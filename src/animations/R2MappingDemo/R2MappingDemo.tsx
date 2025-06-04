@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import * as THREE from 'three';
 import Canvas3D from '../../components/Canvas3D';
-import { R2Mapping, R2Functions } from '../../lib/R2Mapping';
+import { R2Mapping, R2Functions, Vec2 } from '../../lib/R2Mapping';
 
 interface DemoProps {
   count?: number;
