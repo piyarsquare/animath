@@ -11,9 +11,14 @@ export interface ComplexParticlesProps {
 export default function ComplexParticles({ count = 40000, selectedFunction = 'sqrt' }: ComplexParticlesProps) {
   const [saturation, setSaturation] = useState(1);
   const materialRef = useRef<THREE.ShaderMaterial>();
-  const onMount = (ctx: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => {
-    const { scene, camera, renderer } = ctx;
-    camera.position.z = 5;
+  const onMount = React.useCallback(
+    (ctx: {
+      scene: THREE.Scene;
+      camera: THREE.PerspectiveCamera;
+      renderer: THREE.WebGLRenderer;
+    }) => {
+      const { scene, camera, renderer } = ctx;
+      camera.position.z = 5;
 
     const particleMaterial = new THREE.ShaderMaterial({
       uniforms: {
@@ -59,7 +64,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       requestAnimationFrame(animate);
     };
     animate();
-  };
+    }, [count]);
 
   useEffect(() => {
     if (materialRef.current) {
