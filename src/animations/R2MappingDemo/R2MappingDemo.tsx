@@ -50,19 +50,28 @@ export default function R2MappingDemo({ count = 10000 }: DemoProps) {
     }
   }, [mappingName, count, color]);
 
-  const onMount = React.useCallback((ctx: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer; }) => {
-    const { scene, camera } = ctx;
-    camera.position.z = 5;
+  const onMount = React.useCallback(
+    (ctx: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => {
+      const { scene, camera, renderer } = ctx;
+      camera.position.z = 5;
 
-    const geometry = new THREE.BufferGeometry();
-    geomRef.current = geometry;
+      const geometry = new THREE.BufferGeometry();
+      geomRef.current = geometry;
 
-    const material = new THREE.PointsMaterial({ color, size: 0.05 });
-    materialRef.current = material;
+      const material = new THREE.PointsMaterial({ color, size: 0.05 });
+      materialRef.current = material;
 
-    const points = new THREE.Points(geometry, material);
-    scene.add(points);
-  }, [color]);
+      const points = new THREE.Points(geometry, material);
+      scene.add(points);
+
+      const animate = () => {
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      };
+      animate();
+    },
+    [color]
+  );
 
   return (
     <div style={{ position: 'relative' }}>
