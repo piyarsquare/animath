@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Canvas3D from '../../components/Canvas3D';
 import { vertexShader, fragmentShader } from './shaders';
@@ -9,6 +9,8 @@ export interface ComplexParticlesProps {
 }
 
 export default function ComplexParticles({ count = 40000, selectedFunction = 'sqrt' }: ComplexParticlesProps) {
+  const [saturation, setSaturation] = useState(1);
+  const materialRef = useRef<THREE.ShaderMaterial>();
   const onMount = (ctx: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => {
     const { scene, camera, renderer } = ctx;
     camera.position.z = 5;
@@ -17,7 +19,8 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       uniforms: {
         time: { value: 0 },
         opacity: { value: 0.9 },
-        functionType: { value: 0 }
+        functionType: { value: 0 },
+        saturation: { value: saturation }
       },
       vertexShader,
       fragmentShader,
@@ -44,6 +47,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
+    materialRef.current = particleMaterial;
     const particles = new THREE.Points(geometry, particleMaterial);
     scene.add(particles);
 
@@ -57,5 +61,28 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     animate();
   };
 
-  return <Canvas3D onMount={onMount} />;
+  useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.saturation.value = saturation;
+    }
+  }, [saturation]);
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <Canvas3D onMount={onMount} />
+      <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
+        <label>
+          Saturation:
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={saturation}
+            onChange={(e) => setSaturation(parseFloat(e.target.value))}
+          />
+        </label>
+      </div>
+    </div>
+  );
 }
