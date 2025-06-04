@@ -7,6 +7,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <p id="page-info">You are viewing the animath page.</p>
+    <textarea id="html-source" readonly style="width:100%;height:200px;"></textarea>
+    <script>
+      const srcBox = document.getElementById('html-source');
+      srcBox.textContent = document.documentElement.outerHTML;
+    </script>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
