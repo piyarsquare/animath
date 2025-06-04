@@ -18,6 +18,8 @@ const functionNames = [
   'inverse'
 ];
 
+const layoutNames = ['grid', 'circle', 'spiral', 'random', 'ring'];
+
 // Shaders copied from the ComplexParticles demo but with the
 // saturation fixed to 1 and a uniform selecting the mapping.
 const vertexShader = `
@@ -67,7 +69,67 @@ void main(){vec2 d=gl_PointCoord-vec2(0.5);float r2=dot(d,d);if(r2>0.25) discard
 
 export default function R2MappingDemo({ count = 40000 }: DemoProps) {
   const [functionIndex, setFunctionIndex] = useState(3); // default 'exp'
+  const [layoutIndex, setLayoutIndex] = useState(0);
   const materialRef = useRef<THREE.ShaderMaterial>();
+  const geometryRef = useRef<THREE.BufferGeometry>();
+
+  const createPositions = React.useCallback(() => {
+    const positions = new Float32Array(count * 3);
+    const side = Math.sqrt(count);
+    switch (layoutNames[layoutIndex]) {
+      case 'grid': {
+        let i = 0;
+        for (let ix = 0; ix < side; ix++) {
+          for (let iz = 0; iz < side; iz++) {
+            positions[3 * i] = (ix / side - 0.5) * 4;
+            positions[3 * i + 1] = 0;
+            positions[3 * i + 2] = (iz / side - 0.5) * 4;
+            i++;
+          }
+        }
+        break;
+      }
+      case 'circle': {
+        for (let i = 0; i < count; i++) {
+          const a = (i / count) * Math.PI * 2;
+          positions[3 * i] = 2 * Math.cos(a);
+          positions[3 * i + 1] = 0;
+          positions[3 * i + 2] = 2 * Math.sin(a);
+        }
+        break;
+      }
+      case 'spiral': {
+        for (let i = 0; i < count; i++) {
+          const t = i / count;
+          const a = t * Math.PI * 6;
+          const r = 2 * t;
+          positions[3 * i] = r * Math.cos(a);
+          positions[3 * i + 1] = 0;
+          positions[3 * i + 2] = r * Math.sin(a);
+        }
+        break;
+      }
+      case 'random': {
+        for (let i = 0; i < count; i++) {
+          positions[3 * i] = (Math.random() - 0.5) * 4;
+          positions[3 * i + 1] = 0;
+          positions[3 * i + 2] = (Math.random() - 0.5) * 4;
+        }
+        break;
+      }
+      case 'ring': {
+        for (let i = 0; i < count; i++) {
+          const a = (i / count) * Math.PI * 2;
+          const r = 1.5 + 0.3 * Math.sin(a * 8);
+          positions[3 * i] = r * Math.cos(a);
+          positions[3 * i + 1] = 0;
+          positions[3 * i + 2] = r * Math.sin(a);
+        }
+        break;
+      }
+    }
+    return positions;
+  }, [layoutIndex, count]);
 
   const onMount = React.useCallback(
     (ctx: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => {
@@ -89,20 +151,10 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
       });
       materialRef.current = particleMaterial;
 
-      const side = Math.sqrt(count);
       const geometry = new THREE.BufferGeometry();
-      const positions = new Float32Array(count * 3);
-      const sizes = new Float32Array(count);
-      let i = 0;
-      for (let ix = 0; ix < side; ix++) {
-        for (let iz = 0; iz < side; iz++) {
-          positions[3 * i] = (ix / side - 0.5) * 4;
-          positions[3 * i + 1] = 0;
-          positions[3 * i + 2] = (iz / side - 0.5) * 4;
-          sizes[i] = 1;
-          i++;
-        }
-      }
+      geometryRef.current = geometry;
+      const positions = createPositions();
+      const sizes = new Float32Array(count).fill(1);
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
@@ -127,6 +179,16 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
     }
   }, [functionIndex]);
 
+  useEffect(() => {
+    if (geometryRef.current) {
+      const pos = createPositions();
+      geometryRef.current.setAttribute(
+        'position',
+        new THREE.BufferAttribute(pos, 3)
+      );
+    }
+  }, [layoutIndex, createPositions]);
+
   return (
     <div style={{ position: 'relative' }}>
       <Canvas3D onMount={onMount} />
@@ -139,6 +201,20 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
               onChange={(e) => setFunctionIndex(parseInt(e.target.value, 10))}
             >
               {functionNames.map((name, idx) => (
+                <option key={name} value={idx}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <br />
+          <label>
+            Layout:
+            <select
+              value={layoutIndex}
+              onChange={(e) => setLayoutIndex(parseInt(e.target.value, 10))}
+            >
+              {layoutNames.map((name, idx) => (
                 <option key={name} value={idx}>
                   {name}
                 </option>
