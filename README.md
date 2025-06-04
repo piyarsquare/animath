@@ -63,6 +63,9 @@ npx serve dist  # quick sanity check
 
 Node ≥ 20, npm ≥ 10 recommended.
 
+To publish the live demo on GitHub Pages, trigger the `Deploy demo` workflow
+manually from the repository's Actions tab.
+
 ---
 
 ## 4 Repository layout
