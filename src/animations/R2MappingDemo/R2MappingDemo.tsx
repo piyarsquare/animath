@@ -76,6 +76,7 @@ void main(){vec2 d=gl_PointCoord-vec2(0.5);float r2=dot(d,d);if(r2>0.25) discard
 export default function R2MappingDemo({ count = 40000 }: DemoProps) {
   const [functionIndex, setFunctionIndex] = useState(3); // default 'exp'
   const [layoutIndex, setLayoutIndex] = useState(0);
+
   const [particleCount, setParticleCount] = useState(count);
   const [size, setSize] = useState(1);
   const [opacity, setOpacity] = useState(0.9);
@@ -90,6 +91,9 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
   const createPositions = React.useCallback(() => {
     const positions = new Float32Array(particleCount * 3);
     const side = Math.sqrt(particleCount);
+  const materialRef = useRef<THREE.ShaderMaterial>();
+  const geometryRef = useRef<THREE.BufferGeometry>();
+
     switch (layoutNames[layoutIndex]) {
       case 'grid': {
         let i = 0;
@@ -124,6 +128,7 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
         break;
       }
       case 'random': {
+
         for (let i = 0; i < particleCount; i++) {
           positions[3 * i] = (Math.random() - 0.5) * 4;
           positions[3 * i + 1] = 0;
@@ -143,7 +148,9 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
       }
     }
     return positions;
+
   }, [layoutIndex, particleCount]);
+
 
   const onMount = React.useCallback(
     (ctx: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => {
@@ -173,6 +180,7 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
       const geometry = new THREE.BufferGeometry();
       geometryRef.current = geometry;
       const positions = createPositions();
+
       const sizes = new Float32Array(particleCount).fill(1);
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
@@ -236,6 +244,7 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
         'position',
         new THREE.BufferAttribute(pos, 3)
       );
+
       const sizes = new Float32Array(particleCount).fill(1);
       geometryRef.current.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
       geometryRef.current.setDrawRange(0, particleCount);
