@@ -3,8 +3,8 @@
 > *Animated mathematics for curious minds* — a modular, browser-based toolkit for creating, sharing, and exploring mathematical animations and generative art.
 
 <p align="center">
-  <!-- Example animation GIF or PNG goes here -->
-  <em>(demo placeholder)</em>
+  <!-- Update USERNAME to your GitHub account -->
+  <a href="https://USERNAME.github.io/animath/">Live demo</a>
 </p>
 
 ---
