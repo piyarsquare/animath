@@ -18,11 +18,17 @@ const functionNames = [
   'inverse'
 ];
 
+const layoutNames = ['grid', 'circle', 'spiral', 'random', 'ring'];
+
 // Shaders copied from the ComplexParticles demo but with the
 // saturation fixed to 1 and a uniform selecting the mapping.
 const vertexShader = `
 uniform float time;
 uniform int   functionType;
+uniform float globalSize;
+uniform float intensity;
+uniform float shimmerAmp;
+uniform float hueShift;
 attribute float size;
 varying vec3 vColor;
 
@@ -51,12 +57,14 @@ void main(){
   vec3 pos3 = p4.xyz / w * 1.5;
   vec4 mv  = modelViewMatrix * vec4(pos3,1.);
   gl_Position = projectionMatrix * mv;
-  gl_PointSize = size * (80. / -mv.z);
-  float hue = fract((atan(f.y, f.x) / 6.28318530718) + 1.);
+  gl_PointSize = size * globalSize * (80. / -mv.z);
+  float hue = fract((atan(f.y, f.x) / 6.28318530718) + hueShift);
   float logMag = log(length(f) + 1e-6);
   float val    = 0.5 * (1. + tanh(logMag));
   float stripes = sin(6.28318530718 * logMag);
   val = mix(val, clamp(val * (0.75 + 0.25*stripes), 0., 1.), 0.5);
+  float shimmer = sin(time*5.0 + position.x*4.0 + position.z*7.0);
+  val = clamp(val * intensity * (1.0 + shimmerAmp * shimmer), 0., 1.);
   vColor = hsv2rgb(vec3(hue, 1., val));
 }`;
 
@@ -67,18 +75,91 @@ void main(){vec2 d=gl_PointCoord-vec2(0.5);float r2=dot(d,d);if(r2>0.25) discard
 
 export default function R2MappingDemo({ count = 40000 }: DemoProps) {
   const [functionIndex, setFunctionIndex] = useState(3); // default 'exp'
+  const [layoutIndex, setLayoutIndex] = useState(0);
+  const [particleCount, setParticleCount] = useState(count);
+  const [size, setSize] = useState(1);
+  const [opacity, setOpacity] = useState(0.9);
+  const [intensity, setIntensity] = useState(1);
+  const [shimmer, setShimmer] = useState(0);
+  const [hueShift, setHueShift] = useState(0);
   const materialRef = useRef<THREE.ShaderMaterial>();
+  const geometryRef = useRef<THREE.BufferGeometry>();
+  const sceneRef = useRef<THREE.Scene>();
+  const pointsRef = useRef<THREE.Points>();
+
+  const createPositions = React.useCallback(() => {
+    const positions = new Float32Array(particleCount * 3);
+    const side = Math.sqrt(particleCount);
+    switch (layoutNames[layoutIndex]) {
+      case 'grid': {
+        let i = 0;
+        for (let ix = 0; ix < side; ix++) {
+          for (let iz = 0; iz < side; iz++) {
+            positions[3 * i] = (ix / side - 0.5) * 4;
+            positions[3 * i + 1] = 0;
+            positions[3 * i + 2] = (iz / side - 0.5) * 4;
+            i++;
+          }
+        }
+        break;
+      }
+      case 'circle': {
+        for (let i = 0; i < particleCount; i++) {
+          const a = (i / particleCount) * Math.PI * 2;
+          positions[3 * i] = 2 * Math.cos(a);
+          positions[3 * i + 1] = 0;
+          positions[3 * i + 2] = 2 * Math.sin(a);
+        }
+        break;
+      }
+      case 'spiral': {
+        for (let i = 0; i < particleCount; i++) {
+          const t = i / particleCount;
+          const a = t * Math.PI * 6;
+          const r = 2 * t;
+          positions[3 * i] = r * Math.cos(a);
+          positions[3 * i + 1] = 0;
+          positions[3 * i + 2] = r * Math.sin(a);
+        }
+        break;
+      }
+      case 'random': {
+        for (let i = 0; i < particleCount; i++) {
+          positions[3 * i] = (Math.random() - 0.5) * 4;
+          positions[3 * i + 1] = 0;
+          positions[3 * i + 2] = (Math.random() - 0.5) * 4;
+        }
+        break;
+      }
+      case 'ring': {
+        for (let i = 0; i < particleCount; i++) {
+          const a = (i / particleCount) * Math.PI * 2;
+          const r = 1.5 + 0.3 * Math.sin(a * 8);
+          positions[3 * i] = r * Math.cos(a);
+          positions[3 * i + 1] = 0;
+          positions[3 * i + 2] = r * Math.sin(a);
+        }
+        break;
+      }
+    }
+    return positions;
+  }, [layoutIndex, particleCount]);
 
   const onMount = React.useCallback(
     (ctx: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => {
       const { scene, camera, renderer } = ctx;
+      sceneRef.current = scene;
       camera.position.z = 5;
 
       const particleMaterial = new THREE.ShaderMaterial({
         uniforms: {
           time: { value: 0 },
-          opacity: { value: 0.9 },
-          functionType: { value: functionIndex }
+          opacity: { value: opacity },
+          functionType: { value: functionIndex },
+          globalSize: { value: size },
+          intensity: { value: intensity },
+          shimmerAmp: { value: shimmer },
+          hueShift: { value: hueShift }
         },
         vertexShader,
         fragmentShader,
@@ -89,24 +170,15 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
       });
       materialRef.current = particleMaterial;
 
-      const side = Math.sqrt(count);
       const geometry = new THREE.BufferGeometry();
-      const positions = new Float32Array(count * 3);
-      const sizes = new Float32Array(count);
-      let i = 0;
-      for (let ix = 0; ix < side; ix++) {
-        for (let iz = 0; iz < side; iz++) {
-          positions[3 * i] = (ix / side - 0.5) * 4;
-          positions[3 * i + 1] = 0;
-          positions[3 * i + 2] = (iz / side - 0.5) * 4;
-          sizes[i] = 1;
-          i++;
-        }
-      }
+      geometryRef.current = geometry;
+      const positions = createPositions();
+      const sizes = new Float32Array(particleCount).fill(1);
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
       const particles = new THREE.Points(geometry, particleMaterial);
+      pointsRef.current = particles;
       scene.add(particles);
 
       const clock = new THREE.Clock();
@@ -118,7 +190,7 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
       };
       animate();
     },
-    [count, functionIndex]
+    [particleCount, functionIndex]
   );
 
   useEffect(() => {
@@ -126,6 +198,49 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
       materialRef.current.uniforms.functionType.value = functionIndex;
     }
   }, [functionIndex]);
+
+  useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.opacity.value = opacity;
+    }
+  }, [opacity]);
+
+  useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.globalSize.value = size;
+    }
+  }, [size]);
+
+  useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.intensity.value = intensity;
+    }
+  }, [intensity]);
+
+  useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.shimmerAmp.value = shimmer;
+    }
+  }, [shimmer]);
+
+  useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.hueShift.value = hueShift;
+    }
+  }, [hueShift]);
+
+  useEffect(() => {
+    if (geometryRef.current) {
+      const pos = createPositions();
+      geometryRef.current.setAttribute(
+        'position',
+        new THREE.BufferAttribute(pos, 3)
+      );
+      const sizes = new Float32Array(particleCount).fill(1);
+      geometryRef.current.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+      geometryRef.current.setDrawRange(0, particleCount);
+    }
+  }, [layoutIndex, particleCount, createPositions]);
 
   return (
     <div style={{ position: 'relative' }}>
@@ -144,6 +259,92 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
                 </option>
               ))}
             </select>
+          </label>
+          <br />
+          <label>
+            Layout:
+            <select
+              value={layoutIndex}
+              onChange={(e) => setLayoutIndex(parseInt(e.target.value, 10))}
+            >
+              {layoutNames.map((name, idx) => (
+                <option key={name} value={idx}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <br />
+          <label>
+            Particles:
+            <input
+              type="range"
+              min={1000}
+              max={80000}
+              step={1000}
+              value={particleCount}
+              onChange={(e) => setParticleCount(parseInt(e.target.value, 10))}
+            />
+          </label>
+          <br />
+          <label>
+            Size:
+            <input
+              type="range"
+              min={0.2}
+              max={5}
+              step={0.1}
+              value={size}
+              onChange={(e) => setSize(parseFloat(e.target.value))}
+            />
+          </label>
+          <br />
+          <label>
+            Opacity:
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={opacity}
+              onChange={(e) => setOpacity(parseFloat(e.target.value))}
+            />
+          </label>
+          <br />
+          <label>
+            Intensity:
+            <input
+              type="range"
+              min={0.5}
+              max={2}
+              step={0.05}
+              value={intensity}
+              onChange={(e) => setIntensity(parseFloat(e.target.value))}
+            />
+          </label>
+          <br />
+          <label>
+            Shimmer:
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={shimmer}
+              onChange={(e) => setShimmer(parseFloat(e.target.value))}
+            />
+          </label>
+          <br />
+          <label>
+            Hue Shift:
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={hueShift}
+              onChange={(e) => setHueShift(parseFloat(e.target.value))}
+            />
           </label>
         </div>
       </ToggleMenu>
