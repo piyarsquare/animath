@@ -1,0 +1,2 @@
+# animath
+Animations for math
