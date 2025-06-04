@@ -11,11 +11,18 @@ const mappings: { [key: string]: R2Mapping } = {
   identity: new R2Mapping(R2Functions.identity),
   square: new R2Mapping(R2Functions.complexSquare),
   sqrt: new R2Mapping(R2Functions.complexSqrt),
+  ln: new R2Mapping(R2Functions.complexLn),
+  exp: new R2Mapping(R2Functions.complexExp),
+  sin: new R2Mapping(R2Functions.complexSin),
+  cos: new R2Mapping(R2Functions.complexCos),
+  tan: new R2Mapping(R2Functions.complexTan),
+  inverse: new R2Mapping(R2Functions.complexInverse),
   swirl: new R2Mapping(R2Functions.swirl)
 };
 
 export default function R2MappingDemo({ count = 10000 }: DemoProps) {
   const [mappingName, setMappingName] = useState<keyof typeof mappings>('identity');
+  const [color, setColor] = useState('#00ffaa');
   const materialRef = useRef<THREE.PointsMaterial>();
   const geomRef = useRef<THREE.BufferGeometry>();
 
@@ -38,7 +45,10 @@ export default function R2MappingDemo({ count = 10000 }: DemoProps) {
     }
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.attributes.position.needsUpdate = true;
-  }, [mappingName, count]);
+    if (materialRef.current) {
+      materialRef.current.color.set(color);
+    }
+  }, [mappingName, count, color]);
 
   const onMount = React.useCallback((ctx: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer; }) => {
     const { scene, camera } = ctx;
@@ -47,12 +57,12 @@ export default function R2MappingDemo({ count = 10000 }: DemoProps) {
     const geometry = new THREE.BufferGeometry();
     geomRef.current = geometry;
 
-    const material = new THREE.PointsMaterial({ color: '#00ffaa', size: 0.05 });
+    const material = new THREE.PointsMaterial({ color, size: 0.05 });
     materialRef.current = material;
 
     const points = new THREE.Points(geometry, material);
     scene.add(points);
-  }, []);
+  }, [color]);
 
   return (
     <div style={{ position: 'relative' }}>
@@ -63,6 +73,12 @@ export default function R2MappingDemo({ count = 10000 }: DemoProps) {
             <option key={name} value={name}>{name}</option>
           ))}
         </select>
+        <input
+          type="color"
+          value={color}
+          onChange={e => setColor(e.target.value)}
+          style={{ marginLeft: '0.5rem' }}
+        />
       </div>
     </div>
   );
