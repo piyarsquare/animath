@@ -83,9 +83,11 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
   const [intensity, setIntensity] = useState(1);
   const [shimmer, setShimmer] = useState(0);
   const [hueShift, setHueShift] = useState(0);
+  const [cameraZ, setCameraZ] = useState(5);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
   const sceneRef = useRef<THREE.Scene>();
+  const cameraRef = useRef<THREE.PerspectiveCamera>();
   const pointsRef = useRef<THREE.Points>();
 
   const createPositions = React.useCallback(() => {
@@ -99,9 +101,9 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
         let i = 0;
         for (let ix = 0; ix < side; ix++) {
           for (let iz = 0; iz < side; iz++) {
-            positions[3 * i] = (ix / side - 0.5) * 4;
+            positions[3 * i] = (ix / side - 0.5) * 8;
             positions[3 * i + 1] = 0;
-            positions[3 * i + 2] = (iz / side - 0.5) * 4;
+            positions[3 * i + 2] = (iz / side - 0.5) * 8;
             i++;
           }
         }
@@ -110,9 +112,9 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
       case 'circle': {
         for (let i = 0; i < particleCount; i++) {
           const a = (i / particleCount) * Math.PI * 2;
-          positions[3 * i] = 2 * Math.cos(a);
+          positions[3 * i] = 4 * Math.cos(a);
           positions[3 * i + 1] = 0;
-          positions[3 * i + 2] = 2 * Math.sin(a);
+          positions[3 * i + 2] = 4 * Math.sin(a);
         }
         break;
       }
@@ -120,7 +122,7 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
         for (let i = 0; i < particleCount; i++) {
           const t = i / particleCount;
           const a = t * Math.PI * 6;
-          const r = 2 * t;
+          const r = 4 * t;
           positions[3 * i] = r * Math.cos(a);
           positions[3 * i + 1] = 0;
           positions[3 * i + 2] = r * Math.sin(a);
@@ -130,16 +132,16 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
       case 'random': {
 
         for (let i = 0; i < particleCount; i++) {
-          positions[3 * i] = (Math.random() - 0.5) * 4;
+          positions[3 * i] = (Math.random() - 0.5) * 8;
           positions[3 * i + 1] = 0;
-          positions[3 * i + 2] = (Math.random() - 0.5) * 4;
+          positions[3 * i + 2] = (Math.random() - 0.5) * 8;
         }
         break;
       }
       case 'ring': {
         for (let i = 0; i < particleCount; i++) {
           const a = (i / particleCount) * Math.PI * 2;
-          const r = 1.5 + 0.3 * Math.sin(a * 8);
+          const r = 3 + 0.6 * Math.sin(a * 8);
           positions[3 * i] = r * Math.cos(a);
           positions[3 * i + 1] = 0;
           positions[3 * i + 2] = r * Math.sin(a);
@@ -156,7 +158,8 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
     (ctx: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => {
       const { scene, camera, renderer } = ctx;
       sceneRef.current = scene;
-      camera.position.z = 5;
+      cameraRef.current = camera;
+      camera.position.z = cameraZ;
 
       const particleMaterial = new THREE.ShaderMaterial({
         uniforms: {
@@ -236,6 +239,12 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
       materialRef.current.uniforms.hueShift.value = hueShift;
     }
   }, [hueShift]);
+
+  useEffect(() => {
+    if (cameraRef.current) {
+      cameraRef.current.position.z = cameraZ;
+    }
+  }, [cameraZ]);
 
   useEffect(() => {
     if (geometryRef.current) {
@@ -353,6 +362,18 @@ export default function R2MappingDemo({ count = 40000 }: DemoProps) {
               step={0.01}
               value={hueShift}
               onChange={(e) => setHueShift(parseFloat(e.target.value))}
+            />
+          </label>
+          <br />
+          <label>
+            Camera Distance:
+            <input
+              type="range"
+              min={2}
+              max={20}
+              step={0.1}
+              value={cameraZ}
+              onChange={(e) => setCameraZ(parseFloat(e.target.value))}
             />
           </label>
         </div>
