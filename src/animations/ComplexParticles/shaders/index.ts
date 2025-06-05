@@ -9,6 +9,7 @@ uniform float hueShift;
 uniform float saturation;
 uniform float realView;
 uniform float jitterAmp;
+uniform int   shapeType;
 attribute float size;
 attribute vec4 seed;
 varying vec3 vColor;
@@ -101,5 +102,30 @@ void main(){vec2 z = vec2(position.x, position.z);vec2 f = applyComplex(z, funct
 
 export const fragmentShader = `
 uniform float opacity;
+uniform int   shapeType;
 varying vec3 vColor;
-void main(){vec2 d = gl_PointCoord - vec2(0.5);float r2 = dot(d,d);if(r2>0.25) discard;float alpha = (1. - smoothstep(0.2,0.5,sqrt(r2))) * opacity;gl_FragColor = vec4(vColor, alpha);}`;
+void main(){
+  vec2 d = gl_PointCoord - vec2(0.5);
+  float alpha = opacity;
+  vec3 col = vColor;
+
+  if(shapeType==0){
+    float r2 = dot(d,d);
+    if(r2>0.25) discard;
+    alpha *= 1.0 - smoothstep(0.2,0.5,sqrt(r2));
+  }else if(shapeType==1){
+    vec2 p = d*2.0;
+    p = abs(p);
+    float dist = max(p.y*0.57735027 + p.x*0.5, p.x) - 0.5;
+    if(dist>0.0) discard;
+    alpha *= 1.0 - smoothstep(-0.02,0.02,dist);
+  }else{ // pyramid
+    vec2 p = abs(d*2.0);
+    float dist = p.x + p.y - 0.5;
+    if(dist>0.0) discard;
+    float h = 0.5 - (p.x + p.y);
+    col *= 0.7 + 0.6*h;
+    alpha *= 1.0 - smoothstep(-0.02,0.02,dist);
+  }
+  gl_FragColor = vec4(col, alpha);
+}`;
