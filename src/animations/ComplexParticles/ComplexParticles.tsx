@@ -45,6 +45,8 @@ const functionFormulas: Record<string, string> = {
   branchSqrtPoly: '√(z(z-1)(z+1))'
 };
 
+const shapeNames = ['sphere', 'hexagon', 'pyramid'] as const;
+
 const AXIS_LENGTH = 4;
 
 // CPU versions of the complex functions used in the shader
@@ -206,6 +208,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const [hueShift, setHueShift] = useState(0);
   const [jitter, setJitter] = useState(0);
   const [objectMode, setObjectMode] = useState(false);
+  const [shapeIndex, setShapeIndex] = useState(0);
   const [realView, setRealView] = useState(false);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
@@ -240,7 +243,8 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
           jitterAmp: { value: jitter },
           hueShift: { value: hueShift },
           saturation: { value: saturation },
-          realView: { value: realViewRef.current ? 1 : 0 }
+          realView: { value: realViewRef.current ? 1 : 0 },
+          shapeType: { value: shapeIndex }
         },
         vertexShader,
         fragmentShader,
@@ -478,6 +482,12 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   }, [functionIndex]);
 
   useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.shapeType.value = shapeIndex;
+    }
+  }, [shapeIndex]);
+
+  useEffect(() => {
     if (geometryRef.current) {
       const side = Math.sqrt(particleCount);
       const pos = new Float32Array(particleCount * 3);
@@ -617,6 +627,19 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               value={hueShift}
               onChange={(e) => setHueShift(parseFloat(e.target.value))}
             />
+          </label>
+          <label>
+            Shape:
+            <select
+              value={shapeIndex}
+              onChange={(e) => setShapeIndex(parseInt(e.target.value, 10))}
+            >
+              {shapeNames.map((s, idx) => (
+                <option key={s} value={idx}>
+                  {s}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Object Mode:
