@@ -61,6 +61,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const [intensity, setIntensity] = useState(1);
   const [shimmer, setShimmer] = useState(0);
   const [hueShift, setHueShift] = useState(0);
+  const [realView, setRealView] = useState(false);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
@@ -68,6 +69,8 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const yAxisRef = useRef<THREE.Line>();
   const uAxisRef = useRef<THREE.Line>();
   const vAxisRef = useRef<THREE.Line>();
+  const realViewRef = useRef(realView);
+  useEffect(() => { realViewRef.current = realView; }, [realView]);
   const onMount = React.useCallback(
     (ctx: {
       scene: THREE.Scene;
@@ -140,11 +143,17 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     vAxisRef.current = makeAxis(uvMat.clone());
 
     const clock = new THREE.Clock();
+    let tCurrent = 0;
     const animate = () => {
-      const t = clock.getElapsedTime();
-      particleMaterial.uniforms.time.value = t;
+      const elapsed = clock.getElapsedTime();
+      const targetT = realViewRef.current ? 0 : elapsed;
+      tCurrent += (targetT - tCurrent) * 0.05;
+      particleMaterial.uniforms.time.value = tCurrent;
 
-      const tt = t * 0.3;
+      const targetRot = realViewRef.current ? -Math.PI / 2 : 0;
+      camera.rotation.x += (targetRot - camera.rotation.x) * 0.05;
+
+      const tt = tCurrent * 0.3;
       const updateAxis = (
         line: THREE.Line | undefined,
         start: THREE.Vector4,
@@ -368,6 +377,12 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
           </label>
         </div>
       </ToggleMenu>
+      <button
+        onClick={() => setRealView(v => !v)}
+        style={{ position: 'absolute', bottom: 10, left: 10 }}
+      >
+        x:u
+      </button>
     </div>
   );
 }
