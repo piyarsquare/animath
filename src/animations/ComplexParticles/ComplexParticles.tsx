@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import Canvas3D from '../../components/Canvas3D';
 import ToggleMenu from '../../components/ToggleMenu';
-import { quatMul, quatRotate4D, makeUnitQuat, norm, ProjectionMode, project, Axis4D } from '../../lib/viewpoint';
+import { quatMul, quatRotate4D, makeUnitQuat, norm, ProjectionMode, project } from '../../lib/viewpoint';
 import { vertexShader, fragmentShader } from './shaders';
 
 export interface ComplexParticlesProps {
@@ -53,7 +53,6 @@ const textureNames = ['none', 'checker', 'speckled', 'stone', 'metal', 'royal'] 
 const AXIS_LENGTH = 4;
 const modes = Object.entries(ProjectionMode)
   .filter(([k,v]) => typeof v === 'number') as [string,number][];
-const planes: Axis4D[] = ['xy','xu','xv','yu','yv','uv'];
 
 function makeCheckerTexture(size = 64): THREE.DataTexture {
   const data = new Uint8Array(size * size * 4);
@@ -253,7 +252,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const [shapeIndex, setShapeIndex] = useState(0);
   const [textureIndex, setTextureIndex] = useState(0);
   const [realView, setRealView] = useState(false);
-  const [planeIndex, setPlaneIndex] = useState(1);
   const [proj, setProj] = useState(ProjectionMode.Perspective);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
@@ -480,6 +478,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       };
 
       updateAxis(xAxisRef.current, new THREE.Vector4(-AXIS_LENGTH, 0, 0, 0), new THREE.Vector4(AXIS_LENGTH, 0, 0, 0));
+      if (yAxisRef.current) {
+        yAxisRef.current.visible = !realViewRef.current;
+      }
       updateAxis(yAxisRef.current, new THREE.Vector4(0, -AXIS_LENGTH, 0, 0), new THREE.Vector4(0, AXIS_LENGTH, 0, 0));
       updateAxis(uAxisRef.current, new THREE.Vector4(0, 0, -AXIS_LENGTH, 0), new THREE.Vector4(0, 0, AXIS_LENGTH, 0));
       updateAxis(vAxisRef.current, new THREE.Vector4(0, 0, 0, -AXIS_LENGTH), new THREE.Vector4(0, 0, 0, AXIS_LENGTH));
@@ -553,24 +554,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     }
   }, [realView]);
 
-  useEffect(() => {
-    const axes: Record<string, THREE.Line | undefined> = {
-      x: xAxisRef.current,
-      y: yAxisRef.current,
-      u: uAxisRef.current,
-      v: vAxisRef.current
-    };
-    if (realView) {
-      const sel = planes[planeIndex];
-      for (const [key, line] of Object.entries(axes)) {
-        if (line) line.visible = sel.includes(key);
-      }
-    } else {
-      for (const line of Object.values(axes)) {
-        if (line) line.visible = true;
-      }
-    }
-  }, [realView, planeIndex]);
+
 
   useEffect(() => {
     if (cameraRef.current) {
@@ -806,19 +790,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
             </select>
           </label>
           <label>
-            Real Plane:
-            <select
-              value={planeIndex}
-              onChange={(e) => setPlaneIndex(parseInt(e.target.value, 10))}
-            >
-              {planes.map((p, idx) => (
-                <option key={p} value={idx}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
             Object Mode:
             <input
               type="checkbox"
@@ -839,12 +810,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
           </label>
         </div>
       </ToggleMenu>
-      <button
-        onClick={() => setRealView(v => !v)}
-        style={{ position: 'absolute', bottom: 10, left: 10 }}
-      >
-        {planes[planeIndex]}
-      </button>
       <div
         style={{
           position: 'absolute',
