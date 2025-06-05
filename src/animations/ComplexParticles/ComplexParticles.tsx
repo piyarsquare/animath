@@ -89,7 +89,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const [intensity, setIntensity] = useState(1);
   const [shimmer, setShimmer] = useState(0);
   const [hueShift, setHueShift] = useState(0);
-  const [backgroundColor, setBackgroundColor] = useState('#000000');
+  const [objectMode, setObjectMode] = useState(false);
   const [realView, setRealView] = useState(false);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
@@ -110,7 +110,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       const { scene, camera, renderer } = ctx;
       cameraRef.current = camera;
       rendererRef.current = renderer;
-      renderer.setClearColor(new THREE.Color(backgroundColor));
+      renderer.setClearColor(objectMode ? 0xffffff : 0x000000);
       camera.position.z = cameraZ;
 
       const particleMaterial = new THREE.ShaderMaterial({
@@ -331,10 +331,14 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   }, [cameraZ]);
 
   useEffect(() => {
-    if (rendererRef.current) {
-      rendererRef.current.setClearColor(new THREE.Color(backgroundColor));
+    if (rendererRef.current && materialRef.current) {
+      rendererRef.current.setClearColor(objectMode ? 0xffffff : 0x000000);
+      materialRef.current.blending = objectMode
+        ? THREE.NormalBlending
+        : THREE.AdditiveBlending;
+      materialRef.current.depthWrite = objectMode;
     }
-  }, [backgroundColor]);
+  }, [objectMode]);
 
   useEffect(() => {
     if (materialRef.current) {
@@ -469,11 +473,11 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
           </label>
           <br />
           <label>
-            Background:
+            Object Mode:
             <input
-              type="color"
-              value={backgroundColor}
-              onChange={(e) => setBackgroundColor(e.target.value)}
+              type="checkbox"
+              checked={objectMode}
+              onChange={(e) => setObjectMode(e.target.checked)}
             />
           </label>
           <br />
