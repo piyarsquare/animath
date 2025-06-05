@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import Canvas3D from '../../components/Canvas3D';
 import ToggleMenu from '../../components/ToggleMenu';
-import { project4D } from '../../lib/viewpoint';
+import { quatMul, quatRotate4D, makeUnitQuat, norm, ProjectionMode, project } from '../../lib/viewpoint';
 import { vertexShader, fragmentShader } from './shaders';
 
 export interface ComplexParticlesProps {
@@ -51,6 +51,8 @@ const shapeNames = ['sphere', 'hexagon', 'pyramid'] as const;
 const textureNames = ['none', 'checker', 'speckled', 'stone', 'metal', 'royal'] as const;
 
 const AXIS_LENGTH = 4;
+const modes = Object.entries(ProjectionMode)
+  .filter(([k,v]) => typeof v === 'number') as [string,number][];
 
 function makeCheckerTexture(size = 64): THREE.DataTexture {
   const data = new Uint8Array(size * size * 4);
@@ -250,6 +252,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const [shapeIndex, setShapeIndex] = useState(0);
   const [textureIndex, setTextureIndex] = useState(0);
   const [realView, setRealView] = useState(false);
+  const [proj, setProj] = useState(ProjectionMode.Perspective);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
@@ -261,6 +264,8 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const texturesRef = useRef<THREE.Texture[]>([]);
   const realViewRef = useRef(realView);
   useEffect(() => { realViewRef.current = realView; }, [realView]);
+  const projRef = useRef(proj);
+  useEffect(() => { projRef.current = proj; }, [proj]);
   const onMount = React.useCallback(
     (ctx: {
       scene: THREE.Scene;
@@ -309,7 +314,12 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
           realView: { value: realViewRef.current ? 1 : 0 },
           shapeType: { value: shapeIndex },
           tex: { value: white },
-          textureIndex: { value: textureIndex }
+          textureIndex: { value: textureIndex },
+          uRotL: { value: { w: 1, v: new THREE.Vector3() } },
+          uRotR: { value: { w: 1, v: new THREE.Vector3() } },
+          uProjMode: { value: projRef.current },
+          uProjTarget: { value: projRef.current },
+          uProjAlpha: { value: 0 }
         },
         vertexShader,
         fragmentShader,
@@ -431,15 +441,27 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
 
 
 
-      const tt = tCurrent * 0.3;
+      const qxy = makeUnitQuat(tCurrent*0.5, 'xy');
+      const qyu = makeUnitQuat(tCurrent*0.7, 'yu');
+      const qxv = makeUnitQuat(tCurrent, 'xv');
+      let L = quatMul(qxv.L, quatMul(qyu.L, qxy.L));
+      let R = quatMul(qxv.R, quatMul(qyu.R, qxy.R));
+      norm(L); norm(R);
+      if(materialRef.current){
+        materialRef.current.uniforms.uRotL.value.w = L.w;
+        materialRef.current.uniforms.uRotL.value.v.set(L.x,L.y,L.z);
+        materialRef.current.uniforms.uRotR.value.w = R.w;
+        materialRef.current.uniforms.uRotR.value.v.set(R.x,R.y,R.z);
+      }
+
       const updateAxis = (
         line: THREE.Line | undefined,
         start: THREE.Vector4,
         end: THREE.Vector4
       ) => {
         if (!line) return;
-        const p1 = project4D(start, tt, realViewRef.current);
-        const p2 = project4D(end, tt, realViewRef.current);
+        const p1 = project(quatRotate4D(start, L, R), projRef.current);
+        const p2 = project(quatRotate4D(end, L, R), projRef.current);
         const pos = line.geometry.getAttribute('position') as THREE.BufferAttribute;
         pos.setXYZ(0, p1.x, p1.y, p1.z);
         pos.setXYZ(1, p2.x, p2.y, p2.z);
@@ -584,12 +606,42 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     }
   }, [particleCount]);
 
+  function animateTo(target: ProjectionMode){
+    if(!materialRef.current) return;
+    if(target===projRef.current) return;
+    const start = performance.now();
+    const duration = 1000;
+    const step = (now: number) => {
+      const p = Math.min((now-start)/duration,1);
+      materialRef.current!.uniforms.uProjAlpha.value = p;
+      if(p<1){
+        requestAnimationFrame(step);
+      }else{
+        materialRef.current!.uniforms.uProjMode.value = target;
+        materialRef.current!.uniforms.uProjAlpha.value = 0;
+        materialRef.current!.uniforms.uProjTarget.value = target;
+        setProj(target);
+      }
+    };
+    materialRef.current.uniforms.uProjTarget.value = target;
+    requestAnimationFrame(step);
+  }
+
   const currentName = functionNames[functionIndex];
   const currentFormula = functionFormulas[currentName];
 
   return (
     <div style={{ position: 'relative' }}>
       <Canvas3D onMount={onMount} />
+      <div className="proj-toolbar" style={{position:'absolute',top:10,left:150}}>
+        {modes.map(([name,code]) => (
+          <button key={code}
+            className={proj===code ? 'active' : ''}
+            onClick={() => animateTo(code as ProjectionMode)}>
+            {name}
+          </button>
+        ))}
+      </div>
       <ToggleMenu title="Menu">
         <div
           style={{
