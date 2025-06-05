@@ -19,7 +19,78 @@ vec2 complexSin   (vec2 z){vec2 iz=vec2(-z.y,z.x);vec2 e1=complexExp(iz);vec2 e2
 vec2 complexCos   (vec2 z){vec2 iz=vec2(-z.y,z.x);vec2 e1=complexExp(iz);vec2 e2=complexExp(-iz);vec2 sum=e1+e2;return vec2(sum.x*0.5,sum.y*0.5);}
 vec2 complexTan   (vec2 z){vec2 s=complexSin(z);vec2 c=complexCos(z);float d=c.x*c.x+c.y*c.y;if(d<1e-4) d=1e-4;return vec2((s.x*c.x+s.y*c.y)/d,(s.y*c.x-s.x*c.y)/d);}
 vec2 complexInv   (vec2 z){float d=z.x*z.x+z.y*z.y;if(d<1e-4) d=1e-4;return vec2(z.x/d,-z.y/d);}
-vec2 applyComplex(vec2 z,int t){if(t==0) return complexSqrt(z);if(t==1) return complexSquare(z);if(t==2) return complexLn(z);if(t==3) return complexExp(z);if(t==4) return complexSin(z);if(t==5) return complexCos(z);if(t==6) return complexTan(z);if(t==7) return complexInv(z);return z;}
+
+/* ----- new helpers ----- */
+vec2 complexCube(vec2 z){
+  return vec2(
+    z.x*z.x*z.x - 3.0*z.x*z.y*z.y,
+    3.0*z.x*z.x*z.y - z.y*z.y*z.y
+  );
+}
+
+vec2 complexReciprocalCube(vec2 z){
+  float d = dot(z,z);
+  if(d < 1e-6) d = 1e-6;
+  vec2 z3 = complexCube(z);
+  d = d * d * d;
+  return vec2( z3.x / d, -z3.y / d );
+}
+
+vec2 complexJoukowski(vec2 z){
+  vec2 inv = complexInv(z);
+  return vec2( 0.5*(z.x + inv.x), 0.5*(z.y + inv.y) );
+}
+
+vec2 complexRational22(vec2 z){
+  vec2 num  = vec2(z.x*z.x - z.y*z.y + 1.0, 2.0*z.x*z.y);
+  vec2 den  = vec2(z.x*z.x - z.y*z.y - 1.0, 2.0*z.x*z.y);
+  vec2 invd = complexInv(den);
+  return vec2(
+    num.x*invd.x - num.y*invd.y,
+    num.x*invd.y + num.y*invd.x
+  );
+}
+
+vec2 complexEssentialExpInv(vec2 z){
+  float r2 = dot(z,z);
+  if(r2 < 1e-6) r2 = 1e-6;
+  vec2 inv = vec2( z.x / r2, -z.y / r2 );
+  return complexExp(inv);
+}
+
+vec2 complexBranchSqrtPoly(vec2 z){
+  vec2 a = vec2(z.x - 1.0, z.y);
+  vec2 b = vec2(z.x + 1.0, z.y);
+  vec2 p = vec2(
+      z.x*a.x - z.y*a.y,
+      z.x*a.y + z.y*a.x
+  );
+  vec2 q = vec2(
+      p.x*b.x - p.y*b.y,
+      p.x*b.y + p.y*b.x
+  );
+  return complexSqrt(q);
+}
+vec2 applyComplex(vec2 z,int t){
+  if(t==0)  return complexSqrt(z);
+  if(t==1)  return complexSquare(z);
+  if(t==2)  return complexLn(z);
+  if(t==3)  return complexExp(z);
+  if(t==4)  return complexSin(z);
+  if(t==5)  return complexCos(z);
+  if(t==6)  return complexTan(z);
+  if(t==7)  return complexInv(z);
+
+  /* --- new cases, keep in same order as names array --- */
+  if(t==8)  return complexCube(z);
+  if(t==9)  return complexReciprocalCube(z);
+  if(t==10) return complexJoukowski(z);
+  if(t==11) return complexRational22(z);
+  if(t==12) return complexEssentialExpInv(z);
+  if(t==13) return complexBranchSqrtPoly(z);
+
+  return z;
+}
 mat4 rotXW(float a){float c=cos(a),s=sin(a);return mat4(c,0,0,s, 0,1,0,0, 0,0,1,0,-s,0,0,c);} 
 mat4 rotYZ(float a){float c=cos(a),s=sin(a);return mat4(1,0,0,0, 0,c,-s,0, 0,s,c,0, 0,0,0,1);} 
 mat4 rotXY(float a){float c=cos(a),s=sin(a);return mat4(c,-s,0,0, s,c,0,0, 0,0,1,0, 0,0,0,1);} 

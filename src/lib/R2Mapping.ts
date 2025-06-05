@@ -95,5 +95,59 @@ export const R2Functions = {
     const denom = p.x * p.x + p.y * p.y;
     if (denom < 1e-4) return { x: 10, y: 10 };
     return { x: p.x / denom, y: -p.y / denom };
+  },
+
+  /** Cube of the complex number */
+  cube: (p: Vec2): Vec2 => {
+    const { x, y } = p;
+    return { x: x * x * x - 3 * x * y * y, y: 3 * x * x * y - y * y * y };
+  },
+
+  /** Reciprocal of the cube */
+  reciprocalCube: (p: Vec2): Vec2 => {
+    const { x, y } = p;
+    const d = (x * x + y * y) ** 3 || 1e-6;
+    const num = { x: x * x * x - 3 * x * y * y, y: 3 * x * x * y - y * y * y };
+    return { x: num.x / d, y: -num.y / d };
+  },
+
+  /** Joukowski map */
+  joukowski: (p: Vec2): Vec2 => {
+    const { x, y } = p;
+    const d = x * x + y * y || 1e-6;
+    return {
+      x: 0.5 * (x + x / d),
+      y: 0.5 * (y - y / d)
+    };
+  },
+
+  /** (z^2 + 1)/(z^2 - 1) */
+  rational22: (p: Vec2): Vec2 => {
+    const { x, y } = p;
+    const num = { x: x * x - y * y + 1, y: 2 * x * y };
+    const den = { x: x * x - y * y - 1, y: 2 * x * y };
+    const invd = R2Functions.complexInverse(den);
+    return {
+      x: num.x * invd.x - num.y * invd.y,
+      y: num.x * invd.y + num.y * invd.x
+    };
+  },
+
+  /** e^{1/z} */
+  essentialExpInv: (p: Vec2): Vec2 => {
+    const { x, y } = p;
+    const r2 = x * x + y * y || 1e-6;
+    const inv = { x: x / r2, y: -y / r2 };
+    return R2Functions.complexExp(inv);
+  },
+
+  /** sqrt(z(z-1)(z+1)) */
+  branchSqrtPoly: (p: Vec2): Vec2 => {
+    const { x, y } = p;
+    const a = { x: x - 1, y };
+    const b = { x: x + 1, y };
+    const p1 = { x: x * a.x - y * a.y, y: x * a.y + y * a.x };
+    const p2 = { x: p1.x * b.x - p1.y * b.y, y: p1.x * b.y + p1.y * b.x };
+    return R2Functions.complexSqrt(p2);
   }
 };
