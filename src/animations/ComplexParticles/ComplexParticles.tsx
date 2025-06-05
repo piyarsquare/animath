@@ -28,6 +28,23 @@ const functionNames = [
   'branchSqrtPoly'
 ];
 
+const functionFormulas: Record<string, string> = {
+  sqrt: '√z',
+  square: 'z²',
+  ln: 'ln(z)',
+  exp: 'e^z',
+  sin: 'sin(z)',
+  cos: 'cos(z)',
+  tan: 'tan(z)',
+  inverse: '1/z',
+  cube: 'z³',
+  reciprocalCube: '1/z³',
+  joukowski: '0.5*(z + 1/z)',
+  rational22: '(z² + 1)/(z² - 1)',
+  essentialExpInv: 'e^{1/z}',
+  branchSqrtPoly: '√(z(z-1)(z+1))'
+};
+
 const AXIS_LENGTH = 4;
 
 function rotXY(v: THREE.Vector4, a: number): THREE.Vector4 {
@@ -335,6 +352,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     }
   }, [particleCount]);
 
+  const currentName = functionNames[functionIndex];
+  const currentFormula = functionFormulas[currentName];
+
   return (
     <div style={{ position: 'relative' }}>
       <Canvas3D onMount={onMount} />
@@ -457,6 +477,20 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       >
         x:u
       </button>
+      <div
+        style={{
+          position: 'absolute',
+          top: 10,
+          right: 10,
+          color: 'white',
+          fontSize: '1.2em',
+          textAlign: 'right',
+          pointerEvents: 'none'
+        }}
+      >
+        <div>{currentName}</div>
+        <div>{currentFormula}</div>
+      </div>
     </div>
   );
 }
