@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { CANVAS_CONFIG } from '../config/defaults';
 
 export interface CanvasContext {
   scene: THREE.Scene;
@@ -19,7 +20,12 @@ export default function Canvas3D({ onMount }: Canvas3DProps) {
     const width = mountRef.current.clientWidth;
     const height = mountRef.current.clientHeight;
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(
+      CANVAS_CONFIG.fov,
+      width / height,
+      CANVAS_CONFIG.near,
+      CANVAS_CONFIG.far
+    );
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
@@ -38,5 +44,5 @@ export default function Canvas3D({ onMount }: Canvas3DProps) {
     };
   }, [onMount]);
 
-  return <div ref={mountRef} style={{ width: '100vw', height: '100vh' }} />;
+  return <div ref={mountRef} style={CANVAS_CONFIG.style} />;
 }

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import Canvas3D from '../../components/Canvas3D';
 import ToggleMenu from '../../components/ToggleMenu';
+import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import { quatMul, quatRotate4D, makeUnitQuat, norm, ProjectionMode, project } from '../../lib/viewpoint';
 import { vertexShader, fragmentShader } from './shaders';
 
@@ -52,7 +53,7 @@ const functionFormulas: Record<string, string> = {
 const shapeNames = ['sphere', 'hexagon', 'pyramid'] as const;
 const textureNames = ['none', 'checker', 'speckled', 'stone', 'metal', 'royal'] as const;
 
-const AXIS_LENGTH = 4;
+const AXIS_LENGTH = COMPLEX_PARTICLES_DEFAULTS.axisLength;
 const modes = Object.entries(ProjectionMode)
   .filter(([k,v]) => typeof v === 'number') as [string,number][];
 
@@ -237,20 +238,20 @@ function applyComplex(z: THREE.Vector2, t: number): THREE.Vector2 {
 }
 
 
-export default function ComplexParticles({ count = 40000, selectedFunction = 'sqrt' }: ComplexParticlesProps) {
-  const [saturation, setSaturation] = useState(1);
+export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount, selectedFunction = 'sqrt' }: ComplexParticlesProps) {
+  const [saturation, setSaturation] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.saturation);
   const [functionIndex, setFunctionIndex] = useState(() => {
     const idx = functionNames.indexOf(selectedFunction);
     return idx >= 0 ? idx : 0;
   });
   const [particleCount, setParticleCount] = useState(count);
-  const [cameraZ, setCameraZ] = useState(5);
-  const [size, setSize] = useState(1);
-  const [opacity, setOpacity] = useState(0.9);
-  const [intensity, setIntensity] = useState(1);
-  const [shimmer, setShimmer] = useState(0);
-  const [hueShift, setHueShift] = useState(0);
-  const [jitter, setJitter] = useState(0);
+  const [cameraZ, setCameraZ] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.cameraZ);
+  const [size, setSize] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.size);
+  const [opacity, setOpacity] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.opacity);
+  const [intensity, setIntensity] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.intensity);
+  const [shimmer, setShimmer] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.shimmer);
+  const [hueShift, setHueShift] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.hueShift);
+  const [jitter, setJitter] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.jitter);
   const [objectMode, setObjectMode] = useState(false);
   const [shapeIndex, setShapeIndex] = useState(0);
   const [textureIndex, setTextureIndex] = useState(0);
@@ -682,9 +683,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
             Saturation:
             <input
               type="range"
-              min={0}
-              max={1}
-              step={0.01}
+              min={COMPLEX_PARTICLES_DEFAULTS.ranges.saturation.min}
+              max={COMPLEX_PARTICLES_DEFAULTS.ranges.saturation.max}
+              step={COMPLEX_PARTICLES_DEFAULTS.ranges.saturation.step}
               value={saturation}
               onChange={(e) => setSaturation(parseFloat(e.target.value))}
             />
@@ -693,9 +694,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
             Particles:
             <input
               type="range"
-              min={1000}
-              max={80000}
-              step={1000}
+              min={COMPLEX_PARTICLES_DEFAULTS.ranges.particleCount.min}
+              max={COMPLEX_PARTICLES_DEFAULTS.ranges.particleCount.max}
+              step={COMPLEX_PARTICLES_DEFAULTS.ranges.particleCount.step}
               value={particleCount}
               onChange={(e) => setParticleCount(parseInt(e.target.value, 10))}
             />
@@ -704,9 +705,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
             Size:
             <input
               type="range"
-              min={0.2}
-              max={5}
-              step={0.1}
+              min={COMPLEX_PARTICLES_DEFAULTS.ranges.size.min}
+              max={COMPLEX_PARTICLES_DEFAULTS.ranges.size.max}
+              step={COMPLEX_PARTICLES_DEFAULTS.ranges.size.step}
               value={size}
               onChange={(e) => setSize(parseFloat(e.target.value))}
             />
@@ -715,9 +716,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
             Opacity:
             <input
               type="range"
-              min={0}
-              max={1}
-              step={0.01}
+              min={COMPLEX_PARTICLES_DEFAULTS.ranges.opacity.min}
+              max={COMPLEX_PARTICLES_DEFAULTS.ranges.opacity.max}
+              step={COMPLEX_PARTICLES_DEFAULTS.ranges.opacity.step}
               value={opacity}
               onChange={(e) => setOpacity(parseFloat(e.target.value))}
             />
@@ -726,9 +727,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
             Intensity:
             <input
               type="range"
-              min={0.5}
-              max={2}
-              step={0.05}
+              min={COMPLEX_PARTICLES_DEFAULTS.ranges.intensity.min}
+              max={COMPLEX_PARTICLES_DEFAULTS.ranges.intensity.max}
+              step={COMPLEX_PARTICLES_DEFAULTS.ranges.intensity.step}
               value={intensity}
               onChange={(e) => setIntensity(parseFloat(e.target.value))}
             />
@@ -737,9 +738,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
             Shimmer:
             <input
               type="range"
-              min={0}
-              max={1}
-              step={0.01}
+              min={COMPLEX_PARTICLES_DEFAULTS.ranges.shimmer.min}
+              max={COMPLEX_PARTICLES_DEFAULTS.ranges.shimmer.max}
+              step={COMPLEX_PARTICLES_DEFAULTS.ranges.shimmer.step}
               value={shimmer}
               onChange={(e) => setShimmer(parseFloat(e.target.value))}
             />
@@ -748,9 +749,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
             Jitter:
             <input
               type="range"
-              min={0}
-              max={0.5}
-              step={0.005}
+              min={COMPLEX_PARTICLES_DEFAULTS.ranges.jitter.min}
+              max={COMPLEX_PARTICLES_DEFAULTS.ranges.jitter.max}
+              step={COMPLEX_PARTICLES_DEFAULTS.ranges.jitter.step}
               value={jitter}
               onChange={(e) => setJitter(parseFloat(e.target.value))}
             />
@@ -759,9 +760,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
             Hue Shift:
             <input
               type="range"
-              min={0}
-              max={1}
-              step={0.01}
+              min={COMPLEX_PARTICLES_DEFAULTS.ranges.hueShift.min}
+              max={COMPLEX_PARTICLES_DEFAULTS.ranges.hueShift.max}
+              step={COMPLEX_PARTICLES_DEFAULTS.ranges.hueShift.step}
               value={hueShift}
               onChange={(e) => setHueShift(parseFloat(e.target.value))}
             />
@@ -804,9 +805,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
             Camera Distance:
             <input
               type="range"
-              min={2}
-              max={50}
-              step={0.1}
+              min={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.min}
+              max={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.max}
+              step={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.step}
               value={cameraZ}
               onChange={(e) => setCameraZ(parseFloat(e.target.value))}
             />
