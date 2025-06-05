@@ -72,10 +72,12 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const [intensity, setIntensity] = useState(1);
   const [shimmer, setShimmer] = useState(0);
   const [hueShift, setHueShift] = useState(0);
+  const [backgroundColor, setBackgroundColor] = useState('#000000');
   const [realView, setRealView] = useState(false);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
+  const rendererRef = useRef<THREE.WebGLRenderer>();
   const xAxisRef = useRef<THREE.Line>();
   const yAxisRef = useRef<THREE.Line>();
   const uAxisRef = useRef<THREE.Line>();
@@ -90,6 +92,8 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     }) => {
       const { scene, camera, renderer } = ctx;
       cameraRef.current = camera;
+      rendererRef.current = renderer;
+      renderer.setClearColor(new THREE.Color(backgroundColor));
       camera.position.z = cameraZ;
 
       const particleMaterial = new THREE.ShaderMaterial({
@@ -310,6 +314,12 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   }, [cameraZ]);
 
   useEffect(() => {
+    if (rendererRef.current) {
+      rendererRef.current.setClearColor(new THREE.Color(backgroundColor));
+    }
+  }, [backgroundColor]);
+
+  useEffect(() => {
     if (materialRef.current) {
       materialRef.current.uniforms.functionType.value = functionIndex;
     }
@@ -435,6 +445,15 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               step={0.01}
               value={hueShift}
               onChange={(e) => setHueShift(parseFloat(e.target.value))}
+            />
+          </label>
+          <br />
+          <label>
+            Background:
+            <input
+              type="color"
+              value={backgroundColor}
+              onChange={(e) => setBackgroundColor(e.target.value)}
             />
           </label>
           <br />
