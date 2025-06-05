@@ -110,6 +110,7 @@ vec2 applyComplex(vec2 z,int t){
   if(t==11) return complexRational22(z);
   if(t==12) return complexEssentialExpInv(z);
   if(t==13) return complexBranchSqrtPoly(z);
+  if(t==14) return z;
 
   return z;
 }
