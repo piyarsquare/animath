@@ -381,12 +381,19 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     let tCurrent = 0;
     let offset = 0;
     let lastReal = realViewRef.current;
+    let lastProj = projRef.current;
     let transitioning = false;
     let transStart = 0;
     let transDuration = 0;
     let transStartVal = 0;
     const animate = () => {
       const elapsed = clock.getElapsedTime();
+
+      const dropMode = projRef.current >= ProjectionMode.DropX;
+
+      if (projRef.current !== lastProj) {
+        lastProj = projRef.current;
+      }
 
       if (realViewRef.current !== lastReal) {
         if (realViewRef.current) {
@@ -424,6 +431,8 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
         } else {
           tCurrent = 0;
         }
+      } else if (dropMode) {
+        tCurrent = 0;
       } else {
         if (!transitioning) {
           tCurrent = elapsed * 0.5 + offset;
