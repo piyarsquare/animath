@@ -373,7 +373,14 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     <div style={{ position: 'relative' }}>
       <Canvas3D onMount={onMount} />
       <ToggleMenu title="Menu">
-        <div style={{ color: 'white' }}>
+        <div
+          style={{
+            color: 'white',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8
+          }}
+        >
           <label>
             Function:
             <select
@@ -387,7 +394,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               ))}
             </select>
           </label>
-          <br />
           <label>
             Saturation:
             <input
@@ -399,7 +405,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               onChange={(e) => setSaturation(parseFloat(e.target.value))}
             />
           </label>
-          <br />
           <label>
             Particles:
             <input
@@ -411,7 +416,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               onChange={(e) => setParticleCount(parseInt(e.target.value, 10))}
             />
           </label>
-          <br />
           <label>
             Size:
             <input
@@ -423,7 +427,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               onChange={(e) => setSize(parseFloat(e.target.value))}
             />
           </label>
-          <br />
           <label>
             Opacity:
             <input
@@ -435,7 +438,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               onChange={(e) => setOpacity(parseFloat(e.target.value))}
             />
           </label>
-          <br />
           <label>
             Intensity:
             <input
@@ -447,7 +449,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               onChange={(e) => setIntensity(parseFloat(e.target.value))}
             />
           </label>
-          <br />
           <label>
             Shimmer:
             <input
@@ -459,7 +460,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               onChange={(e) => setShimmer(parseFloat(e.target.value))}
             />
           </label>
-          <br />
           <label>
             Hue Shift:
             <input
@@ -471,7 +471,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               onChange={(e) => setHueShift(parseFloat(e.target.value))}
             />
           </label>
-          <br />
           <label>
             Object Mode:
             <input
@@ -480,7 +479,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               onChange={(e) => setObjectMode(e.target.checked)}
             />
           </label>
-          <br />
           <label>
             Camera Distance:
             <input
@@ -505,7 +503,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
           position: 'absolute',
           top: 10,
           right: 10,
-          color: 'white',
+          color: objectMode ? 'black' : 'white',
           fontSize: '1.2em',
           textAlign: 'right',
           pointerEvents: 'none'
