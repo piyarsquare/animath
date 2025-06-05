@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import Canvas3D from '../../components/Canvas3D';
 import ToggleMenu from '../../components/ToggleMenu';
+import { project4D } from '../../lib/viewpoint';
 import { vertexShader, fragmentShader } from './shaders';
 
 export interface ComplexParticlesProps {
@@ -230,34 +231,6 @@ function applyComplex(z: THREE.Vector2, t: number): THREE.Vector2 {
   }
 }
 
-function rotXY(v: THREE.Vector4, a: number): THREE.Vector4 {
-  const c = Math.cos(a);
-  const s = Math.sin(a);
-  return new THREE.Vector4(c * v.x - s * v.y, s * v.x + c * v.y, v.z, v.w);
-}
-
-function rotYZ(v: THREE.Vector4, a: number): THREE.Vector4 {
-  const c = Math.cos(a);
-  const s = Math.sin(a);
-  return new THREE.Vector4(v.x, c * v.y - s * v.z, s * v.y + c * v.z, v.w);
-}
-
-function rotXW(v: THREE.Vector4, a: number): THREE.Vector4 {
-  const c = Math.cos(a);
-  const s = Math.sin(a);
-  return new THREE.Vector4(c * v.x + s * v.w, v.y, v.z, -s * v.x + c * v.w);
-}
-
-function project4D(v: THREE.Vector4, t: number, realOnly = false): THREE.Vector3 {
-  let r = rotXY(v, t * 0.5);
-  r = rotYZ(r, t * 0.7);
-  r = rotXW(r, t);
-  if (realOnly) {
-    return new THREE.Vector3(r.x, r.z, r.w).multiplyScalar(0.5);
-  }
-  const w = 3 + r.w;
-  return new THREE.Vector3(r.x, r.y, r.z).multiplyScalar(1.5 / w);
-}
 
 export default function ComplexParticles({ count = 40000, selectedFunction = 'sqrt' }: ComplexParticlesProps) {
   const [saturation, setSaturation] = useState(1);
