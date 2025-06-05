@@ -89,6 +89,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const [intensity, setIntensity] = useState(1);
   const [shimmer, setShimmer] = useState(0);
   const [hueShift, setHueShift] = useState(0);
+  const [jitter, setJitter] = useState(0);
   const [objectMode, setObjectMode] = useState(false);
   const [realView, setRealView] = useState(false);
   const materialRef = useRef<THREE.ShaderMaterial>();
@@ -121,6 +122,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
           globalSize: { value: size },
           intensity: { value: intensity },
           shimmerAmp: { value: shimmer },
+          jitterAmp: { value: jitter },
           hueShift: { value: hueShift },
           saturation: { value: saturation },
           realView: { value: realViewRef.current ? 1 : 0 }
@@ -138,17 +140,22 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       geometryRef.current = geometry;
       const positions = new Float32Array(particleCount * 3);
       const sizes = new Float32Array(particleCount).fill(1);
+      const seeds = new Float32Array(particleCount * 4);
       let i = 0;
       for (let ix = 0; ix < side; ix++) {
         for (let iz = 0; iz < side; iz++) {
           positions[3 * i] = (ix / side - 0.5) * 8;
           positions[3 * i + 1] = 0;
           positions[3 * i + 2] = (iz / side - 0.5) * 8;
+          for (let k = 0; k < 4; k++) {
+            seeds[4 * i + k] = Math.random();
+          }
           i++;
         }
       }
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
       geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+      geometry.setAttribute('seed', new THREE.BufferAttribute(seeds, 4));
 
     materialRef.current = particleMaterial;
     const particles = new THREE.Points(geometry, particleMaterial);
@@ -300,6 +307,12 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
 
   useEffect(() => {
     if (materialRef.current) {
+      materialRef.current.uniforms.jitterAmp.value = jitter;
+    }
+  }, [jitter]);
+
+  useEffect(() => {
+    if (materialRef.current) {
       materialRef.current.uniforms.hueShift.value = hueShift;
     }
     if (xAxisRef.current) {
@@ -351,17 +364,22 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       const side = Math.sqrt(particleCount);
       const pos = new Float32Array(particleCount * 3);
       const sizes = new Float32Array(particleCount).fill(1);
+      const seeds = new Float32Array(particleCount * 4);
       let i = 0;
       for (let ix = 0; ix < side; ix++) {
         for (let iz = 0; iz < side; iz++) {
           pos[3 * i] = (ix / side - 0.5) * 8;
           pos[3 * i + 1] = 0;
           pos[3 * i + 2] = (iz / side - 0.5) * 8;
+          for (let k = 0; k < 4; k++) {
+            seeds[4 * i + k] = Math.random();
+          }
           i++;
         }
       }
       geometryRef.current.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       geometryRef.current.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+      geometryRef.current.setAttribute('seed', new THREE.BufferAttribute(seeds, 4));
       geometryRef.current.setDrawRange(0, particleCount);
     }
   }, [particleCount]);
@@ -458,6 +476,17 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               step={0.01}
               value={shimmer}
               onChange={(e) => setShimmer(parseFloat(e.target.value))}
+            />
+          </label>
+          <label>
+            Jitter:
+            <input
+              type="range"
+              min={0}
+              max={0.5}
+              step={0.005}
+              value={jitter}
+              onChange={(e) => setJitter(parseFloat(e.target.value))}
             />
           </label>
           <label>
