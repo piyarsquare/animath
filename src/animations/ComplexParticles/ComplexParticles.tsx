@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import Canvas3D from '../../components/Canvas3D';
 import ToggleMenu from '../../components/ToggleMenu';
 import { vertexShader, fragmentShader } from './shaders';
+import { createGlassMaterial, createShardGeometry } from '../../materials/glassShards';
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 
 export interface ComplexParticlesProps {
   count?: number;
@@ -46,6 +48,121 @@ const functionFormulas: Record<string, string> = {
 };
 
 const AXIS_LENGTH = 4;
+
+// CPU versions of the complex functions used in the shader
+function complexSqrt(z: THREE.Vector2): THREE.Vector2 {
+  const r = Math.hypot(z.x, z.y);
+  const t = Math.atan2(z.y, z.x);
+  const sr = Math.sqrt(r);
+  return new THREE.Vector2(sr * Math.cos(t * 0.5), sr * Math.sin(t * 0.5));
+}
+
+function complexSquare(z: THREE.Vector2): THREE.Vector2 {
+  return new THREE.Vector2(z.x * z.x - z.y * z.y, 2 * z.x * z.y);
+}
+
+function complexLn(z: THREE.Vector2): THREE.Vector2 {
+  const r = Math.hypot(z.x, z.y);
+  const t = Math.atan2(z.y, z.x);
+  return new THREE.Vector2(Math.log(r), t);
+}
+
+function complexExp(z: THREE.Vector2): THREE.Vector2 {
+  const ex = Math.exp(z.x);
+  return new THREE.Vector2(ex * Math.cos(z.y), ex * Math.sin(z.y));
+}
+
+function complexSin(z: THREE.Vector2): THREE.Vector2 {
+  const iz = new THREE.Vector2(-z.y, z.x);
+  const e1 = complexExp(iz);
+  const e2 = complexExp(new THREE.Vector2(-iz.x, -iz.y));
+  const diff = new THREE.Vector2(e1.x - e2.x, e1.y - e2.y);
+  return new THREE.Vector2(diff.y * 0.5, -diff.x * 0.5);
+}
+
+function complexCos(z: THREE.Vector2): THREE.Vector2 {
+  const iz = new THREE.Vector2(-z.y, z.x);
+  const e1 = complexExp(iz);
+  const e2 = complexExp(new THREE.Vector2(-iz.x, -iz.y));
+  const sum = new THREE.Vector2(e1.x + e2.x, e1.y + e2.y);
+  return new THREE.Vector2(sum.x * 0.5, sum.y * 0.5);
+}
+
+function complexTan(z: THREE.Vector2): THREE.Vector2 {
+  const s = complexSin(z);
+  const c = complexCos(z);
+  let d = c.x * c.x + c.y * c.y;
+  if (d < 1e-4) d = 1e-4;
+  return new THREE.Vector2((s.x * c.x + s.y * c.y) / d, (s.y * c.x - s.x * c.y) / d);
+}
+
+function complexInv(z: THREE.Vector2): THREE.Vector2 {
+  let d = z.x * z.x + z.y * z.y;
+  if (d < 1e-4) d = 1e-4;
+  return new THREE.Vector2(z.x / d, -z.y / d);
+}
+
+function complexCube(z: THREE.Vector2): THREE.Vector2 {
+  return new THREE.Vector2(
+    z.x * z.x * z.x - 3 * z.x * z.y * z.y,
+    3 * z.x * z.x * z.y - z.y * z.y * z.y
+  );
+}
+
+function complexReciprocalCube(z: THREE.Vector2): THREE.Vector2 {
+  let d = z.dot(z);
+  if (d < 1e-6) d = 1e-6;
+  const z3 = complexCube(z);
+  d = d * d * d;
+  return new THREE.Vector2(z3.x / d, -z3.y / d);
+}
+
+function complexJoukowski(z: THREE.Vector2): THREE.Vector2 {
+  const inv = complexInv(z);
+  return new THREE.Vector2(0.5 * (z.x + inv.x), 0.5 * (z.y + inv.y));
+}
+
+function complexRational22(z: THREE.Vector2): THREE.Vector2 {
+  const num = new THREE.Vector2(z.x * z.x - z.y * z.y + 1, 2 * z.x * z.y);
+  const den = new THREE.Vector2(z.x * z.x - z.y * z.y - 1, 2 * z.x * z.y);
+  const invd = complexInv(den);
+  return new THREE.Vector2(num.x * invd.x - num.y * invd.y, num.x * invd.y + num.y * invd.x);
+}
+
+function complexEssentialExpInv(z: THREE.Vector2): THREE.Vector2 {
+  let r2 = z.dot(z);
+  if (r2 < 1e-6) r2 = 1e-6;
+  const inv = new THREE.Vector2(z.x / r2, -z.y / r2);
+  return complexExp(inv);
+}
+
+function complexBranchSqrtPoly(z: THREE.Vector2): THREE.Vector2 {
+  const a = new THREE.Vector2(z.x - 1, z.y);
+  const b = new THREE.Vector2(z.x + 1, z.y);
+  const p = new THREE.Vector2(z.x * a.x - z.y * a.y, z.x * a.y + z.y * a.x);
+  const q = new THREE.Vector2(p.x * b.x - p.y * b.y, p.x * b.y + p.y * b.x);
+  return complexSqrt(q);
+}
+
+function applyComplex(z: THREE.Vector2, t: number): THREE.Vector2 {
+  switch (t) {
+    case 0: return complexSqrt(z);
+    case 1: return complexSquare(z);
+    case 2: return complexLn(z);
+    case 3: return complexExp(z);
+    case 4: return complexSin(z);
+    case 5: return complexCos(z);
+    case 6: return complexTan(z);
+    case 7: return complexInv(z);
+    case 8: return complexCube(z);
+    case 9: return complexReciprocalCube(z);
+    case 10: return complexJoukowski(z);
+    case 11: return complexRational22(z);
+    case 12: return complexEssentialExpInv(z);
+    case 13: return complexBranchSqrtPoly(z);
+    default: return z.clone();
+  }
+}
 
 function rotXY(v: THREE.Vector4, a: number): THREE.Vector4 {
   const c = Math.cos(a);
@@ -92,8 +209,10 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const [jitter, setJitter] = useState(0);
   const [objectMode, setObjectMode] = useState(false);
   const [realView, setRealView] = useState(false);
+  const [shards, setShards] = useState(false);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
+  const shardMeshRef = useRef<THREE.InstancedMesh>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
   const rendererRef = useRef<THREE.WebGLRenderer>();
   const xAxisRef = useRef<THREE.Line>();
@@ -160,6 +279,26 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     materialRef.current = particleMaterial;
     const particles = new THREE.Points(geometry, particleMaterial);
     scene.add(particles);
+
+    // glass shard instanced mesh
+    const shardCount = Math.min(particleCount, 2000);
+    const shardGeom = createShardGeometry();
+    const shardMaterial = createGlassMaterial();
+    const instanced = new THREE.InstancedMesh(shardGeom, shardMaterial, shardCount);
+    shardMeshRef.current = instanced;
+    scene.add(instanced);
+
+    // load HDR environment map for reflections
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    pmrem.compileEquirectangularShader();
+    new RGBELoader().load('/textures/royal_esplanade_1k.hdr', (tex) => {
+      const env = pmrem.fromEquirectangular(tex).texture;
+      scene.environment = env;
+      shardMaterial.envMap = env;
+      shardMaterial.needsUpdate = true;
+      tex.dispose();
+      pmrem.dispose();
+    });
 
     const xMat = new THREE.LineBasicMaterial({
       color: new THREE.Color().setHSL(hueShift % 1, 1, 0.5)
@@ -269,6 +408,42 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       updateAxis(uAxisRef.current, new THREE.Vector4(0, 0, -AXIS_LENGTH, 0), new THREE.Vector4(0, 0, AXIS_LENGTH, 0));
       updateAxis(vAxisRef.current, new THREE.Vector4(0, 0, 0, -AXIS_LENGTH), new THREE.Vector4(0, 0, 0, AXIS_LENGTH));
 
+      if (shardMeshRef.current && shards) {
+        const pos = geometry.getAttribute('position') as THREE.BufferAttribute;
+        const seed = geometry.getAttribute('seed') as THREE.BufferAttribute;
+        const dummy = new THREE.Object3D();
+        for (let i = 0; i < shardMeshRef.current.count; i++) {
+          const z = new THREE.Vector2(pos.getX(i), pos.getZ(i));
+          const s0 = seed.getX(i);
+          const s1 = seed.getY(i);
+          const s2 = seed.getZ(i);
+          const s3 = seed.getW(i);
+          let f = applyComplex(z.clone(), functionIndex);
+          if (f.length() > 1e3) {
+            f = f.normalize().multiplyScalar(1e3);
+          }
+          let p4 = new THREE.Vector4(z.x, z.y, f.x, f.y);
+          p4.x += (s0 * 2 - 1) * jitter;
+          p4.y += (s1 * 2 - 1) * jitter;
+          p4.z += (s2 * 2 - 1) * jitter;
+          p4.w += (s3 * 2 - 1) * jitter;
+          const t = tt;
+          p4 = rotXY(p4, t * 0.5);
+          p4 = rotYZ(p4, t * 0.7);
+          p4 = rotXW(p4, t);
+          const baseW = 3 + p4.w;
+          const normalProj = new THREE.Vector3(p4.x, p4.y, p4.z).multiplyScalar(1.5 / baseW);
+          const realProj = new THREE.Vector3(p4.x, p4.z, p4.w).multiplyScalar(0.5);
+          const pos3 = normalProj.lerp(realProj, realViewRef.current ? 1 : 0);
+          dummy.position.copy(pos3);
+          dummy.rotation.set(s0 * Math.PI * 2, s1 * Math.PI * 2, s2 * Math.PI * 2);
+          dummy.scale.setScalar(size * 0.1);
+          dummy.updateMatrix();
+          shardMeshRef.current.setMatrixAt(i, dummy.matrix);
+        }
+        shardMeshRef.current.instanceMatrix.needsUpdate = true;
+      }
+
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     };
@@ -290,6 +465,17 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   useEffect(() => {
     if (materialRef.current) {
       materialRef.current.uniforms.globalSize.value = size;
+    }
+    if (shardMeshRef.current) {
+      const dummy = new THREE.Object3D();
+      for (let i = 0; i < shardMeshRef.current.count; i++) {
+        shardMeshRef.current.getMatrixAt(i, dummy.matrix);
+        dummy.matrix.decompose(dummy.position, dummy.quaternion, dummy.scale);
+        dummy.scale.setScalar(size * 0.1);
+        dummy.updateMatrix();
+        shardMeshRef.current.setMatrixAt(i, dummy.matrix);
+      }
+      shardMeshRef.current.instanceMatrix.needsUpdate = true;
     }
   }, [size]);
 
@@ -506,6 +692,14 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               type="checkbox"
               checked={objectMode}
               onChange={(e) => setObjectMode(e.target.checked)}
+            />
+          </label>
+          <label>
+            Shards:
+            <input
+              type="checkbox"
+              checked={shards}
+              onChange={(e) => setShards(e.target.checked)}
             />
           </label>
           <label>

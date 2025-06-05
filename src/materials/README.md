@@ -1,5 +1,5 @@
 # Material Presets
-
+=======
 Reusable Three.js materials for animations. Import any of the preset functions
 from `src/materials` to quickly apply a consistent look.
 
@@ -16,3 +16,8 @@ from `src/materials` to quickly apply a consistent look.
 
 Each function accepts an optional color (when applicable) and returns a ready
 configured Three.js material instance.
+
+Note:
+- `glassShards.ts` – provides a tetrahedron geometry and glass material preset. 
+- It expects an HDR environment map (e.g. `public/textures/royal_esplanade_1k.hdr`) to be available for reflections.
+
