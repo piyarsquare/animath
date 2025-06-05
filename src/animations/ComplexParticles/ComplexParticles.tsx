@@ -44,7 +44,10 @@ function project4D(v: THREE.Vector4, t: number, realOnly = false): THREE.Vector3
   let r = rotXY(v, t * 0.5);
   r = rotYZ(r, t * 0.7);
   r = rotXW(r, t);
-  const w = realOnly ? 3 : 3 + r.w;
+  if (realOnly) {
+    return new THREE.Vector3(r.x, r.z, r.w).multiplyScalar(0.5);
+  }
+  const w = 3 + r.w;
   return new THREE.Vector3(r.x, r.y, r.z).multiplyScalar(1.5 / w);
 }
 
@@ -151,8 +154,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       tCurrent += (targetT - tCurrent) * 0.05;
       particleMaterial.uniforms.time.value = tCurrent;
 
-      const targetRot = realViewRef.current ? -Math.PI / 2 : 0;
-      camera.rotation.x += (targetRot - camera.rotation.x) * 0.05;
+
 
       const tt = tCurrent * 0.3;
       const updateAxis = (
@@ -170,6 +172,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       };
 
       updateAxis(xAxisRef.current, new THREE.Vector4(-AXIS_LENGTH, 0, 0, 0), new THREE.Vector4(AXIS_LENGTH, 0, 0, 0));
+      if (yAxisRef.current) {
+        yAxisRef.current.visible = !realViewRef.current;
+      }
       updateAxis(yAxisRef.current, new THREE.Vector4(0, -AXIS_LENGTH, 0, 0), new THREE.Vector4(0, AXIS_LENGTH, 0, 0));
       updateAxis(uAxisRef.current, new THREE.Vector4(0, 0, -AXIS_LENGTH, 0), new THREE.Vector4(0, 0, AXIS_LENGTH, 0));
       updateAxis(vAxisRef.current, new THREE.Vector4(0, 0, 0, -AXIS_LENGTH), new THREE.Vector4(0, 0, 0, AXIS_LENGTH));
