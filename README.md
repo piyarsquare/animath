@@ -35,10 +35,18 @@ Goals (observable intent):
 | Easy shader recompile without full refresh | ⏳ |
 | Built-in screenshot exporter (`S` key) | ⏳ |
 | Post-processing stack (FXAA, bloom) | ⏳ |
+| Library of material presets | ⏳ |
 | Video / GIF capture | ⏳ |
 | WebGPU backend | 🚧 (experimental branch) |
 
 *(✅ implemented · ⏳ planned · 🚧 experimental)*
+
+## Material library
+
+`animath` collects reusable Three.js material presets (found under
+`src/materials/`). These define common shading styles—such as translucent
+sprites or reflective glass—that can be imported by any animation. The goal is
+to simplify experimenting with different looks without rewriting shader logic.
 
 ---
 

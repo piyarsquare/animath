@@ -29,6 +29,14 @@ The project is designed to allow small, self-contained React components for indi
 
 Shader code can be kept inline or loaded with `vite-plugin-glsl`.
 
+## Material Library Guidelines
+
+The project maintains a small library of reusable Three.js material presets
+(e.g. translucent sprites, reflective glass). When contributing new animations,
+consider whether a material preset could be added or improved. Place such
+materials in a dedicated folder (currently `src/materials/`) with clear
+documentation so other animations can reuse them.
+
 ## Contribution Checks
 
 Before opening a pull request, run `npm run build` to ensure the project compiles. There are currently no automated tests.
