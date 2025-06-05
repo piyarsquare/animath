@@ -103,6 +103,8 @@ void main(){vec2 z = vec2(position.x, position.z);vec2 f = applyComplex(z, funct
 export const fragmentShader = `
 uniform float opacity;
 uniform int   shapeType;
+uniform sampler2D tex;
+uniform int textureIndex;
 varying vec3 vColor;
 void main(){
   vec2 d = gl_PointCoord - vec2(0.5);
@@ -126,6 +128,11 @@ void main(){
     float h = 0.5 - (p.x + p.y);
     col *= 0.7 + 0.6*h;
     alpha *= 1.0 - smoothstep(-0.02,0.02,dist);
+  }
+  if(textureIndex > 0){
+    vec4 samp = texture2D(tex, gl_PointCoord);
+    col *= samp.rgb;
+    alpha *= samp.a;
   }
   gl_FragColor = vec4(col, alpha);
 }`;

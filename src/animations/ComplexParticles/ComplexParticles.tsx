@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import Canvas3D from '../../components/Canvas3D';
 import ToggleMenu from '../../components/ToggleMenu';
 import { vertexShader, fragmentShader } from './shaders';
@@ -46,8 +47,24 @@ const functionFormulas: Record<string, string> = {
 };
 
 const shapeNames = ['sphere', 'hexagon', 'pyramid'] as const;
+const textureNames = ['none', 'checker', 'royal'] as const;
 
 const AXIS_LENGTH = 4;
+
+function makeCheckerTexture(size = 64): THREE.DataTexture {
+  const data = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const c = ((x >> 4) & 1) ^ ((y >> 4) & 1) ? 255 : 0;
+      data[i] = data[i + 1] = data[i + 2] = c;
+      data[i + 3] = 255;
+    }
+  }
+  const tex = new THREE.DataTexture(data, size, size);
+  tex.needsUpdate = true;
+  return tex;
+}
 
 // CPU versions of the complex functions used in the shader
 function complexSqrt(z: THREE.Vector2): THREE.Vector2 {
@@ -209,6 +226,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const [jitter, setJitter] = useState(0);
   const [objectMode, setObjectMode] = useState(false);
   const [shapeIndex, setShapeIndex] = useState(0);
+  const [textureIndex, setTextureIndex] = useState(0);
   const [realView, setRealView] = useState(false);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
@@ -218,6 +236,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const yAxisRef = useRef<THREE.Line>();
   const uAxisRef = useRef<THREE.Line>();
   const vAxisRef = useRef<THREE.Line>();
+  const texturesRef = useRef<THREE.Texture[]>([]);
   const realViewRef = useRef(realView);
   useEffect(() => { realViewRef.current = realView; }, [realView]);
   const onMount = React.useCallback(
@@ -232,6 +251,23 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       renderer.setClearColor(objectMode ? 0xffffff : 0x000000);
       camera.position.z = cameraZ;
 
+      const textures: THREE.Texture[] = [];
+      const white = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+      white.needsUpdate = true;
+      textures[0] = white;
+      textures[1] = makeCheckerTexture(64);
+      new RGBELoader().load('/textures/royal_esplanade_1k.hdr', tex => {
+        tex.minFilter = THREE.LinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+        tex.flipY = true;
+        tex.needsUpdate = true;
+        textures[2] = tex;
+        if (materialRef.current) {
+          materialRef.current.uniforms.tex.value = textures[textureIndex];
+        }
+      });
+      texturesRef.current = textures;
+
       const particleMaterial = new THREE.ShaderMaterial({
         uniforms: {
           time: { value: 0 },
@@ -244,7 +280,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
           hueShift: { value: hueShift },
           saturation: { value: saturation },
           realView: { value: realViewRef.current ? 1 : 0 },
-          shapeType: { value: shapeIndex }
+          shapeType: { value: shapeIndex },
+          tex: { value: white },
+          textureIndex: { value: textureIndex }
         },
         vertexShader,
         fragmentShader,
@@ -488,6 +526,13 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   }, [shapeIndex]);
 
   useEffect(() => {
+    if (materialRef.current && texturesRef.current[textureIndex]) {
+      materialRef.current.uniforms.tex.value = texturesRef.current[textureIndex];
+      materialRef.current.uniforms.textureIndex.value = textureIndex;
+    }
+  }, [textureIndex]);
+
+  useEffect(() => {
     if (geometryRef.current) {
       const side = Math.sqrt(particleCount);
       const pos = new Float32Array(particleCount * 3);
@@ -637,6 +682,19 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               {shapeNames.map((s, idx) => (
                 <option key={s} value={idx}>
                   {s}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Texture:
+            <select
+              value={textureIndex}
+              onChange={(e) => setTextureIndex(parseInt(e.target.value, 10))}
+            >
+              {textureNames.map((t, idx) => (
+                <option key={t} value={idx}>
+                  {t}
                 </option>
               ))}
             </select>
