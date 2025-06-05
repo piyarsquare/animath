@@ -27,7 +27,8 @@ const functionNames = [
   'joukowski',
   'rational22',
   'essentialExpInv',
-  'branchSqrtPoly'
+  'branchSqrtPoly',
+  'linear'
 ];
 
 const functionFormulas: Record<string, string> = {
@@ -44,7 +45,8 @@ const functionFormulas: Record<string, string> = {
   joukowski: '0.5*(z + 1/z)',
   rational22: '(z² + 1)/(z² - 1)',
   essentialExpInv: 'e^{1/z}',
-  branchSqrtPoly: '√(z(z-1)(z+1))'
+  branchSqrtPoly: '√(z(z-1)(z+1))',
+  linear: 'z'
 };
 
 const shapeNames = ['sphere', 'hexagon', 'pyramid'] as const;
@@ -229,6 +231,7 @@ function applyComplex(z: THREE.Vector2, t: number): THREE.Vector2 {
     case 11: return complexRational22(z);
     case 12: return complexEssentialExpInv(z);
     case 13: return complexBranchSqrtPoly(z);
+    case 14: return z.clone();
     default: return z.clone();
   }
 }
@@ -802,7 +805,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
             <input
               type="range"
               min={2}
-              max={20}
+              max={50}
               step={0.1}
               value={cameraZ}
               onChange={(e) => setCameraZ(parseFloat(e.target.value))}
