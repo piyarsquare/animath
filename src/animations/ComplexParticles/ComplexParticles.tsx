@@ -40,11 +40,11 @@ function rotXW(v: THREE.Vector4, a: number): THREE.Vector4 {
   return new THREE.Vector4(c * v.x + s * v.w, v.y, v.z, -s * v.x + c * v.w);
 }
 
-function project4D(v: THREE.Vector4, t: number): THREE.Vector3 {
+function project4D(v: THREE.Vector4, t: number, realOnly = false): THREE.Vector3 {
   let r = rotXY(v, t * 0.5);
   r = rotYZ(r, t * 0.7);
   r = rotXW(r, t);
-  const w = 3 + r.w;
+  const w = realOnly ? 3 : 3 + r.w;
   return new THREE.Vector3(r.x, r.y, r.z).multiplyScalar(1.5 / w);
 }
 
@@ -90,7 +90,8 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
           intensity: { value: intensity },
           shimmerAmp: { value: shimmer },
           hueShift: { value: hueShift },
-          saturation: { value: saturation }
+          saturation: { value: saturation },
+          realView: { value: realViewRef.current ? 1 : 0 }
         },
         vertexShader,
         fragmentShader,
@@ -160,8 +161,8 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
         end: THREE.Vector4
       ) => {
         if (!line) return;
-        const p1 = project4D(start, tt);
-        const p2 = project4D(end, tt);
+        const p1 = project4D(start, tt, realViewRef.current);
+        const p2 = project4D(end, tt, realViewRef.current);
         const pos = line.geometry.getAttribute('position') as THREE.BufferAttribute;
         pos.setXYZ(0, p1.x, p1.y, p1.z);
         pos.setXYZ(1, p2.x, p2.y, p2.z);
@@ -228,6 +229,12 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       );
     }
   }, [hueShift]);
+
+  useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.realView.value = realView ? 1 : 0;
+    }
+  }, [realView]);
 
   useEffect(() => {
     if (cameraRef.current) {
