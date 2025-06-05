@@ -291,7 +291,8 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     // load HDR environment map for reflections
     const pmrem = new THREE.PMREMGenerator(renderer);
     pmrem.compileEquirectangularShader();
-    new RGBELoader().load('/textures/royal_esplanade_1k.hdr', (tex) => {
+    const envPath = `${import.meta.env.BASE_URL}textures/royal_esplanade_1k.hdr`;
+    new RGBELoader().load(envPath, (tex) => {
       const env = pmrem.fromEquirectangular(tex).texture;
       scene.environment = env;
       shardMaterial.envMap = env;
