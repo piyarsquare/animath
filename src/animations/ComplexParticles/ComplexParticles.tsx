@@ -150,8 +150,8 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     let tCurrent = 0;
     const animate = () => {
       const elapsed = clock.getElapsedTime();
-      const targetT = realViewRef.current ? 0 : elapsed;
-      tCurrent += (targetT - tCurrent) * 0.05;
+      const targetT = realViewRef.current ? 0 : elapsed * 0.5;
+      tCurrent += (targetT - tCurrent) * 0.005;
       particleMaterial.uniforms.time.value = tCurrent;
 
 
