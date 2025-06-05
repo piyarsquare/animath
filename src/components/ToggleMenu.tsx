@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { TOGGLE_MENU_STYLE } from '../config/defaults';
 
 export interface ToggleMenuProps {
   title: string;
@@ -12,20 +13,12 @@ export interface ToggleMenuProps {
 export default function ToggleMenu({ title, children }: ToggleMenuProps) {
   const [visible, setVisible] = useState(true);
   return (
-    <div style={{ position: 'absolute', top: 10, left: 10 }}>
+    <div style={TOGGLE_MENU_STYLE.container}>
       <button onClick={() => setVisible(v => !v)}>
         {visible ? 'Hide' : 'Show'} {title}
       </button>
       {visible && (
-        <div
-          style={{
-            marginTop: 8,
-            padding: 6,
-            background: 'rgba(0,0,0,0.5)',
-            color: 'white',
-            borderRadius: 4
-          }}
-        >
+        <div style={TOGGLE_MENU_STYLE.panel}>
           {children}
         </div>
       )}
