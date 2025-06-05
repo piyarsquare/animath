@@ -7,3 +7,4 @@
 5. Introduce a generic `R2Mapping` utility for mapping ℝ² → ℝ².
 6. Provide a demo component using selectable mappings and adjustable appearance.
 7. Expose the new demo via a hash route so it appears on GitHub Pages.
+8. Build a library of reusable Three.js material presets for shading options.
