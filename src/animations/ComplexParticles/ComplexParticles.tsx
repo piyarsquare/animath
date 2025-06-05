@@ -91,7 +91,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       requestAnimationFrame(animate);
     };
     animate();
-    }, [particleCount, functionIndex]);
+    }, []);
 
   useEffect(() => {
     if (materialRef.current) {
