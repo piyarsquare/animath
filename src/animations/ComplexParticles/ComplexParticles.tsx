@@ -3,8 +3,6 @@ import * as THREE from 'three';
 import Canvas3D from '../../components/Canvas3D';
 import ToggleMenu from '../../components/ToggleMenu';
 import { vertexShader, fragmentShader } from './shaders';
-import { createGlassMaterial, createShardGeometry } from '../../materials/glassShards';
-import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 
 export interface ComplexParticlesProps {
   count?: number;
@@ -209,10 +207,8 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const [jitter, setJitter] = useState(0);
   const [objectMode, setObjectMode] = useState(false);
   const [realView, setRealView] = useState(false);
-  const [shards, setShards] = useState(false);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
-  const shardMeshRef = useRef<THREE.InstancedMesh>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
   const rendererRef = useRef<THREE.WebGLRenderer>();
   const xAxisRef = useRef<THREE.Line>();
@@ -280,35 +276,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     const particles = new THREE.Points(geometry, particleMaterial);
     scene.add(particles);
 
-    // glass shard instanced mesh
-    const shardCount = Math.min(particleCount, 2000);
-    const shardGeom = createShardGeometry();
-    const shardMaterial = createGlassMaterial();
-    const instanced = new THREE.InstancedMesh(shardGeom, shardMaterial, shardCount);
-    shardMeshRef.current = instanced;
-    scene.add(instanced);
-
-    // load HDR environment map for reflections
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    pmrem.compileEquirectangularShader();
-    const envPath = `${import.meta.env.BASE_URL}textures/royal_esplanade_1k.hdr`;
-    console.log('Loading HDR environment map:', envPath);
-    new RGBELoader().load(
-      envPath,
-      (tex) => {
-        const env = pmrem.fromEquirectangular(tex).texture;
-        scene.environment = env;
-        shardMaterial.envMap = env;
-        shardMaterial.needsUpdate = true;
-        tex.dispose();
-        pmrem.dispose();
-        console.log('HDR environment loaded');
-      },
-      undefined,
-      (err) => {
-        console.error('Failed to load HDR environment', err);
-      }
-    );
 
     const xMat = new THREE.LineBasicMaterial({
       color: new THREE.Color().setHSL(hueShift % 1, 1, 0.5)
@@ -418,41 +385,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       updateAxis(uAxisRef.current, new THREE.Vector4(0, 0, -AXIS_LENGTH, 0), new THREE.Vector4(0, 0, AXIS_LENGTH, 0));
       updateAxis(vAxisRef.current, new THREE.Vector4(0, 0, 0, -AXIS_LENGTH), new THREE.Vector4(0, 0, 0, AXIS_LENGTH));
 
-      if (shardMeshRef.current && shards) {
-        const pos = geometry.getAttribute('position') as THREE.BufferAttribute;
-        const seed = geometry.getAttribute('seed') as THREE.BufferAttribute;
-        const dummy = new THREE.Object3D();
-        for (let i = 0; i < shardMeshRef.current.count; i++) {
-          const z = new THREE.Vector2(pos.getX(i), pos.getZ(i));
-          const s0 = seed.getX(i);
-          const s1 = seed.getY(i);
-          const s2 = seed.getZ(i);
-          const s3 = seed.getW(i);
-          let f = applyComplex(z.clone(), functionIndex);
-          if (f.length() > 1e3) {
-            f = f.normalize().multiplyScalar(1e3);
-          }
-          let p4 = new THREE.Vector4(z.x, z.y, f.x, f.y);
-          p4.x += (s0 * 2 - 1) * jitter;
-          p4.y += (s1 * 2 - 1) * jitter;
-          p4.z += (s2 * 2 - 1) * jitter;
-          p4.w += (s3 * 2 - 1) * jitter;
-          const t = tt;
-          p4 = rotXY(p4, t * 0.5);
-          p4 = rotYZ(p4, t * 0.7);
-          p4 = rotXW(p4, t);
-          const baseW = 3 + p4.w;
-          const normalProj = new THREE.Vector3(p4.x, p4.y, p4.z).multiplyScalar(1.5 / baseW);
-          const realProj = new THREE.Vector3(p4.x, p4.z, p4.w).multiplyScalar(0.5);
-          const pos3 = normalProj.lerp(realProj, realViewRef.current ? 1 : 0);
-          dummy.position.copy(pos3);
-          dummy.rotation.set(s0 * Math.PI * 2, s1 * Math.PI * 2, s2 * Math.PI * 2);
-          dummy.scale.setScalar(size * 0.1);
-          dummy.updateMatrix();
-          shardMeshRef.current.setMatrixAt(i, dummy.matrix);
-        }
-        shardMeshRef.current.instanceMatrix.needsUpdate = true;
-      }
 
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
@@ -475,17 +407,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   useEffect(() => {
     if (materialRef.current) {
       materialRef.current.uniforms.globalSize.value = size;
-    }
-    if (shardMeshRef.current) {
-      const dummy = new THREE.Object3D();
-      for (let i = 0; i < shardMeshRef.current.count; i++) {
-        shardMeshRef.current.getMatrixAt(i, dummy.matrix);
-        dummy.matrix.decompose(dummy.position, dummy.quaternion, dummy.scale);
-        dummy.scale.setScalar(size * 0.1);
-        dummy.updateMatrix();
-        shardMeshRef.current.setMatrixAt(i, dummy.matrix);
-      }
-      shardMeshRef.current.instanceMatrix.needsUpdate = true;
     }
   }, [size]);
 
@@ -549,12 +470,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     }
   }, [objectMode]);
 
-  useEffect(() => {
-    if (shardMeshRef.current) {
-      shardMeshRef.current.visible = shards;
-      console.log(`Shards ${shards ? 'enabled' : 'disabled'}`);
-    }
-  }, [shards]);
 
   useEffect(() => {
     if (materialRef.current) {
@@ -709,14 +624,6 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               type="checkbox"
               checked={objectMode}
               onChange={(e) => setObjectMode(e.target.checked)}
-            />
-          </label>
-          <label>
-            Shards:
-            <input
-              type="checkbox"
-              checked={shards}
-              onChange={(e) => setShards(e.target.checked)}
             />
           </label>
           <label>

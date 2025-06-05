@@ -1,5 +1,3 @@
 # Complex Particles
 
 Visualises a complex map `z -> f(z)` using domain colouring in four dimensions. The vertex shader computes colours while the fragment shader renders round glowing points. Rename from the earlier `ComplexSqrtParticles` to reflect that any analytic function can be displayed. A small menu lets you pick the function and a saturation slider tweaks the colour intensity in real time. Additional sliders control the particle count, size, opacity, colour intensity, a shimmer amount, a jitter level, a hue shift, and the camera distance. A checkbox toggles **object mode** which switches the particles from luminous sprites on a dark background to solid points on a white background.
-
-Enabling the **Shards** option replaces the sprites with tiny glass tetrahedra rendered using `MeshPhysicalMaterial` and an HDR environment map. These shards reflect and refract light as the four-dimensional rotation progresses. The environment map isn't included in the repository; download `royal_esplanade_1k.hdr` from [Poly Haven](https://polyhaven.com/a/royal_esplanade) and place it in `public/textures/`.
