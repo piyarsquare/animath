@@ -156,10 +156,64 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
 
     const clock = new THREE.Clock();
     let tCurrent = 0;
+    let offset = 0;
+    let lastReal = realViewRef.current;
+    let transitioning = false;
+    let transStart = 0;
+    let transDuration = 0;
+    let transStartVal = 0;
     const animate = () => {
       const elapsed = clock.getElapsedTime();
-      const targetT = realViewRef.current ? 0 : elapsed * 0.5;
-      tCurrent += (targetT - tCurrent) * 0.005;
+
+      if (realViewRef.current !== lastReal) {
+        if (realViewRef.current) {
+          // begin smooth transition to real view
+          transStartVal = tCurrent;
+          transStart = elapsed;
+          const speeds = [0.5 * 0.5, 0.7 * 0.5, 1 * 0.5];
+          const angles = [Math.abs(tCurrent * 0.5), Math.abs(tCurrent * 0.7), Math.abs(tCurrent)];
+          transDuration = Math.max(
+            angles[0] / speeds[0],
+            angles[1] / speeds[1],
+            angles[2] / speeds[2]
+          );
+          transitioning = transDuration > 0;
+        } else {
+          // resume normal rotation from current orientation
+          if (transitioning) {
+            const p = Math.min((elapsed - transStart) / transDuration, 1);
+            tCurrent = transStartVal * (1 - p);
+            transitioning = false;
+          }
+          offset = tCurrent - elapsed * 0.5;
+        }
+        lastReal = realViewRef.current;
+      }
+
+      if (realViewRef.current) {
+        if (transitioning) {
+          const p = Math.min((elapsed - transStart) / transDuration, 1);
+          tCurrent = transStartVal * (1 - p);
+          if (p === 1) {
+            transitioning = false;
+            tCurrent = 0;
+          }
+        } else {
+          tCurrent = 0;
+        }
+      } else {
+        if (!transitioning) {
+          tCurrent = elapsed * 0.5 + offset;
+        } else {
+          const p = Math.min((elapsed - transStart) / transDuration, 1);
+          tCurrent = transStartVal * (1 - p);
+          if (p === 1) {
+            transitioning = false;
+            offset = tCurrent - elapsed * 0.5;
+          }
+        }
+      }
+
       particleMaterial.uniforms.time.value = tCurrent;
 
 
