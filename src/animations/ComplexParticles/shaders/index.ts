@@ -1,5 +1,6 @@
 export const vertexShader = `
 // DOMAIN–COLORING VERTEX SHADER
+#include "quat.glsl"
 uniform float time;
 uniform int   functionType;
 uniform float globalSize;
@@ -10,6 +11,11 @@ uniform float saturation;
 uniform float realView;
 uniform float jitterAmp;
 uniform int   shapeType;
+uniform quat  uRotL;
+uniform quat  uRotR;
+uniform int   uProjMode;
+uniform int   uProjTarget;
+uniform float uProjAlpha;
 attribute float size;
 attribute vec4 seed;
 varying vec3 vColor;
@@ -94,11 +100,18 @@ vec2 applyComplex(vec2 z,int t){
 
   return z;
 }
-mat4 rotXW(float a){float c=cos(a),s=sin(a);return mat4(c,0,0,s, 0,1,0,0, 0,0,1,0,-s,0,0,c);} 
-mat4 rotYZ(float a){float c=cos(a),s=sin(a);return mat4(1,0,0,0, 0,c,-s,0, 0,s,c,0, 0,0,0,1);} 
-mat4 rotXY(float a){float c=cos(a),s=sin(a);return mat4(c,-s,0,0, s,c,0,0, 0,0,1,0, 0,0,0,1);} 
-vec3 hsv2rgb(vec3 c){vec4 K = vec4(1., 2./3., 1./3., 3.);vec3 p = abs(fract(c.xxx + K.xyz)*6. - K.www);return c.z * mix(K.xxx, clamp(p-K.xxx, 0., 1.), c.y);} 
-void main(){vec2 z = vec2(position.x, position.z);vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec4 jitter = (seed*2. - 1.) * jitterAmp;vec4 p4 = vec4(z.x, z.y, f.x, f.y) + jitter;float t = time*0.3;p4 = rotXW(t) * rotYZ(t*0.7) * rotXY(t*0.5) * p4;float baseW = 3. + p4.w;vec3 normalProj = p4.xyz / baseW;vec3 realProj = vec3(p4.x, p4.z, p4.w) / 3.;vec3 pos3 = mix(normalProj, realProj, realView) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);float hue = fract((atan(f.y, f.x) / 6.28318530718) + hueShift);float logMag = log(length(f) + 1e-6);float val    = 0.5 * (1. + tanh(logMag));float stripes = sin(6.28318530718 * logMag);val = mix(val, clamp(val * (0.75 + 0.25*stripes), 0., 1.), 0.5);float shimmer = sin(time*5.0 + position.x*4.0 + position.z*7.0);val = clamp(val * intensity * (1.0 + shimmerAmp * shimmer), 0., 1.);vColor = hsv2rgb(vec3(hue, saturation, val));}`;
+
+vec3 project(vec4 p, int mode){
+  if(mode==0){ return p.xyz / (3.0 + p.w); }
+  if(mode==1){ vec4 n = normalize(p); return n.xyz / (1.0 - n.w); }
+  if(mode==2){ vec2 xy = vec2(p.x, p.y); float w = p.w; float z = p.z; return vec3(2.0*xy*w, w*w + p.x*p.x - xy.y*xy.y - z*z); }
+  if(mode==3) return vec3(p.y, p.z, p.w);
+  if(mode==4) return vec3(p.x, p.z, p.w);
+  if(mode==5) return vec3(p.x, p.y, p.w);
+  return          vec3(p.x, p.y, p.z);
+}
+vec3 hsv2rgb(vec3 c){vec4 K = vec4(1., 2./3., 1./3., 3.);vec3 p = abs(fract(c.xxx + K.xyz)*6. - K.www);return c.z * mix(K.xxx, clamp(p-K.xxx, 0., 1.), c.y);}
+void main(){vec2 z = vec2(position.x, position.z);vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec4 jitter = (seed*2. - 1.) * jitterAmp;vec4 p4 = vec4(z.x, z.y, f.x, f.y) + jitter;float t = time*0.3;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);float hue = fract((atan(f.y, f.x) / 6.28318530718) + hueShift);float logMag = log(length(f) + 1e-6);float val    = 0.5 * (1. + tanh(logMag));float stripes = sin(6.28318530718 * logMag);val = mix(val, clamp(val * (0.75 + 0.25*stripes), 0., 1.), 0.5);float shimmer = sin(time*5.0 + position.x*4.0 + position.z*7.0);val = clamp(val * intensity * (1.0 + shimmerAmp * shimmer), 0., 1.);vColor = hsv2rgb(vec3(hue, saturation, val));}`;
 
 export const fragmentShader = `
 uniform float opacity;

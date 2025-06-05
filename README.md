@@ -94,6 +94,20 @@ PROJECTED EXAMPLE OF WORKFLOW, OPEN TO REVIISION.
 
 *Tip:* Keep GLSL strings inline for zero-fetch builds; use `vite-plugin-glsl` if you prefer external files.
 
+### Projection modes
+
+The renderer supports several ways of mapping a 4‑D point `(x,y,u,v)` to 3‑D:
+
+1. **Perspective** – divide by `3 + v`.
+2. **Stereo** – stereographic projection from the +v pole.
+3. **Hopf** – Hopf fibration assuming a unit hypersphere.
+4. **DropX** – ignore the x component.
+5. **DropY** – ignore the y component.
+6. **DropU** – ignore the u component.
+7. **DropV** – ignore the v component.
+
+Switching modes interpolates on the GPU for a smooth transition.
+
 ---
 
 ## 6 Acknowledgements
