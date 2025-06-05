@@ -17,7 +17,15 @@ const functionNames = [
   'sin',
   'cos',
   'tan',
-  'inverse'
+  'inverse',
+
+  /*  🚩 new additions  — keep order fixed */
+  'cube',
+  'reciprocalCube',
+  'joukowski',
+  'rational22',
+  'essentialExpInv',
+  'branchSqrtPoly'
 ];
 
 const AXIS_LENGTH = 4;
