@@ -47,7 +47,7 @@ const functionFormulas: Record<string, string> = {
 };
 
 const shapeNames = ['sphere', 'hexagon', 'pyramid'] as const;
-const textureNames = ['none', 'checker', 'royal'] as const;
+const textureNames = ['none', 'checker', 'speckled', 'stone', 'metal', 'royal'] as const;
 
 const AXIS_LENGTH = 4;
 
@@ -57,6 +57,55 @@ function makeCheckerTexture(size = 64): THREE.DataTexture {
     for (let x = 0; x < size; x++) {
       const i = (y * size + x) * 4;
       const c = ((x >> 4) & 1) ^ ((y >> 4) & 1) ? 255 : 0;
+      data[i] = data[i + 1] = data[i + 2] = c;
+      data[i + 3] = 255;
+    }
+  }
+  const tex = new THREE.DataTexture(data, size, size);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function makeSpeckledTexture(size = 64): THREE.DataTexture {
+  const data = new Uint8Array(size * size * 4);
+  for (let i = 0; i < size * size; i++) {
+    const c = Math.floor(Math.random() * 256);
+    const j = i * 4;
+    data[j] = data[j + 1] = data[j + 2] = c;
+    data[j + 3] = 255;
+  }
+  const tex = new THREE.DataTexture(data, size, size);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function makeStoneTexture(size = 64): THREE.DataTexture {
+  const data = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const n =
+        0.5 +
+        0.5 *
+          (Math.sin(x * 0.3) * Math.sin(y * 0.3)) +
+        0.1 * Math.random();
+      const c = Math.floor(100 + 80 * n);
+      data[i] = data[i + 1] = data[i + 2] = c;
+      data[i + 3] = 255;
+    }
+  }
+  const tex = new THREE.DataTexture(data, size, size);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function makeMetalTexture(size = 64): THREE.DataTexture {
+  const data = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const shine = 0.5 + 0.5 * Math.sin(x * 0.2);
+      const c = Math.floor(180 + 40 * shine);
       data[i] = data[i + 1] = data[i + 2] = c;
       data[i + 3] = 255;
     }
@@ -256,16 +305,21 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       white.needsUpdate = true;
       textures[0] = white;
       textures[1] = makeCheckerTexture(64);
-      new RGBELoader().load('/textures/royal_esplanade_1k.hdr', tex => {
-        tex.minFilter = THREE.LinearFilter;
-        tex.magFilter = THREE.LinearFilter;
-        tex.flipY = true;
-        tex.needsUpdate = true;
-        textures[2] = tex;
-        if (materialRef.current) {
-          materialRef.current.uniforms.tex.value = textures[textureIndex];
-        }
-      });
+      textures[2] = makeSpeckledTexture(64);
+      textures[3] = makeStoneTexture(64);
+      textures[4] = makeMetalTexture(64);
+      new RGBELoader()
+        .setDataType(THREE.UnsignedByteType)
+        .load('/textures/royal_esplanade_1k.hdr', tex => {
+          tex.minFilter = THREE.LinearFilter;
+          tex.magFilter = THREE.LinearFilter;
+          tex.flipY = true;
+          tex.needsUpdate = true;
+          textures[5] = tex;
+          if (materialRef.current) {
+            materialRef.current.uniforms.tex.value = textures[textureIndex];
+          }
+        });
       texturesRef.current = textures;
 
       const particleMaterial = new THREE.ShaderMaterial({
