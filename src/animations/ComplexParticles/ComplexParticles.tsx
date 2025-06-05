@@ -20,6 +20,34 @@ const functionNames = [
   'inverse'
 ];
 
+const AXIS_LENGTH = 4;
+
+function rotXY(v: THREE.Vector4, a: number): THREE.Vector4 {
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return new THREE.Vector4(c * v.x - s * v.y, s * v.x + c * v.y, v.z, v.w);
+}
+
+function rotYZ(v: THREE.Vector4, a: number): THREE.Vector4 {
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return new THREE.Vector4(v.x, c * v.y - s * v.z, s * v.y + c * v.z, v.w);
+}
+
+function rotXW(v: THREE.Vector4, a: number): THREE.Vector4 {
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return new THREE.Vector4(c * v.x + s * v.w, v.y, v.z, -s * v.x + c * v.w);
+}
+
+function project4D(v: THREE.Vector4, t: number): THREE.Vector3 {
+  let r = rotXY(v, t * 0.5);
+  r = rotYZ(r, t * 0.7);
+  r = rotXW(r, t);
+  const w = 3 + r.w;
+  return new THREE.Vector3(r.x, r.y, r.z).multiplyScalar(1.5 / w);
+}
+
 export default function ComplexParticles({ count = 40000, selectedFunction = 'sqrt' }: ComplexParticlesProps) {
   const [saturation, setSaturation] = useState(1);
   const [functionIndex, setFunctionIndex] = useState(() => {
@@ -36,6 +64,10 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
+  const xAxisRef = useRef<THREE.Line>();
+  const yAxisRef = useRef<THREE.Line>();
+  const uAxisRef = useRef<THREE.Line>();
+  const vAxisRef = useRef<THREE.Line>();
   const onMount = React.useCallback(
     (ctx: {
       scene: THREE.Scene;
@@ -86,10 +118,52 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     const particles = new THREE.Points(geometry, particleMaterial);
     scene.add(particles);
 
+    const xMat = new THREE.LineBasicMaterial({
+      color: new THREE.Color().setHSL(hueShift % 1, 1, 0.5)
+    });
+    const yMat = new THREE.LineBasicMaterial({
+      color: new THREE.Color().setHSL((0.25 + hueShift) % 1, 1, 0.5)
+    });
+    const uvMat = new THREE.LineBasicMaterial({ color: 0x888888 });
+
+    const makeAxis = (mat: THREE.LineBasicMaterial) => {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+      const line = new THREE.Line(g, mat);
+      scene.add(line);
+      return line;
+    };
+
+    xAxisRef.current = makeAxis(xMat);
+    yAxisRef.current = makeAxis(yMat);
+    uAxisRef.current = makeAxis(uvMat.clone());
+    vAxisRef.current = makeAxis(uvMat.clone());
+
     const clock = new THREE.Clock();
     const animate = () => {
       const t = clock.getElapsedTime();
       particleMaterial.uniforms.time.value = t;
+
+      const tt = t * 0.3;
+      const updateAxis = (
+        line: THREE.Line | undefined,
+        start: THREE.Vector4,
+        end: THREE.Vector4
+      ) => {
+        if (!line) return;
+        const p1 = project4D(start, tt);
+        const p2 = project4D(end, tt);
+        const pos = line.geometry.getAttribute('position') as THREE.BufferAttribute;
+        pos.setXYZ(0, p1.x, p1.y, p1.z);
+        pos.setXYZ(1, p2.x, p2.y, p2.z);
+        pos.needsUpdate = true;
+      };
+
+      updateAxis(xAxisRef.current, new THREE.Vector4(-AXIS_LENGTH, 0, 0, 0), new THREE.Vector4(AXIS_LENGTH, 0, 0, 0));
+      updateAxis(yAxisRef.current, new THREE.Vector4(0, -AXIS_LENGTH, 0, 0), new THREE.Vector4(0, AXIS_LENGTH, 0, 0));
+      updateAxis(uAxisRef.current, new THREE.Vector4(0, 0, -AXIS_LENGTH, 0), new THREE.Vector4(0, 0, AXIS_LENGTH, 0));
+      updateAxis(vAxisRef.current, new THREE.Vector4(0, 0, 0, -AXIS_LENGTH), new THREE.Vector4(0, 0, 0, AXIS_LENGTH));
+
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     };
@@ -129,6 +203,20 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   useEffect(() => {
     if (materialRef.current) {
       materialRef.current.uniforms.hueShift.value = hueShift;
+    }
+    if (xAxisRef.current) {
+      (xAxisRef.current.material as THREE.LineBasicMaterial).color.setHSL(
+        hueShift % 1,
+        1,
+        0.5
+      );
+    }
+    if (yAxisRef.current) {
+      (yAxisRef.current.material as THREE.LineBasicMaterial).color.setHSL(
+        (0.25 + hueShift) % 1,
+        1,
+        0.5
+      );
     }
   }, [hueShift]);
 
