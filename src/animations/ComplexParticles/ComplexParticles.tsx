@@ -292,14 +292,23 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     const pmrem = new THREE.PMREMGenerator(renderer);
     pmrem.compileEquirectangularShader();
     const envPath = `${import.meta.env.BASE_URL}textures/royal_esplanade_1k.hdr`;
-    new RGBELoader().load(envPath, (tex) => {
-      const env = pmrem.fromEquirectangular(tex).texture;
-      scene.environment = env;
-      shardMaterial.envMap = env;
-      shardMaterial.needsUpdate = true;
-      tex.dispose();
-      pmrem.dispose();
-    });
+    console.log('Loading HDR environment map:', envPath);
+    new RGBELoader().load(
+      envPath,
+      (tex) => {
+        const env = pmrem.fromEquirectangular(tex).texture;
+        scene.environment = env;
+        shardMaterial.envMap = env;
+        shardMaterial.needsUpdate = true;
+        tex.dispose();
+        pmrem.dispose();
+        console.log('HDR environment loaded');
+      },
+      undefined,
+      (err) => {
+        console.error('Failed to load HDR environment', err);
+      }
+    );
 
     const xMat = new THREE.LineBasicMaterial({
       color: new THREE.Color().setHSL(hueShift % 1, 1, 0.5)
@@ -539,6 +548,13 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       materialRef.current.depthWrite = objectMode;
     }
   }, [objectMode]);
+
+  useEffect(() => {
+    if (shardMeshRef.current) {
+      shardMeshRef.current.visible = shards;
+      console.log(`Shards ${shards ? 'enabled' : 'disabled'}`);
+    }
+  }, [shards]);
 
   useEffect(() => {
     if (materialRef.current) {
