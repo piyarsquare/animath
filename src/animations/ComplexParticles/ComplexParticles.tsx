@@ -27,6 +27,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
     return idx >= 0 ? idx : 0;
   });
   const [particleCount, setParticleCount] = useState(count);
+  const [cameraZ, setCameraZ] = useState(5);
   const [size, setSize] = useState(1);
   const [opacity, setOpacity] = useState(0.9);
   const [intensity, setIntensity] = useState(1);
@@ -34,6 +35,7 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   const [hueShift, setHueShift] = useState(0);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
+  const cameraRef = useRef<THREE.PerspectiveCamera>();
   const onMount = React.useCallback(
     (ctx: {
       scene: THREE.Scene;
@@ -41,7 +43,8 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       renderer: THREE.WebGLRenderer;
     }) => {
       const { scene, camera, renderer } = ctx;
-      camera.position.z = 5;
+      cameraRef.current = camera;
+      camera.position.z = cameraZ;
 
       const particleMaterial = new THREE.ShaderMaterial({
         uniforms: {
@@ -70,9 +73,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       let i = 0;
       for (let ix = 0; ix < side; ix++) {
         for (let iz = 0; iz < side; iz++) {
-          positions[3 * i] = (ix / side - 0.5) * 4;
+          positions[3 * i] = (ix / side - 0.5) * 8;
           positions[3 * i + 1] = 0;
-          positions[3 * i + 2] = (iz / side - 0.5) * 4;
+          positions[3 * i + 2] = (iz / side - 0.5) * 8;
           i++;
         }
       }
@@ -130,6 +133,12 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
   }, [hueShift]);
 
   useEffect(() => {
+    if (cameraRef.current) {
+      cameraRef.current.position.z = cameraZ;
+    }
+  }, [cameraZ]);
+
+  useEffect(() => {
     if (materialRef.current) {
       materialRef.current.uniforms.functionType.value = functionIndex;
     }
@@ -143,9 +152,9 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
       let i = 0;
       for (let ix = 0; ix < side; ix++) {
         for (let iz = 0; iz < side; iz++) {
-          pos[3 * i] = (ix / side - 0.5) * 4;
+          pos[3 * i] = (ix / side - 0.5) * 8;
           pos[3 * i + 1] = 0;
-          pos[3 * i + 2] = (iz / side - 0.5) * 4;
+          pos[3 * i + 2] = (iz / side - 0.5) * 8;
           i++;
         }
       }
@@ -255,6 +264,18 @@ export default function ComplexParticles({ count = 40000, selectedFunction = 'sq
               step={0.01}
               value={hueShift}
               onChange={(e) => setHueShift(parseFloat(e.target.value))}
+            />
+          </label>
+          <br />
+          <label>
+            Camera Distance:
+            <input
+              type="range"
+              min={2}
+              max={20}
+              step={0.1}
+              value={cameraZ}
+              onChange={(e) => setCameraZ(parseFloat(e.target.value))}
             />
           </label>
         </div>
