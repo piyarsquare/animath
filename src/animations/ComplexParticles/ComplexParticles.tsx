@@ -880,6 +880,29 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               onClick={() => setFunctionIndex(idx)}>{name}</button>
           ))}
         </div>
+        <div
+          style={{
+            color: objectMode ? 'black' : 'white',
+            fontSize: '1.2em',
+            textAlign: 'right',
+            pointerEvents: 'none'
+          }}
+        >
+          <div>{currentName}</div>
+          <div>{currentFormula}</div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          position: 'absolute',
+          top: 10,
+          left: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8
+        }}
+      >
         <div className="view-type-toolbar">
           {viewTypes.map(([name,code]) => (
             <button key={name}
@@ -894,17 +917,7 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               onClick={() => handleMotion(m)}>{m}</button>
           ))}
         </div>
-        <div
-          style={{
-            color: objectMode ? 'black' : 'white',
-            fontSize: '1.2em',
-            textAlign: 'right',
-            pointerEvents: 'none'
-          }}
-        >
-          <div>{currentName}</div>
-          <div>{currentFormula}</div>
-        </div>
+        <div style={{color:'white'}}>Distance: {cameraZ.toFixed(1)}</div>
       </div>
     </div>
   );
