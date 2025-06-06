@@ -110,7 +110,7 @@ Switching modes interpolates on the GPU for a smooth transition.
 
 ## Controls
 
-* Six **Quarter-Turn** buttons perform instant 90° rotations in the XY, XU, XV, YU, YV, and UV planes; combine them for any orthogonal orientation before you drop an axis.
+* Six **Quarter-Turn** buttons perform smooth 90° rotations in the XY, XU, XV, YU, YV, and UV planes; combine them for any orthogonal orientation before you drop an axis.
 
 ---
 

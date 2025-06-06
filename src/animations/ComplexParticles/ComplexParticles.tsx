@@ -709,26 +709,27 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   function applyQuarterTurn(plane: Plane, θ: number){
     if(!materialRef.current) return;
     const { L, R } = quarterQuat(plane, θ);
-    const qL = new THREE.Quaternion(
-      materialRef.current.uniforms.uRotL.value.v.x,
-      materialRef.current.uniforms.uRotL.value.v.y,
-      materialRef.current.uniforms.uRotL.value.v.z,
-      materialRef.current.uniforms.uRotL.value.w
-    );
-    const qR = new THREE.Quaternion(
-      materialRef.current.uniforms.uRotR.value.v.x,
-      materialRef.current.uniforms.uRotR.value.v.y,
-      materialRef.current.uniforms.uRotR.value.v.z,
-      materialRef.current.uniforms.uRotR.value.w
-    );
-    qL.premultiply(L).normalize();
-    qR.multiply(R.conjugate()).normalize();
-    materialRef.current.uniforms.uRotL.value.w = qL.w;
-    materialRef.current.uniforms.uRotL.value.v.set(qL.x,qL.y,qL.z);
-    materialRef.current.uniforms.uRotR.value.w = qR.w;
-    materialRef.current.uniforms.uRotR.value.v.set(qR.x,qR.y,qR.z);
-    rotLRef.current.copy(qL);
-    rotRRef.current.copy(qR);
+    const startL = rotLRef.current.clone();
+    const startR = rotRRef.current.clone();
+    const endL = L.clone().multiply(startL).normalize();
+    const endR = startR.clone().multiply(R.conjugate()).normalize();
+    const duration = 1000;
+    const start = performance.now();
+    const step = (now: number) => {
+      const p = Math.min((now-start)/duration,1);
+      const qL = startL.clone().slerp(endL, p);
+      const qR = startR.clone().slerp(endR, p);
+      materialRef.current!.uniforms.uRotL.value.w = qL.w;
+      materialRef.current!.uniforms.uRotL.value.v.set(qL.x,qL.y,qL.z);
+      materialRef.current!.uniforms.uRotR.value.w = qR.w;
+      materialRef.current!.uniforms.uRotR.value.v.set(qR.x,qR.y,qR.z);
+      rotLRef.current.copy(qL);
+      rotRRef.current.copy(qR);
+      if(p<1){
+        requestAnimationFrame(step);
+      }
+    };
+    requestAnimationFrame(step);
   }
 
   const turn = (plane: Plane) => {
