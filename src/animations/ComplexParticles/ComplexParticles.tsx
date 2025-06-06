@@ -702,28 +702,7 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   return (
     <div style={{ position: 'relative' }}>
       <Canvas3D onMount={onMount} />
-      <div style={{position:'absolute',bottom:10,left:10,display:'flex',flexDirection:'column',gap:8}}>
-        <div className="function-toolbar" style={{display:'grid',gridTemplateColumns:'repeat(8,auto)',gap:4}}>
-          {functionNames.map((name, idx) => (
-            <button key={name}
-              className={functionIndex===idx ? 'active' : ''}
-              onClick={() => setFunctionIndex(idx)}>{name}</button>
-          ))}
-        </div>
-        <div className="view-type-toolbar">
-          {viewTypes.map(([name,code]) => (
-            <button key={name}
-              className={viewType===code ? 'active' : ''}
-              onClick={() => handleViewType(code)}>{name}</button>
-          ))}
-        </div>
-        <div className="view-motion-toolbar">
-          {motionModes.map(m => (
-            <button key={m}
-              className={viewMotion===m ? 'active' : ''}
-              onClick={() => handleMotion(m)}>{m}</button>
-          ))}
-        </div>
+      <div style={{position:'absolute',bottom:10,left:10}}>
         <ToggleMenu title="Menu">
           <div
             style={{
@@ -888,14 +867,44 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
           position: 'absolute',
           top: 10,
           right: 10,
-          color: objectMode ? 'black' : 'white',
-          fontSize: '1.2em',
-          textAlign: 'right',
-          pointerEvents: 'none'
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          alignItems: 'flex-end'
         }}
       >
-        <div>{currentName}</div>
-        <div>{currentFormula}</div>
+        <div className="function-toolbar" style={{display:'grid',gridTemplateColumns:'repeat(8,auto)',gap:4}}>
+          {functionNames.map((name, idx) => (
+            <button key={name}
+              className={functionIndex===idx ? 'active' : ''}
+              onClick={() => setFunctionIndex(idx)}>{name}</button>
+          ))}
+        </div>
+        <div className="view-type-toolbar">
+          {viewTypes.map(([name,code]) => (
+            <button key={name}
+              className={viewType===code ? 'active' : ''}
+              onClick={() => handleViewType(code)}>{name}</button>
+          ))}
+        </div>
+        <div className="view-motion-toolbar">
+          {motionModes.map(m => (
+            <button key={m}
+              className={viewMotion===m ? 'active' : ''}
+              onClick={() => handleMotion(m)}>{m}</button>
+          ))}
+        </div>
+        <div
+          style={{
+            color: objectMode ? 'black' : 'white',
+            fontSize: '1.2em',
+            textAlign: 'right',
+            pointerEvents: 'none'
+          }}
+        >
+          <div>{currentName}</div>
+          <div>{currentFormula}</div>
+        </div>
       </div>
     </div>
   );
