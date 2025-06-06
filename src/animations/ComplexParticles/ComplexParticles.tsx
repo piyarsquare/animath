@@ -848,17 +848,6 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               onChange={(e) => setObjectMode(e.target.checked)}
             />
           </label>
-          <label>
-            Camera Distance:
-            <input
-              type="range"
-              min={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.min}
-              max={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.max}
-              step={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.step}
-              value={cameraZ}
-              onChange={(e) => setCameraZ(parseFloat(e.target.value))}
-            />
-          </label>
         </div>
         </ToggleMenu>
       </div>
@@ -917,7 +906,17 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               onClick={() => handleMotion(m)}>{m}</button>
           ))}
         </div>
-        <div style={{color:'white'}}>Distance: {cameraZ.toFixed(1)}</div>
+        <label style={{color:'white',display:'flex',flexDirection:'column'}}>
+          Distance: {cameraZ.toFixed(1)}
+          <input
+            type="range"
+            min={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.min}
+            max={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.max}
+            step={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.step}
+            value={cameraZ}
+            onChange={(e) => setCameraZ(parseFloat(e.target.value))}
+          />
+        </label>
       </div>
     </div>
   );
