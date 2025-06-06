@@ -53,6 +53,14 @@ const functionFormulas: Record<string, string> = {
 const shapeNames = ['sphere', 'hexagon', 'pyramid'] as const;
 const textureNames = ['none', 'checker', 'speckled', 'stone', 'metal', 'royal'] as const;
 
+export enum ColorScheme {
+  DefaultHSV_F = 0,
+  DomainHSV_Z  = 1,
+  PhaseOnly    = 2,
+  ModulusBands = 3,
+  DualHueCVD   = 4
+}
+
 const AXIS_LENGTH = COMPLEX_PARTICLES_DEFAULTS.axisLength;
 const modes = Object.entries(ProjectionMode)
   .filter(([k,v]) => typeof v === 'number') as [string,number][];
@@ -256,6 +264,7 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   const [shapeIndex, setShapeIndex] = useState(0);
   const [textureIndex, setTextureIndex] = useState(0);
   const [realView, setRealView] = useState(false);
+  const [colour, setColour] = useState<ColorScheme>(ColorScheme.DefaultHSV_F);
   const [proj, setProj] = useState(ProjectionMode.Perspective);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
@@ -319,6 +328,7 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
           shapeType: { value: shapeIndex },
           tex: { value: white },
           textureIndex: { value: textureIndex },
+          uColour: { value: colour },
           uRotL: { value: { w: 1, v: new THREE.Vector3() } },
           uRotR: { value: { w: 1, v: new THREE.Vector3() } },
           uProjMode: { value: projRef.current },
@@ -597,6 +607,12 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   }, [textureIndex]);
 
   useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.uColour.value = colour;
+    }
+  }, [colour]);
+
+  useEffect(() => {
     if (geometryRef.current) {
       const side = Math.sqrt(particleCount);
       const pos = new Float32Array(particleCount * 3);
@@ -655,6 +671,13 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
             onClick={() => animateTo(code as ProjectionMode)}>
             {name}
           </button>
+        ))}
+      </div>
+      <div className="colour-toolbar" style={{position:'absolute',top:10,left:10}}>
+        {Object.keys(ColorScheme).map(k => (
+          <button key={k}
+            className={colour===ColorScheme[k as keyof typeof ColorScheme] ? 'active' : ''}
+            onClick={() => setColour(ColorScheme[k as keyof typeof ColorScheme])}>{k}</button>
         ))}
       </div>
       <ToggleMenu title="Menu">
