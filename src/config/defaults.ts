@@ -23,6 +23,7 @@ export const TOGGLE_MENU_STYLE = {
 
 export const COMPLEX_PARTICLES_DEFAULTS = {
   axisLength: 4,
+  axisWidth: 1,
   initial: {
     saturation: 1,
     cameraZ: 5,
@@ -31,7 +32,8 @@ export const COMPLEX_PARTICLES_DEFAULTS = {
     intensity: 1,
     shimmer: 0,
     hueShift: 0,
-    jitter: 0
+    jitter: 0,
+    axisWidth: 1
   },
   defaultParticleCount: 40000,
   ranges: {
@@ -43,6 +45,7 @@ export const COMPLEX_PARTICLES_DEFAULTS = {
     shimmer: { min: 0, max: 1, step: 0.01 },
     jitter: { min: 0, max: 0.5, step: 0.005 },
     hueShift: { min: 0, max: 1, step: 0.01 },
-    cameraZ: { min: 2, max: 50, step: 0.1 }
+    cameraZ: { min: 2, max: 50, step: 0.1 },
+    axisWidth: { min: 0.5, max: 5, step: 0.1 }
   }
 };
