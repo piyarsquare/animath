@@ -13,6 +13,7 @@ export interface ComplexParticlesProps {
 }
 
 const functionNames = [
+  'linear',
   'sqrt',
   'square',
   'ln',
@@ -28,8 +29,7 @@ const functionNames = [
   'joukowski',
   'rational22',
   'essentialExpInv',
-  'branchSqrtPoly',
-  'linear'
+  'branchSqrtPoly'
 ];
 
 const functionFormulas: Record<string, string> = {
@@ -53,17 +53,25 @@ const functionFormulas: Record<string, string> = {
 const shapeNames = ['sphere', 'hexagon', 'pyramid'] as const;
 const textureNames = ['none', 'checker', 'speckled', 'stone', 'metal', 'royal'] as const;
 
-export enum ColorScheme {
-  DefaultHSV_F = 0,
-  DomainHSV_Z  = 1,
-  PhaseOnly    = 2,
-  ModulusBands = 3,
-  DualHueCVD   = 4
+export enum ColorStyle {
+  HSV = 0,
+  ModulusBands = 1,
+  PhaseOnly = 2,
+  DualHueCVD = 3
+}
+
+export enum ColourBy {
+  Domain = 0,
+  Range  = 1
 }
 
 const AXIS_LENGTH = COMPLEX_PARTICLES_DEFAULTS.axisLength;
-const modes = Object.entries(ProjectionMode)
-  .filter(([k,v]) => typeof v === 'number') as [string,number][];
+const viewTypes = [
+  ['Perspective', ProjectionMode.Perspective],
+  ['Stereo', ProjectionMode.Stereo],
+  ['Hopf', ProjectionMode.Hopf]
+] as const;
+const motionModes = ['Quaternion','DropX','DropY','DropU','DropV'] as const;
 
 function makeCheckerTexture(size = 64): THREE.DataTexture {
   const data = new Uint8Array(size * size * 4);
@@ -246,7 +254,7 @@ function applyComplex(z: THREE.Vector2, t: number): THREE.Vector2 {
 }
 
 
-export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount, selectedFunction = 'sqrt' }: ComplexParticlesProps) {
+export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount, selectedFunction = 'exp' }: ComplexParticlesProps) {
   const [saturation, setSaturation] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.saturation);
   const [functionIndex, setFunctionIndex] = useState(() => {
     const idx = functionNames.indexOf(selectedFunction);
@@ -264,7 +272,10 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   const [shapeIndex, setShapeIndex] = useState(0);
   const [textureIndex, setTextureIndex] = useState(0);
   const [realView, setRealView] = useState(false);
-  const [colour, setColour] = useState<ColorScheme>(ColorScheme.DefaultHSV_F);
+  const [colourStyle, setColourStyle] = useState<ColorStyle>(ColorStyle.HSV);
+  const [colourBy, setColourBy] = useState<ColourBy>(ColourBy.Range);
+  const [viewType, setViewType] = useState<ProjectionMode>(ProjectionMode.Perspective);
+  const [viewMotion, setViewMotion] = useState<(typeof motionModes)[number]>('Quaternion');
   const [proj, setProj] = useState(ProjectionMode.Perspective);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
@@ -328,7 +339,8 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
           shapeType: { value: shapeIndex },
           tex: { value: white },
           textureIndex: { value: textureIndex },
-          uColour: { value: colour },
+          uColourStyle: { value: colourStyle },
+          uColourBy: { value: colourBy },
           uRotL: { value: { w: 1, v: new THREE.Vector3() } },
           uRotR: { value: { w: 1, v: new THREE.Vector3() } },
           uProjMode: { value: projRef.current },
@@ -608,9 +620,15 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
 
   useEffect(() => {
     if (materialRef.current) {
-      materialRef.current.uniforms.uColour.value = colour;
+      materialRef.current.uniforms.uColourStyle.value = colourStyle;
     }
-  }, [colour]);
+  }, [colourStyle]);
+
+  useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.uColourBy.value = colourBy;
+    }
+  }, [colourBy]);
 
   useEffect(() => {
     if (geometryRef.current) {
@@ -658,6 +676,26 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
     requestAnimationFrame(step);
   }
 
+  function applyView(type: ProjectionMode, motion: (typeof motionModes)[number]){
+    const target = motion==='Quaternion'
+      ? type
+      : motion==='DropX' ? ProjectionMode.DropX
+      : motion==='DropY' ? ProjectionMode.DropY
+      : motion==='DropU' ? ProjectionMode.DropU
+      : ProjectionMode.DropV;
+    animateTo(target);
+  }
+
+  function handleViewType(t: ProjectionMode){
+    setViewType(t);
+    applyView(t, viewMotion);
+  }
+
+  function handleMotion(m: (typeof motionModes)[number]){
+    setViewMotion(m);
+    applyView(viewType, m);
+  }
+
   const currentName = functionNames[functionIndex];
   const currentFormula = functionFormulas[currentName];
 
@@ -665,20 +703,39 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
     <div style={{ position: 'relative' }}>
       <Canvas3D onMount={onMount} />
       <div style={{position:'absolute',top:10,left:10,display:'flex',flexDirection:'column',gap:8}}>
-        <div className="proj-toolbar">
-          {modes.map(([name,code]) => (
-            <button key={code}
-              className={proj===code ? 'active' : ''}
-              onClick={() => animateTo(code as ProjectionMode)}>
-              {name}
-            </button>
+        <div className="function-toolbar">
+          {functionNames.map((name, idx) => (
+            <button key={name}
+              className={functionIndex===idx ? 'active' : ''}
+              onClick={() => setFunctionIndex(idx)}>{name}</button>
           ))}
         </div>
-        <div className="colour-toolbar">
-          {Object.keys(ColorScheme).map(k => (
+        <div className="color-by-toolbar">
+          {(['Domain','Range'] as const).map((n,idx) => (
+            <button key={n}
+              className={colourBy===idx ? 'active' : ''}
+              onClick={() => setColourBy(idx as ColourBy)}>{n}</button>
+          ))}
+        </div>
+        <div className="color-style-toolbar">
+          {Object.keys(ColorStyle).filter(k => isNaN(Number(k))).map(k => (
             <button key={k}
-              className={colour===ColorScheme[k as keyof typeof ColorScheme] ? 'active' : ''}
-              onClick={() => setColour(ColorScheme[k as keyof typeof ColorScheme])}>{k}</button>
+              className={colourStyle===ColorStyle[k as keyof typeof ColorStyle] ? 'active' : ''}
+              onClick={() => setColourStyle(ColorStyle[k as keyof typeof ColorStyle])}>{k}</button>
+          ))}
+        </div>
+        <div className="view-type-toolbar">
+          {viewTypes.map(([name,code]) => (
+            <button key={name}
+              className={viewType===code ? 'active' : ''}
+              onClick={() => handleViewType(code)}>{name}</button>
+          ))}
+        </div>
+        <div className="view-motion-toolbar">
+          {motionModes.map(m => (
+            <button key={m}
+              className={viewMotion===m ? 'active' : ''}
+              onClick={() => handleMotion(m)}>{m}</button>
           ))}
         </div>
         <ToggleMenu title="Menu">
@@ -690,19 +747,6 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               gap: 8
           }}
         >
-          <label>
-            Function:
-            <select
-              value={functionIndex}
-              onChange={(e) => setFunctionIndex(parseInt(e.target.value, 10))}
-            >
-              {functionNames.map((name, idx) => (
-                <option key={name} value={idx}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
           <label>
             Saturation:
             <input

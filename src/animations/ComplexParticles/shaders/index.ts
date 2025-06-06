@@ -29,7 +29,8 @@ uniform quat  uRotR;
 uniform int   uProjMode;
 uniform int   uProjTarget;
 uniform float uProjAlpha;
-uniform int   uColour;
+uniform int   uColourStyle;
+uniform int   uColourBy;
 attribute float size;
 attribute vec4 seed;
 varying vec3 vColor;
@@ -127,35 +128,32 @@ vec3 project(vec4 p, int mode){
 }
 vec3 hsv2rgb(vec3 c){vec4 K = vec4(1., 2./3., 1./3., 3.);vec3 p = abs(fract(c.xxx + K.xyz)*6. - K.www);return c.z * mix(K.xxx, clamp(p-K.xxx, 0., 1.), c.y);}
 const float LAMBDA = 0.7;
-vec3 calcColour(vec2 z, vec2 f, int scheme){
+vec3 calcColour(vec2 z, vec2 f){
     const float TAU = 6.28318530718;
-    if(scheme==0){
-        float hue = fract(atan(f.y,f.x)/TAU + 1.);
-        float val = 0.5*(1.+tanh(log(length(f)+1e-6)));
-        val = mix(val, val*(0.75+0.25*sin(TAU*log(length(f)))), 0.5);
-        return hsv2rgb(vec3(hue,1.,val));
+    vec2 w = (uColourBy==0) ? z : f;
+    float r = length(w);
+    float angle = atan(w.y, w.x);
+    float hue = fract(angle/TAU + 1.0 + hueShift);
+    float val = 0.5*(1.+tanh(log(r+1e-6)));
+    if(uColourStyle==0){
+        val = mix(val, val*(0.75+0.25*sin(TAU*log(r))), 0.5);
+        return hsv2rgb(vec3(hue, saturation, val)) * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
     }
-    if(scheme==1){
-        float hue = fract(atan(z.y,z.x)/TAU + 1.);
-        float val = 0.5*(1.+tanh(log(length(z)+1e-6)));
-        return hsv2rgb(vec3(hue,1.,val));
+    if(uColourStyle==1){
+        float v = fract( log(r+1e-6) / LAMBDA );
+        return hsv2rgb(vec3(hue, saturation, v)) * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
     }
-    if(scheme==2){
-        float hue = fract(atan(f.y,f.x)/TAU + 1.);
-        return hsv2rgb(vec3(hue,1.,1.));
+    if(uColourStyle==2){
+        return hsv2rgb(vec3(hue, saturation, 1.0)) * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
     }
-    if(scheme==3){
-        float hue = fract(atan(f.y,f.x)/TAU + 1.);
-        float val = fract( log(length(f)+1e-6) / LAMBDA );
-        return hsv2rgb(vec3(hue,1.,val));
-    }
-    float t   = (atan(f.y,f.x)/3.14159265 + 1.)*0.5;
+    float t   = (angle/3.14159265 + 1.)*0.5;
     vec3 colA = vec3(0.2,0.4,0.95);
     vec3 colB = vec3(0.95,0.9,0.2);
-    float val = 0.5*(1.+tanh(log(length(f)+1e-6)));
-    return mix(colA,colB,t)*val;
+    vec3 col  = mix(colA,colB,t)*val;
+    col = mix(vec3(dot(col, vec3(0.3333))), col, saturation);
+    return col * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
 }
-void main(){vec2 z = vec2(position.x, position.z);vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec4 jitter = (seed*2. - 1.) * jitterAmp;vec4 p4 = vec4(z.x, z.y, f.x, f.y) + jitter;float t = time*0.3;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f,uColour);}`;
+void main(){vec2 z = vec2(position.x, position.z);vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec4 jitter = (seed*2. - 1.) * jitterAmp;vec4 p4 = vec4(z.x, z.y, f.x, f.y) + jitter;float t = time*0.3;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f);}`;
 
 export const fragmentShader = `
 uniform float opacity;
