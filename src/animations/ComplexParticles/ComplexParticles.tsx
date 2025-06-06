@@ -234,21 +234,21 @@ function complexBranchSqrtPoly(z: THREE.Vector2): THREE.Vector2 {
 
 function applyComplex(z: THREE.Vector2, t: number): THREE.Vector2 {
   switch (t) {
-    case 0: return complexSqrt(z);
-    case 1: return complexSquare(z);
-    case 2: return complexLn(z);
-    case 3: return complexExp(z);
-    case 4: return complexSin(z);
-    case 5: return complexCos(z);
-    case 6: return complexTan(z);
-    case 7: return complexInv(z);
-    case 8: return complexCube(z);
-    case 9: return complexReciprocalCube(z);
-    case 10: return complexJoukowski(z);
-    case 11: return complexRational22(z);
-    case 12: return complexEssentialExpInv(z);
-    case 13: return complexBranchSqrtPoly(z);
-    case 14: return z.clone();
+    case 0: return z.clone();
+    case 1: return complexSqrt(z);
+    case 2: return complexSquare(z);
+    case 3: return complexLn(z);
+    case 4: return complexExp(z);
+    case 5: return complexSin(z);
+    case 6: return complexCos(z);
+    case 7: return complexTan(z);
+    case 8: return complexInv(z);
+    case 9: return complexCube(z);
+    case 10: return complexReciprocalCube(z);
+    case 11: return complexJoukowski(z);
+    case 12: return complexRational22(z);
+    case 13: return complexEssentialExpInv(z);
+    case 14: return complexBranchSqrtPoly(z);
     default: return z.clone();
   }
 }
@@ -702,26 +702,12 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   return (
     <div style={{ position: 'relative' }}>
       <Canvas3D onMount={onMount} />
-      <div style={{position:'absolute',top:10,left:10,display:'flex',flexDirection:'column',gap:8}}>
-        <div className="function-toolbar">
+      <div style={{position:'absolute',bottom:10,left:10,display:'flex',flexDirection:'column',gap:8}}>
+        <div className="function-toolbar" style={{display:'grid',gridTemplateColumns:'repeat(8,auto)',gap:4}}>
           {functionNames.map((name, idx) => (
             <button key={name}
               className={functionIndex===idx ? 'active' : ''}
               onClick={() => setFunctionIndex(idx)}>{name}</button>
-          ))}
-        </div>
-        <div className="color-by-toolbar">
-          {(['Domain','Range'] as const).map((n,idx) => (
-            <button key={n}
-              className={colourBy===idx ? 'active' : ''}
-              onClick={() => setColourBy(idx as ColourBy)}>{n}</button>
-          ))}
-        </div>
-        <div className="color-style-toolbar">
-          {Object.keys(ColorStyle).filter(k => isNaN(Number(k))).map(k => (
-            <button key={k}
-              className={colourStyle===ColorStyle[k as keyof typeof ColorStyle] ? 'active' : ''}
-              onClick={() => setColourStyle(ColorStyle[k as keyof typeof ColorStyle])}>{k}</button>
           ))}
         </div>
         <div className="view-type-toolbar">
@@ -835,6 +821,20 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               onChange={(e) => setHueShift(parseFloat(e.target.value))}
             />
           </label>
+          <div className="color-by-toolbar" style={{display:'flex',gap:4}}>
+            {(['Domain','Range'] as const).map((n,idx) => (
+              <button key={n}
+                className={colourBy===idx ? 'active' : ''}
+                onClick={() => setColourBy(idx as ColourBy)}>{n}</button>
+            ))}
+          </div>
+          <div className="color-style-toolbar" style={{display:'flex',gap:4}}>
+            {Object.keys(ColorStyle).filter(k => isNaN(Number(k))).map(k => (
+              <button key={k}
+                className={colourStyle===ColorStyle[k as keyof typeof ColorStyle] ? 'active' : ''}
+                onClick={() => setColourStyle(ColorStyle[k as keyof typeof ColorStyle])}>{k}</button>
+            ))}
+          </div>
           <label>
             Shape:
             <select

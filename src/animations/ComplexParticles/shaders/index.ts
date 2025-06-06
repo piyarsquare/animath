@@ -96,23 +96,23 @@ vec2 complexBranchSqrtPoly(vec2 z){
   return complexSqrt(q);
 }
 vec2 applyComplex(vec2 z,int t){
-  if(t==0)  return complexSqrt(z);
-  if(t==1)  return complexSquare(z);
-  if(t==2)  return complexLn(z);
-  if(t==3)  return complexExp(z);
-  if(t==4)  return complexSin(z);
-  if(t==5)  return complexCos(z);
-  if(t==6)  return complexTan(z);
-  if(t==7)  return complexInv(z);
+  if(t==0)  return z;
+  if(t==1)  return complexSqrt(z);
+  if(t==2)  return complexSquare(z);
+  if(t==3)  return complexLn(z);
+  if(t==4)  return complexExp(z);
+  if(t==5)  return complexSin(z);
+  if(t==6)  return complexCos(z);
+  if(t==7)  return complexTan(z);
+  if(t==8)  return complexInv(z);
 
   /* --- new cases, keep in same order as names array --- */
-  if(t==8)  return complexCube(z);
-  if(t==9)  return complexReciprocalCube(z);
-  if(t==10) return complexJoukowski(z);
-  if(t==11) return complexRational22(z);
-  if(t==12) return complexEssentialExpInv(z);
-  if(t==13) return complexBranchSqrtPoly(z);
-  if(t==14) return z;
+  if(t==9)  return complexCube(z);
+  if(t==10) return complexReciprocalCube(z);
+  if(t==11) return complexJoukowski(z);
+  if(t==12) return complexRational22(z);
+  if(t==13) return complexEssentialExpInv(z);
+  if(t==14) return complexBranchSqrtPoly(z);
 
   return z;
 }
