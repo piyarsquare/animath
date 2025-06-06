@@ -10,9 +10,7 @@ export const CANVAS_CONFIG = {
 
 export const TOGGLE_MENU_STYLE = {
   container: {
-    position: 'absolute' as const,
-    top: 10,
-    left: 10
+    display: 'inline-block'
   },
   panel: {
     marginTop: 8,

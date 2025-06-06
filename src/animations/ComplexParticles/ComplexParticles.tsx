@@ -664,29 +664,30 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   return (
     <div style={{ position: 'relative' }}>
       <Canvas3D onMount={onMount} />
-      <div className="proj-toolbar" style={{position:'absolute',top:10,left:150}}>
-        {modes.map(([name,code]) => (
-          <button key={code}
-            className={proj===code ? 'active' : ''}
-            onClick={() => animateTo(code as ProjectionMode)}>
-            {name}
-          </button>
-        ))}
-      </div>
-      <div className="colour-toolbar" style={{position:'absolute',top:10,left:10}}>
-        {Object.keys(ColorScheme).map(k => (
-          <button key={k}
-            className={colour===ColorScheme[k as keyof typeof ColorScheme] ? 'active' : ''}
-            onClick={() => setColour(ColorScheme[k as keyof typeof ColorScheme])}>{k}</button>
-        ))}
-      </div>
-      <ToggleMenu title="Menu">
-        <div
-          style={{
-            color: 'white',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8
+      <div style={{position:'absolute',top:10,left:10,display:'flex',flexDirection:'column',gap:8}}>
+        <div className="proj-toolbar">
+          {modes.map(([name,code]) => (
+            <button key={code}
+              className={proj===code ? 'active' : ''}
+              onClick={() => animateTo(code as ProjectionMode)}>
+              {name}
+            </button>
+          ))}
+        </div>
+        <div className="colour-toolbar">
+          {Object.keys(ColorScheme).map(k => (
+            <button key={k}
+              className={colour===ColorScheme[k as keyof typeof ColorScheme] ? 'active' : ''}
+              onClick={() => setColour(ColorScheme[k as keyof typeof ColorScheme])}>{k}</button>
+          ))}
+        </div>
+        <ToggleMenu title="Menu">
+          <div
+            style={{
+              color: 'white',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8
           }}
         >
           <label>
@@ -836,7 +837,8 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
             />
           </label>
         </div>
-      </ToggleMenu>
+        </ToggleMenu>
+      </div>
       <div
         style={{
           position: 'absolute',
