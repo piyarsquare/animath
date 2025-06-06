@@ -69,6 +69,12 @@ export enum ColourBy {
 }
 
 const AXIS_LENGTH = COMPLEX_PARTICLES_DEFAULTS.axisLength;
+const AXIS_COLORS = {
+  x: 0,
+  y: 0.25,
+  u: 0.5,
+  v: 0.75
+} as const;
 const viewTypes = [
   ['Perspective', ProjectionMode.Perspective],
   ['Stereo', ProjectionMode.Stereo],
@@ -310,8 +316,6 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   const rendererRef = useRef<THREE.WebGLRenderer>();
   interface Axis {
     line: THREE.Line;
-    posLabel: THREE.Sprite;
-    negLabel: THREE.Sprite;
   }
 
   const xAxisRef = useRef<Axis>();
@@ -418,30 +422,28 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
 
 
     const xMat = new THREE.LineBasicMaterial({
-      color: new THREE.Color().setHSL(hueShift % 1, 1, 0.5),
+      color: new THREE.Color().setHSL((AXIS_COLORS.x + hueShift) % 1, 1, 0.5),
       linewidth: axisWidth
     });
     const yMat = new THREE.LineBasicMaterial({
-      color: new THREE.Color().setHSL((0.25 + hueShift) % 1, 1, 0.5),
+      color: new THREE.Color().setHSL((AXIS_COLORS.y + hueShift) % 1, 1, 0.5),
       linewidth: axisWidth
     });
     const uMat = new THREE.LineDashedMaterial({
-      color: new THREE.Color().setHSL(hueShift % 1, 1, 0.5),
+      color: new THREE.Color().setHSL((AXIS_COLORS.u + hueShift) % 1, 1, 0.5),
       linewidth: axisWidth,
       dashSize: 0.2,
       gapSize: 0.1
     });
     const vMat = new THREE.LineDashedMaterial({
-      color: new THREE.Color().setHSL((0.25 + hueShift) % 1, 1, 0.5),
+      color: new THREE.Color().setHSL((AXIS_COLORS.v + hueShift) % 1, 1, 0.5),
       linewidth: axisWidth,
       dashSize: 0.2,
       gapSize: 0.1
     });
 
     const makeAxis = (
-      mat: THREE.LineBasicMaterial | THREE.LineDashedMaterial,
-      posText: string,
-      negText: string
+      mat: THREE.LineBasicMaterial | THREE.LineDashedMaterial
     ): Axis => {
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
@@ -449,18 +451,14 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
       if ((line.material as any).isLineDashedMaterial) {
         line.computeLineDistances();
       }
-      const posLabel = makeTextSprite(posText, (mat as any).color ?? 0xffffff);
-      const negLabel = makeTextSprite(negText, (mat as any).color ?? 0xffffff);
       scene.add(line);
-      scene.add(posLabel);
-      scene.add(negLabel);
-      return { line, posLabel, negLabel };
+      return { line };
     };
 
-    xAxisRef.current = makeAxis(xMat, 'θ=0', 'θ=π');
-    yAxisRef.current = makeAxis(yMat, 'θ=π/2', 'θ=-π/2');
-    uAxisRef.current = makeAxis(uMat, 'θ=0', 'θ=π');
-    vAxisRef.current = makeAxis(vMat, 'θ=π/2', 'θ=-π/2');
+    xAxisRef.current = makeAxis(xMat);
+    yAxisRef.current = makeAxis(yMat);
+    uAxisRef.current = makeAxis(uMat);
+    vAxisRef.current = makeAxis(vMat);
 
     const clock = new THREE.Clock();
     let tCurrent = 0;
@@ -565,8 +563,6 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
         pos.setXYZ(0, p1.x, p1.y, p1.z);
         pos.setXYZ(1, p2.x, p2.y, p2.z);
         pos.needsUpdate = true;
-        axis.posLabel.position.set(p2.x, p2.y, p2.z);
-        axis.negLabel.position.set(p1.x, p1.y, p1.z);
       };
 
       updateAxis(xAxisRef.current, new THREE.Vector4(-AXIS_LENGTH, 0, 0, 0), new THREE.Vector4(AXIS_LENGTH, 0, 0, 0));
@@ -626,24 +622,28 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
     }
     if (xAxisRef.current) {
       (xAxisRef.current.line.material as THREE.LineBasicMaterial).color.setHSL(
-        hueShift % 1,
-        1,
-        0.5
-      );
-      (uAxisRef.current!.line.material as THREE.LineDashedMaterial).color.setHSL(
-        hueShift % 1,
+        (AXIS_COLORS.x + hueShift) % 1,
         1,
         0.5
       );
     }
     if (yAxisRef.current) {
       (yAxisRef.current.line.material as THREE.LineBasicMaterial).color.setHSL(
-        (0.25 + hueShift) % 1,
+        (AXIS_COLORS.y + hueShift) % 1,
         1,
         0.5
       );
-      (vAxisRef.current!.line.material as THREE.LineDashedMaterial).color.setHSL(
-        (0.25 + hueShift) % 1,
+    }
+    if (uAxisRef.current) {
+      (uAxisRef.current.line.material as THREE.LineDashedMaterial).color.setHSL(
+        (AXIS_COLORS.u + hueShift) % 1,
+        1,
+        0.5
+      );
+    }
+    if (vAxisRef.current) {
+      (vAxisRef.current.line.material as THREE.LineDashedMaterial).color.setHSL(
+        (AXIS_COLORS.v + hueShift) % 1,
         1,
         0.5
       );
@@ -922,7 +922,7 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
             />
           </label>
           <label>
-            Axis Width:
+            Axis Width: {axisWidth.toFixed(1)}
             <input
               type="range"
               min={COMPLEX_PARTICLES_DEFAULTS.ranges.axisWidth.min}
@@ -1044,6 +1044,24 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
             />
           </label>
         </div>
+      </div>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 10,
+          right: 10,
+          color: objectMode ? 'black' : 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4
+        }}
+      >
+        {(['x','y','u','v'] as const).map(k => (
+          <div key={k} style={{display:'flex',alignItems:'center',gap:4}}>
+            <div style={{width:20,height:3,background:`hsl(${((AXIS_COLORS[k]+hueShift)%1)*360},100%,50%)`}} />
+            <span>{k}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
