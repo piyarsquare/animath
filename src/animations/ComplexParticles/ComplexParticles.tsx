@@ -899,10 +899,10 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
           left: 10,
           display: 'flex',
           flexDirection: 'column',
-          gap: 8
+          gap: 8,
         }}
       >
-        <div className="function-toolbar" style={{display:'grid',gridTemplateColumns:'repeat(8,auto)',gap:4}}>
+        <div className="function-toolbar" style={{display:'flex',flexDirection:'column',gap:4}}>
           {functionNames.map((name, idx) => (
             <button key={name}
               className={functionIndex===idx ? 'active' : ''}
@@ -933,18 +933,20 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               onClick={() => handleMotion(m)}>{m}</button>
           ))}
         </div>
-        <QuarterTurnBar onTurn={turn}/>
-        <label style={{color:'white',display:'flex',flexDirection:'column'}}>
-          Distance: {cameraZ.toFixed(1)}
-          <input
-            type="range"
-            min={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.min}
-            max={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.max}
-            step={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.step}
-            value={cameraZ}
-            onChange={(e) => setCameraZ(parseFloat(e.target.value))}
-          />
-        </label>
+        <div style={{display:'flex',gap:4,alignItems:'center'}}>
+          <QuarterTurnBar onTurn={turn}/>
+          <label style={{color:'white',display:'flex',flexDirection:'column',margin:0}}>
+            Distance: {cameraZ.toFixed(1)}
+            <input
+              type="range"
+              min={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.min}
+              max={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.max}
+              step={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.step}
+              value={cameraZ}
+              onChange={(e) => setCameraZ(parseFloat(e.target.value))}
+            />
+          </label>
+        </div>
       </div>
     </div>
   );
