@@ -4,7 +4,10 @@ import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import Canvas3D from '../../components/Canvas3D';
 import ToggleMenu from '../../components/ToggleMenu';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
-import { quatMul, quatRotate4D, makeUnitQuat, norm, ProjectionMode, project } from '../../lib/viewpoint';
+import { quatRotate4D, ProjectionMode, project } from '../../lib/viewpoint';
+import QuarterTurnBar from '@/controls/QuarterTurnBar';
+import { QUARTER, Plane } from '@/math/constants';
+import { quarterQuat } from '@/math/quat4';
 import { vertexShader, fragmentShader } from './shaders';
 
 export interface ComplexParticlesProps {
@@ -286,6 +289,8 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   const uAxisRef = useRef<THREE.Line>();
   const vAxisRef = useRef<THREE.Line>();
   const texturesRef = useRef<THREE.Texture[]>([]);
+  const rotLRef = useRef(new THREE.Quaternion());
+  const rotRRef = useRef(new THREE.Quaternion());
   const realViewRef = useRef(realView);
   useEffect(() => { realViewRef.current = realView; }, [realView]);
   const projRef = useRef(proj);
@@ -476,18 +481,23 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
 
 
 
-      const qxy = makeUnitQuat(tCurrent*0.5, 'xy');
-      const qyu = makeUnitQuat(tCurrent*0.7, 'yu');
-      const qxv = makeUnitQuat(tCurrent, 'xv');
-      let L = quatMul(qxv.L, quatMul(qyu.L, qxy.L));
-      let R = quatMul(qxv.R, quatMul(qyu.R, qxy.R));
-      norm(L); norm(R);
+      const qxy = quarterQuat('XY', tCurrent*0.5);
+      const qyu = quarterQuat('YU', tCurrent*0.7);
+      const qxv = quarterQuat('XV', tCurrent);
+      const dynL = qxv.L.clone().multiply(qyu.L).multiply(qxy.L);
+      const dynR = qxv.R.clone().multiply(qyu.R).multiply(qxy.R);
+      const baseL = rotLRef.current;
+      const baseR = rotRRef.current;
+      const Lq = dynL.clone().multiply(baseL);
+      const Rq = dynR.clone().multiply(baseR);
       if(materialRef.current){
-        materialRef.current.uniforms.uRotL.value.w = L.w;
-        materialRef.current.uniforms.uRotL.value.v.set(L.x,L.y,L.z);
-        materialRef.current.uniforms.uRotR.value.w = R.w;
-        materialRef.current.uniforms.uRotR.value.v.set(R.x,R.y,R.z);
+        materialRef.current.uniforms.uRotL.value.w = Lq.w;
+        materialRef.current.uniforms.uRotL.value.v.set(Lq.x,Lq.y,Lq.z);
+        materialRef.current.uniforms.uRotR.value.w = Rq.w;
+        materialRef.current.uniforms.uRotR.value.v.set(Rq.x,Rq.y,Rq.z);
       }
+      const L = new THREE.Vector4(Lq.x,Lq.y,Lq.z,Lq.w);
+      const R = new THREE.Vector4(Rq.x,Rq.y,Rq.z,Rq.w);
 
       const updateAxis = (
         line: THREE.Line | undefined,
@@ -695,6 +705,35 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
     setViewMotion(m);
     applyView(viewType, m);
   }
+
+  function applyQuarterTurn(plane: Plane, θ: number){
+    if(!materialRef.current) return;
+    const { L, R } = quarterQuat(plane, θ);
+    const qL = new THREE.Quaternion(
+      materialRef.current.uniforms.uRotL.value.v.x,
+      materialRef.current.uniforms.uRotL.value.v.y,
+      materialRef.current.uniforms.uRotL.value.v.z,
+      materialRef.current.uniforms.uRotL.value.w
+    );
+    const qR = new THREE.Quaternion(
+      materialRef.current.uniforms.uRotR.value.v.x,
+      materialRef.current.uniforms.uRotR.value.v.y,
+      materialRef.current.uniforms.uRotR.value.v.z,
+      materialRef.current.uniforms.uRotR.value.w
+    );
+    qL.premultiply(L).normalize();
+    qR.multiply(R.conjugate()).normalize();
+    materialRef.current.uniforms.uRotL.value.w = qL.w;
+    materialRef.current.uniforms.uRotL.value.v.set(qL.x,qL.y,qL.z);
+    materialRef.current.uniforms.uRotR.value.w = qR.w;
+    materialRef.current.uniforms.uRotR.value.v.set(qR.x,qR.y,qR.z);
+    rotLRef.current.copy(qL);
+    rotRRef.current.copy(qR);
+  }
+
+  const turn = (plane: Plane) => {
+    applyQuarterTurn(plane, QUARTER);
+  };
 
   const currentName = functionNames[functionIndex];
   const currentFormula = functionFormulas[currentName];
@@ -906,6 +945,7 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               onClick={() => handleMotion(m)}>{m}</button>
           ))}
         </div>
+        <QuarterTurnBar onTurn={turn}/>
         <label style={{color:'white',display:'flex',flexDirection:'column'}}>
           Distance: {cameraZ.toFixed(1)}
           <input
