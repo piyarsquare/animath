@@ -902,7 +902,12 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
           gap: 8,
         }}
       >
-        <div className="function-toolbar" style={{display:'flex',flexDirection:'column',gap:4}}>
+        <div className="function-toolbar" style={{
+          display: 'grid',
+          gridAutoFlow: 'column',
+          gridTemplateRows: 'repeat(2, auto)',
+          gap: 4
+        }}>
           {functionNames.map((name, idx) => (
             <button key={name}
               className={functionIndex===idx ? 'active' : ''}
