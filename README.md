@@ -108,6 +108,10 @@ The renderer supports several ways of mapping a 4‑D point `(x,y,u,v)` to 3‑D
 
 Switching modes interpolates on the GPU for a smooth transition.
 
+## Controls
+
+* Six **Quarter-Turn** buttons perform instant 90° rotations in the XY, XU, XV, YU, YV, and UV planes; combine them for any orthogonal orientation before you drop an axis.
+
 ---
 
 ## 6 Acknowledgements
