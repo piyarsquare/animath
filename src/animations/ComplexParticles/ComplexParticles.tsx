@@ -140,6 +140,29 @@ function makeMetalTexture(size = 64): THREE.DataTexture {
   return tex;
 }
 
+function makeTextSprite(text: string, color: THREE.Color | number | string): THREE.Sprite {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d')!;
+  const fontSize = 64;
+  context.font = `${fontSize}px sans-serif`;
+  const metrics = context.measureText(text);
+  canvas.width = metrics.width + 20;
+  canvas.height = fontSize + 20;
+  context.font = `${fontSize}px sans-serif`;
+  context.fillStyle = typeof color === 'string' || typeof color === 'number'
+    ? new THREE.Color(color).getStyle()
+    : color.getStyle();
+  context.textBaseline = 'top';
+  context.fillText(text, 10, 10);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+  const sprite = new THREE.Sprite(material);
+  const scale = 0.01;
+  sprite.scale.set(canvas.width * scale, canvas.height * scale, 1);
+  return sprite;
+}
+
 // CPU versions of the complex functions used in the shader
 function complexSqrt(z: THREE.Vector2): THREE.Vector2 {
   const r = Math.hypot(z.x, z.y);
@@ -271,6 +294,7 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   const [shimmer, setShimmer] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.shimmer);
   const [hueShift, setHueShift] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.hueShift);
   const [jitter, setJitter] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.jitter);
+  const [axisWidth, setAxisWidth] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.axisWidth);
   const [objectMode, setObjectMode] = useState(false);
   const [shapeIndex, setShapeIndex] = useState(0);
   const [textureIndex, setTextureIndex] = useState(0);
@@ -284,10 +308,16 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   const geometryRef = useRef<THREE.BufferGeometry>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
   const rendererRef = useRef<THREE.WebGLRenderer>();
-  const xAxisRef = useRef<THREE.Line>();
-  const yAxisRef = useRef<THREE.Line>();
-  const uAxisRef = useRef<THREE.Line>();
-  const vAxisRef = useRef<THREE.Line>();
+  interface Axis {
+    line: THREE.Line;
+    posLabel: THREE.Sprite;
+    negLabel: THREE.Sprite;
+  }
+
+  const xAxisRef = useRef<Axis>();
+  const yAxisRef = useRef<Axis>();
+  const uAxisRef = useRef<Axis>();
+  const vAxisRef = useRef<Axis>();
   const texturesRef = useRef<THREE.Texture[]>([]);
   const rotLRef = useRef(new THREE.Quaternion());
   const rotRRef = useRef(new THREE.Quaternion());
@@ -388,25 +418,49 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
 
 
     const xMat = new THREE.LineBasicMaterial({
-      color: new THREE.Color().setHSL(hueShift % 1, 1, 0.5)
+      color: new THREE.Color().setHSL(hueShift % 1, 1, 0.5),
+      linewidth: axisWidth
     });
     const yMat = new THREE.LineBasicMaterial({
-      color: new THREE.Color().setHSL((0.25 + hueShift) % 1, 1, 0.5)
+      color: new THREE.Color().setHSL((0.25 + hueShift) % 1, 1, 0.5),
+      linewidth: axisWidth
     });
-    const uvMat = new THREE.LineBasicMaterial({ color: 0x888888 });
+    const uMat = new THREE.LineDashedMaterial({
+      color: new THREE.Color().setHSL(hueShift % 1, 1, 0.5),
+      linewidth: axisWidth,
+      dashSize: 0.2,
+      gapSize: 0.1
+    });
+    const vMat = new THREE.LineDashedMaterial({
+      color: new THREE.Color().setHSL((0.25 + hueShift) % 1, 1, 0.5),
+      linewidth: axisWidth,
+      dashSize: 0.2,
+      gapSize: 0.1
+    });
 
-    const makeAxis = (mat: THREE.LineBasicMaterial) => {
+    const makeAxis = (
+      mat: THREE.LineBasicMaterial | THREE.LineDashedMaterial,
+      posText: string,
+      negText: string
+    ): Axis => {
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
       const line = new THREE.Line(g, mat);
+      if ((line.material as any).isLineDashedMaterial) {
+        line.computeLineDistances();
+      }
+      const posLabel = makeTextSprite(posText, (mat as any).color ?? 0xffffff);
+      const negLabel = makeTextSprite(negText, (mat as any).color ?? 0xffffff);
       scene.add(line);
-      return line;
+      scene.add(posLabel);
+      scene.add(negLabel);
+      return { line, posLabel, negLabel };
     };
 
-    xAxisRef.current = makeAxis(xMat);
-    yAxisRef.current = makeAxis(yMat);
-    uAxisRef.current = makeAxis(uvMat.clone());
-    vAxisRef.current = makeAxis(uvMat.clone());
+    xAxisRef.current = makeAxis(xMat, 'θ=0', 'θ=π');
+    yAxisRef.current = makeAxis(yMat, 'θ=π/2', 'θ=-π/2');
+    uAxisRef.current = makeAxis(uMat, 'θ=0', 'θ=π');
+    vAxisRef.current = makeAxis(vMat, 'θ=π/2', 'θ=-π/2');
 
     const clock = new THREE.Clock();
     let tCurrent = 0;
@@ -500,22 +554,24 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
       const R = new THREE.Vector4(Rq.x,Rq.y,Rq.z,Rq.w);
 
       const updateAxis = (
-        line: THREE.Line | undefined,
+        axis: Axis | undefined,
         start: THREE.Vector4,
         end: THREE.Vector4
       ) => {
-        if (!line) return;
+        if (!axis) return;
         const p1 = project(quatRotate4D(start, L, R), projRef.current);
         const p2 = project(quatRotate4D(end, L, R), projRef.current);
-        const pos = line.geometry.getAttribute('position') as THREE.BufferAttribute;
+        const pos = axis.line.geometry.getAttribute('position') as THREE.BufferAttribute;
         pos.setXYZ(0, p1.x, p1.y, p1.z);
         pos.setXYZ(1, p2.x, p2.y, p2.z);
         pos.needsUpdate = true;
+        axis.posLabel.position.set(p2.x, p2.y, p2.z);
+        axis.negLabel.position.set(p1.x, p1.y, p1.z);
       };
 
       updateAxis(xAxisRef.current, new THREE.Vector4(-AXIS_LENGTH, 0, 0, 0), new THREE.Vector4(AXIS_LENGTH, 0, 0, 0));
       if (yAxisRef.current) {
-        yAxisRef.current.visible = !realViewRef.current;
+        yAxisRef.current.line.visible = !realViewRef.current;
       }
       updateAxis(yAxisRef.current, new THREE.Vector4(0, -AXIS_LENGTH, 0, 0), new THREE.Vector4(0, AXIS_LENGTH, 0, 0));
       updateAxis(uAxisRef.current, new THREE.Vector4(0, 0, -AXIS_LENGTH, 0), new THREE.Vector4(0, 0, AXIS_LENGTH, 0));
@@ -569,20 +625,45 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
       materialRef.current.uniforms.hueShift.value = hueShift;
     }
     if (xAxisRef.current) {
-      (xAxisRef.current.material as THREE.LineBasicMaterial).color.setHSL(
+      (xAxisRef.current.line.material as THREE.LineBasicMaterial).color.setHSL(
+        hueShift % 1,
+        1,
+        0.5
+      );
+      (uAxisRef.current!.line.material as THREE.LineDashedMaterial).color.setHSL(
         hueShift % 1,
         1,
         0.5
       );
     }
     if (yAxisRef.current) {
-      (yAxisRef.current.material as THREE.LineBasicMaterial).color.setHSL(
+      (yAxisRef.current.line.material as THREE.LineBasicMaterial).color.setHSL(
+        (0.25 + hueShift) % 1,
+        1,
+        0.5
+      );
+      (vAxisRef.current!.line.material as THREE.LineDashedMaterial).color.setHSL(
         (0.25 + hueShift) % 1,
         1,
         0.5
       );
     }
   }, [hueShift]);
+
+  useEffect(() => {
+    if (xAxisRef.current) {
+      (xAxisRef.current.line.material as THREE.LineBasicMaterial).linewidth = axisWidth;
+    }
+    if (yAxisRef.current) {
+      (yAxisRef.current.line.material as THREE.LineBasicMaterial).linewidth = axisWidth;
+    }
+    if (uAxisRef.current) {
+      (uAxisRef.current.line.material as THREE.LineDashedMaterial).linewidth = axisWidth;
+    }
+    if (vAxisRef.current) {
+      (vAxisRef.current.line.material as THREE.LineDashedMaterial).linewidth = axisWidth;
+    }
+  }, [axisWidth]);
 
   useEffect(() => {
     if (materialRef.current) {
@@ -838,6 +919,17 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.hueShift.step}
               value={hueShift}
               onChange={(e) => setHueShift(parseFloat(e.target.value))}
+            />
+          </label>
+          <label>
+            Axis Width:
+            <input
+              type="range"
+              min={COMPLEX_PARTICLES_DEFAULTS.ranges.axisWidth.min}
+              max={COMPLEX_PARTICLES_DEFAULTS.ranges.axisWidth.max}
+              step={COMPLEX_PARTICLES_DEFAULTS.ranges.axisWidth.step}
+              value={axisWidth}
+              onChange={(e) => setAxisWidth(parseFloat(e.target.value))}
             />
           </label>
           <div className="color-by-toolbar" style={{display:'flex',gap:4}}>
