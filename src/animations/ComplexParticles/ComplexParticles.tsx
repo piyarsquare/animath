@@ -563,6 +563,7 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
         pos.setXYZ(0, p1.x, p1.y, p1.z);
         pos.setXYZ(1, p2.x, p2.y, p2.z);
         pos.needsUpdate = true;
+        axis.line.computeLineDistances();
       };
 
       updateAxis(xAxisRef.current, new THREE.Vector4(-AXIS_LENGTH, 0, 0, 0), new THREE.Vector4(AXIS_LENGTH, 0, 0, 0));
