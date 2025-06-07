@@ -1,9 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import Mandelbrot2D from './animations/Mandelbrot/Mandelbrot2D';
 
 const routes: Record<string, JSX.Element> = {
-  '/': <App />
+  '/': <App />,
+  '/mandelbrot': <Mandelbrot2D />
 };
 
 function getRoute(): JSX.Element {

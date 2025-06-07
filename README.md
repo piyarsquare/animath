@@ -10,8 +10,8 @@
 
 ## 1 What is animath?
 
-`animath` is a TypeScript/React + WebGL (Three.js) code-base designed for **rapid prototyping of mathematical visuals**.  
-It began with complex-analysis “domain colouring” but is meant to grow into a **general playground**: fractals, differential-equation flows, algebraic surfaces, knot animations, and more.
+`animath` is a TypeScript/React + WebGL (Three.js) code-base designed for **rapid prototyping of mathematical visuals**.
+It began with complex-analysis “domain colouring” but is meant to grow into a **general playground**: fractals, differential-equation flows, algebraic surfaces, knot animations, and more. A simple Mandelbrot renderer now demonstrates the fractal side of the toolkit (see the `#/mandelbrot` route).
 
 Goals (observable intent):
 
