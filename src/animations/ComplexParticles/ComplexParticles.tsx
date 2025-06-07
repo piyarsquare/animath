@@ -808,7 +808,7 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   }
 
   const turn = (plane: Plane, dir: 1 | -1) => {
-    applyQuarterTurn(plane, QUARTER * dir);
+    applyQuarterTurn(plane, (QUARTER / 2) * dir);
   };
 
   const currentName = functionNames[functionIndex];
@@ -1041,8 +1041,9 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
       <div
         style={{
           position: 'absolute',
-          top: 10,
+          top: '50%',
           right: 10,
+          transform: 'translateY(-50%)',
           display: 'flex',
           flexDirection: 'column',
           gap: 4
