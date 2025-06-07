@@ -8,8 +8,8 @@
 
 ## Table of contents
 
-1. **[Complex Particles](#/)** – 3D representation of four-dimensional complex functions
-2. **[Fractals](#/fractals)** – explore Mandelbrot, Julia, Burning Ship and Multibrot sets
+1. **[Complex Particles](https://piyarsquare.github.io/animath/#/)** – 3D representation of four-dimensional complex functions
+2. **[Fractals](https://piyarsquare.github.io/animath/#/fractals)** – explore Mandelbrot, Julia, Burning Ship and Multibrot sets
 
 ---
 
