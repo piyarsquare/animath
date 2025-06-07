@@ -6,12 +6,17 @@
   <a href="https://piyarsquare.github.io/animath/">Live demo</a>
 </p>
 
+## Table of contents
+
+1. **[Complex Particles](#/)** – 3D representation of four-dimensional complex functions
+2. **[Fractals](#/fractals)** – explore Mandelbrot, Julia, Burning Ship and Multibrot sets
+
 ---
 
 ## 1 What is animath?
 
 `animath` is a TypeScript/React + WebGL (Three.js) code-base designed for **rapid prototyping of mathematical visuals**.
-It began with complex-analysis “domain colouring” but is meant to grow into a **general playground**: fractals, differential-equation flows, algebraic surfaces, knot animations, and more. A simple Mandelbrot renderer now demonstrates the fractal side of the toolkit (see the `#/mandelbrot` route).
+It began with complex-analysis “domain colouring” but is meant to grow into a **general playground**: fractals, differential-equation flows, algebraic surfaces, knot animations, and more. A simple fractal renderer now demonstrates the fractal side of the toolkit (see the `#/fractals` route).
 
 Goals (observable intent):
 
