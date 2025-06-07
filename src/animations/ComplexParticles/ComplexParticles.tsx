@@ -429,28 +429,21 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
       color: new THREE.Color().setHSL((AXIS_COLORS.y + hueShift) % 1, 1, 0.5),
       linewidth: axisWidth
     });
-    const uMat = new THREE.LineDashedMaterial({
+    const uMat = new THREE.LineBasicMaterial({
       color: new THREE.Color().setHSL((AXIS_COLORS.u + hueShift) % 1, 1, 0.5),
-      linewidth: axisWidth,
-      dashSize: 0.2,
-      gapSize: 0.1
+      linewidth: axisWidth
     });
-    const vMat = new THREE.LineDashedMaterial({
+    const vMat = new THREE.LineBasicMaterial({
       color: new THREE.Color().setHSL((AXIS_COLORS.v + hueShift) % 1, 1, 0.5),
-      linewidth: axisWidth,
-      dashSize: 0.2,
-      gapSize: 0.1
+      linewidth: axisWidth
     });
 
     const makeAxis = (
-      mat: THREE.LineBasicMaterial | THREE.LineDashedMaterial
+      mat: THREE.LineBasicMaterial
     ): Axis => {
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
       const line = new THREE.Line(g, mat);
-      if ((line.material as any).isLineDashedMaterial) {
-        line.computeLineDistances();
-      }
       scene.add(line);
       return { line };
     };
@@ -636,14 +629,14 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
       );
     }
     if (uAxisRef.current) {
-      (uAxisRef.current.line.material as THREE.LineDashedMaterial).color.setHSL(
+      (uAxisRef.current.line.material as THREE.LineBasicMaterial).color.setHSL(
         (AXIS_COLORS.u + hueShift) % 1,
         1,
         0.5
       );
     }
     if (vAxisRef.current) {
-      (vAxisRef.current.line.material as THREE.LineDashedMaterial).color.setHSL(
+      (vAxisRef.current.line.material as THREE.LineBasicMaterial).color.setHSL(
         (AXIS_COLORS.v + hueShift) % 1,
         1,
         0.5
@@ -659,10 +652,10 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
       (yAxisRef.current.line.material as THREE.LineBasicMaterial).linewidth = axisWidth;
     }
     if (uAxisRef.current) {
-      (uAxisRef.current.line.material as THREE.LineDashedMaterial).linewidth = axisWidth;
+      (uAxisRef.current.line.material as THREE.LineBasicMaterial).linewidth = axisWidth;
     }
     if (vAxisRef.current) {
-      (vAxisRef.current.line.material as THREE.LineDashedMaterial).linewidth = axisWidth;
+      (vAxisRef.current.line.material as THREE.LineBasicMaterial).linewidth = axisWidth;
     }
   }, [axisWidth]);
 
@@ -1032,7 +1025,6 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
           ))}
         </div>
         <div style={{display:'flex',gap:4,alignItems:'center'}}>
-          <QuarterTurnBar onTurn={turn}/>
           <label style={{color:'white',display:'flex',flexDirection:'column',margin:0}}>
             Distance: {cameraZ.toFixed(1)}
             <input
@@ -1045,6 +1037,18 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
             />
           </label>
         </div>
+      </div>
+      <div
+        style={{
+          position: 'absolute',
+          top: 10,
+          right: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4
+        }}
+      >
+        <QuarterTurnBar onTurn={turn}/>
       </div>
       <div
         style={{
