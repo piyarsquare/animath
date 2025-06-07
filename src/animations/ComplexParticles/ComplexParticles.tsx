@@ -807,8 +807,8 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
     requestAnimationFrame(step);
   }
 
-  const turn = (plane: Plane) => {
-    applyQuarterTurn(plane, QUARTER);
+  const turn = (plane: Plane, dir: 1 | -1) => {
+    applyQuarterTurn(plane, QUARTER * dir);
   };
 
   const currentName = functionNames[functionIndex];
