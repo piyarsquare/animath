@@ -302,11 +302,11 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   const [jitter, setJitter] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.jitter);
   const [axisWidth, setAxisWidth] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.axisWidth);
   const [objectMode, setObjectMode] = useState(false);
-  const [shapeIndex, setShapeIndex] = useState(0);
+  const [shapeIndex, setShapeIndex] = useState(1);
   const [textureIndex, setTextureIndex] = useState(0);
   const [realView, setRealView] = useState(false);
   const [colourStyle, setColourStyle] = useState<ColorStyle>(ColorStyle.HSV);
-  const [colourBy, setColourBy] = useState<ColourBy>(ColourBy.Range);
+  const [colourBy, setColourBy] = useState<ColourBy>(ColourBy.Domain);
   const [viewType, setViewType] = useState<ProjectionMode>(ProjectionMode.Perspective);
   const [viewMotion, setViewMotion] = useState<(typeof motionModes)[number]>('Quaternion');
   const [proj, setProj] = useState(ProjectionMode.Perspective);
@@ -988,28 +988,17 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
           gap: 8,
         }}
       >
-        <div className="function-toolbar" style={{
-          display: 'grid',
-          gridAutoFlow: 'column',
-          gridTemplateRows: 'repeat(2, auto)',
-          gap: 4
-        }}>
-          {functionNames.map((name, idx) => (
-            <button key={name}
-              className={functionIndex===idx ? 'active' : ''}
-              onClick={() => setFunctionIndex(idx)}>{name}</button>
-          ))}
-        </div>
-        <div
-          style={{
-            color: objectMode ? 'black' : 'white',
-            fontSize: '1.2em',
-            pointerEvents: 'none'
-          }}
-        >
-          <div>{currentName}</div>
-          <div>{currentFormula}</div>
-        </div>
+        <label style={{display:'flex',flexDirection:'column',color:'white',gap:4}}>
+          Function:
+          <select
+            value={functionIndex}
+            onChange={(e) => setFunctionIndex(parseInt(e.target.value,10))}
+          >
+            {functionNames.map((name, idx) => (
+              <option key={name} value={idx}>{name}</option>
+            ))}
+          </select>
+        </label>
         <div className="view-type-toolbar">
           {viewTypes.map(([name,code]) => (
             <button key={name}
@@ -1041,33 +1030,28 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
       <div
         style={{
           position: 'absolute',
-          top: '50%',
-          right: 10,
-          transform: 'translateY(-50%)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4
-        }}
-      >
-        <QuarterTurnBar onTurn={turn}/>
-      </div>
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 10,
+          top: 10,
           right: 10,
           color: objectMode ? 'black' : 'white',
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'flex-end',
           gap: 4
         }}
       >
-        {(['x','y','u','v'] as const).map(k => (
-          <div key={k} style={{display:'flex',alignItems:'center',gap:4}}>
-            <div style={{width:20,height:3,background:`hsl(${((AXIS_COLORS[k]+hueShift)%1)*360},100%,50%)`}} />
-            <span>{k}</span>
-          </div>
-        ))}
+        <div style={{ fontSize: '1.2em', pointerEvents: 'none' }}>
+          <div>{currentName}</div>
+          <div>{currentFormula}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(['x','y','u','v'] as const).map(k => (
+            <div key={k} style={{display:'flex',alignItems:'center',gap:4}}>
+              <div style={{width:20,height:3,background:`hsl(${((AXIS_COLORS[k]+hueShift)%1)*360},100%,50%)`}} />
+              <span>{k}</span>
+            </div>
+          ))}
+        </div>
+        <QuarterTurnBar onTurn={turn}/>
       </div>
     </div>
   );
