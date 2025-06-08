@@ -5,6 +5,16 @@ import ToggleMenu from '../../components/ToggleMenu';
 export default function Fractals2D() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>();
+  const renderRef = useRef<number>();
+
+  const iterationsRef = useRef<Float32Array>();
+  const imageRef = useRef<ImageData>();
+  const tilesRef = useRef<{ x: number; y: number; w: number; h: number }[]>([]);
+  const tileIndexRef = useRef(0);
+  const lastIterRef = useRef(0);
+
+  const TILE_SIZE = 32;
+  const TILES_PER_FRAME = 16;
 
   const [view, setView] = useState({
     xMin: -2.5,
@@ -98,34 +108,79 @@ export default function Fractals2D() {
     return i + 1 - Math.log(Math.log(Math.hypot(x, y))) / Math.log(2);
   }, []);
 
-  const render = useCallback(() => {
+  const renderTiles = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !imageRef.current || !iterationsRef.current) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const width = canvas.width;
+    const pal = generatePalette(palette, offset);
+    const scale = (view.xMax - view.xMin) / width;
+
+    for (
+      let n = 0;
+      n < TILES_PER_FRAME && tileIndexRef.current < tilesRef.current.length;
+      n++, tileIndexRef.current++
+    ) {
+      const t = tilesRef.current[tileIndexRef.current];
+      for (let py = t.y; py < t.y + t.h; py++) {
+        const fy = view.yMin + py * scale;
+        for (let px = t.x; px < t.x + t.w; px++) {
+          const idx = py * width + px;
+          let v = iterationsRef.current[idx];
+          if (v < 0) {
+            const fx = view.xMin + px * scale;
+            v =
+              type === 'mandelbrot'
+                ? mandelbrot(fx, fy, iter)
+                : julia(fx, fy, juliaC.real, juliaC.imag, iter);
+            iterationsRef.current[idx] = v;
+          }
+          const c = pal[v === 0 ? 0 : Math.floor((v * 10) % 255)];
+          const di = idx * 4;
+          imageRef.current.data[di] = c.r;
+          imageRef.current.data[di + 1] = c.g;
+          imageRef.current.data[di + 2] = c.b;
+          imageRef.current.data[di + 3] = 255;
+        }
+      }
+    }
+
+    ctx.putImageData(imageRef.current, 0, 0);
+    if (tileIndexRef.current < tilesRef.current.length) {
+      renderRef.current = requestAnimationFrame(renderTiles);
+    } else {
+      renderRef.current = undefined;
+    }
+  }, [generatePalette, mandelbrot, julia, view, iter, palette, offset, type, juliaC]);
+
+  const startRender = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const width = canvas.width;
     const height = canvas.height;
-    const img = ctx.createImageData(width, height);
-    const pal = generatePalette(palette, offset);
-    const scale = (view.xMax - view.xMin) / width; // x and y scale are equal
-    for (let py = 0; py < height; py++) {
-      for (let px = 0; px < width; px++) {
-        const x0 = view.xMin + px * scale;
-        const y0 = view.yMin + py * scale;
-        const v =
-          type === 'mandelbrot'
-            ? mandelbrot(x0, y0, iter)
-            : julia(x0, y0, juliaC.real, juliaC.imag, iter);
-        const idx = (py * width + px) * 4;
-        const c = pal[v === 0 ? 0 : Math.floor((v * 10) % 255)];
-        img.data[idx] = c.r;
-        img.data[idx + 1] = c.g;
-        img.data[idx + 2] = c.b;
-        img.data[idx + 3] = 255;
+    iterationsRef.current = new Float32Array(width * height);
+    iterationsRef.current.fill(-1);
+    imageRef.current = ctx.createImageData(width, height);
+    const list: { x: number; y: number; w: number; h: number }[] = [];
+    for (let y = 0; y < height; y += TILE_SIZE) {
+      for (let x = 0; x < width; x += TILE_SIZE) {
+        list.push({
+          x,
+          y,
+          w: Math.min(TILE_SIZE, width - x),
+          h: Math.min(TILE_SIZE, height - y)
+        });
       }
     }
-    ctx.putImageData(img, 0, 0);
-  }, [generatePalette, mandelbrot, julia, view, iter, palette, offset, type, juliaC]);
+    tilesRef.current = list;
+    tileIndexRef.current = 0;
+    lastIterRef.current = iter;
+    if (renderRef.current) cancelAnimationFrame(renderRef.current);
+    renderRef.current = requestAnimationFrame(renderTiles);
+  }, [iter, renderTiles]);
 
   const screenToFractal = useCallback((sx: number, sy: number) => {
     const canvas = canvasRef.current;
@@ -209,12 +264,23 @@ export default function Fractals2D() {
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     setView(v => normalizeView(v, canvas));
-    render();
-  }, [render, normalizeView]);
+    startRender();
+  }, [startRender, normalizeView]);
 
   useEffect(() => {
-    render();
-  }, [render]);
+    startRender();
+  }, [startRender]);
+
+  useEffect(() => {
+    startRender();
+  }, [view, iter, type, juliaC, startRender]);
+
+  useEffect(() => {
+    if (!imageRef.current) return;
+    tileIndexRef.current = 0;
+    if (renderRef.current) cancelAnimationFrame(renderRef.current);
+    renderRef.current = requestAnimationFrame(renderTiles);
+  }, [palette, offset, renderTiles]);
 
   useEffect(() => {
     handleResize();
