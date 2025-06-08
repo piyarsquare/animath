@@ -159,9 +159,30 @@ export default function Fractals2D() {
     animRef.current = requestAnimationFrame(animate);
   }, []);
 
+  // Ensure canvas resolution matches its displayed size so pixels remain square
+  const handleResize = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = parent.getBoundingClientRect();
+    canvas.style.width = `${rect.width}px`;
+    canvas.style.height = `${rect.height}px`;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    render();
+  }, [render]);
+
   useEffect(() => {
     render();
   }, [render]);
+
+  useEffect(() => {
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [handleResize]);
 
   useEffect(() => {
     if (animating) {
@@ -178,8 +199,8 @@ export default function Fractals2D() {
     <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
       <canvas
         ref={canvasRef}
-        width={800}
-        height={600}
+        width={1}
+        height={1}
         style={{ width: '100%', height: '100%', display: 'block', background: 'black' }}
       />
       <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
