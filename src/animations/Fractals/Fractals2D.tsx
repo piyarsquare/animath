@@ -19,6 +19,8 @@ export default function Fractals2D() {
   const [isDragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [animating, setAnimating] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const lastDistRef = useRef<number | null>(null);
 
   const generatePalette = useCallback((scheme: number, off: number) => {
     const out = [] as { r: number; g: number; b: number }[];
@@ -162,6 +164,40 @@ export default function Fractals2D() {
     zoom(e.deltaY > 0 ? 1.1 : 0.9, e.clientX, e.clientY);
   }, [zoom]);
 
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 1) {
+      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastDistRef.current = Math.hypot(dx, dy);
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && touchStartRef.current) {
+      const nx = e.touches[0].clientX;
+      const ny = e.touches[0].clientY;
+      pan(nx - touchStartRef.current.x, ny - touchStartRef.current.y);
+      touchStartRef.current = { x: nx, y: ny };
+    } else if (e.touches.length === 2 && lastDistRef.current !== null) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const factor = lastDistRef.current / dist;
+      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      zoom(factor, cx, cy);
+      lastDistRef.current = dist;
+    }
+  }, [pan, zoom]);
+
+  const handleTouchEnd = useCallback(() => {
+    touchStartRef.current = null;
+    lastDistRef.current = null;
+  }, []);
+
   const reset = useCallback(() => {
     setView({ xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 });
     setIter(100);
@@ -235,6 +271,9 @@ export default function Fractals2D() {
         onMouseMove={handleMove}
         onMouseUp={stopDrag}
         onMouseLeave={stopDrag}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         onWheel={handleWheel}
         style={{ width: '100%', height: '100%', cursor: 'move', background: 'black' }}
       />
