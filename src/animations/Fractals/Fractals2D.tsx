@@ -1,10 +1,19 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 import ToggleMenu from '../../components/ToggleMenu';
 
 /** Interactive 2D fractal viewer inspired by the old Fractint program. */
 export default function Fractals2D() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>();
+  const pixelRef = useRef<Uint8ClampedArray>();
+  const imageRef = useRef<ImageData>();
+  const dirtyRef = useRef(true);
 
   const [view, setView] = useState({
     xMin: -2.5,
@@ -19,16 +28,19 @@ export default function Fractals2D() {
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
 
+
   const FORMULAS: Record<'mandelbrot' | 'julia', string> = {
     mandelbrot: 'z_{n+1} = z_n^2 + c',
     julia: 'z_{n+1} = z_n^2 + c'
   };
 
   const generatePalette = useCallback((scheme: number, off: number) => {
-    const out = [] as { r: number; g: number; b: number }[];
+    const out = new Uint8ClampedArray(256 * 3);
     for (let i = 0; i < 256; i++) {
-      const t = (i + off) % 256;
-      let r = 0, g = 0, b = 0;
+      const t = (i + off) & 255;
+      let r = 0,
+        g = 0,
+        b = 0;
       switch (scheme) {
         case 0:
           r = Math.sin(0.024 * t + 0) * 127 + 128;
@@ -49,64 +61,85 @@ export default function Fractals2D() {
           r = g = b = t;
           break;
       }
-      out.push({ r: Math.floor(r), g: Math.floor(g), b: Math.floor(b) });
+      const idx = i * 3;
+      out[idx] = r as number;
+      out[idx + 1] = g as number;
+      out[idx + 2] = b as number;
     }
     return out;
   }, []);
 
-  const mandelbrot = useCallback((cx: number, cy: number, max: number) => {
-    let x = 0, y = 0, i = 0;
-    while (x * x + y * y <= 4 && i < max) {
-      const xt = x * x - y * y + cx;
-      y = 2 * x * y + cy;
-      x = xt;
-      i++;
-    }
-    if (i === max) return 0;
-    return i + 1 - Math.log(Math.log(Math.hypot(x, y))) / Math.log(2);
-  }, []);
+  const paletteData = useMemo(
+    () => generatePalette(palette, offset),
+    [generatePalette, palette, offset]
+  );
 
-  const julia = useCallback((zx: number, zy: number, cx: number, cy: number, max: number) => {
-    let x = zx, y = zy, i = 0;
-    while (x * x + y * y <= 4 && i < max) {
-      const xt = x * x - y * y + cx;
-      y = 2 * x * y + cy;
-      x = xt;
-      i++;
-    }
-    if (i === max) return 0;
-    return i + 1 - Math.log(Math.log(Math.hypot(x, y))) / Math.log(2);
-  }, []);
 
   const render = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !pixelRef.current || !imageRef.current) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
     const width = canvas.width;
     const height = canvas.height;
-    const img = ctx.createImageData(width, height);
-    const pal = generatePalette(palette, offset);
+    const data = pixelRef.current;
+    const pal = paletteData;
+
     const xScale = (view.xMax - view.xMin) / width;
     const yScale = (view.yMax - view.yMin) / height;
+
+    const maxIter = iter;
+    const log2 = Math.log(2);
+    const invLog2 = 1 / log2;
+
+    const useMandelbrot = type === 'mandelbrot';
+    const cRe = juliaC.real;
+    const cIm = juliaC.imag;
+
+    let idx = 0;
     for (let py = 0; py < height; py++) {
+      const y0 = view.yMin + py * yScale;
       for (let px = 0; px < width; px++) {
         const x0 = view.xMin + px * xScale;
-        const y0 = view.yMin + py * yScale;
-        const v =
-          type === 'mandelbrot'
-            ? mandelbrot(x0, y0, iter)
-            : julia(x0, y0, juliaC.real, juliaC.imag, iter);
-        const idx = (py * width + px) * 4;
-        const c = pal[v === 0 ? 0 : Math.floor((v * 10) % 255)];
-        img.data[idx] = c.r;
-        img.data[idx + 1] = c.g;
-        img.data[idx + 2] = c.b;
-        img.data[idx + 3] = 255;
+
+        let x = useMandelbrot ? 0 : x0;
+        let y = useMandelbrot ? 0 : y0;
+        const cx = useMandelbrot ? x0 : cRe;
+        const cy = useMandelbrot ? y0 : cIm;
+
+        let iterCount = 0;
+        let x2 = x * x;
+        let y2 = y * y;
+        while (x2 + y2 <= 4 && iterCount < maxIter) {
+          y = 2 * x * y + cy;
+          x = x2 - y2 + cx;
+          x2 = x * x;
+          y2 = y * y;
+          iterCount++;
+        }
+
+        let colorIdx = 0;
+        if (iterCount !== maxIter) {
+          const logZn = Math.log(x2 + y2) / 2;
+          const smooth = iterCount + 1 - Math.log(logZn) * invLog2;
+          colorIdx = Math.floor((smooth * 10) % 255);
+        }
+
+        const p = colorIdx * 3;
+        data[idx] = pal[p];
+        data[idx + 1] = pal[p + 1];
+        data[idx + 2] = pal[p + 2];
+        data[idx + 3] = 255;
+        idx += 4;
       }
     }
-    ctx.putImageData(img, 0, 0);
-  }, [generatePalette, mandelbrot, julia, view, iter, palette, offset, type, juliaC]);
+
+    if (dirtyRef.current) {
+      ctx.putImageData(imageRef.current, 0, 0);
+      dirtyRef.current = false;
+    }
+  }, [paletteData, view, iter, type, juliaC]);
 
   const screenToFractal = useCallback((sx: number, sy: number) => {
     const canvas = canvasRef.current;
@@ -156,6 +189,7 @@ export default function Fractals2D() {
 
   const animate = useCallback(() => {
     setOffset(o => (o + 1) % 256);
+    dirtyRef.current = true;
     animRef.current = requestAnimationFrame(animate);
   }, []);
 
@@ -171,10 +205,14 @@ export default function Fractals2D() {
     canvas.style.height = `${rect.height}px`;
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
+    pixelRef.current = new Uint8ClampedArray(canvas.width * canvas.height * 4);
+    imageRef.current = new ImageData(pixelRef.current, canvas.width, canvas.height);
+    dirtyRef.current = true;
     render();
   }, [render]);
 
   useEffect(() => {
+    dirtyRef.current = true;
     render();
   }, [render]);
 
