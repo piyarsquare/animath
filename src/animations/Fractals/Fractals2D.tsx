@@ -12,6 +12,7 @@ export default function Fractals2D() {
   const tilesRef = useRef<{ x: number; y: number; w: number; h: number }[]>([]);
   const tileIndexRef = useRef(0);
   const lastIterRef = useRef(0);
+  const pathRef = useRef<{ x: number; y: number }[] | null>(null);
 
   const TILE_SIZE = 32;
   const TILES_PER_FRAME = 16;
@@ -108,6 +109,7 @@ export default function Fractals2D() {
     return i + 1 - Math.log(Math.log(Math.hypot(x, y))) / Math.log(2);
   }, []);
 
+
   const renderTiles = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !imageRef.current || !iterationsRef.current) return;
@@ -147,12 +149,13 @@ export default function Fractals2D() {
     }
 
     ctx.putImageData(imageRef.current, 0, 0);
+    drawPath(ctx);
     if (tileIndexRef.current < tilesRef.current.length) {
       renderRef.current = requestAnimationFrame(renderTiles);
     } else {
       renderRef.current = undefined;
     }
-  }, [generatePalette, mandelbrot, julia, view, iter, palette, offset, type, juliaC]);
+  }, [generatePalette, mandelbrot, julia, view, iter, palette, offset, type, juliaC, drawPath]);
 
   const startRender = useCallback(() => {
     const canvas = canvasRef.current;
@@ -178,6 +181,7 @@ export default function Fractals2D() {
     tilesRef.current = list;
     tileIndexRef.current = 0;
     lastIterRef.current = iter;
+    pathRef.current = null;
     if (renderRef.current) cancelAnimationFrame(renderRef.current);
     renderRef.current = requestAnimationFrame(renderTiles);
   }, [iter, renderTiles]);
@@ -204,6 +208,55 @@ export default function Fractals2D() {
       y: (fy - view.yMin) * scale
     };
   }, [view]);
+
+  function drawPath(ctx: CanvasRenderingContext2D) {
+    if (!pathRef.current || pathRef.current.length < 2) return;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < pathRef.current.length - 1; i++) {
+      const start = fractalToScreen(pathRef.current[i].x, pathRef.current[i].y);
+      const end = fractalToScreen(pathRef.current[i + 1].x, pathRef.current[i + 1].y);
+      const hue = (i / (pathRef.current.length - 1)) * 360;
+      ctx.strokeStyle = `hsl(${hue},100%,50%)`;
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke();
+    }
+  }
+
+  const handleSelect = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const start = screenToFractal(e.clientX, e.clientY);
+      const pts: { x: number; y: number }[] = [];
+      if (type === 'mandelbrot') {
+        let zx = 0,
+          zy = 0;
+        for (let i = 0; i < iter && zx * zx + zy * zy <= 4; i++) {
+          pts.push({ x: zx, y: zy });
+          const xt = zx * zx - zy * zy + start.x;
+          zy = 2 * zx * zy + start.y;
+          zx = xt;
+        }
+        pts.push({ x: zx, y: zy });
+      } else {
+        let zx = start.x,
+          zy = start.y;
+        for (let i = 0; i < iter && zx * zx + zy * zy <= 4; i++) {
+          pts.push({ x: zx, y: zy });
+          const xt = zx * zx - zy * zy + juliaC.real;
+          zy = 2 * zx * zy + juliaC.imag;
+          zx = xt;
+        }
+        pts.push({ x: zx, y: zy });
+      }
+      pathRef.current = pts;
+      const canvas = canvasRef.current;
+      if (!canvas || !imageRef.current) return;
+      const ctx = canvas.getContext('2d');
+      if (ctx) drawPath(ctx);
+    },
+    [screenToFractal, iter, type, juliaC, drawPath]
+  );
 
   const zoom = useCallback((factor: number, cx?: number, cy?: number) => {
     const canvas = canvasRef.current;
@@ -305,6 +358,7 @@ export default function Fractals2D() {
         ref={canvasRef}
         width={1}
         height={1}
+        onClick={handleSelect}
         style={{ width: '100%', height: '100%', display: 'block', background: 'black' }}
       />
       <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
