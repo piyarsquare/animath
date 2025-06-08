@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import ToggleMenu from '../../components/ToggleMenu';
 
 /** Interactive 2D fractal viewer inspired by the old Fractint program. */
 export default function Fractals2D() {
@@ -16,11 +17,12 @@ export default function Fractals2D() {
   const [iter, setIter] = useState(100);
   const [palette, setPalette] = useState(0);
   const [offset, setOffset] = useState(0);
-  const [isDragging, setDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [animating, setAnimating] = useState(false);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const lastDistRef = useRef<number | null>(null);
+
+  const FORMULAS: Record<'mandelbrot' | 'julia', string> = {
+    mandelbrot: 'z_{n+1} = z_n^2 + c',
+    julia: 'z_{n+1} = z_n^2 + c'
+  };
 
   const generatePalette = useCallback((scheme: number, off: number) => {
     const out = [] as { r: number; g: number; b: number }[];
@@ -146,57 +148,6 @@ export default function Fractals2D() {
     }));
   }, [view]);
 
-  const handleDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    setDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
-  }, []);
-
-  const handleMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging) return;
-    pan(e.clientX - dragStart.x, e.clientY - dragStart.y);
-    setDragStart({ x: e.clientX, y: e.clientY });
-  }, [isDragging, dragStart, pan]);
-
-  const stopDrag = useCallback(() => setDragging(false), []);
-
-  const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    zoom(e.deltaY > 0 ? 1.1 : 0.9, e.clientX, e.clientY);
-  }, [zoom]);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (e.touches.length === 1) {
-      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    } else if (e.touches.length === 2) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      lastDistRef.current = Math.hypot(dx, dy);
-    }
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    if (e.touches.length === 1 && touchStartRef.current) {
-      const nx = e.touches[0].clientX;
-      const ny = e.touches[0].clientY;
-      pan(nx - touchStartRef.current.x, ny - touchStartRef.current.y);
-      touchStartRef.current = { x: nx, y: ny };
-    } else if (e.touches.length === 2 && lastDistRef.current !== null) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const dist = Math.hypot(dx, dy);
-      const factor = lastDistRef.current / dist;
-      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-      zoom(factor, cx, cy);
-      lastDistRef.current = dist;
-    }
-  }, [pan, zoom]);
-
-  const handleTouchEnd = useCallback(() => {
-    touchStartRef.current = null;
-    lastDistRef.current = null;
-  }, []);
 
   const reset = useCallback(() => {
     setView({ xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 });
@@ -224,59 +175,101 @@ export default function Fractals2D() {
   }, [animating, animate]);
 
   return (
-    <div style={{ padding: 8 }}>
-      <div style={{ marginBottom: 8 }}>
-        <label style={{ marginRight: 8 }}>
-          Fractal:
-          <select value={type} onChange={e => setType(e.target.value as any)} style={{ marginLeft: 4 }}>
-            <option value="mandelbrot">Mandelbrot</option>
-            <option value="julia">Julia</option>
-          </select>
-        </label>
-        <label style={{ marginRight: 8 }}>
-          Palette:
-          <select value={palette} onChange={e => setPalette(parseInt(e.target.value, 10))} style={{ marginLeft: 4 }}>
-            <option value={0}>Rainbow</option>
-            <option value={1}>Fire</option>
-            <option value={2}>Ocean</option>
-            <option value={3}>Gray</option>
-          </select>
-        </label>
-        <label style={{ marginRight: 8 }}>
-          Iter:
-          <input type="number" value={iter} min={50} max={500} onChange={e => setIter(parseInt(e.target.value, 10))} style={{ width: 60, marginLeft: 4 }} />
-        </label>
-        <button onClick={() => setAnimating(a => !a)} style={{ marginRight: 4 }}>
-          {animating ? 'Stop' : 'Cycle'}
-        </button>
-        <button onClick={reset}>Reset</button>
-      </div>
-      {type === 'julia' && (
-        <div style={{ marginBottom: 8 }}>
-          <label style={{ marginRight: 8 }}>
-            C real:
-            <input type="number" step={0.01} value={juliaC.real} onChange={e => setJuliaC({ ...juliaC, real: parseFloat(e.target.value) })} style={{ width: 70, marginLeft: 4 }} />
-          </label>
-          <label>
-            C imag:
-            <input type="number" step={0.01} value={juliaC.imag} onChange={e => setJuliaC({ ...juliaC, imag: parseFloat(e.target.value) })} style={{ width: 70, marginLeft: 4 }} />
-          </label>
-        </div>
-      )}
+    <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
       <canvas
         ref={canvasRef}
         width={800}
         height={600}
-        onMouseDown={handleDown}
-        onMouseMove={handleMove}
-        onMouseUp={stopDrag}
-        onMouseLeave={stopDrag}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onWheel={handleWheel}
-        style={{ width: '100%', height: '100%', cursor: 'move', background: 'black' }}
+        style={{ width: '100%', height: '100%', display: 'block', background: 'black' }}
       />
+      <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
+        <label>
+          Function:
+          <select value={type} onChange={e => setType(e.target.value as any)}>
+            <option value="mandelbrot">Mandelbrot</option>
+            <option value="julia">Julia</option>
+          </select>
+        </label>
+      </div>
+      <div
+        style={{
+          position: 'absolute',
+          top: 10,
+          right: 10,
+          color: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: 4
+        }}
+      >
+        <div style={{ fontSize: '1.2em' }}>{type === 'mandelbrot' ? 'Mandelbrot' : 'Julia'}</div>
+        <div>{FORMULAS[type]}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <button onClick={() => pan(0, -50)}>Up</button>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button onClick={() => pan(-50, 0)}>Left</button>
+            <button onClick={() => pan(50, 0)}>Right</button>
+          </div>
+          <button onClick={() => pan(0, 50)}>Down</button>
+        </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button onClick={() => zoom(0.9)}>Zoom In</button>
+          <button onClick={() => zoom(1.1)}>Zoom Out</button>
+        </div>
+      </div>
+      <div style={{ position: 'absolute', bottom: 10, left: 10 }}>
+        <ToggleMenu title="Menu">
+          <div style={{ color: 'white', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label>
+              Palette:
+              <select value={palette} onChange={e => setPalette(parseInt(e.target.value, 10))}>
+                <option value={0}>Rainbow</option>
+                <option value={1}>Fire</option>
+                <option value={2}>Ocean</option>
+                <option value={3}>Gray</option>
+              </select>
+            </label>
+            <label>
+              Iter:
+              <input
+                type="number"
+                value={iter}
+                min={50}
+                max={500}
+                onChange={e => setIter(parseInt(e.target.value, 10))}
+                style={{ width: 60 }}
+              />
+            </label>
+            <button onClick={() => setAnimating(a => !a)}>{animating ? 'Stop' : 'Cycle'}</button>
+            <button onClick={reset}>Reset</button>
+            {type === 'julia' && (
+              <>
+                <label>
+                  C real:
+                  <input
+                    type="number"
+                    step={0.01}
+                    value={juliaC.real}
+                    onChange={e => setJuliaC({ ...juliaC, real: parseFloat(e.target.value) })}
+                    style={{ width: 70 }}
+                  />
+                </label>
+                <label>
+                  C imag:
+                  <input
+                    type="number"
+                    step={0.01}
+                    value={juliaC.imag}
+                    onChange={e => setJuliaC({ ...juliaC, imag: parseFloat(e.target.value) })}
+                    style={{ width: 70 }}
+                  />
+                </label>
+              </>
+            )}
+          </div>
+        </ToggleMenu>
+      </div>
     </div>
   );
 }
