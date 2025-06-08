@@ -18,6 +18,7 @@ export default function Fractals2D() {
   const [palette, setPalette] = useState(0);
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
+  const [orbit, setOrbit] = useState<{ x: number; y: number }[]>([]);
 
   // Adjust view ranges to match canvas aspect ratio so pixel scale is uniform
   const normalizeView = useCallback((v: typeof view, canvas?: HTMLCanvasElement) => {
@@ -125,7 +126,25 @@ export default function Fractals2D() {
       }
     }
     ctx.putImageData(img, 0, 0);
-  }, [generatePalette, mandelbrot, julia, view, iter, palette, offset, type, juliaC]);
+    if (orbit.length > 0) {
+      for (let i = 0; i < orbit.length - 1; i++) {
+        const p1 = fractalToScreen(orbit[i].x, orbit[i].y);
+        const p2 = fractalToScreen(orbit[i + 1].x, orbit[i + 1].y);
+        ctx.strokeStyle = `hsl(${(i / Math.max(1, orbit.length - 1)) * 360},100%,50%)`;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+      for (let i = 0; i < orbit.length; i++) {
+        const p = fractalToScreen(orbit[i].x, orbit[i].y);
+        ctx.fillStyle = `hsl(${(i / Math.max(1, orbit.length - 1)) * 360},100%,50%)`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }, [generatePalette, mandelbrot, julia, view, iter, palette, offset, type, juliaC, orbit]);
 
   const screenToFractal = useCallback((sx: number, sy: number) => {
     const canvas = canvasRef.current;
@@ -140,7 +159,7 @@ export default function Fractals2D() {
     };
   }, [view]);
 
-  const fractalToScreen = useCallback((fx: number, fy: number) => {
+  function fractalToScreen(fx: number, fy: number) {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const scale = canvas.width / (view.xMax - view.xMin);
@@ -148,7 +167,32 @@ export default function Fractals2D() {
       x: (fx - view.xMin) * scale,
       y: (fy - view.yMin) * scale
     };
-  }, [view]);
+  }
+
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const f = screenToFractal(e.clientX, e.clientY);
+    const pts: { x: number; y: number }[] = [];
+    if (type === 'mandelbrot') {
+      let zx = 0, zy = 0;
+      for (let i = 0; i < iter; i++) {
+        pts.push({ x: zx, y: zy });
+        const xt = zx * zx - zy * zy + f.x;
+        zy = 2 * zx * zy + f.y;
+        zx = xt;
+        if (zx * zx + zy * zy > 4) break;
+      }
+    } else {
+      let zx = f.x, zy = f.y;
+      for (let i = 0; i < iter; i++) {
+        pts.push({ x: zx, y: zy });
+        const xt = zx * zx - zy * zy + juliaC.real;
+        zy = 2 * zx * zy + juliaC.imag;
+        zx = xt;
+        if (zx * zx + zy * zy > 4) break;
+      }
+    }
+    setOrbit(pts);
+  }, [screenToFractal, type, iter, juliaC]);
 
   const zoom = useCallback((factor: number, cx?: number, cy?: number) => {
     const canvas = canvasRef.current;
@@ -166,6 +210,7 @@ export default function Fractals2D() {
       yMax: center.y + yr / 2
     };
     setView(normalizeView(newView, canvas));
+    setOrbit([]);
   }, [view, screenToFractal, normalizeView]);
 
   const pan = useCallback((dx: number, dy: number) => {
@@ -181,6 +226,7 @@ export default function Fractals2D() {
       };
       return normalizeView(newView, canvas);
     });
+    setOrbit([]);
   }, [normalizeView]);
 
 
@@ -189,6 +235,7 @@ export default function Fractals2D() {
     const base = { xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 };
     setView(normalizeView(base, canvas));
     setIter(100);
+    setOrbit([]);
   }, [normalizeView]);
 
   const animate = useCallback(() => {
@@ -239,6 +286,7 @@ export default function Fractals2D() {
         ref={canvasRef}
         width={1}
         height={1}
+        onClick={handleCanvasClick}
         style={{ width: '100%', height: '100%', display: 'block', background: 'black' }}
       />
       <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
