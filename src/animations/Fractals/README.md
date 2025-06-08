@@ -1,3 +1,5 @@
 # Fractals 2D
 
-This basic component renders several 2D fractals to a canvas. Choose between the Mandelbrot set, a Julia set and the Burning Ship or Multibrot variants.
+Interactive Mandelbrot and Julia set viewer. Use the on-screen controls to pan, zoom
+and switch colour palettes. When the Julia option is selected the complex
+parameter can be adjusted and the palette can be animated.
