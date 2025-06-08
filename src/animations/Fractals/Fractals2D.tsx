@@ -19,6 +19,26 @@ export default function Fractals2D() {
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
 
+  // Adjust view ranges to match canvas aspect ratio so pixel scale is uniform
+  const normalizeView = useCallback((v: typeof view, canvas?: HTMLCanvasElement) => {
+    const c = canvas || canvasRef.current;
+    if (!c) return v;
+    const aspect = c.width / c.height;
+    const xRange = v.xMax - v.xMin;
+    const yRange = v.yMax - v.yMin;
+    const viewAspect = xRange / yRange;
+    if (Math.abs(viewAspect - aspect) < 1e-9) return v;
+    const cx = (v.xMin + v.xMax) / 2;
+    const cy = (v.yMin + v.yMax) / 2;
+    if (viewAspect > aspect) {
+      const newY = xRange / aspect;
+      return { xMin: v.xMin, xMax: v.xMax, yMin: cy - newY / 2, yMax: cy + newY / 2 };
+    } else {
+      const newX = yRange * aspect;
+      return { xMin: cx - newX / 2, xMax: cx + newX / 2, yMin: v.yMin, yMax: v.yMax };
+    }
+  }, []);
+
   const FORMULAS: Record<'mandelbrot' | 'julia', string> = {
     mandelbrot: 'z_{n+1} = z_n^2 + c',
     julia: 'z_{n+1} = z_n^2 + c'
@@ -87,12 +107,11 @@ export default function Fractals2D() {
     const height = canvas.height;
     const img = ctx.createImageData(width, height);
     const pal = generatePalette(palette, offset);
-    const xScale = (view.xMax - view.xMin) / width;
-    const yScale = (view.yMax - view.yMin) / height;
+    const scale = (view.xMax - view.xMin) / width; // x and y scale are equal
     for (let py = 0; py < height; py++) {
       for (let px = 0; px < width; px++) {
-        const x0 = view.xMin + px * xScale;
-        const y0 = view.yMin + py * yScale;
+        const x0 = view.xMin + px * scale;
+        const y0 = view.yMin + py * scale;
         const v =
           type === 'mandelbrot'
             ? mandelbrot(x0, y0, iter)
@@ -114,45 +133,63 @@ export default function Fractals2D() {
     const rect = canvas.getBoundingClientRect();
     const x = sx - rect.left;
     const y = sy - rect.top;
+    const scale = (view.xMax - view.xMin) / canvas.width;
     return {
-      x: view.xMin + (x / canvas.width) * (view.xMax - view.xMin),
-      y: view.yMin + (y / canvas.height) * (view.yMax - view.yMin)
+      x: view.xMin + x * scale,
+      y: view.yMin + y * scale
+    };
+  }, [view]);
+
+  const fractalToScreen = useCallback((fx: number, fy: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const scale = canvas.width / (view.xMax - view.xMin);
+    return {
+      x: (fx - view.xMin) * scale,
+      y: (fy - view.yMin) * scale
     };
   }, [view]);
 
   const zoom = useCallback((factor: number, cx?: number, cy?: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const center = cx !== undefined && cy !== undefined ? screenToFractal(cx, cy) : {
       x: (view.xMin + view.xMax) / 2,
       y: (view.yMin + view.yMax) / 2
     };
     const xr = (view.xMax - view.xMin) * factor;
     const yr = (view.yMax - view.yMin) * factor;
-    setView({
+    const newView = {
       xMin: center.x - xr / 2,
       xMax: center.x + xr / 2,
       yMin: center.y - yr / 2,
       yMax: center.y + yr / 2
-    });
-  }, [view, screenToFractal]);
+    };
+    setView(normalizeView(newView, canvas));
+  }, [view, screenToFractal, normalizeView]);
 
   const pan = useCallback((dx: number, dy: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const xr = view.xMax - view.xMin;
-    const yr = view.yMax - view.yMin;
-    setView(v => ({
-      xMin: v.xMin - (dx / canvas.width) * xr,
-      xMax: v.xMax - (dx / canvas.width) * xr,
-      yMin: v.yMin - (dy / canvas.height) * yr,
-      yMax: v.yMax - (dy / canvas.height) * yr
-    }));
-  }, [view]);
+    setView(v => {
+      const scale = (v.xMax - v.xMin) / canvas.width;
+      const newView = {
+        xMin: v.xMin - dx * scale,
+        xMax: v.xMax - dx * scale,
+        yMin: v.yMin - dy * scale,
+        yMax: v.yMax - dy * scale
+      };
+      return normalizeView(newView, canvas);
+    });
+  }, [normalizeView]);
 
 
   const reset = useCallback(() => {
-    setView({ xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 });
+    const canvas = canvasRef.current ?? undefined;
+    const base = { xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 };
+    setView(normalizeView(base, canvas));
     setIter(100);
-  }, []);
+  }, [normalizeView]);
 
   const animate = useCallback(() => {
     setOffset(o => (o + 1) % 256);
@@ -171,8 +208,9 @@ export default function Fractals2D() {
     canvas.style.height = `${rect.height}px`;
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
+    setView(v => normalizeView(v, canvas));
     render();
-  }, [render]);
+  }, [render, normalizeView]);
 
   useEffect(() => {
     render();
