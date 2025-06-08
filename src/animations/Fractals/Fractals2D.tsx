@@ -193,8 +193,8 @@ export default function Fractals2D() {
       const start = screenToFractal(e.clientX, e.clientY);
       const pts: { x: number; y: number }[] = [];
       if (type === 'mandelbrot') {
-        let zx = 0,
-          zy = 0;
+        let zx = start.x,
+          zy = start.y;
         for (let i = 0; i < iter && zx * zx + zy * zy <= 4; i++) {
           pts.push({ x: zx, y: zy });
           const xt = zx * zx - zy * zy + start.x;
