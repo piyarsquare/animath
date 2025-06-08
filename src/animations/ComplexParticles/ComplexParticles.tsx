@@ -80,7 +80,8 @@ const viewTypes = [
   ['Stereo', ProjectionMode.Stereo],
   ['Hopf', ProjectionMode.Hopf]
 ] as const;
-const motionModes = ['Quaternion','DropX','DropY','DropU','DropV'] as const;
+const motionModes = ['Quaternion','Fixed'] as const;
+const dropModes = ['None','DropX','DropY','DropU','DropV'] as const;
 
 function makeCheckerTexture(size = 64): THREE.DataTexture {
   const data = new Uint8Array(size * size * 4);
@@ -309,6 +310,7 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   const [colourBy, setColourBy] = useState<ColourBy>(ColourBy.Domain);
   const [viewType, setViewType] = useState<ProjectionMode>(ProjectionMode.Perspective);
   const [viewMotion, setViewMotion] = useState<(typeof motionModes)[number]>('Quaternion');
+  const [dropAxis, setDropAxis] = useState<(typeof dropModes)[number]>('None');
   const [proj, setProj] = useState(ProjectionMode.Perspective);
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
@@ -329,6 +331,10 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   useEffect(() => { realViewRef.current = realView; }, [realView]);
   const projRef = useRef(proj);
   useEffect(() => { projRef.current = proj; }, [proj]);
+  const viewMotionRef = useRef(viewMotion);
+  useEffect(() => { viewMotionRef.current = viewMotion; }, [viewMotion]);
+  const dropAxisRef = useRef(dropAxis);
+  useEffect(() => { dropAxisRef.current = dropAxis; }, [dropAxis]);
   const onMount = React.useCallback(
     (ctx: {
       scene: THREE.Scene;
@@ -465,7 +471,8 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
     const animate = () => {
       const elapsed = clock.getElapsedTime();
 
-      const dropMode = projRef.current >= ProjectionMode.DropX;
+      const dropMode = dropAxisRef.current !== 'None';
+      const fixedMode = viewMotionRef.current === 'Fixed';
 
       if (projRef.current !== lastProj) {
         lastProj = projRef.current;
@@ -507,7 +514,7 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
         } else {
           tCurrent = 0;
         }
-      } else if (dropMode) {
+      } else if (dropMode || fixedMode) {
         tCurrent = 0;
       } else {
         if (!transitioning) {
@@ -761,24 +768,27 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
     requestAnimationFrame(step);
   }
 
-  function applyView(type: ProjectionMode, motion: (typeof motionModes)[number]){
-    const target = motion==='Quaternion'
-      ? type
-      : motion==='DropX' ? ProjectionMode.DropX
-      : motion==='DropY' ? ProjectionMode.DropY
-      : motion==='DropU' ? ProjectionMode.DropU
-      : ProjectionMode.DropV;
+  function applyView(type: ProjectionMode, drop: (typeof dropModes)[number]){
+    const target = drop==='DropX' ? ProjectionMode.DropX
+      : drop==='DropY' ? ProjectionMode.DropY
+      : drop==='DropU' ? ProjectionMode.DropU
+      : drop==='DropV' ? ProjectionMode.DropV
+      : type;
     animateTo(target);
   }
 
   function handleViewType(t: ProjectionMode){
     setViewType(t);
-    applyView(t, viewMotion);
+    applyView(t, dropAxis);
   }
 
   function handleMotion(m: (typeof motionModes)[number]){
     setViewMotion(m);
-    applyView(viewType, m);
+  }
+
+  function handleDropAxis(d: (typeof dropModes)[number]){
+    setDropAxis(d);
+    applyView(viewType, d);
   }
 
   function applyQuarterTurn(plane: Plane, θ: number){
@@ -1011,6 +1021,13 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
             <button key={m}
               className={viewMotion===m ? 'active' : ''}
               onClick={() => handleMotion(m)}>{m}</button>
+          ))}
+        </div>
+        <div className="drop-axis-toolbar">
+          {dropModes.map(d => (
+            <button key={d}
+              className={dropAxis===d ? 'active' : ''}
+              onClick={() => handleDropAxis(d)}>{d}</button>
           ))}
         </div>
         <div style={{display:'flex',gap:4,alignItems:'center'}}>
