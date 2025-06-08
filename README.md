@@ -115,7 +115,9 @@ Switching modes interpolates on the GPU for a smooth transition.
 
 ## Controls
 
-* For each plane (XY, XU, XV, YU, YV, UV) there are two **Quarter-Turn** buttons — clockwise and counterclockwise — enabling smooth 90° rotations. Combine them for any orthogonal orientation before you drop an axis.
+* For each plane (XY, XU, XV, YU, YV, UV) there are **Quarter-Turn** buttons that give smooth 90° rotations.
+* View motion now toggles between **Quaternion** (automatic spin) and a **Fixed** orientation.
+* A separate drop-axis selector (None, DropX, DropY, DropU, DropV) determines which coordinate is discarded.
 
 ---
 
