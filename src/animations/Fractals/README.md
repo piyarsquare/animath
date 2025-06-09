@@ -1,9 +1,3 @@
-# Fractals 2D
+# Fractals 2D (legacy)
 
-Interactive Mandelbrot and Julia set viewer. The fractal now resizes with the
-window so pixels remain square in either orientation. A small menu in the lower
-left provides palette, iteration and animation options. Pan and zoom are
-performed using the buttons in the upper right – no dragging or scrolling is
-needed. When the Julia option is selected the complex parameter can be adjusted
-and the palette can be animated. Zooming or panning recomputes the fractal each
-time.
+This file describes the original CPU-based fractal viewer. It has been replaced by the GPU implementation which offers the same features with much faster rendering.

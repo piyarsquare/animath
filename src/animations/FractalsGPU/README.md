@@ -1,5 +1,5 @@
 # Fractals GPU
 
-This variant of the fractal viewer renders the Mandelbrot and Julia sets entirely on the GPU via a fragment shader. The shader computes the iteration count for each pixel in parallel, making zoom and palette changes much faster than the CPU implementation.
+This viewer renders the Mandelbrot and Julia sets entirely on the GPU via a fragment shader. Escape times for every pixel are computed in parallel, then a color map is applied. Clicking the fractal now shows the orbit path just like the original CPU implementation.
 
 Pan and zoom are available through the arrow and zoom buttons in the interface.
