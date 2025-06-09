@@ -19,6 +19,7 @@ export interface ComplexParticlesProps {
   count?: number;
   selectedFunction?: string;
   onViewPointChange?: (view: ViewPoint) => void;
+  viewPoint?: ViewPoint;
 }
 
 const functionNames = [
@@ -293,7 +294,7 @@ function applyComplex(z: THREE.Vector2, t: number): THREE.Vector2 {
 }
 
 
-export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount, selectedFunction = 'exp', onViewPointChange }: ComplexParticlesProps) {
+export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount, selectedFunction = 'exp', onViewPointChange, viewPoint }: ComplexParticlesProps) {
   const [saturation, setSaturation] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.saturation);
   const [functionIndex, setFunctionIndex] = useState(() => {
     const idx = functionNames.indexOf(selectedFunction);
@@ -318,6 +319,8 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   const [viewMotion, setViewMotion] = useState<(typeof motionModes)[number]>('Quaternion');
   const [dropAxis, setDropAxis] = useState<(typeof dropModes)[number]>('None');
   const [proj, setProj] = useState(ProjectionMode.Perspective);
+  const [orientationRows, setOrientationRows] = useState<string[]>(['','','']);
+  const orientationRef = useRef('');
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
@@ -336,6 +339,18 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   const texturesRef = useRef<THREE.Texture[]>([]);
   const rotLRef = useRef(new THREE.Quaternion());
   const rotRRef = useRef(new THREE.Quaternion());
+  useEffect(() => {
+    if(viewPoint){
+      rotLRef.current.copy(viewPoint.L);
+      rotRRef.current.copy(viewPoint.R);
+      if(materialRef.current){
+        materialRef.current.uniforms.uRotL.value.w = viewPoint.L.w;
+        materialRef.current.uniforms.uRotL.value.v.set(viewPoint.L.x, viewPoint.L.y, viewPoint.L.z);
+        materialRef.current.uniforms.uRotR.value.w = viewPoint.R.w;
+        materialRef.current.uniforms.uRotR.value.v.set(viewPoint.R.x, viewPoint.R.y, viewPoint.R.z);
+      }
+    }
+  }, [viewPoint]);
   const realViewRef = useRef(realView);
   useEffect(() => { realViewRef.current = realView; }, [realView]);
   const projRef = useRef(proj);
@@ -592,6 +607,20 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
       updateAxis(uAxisRef.current, new THREE.Vector4(0, 0, -AXIS_LENGTH, 0), new THREE.Vector4(0, 0, AXIS_LENGTH, 0));
       updateAxis(vAxisRef.current, new THREE.Vector4(0, 0, 0, -AXIS_LENGTH), new THREE.Vector4(0, 0, 0, AXIS_LENGTH));
 
+      const ex = project(quatRotate4D(new THREE.Vector4(1,0,0,0), L, R), projRef.current);
+      const ey = project(quatRotate4D(new THREE.Vector4(0,1,0,0), L, R), projRef.current);
+      const eu = project(quatRotate4D(new THREE.Vector4(0,0,1,0), L, R), projRef.current);
+      const ev = project(quatRotate4D(new THREE.Vector4(0,0,0,1), L, R), projRef.current);
+      const rows = [
+        `${ex.x.toFixed(2)} ${ey.x.toFixed(2)} ${eu.x.toFixed(2)} ${ev.x.toFixed(2)}`,
+        `${ex.y.toFixed(2)} ${ey.y.toFixed(2)} ${eu.y.toFixed(2)} ${ev.y.toFixed(2)}`,
+        `${ex.z.toFixed(2)} ${ey.z.toFixed(2)} ${eu.z.toFixed(2)} ${ev.z.toFixed(2)}`,
+      ];
+      const joined = rows.join('|');
+      if(joined !== orientationRef.current){
+        orientationRef.current = joined;
+        setOrientationRows(rows);
+      }
 
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
@@ -1086,6 +1115,11 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               <div style={{width:20,height:3,background:`hsl(${((AXIS_COLORS[k]+hueShift)%1)*360},100%,50%)`}} />
               <span>{k}</span>
             </div>
+          ))}
+        </div>
+        <div style={{fontFamily:'monospace',textAlign:'right',lineHeight:1}}>
+          {orientationRows.map((row,i) => (
+            <div key={i}>{row}</div>
           ))}
         </div>
         <QuarterTurnBar onTurn={turn}/>
