@@ -14,6 +14,9 @@ export default function FractalsGPU() {
   const animRef = useRef<number>();
   // Ref to always hold the latest render callback
   const renderRef = useRef<() => void>(() => {});
+  const overlayRef = useRef<HTMLCanvasElement>(null);
+  const overlayCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const pathRef = useRef<{ x: number; y: number }[] | null>(null);
 
   const [view, setView] = useState({
     xMin: -2.5,
@@ -113,14 +116,21 @@ export default function FractalsGPU() {
   const handleResize = useCallback(() => {
     const mount = mountRef.current;
     const renderer = rendererRef.current;
-    if (!mount || !renderer) return;
+    const overlay = overlayRef.current;
+    if (!mount || !renderer || !overlay) return;
     const rect = mount.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
     renderer.setSize(rect.width, rect.height, false);
     renderer.domElement.style.width = `${rect.width}px`;
     renderer.domElement.style.height = `${rect.height}px`;
     renderer.setPixelRatio(dpr);
+    overlay.style.width = `${rect.width}px`;
+    overlay.style.height = `${rect.height}px`;
+    overlay.width = rect.width * dpr;
+    overlay.height = rect.height * dpr;
+    overlayCtxRef.current = overlay.getContext('2d');
     setView(v => normalizeView(v, renderer.domElement));
+    drawPath();
   }, [normalizeView]);
 
 
@@ -146,6 +156,79 @@ export default function FractalsGPU() {
     setOffset(o => (o + 1) % 256);
     animRef.current = requestAnimationFrame(animate);
   }, []);
+
+  const screenToFractal = useCallback(
+    (sx: number, sy: number) => {
+      const canvas = rendererRef.current?.domElement;
+      if (!canvas) return { x: 0, y: 0 };
+      const rect = canvas.getBoundingClientRect();
+      const x = sx - rect.left;
+      const y = sy - rect.top;
+      const scale = (view.xMax - view.xMin) / canvas.width;
+      return { x: view.xMin + x * scale, y: view.yMin + y * scale };
+    },
+    [view]
+  );
+
+  const fractalToScreen = useCallback(
+    (fx: number, fy: number) => {
+      const canvas = rendererRef.current?.domElement;
+      if (!canvas) return { x: 0, y: 0 };
+      const scale = canvas.width / (view.xMax - view.xMin);
+      return { x: (fx - view.xMin) * scale, y: (fy - view.yMin) * scale };
+    },
+    [view]
+  );
+
+  function drawPath() {
+    const canvas = overlayRef.current;
+    if (!canvas || !overlayCtxRef.current || !pathRef.current) return;
+    const ctx = overlayCtxRef.current;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (pathRef.current.length < 2) return;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < pathRef.current.length - 1; i++) {
+      const start = fractalToScreen(pathRef.current[i].x, pathRef.current[i].y);
+      const end = fractalToScreen(pathRef.current[i + 1].x, pathRef.current[i + 1].y);
+      const hue = (i / (pathRef.current.length - 1)) * 360;
+      ctx.strokeStyle = `hsl(${hue},100%,50%)`;
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke();
+    }
+  }
+
+  const handleSelect = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const start = screenToFractal(e.clientX, e.clientY);
+      const pts: { x: number; y: number }[] = [];
+      if (type === 'mandelbrot') {
+        let zx = start.x,
+          zy = start.y;
+        for (let i = 0; i < iter && zx * zx + zy * zy <= 4; i++) {
+          pts.push({ x: zx, y: zy });
+          const xt = zx * zx - zy * zy + start.x;
+          zy = 2 * zx * zy + start.y;
+          zx = xt;
+        }
+        pts.push({ x: zx, y: zy });
+      } else {
+        let zx = start.x,
+          zy = start.y;
+        for (let i = 0; i < iter && zx * zx + zy * zy <= 4; i++) {
+          pts.push({ x: zx, y: zy });
+          const xt = zx * zx - zy * zy + juliaC.real;
+          zy = 2 * zx * zy + juliaC.imag;
+          zx = xt;
+        }
+        pts.push({ x: zx, y: zy });
+      }
+      pathRef.current = pts;
+      drawPath();
+    },
+    [screenToFractal, iter, type, juliaC, drawPath]
+  );
 
 
   const zoom = useCallback((factor: number) => {
@@ -252,11 +335,20 @@ export default function FractalsGPU() {
     render();
   }, [view, iter, type, juliaC, palette, offset, render]);
 
+  useEffect(() => {
+    drawPath();
+  }, [view]);
+
   return (
     <div
       ref={mountRef}
       style={{ position: 'relative', width: '100vw', height: '100vh' }}
     >
+      <canvas
+        ref={overlayRef}
+        onClick={handleSelect}
+        style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', zIndex: 1 }}
+      />
       <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
         <label>
           Function:
