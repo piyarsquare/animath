@@ -8,7 +8,6 @@ export default function FractalsGPU() {
   const materialRef = useRef<THREE.ShaderMaterial>();
   const sceneRef = useRef<THREE.Scene>();
   const cameraRef = useRef<THREE.OrthographicCamera>();
-  const pathCanvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>();
 
   const [view, setView] = useState({
@@ -23,8 +22,6 @@ export default function FractalsGPU() {
   const [palette, setPalette] = useState(0);
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
-  const dragRef = useRef<{ x: number; y: number } | null>(null);
-  const pathRef = useRef<{ x: number; y: number }[] | null>(null);
 
   const FORMULAS: Record<'mandelbrot' | 'julia', string> = {
     mandelbrot: 'z_{n+1} = z_n^2 + c',
@@ -111,35 +108,16 @@ export default function FractalsGPU() {
   const handleResize = useCallback(() => {
     const mount = mountRef.current;
     const renderer = rendererRef.current;
-    const canvas2d = pathCanvasRef.current;
-    if (!mount || !renderer || !canvas2d) return;
+    if (!mount || !renderer) return;
     const rect = mount.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
     renderer.setSize(rect.width, rect.height, false);
     renderer.domElement.style.width = `${rect.width}px`;
     renderer.domElement.style.height = `${rect.height}px`;
     renderer.setPixelRatio(dpr);
-    canvas2d.width = rect.width * dpr;
-    canvas2d.height = rect.height * dpr;
-    canvas2d.style.width = `${rect.width}px`;
-    canvas2d.style.height = `${rect.height}px`;
-    setView(v => normalizeView(v, canvas2d));
+    setView(v => normalizeView(v, renderer.domElement));
   }, [normalizeView]);
 
-  const drawPath = useCallback((ctx: CanvasRenderingContext2D) => {
-    if (!pathRef.current || pathRef.current.length < 2) return;
-    ctx.lineWidth = 2;
-    for (let i = 0; i < pathRef.current.length - 1; i++) {
-      const start = fractalToScreen(pathRef.current[i].x, pathRef.current[i].y);
-      const end = fractalToScreen(pathRef.current[i + 1].x, pathRef.current[i + 1].y);
-      const hue = (i / (pathRef.current.length - 1)) * 360;
-      ctx.strokeStyle = `hsl(${hue},100%,50%)`;
-      ctx.beginPath();
-      ctx.moveTo(start.x, start.y);
-      ctx.lineTo(end.x, end.y);
-      ctx.stroke();
-    }
-  }, []);
 
   const render = useCallback(() => {
     if (!rendererRef.current || !materialRef.current) return;
@@ -152,71 +130,18 @@ export default function FractalsGPU() {
     if (sceneRef.current && cameraRef.current) {
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     }
-    const ctx2d = pathCanvasRef.current?.getContext('2d');
-    if (ctx2d) {
-      ctx2d.clearRect(0, 0, pathCanvasRef.current!.width, pathCanvasRef.current!.height);
-      drawPath(ctx2d);
-    }
-  }, [view, iter, type, juliaC, palette, offset, drawPath]);
+  }, [view, iter, type, juliaC, palette, offset]);
 
   const animate = useCallback(() => {
     setOffset(o => (o + 1) % 256);
     animRef.current = requestAnimationFrame(animate);
   }, []);
 
-  const screenToFractal = useCallback((sx: number, sy: number) => {
-    const canvas = rendererRef.current?.domElement;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const x = sx - rect.left;
-    const y = sy - rect.top;
-    const scale = (view.xMax - view.xMin) / canvas.width;
-    return {
-      x: view.xMin + x * scale,
-      y: view.yMin + y * scale
-    };
-  }, [view]);
 
-  const fractalToScreen = useCallback((fx: number, fy: number) => {
-    const canvas = rendererRef.current?.domElement;
-    if (!canvas) return { x: 0, y: 0 };
-    const scale = canvas.width / (view.xMax - view.xMin);
-    return {
-      x: (fx - view.xMin) * scale,
-      y: (fy - view.yMin) * scale
-    };
-  }, [view]);
-
-  const handleSelect = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const start = screenToFractal(e.clientX, e.clientY);
-    const pts: { x: number; y: number }[] = [];
-    if (type === 'mandelbrot') {
-      let zx = start.x, zy = start.y;
-      for (let i = 0; i < iter && zx * zx + zy * zy <= 4; i++) {
-        pts.push({ x: zx, y: zy });
-        const xt = zx * zx - zy * zy + start.x;
-        zy = 2 * zx * zy + start.y;
-        zx = xt;
-      }
-      pts.push({ x: zx, y: zy });
-    } else {
-      let zx = start.x, zy = start.y;
-      for (let i = 0; i < iter && zx * zx + zy * zy <= 4; i++) {
-        pts.push({ x: zx, y: zy });
-        const xt = zx * zx - zy * zy + juliaC.real;
-        zy = 2 * zx * zy + juliaC.imag;
-        zx = xt;
-      }
-      pts.push({ x: zx, y: zy });
-    }
-    pathRef.current = pts;
-    render();
-  }, [screenToFractal, iter, type, juliaC, render]);
-
-  const zoom = useCallback((factor: number, cx?: number, cy?: number) => {
+  const zoom = useCallback((factor: number) => {
     const canvas = rendererRef.current?.domElement;
     if (!canvas) return;
-    const center = cx !== undefined && cy !== undefined ? screenToFractal(cx, cy) : {
+    const center = {
       x: (view.xMin + view.xMax) / 2,
       y: (view.yMin + view.yMax) / 2
     };
@@ -229,16 +154,8 @@ export default function FractalsGPU() {
       yMax: center.y + yr / 2
     };
     setView(normalizeView(newView, canvas));
-  }, [view, screenToFractal, normalizeView]);
+  }, [view, normalizeView]);
 
-  const handleWheel = useCallback(
-    (e: React.WheelEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      const factor = e.deltaY > 0 ? 1.1 : 0.9;
-      zoom(factor, e.clientX, e.clientY);
-    },
-    [zoom]
-  );
 
   const pan = useCallback((dx: number, dy: number) => {
     const canvas = rendererRef.current?.domElement;
@@ -255,24 +172,6 @@ export default function FractalsGPU() {
     });
   }, [normalizeView]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    dragRef.current = { x: e.clientX, y: e.clientY };
-  }, []);
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!dragRef.current) return;
-      const dx = e.clientX - dragRef.current.x;
-      const dy = e.clientY - dragRef.current.y;
-      pan(dx, dy);
-      dragRef.current = { x: e.clientX, y: e.clientY };
-    },
-    [pan]
-  );
-
-  const handleMouseUp = useCallback(() => {
-    dragRef.current = null;
-  }, []);
 
   const reset = useCallback(() => {
     const canvas = rendererRef.current?.domElement;
@@ -347,19 +246,7 @@ export default function FractalsGPU() {
     <div
       ref={mountRef}
       style={{ position: 'relative', width: '100vw', height: '100vh' }}
-      onWheel={handleWheel}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
     >
-      <canvas
-        ref={pathCanvasRef}
-        width={1}
-        height={1}
-        onClick={handleSelect}
-        style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}
-      />
       <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
         <label>
           Function:
