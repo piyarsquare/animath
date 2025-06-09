@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
+import Readme from '../../components/Readme';
+import ToggleMenu from '../../components/ToggleMenu';
+import readmeText from './README.md?raw';
 
 /** GPU accelerated Mandelbrot/Julia viewer using a fragment shader. */
 export default function FractalsGPU() {
@@ -339,6 +342,11 @@ export default function FractalsGPU() {
             </>
           )}
         </div>
+      </div>
+      <div style={{ position: 'absolute', bottom: 10, right: 10 }}>
+        <ToggleMenu title="About">
+          <Readme markdown={readmeText} />
+        </ToggleMenu>
       </div>
     </div>
   );
