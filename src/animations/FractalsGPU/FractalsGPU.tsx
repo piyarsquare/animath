@@ -23,6 +23,7 @@ export default function FractalsGPU() {
   const [palette, setPalette] = useState(0);
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
+  const dragRef = useRef<{ x: number; y: number } | null>(null);
   const pathRef = useRef<{ x: number; y: number }[] | null>(null);
 
   const FORMULAS: Record<'mandelbrot' | 'julia', string> = {
@@ -230,6 +231,15 @@ export default function FractalsGPU() {
     setView(normalizeView(newView, canvas));
   }, [view, screenToFractal, normalizeView]);
 
+  const handleWheel = useCallback(
+    (e: React.WheelEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const factor = e.deltaY > 0 ? 1.1 : 0.9;
+      zoom(factor, e.clientX, e.clientY);
+    },
+    [zoom]
+  );
+
   const pan = useCallback((dx: number, dy: number) => {
     const canvas = rendererRef.current?.domElement;
     if (!canvas) return;
@@ -244,6 +254,25 @@ export default function FractalsGPU() {
       return normalizeView(newView, canvas);
     });
   }, [normalizeView]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    dragRef.current = { x: e.clientX, y: e.clientY };
+  }, []);
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!dragRef.current) return;
+      const dx = e.clientX - dragRef.current.x;
+      const dy = e.clientY - dragRef.current.y;
+      pan(dx, dy);
+      dragRef.current = { x: e.clientX, y: e.clientY };
+    },
+    [pan]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    dragRef.current = null;
+  }, []);
 
   const reset = useCallback(() => {
     const canvas = rendererRef.current?.domElement;
@@ -315,7 +344,15 @@ export default function FractalsGPU() {
   }, [view, iter, type, juliaC, palette, offset, render]);
 
   return (
-    <div ref={mountRef} style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+    <div
+      ref={mountRef}
+      style={{ position: 'relative', width: '100vw', height: '100vh' }}
+      onWheel={handleWheel}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+    >
       <canvas
         ref={pathCanvasRef}
         width={1}
