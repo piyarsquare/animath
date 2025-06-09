@@ -28,12 +28,17 @@ export default function FractalsGPU() {
   const [juliaC, setJuliaC] = useState({ real: -0.7, imag: 0.27015 });
   const [iter, setIter] = useState(100);
   const [palette, setPalette] = useState(0);
+  const [power, setPower] = useState(2);
+  const [colorMode, setColorMode] = useState<"escape" | "limit" | "layered">(
+    "escape"
+  );
+  const [insidePalette, setInsidePalette] = useState(0);
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
 
   const FORMULAS: Record<'mandelbrot' | 'julia', string> = {
-    mandelbrot: 'z_{n+1} = z_n^2 + c',
-    julia: 'z_{n+1} = z_n^2 + c'
+    mandelbrot: 'z_{n+1} = z_n^k + c',
+    julia: 'z_{n+1} = z_n^k + c'
   };
 
   const vertexShader = `
@@ -52,9 +57,13 @@ export default function FractalsGPU() {
     uniform int type;
     uniform vec2 juliaC;
     uniform int palette;
+    uniform int paletteIn;
+    uniform int power;
+    uniform int colorMode;
     uniform float offset;
 
     const int MAX_ITER = 1000;
+    const int MAX_POWER = 8;
 
     vec3 paletteColor(float t, int scheme) {
       if(scheme==0){
@@ -82,17 +91,32 @@ export default function FractalsGPU() {
       for(i=0;i<MAX_ITER;i++){
         if(i>=iter) break;
         if(dot(z,z)>4.0) break;
-        z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + k;
+        vec2 zpow = z;
+        for(int p=1;p<MAX_POWER;p++){
+          if(p>=power) break;
+          zpow = vec2(zpow.x*z.x - zpow.y*z.y, zpow.x*z.y + zpow.y*z.x);
+        }
+        z = zpow + k;
       }
-      float v = 0.0;
+      float v = float(i);
+      float escVal = 0.0;
       if(i < iter){
         float log_zn = log(dot(z,z))/2.0;
-        v = float(i) + 1.0 - log(log_zn)/log(2.0);
+        escVal = float(i) + 1.0 - log(log_zn)/log(2.0);
       }
-      float idx = (v==0.0) ? 0.0 : mod(floor(v*10.0), 255.0);
+      float idx = (escVal==0.0) ? 0.0 : mod(floor(escVal*10.0), 255.0);
       float t = mod(idx + offset, 256.0);
-      vec3 col = paletteColor(t, palette);
-      gl_FragColor = vec4(col, 1.0);
+      vec3 outCol = paletteColor(t, palette);
+      vec3 inCol = paletteColor(mod(length(z)*16.0,256.0), paletteIn);
+      if(i < iter){
+        if(colorMode==0) gl_FragColor = vec4(outCol,1.0);
+        else if(colorMode==2) gl_FragColor = vec4(outCol,1.0);
+        else gl_FragColor = vec4(0.0,0.0,0.0,1.0);
+      }else{
+        if(colorMode==1) gl_FragColor = vec4(inCol,1.0);
+        else if(colorMode==2) gl_FragColor = vec4(inCol,1.0);
+        else gl_FragColor = vec4(0.0,0.0,0.0,1.0);
+      }
     }
   `;
 
@@ -141,11 +165,14 @@ export default function FractalsGPU() {
     materialRef.current.uniforms.type.value = type === 'mandelbrot' ? 0 : 1;
     materialRef.current.uniforms.juliaC.value = new THREE.Vector2(juliaC.real, juliaC.imag);
     materialRef.current.uniforms.palette.value = palette;
+    materialRef.current.uniforms.paletteIn.value = insidePalette;
+    materialRef.current.uniforms.power.value = power;
+    materialRef.current.uniforms.colorMode.value = colorMode === 'escape' ? 0 : colorMode === 'limit' ? 1 : 2;
     materialRef.current.uniforms.offset.value = offset;
     if (sceneRef.current && cameraRef.current) {
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     }
-  }, [view, iter, type, juliaC, palette, offset]);
+  }, [view, iter, type, juliaC, palette, insidePalette, power, colorMode, offset]);
 
   // Keep renderRef pointing at the latest render implementation
   useEffect(() => {
@@ -203,14 +230,24 @@ export default function FractalsGPU() {
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const start = screenToFractal(e.clientX, e.clientY);
       const pts: { x: number; y: number }[] = [];
+      const powComplex = (x: number, y: number) => {
+        let rx = x;
+        let ry = y;
+        for (let p = 1; p < power; p++) {
+          const tx = rx * x - ry * y;
+          ry = rx * y + ry * x;
+          rx = tx;
+        }
+        return { x: rx, y: ry };
+      };
       if (type === 'mandelbrot') {
         let zx = start.x,
           zy = start.y;
         for (let i = 0; i < iter && zx * zx + zy * zy <= 4; i++) {
           pts.push({ x: zx, y: zy });
-          const xt = zx * zx - zy * zy + start.x;
-          zy = 2 * zx * zy + start.y;
-          zx = xt;
+          const pow = powComplex(zx, zy);
+          zx = pow.x + start.x;
+          zy = pow.y + start.y;
         }
         pts.push({ x: zx, y: zy });
       } else {
@@ -218,16 +255,16 @@ export default function FractalsGPU() {
           zy = start.y;
         for (let i = 0; i < iter && zx * zx + zy * zy <= 4; i++) {
           pts.push({ x: zx, y: zy });
-          const xt = zx * zx - zy * zy + juliaC.real;
-          zy = 2 * zx * zy + juliaC.imag;
-          zx = xt;
+          const pow = powComplex(zx, zy);
+          zx = pow.x + juliaC.real;
+          zy = pow.y + juliaC.imag;
         }
         pts.push({ x: zx, y: zy });
       }
       pathRef.current = pts;
       drawPath();
     },
-    [screenToFractal, iter, type, juliaC, drawPath]
+    [screenToFractal, iter, type, juliaC, drawPath, power]
   );
 
 
@@ -304,6 +341,9 @@ export default function FractalsGPU() {
       type: { value: 0 },
       juliaC: { value: new THREE.Vector2(juliaC.real, juliaC.imag) },
       palette: { value: palette },
+      paletteIn: { value: insidePalette },
+      power: { value: power },
+      colorMode: { value: 0 },
       offset: { value: offset }
     };
     const material = new THREE.ShaderMaterial({
@@ -333,7 +373,7 @@ export default function FractalsGPU() {
 
   useEffect(() => {
     render();
-  }, [view, iter, type, juliaC, palette, offset, render]);
+  }, [view, iter, type, juliaC, palette, insidePalette, power, colorMode, offset, render]);
 
   useEffect(() => {
     drawPath();
@@ -395,6 +435,36 @@ export default function FractalsGPU() {
               <option value={3}>Gray</option>
             </select>
           </label>
+          <label>
+            Power k:
+            <input
+              type="number"
+              value={power}
+              min={2}
+              max={8}
+              onChange={e => setPower(parseInt(e.target.value, 10))}
+              style={{ width: 60 }}
+            />
+          </label>
+          <label>
+            Coloring:
+            <select value={colorMode} onChange={e => setColorMode(e.target.value as any)}>
+              <option value="escape">Escape velocity</option>
+              <option value="limit">Limit magnitude</option>
+              <option value="layered">Layered</option>
+            </select>
+          </label>
+          {colorMode !== 'escape' && (
+            <label>
+              Inside palette:
+              <select value={insidePalette} onChange={e => setInsidePalette(parseInt(e.target.value, 10))}>
+                <option value={0}>Rainbow</option>
+                <option value={1}>Fire</option>
+                <option value={2}>Ocean</option>
+                <option value={3}>Gray</option>
+              </select>
+            </label>
+          )}
           <label>
             Iter:
             <input
