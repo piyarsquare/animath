@@ -107,7 +107,8 @@ export default function FractalsGPU() {
       float idx = (escVal==0.0) ? 0.0 : mod(floor(escVal*10.0), 255.0);
       float t = mod(idx + offset, 256.0);
       vec3 outCol = paletteColor(t, palette);
-      vec3 inCol = paletteColor(mod(length(z)*16.0,256.0), paletteIn);
+      // Map the final |z| value to the palette for interior coloring
+      vec3 inCol = paletteColor(clamp(length(z) * 128.0, 0.0, 255.0), paletteIn);
       if(i < iter){
         if(colorMode==0) gl_FragColor = vec4(outCol,1.0);
         else if(colorMode==2) gl_FragColor = vec4(outCol,1.0);
