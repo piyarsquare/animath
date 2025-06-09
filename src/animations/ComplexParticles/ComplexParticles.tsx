@@ -10,9 +10,15 @@ import { QUARTER, Plane } from '@/math/constants';
 import { quarterQuat } from '@/math/quat4';
 import { vertexShader, fragmentShader } from './shaders';
 
+export interface ViewPoint {
+  L: THREE.Quaternion;
+  R: THREE.Quaternion;
+}
+
 export interface ComplexParticlesProps {
   count?: number;
   selectedFunction?: string;
+  onViewPointChange?: (view: ViewPoint) => void;
 }
 
 const functionNames = [
@@ -287,7 +293,7 @@ function applyComplex(z: THREE.Vector2, t: number): THREE.Vector2 {
 }
 
 
-export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount, selectedFunction = 'exp' }: ComplexParticlesProps) {
+export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount, selectedFunction = 'exp', onViewPointChange }: ComplexParticlesProps) {
   const [saturation, setSaturation] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.saturation);
   const [functionIndex, setFunctionIndex] = useState(() => {
     const idx = functionNames.indexOf(selectedFunction);
@@ -316,6 +322,9 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   const geometryRef = useRef<THREE.BufferGeometry>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
   const rendererRef = useRef<THREE.WebGLRenderer>();
+  const viewPointRef = useRef<ViewPoint>({ L: new THREE.Quaternion(), R: new THREE.Quaternion() });
+  const onViewPointChangeRef = useRef(onViewPointChange);
+  useEffect(() => { onViewPointChangeRef.current = onViewPointChange; }, [onViewPointChange]);
   interface Axis {
     line: THREE.Line;
   }
@@ -459,6 +468,11 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
     uAxisRef.current = makeAxis(uMat);
     vAxisRef.current = makeAxis(vMat);
 
+    viewPointRef.current = { L: rotLRef.current.clone(), R: rotRRef.current.clone() };
+    if(onViewPointChangeRef.current){
+      onViewPointChangeRef.current(viewPointRef.current);
+    }
+
     const clock = new THREE.Clock();
     let tCurrent = 0;
     let offset = 0;
@@ -547,6 +561,10 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
         materialRef.current.uniforms.uRotL.value.v.set(Lq.x,Lq.y,Lq.z);
         materialRef.current.uniforms.uRotR.value.w = Rq.w;
         materialRef.current.uniforms.uRotR.value.v.set(Rq.x,Rq.y,Rq.z);
+      }
+      viewPointRef.current = { L: Lq.clone(), R: Rq.clone() };
+      if(onViewPointChangeRef.current){
+        onViewPointChangeRef.current(viewPointRef.current);
       }
       const L = new THREE.Vector4(Lq.x,Lq.y,Lq.z,Lq.w);
       const R = new THREE.Vector4(Rq.x,Rq.y,Rq.z,Rq.w);
@@ -808,6 +826,8 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
       materialRef.current!.uniforms.uRotL.value.v.set(qL.x,qL.y,qL.z);
       materialRef.current!.uniforms.uRotR.value.w = qR.w;
       materialRef.current!.uniforms.uRotR.value.v.set(qR.x,qR.y,qR.z);
+      viewPointRef.current = { L: qL.clone(), R: qR.clone() };
+      onViewPointChangeRef.current?.(viewPointRef.current);
       rotLRef.current.copy(qL);
       rotRRef.current.copy(qR);
       if(p<1){
