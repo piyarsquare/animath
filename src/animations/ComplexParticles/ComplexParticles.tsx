@@ -319,7 +319,11 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   const [viewMotion, setViewMotion] = useState<(typeof motionModes)[number]>('Quaternion');
   const [dropAxis, setDropAxis] = useState<(typeof dropModes)[number]>('None');
   const [proj, setProj] = useState(ProjectionMode.Perspective);
-  const [orientationRows, setOrientationRows] = useState<string[]>(['','','']);
+  const [orientationMatrix, setOrientationMatrix] = useState<number[][]>([
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0]
+  ]);
   const orientationRef = useRef('');
   const materialRef = useRef<THREE.ShaderMaterial>();
   const geometryRef = useRef<THREE.BufferGeometry>();
@@ -611,15 +615,17 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
       const ey = project(quatRotate4D(new THREE.Vector4(0,1,0,0), L, R), projRef.current);
       const eu = project(quatRotate4D(new THREE.Vector4(0,0,1,0), L, R), projRef.current);
       const ev = project(quatRotate4D(new THREE.Vector4(0,0,0,1), L, R), projRef.current);
-      const rows = [
-        `${ex.x.toFixed(2)} ${ey.x.toFixed(2)} ${eu.x.toFixed(2)} ${ev.x.toFixed(2)}`,
-        `${ex.y.toFixed(2)} ${ey.y.toFixed(2)} ${eu.y.toFixed(2)} ${ev.y.toFixed(2)}`,
-        `${ex.z.toFixed(2)} ${ey.z.toFixed(2)} ${eu.z.toFixed(2)} ${ev.z.toFixed(2)}`,
+      const matrix = [
+        [ex.x, ey.x, ev.x, eu.x],
+        [ex.y, ey.y, ev.y, eu.y],
+        [ex.z, ey.z, ev.z, eu.z]
       ];
-      const joined = rows.join('|');
-      if(joined !== orientationRef.current){
+      const joined = matrix
+        .map(r => r.map(v => v.toFixed(2)).join(' '))
+        .join('|');
+      if (joined !== orientationRef.current) {
         orientationRef.current = joined;
-        setOrientationRows(rows);
+        setOrientationMatrix(matrix);
       }
 
       renderer.render(scene, camera);
@@ -1109,18 +1115,36 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
           <div>{currentName}</div>
           <div>{currentFormula}</div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {(['x','y','u','v'] as const).map(k => (
-            <div key={k} style={{display:'flex',alignItems:'center',gap:4}}>
-              <div style={{width:20,height:3,background:`hsl(${((AXIS_COLORS[k]+hueShift)%1)*360},100%,50%)`}} />
-              <span>{k}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{fontFamily:'monospace',textAlign:'right',lineHeight:1}}>
-          {orientationRows.map((row,i) => (
-            <div key={i}>{row}</div>
-          ))}
+        <div style={{fontFamily:'monospace',lineHeight:1}}>
+          <table style={{borderCollapse:'collapse'}}>
+            <thead>
+              <tr>
+                {(['x','y','v','u'] as const).map(k => (
+                  <th
+                    key={k}
+                    style={{
+                      color: `hsl(${((AXIS_COLORS[k]+hueShift)%1)*360},100%,50%)`,
+                      padding: '0 4px',
+                      fontWeight: 'normal'
+                    }}
+                  >
+                    {k}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {orientationMatrix.map((row, i) => (
+                <tr key={i}>
+                  {row.map((v, j) => (
+                    <td key={j} style={{textAlign:'right',padding:'0 4px'}}>
+                      {v.toFixed(2)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
         <QuarterTurnBar onTurn={turn}/>
       </div>
