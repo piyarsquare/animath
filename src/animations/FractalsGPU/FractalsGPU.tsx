@@ -9,6 +9,8 @@ export default function FractalsGPU() {
   const sceneRef = useRef<THREE.Scene>();
   const cameraRef = useRef<THREE.OrthographicCamera>();
   const animRef = useRef<number>();
+  // Ref to always hold the latest render callback
+  const renderRef = useRef<() => void>(() => {});
 
   const [view, setView] = useState({
     xMin: -2.5,
@@ -132,6 +134,11 @@ export default function FractalsGPU() {
     }
   }, [view, iter, type, juliaC, palette, offset]);
 
+  // Keep renderRef pointing at the latest render implementation
+  useEffect(() => {
+    renderRef.current = render;
+  }, [render]);
+
   const animate = useCallback(() => {
     setOffset(o => (o + 1) % 256);
     animRef.current = requestAnimationFrame(animate);
@@ -224,7 +231,7 @@ export default function FractalsGPU() {
 
     let frameId: number;
     const renderLoop = () => {
-      render();
+      renderRef.current();
       frameId = requestAnimationFrame(renderLoop);
     };
     frameId = requestAnimationFrame(renderLoop);
