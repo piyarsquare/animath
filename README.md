@@ -10,6 +10,7 @@
 
 1. **[Complex Particles](https://piyarsquare.github.io/animath/#/)** – 3D representation of four-dimensional complex functions
 2. **[Fractals](https://piyarsquare.github.io/animath/#/fractals)** – explore Mandelbrot, Julia, Burning Ship and Multibrot sets
+3. **[Fractals GPU](https://piyarsquare.github.io/animath/#/fractals-gpu)** – GPU accelerated Mandelbrot/Julia viewer
 
 ---
 
