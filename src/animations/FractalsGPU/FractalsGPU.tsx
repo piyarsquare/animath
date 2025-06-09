@@ -346,8 +346,7 @@ export default function FractalsGPU() {
     >
       <canvas
         ref={overlayRef}
-        onClick={handleSelect}
-        style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', zIndex: 1 }}
+        style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', zIndex: 1, pointerEvents: 'none' }}
       />
       <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
         <label>
