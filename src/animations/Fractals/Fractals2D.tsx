@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ToggleMenu from '../../components/ToggleMenu';
+import Readme from '../../components/Readme';
+import readmeText from './README.md?raw';
 
 /** Interactive 2D fractal viewer inspired by the old Fractint program. */
 export default function Fractals2D() {
@@ -409,6 +411,11 @@ export default function Fractals2D() {
               </>
             )}
           </div>
+        </ToggleMenu>
+      </div>
+      <div style={{ position: 'absolute', bottom: 10, right: 10 }}>
+        <ToggleMenu title="About">
+          <Readme markdown={readmeText} />
         </ToggleMenu>
       </div>
     </div>

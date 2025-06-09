@@ -14,11 +14,6 @@
   <body>
     <div id="root"></div>
     <p id="page-info">You are viewing the animath page. Try <a href="#/fractals">#/fractals</a> for the fractals demo.</p>
-    <textarea id="html-source" readonly style="width:100%;height:200px;"></textarea>
-    <script>
-      const srcBox = document.getElementById('html-source');
-      srcBox.textContent = document.documentElement.outerHTML;
-    </script>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>

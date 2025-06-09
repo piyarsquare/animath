@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import Canvas3D from '../../components/Canvas3D';
 import ToggleMenu from '../../components/ToggleMenu';
+import Readme from '../../components/Readme';
+import readmeText from './README.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import { quatRotate4D, ProjectionMode, project } from '../../lib/viewpoint';
 import QuarterTurnBar from '@/controls/QuarterTurnBar';
@@ -1147,6 +1149,11 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
           </table>
         </div>
         <QuarterTurnBar onTurn={turn}/>
+      </div>
+      <div style={{ position: 'absolute', bottom: 10, right: 10 }}>
+        <ToggleMenu title="About">
+          <Readme markdown={readmeText} />
+        </ToggleMenu>
       </div>
     </div>
   );
