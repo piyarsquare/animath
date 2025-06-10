@@ -456,12 +456,13 @@ export default function FractalsGPU() {
               value={powerInput}
               min={1}
               max={100}
-              onChange={e => setPowerInput(e.target.value)}
-              onBlur={() => {
-                let v = parseInt(powerInput, 10);
-                if (isNaN(v)) v = power;
-                v = Math.min(100, Math.max(1, v));
-                setPower(v);
+              onChange={e => {
+                const val = e.target.value;
+                setPowerInput(val);
+                const parsed = parseInt(val, 10);
+                if (!isNaN(parsed)) {
+                  setPower(Math.min(100, Math.max(1, parsed)));
+                }
               }}
               style={{ width: 60 }}
             />
@@ -492,12 +493,13 @@ export default function FractalsGPU() {
               value={iterInput}
               min={1}
               max={1000}
-              onChange={e => setIterInput(e.target.value)}
-              onBlur={() => {
-                let v = parseInt(iterInput, 10);
-                if (isNaN(v)) v = iter;
-                v = Math.min(1000, Math.max(1, v));
-                setIter(v);
+              onChange={e => {
+                const val = e.target.value;
+                setIterInput(val);
+                const parsed = parseInt(val, 10);
+                if (!isNaN(parsed)) {
+                  setIter(Math.min(1000, Math.max(1, parsed)));
+                }
               }}
               style={{ width: 60 }}
             />
