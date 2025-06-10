@@ -27,15 +27,20 @@ export default function FractalsGPU() {
   const [type, setType] = useState<'mandelbrot' | 'julia'>('mandelbrot');
   const [juliaC, setJuliaC] = useState({ real: -0.7, imag: 0.27015 });
   const [iter, setIter] = useState(100);
+  const [iterInput, setIterInput] = useState('100');
   const [startIter, setStartIter] = useState(0);
   const [palette, setPalette] = useState(0);
   const [power, setPower] = useState(2);
+  const [powerInput, setPowerInput] = useState('2');
   const [colorMode, setColorMode] = useState<"escape" | "limit" | "layered">(
     "escape"
   );
   const [insidePalette, setInsidePalette] = useState(0);
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
+
+  useEffect(() => setIterInput(String(iter)), [iter]);
+  useEffect(() => setPowerInput(String(power)), [power]);
 
   const FORMULAS: Record<'mandelbrot' | 'julia', string> = {
     mandelbrot: 'z_{n+1} = z_n^k + c',
@@ -65,7 +70,7 @@ export default function FractalsGPU() {
     uniform float offset;
 
     const int MAX_ITER = 1000;
-    const int MAX_POWER = 8;
+    const int MAX_POWER = 100;
 
     vec3 paletteColor(float t, int scheme) {
       if(scheme==0){
@@ -448,10 +453,16 @@ export default function FractalsGPU() {
             Power k:
             <input
               type="number"
-              value={power}
-              min={2}
-              max={8}
-              onChange={e => setPower(parseInt(e.target.value, 10))}
+              value={powerInput}
+              min={1}
+              max={100}
+              onChange={e => setPowerInput(e.target.value)}
+              onBlur={() => {
+                let v = parseInt(powerInput, 10);
+                if (isNaN(v)) v = power;
+                v = Math.min(100, Math.max(1, v));
+                setPower(v);
+              }}
               style={{ width: 60 }}
             />
           </label>
@@ -478,10 +489,16 @@ export default function FractalsGPU() {
             Iter:
             <input
               type="number"
-              value={iter}
-              min={50}
-              max={500}
-              onChange={e => setIter(parseInt(e.target.value, 10))}
+              value={iterInput}
+              min={1}
+              max={1000}
+              onChange={e => setIterInput(e.target.value)}
+              onBlur={() => {
+                let v = parseInt(iterInput, 10);
+                if (isNaN(v)) v = iter;
+                v = Math.min(1000, Math.max(1, v));
+                setIter(v);
+              }}
               style={{ width: 60 }}
             />
           </label>
@@ -491,7 +508,7 @@ export default function FractalsGPU() {
               type="number"
               value={startIter}
               min={0}
-              max={500}
+              max={1000}
               onChange={e => setStartIter(parseInt(e.target.value, 10))}
               style={{ width: 60 }}
             />
@@ -504,7 +521,7 @@ export default function FractalsGPU() {
                 C real:
                 <input
                   type="number"
-                  step={0.01}
+                  step="any"
                   value={juliaC.real}
                   onChange={e => setJuliaC({ ...juliaC, real: parseFloat(e.target.value) })}
                   style={{ width: 70 }}
@@ -514,7 +531,7 @@ export default function FractalsGPU() {
                 C imag:
                 <input
                   type="number"
-                  step={0.01}
+                  step="any"
                   value={juliaC.imag}
                   onChange={e => setJuliaC({ ...juliaC, imag: parseFloat(e.target.value) })}
                   style={{ width: 70 }}
