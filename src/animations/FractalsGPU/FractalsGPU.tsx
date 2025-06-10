@@ -27,6 +27,7 @@ export default function FractalsGPU() {
   const [type, setType] = useState<'mandelbrot' | 'julia'>('mandelbrot');
   const [juliaC, setJuliaC] = useState({ real: -0.7, imag: 0.27015 });
   const [iter, setIter] = useState(100);
+  const [startIter, setStartIter] = useState(0);
   const [palette, setPalette] = useState(0);
   const [power, setPower] = useState(2);
   const [colorMode, setColorMode] = useState<"escape" | "limit" | "layered">(
@@ -54,6 +55,7 @@ export default function FractalsGPU() {
     varying vec2 vUv;
     uniform vec4 view;
     uniform int iter;
+    uniform int startIter;
     uniform int type;
     uniform vec2 juliaC;
     uniform int palette;
@@ -88,6 +90,7 @@ export default function FractalsGPU() {
       vec2 z = type==0 ? vec2(0.0) : c;
       vec2 k = type==0 ? c : juliaC;
       int i;
+      float maxMag = 0.0;
       for(i=0;i<MAX_ITER;i++){
         if(i>=iter) break;
         if(dot(z,z)>4.0) break;
@@ -97,6 +100,9 @@ export default function FractalsGPU() {
           zpow = vec2(zpow.x*z.x - zpow.y*z.y, zpow.x*z.y + zpow.y*z.x);
         }
         z = zpow + k;
+        if(i >= startIter){
+          maxMag = max(maxMag, length(z));
+        }
       }
       float v = float(i);
       float escVal = 0.0;
@@ -108,7 +114,7 @@ export default function FractalsGPU() {
       float t = mod(idx + offset, 256.0);
       vec3 outCol = paletteColor(t, palette);
       // Map the final |z| value to the palette for interior coloring
-      vec3 inCol = paletteColor(clamp(length(z) * 128.0, 0.0, 255.0), paletteIn);
+      vec3 inCol = paletteColor(clamp(maxMag * 128.0, 0.0, 255.0), paletteIn);
       if(i < iter){
         if(colorMode==0) gl_FragColor = vec4(outCol,1.0);
         else if(colorMode==2) gl_FragColor = vec4(outCol,1.0);
@@ -163,6 +169,7 @@ export default function FractalsGPU() {
     if (!rendererRef.current || !materialRef.current) return;
     materialRef.current.uniforms.view.value = new THREE.Vector4(view.xMin, view.xMax, view.yMin, view.yMax);
     materialRef.current.uniforms.iter.value = iter;
+    materialRef.current.uniforms.startIter.value = startIter;
     materialRef.current.uniforms.type.value = type === 'mandelbrot' ? 0 : 1;
     materialRef.current.uniforms.juliaC.value = new THREE.Vector2(juliaC.real, juliaC.imag);
     materialRef.current.uniforms.palette.value = palette;
@@ -339,6 +346,7 @@ export default function FractalsGPU() {
     const uniforms = {
       view: { value: new THREE.Vector4(view.xMin, view.xMax, view.yMin, view.yMax) },
       iter: { value: iter },
+      startIter: { value: startIter },
       type: { value: 0 },
       juliaC: { value: new THREE.Vector2(juliaC.real, juliaC.imag) },
       palette: { value: palette },
@@ -374,7 +382,7 @@ export default function FractalsGPU() {
 
   useEffect(() => {
     render();
-  }, [view, iter, type, juliaC, palette, insidePalette, power, colorMode, offset, render]);
+  }, [view, iter, startIter, type, juliaC, palette, insidePalette, power, colorMode, offset, render]);
 
   useEffect(() => {
     drawPath();
@@ -474,6 +482,17 @@ export default function FractalsGPU() {
               min={50}
               max={500}
               onChange={e => setIter(parseInt(e.target.value, 10))}
+              style={{ width: 60 }}
+            />
+          </label>
+          <label>
+            Start Iter:
+            <input
+              type="number"
+              value={startIter}
+              min={0}
+              max={500}
+              onChange={e => setStartIter(parseInt(e.target.value, 10))}
               style={{ width: 60 }}
             />
           </label>
