@@ -10,7 +10,7 @@ const routes: Record<string, JSX.Element> = {
   '/': <App />,
   '/fractals': <FractalsGPU />,
   '/correspondence': <Correspondence />,
-  '/roots': <ComplexRoots />
+  '/roots': <ComplexRoots />,
   '/multibranch': <ComplexMultibranch />
 };
 
