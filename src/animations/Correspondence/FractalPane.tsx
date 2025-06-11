@@ -135,6 +135,8 @@ export default function FractalPane({
       const rect = mountRef.current.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
       renderer.setSize(rect.width, rect.height, false);
+      renderer.domElement.style.width = `${rect.width}px`;
+      renderer.domElement.style.height = `${rect.height}px`;
       renderer.setPixelRatio(dpr);
     };
     handleResize();
