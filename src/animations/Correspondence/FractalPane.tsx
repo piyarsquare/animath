@@ -134,9 +134,12 @@ export default function FractalPane({
       if (!mountRef.current) return;
       const rect = mountRef.current.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      renderer.setSize(rect.width, rect.height, false);
-      renderer.domElement.style.width = `${rect.width}px`;
-      renderer.domElement.style.height = `${rect.height}px`;
+      const width = rect.width * 0.75;
+      const height = rect.height * 0.75;
+      renderer.setSize(width, height, false);
+      renderer.domElement.style.width = `${width}px`;
+      renderer.domElement.style.height = `${height}px`;
+      renderer.domElement.style.margin = 'auto';
       renderer.setPixelRatio(dpr);
     };
     handleResize();
@@ -191,7 +194,13 @@ export default function FractalPane({
   return (
     <div
       ref={mountRef}
-      style={{ width: '100%', height: '100%' }}
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
       // Wheel events are ignored to avoid accidental zooming
       onPointerMove={handlePointerMove}
     />
