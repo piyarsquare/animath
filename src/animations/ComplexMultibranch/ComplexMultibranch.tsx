@@ -316,7 +316,9 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
     const idx = functionNames.indexOf(selectedFunction);
     return idx >= 0 ? idx : 0;
   });
-  const [branchIndex, setBranchIndex] = useState(0);
+  const [branchCount, setBranchCount] = useState(1);
+  const [branchIndices, setBranchIndices] = useState<number[]>([0, 1, 2]);
+  const [branchStyle, setBranchStyle] = useState<'color' | 'intensity' | 'shape'>('color');
   const [particleCount, setParticleCount] = useState(count);
   const [cameraZ, setCameraZ] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.cameraZ);
   const [size, setSize] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.size);
@@ -342,7 +344,9 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
     [0, 0, 0, 0]
   ]);
   const orientationRef = useRef('');
-  const materialRef = useRef<THREE.ShaderMaterial>();
+  const materialsRef = useRef<THREE.ShaderMaterial[]>([]);
+  const pointsRef = useRef<THREE.Points[]>([]);
+  const sceneRef = useRef<THREE.Scene>();
   const geometryRef = useRef<THREE.BufferGeometry>();
   const cameraRef = useRef<THREE.PerspectiveCamera>();
   const rendererRef = useRef<THREE.WebGLRenderer>();
@@ -364,23 +368,23 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
     if(viewPoint){
       rotLRef.current.copy(viewPoint.L);
       rotRRef.current.copy(viewPoint.R);
-      if(materialRef.current){
-        materialRef.current.uniforms.uRotL.value.w = viewPoint.L.w;
-        materialRef.current.uniforms.uRotL.value.v.set(viewPoint.L.x, viewPoint.L.y, viewPoint.L.z);
-        materialRef.current.uniforms.uRotR.value.w = viewPoint.R.w;
-        materialRef.current.uniforms.uRotR.value.v.set(viewPoint.R.x, viewPoint.R.y, viewPoint.R.z);
-      }
+      materialsRef.current.forEach(m => {
+        m.uniforms.uRotL.value.w = viewPoint.L.w;
+        m.uniforms.uRotL.value.v.set(viewPoint.L.x, viewPoint.L.y, viewPoint.L.z);
+        m.uniforms.uRotR.value.w = viewPoint.R.w;
+        m.uniforms.uRotR.value.v.set(viewPoint.R.x, viewPoint.R.y, viewPoint.R.z);
+      });
     }
   }, [viewPoint]);
   const realViewRef = useRef(realView);
   useEffect(() => { realViewRef.current = realView; }, [realView]);
-  const branchIndexRef = useRef(branchIndex);
+  const branchIndicesRef = useRef(branchIndices);
   useEffect(() => {
-    branchIndexRef.current = branchIndex;
-    if(materialRef.current){
-      materialRef.current.uniforms.branchIndex.value = branchIndex;
-    }
-  }, [branchIndex]);
+    branchIndicesRef.current = branchIndices;
+    materialsRef.current.forEach((m, i) => {
+      m.uniforms.branchIndex.value = branchIndices[i] ?? 0;
+    });
+  }, [branchIndices]);
   const projRef = useRef(proj);
   useEffect(() => { projRef.current = proj; }, [proj]);
   const viewMotionRef = useRef(viewMotion);
@@ -394,6 +398,7 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
       renderer: THREE.WebGLRenderer;
     }) => {
       const { scene, camera, renderer } = ctx;
+      sceneRef.current = scene;
       cameraRef.current = camera;
       rendererRef.current = renderer;
       renderer.setClearColor(objectMode ? 0xffffff : 0x000000);
@@ -415,43 +420,11 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
           tex.flipY = true;
           tex.needsUpdate = true;
           textures[5] = tex;
-          if (materialRef.current) {
-            materialRef.current.uniforms.tex.value = textures[textureIndex];
-          }
+          materialsRef.current.forEach(m => {
+            m.uniforms.tex.value = textures[textureIndex];
+          });
         });
       texturesRef.current = textures;
-
-      const particleMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-          time: { value: 0 },
-          opacity: { value: opacity },
-          functionType: { value: functionIndex },
-          globalSize: { value: size },
-          intensity: { value: intensity },
-          shimmerAmp: { value: shimmer },
-          jitterAmp: { value: jitter },
-          hueShift: { value: hueShift },
-          saturation: { value: saturation },
-          realView: { value: realViewRef.current ? 1 : 0 },
-          shapeType: { value: shapeIndex },
-          tex: { value: white },
-          textureIndex: { value: textureIndex },
-          uColourStyle: { value: colourStyle },
-          uColourBy: { value: colourBy },
-          uRotL: { value: { w: 1, v: new THREE.Vector3() } },
-          uRotR: { value: { w: 1, v: new THREE.Vector3() } },
-          uProjMode: { value: projRef.current },
-          uProjTarget: { value: projRef.current },
-          uProjAlpha: { value: 0 },
-          branchIndex: { value: branchIndex }
-        },
-        vertexShader,
-        fragmentShader,
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        vertexColors: true
-      });
 
       const side = Math.sqrt(particleCount);
       const geometry = new THREE.BufferGeometry();
@@ -475,9 +448,47 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
       geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
       geometry.setAttribute('seed', new THREE.BufferAttribute(seeds, 4));
 
-    materialRef.current = particleMaterial;
-    const particles = new THREE.Points(geometry, particleMaterial);
-    scene.add(particles);
+      materialsRef.current = [];
+      pointsRef.current = [];
+      for(let b=0;b<branchCount;b++){
+        const particleMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+            time: { value: 0 },
+            opacity: { value: opacity },
+            functionType: { value: functionIndex },
+            globalSize: { value: size },
+            intensity: { value: branchStyle==='intensity' ? intensity*(1 - b*0.3) : intensity },
+            shimmerAmp: { value: shimmer },
+            jitterAmp: { value: jitter },
+            hueShift: { value: branchStyle==='color' ? (hueShift + b/3) % 1 : hueShift },
+            saturation: { value: saturation },
+            realView: { value: realViewRef.current ? 1 : 0 },
+            shapeType: { value: branchStyle==='shape' ? (shapeIndex + b) % shapeNames.length : shapeIndex },
+            tex: { value: white },
+            textureIndex: { value: textureIndex },
+            uColourStyle: { value: colourStyle },
+            uColourBy: { value: colourBy },
+            uRotL: { value: { w: 1, v: new THREE.Vector3() } },
+            uRotR: { value: { w: 1, v: new THREE.Vector3() } },
+            uProjMode: { value: projRef.current },
+            uProjTarget: { value: projRef.current },
+            uProjAlpha: { value: 0 },
+            branchIndex: { value: branchIndices[b] ?? 0 }
+          },
+          vertexShader,
+          fragmentShader,
+          transparent: true,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          vertexColors: true
+        });
+        materialsRef.current.push(particleMaterial);
+        const particles = new THREE.Points(geometry, particleMaterial);
+        scene.add(particles);
+        pointsRef.current.push(particles);
+      }
+
+
 
 
     const xMat = new THREE.LineBasicMaterial({
@@ -587,7 +598,9 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
         }
       }
 
-      particleMaterial.uniforms.time.value = tCurrent;
+      materialsRef.current.forEach(m => {
+        m.uniforms.time.value = tCurrent;
+      });
 
 
 
@@ -600,12 +613,12 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
       const baseR = rotRRef.current;
       const Lq = dynL.clone().multiply(baseL);
       const Rq = dynR.clone().multiply(baseR);
-      if(materialRef.current){
-        materialRef.current.uniforms.uRotL.value.w = Lq.w;
-        materialRef.current.uniforms.uRotL.value.v.set(Lq.x,Lq.y,Lq.z);
-        materialRef.current.uniforms.uRotR.value.w = Rq.w;
-        materialRef.current.uniforms.uRotR.value.v.set(Rq.x,Rq.y,Rq.z);
-      }
+      materialsRef.current.forEach(m => {
+        m.uniforms.uRotL.value.w = Lq.w;
+        m.uniforms.uRotL.value.v.set(Lq.x,Lq.y,Lq.z);
+        m.uniforms.uRotR.value.w = Rq.w;
+        m.uniforms.uRotR.value.v.set(Rq.x,Rq.y,Rq.z);
+      });
       viewPointRef.current = { L: Lq.clone(), R: Rq.clone() };
       if(onViewPointChangeRef.current){
         onViewPointChangeRef.current(viewPointRef.current);
@@ -660,45 +673,47 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
     }, []);
 
   useEffect(() => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.saturation.value = saturation;
-    }
+    materialsRef.current.forEach(m => {
+      m.uniforms.saturation.value = saturation;
+    });
   }, [saturation]);
 
   useEffect(() => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.opacity.value = opacity;
-    }
+    materialsRef.current.forEach(m => {
+      m.uniforms.opacity.value = opacity;
+    });
   }, [opacity]);
 
   useEffect(() => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.globalSize.value = size;
-    }
+    materialsRef.current.forEach(m => {
+      m.uniforms.globalSize.value = size;
+    });
   }, [size]);
 
   useEffect(() => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.intensity.value = intensity;
-    }
-  }, [intensity]);
+    materialsRef.current.forEach((m, i) => {
+      const value = branchStyle==='intensity' ? intensity*(1 - i*0.3) : intensity;
+      m.uniforms.intensity.value = value;
+    });
+  }, [intensity, branchStyle]);
 
   useEffect(() => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.shimmerAmp.value = shimmer;
-    }
+    materialsRef.current.forEach(m => {
+      m.uniforms.shimmerAmp.value = shimmer;
+    });
   }, [shimmer]);
 
   useEffect(() => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.jitterAmp.value = jitter;
-    }
+    materialsRef.current.forEach(m => {
+      m.uniforms.jitterAmp.value = jitter;
+    });
   }, [jitter]);
 
   useEffect(() => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.hueShift.value = hueShift;
-    }
+    materialsRef.current.forEach((m, i) => {
+      const value = branchStyle==='color' ? (hueShift + i/3) % 1 : hueShift;
+      m.uniforms.hueShift.value = value;
+    });
     if (xAxisRef.current) {
       (xAxisRef.current.line.material as THREE.LineBasicMaterial).color.setHSL(
         (AXIS_COLORS.x + hueShift) % 1,
@@ -745,9 +760,9 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
   }, [axisWidth]);
 
   useEffect(() => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.realView.value = realView ? 1 : 0;
-    }
+    materialsRef.current.forEach(m => {
+      m.uniforms.realView.value = realView ? 1 : 0;
+    });
   }, [realView]);
 
 
@@ -759,45 +774,48 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
   }, [cameraZ]);
 
   useEffect(() => {
-    if (rendererRef.current && materialRef.current) {
+    if (rendererRef.current) {
       rendererRef.current.setClearColor(objectMode ? 0xffffff : 0x000000);
-      materialRef.current.blending = objectMode
-        ? THREE.NormalBlending
-        : THREE.AdditiveBlending;
-      materialRef.current.depthWrite = objectMode;
     }
+    materialsRef.current.forEach(m => {
+      m.blending = objectMode ? THREE.NormalBlending : THREE.AdditiveBlending;
+      m.depthWrite = objectMode;
+    });
   }, [objectMode]);
 
 
   useEffect(() => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.functionType.value = functionIndex;
-    }
+    materialsRef.current.forEach(m => {
+      m.uniforms.functionType.value = functionIndex;
+    });
   }, [functionIndex]);
 
   useEffect(() => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.shapeType.value = shapeIndex;
-    }
-  }, [shapeIndex]);
+    materialsRef.current.forEach((m, i) => {
+      const value = branchStyle==='shape' ? (shapeIndex + i) % shapeNames.length : shapeIndex;
+      m.uniforms.shapeType.value = value;
+    });
+  }, [shapeIndex, branchStyle]);
 
   useEffect(() => {
-    if (materialRef.current && texturesRef.current[textureIndex]) {
-      materialRef.current.uniforms.tex.value = texturesRef.current[textureIndex];
-      materialRef.current.uniforms.textureIndex.value = textureIndex;
+    if (texturesRef.current[textureIndex]) {
+      materialsRef.current.forEach(m => {
+        m.uniforms.tex.value = texturesRef.current[textureIndex];
+        m.uniforms.textureIndex.value = textureIndex;
+      });
     }
   }, [textureIndex]);
 
   useEffect(() => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.uColourStyle.value = colourStyle;
-    }
+    materialsRef.current.forEach(m => {
+      m.uniforms.uColourStyle.value = colourStyle;
+    });
   }, [colourStyle]);
 
   useEffect(() => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.uColourBy.value = colourBy;
-    }
+    materialsRef.current.forEach(m => {
+      m.uniforms.uColourBy.value = colourBy;
+    });
   }, [colourBy]);
 
   useEffect(() => {
@@ -825,24 +843,76 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
     }
   }, [particleCount]);
 
+  useEffect(() => {
+    if(!sceneRef.current || !geometryRef.current) return;
+    // remove old points
+    pointsRef.current.forEach(p => sceneRef.current!.remove(p));
+    materialsRef.current.forEach(m => m.dispose());
+    materialsRef.current = [];
+    pointsRef.current = [];
+    for(let b=0;b<branchCount;b++){
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          time: { value: 0 },
+          opacity: { value: opacity },
+          functionType: { value: functionIndex },
+          globalSize: { value: size },
+          intensity: { value: branchStyle==='intensity' ? intensity*(1 - b*0.3) : intensity },
+          shimmerAmp: { value: shimmer },
+          jitterAmp: { value: jitter },
+          hueShift: { value: branchStyle==='color' ? (hueShift + b/3) % 1 : hueShift },
+          saturation: { value: saturation },
+          realView: { value: realViewRef.current ? 1 : 0 },
+          shapeType: { value: branchStyle==='shape' ? (shapeIndex + b) % shapeNames.length : shapeIndex },
+          tex: { value: texturesRef.current[textureIndex] ?? new THREE.DataTexture(new Uint8Array([255,255,255,255]),1,1) },
+          textureIndex: { value: textureIndex },
+          uColourStyle: { value: colourStyle },
+          uColourBy: { value: colourBy },
+          uRotL: { value: { w: 1, v: new THREE.Vector3() } },
+          uRotR: { value: { w: 1, v: new THREE.Vector3() } },
+          uProjMode: { value: projRef.current },
+          uProjTarget: { value: projRef.current },
+          uProjAlpha: { value: 0 },
+          branchIndex: { value: branchIndices[b] ?? 0 }
+        },
+        vertexShader,
+        fragmentShader,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        vertexColors: true
+      });
+      materialsRef.current.push(material);
+      const pts = new THREE.Points(geometryRef.current, material);
+      sceneRef.current.add(pts);
+      pointsRef.current.push(pts);
+    }
+  }, [branchCount]);
+
   function animateTo(target: ProjectionMode){
-    if(!materialRef.current) return;
+    if(materialsRef.current.length===0) return;
     if(target===projRef.current) return;
     const start = performance.now();
     const duration = 1000;
     const step = (now: number) => {
       const p = Math.min((now-start)/duration,1);
-      materialRef.current!.uniforms.uProjAlpha.value = p;
+      materialsRef.current.forEach(m => {
+        m.uniforms.uProjAlpha.value = p;
+      });
       if(p<1){
         requestAnimationFrame(step);
       }else{
-        materialRef.current!.uniforms.uProjMode.value = target;
-        materialRef.current!.uniforms.uProjAlpha.value = 0;
-        materialRef.current!.uniforms.uProjTarget.value = target;
+        materialsRef.current.forEach(m => {
+          m.uniforms.uProjMode.value = target;
+          m.uniforms.uProjAlpha.value = 0;
+          m.uniforms.uProjTarget.value = target;
+        });
         setProj(target);
       }
     };
-    materialRef.current.uniforms.uProjTarget.value = target;
+    materialsRef.current.forEach(m => {
+      m.uniforms.uProjTarget.value = target;
+    });
     requestAnimationFrame(step);
   }
 
@@ -860,12 +930,12 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
     const qR = new THREE.Quaternion();
     rotLRef.current.copy(qL);
     rotRRef.current.copy(qR);
-    if(materialRef.current){
-      materialRef.current.uniforms.uRotL.value.w = qL.w;
-      materialRef.current.uniforms.uRotL.value.v.set(qL.x,qL.y,qL.z);
-      materialRef.current.uniforms.uRotR.value.w = qR.w;
-      materialRef.current.uniforms.uRotR.value.v.set(qR.x,qR.y,qR.z);
-    }
+    materialsRef.current.forEach(m => {
+      m.uniforms.uRotL.value.w = qL.w;
+      m.uniforms.uRotL.value.v.set(qL.x,qL.y,qL.z);
+      m.uniforms.uRotR.value.w = qR.w;
+      m.uniforms.uRotR.value.v.set(qR.x,qR.y,qR.z);
+    });
     viewPointRef.current = { L: qL.clone(), R: qR.clone() };
     onViewPointChangeRef.current?.(viewPointRef.current);
   }
@@ -888,7 +958,7 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
   }
 
   function applyQuarterTurn(plane: Plane, θ: number){
-    if(!materialRef.current) return;
+    if(materialsRef.current.length===0) return;
     const { L, R } = quarterQuat(plane, θ);
     const startL = rotLRef.current.clone();
     const startR = rotRRef.current.clone();
@@ -900,10 +970,12 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
       const p = Math.min((now-start)/duration,1);
       const qL = startL.clone().slerp(endL, p);
       const qR = startR.clone().slerp(endR, p);
-      materialRef.current!.uniforms.uRotL.value.w = qL.w;
-      materialRef.current!.uniforms.uRotL.value.v.set(qL.x,qL.y,qL.z);
-      materialRef.current!.uniforms.uRotR.value.w = qR.w;
-      materialRef.current!.uniforms.uRotR.value.v.set(qR.x,qR.y,qR.z);
+      materialsRef.current.forEach(m => {
+        m.uniforms.uRotL.value.w = qL.w;
+        m.uniforms.uRotL.value.v.set(qL.x,qL.y,qL.z);
+        m.uniforms.uRotR.value.w = qR.w;
+        m.uniforms.uRotR.value.v.set(qR.x,qR.y,qR.z);
+      });
       viewPointRef.current = { L: qL.clone(), R: qR.clone() };
       onViewPointChangeRef.current?.(viewPointRef.current);
       rotLRef.current.copy(qL);
@@ -1108,13 +1180,28 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
           </select>
         </label>
         <label style={{display:'flex',flexDirection:'column',color:'white',gap:4}}>
-          Branch:
-          <input
-            type="number"
-            value={branchIndex}
-            onChange={(e) => setBranchIndex(parseInt(e.target.value,10))}
-            style={{width:'4em'}}
-          />
+          Branches:
+          <select value={branchCount} onChange={e=>setBranchCount(parseInt(e.target.value,10))}>
+            {[1,2,3].map(n=>(<option key={n} value={n}>{n}</option>))}
+          </select>
+        </label>
+        <div style={{display:'flex',gap:4,color:'white'}}>
+          {Array.from({length: branchCount}).map((_,i)=>(
+            <input key={i} type="number" value={branchIndices[i]}
+              onChange={e=>{
+                const arr=[...branchIndices];
+                arr[i]=parseInt(e.target.value,10);
+                setBranchIndices(arr);
+              }} style={{width:'4em'}}/>
+          ))}
+        </div>
+        <label style={{display:'flex',flexDirection:'column',color:'white',gap:4}}>
+          Style:
+          <select value={branchStyle} onChange={e=>setBranchStyle(e.target.value as any)}>
+            <option value="color">color</option>
+            <option value="intensity">intensity</option>
+            <option value="shape">shape</option>
+          </select>
         </label>
         <div className="view-type-toolbar">
           {viewTypes.map(([name,code]) => (
