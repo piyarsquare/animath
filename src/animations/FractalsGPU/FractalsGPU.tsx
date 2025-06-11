@@ -24,7 +24,8 @@ export default function FractalsGPU() {
     yMin: -1.5,
     yMax: 1.5
   });
-  const [type, setType] = useState<'mandelbrot' | 'julia'>('mandelbrot');
+  type FractalType = 'mandelbrot' | 'julia' | 'burning' | 'tricorn';
+  const [type, setType] = useState<FractalType>('mandelbrot');
   const [juliaC, setJuliaC] = useState({ real: -0.7, imag: 0.27015 });
   const [iter, setIter] = useState(100);
   const [iterInput, setIterInput] = useState('100');
@@ -42,9 +43,18 @@ export default function FractalsGPU() {
   useEffect(() => setIterInput(String(iter)), [iter]);
   useEffect(() => setPowerInput(String(power)), [power]);
 
-  const FORMULAS: Record<'mandelbrot' | 'julia', string> = {
+  const FORMULAS: Record<FractalType, string> = {
     mandelbrot: 'z_{n+1} = z_n^k + c',
-    julia: 'z_{n+1} = z_n^k + c'
+    julia: 'z_{n+1} = z_n^k + c',
+    burning: 'z_{n+1} = (|Re(z_n)| + i|Im(z_n)|)^k + c',
+    tricorn: 'z_{n+1} = (conj(z_n))^k + c'
+  };
+
+  const TYPE_NAMES: Record<FractalType, string> = {
+    mandelbrot: 'Mandelbrot',
+    julia: 'Julia',
+    burning: 'Burning Ship',
+    tricorn: 'Tricorn'
   };
 
   const vertexShader = `
@@ -91,18 +101,25 @@ export default function FractalsGPU() {
     }
 
     void main(){
+      // type: 0=Mandelbrot, 1=Julia, 2=Burning Ship, 3=Tricorn
       vec2 c = vec2(mix(view.x, view.y, vUv.x), mix(view.z, view.w, vUv.y));
-      vec2 z = type==0 ? vec2(0.0) : c;
-      vec2 k = type==0 ? c : juliaC;
+      vec2 z = (type==0 || type==2 || type==3) ? vec2(0.0) : c;
+      vec2 k = (type==0 || type==2 || type==3) ? c : juliaC;
       int i;
       float maxMag = 0.0;
       for(i=0;i<MAX_ITER;i++){
         if(i>=iter) break;
         if(dot(z,z)>4.0) break;
-        vec2 zpow = z;
+        vec2 zcur = z;
+        if(type==2){
+          zcur = vec2(abs(zcur.x), abs(zcur.y));
+        }else if(type==3){
+          zcur = vec2(zcur.x, -zcur.y);
+        }
+        vec2 zpow = zcur;
         for(int p=1;p<MAX_POWER;p++){
           if(p>=power) break;
-          zpow = vec2(zpow.x*z.x - zpow.y*z.y, zpow.x*z.y + zpow.y*z.x);
+          zpow = vec2(zpow.x*zcur.x - zpow.y*zcur.y, zpow.x*zcur.y + zpow.y*zcur.x);
         }
         z = zpow + k;
         if(i >= startIter){
@@ -175,7 +192,8 @@ export default function FractalsGPU() {
     materialRef.current.uniforms.view.value = new THREE.Vector4(view.xMin, view.xMax, view.yMin, view.yMax);
     materialRef.current.uniforms.iter.value = iter;
     materialRef.current.uniforms.startIter.value = startIter;
-    materialRef.current.uniforms.type.value = type === 'mandelbrot' ? 0 : 1;
+    const tMap = { mandelbrot: 0, julia: 1, burning: 2, tricorn: 3 } as const;
+    materialRef.current.uniforms.type.value = tMap[type];
     materialRef.current.uniforms.juliaC.value = new THREE.Vector2(juliaC.real, juliaC.imag);
     materialRef.current.uniforms.palette.value = palette;
     materialRef.current.uniforms.paletteIn.value = insidePalette;
@@ -253,12 +271,20 @@ export default function FractalsGPU() {
         }
         return { x: rx, y: ry };
       };
-      if (type === 'mandelbrot') {
+      if (type === 'mandelbrot' || type === 'burning' || type === 'tricorn') {
         let zx = start.x,
           zy = start.y;
         for (let i = 0; i < iter && zx * zx + zy * zy <= 4; i++) {
           pts.push({ x: zx, y: zy });
-          const pow = powComplex(zx, zy);
+          let tx = zx,
+            ty = zy;
+          if (type === 'burning') {
+            tx = Math.abs(tx);
+            ty = Math.abs(ty);
+          } else if (type === 'tricorn') {
+            ty = -ty;
+          }
+          const pow = powComplex(tx, ty);
           zx = pow.x + start.x;
           zy = pow.y + start.y;
         }
@@ -408,6 +434,8 @@ export default function FractalsGPU() {
           <select value={type} onChange={e => setType(e.target.value as any)}>
             <option value="mandelbrot">Mandelbrot</option>
             <option value="julia">Julia</option>
+            <option value="burning">Burning Ship</option>
+            <option value="tricorn">Tricorn</option>
           </select>
         </label>
       </div>
@@ -423,7 +451,7 @@ export default function FractalsGPU() {
           gap: 4
         }}
       >
-        <div style={{ fontSize: '1.2em' }}>{type === 'mandelbrot' ? 'Mandelbrot' : 'Julia'}</div>
+        <div style={{ fontSize: '1.2em' }}>{TYPE_NAMES[type]}</div>
         <div>{FORMULAS[type]}</div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
           <button onClick={() => pan(0, -50)}>Up</button>
