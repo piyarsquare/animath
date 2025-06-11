@@ -11,6 +11,7 @@
 1. **[Complex Particles](https://piyarsquare.github.io/animath/#/)** – 3D representation of four-dimensional complex functions
 2. **[Fractals](https://piyarsquare.github.io/animath/#/fractals)** – GPU accelerated Mandelbrot and Julia viewer with orbit visualization
 3. **[Correspondence](https://piyarsquare.github.io/animath/#/correspondence)** – interactive Mandelbrot–Julia correspondence simulation
+4. **[Complex Roots](https://piyarsquare.github.io/animath/#/roots)** – explore $z^{p/q}$ mappings with adjustable integer exponents
 
 ---
 
