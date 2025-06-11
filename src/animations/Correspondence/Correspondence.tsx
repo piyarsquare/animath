@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FractalPane, { Complex, ViewBounds } from './FractalPane';
 
 export default function Correspondence() {
@@ -12,15 +12,39 @@ export default function Correspondence() {
   const [paletteJ, setPaletteJ] = useState(0);
   const [offsetJ, setOffsetJ] = useState(0);
 
+  const [dims, setDims] = useState({ width: 0, paneHeight: 0 });
+
+  useEffect(() => {
+    const update = () => {
+      const maxW = window.innerWidth * 0.8;
+      const maxH = window.innerHeight * 0.8;
+      const width = Math.min(maxW, 0.75 * maxH);
+      const paneHeight = (2 / 3) * width;
+      setDims({ width, paneHeight });
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        width: dims.width,
+        height: dims.paneHeight * 2,
+        margin: 'auto',
+        position: 'relative'
+      }}
+    >
       <div style={{ position: 'absolute', top: 10, right: 10, color: 'white', zIndex: 1 }}>
         <label>
           Iter:
           <input type="number" value={iter} min={1} max={1000} onChange={e => setIter(parseInt(e.target.value, 10))} style={{ width: 60 }} />
         </label>
       </div>
-      <div style={{ flex: 1, position: 'relative' }}>
+      <div style={{ width: '100%', height: dims.paneHeight, position: 'relative' }}>
         <FractalPane type="mandelbrot" view={mandelView} onViewChange={setMandelView} juliaC={c} iter={iter} palette={paletteM} offset={offsetM} />
         <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
           <label>
@@ -35,7 +59,7 @@ export default function Correspondence() {
           <input type="range" min={0} max={255} value={offsetM} onChange={e => setOffsetM(parseInt(e.target.value, 10))} />
         </div>
       </div>
-      <div style={{ flex: 1, position: 'relative' }}>
+      <div style={{ width: '100%', height: dims.paneHeight, position: 'relative' }}>
         <FractalPane type="julia" view={juliaView} onViewChange={setJuliaView} juliaC={c} iter={iter} palette={paletteJ} offset={offsetJ} />
         <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
           <label>
