@@ -20,6 +20,9 @@ export interface FractalPaneProps {
   view: ViewBounds;
   onViewChange: (v: ViewBounds) => void;
   juliaC: Complex;
+  iter: number;
+  palette: number;
+  offset: number;
   onPickC?: (c: Complex) => void;
 }
 
@@ -42,6 +45,9 @@ export default function FractalPane({
   view,
   onViewChange,
   juliaC,
+  iter,
+  palette,
+  offset,
   onPickC,
 }: FractalPaneProps) {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -64,12 +70,24 @@ export default function FractalPane({
     uniform vec2 c;
     uniform int maxIter;
     uniform int power;
-    vec3 palette(float t){
-      return vec3(
-        0.5+0.5*sin(6.2831*t),
-        0.5+0.5*sin(6.2831*t+2.1),
-        0.5+0.5*sin(6.2831*t+4.2)
-      );
+    uniform int palette;
+    uniform float offset;
+    vec3 paletteColor(float t, int scheme){
+      if(scheme==0){
+        return vec3(
+          sin(0.024*(t)+0.0)*0.5+0.5,
+          sin(0.024*(t)+2.0)*0.5+0.5,
+          sin(0.024*(t)+4.0)*0.5+0.5
+        );
+      }else if(scheme==1){
+        float r = min(255.0, t*3.0);
+        float g = clamp(t*3.0-255.0,0.0,255.0);
+        float b = max(0.0,t*3.0-510.0);
+        return vec3(r,g,b)/255.0;
+      }else if(scheme==2){
+        return vec3(0.0, t/2.0, t)/255.0;
+      }
+      return vec3(t,t,t)/255.0;
     }
     void main(){
       vec2 pos = vec2(mix(view.x,view.y,vUv.x), mix(view.z,view.w,vUv.y));
@@ -85,8 +103,8 @@ export default function FractalPane({
         }
         z = zp + k;
       }
-      float t = float(i)/float(maxIter);
-      gl_FragColor = vec4(palette(t),1.0);
+      float t = mod(float(i)*10.0 + offset, 256.0);
+      gl_FragColor = vec4(paletteColor(t, palette),1.0);
     }
   `;
 
@@ -101,8 +119,10 @@ export default function FractalPane({
       view: { value: new THREE.Vector4(view.xMin, view.xMax, view.yMin, view.yMax) },
       fType: { value: type === 'mandelbrot' ? 0 : 1 },
       c: { value: new THREE.Vector2(juliaC.real, juliaC.imag) },
-      maxIter: { value: 100 },
+      maxIter: { value: iter },
       power: { value: 2 },
+      palette: { value: palette },
+      offset: { value: offset },
     };
     const material = new THREE.ShaderMaterial({ vertexShader, fragmentShader, uniforms });
     materialRef.current = material;
@@ -124,6 +144,9 @@ export default function FractalPane({
       material.uniforms.view.value.set(view.xMin, view.xMax, view.yMin, view.yMax);
       material.uniforms.fType.value = type === 'mandelbrot' ? 0 : 1;
       material.uniforms.c.value.set(juliaC.real, juliaC.imag);
+      material.uniforms.maxIter.value = iter;
+      material.uniforms.palette.value = palette;
+      material.uniforms.offset.value = offset;
       renderer.render(scene, camera);
     };
 
@@ -137,7 +160,7 @@ export default function FractalPane({
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
     };
-  }, [juliaC, type, view]);
+  }, [juliaC, type, view, iter, palette, offset]);
 
   useEffect(() => setup(), [setup]);
 
