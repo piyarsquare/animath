@@ -139,6 +139,10 @@ export default function FractalPane({
     };
     handleResize();
     window.addEventListener('resize', handleResize);
+    const ro = new ResizeObserver(handleResize);
+    if (mountRef.current) {
+      ro.observe(mountRef.current);
+    }
 
     const render = () => {
       renderer.render(scene, camera);
@@ -152,6 +156,7 @@ export default function FractalPane({
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      ro.disconnect();
       renderer.dispose();
       mountRef.current?.removeChild(canvas);
     };
