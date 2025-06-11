@@ -3,11 +3,13 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import FractalsGPU from './animations/FractalsGPU/FractalsGPU';
 import Correspondence from './animations/Correspondence/Correspondence';
+import ComplexMultibranch from './animations/ComplexMultibranch/ComplexMultibranch';
 
 const routes: Record<string, JSX.Element> = {
   '/': <App />,
   '/fractals': <FractalsGPU />,
-  '/correspondence': <Correspondence />
+  '/correspondence': <Correspondence />,
+  '/multibranch': <ComplexMultibranch />
 };
 
 function getRoute(): JSX.Element {
