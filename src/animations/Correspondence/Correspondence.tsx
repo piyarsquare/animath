@@ -5,7 +5,8 @@ export default function Correspondence() {
   const baseView: ViewBounds = { xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 };
   const [mandelView, setMandelView] = useState<ViewBounds>(baseView);
   const [juliaView, setJuliaView] = useState<ViewBounds>({ xMin: -2, xMax: 2, yMin: -2, yMax: 2 });
-  const [c] = useState<Complex>({ real: -0.7, imag: 0.27015 });
+  const [c, setC] = useState<Complex>({ real: -0.7, imag: 0.27015 });
+  const [selecting, setSelecting] = useState(false);
   const [iter, setIter] = useState(100);
   const [paletteM, setPaletteM] = useState(0);
   const [offsetM, setOffsetM] = useState(0);
@@ -28,6 +29,12 @@ export default function Correspondence() {
       const sy = (v.yMax - v.yMin) * 0.1 * dy;
       return { xMin: v.xMin + sx, xMax: v.xMax + sx, yMin: v.yMin + sy, yMax: v.yMax + sy };
     });
+  };
+
+  const handlePick = (nc: Complex) => {
+    if (!selecting) return;
+    setC(nc);
+    setSelecting(false);
   };
 
 
@@ -58,7 +65,22 @@ export default function Correspondence() {
           boxSizing: 'border-box'
         }}
       >
-        <FractalPane type="mandelbrot" view={mandelView} onViewChange={setMandelView} juliaC={c} iter={iter} palette={paletteM} offset={offsetM} />
+        <FractalPane
+          type="mandelbrot"
+          view={mandelView}
+          onViewChange={setMandelView}
+          juliaC={c}
+          iter={iter}
+          palette={paletteM}
+          offset={offsetM}
+          markC={c}
+          onPickC={handlePick}
+        />
+        <div
+          style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', color: 'white' }}
+        >
+          Mandelbrot
+        </div>
         <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
           <label>
             Palette:
@@ -94,6 +116,7 @@ export default function Correspondence() {
             <button onClick={() => zoom(0.9, setMandelView)}>Zoom In</button>
             <button onClick={() => zoom(1.1, setMandelView)}>Zoom Out</button>
           </div>
+          <button onClick={() => setSelecting(true)}>Select Julia point</button>
         </div>
       </div>
       <div
@@ -104,7 +127,20 @@ export default function Correspondence() {
           boxSizing: 'border-box'
         }}
       >
-        <FractalPane type="julia" view={juliaView} onViewChange={setJuliaView} juliaC={c} iter={iter} palette={paletteJ} offset={offsetJ} />
+        <FractalPane
+          type="julia"
+          view={juliaView}
+          onViewChange={setJuliaView}
+          juliaC={c}
+          iter={iter}
+          palette={paletteJ}
+          offset={offsetJ}
+        />
+        <div
+          style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', color: 'white' }}
+        >
+          {`Julia (c = ${c.real.toFixed(3)} ${c.imag >= 0 ? '+' : '-'} ${Math.abs(c.imag).toFixed(3)}i)`}
+        </div>
         <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
           <label>
             Palette:
