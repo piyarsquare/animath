@@ -141,12 +141,6 @@ export default function FractalPane({
     window.addEventListener('resize', handleResize);
 
     const render = () => {
-      material.uniforms.view.value.set(view.xMin, view.xMax, view.yMin, view.yMax);
-      material.uniforms.fType.value = type === 'mandelbrot' ? 0 : 1;
-      material.uniforms.c.value.set(juliaC.real, juliaC.imag);
-      material.uniforms.maxIter.value = iter;
-      material.uniforms.palette.value = palette;
-      material.uniforms.offset.value = offset;
       renderer.render(scene, camera);
     };
 
@@ -159,10 +153,21 @@ export default function FractalPane({
     return () => {
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
+      mountRef.current?.removeChild(canvas);
     };
-  }, [juliaC, type, view, iter, palette, offset]);
+  }, []);
 
   useEffect(() => setup(), [setup]);
+
+  useEffect(() => {
+    if (!materialRef.current) return;
+    materialRef.current.uniforms.view.value.set(view.xMin, view.xMax, view.yMin, view.yMax);
+    materialRef.current.uniforms.fType.value = type === 'mandelbrot' ? 0 : 1;
+    materialRef.current.uniforms.c.value.set(juliaC.real, juliaC.imag);
+    materialRef.current.uniforms.maxIter.value = iter;
+    materialRef.current.uniforms.palette.value = palette;
+    materialRef.current.uniforms.offset.value = offset;
+  }, [view, type, juliaC, iter, palette, offset]);
 
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
