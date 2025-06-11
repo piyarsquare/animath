@@ -1154,6 +1154,30 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               onChange={(e) => setObjectMode(e.target.checked)}
             />
           </label>
+          <label>
+            Branches:
+            <select value={branchCount} onChange={e=>setBranchCount(parseInt(e.target.value,10))}>
+              {[1,2,3].map(n=>(<option key={n} value={n}>{n}</option>))}
+            </select>
+          </label>
+          <div style={{display:'flex',gap:4,color:'white'}}>
+            {Array.from({length: branchCount}).map((_,i)=>(
+              <input key={i} type="number" value={branchIndices[i]}
+                onChange={e=>{
+                  const arr=[...branchIndices];
+                  arr[i]=parseInt(e.target.value,10);
+                  setBranchIndices(arr);
+                }} style={{width:'4em'}}/>
+            ))}
+          </div>
+          <label>
+            Style:
+            <select value={branchStyle} onChange={e=>setBranchStyle(e.target.value as any)}>
+              <option value="color">color</option>
+              <option value="intensity">intensity</option>
+              <option value="shape">shape</option>
+            </select>
+          </label>
         </div>
         </ToggleMenu>
       </div>
@@ -1177,30 +1201,6 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
             {functionNames.map((name, idx) => (
               <option key={name} value={idx}>{name}</option>
             ))}
-          </select>
-        </label>
-        <label style={{display:'flex',flexDirection:'column',color:'white',gap:4}}>
-          Branches:
-          <select value={branchCount} onChange={e=>setBranchCount(parseInt(e.target.value,10))}>
-            {[1,2,3].map(n=>(<option key={n} value={n}>{n}</option>))}
-          </select>
-        </label>
-        <div style={{display:'flex',gap:4,color:'white'}}>
-          {Array.from({length: branchCount}).map((_,i)=>(
-            <input key={i} type="number" value={branchIndices[i]}
-              onChange={e=>{
-                const arr=[...branchIndices];
-                arr[i]=parseInt(e.target.value,10);
-                setBranchIndices(arr);
-              }} style={{width:'4em'}}/>
-          ))}
-        </div>
-        <label style={{display:'flex',flexDirection:'column',color:'white',gap:4}}>
-          Style:
-          <select value={branchStyle} onChange={e=>setBranchStyle(e.target.value as any)}>
-            <option value="color">color</option>
-            <option value="intensity">intensity</option>
-            <option value="shape">shape</option>
           </select>
         </label>
         <div className="view-type-toolbar">
