@@ -832,6 +832,21 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
     animateTo(target);
   }
 
+  function snapToStandardView(){
+    const qL = new THREE.Quaternion();
+    const qR = new THREE.Quaternion();
+    rotLRef.current.copy(qL);
+    rotRRef.current.copy(qR);
+    if(materialRef.current){
+      materialRef.current.uniforms.uRotL.value.w = qL.w;
+      materialRef.current.uniforms.uRotL.value.v.set(qL.x,qL.y,qL.z);
+      materialRef.current.uniforms.uRotR.value.w = qR.w;
+      materialRef.current.uniforms.uRotR.value.v.set(qR.x,qR.y,qR.z);
+    }
+    viewPointRef.current = { L: qL.clone(), R: qR.clone() };
+    onViewPointChangeRef.current?.(viewPointRef.current);
+  }
+
   function handleViewType(t: ProjectionMode){
     setViewType(t);
     applyView(t, dropAxis);
@@ -842,6 +857,9 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   }
 
   function handleDropAxis(d: (typeof dropModes)[number]){
+    if(d !== 'None'){
+      snapToStandardView();
+    }
     setDropAxis(d);
     applyView(viewType, d);
   }
