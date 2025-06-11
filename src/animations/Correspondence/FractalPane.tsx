@@ -174,22 +174,6 @@ export default function FractalPane({
     materialRef.current.uniforms.offset.value = offset;
   }, [view, type, juliaC, iter, palette, offset]);
 
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
-      e.preventDefault();
-      const scale = e.deltaY < 0 ? 0.9 : 1.1;
-      const frac = screenToComplex(e.nativeEvent, rendererRef.current!.domElement, view);
-      const xr = (view.xMax - view.xMin) * scale;
-      const yr = (view.yMax - view.yMin) * scale;
-      onViewChange({
-        xMin: frac.real - xr / 2,
-        xMax: frac.real + xr / 2,
-        yMin: frac.imag - yr / 2,
-        yMax: frac.imag + yr / 2,
-      });
-    },
-    [view, onViewChange]
-  );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
@@ -206,7 +190,7 @@ export default function FractalPane({
     <div
       ref={mountRef}
       style={{ width: '100%', height: '100%' }}
-      onWheel={handleWheel}
+      // Wheel events are ignored to avoid accidental zooming
       onPointerMove={handlePointerMove}
     />
   );

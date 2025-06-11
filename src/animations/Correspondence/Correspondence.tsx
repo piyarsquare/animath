@@ -32,8 +32,9 @@ export default function Correspondence() {
       style={{
         display: 'flex',
         flexDirection: 'column',
+        gap: 16,
         width: dims.width,
-        height: dims.paneHeight * 2,
+        height: dims.paneHeight * 2 + 16,
         margin: 'auto',
         position: 'relative'
       }}
@@ -44,7 +45,15 @@ export default function Correspondence() {
           <input type="number" value={iter} min={1} max={1000} onChange={e => setIter(parseInt(e.target.value, 10))} style={{ width: 60 }} />
         </label>
       </div>
-      <div style={{ width: '100%', height: dims.paneHeight, position: 'relative' }}>
+      <div
+        style={{
+          width: '100%',
+          height: dims.paneHeight,
+          position: 'relative',
+          border: '1px solid white',
+          boxSizing: 'border-box'
+        }}
+      >
         <FractalPane type="mandelbrot" view={mandelView} onViewChange={setMandelView} juliaC={c} iter={iter} palette={paletteM} offset={offsetM} />
         <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
           <label>
@@ -59,7 +68,15 @@ export default function Correspondence() {
           <input type="range" min={0} max={255} value={offsetM} onChange={e => setOffsetM(parseInt(e.target.value, 10))} />
         </div>
       </div>
-      <div style={{ width: '100%', height: dims.paneHeight, position: 'relative' }}>
+      <div
+        style={{
+          width: '100%',
+          height: dims.paneHeight,
+          position: 'relative',
+          border: '1px solid white',
+          boxSizing: 'border-box'
+        }}
+      >
         <FractalPane type="julia" view={juliaView} onViewChange={setJuliaView} juliaC={c} iter={iter} palette={paletteJ} offset={offsetJ} />
         <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
           <label>
