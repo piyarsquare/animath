@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import FractalPane, { Complex, ViewBounds } from './FractalPane';
 
 export default function Correspondence() {
@@ -12,20 +12,24 @@ export default function Correspondence() {
   const [paletteJ, setPaletteJ] = useState(0);
   const [offsetJ, setOffsetJ] = useState(0);
 
-  const [dims, setDims] = useState({ width: 0, paneHeight: 0 });
+  const zoom = (factor: number, setView: React.Dispatch<React.SetStateAction<ViewBounds>>) => {
+    setView(v => {
+      const cx = (v.xMin + v.xMax) / 2;
+      const cy = (v.yMin + v.yMax) / 2;
+      const xr = (v.xMax - v.xMin) * factor;
+      const yr = (v.yMax - v.yMin) * factor;
+      return { xMin: cx - xr / 2, xMax: cx + xr / 2, yMin: cy - yr / 2, yMax: cy + yr / 2 };
+    });
+  };
 
-  useEffect(() => {
-    const update = () => {
-      const maxW = window.innerWidth * 0.8;
-      const maxH = window.innerHeight * 0.8;
-      const width = Math.min(maxW, 0.75 * maxH);
-      const paneHeight = (2 / 3) * width;
-      setDims({ width, paneHeight });
-    };
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
+  const pan = (dx: number, dy: number, setView: React.Dispatch<React.SetStateAction<ViewBounds>>) => {
+    setView(v => {
+      const sx = (v.xMax - v.xMin) * 0.1 * dx;
+      const sy = (v.yMax - v.yMin) * 0.1 * dy;
+      return { xMin: v.xMin + sx, xMax: v.xMax + sx, yMin: v.yMin + sy, yMax: v.yMax + sy };
+    });
+  };
+
 
   return (
     <div
@@ -33,9 +37,10 @@ export default function Correspondence() {
         display: 'flex',
         flexDirection: 'column',
         gap: 16,
-        width: dims.width,
-        height: dims.paneHeight * 2 + 16,
-        margin: 'auto',
+        width: '100vw',
+        height: '100vh',
+        boxSizing: 'border-box',
+        padding: 20,
         position: 'relative'
       }}
     >
@@ -47,8 +52,7 @@ export default function Correspondence() {
       </div>
       <div
         style={{
-          width: '100%',
-          height: dims.paneHeight,
+          flex: 1,
           position: 'relative',
           border: '1px solid white',
           boxSizing: 'border-box'
@@ -67,11 +71,34 @@ export default function Correspondence() {
           </label>
           <input type="range" min={0} max={255} value={offsetM} onChange={e => setOffsetM(parseInt(e.target.value, 10))} />
         </div>
+        <div
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            color: 'white',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <button onClick={() => pan(0, -1, setMandelView)}>Up</button>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button onClick={() => pan(-1, 0, setMandelView)}>Left</button>
+              <button onClick={() => pan(1, 0, setMandelView)}>Right</button>
+            </div>
+            <button onClick={() => pan(0, 1, setMandelView)}>Down</button>
+          </div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button onClick={() => zoom(0.9, setMandelView)}>Zoom In</button>
+            <button onClick={() => zoom(1.1, setMandelView)}>Zoom Out</button>
+          </div>
+        </div>
       </div>
       <div
         style={{
-          width: '100%',
-          height: dims.paneHeight,
+          flex: 1,
           position: 'relative',
           border: '1px solid white',
           boxSizing: 'border-box'
@@ -89,6 +116,30 @@ export default function Correspondence() {
             </select>
           </label>
           <input type="range" min={0} max={255} value={offsetJ} onChange={e => setOffsetJ(parseInt(e.target.value, 10))} />
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            color: 'white',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <button onClick={() => pan(0, -1, setJuliaView)}>Up</button>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button onClick={() => pan(-1, 0, setJuliaView)}>Left</button>
+              <button onClick={() => pan(1, 0, setJuliaView)}>Right</button>
+            </div>
+            <button onClick={() => pan(0, 1, setJuliaView)}>Down</button>
+          </div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button onClick={() => zoom(0.9, setJuliaView)}>Zoom In</button>
+            <button onClick={() => zoom(1.1, setJuliaView)}>Zoom Out</button>
+          </div>
         </div>
       </div>
     </div>
