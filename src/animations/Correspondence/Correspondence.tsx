@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import FractalPane, { Complex, ViewBounds } from './FractalPane';
 
 export default function Correspondence() {
@@ -12,6 +12,11 @@ export default function Correspondence() {
   const [offsetM, setOffsetM] = useState(0);
   const [paletteJ, setPaletteJ] = useState(0);
   const [offsetJ, setOffsetJ] = useState(0);
+  const [path, setPath] = useState<Complex[]>([]);
+  const [drawingPath, setDrawingPath] = useState(false);
+  const animRef = useRef<number>();
+  const progressRef = useRef(0);
+  const [playing, setPlaying] = useState(false);
 
   const zoom = (factor: number, setView: React.Dispatch<React.SetStateAction<ViewBounds>>) => {
     setView(v => {
@@ -35,6 +40,42 @@ export default function Correspondence() {
     if (!selecting) return;
     setC(nc);
     setSelecting(false);
+  };
+
+  const handlePathChange = (pts: Complex[]) => {
+    setPath(pts);
+  };
+
+  const playPath = () => {
+    if (path.length < 2) return;
+    cancelAnimationFrame(animRef.current!);
+    progressRef.current = 0;
+    setPlaying(true);
+
+    const step = () => {
+      const idx = Math.floor(progressRef.current);
+      const t = progressRef.current - idx;
+      const p0 = path[idx];
+      const p1 = path[idx + 1];
+      const nc = {
+        real: p0.real * (1 - t) + p1.real * t,
+        imag: p0.imag * (1 - t) + p1.imag * t,
+      };
+      setC(nc);
+      progressRef.current += 0.02;
+      if (progressRef.current >= path.length - 1) {
+        setC(path[path.length - 1]);
+        setPlaying(false);
+        return;
+      }
+      animRef.current = requestAnimationFrame(step);
+    };
+    animRef.current = requestAnimationFrame(step);
+  };
+
+  const stopPath = () => {
+    setPlaying(false);
+    cancelAnimationFrame(animRef.current!);
   };
 
 
@@ -75,6 +116,9 @@ export default function Correspondence() {
           offset={offsetM}
           markC={c}
           onPickC={handlePick}
+          drawing={drawingPath}
+          path={path}
+          onPathChange={handlePathChange}
         />
         <div
           style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', color: 'white' }}
@@ -117,6 +161,13 @@ export default function Correspondence() {
             <button onClick={() => zoom(1.1, setMandelView)}>Zoom Out</button>
           </div>
           <button onClick={() => setSelecting(true)}>Select Julia point</button>
+          <button onClick={() => setDrawingPath(p => !p)}>
+            {drawingPath ? 'Finish Path' : 'Draw Path'}
+          </button>
+          <button onClick={() => setPath([])}>Clear Path</button>
+          <button onClick={playing ? stopPath : playPath} disabled={path.length < 2}>
+            {playing ? 'Stop' : 'Play'}
+          </button>
         </div>
       </div>
       <div

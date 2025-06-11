@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import * as THREE from 'three';
 
 export interface Complex {
@@ -25,6 +25,9 @@ export interface FractalPaneProps {
   offset: number;
   onPickC?: (c: Complex) => void;
   markC?: Complex;
+  drawing?: boolean;
+  path?: Complex[];
+  onPathChange?: (pts: Complex[]) => void;
 }
 
 export function screenToComplex(
@@ -51,6 +54,9 @@ export default function FractalPane({
   offset,
   onPickC,
   markC,
+  drawing,
+  path,
+  onPathChange,
 }: FractalPaneProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer>();
@@ -182,16 +188,54 @@ export default function FractalPane({
   }, [view, type, juliaC, iter, palette, offset]);
 
 
+  const [drawPoints, setDrawPoints] = useState<Complex[]>([]);
+  const isDrawingRef = useRef(false);
+
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
+      if (drawing) return;
       if (!onPickC) return;
       const canvas = rendererRef.current?.domElement;
       if (!canvas) return;
       const c = screenToComplex(e.nativeEvent, canvas, view);
       onPickC(c);
     },
-    [onPickC, view]
+    [onPickC, view, drawing]
   );
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (!drawing) return;
+      const canvas = rendererRef.current?.domElement;
+      if (!canvas) return;
+      const c = screenToComplex(e.nativeEvent, canvas, view);
+      isDrawingRef.current = true;
+      setDrawPoints([c]);
+      onPathChange?.([c]);
+    },
+    [drawing, view, onPathChange]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!drawing || !isDrawingRef.current) return;
+      const canvas = rendererRef.current?.domElement;
+      if (!canvas) return;
+      const c = screenToComplex(e.nativeEvent, canvas, view);
+      setDrawPoints(prev => {
+        const np = [...prev, c];
+        onPathChange?.(np);
+        return np;
+      });
+    },
+    [drawing, view, onPathChange]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    if (!drawing || !isDrawingRef.current) return;
+    isDrawingRef.current = false;
+    onPathChange?.(drawPoints);
+  }, [drawing, drawPoints, onPathChange]);
 
   const crossStyle = () => {
     if (!markC || !mountRef.current) return { display: 'none' } as React.CSSProperties;
@@ -212,6 +256,23 @@ export default function FractalPane({
     } as React.CSSProperties;
   };
 
+  const toScreen = (c: Complex): { x: number; y: number } => {
+    if (!mountRef.current) return { x: 0, y: 0 };
+    const rect = mountRef.current.getBoundingClientRect();
+    const width = rect.width * 0.75;
+    const height = rect.height * 0.75;
+    const offsetX = (rect.width - width) / 2;
+    const offsetY = (rect.height - height) / 2;
+    const x = offsetX + ((c.real - view.xMin) / (view.xMax - view.xMin)) * width;
+    const y = offsetY + ((c.imag - view.yMin) / (view.yMax - view.yMin)) * height;
+    return { x, y };
+  };
+
+  const pathPoints = (path ?? drawPoints).map(p => {
+    const { x, y } = toScreen(p);
+    return `${x},${y}`;
+  }).join(' ');
+
   return (
     <div
       ref={mountRef}
@@ -224,9 +285,24 @@ export default function FractalPane({
         position: 'relative'
       }}
       onClick={handleClick}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
     >
       {markC && type === 'mandelbrot' && (
         <div style={crossStyle()}>X</div>
+      )}
+      {pathPoints.length > 0 && (
+        <svg
+          style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+        >
+          <polyline
+            points={pathPoints}
+            fill="none"
+            stroke="white"
+            strokeWidth="1"
+          />
+        </svg>
       )}
     </div>
   );
