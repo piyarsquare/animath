@@ -24,6 +24,7 @@ export interface FractalPaneProps {
   palette: number;
   offset: number;
   onPickC?: (c: Complex) => void;
+  markC?: Complex;
 }
 
 export function screenToComplex(
@@ -49,6 +50,7 @@ export default function FractalPane({
   palette,
   offset,
   onPickC,
+  markC,
 }: FractalPaneProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer>();
@@ -180,8 +182,8 @@ export default function FractalPane({
   }, [view, type, juliaC, iter, palette, offset]);
 
 
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent) => {
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
       if (!onPickC) return;
       const canvas = rendererRef.current?.domElement;
       if (!canvas) return;
@@ -190,6 +192,25 @@ export default function FractalPane({
     },
     [onPickC, view]
   );
+
+  const crossStyle = () => {
+    if (!markC || !mountRef.current) return { display: 'none' } as React.CSSProperties;
+    const rect = mountRef.current.getBoundingClientRect();
+    const width = rect.width * 0.75;
+    const height = rect.height * 0.75;
+    const offsetX = (rect.width - width) / 2;
+    const offsetY = (rect.height - height) / 2;
+    const x = offsetX + ((markC.real - view.xMin) / (view.xMax - view.xMin)) * width;
+    const y = offsetY + ((markC.imag - view.yMin) / (view.yMax - view.yMin)) * height;
+    return {
+      position: 'absolute',
+      left: `${x}px`,
+      top: `${y}px`,
+      transform: 'translate(-50%, -50%)',
+      pointerEvents: 'none',
+      color: 'white'
+    } as React.CSSProperties;
+  };
 
   return (
     <div
@@ -200,9 +221,13 @@ export default function FractalPane({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        position: 'relative'
       }}
-      // Wheel events are ignored to avoid accidental zooming
-      onPointerMove={handlePointerMove}
-    />
+      onClick={handleClick}
+    >
+      {markC && type === 'mandelbrot' && (
+        <div style={crossStyle()}>X</div>
+      )}
+    </div>
   );
 }
