@@ -45,6 +45,10 @@ vec2 complexTan   (vec2 z){vec2 s=complexSin(z);vec2 c=complexCos(z);float d=c.x
 vec2 complexInv   (vec2 z){float d=z.x*z.x+z.y*z.y;if(d<1e-4) d=1e-4;return vec2(z.x/d,-z.y/d);}
 
 /* ----- new helpers ----- */
+vec2 complexMul(vec2 a, vec2 b){
+  return vec2(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x);
+}
+
 vec2 complexCube(vec2 z){
   return vec2(
     z.x*z.x*z.x - 3.0*z.x*z.y*z.y,
@@ -95,6 +99,30 @@ vec2 complexBranchSqrtPoly(vec2 z){
   );
   return complexSqrt(q);
 }
+
+vec2 complexGamma(vec2 z){
+  const float PI = 3.141592653589793;
+  vec2 halfVec = vec2(0.5,0.0);
+  vec2 logZ = complexLn(z);
+  vec2 t = complexMul(z - halfVec, logZ) - z + vec2(0.5*log(2.0*PI),0.0);
+  return complexExp(t);
+}
+
+vec2 complexCbrt(vec2 z){
+  float r = length(z);
+  float ang = atan(z.y, z.x);
+  float rr = pow(r, 1.0/3.0);
+  return vec2(rr*cos(ang/3.0), rr*sin(ang/3.0));
+}
+
+vec2 complexZMinus1OverZPlus1(vec2 z){
+  vec2 num = vec2(z.x - 1.0, z.y);
+  vec2 denInv = complexInv(vec2(z.x + 1.0, z.y));
+  return vec2(
+    num.x*denInv.x - num.y*denInv.y,
+    num.x*denInv.y + num.y*denInv.x
+  );
+}
 vec2 applyComplex(vec2 z,int t){
   if(t==0)  return z;
   if(t==1)  return complexSqrt(z);
@@ -113,6 +141,9 @@ vec2 applyComplex(vec2 z,int t){
   if(t==12) return complexRational22(z);
   if(t==13) return complexEssentialExpInv(z);
   if(t==14) return complexBranchSqrtPoly(z);
+  if(t==15) return complexGamma(z);
+  if(t==16) return complexCbrt(z);
+  if(t==17) return complexZMinus1OverZPlus1(z);
 
   return z;
 }
