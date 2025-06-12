@@ -14,6 +14,7 @@ export default function Correspondence() {
   const [offsetJ, setOffsetJ] = useState(0);
   const [path, setPath] = useState<Complex[]>([]);
   const [drawingPath, setDrawingPath] = useState(false);
+  const [speed, setSpeed] = useState(0.02);
   const animRef = useRef<number>();
   const progressRef = useRef(0);
   const [playing, setPlaying] = useState(false);
@@ -62,7 +63,7 @@ export default function Correspondence() {
         imag: p0.imag * (1 - t) + p1.imag * t,
       };
       setC(nc);
-      progressRef.current += 0.02;
+      progressRef.current += speed;
       if (progressRef.current >= path.length - 1) {
         setC(path[path.length - 1]);
         setPlaying(false);
@@ -168,6 +169,17 @@ export default function Correspondence() {
           <button onClick={playing ? stopPath : playPath} disabled={path.length < 2}>
             {playing ? 'Stop' : 'Play'}
           </button>
+          <label>
+            Speed:
+            <input
+              type="range"
+              min={0.005}
+              max={0.1}
+              step={0.005}
+              value={speed}
+              onChange={e => setSpeed(parseFloat(e.target.value))}
+            />
+          </label>
         </div>
       </div>
       <div
@@ -186,6 +198,7 @@ export default function Correspondence() {
           iter={iter}
           palette={paletteJ}
           offset={offsetJ}
+          path={path}
         />
         <div
           style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', color: 'white' }}
