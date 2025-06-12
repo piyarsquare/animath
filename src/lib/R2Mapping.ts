@@ -149,5 +149,36 @@ export const R2Functions = {
     const p1 = { x: x * a.x - y * a.y, y: x * a.y + y * a.x };
     const p2 = { x: p1.x * b.x - p1.y * b.y, y: p1.x * b.y + p1.y * b.x };
     return R2Functions.complexSqrt(p2);
+  },
+
+  /** Gamma function (Stirling approximation) */
+  gamma: (p: Vec2): Vec2 => {
+    const PI = Math.PI;
+    const half = { x: 0.5, y: 0 };
+    const lnz = R2Functions.complexLn(p);
+    const t = {
+      x: (p.x - half.x) * lnz.x - (p.y - half.y) * lnz.y - p.x + 0.5 * Math.log(2 * PI),
+      y: (p.x - half.x) * lnz.y + (p.y - half.y) * lnz.x - p.y
+    };
+    return R2Functions.complexExp(t);
+  },
+
+  /** Cube root */
+  cubeRoot: (p: Vec2): Vec2 => {
+    const r = Math.hypot(p.x, p.y);
+    const ang = Math.atan2(p.y, p.x);
+    const rr = Math.cbrt(r);
+    return { x: rr * Math.cos(ang / 3), y: rr * Math.sin(ang / 3) };
+  },
+
+  /** (z-1)/(z+1) */
+  zMinus1OverZPlus1: (p: Vec2): Vec2 => {
+    const num = { x: p.x - 1, y: p.y };
+    const den = { x: p.x + 1, y: p.y };
+    const invd = R2Functions.complexInverse(den);
+    return {
+      x: num.x * invd.x - num.y * invd.y,
+      y: num.x * invd.y + num.y * invd.x
+    };
   }
 };
