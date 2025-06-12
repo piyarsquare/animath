@@ -41,7 +41,10 @@ const functionNames = [
   'joukowski',
   'rational22',
   'essentialExpInv',
-  'branchSqrtPoly'
+  'branchSqrtPoly',
+  'gamma',
+  'cubeRoot',
+  'zMinus1OverZPlus1'
 ];
 
 const functionFormulas: Record<string, string> = {
@@ -59,6 +62,9 @@ const functionFormulas: Record<string, string> = {
   rational22: '(z² + 1)/(z² - 1)',
   essentialExpInv: 'e^{1/z}',
   branchSqrtPoly: '√(z(z-1)(z+1))',
+  gamma: 'Γ(z)',
+  cubeRoot: '∛z',
+  zMinus1OverZPlus1: '(z-1)/(z+1)',
   linear: 'z'
 };
 
