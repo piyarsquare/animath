@@ -117,9 +117,9 @@ vec2 complexBranchSqrtPoly(vec2 z){
 
 vec2 complexGamma(vec2 z){
   const float PI = 3.141592653589793;
-  vec2 half = vec2(0.5,0.0);
+  vec2 halfVec = vec2(0.5,0.0);
   vec2 logZ = complexLn(z);
-  vec2 t = complexMul(z - half, logZ) - z + vec2(0.5*log(2.0*PI),0.0);
+  vec2 t = complexMul(z - halfVec, logZ) - z + vec2(0.5*log(2.0*PI),0.0);
   return complexExp(t);
 }
 
