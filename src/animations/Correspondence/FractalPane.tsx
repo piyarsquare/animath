@@ -286,12 +286,10 @@ export default function FractalPane({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      {markC && type === 'mandelbrot' && (
-        <div style={crossStyle()}>X</div>
-      )}
+      {markC && <div style={crossStyle()}>X</div>}
       {pathPoints.length > 0 && (
         <svg
-          style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+          style={{ position: 'absolute', inset: 0, pointerEvents: 'none', width: '100%', height: '100%' }}
         >
           <polyline
             points={pathPoints}
