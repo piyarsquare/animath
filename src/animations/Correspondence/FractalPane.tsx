@@ -142,11 +142,10 @@ export default function FractalPane({
       if (!mountRef.current) return;
       const rect = mountRef.current.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      const width = rect.width * 0.75;
-      const height = rect.height * 0.75;
-      renderer.setSize(width, height, false);
-      renderer.domElement.style.width = `${width}px`;
-      renderer.domElement.style.height = `${height}px`;
+      const size = Math.min(rect.width, rect.height);
+      renderer.setSize(size, size, false);
+      renderer.domElement.style.width = `${size}px`;
+      renderer.domElement.style.height = `${size}px`;
       renderer.domElement.style.margin = 'auto';
       renderer.setPixelRatio(dpr);
     };
@@ -240,12 +239,11 @@ export default function FractalPane({
   const crossStyle = () => {
     if (!markC || !mountRef.current) return { display: 'none' } as React.CSSProperties;
     const rect = mountRef.current.getBoundingClientRect();
-    const width = rect.width * 0.75;
-    const height = rect.height * 0.75;
-    const offsetX = (rect.width - width) / 2;
-    const offsetY = (rect.height - height) / 2;
-    const x = offsetX + ((markC.real - view.xMin) / (view.xMax - view.xMin)) * width;
-    const y = offsetY + ((markC.imag - view.yMin) / (view.yMax - view.yMin)) * height;
+    const size = Math.min(rect.width, rect.height);
+    const offsetX = (rect.width - size) / 2;
+    const offsetY = (rect.height - size) / 2;
+    const x = offsetX + ((markC.real - view.xMin) / (view.xMax - view.xMin)) * size;
+    const y = offsetY + ((markC.imag - view.yMin) / (view.yMax - view.yMin)) * size;
     return {
       position: 'absolute',
       left: `${x}px`,
@@ -259,12 +257,11 @@ export default function FractalPane({
   const toScreen = (c: Complex): { x: number; y: number } => {
     if (!mountRef.current) return { x: 0, y: 0 };
     const rect = mountRef.current.getBoundingClientRect();
-    const width = rect.width * 0.75;
-    const height = rect.height * 0.75;
-    const offsetX = (rect.width - width) / 2;
-    const offsetY = (rect.height - height) / 2;
-    const x = offsetX + ((c.real - view.xMin) / (view.xMax - view.xMin)) * width;
-    const y = offsetY + ((c.imag - view.yMin) / (view.yMax - view.yMin)) * height;
+    const size = Math.min(rect.width, rect.height);
+    const offsetX = (rect.width - size) / 2;
+    const offsetY = (rect.height - size) / 2;
+    const x = offsetX + ((c.real - view.xMin) / (view.xMax - view.xMin)) * size;
+    const y = offsetY + ((c.imag - view.yMin) / (view.yMax - view.yMin)) * size;
     return { x, y };
   };
 
@@ -289,12 +286,10 @@ export default function FractalPane({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      {markC && type === 'mandelbrot' && (
-        <div style={crossStyle()}>X</div>
-      )}
+      {markC && <div style={crossStyle()}>X</div>}
       {pathPoints.length > 0 && (
         <svg
-          style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+          style={{ position: 'absolute', inset: 0, pointerEvents: 'none', width: '100%', height: '100%' }}
         >
           <polyline
             points={pathPoints}

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import FractalPane, { Complex, ViewBounds } from './FractalPane';
 
 export default function Correspondence() {
@@ -14,9 +14,26 @@ export default function Correspondence() {
   const [offsetJ, setOffsetJ] = useState(0);
   const [path, setPath] = useState<Complex[]>([]);
   const [drawingPath, setDrawingPath] = useState(false);
+  const [speed, setSpeed] = useState(0.02);
+  const speedRef = useRef(speed);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
   const animRef = useRef<number>();
   const progressRef = useRef(0);
   const [playing, setPlaying] = useState(false);
+  const playingRef = useRef(false);
+
+  useEffect(() => {
+    speedRef.current = speed;
+  }, [speed]);
+
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
 
   const zoom = (factor: number, setView: React.Dispatch<React.SetStateAction<ViewBounds>>) => {
     setView(v => {
@@ -50,23 +67,27 @@ export default function Correspondence() {
     if (path.length < 2) return;
     cancelAnimationFrame(animRef.current!);
     progressRef.current = 0;
+    setPaused(false);
     setPlaying(true);
 
     const step = () => {
-      const idx = Math.floor(progressRef.current);
-      const t = progressRef.current - idx;
-      const p0 = path[idx];
-      const p1 = path[idx + 1];
-      const nc = {
-        real: p0.real * (1 - t) + p1.real * t,
-        imag: p0.imag * (1 - t) + p1.imag * t,
-      };
-      setC(nc);
-      progressRef.current += 0.02;
-      if (progressRef.current >= path.length - 1) {
-        setC(path[path.length - 1]);
-        setPlaying(false);
-        return;
+      if (!playingRef.current) return;
+      if (!pausedRef.current) {
+        const idx = Math.floor(progressRef.current);
+        const t = progressRef.current - idx;
+        const p0 = path[idx];
+        const p1 = path[idx + 1];
+        const nc = {
+          real: p0.real * (1 - t) + p1.real * t,
+          imag: p0.imag * (1 - t) + p1.imag * t,
+        };
+        setC(nc);
+        progressRef.current += speedRef.current;
+        if (progressRef.current >= path.length - 1) {
+          setC(path[path.length - 1]);
+          setPlaying(false);
+          return;
+        }
       }
       animRef.current = requestAnimationFrame(step);
     };
@@ -75,6 +96,7 @@ export default function Correspondence() {
 
   const stopPath = () => {
     setPlaying(false);
+    setPaused(false);
     cancelAnimationFrame(animRef.current!);
   };
 
@@ -168,6 +190,22 @@ export default function Correspondence() {
           <button onClick={playing ? stopPath : playPath} disabled={path.length < 2}>
             {playing ? 'Stop' : 'Play'}
           </button>
+          {playing && (
+            <button onClick={() => setPaused(p => !p)}>
+              {paused ? 'Resume' : 'Pause'}
+            </button>
+          )}
+          <label>
+            Speed:
+            <input
+              type="range"
+              min={0.005}
+              max={0.5}
+              step={0.005}
+              value={speed}
+              onChange={e => setSpeed(parseFloat(e.target.value))}
+            />
+          </label>
         </div>
       </div>
       <div
@@ -186,6 +224,7 @@ export default function Correspondence() {
           iter={iter}
           palette={paletteJ}
           offset={offsetJ}
+          path={path}
         />
         <div
           style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', color: 'white' }}
