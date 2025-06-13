@@ -224,7 +224,6 @@ export default function Correspondence() {
           iter={iter}
           palette={paletteJ}
           offset={offsetJ}
-          path={path}
         />
         <div
           style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', color: 'white' }}
