@@ -13,7 +13,7 @@ export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
   const camPosT = useRef(0);          // param t along centreline
   const clockRef = useRef(new THREE.Clock());
 
-  const onMount = React.useCallback(({ scene, camera }: {
+  const onMount = React.useCallback(({ scene, camera, renderer }: {
     scene: THREE.Scene;
     camera: THREE.PerspectiveCamera;
     renderer: THREE.WebGLRenderer;
@@ -50,6 +50,7 @@ export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
       camera.updateMatrixWorld();
       (camera as any).parent?.updateMatrixWorld?.();
 
+      renderer.render(scene, camera);
       requestAnimationFrame(animate);
     };
     animate();
