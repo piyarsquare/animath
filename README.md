@@ -14,6 +14,7 @@
 4. **[Complex Roots](https://piyarsquare.github.io/animath/#/roots)** – explore $z^{p/q}$ mappings with adjustable integer exponents
 5. **[Complex Multibranch](https://piyarsquare.github.io/animath/#/multibranch)** – variant supporting multiple branches for functions
 6. **[Möbius Walk](https://piyarsquare.github.io/animath/#/mobius)** – stroll through an endless twisted corridor
+7. **[Circular Hallway](https://piyarsquare.github.io/animath/#/hallway)** – simple corridor with an optional Möbius twist
 
 ---
 
