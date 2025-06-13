@@ -5,13 +5,15 @@ import FractalsGPU from './animations/FractalsGPU/FractalsGPU';
 import Correspondence from './animations/Correspondence/Correspondence';
 import ComplexRoots from './animations/ComplexRoots/ComplexRoots';
 import ComplexMultibranch from './animations/ComplexMultibranch/ComplexMultibranch';
+import MobiusWalk from './animations/MobiusWalk/MobiusWalk';
 
 const routes: Record<string, JSX.Element> = {
   '/': <App />,
   '/fractals': <FractalsGPU />,
   '/correspondence': <Correspondence />,
   '/roots': <ComplexRoots />,
-  '/multibranch': <ComplexMultibranch />
+  '/multibranch': <ComplexMultibranch />,
+  '/mobius': <MobiusWalk />
 };
 
 function getRoute(): JSX.Element {
