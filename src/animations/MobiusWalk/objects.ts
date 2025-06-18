@@ -12,10 +12,16 @@ export interface HallObject {
 
 const texLoader = new THREE.TextureLoader();
 
+// Small inline textures so the demo works without external downloads.
+const ARROW_URI =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAATklEQVR4nO2RMQ4AIAgDgf//ua6KUNA42pFyl6AiRQCA9daBmSQVeCiThIJsOZrTEzrZBNWj+d5Y2ZFYNDyR6A08R5k9BFQX5v0vfMF5BukkO+WWaMCKAAAAAElFTkSuQmCC';
+const PAINTING_URI =
+  'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAQABADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDgrDQenyV1On6D0+Sun0/QenyV1On6D0+SjGZv5hw7nu2p/9k=';
+
 function makePainting(): THREE.Mesh {
   const geom = new THREE.PlaneGeometry(1.2, 0.8);
   const mat  = new THREE.MeshStandardMaterial({
-    map: texLoader.load('/textures/painting.jpg'), // swap assets
+    map: texLoader.load(PAINTING_URI),
     side: THREE.DoubleSide
   });
   return new THREE.Mesh(geom, mat);
@@ -24,7 +30,7 @@ function makePainting(): THREE.Mesh {
 function makeArrow(): THREE.Mesh {
   const g = new THREE.PlaneGeometry(0.6, 0.6);
   const m = new THREE.MeshBasicMaterial({
-    map: texLoader.load('/textures/arrow.png'),
+    map: texLoader.load(ARROW_URI),
     transparent: true
   });
   return new THREE.Mesh(g, m);

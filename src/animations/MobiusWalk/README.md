@@ -6,16 +6,5 @@ Import `MobiusWalk` and mount it like any other `<Canvas3D>` scene.
 
 ## Textures
 
-The module expects two textures inside `public/textures/`:
-
-```
-public/textures/arrow.png
-public/textures/painting.jpg
-```
-
-Both are small PNG/JPG assets hosted externally. Download them from:
-
-- <https://raw.githubusercontent.com/piyarsquare/animath-assets/main/arrow.png>
-- <https://raw.githubusercontent.com/piyarsquare/animath-assets/main/painting.jpg>
-
-Place the files in the folder above before running the demo.
+Earlier versions required downloading external PNG/JPG files for the corridor decorations.
+These assets are now embedded directly as data URIs so the demo runs out of the box.
