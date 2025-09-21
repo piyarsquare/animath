@@ -3,9 +3,11 @@ import * as THREE from 'three';
 import Readme from '../../components/Readme';
 import ToggleMenu from '../../components/ToggleMenu';
 import readmeText from './README.md?raw';
+import { useResponsive, getResponsiveControlsStyle, getResponsiveButtonStyle, getResponsiveInputStyle } from '../../styles/responsive';
 
 /** GPU accelerated Mandelbrot/Julia viewer using a fragment shader. */
 export default function FractalsGPU() {
+  const { isMobile, isTablet, screenSize } = useResponsive();
   const mountRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer>();
   const materialRef = useRef<THREE.ShaderMaterial>();
@@ -422,16 +424,37 @@ export default function FractalsGPU() {
   return (
     <div
       ref={mountRef}
-      style={{ position: 'relative', width: '100vw', height: '100vh' }}
+      style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}
     >
       <canvas
         ref={overlayRef}
-        style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', zIndex: 1, pointerEvents: 'none' }}
+        style={{ 
+          position: 'absolute', 
+          left: 0, 
+          top: 0, 
+          width: '100%', 
+          height: '100%', 
+          zIndex: 1, 
+          pointerEvents: 'none',
+          touchAction: 'none' 
+        }}
       />
-      <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
+      
+      {/* Top Left - Function Selector */}
+      <div 
+        style={{
+          ...getResponsiveControlsStyle(isMobile),
+          top: '10px',
+          left: '10px',
+        }}
+      >
         <label>
           Function:
-          <select value={type} onChange={e => setType(e.target.value as any)}>
+          <select 
+            value={type} 
+            onChange={e => setType(e.target.value as any)}
+            style={{ ...getResponsiveInputStyle(isMobile), marginLeft: '4px' }}
+          >
             <option value="mandelbrot">Mandelbrot</option>
             <option value="julia">Julia</option>
             <option value="burning">Burning Ship</option>
@@ -439,44 +462,111 @@ export default function FractalsGPU() {
           </select>
         </label>
       </div>
+      
+      {/* Top Right - Info and Navigation */}
       <div
         style={{
+          ...getResponsiveControlsStyle(isMobile),
           position: 'absolute',
-          top: 10,
-          right: 10,
-          color: 'white',
+          top: '10px',
+          right: '10px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'flex-end',
-          gap: 4
+          gap: isMobile ? 4 : 6,
+          maxWidth: isMobile ? '180px' : '220px'
         }}
       >
-        <div style={{ fontSize: '1.2em' }}>{TYPE_NAMES[type]}</div>
-        <div>{FORMULAS[type]}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <button onClick={() => pan(0, -50)}>Up</button>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <button onClick={() => pan(-50, 0)}>Left</button>
-            <button onClick={() => pan(50, 0)}>Right</button>
+        <div style={{ fontSize: isMobile ? '1em' : '1.2em', textAlign: 'center' }}>
+          <div>{TYPE_NAMES[type]}</div>
+          <div style={{ fontSize: isMobile ? '0.8em' : '0.9em' }}>{FORMULAS[type]}</div>
+        </div>
+        
+        {!isMobile && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <button 
+              onClick={() => pan(0, -50)}
+              style={getResponsiveButtonStyle(isMobile)}
+            >
+              Up
+            </button>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button 
+                onClick={() => pan(-50, 0)}
+                style={getResponsiveButtonStyle(isMobile)}
+              >
+                Left
+              </button>
+              <button 
+                onClick={() => pan(50, 0)}
+                style={getResponsiveButtonStyle(isMobile)}
+              >
+                Right
+              </button>
+            </div>
+            <button 
+              onClick={() => pan(0, 50)}
+              style={getResponsiveButtonStyle(isMobile)}
+            >
+              Down
+            </button>
           </div>
-          <button onClick={() => pan(0, 50)}>Down</button>
+        )}
+        
+        <div style={{ display: 'flex', gap: isMobile ? 2 : 4 }}>
+          <button 
+            onClick={() => zoom(0.9)}
+            style={getResponsiveButtonStyle(isMobile)}
+          >
+            Zoom In
+          </button>
+          <button 
+            onClick={() => zoom(1.1)}
+            style={getResponsiveButtonStyle(isMobile)}
+          >
+            Zoom Out
+          </button>
         </div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button onClick={() => zoom(0.9)}>Zoom In</button>
-          <button onClick={() => zoom(1.1)}>Zoom Out</button>
-        </div>
+        
+        {isMobile && (
+          <div style={{ 
+            fontSize: '10px', 
+            color: '#ccc', 
+            textAlign: 'center',
+            marginTop: '4px'
+          }}>
+            Pinch to zoom, drag to pan
+          </div>
+        )}
       </div>
-      <div style={{ position: 'absolute', bottom: 10, left: 10 }}>
-        <div style={{ color: 'white', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      
+      {/* Bottom Left - Main Controls */}
+      <div style={{ position: 'absolute', bottom: '10px', left: '10px' }}>
+        <div 
+          style={{ 
+            ...getResponsiveControlsStyle(isMobile),
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: isMobile ? 6 : 8,
+            maxWidth: isMobile ? '200px' : '250px',
+            maxHeight: isMobile ? '50vh' : '60vh',
+            overflowY: 'auto'
+          }}
+        >
           <label>
             Palette:
-            <select value={palette} onChange={e => setPalette(parseInt(e.target.value, 10))}>
+            <select 
+              value={palette} 
+              onChange={e => setPalette(parseInt(e.target.value, 10))}
+              style={{ ...getResponsiveInputStyle(isMobile), width: '100%' }}
+            >
               <option value={0}>Rainbow</option>
               <option value={1}>Fire</option>
               <option value={2}>Ocean</option>
               <option value={3}>Gray</option>
             </select>
           </label>
+          
           <label>
             Power k:
             <input
@@ -492,21 +582,31 @@ export default function FractalsGPU() {
                   setPower(Math.min(100, Math.max(1, parsed)));
                 }
               }}
-              style={{ width: 60 }}
+              style={{ ...getResponsiveInputStyle(isMobile), width: isMobile ? '50px' : '60px' }}
             />
           </label>
+          
           <label>
             Coloring:
-            <select value={colorMode} onChange={e => setColorMode(e.target.value as any)}>
+            <select 
+              value={colorMode} 
+              onChange={e => setColorMode(e.target.value as any)}
+              style={{ ...getResponsiveInputStyle(isMobile), width: '100%' }}
+            >
               <option value="escape">Escape velocity</option>
               <option value="limit">Limit magnitude</option>
               <option value="layered">Layered</option>
             </select>
           </label>
+          
           {colorMode !== 'escape' && (
             <label>
               Inside palette:
-              <select value={insidePalette} onChange={e => setInsidePalette(parseInt(e.target.value, 10))}>
+              <select 
+                value={insidePalette} 
+                onChange={e => setInsidePalette(parseInt(e.target.value, 10))}
+                style={{ ...getResponsiveInputStyle(isMobile), width: '100%' }}
+              >
                 <option value={0}>Rainbow</option>
                 <option value={1}>Fire</option>
                 <option value={2}>Ocean</option>
@@ -514,8 +614,9 @@ export default function FractalsGPU() {
               </select>
             </label>
           )}
+          
           <label>
-            Iter:
+            Iterations:
             <input
               type="number"
               value={iterInput}
@@ -529,9 +630,10 @@ export default function FractalsGPU() {
                   setIter(Math.min(1000, Math.max(1, parsed)));
                 }
               }}
-              style={{ width: 60 }}
+              style={{ ...getResponsiveInputStyle(isMobile), width: isMobile ? '50px' : '60px' }}
             />
           </label>
+          
           <label>
             Start Iter:
             <input
@@ -540,13 +642,27 @@ export default function FractalsGPU() {
               min={0}
               max={1000}
               onChange={e => setStartIter(parseInt(e.target.value, 10))}
-              style={{ width: 60 }}
+              style={{ ...getResponsiveInputStyle(isMobile), width: isMobile ? '50px' : '60px' }}
             />
           </label>
-          <button onClick={() => setAnimating(a => !a)}>{animating ? 'Stop' : 'Cycle'}</button>
-          <button onClick={reset}>Reset</button>
+          
+          <div style={{ display: 'flex', gap: isMobile ? 2 : 4 }}>
+            <button 
+              onClick={() => setAnimating(a => !a)}
+              style={{ ...getResponsiveButtonStyle(isMobile), backgroundColor: animating ? '#ff4444' : '#44ff44' }}
+            >
+              {animating ? 'Stop' : 'Cycle'}
+            </button>
+            <button 
+              onClick={reset}
+              style={getResponsiveButtonStyle(isMobile)}
+            >
+              Reset
+            </button>
+          </div>
+          
           {type === 'julia' && (
-            <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <label>
                 C real:
                 <input
@@ -554,24 +670,26 @@ export default function FractalsGPU() {
                   step="any"
                   value={juliaC.real}
                   onChange={e => setJuliaC({ ...juliaC, real: parseFloat(e.target.value) })}
-                  style={{ width: 70 }}
+                  style={{ ...getResponsiveInputStyle(isMobile), width: isMobile ? '60px' : '70px' }}
                 />
               </label>
               <label>
-                C imag:
+                C imaginary:
                 <input
                   type="number"
                   step="any"
                   value={juliaC.imag}
                   onChange={e => setJuliaC({ ...juliaC, imag: parseFloat(e.target.value) })}
-                  style={{ width: 70 }}
+                  style={{ ...getResponsiveInputStyle(isMobile), width: isMobile ? '60px' : '70px' }}
                 />
               </label>
-            </>
+            </div>
           )}
         </div>
       </div>
-      <div style={{ position: 'absolute', bottom: 10, right: 10 }}>
+      
+      {/* About Menu */}
+      <div style={{ position: 'absolute', bottom: '10px', right: '10px' }}>
         <ToggleMenu title="About">
           <Readme markdown={readmeText} />
         </ToggleMenu>

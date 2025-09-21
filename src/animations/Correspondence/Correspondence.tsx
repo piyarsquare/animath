@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import FractalPane, { Complex, ViewBounds } from './FractalPane';
+import { useResponsive, getResponsiveLayoutStyle, getResponsiveControlsStyle, getResponsiveButtonStyle, getResponsiveInputStyle } from '../../styles/responsive';
 
 export default function Correspondence() {
+  const { isMobile, isTablet, screenSize } = useResponsive();
   const baseView: ViewBounds = { xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 };
   const [mandelView, setMandelView] = useState<ViewBounds>(baseView);
   const [juliaView, setJuliaView] = useState<ViewBounds>({ xMin: -2, xMax: 2, yMin: -2, yMax: 2 });
@@ -102,30 +104,40 @@ export default function Correspondence() {
 
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 16,
-        width: '100vw',
-        height: '100vh',
-        boxSizing: 'border-box',
-        padding: 20,
-        position: 'relative'
-      }}
-    >
-      <div style={{ position: 'absolute', top: 10, right: 10, color: 'white', zIndex: 1 }}>
+    <div style={{...getResponsiveLayoutStyle('split', isMobile)}}>
+      
+      {/* Global Controls - Mobile Friendly */}
+      <div 
+        style={{ 
+          ...getResponsiveControlsStyle(isMobile),
+          position: 'absolute', 
+          top: '10px', 
+          right: '10px', 
+          zIndex: 20,
+          fontSize: isMobile ? '12px' : '14px'
+        }}
+      >
         <label>
-          Iter:
-          <input type="number" value={iter} min={1} max={1000} onChange={e => setIter(parseInt(e.target.value, 10))} style={{ width: 60 }} />
+          Iterations:
+          <input 
+            type="number" 
+            value={iter} 
+            min={1} 
+            max={1000} 
+            onChange={e => setIter(parseInt(e.target.value, 10))} 
+            style={{ ...getResponsiveInputStyle(isMobile), width: isMobile ? '50px' : '60px' }} 
+          />
         </label>
       </div>
+
+      {/* Mandelbrot Pane */}
       <div
         style={{
           flex: 1,
           position: 'relative',
           border: '1px solid white',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          minHeight: isMobile ? '40vh' : '50vh',
         }}
       >
         <FractalPane
@@ -142,60 +154,155 @@ export default function Correspondence() {
           path={path}
           onPathChange={handlePathChange}
         />
+        
         <div
-          style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', color: 'white' }}
+          style={{ 
+            position: 'absolute', 
+            top: '4px', 
+            left: '50%', 
+            transform: 'translateX(-50%)', 
+            color: 'white',
+            fontSize: isMobile ? '14px' : '16px',
+            fontWeight: 'bold',
+            textShadow: '1px 1px 2px black'
+          }}
         >
           Mandelbrot
         </div>
-        <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
+        
+        {/* Mandelbrot Controls */}
+        <div 
+          style={{
+            ...getResponsiveControlsStyle(isMobile),
+            position: 'absolute',
+            top: '10px',
+            left: '10px',
+            fontSize: isMobile ? '12px' : '14px'
+          }}
+        >
           <label>
             Palette:
-            <select value={paletteM} onChange={e => setPaletteM(parseInt(e.target.value, 10))}>
+            <select 
+              value={paletteM} 
+              onChange={e => setPaletteM(parseInt(e.target.value, 10))}
+              style={{ ...getResponsiveInputStyle(isMobile), marginLeft: '4px' }}
+            >
               <option value={0}>Rainbow</option>
               <option value={1}>Fire</option>
               <option value={2}>Ocean</option>
               <option value={3}>Gray</option>
             </select>
           </label>
-          <input type="range" min={0} max={255} value={offsetM} onChange={e => setOffsetM(parseInt(e.target.value, 10))} />
+          <input 
+            type="range" 
+            min={0} 
+            max={255} 
+            value={offsetM} 
+            onChange={e => setOffsetM(parseInt(e.target.value, 10))}
+            style={{ width: '100%', marginTop: '4px' }}
+          />
         </div>
+        
+        {/* Navigation and Action Controls */}
         <div
           style={{
+            ...getResponsiveControlsStyle(isMobile),
             position: 'absolute',
-            top: 10,
-            right: 10,
-            color: 'white',
+            top: '10px',
+            right: '10px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 4
+            gap: isMobile ? 4 : 6,
+            fontSize: isMobile ? '11px' : '12px'
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <button onClick={() => pan(0, -1, setMandelView)}>Up</button>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <button onClick={() => pan(-1, 0, setMandelView)}>Left</button>
-              <button onClick={() => pan(1, 0, setMandelView)}>Right</button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: isMobile ? 2 : 4 }}>
+            <button 
+              onClick={() => pan(0, -1, setMandelView)}
+              style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+            >
+              Up
+            </button>
+            <div style={{ display: 'flex', gap: isMobile ? 2 : 4 }}>
+              <button 
+                onClick={() => pan(-1, 0, setMandelView)}
+                style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+              >
+                Left
+              </button>
+              <button 
+                onClick={() => pan(1, 0, setMandelView)}
+                style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+              >
+                Right
+              </button>
             </div>
-            <button onClick={() => pan(0, 1, setMandelView)}>Down</button>
+            <button 
+              onClick={() => pan(0, 1, setMandelView)}
+              style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+            >
+              Down
+            </button>
           </div>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <button onClick={() => zoom(0.9, setMandelView)}>Zoom In</button>
-            <button onClick={() => zoom(1.1, setMandelView)}>Zoom Out</button>
+          
+          <div style={{ display: 'flex', gap: isMobile ? 2 : 4 }}>
+            <button 
+              onClick={() => zoom(0.9, setMandelView)}
+              style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+            >
+              Zoom In
+            </button>
+            <button 
+              onClick={() => zoom(1.1, setMandelView)}
+              style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+            >
+              Zoom Out
+            </button>
           </div>
-          <button onClick={() => setSelecting(true)}>Select Julia point</button>
-          <button onClick={() => setDrawingPath(p => !p)}>
-            {drawingPath ? 'Finish Path' : 'Draw Path'}
+          
+          <button 
+            onClick={() => setSelecting(true)}
+            style={{ ...getResponsiveButtonStyle(isMobile), backgroundColor: selecting ? '#ffd400' : undefined }}
+          >
+            {isMobile ? 'Pick Julia' : 'Select Julia point'}
           </button>
-          <button onClick={() => setPath([])}>Clear Path</button>
-          <button onClick={playing ? stopPath : playPath} disabled={path.length < 2}>
+          
+          <button 
+            onClick={() => setDrawingPath(p => !p)}
+            style={{ ...getResponsiveButtonStyle(isMobile), backgroundColor: drawingPath ? '#ffd400' : undefined }}
+          >
+            {drawingPath ? 'Finish Path' : (isMobile ? 'Draw Path' : 'Draw Path')}
+          </button>
+          
+          <button 
+            onClick={() => setPath([])}
+            style={getResponsiveButtonStyle(isMobile)}
+          >
+            Clear Path
+          </button>
+          
+          <button 
+            onClick={playing ? stopPath : playPath} 
+            disabled={path.length < 2}
+            style={{ 
+              ...getResponsiveButtonStyle(isMobile),
+              backgroundColor: playing ? '#ff4444' : '#44ff44',
+              opacity: path.length < 2 ? 0.5 : 1
+            }}
+          >
             {playing ? 'Stop' : 'Play'}
           </button>
+          
           {playing && (
-            <button onClick={() => setPaused(p => !p)}>
+            <button 
+              onClick={() => setPaused(p => !p)}
+              style={{ ...getResponsiveButtonStyle(isMobile), backgroundColor: paused ? '#ffaa44' : '#44aaff' }}
+            >
               {paused ? 'Resume' : 'Pause'}
             </button>
           )}
-          <label>
+          
+          <label style={{ fontSize: isMobile ? '10px' : '12px' }}>
             Speed:
             <input
               type="range"
@@ -204,16 +311,20 @@ export default function Correspondence() {
               step={0.005}
               value={speed}
               onChange={e => setSpeed(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
         </div>
       </div>
+
+      {/* Julia Set Pane */}
       <div
         style={{
           flex: 1,
           position: 'relative',
           border: '1px solid white',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          minHeight: isMobile ? '40vh' : '50vh',
         }}
       >
         <FractalPane
@@ -225,45 +336,114 @@ export default function Correspondence() {
           palette={paletteJ}
           offset={offsetJ}
         />
+        
         <div
-          style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', color: 'white' }}
+          style={{ 
+            position: 'absolute', 
+            top: '4px', 
+            left: '50%', 
+            transform: 'translateX(-50%)', 
+            color: 'white',
+            fontSize: isMobile ? '12px' : '14px',
+            fontWeight: 'bold',
+            textShadow: '1px 1px 2px black',
+            textAlign: 'center',
+            maxWidth: '90%'
+          }}
         >
-          {`Julia (c = ${c.real.toFixed(3)} ${c.imag >= 0 ? '+' : '-'} ${Math.abs(c.imag).toFixed(3)}i)`}
+          {isMobile 
+            ? `Julia (${c.real.toFixed(2)} ${c.imag >= 0 ? '+' : '-'} ${Math.abs(c.imag).toFixed(2)}i)`
+            : `Julia (c = ${c.real.toFixed(3)} ${c.imag >= 0 ? '+' : '-'} ${Math.abs(c.imag).toFixed(3)}i)`
+          }
         </div>
-        <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
+        
+        {/* Julia Controls */}
+        <div 
+          style={{
+            ...getResponsiveControlsStyle(isMobile),
+            position: 'absolute',
+            top: '10px',
+            left: '10px',
+            fontSize: isMobile ? '12px' : '14px'
+          }}
+        >
           <label>
             Palette:
-            <select value={paletteJ} onChange={e => setPaletteJ(parseInt(e.target.value, 10))}>
+            <select 
+              value={paletteJ} 
+              onChange={e => setPaletteJ(parseInt(e.target.value, 10))}
+              style={{ ...getResponsiveInputStyle(isMobile), marginLeft: '4px' }}
+            >
               <option value={0}>Rainbow</option>
               <option value={1}>Fire</option>
               <option value={2}>Ocean</option>
               <option value={3}>Gray</option>
             </select>
           </label>
-          <input type="range" min={0} max={255} value={offsetJ} onChange={e => setOffsetJ(parseInt(e.target.value, 10))} />
+          <input 
+            type="range" 
+            min={0} 
+            max={255} 
+            value={offsetJ} 
+            onChange={e => setOffsetJ(parseInt(e.target.value, 10))}
+            style={{ width: '100%', marginTop: '4px' }}
+          />
         </div>
+        
+        {/* Julia Navigation */}
         <div
           style={{
+            ...getResponsiveControlsStyle(isMobile),
             position: 'absolute',
-            top: 10,
-            right: 10,
-            color: 'white',
+            top: '10px',
+            right: '10px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 4
+            gap: isMobile ? 4 : 6
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <button onClick={() => pan(0, -1, setJuliaView)}>Up</button>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <button onClick={() => pan(-1, 0, setJuliaView)}>Left</button>
-              <button onClick={() => pan(1, 0, setJuliaView)}>Right</button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: isMobile ? 2 : 4 }}>
+            <button 
+              onClick={() => pan(0, -1, setJuliaView)}
+              style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+            >
+              Up
+            </button>
+            <div style={{ display: 'flex', gap: isMobile ? 2 : 4 }}>
+              <button 
+                onClick={() => pan(-1, 0, setJuliaView)}
+                style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+              >
+                Left
+              </button>
+              <button 
+                onClick={() => pan(1, 0, setJuliaView)}
+                style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+              >
+                Right
+              </button>
             </div>
-            <button onClick={() => pan(0, 1, setJuliaView)}>Down</button>
+            <button 
+              onClick={() => pan(0, 1, setJuliaView)}
+              style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+            >
+              Down
+            </button>
           </div>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <button onClick={() => zoom(0.9, setJuliaView)}>Zoom In</button>
-            <button onClick={() => zoom(1.1, setJuliaView)}>Zoom Out</button>
+          
+          <div style={{ display: 'flex', gap: isMobile ? 2 : 4 }}>
+            <button 
+              onClick={() => zoom(0.9, setJuliaView)}
+              style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+            >
+              Zoom In
+            </button>
+            <button 
+              onClick={() => zoom(1.1, setJuliaView)}
+              style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+            >
+              Zoom Out
+            </button>
           </div>
         </div>
       </div>

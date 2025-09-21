@@ -17,8 +17,11 @@ export default function Canvas3D({ onMount }: Canvas3DProps) {
 
   useEffect(() => {
     if (!mountRef.current) return;
-    const width = mountRef.current.clientWidth;
-    const height = mountRef.current.clientHeight;
+    
+    const mount = mountRef.current;
+    const width = mount.clientWidth;
+    const height = mount.clientHeight;
+    
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       CANVAS_CONFIG.fov,
@@ -26,23 +29,53 @@ export default function Canvas3D({ onMount }: Canvas3DProps) {
       CANVAS_CONFIG.near,
       CANVAS_CONFIG.far
     );
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: true,
+      alpha: true,
+      preserveDrawingBuffer: true 
+    });
+    
+    // Set initial size
     renderer.setSize(width, height);
-    mountRef.current.appendChild(renderer.domElement);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit DPR for performance
+    mount.appendChild(renderer.domElement);
+    
     onMount({ scene, camera, renderer });
+    
     const handleResize = () => {
-      const w = mountRef.current!.clientWidth;
-      const h = mountRef.current!.clientHeight;
+      if (!mount) return;
+      const w = mount.clientWidth;
+      const h = mount.clientHeight;
+      
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     };
+    
+    // Use ResizeObserver for better performance than window resize events
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(mount);
+    
+    // Fallback to window resize for broader compatibility
     window.addEventListener('resize', handleResize);
+    
     return () => {
+      resizeObserver.disconnect();
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
     };
   }, [onMount]);
 
-  return <div ref={mountRef} style={CANVAS_CONFIG.style} />;
+  return (
+    <div 
+      ref={mountRef} 
+      style={{
+        ...CANVAS_CONFIG.style,
+        display: 'block',
+        touchAction: 'none', // Prevent default touch behaviors
+      }} 
+    />
+  );
 }

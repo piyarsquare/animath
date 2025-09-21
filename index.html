@@ -2,22 +2,89 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5" />
     <title>animath</title>
     <style>
-      .projection-toolbar, .quarter-bar button.active{
-        background:#ffd400;
+      /* Global styles for better responsive behavior */
+      * {
+        box-sizing: border-box;
       }
-      .active{background:#ffd400;}
-      #page-info{
-        text-align:center;
-        margin:4px 0;
+      
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        touch-action: pan-x pan-y;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      }
+      
+      /* Button and UI improvements for mobile */
+      button {
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      button:hover {
+        background-color: #e0e0e0;
+      }
+      
+      input, select {
+        touch-action: manipulation;
+      }
+      
+      /* Active button styling */
+      .projection-toolbar, .quarter-bar button.active {
+        background: #ffd400;
+      }
+      
+      .active {
+        background: #ffd400 !important;
+        color: #000;
+      }
+      
+      /* Mobile-specific styles */
+      @media (max-width: 768px) {
+        button {
+          min-height: 44px;
+          min-width: 44px;
+          font-size: 14px;
+        }
+        
+        input, select {
+          min-height: 44px;
+          font-size: 16px; /* Prevents zoom on iOS */
+        }
+      }
+      
+      /* High DPI display support */
+      @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+        canvas {
+          image-rendering: crisp-edges;
+          image-rendering: -webkit-optimize-contrast;
+        }
+      }
+      
+      #page-info {
+        text-align: center;
+        margin: 4px 0;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        font-size: 14px;
+      }
+      
+      @media (max-width: 480px) {
+        #page-info {
+          font-size: 12px;
+          padding: 8px;
+        }
       }
     </style>
   </head>
   <body>
     <div id="root"></div>
-    <p id="page-info">You are viewing the animath page. Try <a href="#/fractals">#/fractals</a> for the fractals demo.</p>
+    <p id="page-info">You are viewing the animath page. Try <a href="#/fractals" style="color: #ffd400;">#/fractals</a> for the fractals demo.</p>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
