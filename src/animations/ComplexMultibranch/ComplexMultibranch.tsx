@@ -11,6 +11,7 @@ import QuarterTurnBar from '@/controls/QuarterTurnBar';
 import { QUARTER, Plane } from '@/math/constants';
 import { quarterQuat } from '@/math/quat4';
 import { vertexShader, fragmentShader } from './shaders';
+import { useResponsive, getResponsiveControlsStyle, getResponsiveButtonStyle, getResponsiveInputStyle } from '../../styles/responsive';
 
 export interface ViewPoint {
   L: THREE.Quaternion;
@@ -317,6 +318,7 @@ function applyComplex(z: THREE.Vector2, t: number, branch: number): THREE.Vector
 
 
 export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount, selectedFunction = 'exp', onViewPointChange, viewPoint }: ComplexMultibranchProps) {
+  const { isMobile, isTablet, screenSize } = useResponsive();
   const [saturation, setSaturation] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.saturation);
   const [functionIndex, setFunctionIndex] = useState(() => {
     const idx = functionNames.indexOf(selectedFunction);
@@ -1001,19 +1003,28 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
   const currentFormula = functionFormulas[currentName];
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
       <Canvas3D onMount={onMount} />
-      <div style={{position:'absolute',bottom:10,left:10}}>
+      
+      {/* Bottom Left Menu - Mobile Friendly */}
+      <div 
+        style={{
+          ...getResponsiveControlsStyle(isMobile),
+          bottom: isMobile ? '10px' : '10px',
+          left: isMobile ? '10px' : '10px',
+          maxWidth: isMobile ? 'calc(100vw - 20px)' : '300px',
+        }}
+      >
         <ToggleMenu title="Menu">
           <div
             style={{
               color: 'white',
               display: 'flex',
               flexDirection: 'column',
-              gap: 8
+              gap: isMobile ? 6 : 8
           }}
         >
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Saturation:
             <input
               type="range"
@@ -1022,9 +1033,10 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.saturation.step}
               value={saturation}
               onChange={(e) => setSaturation(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Particles:
             <input
               type="range"
@@ -1033,9 +1045,10 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.particleCount.step}
               value={particleCount}
               onChange={(e) => setParticleCount(parseInt(e.target.value, 10))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Size:
             <input
               type="range"
@@ -1044,9 +1057,10 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.size.step}
               value={size}
               onChange={(e) => setSize(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Opacity:
             <input
               type="range"
@@ -1055,9 +1069,10 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.opacity.step}
               value={opacity}
               onChange={(e) => setOpacity(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Intensity:
             <input
               type="range"
@@ -1066,9 +1081,10 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.intensity.step}
               value={intensity}
               onChange={(e) => setIntensity(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Shimmer:
             <input
               type="range"
@@ -1077,9 +1093,10 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.shimmer.step}
               value={shimmer}
               onChange={(e) => setShimmer(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Jitter:
             <input
               type="range"
@@ -1088,9 +1105,10 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.jitter.step}
               value={jitter}
               onChange={(e) => setJitter(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Hue Shift:
             <input
               type="range"
@@ -1099,9 +1117,10 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.hueShift.step}
               value={hueShift}
               onChange={(e) => setHueShift(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Axis Width: {axisWidth.toFixed(1)}
             <input
               type="range"
@@ -1110,6 +1129,7 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.axisWidth.step}
               value={axisWidth}
               onChange={(e) => setAxisWidth(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
           <div className="color-by-toolbar" style={{display:'flex',gap:4}}>
@@ -1126,7 +1146,7 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
                 onClick={() => setColourStyle(ColorStyle[k as keyof typeof ColorStyle])}>{k}</button>
             ))}
           </div>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Shape:
             <select
               value={shapeIndex}
@@ -1139,7 +1159,7 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               ))}
             </select>
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Texture:
             <select
               value={textureIndex}
@@ -1152,7 +1172,7 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               ))}
             </select>
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Object Mode:
             <input
               type="checkbox"
@@ -1160,7 +1180,7 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               onChange={(e) => setObjectMode(e.target.checked)}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Branches:
             <select value={branchCount} onChange={e=>setBranchCount(parseInt(e.target.value,10))}>
               {[1,2,3].map(n=>(<option key={n} value={n}>{n}</option>))}
@@ -1176,7 +1196,7 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
                 }} style={{width:'4em'}}/>
             ))}
           </div>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Style:
             <select value={branchStyle} onChange={e=>setBranchStyle(e.target.value as any)}>
               <option value="color">color</option>
@@ -1240,60 +1260,90 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.step}
               value={cameraZ}
               onChange={(e) => setCameraZ(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
         </div>
       </div>
-      <div
-        style={{
-          position: 'absolute',
-          top: 10,
-          right: 10,
-          color: objectMode ? 'black' : 'white',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: 4
-        }}
-      >
-        <div style={{ fontSize: '1.2em', pointerEvents: 'none' }}>
-          <div>{currentName}</div>
-          <div>{currentFormula}</div>
-        </div>
-        <div style={{fontFamily:'monospace',lineHeight:1}}>
-          <table style={{borderCollapse:'collapse'}}>
-            <thead>
-              <tr>
-                {(['x','y','v','u'] as const).map(k => (
-                  <th
-                    key={k}
-                    style={{
-                      color: `hsl(${((AXIS_COLORS[k]+hueShift)%1)*360},100%,50%)`,
-                      padding: '0 4px',
-                      fontWeight: 'normal'
-                    }}
-                  >
-                    {k}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {orientationMatrix.map((row, i) => (
-                <tr key={i}>
-                  {row.map((v, j) => (
-                    <td key={j} style={{textAlign:'right',padding:'0 4px'}}>
-                      {v.toFixed(2)}
-                    </td>
+      {/* Top Right Orientation Matrix and Quarter Turn */}
+      {!isMobile && (
+        <div
+          style={{
+            ...getResponsiveControlsStyle(isMobile),
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: 4
+          }}
+        >
+          <div style={{ fontSize: '1.2em', pointerEvents: 'none' }}>
+            <div>{currentName}</div>
+            <div>{currentFormula}</div>
+          </div>
+          <div style={{fontFamily:'monospace',lineHeight:1}}>
+            <table style={{borderCollapse:'collapse'}}>
+              <thead>
+                <tr>
+                  {(['x','y','v','u'] as const).map(k => (
+                    <th
+                      key={k}
+                      style={{
+                        color: `hsl(${((AXIS_COLORS[k]+hueShift)%1)*360},100%,50%)`,
+                        padding: '0 4px',
+                        fontWeight: 'normal'
+                      }}
+                    >
+                      {k}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {orientationMatrix.map((row, i) => (
+                  <tr key={i}>
+                    {row.map((v, j) => (
+                      <td key={j} style={{textAlign:'right',padding:'0 4px'}}>
+                        {v.toFixed(2)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <QuarterTurnBar onTurn={turn}/>
         </div>
-        <QuarterTurnBar onTurn={turn}/>
-      </div>
-      <div style={{ position: 'absolute', bottom: 10, right: 10 }}>
+      )}
+
+      {/* Mobile: Function Name Display */}
+      {isMobile && (
+        <div
+          style={{
+            ...getResponsiveControlsStyle(isMobile),
+            top: '10px',
+            right: '10px',
+            maxWidth: '140px',
+            textAlign: 'center',
+            fontSize: '14px'
+          }}
+        >
+          <div>{currentName}</div>
+          <div style={{ fontSize: '12px' }}>{currentFormula}</div>
+        </div>
+      )}
+
+      {/* About Menu */}
+      <div 
+        style={{ 
+          position: 'absolute', 
+          bottom: '10px', 
+          right: '10px',
+          zIndex: 10
+        }}
+      >
         <ToggleMenu title="About">
           <Readme markdown={readmeText} />
         </ToggleMenu>

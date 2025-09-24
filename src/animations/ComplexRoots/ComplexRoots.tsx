@@ -11,6 +11,7 @@ import QuarterTurnBar from '@/controls/QuarterTurnBar';
 import { QUARTER, Plane } from '@/math/constants';
 import { quarterQuat } from '@/math/quat4';
 import { vertexShader, fragmentShader } from './shaders';
+import { useResponsive, getResponsiveControlsStyle, getResponsiveButtonStyle, getResponsiveInputStyle } from '../../styles/responsive';
 
 export interface ViewPoint {
   L: THREE.Quaternion;
@@ -210,6 +211,7 @@ function applyComplex(z: THREE.Vector2, p: number, q: number): THREE.Vector2 {
 
 
 export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount, p = 1, q = 2, onViewPointChange, viewPoint }: ComplexRootsProps) {
+  const { isMobile, isTablet, screenSize } = useResponsive();
   const [saturation, setSaturation] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.saturation);
   const [expP, setExpP] = useState(p);
   const [expQ, setExpQ] = useState(q);
@@ -813,19 +815,28 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
   const currentFormula = `z^{${expP}/${expQ}}`;
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
       <Canvas3D onMount={onMount} />
-      <div style={{position:'absolute',bottom:10,left:10}}>
+      
+      {/* Bottom Left Menu - Mobile Friendly */}
+      <div 
+        style={{
+          ...getResponsiveControlsStyle(isMobile),
+          bottom: isMobile ? '10px' : '10px',
+          left: isMobile ? '10px' : '10px',
+          maxWidth: isMobile ? 'calc(100vw - 20px)' : '300px',
+        }}
+      >
         <ToggleMenu title="Menu">
           <div
             style={{
               color: 'white',
               display: 'flex',
               flexDirection: 'column',
-              gap: 8
+              gap: isMobile ? 6 : 8
           }}
         >
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Saturation:
             <input
               type="range"
@@ -834,9 +845,10 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.saturation.step}
               value={saturation}
               onChange={(e) => setSaturation(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Particles:
             <input
               type="range"
@@ -847,7 +859,7 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
               onChange={(e) => setParticleCount(parseInt(e.target.value, 10))}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Size:
             <input
               type="range"
@@ -858,7 +870,7 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
               onChange={(e) => setSize(parseFloat(e.target.value))}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Opacity:
             <input
               type="range"
@@ -869,7 +881,7 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
               onChange={(e) => setOpacity(parseFloat(e.target.value))}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Intensity:
             <input
               type="range"
@@ -880,7 +892,7 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
               onChange={(e) => setIntensity(parseFloat(e.target.value))}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Shimmer:
             <input
               type="range"
@@ -891,7 +903,7 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
               onChange={(e) => setShimmer(parseFloat(e.target.value))}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Jitter:
             <input
               type="range"
@@ -902,7 +914,7 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
               onChange={(e) => setJitter(parseFloat(e.target.value))}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Hue Shift:
             <input
               type="range"
@@ -913,7 +925,7 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
               onChange={(e) => setHueShift(parseFloat(e.target.value))}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Axis Width: {axisWidth.toFixed(1)}
             <input
               type="range"
@@ -924,25 +936,30 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
               onChange={(e) => setAxisWidth(parseFloat(e.target.value))}
             />
           </label>
-          <div className="color-by-toolbar" style={{display:'flex',gap:4}}>
+          <div className="color-by-toolbar" style={{ display: 'flex', gap: isMobile ? 2 : 4, flexWrap: 'wrap' }}>
             {(['Domain','Range'] as const).map((n,idx) => (
               <button key={n}
                 className={colourBy===idx ? 'active' : ''}
-                onClick={() => setColourBy(idx as ColourBy)}>{n}</button>
+                onClick={() => setColourBy(idx as ColourBy)}
+                style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+              >{n}</button>
             ))}
           </div>
-          <div className="color-style-toolbar" style={{display:'flex',gap:4}}>
+          <div className="color-style-toolbar" style={{ display: 'flex', gap: isMobile ? 2 : 4, flexWrap: 'wrap' }}>
             {Object.keys(ColorStyle).filter(k => isNaN(Number(k))).map(k => (
               <button key={k}
                 className={colourStyle===ColorStyle[k as keyof typeof ColorStyle] ? 'active' : ''}
-                onClick={() => setColourStyle(ColorStyle[k as keyof typeof ColorStyle])}>{k}</button>
+                onClick={() => setColourStyle(ColorStyle[k as keyof typeof ColorStyle])}
+                style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+              >{k}</button>
             ))}
           </div>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Shape:
             <select
               value={shapeIndex}
               onChange={(e) => setShapeIndex(parseInt(e.target.value, 10))}
+              style={{ ...getResponsiveInputStyle(isMobile), marginLeft: '4px' }}
             >
               {shapeNames.map((s, idx) => (
                 <option key={s} value={idx}>
@@ -951,11 +968,12 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
               ))}
             </select>
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Texture:
             <select
               value={textureIndex}
               onChange={(e) => setTextureIndex(parseInt(e.target.value, 10))}
+              style={{ ...getResponsiveInputStyle(isMobile), marginLeft: '4px' }}
             >
               {textureNames.map((t, idx) => (
                 <option key={t} value={idx}>
@@ -964,7 +982,7 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
               ))}
             </select>
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Object Mode:
             <input
               type="checkbox"
@@ -1039,56 +1057,85 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
           </label>
         </div>
       </div>
-      <div
-        style={{
-          position: 'absolute',
-          top: 10,
-          right: 10,
-          color: objectMode ? 'black' : 'white',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: 4
-        }}
-      >
-        <div style={{ fontSize: '1.2em', pointerEvents: 'none' }}>
-          <div>{currentName}</div>
-          <div>{currentFormula}</div>
-        </div>
-        <div style={{fontFamily:'monospace',lineHeight:1}}>
-          <table style={{borderCollapse:'collapse'}}>
-            <thead>
-              <tr>
-                {(['x','y','v','u'] as const).map(k => (
-                  <th
-                    key={k}
-                    style={{
-                      color: `hsl(${((AXIS_COLORS[k]+hueShift)%1)*360},100%,50%)`,
-                      padding: '0 4px',
-                      fontWeight: 'normal'
-                    }}
-                  >
-                    {k}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {orientationMatrix.map((row, i) => (
-                <tr key={i}>
-                  {row.map((v, j) => (
-                    <td key={j} style={{textAlign:'right',padding:'0 4px'}}>
-                      {v.toFixed(2)}
-                    </td>
+      {/* Top Right Orientation Matrix and Quarter Turn */}
+      {!isMobile && (
+        <div
+          style={{
+            ...getResponsiveControlsStyle(isMobile),
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: 4
+          }}
+        >
+          <div style={{ fontSize: '1.2em', pointerEvents: 'none' }}>
+            <div>{currentName}</div>
+            <div>{currentFormula}</div>
+          </div>
+          <div style={{fontFamily:'monospace',lineHeight:1}}>
+            <table style={{borderCollapse:'collapse'}}>
+              <thead>
+                <tr>
+                  {(['x','y','v','u'] as const).map(k => (
+                    <th
+                      key={k}
+                      style={{
+                        color: `hsl(${((AXIS_COLORS[k]+hueShift)%1)*360},100%,50%)`,
+                        padding: '0 4px',
+                        fontWeight: 'normal'
+                      }}
+                    >
+                      {k}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {orientationMatrix.map((row, i) => (
+                  <tr key={i}>
+                    {row.map((v, j) => (
+                      <td key={j} style={{textAlign:'right',padding:'0 4px'}}>
+                        {v.toFixed(2)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <QuarterTurnBar onTurn={turn}/>
         </div>
-        <QuarterTurnBar onTurn={turn}/>
-      </div>
-      <div style={{ position: 'absolute', bottom: 10, right: 10 }}>
+      )}
+
+      {/* Mobile: Function Name Display */}
+      {isMobile && (
+        <div
+          style={{
+            ...getResponsiveControlsStyle(isMobile),
+            top: '10px',
+            right: '10px',
+            maxWidth: '140px',
+            textAlign: 'center',
+            fontSize: '14px'
+          }}
+        >
+          <div>{currentName}</div>
+          <div style={{ fontSize: '12px' }}>{currentFormula}</div>
+        </div>
+      )}
+
+      {/* About Menu */}
+      <div 
+        style={{ 
+          position: 'absolute', 
+          bottom: '10px', 
+          right: '10px',
+          zIndex: 10
+        }}
+      >
         <ToggleMenu title="About">
           <Readme markdown={readmeText} />
         </ToggleMenu>
