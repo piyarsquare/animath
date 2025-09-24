@@ -11,6 +11,7 @@ import QuarterTurnBar from '@/controls/QuarterTurnBar';
 import { QUARTER, Plane } from '@/math/constants';
 import { quarterQuat } from '@/math/quat4';
 import { vertexShader, fragmentShader } from './shaders';
+import { useResponsive, getResponsiveControlsStyle, getResponsiveButtonStyle, getResponsiveInputStyle } from '../../styles/responsive';
 
 export interface ViewPoint {
   L: THREE.Quaternion;
@@ -303,6 +304,7 @@ function applyComplex(z: THREE.Vector2, t: number): THREE.Vector2 {
 
 
 export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount, selectedFunction = 'exp', onViewPointChange, viewPoint }: ComplexParticlesProps) {
+  const { isMobile, isTablet, screenSize } = useResponsive();
   const [saturation, setSaturation] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.saturation);
   const [functionIndex, setFunctionIndex] = useState(() => {
     const idx = functionNames.indexOf(selectedFunction);
@@ -906,19 +908,30 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
   const currentFormula = functionFormulas[currentName];
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
       <Canvas3D onMount={onMount} />
-      <div style={{position:'absolute',bottom:10,left:10}}>
+      
+      {/* Bottom Left Menu - Mobile Friendly */}
+      <div 
+        style={{
+          ...getResponsiveControlsStyle(isMobile),
+          bottom: isMobile ? '10px' : '10px',
+          left: isMobile ? '10px' : '10px',
+          maxWidth: isMobile ? 'calc(100vw - 20px)' : '300px',
+        }}
+      >
         <ToggleMenu title="Menu">
           <div
             style={{
               color: 'white',
               display: 'flex',
               flexDirection: 'column',
-              gap: 8
+              gap: isMobile ? 6 : 8,
+              maxHeight: isMobile ? '40vh' : '60vh',
+              overflowY: 'auto',
           }}
         >
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Saturation:
             <input
               type="range"
@@ -927,9 +940,10 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.saturation.step}
               value={saturation}
               onChange={(e) => setSaturation(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Particles:
             <input
               type="range"
@@ -938,9 +952,10 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.particleCount.step}
               value={particleCount}
               onChange={(e) => setParticleCount(parseInt(e.target.value, 10))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Size:
             <input
               type="range"
@@ -949,9 +964,10 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.size.step}
               value={size}
               onChange={(e) => setSize(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Opacity:
             <input
               type="range"
@@ -960,9 +976,10 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.opacity.step}
               value={opacity}
               onChange={(e) => setOpacity(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Intensity:
             <input
               type="range"
@@ -971,9 +988,10 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.intensity.step}
               value={intensity}
               onChange={(e) => setIntensity(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Shimmer:
             <input
               type="range"
@@ -982,9 +1000,10 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.shimmer.step}
               value={shimmer}
               onChange={(e) => setShimmer(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Jitter:
             <input
               type="range"
@@ -993,9 +1012,10 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.jitter.step}
               value={jitter}
               onChange={(e) => setJitter(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Hue Shift:
             <input
               type="range"
@@ -1004,9 +1024,10 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.hueShift.step}
               value={hueShift}
               onChange={(e) => setHueShift(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Axis Width: {axisWidth.toFixed(1)}
             <input
               type="range"
@@ -1015,27 +1036,33 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.axisWidth.step}
               value={axisWidth}
               onChange={(e) => setAxisWidth(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
-          <div className="color-by-toolbar" style={{display:'flex',gap:4}}>
+          <div className="color-by-toolbar" style={{ display: 'flex', gap: isMobile ? 2 : 4, flexWrap: 'wrap' }}>
             {(['Domain','Range'] as const).map((n,idx) => (
               <button key={n}
                 className={colourBy===idx ? 'active' : ''}
-                onClick={() => setColourBy(idx as ColourBy)}>{n}</button>
+                onClick={() => setColourBy(idx as ColourBy)}
+                style={{ ...getResponsiveButtonStyle(isMobile), flex: isMobile ? '1' : 'none' }}
+              >{n}</button>
             ))}
           </div>
-          <div className="color-style-toolbar" style={{display:'flex',gap:4}}>
+          <div className="color-style-toolbar" style={{ display: 'flex', gap: isMobile ? 2 : 4, flexWrap: 'wrap' }}>
             {Object.keys(ColorStyle).filter(k => isNaN(Number(k))).map(k => (
               <button key={k}
                 className={colourStyle===ColorStyle[k as keyof typeof ColorStyle] ? 'active' : ''}
-                onClick={() => setColourStyle(ColorStyle[k as keyof typeof ColorStyle])}>{k}</button>
+                onClick={() => setColourStyle(ColorStyle[k as keyof typeof ColorStyle])}
+                style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+              >{k}</button>
             ))}
           </div>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Shape:
             <select
               value={shapeIndex}
               onChange={(e) => setShapeIndex(parseInt(e.target.value, 10))}
+              style={{ ...getResponsiveInputStyle(isMobile), width: '100%' }}
             >
               {shapeNames.map((s, idx) => (
                 <option key={s} value={idx}>
@@ -1044,11 +1071,12 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               ))}
             </select>
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Texture:
             <select
               value={textureIndex}
               onChange={(e) => setTextureIndex(parseInt(e.target.value, 10))}
+              style={{ ...getResponsiveInputStyle(isMobile), width: '100%' }}
             >
               {textureNames.map((t, idx) => (
                 <option key={t} value={idx}>
@@ -1057,62 +1085,76 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               ))}
             </select>
           </label>
-          <label>
+          <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
             Object Mode:
             <input
               type="checkbox"
               checked={objectMode}
               onChange={(e) => setObjectMode(e.target.checked)}
+              style={{ marginLeft: '8px' }}
             />
           </label>
         </div>
         </ToggleMenu>
       </div>
 
+      {/* Top Left Controls - Function and View Controls */}
       <div
         style={{
-          position: 'absolute',
-          top: 10,
-          left: 10,
+          ...getResponsiveControlsStyle(isMobile),
+          top: '10px',
+          left: '10px',
           display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
+          flexDirection: isMobile ? 'column' : 'column',
+          gap: isMobile ? 6 : 8,
+          maxWidth: isMobile ? '200px' : '250px',
         }}
       >
-        <label style={{display:'flex',flexDirection:'column',color:'white',gap:4}}>
+        <label style={{ display: 'flex', flexDirection: 'column', color: 'white', gap: 4, fontSize: isMobile ? '12px' : '14px' }}>
           Function:
           <select
             value={functionIndex}
             onChange={(e) => setFunctionIndex(parseInt(e.target.value,10))}
+            style={{ ...getResponsiveInputStyle(isMobile), width: '100%' }}
           >
             {functionNames.map((name, idx) => (
               <option key={name} value={idx}>{name}</option>
             ))}
           </select>
         </label>
-        <div className="view-type-toolbar">
+        
+        <div className="view-type-toolbar" style={{ display: 'flex', gap: isMobile ? 2 : 4, flexWrap: 'wrap' }}>
           {viewTypes.map(([name,code]) => (
             <button key={name}
               className={viewType===code ? 'active' : ''}
-              onClick={() => handleViewType(code)}>{name}</button>
+              onClick={() => handleViewType(code)}
+              style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+            >{name}</button>
           ))}
         </div>
-        <div className="view-motion-toolbar">
+        
+        <div className="view-motion-toolbar" style={{ display: 'flex', gap: isMobile ? 2 : 4, flexWrap: 'wrap' }}>
           {motionModes.map(m => (
             <button key={m}
               className={viewMotion===m ? 'active' : ''}
-              onClick={() => handleMotion(m)}>{m}</button>
+              onClick={() => handleMotion(m)}
+              style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '10px' : '12px' }}
+            >{m}</button>
           ))}
         </div>
-        <div className="drop-axis-toolbar">
+        
+        <div className="drop-axis-toolbar" style={{ display: 'flex', gap: isMobile ? 2 : 4, flexWrap: 'wrap' }}>
           {dropModes.map(d => (
             <button key={d}
               className={dropAxis===d ? 'active' : ''}
-              onClick={() => handleDropAxis(d)}>{d}</button>
+              onClick={() => handleDropAxis(d)}
+              style={{ ...getResponsiveButtonStyle(isMobile), fontSize: isMobile ? '9px' : '11px' }}
+            >{d}</button>
           ))}
         </div>
-        <div style={{display:'flex',gap:4,alignItems:'center'}}>
-          <label style={{color:'white',display:'flex',flexDirection:'column',margin:0}}>
+        
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <label style={{ color: 'white', display: 'flex', flexDirection: 'column', margin: 0, fontSize: isMobile ? '12px' : '14px' }}>
             Distance: {cameraZ.toFixed(1)}
             <input
               type="range"
@@ -1121,60 +1163,93 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
               step={COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ.step}
               value={cameraZ}
               onChange={(e) => setCameraZ(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
             />
           </label>
         </div>
       </div>
-      <div
-        style={{
-          position: 'absolute',
-          top: 10,
-          right: 10,
-          color: objectMode ? 'black' : 'white',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: 4
-        }}
-      >
-        <div style={{ fontSize: '1.2em', pointerEvents: 'none' }}>
-          <div>{currentName}</div>
-          <div>{currentFormula}</div>
-        </div>
-        <div style={{fontFamily:'monospace',lineHeight:1}}>
-          <table style={{borderCollapse:'collapse'}}>
-            <thead>
-              <tr>
-                {(['x','y','v','u'] as const).map(k => (
-                  <th
-                    key={k}
-                    style={{
-                      color: `hsl(${((AXIS_COLORS[k]+hueShift)%1)*360},100%,50%)`,
-                      padding: '0 4px',
-                      fontWeight: 'normal'
-                    }}
-                  >
-                    {k}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {orientationMatrix.map((row, i) => (
-                <tr key={i}>
-                  {row.map((v, j) => (
-                    <td key={j} style={{textAlign:'right',padding:'0 4px'}}>
-                      {v.toFixed(2)}
-                    </td>
+
+      {/* Top Right Info Panel - Responsive */}
+      {!isMobile && (
+        <div
+          style={{
+            ...getResponsiveControlsStyle(isMobile),
+            top: '10px',
+            right: '10px',
+            color: objectMode ? 'black' : 'white',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: 4,
+            maxWidth: '300px'
+          }}
+        >
+          <div style={{ fontSize: isMobile ? '1em' : '1.2em', pointerEvents: 'none' }}>
+            <div>{currentName}</div>
+            <div>{currentFormula}</div>
+          </div>
+          <div style={{ fontFamily: 'monospace', lineHeight: 1, fontSize: isMobile ? '10px' : '12px' }}>
+            <table style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  {(['x','y','v','u'] as const).map(k => (
+                    <th
+                      key={k}
+                      style={{
+                        color: `hsl(${((AXIS_COLORS[k]+hueShift)%1)*360},100%,50%)`,
+                        padding: '0 4px',
+                        fontWeight: 'normal',
+                        fontSize: isMobile ? '10px' : '12px'
+                      }}
+                    >
+                      {k}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {orientationMatrix.map((row, i) => (
+                  <tr key={i}>
+                    {row.map((v, j) => (
+                      <td key={j} style={{ textAlign: 'right', padding: '0 4px', fontSize: isMobile ? '9px' : '11px' }}>
+                        {v.toFixed(2)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <QuarterTurnBar onTurn={turn}/>
         </div>
-        <QuarterTurnBar onTurn={turn}/>
-      </div>
-      <div style={{ position: 'absolute', bottom: 10, right: 10 }}>
+      )}
+
+      {/* Mobile: Function Name Display */}
+      {isMobile && (
+        <div
+          style={{
+            ...getResponsiveControlsStyle(isMobile),
+            top: '10px',
+            right: '10px',
+            maxWidth: '140px',
+            textAlign: 'center',
+            fontSize: '14px'
+          }}
+        >
+          <div>{currentName}</div>
+          <div style={{ fontSize: '12px' }}>{currentFormula}</div>
+        </div>
+      )}
+
+      {/* About Menu */}
+      <div 
+        style={{ 
+          position: 'absolute', 
+          bottom: '10px', 
+          right: '10px',
+          zIndex: 10
+        }}
+      >
         <ToggleMenu title="About">
           <Readme markdown={readmeText} />
         </ToggleMenu>
