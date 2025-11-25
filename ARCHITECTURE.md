@@ -60,7 +60,7 @@ src/
 
 ### Key Observations
 
-1. **Significant Code Duplication**: `ComplexParticles`, `ComplexRoots`, and `ComplexMultibranch` share ~80% identical code
+1. **Significant Code Duplication**: `ComplexParticles`, `ComplexRoots`, and `ComplexMultibranch` share ~80% of their structure and patterns (same state management, animation loop, UI layout)
 2. **Mixed Concerns**: Some animation components contain reusable utilities (texture generators, complex math functions)
 3. **Inconsistent Imports**: Mix of relative and alias (`@/`) imports
 4. **Scattered Math Functions**: Complex number operations duplicated across multiple files
@@ -214,12 +214,19 @@ const animate = () => {
 
 ### 4.2 Lines of Code Analysis
 
-| File | Total Lines | Estimated Duplicate Lines | Unique Lines |
-|------|-------------|---------------------------|--------------|
+| File | Total Lines | Lines Matching Shared Patterns | Unique Lines |
+|------|-------------|-------------------------------|--------------|
 | ComplexParticles.tsx | 1260 | ~700 | ~560 |
-| ComplexRoots.tsx | 1146 | ~700 | ~446 |
-| ComplexMultibranch.tsx | 1354 | ~800 | ~554 |
-| **Total** | 3760 | ~2200 (58%) | ~1560 |
+| ComplexRoots.tsx | 1146 | ~650 | ~496 |
+| ComplexMultibranch.tsx | 1354 | ~750 | ~604 |
+| **Total** | 3760 | N/A | ~1660 |
+
+**Analysis**: The three complex viewers share a common structure that could be extracted into a base component of ~700-800 lines. After extraction:
+- Base component: ~750 lines (shared logic)
+- ComplexParticles: ~560 lines (unique)
+- ComplexRoots: ~450 lines (unique, mainly p/q controls)
+- ComplexMultibranch: ~550 lines (unique, mainly branch logic)
+- **Consolidated total**: ~2310 lines (vs current 3760 = ~38% reduction)
 
 ---
 
@@ -471,13 +478,13 @@ interface ControlPanelProps {
 
 The animath repository would benefit significantly from:
 
-1. **Extracting ~2200 lines of duplicated code** into shared primitives
+1. **Extracting shared code** into reusable primitives (~750 lines of common logic)
 2. **Establishing a clear hierarchy**: core primitives → widgets → animations
 3. **Creating a composable UI system** with generic control components
 4. **Unifying the shader architecture** with shared GLSL chunks
 
 This consolidation would:
-- Reduce total codebase size by ~40%
+- Reduce the complex viewer code by ~38% (3760 → ~2310 lines)
 - Make adding new animations much easier
 - Improve consistency across the application
 - Enable easier testing of isolated primitives
