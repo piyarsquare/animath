@@ -88,8 +88,54 @@ manually from the repository's Actions tab.
 ## 4 Repository layout
 
 ```
-TO BE DETERMINED
+src/
+├── index.tsx               # Entry point with hash-based routing
+├── App.tsx                 # Default route component (ComplexParticles)
+│
+├── animations/             # Self-contained animation modules
+│   ├── ComplexParticles/   # 3D complex function visualization
+│   ├── ComplexRoots/       # z^(p/q) rational exponent viewer
+│   ├── ComplexMultibranch/ # Multi-branch complex function viewer
+│   ├── Correspondence/     # Mandelbrot-Julia correspondence
+│   ├── Fractals/           # Legacy CPU-based fractal renderer
+│   ├── FractalsGPU/        # GPU-accelerated Mandelbrot/Julia viewer
+│   └── MobiusWalk/         # First-person Möbius strip corridor
+│
+├── components/             # Reusable React components
+│   ├── Canvas3D.tsx        # Three.js scene lifecycle wrapper
+│   ├── ToggleMenu.tsx      # Collapsible menu widget
+│   └── Readme.tsx          # Markdown renderer component
+│
+├── lib/                    # Utility libraries
+│   ├── ParticleDisplay.ts  # Particle system helper
+│   ├── R2Mapping.ts        # ℝ² → ℝ² function mappings library
+│   └── viewpoint.ts        # 4D projection and quaternion utilities
+│
+├── math/                   # Mathematical utilities
+│   ├── constants.ts        # Math constants (planes, QUARTER, etc.)
+│   └── quat4.ts            # 4D quaternion rotation helpers
+│
+├── controls/               # UI control components
+│   └── QuarterTurnBar.tsx  # 4D rotation control buttons
+│
+├── materials/              # Three.js material presets library
+│   ├── index.ts            # Material factory functions
+│   └── README.md
+│
+├── config/                 # Global configuration
+│   └── defaults.ts         # Canvas and particle defaults
+│
+├── styles/                 # Style utilities
+│   └── responsive.ts       # Responsive design hooks/utilities
+│
+├── types/                  # TypeScript type definitions
+│   └── uniforms.d.ts       # Shader uniform types
+│
+└── unported_examples/      # Legacy/experimental code
 ```
+
+For a detailed consolidation proposal including primitive extraction and widget patterns,
+see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
