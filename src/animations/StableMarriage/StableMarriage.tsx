@@ -1160,7 +1160,7 @@ export default function StableMarriage() {
           maxRank={labN}
           resolution={labResolution}
           type="diverging"
-          labels={{ left: 'Asked Better', right: 'Askers Better' }}
+          labels={{ left: 'Askers Better', right: 'Asked Better' }}
         />
       </Card>
     </div>
