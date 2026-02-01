@@ -15,6 +15,7 @@
 5. **[Complex Multibranch](https://piyarsquare.github.io/animath/#/multibranch)** – variant supporting multiple branches for functions
 6. **[Möbius Walk](https://piyarsquare.github.io/animath/#/mobius)** – stroll through an endless twisted corridor (now with optional twist toggle)
 7. **[Stable Marriage](https://piyarsquare.github.io/animath/#/stable-marriage)** – step through the Gale–Shapley process with bias and consensus controls
+8. **[Agentic Sorting](https://piyarsquare.github.io/animath/#/agentic-sorting)** – concurrent sorting simulation where autonomous agents with distinct strategies produce emergent order
 
 ---
 
