@@ -7,6 +7,7 @@ import ComplexRoots from './animations/ComplexRoots/ComplexRoots';
 import ComplexMultibranch from './animations/ComplexMultibranch/ComplexMultibranch';
 import MobiusWalk from './animations/MobiusWalk/MobiusWalk';
 import StableMarriage from './animations/StableMarriage/StableMarriage';
+import AgenticSorting from './animations/AgenticSorting/AgenticSorting';
 
 const routes: Record<string, JSX.Element> = {
   '/': <App />,
@@ -15,7 +16,8 @@ const routes: Record<string, JSX.Element> = {
   '/roots': <ComplexRoots />,
   '/multibranch': <ComplexMultibranch />,
   '/mobius': <MobiusWalk />,
-  '/stable-marriage': <StableMarriage />
+  '/stable-marriage': <StableMarriage />,
+  '/agentic-sorting': <AgenticSorting />
 };
 
 function getRoute(): JSX.Element {
