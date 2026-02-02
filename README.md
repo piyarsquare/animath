@@ -2,7 +2,7 @@
 
 > *Animated mathematics for curious minds* — a modular, browser-based toolkit for creating, sharing, and exploring mathematical animations and generative art.
 
-<p align="center">
+<p style="text-align: center;">
   <a href="https://piyarsquare.github.io/animath/">Live demo</a>
 </p>
 
