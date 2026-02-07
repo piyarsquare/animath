@@ -20,13 +20,24 @@ const routes: Record<string, JSX.Element> = {
   '/agentic-sorting': <AgenticSorting />
 };
 
-function getRoute(): JSX.Element {
-  const hash = window.location.hash.replace(/^#/, '');
+function getHash(): string {
+  return window.location.hash.replace(/^#/, '');
+}
+
+function Router(): JSX.Element {
+  const [hash, setHash] = React.useState(getHash());
+
+  React.useEffect(() => {
+    const handleHashChange = () => setHash(getHash());
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   return routes[hash] ?? <App />;
 }
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    {getRoute()}
+    <Router />
   </React.StrictMode>
 );
