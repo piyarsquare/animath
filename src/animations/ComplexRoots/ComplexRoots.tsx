@@ -300,7 +300,7 @@ export default function ComplexRoots({ count = COMPLEX_PARTICLES_DEFAULTS.defaul
       textures[4] = makeMetalTexture(64);
       new RGBELoader()
         .setDataType(THREE.UnsignedByteType)
-        .load('/textures/royal_esplanade_1k.hdr', tex => {
+        .load(`${import.meta.env.BASE_URL}textures/royal_esplanade_1k.hdr`, tex => {
           tex.minFilter = THREE.LinearFilter;
           tex.magFilter = THREE.LinearFilter;
           tex.flipY = true;

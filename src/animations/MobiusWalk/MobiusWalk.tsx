@@ -56,7 +56,7 @@ export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
       requestAnimationFrame(animate);
     };
     animate();
-  }, [speed]);
+  }, [speed, twist]);
 
   return (
     <div>

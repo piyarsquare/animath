@@ -8,10 +8,12 @@ import ComplexMultibranch from './animations/ComplexMultibranch/ComplexMultibran
 import MobiusWalk from './animations/MobiusWalk/MobiusWalk';
 import StableMarriage from './animations/StableMarriage/StableMarriage';
 import AgenticSorting from './animations/AgenticSorting/AgenticSorting';
+import Fractals2D from './animations/Fractals/Fractals2D';
 
 const routes: Record<string, JSX.Element> = {
   '/': <App />,
   '/fractals': <FractalsGPU />,
+  '/fractals-cpu': <Fractals2D />,
   '/correspondence': <Correspondence />,
   '/roots': <ComplexRoots />,
   '/multibranch': <ComplexMultibranch />,
