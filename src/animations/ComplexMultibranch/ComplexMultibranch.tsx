@@ -197,7 +197,7 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
           maxWidth: isMobile ? 'calc(100vw - 20px)' : '300px',
         }}
       >
-        <ToggleMenu title="Menu">
+        <ToggleMenu title="Menu" defaultOpen={!isMobile}>
           <div style={{ color: 'white', display: 'flex', flexDirection: 'column', gap: isMobile ? 6 : 8 }}>
             <label style={{ fontSize: isMobile ? '12px' : '14px' }}>
               Saturation:
@@ -372,7 +372,7 @@ export default function ComplexMultibranch({ count = COMPLEX_PARTICLES_DEFAULTS.
 
       {/* About Menu */}
       <div style={{ position: 'absolute', bottom: '10px', right: '10px', zIndex: 10 }}>
-        <ToggleMenu title="About">
+        <ToggleMenu title="About" defaultOpen={!isMobile}>
           <Readme markdown={readmeText} />
         </ToggleMenu>
       </div>

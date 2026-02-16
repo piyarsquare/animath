@@ -138,7 +138,7 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
           maxWidth: isMobile ? 'calc(100vw - 20px)' : '300px',
         }}
       >
-        <ToggleMenu title="Menu">
+        <ToggleMenu title="Menu" defaultOpen={!isMobile}>
           <div
             style={{
               color: 'white',
@@ -309,7 +309,7 @@ export default function ComplexParticles({ count = COMPLEX_PARTICLES_DEFAULTS.de
 
       {/* About Menu */}
       <div style={{ position: 'absolute', bottom: '10px', right: '10px', zIndex: 10 }}>
-        <ToggleMenu title="About">
+        <ToggleMenu title="About" defaultOpen={!isMobile}>
           <Readme markdown={readmeText} />
         </ToggleMenu>
       </div>
