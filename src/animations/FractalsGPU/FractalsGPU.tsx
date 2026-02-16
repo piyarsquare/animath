@@ -690,7 +690,7 @@ export default function FractalsGPU() {
       
       {/* About Menu */}
       <div style={{ position: 'absolute', bottom: '10px', right: '10px' }}>
-        <ToggleMenu title="About">
+        <ToggleMenu title="About" defaultOpen={!isMobile}>
           <Readme markdown={readmeText} />
         </ToggleMenu>
       </div>

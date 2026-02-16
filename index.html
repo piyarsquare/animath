@@ -66,25 +66,40 @@
       }
       
       #page-info {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
         text-align: center;
-        margin: 4px 0;
-        padding: 10px;
-        background: rgba(0, 0, 0, 0.8);
+        margin: 0;
+        padding: 6px 10px;
+        background: rgba(0, 0, 0, 0.85);
         color: white;
-        font-size: 14px;
+        font-size: 13px;
+        backdrop-filter: blur(4px);
       }
-      
+
+      #page-info a {
+        color: #ffd400;
+        margin: 0 4px;
+      }
+
       @media (max-width: 480px) {
         #page-info {
-          font-size: 12px;
-          padding: 8px;
+          font-size: 11px;
+          padding: 5px 8px;
+        }
+
+        #page-info a {
+          margin: 0 2px;
         }
       }
     </style>
   </head>
   <body>
     <div id="root"></div>
-    <p id="page-info">You are viewing the animath page. Try <a href="#/fractals" style="color: #ffd400;">#/fractals</a> for the fractals demo.</p>
+    <p id="page-info"><a href="#/">particles</a> · <a href="#/fractals">fractals</a> · <a href="#/correspondence">correspondence</a> · <a href="#/roots">roots</a> · <a href="#/multibranch">multibranch</a> · <a href="#/mobius">mobius</a> · <a href="#/stable-marriage">stable marriage</a> · <a href="#/agentic-sorting">agentic sorting</a></p>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
