@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ProjectionMode, quatRotate4D, project } from '../viewpoint';
 import { quarterQuat } from '../../math/quat4';
-import { ViewPoint, Axis } from './types';
+import type { ViewPoint, Axis } from './types';
 import { AXIS_LENGTH } from './createAxes';
 
 export interface AnimationLoopDeps {

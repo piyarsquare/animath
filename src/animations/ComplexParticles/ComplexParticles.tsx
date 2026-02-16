@@ -12,7 +12,7 @@ import { loadParticleTextures } from '../../lib/textures';
 import {
   useParticleState, useUniformSync, useViewControls,
   createParticleGeometry, createAxes, startAnimationLoop,
-  ViewPoint, ColorStyle, ColourBy,
+  type ViewPoint, ColorStyle, ColourBy,
   shapeNames, textureNames, viewTypes, motionModes, dropModes, AXIS_COLORS,
 } from '../../lib/particles';
 import { functionNames, functionFormulas } from '../../lib/complexMath';

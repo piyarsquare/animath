@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
-import { Axis, AXIS_COLORS } from './types';
+import { type Axis, AXIS_COLORS } from './types';
 
 const AXIS_LENGTH = COMPLEX_PARTICLES_DEFAULTS.axisLength;
 

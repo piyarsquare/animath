@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { ProjectionMode } from '../viewpoint';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
-import { ViewPoint, ColorStyle, ColourBy, Axis, motionModes, dropModes } from './types';
+import { type ViewPoint, ColorStyle, ColourBy, type Axis, motionModes, dropModes } from './types';
 
 export interface UseParticleStateOptions {
   count?: number;
