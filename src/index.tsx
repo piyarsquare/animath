@@ -1,25 +1,26 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import FractalsGPU from './animations/FractalsGPU/FractalsGPU';
-import Correspondence from './animations/Correspondence/Correspondence';
-import ComplexRoots from './animations/ComplexRoots/ComplexRoots';
-import ComplexMultibranch from './animations/ComplexMultibranch/ComplexMultibranch';
-import MobiusWalk from './animations/MobiusWalk/MobiusWalk';
-import StableMarriage from './animations/StableMarriage/StableMarriage';
-import AgenticSorting from './animations/AgenticSorting/AgenticSorting';
-import Fractals2D from './animations/Fractals/Fractals2D';
 
-const routes: Record<string, JSX.Element> = {
-  '/': <App />,
-  '/fractals': <FractalsGPU />,
-  '/fractals-cpu': <Fractals2D />,
-  '/correspondence': <Correspondence />,
-  '/roots': <ComplexRoots />,
-  '/multibranch': <ComplexMultibranch />,
-  '/mobius': <MobiusWalk />,
-  '/stable-marriage': <StableMarriage />,
-  '/agentic-sorting': <AgenticSorting />
+const FractalsGPU = React.lazy(() => import('./animations/FractalsGPU/FractalsGPU'));
+const Fractals2D = React.lazy(() => import('./animations/Fractals/Fractals2D'));
+const Correspondence = React.lazy(() => import('./animations/Correspondence/Correspondence'));
+const ComplexRoots = React.lazy(() => import('./animations/ComplexRoots/ComplexRoots'));
+const ComplexMultibranch = React.lazy(() => import('./animations/ComplexMultibranch/ComplexMultibranch'));
+const MobiusWalk = React.lazy(() => import('./animations/MobiusWalk/MobiusWalk'));
+const StableMarriage = React.lazy(() => import('./animations/StableMarriage/StableMarriage'));
+const AgenticSorting = React.lazy(() => import('./animations/AgenticSorting/AgenticSorting'));
+
+const routes: Record<string, React.ComponentType> = {
+  '/': App,
+  '/fractals': FractalsGPU,
+  '/fractals-cpu': Fractals2D,
+  '/correspondence': Correspondence,
+  '/roots': ComplexRoots,
+  '/multibranch': ComplexMultibranch,
+  '/mobius': MobiusWalk,
+  '/stable-marriage': StableMarriage,
+  '/agentic-sorting': AgenticSorting,
 };
 
 function getHash(): string {
@@ -35,7 +36,13 @@ function Router(): JSX.Element {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  return routes[hash] ?? <App />;
+  const Component = routes[hash] ?? App;
+
+  return (
+    <React.Suspense fallback={<div style={{ background: '#000', width: '100vw', height: '100vh' }} />}>
+      <Component />
+    </React.Suspense>
+  );
 }
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
