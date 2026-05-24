@@ -6,7 +6,8 @@ export { createParticleGeometry, rebuildGeometryBuffers } from './createParticle
 export { createAxes, AXIS_LENGTH } from './createAxes';
 export { startAnimationLoop } from './createAnimationLoop';
 export type { AnimationLoopDeps } from './createAnimationLoop';
+export type { ViewPoint, Axis } from './types';
 export {
-  ViewPoint, ColorStyle, ColourBy, Axis,
+  ColorStyle, ColourBy,
   shapeNames, textureNames, viewTypes, motionModes, dropModes, AXIS_COLORS,
 } from './types';
