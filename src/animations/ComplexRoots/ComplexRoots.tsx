@@ -8,8 +8,8 @@ import { loadParticleTextures } from '../../lib/textures';
 import {
   useParticleState, useUniformSync, useViewControls,
   createParticleGeometry, createAxes, startAnimationLoop,
-  ViewPoint,
 } from '../../lib/particles';
+import type { ViewPoint } from '../../lib/particles';
 
 export type { ViewPoint };
 

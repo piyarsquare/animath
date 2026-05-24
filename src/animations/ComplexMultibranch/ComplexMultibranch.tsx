@@ -9,8 +9,9 @@ import { loadParticleTextures } from '../../lib/textures';
 import {
   useParticleState, useUniformSync, useViewControls,
   createParticleGeometry, createAxes, startAnimationLoop,
-  ViewPoint, shapeNames,
+  shapeNames,
 } from '../../lib/particles';
+import type { ViewPoint } from '../../lib/particles';
 import { functionNames, functionFormulas } from '../../lib/complexMath';
 
 export type { ViewPoint };
