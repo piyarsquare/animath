@@ -24,6 +24,9 @@ uniform float saturation;
 uniform float realView;
 uniform float jitterAmp;
 uniform int   shapeType;
+uniform int   branchIndex;
+uniform int   exponentP;
+uniform int   exponentQ;
 uniform quat  uRotL;
 uniform quat  uRotR;
 uniform int   uProjMode;
@@ -44,9 +47,22 @@ vec2 complexCos   (vec2 z){vec2 iz=vec2(-z.y,z.x);vec2 e1=complexExp(iz);vec2 e2
 vec2 complexTan   (vec2 z){vec2 s=complexSin(z);vec2 c=complexCos(z);float d=c.x*c.x+c.y*c.y;if(d<1e-4) d=1e-4;return vec2((s.x*c.x+s.y*c.y)/d,(s.y*c.x-s.x*c.y)/d);}
 vec2 complexInv   (vec2 z){float d=z.x*z.x+z.y*z.y;if(d<1e-4) d=1e-4;return vec2(z.x/d,-z.y/d);}
 
-/* ----- new helpers ----- */
 vec2 complexMul(vec2 a, vec2 b){
   return vec2(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x);
+}
+
+vec2 complexSqrtBranch(vec2 z, int branch){
+  float r = length(z);
+  float t = atan(z.y, z.x);
+  float sr = sqrt(r);
+  t = t * 0.5 + float(branch) * 3.141592653589793;
+  return vec2(sr*cos(t), sr*sin(t));
+}
+
+vec2 complexLnBranch(vec2 z, int branch){
+  float r = length(z);
+  float t = atan(z.y, z.x) + float(branch) * 6.28318530718;
+  return vec2(log(r), t);
 }
 
 vec2 complexCube(vec2 z){
@@ -86,7 +102,7 @@ vec2 complexEssentialExpInv(vec2 z){
   return complexExp(inv);
 }
 
-vec2 complexBranchSqrtPoly(vec2 z){
+vec2 complexBranchSqrtPoly(vec2 z, int branch){
   vec2 a = vec2(z.x - 1.0, z.y);
   vec2 b = vec2(z.x + 1.0, z.y);
   vec2 p = vec2(
@@ -97,7 +113,7 @@ vec2 complexBranchSqrtPoly(vec2 z){
       p.x*b.x - p.y*b.y,
       p.x*b.y + p.y*b.x
   );
-  return complexSqrt(q);
+  return complexSqrtBranch(q, branch);
 }
 
 vec2 complexGamma(vec2 z){
@@ -123,28 +139,38 @@ vec2 complexZMinus1OverZPlus1(vec2 z){
     num.x*denInv.y + num.y*denInv.x
   );
 }
-vec2 applyComplex(vec2 z,int t){
+
+vec2 complexPowRational(vec2 z, int p, int q){
+  float r = length(z);
+  if(r < 1e-6) return vec2(0.0);
+  int qSafe = (q == 0) ? 1 : q;
+  float pq = float(p) / float(qSafe);
+  float t = atan(z.y, z.x) + float(branchIndex) * 6.28318530718;
+  float rpq = pow(r, pq);
+  float ang = t * pq;
+  return vec2(rpq * cos(ang), rpq * sin(ang));
+}
+
+vec2 applyComplex(vec2 z, int t){
   if(t==0)  return z;
-  if(t==1)  return complexSqrt(z);
+  if(t==1)  return complexSqrtBranch(z, branchIndex);
   if(t==2)  return complexSquare(z);
-  if(t==3)  return complexLn(z);
+  if(t==3)  return complexLnBranch(z, branchIndex);
   if(t==4)  return complexExp(z);
   if(t==5)  return complexSin(z);
   if(t==6)  return complexCos(z);
   if(t==7)  return complexTan(z);
   if(t==8)  return complexInv(z);
-
-  /* --- new cases, keep in same order as names array --- */
   if(t==9)  return complexCube(z);
   if(t==10) return complexReciprocalCube(z);
   if(t==11) return complexJoukowski(z);
   if(t==12) return complexRational22(z);
   if(t==13) return complexEssentialExpInv(z);
-  if(t==14) return complexBranchSqrtPoly(z);
+  if(t==14) return complexBranchSqrtPoly(z, branchIndex);
   if(t==15) return complexGamma(z);
   if(t==16) return complexCbrt(z);
   if(t==17) return complexZMinus1OverZPlus1(z);
-
+  if(t==18) return complexPowRational(z, exponentP, exponentQ);
   return z;
 }
 

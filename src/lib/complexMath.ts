@@ -173,8 +173,11 @@ export function applyComplexBranch(z: THREE.Vector2, t: number, branch: number):
 export const functionNames = [
   'linear', 'sqrt', 'square', 'ln', 'exp', 'sin', 'cos', 'tan', 'inverse',
   'cube', 'reciprocalCube', 'joukowski', 'rational22', 'essentialExpInv',
-  'branchSqrtPoly', 'gamma', 'cubeRoot', 'zMinus1OverZPlus1'
+  'branchSqrtPoly', 'gamma', 'cubeRoot', 'zMinus1OverZPlus1', 'powPQ'
 ];
+
+/** Index of the z^(p/q) rational-power function in {@link functionNames}. */
+export const POW_PQ_INDEX = 18;
 
 export const functionFormulas: Record<string, string> = {
   linear: 'z',
@@ -194,5 +197,6 @@ export const functionFormulas: Record<string, string> = {
   branchSqrtPoly: '\u221A(z(z-1)(z+1))',
   gamma: '\u0393(z)',
   cubeRoot: '\u221Bz',
-  zMinus1OverZPlus1: '(z-1)/(z+1)'
+  zMinus1OverZPlus1: '(z-1)/(z+1)',
+  powPQ: 'z^(p/q)'
 };
