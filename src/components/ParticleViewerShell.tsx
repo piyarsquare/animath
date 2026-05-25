@@ -8,6 +8,7 @@ import { planes } from '../math/constants';
 import {
   ColorStyle, ColourBy, AXIS_COLORS,
   shapeNames, textureNames, viewTypes, motionModes, dropModes,
+  useGestureRotation,
 } from '../lib/particles';
 import type { ParticleState } from '../lib/particles';
 import type { useViewControls } from '../lib/particles';
@@ -41,6 +42,7 @@ export default function ParticleViewerShell({
 }: ParticleViewerShellProps) {
   const { isMobile, isTablet } = useResponsive();
   const compact = isMobile || isTablet;
+  const gestures = useGestureRotation(state);
 
   const peek = (
     <>
@@ -53,7 +55,12 @@ export default function ParticleViewerShell({
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
-      <Canvas3D onMount={onMount} />
+      <div
+        style={{ position: 'absolute', inset: 0, touchAction: 'none' }}
+        {...gestures}
+      >
+        <Canvas3D onMount={onMount} />
+      </div>
 
       <ControlPanel peekContent={peek}>
         <Section title="Function" icon="ƒ" defaultOpen>

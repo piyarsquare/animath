@@ -2,6 +2,7 @@ export { useParticleState } from './useParticleState';
 export type { ParticleState, UseParticleStateOptions } from './useParticleState';
 export { useUniformSync } from './useUniformSync';
 export { useViewControls } from './useViewControls';
+export { useGestureRotation } from './useGestureRotation';
 export { createParticleGeometry, rebuildGeometryBuffers } from './createParticleGeometry';
 export { createAxes, AXIS_LENGTH } from './createAxes';
 export { startAnimationLoop } from './createAnimationLoop';
