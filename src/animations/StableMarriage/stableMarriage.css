@@ -645,3 +645,65 @@
     align-items: flex-start;
   }
 }
+
+@media (max-width: 600px) {
+  .sm-app { padding: 12px; }
+  .sm-header h1 { font-size: 20px; }
+  .sm-mode-toggle { flex-wrap: wrap; }
+  .sm-card { padding: 14px; border-radius: 12px; }
+  .sm-card + .sm-card { margin-top: 12px; }
+  .sm-card-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+  /* Single-column controls/results/people on phones */
+  .sm-control-group { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .sm-people { grid-template-columns: 1fr; gap: 16px; }
+  .sm-summary { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sm-summary div { padding: 10px; }
+  .sm-summary strong { font-size: 16px; }
+  .sm-lab-grid { grid-template-columns: 1fr; gap: 14px; }
+
+  /* Shorter scroll regions */
+  .sm-column-list { max-height: 320px; }
+
+  /* Smaller people circles, tighter rows */
+  .sm-person { width: 36px; height: 36px; }
+  .sm-rank-badge { font-size: 9px; padding: 1px 5px; }
+  .sm-role-badge { width: 16px; height: 16px; font-size: 8px; }
+
+  /* Tabs & header wrap */
+  .sm-result-header { flex-direction: column; align-items: flex-start; }
+  .sm-tabs { flex-wrap: wrap; }
+  .sm-result-meta { flex-wrap: wrap; }
+
+  /* Distribution: shorter, more touch-friendly */
+  .sm-distribution-bars { height: 160px; gap: 4px; }
+  .sm-distribution-column { min-width: 18px; }
+  .sm-distribution-bar { width: 8px; }
+  .sm-distribution-legend { flex-wrap: wrap; gap: 8px; }
+
+  /* Heatmap: shorter so it doesn't dominate the screen */
+  .sm-heatmap-body { min-height: 240px; }
+  .sm-heatmap-tooltip { font-size: 10px; padding: 6px 8px; }
+  .sm-heatmap-tooltip-grid { grid-template-columns: 1fr 1fr; gap: 2px 8px; }
+
+  /* Bigger range thumb so it's touchable */
+  .sm-controls input[type='range'] {
+    height: 8px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #cbd5f5;
+    border-radius: 4px;
+  }
+  .sm-controls input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #2563eb; cursor: pointer;
+  }
+  .sm-controls input[type='range']::-moz-range-thumb {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #2563eb; border: none; cursor: pointer;
+  }
+}
+
+/* Heatmap cell: keep hover-style highlight for taps too */
+.sm-heatmap-cell.pinned { filter: brightness(0.85); }

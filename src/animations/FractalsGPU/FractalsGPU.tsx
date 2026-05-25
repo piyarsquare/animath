@@ -4,6 +4,7 @@ import Readme from '../../components/Readme';
 import ToggleMenu from '../../components/ToggleMenu';
 import readmeText from './README.md?raw';
 import { useResponsive, getResponsiveControlsStyle, getResponsiveButtonStyle, getResponsiveInputStyle } from '../../styles/responsive';
+import { useViewportGestures } from '../../lib/useViewportGestures';
 
 /** GPU accelerated Mandelbrot/Julia viewer using a fragment shader. */
 export default function FractalsGPU() {
@@ -217,18 +218,6 @@ export default function FractalsGPU() {
     animRef.current = requestAnimationFrame(animate);
   }, []);
 
-  const screenToFractal = useCallback(
-    (sx: number, sy: number) => {
-      const canvas = rendererRef.current?.domElement;
-      if (!canvas) return { x: 0, y: 0 };
-      const rect = canvas.getBoundingClientRect();
-      const x = sx - rect.left;
-      const y = sy - rect.top;
-      const scale = (view.xMax - view.xMin) / canvas.width;
-      return { x: view.xMin + x * scale, y: view.yMin + y * scale };
-    },
-    [view]
-  );
 
   const fractalToScreen = useCallback(
     (fx: number, fy: number) => {
@@ -259,9 +248,8 @@ export default function FractalsGPU() {
     }
   }
 
-  const handleSelect = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const start = screenToFractal(e.clientX, e.clientY);
+  const tracePath = useCallback(
+    (start: { x: number; y: number }) => {
       const pts: { x: number; y: number }[] = [];
       const powComplex = (x: number, y: number) => {
         let rx = x;
@@ -305,44 +293,19 @@ export default function FractalsGPU() {
       pathRef.current = pts;
       drawPath();
     },
-    [screenToFractal, iter, type, juliaC, drawPath, power]
+    [iter, type, juliaC, drawPath, power]
   );
 
 
-  const zoom = useCallback((factor: number) => {
-    const canvas = rendererRef.current?.domElement;
-    if (!canvas) return;
-    const center = {
-      x: (view.xMin + view.xMax) / 2,
-      y: (view.yMin + view.yMax) / 2
-    };
-    const xr = (view.xMax - view.xMin) * factor;
-    const yr = (view.yMax - view.yMin) * factor;
-    const newView = {
-      xMin: center.x - xr / 2,
-      xMax: center.x + xr / 2,
-      yMin: center.y - yr / 2,
-      yMax: center.y + yr / 2
-    };
-    setView(normalizeView(newView, canvas));
-  }, [view, normalizeView]);
-
-
-  const pan = useCallback((dx: number, dy: number) => {
-    const canvas = rendererRef.current?.domElement;
-    if (!canvas) return;
-    setView(v => {
-      const scale = (v.xMax - v.xMin) / canvas.width;
-      const newView = {
-        xMin: v.xMin - dx * scale,
-        xMax: v.xMax - dx * scale,
-        yMin: v.yMin - dy * scale,
-        yMax: v.yMax - dy * scale
-      };
-      return normalizeView(newView, canvas);
-    });
-  }, [normalizeView]);
-
+  const gestures = useViewportGestures({
+    view,
+    onViewChange: setView,
+    clamp: (v) => {
+      const canvas = rendererRef.current?.domElement;
+      return canvas ? normalizeView(v, canvas) : v;
+    },
+    onTap: tracePath,
+  });
 
   const reset = useCallback(() => {
     const canvas = rendererRef.current?.domElement;
@@ -424,7 +387,8 @@ export default function FractalsGPU() {
   return (
     <div
       ref={mountRef}
-      style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}
+      style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', touchAction: 'none' }}
+      {...gestures}
     >
       <canvas
         ref={overlayRef}
@@ -482,62 +446,14 @@ export default function FractalsGPU() {
           <div style={{ fontSize: isMobile ? '0.8em' : '0.9em' }}>{FORMULAS[type]}</div>
         </div>
         
-        {!isMobile && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <button 
-              onClick={() => pan(0, -50)}
-              style={getResponsiveButtonStyle(isMobile)}
-            >
-              Up
-            </button>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <button 
-                onClick={() => pan(-50, 0)}
-                style={getResponsiveButtonStyle(isMobile)}
-              >
-                Left
-              </button>
-              <button 
-                onClick={() => pan(50, 0)}
-                style={getResponsiveButtonStyle(isMobile)}
-              >
-                Right
-              </button>
-            </div>
-            <button 
-              onClick={() => pan(0, 50)}
-              style={getResponsiveButtonStyle(isMobile)}
-            >
-              Down
-            </button>
-          </div>
-        )}
-        
-        <div style={{ display: 'flex', gap: isMobile ? 2 : 4 }}>
-          <button 
-            onClick={() => zoom(0.9)}
-            style={getResponsiveButtonStyle(isMobile)}
-          >
-            Zoom In
-          </button>
-          <button 
-            onClick={() => zoom(1.1)}
-            style={getResponsiveButtonStyle(isMobile)}
-          >
-            Zoom Out
-          </button>
+        <div style={{
+          fontSize: isMobile ? '10px' : '11px',
+          color: '#ccc',
+          textAlign: 'center',
+          marginTop: '4px'
+        }}>
+          {isMobile ? 'Pinch to zoom · drag to pan · tap to trace' : 'Wheel to zoom · drag to pan · click to trace'}
         </div>
-        
-        {isMobile && (
-          <div style={{ 
-            fontSize: '10px', 
-            color: '#ccc', 
-            textAlign: 'center',
-            marginTop: '4px'
-          }}>
-            Pinch to zoom, drag to pan
-          </div>
-        )}
       </div>
       
       {/* Bottom Left - Main Controls */}

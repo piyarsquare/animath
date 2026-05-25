@@ -56,6 +56,25 @@
   .as-layout {
     grid-template-columns: 1fr;
   }
+  /* Show the arena first on narrow screens; controls scroll down below it. */
+  .as-main { order: -1; }
+}
+
+@media (max-width: 600px) {
+  .as-app { padding: 8px; }
+  .as-header { margin-bottom: 8px; }
+  .as-header h1 { font-size: 22px; }
+  .as-layout { gap: 12px; }
+  .as-card { padding: 14px; border-radius: 12px; }
+  .as-main { gap: 12px; }
+  .as-sidebar { gap: 12px; }
+  .as-controls-row { margin-bottom: 14px; }
+  .as-button-primary, .as-button-reset { padding: 12px 16px; font-size: 13px; }
+  .as-slider-group { margin-bottom: 14px; }
+  .as-slider { height: 8px; }
+  .as-slider::-webkit-slider-thumb { width: 22px; height: 22px; }
+  .as-slider::-moz-range-thumb { width: 22px; height: 22px; }
+  .as-stat-value { font-size: 16px; }
 }
 
 /* ── Sidebar ── */

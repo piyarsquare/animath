@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import * as THREE from 'three';
+import { useViewportGestures } from '../../lib/useViewportGestures';
 
 export interface Complex {
   real: number;
@@ -61,6 +62,7 @@ export default function FractalPane({
   const mountRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer>();
   const materialRef = useRef<THREE.ShaderMaterial>();
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const vertexShader = `
     varying vec2 vUv;
@@ -137,6 +139,7 @@ export default function FractalPane({
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
     scene.add(mesh);
     mountRef.current.appendChild(canvas);
+    canvasRef.current = canvas;
 
     const handleResize = () => {
       if (!mountRef.current) return;
@@ -188,53 +191,32 @@ export default function FractalPane({
 
 
   const [drawPoints, setDrawPoints] = useState<Complex[]>([]);
-  const isDrawingRef = useRef(false);
+  const drawBufferRef = useRef<Complex[]>([]);
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (drawing) return;
-      if (!onPickC) return;
-      const canvas = rendererRef.current?.domElement;
-      if (!canvas) return;
-      const c = screenToComplex(e.nativeEvent, canvas, view);
-      onPickC(c);
+  const gestures = useViewportGestures({
+    view,
+    onViewChange,
+    coordRef: canvasRef,
+    mode: drawing ? 'draw' : 'pan',
+    onTap: (p) => {
+      onPickC?.({ real: p.x, imag: p.y });
     },
-    [onPickC, view, drawing]
-  );
-
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (!drawing) return;
-      const canvas = rendererRef.current?.domElement;
-      if (!canvas) return;
-      const c = screenToComplex(e.nativeEvent, canvas, view);
-      isDrawingRef.current = true;
+    onDrawStart: (p) => {
+      const c = { real: p.x, imag: p.y };
+      drawBufferRef.current = [c];
       setDrawPoints([c]);
       onPathChange?.([c]);
     },
-    [drawing, view, onPathChange]
-  );
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (!drawing || !isDrawingRef.current) return;
-      const canvas = rendererRef.current?.domElement;
-      if (!canvas) return;
-      const c = screenToComplex(e.nativeEvent, canvas, view);
-      setDrawPoints(prev => {
-        const np = [...prev, c];
-        onPathChange?.(np);
-        return np;
-      });
+    onDrawMove: (p) => {
+      const c = { real: p.x, imag: p.y };
+      drawBufferRef.current = [...drawBufferRef.current, c];
+      setDrawPoints(drawBufferRef.current);
+      onPathChange?.(drawBufferRef.current);
     },
-    [drawing, view, onPathChange]
-  );
-
-  const handleMouseUp = useCallback(() => {
-    if (!drawing || !isDrawingRef.current) return;
-    isDrawingRef.current = false;
-    onPathChange?.(drawPoints);
-  }, [drawing, drawPoints, onPathChange]);
+    onDrawEnd: () => {
+      onPathChange?.(drawBufferRef.current);
+    },
+  });
 
   const crossStyle = () => {
     if (!markC || !mountRef.current) return { display: 'none' } as React.CSSProperties;
@@ -279,12 +261,10 @@ export default function FractalPane({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        position: 'relative'
+        position: 'relative',
+        touchAction: 'none'
       }}
-      onClick={handleClick}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
+      {...gestures}
     >
       {markC && <div style={crossStyle()}>X</div>}
       {pathPoints.length > 0 && (
