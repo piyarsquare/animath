@@ -1,6 +1,7 @@
 /* ── App shell ── */
 .as-app {
-  min-height: 100vh;
+  height: 100%;
+  width: 100%;
   background: #020617;
   color: #e2e8f0;
   padding: 16px;
@@ -9,6 +10,7 @@
   flex-direction: column;
   align-items: center;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* ── Header ── */

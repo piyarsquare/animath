@@ -4,6 +4,7 @@ import {
   Target, Activity
 } from 'lucide-react';
 import './agenticSorting.css';
+import { useAppHeader } from '../../components/AppShell';
 
 type AgentType = 'standard' | 'blindDate' | 'nomadic' | 'patrolling' | 'perfectionist';
 
@@ -64,6 +65,7 @@ type Stats = {
 type Weights = Record<AgentType, number>;
 
 export default function AgenticSorting() {
+  useAppHeader('Agentic Sorting');
   const [itemCount, setItemCount] = useState(60);
   const [simulationSpeed, setSimulationSpeed] = useState(20);
   const [isRunning, setIsRunning] = useState(false);

@@ -21,6 +21,7 @@ import {
   Zap
 } from 'lucide-react';
 import './stableMarriage.css';
+import { useAppHeader } from '../../components/AppShell';
 
 const MAX_POPULATION = 100;
 const ROW_HEIGHT = 64;
@@ -515,6 +516,7 @@ const DistributionChart = ({
 };
 
 export default function StableMarriage() {
+  useAppHeader('Stable Marriage');
   const [appMode, setAppMode] = useState<'visualizer' | 'lab'>('visualizer');
 
   const [n, setN] = useState(20);

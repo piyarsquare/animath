@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { AppShell, AppDescriptor } from './components/AppShell';
 
 const FractalsGPU = React.lazy(() => import('./animations/FractalsGPU/FractalsGPU'));
 const Fractals2D = React.lazy(() => import('./animations/Fractals/Fractals2D'));
@@ -8,6 +9,15 @@ const Correspondence = React.lazy(() => import('./animations/Correspondence/Corr
 const MobiusWalk = React.lazy(() => import('./animations/MobiusWalk/MobiusWalk'));
 const StableMarriage = React.lazy(() => import('./animations/StableMarriage/StableMarriage'));
 const AgenticSorting = React.lazy(() => import('./animations/AgenticSorting/AgenticSorting'));
+
+const apps: AppDescriptor[] = [
+  { hash: '/', name: 'Complex Particles', icon: '✦' },
+  { hash: '/fractals', name: 'Fractals', icon: '◯' },
+  { hash: '/correspondence', name: 'Mandelbrot ↔ Julia', icon: '⇄' },
+  { hash: '/mobius', name: 'Möbius Walk', icon: '∞' },
+  { hash: '/stable-marriage', name: 'Stable Marriage', icon: '♥' },
+  { hash: '/agentic-sorting', name: 'Agentic Sorting', icon: '⇅' },
+];
 
 const routes: Record<string, React.ComponentType> = {
   '/': App,
@@ -20,7 +30,7 @@ const routes: Record<string, React.ComponentType> = {
 };
 
 function getHash(): string {
-  return window.location.hash.replace(/^#/, '');
+  return window.location.hash.replace(/^#/, '') || '/';
 }
 
 function Router(): JSX.Element {
@@ -33,11 +43,14 @@ function Router(): JSX.Element {
   }, []);
 
   const Component = routes[hash] ?? App;
+  const navigate = (h: string) => { window.location.hash = '#' + h; };
 
   return (
-    <React.Suspense fallback={<div style={{ background: '#000', width: '100vw', height: '100vh' }} />}>
-      <Component />
-    </React.Suspense>
+    <AppShell apps={apps} currentHash={hash} onNavigate={navigate}>
+      <React.Suspense fallback={<div style={{ background: '#000', width: '100%', height: '100%' }} />}>
+        <Component />
+      </React.Suspense>
+    </AppShell>
   );
 }
 
