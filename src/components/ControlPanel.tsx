@@ -1,92 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { useResponsive } from '../styles/responsive';
+import React, { useState } from 'react';
 import './ControlPanel.css';
 
-type SheetSize = 'peek' | 'half' | 'full';
-
-export interface ControlPanelProps {
-  children: React.ReactNode;
-  /** Compact content shown in mobile peek state and never elsewhere. */
-  peekContent?: React.ReactNode;
-}
-
-export function ControlPanel({ children, peekContent }: ControlPanelProps) {
-  const { isMobile, isTablet } = useResponsive();
-  const useSheet = isMobile || isTablet;
-  const [hidden, setHidden] = useState(false);
-  const [open, setOpen] = useState(true);
-  const [sheetSize, setSheetSize] = useState<SheetSize>('half');
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'h' || e.key === 'H') setHidden(v => !v);
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
-
-  if (hidden) {
-    return (
-      <button
-        className="cp-show-btn cp-root"
-        title="Show controls (H)"
-        onClick={() => setHidden(false)}
-      >
-        ⊞
-      </button>
-    );
-  }
-
-  if (useSheet) {
-    const cycle: Record<SheetSize, SheetSize> = { peek: 'half', half: 'full', full: 'peek' };
-    return (
-      <>
-        <div className={`cp-sheet cp-root cp-${sheetSize}`} role="dialog" aria-label="Controls">
-          <div
-            className="cp-sheet-handle"
-            onClick={() => setSheetSize(cycle[sheetSize])}
-            role="button"
-            aria-label="Resize panel"
-          />
-          {sheetSize === 'peek' && peekContent && (
-            <div className="cp-sheet-peek-row">{peekContent}</div>
-          )}
-          {sheetSize !== 'peek' && <div className="cp-body">{children}</div>}
-        </div>
-        <button
-          className="cp-hide-btn cp-root"
-          title="Hide UI (H)"
-          onClick={() => setHidden(true)}
-        >
-          ⊟
-        </button>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div className={`cp-drawer cp-root ${open ? '' : 'cp-closed'}`} role="dialog" aria-label="Controls">
-        <div className="cp-body">{children}</div>
-      </div>
-      <button
-        className={`cp-tab cp-root ${open ? '' : 'cp-closed'}`}
-        title={open ? 'Collapse panel' : 'Expand panel'}
-        onClick={() => setOpen(v => !v)}
-      >
-        {open ? '›' : '‹'}
-      </button>
-      <button
-        className="cp-hide-btn cp-root"
-        title="Hide UI (H)"
-        onClick={() => setHidden(true)}
-        style={open ? { right: 'calc(var(--cp-drawer-width) + 12px)' } : undefined}
-      >
-        ⊟
-      </button>
-    </>
-  );
-}
+/**
+ * Form primitives — Section, Slider, Pills, Select, Checkbox — used inside
+ * AppShell's Settings/Actions tabs. The old desktop-drawer/mobile-sheet
+ * wrapper that lived here previously is now replaced by the global AppShell.
+ */
 
 export interface SectionProps {
   title: string;

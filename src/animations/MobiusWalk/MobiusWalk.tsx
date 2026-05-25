@@ -4,15 +4,18 @@ import Canvas3D from '@/components/Canvas3D';
 import { makeCorridorGeometry, DEFAULT_PARAMS, paramToFrame } from './corridorGeometry';
 import { corridorMaterial } from './shaders/corridorMaterial';
 import { instantiateObjects } from './objects';
+import { ShellActions, useAppHeader } from '../../components/AppShell';
 
 export interface MobiusWalkProps {
-  speed?: number;      // metres / second along corridor
+  speed?: number;
 }
 
 export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
-  const camPosT = useRef(0);          // param t along centreline
+  const camPosT = useRef(0);
   const clockRef = useRef(new THREE.Clock());
   const [twist, setTwist] = useState(true);
+
+  useAppHeader('Möbius Walk', twist ? 'twisted corridor' : 'untwisted corridor');
 
   const onMount = React.useCallback(({ scene, camera, renderer }: {
     scene: THREE.Scene;
@@ -59,14 +62,25 @@ export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
   }, [speed, twist]);
 
   return (
-    <div>
-      <Canvas3D onMount={onMount} />
-      <button
-        style={{ position: 'absolute', top: 20, left: 20 }}
-        onClick={() => setTwist((t) => !t)}
-      >
-        {twist ? 'Disable Twist' : 'Enable Möbius Twist'}
-      </button>
-    </div>
+    <>
+      <div style={{ position: 'absolute', inset: 0 }}>
+        <Canvas3D onMount={onMount} />
+      </div>
+      <ShellActions>
+        <div className="cp-section-body">
+          <button
+            style={{
+              padding: '12px 16px', borderRadius: 6,
+              border: '1px solid var(--cp-border)',
+              background: twist ? 'rgba(255, 212, 0, 0.18)' : 'rgba(255,255,255,0.06)',
+              color: 'var(--cp-fg)', cursor: 'pointer', fontSize: 14,
+            }}
+            onClick={() => setTwist((t) => !t)}
+          >
+            {twist ? 'Disable twist' : 'Enable Möbius twist'}
+          </button>
+        </div>
+      </ShellActions>
+    </>
   );
 }

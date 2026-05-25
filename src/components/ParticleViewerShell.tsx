@@ -1,7 +1,8 @@
 import React from 'react';
 import Canvas3D from './Canvas3D';
 import Readme from './Readme';
-import { ControlPanel, Section, Slider, Pills, Select, Checkbox } from './ControlPanel';
+import { Section, Slider, Pills, Select, Checkbox } from './ControlPanel';
+import { ShellSettings, ShellActions, useAppHeader } from './AppShell';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../config/defaults';
 import { useResponsive } from '../styles/responsive';
 import { planes } from '../math/constants';
@@ -24,15 +25,10 @@ export interface ParticleViewerShellProps {
     camera: import('three').PerspectiveCamera;
     renderer: import('three').WebGLRenderer;
   }) => void;
-  /** Variant-specific label, e.g. "exp" or "z^(1/2)". */
   functionName: string;
-  /** Variant-specific formula, rendered in accent color. */
   functionFormula: string;
-  /** Variant-specific picker UI (dropdown / p,q / etc.) rendered inside Function section. */
   functionPicker: React.ReactNode;
-  /** Optional extra controls (e.g. multibranch branch count/indices/style). */
   variantExtras?: React.ReactNode;
-  /** README markdown to render inside the About section. */
   readme: string;
 }
 
@@ -44,17 +40,10 @@ export default function ParticleViewerShell({
   const compact = isMobile || isTablet;
   const gestures = useGestureRotation(state);
 
-  const peek = (
-    <>
-      <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
-        <span className="cp-peek-name">{functionName}</span>
-        <span className="cp-peek-formula">{functionFormula}</span>
-      </div>
-    </>
-  );
+  useAppHeader(functionName, functionFormula);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
+    <>
       <div
         style={{ position: 'absolute', inset: 0, touchAction: 'none' }}
         {...gestures}
@@ -62,10 +51,8 @@ export default function ParticleViewerShell({
         <Canvas3D onMount={onMount} />
       </div>
 
-      <ControlPanel peekContent={peek}>
+      <ShellSettings>
         <Section title="Function" icon="ƒ" defaultOpen>
-          <div className="cp-function-title">{functionName}</div>
-          <div className="cp-function-formula">{functionFormula}</div>
           {functionPicker}
           {variantExtras}
         </Section>
@@ -96,18 +83,6 @@ export default function ParticleViewerShell({
             onChange={state.setCameraZ}
             format={v => v.toFixed(1)}
           />
-          <div className="cp-quarter">
-            <div className="cp-quarter-label">4D turn</div>
-            <div />
-            <div />
-            {planes.map(p => (
-              <React.Fragment key={p}>
-                <div className="cp-quarter-label" style={{ alignSelf: 'center' }}>{p}</div>
-                <button onClick={() => controls.turn(p, 1)}>↻</button>
-                <button onClick={() => controls.turn(p, -1)}>↺</button>
-              </React.Fragment>
-            ))}
-          </div>
           {!compact && (
             <table className="cp-orient-matrix">
               <thead>
@@ -198,10 +173,27 @@ export default function ParticleViewerShell({
         <Section title="About" icon="ⓘ">
           <Readme markdown={readme} />
         </Section>
-      </ControlPanel>
-    </div>
+      </ShellSettings>
+
+      <ShellActions>
+        <div className="cp-section-body">
+          <div className="cp-row-label" style={{ marginBottom: 4 }}>4D quarter turns</div>
+          <div className="cp-quarter">
+            <div />
+            <div className="cp-quarter-label" style={{ textAlign: 'center' }}>↻</div>
+            <div className="cp-quarter-label" style={{ textAlign: 'center' }}>↺</div>
+            {planes.map(p => (
+              <React.Fragment key={p}>
+                <div className="cp-quarter-label" style={{ alignSelf: 'center' }}>{p}</div>
+                <button onClick={() => controls.turn(p, 1)}>↻ {p}</button>
+                <button onClick={() => controls.turn(p, -1)}>↺ {p}</button>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </ShellActions>
+    </>
   );
 }
 
-/** Re-export so variants can build their function pickers using a single import. */
 export { ProjectionMode };

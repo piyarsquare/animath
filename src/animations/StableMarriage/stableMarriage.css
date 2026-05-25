@@ -7,7 +7,9 @@
   color: #0f172a;
   padding: 32px;
   background: #f8fafc;
-  min-height: 100vh;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sm-header {

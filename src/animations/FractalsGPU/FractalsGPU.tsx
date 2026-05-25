@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import Readme from '../../components/Readme';
-import ToggleMenu from '../../components/ToggleMenu';
 import readmeText from './README.md?raw';
-import { useResponsive, getResponsiveControlsStyle, getResponsiveButtonStyle, getResponsiveInputStyle } from '../../styles/responsive';
+import { useResponsive } from '../../styles/responsive';
 import { useViewportGestures } from '../../lib/useViewportGestures';
+import { ShellSettings, ShellActions, useAppHeader } from '../../components/AppShell';
+import { Section, Slider, Pills, Select } from '../../components/ControlPanel';
 
 /** GPU accelerated Mandelbrot/Julia viewer using a fragment shader. */
 export default function FractalsGPU() {
@@ -384,232 +385,133 @@ export default function FractalsGPU() {
     drawPath();
   }, [view]);
 
+  useAppHeader(TYPE_NAMES[type], FORMULAS[type]);
+
   return (
-    <div
-      ref={mountRef}
-      style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', touchAction: 'none' }}
-      {...gestures}
-    >
-      <canvas
-        ref={overlayRef}
-        style={{ 
-          position: 'absolute', 
-          left: 0, 
-          top: 0, 
-          width: '100%', 
-          height: '100%', 
-          zIndex: 1, 
-          pointerEvents: 'none',
-          touchAction: 'none' 
-        }}
-      />
-      
-      {/* Top Left - Function Selector */}
-      <div 
-        style={{
-          ...getResponsiveControlsStyle(isMobile),
-          top: '10px',
-          left: '10px',
-        }}
-      >
-        <label>
-          Function:
-          <select 
-            value={type} 
-            onChange={e => setType(e.target.value as any)}
-            style={{ ...getResponsiveInputStyle(isMobile), marginLeft: '4px' }}
-          >
-            <option value="mandelbrot">Mandelbrot</option>
-            <option value="julia">Julia</option>
-            <option value="burning">Burning Ship</option>
-            <option value="tricorn">Tricorn</option>
-          </select>
-        </label>
-      </div>
-      
-      {/* Top Right - Info and Navigation */}
+    <>
       <div
-        style={{
-          ...getResponsiveControlsStyle(isMobile),
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: isMobile ? 4 : 6,
-          maxWidth: isMobile ? '180px' : '220px'
-        }}
+        ref={mountRef}
+        style={{ position: 'absolute', inset: 0, overflow: 'hidden', touchAction: 'none' }}
+        {...gestures}
       >
-        <div style={{ fontSize: isMobile ? '1em' : '1.2em', textAlign: 'center' }}>
-          <div>{TYPE_NAMES[type]}</div>
-          <div style={{ fontSize: isMobile ? '0.8em' : '0.9em' }}>{FORMULAS[type]}</div>
-        </div>
-        
-        <div style={{
-          fontSize: isMobile ? '10px' : '11px',
-          color: '#ccc',
-          textAlign: 'center',
-          marginTop: '4px'
-        }}>
-          {isMobile ? 'Pinch to zoom · drag to pan · tap to trace' : 'Wheel to zoom · drag to pan · click to trace'}
-        </div>
-      </div>
-      
-      {/* Bottom Left - Main Controls */}
-      <div style={{ position: 'absolute', bottom: '10px', left: '10px' }}>
-        <div 
-          style={{ 
-            ...getResponsiveControlsStyle(isMobile),
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: isMobile ? 6 : 8,
-            maxWidth: isMobile ? '200px' : '250px',
-            maxHeight: isMobile ? '50vh' : '60vh',
-            overflowY: 'auto'
+        <canvas
+          ref={overlayRef}
+          style={{
+            position: 'absolute', left: 0, top: 0,
+            width: '100%', height: '100%',
+            zIndex: 1, pointerEvents: 'none', touchAction: 'none',
           }}
-        >
-          <label>
-            Palette:
-            <select 
-              value={palette} 
-              onChange={e => setPalette(parseInt(e.target.value, 10))}
-              style={{ ...getResponsiveInputStyle(isMobile), width: '100%' }}
-            >
-              <option value={0}>Rainbow</option>
-              <option value={1}>Fire</option>
-              <option value={2}>Ocean</option>
-              <option value={3}>Gray</option>
-            </select>
-          </label>
-          
-          <label>
-            Power k:
-            <input
-              type="number"
-              value={powerInput}
-              min={1}
-              max={100}
-              onChange={e => {
-                const val = e.target.value;
-                setPowerInput(val);
-                const parsed = parseInt(val, 10);
-                if (!isNaN(parsed)) {
-                  setPower(Math.min(100, Math.max(1, parsed)));
-                }
-              }}
-              style={{ ...getResponsiveInputStyle(isMobile), width: isMobile ? '50px' : '60px' }}
-            />
-          </label>
-          
-          <label>
-            Coloring:
-            <select 
-              value={colorMode} 
-              onChange={e => setColorMode(e.target.value as any)}
-              style={{ ...getResponsiveInputStyle(isMobile), width: '100%' }}
-            >
-              <option value="escape">Escape velocity</option>
-              <option value="limit">Limit magnitude</option>
-              <option value="layered">Layered</option>
-            </select>
-          </label>
-          
-          {colorMode !== 'escape' && (
-            <label>
-              Inside palette:
-              <select 
-                value={insidePalette} 
-                onChange={e => setInsidePalette(parseInt(e.target.value, 10))}
-                style={{ ...getResponsiveInputStyle(isMobile), width: '100%' }}
-              >
-                <option value={0}>Rainbow</option>
-                <option value={1}>Fire</option>
-                <option value={2}>Ocean</option>
-                <option value={3}>Gray</option>
-              </select>
-            </label>
-          )}
-          
-          <label>
-            Iterations:
-            <input
-              type="number"
-              value={iterInput}
-              min={1}
-              max={1000}
-              onChange={e => {
-                const val = e.target.value;
-                setIterInput(val);
-                const parsed = parseInt(val, 10);
-                if (!isNaN(parsed)) {
-                  setIter(Math.min(1000, Math.max(1, parsed)));
-                }
-              }}
-              style={{ ...getResponsiveInputStyle(isMobile), width: isMobile ? '50px' : '60px' }}
-            />
-          </label>
-          
-          <label>
-            Start Iter:
-            <input
-              type="number"
-              value={startIter}
-              min={0}
-              max={1000}
-              onChange={e => setStartIter(parseInt(e.target.value, 10))}
-              style={{ ...getResponsiveInputStyle(isMobile), width: isMobile ? '50px' : '60px' }}
-            />
-          </label>
-          
-          <div style={{ display: 'flex', gap: isMobile ? 2 : 4 }}>
-            <button 
-              onClick={() => setAnimating(a => !a)}
-              style={{ ...getResponsiveButtonStyle(isMobile), backgroundColor: animating ? '#ff4444' : '#44ff44' }}
-            >
-              {animating ? 'Stop' : 'Cycle'}
-            </button>
-            <button 
-              onClick={reset}
-              style={getResponsiveButtonStyle(isMobile)}
-            >
-              Reset
-            </button>
-          </div>
-          
+        />
+      </div>
+
+      <ShellSettings>
+        <Section title="Function" icon="ƒ" defaultOpen>
+          <Select
+            label="Fractal type"
+            options={[
+              { value: 'mandelbrot', label: 'Mandelbrot' },
+              { value: 'julia', label: 'Julia' },
+              { value: 'burning', label: 'Burning Ship' },
+              { value: 'tricorn', label: 'Tricorn' },
+            ]}
+            value={type}
+            onChange={(v) => setType(v)}
+          />
+          <Slider label="Power k" value={power}
+            min={1} max={10} step={1}
+            onChange={(v) => setPower(Math.max(1, Math.round(v)))}
+            format={v => String(v)} />
           {type === 'julia' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label>
-                C real:
-                <input
-                  type="number"
-                  step="any"
-                  value={juliaC.real}
-                  onChange={e => setJuliaC({ ...juliaC, real: parseFloat(e.target.value) })}
-                  style={{ ...getResponsiveInputStyle(isMobile), width: isMobile ? '60px' : '70px' }}
-                />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <label className="cp-row" style={{ flex: 1 }}>
+                <div className="cp-row-label"><span>c real</span></div>
+                <input type="number" step="any" value={juliaC.real}
+                  onChange={e => setJuliaC({ ...juliaC, real: parseFloat(e.target.value) || 0 })} />
               </label>
-              <label>
-                C imaginary:
-                <input
-                  type="number"
-                  step="any"
-                  value={juliaC.imag}
-                  onChange={e => setJuliaC({ ...juliaC, imag: parseFloat(e.target.value) })}
-                  style={{ ...getResponsiveInputStyle(isMobile), width: isMobile ? '60px' : '70px' }}
-                />
+              <label className="cp-row" style={{ flex: 1 }}>
+                <div className="cp-row-label"><span>c imag</span></div>
+                <input type="number" step="any" value={juliaC.imag}
+                  onChange={e => setJuliaC({ ...juliaC, imag: parseFloat(e.target.value) || 0 })} />
               </label>
             </div>
           )}
-        </div>
-      </div>
-      
-      {/* About Menu */}
-      <div style={{ position: 'absolute', bottom: '10px', right: '10px' }}>
-        <ToggleMenu title="About" defaultOpen={!isMobile}>
+        </Section>
+
+        <Section title="Iteration" icon="↻" defaultOpen>
+          <Slider label="Max iterations" value={iter}
+            min={10} max={1000} step={10}
+            onChange={(v) => setIter(Math.max(1, Math.round(v)))}
+            format={v => String(v)} />
+          <Slider label="Start iteration" value={startIter}
+            min={0} max={500} step={1}
+            onChange={(v) => setStartIter(Math.max(0, Math.round(v)))}
+            format={v => String(v)} />
+        </Section>
+
+        <Section title="Colour" icon="◐">
+          <Select label="Palette"
+            options={[
+              { value: 0, label: 'Rainbow' },
+              { value: 1, label: 'Fire' },
+              { value: 2, label: 'Ocean' },
+              { value: 3, label: 'Gray' },
+            ]}
+            value={palette} onChange={setPalette} />
+          <Pills label="Colouring"
+            options={[
+              { value: 'escape', label: 'Escape' },
+              { value: 'limit', label: 'Limit' },
+              { value: 'layered', label: 'Layered' },
+            ]}
+            value={colorMode}
+            onChange={setColorMode} />
+          {colorMode !== 'escape' && (
+            <Select label="Inside palette"
+              options={[
+                { value: 0, label: 'Rainbow' },
+                { value: 1, label: 'Fire' },
+                { value: 2, label: 'Ocean' },
+                { value: 3, label: 'Gray' },
+              ]}
+              value={insidePalette} onChange={setInsidePalette} />
+          )}
+        </Section>
+
+        <Section title="About" icon="ⓘ">
           <Readme markdown={readmeText} />
-        </ToggleMenu>
-      </div>
-    </div>
+          <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', marginTop: 8 }}>
+            {isMobile ? 'Pinch to zoom · drag to pan · tap to trace' : 'Wheel to zoom · drag to pan · click to trace'}
+          </div>
+        </Section>
+      </ShellSettings>
+
+      <ShellActions>
+        <div className="cp-section-body">
+          <button
+            className="cp-pills"
+            style={{
+              padding: '12px 16px', borderRadius: 6, border: 'none',
+              background: animating ? '#ef4444' : '#10b981',
+              color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 14,
+            }}
+            onClick={() => setAnimating(a => !a)}
+          >
+            {animating ? 'Stop colour cycle' : 'Start colour cycle'}
+          </button>
+          <button
+            className="cp-pills"
+            style={{
+              padding: '12px 16px', borderRadius: 6,
+              border: '1px solid var(--cp-border)',
+              background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
+              cursor: 'pointer', fontSize: 14,
+            }}
+            onClick={reset}
+          >
+            Reset view
+          </button>
+        </div>
+      </ShellActions>
+    </>
   );
 }
