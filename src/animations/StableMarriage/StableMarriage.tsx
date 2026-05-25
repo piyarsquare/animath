@@ -356,6 +356,10 @@ const Heatmap = ({
   labels?: { left: string; right: string };
 }) => {
   const [hover, setHover] = useState<HeatmapPoint | null>(null);
+  const [pinned, setPinned] = useState<HeatmapPoint | null>(null);
+  const active = pinned ?? hover;
+  const samePoint = (a: HeatmapPoint | null, b: HeatmapPoint | null) =>
+    !!a && !!b && a.x === b.x && a.y === b.y;
 
   if (!data || data.length === 0) {
     return (
@@ -391,11 +395,11 @@ const Heatmap = ({
         <div className="sm-heatmap-axis">
           <span>Women Consensus (0% → 100%)</span>
         </div>
-        <div className="sm-heatmap-grid">
+        <div className="sm-heatmap-grid" onClick={() => setPinned(null)}>
           {data.map((point, index) => (
             <div
               key={`${point.x}-${point.y}-${index}`}
-              className="sm-heatmap-cell"
+              className={`sm-heatmap-cell${samePoint(pinned, point) ? ' pinned' : ''}`}
               style={{
                 left: `${point.x}%`,
                 bottom: `${point.y}%`,
@@ -403,21 +407,25 @@ const Heatmap = ({
                 height: `${cellSize}%`,
                 backgroundColor: getColor(Number(point[dataKey]))
               }}
-              onMouseEnter={() => setHover(point)}
-              onMouseLeave={() => setHover(null)}
+              onMouseEnter={() => { if (!pinned) setHover(point); }}
+              onMouseLeave={() => { if (!pinned) setHover(null); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPinned(p => samePoint(p, point) ? null : point);
+              }}
             />
           ))}
-          {hover ? (
+          {active ? (
             <div className="sm-heatmap-hover">
               <div className="sm-heatmap-tooltip">
                 <div className="sm-heatmap-tooltip-header">
-                  M-Consensus: {hover.x.toFixed(0)}%<br />W-Consensus: {hover.y.toFixed(0)}%
+                  M-Consensus: {active.x.toFixed(0)}%<br />W-Consensus: {active.y.toFixed(0)}%
                 </div>
                 <div className="sm-heatmap-tooltip-grid">
-                  <span>Men: {hover.menAvg.toFixed(1)}</span>
-                  <span>Women: {hover.womenAvg.toFixed(1)}</span>
-                  <span>Asker: {hover.askerAvg.toFixed(1)}</span>
-                  <span>Asked: {hover.askedAvg.toFixed(1)}</span>
+                  <span>Men: {active.menAvg.toFixed(1)}</span>
+                  <span>Women: {active.womenAvg.toFixed(1)}</span>
+                  <span>Asker: {active.askerAvg.toFixed(1)}</span>
+                  <span>Asked: {active.askedAvg.toFixed(1)}</span>
                 </div>
               </div>
             </div>
