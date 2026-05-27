@@ -54,6 +54,7 @@ export default function ParticleViewerShell({
 
       <QuarterTurnFloater
         onTurn={controls.turn}
+        onRotateBy={controls.rotateBy}
         onReset={controls.snapToStandardView}
       />
 

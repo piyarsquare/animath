@@ -4,28 +4,29 @@ import { Plane } from '../../math/constants';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import type { ParticleState } from './useParticleState';
 
-// Lower than the original 0.005 — testers found 4D rotation too "twitchy",
-// since a small finger drag composes two plane rotations at once.
-const ROT_SENSITIVITY = 0.0025;      // radians per pixel of drag
+const ROT_SENSITIVITY = 0.005;       // radians per pixel of drag
 const WHEEL_ZOOM_SENSITIVITY = 0.01; // cameraZ delta per wheel deltaY
 
 interface Pt { x: number; y: number; }
 
 /**
- * Pointer-driven 4D rotation, zoom, and twist for a particle viewer.
+ * Pointer-driven view controls for a particle viewer.
  *
- *   1 pointer drag         → xu (horizontal), yu (vertical)
- *   2 pointers, centroid   → xv (horizontal), yv (vertical)
- *   2 pointers, pinch      → cameraZ
- *   2 pointers, twist      → uv
- *   wheel                  → cameraZ
+ *   1 pointer drag         → XU (horizontal) + YU (vertical) — feels like a
+ *                            standard 3D orbit in perspective view.
+ *   2 pointers, pinch      → cameraZ (zoom).
+ *   wheel                  → cameraZ.
+ *
+ * Earlier revisions mapped 2-finger drag and 2-finger twist onto the XV, YV,
+ * and UV planes, but composing four rotations through a single drag was
+ * unnavigable in 4D. Those planes are now reached via the on-screen quarter-
+ * turn buttons (tap for 90°, hold for continuous rotation).
  *
  * Unifies mouse, pen, and touch via Pointer Events.
  */
 export function useGestureRotation(state: ParticleState) {
   const pointers = useRef(new Map<number, Pt>());
   const lastPinchDist = useRef<number | null>(null);
-  const lastTwistAngle = useRef<number | null>(null);
 
   function pushUniforms() {
     const L = state.rotLRef.current;
@@ -63,7 +64,6 @@ export function useGestureRotation(state: ParticleState) {
     if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()];
       lastPinchDist.current = Math.hypot(a.x - b.x, a.y - b.y);
-      lastTwistAngle.current = Math.atan2(b.y - a.y, b.x - a.x);
     }
   };
 
@@ -83,29 +83,11 @@ export function useGestureRotation(state: ParticleState) {
       const others = [...pointers.current.entries()].filter(([id]) => id !== e.pointerId);
       const other = others[0]?.[1];
       if (other) {
-        const prevCx = (prev.x + other.x) / 2;
-        const prevCy = (prev.y + other.y) / 2;
-        const newCx = (next.x + other.x) / 2;
-        const newCy = (next.y + other.y) / 2;
-        applyRotation('XV', (newCx - prevCx) * ROT_SENSITIVITY);
-        applyRotation('YV', (newCy - prevCy) * ROT_SENSITIVITY);
-
         const newDist = Math.hypot(next.x - other.x, next.y - other.y);
         if (lastPinchDist.current != null && newDist > 1e-3) {
           clampedZoom(lastPinchDist.current / newDist);
         }
         lastPinchDist.current = newDist;
-
-        const newAngle = Math.atan2(next.y - other.y, next.x - other.x);
-        if (lastTwistAngle.current != null) {
-          let dAngle = newAngle - lastTwistAngle.current;
-          while (dAngle > Math.PI) dAngle -= 2 * Math.PI;
-          while (dAngle < -Math.PI) dAngle += 2 * Math.PI;
-          applyRotation('UV', dAngle);
-        }
-        lastTwistAngle.current = newAngle;
-
-        pushUniforms();
       }
     }
 
@@ -114,10 +96,7 @@ export function useGestureRotation(state: ParticleState) {
 
   const onPointerUp = (e: React.PointerEvent) => {
     pointers.current.delete(e.pointerId);
-    if (pointers.current.size < 2) {
-      lastPinchDist.current = null;
-      lastTwistAngle.current = null;
-    }
+    if (pointers.current.size < 2) lastPinchDist.current = null;
   };
 
   const onWheel = (e: React.WheelEvent) => {

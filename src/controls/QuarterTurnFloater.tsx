@@ -1,18 +1,25 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { planes, Plane } from '@/math/constants';
 import './QuarterTurnFloater.css';
 
 export interface QuarterTurnFloaterProps {
+  /** Tap callback — animated 90° turn. */
   onTurn: (p: Plane, dir: 1 | -1) => void;
+  /** Optional continuous-rotation callback driven by the floater's rAF loop. */
+  onRotateBy?: (p: Plane, theta: number) => void;
   onReset?: () => void;
 }
 
+const HOLD_THRESHOLD_MS = 220;     // how long before tap becomes hold
+const HOLD_RATE_RAD_PER_S = 1.5;   // ~86°/sec while holding
+
 /**
- * A small floating cluster of unit-rotation buttons (six 4D planes × two
- * directions, plus optional reset). Collapses to a single icon by default so
- * it stays out of the way; tap to expand. Placed bottom-left of the canvas.
+ * Floating cluster of unit-rotation buttons for the six 4D planes. Tap a
+ * button for an animated 90° quarter turn. Press and hold to rotate
+ * continuously in that plane (∼86°/sec). Includes a Reset orientation row.
+ * Starts collapsed; tap the ↻ chip to expand.
  */
-export default function QuarterTurnFloater({ onTurn, onReset }: QuarterTurnFloaterProps) {
+export default function QuarterTurnFloater({ onTurn, onRotateBy, onReset }: QuarterTurnFloaterProps) {
   const [open, setOpen] = useState(false);
 
   if (!open) {
@@ -44,7 +51,7 @@ export default function QuarterTurnFloater({ onTurn, onReset }: QuarterTurnFloat
         <div className="qtb-label">↻</div>
         <div className="qtb-label">↺</div>
         {planes.map(p => (
-          <Row key={p} plane={p} onTurn={onTurn} />
+          <Row key={p} plane={p} onTurn={onTurn} onRotateBy={onRotateBy} />
         ))}
       </div>
       {onReset && (
@@ -56,12 +63,87 @@ export default function QuarterTurnFloater({ onTurn, onReset }: QuarterTurnFloat
   );
 }
 
-function Row({ plane, onTurn }: { plane: Plane; onTurn: (p: Plane, d: 1 | -1) => void }) {
+function Row({
+  plane, onTurn, onRotateBy,
+}: {
+  plane: Plane;
+  onTurn: (p: Plane, d: 1 | -1) => void;
+  onRotateBy?: (p: Plane, theta: number) => void;
+}) {
   return (
     <>
       <div className="qtb-label" style={{ alignSelf: 'center' }}>{plane}</div>
-      <button className="qtb-btn" onClick={() => onTurn(plane, 1)} aria-label={`${plane} clockwise`}>↻</button>
-      <button className="qtb-btn" onClick={() => onTurn(plane, -1)} aria-label={`${plane} counter-clockwise`}>↺</button>
+      <HoldButton plane={plane} direction={1} onTurn={onTurn} onRotateBy={onRotateBy} label="↻" />
+      <HoldButton plane={plane} direction={-1} onTurn={onTurn} onRotateBy={onRotateBy} label="↺" />
     </>
+  );
+}
+
+function HoldButton({
+  plane, direction, onTurn, onRotateBy, label,
+}: {
+  plane: Plane;
+  direction: 1 | -1;
+  onTurn: (p: Plane, d: 1 | -1) => void;
+  onRotateBy?: (p: Plane, theta: number) => void;
+  label: string;
+}) {
+  const rafRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number>(0);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heldRef = useRef(false);
+
+  const startHold = () => {
+    heldRef.current = true;
+    lastTimeRef.current = performance.now();
+    const step = (now: number) => {
+      const dt = Math.min(0.1, (now - lastTimeRef.current) / 1000);
+      lastTimeRef.current = now;
+      onRotateBy?.(plane, direction * HOLD_RATE_RAD_PER_S * dt);
+      rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+  };
+
+  const stop = () => {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    const wasHeld = heldRef.current;
+    heldRef.current = false;
+    return wasHeld;
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    holdTimerRef.current = setTimeout(() => {
+      holdTimerRef.current = null;
+      if (onRotateBy) startHold();
+    }, HOLD_THRESHOLD_MS);
+  };
+
+  const onPointerUp = () => {
+    const wasHeld = stop();
+    if (!wasHeld) onTurn(plane, direction); // simple tap → animated quarter turn
+  };
+
+  const onPointerCancel = () => { stop(); };
+
+  useEffect(() => () => { stop(); }, []);
+
+  return (
+    <button
+      className="qtb-btn"
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      onPointerLeave={(e) => { if (e.buttons === 0) stop(); }}
+      aria-label={`${plane} ${direction === 1 ? 'clockwise' : 'counter-clockwise'} (hold to rotate continuously)`}
+    >{label}</button>
   );
 }

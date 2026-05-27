@@ -106,5 +106,25 @@ export function useViewControls(state: ParticleState) {
     applyQuarterTurn(plane, (QUARTER / 2) * dir);
   };
 
-  return { handleViewType, handleMotion, handleDropAxis, turn, snapToStandardView };
+  /**
+   * Apply an incremental rotation in {plane} by {theta} radians, with no
+   * slerp animation. Used by hold-to-rotate buttons that drive their own
+   * requestAnimationFrame loop.
+   */
+  function rotateBy(plane: Plane, theta: number) {
+    if (materialsRef.current.length === 0) return;
+    const { L, R } = quarterQuat(plane, theta);
+    rotLRef.current.copy(L.clone().multiply(rotLRef.current).normalize());
+    rotRRef.current.copy(rotRRef.current.clone().multiply(R.conjugate()).normalize());
+    materialsRef.current.forEach(m => {
+      m.uniforms.uRotL.value.w = rotLRef.current.w;
+      m.uniforms.uRotL.value.v.set(rotLRef.current.x, rotLRef.current.y, rotLRef.current.z);
+      m.uniforms.uRotR.value.w = rotRRef.current.w;
+      m.uniforms.uRotR.value.v.set(rotRRef.current.x, rotRRef.current.y, rotRRef.current.z);
+    });
+    viewPointRef.current = { L: rotLRef.current.clone(), R: rotRRef.current.clone() };
+    onViewPointChangeRef.current?.(viewPointRef.current);
+  }
+
+  return { handleViewType, handleMotion, handleDropAxis, turn, snapToStandardView, rotateBy };
 }
