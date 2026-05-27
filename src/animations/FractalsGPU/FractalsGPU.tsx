@@ -43,6 +43,10 @@ export default function FractalsGPU() {
   const [insidePalette, setInsidePalette] = useState(0);
   const [offset, setOffset] = useState(0);
   const [animating, setAnimating] = useState(false);
+  /** When true, a tap/click on the canvas traces an iteration orbit from
+   *  that point. When false, taps do nothing (so panning doesn't spawn
+   *  unwanted trajectories). Default off. */
+  const [tracing, setTracing] = useState(false);
 
   useEffect(() => setIterInput(String(iter)), [iter]);
   useEffect(() => setPowerInput(String(power)), [power]);
@@ -224,8 +228,10 @@ export default function FractalsGPU() {
     (fx: number, fy: number) => {
       const canvas = rendererRef.current?.domElement;
       if (!canvas) return { x: 0, y: 0 };
-      const scale = canvas.width / (view.xMax - view.xMin);
-      return { x: (fx - view.xMin) * scale, y: (fy - view.yMin) * scale };
+      const scaleX = canvas.width  / (view.xMax - view.xMin);
+      const scaleY = canvas.height / (view.yMax - view.yMin);
+      // Math-Y points up but canvas-Y grows downward, so flip: yMax → 0, yMin → height.
+      return { x: (fx - view.xMin) * scaleX, y: (view.yMax - fy) * scaleY };
     },
     [view]
   );
@@ -305,8 +311,17 @@ export default function FractalsGPU() {
       const canvas = rendererRef.current?.domElement;
       return canvas ? normalizeView(v, canvas) : v;
     },
-    onTap: tracePath,
+    // Tracing is opt-in via the action toggle. Without this gate, every tap
+    // before a pan would spawn a stray orbit.
+    onTap: tracing ? tracePath : undefined,
   });
+
+  const clearPath = useCallback(() => {
+    pathRef.current = null;
+    const canvas = overlayRef.current;
+    const ctx = overlayCtxRef.current;
+    if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }, []);
 
   const reset = useCallback(() => {
     const canvas = rendererRef.current?.domElement;
@@ -480,13 +495,39 @@ export default function FractalsGPU() {
         <Section title="About" icon="ⓘ">
           <Readme markdown={readmeText} />
           <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', marginTop: 8 }}>
-            {isMobile ? 'Pinch to zoom · drag to pan · tap to trace' : 'Wheel to zoom · drag to pan · click to trace'}
+            Drag to pan · pinch or wheel to zoom. Open Actions and toggle
+            "Trace mode" to spawn iteration paths by tap/click.
           </div>
         </Section>
       </ShellSettings>
 
       <ShellActions>
         <div className="cp-section-body">
+          <button
+            style={{
+              padding: '12px 16px', borderRadius: 6,
+              border: tracing ? '1px solid var(--cp-accent)' : '1px solid var(--cp-border)',
+              background: tracing ? 'rgba(255, 212, 0, 0.18)' : 'rgba(255,255,255,0.06)',
+              color: 'var(--cp-fg)', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+              textAlign: 'left',
+            }}
+            onClick={() => setTracing(t => !t)}
+          >
+            {tracing ? 'Trace mode: tap to spawn orbit' : 'Trace mode (off)'}
+          </button>
+          <button
+            style={{
+              padding: '12px 16px', borderRadius: 6,
+              border: '1px solid var(--cp-border)',
+              background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
+              cursor: pathRef.current ? 'pointer' : 'not-allowed',
+              fontSize: 14, opacity: pathRef.current ? 1 : 0.5,
+              textAlign: 'left',
+            }}
+            onClick={clearPath}
+          >
+            Clear orbit
+          </button>
           <button
             className="cp-pills"
             style={{
