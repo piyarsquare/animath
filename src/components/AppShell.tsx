@@ -85,7 +85,12 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     <AppShellContext.Provider value={ctx}>
       <div className="as-shell">
         <header className="as-bar">
-          <button className="as-bar-btn" aria-label="Open menu" onClick={() => openWithTab('apps')}>≡</button>
+          <button
+            className="as-bar-btn"
+            aria-label="Apps"
+            title="Apps"
+            onClick={() => openWithTab('apps')}
+          >☰</button>
           <button
             className="as-bar-title"
             onClick={() => openWithTab(hasSettings ? 'settings' : 'apps')}
@@ -94,9 +99,18 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
             <span className="as-bar-title-name">{titleName}</span>
             {subtitle && <span className="as-bar-title-formula">{subtitle}</span>}
           </button>
-          {hasActions && (
-            <button className="as-bar-btn" aria-label="Show actions" onClick={() => openWithTab('actions')}>▶</button>
-          )}
+          <button
+            className={`as-bar-btn ${hasSettings ? '' : 'as-bar-btn-dim'}`}
+            aria-label="Settings"
+            title="Settings"
+            onClick={() => openWithTab('settings')}
+          >⚙</button>
+          <button
+            className={`as-bar-btn ${hasActions ? '' : 'as-bar-btn-dim'}`}
+            aria-label="Actions"
+            title="Actions"
+            onClick={() => openWithTab('actions')}
+          >▶</button>
         </header>
 
         <div className="as-content">
