@@ -21,6 +21,10 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [saturation, setSaturation] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.saturation);
   const [particleCount, setParticleCount] = useState(count);
   const [cameraZ, setCameraZ] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.cameraZ);
+  // Camera orbit: spherical coords around the origin. 1-finger drag updates
+  // these without touching the 4D quaternion rotation.
+  const [azimuth, setAzimuth] = useState(0);
+  const [elevation, setElevation] = useState(0);
   const [size, setSize] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.size);
   const [opacity, setOpacity] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.opacity);
   const [intensity, setIntensity] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.intensity);
@@ -97,6 +101,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     saturation, setSaturation,
     particleCount, setParticleCount,
     cameraZ, setCameraZ,
+    azimuth, setAzimuth,
+    elevation, setElevation,
     size, setSize,
     opacity, setOpacity,
     intensity, setIntensity,

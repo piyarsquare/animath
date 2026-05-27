@@ -57,6 +57,9 @@ export function useViewControls(state: ParticleState) {
     });
     viewPointRef.current = { L: qL.clone(), R: qR.clone() };
     onViewPointChangeRef.current?.(viewPointRef.current);
+    // Camera also returns to its default vantage point.
+    state.setAzimuth(0);
+    state.setElevation(0);
   }
 
   function handleViewType(t: ProjectionMode) {
