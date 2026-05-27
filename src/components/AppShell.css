@@ -68,6 +68,9 @@
 }
 .as-bar-btn:hover { background: var(--as-hover); }
 .as-bar-btn:focus-visible { outline: 2px solid var(--as-accent); outline-offset: 2px; }
+/* Dim a bar button when its tab has no content (still clickable; the tab
+   itself shows a "No settings/actions for this view" message). */
+.as-bar-btn-dim { opacity: 0.4; }
 
 .as-bar-title {
   flex: 1;
