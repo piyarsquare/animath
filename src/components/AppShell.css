@@ -18,8 +18,12 @@
 .as-shell {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  /* Use the dynamic viewport so the shell shrinks when iOS Safari's URL bar
+     re-appears, keeping the bottom of our content above the browser chrome. */
+  height: 100vh;            /* fallback for older browsers */
+  height: 100dvh;
   width: 100vw;
+  width: 100dvw;
   overflow: hidden;
 }
 

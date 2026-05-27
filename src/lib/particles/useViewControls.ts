@@ -106,5 +106,5 @@ export function useViewControls(state: ParticleState) {
     applyQuarterTurn(plane, (QUARTER / 2) * dir);
   };
 
-  return { handleViewType, handleMotion, handleDropAxis, turn };
+  return { handleViewType, handleMotion, handleDropAxis, turn, snapToStandardView };
 }

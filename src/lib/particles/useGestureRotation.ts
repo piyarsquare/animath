@@ -4,7 +4,9 @@ import { Plane } from '../../math/constants';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import type { ParticleState } from './useParticleState';
 
-const ROT_SENSITIVITY = 0.005;       // radians per pixel of drag
+// Lower than the original 0.005 — testers found 4D rotation too "twitchy",
+// since a small finger drag composes two plane rotations at once.
+const ROT_SENSITIVITY = 0.0025;      // radians per pixel of drag
 const WHEEL_ZOOM_SENSITIVITY = 0.01; // cameraZ delta per wheel deltaY
 
 interface Pt { x: number; y: number; }
