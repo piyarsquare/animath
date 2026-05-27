@@ -1,56 +1,34 @@
 import { useRef } from 'react';
-import { quarterQuat } from '../../math/quat4';
-import { Plane } from '../../math/constants';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import type { ParticleState } from './useParticleState';
 
-const ROT_SENSITIVITY = 0.005;       // radians per pixel of drag
+const ORBIT_SENSITIVITY = 0.006;     // radians of camera orbit per pixel
 const WHEEL_ZOOM_SENSITIVITY = 0.01; // cameraZ delta per wheel deltaY
+const ELEV_LIMIT = Math.PI / 2 - 0.01;
 
 interface Pt { x: number; y: number; }
 
 /**
- * Pointer-driven 4D rotation, zoom, and twist for a particle viewer.
+ * Pointer-driven CAMERA controls for a particle viewer.
  *
- *   1 pointer drag         → xu (horizontal), yu (vertical)
- *   2 pointers, centroid   → xv (horizontal), yv (vertical)
- *   2 pointers, pinch      → cameraZ
- *   2 pointers, twist      → uv
- *   wheel                  → cameraZ
- *
- * Unifies mouse, pen, and touch via Pointer Events.
+ *   1 pointer drag    → orbit the camera around the origin (azimuth/elevation).
+ *                       The 4D quaternion rotation is untouched: gestures only
+ *                       change where you look from, not how the 4D object is
+ *                       oriented. Any plane rotation that "swaps axes" lives
+ *                       on the on-screen quarter-turn buttons.
+ *   2 pointer pinch   → cameraZ (zoom around origin).
+ *   wheel             → cameraZ.
  */
 export function useGestureRotation(state: ParticleState) {
   const pointers = useRef(new Map<number, Pt>());
   const lastPinchDist = useRef<number | null>(null);
-  const lastTwistAngle = useRef<number | null>(null);
 
-  function pushUniforms() {
-    const L = state.rotLRef.current;
-    const R = state.rotRRef.current;
-    state.materialsRef.current.forEach(m => {
-      m.uniforms.uRotL.value.w = L.w;
-      m.uniforms.uRotL.value.v.set(L.x, L.y, L.z);
-      m.uniforms.uRotR.value.w = R.w;
-      m.uniforms.uRotR.value.v.set(R.x, R.y, R.z);
-    });
-    state.viewPointRef.current = { L: L.clone(), R: R.clone() };
-    state.onViewPointChangeRef.current?.(state.viewPointRef.current);
-  }
-
-  function applyRotation(plane: Plane, theta: number) {
-    if (Math.abs(theta) < 1e-7) return;
-    const { L, R } = quarterQuat(plane, theta);
-    state.rotLRef.current.copy(L.clone().multiply(state.rotLRef.current).normalize());
-    state.rotRRef.current.copy(state.rotRRef.current.clone().multiply(R.conjugate()).normalize());
-  }
-
-  function clampedZoom(scale: number) {
+  function clampedZoomScale(scale: number) {
     const { min, max } = COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ;
     state.setCameraZ(cz => Math.max(min, Math.min(max, cz * scale)));
   }
 
-  function deltaZoom(delta: number) {
+  function clampedZoomDelta(delta: number) {
     const { min, max } = COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ;
     state.setCameraZ(cz => Math.max(min, Math.min(max, cz + delta)));
   }
@@ -61,7 +39,6 @@ export function useGestureRotation(state: ParticleState) {
     if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()];
       lastPinchDist.current = Math.hypot(a.x - b.x, a.y - b.y);
-      lastTwistAngle.current = Math.atan2(b.y - a.y, b.x - a.x);
     }
   };
 
@@ -74,36 +51,21 @@ export function useGestureRotation(state: ParticleState) {
     if (count === 1) {
       const dx = next.x - prev.x;
       const dy = next.y - prev.y;
-      applyRotation('XU', dx * ROT_SENSITIVITY);
-      applyRotation('YU', dy * ROT_SENSITIVITY);
-      pushUniforms();
+      // Drag-right turns the camera to the right (azimuth grows).
+      // Drag-up pitches the view down (elevation grows).
+      state.setAzimuth(a => a + dx * ORBIT_SENSITIVITY);
+      state.setElevation(e =>
+        Math.max(-ELEV_LIMIT, Math.min(ELEV_LIMIT, e - dy * ORBIT_SENSITIVITY)),
+      );
     } else if (count >= 2) {
       const others = [...pointers.current.entries()].filter(([id]) => id !== e.pointerId);
       const other = others[0]?.[1];
       if (other) {
-        const prevCx = (prev.x + other.x) / 2;
-        const prevCy = (prev.y + other.y) / 2;
-        const newCx = (next.x + other.x) / 2;
-        const newCy = (next.y + other.y) / 2;
-        applyRotation('XV', (newCx - prevCx) * ROT_SENSITIVITY);
-        applyRotation('YV', (newCy - prevCy) * ROT_SENSITIVITY);
-
         const newDist = Math.hypot(next.x - other.x, next.y - other.y);
         if (lastPinchDist.current != null && newDist > 1e-3) {
-          clampedZoom(lastPinchDist.current / newDist);
+          clampedZoomScale(lastPinchDist.current / newDist);
         }
         lastPinchDist.current = newDist;
-
-        const newAngle = Math.atan2(next.y - other.y, next.x - other.x);
-        if (lastTwistAngle.current != null) {
-          let dAngle = newAngle - lastTwistAngle.current;
-          while (dAngle > Math.PI) dAngle -= 2 * Math.PI;
-          while (dAngle < -Math.PI) dAngle += 2 * Math.PI;
-          applyRotation('UV', dAngle);
-        }
-        lastTwistAngle.current = newAngle;
-
-        pushUniforms();
       }
     }
 
@@ -112,14 +74,11 @@ export function useGestureRotation(state: ParticleState) {
 
   const onPointerUp = (e: React.PointerEvent) => {
     pointers.current.delete(e.pointerId);
-    if (pointers.current.size < 2) {
-      lastPinchDist.current = null;
-      lastTwistAngle.current = null;
-    }
+    if (pointers.current.size < 2) lastPinchDist.current = null;
   };
 
   const onWheel = (e: React.WheelEvent) => {
-    deltaZoom(e.deltaY * WHEEL_ZOOM_SENSITIVITY);
+    clampedZoomDelta(e.deltaY * WHEEL_ZOOM_SENSITIVITY);
   };
 
   return {

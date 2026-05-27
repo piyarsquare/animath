@@ -3,6 +3,7 @@ import Canvas3D from './Canvas3D';
 import Readme from './Readme';
 import { Section, Slider, Pills, Select, Checkbox } from './ControlPanel';
 import { ShellSettings, ShellActions, useAppHeader } from './AppShell';
+import QuarterTurnFloater from '../controls/QuarterTurnFloater';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../config/defaults';
 import { useResponsive } from '../styles/responsive';
 import { planes } from '../math/constants';
@@ -50,6 +51,12 @@ export default function ParticleViewerShell({
       >
         <Canvas3D onMount={onMount} />
       </div>
+
+      <QuarterTurnFloater
+        onTurn={controls.turn}
+        onRotateBy={controls.rotateBy}
+        onReset={controls.snapToStandardView}
+      />
 
       <ShellSettings>
         <Section title="Function" icon="ƒ" defaultOpen>
@@ -177,7 +184,18 @@ export default function ParticleViewerShell({
 
       <ShellActions>
         <div className="cp-section-body">
-          <div className="cp-row-label" style={{ marginBottom: 4 }}>4D quarter turns</div>
+          <button
+            style={{
+              padding: '12px 16px', borderRadius: 6,
+              border: '1px solid var(--cp-border)',
+              background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
+              cursor: 'pointer', fontSize: 14, fontWeight: 600,
+            }}
+            onClick={controls.snapToStandardView}
+          >
+            Reset orientation
+          </button>
+          <div className="cp-row-label" style={{ marginTop: 8, marginBottom: 4 }}>4D quarter turns</div>
           <div className="cp-quarter">
             <div />
             <div className="cp-quarter-label" style={{ textAlign: 'center' }}>↻</div>

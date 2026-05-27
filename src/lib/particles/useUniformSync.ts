@@ -66,8 +66,21 @@ export function useUniformSync(state: ParticleState): void {
   }, [state.realView]);
 
   useEffect(() => {
-    if (cameraRef.current) cameraRef.current.position.z = state.cameraZ;
-  }, [state.cameraZ]);
+    const cam = cameraRef.current;
+    if (!cam) return;
+    // Place the camera on a sphere of radius cameraZ around the origin, then
+    // look at the origin. azimuth = 0, elevation = 0 reproduces the original
+    // straight-back position (0, 0, cameraZ).
+    const r = state.cameraZ;
+    const az = state.azimuth;
+    const el = state.elevation;
+    cam.position.set(
+      r * Math.cos(el) * Math.sin(az),
+      r * Math.sin(el),
+      r * Math.cos(el) * Math.cos(az),
+    );
+    cam.lookAt(0, 0, 0);
+  }, [state.cameraZ, state.azimuth, state.elevation]);
 
   useEffect(() => {
     if (rendererRef.current) {
