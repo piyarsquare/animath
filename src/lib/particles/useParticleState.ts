@@ -25,6 +25,13 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // these without touching the 4D quaternion rotation.
   const [azimuth, setAzimuth] = useState(0);
   const [elevation, setElevation] = useState(0);
+  // Pan offset: shifts the look-at target away from the origin. 2-finger drag
+  // (or Shift+drag on desktop) updates these. Position and look-at both
+  // translate by this vector, so the visible scene appears to follow the
+  // finger (Maps convention).
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [panZ, setPanZ] = useState(0);
   const [size, setSize] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.size);
   const [opacity, setOpacity] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.opacity);
   const [intensity, setIntensity] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.intensity);
@@ -103,6 +110,9 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     cameraZ, setCameraZ,
     azimuth, setAzimuth,
     elevation, setElevation,
+    panX, setPanX,
+    panY, setPanY,
+    panZ, setPanZ,
     size, setSize,
     opacity, setOpacity,
     intensity, setIntensity,

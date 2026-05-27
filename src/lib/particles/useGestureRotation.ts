@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import * as THREE from 'three';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import type { ParticleState } from './useParticleState';
 
@@ -9,19 +10,21 @@ const ELEV_LIMIT = Math.PI / 2 - 0.01;
 interface Pt { x: number; y: number; }
 
 /**
- * Pointer-driven CAMERA controls for a particle viewer.
+ * Pointer-driven CAMERA controls for a particle viewer. Gestures never touch
+ * the 4D quaternion rotation — plane rotations live on the on-screen
+ * quarter-turn buttons.
  *
- *   1 pointer drag    → orbit the camera around the origin (azimuth/elevation).
- *                       The 4D quaternion rotation is untouched: gestures only
- *                       change where you look from, not how the 4D object is
- *                       oriented. Any plane rotation that "swaps axes" lives
- *                       on the on-screen quarter-turn buttons.
- *   2 pointer pinch   → cameraZ (zoom around origin).
- *   wheel             → cameraZ.
+ *   1-pointer drag             → orbit (azimuth + elevation around look-at).
+ *   1-pointer drag + Shift     → pan (translates the look-at target in the
+ *                                screen plane, scene follows the finger).
+ *   2-pointer pinch            → cameraZ (zoom).
+ *   2-pointer centroid drag    → pan, in addition to any pinch.
+ *   wheel                      → cameraZ.
  */
 export function useGestureRotation(state: ParticleState) {
   const pointers = useRef(new Map<number, Pt>());
   const lastPinchDist = useRef<number | null>(null);
+  const lastCentroid = useRef<Pt | null>(null);
 
   function clampedZoomScale(scale: number) {
     const { min, max } = COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ;
@@ -33,12 +36,30 @@ export function useGestureRotation(state: ParticleState) {
     state.setCameraZ(cz => Math.max(min, Math.min(max, cz + delta)));
   }
 
+  /** Translate the look-at target by a screen-space drag. Drag right shifts
+   *  the target left so the visible scene follows the finger (Maps convention). */
+  function applyPan(dxPx: number, dyPx: number, el: HTMLElement) {
+    const cam = state.cameraRef.current;
+    if (!cam || el.clientHeight === 0) return;
+    const fovRad = (cam.fov * Math.PI) / 180;
+    // By construction the camera-to-target distance equals state.cameraZ.
+    const worldPerPixel = (2 * state.cameraZ * Math.tan(fovRad / 2)) / el.clientHeight;
+    const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
+    const up    = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 1);
+    const sx = -dxPx * worldPerPixel;
+    const sy =  dyPx * worldPerPixel; // browser y grows downward
+    state.setPanX(p => p + right.x * sx + up.x * sy);
+    state.setPanY(p => p + right.y * sx + up.y * sy);
+    state.setPanZ(p => p + right.z * sx + up.z * sy);
+  }
+
   const onPointerDown = (e: React.PointerEvent) => {
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()];
       lastPinchDist.current = Math.hypot(a.x - b.x, a.y - b.y);
+      lastCentroid.current  = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     }
   };
 
@@ -47,25 +68,39 @@ export function useGestureRotation(state: ParticleState) {
     if (!prev) return;
     const next: Pt = { x: e.clientX, y: e.clientY };
     const count = pointers.current.size;
+    const el = e.currentTarget as HTMLElement;
 
     if (count === 1) {
       const dx = next.x - prev.x;
       const dy = next.y - prev.y;
-      // Drag-right turns the camera to the right (azimuth grows).
-      // Drag-up pitches the view down (elevation grows).
-      state.setAzimuth(a => a + dx * ORBIT_SENSITIVITY);
-      state.setElevation(e =>
-        Math.max(-ELEV_LIMIT, Math.min(ELEV_LIMIT, e - dy * ORBIT_SENSITIVITY)),
-      );
+      if (e.shiftKey) {
+        applyPan(dx, dy, el);
+      } else {
+        // Drag-right turns the camera right (azimuth grows); drag-up pitches down.
+        state.setAzimuth(a => a + dx * ORBIT_SENSITIVITY);
+        state.setElevation(prevEl =>
+          Math.max(-ELEV_LIMIT, Math.min(ELEV_LIMIT, prevEl - dy * ORBIT_SENSITIVITY)),
+        );
+      }
     } else if (count >= 2) {
       const others = [...pointers.current.entries()].filter(([id]) => id !== e.pointerId);
       const other = others[0]?.[1];
       if (other) {
         const newDist = Math.hypot(next.x - other.x, next.y - other.y);
+        const newCentroid = { x: (next.x + other.x) / 2, y: (next.y + other.y) / 2 };
+
         if (lastPinchDist.current != null && newDist > 1e-3) {
           clampedZoomScale(lastPinchDist.current / newDist);
         }
+        if (lastCentroid.current != null) {
+          applyPan(
+            newCentroid.x - lastCentroid.current.x,
+            newCentroid.y - lastCentroid.current.y,
+            el,
+          );
+        }
         lastPinchDist.current = newDist;
+        lastCentroid.current  = newCentroid;
       }
     }
 
@@ -74,7 +109,10 @@ export function useGestureRotation(state: ParticleState) {
 
   const onPointerUp = (e: React.PointerEvent) => {
     pointers.current.delete(e.pointerId);
-    if (pointers.current.size < 2) lastPinchDist.current = null;
+    if (pointers.current.size < 2) {
+      lastPinchDist.current = null;
+      lastCentroid.current  = null;
+    }
   };
 
   const onWheel = (e: React.WheelEvent) => {

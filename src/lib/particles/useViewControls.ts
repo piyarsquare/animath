@@ -60,6 +60,9 @@ export function useViewControls(state: ParticleState) {
     // Camera also returns to its default vantage point.
     state.setAzimuth(0);
     state.setElevation(0);
+    state.setPanX(0);
+    state.setPanY(0);
+    state.setPanZ(0);
   }
 
   function handleViewType(t: ProjectionMode) {
