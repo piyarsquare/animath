@@ -68,19 +68,23 @@ export function useUniformSync(state: ParticleState): void {
   useEffect(() => {
     const cam = cameraRef.current;
     if (!cam) return;
-    // Place the camera on a sphere of radius cameraZ around the origin, then
-    // look at the origin. azimuth = 0, elevation = 0 reproduces the original
-    // straight-back position (0, 0, cameraZ).
+    // Place the camera on a sphere of radius cameraZ around the pan target,
+    // then look at the pan target. azimuth = 0, elevation = 0, pan = (0,0,0)
+    // reproduces the original straight-back position (0, 0, cameraZ).
     const r = state.cameraZ;
     const az = state.azimuth;
     const el = state.elevation;
+    const tx = state.panX, ty = state.panY, tz = state.panZ;
     cam.position.set(
-      r * Math.cos(el) * Math.sin(az),
-      r * Math.sin(el),
-      r * Math.cos(el) * Math.cos(az),
+      tx + r * Math.cos(el) * Math.sin(az),
+      ty + r * Math.sin(el),
+      tz + r * Math.cos(el) * Math.cos(az),
     );
-    cam.lookAt(0, 0, 0);
-  }, [state.cameraZ, state.azimuth, state.elevation]);
+    cam.lookAt(tx, ty, tz);
+    // Keep the world matrix fresh so basis-vector reads from elsewhere
+    // (e.g. the gesture hook computing pan) reflect the new orientation.
+    cam.updateMatrixWorld(true);
+  }, [state.cameraZ, state.azimuth, state.elevation, state.panX, state.panY, state.panZ]);
 
   useEffect(() => {
     if (rendererRef.current) {
