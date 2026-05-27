@@ -43,20 +43,26 @@ const WHEEL_ZOOM_FACTOR = 0.0015; // factor = exp(deltaY * WHEEL_ZOOM_FACTOR)
 function screenToMath(view: ViewBounds, px: number, py: number, el: HTMLElement): Point2 {
   const w = el.clientWidth;
   const h = el.clientHeight;
+  // Screen Y grows downward; math Y in the fractals/complex viewers grows
+  // upward (the fragment shader maps vUv.y = 1 — top of screen — to yMax).
   return {
     x: view.xMin + (view.xMax - view.xMin) * (px / w),
-    y: view.yMin + (view.yMax - view.yMin) * (py / h),
+    y: view.yMax - (view.yMax - view.yMin) * (py / h),
   };
 }
 
 function panView(view: ViewBounds, dxPx: number, dyPx: number, el: HTMLElement): ViewBounds {
   const sx = (view.xMax - view.xMin) / el.clientWidth;
   const sy = (view.yMax - view.yMin) / el.clientHeight;
+  // Drag right (dxPx > 0) shifts the view left so the scene follows the finger.
+  // For y: drag down (dyPx > 0) — finger moves toward bottom of screen — must
+  // shift the view UP in math space (yMax/yMin both increase), since screen-Y
+  // and math-Y point in opposite directions.
   return {
     xMin: view.xMin - dxPx * sx,
     xMax: view.xMax - dxPx * sx,
-    yMin: view.yMin - dyPx * sy,
-    yMax: view.yMax - dyPx * sy,
+    yMin: view.yMin + dyPx * sy,
+    yMax: view.yMax + dyPx * sy,
   };
 }
 
@@ -66,15 +72,18 @@ function zoomViewAtPixel(view: ViewBounds, factor: number, px: number, py: numbe
   const h = el.clientHeight;
   const tx = px / w;
   const ty = py / h;
+  // (fx, fy) is the math point under the pixel — held fixed by the zoom.
   const fx = view.xMin + (view.xMax - view.xMin) * tx;
-  const fy = view.yMin + (view.yMax - view.yMin) * ty;
+  const fy = view.yMax - (view.yMax - view.yMin) * ty;
   const newW = (view.xMax - view.xMin) * factor;
   const newH = (view.yMax - view.yMin) * factor;
   return {
     xMin: fx - newW * tx,
     xMax: fx + newW * (1 - tx),
-    yMin: fy - newH * ty,
-    yMax: fy + newH * (1 - ty),
+    // The pivot's math-y = fy; tx of new width sits to the left, ty of new
+    // height sits ABOVE (because math-Y is flipped from screen-Y).
+    yMin: fy - newH * (1 - ty),
+    yMax: fy + newH * ty,
   };
 }
 

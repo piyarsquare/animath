@@ -39,9 +39,10 @@ export function screenToComplex(
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) / rect.width;
   const y = (e.clientY - rect.top) / rect.height;
+  // Screen-Y down; math (imag) up.
   return {
     real: v.xMin + (v.xMax - v.xMin) * x,
-    imag: v.yMin + (v.yMax - v.yMin) * y,
+    imag: v.yMax - (v.yMax - v.yMin) * y,
   };
 }
 
@@ -224,8 +225,9 @@ export default function FractalPane({
     const size = Math.min(rect.width, rect.height);
     const offsetX = (rect.width - size) / 2;
     const offsetY = (rect.height - size) / 2;
+    // Math-Y points up; screen-Y points down. yMax sits at the top of the pane.
     const x = offsetX + ((markC.real - view.xMin) / (view.xMax - view.xMin)) * size;
-    const y = offsetY + ((markC.imag - view.yMin) / (view.yMax - view.yMin)) * size;
+    const y = offsetY + ((view.yMax - markC.imag) / (view.yMax - view.yMin)) * size;
     return {
       position: 'absolute',
       left: `${x}px`,
@@ -243,7 +245,7 @@ export default function FractalPane({
     const offsetX = (rect.width - size) / 2;
     const offsetY = (rect.height - size) / 2;
     const x = offsetX + ((c.real - view.xMin) / (view.xMax - view.xMin)) * size;
-    const y = offsetY + ((c.imag - view.yMin) / (view.yMax - view.yMin)) * size;
+    const y = offsetY + ((view.yMax - c.imag) / (view.yMax - view.yMin)) * size;
     return { x, y };
   };
 
