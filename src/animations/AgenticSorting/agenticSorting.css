@@ -329,7 +329,13 @@
   border: 2px solid #0f172a;
   border-radius: 24px;
   padding: 24px;
-  height: 500px;
+  /* Scale with the visible viewport: at least 280 px so bars stay readable,
+     at most 640 px so the arena doesn't dominate large monitors. dvh tracks
+     iOS Safari's URL bar; vh is the fallback for older browsers. */
+  height: 60vh;
+  height: 60dvh;
+  min-height: 280px;
+  max-height: 640px;
   position: relative;
   overflow: hidden;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
@@ -337,8 +343,14 @@
 
 @media (max-width: 600px) {
   .as-arena {
-    height: 320px;
+    /* Reserve more relative space on phones, where every pixel matters and
+       the user wants the visualization front-and-center. */
+    height: 55vh;
+    height: 55dvh;
+    min-height: 220px;
+    max-height: 500px;
     padding: 12px;
+    border-radius: 16px;
   }
 }
 
