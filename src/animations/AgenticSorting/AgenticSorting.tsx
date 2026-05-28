@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Play, Pause, RotateCcw, Zap, Users,
-  Target, Activity
+  Play, Pause, RotateCcw, Zap, Users, Target,
 } from 'lucide-react';
 import './agenticSorting.css';
 import { useAppHeader } from '../../components/AppShell';
@@ -69,6 +68,10 @@ export default function AgenticSorting() {
   const [itemCount, setItemCount] = useState(60);
   const [simulationSpeed, setSimulationSpeed] = useState(20);
   const [isRunning, setIsRunning] = useState(false);
+  /** Visualisation mode: bars (full-length rectangles from the midline) or
+   *  dots (a small circle at each agent's value). Dots stay readable at
+   *  high agent counts where adjacent bars start to merge. */
+  const [display, setDisplay] = useState<'bars' | 'dots'>('bars');
 
   const [weights, setWeights] = useState<Weights>({
     standard: 20,
@@ -257,10 +260,8 @@ export default function AgenticSorting() {
   return (
     <div className="as-app">
       <header className="as-header">
-        <h1>
-          <Activity size={28} />
-          AGENTIC SORTING LAB
-        </h1>
+        {/* The app's name lives in the AppShell bar above; this header keeps
+            just a short subtitle for context. */}
         <p>Concurrent behavioral sorting simulation</p>
       </header>
 
@@ -308,6 +309,19 @@ export default function AgenticSorting() {
                 onChange={(e) => setSimulationSpeed(parseInt(e.target.value))}
                 className="as-slider as-slider-speed"
               />
+            </div>
+
+            <div className="as-display-toggle" role="group" aria-label="Display mode">
+              <button
+                className={`as-display-btn ${display === 'bars' ? 'as-display-btn-active' : ''}`}
+                onClick={() => setDisplay('bars')}
+                aria-pressed={display === 'bars'}
+              >Bars</button>
+              <button
+                className={`as-display-btn ${display === 'dots' ? 'as-display-btn-active' : ''}`}
+                onClick={() => setDisplay('dots')}
+                aria-pressed={display === 'dots'}
+              >Dots</button>
             </div>
           </div>
 
@@ -367,8 +381,13 @@ export default function AgenticSorting() {
                   style={{ width: `${100 / items.length}%` }}
                 >
                   <div
-                    className={getBarClass(item)}
-                    style={{
+                    className={`${getBarClass(item)}${display === 'dots' ? ' as-bar-dot' : ''}`}
+                    // Bars: column from the midline, length = |value|/2 %.
+                    // Dots: a small circle at vertical position = 50% + value/2,
+                    //       offset by half the dot size (set in CSS) to center.
+                    style={display === 'dots' ? {
+                      bottom: `calc(${50 + item.value / 2}% - var(--as-dot-size) / 2)`,
+                    } : {
                       height: `${Math.abs(item.value) / 2}%`,
                       top: item.value < 0 ? '50.1%' : undefined,
                       bottom: item.value < 0 ? undefined : '50.1%',

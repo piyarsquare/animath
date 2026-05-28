@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   ArrowDownUp,
   BarChart2,
-  Box,
   FastForward,
   FlaskConical,
   Grid,
@@ -1179,10 +1178,9 @@ export default function StableMarriage() {
   return (
     <div className="sm-app">
       <header className="sm-header">
+        {/* The app's name lives in the AppShell bar above. Keep just a short
+            subtitle for context, alongside the Visualizer / Lab toggle. */}
         <div>
-          <h1>
-            <Box size={22} /> Stable Marriage Lab
-          </h1>
           <p>Explore how proposal bias and preference consensus shape stable matches.</p>
         </div>
         <div className="sm-mode-toggle">
