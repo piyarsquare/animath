@@ -119,7 +119,7 @@ export function useUniformSync(state: ParticleState): void {
 
   useEffect(() => {
     if (geometryRef.current) {
-      rebuildGeometryBuffers(geometryRef.current, state.particleCount);
+      rebuildGeometryBuffers(geometryRef.current, state.particleCount, state.gridExtent);
     }
-  }, [state.particleCount]);
+  }, [state.particleCount, state.gridExtent]);
 }

@@ -2,24 +2,36 @@ import { useEffect, useRef, useState } from 'react';
 import { planes, Plane } from '@/math/constants';
 import './QuarterTurnFloater.css';
 
+export type AxisLetter = 'X' | 'Y' | 'U' | 'V';
+export type DropAxis = 'None' | 'DropX' | 'DropY' | 'DropU' | 'DropV';
+
 export interface QuarterTurnFloaterProps {
   /** Tap callback — animated 90° turn. */
   onTurn: (p: Plane, dir: 1 | -1) => void;
   /** Optional continuous-rotation callback driven by the floater's rAF loop. */
   onRotateBy?: (p: Plane, theta: number) => void;
   onReset?: () => void;
+  /** Optional per-axis colour, e.g. `axis => 'hsl(...)`. When provided, plane
+   *  labels render each letter in its axis colour. */
+  getAxisColor?: (axis: AxisLetter) => string;
+  /** Currently-selected drop axis (or 'None'). When provided, a Drop-axis
+   *  button row appears under the quarter-turn grid. */
+  dropAxis?: DropAxis;
+  /** Setter for the drop-axis selection. */
+  onDropAxisChange?: (d: DropAxis) => void;
 }
 
 const HOLD_THRESHOLD_MS = 220;     // how long before tap becomes hold
 const HOLD_RATE_RAD_PER_S = 1.5;   // ~86°/sec while holding
 
 /**
- * Floating cluster of unit-rotation buttons for the six 4D planes. Tap a
- * button for an animated 90° quarter turn. Press and hold to rotate
- * continuously in that plane (∼86°/sec). Includes a Reset orientation row.
- * Starts collapsed; tap the ↻ chip to expand.
+ * Floating cluster of unit-rotation buttons for the six 4D planes, plus an
+ * optional drop-axis row. Tap a quarter-turn button for an animated 90° turn,
+ * press-and-hold to rotate continuously. Starts collapsed; tap ↻ to expand.
  */
-export default function QuarterTurnFloater({ onTurn, onRotateBy, onReset }: QuarterTurnFloaterProps) {
+export default function QuarterTurnFloater({
+  onTurn, onRotateBy, onReset, getAxisColor, dropAxis, onDropAxisChange,
+}: QuarterTurnFloaterProps) {
   const [open, setOpen] = useState(false);
 
   if (!open) {
@@ -51,9 +63,36 @@ export default function QuarterTurnFloater({ onTurn, onRotateBy, onReset }: Quar
         <div className="qtb-label">↻</div>
         <div className="qtb-label">↺</div>
         {planes.map(p => (
-          <Row key={p} plane={p} onTurn={onTurn} onRotateBy={onRotateBy} />
+          <Row key={p} plane={p} onTurn={onTurn} onRotateBy={onRotateBy} getAxisColor={getAxisColor} />
         ))}
       </div>
+
+      {dropAxis !== undefined && onDropAxisChange && (
+        <div className="qtb-row-drop">
+          <div className="qtb-label" style={{ marginBottom: 4 }}>Drop axis</div>
+          <div className="qtb-drop-buttons">
+            <button
+              className={`qtb-drop-btn ${dropAxis === 'None' ? 'qtb-drop-btn-active' : ''}`}
+              onClick={() => onDropAxisChange('None')}
+              aria-pressed={dropAxis === 'None'}
+            >None</button>
+            {(['X', 'Y', 'U', 'V'] as const).map(letter => {
+              const key: DropAxis = `Drop${letter}`;
+              const active = dropAxis === key;
+              return (
+                <button
+                  key={letter}
+                  className={`qtb-drop-btn ${active ? 'qtb-drop-btn-active' : ''}`}
+                  onClick={() => onDropAxisChange(key)}
+                  aria-pressed={active}
+                  style={getAxisColor && !active ? { color: getAxisColor(letter) } : undefined}
+                >{letter}</button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {onReset && (
         <div className="qtb-row-reset">
           <button className="qtb-reset" onClick={onReset}>Reset orientation</button>
@@ -64,15 +103,20 @@ export default function QuarterTurnFloater({ onTurn, onRotateBy, onReset }: Quar
 }
 
 function Row({
-  plane, onTurn, onRotateBy,
+  plane, onTurn, onRotateBy, getAxisColor,
 }: {
   plane: Plane;
   onTurn: (p: Plane, d: 1 | -1) => void;
   onRotateBy?: (p: Plane, theta: number) => void;
+  getAxisColor?: (axis: AxisLetter) => string;
 }) {
+  const [a, b] = [plane[0] as AxisLetter, plane[1] as AxisLetter];
   return (
     <>
-      <div className="qtb-label" style={{ alignSelf: 'center' }}>{plane}</div>
+      <div className="qtb-label qtb-plane" style={{ alignSelf: 'center' }}>
+        <span style={getAxisColor ? { color: getAxisColor(a) } : undefined}>{a}</span>
+        <span style={getAxisColor ? { color: getAxisColor(b) } : undefined}>{b}</span>
+      </div>
       <HoldButton plane={plane} direction={1} onTurn={onTurn} onRotateBy={onRotateBy} label="↻" />
       <HoldButton plane={plane} direction={-1} onTurn={onTurn} onRotateBy={onRotateBy} label="↺" />
     </>
@@ -129,7 +173,7 @@ function HoldButton({
 
   const onPointerUp = () => {
     const wasHeld = stop();
-    if (!wasHeld) onTurn(plane, direction); // simple tap → animated quarter turn
+    if (!wasHeld) onTurn(plane, direction);
   };
 
   const onPointerCancel = () => { stop(); };
