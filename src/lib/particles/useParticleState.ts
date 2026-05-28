@@ -41,6 +41,10 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [axisWidth, setAxisWidth] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.axisWidth);
   /** Half-side of the sampled grid in input-space units. */
   const [gridExtent, setGridExtent] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.gridExtent);
+  /** When true, sample more densely where |f'(z)| is large. */
+  const [adaptive, setAdaptive] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.adaptive);
+  /** Exponent biasing strength for adaptive sampling. */
+  const [adaptiveAlpha, setAdaptiveAlpha] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.adaptiveAlpha);
   const [objectMode, setObjectMode] = useState(false);
   const [shapeIndex, setShapeIndex] = useState(1);
   const [textureIndex, setTextureIndex] = useState(0);
@@ -123,6 +127,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     jitter, setJitter,
     axisWidth, setAxisWidth,
     gridExtent, setGridExtent,
+    adaptive, setAdaptive,
+    adaptiveAlpha, setAdaptiveAlpha,
     objectMode, setObjectMode,
     shapeIndex, setShapeIndex,
     textureIndex, setTextureIndex,

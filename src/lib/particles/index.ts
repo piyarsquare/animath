@@ -3,7 +3,8 @@ export type { ParticleState, UseParticleStateOptions } from './useParticleState'
 export { useUniformSync } from './useUniformSync';
 export { useViewControls } from './useViewControls';
 export { useGestureRotation } from './useGestureRotation';
-export { createParticleGeometry, rebuildGeometryBuffers } from './createParticleGeometry';
+export { createParticleGeometry, rebuildGeometryBuffers, redistributeAdaptive } from './createParticleGeometry';
+export type { AdaptiveOptions } from './createParticleGeometry';
 export { createAxes, AXIS_LENGTH } from './createAxes';
 export { startAnimationLoop } from './createAnimationLoop';
 export type { AnimationLoopDeps } from './createAnimationLoop';

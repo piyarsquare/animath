@@ -175,6 +175,13 @@ export default function ParticleViewerShell({
           <Slider label="Grid extent (±)" value={state.gridExtent}
             min={R.gridExtent.min} max={R.gridExtent.max} step={R.gridExtent.step}
             onChange={state.setGridExtent} format={v => v.toFixed(1)} />
+          <Checkbox label="Adaptive density"
+            checked={state.adaptive} onChange={state.setAdaptive} />
+          {state.adaptive && (
+            <Slider label="Sharpness (α)" value={state.adaptiveAlpha}
+              min={R.adaptiveAlpha.min} max={R.adaptiveAlpha.max} step={R.adaptiveAlpha.step}
+              onChange={state.setAdaptiveAlpha} format={v => v.toFixed(1)} />
+          )}
           <Slider label="Axis width" value={state.axisWidth}
             min={R.axisWidth.min} max={R.axisWidth.max} step={R.axisWidth.step}
             onChange={state.setAxisWidth} format={v => v.toFixed(1)} />

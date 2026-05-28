@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import * as THREE from 'three';
 import { AXIS_COLORS } from './types';
-import { rebuildGeometryBuffers } from './createParticleGeometry';
 import type { ParticleState } from './useParticleState';
 
 export function useUniformSync(state: ParticleState): void {
@@ -117,9 +116,7 @@ export function useUniformSync(state: ParticleState): void {
     materialsRef.current.forEach(m => { m.uniforms.uColourBy.value = state.colourBy; });
   }, [state.colourBy]);
 
-  useEffect(() => {
-    if (geometryRef.current) {
-      rebuildGeometryBuffers(geometryRef.current, state.particleCount, state.gridExtent);
-    }
-  }, [state.particleCount, state.gridExtent]);
+  // The geometry rebuild (uniform or adaptive) now lives in each viewer, so
+  // it can depend on the selected function when adaptive sampling is on.
+  // (Previously: rebuildGeometryBuffers on count/extent change.)
 }
