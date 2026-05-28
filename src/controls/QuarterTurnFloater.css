@@ -81,7 +81,10 @@
 }
 .qtb-drop-buttons {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* Four toggle buttons — None is implied by no active button. The grid
+     stretches to the floater's natural width (determined by the
+     quarter-turn rows), which keeps the whole panel compact. */
+  grid-template-columns: repeat(4, 1fr);
   gap: 3px;
 }
 .qtb-drop-btn {

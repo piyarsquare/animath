@@ -70,12 +70,11 @@ export default function QuarterTurnFloater({
       {dropAxis !== undefined && onDropAxisChange && (
         <div className="qtb-row-drop">
           <div className="qtb-label" style={{ marginBottom: 4 }}>Drop axis</div>
+          {/* Four toggle buttons instead of five (None implied by the absence
+              of an active button). Tap an inactive axis to drop it; tap the
+              active one to clear back to None. Keeps the row the same width
+              as the quarter-turn grid above, so the floater stays narrow. */}
           <div className="qtb-drop-buttons">
-            <button
-              className={`qtb-drop-btn ${dropAxis === 'None' ? 'qtb-drop-btn-active' : ''}`}
-              onClick={() => onDropAxisChange('None')}
-              aria-pressed={dropAxis === 'None'}
-            >None</button>
             {(['X', 'Y', 'U', 'V'] as const).map(letter => {
               const key: DropAxis = `Drop${letter}`;
               const active = dropAxis === key;
@@ -83,8 +82,9 @@ export default function QuarterTurnFloater({
                 <button
                   key={letter}
                   className={`qtb-drop-btn ${active ? 'qtb-drop-btn-active' : ''}`}
-                  onClick={() => onDropAxisChange(key)}
+                  onClick={() => onDropAxisChange(active ? 'None' : key)}
                   aria-pressed={active}
+                  aria-label={active ? `Drop ${letter} (active — tap to clear)` : `Drop ${letter}`}
                   style={getAxisColor && !active ? { color: getAxisColor(letter) } : undefined}
                 >{letter}</button>
               );
@@ -95,7 +95,7 @@ export default function QuarterTurnFloater({
 
       {onReset && (
         <div className="qtb-row-reset">
-          <button className="qtb-reset" onClick={onReset}>Reset orientation</button>
+          <button className="qtb-reset" onClick={onReset}>Reset</button>
         </div>
       )}
     </div>
