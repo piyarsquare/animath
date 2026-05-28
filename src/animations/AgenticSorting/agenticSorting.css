@@ -392,7 +392,22 @@
   width: 75%;
   border-radius: 999px;
   position: absolute;
-  transition: height 0.15s, background 0.15s;
+  transition: height 0.15s, background 0.15s, bottom 0.15s;
+}
+
+/* Dot variant: a small fixed-size circle whose vertical position is set
+   inline. The component reads --as-dot-size to center it on its value. */
+:root { --as-dot-size: 10px; }
+.as-bar.as-bar-dot {
+  width: var(--as-dot-size);
+  height: var(--as-dot-size);
+  border-radius: 50%;
+  left: 50%;
+  transform: translateX(-50%);
+  top: auto;
+}
+@media (max-width: 600px) {
+  :root { --as-dot-size: 8px; }
 }
 
 .as-bar-swapping {
@@ -405,6 +420,35 @@
   background: #facc15;
   box-shadow: 0 0 10px rgba(250, 204, 21, 0.6);
   z-index: 10;
+}
+
+/* Display-mode toggle (Bars / Dots) sitting in the controls card */
+.as-display-toggle {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px;
+  background: #1e293b;
+  border-radius: 8px;
+}
+.as-display-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+.as-display-btn:hover { color: #e2e8f0; }
+.as-display-btn-active {
+  background: #334155;
+  color: #fff;
 }
 
 .as-arena-label {
