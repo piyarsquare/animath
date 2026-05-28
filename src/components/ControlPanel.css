@@ -218,6 +218,18 @@
   padding: 6px 8px;
   font-size: 13px;
   width: 100%;
+  /* Tell the browser to render this widget's OS-native bits (the closed
+     control on some platforms, the dropdown popup with the options) in dark
+     mode. Without this, dark-mode OS users see light-on-light text in the
+     popup. */
+  color-scheme: dark;
+}
+/* Some browsers (Firefox, older Chromium) honour the option's own colors
+   in the popup; specifying them keeps the list readable even if
+   color-scheme is ignored. */
+.cp-row select option {
+  background: #0c0c10;
+  color: #f0f0f3;
 }
 .cp-row input[type="number"] { padding: 4px 6px; }
 .cp-row input[type="checkbox"] {
