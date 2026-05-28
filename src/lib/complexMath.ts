@@ -102,6 +102,43 @@ export function complexPowRational(z: THREE.Vector2, p: number, q: number): THRE
   return new THREE.Vector2(mag * Math.cos(ang), mag * Math.sin(ang));
 }
 
+/** Principal cube root: r^(1/3) at angle/3. (Vertex shader's complexCbrt.) */
+export function complexCubeRoot(z: THREE.Vector2): THREE.Vector2 {
+  const r = Math.hypot(z.x, z.y);
+  const t = Math.atan2(z.y, z.x);
+  const rr = Math.cbrt(r);
+  return new THREE.Vector2(rr * Math.cos(t / 3), rr * Math.sin(t / 3));
+}
+
+/** Möbius transform (z - 1) / (z + 1). */
+export function complexZMinus1OverZPlus1(z: THREE.Vector2): THREE.Vector2 {
+  const num = new THREE.Vector2(z.x - 1, z.y);
+  const denInv = complexInv(new THREE.Vector2(z.x + 1, z.y));
+  return new THREE.Vector2(
+    num.x * denInv.x - num.y * denInv.y,
+    num.x * denInv.y + num.y * denInv.x,
+  );
+}
+
+/** Gamma function via the Stirling-like approximation used in the vertex
+ *  shader: Γ(z) ≈ exp((z − 1/2) · ln z − z + (1/2) ln 2π). Same accuracy
+ *  envelope as the GPU path. */
+export function complexGamma(z: THREE.Vector2): THREE.Vector2 {
+  const halfVec = new THREE.Vector2(0.5, 0);
+  const logZ = complexLn(z);
+  const zMinusHalf = new THREE.Vector2(z.x - halfVec.x, z.y - halfVec.y);
+  // (z − 1/2) · log z, in complex multiplication.
+  const prod = new THREE.Vector2(
+    zMinusHalf.x * logZ.x - zMinusHalf.y * logZ.y,
+    zMinusHalf.x * logZ.y + zMinusHalf.y * logZ.x,
+  );
+  const t = new THREE.Vector2(
+    prod.x - z.x + 0.5 * Math.log(2 * Math.PI),
+    prod.y - z.y,
+  );
+  return complexExp(t);
+}
+
 /** Branch-aware sqrt: adds branch * PI to the angle before taking the root. */
 export function complexSqrtBranch(z: THREE.Vector2, branch: number): THREE.Vector2 {
   const r = Math.hypot(z.x, z.y);
@@ -126,7 +163,10 @@ export function complexBranchSqrtPolyBranch(z: THREE.Vector2, branch: number): T
   return complexSqrtBranch(q, branch);
 }
 
-/** Apply one of the named complex functions by index. */
+/** Apply one of the named complex functions by index. Mirrors the shader's
+ *  applyComplex dispatch — cases 0..17 cover the named functions; case 18
+ *  (powPQ) needs the p/q parameters and is handled by complexPowRational
+ *  directly. */
 export function applyComplex(z: THREE.Vector2, t: number): THREE.Vector2 {
   switch (t) {
     case 0: return z.clone();
@@ -144,6 +184,9 @@ export function applyComplex(z: THREE.Vector2, t: number): THREE.Vector2 {
     case 12: return complexRational22(z);
     case 13: return complexEssentialExpInv(z);
     case 14: return complexBranchSqrtPoly(z);
+    case 15: return complexGamma(z);
+    case 16: return complexCubeRoot(z);
+    case 17: return complexZMinus1OverZPlus1(z);
     default: return z.clone();
   }
 }
@@ -166,6 +209,9 @@ export function applyComplexBranch(z: THREE.Vector2, t: number, branch: number):
     case 12: return complexRational22(z);
     case 13: return complexEssentialExpInv(z);
     case 14: return complexBranchSqrtPolyBranch(z, branch);
+    case 15: return complexGamma(z);
+    case 16: return complexCubeRoot(z);
+    case 17: return complexZMinus1OverZPlus1(z);
     default: return z.clone();
   }
 }

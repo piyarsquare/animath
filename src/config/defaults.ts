@@ -38,6 +38,11 @@ export const COMPLEX_PARTICLES_DEFAULTS = {
     axisWidth: 5,
     /** Half-side of the sampled (x, y) grid; default ±4. */
     gridExtent: 4,
+    /** Whether the grid samples more densely where |f'(z)| is large. */
+    adaptive: false,
+    /** Exponent applied to |f'(z)| when adaptive sampling is on; higher
+     *  values bias more aggressively toward stretching regions. */
+    adaptiveAlpha: 1,
   },
   defaultParticleCount: 80000,
   ranges: {
@@ -52,5 +57,6 @@ export const COMPLEX_PARTICLES_DEFAULTS = {
     cameraZ: { min: 2, max: 50, step: 0.1 },
     axisWidth: { min: 0.5, max: 5, step: 0.1 },
     gridExtent: { min: 1, max: 12, step: 0.5 },
+    adaptiveAlpha: { min: 0, max: 3, step: 0.1 },
   }
 };

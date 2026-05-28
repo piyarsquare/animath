@@ -8,11 +8,14 @@ import { vertexShader, fragmentShader } from './shaders';
 import { loadParticleTextures } from '../../lib/textures';
 import {
   useParticleState, useUniformSync, useViewControls,
-  createParticleGeometry, createAxes, startAnimationLoop,
-  shapeNames,
+  createParticleGeometry, rebuildGeometryBuffers, redistributeAdaptive,
+  createAxes, startAnimationLoop, shapeNames,
 } from '../../lib/particles';
 import type { ViewPoint } from '../../lib/particles';
-import { functionNames, functionFormulas, POW_PQ_INDEX } from '../../lib/complexMath';
+import {
+  applyComplex, complexPowRational,
+  functionNames, functionFormulas, POW_PQ_INDEX,
+} from '../../lib/complexMath';
 
 export type { ViewPoint };
 
@@ -58,6 +61,32 @@ export default function ComplexParticles({
   useEffect(() => {
     state.materialsRef.current.forEach(m => { m.uniforms.functionType.value = functionIndex; });
   }, [functionIndex]);
+
+  /** Rebuild the particle grid when sampling-related state changes. In
+   *  adaptive mode the rebuild depends on the function (we need |f'(z)| at
+   *  each candidate); otherwise we re-stamp the uniform grid. */
+  useEffect(() => {
+    const geom = state.geometryRef.current;
+    if (!geom) return;
+    if (state.adaptive) {
+      const evalFn = (x: number, z: number) => {
+        const pt = new THREE.Vector2(x, z);
+        const out = functionIndex === POW_PQ_INDEX
+          ? complexPowRational(pt, expP, expQ === 0 ? 1 : expQ)
+          : applyComplex(pt, functionIndex);
+        return { x: out.x, y: out.y };
+      };
+      redistributeAdaptive(geom, state.particleCount, state.gridExtent, {
+        evalFn,
+        alpha: state.adaptiveAlpha,
+      });
+    } else {
+      rebuildGeometryBuffers(geom, state.particleCount, state.gridExtent);
+    }
+  }, [
+    state.adaptive, state.adaptiveAlpha, state.particleCount, state.gridExtent,
+    functionIndex, expP, expQ,
+  ]);
 
   useEffect(() => {
     state.materialsRef.current.forEach(m => {
