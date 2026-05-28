@@ -6,174 +6,202 @@
   <a href="https://piyarsquare.github.io/animath/">Live demo</a>
 </p>
 
-## Table of contents
+## Apps
 
-1. **[Complex Particles](https://piyarsquare.github.io/animath/#/)** – 3D representation of four-dimensional complex functions
-2. **[Fractals](https://piyarsquare.github.io/animath/#/fractals)** – GPU accelerated Mandelbrot and Julia viewer with orbit visualization
-3. **[Correspondence](https://piyarsquare.github.io/animath/#/correspondence)** – interactive Mandelbrot–Julia correspondence simulation
-4. **[Complex Roots](https://piyarsquare.github.io/animath/#/roots)** – explore $z^{p/q}$ mappings with adjustable integer exponents
-5. **[Complex Multibranch](https://piyarsquare.github.io/animath/#/multibranch)** – variant supporting multiple branches for functions
-6. **[Möbius Walk](https://piyarsquare.github.io/animath/#/mobius)** – stroll through an endless twisted corridor (now with optional twist toggle)
-7. **[Stable Marriage](https://piyarsquare.github.io/animath/#/stable-marriage)** – step through the Gale–Shapley process with bias and consensus controls
-8. **[Agentic Sorting](https://piyarsquare.github.io/animath/#/agentic-sorting)** – concurrent sorting simulation where autonomous agents with distinct strategies produce emergent order
+1. **[Complex Particles](https://piyarsquare.github.io/animath/#/)** – 3D representation of four-dimensional complex functions. Includes the former *Complex Roots* (`z^(p/q)`) and *Complex Multibranch* (multi-sheeted maps for `sqrt`, `ln`, etc.) as built-in modes.
+2. **[Fractals](https://piyarsquare.github.io/animath/#/fractals)** – GPU-accelerated Mandelbrot / Julia / Burning Ship / Tricorn viewer with optional orbit-tracing mode.
+3. **[Correspondence](https://piyarsquare.github.io/animath/#/correspondence)** – side-by-side Mandelbrot–Julia explorer; pick or draw paths through `c`.
+4. **[Möbius Walk](https://piyarsquare.github.io/animath/#/mobius)** – first-person stroll through a twisted corridor.
+5. **[Stable Marriage](https://piyarsquare.github.io/animath/#/stable-marriage)** – step through the Gale–Shapley algorithm with bias and consensus controls.
+6. **[Agentic Sorting](https://piyarsquare.github.io/animath/#/agentic-sorting)** – concurrent sorting simulation where autonomous agents with distinct strategies produce emergent order.
 
 ---
 
-## 1 What is animath?
+## 1 What is animath?
 
-`animath` is a TypeScript/React + WebGL (Three.js) code-base designed for **rapid prototyping of mathematical visuals**.
-It began with complex-analysis “domain colouring” but is meant to grow into a **general playground**: fractals, differential-equation flows, algebraic surfaces, knot animations, and more. A simple fractal renderer now demonstrates the fractal side of the toolkit (see the `#/fractals` route).
+`animath` is a TypeScript + React + Three.js codebase for **rapid prototyping
+of mathematical visuals**. It started as a domain-colouring playground for
+complex analysis and is growing into a general toolkit: fractals,
+differential-equation flows, algebraic surfaces, sorting and matching
+algorithms, and more.
 
-Goals (observable intent):
+Goals:
 
-* **Self-contained** – runs in any modern browser; no server component required.  
-* **Composable** – each animation is an isolated React component with its own GLSL shaders, props, and UI controls.  
-* **Pedagogical** – clear code, extensive comments, and references to underlying maths.  
-* **Art-friendly** – export stills, GIF loops, and high-resolution renders.
-
----
-
-## 2 Features
-
-| Capability | Status |
-|------------|--------|
-| Vite-based hot-reload dev server | ⏳ |
-| Typed math utilities (ℂ, ℝ³, quaternions, noise, etc.) | ⏳ |
-| Core `Canvas3D` wrapper (Three.js scene, camera, resize) | ⏳ |
-| Plug-in animation modules (`src/animations/*`) | ⏳ |
-| Keyboard/mouse orbit + trackball controls | ⏳ |
-| Works on mobile devices | ⏳ |
-| Easy shader recompile without full refresh | ⏳ |
-| Built-in screenshot exporter (`S` key) | ⏳ |
-| Post-processing stack (FXAA, bloom) | ⏳ |
-| Library of material presets | ⏳ |
-| Video / GIF capture | ⏳ |
-| WebGPU backend | 🚧 (experimental branch) |
-
-*(✅ implemented · ⏳ planned · 🚧 experimental)*
-
-## Material library
-
-`animath` collects reusable Three.js material presets (found under
-`src/materials/`). These define common shading styles—such as translucent
-sprites or reflective glass—that can be imported by any animation. The goal is
-to simplify experimenting with different looks without rewriting shader logic.
+* **Self-contained** — runs in any modern browser; no server component.
+* **Composable** — each app is an isolated React module with its own shaders
+  and UI.
+* **Pedagogical** — clear code and per-app README pages explaining the maths.
+* **Mobile-friendly** — every app works on a phone with touch gestures.
 
 ---
 
-## 3 Quick start
+## 2 The app shell
+
+Every route is wrapped in a persistent `AppShell` that provides:
+
+* A top bar showing the current app's name and (where relevant) a formula.
+* Three menu buttons: **Apps** (☰), **Settings** (⚙), and **Actions** (▶).
+  Each opens a side drawer to that tab directly.
+* iOS safe-area padding so the bottom of the screen stays visible behind
+  Safari's URL bar and the home indicator.
+
+The Complex Particles viewer also adds a small floating **quarter-turn**
+cluster in the bottom-left corner of the canvas for direct 4D plane
+rotations (tap for 90°, hold for continuous rotation).
+
+---
+
+## 3 Quick start
 
 ```bash
-# Clone and install dependencies
-git clone https://github.com/<USER>/animath.git
+git clone https://github.com/piyarsquare/animath.git
 cd animath
 npm ci          # reproducible install
+npm run dev     # http://localhost:5173/animath/
+```
 
-# Live-reload dev server
-npm run dev     # → http://localhost:5173
-````
-
-Production build & local preview:
+Production build & preview:
 
 ```bash
-npm run build   # outputs static files to dist/
-npx serve dist  # quick sanity check
+npm run build           # outputs static files to dist/
+npx vite preview        # serves dist/ at http://localhost:4173/animath/
 ```
 
 Node ≥ 20, npm ≥ 10 recommended.
 
-To publish the live demo on GitHub Pages, trigger the `Deploy demo` workflow
-manually from the repository's Actions tab.
+### Deploying
+
+Pushes to `main` automatically trigger the **Deploy demo** workflow, which
+publishes `dist/` to GitHub Pages. The workflow also accepts manual dispatch
+from the Actions tab.
+
+For per-PR preview URLs (so you can test a branch on your phone without
+merging to `main`), see [docs/PREVIEW_DEPLOYS.md](./docs/PREVIEW_DEPLOYS.md).
 
 ---
 
-## 4 Repository layout
+## 4 Repository layout
 
 ```
 src/
-├── index.tsx               # Entry point with hash-based routing
-├── App.tsx                 # Default route component (ComplexParticles)
+├── index.tsx               # entry: hash-based router + AppShell
+├── App.tsx                 # default route (Complex Particles)
 │
-├── animations/             # Self-contained animation modules
-│   ├── ComplexParticles/   # 3D complex function visualization
-│   ├── ComplexRoots/       # z^(p/q) rational exponent viewer
-│   ├── ComplexMultibranch/ # Multi-branch complex function viewer
-│   ├── Correspondence/     # Mandelbrot-Julia correspondence
-│   ├── Fractals/           # Legacy CPU-based fractal renderer
-│   ├── FractalsGPU/        # GPU-accelerated Mandelbrot/Julia viewer
-│   └── MobiusWalk/         # First-person Möbius strip corridor
+├── animations/             # one folder per app, each with its own README
+│   ├── ComplexParticles/   # 4D complex-function viewer (Particles + Roots + Multibranch)
+│   ├── FractalsGPU/        # GPU Mandelbrot / Julia / Burning Ship / Tricorn
+│   ├── Correspondence/     # Mandelbrot ↔ Julia split view
+│   ├── Fractals/           # legacy CPU fractal renderer (unreachable, kept for reference)
+│   ├── MobiusWalk/         # first-person corridor walk
+│   ├── StableMarriage/     # Gale–Shapley visualiser + heatmap lab
+│   └── AgenticSorting/     # concurrent agent-based sorting
 │
-├── components/             # Reusable React components
-│   ├── Canvas3D.tsx        # Three.js scene lifecycle wrapper
-│   ├── ToggleMenu.tsx      # Collapsible menu widget
-│   └── Readme.tsx          # Markdown renderer component
+├── components/             # shared UI
+│   ├── AppShell.tsx        # global chrome: top bar + drawer + tabs
+│   ├── ParticleViewerShell # wraps Canvas3D + standard 7 sections for the particle viewers
+│   ├── ControlPanel.tsx    # form primitives (Section / Slider / Pills / Select / Checkbox)
+│   ├── Canvas3D.tsx        # Three.js scene + camera + resize wrapper
+│   ├── Readme.tsx          # in-app markdown renderer
+│   └── ToggleMenu.tsx      # collapsible menu (legacy, used by FractalsGPU)
 │
-├── lib/                    # Utility libraries
-│   ├── ParticleDisplay.ts  # Particle system helper
-│   ├── R2Mapping.ts        # ℝ² → ℝ² function mappings library
-│   └── viewpoint.ts        # 4D projection and quaternion utilities
+├── controls/
+│   └── QuarterTurnFloater  # floating 4D quarter-turn cluster
 │
-├── math/                   # Mathematical utilities
-│   ├── constants.ts        # Math constants (planes, QUARTER, etc.)
-│   └── quat4.ts            # 4D quaternion rotation helpers
+├── lib/
+│   ├── particles/          # shared particle-viewer engine
+│   │   ├── createAnimationLoop.ts
+│   │   ├── createAxes.ts
+│   │   ├── createParticleGeometry.ts
+│   │   ├── useParticleState.ts
+│   │   ├── useUniformSync.ts
+│   │   ├── useViewControls.ts
+│   │   ├── useGestureRotation.ts   # camera-orbit + zoom gestures
+│   │   └── types.ts                # ProjectionMode, ColorStyle, shapeNames, …
+│   ├── useViewportGestures.ts      # pan + pinch-zoom + tap for 2D viewers
+│   ├── viewpoint.ts                # 4D → 3D projection helpers
+│   ├── complexMath.ts              # complex arithmetic + function names
+│   └── textures.ts                 # particle texture factory
 │
-├── controls/               # UI control components
-│   └── QuarterTurnBar.tsx  # 4D rotation control buttons
+├── math/
+│   ├── constants.ts        # plane names, QUARTER constant
+│   └── quat4.ts            # 4D quaternion rotation builder
 │
-├── materials/              # Three.js material presets library
-│   ├── index.ts            # Material factory functions
-│   └── README.md
-│
-├── config/                 # Global configuration
-│   └── defaults.ts         # Canvas and particle defaults
-│
-├── styles/                 # Style utilities
-│   └── responsive.ts       # Responsive design hooks/utilities
-│
-├── types/                  # TypeScript type definitions
-│   └── uniforms.d.ts       # Shader uniform types
-│
-└── unported_examples/      # Legacy/experimental code
+├── config/defaults.ts      # shared sliders, ranges, initial values
+├── styles/responsive.ts    # breakpoints + useResponsive hook
+└── types/uniforms.d.ts     # shader uniform type declarations
 ```
 
-For a detailed consolidation proposal including primitive extraction and widget patterns,
-see [ARCHITECTURE.md](./ARCHITECTURE.md).
+For architectural notes and the consolidation history that produced the
+current shape, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
-## 5 Creating a new animation
+## 5 Adding a new animation
 
-PROJECTED EXAMPLE OF WORKFLOW, OPEN TO REVIISION.
-1. `mkdir src/animations/myCoolThing`
-2. Implement `<MyCoolThing/>` extending the `Canvas3D` wrapper.
-3. Add route entry in `src/index.tsx`.
-4. Provide a `README.md` inside the folder explaining the maths.
+1. Create `src/animations/MyAnimation/MyAnimation.tsx` and (optionally) a
+   `README.md` next to it loaded via `import md from './README.md?raw'`.
+2. Add a route entry in `src/index.tsx`:
+   ```ts
+   const MyAnimation = React.lazy(() => import('./animations/MyAnimation/MyAnimation'));
+   const apps: AppDescriptor[] = [
+     // …existing entries…
+     { hash: '/my-animation', name: 'My Animation', icon: '◆' },
+   ];
+   const routes = {
+     // …existing routes…
+     '/my-animation': MyAnimation,
+   };
+   ```
+3. Inside the component, call `useAppHeader('My Animation', 'optional formula')`
+   to populate the top bar, and render `<ShellSettings>` / `<ShellActions>`
+   for controls.
 
-*Tip:* Keep GLSL strings inline for zero-fetch builds; use `vite-plugin-glsl` if you prefer external files.
+Three.js animations can wrap `Canvas3D`. For particle-style 4D viewers,
+`ParticleViewerShell` plus the `src/lib/particles` hooks gives you the
+default Function / Camera / Colour / Particles / Motion / Detail / About
+sections out of the box — see ComplexParticles for the simplest example.
 
-### Projection modes
+GLSL is kept inline as template strings in `shaders/index.ts` per app for
+zero-fetch builds.
 
-The renderer supports several ways of mapping a 4‑D point `(x,y,u,v)` to 3‑D:
+---
 
-1. **Perspective** – divide by `3 + v`.
-2. **Stereo** – stereographic projection from the +v pole.
-3. **Hopf** – Hopf fibration assuming a unit hypersphere.
-4. **DropX** – ignore the x component.
-5. **DropY** – ignore the y component.
-6. **DropU** – ignore the u component.
-7. **DropV** – ignore the v component.
+## 6 Interaction conventions
+
+The particle viewers use a clean split between **looking** (gestures) and
+**navigating** (buttons):
+
+* **1-finger / mouse drag** orbits the camera around the look-at point.
+  Never touches the 4D rotation.
+* **2-finger drag** (or `Shift` + drag) pans the look-at target.
+* **2-finger pinch** / **mouse wheel** zooms.
+* **Quarter-turn floater** (bottom-left of the canvas) — tap a plane button
+  for a 90° animated turn, **hold** for continuous rotation. Includes a
+  "Reset orientation" row.
+
+The fractal viewers use:
+
+* **Drag** to pan, **pinch** or **wheel** to zoom.
+* **Trace mode** (toggle in the Actions drawer) — when on, taps spawn an
+  iteration orbit from the tap point.
+
+---
+
+## 7 Projection modes (Complex Particles)
+
+The renderer maps a 4D point `(x, y, u, v)` to 3D using one of:
+
+1. **Perspective** — divide by `3 + v`.
+2. **Stereo** — stereographic projection from the +v pole.
+3. **Hopf** — Hopf fibration assuming a unit hypersphere.
+4. **Drop X / Y / U / V** — discard the named axis.
 
 Switching modes interpolates on the GPU for a smooth transition.
 
-## Controls
-
-* For each plane (XY, XU, XV, YU, YV, UV) there are **Quarter-Turn** buttons that give smooth 90° rotations.
-* View motion now toggles between **Quaternion** (automatic spin) and a **Fixed** orientation.
-* A separate drop-axis selector (None, DropX, DropY, DropU, DropV) determines which coordinate is discarded.
-
 ---
 
-## 6 Acknowledgements
+## 8 Acknowledgements
 
-* Three.js – rendering engine
-* React & Vite – UI and build tooling
+* Three.js — rendering engine
+* React + Vite — UI and build tooling
+* lucide-react — icon set used by Stable Marriage and Agentic Sorting
