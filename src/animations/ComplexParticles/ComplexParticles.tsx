@@ -165,7 +165,7 @@ export default function ComplexParticles({
       });
       state.texturesRef.current = textures;
 
-      const geometry = createParticleGeometry(state.particleCount);
+      const geometry = createParticleGeometry(state.particleCount, state.gridExtent);
       state.geometryRef.current = geometry;
 
       state.materialsRef.current = [];

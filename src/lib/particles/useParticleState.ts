@@ -39,6 +39,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [hueShift, setHueShift] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.hueShift);
   const [jitter, setJitter] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.jitter);
   const [axisWidth, setAxisWidth] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.axisWidth);
+  /** Half-side of the sampled grid in input-space units. */
+  const [gridExtent, setGridExtent] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.gridExtent);
   const [objectMode, setObjectMode] = useState(false);
   const [shapeIndex, setShapeIndex] = useState(1);
   const [textureIndex, setTextureIndex] = useState(0);
@@ -120,6 +122,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     hueShift, setHueShift,
     jitter, setJitter,
     axisWidth, setAxisWidth,
+    gridExtent, setGridExtent,
     objectMode, setObjectMode,
     shapeIndex, setShapeIndex,
     textureIndex, setTextureIndex,

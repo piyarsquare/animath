@@ -66,6 +66,42 @@
 .qtb-btn:hover { background: rgba(255,255,255,0.12); }
 .qtb-btn:active { background: var(--cp-accent, #ffd400); color: #000; }
 
+/* Plane labels (e.g. "XY") render each letter in its axis color when a
+   getAxisColor prop is provided. The two child spans sit side by side. */
+.qtb-plane {
+  display: inline-flex;
+  gap: 1px;
+  font-weight: 700;
+}
+
+.qtb-row-drop {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.qtb-drop-buttons {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+}
+.qtb-drop-btn {
+  height: 28px;
+  border-radius: 5px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
+  color: #f0f0f3;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.qtb-drop-btn:hover { background: rgba(255,255,255,0.12); }
+.qtb-drop-btn-active {
+  background: var(--cp-accent, #ffd400);
+  color: #000;
+  border-color: var(--cp-accent, #ffd400);
+}
+
 .qtb-row-reset {
   margin-top: 4px;
   padding-top: 6px;

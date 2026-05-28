@@ -56,6 +56,12 @@ export default function ParticleViewerShell({
         onTurn={controls.turn}
         onRotateBy={controls.rotateBy}
         onReset={controls.snapToStandardView}
+        getAxisColor={(letter) => {
+          const key = letter.toLowerCase() as 'x' | 'y' | 'u' | 'v';
+          return `hsl(${((AXIS_COLORS[key] + state.hueShift) % 1) * 360},100%,60%)`;
+        }}
+        dropAxis={state.dropAxis}
+        onDropAxisChange={controls.handleDropAxis}
       />
 
       <ShellSettings>
@@ -70,12 +76,6 @@ export default function ParticleViewerShell({
             options={viewTypes.map(([name, code]) => ({ value: code, label: name }))}
             value={state.viewType}
             onChange={controls.handleViewType}
-          />
-          <Pills
-            label="Drop axis"
-            options={dropModes.map(d => ({ value: d, label: d.replace('Drop', '') }))}
-            value={state.dropAxis}
-            onChange={controls.handleDropAxis}
           />
           <Pills
             label="Motion"
@@ -172,6 +172,9 @@ export default function ParticleViewerShell({
           <Slider label="Particle count" value={state.particleCount}
             min={R.particleCount.min} max={R.particleCount.max} step={R.particleCount.step}
             onChange={state.setParticleCount} format={v => `${(v / 1000).toFixed(0)}k`} />
+          <Slider label="Grid extent (±)" value={state.gridExtent}
+            min={R.gridExtent.min} max={R.gridExtent.max} step={R.gridExtent.step}
+            onChange={state.setGridExtent} format={v => v.toFixed(1)} />
           <Slider label="Axis width" value={state.axisWidth}
             min={R.axisWidth.min} max={R.axisWidth.max} step={R.axisWidth.step}
             onChange={state.setAxisWidth} format={v => v.toFixed(1)} />
@@ -195,18 +198,35 @@ export default function ParticleViewerShell({
           >
             Reset orientation
           </button>
+
+          <div className="cp-row-label" style={{ marginTop: 8, marginBottom: 4 }}>Drop axis</div>
+          <Pills
+            options={dropModes.map(d => ({ value: d, label: d.replace('Drop', '') }))}
+            value={state.dropAxis}
+            onChange={controls.handleDropAxis}
+          />
+
           <div className="cp-row-label" style={{ marginTop: 8, marginBottom: 4 }}>4D quarter turns</div>
           <div className="cp-quarter">
             <div />
             <div className="cp-quarter-label" style={{ textAlign: 'center' }}>↻</div>
             <div className="cp-quarter-label" style={{ textAlign: 'center' }}>↺</div>
-            {planes.map(p => (
-              <React.Fragment key={p}>
-                <div className="cp-quarter-label" style={{ alignSelf: 'center' }}>{p}</div>
-                <button onClick={() => controls.turn(p, 1)}>↻ {p}</button>
-                <button onClick={() => controls.turn(p, -1)}>↺ {p}</button>
-              </React.Fragment>
-            ))}
+            {planes.map(p => {
+              const colorOf = (letter: string) => {
+                const key = letter.toLowerCase() as 'x' | 'y' | 'u' | 'v';
+                return `hsl(${((AXIS_COLORS[key] + state.hueShift) % 1) * 360},100%,60%)`;
+              };
+              return (
+                <React.Fragment key={p}>
+                  <div className="cp-quarter-label" style={{ alignSelf: 'center' }}>
+                    <span style={{ color: colorOf(p[0]) }}>{p[0]}</span>
+                    <span style={{ color: colorOf(p[1]) }}>{p[1]}</span>
+                  </div>
+                  <button onClick={() => controls.turn(p, 1)}>↻ {p}</button>
+                  <button onClick={() => controls.turn(p, -1)}>↺ {p}</button>
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
       </ShellActions>

@@ -35,12 +35,14 @@ export const COMPLEX_PARTICLES_DEFAULTS = {
     shimmer: 0,
     hueShift: 0,
     jitter: 0.1,
-    axisWidth: 5
+    axisWidth: 5,
+    /** Half-side of the sampled (x, y) grid; default ±4. */
+    gridExtent: 4,
   },
   defaultParticleCount: 80000,
   ranges: {
     saturation: { min: 0, max: 1, step: 0.01 },
-    particleCount: { min: 1000, max: 80000, step: 1000 },
+    particleCount: { min: 1000, max: 250000, step: 1000 },
     size: { min: 0.2, max: 5, step: 0.1 },
     opacity: { min: 0, max: 1, step: 0.01 },
     intensity: { min: 0.5, max: 2, step: 0.05 },
@@ -48,6 +50,7 @@ export const COMPLEX_PARTICLES_DEFAULTS = {
     jitter: { min: 0, max: 0.5, step: 0.005 },
     hueShift: { min: 0, max: 1, step: 0.01 },
     cameraZ: { min: 2, max: 50, step: 0.1 },
-    axisWidth: { min: 0.5, max: 5, step: 0.1 }
+    axisWidth: { min: 0.5, max: 5, step: 0.1 },
+    gridExtent: { min: 1, max: 12, step: 0.5 },
   }
 };
