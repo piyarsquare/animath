@@ -6,12 +6,14 @@ import { AppShell, AppDescriptor } from './components/AppShell';
 const FractalsGPU = React.lazy(() => import('./animations/FractalsGPU/FractalsGPU'));
 const Fractals2D = React.lazy(() => import('./animations/Fractals/Fractals2D'));
 const Correspondence = React.lazy(() => import('./animations/Correspondence/Correspondence'));
+const PlaneTransform = React.lazy(() => import('./animations/PlaneTransform/PlaneTransform'));
 const MobiusWalk = React.lazy(() => import('./animations/MobiusWalk/MobiusWalk'));
 const StableMarriage = React.lazy(() => import('./animations/StableMarriage/StableMarriage'));
 const AgenticSorting = React.lazy(() => import('./animations/AgenticSorting/AgenticSorting'));
 
 const apps: AppDescriptor[] = [
   { hash: '/', name: 'Complex Particles', icon: '✦' },
+  { hash: '/plane-transform', name: 'Plane Transform', icon: '↦' },
   { hash: '/fractals', name: 'Fractals', icon: '◯' },
   { hash: '/correspondence', name: 'Mandelbrot ↔ Julia', icon: '⇄' },
   { hash: '/mobius', name: 'Möbius Walk', icon: '∞' },
@@ -21,6 +23,7 @@ const apps: AppDescriptor[] = [
 
 const routes: Record<string, React.ComponentType> = {
   '/': App,
+  '/plane-transform': PlaneTransform,
   '/fractals': FractalsGPU,
   '/fractals-cpu': Fractals2D,
   '/correspondence': Correspondence,
