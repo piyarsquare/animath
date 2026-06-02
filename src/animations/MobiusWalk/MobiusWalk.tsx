@@ -26,9 +26,9 @@ const TRAIL_MAX_PAIRS = 2200;
 const TRAIL_SPACING = 0.3;
 const TRAIL_HALF_W = 0.14;
 
-const PAINT_MAX = 5000;
-const PAINT_REACH = 7;
-const PAINT_SPACING = 0.08;
+const WRITE_REACH = 8;     // how far the gaze can reach a wall to write on
+const MAX_WRITE = 60;      // max text decals kept
+const INK = '#ffef6b';
 
 type MoveKey = 'fwd' | 'back' | 'left' | 'right';
 
@@ -49,14 +49,14 @@ interface SceneCtx {
   flames: THREE.Sprite[];
   params: CorridorParams;
   theme: MobiusTheme;
+  ambientBase: number;
+  hemiBase: number;
   trail: THREE.Mesh;
   trailPos: Float32Array;
   trailCount: number;
   trailLast: THREE.Vector3 | null;
-  paint: THREE.Points;
-  paintPos: Float32Array;
-  paintCount: number;
-  paintLast: THREE.Vector3 | null;
+  writing: THREE.Group;
+  writeMeshes: THREE.Mesh[];
   raycaster: THREE.Raycaster;
   stridePhase: number;
   bufW: number;
@@ -68,10 +68,65 @@ function flicker(kind: FlickerKind, t: number, seed: number, amp: number): numbe
   if (kind === 'pulse') return 1 - amp * 0.5 * (1 + Math.sin(t * 2.2 + seed));
   if (kind === 'candle') return 1 - amp * (1 - (Math.sin(t * 5 + seed) * 0.5 + 0.5));
   const n = (Math.sin(t * 13 + seed) * 0.5 + 0.5) * 0.6 + (Math.sin(t * 29 + seed * 2.3) * 0.5 + 0.5) * 0.4;
-  return 1 - amp * (1 - n); // torch
+  return 1 - amp * (1 - n);
 }
 
-function applyTheme(c: SceneCtx, theme: MobiusTheme) {
+/** Render text to a transparent canvas texture; returns it with its aspect. */
+function textTexture(text: string): { tex: THREE.CanvasTexture; aspect: number } {
+  const font = 72, pad = 26;
+  const meas = document.createElement('canvas').getContext('2d')!;
+  meas.font = `bold ${font}px Georgia, 'Times New Roman', serif`;
+  const w = Math.max(font, Math.ceil(meas.measureText(text || ' ').width)) + pad * 2;
+  const h = font + pad * 2;
+  const cvs = document.createElement('canvas');
+  cvs.width = w; cvs.height = h;
+  const ctx = cvs.getContext('2d')!;
+  ctx.font = `bold ${font}px Georgia, 'Times New Roman', serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = INK; ctx.shadowBlur = 22;
+  ctx.fillStyle = INK; ctx.fillText(text, w / 2, h / 2 + 4);
+  const tex = new THREE.CanvasTexture(cvs);
+  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  return { tex, aspect: w / h };
+}
+
+/** Place a flat text panel on whatever wall the player is looking at, aligned to
+ *  the corridor's local "up" so it reads upright — and so it appears reversed
+ *  when you come around to the other side of the strip. */
+function stampText(c: SceneCtx, eye: THREE.Vector3, lookDir: THREE.Vector3, up: THREE.Vector3, text: string) {
+  if (!text) return;
+  c.raycaster.set(eye, lookDir);
+  c.raycaster.far = WRITE_REACH;
+  const hit = c.raycaster.intersectObject(c.mesh, false)[0];
+  if (!hit || !hit.face) return;
+
+  const nrm = hit.face.normal.clone();
+  if (nrm.dot(eye.clone().sub(hit.point)) < 0) nrm.negate(); // face the player
+  const up1 = up.clone().addScaledVector(nrm, -up.dot(nrm));
+  if (up1.lengthSq() < 1e-4) up1.copy(lookDir).addScaledVector(nrm, -lookDir.dot(nrm));
+  up1.normalize();
+  const rightV = new THREE.Vector3().crossVectors(up1, nrm).normalize();
+
+  const { tex, aspect } = textTexture(text);
+  const height = 0.55;
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(height * aspect, height),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false }),
+  );
+  mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(rightV, up1, nrm));
+  mesh.position.copy(hit.point).addScaledVector(nrm, 0.02);
+  c.writing.add(mesh);
+  c.writeMeshes.push(mesh);
+  if (c.writeMeshes.length > MAX_WRITE) {
+    const old = c.writeMeshes.shift()!;
+    c.writing.remove(old);
+    old.geometry.dispose();
+    (old.material as THREE.MeshBasicMaterial).map?.dispose();
+    (old.material as THREE.Material).dispose();
+  }
+}
+
+function applyTheme(c: SceneCtx, theme: MobiusTheme, ambientMul: number) {
   c.theme = theme;
   const L = theme.lighting;
   c.scene.background = new THREE.Color(theme.background);
@@ -79,14 +134,14 @@ function applyTheme(c: SceneCtx, theme: MobiusTheme) {
   fog.color.setHex(theme.background); fog.near = theme.fogNear; fog.far = theme.fogFar;
   c.renderer.toneMappingExposure = L.exposure;
 
-  c.ambient.intensity = L.ambient;
+  c.ambientBase = L.ambient;
+  c.hemiBase = L.hemi ? L.hemi.intensity : 0;
+  c.ambient.intensity = c.ambientBase * ambientMul;
   c.hemi.visible = !!L.hemi;
-  if (L.hemi) { c.hemi.color.setHex(L.hemi.sky); c.hemi.groundColor.setHex(L.hemi.ground); c.hemi.intensity = L.hemi.intensity; }
+  if (L.hemi) { c.hemi.color.setHex(L.hemi.sky); c.hemi.groundColor.setHex(L.hemi.ground); }
+  c.hemi.intensity = c.hemiBase * ambientMul;
   c.moon.visible = !!L.moonbeam;
-  if (L.moonbeam) {
-    c.moon.color.setHex(L.moonbeam.color); c.moon.intensity = L.moonbeam.intensity;
-    c.moon.position.set(...L.moonbeam.dir);
-  }
+  if (L.moonbeam) { c.moon.color.setHex(L.moonbeam.color); c.moon.intensity = L.moonbeam.intensity; c.moon.position.set(...L.moonbeam.dir); }
   c.fill.color.setHex(L.emitter.color);
 
   c.bloom.strength = L.bloom.strength;
@@ -101,10 +156,13 @@ function applyTheme(c: SceneCtx, theme: MobiusTheme) {
 export default function MobiusWalk() {
   const [twist, setTwist] = useState(true);
   const [moveSpeed, setMoveSpeed] = useState(6);
+  const [width, setWidth] = useState(DEFAULT_PARAMS.width);
+  const [ambientMul, setAmbientMul] = useState(1);
   const [themeId, setThemeId] = useState(DEFAULT_THEME.id);
   const [thirdPerson, setThirdPerson] = useState(true);
   const [markers, setMarkers] = useState(true);
   const [bloomOn, setBloomOn] = useState(true);
+  const [wallText, setWallText] = useState('MÖBIUS');
 
   useAppHeader('Möbius Walk', twist ? 'twisted corridor' : 'untwisted corridor');
   useAppExplainer(explainerText);
@@ -119,23 +177,25 @@ export default function MobiusWalk() {
   const yawRef = useRef(0);
   const pitchRef = useRef(0);
   const keysRef = useRef<Record<MoveKey, boolean>>({ fwd: false, back: false, left: false, right: false });
-  const paintRef = useRef(false);
+  const stampRef = useRef(false);
   const speedRef = useRef(moveSpeed);
   const twistRef = useRef(twist);
   const thirdRef = useRef(thirdPerson);
   const bloomRef = useRef(bloomOn);
+  const wallTextRef = useRef(wallText);
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
   useEffect(() => { thirdRef.current = thirdPerson; }, [thirdPerson]);
   useEffect(() => { bloomRef.current = bloomOn; }, [bloomOn]);
+  useEffect(() => { wallTextRef.current = wallText; }, [wallText]);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
-  const setPaint = useCallback((v: boolean) => { paintRef.current = v; }, []);
+  const requestStamp = useCallback(() => { stampRef.current = true; }, []);
 
   const onMount = useCallback(({ scene, camera, renderer }: {
     scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer;
   }) => {
     const theme = THEMES.find((t) => t.id === themeId) ?? DEFAULT_THEME;
-    const params: CorridorParams = { ...DEFAULT_PARAMS, tiltTurns: twistRef.current ? 1 : 0 };
+    const params: CorridorParams = { ...DEFAULT_PARAMS, tiltTurns: twistRef.current ? 1 : 0, width };
 
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = theme.lighting.exposure;
@@ -150,10 +210,8 @@ export default function MobiusWalk() {
     decal.frustumCulled = false; scene.add(decal);
 
     const character = makeCharacter(); scene.add(character.group);
-
     const glow = glowTexture();
 
-    // Trail.
     const trailPos = new Float32Array(TRAIL_MAX_PAIRS * 2 * 3);
     const trailIndex = new Uint16Array((TRAIL_MAX_PAIRS - 1) * 6);
     for (let i = 0; i < TRAIL_MAX_PAIRS - 1; i++) {
@@ -168,18 +226,8 @@ export default function MobiusWalk() {
     const trail = new THREE.Mesh(trailGeo, new THREE.MeshBasicMaterial({ color: 0xff2740, side: THREE.DoubleSide }));
     trail.frustumCulled = false; scene.add(trail);
 
-    // Wall-writing "ink" — additive glowing points.
-    const paintPos = new Float32Array(PAINT_MAX * 3);
-    const paintGeo = new THREE.BufferGeometry();
-    paintGeo.setAttribute('position', new THREE.BufferAttribute(paintPos, 3));
-    paintGeo.setDrawRange(0, 0);
-    const paint = new THREE.Points(paintGeo, new THREE.PointsMaterial({
-      size: 0.24, sizeAttenuation: true, map: glow, color: 0x8af7ff,
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    }));
-    paint.frustumCulled = false; scene.add(paint);
+    const writing = new THREE.Group(); scene.add(writing);
 
-    // Lights.
     const ambient = new THREE.AmbientLight(0xffffff, theme.lighting.ambient); scene.add(ambient);
     const hemi = new THREE.HemisphereLight(0xffffff, 0x202028, 0); scene.add(hemi);
     const moon = new THREE.DirectionalLight(0xffffff, 0); scene.add(moon);
@@ -196,7 +244,6 @@ export default function MobiusWalk() {
     scene.background = new THREE.Color(theme.background);
     camera.fov = 75; camera.near = 0.05; camera.far = 200; camera.updateProjectionMatrix();
 
-    // Post-processing (GPU bloom).
     const bufW = renderer.domElement.width, bufH = renderer.domElement.height;
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
@@ -206,17 +253,16 @@ export default function MobiusWalk() {
     composer.addPass(new OutputPass());
     composer.setSize(bufW, bufH);
 
-    const raycaster = new THREE.Raycaster(); raycaster.far = PAINT_REACH;
+    const raycaster = new THREE.Raycaster();
 
     const c: SceneCtx = {
       scene, camera, renderer, composer, bloom, mesh, decal, character,
-      ambient, hemi, moon, fill, lights, flames, params, theme,
+      ambient, hemi, moon, fill, lights, flames, params, theme, ambientBase: theme.lighting.ambient, hemiBase: 0,
       trail, trailPos, trailCount: 0, trailLast: null,
-      paint, paintPos, paintCount: 0, paintLast: null, raycaster,
-      stridePhase: 0, bufW, bufH,
+      writing, writeMeshes: [], raycaster, stridePhase: 0, bufW, bufH,
     };
     ctxRef.current = c;
-    applyTheme(c, theme);
+    applyTheme(c, theme, ambientMul);
 
     clockRef.current.start();
     const animate = () => {
@@ -226,7 +272,6 @@ export default function MobiusWalk() {
       timeRef.current += dt;
       const time = timeRef.current;
 
-      // Movement.
       const k = keysRef.current;
       const fwd = (k.fwd ? 1 : 0) - (k.back ? 1 : 0);
       const strafe = (k.right ? 1 : 0) - (k.left ? 1 : 0);
@@ -254,14 +299,12 @@ export default function MobiusWalk() {
       const eye = foot.clone().addScaledVector(up, EYE_HEIGHT);
       const lookDir = facing.clone().multiplyScalar(Math.cos(pitch)).addScaledVector(up, Math.sin(pitch)).normalize();
 
-      // Character.
       const charRight = new THREE.Vector3().crossVectors(up, facing).normalize();
       cx.character.group.position.copy(foot);
       cx.character.group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(charRight, up, facing));
       cx.character.group.visible = thirdRef.current;
       cx.character.stride(cx.stridePhase);
 
-      // Camera.
       if (thirdRef.current) {
         const camPos = foot.clone().addScaledVector(facing, -3.0).addScaledVector(up, 1.9 + pitch * 1.6);
         const target = foot.clone().addScaledVector(up, 1.0).addScaledVector(facing, 1.2);
@@ -271,7 +314,10 @@ export default function MobiusWalk() {
       }
       cx.fill.position.copy(eye);
 
-      // Emitter lights (torches/candles/…) near the player, with flicker.
+      // Write text on the wall (one stamp per request).
+      if (stampRef.current) { stampRef.current = false; stampText(cx, eye, lookDir, up, wallTextRef.current); }
+
+      // Emitter lights.
       const L = cx.theme.lighting.emitter;
       const count = Math.min(L.count, MAX_LIGHTS);
       const base = Math.round(sRef.current / L.spacing);
@@ -295,24 +341,6 @@ export default function MobiusWalk() {
         } else spr.visible = false;
       }
 
-      // Wall writing.
-      if (paintRef.current) {
-        cx.raycaster.set(eye, lookDir);
-        const hit = cx.raycaster.intersectObject(cx.mesh, false)[0];
-        if (hit) {
-          const p = hit.point.clone().addScaledVector(eye.clone().sub(hit.point).normalize(), 0.03);
-          if (!cx.paintLast || p.distanceTo(cx.paintLast) > PAINT_SPACING) {
-            if (cx.paintCount >= PAINT_MAX) { cx.paintPos.copyWithin(0, 3); cx.paintCount--; }
-            const o = cx.paintCount * 3;
-            cx.paintPos[o] = p.x; cx.paintPos[o + 1] = p.y; cx.paintPos[o + 2] = p.z;
-            cx.paintCount++; cx.paintLast = p.clone();
-            (cx.paint.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
-            cx.paint.geometry.setDrawRange(0, cx.paintCount);
-          }
-        }
-      }
-
-      // Floor trail.
       const floorPt = foot.clone().addScaledVector(up, 0.03);
       if (moving && (!cx.trailLast || floorPt.distanceTo(cx.trailLast) > TRAIL_SPACING)) {
         if (cx.trailCount >= TRAIL_MAX_PAIRS) { cx.trailPos.copyWithin(0, 6); cx.trailCount--; }
@@ -328,7 +356,6 @@ export default function MobiusWalk() {
         cx.trail.geometry.setDrawRange(0, Math.max(0, (cx.trailCount - 1) * 6));
       }
 
-      // Keep the composer sized to the drawing buffer.
       const w = cx.renderer.domElement.width, h = cx.renderer.domElement.height;
       if (w !== cx.bufW || h !== cx.bufH) { cx.bufW = w; cx.bufH = h; cx.composer.setSize(w, h); }
 
@@ -346,22 +373,33 @@ export default function MobiusWalk() {
   }, []);
   const clearWriting = useCallback(() => {
     const c = ctxRef.current; if (!c) return;
-    c.paintCount = 0; c.paintLast = null; c.paint.geometry.setDrawRange(0, 0);
+    for (const m of c.writeMeshes) {
+      c.writing.remove(m); m.geometry.dispose();
+      (m.material as THREE.MeshBasicMaterial).map?.dispose(); (m.material as THREE.Material).dispose();
+    }
+    c.writeMeshes = [];
   }, []);
 
+  // Twist or width changes reshape the corridor; rebuild geometry, clear marks.
   useEffect(() => {
     twistRef.current = twist;
     const c = ctxRef.current; if (!c) return;
-    const params: CorridorParams = { ...DEFAULT_PARAMS, tiltTurns: twist ? 1 : 0 };
+    const params: CorridorParams = { ...c.params, tiltTurns: twist ? 1 : 0, width };
     c.mesh.geometry.dispose(); c.mesh.geometry = makeCorridorGeometry(params);
     c.decal.geometry.dispose(); c.decal.geometry = makeFloorDecalGeometry(params);
     c.params = params; clearTrail(); clearWriting();
-  }, [twist, clearTrail, clearWriting]);
+  }, [twist, width, clearTrail, clearWriting]);
+
+  useEffect(() => {
+    const c = ctxRef.current; if (c) applyTheme(c, THEMES.find((t) => t.id === themeId) ?? DEFAULT_THEME, ambientMul);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themeId]);
 
   useEffect(() => {
     const c = ctxRef.current; if (!c) return;
-    applyTheme(c, THEMES.find((t) => t.id === themeId) ?? DEFAULT_THEME);
-  }, [themeId]);
+    c.ambient.intensity = c.ambientBase * ambientMul;
+    c.hemi.intensity = c.hemiBase * ambientMul;
+  }, [ambientMul]);
 
   useEffect(() => { const c = ctxRef.current; if (c) c.decal.visible = markers; }, [markers]);
 
@@ -371,11 +409,10 @@ export default function MobiusWalk() {
       KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right',
     };
     const down = (e: KeyboardEvent) => {
-      if (e.code === 'Space') { paintRef.current = true; e.preventDefault(); return; }
+      if (e.code === 'Space') { if (!e.repeat) stampRef.current = true; e.preventDefault(); return; }
       const m = map[e.code]; if (m) { keysRef.current[m] = true; e.preventDefault(); }
     };
     const up = (e: KeyboardEvent) => {
-      if (e.code === 'Space') { paintRef.current = false; e.preventDefault(); return; }
       const m = map[e.code]; if (m) { keysRef.current[m] = false; e.preventDefault(); }
     };
     window.addEventListener('keydown', down);
@@ -390,13 +427,12 @@ export default function MobiusWalk() {
       c.mesh.geometry.dispose(); (c.mesh.material as THREE.MeshPhysicalMaterial).map?.dispose(); (c.mesh.material as THREE.Material).dispose();
       c.decal.geometry.dispose(); ((c.decal.material as THREE.MeshBasicMaterial).map)?.dispose(); (c.decal.material as THREE.Material).dispose();
       c.trail.geometry.dispose(); (c.trail.material as THREE.Material).dispose();
-      c.paint.geometry.dispose(); (c.paint.material as THREE.Material).dispose();
+      for (const m of c.writeMeshes) { m.geometry.dispose(); (m.material as THREE.MeshBasicMaterial).map?.dispose(); (m.material as THREE.Material).dispose(); }
       c.character.dispose();
       c.composer.dispose();
     }
   }, []);
 
-  // Drag to look / turn.
   const dragRef = useRef<{ x: number; y: number } | null>(null);
   const onPointerDown = (e: React.PointerEvent) => {
     dragRef.current = { x: e.clientX, y: e.clientY };
@@ -420,13 +456,13 @@ export default function MobiusWalk() {
         <Canvas3D onMount={onMount} />
       </div>
 
-      <MovePad onSet={setKey} onPaint={setPaint} />
+      <MovePad onSet={setKey} onWrite={requestStamp} />
 
       <div style={{
         position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
         color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
       }}>
-        Drag to look · WASD / arrows move · Space (or ✎) writes on the wall
+        Drag to look · WASD / arrows move · Space (or ✎) writes your text on the wall
       </div>
 
       <ShellSettings>
@@ -435,7 +471,25 @@ export default function MobiusWalk() {
           <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
           <Checkbox label="Floor markers (UP arrows)" checked={markers} onChange={setMarkers} />
           <Checkbox label="Cinematic bloom (GPU)" checked={bloomOn} onChange={setBloomOn} />
+          <Slider label="Corridor width" value={width} min={0.8} max={4} step={0.1} onChange={setWidth} format={(v) => v.toFixed(1)} />
+          <Slider label="Ambient light" value={ambientMul} min={0} max={2.5} step={0.05} onChange={setAmbientMul} format={(v) => `${Math.round(v * 100)}%`} />
           <Slider label="Move speed" value={moveSpeed} min={1} max={14} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
+        </Section>
+        <Section title="Writing" icon="✎" defaultOpen>
+          <label className="cp-row">
+            <div className="cp-row-label"><span>Wall text</span></div>
+            <input
+              type="text" value={wallText} maxLength={24}
+              onChange={(e) => setWallText(e.target.value)}
+              style={{
+                background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
+                border: '1px solid var(--cp-border)', borderRadius: 4, padding: '6px 8px', fontSize: 13, width: '100%',
+              }}
+            />
+          </label>
+          <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>
+            Aim at a wall and press Space (or ✎) to paint it. Come around to read it from the other side.
+          </div>
         </Section>
       </ShellSettings>
 
@@ -460,32 +514,38 @@ function actionBtn(active: boolean): React.CSSProperties {
   };
 }
 
-function MovePad({ onSet, onPaint }: { onSet: (k: MoveKey, v: boolean) => void; onPaint: (v: boolean) => void }) {
-  const hold = (down: () => void, upFn: () => void, label: string, style: React.CSSProperties, aria: string) => (
+function MovePad({ onSet, onWrite }: { onSet: (k: MoveKey, v: boolean) => void; onWrite: () => void }) {
+  const mv = (k: MoveKey, label: string, style: React.CSSProperties) => (
     <button
-      aria-label={aria}
-      onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); down(); }}
-      onPointerUp={upFn}
-      onPointerCancel={upFn}
-      onPointerLeave={(e) => { if (e.buttons === 0) upFn(); }}
-      style={{
-        position: 'absolute', width: 46, height: 46, ...style,
-        borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)',
-        background: 'rgba(12,12,16,0.6)', color: '#f0f0f3', fontSize: 18,
-        backdropFilter: 'blur(6px)', cursor: 'pointer', touchAction: 'none',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}
+      aria-label={k}
+      onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); onSet(k, true); }}
+      onPointerUp={() => onSet(k, false)}
+      onPointerCancel={() => onSet(k, false)}
+      onPointerLeave={(e) => { if (e.buttons === 0) onSet(k, false); }}
+      style={padBtn(style)}
     >{label}</button>
   );
-  const mv = (k: MoveKey, label: string, style: React.CSSProperties) =>
-    hold(() => onSet(k, true), () => onSet(k, false), label, style, k);
   return (
     <div style={{ position: 'absolute', bottom: 20, right: 20, width: 150, height: 150, zIndex: 20 }}>
       {mv('fwd', '▲', { top: 0, left: 52 })}
       {mv('left', '◀', { top: 52, left: 0 })}
       {mv('right', '▶', { top: 52, left: 104 })}
       {mv('back', '▼', { top: 104, left: 52 })}
-      {hold(() => onPaint(true), () => onPaint(false), '✎', { top: 104, left: 0, background: 'rgba(40,120,140,0.6)' }, 'write')}
+      <button
+        aria-label="write"
+        onPointerDown={(e) => { e.preventDefault(); onWrite(); }}
+        style={padBtn({ top: 104, left: 0, background: 'rgba(40,120,140,0.7)' })}
+      >✎</button>
     </div>
   );
+}
+
+function padBtn(style: React.CSSProperties): React.CSSProperties {
+  return {
+    position: 'absolute', width: 46, height: 46, ...style,
+    borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)',
+    background: (style.background as string) ?? 'rgba(12,12,16,0.6)', color: '#f0f0f3', fontSize: 18,
+    backdropFilter: 'blur(6px)', cursor: 'pointer', touchAction: 'none',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  };
 }
