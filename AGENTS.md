@@ -1,46 +1,58 @@
 # AGENTS Instructions
 
-This repository contains `animath`, a modular browser-based toolkit for creating mathematical animations using TypeScript/React and WebGL (Three.js).
+This repository contains `animath`, a modular browser-based toolkit for
+mathematical animations and generative art, built with TypeScript, React 18,
+Three.js, and Vite. Each animation ("app") is a self-contained module that plugs
+into a shared **AppShell** (top bar + slide-out drawer) and is registered in a
+single catalog, `src/apps.ts`.
+
+## Orientation — read these first
+
+- **CLAUDE.md** — the detailed map of the codebase, the AppShell framework, the
+  routing model, conventions, and current technical debt.
+- **docs/BUILDING_AN_APP.md** — the step-by-step recipe for adding a new app that
+  conforms to the framework. **Follow it when creating a module.**
+- **README.md** — user-facing tour of the apps and interaction conventions.
+- **ARCHITECTURE.md** — historical design proposal; background only, not the
+  current layout.
 
 ## Development Quick Start
 
-1. Install dependencies and start the Vite dev server:
-   ```bash
-   npm run dev
-   ```
-   which serves the application at <http://localhost:5173>.
+```bash
+npm ci          # reproducible install (Node 20+, npm 10+)
+npm run dev     # Vite dev server at http://localhost:5173/animath/
+npm run build   # tsc && vite build → dist/   (the ONLY CI check)
+npm run preview # preview the production build
+```
 
-2. For a production build and simple preview:
-   ```bash
-   npm run build   # outputs files to dist/
-   npx serve dist  # preview
-   ```
+## Creating a new app (summary)
 
-Node 20+ and npm 10+ are recommended.
+The framework is hook-driven, not inheritance-driven. A new app:
 
-## Creating New Animations
+1. Lives in `src/animations/<Name>/` with its main `.tsx`, a `README.md` (the
+   in-app **About** text) and an `EXPLAINER.md` (the **?** popup), both imported
+   with Vite's `?raw` suffix.
+2. Is registered in **two** places: the `routes` map in `src/index.tsx`
+   (`React.lazy` import) and the `apps` array in `src/apps.ts` (catalog entry
+   that drives the drawer and the landing menu).
+3. Integrates with the shell via hooks/components from
+   `src/components/AppShell.tsx`: `useAppHeader`, `useAppExplainer`,
+   (optionally `useAppFunctions`), and `<ShellSettings>` / `<ShellActions>`.
+4. Builds its controls from the primitives in `src/components/ControlPanel.tsx`
+   (`Section`, `Slider`, `Pills`, `Select`, `Checkbox`) for a consistent look.
 
-The project is designed to allow small, self-contained React components for individual animations. A typical workflow is:
+For 3D work, wrap `src/components/Canvas3D.tsx`. For 4D particle viewers, build on
+`ParticleViewerShell` + the `src/lib/particles` engine — copy `ComplexParticles`,
+the canonical example. See `docs/BUILDING_AN_APP.md` for the full walkthrough.
 
-1. Create a new folder inside `src/animations/`.
-2. Implement a React component (e.g. `<MyCoolThing/>`) extending the `Canvas3D` wrapper.
-3. Add a route entry in `src/index.tsx` so the animation is accessible.
-4. Provide a `README.md` inside the animation folder explaining the maths.
-
-Shader code can be kept inline or loaded with `vite-plugin-glsl`.
-
-## Material Library Guidelines
-
-The project maintains a small library of reusable Three.js material presets
-(e.g. translucent sprites, reflective glass). When contributing new animations,
-consider whether a material preset could be added or improved. Place such
-materials in a dedicated folder (currently `src/materials/`) with clear
-documentation so other animations can reuse them.
+GLSL is kept inline as template strings under each app's `shaders/` directory.
 
 ## Contribution Checks
 
-Before opening a pull request, run `npm run build` to ensure the project compiles. There are currently no automated tests.
+Run `npm run build` before opening a pull request — it must pass. There are
+currently no automated tests, linter, or formatter.
 
 ---
 
 These instructions apply repository-wide.
+</content>
