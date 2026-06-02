@@ -6,6 +6,10 @@
 
 import type { Star } from './physics';
 
+/** What the planet is launched into orbit around:
+ *  the system barycenter, one specific star, or the inner two-star binary. */
+export type TargetId = 'bary' | 's0' | 's1' | 's2' | 'binary';
+
 export interface Preset {
   id: string;
   name: string;
@@ -17,9 +21,13 @@ export interface Preset {
   dt: number;
   /** Softening length for star–star interactions. */
   starSoft: number;
-  /** Default planet launch radius and tangential speed for this preset. */
+  /** Default body the planet orbits, plus its launch radius and tangential
+   *  speed (measured relative to that body) for this preset. */
+  target: TargetId;
   planetRadius: number;
   planetSpeed: number;
+  /** Whether this preset has a meaningful inner binary (enables that target). */
+  hasBinary?: boolean;
 }
 
 function star(x: number, y: number, vx: number, vy: number, mass: number): Star {
@@ -56,8 +64,9 @@ export const PRESETS: Preset[] = [
     ]),
     dt: 0.0022,
     starSoft: 0.01,
-    planetRadius: 2.4,
-    planetSpeed: 1.0,
+    target: 'bary',
+    planetRadius: 1.8,
+    planetSpeed: 1.1,
   },
   {
     id: 'pythagorean',
@@ -71,24 +80,27 @@ export const PRESETS: Preset[] = [
     ]),
     dt: 0.0016,
     starSoft: 0.04,
-    planetRadius: 5.5,
-    planetSpeed: 1.25,
+    target: 'bary',
+    planetRadius: 4.0,
+    planetSpeed: 1.6,
   },
   {
     id: 'binary',
     name: 'Binary + Star',
-    blurb: 'A tight equal-mass binary near the centre with a heavier star wheeling around outside — a hierarchical trio.',
+    blurb: 'A tight equal-mass binary with a lighter star wheeling around outside. Launch the planet around the inner binary for an orbit smaller than the third star’s.',
     make: () => normalize([
-      // Tight binary (each mass 1, separation 0.5, circular).
-      star(0.25, 0, 0, 1.0, 1),
-      star(-0.25, 0, 0, -1.0, 1),
-      // Distant third star.
-      star(2.6, 0, 0, 1.05, 1.4),
+      // Tight equal-mass binary (separation 0.6, circular: v = √(1/4·sep)).
+      star(0.3, 0, 0, 0.91, 1),
+      star(-0.3, 0, 0, -0.91, 1),
+      // Lighter third star on a wide, near-circular outer orbit (v = √(M/d)).
+      star(5.0, 0, 0, 0.707, 0.5),
     ]),
     dt: 0.0020,
     starSoft: 0.03,
-    planetRadius: 3.6,
-    planetSpeed: 0.95,
+    target: 'binary',
+    planetRadius: 1.6,
+    planetSpeed: 1.1,
+    hasBinary: true,
   },
 ];
 

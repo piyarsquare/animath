@@ -47,6 +47,18 @@ readout tracks this divergence live.
   More structured, but a planet wandering between the two scales still finds
   chaos.
 
+## Where the planet starts
+
+Use **Orbit around** to choose what the planet circles. Pick a single **star**
+for a tight *S-type* orbit nestled well inside the stellar dance — a
+"moon-like" world that looks stable until a close pass by another star tears it
+loose. Pick the **barycenter** (or the **inner binary**) for a wide
+*circumtrinary / circumbinary* orbit that wraps the whole system. **Start
+radius** and **speed** are measured from that body; **Circular orbit speed**
+sets the speed for a roughly circular orbit (√(M/r)), a good starting point for
+bound, interesting paths. Or hit **Place planet by hand** and click–drag right
+on the scene to set the launch point and velocity arrow yourself.
+
 ## What you're seeing
 
 - **Bright spheres** are the three stars, full participants in the gravity —

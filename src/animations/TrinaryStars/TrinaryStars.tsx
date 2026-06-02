@@ -3,8 +3,8 @@ import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import { ShellActions, ShellSettings, useAppExplainer, useAppHeader } from '../../components/AppShell';
 import { Section, Slider, Pills } from '../../components/ControlPanel';
-import { step, cloudSpread, type SimState, type Planet } from './physics';
-import { PRESETS, getPreset } from './presets';
+import { step, cloudSpread, type SimState, type Planet, type Star } from './physics';
+import { PRESETS, getPreset, type TargetId } from './presets';
 import explainerText from './EXPLAINER.md?raw';
 
 const STAR_COLORS = [0xffd27f, 0xff7043, 0x9ec7ff];
@@ -12,10 +12,30 @@ const REF_COLOR = 0x66f0ff;
 const GHOST_COLOR = 0xff5fa2;
 const GHOST_COLOR_HEX = '#ff5fa2';
 const TRAIL_MAX = 2000; // points stored per body; visible length is a live slider.
+const VEL_SCALE = 1;    // sim-units of drag → units of launch speed.
 
 /** Sim plane lives at world y = 0 so the camera can look down on it like a floor. */
 function simX(x: number) { return x; }
 function simZ(y: number) { return -y; }
+
+/** The body the planet is launched around: its position, velocity and the mass
+ *  that governs a circular orbit at a given radius. */
+function orbitFrame(stars: Star[], target: TargetId) {
+  if (target === 'bary' || target === 'binary') {
+    const idx = target === 'binary' ? [0, 1] : [0, 1, 2];
+    let M = 0, cx = 0, cy = 0, cvx = 0, cvy = 0;
+    for (const i of idx) {
+      const s = stars[i];
+      M += s.mass;
+      cx += s.mass * s.x; cy += s.mass * s.y;
+      cvx += s.mass * s.vx; cvy += s.mass * s.vy;
+    }
+    return { cx: cx / M, cy: cy / M, cvx: cvx / M, cvy: cvy / M, mass: M };
+  }
+  const k = target === 's0' ? 0 : target === 's1' ? 1 : 2;
+  const s = stars[k];
+  return { cx: s.x, cy: s.y, cvx: s.vx, cvy: s.vy, mass: s.mass };
+}
 
 /** Soft radial sprite used to give the stars a glow halo. */
 function makeGlowTexture(): THREE.Texture {
@@ -81,31 +101,34 @@ class Trail {
 
 export default function TrinaryStars() {
   const [presetId, setPresetId] = useState(PRESETS[0].id);
+  const [target, setTargetState] = useState<TargetId>(PRESETS[0].target);
   const [ghostCount, setGhostCount] = useState(8);
   const [epsExp, setEpsExp] = useState(-3);      // perturbation ε = 10^epsExp
-  const [planetRadius, setPlanetRadius] = useState(PRESETS[0].planetRadius);
-  const [planetSpeed, setPlanetSpeed] = useState(PRESETS[0].planetSpeed);
+  const [planetRadius, setPlanetRadiusState] = useState(PRESETS[0].planetRadius);
+  const [planetSpeed, setPlanetSpeedState] = useState(PRESETS[0].planetSpeed);
   const [speed, setSpeed] = useState(1);          // sim-seconds per real-second
   const [trailLen, setTrailLen] = useState(500);
   const [showTrails, setShowTrails] = useState(true);
   const [paused, setPaused] = useState(false);
+  const [placeMode, setPlaceMode] = useState(false);
 
   const preset = getPreset(presetId);
   useAppHeader('Trinary System', preset.name);
   useAppExplainer(explainerText);
 
-  // Live params the animation loop reads without re-mounting the scene.
+  // Live params the animation loop / pointer handlers read without re-mounting.
   const refs = useRef({
     speed, trailLen, showTrails, paused,
-    ghostCount, epsExp, planetRadius, planetSpeed, presetId,
+    ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode,
   });
-  refs.current = { speed, trailLen, showTrails, paused, ghostCount, epsExp, planetRadius, planetSpeed, presetId };
+  refs.current = { speed, trailLen, showTrails, paused, ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode };
+
+  // A hand-placed launch (position + velocity). When set it overrides the
+  // parametric target/radius/speed seeding until a launch control changes.
+  const customRef = useRef<{ x: number; y: number; vx: number; vy: number } | null>(null);
 
   // Imperative handles populated by onMount and called by control effects/buttons.
-  const api = useRef<{
-    reset: () => void;
-    scatter: () => void;
-  } | null>(null);
+  const api = useRef<{ reset: () => void; scatter: () => void } | null>(null);
 
   const spreadElRef = useRef<HTMLSpanElement>(null);
   const timeElRef = useRef<HTMLSpanElement>(null);
@@ -169,23 +192,35 @@ export default function TrinaryStars() {
       planetTrails = [];
     }
 
-    /** Seed the planet states from current launch settings, spreading the
-     *  ghosts in a tiny ring of radius ε around the reference planet. */
+    /** Seed the planet states: a reference planet at the chosen launch point,
+     *  with ghosts spread in a tiny ring of radius ε around it. */
     function seedPlanets(): Planet[] {
-      const r = refs.current.planetRadius;
-      const v = refs.current.planetSpeed;
       const n = Math.max(1, Math.round(refs.current.ghostCount));
       const eps = Math.pow(10, refs.current.epsExp);
+
+      let bx: number, by: number, bvx: number, bvy: number;
+      const custom = customRef.current;
+      if (custom) {
+        bx = custom.x; by = custom.y; bvx = custom.vx; bvy = custom.vy;
+      } else {
+        const f = orbitFrame(sim.stars, refs.current.target);
+        const r = refs.current.planetRadius;
+        const v = refs.current.planetSpeed;
+        // Launch at radius r along +x from the target, moving tangentially
+        // (CCW), carried along by the target body's own velocity.
+        bx = f.cx + r; by = f.cy;
+        bvx = f.cvx; bvy = f.cvy + v;
+      }
+
       const planets: Planet[] = [];
-      // Reference planet launched on a circular-ish tangential path.
       for (let i = 0; i < n; i++) {
-        let px = r, py = 0;
+        let px = bx, py = by;
         if (i > 0) {
           const ang = (2 * Math.PI * (i - 1)) / Math.max(1, n - 1);
           px += eps * Math.cos(ang);
           py += eps * Math.sin(ang);
         }
-        planets.push({ x: px, y: py, vx: 0, vy: v, ax: 0, ay: 0 });
+        planets.push({ x: px, y: py, vx: bvx, vy: bvy, ax: 0, ay: 0 });
       }
       return planets;
     }
@@ -270,18 +305,77 @@ export default function TrinaryStars() {
     }
     placeCamera();
 
+    // --- Click-to-place plumbing ---
+    const raycaster = new THREE.Raycaster();
+    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const hit = new THREE.Vector3();
+    const arrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), 1, 0xffffff, 0.22, 0.13);
+    arrow.visible = false;
+    scene.add(arrow);
+
     const el = renderer.domElement;
-    let dragging = false;
+    function pointerToSim(e: PointerEvent): { x: number; y: number } | null {
+      const rect = el.getBoundingClientRect();
+      const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const ndcY = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
+      raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+      if (!raycaster.ray.intersectPlane(groundPlane, hit)) return null;
+      return { x: hit.x, y: -hit.z };
+    }
+
+    let dragging = false;       // camera orbit
+    let placing = false;        // planet placement
     let lastX = 0, lastY = 0;
-    const onDown = (e: PointerEvent) => { dragging = true; lastX = e.clientX; lastY = e.clientY; el.setPointerCapture(e.pointerId); };
+    let placeStart = { x: 0, y: 0 };
+    let draftVel = { vx: 0, vy: 0 };
+
+    const onDown = (e: PointerEvent) => {
+      if (refs.current.placeMode) {
+        const p = pointerToSim(e);
+        if (!p) return;
+        placing = true;
+        placeStart = p;
+        draftVel = { vx: 0, vy: 0 };
+        arrow.position.set(p.x, 0, -p.y);
+        arrow.setLength(0.0001, 0.0001, 0.0001);
+        arrow.visible = true;
+        el.setPointerCapture(e.pointerId);
+        return;
+      }
+      dragging = true; lastX = e.clientX; lastY = e.clientY; el.setPointerCapture(e.pointerId);
+    };
     const onMove = (e: PointerEvent) => {
+      if (placing) {
+        const p = pointerToSim(e);
+        if (!p) return;
+        const dx = p.x - placeStart.x, dy = p.y - placeStart.y;
+        draftVel = { vx: dx * VEL_SCALE, vy: dy * VEL_SCALE };
+        const dir = new THREE.Vector3(dx, 0, -dy);
+        const len = dir.length();
+        if (len > 1e-5) {
+          arrow.setDirection(dir.normalize());
+          arrow.setLength(len, Math.min(0.3, len * 0.28), Math.min(0.18, len * 0.16));
+        }
+        return;
+      }
       if (!dragging) return;
       cam.az -= (e.clientX - lastX) * 0.006;
       cam.polar = Math.min(1.52, Math.max(0.05, cam.polar - (e.clientY - lastY) * 0.006));
       lastX = e.clientX; lastY = e.clientY;
       placeCamera();
     };
-    const onUp = (e: PointerEvent) => { dragging = false; try { el.releasePointerCapture(e.pointerId); } catch { /* ignore */ } };
+    const onUp = (e: PointerEvent) => {
+      if (placing) {
+        placing = false;
+        arrow.visible = false;
+        customRef.current = { x: placeStart.x, y: placeStart.y, vx: draftVel.vx, vy: draftVel.vy };
+        reset();
+        try { el.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+        return;
+      }
+      dragging = false;
+      try { el.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+    };
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       cam.dist = Math.min(60, Math.max(2, cam.dist * (1 + Math.sign(e.deltaY) * 0.08)));
@@ -357,22 +451,56 @@ export default function TrinaryStars() {
     };
   }, []);
 
-  // Re-seed the whole system whenever an initial-condition control changes.
+  // Re-seed whenever an initial-condition control changes. (Launch-defining
+  // changes also clear any hand-placed launch via their wrapped setters.)
   useEffect(() => {
     api.current?.reset();
-  }, [presetId, ghostCount, epsExp, planetRadius, planetSpeed]);
+  }, [presetId, target, ghostCount, epsExp, planetRadius, planetSpeed]);
 
-  // When switching preset, adopt its recommended planet launch defaults.
+  // Wrapped setters: any change that redefines the launch drops a hand-placed one.
+  const setPlanetRadius = (v: number) => { customRef.current = null; setPlanetRadiusState(v); };
+  const setPlanetSpeed = (v: number) => { customRef.current = null; setPlanetSpeedState(v); };
+  const setTarget = (t: TargetId) => { customRef.current = null; setTargetState(t); };
+
   const onPickPreset = (id: string) => {
     const p = getPreset(id);
+    customRef.current = null;
     setPresetId(id);
-    setPlanetRadius(p.planetRadius);
-    setPlanetSpeed(p.planetSpeed);
+    setTargetState(p.target);
+    setPlanetRadiusState(p.planetRadius);
+    setPlanetSpeedState(p.planetSpeed);
   };
+
+  // Set the launch speed to the local circular speed √(M/r) for the target.
+  const onAutoCircular = () => {
+    const stars = getPreset(presetId).make();
+    const f = orbitFrame(stars, target);
+    const v = Math.sqrt(f.mass / Math.max(0.05, planetRadius));
+    setPlanetSpeed(Math.round(v / 0.05) * 0.05);
+  };
+
+  const onTogglePlace = () => {
+    const next = !placeMode;
+    setPlaceMode(next);
+    if (next) { setPaused(true); api.current?.reset(); }
+  };
+
+  const targetOptions: { value: TargetId; label: string }[] = [
+    { value: 'bary', label: 'Barycenter' },
+    { value: 's0', label: 'Star 1' },
+    { value: 's1', label: 'Star 2' },
+    { value: 's2', label: 'Star 3' },
+    ...(preset.hasBinary ? [{ value: 'binary' as TargetId, label: 'Inner binary' }] : []),
+  ];
 
   const btnStyle: React.CSSProperties = {
     padding: '10px 14px', borderRadius: 6, border: '1px solid var(--cp-border, #2a3550)',
     background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg, #e8edf6)', cursor: 'pointer', fontSize: 14, flex: 1,
+  };
+  const placeBtnStyle: React.CSSProperties = {
+    ...btnStyle,
+    background: placeMode ? 'rgba(255, 212, 0, 0.18)' : 'rgba(255,255,255,0.06)',
+    borderColor: placeMode ? 'rgba(255,212,0,0.5)' : 'var(--cp-border, #2a3550)',
   };
 
   return (
@@ -390,6 +518,7 @@ export default function TrinaryStars() {
       }}>
         <div>cloud spread&nbsp; <span ref={spreadElRef} style={{ color: GHOST_COLOR_HEX }}>0.00e+0</span></div>
         <div>sim time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span ref={timeElRef} style={{ color: '#9ec7ff' }}>0.0</span></div>
+        {placeMode && <div style={{ color: '#ffd27f' }}>click + drag to launch</div>}
       </div>
 
       <ShellActions>
@@ -398,6 +527,9 @@ export default function TrinaryStars() {
             <button style={btnStyle} onClick={() => setPaused(p => !p)}>{paused ? '▶ Play' : '❚❚ Pause'}</button>
             <button style={btnStyle} onClick={() => api.current?.reset()}>↺ Reset</button>
           </div>
+          <button style={placeBtnStyle} onClick={onTogglePlace}>
+            {placeMode ? '✛ Placing — click + drag on the scene' : '✛ Place planet by hand'}
+          </button>
           <button style={btnStyle} onClick={() => api.current?.scatter()}>✦ Scatter ghosts here</button>
           <Slider label="Speed" value={speed} min={0.1} max={4} step={0.1}
             onChange={setSpeed} format={v => `${v.toFixed(1)}×`} />
@@ -423,11 +555,23 @@ export default function TrinaryStars() {
             onChange={setEpsExp} format={v => `10^${v.toFixed(1)}`} />
         </Section>
 
-        <Section title="Planet launch" icon="◐">
-          <Slider label="Start radius" value={planetRadius} min={0.5} max={8} step={0.1}
-            onChange={setPlanetRadius} format={v => v.toFixed(1)} />
-          <Slider label="Start speed" value={planetSpeed} min={0} max={2.5} step={0.05}
+        <Section title="Planet launch" icon="◐" defaultOpen>
+          <Pills
+            label="Orbit around"
+            options={targetOptions}
+            value={target}
+            onChange={setTarget}
+          />
+          <Slider label="Start radius" value={planetRadius} min={0.1} max={8} step={0.05}
+            onChange={setPlanetRadius} format={v => v.toFixed(2)} />
+          <Slider label="Start speed" value={planetSpeed} min={0} max={3} step={0.05}
             onChange={setPlanetSpeed} format={v => v.toFixed(2)} />
+          <button style={{ ...btnStyle, width: '100%', flex: 'none' }} onClick={onAutoCircular}>
+            ◯ Circular orbit speed
+          </button>
+          <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
+            Radius &amp; speed are measured from the body you orbit. Pick a star for a tight inner (S-type) orbit; the barycenter or inner binary for a wide one.
+          </div>
         </Section>
 
         <Section title="View" icon="◑">
