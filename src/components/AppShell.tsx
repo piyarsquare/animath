@@ -9,6 +9,8 @@ export interface AppDescriptor {
   name: string;
   /** Optional emoji or single character used as a list-icon. */
   icon?: string;
+  /** One-line description shown on the menu screen's gallery cards. */
+  blurb?: string;
 }
 
 /** Apps register their function picker via useAppFunctions so the AppShell's
@@ -79,8 +81,9 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const current = apps.find(a => a.hash === currentHash) ?? apps[0];
-  const titleName = header.title ?? current?.name ?? '';
+  const isHome = currentHash === '/';
+  const current = apps.find(a => a.hash === currentHash);
+  const titleName = header.title ?? (isHome ? 'animath' : current?.name) ?? '';
   const subtitle = header.subtitle;
   const hasFunctions = functions != null;
 
@@ -104,6 +107,14 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     <AppShellContext.Provider value={ctx}>
       <div className="as-shell">
         <header className="as-bar">
+          {currentHash !== '/' && (
+            <button
+              className="as-bar-btn"
+              aria-label="Menu screen"
+              title="Menu"
+              onClick={() => onNavigate('/')}
+            >⌂</button>
+          )}
           <button
             className="as-bar-btn"
             aria-label="Apps"

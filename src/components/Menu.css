@@ -1,0 +1,113 @@
+/* Menu — the landing gallery shown at the `/` route. Reuses the AppShell
+   design tokens (--as-*) so it stays visually consistent with the chrome. */
+
+.menu {
+  padding: clamp(24px, 6vw, 64px) clamp(16px, 5vw, 48px) 64px;
+  color: var(--as-fg);
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(255, 212, 0, 0.08), transparent 60%),
+    var(--as-bg);
+}
+
+/* ---------- Hero ---------- */
+.menu-hero {
+  max-width: 760px;
+  margin: 0 auto clamp(28px, 5vw, 48px);
+  text-align: center;
+}
+.menu-title {
+  margin: 0;
+  font-size: clamp(40px, 9vw, 76px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  background: linear-gradient(120deg, var(--as-fg) 30%, var(--as-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.menu-tagline {
+  margin: 16px auto 0;
+  max-width: 46ch;
+  color: var(--as-fg-dim);
+  font-size: clamp(14px, 2.2vw, 17px);
+  line-height: 1.5;
+}
+
+/* ---------- Card grid ---------- */
+.menu-grid {
+  max-width: 960px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.menu-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  text-align: left;
+  padding: 20px;
+  border-radius: var(--as-radius);
+  border: 1px solid var(--as-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--as-fg);
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease,
+    background 160ms ease, box-shadow 160ms ease;
+}
+.menu-card:hover,
+.menu-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(255, 212, 0, 0.5);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: var(--as-shadow);
+  outline: none;
+}
+
+.menu-card-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  border-radius: 10px;
+  background: rgba(255, 212, 0, 0.12);
+  color: var(--as-accent);
+}
+
+.menu-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.menu-card-name {
+  font-size: 17px;
+  font-weight: 700;
+}
+.menu-card-blurb {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--as-fg-dim);
+}
+
+.menu-card-go {
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 18px;
+  color: var(--as-fg-dim);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 160ms ease, transform 160ms ease, color 160ms ease;
+}
+.menu-card:hover .menu-card-go,
+.menu-card:focus-visible .menu-card-go {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--as-accent);
+}
