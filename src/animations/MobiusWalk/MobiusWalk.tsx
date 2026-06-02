@@ -3,28 +3,35 @@ import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import { makeCorridorGeometry, DEFAULT_PARAMS, frameAt, CorridorParams } from './corridorGeometry';
 import { corridorMaterial } from './shaders/corridorMaterial';
-import { instantiateObjects, disposeObjects } from './objects';
 import { ShellActions, ShellSettings, useAppHeader, useAppExplainer } from '../../components/AppShell';
 import { Section, Slider } from '../../components/ControlPanel';
 import explainerText from './EXPLAINER.md?raw';
 
-export interface MobiusWalkProps {
-  speed?: number;
-}
+const EYE_HEIGHT = 1.6;          // camera height above the floor
+const LOOK_SENS = 0.0035;        // radians per pixel dragged
+const MAX_PITCH = 1.3;           // ~75°
 
 interface SceneCtx {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
   mesh: THREE.Mesh;
-  objects: THREE.Group;
   lamp: THREE.PointLight;
   params: CorridorParams;
 }
 
-export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
+type MoveKey = 'fwd' | 'back' | 'left' | 'right';
+
+/**
+ * First-person walk along the floor of a corridor whose rectangular section is
+ * looped with a half-twist — a Möbius strip. You drive the movement and look
+ * freely; "up" is always the floor's surface normal, so as you walk the loop the
+ * world rolls until you're standing where the ceiling used to be (a full lap),
+ * returning to normal after two laps.
+ */
+export default function MobiusWalk() {
   const [twist, setTwist] = useState(true);
-  const [walkSpeed, setWalkSpeed] = useState(speed);
+  const [moveSpeed, setMoveSpeed] = useState(6);
 
   useAppHeader('Möbius Walk', twist ? 'twisted corridor' : 'untwisted corridor');
   useAppExplainer(explainerText);
@@ -32,13 +39,19 @@ export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
   const ctxRef = useRef<SceneCtx | null>(null);
   const rafRef = useRef<number | null>(null);
   const clockRef = useRef(new THREE.Clock());
-  const camTRef = useRef(0);
-  const speedRef = useRef(walkSpeed);
-  const twistRef = useRef(twist);
-  useEffect(() => { speedRef.current = walkSpeed; }, [walkSpeed]);
 
-  // Built once; reacts to state via refs so toggling twist / speed never tears
-  // down the WebGL context.
+  // Player state (refs so the animation loop reads live values).
+  const sRef = useRef(0);     // arc position along the corridor
+  const wRef = useRef(0);     // lateral position across the floor
+  const yawRef = useRef(0);   // look yaw (around surface normal)
+  const pitchRef = useRef(0); // look pitch
+  const keysRef = useRef<Record<MoveKey, boolean>>({ fwd: false, back: false, left: false, right: false });
+  const speedRef = useRef(moveSpeed);
+  const twistRef = useRef(twist);
+  useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
+
+  const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
+
   const onMount = useCallback(({ scene, camera, renderer }: {
     scene: THREE.Scene;
     camera: THREE.PerspectiveCamera;
@@ -49,50 +62,68 @@ export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
     const mesh = new THREE.Mesh(makeCorridorGeometry(params), corridorMaterial());
     scene.add(mesh);
 
-    const objects = instantiateObjects(params);
-    scene.add(objects);
-
     scene.add(new THREE.AmbientLight(0xffffff, 0.45));
-    const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.5);
     dir.position.set(5, 5, 5);
     scene.add(dir);
-    // A lamp that rides just ahead of the camera so the hall is lit as you walk.
-    const lamp = new THREE.PointLight(0xfff1e0, 14, 30, 1.8);
+    const lamp = new THREE.PointLight(0xfff1e0, 10, 36, 1.5);
     scene.add(lamp);
 
     scene.background = new THREE.Color(0x05050a);
-    scene.fog = new THREE.Fog(0x05050a, 6, 28);
+    scene.fog = new THREE.Fog(0x05050a, 6, 30);
 
     camera.fov = 75;
     camera.near = 0.05;
     camera.far = 200;
     camera.updateProjectionMatrix();
 
-    ctxRef.current = { scene, camera, renderer, mesh, objects, lamp, params };
+    ctxRef.current = { scene, camera, renderer, mesh, lamp, params };
 
     clockRef.current.start();
     const animate = () => {
       const c = ctxRef.current;
-      if (!c) return; // torn down
+      if (!c) return;
       const dt = Math.min(0.05, clockRef.current.getDelta());
-      const circumference = 2 * Math.PI * c.params.radius;
-      // A half-twist only returns the cross-section frame to itself after TWO
-      // laps, so wrap the phase at that period. Wrapping at one lap would snap
-      // the (inverted) frame back to upright and roll the camera 180° at the
-      // seam — the discontinuity Codex flagged. b/n are continuous across the
-      // double-lap wrap, so there's no pop.
-      const period = c.params.tiltTurns % 2 === 1 ? 2 : 1;
-      camTRef.current = (camTRef.current + (speedRef.current * dt) / circumference + period) % period;
 
-      const f = frameAt(camTRef.current, c.params);
-      // Walk the centreline with a gentle bob; look ahead along the tangent with
-      // "up" = the twisting binormal, so the Möbius half-turn is felt directly.
-      const bob = 0.05 * Math.sin(camTRef.current * Math.PI * 20);
-      c.camera.position.copy(f.center).addScaledVector(f.b, bob);
-      c.camera.up.copy(f.b);
-      c.camera.lookAt(f.center.clone().addScaledVector(f.tangent, 2));
+      // Movement, relative to where you're facing (yaw), in the floor plane.
+      const k = keysRef.current;
+      const fwd = (k.fwd ? 1 : 0) - (k.back ? 1 : 0);
+      const strafe = (k.right ? 1 : 0) - (k.left ? 1 : 0);
+      if (fwd || strafe) {
+        const v = speedRef.current * dt;
+        const cy = Math.cos(yawRef.current);
+        const sy = Math.sin(yawRef.current);
+        sRef.current += (fwd * cy - strafe * sy) * v;            // along corridor
+        const halfW = c.params.width - 0.3;
+        wRef.current = Math.max(-halfW, Math.min(halfW,
+          wRef.current + (fwd * sy + strafe * cy) * v));         // across floor
+      }
 
-      c.lamp.position.copy(c.camera.position).addScaledVector(f.tangent, 1.5);
+      // Position on the (possibly twisting) floor; up = floor normal.
+      const circ = 2 * Math.PI * c.params.radius;
+      const period = c.params.tiltTurns % 2 === 1 ? 2 : 1; // laps before the frame repeats
+      const t = (((sRef.current / circ) % period) + period) % period;
+      const f = frameAt(t, c.params);
+
+      const up = f.b;                              // surface normal = gravity-up
+      const right = f.n.clone().negate();          // player's right on the floor
+      const eye = f.center.clone()
+        .addScaledVector(right, wRef.current)
+        .addScaledVector(f.b, -(c.params.height - EYE_HEIGHT));
+
+      const yaw = yawRef.current;
+      const pitch = pitchRef.current;
+      const cp = Math.cos(pitch);
+      const lookDir = new THREE.Vector3()
+        .addScaledVector(f.tangent, cp * Math.cos(yaw))
+        .addScaledVector(right, cp * Math.sin(yaw))
+        .addScaledVector(up, Math.sin(pitch));
+
+      c.camera.up.copy(up);
+      c.camera.position.copy(eye);
+      c.camera.lookAt(eye.clone().add(lookDir));
+      // Headlamp at eye level (not ahead) so looking at a near wall doesn't bloom.
+      c.lamp.position.copy(eye).addScaledVector(up, 0.3);
 
       c.renderer.render(c.scene, c.camera);
       rafRef.current = requestAnimationFrame(animate);
@@ -100,8 +131,7 @@ export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
     rafRef.current = requestAnimationFrame(animate);
   }, []);
 
-  // Rebuild the corridor + objects in place when the twist toggles — no canvas
-  // remount, so the walk continues seamlessly.
+  // Rebuild the corridor in place when the twist toggles (no canvas remount).
   useEffect(() => {
     twistRef.current = twist;
     const c = ctxRef.current;
@@ -109,14 +139,34 @@ export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
     const params: CorridorParams = { ...DEFAULT_PARAMS, tiltTurns: twist ? 1 : 0 };
     c.mesh.geometry.dispose();
     c.mesh.geometry = makeCorridorGeometry(params);
-    c.scene.remove(c.objects);
-    disposeObjects(c.objects);
-    c.objects = instantiateObjects(params);
-    c.scene.add(c.objects);
     c.params = params;
   }, [twist]);
 
-  // Stop the animation loop and release the scene when leaving the view.
+  // Keyboard: WASD / arrow keys.
+  useEffect(() => {
+    const map: Record<string, MoveKey> = {
+      KeyW: 'fwd', ArrowUp: 'fwd',
+      KeyS: 'back', ArrowDown: 'back',
+      KeyA: 'left', ArrowLeft: 'left',
+      KeyD: 'right', ArrowRight: 'right',
+    };
+    const down = (e: KeyboardEvent) => {
+      const m = map[e.code];
+      if (m) { keysRef.current[m] = true; e.preventDefault(); }
+    };
+    const up = (e: KeyboardEvent) => {
+      const m = map[e.code];
+      if (m) { keysRef.current[m] = false; e.preventDefault(); }
+    };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+    };
+  }, []);
+
+  // Stop the loop and release the scene on unmount.
   useEffect(() => () => {
     if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
     const c = ctxRef.current;
@@ -124,24 +174,55 @@ export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
     if (c) {
       c.mesh.geometry.dispose();
       (c.mesh.material as THREE.Material).dispose();
-      disposeObjects(c.objects);
     }
   }, []);
 
+  // Drag-to-look.
+  const dragRef = useRef<{ x: number; y: number } | null>(null);
+  const onPointerDown = (e: React.PointerEvent) => {
+    dragRef.current = { x: e.clientX, y: e.clientY };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    yawRef.current += (e.clientX - d.x) * LOOK_SENS;
+    pitchRef.current = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, pitchRef.current - (e.clientY - d.y) * LOOK_SENS));
+    d.x = e.clientX;
+    d.y = e.clientY;
+  };
+  const onPointerUp = () => { dragRef.current = null; };
+
   return (
     <>
-      <div style={{ position: 'absolute', inset: 0 }}>
+      <div
+        style={{ position: 'absolute', inset: 0, cursor: 'grab', touchAction: 'none' }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
         <Canvas3D onMount={onMount} />
+      </div>
+
+      <MovePad onSet={setKey} />
+
+      <div style={{
+        position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
+        color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none',
+        textShadow: '0 1px 2px #000',
+      }}>
+        Drag to look · WASD / arrows or the pad to move
       </div>
 
       <ShellSettings>
         <Section title="Walk" icon="∞" defaultOpen>
           <Slider
-            label="Speed"
-            value={walkSpeed}
-            min={0} max={8} step={0.5}
-            onChange={setWalkSpeed}
-            format={(v) => (v === 0 ? 'paused' : v.toFixed(1))}
+            label="Move speed"
+            value={moveSpeed}
+            min={1} max={14} step={0.5}
+            onChange={setMoveSpeed}
+            format={(v) => v.toFixed(1)}
           />
         </Section>
       </ShellSettings>
@@ -157,10 +238,38 @@ export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
             }}
             onClick={() => setTwist((t) => !t)}
           >
-            {twist ? 'Disable twist' : 'Enable Möbius twist'}
+            {twist ? 'Disable twist (plain loop)' : 'Enable Möbius twist'}
           </button>
         </div>
       </ShellActions>
     </>
+  );
+}
+
+/* On-screen movement pad — works on touch and as a discoverable desktop hint. */
+function MovePad({ onSet }: { onSet: (k: MoveKey, v: boolean) => void }) {
+  const btn = (k: MoveKey, label: string, style: React.CSSProperties) => (
+    <button
+      aria-label={k}
+      onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); onSet(k, true); }}
+      onPointerUp={() => onSet(k, false)}
+      onPointerCancel={() => onSet(k, false)}
+      onPointerLeave={(e) => { if (e.buttons === 0) onSet(k, false); }}
+      style={{
+        position: 'absolute', width: 46, height: 46, ...style,
+        borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)',
+        background: 'rgba(12,12,16,0.6)', color: '#f0f0f3', fontSize: 18,
+        backdropFilter: 'blur(6px)', cursor: 'pointer', touchAction: 'none',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >{label}</button>
+  );
+  return (
+    <div style={{ position: 'absolute', bottom: 20, right: 20, width: 150, height: 150, zIndex: 20 }}>
+      {btn('fwd', '▲', { top: 0, left: 52 })}
+      {btn('left', '◀', { top: 52, left: 0 })}
+      {btn('right', '▶', { top: 52, left: 104 })}
+      {btn('back', '▼', { top: 104, left: 52 })}
+    </div>
   );
 }

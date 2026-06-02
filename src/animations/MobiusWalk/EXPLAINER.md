@@ -20,10 +20,15 @@ counterclockwise. Walk all the way around the corridor and you return
 to come back to normal. That's why the hallway looks ordinary until you
 notice the world has flipped.
 
-## What you're seeing
+## Walking it
 
-The walls are parametrized along the strip, and the gentle iridescent shading
-tracks your position around the loop, so you can tell how far around you've
-traveled. The "impossible" feeling — that the far end joins back to the
-start with a flip — isn't a rendering trick; it's the genuine topology of the
-strip.
+You walk the **floor** of the corridor in first person: drag to look around,
+and use **WASD / arrow keys** (or the on-screen pad) to move. There's no
+autopilot — you go where you steer.
+
+Crucially, **"up" is always the floor's surface normal** — gravity is glued to
+whatever you're standing on. Because the floor is the Möbius strip, walking one
+full lap rolls the whole world 180°: you end up standing where the *ceiling*
+used to be, upside-down relative to where you started. Keep going and a second
+lap brings you back. That's the genuine topology of the strip, felt underfoot
+rather than just described.
