@@ -22,6 +22,11 @@ export const DEFAULT_PARAMS: CorridorParams = {
  * enclosed corridor (ceiling, both walls, floor) rather than two loose panels.
  * After one lap the cross-section has rotated by π·tiltTurns, so the floor and
  * ceiling have swapped: a Möbius corridor.
+ *
+ * Each wall gets its own vertices (not shared at the corners) so the 90° edges
+ * stay crisp — sharing them makes computeVertexNormals average across the
+ * corner and the walls look soft/"fuzzy". UVs are metric (world units) so a
+ * repeating panel texture keeps a consistent scale on every wall.
  */
 export function makeCorridorGeometry(
   p: CorridorParams = DEFAULT_PARAMS
@@ -38,25 +43,33 @@ export function makeCorridorGeometry(
     [ p.width, -p.height],  // 3: floor-right
   ];
   const ring = corners.length;
+  const wallSpan = [2 * p.width, 2 * p.height, 2 * p.width, 2 * p.height];
+  const circumference = 2 * Math.PI * p.radius;
 
   for (let i = 0; i <= p.segments; i++) {
     const t = i / p.segments;
     const { center, n, b } = frameAt(t, p);
-    corners.forEach(([u, v], k) => {
-      const pos = center.clone().addScaledVector(n, u).addScaledVector(b, v);
-      verts.push(pos.x, pos.y, pos.z);
-      uvs.push(t * p.radius, k / ring);
-    });
+    const along = t * circumference;
+    for (let w = 0; w < ring; w++) {
+      const [u0, v0] = corners[w];
+      const [u1, v1] = corners[(w + 1) % ring];
+      const a = center.clone().addScaledVector(n, u0).addScaledVector(b, v0);
+      const c = center.clone().addScaledVector(n, u1).addScaledVector(b, v1);
+      verts.push(a.x, a.y, a.z, c.x, c.y, c.z);
+      uvs.push(along, 0, along, wallSpan[w]);
+    }
   }
 
+  const perRing = ring * 2; // two vertices per wall
   const indices: number[] = [];
   for (let i = 0; i < p.segments; i++) {
-    const a = i * ring;
-    const c = (i + 1) * ring;
-    for (let k = 0; k < ring; k++) {
-      const k1 = (k + 1) % ring;
-      indices.push(a + k, c + k, c + k1);
-      indices.push(a + k, c + k1, a + k1);
+    const a = i * perRing;
+    const c = (i + 1) * perRing;
+    for (let w = 0; w < ring; w++) {
+      const a0 = a + w * 2, a1 = a + w * 2 + 1;
+      const c0 = c + w * 2, c1 = c + w * 2 + 1;
+      indices.push(a0, c0, c1);
+      indices.push(a0, c1, a1);
     }
   }
 

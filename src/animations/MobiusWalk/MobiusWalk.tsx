@@ -76,7 +76,13 @@ export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
       if (!c) return; // torn down
       const dt = Math.min(0.05, clockRef.current.getDelta());
       const circumference = 2 * Math.PI * c.params.radius;
-      camTRef.current = (camTRef.current + (speedRef.current * dt) / circumference + 1) % 1;
+      // A half-twist only returns the cross-section frame to itself after TWO
+      // laps, so wrap the phase at that period. Wrapping at one lap would snap
+      // the (inverted) frame back to upright and roll the camera 180° at the
+      // seam — the discontinuity Codex flagged. b/n are continuous across the
+      // double-lap wrap, so there's no pop.
+      const period = c.params.tiltTurns % 2 === 1 ? 2 : 1;
+      camTRef.current = (camTRef.current + (speedRef.current * dt) / circumference + period) % period;
 
       const f = frameAt(camTRef.current, c.params);
       // Walk the centreline with a gentle bob; look ahead along the tangent with
