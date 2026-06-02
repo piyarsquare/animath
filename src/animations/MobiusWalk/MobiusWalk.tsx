@@ -11,6 +11,10 @@ const EYE_HEIGHT = 1.6;          // camera height above the floor
 const LOOK_SENS = 0.0035;        // radians per pixel dragged
 const MAX_PITCH = 1.3;           // ~75°
 
+const TRAIL_MAX_PAIRS = 2200;    // ribbon capacity (~4 laps); oldest drops off
+const TRAIL_SPACING = 0.3;       // min metres between trail samples
+const TRAIL_HALF_W = 0.14;       // ribbon half-width
+
 interface SceneCtx {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -18,6 +22,10 @@ interface SceneCtx {
   mesh: THREE.Mesh;
   lamp: THREE.PointLight;
   params: CorridorParams;
+  trail: THREE.Mesh;
+  trailPos: Float32Array;
+  trailCount: number;        // number of vertex pairs laid
+  trailLast: THREE.Vector3 | null;
 }
 
 type MoveKey = 'fwd' | 'back' | 'left' | 'right';
@@ -62,6 +70,28 @@ export default function MobiusWalk() {
     const mesh = new THREE.Mesh(makeCorridorGeometry(params), corridorMaterial());
     scene.add(mesh);
 
+    // Red trail ribbon dropped on the floor as you walk. Pre-allocated; the
+    // index stitches consecutive vertex pairs into a strip, drawRange grows as
+    // samples are laid. DoubleSide + unlit so it stays bright red and is just
+    // as visible when you later see it overhead on the ceiling.
+    const trailPos = new Float32Array(TRAIL_MAX_PAIRS * 2 * 3);
+    const trailIndex = new Uint16Array((TRAIL_MAX_PAIRS - 1) * 6);
+    for (let i = 0; i < TRAIL_MAX_PAIRS - 1; i++) {
+      const o = i * 6, v = i * 2;
+      trailIndex[o] = v; trailIndex[o + 1] = v + 1; trailIndex[o + 2] = v + 2;
+      trailIndex[o + 3] = v + 1; trailIndex[o + 4] = v + 3; trailIndex[o + 5] = v + 2;
+    }
+    const trailGeo = new THREE.BufferGeometry();
+    trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+    trailGeo.setIndex(new THREE.BufferAttribute(trailIndex, 1));
+    trailGeo.setDrawRange(0, 0);
+    const trail = new THREE.Mesh(
+      trailGeo,
+      new THREE.MeshBasicMaterial({ color: 0xff2740, side: THREE.DoubleSide }),
+    );
+    trail.frustumCulled = false;
+    scene.add(trail);
+
     scene.add(new THREE.AmbientLight(0xffffff, 0.45));
     const dir = new THREE.DirectionalLight(0xffffff, 0.5);
     dir.position.set(5, 5, 5);
@@ -77,7 +107,7 @@ export default function MobiusWalk() {
     camera.far = 200;
     camera.updateProjectionMatrix();
 
-    ctxRef.current = { scene, camera, renderer, mesh, lamp, params };
+    ctxRef.current = { scene, camera, renderer, mesh, lamp, params, trail, trailPos, trailCount: 0, trailLast: null };
 
     clockRef.current.start();
     const animate = () => {
@@ -125,13 +155,43 @@ export default function MobiusWalk() {
       // Headlamp at eye level (not ahead) so looking at a near wall doesn't bloom.
       c.lamp.position.copy(eye).addScaledVector(up, 0.3);
 
+      // Lay the trail on the floor just beneath the feet.
+      const floorPt = eye.clone().addScaledVector(up, -(EYE_HEIGHT - 0.03));
+      if (!c.trailLast || floorPt.distanceTo(c.trailLast) > TRAIL_SPACING) {
+        if (c.trailCount >= TRAIL_MAX_PAIRS) {
+          c.trailPos.copyWithin(0, 6);   // drop the oldest pair
+          c.trailCount--;
+        }
+        const o = c.trailCount * 6;
+        c.trailPos[o]     = floorPt.x + right.x * TRAIL_HALF_W;
+        c.trailPos[o + 1] = floorPt.y + right.y * TRAIL_HALF_W;
+        c.trailPos[o + 2] = floorPt.z + right.z * TRAIL_HALF_W;
+        c.trailPos[o + 3] = floorPt.x - right.x * TRAIL_HALF_W;
+        c.trailPos[o + 4] = floorPt.y - right.y * TRAIL_HALF_W;
+        c.trailPos[o + 5] = floorPt.z - right.z * TRAIL_HALF_W;
+        c.trailCount++;
+        c.trailLast = floorPt.clone();
+        const attr = c.trail.geometry.getAttribute('position') as THREE.BufferAttribute;
+        attr.needsUpdate = true;
+        c.trail.geometry.setDrawRange(0, Math.max(0, (c.trailCount - 1) * 6));
+      }
+
       c.renderer.render(c.scene, c.camera);
       rafRef.current = requestAnimationFrame(animate);
     };
     rafRef.current = requestAnimationFrame(animate);
   }, []);
 
+  const clearTrail = useCallback(() => {
+    const c = ctxRef.current;
+    if (!c) return;
+    c.trailCount = 0;
+    c.trailLast = null;
+    c.trail.geometry.setDrawRange(0, 0);
+  }, []);
+
   // Rebuild the corridor in place when the twist toggles (no canvas remount).
+  // The old trail no longer lies on the reshaped floor, so clear it.
   useEffect(() => {
     twistRef.current = twist;
     const c = ctxRef.current;
@@ -140,7 +200,8 @@ export default function MobiusWalk() {
     c.mesh.geometry.dispose();
     c.mesh.geometry = makeCorridorGeometry(params);
     c.params = params;
-  }, [twist]);
+    clearTrail();
+  }, [twist, clearTrail]);
 
   // Keyboard: WASD / arrow keys.
   useEffect(() => {
@@ -174,6 +235,8 @@ export default function MobiusWalk() {
     if (c) {
       c.mesh.geometry.dispose();
       (c.mesh.material as THREE.Material).dispose();
+      c.trail.geometry.dispose();
+      (c.trail.material as THREE.Material).dispose();
     }
   }, []);
 
@@ -239,6 +302,17 @@ export default function MobiusWalk() {
             onClick={() => setTwist((t) => !t)}
           >
             {twist ? 'Disable twist (plain loop)' : 'Enable Möbius twist'}
+          </button>
+          <button
+            style={{
+              padding: '12px 16px', borderRadius: 6,
+              border: '1px solid var(--cp-border)',
+              background: 'rgba(255,255,255,0.06)',
+              color: 'var(--cp-fg)', cursor: 'pointer', fontSize: 14, textAlign: 'left',
+            }}
+            onClick={clearTrail}
+          >
+            Clear trail
           </button>
         </div>
       </ShellActions>
