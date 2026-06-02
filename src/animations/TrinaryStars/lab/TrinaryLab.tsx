@@ -9,9 +9,12 @@ import { runOne, targetMassOf } from './runner';
 import { sampleParams, type EnsembleConfig } from './rng';
 import { WorkerPool } from './pool';
 import { sweepCell, type SweepCell } from './sweep';
+import { GpuRunner, gpuAvailable } from './gpu';
 import MiniSim from './MiniSim';
 
 const HAS_WORKERS = typeof Worker !== 'undefined';
+const HAS_GPU = gpuAvailable();
+type Engine = 'cpu' | 'workers' | 'gpu';
 const TILE_COUNT = 8;
 
 /** Read the lab config carried in the URL hash query (for shareable links). */
@@ -140,8 +143,12 @@ export default function TrinaryLab() {
   const [running, setRunning] = useState(false);
   const [agg, setAgg] = useState<AggSnapshot | null>(null);
   const [rate, setRate] = useState(0);
-  const [engine, setEngine] = useState<'cpu' | 'workers'>(() =>
-    (U.get('e') === 'cpu' || !HAS_WORKERS) ? 'cpu' : 'workers');
+  const [engine, setEngine] = useState<Engine>(() => {
+    const e = U.get('e') as Engine | null;
+    if (e === 'gpu' && HAS_GPU) return 'gpu';
+    if (e === 'cpu' || !HAS_WORKERS) return 'cpu';
+    return 'workers';
+  });
   const [copied, setCopied] = useState(false);
 
   // Parameter sweep state.
@@ -182,6 +189,7 @@ export default function TrinaryLab() {
   const rafRef = useRef(0);
   const tmRef = useRef(1);
   const poolRef = useRef<WorkerPool | null>(null);
+  const gpuRef = useRef<GpuRunner | null>(null);
   const watchdogRef = useRef<number | null>(null);
   const uiClock = useRef({ t: 0, n: 0 });
 
@@ -236,6 +244,35 @@ export default function TrinaryLab() {
 
   const startCpu = () => { rafRef.current = requestAnimationFrame(cpuTick); };
 
+  const startGpu = async () => {
+    try {
+      if (!gpuRef.current) gpuRef.current = await GpuRunner.create();
+    } catch {
+      gpuRef.current = null;
+      setEngine(HAS_WORKERS ? 'workers' : 'cpu');
+      if (runningRef.current) (HAS_WORKERS ? startWorkers : startCpu)();
+      return;
+    }
+    const cfgNow = cfgRef.current;
+    const agg = aggRef.current!;
+    while (runningRef.current && agg.count < targetNRef.current) {
+      const startIdx = agg.count;
+      const B = Math.min(2048, targetNRef.current - startIdx);
+      const params = Array.from({ length: B }, (_, i) => sampleParams(cfgNow, startIdx + i, tmRef.current));
+      let res;
+      try {
+        res = await gpuRef.current!.runBatch(cfgNow, params);
+      } catch {
+        gpuRef.current = null;
+        setEngine('cpu');
+        if (runningRef.current) startCpu();
+        return;
+      }
+      if (!runningRef.current) break;
+      ingestBatch(res);
+    }
+  };
+
   const startWorkers = () => {
     try {
       if (!poolRef.current) {
@@ -263,7 +300,9 @@ export default function TrinaryLab() {
     tmRef.current = targetMassOf(cfgRef.current);
     uiClock.current = { t: performance.now(), n: aggRef.current!.count };
     runningRef.current = true; setRunning(true);
-    if (engineRef.current === 'workers') startWorkers(); else startCpu();
+    if (engineRef.current === 'gpu') { void startGpu(); }
+    else if (engineRef.current === 'workers') startWorkers();
+    else startCpu();
   };
 
   const pause = () => {
@@ -501,8 +540,17 @@ export default function TrinaryLab() {
           <Pills options={PRESETS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
           <Pills label="Orbit around" options={targetOptions} value={target} onChange={setTarget} />
           <Pills label="Engine" value={engine}
-            options={[{ value: 'cpu', label: 'CPU' }, ...(HAS_WORKERS ? [{ value: 'workers' as const, label: `Workers ×${Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1))}` }] : [])]}
-            onChange={(v) => setEngine(v as 'cpu' | 'workers')} />
+            options={[
+              { value: 'cpu', label: 'CPU' },
+              ...(HAS_WORKERS ? [{ value: 'workers', label: `Workers ×${Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1))}` }] : []),
+              ...(HAS_GPU ? [{ value: 'gpu', label: 'GPU (exp)' }] : []),
+            ]}
+            onChange={(v) => setEngine(v as Engine)} />
+          {engine === 'gpu' && (
+            <div style={{ font: '11px/1.5 system-ui', color: '#ffd27f', marginTop: 4 }}>
+              ⚠ Experimental WebGPU engine: simplified classifier (no “calm” axis, so Paradise% reads 0). Verify against CPU; falls back automatically on error.
+            </div>
+          )}
           <Slider label="Runs (target N)" value={targetN} min={500} max={20000} step={500} onChange={setTargetN} format={v => v.toLocaleString()} />
           <Slider label="Time budget / run" value={tMax} min={60} max={400} step={20} onChange={setTMax} format={v => v.toFixed(0)} />
           <Slider label="Launch radius min" value={rMin} min={0.2} max={6} step={0.1} onChange={v => setRMin(Math.min(v, rMax))} format={v => v.toFixed(1)} />
