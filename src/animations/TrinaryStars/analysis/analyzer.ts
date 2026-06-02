@@ -124,6 +124,9 @@ export class Analyzer {
     this.lastCalm = calm;
   }
 
+  /** Current planet fate, for cheap early-stop checks in the headless runner. */
+  fateNow(): PlanetFate { return this.planetFate; }
+
   private energyVariation(): number {
     const n = this.wE.length;
     if (n < 3) return 0;

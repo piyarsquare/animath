@@ -4,7 +4,7 @@ import Canvas3D from '@/components/Canvas3D';
 import { ShellActions, ShellSettings, useAppExplainer, useAppHeader } from '../../components/AppShell';
 import { Section, Slider, Pills } from '../../components/ControlPanel';
 import { step, cloudSpread, type SimState, type Planet, type Star } from './physics';
-import { PRESETS, getPreset, buildStars, type TargetId } from './presets';
+import { PRESETS, getPreset, buildStars, orbitFrame, launchPlanet, type TargetId } from './presets';
 import { Analyzer } from './analysis/analyzer';
 import { DEFAULT_CLASSIFY, type ClassifyParams, type Snapshot } from './analysis/types';
 import Observatory from './Observatory';
@@ -21,25 +21,6 @@ const SAMPLE_DT = 0.05; // sim-time between classifier samples of the reference 
 /** Sim plane lives at world y = 0 so the camera can look down on it like a floor. */
 function simX(x: number) { return x; }
 function simZ(y: number) { return -y; }
-
-/** The body the planet is launched around: its position, velocity and the mass
- *  that governs a circular orbit at a given radius. */
-function orbitFrame(stars: Star[], target: TargetId) {
-  if (target === 'bary' || target === 'binary') {
-    const idx = target === 'binary' ? [0, 1] : [0, 1, 2];
-    let M = 0, cx = 0, cy = 0, cvx = 0, cvy = 0;
-    for (const i of idx) {
-      const s = stars[i];
-      M += s.mass;
-      cx += s.mass * s.x; cy += s.mass * s.y;
-      cvx += s.mass * s.vx; cvy += s.mass * s.vy;
-    }
-    return { cx: cx / M, cy: cy / M, cvx: cvx / M, cvy: cvy / M, mass: M };
-  }
-  const k = target === 's0' ? 0 : target === 's1' ? 1 : 2;
-  const s = stars[k];
-  return { cx: s.x, cy: s.y, cvx: s.vx, cvy: s.vy, mass: s.mass };
-}
 
 /** Soft radial sprite used to give the stars a glow halo. */
 function makeGlowTexture(): THREE.Texture {
@@ -224,13 +205,9 @@ export default function TrinaryStars() {
       if (custom) {
         bx = custom.x; by = custom.y; bvx = custom.vx; bvy = custom.vy;
       } else {
-        const f = orbitFrame(sim.stars, refs.current.target);
-        const r = refs.current.planetRadius;
-        const v = refs.current.planetSpeed;
-        // Launch at radius r along +x from the target, moving tangentially
-        // (CCW), carried along by the target body's own velocity.
-        bx = f.cx + r; by = f.cy;
-        bvx = f.cvx; bvy = f.cvy + v;
+        // Launch at radius r along +x from the target, tangentially (CCW).
+        const b = launchPlanet(sim.stars, refs.current.target, refs.current.planetRadius, refs.current.planetSpeed);
+        bx = b.x; by = b.y; bvx = b.vx; bvy = b.vy;
       }
 
       const planets: Planet[] = [];
@@ -569,6 +546,7 @@ export default function TrinaryStars() {
             {placeMode ? '✛ Placing — click + drag on the scene' : '✛ Place planet by hand'}
           </button>
           <button style={btnStyle} onClick={() => api.current?.scatter()}>✦ Scatter ghosts here</button>
+          <button style={btnStyle} onClick={() => { window.location.hash = '#/trinary-lab'; }}>📊 Open statistics lab</button>
           <Slider label="Speed" value={speed} min={0.1} max={4} step={0.1}
             onChange={setSpeed} format={v => `${v.toFixed(1)}×`} />
         </div>

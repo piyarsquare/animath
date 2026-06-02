@@ -4,7 +4,7 @@
  * deterministically on reset.
  */
 
-import type { Star } from './physics';
+import type { Planet, Star } from './physics';
 
 /** What the planet is launched into orbit around:
  *  the system barycenter, one specific star, or the inner two-star binary. */
@@ -116,4 +116,41 @@ export function buildStars(preset: Preset, massMul: readonly number[]): Star[] {
   const stars = preset.make();
   for (let i = 0; i < stars.length; i++) stars[i].mass *= massMul[i] ?? 1;
   return recenter(stars);
+}
+
+/** The body the planet is launched around: its position, velocity and the mass
+ *  that governs a circular orbit at a given radius. */
+export function orbitFrame(stars: Star[], target: TargetId) {
+  if (target === 'bary' || target === 'binary') {
+    const idx = target === 'binary' ? [0, 1] : [0, 1, 2];
+    let M = 0, cx = 0, cy = 0, cvx = 0, cvy = 0;
+    for (const i of idx) {
+      const s = stars[i];
+      M += s.mass;
+      cx += s.mass * s.x; cy += s.mass * s.y;
+      cvx += s.mass * s.vx; cvy += s.mass * s.vy;
+    }
+    return { cx: cx / M, cy: cy / M, cvx: cvx / M, cvy: cvy / M, mass: M };
+  }
+  const k = target === 's0' ? 0 : target === 's1' ? 1 : 2;
+  const s = stars[k];
+  return { cx: s.x, cy: s.y, cvx: s.vx, cvy: s.vy, mass: s.mass };
+}
+
+/** Place a planet at `radius` from the target body, at `angle` (radians) around
+ *  it, moving tangentially at `speed` (prograde, or retrograde if `retro`),
+ *  carried along by the target's own velocity. */
+export function launchPlanet(
+  stars: Star[], target: TargetId, radius: number, speed: number, angle = 0, retro = false,
+): Planet {
+  const f = orbitFrame(stars, target);
+  const ca = Math.cos(angle), sa = Math.sin(angle);
+  const dir = retro ? -1 : 1;
+  return {
+    x: f.cx + radius * ca,
+    y: f.cy + radius * sa,
+    vx: f.cvx + dir * speed * -sa,
+    vy: f.cvy + dir * speed * ca,
+    ax: 0, ay: 0,
+  };
 }

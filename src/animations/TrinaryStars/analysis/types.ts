@@ -58,6 +58,28 @@ export interface LabEvent {
   star?: number;
 }
 
+/** Terminal classification of a whole run. */
+export type Outcome = 'happy' | 'survived' | 'planet-ejected' | 'planet-destroyed' | 'blowup';
+
+/** Compact result of one headless run, for ensemble aggregation. */
+export interface RunResult {
+  tSim: number;
+  outcome: Outcome;
+  habitableFraction: number;
+  bothFraction: number;
+  longestHabitable: number;
+  minStarDist: number;
+  ejectedStar: number;   // -1 if none
+  tEject: number;        // sim-time of star ejection, or -1
+  planetFate: PlanetFate;
+  // Echoed initial conditions (for records / reproduction).
+  radius: number;
+  speed: number;
+  angleDeg: number;
+  retro: boolean;
+  seed: number;
+}
+
 export interface Snapshot {
   t: number;
   total: number;

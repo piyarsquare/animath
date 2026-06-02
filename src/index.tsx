@@ -11,6 +11,7 @@ const Correspondence = React.lazy(() => import('./animations/Correspondence/Corr
 const PlaneTransform = React.lazy(() => import('./animations/PlaneTransform/PlaneTransform'));
 const MobiusWalk = React.lazy(() => import('./animations/MobiusWalk/MobiusWalk'));
 const TrinaryStars = React.lazy(() => import('./animations/TrinaryStars/TrinaryStars'));
+const TrinaryLab = React.lazy(() => import('./animations/TrinaryStars/lab/TrinaryLab'));
 const StableMarriage = React.lazy(() => import('./animations/StableMarriage/StableMarriage'));
 const AgenticSorting = React.lazy(() => import('./animations/AgenticSorting/AgenticSorting'));
 
@@ -23,6 +24,7 @@ const routes: Record<string, React.ComponentType> = {
   '/correspondence': Correspondence,
   '/mobius': MobiusWalk,
   '/trinary': TrinaryStars,
+  '/trinary-lab': TrinaryLab,
   '/stable-marriage': StableMarriage,
   '/agentic-sorting': AgenticSorting,
 };
