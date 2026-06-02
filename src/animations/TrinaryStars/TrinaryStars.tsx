@@ -5,6 +5,9 @@ import { ShellActions, ShellSettings, useAppExplainer, useAppHeader } from '../.
 import { Section, Slider, Pills } from '../../components/ControlPanel';
 import { step, cloudSpread, type SimState, type Planet, type Star } from './physics';
 import { PRESETS, getPreset, buildStars, type TargetId } from './presets';
+import { Analyzer } from './analysis/analyzer';
+import { DEFAULT_CLASSIFY, type ClassifyParams, type Snapshot } from './analysis/types';
+import Observatory from './Observatory';
 import explainerText from './EXPLAINER.md?raw';
 
 const STAR_COLORS = [0xffd27f, 0xff7043, 0x9ec7ff];
@@ -13,6 +16,7 @@ const GHOST_COLOR = 0xff5fa2;
 const GHOST_COLOR_HEX = '#ff5fa2';
 const TRAIL_MAX = 2000; // points stored per body; visible length is a live slider.
 const VEL_SCALE = 1;    // sim-units of drag → units of launch speed.
+const SAMPLE_DT = 0.05; // sim-time between classifier samples of the reference planet.
 
 /** Sim plane lives at world y = 0 so the camera can look down on it like a floor. */
 function simX(x: number) { return x; }
@@ -113,10 +117,18 @@ export default function TrinaryStars() {
   const [showTrails, setShowTrails] = useState(true);
   const [paused, setPaused] = useState(false);
   const [placeMode, setPlaceMode] = useState(false);
+  // Climate-classification knobs (habitable band as multiples of launch insolation).
+  const [lumExp, setLumExp] = useState(DEFAULT_CLASSIFY.lumExp);
+  const [habLo, setHabLo] = useState(DEFAULT_CLASSIFY.habLo);
+  const [habHi, setHabHi] = useState(DEFAULT_CLASSIFY.habHi);
+  const [calmThresh, setCalmThresh] = useState(DEFAULT_CLASSIFY.calmThresh);
+  const [labSnap, setLabSnap] = useState<Snapshot | null>(null);
 
   const preset = getPreset(presetId);
   useAppHeader('Trinary System', preset.name);
   useAppExplainer(explainerText);
+
+  const classify: ClassifyParams = { ...DEFAULT_CLASSIFY, lumExp, habLo, habHi, calmThresh };
 
   // Base (untuned) star masses for this preset, for labelling the mass sliders.
   const baseMasses = useMemo(() => getPreset(presetId).make().map(s => s.mass), [presetId]);
@@ -124,9 +136,9 @@ export default function TrinaryStars() {
   // Live params the animation loop / pointer handlers read without re-mounting.
   const refs = useRef({
     speed, trailLen, showTrails, paused,
-    ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft,
+    ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft, classify,
   });
-  refs.current = { speed, trailLen, showTrails, paused, ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft };
+  refs.current = { speed, trailLen, showTrails, paused, ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft, classify };
 
   // A hand-placed launch (position + velocity). When set it overrides the
   // parametric target/radius/speed seeding until a launch control changes.
@@ -185,6 +197,10 @@ export default function TrinaryStars() {
     const sim: SimState = {
       stars: [], planets: [], t: 0, dtBase: 0.002, G: 1, starSoft: 0.02, planetSoft: 0.05,
     };
+
+    // Streaming classifier for the reference planet (planets[0]).
+    let analyzer: Analyzer | null = null;
+    let nextSampleT = SAMPLE_DT;
 
     function disposePlanets() {
       for (const m of planetMeshes) {
@@ -270,6 +286,10 @@ export default function TrinaryStars() {
         starMeshes[i].scale.setScalar(rad);
         starGlows[i].scale.setScalar(rad * 9);
       }
+      // Restart classification from the fresh launch state.
+      analyzer = new Analyzer(refs.current.classify, sim.stars, sim.planets[0]);
+      nextSampleT = SAMPLE_DT;
+      setLabSnap(analyzer.snapshot());
     }
 
     /** Re-scatter the ghosts around the reference planet's *current* state,
@@ -415,6 +435,12 @@ export default function TrinaryStars() {
             planetTrails[i]?.push(simX(sim.planets[i].x), 0, simZ(sim.planets[i].y));
           }
         }
+
+        // Sample the classifier at a fixed sim-time cadence.
+        if (analyzer && steps > 0 && sim.t >= nextSampleT) {
+          analyzer.push(sim.t, sim.stars, sim.planets[0]);
+          nextSampleT = sim.t + SAMPLE_DT;
+        }
       }
 
       // Sync meshes to state.
@@ -438,6 +464,7 @@ export default function TrinaryStars() {
         uiAccum = 0;
         if (spreadElRef.current) spreadElRef.current.textContent = cloudSpread(sim.planets).toExponential(2);
         if (timeElRef.current) timeElRef.current.textContent = sim.t.toFixed(1);
+        if (analyzer) setLabSnap(analyzer.snapshot());
       }
 
       renderer.render(scene, camera);
@@ -460,7 +487,7 @@ export default function TrinaryStars() {
   // changes also clear any hand-placed launch via their wrapped setters.)
   useEffect(() => {
     api.current?.reset();
-  }, [presetId, target, ghostCount, epsExp, planetRadius, planetSpeed, massMul, starSoft]);
+  }, [presetId, target, ghostCount, epsExp, planetRadius, planetSpeed, massMul, starSoft, lumExp, habLo, habHi, calmThresh]);
 
   // Wrapped setters: any change that redefines the launch drops a hand-placed one.
   const setPlanetRadius = (v: number) => { customRef.current = null; setPlanetRadiusState(v); };
@@ -530,6 +557,8 @@ export default function TrinaryStars() {
         {placeMode && <div style={{ color: '#ffd27f' }}>click + drag to launch</div>}
       </div>
 
+      <Observatory snapshot={labSnap} />
+
       <ShellActions>
         <div className="cp-section-body" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -598,6 +627,20 @@ export default function TrinaryStars() {
           </button>
           <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
             Radius &amp; speed are measured from the body you orbit. Pick a star for a tight inner (S-type) orbit; the barycenter or inner binary for a wide one.
+          </div>
+        </Section>
+
+        <Section title="Climate model" icon="🌡">
+          <Slider label="Habitable floor (×ref)" value={habLo} min={0.1} max={1} step={0.05}
+            onChange={setHabLo} format={v => v.toFixed(2)} />
+          <Slider label="Habitable ceiling (×ref)" value={habHi} min={1} max={6} step={0.25}
+            onChange={setHabHi} format={v => v.toFixed(2)} />
+          <Slider label="Luminosity exponent β" value={lumExp} min={0.5} max={4} step={0.5}
+            onChange={setLumExp} format={v => v.toFixed(1)} />
+          <Slider label="Calm threshold" value={calmThresh} min={0.01} max={0.2} step={0.01}
+            onChange={setCalmThresh} format={v => v.toFixed(2)} />
+          <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
+            The habitable band is set relative to the planet’s starlight at launch (L = mᵝ). The timeline below classifies every moment as Paradise / Warm·precarious / Calm·barren / Chaotic.
           </div>
         </Section>
 
