@@ -3,11 +3,15 @@ import { useAppHeader } from '../../../components/AppShell';
 import { Slider, Pills } from '../../../components/ControlPanel';
 import { PRESETS, getPreset, type TargetId } from '../presets';
 import { DEFAULT_CLASSIFY } from '../analysis/types';
-import type { Outcome } from '../analysis/types';
+import type { Outcome, RunResult } from '../analysis/types';
 import { Aggregator, OUTCOMES, type AggSnapshot } from './ensemble';
 import { runOne, targetMassOf } from './runner';
 import { sampleParams, type EnsembleConfig } from './rng';
+import { WorkerPool } from './pool';
 import MiniSim from './MiniSim';
+
+const HAS_WORKERS = typeof Worker !== 'undefined';
+const TILE_COUNT = 8;
 
 const OUTCOME_META: Record<Outcome, { label: string; color: string }> = {
   happy: { label: 'Happy ending (star ejected, planet survives)', color: '#46d98a' },
@@ -67,6 +71,7 @@ export default function TrinaryLab() {
   const [running, setRunning] = useState(false);
   const [agg, setAgg] = useState<AggSnapshot | null>(null);
   const [rate, setRate] = useState(0);
+  const [engine, setEngine] = useState<'cpu' | 'workers'>(HAS_WORKERS ? 'workers' : 'cpu');
 
   const cfg: EnsembleConfig = useMemo(() => ({
     presetId, target, massMul: [1, 1, 1], starSoft: preset.starSoft,
@@ -77,56 +82,112 @@ export default function TrinaryLab() {
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
   const targetNRef = useRef(targetN); targetNRef.current = targetN;
   const aggRef = useRef<Aggregator | null>(null);
-  const idxRef = useRef(0);
   const runningRef = useRef(false);
   const rafRef = useRef(0);
   const tmRef = useRef(1);
+  const poolRef = useRef<WorkerPool | null>(null);
+  const watchdogRef = useRef<number | null>(null);
   const uiClock = useRef({ t: 0, n: 0 });
 
-  const loop = () => {
-    if (!runningRef.current) return;
-    const cfgNow = cfgRef.current;
-    const agg = aggRef.current!;
-    const t0 = performance.now();
-    while (idxRef.current < targetNRef.current && performance.now() - t0 < 24) {
-      const p = sampleParams(cfgNow, idxRef.current, tmRef.current);
-      agg.ingest(runOne(cfgNow, p));
-      idxRef.current++;
+  const ensureAgg = () => {
+    if (!aggRef.current || aggRef.current.count >= targetNRef.current) {
+      aggRef.current = new Aggregator(cfgRef.current.tMax);
     }
+    return aggRef.current;
+  };
+
+  const refreshUi = (force = false) => {
+    const agg = aggRef.current;
+    if (!agg) return;
     const now = performance.now();
-    if (now - uiClock.current.t > 120) {
+    if (force || now - uiClock.current.t > 120) {
       const dn = agg.count - uiClock.current.n;
-      setRate((dn / (now - uiClock.current.t)) * 1000);
+      if (now > uiClock.current.t) setRate((dn / (now - uiClock.current.t)) * 1000);
       uiClock.current = { t: now, n: agg.count };
       setAgg(agg.snapshot());
     }
-    if (idxRef.current >= targetNRef.current) {
-      runningRef.current = false; setRunning(false); setAgg(agg.snapshot());
-      return;
+  };
+
+  const finish = () => {
+    if (!runningRef.current) return;
+    runningRef.current = false;
+    setRunning(false);
+    refreshUi(true);
+  };
+
+  const ingestBatch = (runs: RunResult[]) => {
+    const agg = aggRef.current;
+    if (!agg) return;
+    if (watchdogRef.current) { clearTimeout(watchdogRef.current); watchdogRef.current = null; }
+    for (const r of runs) agg.ingest(r);
+    refreshUi();
+    if (agg.count >= targetNRef.current) finish();
+  };
+
+  const cpuTick = () => {
+    if (!runningRef.current) return;
+    const agg = aggRef.current!;
+    const cfgNow = cfgRef.current, tm = tmRef.current, targetN = targetNRef.current;
+    const batch: RunResult[] = [];
+    const t0 = performance.now();
+    while (agg.count + batch.length < targetN && performance.now() - t0 < 22) {
+      const i = agg.count + batch.length;
+      batch.push(runOne(cfgNow, sampleParams(cfgNow, i, tm)));
     }
-    rafRef.current = requestAnimationFrame(loop);
+    ingestBatch(batch);
+    if (runningRef.current && agg.count < targetN) rafRef.current = requestAnimationFrame(cpuTick);
+  };
+
+  const startCpu = () => { rafRef.current = requestAnimationFrame(cpuTick); };
+
+  const startWorkers = () => {
+    try {
+      if (!poolRef.current) {
+        const size = Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1));
+        poolRef.current = new WorkerPool(size, cfgRef.current, tmRef.current, ingestBatch, finish);
+      }
+      poolRef.current.run(targetNRef.current);
+      // Safety net: if no worker results arrive shortly, fall back to CPU.
+      watchdogRef.current = window.setTimeout(() => {
+        if (runningRef.current && (aggRef.current?.count ?? 0) === 0) {
+          poolRef.current?.dispose(); poolRef.current = null;
+          setEngine('cpu');
+          startCpu();
+        }
+      }, 3000);
+    } catch {
+      poolRef.current = null;
+      setEngine('cpu');
+      startCpu();
+    }
   };
 
   const start = () => {
-    if (!aggRef.current || idxRef.current >= targetNRef.current) {
-      aggRef.current = new Aggregator(cfgRef.current.tMax);
-      idxRef.current = 0;
-    }
+    ensureAgg();
     tmRef.current = targetMassOf(cfgRef.current);
-    uiClock.current = { t: performance.now(), n: aggRef.current.count };
+    uiClock.current = { t: performance.now(), n: aggRef.current!.count };
     runningRef.current = true; setRunning(true);
-    rafRef.current = requestAnimationFrame(loop);
-  };
-  const pause = () => { runningRef.current = false; setRunning(false); cancelAnimationFrame(rafRef.current); };
-  const reset = () => {
-    pause();
-    aggRef.current = new Aggregator(cfgRef.current.tMax);
-    idxRef.current = 0; setRate(0); setAgg(null);
+    if (engineRef.current === 'workers') startWorkers(); else startCpu();
   };
 
-  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
-  // Changing the configuration invalidates accumulated stats.
-  useEffect(() => { reset(); /* eslint-disable-next-line */ }, [cfg]);
+  const pause = () => {
+    runningRef.current = false; setRunning(false);
+    cancelAnimationFrame(rafRef.current);
+    if (watchdogRef.current) { clearTimeout(watchdogRef.current); watchdogRef.current = null; }
+    poolRef.current?.pause();
+  };
+
+  const reset = () => {
+    pause();
+    poolRef.current?.dispose(); poolRef.current = null;
+    aggRef.current = new Aggregator(cfgRef.current.tMax);
+    setRate(0); setAgg(null);
+  };
+
+  const engineRef = useRef(engine); engineRef.current = engine;
+  useEffect(() => () => { cancelAnimationFrame(rafRef.current); poolRef.current?.dispose(); }, []);
+  // Changing the configuration or engine invalidates accumulated stats.
+  useEffect(() => { reset(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [cfg, engine]);
 
   const onPickPreset = (id: string) => { setPresetId(id); setTarget(getPreset(id).target); };
 
@@ -152,7 +213,7 @@ export default function TrinaryLab() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
         <button style={btn} onClick={() => { window.location.hash = '#/trinary'; }}>← Single run</button>
         <button style={{ ...btn, background: running ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }}
-          onClick={running ? pause : start}>{running ? '❚❚ Pause' : (idxRef.current > 0 && idxRef.current < targetN ? '▶ Resume' : '▶ Run ensemble')}</button>
+          onClick={running ? pause : start}>{running ? '❚❚ Pause' : (n > 0 && n < targetN ? '▶ Resume' : '▶ Run ensemble')}</button>
         <button style={btn} onClick={reset}>↺ Reset</button>
         <div style={{ flex: 1 }} />
         <span style={{ font: '12px ui-monospace, monospace', color: '#6f7f99' }}>
@@ -178,9 +239,13 @@ export default function TrinaryLab() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
         {/* Live sample + outcomes */}
         <div style={panel}>
-          <h3 style={h3}>LIVE SAMPLE</h3>
+          <h3 style={h3}>LIVE SAMPLES</h3>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <MiniSim cfg={cfg} running={running} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
+              {Array.from({ length: TILE_COUNT }, (_, i) => (
+                <MiniSim key={i} cfg={cfg} running={running} size={94} steps={80} />
+              ))}
+            </div>
             <div style={{ flex: 1, minWidth: 160 }}>
               {OUTCOMES.map(o => {
                 const c = agg?.counts[o] ?? 0;
@@ -249,6 +314,9 @@ export default function TrinaryLab() {
           <h3 style={h3}>SYSTEM &amp; SWEEP</h3>
           <Pills options={PRESETS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
           <Pills label="Orbit around" options={targetOptions} value={target} onChange={setTarget} />
+          <Pills label="Engine" value={engine}
+            options={[{ value: 'cpu', label: 'CPU' }, ...(HAS_WORKERS ? [{ value: 'workers' as const, label: `Workers ×${Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1))}` }] : [])]}
+            onChange={(v) => setEngine(v as 'cpu' | 'workers')} />
           <Slider label="Runs (target N)" value={targetN} min={500} max={20000} step={500} onChange={setTargetN} format={v => v.toLocaleString()} />
           <Slider label="Time budget / run" value={tMax} min={60} max={400} step={20} onChange={setTMax} format={v => v.toFixed(0)} />
           <Slider label="Launch radius min" value={rMin} min={0.2} max={6} step={0.1} onChange={v => setRMin(Math.min(v, rMax))} format={v => v.toFixed(1)} />

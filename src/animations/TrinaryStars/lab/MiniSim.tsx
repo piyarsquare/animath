@@ -4,13 +4,15 @@ import { getPreset, buildStars, launchPlanet, orbitFrame } from '../presets';
 import type { EnsembleConfig } from './rng';
 
 const STAR_COLORS = ['#ffd27f', '#ff7043', '#9ec7ff'];
-const SIZE = 200;
 const HALF_EXTENT = 8;
 
 /** A small, fast, decorative sim that cycles through randomly-sampled worlds —
- *  the "one live screen" while the ensemble tallies headless. Flashes an outcome
+ *  the live screens while the ensemble tallies headless. Flashes an outcome
  *  colour as each world resolves, then launches the next. */
-export default function MiniSim({ cfg, running }: { cfg: EnsembleConfig; running: boolean }) {
+export default function MiniSim({ cfg, running, size = 200, steps = 140 }: {
+  cfg: EnsembleConfig; running: boolean; size?: number; steps?: number;
+}) {
+  const SIZE = size;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
   const runRef = useRef(running); runRef.current = running;
@@ -51,7 +53,7 @@ export default function MiniSim({ cfg, running }: { cfg: EnsembleConfig; running
       const preset = getPreset(c.presetId);
 
       if (runRef.current && sim) {
-        for (let i = 0; i < 140; i++) step(sim, preset.dt);
+        for (let i = 0; i < steps; i++) step(sim, preset.dt);
         const p = sim.planets[0];
         trail.push([p.x, p.y]);
         if (trail.length > 64) trail.shift();
