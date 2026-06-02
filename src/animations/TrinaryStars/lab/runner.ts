@@ -3,7 +3,7 @@
  *  Pure and deterministic — the same engine that powers the live Observatory,
  *  so ensemble statistics agree with what you see in the single-run view. */
 
-import { step, type SimState } from '../physics';
+import { step, type SimState, type Planet, type Star } from '../physics';
 import { getPreset, buildStars, launchPlanet, orbitFrame } from '../presets';
 import { Analyzer } from '../analysis/analyzer';
 import type { Outcome, RunResult } from '../analysis/types';
@@ -19,18 +19,14 @@ export function targetMassOf(cfg: EnsembleConfig): number {
   return orbitFrame(stars, cfg.target).mass;
 }
 
-export function runOne(cfg: EnsembleConfig, params: RunParams): RunResult {
-  const preset = getPreset(cfg.presetId);
-  const stars = buildStars(preset, cfg.massMul);
-  const planet = launchPlanet(stars, cfg.target, params.radius, params.speed, params.angleDeg * DEG, params.retro);
-
+/** Integrate one world to a terminal outcome (or the time budget). */
+function simulate(cfg: EnsembleConfig, stars: Star[], planet: Planet) {
+  const dt = getPreset(cfg.presetId).dt;
   const sim: SimState = {
-    stars, planets: [planet], t: 0, dtBase: preset.dt, G: 1,
+    stars, planets: [planet], t: 0, dtBase: dt, G: 1,
     starSoft: cfg.starSoft, planetSoft: 0.05,
   };
   const an = new Analyzer(cfg.classify, stars, planet);
-
-  const dt = preset.dt;
   const maxSteps = Math.round(cfg.tMax / dt);
   let nextSample = SAMPLE_DT_BATCH;
   let blowup = false;
@@ -44,27 +40,30 @@ export function runOne(cfg: EnsembleConfig, params: RunParams): RunResult {
     if (sim.t >= nextSample) {
       an.push(sim.t, stars, planet);
       nextSample = sim.t + SAMPLE_DT_BATCH;
-      if (an.fateNow() !== 'bound') break; // planet destroyed or ejected — resolved
+      if (an.fateNow() !== 'bound') break;
     }
   }
+  return { s: an.snapshot(), blowup };
+}
 
-  const s = an.snapshot();
-  const outcome: Outcome = blowup ? 'blowup'
+function outcomeOf(s: ReturnType<Analyzer['snapshot']>, blowup: boolean): Outcome {
+  return blowup ? 'blowup'
     : s.planetFate === 'destroyed' ? 'planet-destroyed'
     : s.planetFate === 'ejected' ? 'planet-ejected'
     : s.ejectedStar >= 0 ? 'happy'
     : 'survived';
-  const tEject = s.events.find(e => e.kind === 'star-ejected')?.t ?? -1;
+}
 
+function resultOf(s: ReturnType<Analyzer['snapshot']>, blowup: boolean, params: RunParams): RunResult {
   return {
     tSim: s.t,
-    outcome,
+    outcome: outcomeOf(s, blowup),
     habitableFraction: s.habitableFraction,
     bothFraction: s.bothFraction,
     longestHabitable: s.longestHabitable,
     minStarDist: s.minStarDist,
     ejectedStar: s.ejectedStar,
-    tEject,
+    tEject: s.events.find(e => e.kind === 'star-ejected')?.t ?? -1,
     planetFate: s.planetFate,
     radius: params.radius,
     speed: params.speed,
@@ -72,4 +71,19 @@ export function runOne(cfg: EnsembleConfig, params: RunParams): RunResult {
     retro: params.retro,
     seed: params.seed,
   };
+}
+
+export function runOne(cfg: EnsembleConfig, params: RunParams): RunResult {
+  const stars = buildStars(getPreset(cfg.presetId), cfg.massMul);
+  const planet = launchPlanet(stars, cfg.target, params.radius, params.speed, params.angleDeg * DEG, params.retro);
+  const { s, blowup } = simulate(cfg, stars, planet);
+  return resultOf(s, blowup, params);
+}
+
+/** Run a single explicit planet IC against a given star configuration — used by
+ *  the basin map's position-plane mode, where launches don't fit the
+ *  radius/speed/angle parameterisation. */
+export function runPlanet(cfg: EnsembleConfig, stars: Star[], planet: Planet): RunResult {
+  const { s, blowup } = simulate(cfg, stars, planet);
+  return resultOf(s, blowup, { radius: 0, speed: 0, angleDeg: 0, retro: false, seed: 0 });
 }

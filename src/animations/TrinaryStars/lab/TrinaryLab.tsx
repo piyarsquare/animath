@@ -10,6 +10,7 @@ import { sampleParams, type EnsembleConfig } from './rng';
 import { WorkerPool } from './pool';
 import { sweepCell, type SweepCell } from './sweep';
 import { GpuRunner, gpuAvailable } from './gpu';
+import BasinMap from './BasinMap';
 import MiniSim from './MiniSim';
 
 const HAS_WORKERS = typeof Worker !== 'undefined';
@@ -532,6 +533,8 @@ export default function TrinaryLab() {
           </div>
         </div>
       </div>
+
+      <BasinMap cfg={cfg} />
 
       {/* Two-column body */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
