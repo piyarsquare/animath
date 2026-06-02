@@ -118,6 +118,59 @@ function SweepHeatmap({ grid, n, metric, rDom, fDom, onHover }: {
   );
 }
 
+/** Visualises the region of (launch radius × speed-fraction) space that the
+ *  current sliders sample from, within the full possible domain — with the
+ *  circular and escape-velocity reference lines and a scatter of sample points
+ *  coloured by launch direction. */
+function LaunchSpace({ rMin, rMax, fMin, fMax, allowRetro }: {
+  rMin: number; rMax: number; fMin: number; fMax: number; allowRetro: boolean;
+}) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const cv = ref.current; const ctx = cv?.getContext('2d');
+    if (!cv || !ctx) return;
+    const W = cv.width, H = cv.height, pad = 26;
+    const RD0 = 0.2, RD1 = 8, FD0 = 0.2, FD1 = 1.8;
+    const X = (r: number) => pad + ((r - RD0) / (RD1 - RD0)) * (W - 2 * pad);
+    const Y = (f: number) => H - pad - ((f - FD0) / (FD1 - FD0)) * (H - 2 * pad);
+
+    ctx.fillStyle = '#0a0e16'; ctx.fillRect(0, 0, W, H);
+    const yEsc = Y(Math.SQRT2), yCirc = Y(1);
+    ctx.fillStyle = 'rgba(255,112,67,0.10)'; ctx.fillRect(pad, pad, W - 2 * pad, yEsc - pad);          // likely escape
+    ctx.fillStyle = 'rgba(90,155,232,0.08)'; ctx.fillRect(pad, yCirc, W - 2 * pad, (H - pad) - yCirc); // likely bound/infall
+
+    ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(230,193,90,0.8)'; ctx.beginPath(); ctx.moveTo(pad, yCirc); ctx.lineTo(W - pad, yCirc); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,112,67,0.8)'; ctx.beginPath(); ctx.moveTo(pad, yEsc); ctx.lineTo(W - pad, yEsc); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Selected sampling box.
+    const bx0 = X(rMin), bx1 = X(rMax), by0 = Y(fMax), by1 = Y(fMin);
+    ctx.fillStyle = 'rgba(102,240,255,0.12)'; ctx.fillRect(bx0, by0, bx1 - bx0, by1 - by0);
+    ctx.strokeStyle = '#66f0ff'; ctx.lineWidth = 1.5; ctx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0);
+
+    // Scatter of representative samples (deterministic).
+    let s = 0x1234abcd >>> 0;
+    const rnd = () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+    for (let i = 0; i < 150; i++) {
+      const r = rMin + (rMax - rMin) * rnd();
+      const f = fMin + (fMax - fMin) * rnd();
+      const retro = allowRetro && rnd() < 0.5;
+      ctx.fillStyle = retro ? 'rgba(255,95,162,0.85)' : 'rgba(102,240,255,0.9)';
+      ctx.beginPath(); ctx.arc(X(r), Y(f), 1.5, 0, 7); ctx.fill();
+    }
+
+    ctx.fillStyle = '#8a96ad'; ctx.font = '10px ui-monospace, monospace';
+    ctx.fillText('circular', W - pad - 48, yCirc - 3);
+    ctx.fillText('escape √2', W - pad - 58, yEsc - 3);
+    ctx.fillStyle = '#6f7f99';
+    ctx.fillText('radius →', W - pad - 52, H - 8);
+    ctx.save(); ctx.translate(11, pad + 70); ctx.rotate(-Math.PI / 2); ctx.fillText('speed × circular →', 0, 0); ctx.restore();
+  }, [rMin, rMax, fMin, fMax, allowRetro]);
+  return <canvas ref={ref} width={340} height={250}
+    style={{ width: '100%', borderRadius: 6, display: 'block' }} />;
+}
+
 export default function TrinaryLab() {
   useAppHeader('Trinary Lab', 'ensemble statistics');
 
@@ -434,6 +487,52 @@ export default function TrinaryLab() {
         </div>
       </div>
 
+      {/* Setup: controls + a view of the space being sampled */}
+      <div style={{ ...panel, marginBottom: 12 }}>
+        <h3 style={h3}>SETUP — THE SPACE OF SIMULATIONS</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1.5fr) minmax(260px, 1fr)', gap: 18, alignItems: 'start' }}>
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0 18px' }}>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <Pills options={PRESETS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
+              </div>
+              <Pills label="Orbit around" options={targetOptions} value={target} onChange={setTarget} />
+              <Pills label="Engine" value={engine}
+                options={[
+                  { value: 'cpu', label: 'CPU' },
+                  ...(HAS_WORKERS ? [{ value: 'workers', label: `Workers ×${Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1))}` }] : []),
+                  ...(HAS_GPU ? [{ value: 'gpu', label: 'GPU (exp)' }] : []),
+                ]}
+                onChange={(v) => setEngine(v as Engine)} />
+              {engine === 'gpu' && (
+                <div style={{ gridColumn: '1 / -1', font: '11px/1.5 system-ui', color: '#ffd27f' }}>
+                  ⚠ Experimental WebGPU engine: simplified classifier (no “calm” axis, so Paradise% reads 0). Verify against CPU; falls back automatically on error.
+                </div>
+              )}
+              <Slider label="Runs (target N)" value={targetN} min={500} max={20000} step={500} onChange={setTargetN} format={v => v.toLocaleString()} />
+              <Slider label="Time budget / run" value={tMax} min={60} max={400} step={20} onChange={setTMax} format={v => v.toFixed(0)} />
+              <Slider label="Launch radius min" value={rMin} min={0.2} max={6} step={0.1} onChange={v => setRMin(Math.min(v, rMax))} format={v => v.toFixed(1)} />
+              <Slider label="Launch radius max" value={rMax} min={0.2} max={8} step={0.1} onChange={v => setRMax(Math.max(v, rMin))} format={v => v.toFixed(1)} />
+              <Slider label="Speed × circular min" value={fMin} min={0.2} max={1.5} step={0.05} onChange={v => setFMin(Math.min(v, fMax))} format={v => v.toFixed(2)} />
+              <Slider label="Speed × circular max" value={fMax} min={0.2} max={1.8} step={0.05} onChange={v => setFMax(Math.max(v, fMin))} format={v => v.toFixed(2)} />
+              <Slider label="Habitable floor (×ref)" value={habLo} min={0.1} max={1} step={0.05} onChange={setHabLo} format={v => v.toFixed(2)} />
+              <Slider label="Habitable ceiling (×ref)" value={habHi} min={1} max={6} step={0.25} onChange={setHabHi} format={v => v.toFixed(2)} />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <Pills label="Launch direction" options={[{ value: 1, label: 'Pro + retro' }, { value: 0, label: 'Prograde only' }]}
+                  value={allowRetro ? 1 : 0} onChange={v => setAllowRetro(v === 1)} />
+              </div>
+            </div>
+          </div>
+          <div>
+            <LaunchSpace rMin={rMin} rMax={rMax} fMin={fMin} fMax={fMax} allowRetro={allowRetro} />
+            <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 6 }}>
+              Each dot is a candidate world: a launch radius and a speed (as a multiple of the local circular speed). The cyan box is what you’re sampling now — move the sliders to reshape it. Below the amber line orbits tend to be bound; above the red √2 line they tend to escape.
+              <span style={{ color: '#9aa7bd' }}> Changing any setting clears the tally.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Two-column body */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
         {/* Live sample + outcomes */}
@@ -534,37 +633,6 @@ export default function TrinaryLab() {
           </div>
         </div>
 
-        {/* Controls */}
-        <div style={panel}>
-          <h3 style={h3}>SYSTEM &amp; SWEEP</h3>
-          <Pills options={PRESETS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
-          <Pills label="Orbit around" options={targetOptions} value={target} onChange={setTarget} />
-          <Pills label="Engine" value={engine}
-            options={[
-              { value: 'cpu', label: 'CPU' },
-              ...(HAS_WORKERS ? [{ value: 'workers', label: `Workers ×${Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1))}` }] : []),
-              ...(HAS_GPU ? [{ value: 'gpu', label: 'GPU (exp)' }] : []),
-            ]}
-            onChange={(v) => setEngine(v as Engine)} />
-          {engine === 'gpu' && (
-            <div style={{ font: '11px/1.5 system-ui', color: '#ffd27f', marginTop: 4 }}>
-              ⚠ Experimental WebGPU engine: simplified classifier (no “calm” axis, so Paradise% reads 0). Verify against CPU; falls back automatically on error.
-            </div>
-          )}
-          <Slider label="Runs (target N)" value={targetN} min={500} max={20000} step={500} onChange={setTargetN} format={v => v.toLocaleString()} />
-          <Slider label="Time budget / run" value={tMax} min={60} max={400} step={20} onChange={setTMax} format={v => v.toFixed(0)} />
-          <Slider label="Launch radius min" value={rMin} min={0.2} max={6} step={0.1} onChange={v => setRMin(Math.min(v, rMax))} format={v => v.toFixed(1)} />
-          <Slider label="Launch radius max" value={rMax} min={0.2} max={8} step={0.1} onChange={v => setRMax(Math.max(v, rMin))} format={v => v.toFixed(1)} />
-          <Slider label="Speed × circular min" value={fMin} min={0.2} max={1.5} step={0.05} onChange={v => setFMin(Math.min(v, fMax))} format={v => v.toFixed(2)} />
-          <Slider label="Speed × circular max" value={fMax} min={0.2} max={1.8} step={0.05} onChange={v => setFMax(Math.max(v, fMin))} format={v => v.toFixed(2)} />
-          <Pills label="Launch direction" options={[{ value: 1, label: 'Pro + retro' }, { value: 0, label: 'Prograde only' }]}
-            value={allowRetro ? 1 : 0} onChange={v => setAllowRetro(v === 1)} />
-          <Slider label="Habitable floor (×ref)" value={habLo} min={0.1} max={1} step={0.05} onChange={setHabLo} format={v => v.toFixed(2)} />
-          <Slider label="Habitable ceiling (×ref)" value={habHi} min={1} max={6} step={0.25} onChange={setHabHi} format={v => v.toFixed(2)} />
-          <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 6 }}>
-            Each run launches a planet from a randomly sampled radius, speed and direction, then integrates to a verdict. Changing any setting clears the tally.
-          </div>
-        </div>
       </div>
     </div>
   );
