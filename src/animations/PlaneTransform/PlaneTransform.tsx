@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { ShellSettings, useAppHeader, useAppFunctions } from '../../components/AppShell';
+import { ShellSettings, useAppHeader, useAppFunctions, useAppExplainer } from '../../components/AppShell';
 import { Section, Slider, Pills, Select } from '../../components/ControlPanel';
 import Readme from '../../components/Readme';
 import readmeText from './README.md?raw';
+import explainerText from './EXPLAINER.md?raw';
 import {
   functionNames, functionFormulas, POW_PQ_INDEX,
   applyComplexBranch, complexPowRational,
@@ -55,6 +56,7 @@ export default function PlaneTransform() {
     ? `z^(${expP}/${expQ})`
     : functionFormulas[fnName];
   useAppHeader(fnName, fnFormula);
+  useAppExplainer(explainerText);
   useAppFunctions({
     names: functionNames,
     current: fnName,

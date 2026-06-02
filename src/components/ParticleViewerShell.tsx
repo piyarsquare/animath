@@ -2,7 +2,7 @@ import React from 'react';
 import Canvas3D from './Canvas3D';
 import Readme from './Readme';
 import { Section, Slider, Pills, Select, Checkbox } from './ControlPanel';
-import { ShellSettings, ShellActions, useAppHeader, useAppFunctions } from './AppShell';
+import { ShellSettings, ShellActions, useAppHeader, useAppFunctions, useAppExplainer } from './AppShell';
 import QuarterTurnFloater from '../controls/QuarterTurnFloater';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../config/defaults';
 import { useResponsive } from '../styles/responsive';
@@ -39,17 +39,20 @@ export interface ParticleViewerShellProps {
     onChangeIndex: (i: number) => void;
   };
   readme: string;
+  /** Markdown explainer for the top-bar "?" help popup. */
+  explainer?: string;
 }
 
 export default function ParticleViewerShell({
   state, controls, onMount,
-  functionName, functionFormula, functionPicker, variantExtras, functionList, readme,
+  functionName, functionFormula, functionPicker, variantExtras, functionList, readme, explainer,
 }: ParticleViewerShellProps) {
   const { isMobile, isTablet } = useResponsive();
   const compact = isMobile || isTablet;
   const gestures = useGestureRotation(state);
 
   useAppHeader(functionName, functionFormula);
+  useAppExplainer(explainer ?? null);
   useAppFunctions(functionList ? {
     names: functionList.names,
     current: functionList.names[functionList.currentIndex] ?? '',

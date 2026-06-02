@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import FractalPane, { Complex, ViewBounds } from './FractalPane';
 import { useResponsive } from '../../styles/responsive';
-import { ShellSettings, ShellActions, useAppHeader } from '../../components/AppShell';
+import { ShellSettings, ShellActions, useAppHeader, useAppExplainer } from '../../components/AppShell';
 import { Section, Slider, Select } from '../../components/ControlPanel';
 import Readme from '../../components/Readme';
 import PlaybackFloater from './PlaybackFloater';
 import readmeText from './README.md?raw';
+import explainerText from './EXPLAINER.md?raw';
 
 export default function Correspondence() {
   const { isMobile } = useResponsive();
@@ -110,6 +111,7 @@ export default function Correspondence() {
   };
 
   useAppHeader('Mandelbrot ↔ Julia', `c = ${c.real.toFixed(3)} ${c.imag >= 0 ? '+' : '-'} ${Math.abs(c.imag).toFixed(3)}i`);
+  useAppExplainer(explainerText);
 
   // The action controls live in two places at once: the drawer's Actions tab
   // and the on-screen PlaybackFloater. Defining them once keeps both in sync.

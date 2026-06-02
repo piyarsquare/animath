@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import Readme from '../../components/Readme';
 import readmeText from './README.md?raw';
+import explainerText from './EXPLAINER.md?raw';
 import { useResponsive } from '../../styles/responsive';
 import { useViewportGestures } from '../../lib/useViewportGestures';
-import { ShellSettings, ShellActions, useAppHeader } from '../../components/AppShell';
+import { ShellSettings, ShellActions, useAppHeader, useAppExplainer } from '../../components/AppShell';
 import { Section, Slider, Pills, Select } from '../../components/ControlPanel';
 
 /** GPU accelerated Mandelbrot/Julia viewer using a fragment shader. */
@@ -401,6 +402,7 @@ export default function FractalsGPU() {
   }, [view]);
 
   useAppHeader(TYPE_NAMES[type], FORMULAS[type]);
+  useAppExplainer(explainerText);
 
   return (
     <>

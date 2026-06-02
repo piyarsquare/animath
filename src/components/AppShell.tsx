@@ -1,6 +1,9 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import './AppShell.css';
+
+// Lazily loaded so `marked` only enters the bundle when a help popup is opened.
+const Readme = React.lazy(() => import('./Readme'));
 
 export interface AppDescriptor {
   /** Hash route (no leading `#`, e.g. `/` or `/fractals`). */
@@ -42,6 +45,9 @@ export interface AppShellState {
   /** Function registration (or null when the active app has no function picker). */
   functions: AppFunctionsRegistration | null;
   setFunctions: (reg: AppFunctionsRegistration | null) => void;
+  /** Markdown explainer for the active app (the "?" help popup), or null. */
+  explainer: string | null;
+  setExplainer: (md: string | null) => void;
 }
 
 const AppShellContext = createContext<AppShellState | null>(null);
@@ -62,6 +68,8 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
   const [hasSettings, setHasSettings] = useState(false);
   const [hasActions, setHasActions] = useState(false);
   const [functions, setFunctions] = useState<AppFunctionsRegistration | null>(null);
+  const [explainer, setExplainer] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
   const settingsTargetRef = useRef<HTMLDivElement | null>(null);
   const actionsTargetRef = useRef<HTMLDivElement | null>(null);
 
@@ -71,12 +79,18 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     setHasSettings(false);
     setHasActions(false);
     setFunctions(null);
+    setExplainer(null);
+    setHelpOpen(false);
     setTab('apps');
   }, [currentHash]);
 
-  // Escape closes drawer.
+  // Escape closes the help popup, then the drawer.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setHelpOpen(false);
+      setOpen(false);
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
@@ -86,6 +100,7 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
   const titleName = header.title ?? (isHome ? 'animath' : current?.name) ?? '';
   const subtitle = header.subtitle;
   const hasFunctions = functions != null;
+  const hasExplainer = explainer != null;
 
   const ctx = useMemo<AppShellState>(() => ({
     title: header.title,
@@ -99,7 +114,9 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     setHeader,
     functions,
     setFunctions,
-  }), [header.title, header.subtitle, hasSettings, hasActions, functions]);
+    explainer,
+    setExplainer,
+  }), [header.title, header.subtitle, hasSettings, hasActions, functions, explainer]);
 
   const openWithTab = useCallback((t: Tab) => { setTab(t); setOpen(true); }, []);
 
@@ -147,6 +164,15 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
             title="Actions"
             onClick={() => openWithTab('actions')}
           >▶</button>
+          <button
+            className={`as-bar-btn ${hasExplainer ? '' : 'as-bar-btn-dim'}`}
+            aria-label="Explainer"
+            title="What am I looking at?"
+            onClick={() => { if (hasExplainer) setHelpOpen(true); }}
+          >?</button>
+          {/* Absorbs the leftover width so the controls cluster on the left
+              instead of the actions stretching to the far right. */}
+          <div className="as-bar-spacer" />
         </header>
 
         <div className="as-content">
@@ -209,6 +235,36 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
             {!hasActions && <div className="as-empty">No actions for this view.</div>}
           </div>
         </aside>
+
+        {helpOpen && explainer && (
+          <div
+            className="as-help-scrim"
+            onClick={() => setHelpOpen(false)}
+            role="presentation"
+          >
+            <div
+              className="as-help-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`${titleName} — explainer`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="as-help-header">
+                <h2 className="as-help-title">{titleName}</h2>
+                <button
+                  className="as-bar-btn"
+                  aria-label="Close explainer"
+                  onClick={() => setHelpOpen(false)}
+                >×</button>
+              </div>
+              <div className="as-help-body">
+                <Suspense fallback={<div className="as-empty">Loading…</div>}>
+                  <Readme markdown={explainer} />
+                </Suspense>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppShellContext.Provider>
   );
@@ -285,6 +341,19 @@ export function useAppFunctions(reg: AppFunctionsRegistration | null) {
     shell.setFunctions(reg ? { names: reg.names, current: reg.current, onChange: reg.onChange } : null);
     return () => shell.setFunctions(null);
   }, [shell, names, current, onChange]);
+}
+
+/** Register the active app's markdown explainer, shown by the top-bar "?"
+ *  button in a popup. Apps that don't call this leave the button dimmed.
+ *  Content lives in standalone `EXPLAINER.md` files imported with `?raw`, so
+ *  it can be edited without touching component code. */
+export function useAppExplainer(markdown: string | null) {
+  const shell = useContext(AppShellContext);
+  useEffect(() => {
+    if (!shell) return;
+    shell.setExplainer(markdown);
+    return () => shell.setExplainer(null);
+  }, [shell, markdown]);
 }
 
 /** Render children into the drawer's Settings tab. */

@@ -3,7 +3,8 @@ import {
   Play, Pause, RotateCcw, Zap, Users, Target,
 } from 'lucide-react';
 import './agenticSorting.css';
-import { useAppHeader } from '../../components/AppShell';
+import { useAppHeader, useAppExplainer } from '../../components/AppShell';
+import explainerText from './EXPLAINER.md?raw';
 
 type AgentType = 'standard' | 'blindDate' | 'nomadic' | 'patrolling' | 'perfectionist';
 
@@ -65,6 +66,7 @@ type Weights = Record<AgentType, number>;
 
 export default function AgenticSorting() {
   useAppHeader('Agentic Sorting');
+  useAppExplainer(explainerText);
   const [itemCount, setItemCount] = useState(60);
   const [simulationSpeed, setSimulationSpeed] = useState(20);
   const [isRunning, setIsRunning] = useState(false);
