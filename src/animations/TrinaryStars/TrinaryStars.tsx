@@ -1,0 +1,446 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
+import Canvas3D from '@/components/Canvas3D';
+import { ShellActions, ShellSettings, useAppExplainer, useAppHeader } from '../../components/AppShell';
+import { Section, Slider, Pills } from '../../components/ControlPanel';
+import { step, cloudSpread, type SimState, type Planet } from './physics';
+import { PRESETS, getPreset } from './presets';
+import explainerText from './EXPLAINER.md?raw';
+
+const STAR_COLORS = [0xffd27f, 0xff7043, 0x9ec7ff];
+const REF_COLOR = 0x66f0ff;
+const GHOST_COLOR = 0xff5fa2;
+const GHOST_COLOR_HEX = '#ff5fa2';
+const TRAIL_MAX = 2000; // points stored per body; visible length is a live slider.
+
+/** Sim plane lives at world y = 0 so the camera can look down on it like a floor. */
+function simX(x: number) { return x; }
+function simZ(y: number) { return -y; }
+
+/** Soft radial sprite used to give the stars a glow halo. */
+function makeGlowTexture(): THREE.Texture {
+  const size = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d')!;
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.25, 'rgba(255,255,255,0.55)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/** A sliding-window trail: a fixed buffer with a live-adjustable visible tail. */
+class Trail {
+  geom = new THREE.BufferGeometry();
+  line: THREE.Line;
+  private attr: THREE.BufferAttribute;
+  private buf = new Float32Array(TRAIL_MAX * 3);
+  private count = 0;
+
+  constructor(color: number, opacity: number) {
+    this.attr = new THREE.BufferAttribute(this.buf, 3);
+    this.geom.setAttribute('position', this.attr);
+    this.geom.setDrawRange(0, 0);
+    const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity });
+    this.line = new THREE.Line(this.geom, mat);
+    this.line.frustumCulled = false;
+  }
+
+  push(x: number, y: number, z: number) {
+    if (this.count === TRAIL_MAX) {
+      this.buf.copyWithin(0, 3);
+      this.count--;
+    }
+    const i = this.count * 3;
+    this.buf[i] = x; this.buf[i + 1] = y; this.buf[i + 2] = z;
+    this.count++;
+  }
+
+  /** Show only the most recent `visible` points. */
+  setVisible(visible: number) {
+    const start = Math.max(0, this.count - visible);
+    this.geom.setDrawRange(start, this.count - start);
+    this.attr.needsUpdate = true;
+  }
+
+  reset() {
+    this.count = 0;
+    this.geom.setDrawRange(0, 0);
+  }
+
+  dispose() {
+    this.geom.dispose();
+    (this.line.material as THREE.Material).dispose();
+  }
+}
+
+export default function TrinaryStars() {
+  const [presetId, setPresetId] = useState(PRESETS[0].id);
+  const [ghostCount, setGhostCount] = useState(8);
+  const [epsExp, setEpsExp] = useState(-3);      // perturbation ε = 10^epsExp
+  const [planetRadius, setPlanetRadius] = useState(PRESETS[0].planetRadius);
+  const [planetSpeed, setPlanetSpeed] = useState(PRESETS[0].planetSpeed);
+  const [speed, setSpeed] = useState(1);          // sim-seconds per real-second
+  const [trailLen, setTrailLen] = useState(500);
+  const [showTrails, setShowTrails] = useState(true);
+  const [paused, setPaused] = useState(false);
+
+  const preset = getPreset(presetId);
+  useAppHeader('Trinary System', preset.name);
+  useAppExplainer(explainerText);
+
+  // Live params the animation loop reads without re-mounting the scene.
+  const refs = useRef({
+    speed, trailLen, showTrails, paused,
+    ghostCount, epsExp, planetRadius, planetSpeed, presetId,
+  });
+  refs.current = { speed, trailLen, showTrails, paused, ghostCount, epsExp, planetRadius, planetSpeed, presetId };
+
+  // Imperative handles populated by onMount and called by control effects/buttons.
+  const api = useRef<{
+    reset: () => void;
+    scatter: () => void;
+  } | null>(null);
+
+  const spreadElRef = useRef<HTMLSpanElement>(null);
+  const timeElRef = useRef<HTMLSpanElement>(null);
+
+  const onMount = useCallback(({ scene, camera, renderer }: {
+    scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer;
+  }) => {
+    scene.background = new THREE.Color(0x05060a);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
+    const grid = new THREE.GridHelper(24, 24, 0x223047, 0x141c2b);
+    (grid.material as THREE.Material).transparent = true;
+    (grid.material as THREE.Material).opacity = 0.5;
+    scene.add(grid);
+
+    const glowTex = makeGlowTexture();
+
+    // --- Stars (created once; positions updated each frame) ---
+    const starMeshes: THREE.Mesh[] = [];
+    const starGlows: THREE.Sprite[] = [];
+    const starTrails: Trail[] = [];
+    for (let i = 0; i < 3; i++) {
+      const color = STAR_COLORS[i];
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(1, 24, 24),
+        new THREE.MeshBasicMaterial({ color }),
+      );
+      scene.add(mesh);
+      starMeshes.push(mesh);
+
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowTex, color, transparent: true, opacity: 0.8,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      }));
+      scene.add(glow);
+      starGlows.push(glow);
+
+      const trail = new Trail(color, 0.35);
+      scene.add(trail.line);
+      starTrails.push(trail);
+    }
+
+    // --- Planets (rebuilt when the ghost count changes) ---
+    const planetGroup = new THREE.Group();
+    scene.add(planetGroup);
+    let planetMeshes: THREE.Mesh[] = [];
+    let planetTrails: Trail[] = [];
+
+    const sim: SimState = {
+      stars: [], planets: [], t: 0, dtBase: 0.002, G: 1, starSoft: 0.02, planetSoft: 0.05,
+    };
+
+    function disposePlanets() {
+      for (const m of planetMeshes) {
+        planetGroup.remove(m);
+        m.geometry.dispose();
+        (m.material as THREE.Material).dispose();
+      }
+      for (const t of planetTrails) { scene.remove(t.line); t.dispose(); }
+      planetMeshes = [];
+      planetTrails = [];
+    }
+
+    /** Seed the planet states from current launch settings, spreading the
+     *  ghosts in a tiny ring of radius ε around the reference planet. */
+    function seedPlanets(): Planet[] {
+      const r = refs.current.planetRadius;
+      const v = refs.current.planetSpeed;
+      const n = Math.max(1, Math.round(refs.current.ghostCount));
+      const eps = Math.pow(10, refs.current.epsExp);
+      const planets: Planet[] = [];
+      // Reference planet launched on a circular-ish tangential path.
+      for (let i = 0; i < n; i++) {
+        let px = r, py = 0;
+        if (i > 0) {
+          const ang = (2 * Math.PI * (i - 1)) / Math.max(1, n - 1);
+          px += eps * Math.cos(ang);
+          py += eps * Math.sin(ang);
+        }
+        planets.push({ x: px, y: py, vx: 0, vy: v, ax: 0, ay: 0 });
+      }
+      return planets;
+    }
+
+    function buildPlanetMeshes(n: number) {
+      disposePlanets();
+      for (let i = 0; i < n; i++) {
+        const isRef = i === 0;
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(isRef ? 0.085 : 0.06, 16, 16),
+          new THREE.MeshBasicMaterial({
+            color: isRef ? REF_COLOR : GHOST_COLOR,
+            transparent: !isRef,
+            opacity: isRef ? 1 : 0.6,
+          }),
+        );
+        planetGroup.add(mesh);
+        planetMeshes.push(mesh);
+
+        const trail = new Trail(isRef ? REF_COLOR : GHOST_COLOR, isRef ? 0.7 : 0.22);
+        scene.add(trail.line);
+        planetTrails.push(trail);
+      }
+    }
+
+    /** Full deterministic reset: re-seed stars + planets from the active preset. */
+    function reset() {
+      const p = getPreset(refs.current.presetId);
+      sim.stars = p.make();
+      sim.starSoft = p.starSoft;
+      sim.dtBase = p.dt;
+      sim.planets = seedPlanets();
+      sim.t = 0;
+      const n = sim.planets.length;
+      if (planetMeshes.length !== n) buildPlanetMeshes(n);
+      for (const t of starTrails) t.reset();
+      for (const t of planetTrails) t.reset();
+      // Scale star sizes/glow by mass.
+      for (let i = 0; i < 3; i++) {
+        const m = sim.stars[i].mass;
+        const rad = 0.11 * Math.cbrt(m);
+        starMeshes[i].scale.setScalar(rad);
+        starGlows[i].scale.setScalar(rad * 9);
+      }
+    }
+
+    /** Re-scatter the ghosts around the reference planet's *current* state,
+     *  without disturbing the stars — make a fresh cloud mid-flight. */
+    function scatter() {
+      const ref = sim.planets[0];
+      if (!ref) return;
+      const eps = Math.pow(10, refs.current.epsExp);
+      const n = sim.planets.length;
+      for (let i = 1; i < n; i++) {
+        const ang = (2 * Math.PI * (i - 1)) / Math.max(1, n - 1);
+        sim.planets[i].x = ref.x + eps * Math.cos(ang);
+        sim.planets[i].y = ref.y + eps * Math.sin(ang);
+        sim.planets[i].vx = ref.vx;
+        sim.planets[i].vy = ref.vy;
+      }
+      for (const t of planetTrails) t.reset();
+    }
+
+    api.current = { reset, scatter };
+    reset();
+
+    // --- Orbit camera (drag to rotate, wheel to zoom) ---
+    const cam = { az: 0.0, polar: 0.62, dist: 11 };
+    camera.up.set(0, 1, 0);
+    camera.near = 0.05;
+    camera.far = 400;
+    camera.updateProjectionMatrix();
+
+    function placeCamera() {
+      const sp = Math.sin(cam.polar), cp = Math.cos(cam.polar);
+      camera.position.set(
+        cam.dist * sp * Math.sin(cam.az),
+        cam.dist * cp,
+        cam.dist * sp * Math.cos(cam.az),
+      );
+      camera.lookAt(0, 0, 0);
+    }
+    placeCamera();
+
+    const el = renderer.domElement;
+    let dragging = false;
+    let lastX = 0, lastY = 0;
+    const onDown = (e: PointerEvent) => { dragging = true; lastX = e.clientX; lastY = e.clientY; el.setPointerCapture(e.pointerId); };
+    const onMove = (e: PointerEvent) => {
+      if (!dragging) return;
+      cam.az -= (e.clientX - lastX) * 0.006;
+      cam.polar = Math.min(1.52, Math.max(0.05, cam.polar - (e.clientY - lastY) * 0.006));
+      lastX = e.clientX; lastY = e.clientY;
+      placeCamera();
+    };
+    const onUp = (e: PointerEvent) => { dragging = false; try { el.releasePointerCapture(e.pointerId); } catch { /* ignore */ } };
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      cam.dist = Math.min(60, Math.max(2, cam.dist * (1 + Math.sign(e.deltaY) * 0.08)));
+      placeCamera();
+    };
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+    el.addEventListener('wheel', onWheel, { passive: false });
+
+    // --- Animation loop ---
+    const clock = new THREE.Clock();
+    let raf = 0;
+    let uiAccum = 0;
+
+    const animate = () => {
+      raf = requestAnimationFrame(animate);
+      const realDt = Math.min(clock.getDelta(), 0.05);
+      const r = refs.current;
+
+      if (!r.paused) {
+        const dt = sim.dtBase ?? 0.002;
+        const simSeconds = r.speed * realDt;
+        let steps = Math.round(simSeconds / dt);
+        steps = Math.min(400, Math.max(0, steps));
+        for (let s = 0; s < steps; s++) step(sim, dt);
+
+        if (r.showTrails && steps > 0) {
+          for (let i = 0; i < 3; i++) starTrails[i].push(simX(sim.stars[i].x), 0, simZ(sim.stars[i].y));
+          for (let i = 0; i < sim.planets.length; i++) {
+            planetTrails[i]?.push(simX(sim.planets[i].x), 0, simZ(sim.planets[i].y));
+          }
+        }
+      }
+
+      // Sync meshes to state.
+      for (let i = 0; i < 3; i++) {
+        const wx = simX(sim.stars[i].x), wz = simZ(sim.stars[i].y);
+        starMeshes[i].position.set(wx, 0, wz);
+        starGlows[i].position.set(wx, 0, wz);
+      }
+      for (let i = 0; i < sim.planets.length; i++) {
+        planetMeshes[i]?.position.set(simX(sim.planets[i].x), 0, simZ(sim.planets[i].y));
+      }
+
+      // Trails: visibility + show/hide.
+      const vis = Math.round(r.trailLen);
+      for (const t of starTrails) { t.line.visible = r.showTrails; if (r.showTrails) t.setVisible(vis); }
+      for (const t of planetTrails) { t.line.visible = r.showTrails; if (r.showTrails) t.setVisible(vis); }
+
+      // Throttled UI readouts.
+      uiAccum += realDt;
+      if (uiAccum > 0.1) {
+        uiAccum = 0;
+        if (spreadElRef.current) spreadElRef.current.textContent = cloudSpread(sim.planets).toExponential(2);
+        if (timeElRef.current) timeElRef.current.textContent = sim.t.toFixed(1);
+      }
+
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+      el.removeEventListener('wheel', onWheel);
+      glowTex.dispose();
+      api.current = null;
+    };
+  }, []);
+
+  // Re-seed the whole system whenever an initial-condition control changes.
+  useEffect(() => {
+    api.current?.reset();
+  }, [presetId, ghostCount, epsExp, planetRadius, planetSpeed]);
+
+  // When switching preset, adopt its recommended planet launch defaults.
+  const onPickPreset = (id: string) => {
+    const p = getPreset(id);
+    setPresetId(id);
+    setPlanetRadius(p.planetRadius);
+    setPlanetSpeed(p.planetSpeed);
+  };
+
+  const btnStyle: React.CSSProperties = {
+    padding: '10px 14px', borderRadius: 6, border: '1px solid var(--cp-border, #2a3550)',
+    background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg, #e8edf6)', cursor: 'pointer', fontSize: 14, flex: 1,
+  };
+
+  return (
+    <>
+      <div style={{ position: 'absolute', inset: 0 }}>
+        <Canvas3D onMount={onMount} />
+      </div>
+
+      {/* Live divergence readout. */}
+      <div style={{
+        position: 'absolute', top: 64, left: 12, padding: '8px 12px',
+        background: 'rgba(8,12,20,0.62)', border: '1px solid rgba(120,150,200,0.25)',
+        borderRadius: 8, color: '#cfe0f5', font: '12px/1.5 ui-monospace, monospace',
+        pointerEvents: 'none', backdropFilter: 'blur(4px)',
+      }}>
+        <div>cloud spread&nbsp; <span ref={spreadElRef} style={{ color: GHOST_COLOR_HEX }}>0.00e+0</span></div>
+        <div>sim time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span ref={timeElRef} style={{ color: '#9ec7ff' }}>0.0</span></div>
+      </div>
+
+      <ShellActions>
+        <div className="cp-section-body" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button style={btnStyle} onClick={() => setPaused(p => !p)}>{paused ? '▶ Play' : '❚❚ Pause'}</button>
+            <button style={btnStyle} onClick={() => api.current?.reset()}>↺ Reset</button>
+          </div>
+          <button style={btnStyle} onClick={() => api.current?.scatter()}>✦ Scatter ghosts here</button>
+          <Slider label="Speed" value={speed} min={0.1} max={4} step={0.1}
+            onChange={setSpeed} format={v => `${v.toFixed(1)}×`} />
+        </div>
+      </ShellActions>
+
+      <ShellSettings>
+        <Section title="System" icon="✸" defaultOpen>
+          <Pills
+            options={PRESETS.map(p => ({ value: p.id, label: p.name }))}
+            value={presetId}
+            onChange={onPickPreset}
+          />
+          <div style={{ font: '12px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '4px 2px' }}>
+            {preset.blurb}
+          </div>
+        </Section>
+
+        <Section title="Chaos demo" icon="∿" defaultOpen>
+          <Slider label="Ghost planets" value={ghostCount} min={1} max={16} step={1}
+            onChange={setGhostCount} format={v => `${v}`} />
+          <Slider label="Perturbation ε" value={epsExp} min={-5} max={-1} step={0.5}
+            onChange={setEpsExp} format={v => `10^${v.toFixed(1)}`} />
+        </Section>
+
+        <Section title="Planet launch" icon="◐">
+          <Slider label="Start radius" value={planetRadius} min={0.5} max={8} step={0.1}
+            onChange={setPlanetRadius} format={v => v.toFixed(1)} />
+          <Slider label="Start speed" value={planetSpeed} min={0} max={2.5} step={0.05}
+            onChange={setPlanetSpeed} format={v => v.toFixed(2)} />
+        </Section>
+
+        <Section title="View" icon="◑">
+          <Slider label="Trail length" value={trailLen} min={0} max={TRAIL_MAX} step={50}
+            onChange={setTrailLen} format={v => (v === 0 ? 'off' : `${v}`)} />
+          <Pills
+            label="Trails"
+            options={[{ value: 1, label: 'On' }, { value: 0, label: 'Off' }]}
+            value={showTrails ? 1 : 0}
+            onChange={v => setShowTrails(v === 1)}
+          />
+        </Section>
+      </ShellSettings>
+    </>
+  );
+}
