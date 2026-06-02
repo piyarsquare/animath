@@ -42,11 +42,13 @@ function Router(): JSX.Element {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const Component = routes[hash] ?? Menu;
+  // Routes may carry a `?query` (e.g. the lab's shareable config); match on path.
+  const path = hash.split('?')[0];
+  const Component = routes[path] ?? Menu;
   const navigate = (h: string) => { window.location.hash = '#' + h; };
 
   return (
-    <AppShell apps={apps} currentHash={hash} onNavigate={navigate}>
+    <AppShell apps={apps} currentHash={path} onNavigate={navigate}>
       <React.Suspense fallback={<div style={{ background: '#000', width: '100%', height: '100%' }} />}>
         <Component />
       </React.Suspense>

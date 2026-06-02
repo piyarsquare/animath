@@ -8,10 +8,28 @@ import { Aggregator, OUTCOMES, type AggSnapshot } from './ensemble';
 import { runOne, targetMassOf } from './runner';
 import { sampleParams, type EnsembleConfig } from './rng';
 import { WorkerPool } from './pool';
+import { sweepCell, type SweepCell } from './sweep';
 import MiniSim from './MiniSim';
 
 const HAS_WORKERS = typeof Worker !== 'undefined';
 const TILE_COUNT = 8;
+
+/** Read the lab config carried in the URL hash query (for shareable links). */
+function labParams(): URLSearchParams {
+  return new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+}
+const pNum = (p: URLSearchParams, k: string, d: number) => {
+  const v = p.get(k); const n = v == null ? NaN : parseFloat(v);
+  return Number.isFinite(n) ? n : d;
+};
+
+function download(name: string, text: string, type: string) {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
 
 const OUTCOME_META: Record<Outcome, { label: string; color: string }> = {
   happy: { label: 'Happy ending (star ejected, planet survives)', color: '#46d98a' },
@@ -52,32 +70,110 @@ function Histogram({ data, max, color, domain }: { data: number[]; max: number; 
   );
 }
 
+type SweepMetric = 'happy' | 'hab' | 'destroyed';
+const METRIC_COLOR: Record<SweepMetric, [number, number, number]> = {
+  happy: [70, 217, 138], hab: [102, 240, 255], destroyed: [255, 112, 67],
+};
+
+/** Heatmap of a sweep metric over launch radius (x) × speed-fraction (y). */
+function SweepHeatmap({ grid, n, metric, rDom, fDom, onHover }: {
+  grid: (SweepCell | null)[]; n: number; metric: SweepMetric;
+  rDom: [number, number]; fDom: [number, number]; onHover: (i: number, j: number) => void;
+}) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const cv = ref.current; const ctx = cv?.getContext('2d');
+    if (!cv || !ctx) return;
+    const W = cv.width, H = cv.height, cw = W / n, ch = H / n;
+    ctx.fillStyle = '#0a0e16'; ctx.fillRect(0, 0, W, H);
+    const [cr, cg, cb] = METRIC_COLOR[metric];
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      const cell = grid[j * n + i];
+      if (!cell) continue;
+      const v = metric === 'happy' ? cell.happy : metric === 'hab' ? cell.hab : cell.destroyed;
+      ctx.fillStyle = `rgb(${10 + (cr - 10) * v},${14 + (cg - 14) * v},${22 + (cb - 22) * v})`;
+      ctx.fillRect(i * cw, H - (j + 1) * ch, cw + 0.5, ch + 0.5);
+    }
+  }, [grid, n, metric]);
+  return (
+    <div>
+      <canvas ref={ref} width={260} height={260}
+        style={{ width: '100%', maxWidth: 320, aspectRatio: '1', borderRadius: 6, display: 'block', cursor: 'crosshair' }}
+        onMouseMove={(e) => {
+          const rect = (e.target as HTMLElement).getBoundingClientRect();
+          const i = Math.min(n - 1, Math.max(0, Math.floor(((e.clientX - rect.left) / rect.width) * n)));
+          const j = Math.min(n - 1, Math.max(0, Math.floor((1 - (e.clientY - rect.top) / rect.height) * n)));
+          onHover(i, j);
+        }}
+      />
+      <div style={{ display: 'flex', justifyContent: 'space-between', font: '10px ui-monospace, monospace', color: '#6f7f99', marginTop: 2 }}>
+        <span>radius {rDom[0].toFixed(1)}</span>
+        <span>→ speed×circ {fDom[0].toFixed(2)}–{fDom[1].toFixed(2)} ↑</span>
+        <span>{rDom[1].toFixed(1)}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function TrinaryLab() {
   useAppHeader('Trinary Lab', 'ensemble statistics');
 
-  const [presetId, setPresetId] = useState(PRESETS[0].id);
+  // Initialise from a shareable URL config, if present.
+  const urlRef = useRef<URLSearchParams | null>(null);
+  if (!urlRef.current) urlRef.current = labParams();
+  const U = urlRef.current;
+
+  const [presetId, setPresetId] = useState(() => U.get('p') ?? PRESETS[0].id);
   const preset = getPreset(presetId);
-  const [target, setTarget] = useState<TargetId>(preset.target);
-  const [tMax, setTMax] = useState(180);
-  const [rMin, setRMin] = useState(0.6);
-  const [rMax, setRMax] = useState(4);
-  const [fMin, setFMin] = useState(0.6);
-  const [fMax, setFMax] = useState(1.25);
-  const [allowRetro, setAllowRetro] = useState(true);
-  const [habLo, setHabLo] = useState(DEFAULT_CLASSIFY.habLo);
-  const [habHi, setHabHi] = useState(DEFAULT_CLASSIFY.habHi);
-  const [targetN, setTargetN] = useState(4000);
+  const [target, setTarget] = useState<TargetId>(() => (U.get('tg') as TargetId) ?? preset.target);
+  const [tMax, setTMax] = useState(() => pNum(U, 'tm', 180));
+  const [rMin, setRMin] = useState(() => pNum(U, 'r0', 0.6));
+  const [rMax, setRMax] = useState(() => pNum(U, 'r1', 4));
+  const [fMin, setFMin] = useState(() => pNum(U, 'f0', 0.6));
+  const [fMax, setFMax] = useState(() => pNum(U, 'f1', 1.25));
+  const [allowRetro, setAllowRetro] = useState(() => U.get('rt') !== '0');
+  const [habLo, setHabLo] = useState(() => pNum(U, 'hl', DEFAULT_CLASSIFY.habLo));
+  const [habHi, setHabHi] = useState(() => pNum(U, 'hh', DEFAULT_CLASSIFY.habHi));
+  const [targetN, setTargetN] = useState(() => pNum(U, 'n', 4000));
+  const [baseSeed, setBaseSeed] = useState(() => pNum(U, 'sd', 1234567) >>> 0);
 
   const [running, setRunning] = useState(false);
   const [agg, setAgg] = useState<AggSnapshot | null>(null);
   const [rate, setRate] = useState(0);
-  const [engine, setEngine] = useState<'cpu' | 'workers'>(HAS_WORKERS ? 'workers' : 'cpu');
+  const [engine, setEngine] = useState<'cpu' | 'workers'>(() =>
+    (U.get('e') === 'cpu' || !HAS_WORKERS) ? 'cpu' : 'workers');
+  const [copied, setCopied] = useState(false);
+
+  // Parameter sweep state.
+  const SWEEP_N = 16;
+  const [sweepRuns, setSweepRuns] = useState(16);
+  const [sweepMetric, setSweepMetric] = useState<SweepMetric>('happy');
+  const [sweepGrid, setSweepGrid] = useState<(SweepCell | null)[]>(() => new Array(SWEEP_N * SWEEP_N).fill(null));
+  const [sweepBusy, setSweepBusy] = useState(false);
+  const [sweepDone, setSweepDone] = useState(0);
+  const [hover, setHover] = useState<{ i: number; j: number } | null>(null);
+  const sweepGridRef = useRef<(SweepCell | null)[]>(sweepGrid);
+  const sweepCellRef = useRef(0);
+  const sweepRafRef = useRef(0);
+  const sweepBusyRef = useRef(false);
 
   const cfg: EnsembleConfig = useMemo(() => ({
     presetId, target, massMul: [1, 1, 1], starSoft: preset.starSoft,
     classify: { ...DEFAULT_CLASSIFY, habLo, habHi },
-    tMax, rMin, rMax, fMin, fMax, allowRetro, baseSeed: 1234567,
-  }), [presetId, target, preset.starSoft, habLo, habHi, tMax, rMin, rMax, fMin, fMax, allowRetro]);
+    tMax, rMin, rMax, fMin, fMax, allowRetro, baseSeed,
+  }), [presetId, target, preset.starSoft, habLo, habHi, tMax, rMin, rMax, fMin, fMax, allowRetro, baseSeed]);
+
+  // Keep the URL in sync so the current configuration is shareable/reproducible.
+  useEffect(() => {
+    const q = new URLSearchParams({
+      p: presetId, tg: target, n: String(targetN), tm: String(tMax),
+      r0: String(rMin), r1: String(rMax), f0: String(fMin), f1: String(fMax),
+      rt: allowRetro ? '1' : '0', hl: String(habLo), hh: String(habHi),
+      sd: String(baseSeed), e: engine,
+    });
+    const base = (window.location.hash.split('?')[0] || '#/trinary-lab').replace(/^#/, '');
+    window.history.replaceState(null, '', `#${base}?${q.toString()}`);
+  }, [presetId, target, targetN, tMax, rMin, rMax, fMin, fMax, allowRetro, habLo, habHi, baseSeed, engine]);
 
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
   const targetNRef = useRef(targetN); targetNRef.current = targetN;
@@ -191,6 +287,66 @@ export default function TrinaryLab() {
 
   const onPickPreset = (id: string) => { setPresetId(id); setTarget(getPreset(id).target); };
 
+  // --- Parameter sweep (its own chunked CPU loop) ---
+  const sweepTick = () => {
+    if (!sweepBusyRef.current) return;
+    const cfgNow = cfgRef.current;
+    const tm = targetMassOf(cfgNow);
+    const N = SWEEP_N;
+    const grid = sweepGridRef.current;
+    const t0 = performance.now();
+    while (sweepCellRef.current < N * N && performance.now() - t0 < 28) {
+      const c = sweepCellRef.current;
+      const i = c % N, j = Math.floor(c / N);
+      const radius = cfgNow.rMin + (cfgNow.rMax - cfgNow.rMin) * ((i + 0.5) / N);
+      const frac = cfgNow.fMin + (cfgNow.fMax - cfgNow.fMin) * ((j + 0.5) / N);
+      grid[c] = sweepCell(cfgNow, radius, frac, sweepRuns, tm, (cfgNow.baseSeed ^ (c * 0x85ebca6b)) >>> 0);
+      sweepCellRef.current++;
+    }
+    setSweepGrid(grid.slice());
+    setSweepDone(sweepCellRef.current);
+    if (sweepCellRef.current >= N * N) { sweepBusyRef.current = false; setSweepBusy(false); return; }
+    sweepRafRef.current = requestAnimationFrame(sweepTick);
+  };
+  const startSweep = () => {
+    pause(); // free the main thread from the random ensemble
+    sweepGridRef.current = new Array(SWEEP_N * SWEEP_N).fill(null);
+    sweepCellRef.current = 0;
+    setSweepGrid(sweepGridRef.current.slice()); setSweepDone(0);
+    sweepBusyRef.current = true; setSweepBusy(true);
+    sweepRafRef.current = requestAnimationFrame(sweepTick);
+  };
+  const stopSweep = () => { sweepBusyRef.current = false; setSweepBusy(false); cancelAnimationFrame(sweepRafRef.current); };
+  useEffect(() => () => cancelAnimationFrame(sweepRafRef.current), []);
+
+  const hoverCell = hover ? sweepGrid[hover.j * SWEEP_N + hover.i] : null;
+  const hoverR = hover ? (rMin + (rMax - rMin) * ((hover.i + 0.5) / SWEEP_N)) : 0;
+  const hoverF = hover ? (fMin + (fMax - fMin) * ((hover.j + 0.5) / SWEEP_N)) : 0;
+
+  const copyLink = () => {
+    navigator.clipboard?.writeText(window.location.href).then(() => {
+      setCopied(true); window.setTimeout(() => setCopied(false), 1500);
+    }).catch(() => { /* ignore */ });
+  };
+  const exportJSON = () => {
+    if (!agg) return;
+    download('trinary-ensemble.json', JSON.stringify({
+      config: cfgRef.current, n: agg.n, counts: agg.counts,
+      habMean: agg.habMean, habStderr: agg.habStderr, longMean: agg.longMean, longMax: agg.longMax,
+      histHab: agg.histHab, histLong: agg.histLong, histEject: agg.histEject, records: agg.records,
+    }, null, 2), 'application/json');
+  };
+  const exportCSV = () => {
+    if (!agg) return;
+    const head = ['rank', 'longestStableEra', 'habitableFraction', 'radius', 'speed', 'angleDeg', 'direction', 'outcome', 'seed'];
+    const rows = agg.records.map((r, i) => [
+      i + 1, r.longestHabitable.toFixed(3), r.habitableFraction.toFixed(3),
+      r.radius.toFixed(3), r.speed.toFixed(3), r.angleDeg.toFixed(1),
+      r.retro ? 'retro' : 'pro', r.outcome, r.seed,
+    ]);
+    download('trinary-records.csv', [head, ...rows].map(r => r.join(',')).join('\n'), 'text/csv');
+  };
+
   const n = agg?.n ?? 0;
   const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
   const happyPct = n ? (agg!.counts.happy / n) : 0;
@@ -215,10 +371,14 @@ export default function TrinaryLab() {
         <button style={{ ...btn, background: running ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }}
           onClick={running ? pause : start}>{running ? '❚❚ Pause' : (n > 0 && n < targetN ? '▶ Resume' : '▶ Run ensemble')}</button>
         <button style={btn} onClick={reset}>↺ Reset</button>
+        <button style={btn} title="New random ensemble seed" onClick={() => setBaseSeed((Math.random() * 4294967296) >>> 0)}>🎲 Reseed</button>
         <div style={{ flex: 1 }} />
         <span style={{ font: '12px ui-monospace, monospace', color: '#6f7f99' }}>
           {rate > 0 ? `${rate.toFixed(0)} worlds/s` : ''}
         </span>
+        <button style={btn} onClick={copyLink}>{copied ? '✓ Copied' : '🔗 Copy link'}</button>
+        <button style={btn} onClick={exportJSON} disabled={!agg}>⬇ JSON</button>
+        <button style={btn} onClick={exportCSV} disabled={!agg}>⬇ CSV</button>
       </div>
 
       {/* Completion meter */}
@@ -307,6 +467,32 @@ export default function TrinaryLab() {
               {!agg?.records.length && <tr><td colSpan={7} style={{ color: '#6f7f99', padding: '8px 0' }}>Run the ensemble to populate…</td></tr>}
             </tbody>
           </table>
+        </div>
+
+        {/* Parameter sweep */}
+        <div style={panel}>
+          <h3 style={h3}>PARAMETER SWEEP — {SWEEP_N}×{SWEEP_N} grid</h3>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+            <button style={{ ...btn, padding: '6px 12px' }} onClick={sweepBusy ? stopSweep : startSweep}>
+              {sweepBusy ? '❚❚ Stop' : '▦ Run sweep'}
+            </button>
+            <Pills value={sweepMetric} options={[
+              { value: 'happy', label: 'Happy %' }, { value: 'hab', label: 'Habitable' }, { value: 'destroyed', label: 'Destroyed %' },
+            ]} onChange={(v) => setSweepMetric(v as SweepMetric)} />
+            <span style={{ font: '11px ui-monospace, monospace', color: '#6f7f99' }}>
+              {sweepDone}/{SWEEP_N * SWEEP_N} cells
+            </span>
+          </div>
+          <SweepHeatmap grid={sweepGrid} n={SWEEP_N} metric={sweepMetric}
+            rDom={[rMin, rMax]} fDom={[fMin, fMax]} onHover={(i, j) => setHover({ i, j })} />
+          <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', marginTop: 6, minHeight: 16 }}>
+            {hoverCell
+              ? `r=${hoverR.toFixed(2)} · v=${hoverF.toFixed(2)}×circ → happy ${(hoverCell.happy * 100).toFixed(0)}% · hab ${(hoverCell.hab * 100).toFixed(0)}% · destroyed ${(hoverCell.destroyed * 100).toFixed(0)}%`
+              : 'Hover a cell to read its outcome mix. Brighter = higher.'}
+          </div>
+          <div style={{ marginTop: 6 }}>
+            <Slider label="Runs per cell" value={sweepRuns} min={4} max={64} step={4} onChange={setSweepRuns} format={v => `${v}`} />
+          </div>
         </div>
 
         {/* Controls */}
