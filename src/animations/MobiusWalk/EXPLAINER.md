@@ -36,6 +36,9 @@ rather than just described.
 To make the flip unmistakable you leave a **red trail** on the floor as you
 walk, and the floor carries **"UP" arrows**. Come around one lap and you'll see
 your own trail — and the arrows — running across the *ceiling* above you,
-reversed: proof that floor and ceiling are one and the same surface. Switch
-**themes** for different scenery, and toggle first/third-person to watch
-yourself laying the trail.
+reversed: proof that floor and ceiling are one and the same surface. You can
+also **press Space (or the ✎ button) to write on the walls** in glowing ink and
+find your message again, flipped, when you pass it from the other side. Switch
+**themes** for different scenery and lighting — flickering torches, pulsing
+ship lights, cool moonbeams — and toggle first/third-person to watch yourself
+laying the trail.
