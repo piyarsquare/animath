@@ -33,6 +33,13 @@ const INK = '#ffef6b';
 const MINI_UP = new THREE.Vector3(0, 1, 0);
 const MINI_BG = new THREE.Color(0x0a0c16);
 
+/** Phone-ish layout: portrait or a small short side. Used to choose
+ *  mobile-friendly defaults (first-person view, bloom off). */
+function isCrampedLayout(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.innerHeight >= window.innerWidth || Math.min(window.innerWidth, window.innerHeight) < 560;
+}
+
 type MoveKey = 'fwd' | 'back' | 'left' | 'right';
 
 interface SceneCtx {
@@ -192,9 +199,11 @@ export default function MobiusWalk() {
   const [width, setWidth] = useState(DEFAULT_PARAMS.width);
   const [ambientMul, setAmbientMul] = useState(1);
   const [themeId, setThemeId] = useState(DEFAULT_THEME.id);
-  const [thirdPerson, setThirdPerson] = useState(true);
+  // First-person by default on portrait / small screens (a chase cam is too
+  // cramped in a narrow corridor on a phone); third-person elsewhere.
+  const [thirdPerson, setThirdPerson] = useState(() => !isCrampedLayout());
   const [markers, setMarkers] = useState(true);
-  const [bloomOn, setBloomOn] = useState(true);
+  const [bloomOn, setBloomOn] = useState(() => !isCrampedLayout()); // bloom is heavy on phones
   const [miniMap, setMiniMap] = useState(true);
   const [wallText, setWallText] = useState('MÖBIUS');
 
@@ -358,8 +367,13 @@ export default function MobiusWalk() {
       cx.character.stride(cx.stridePhase);
 
       if (thirdRef.current) {
-        const camPos = foot.clone().addScaledVector(facing, -3.0).addScaledVector(up, 1.9 + pitch * 1.6);
-        const target = foot.clone().addScaledVector(up, 1.0).addScaledVector(facing, 1.2);
+        // Pull back a little on narrow (portrait) aspects, where the small
+        // horizontal FOV magnifies the avatar.
+        const aspect = cx.camera.aspect || 1;
+        const distScale = Math.min(1.7, Math.max(1, 1 / Math.min(aspect, 1)));
+        const D = 3.2 * distScale;
+        const camPos = foot.clone().addScaledVector(facing, -D).addScaledVector(up, 2.2 + pitch * 1.6);
+        const target = foot.clone().addScaledVector(up, 1.4).addScaledVector(facing, 0.5);
         cx.camera.up.copy(up); cx.camera.position.copy(camPos); cx.camera.lookAt(target);
       } else {
         cx.camera.up.copy(up); cx.camera.position.copy(eye); cx.camera.lookAt(eye.clone().add(lookDir));
