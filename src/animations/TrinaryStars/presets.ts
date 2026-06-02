@@ -36,7 +36,7 @@ function star(x: number, y: number, vx: number, vy: number, mass: number): Star 
 
 /** Shift to the centre-of-mass frame: zero net position and net momentum so
  *  the system stays framed instead of drifting off screen. */
-function normalize(stars: Star[]): Star[] {
+export function recenter(stars: Star[]): Star[] {
   let M = 0, cx = 0, cy = 0, px = 0, py = 0;
   for (const s of stars) {
     M += s.mass;
@@ -57,7 +57,7 @@ export const PRESETS: Preset[] = [
     name: 'Figure-Eight',
     blurb: 'Three equal stars chase each other along one perfectly repeating loop — yet the planet they cradle is still chaotic.',
     // Chenciner–Montgomery choreography (equal masses, G = 1).
-    make: () => normalize([
+    make: () => recenter([
       star(-0.97000436, 0.24308753, 0.4662036850, 0.4323657300, 1),
       star(0.97000436, -0.24308753, 0.4662036850, 0.4323657300, 1),
       star(0, 0, -0.93240737, -0.86473146, 1),
@@ -73,7 +73,7 @@ export const PRESETS: Preset[] = [
     name: 'Pythagorean',
     blurb: "Burrau's problem: stars of mass 3, 4 and 5 fall together from rest, swing through violent close passes, and eject one of their own.",
     // Masses 3,4,5 at the vertices of a 3-4-5 right triangle, starting at rest.
-    make: () => normalize([
+    make: () => recenter([
       star(1, 3, 0, 0, 3),
       star(-2, -1, 0, 0, 4),
       star(1, -1, 0, 0, 5),
@@ -88,7 +88,7 @@ export const PRESETS: Preset[] = [
     id: 'binary',
     name: 'Binary + Star',
     blurb: 'A tight equal-mass binary with a lighter star wheeling around outside. Launch the planet around the inner binary for an orbit smaller than the third star’s.',
-    make: () => normalize([
+    make: () => recenter([
       // Tight equal-mass binary (separation 0.6, circular: v = √(1/4·sep)).
       star(0.3, 0, 0, 0.91, 1),
       star(-0.3, 0, 0, -0.91, 1),
@@ -106,4 +106,14 @@ export const PRESETS: Preset[] = [
 
 export function getPreset(id: string): Preset {
   return PRESETS.find(p => p.id === id) ?? PRESETS[0];
+}
+
+/** Build a preset's stars with per-star mass multipliers applied, re-centred so
+ *  net momentum stays zero. A uniform multiplier just rescales time; uneven
+ *  ones detune the configuration (e.g. break the figure-eight) — useful for
+ *  exploring how sensitive the dynamics are. */
+export function buildStars(preset: Preset, massMul: readonly number[]): Star[] {
+  const stars = preset.make();
+  for (let i = 0; i < stars.length; i++) stars[i].mass *= massMul[i] ?? 1;
+  return recenter(stars);
 }

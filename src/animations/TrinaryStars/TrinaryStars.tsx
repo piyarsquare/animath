@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import { ShellActions, ShellSettings, useAppExplainer, useAppHeader } from '../../components/AppShell';
 import { Section, Slider, Pills } from '../../components/ControlPanel';
 import { step, cloudSpread, type SimState, type Planet, type Star } from './physics';
-import { PRESETS, getPreset, type TargetId } from './presets';
+import { PRESETS, getPreset, buildStars, type TargetId } from './presets';
 import explainerText from './EXPLAINER.md?raw';
 
 const STAR_COLORS = [0xffd27f, 0xff7043, 0x9ec7ff];
@@ -102,10 +102,12 @@ class Trail {
 export default function TrinaryStars() {
   const [presetId, setPresetId] = useState(PRESETS[0].id);
   const [target, setTargetState] = useState<TargetId>(PRESETS[0].target);
-  const [ghostCount, setGhostCount] = useState(8);
+  const [ghostCount, setGhostCount] = useState(12);
   const [epsExp, setEpsExp] = useState(-3);      // perturbation ε = 10^epsExp
   const [planetRadius, setPlanetRadiusState] = useState(PRESETS[0].planetRadius);
   const [planetSpeed, setPlanetSpeedState] = useState(PRESETS[0].planetSpeed);
+  const [massMul, setMassMul] = useState<number[]>([1, 1, 1]);   // per-star mass multipliers
+  const [starSoft, setStarSoft] = useState(PRESETS[0].starSoft); // close-encounter softening
   const [speed, setSpeed] = useState(1);          // sim-seconds per real-second
   const [trailLen, setTrailLen] = useState(500);
   const [showTrails, setShowTrails] = useState(true);
@@ -116,12 +118,15 @@ export default function TrinaryStars() {
   useAppHeader('Trinary System', preset.name);
   useAppExplainer(explainerText);
 
+  // Base (untuned) star masses for this preset, for labelling the mass sliders.
+  const baseMasses = useMemo(() => getPreset(presetId).make().map(s => s.mass), [presetId]);
+
   // Live params the animation loop / pointer handlers read without re-mounting.
   const refs = useRef({
     speed, trailLen, showTrails, paused,
-    ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode,
+    ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft,
   });
-  refs.current = { speed, trailLen, showTrails, paused, ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode };
+  refs.current = { speed, trailLen, showTrails, paused, ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft };
 
   // A hand-placed launch (position + velocity). When set it overrides the
   // parametric target/radius/speed seeding until a launch control changes.
@@ -249,8 +254,8 @@ export default function TrinaryStars() {
     /** Full deterministic reset: re-seed stars + planets from the active preset. */
     function reset() {
       const p = getPreset(refs.current.presetId);
-      sim.stars = p.make();
-      sim.starSoft = p.starSoft;
+      sim.stars = buildStars(p, refs.current.massMul);
+      sim.starSoft = refs.current.starSoft;
       sim.dtBase = p.dt;
       sim.planets = seedPlanets();
       sim.t = 0;
@@ -455,12 +460,14 @@ export default function TrinaryStars() {
   // changes also clear any hand-placed launch via their wrapped setters.)
   useEffect(() => {
     api.current?.reset();
-  }, [presetId, target, ghostCount, epsExp, planetRadius, planetSpeed]);
+  }, [presetId, target, ghostCount, epsExp, planetRadius, planetSpeed, massMul, starSoft]);
 
   // Wrapped setters: any change that redefines the launch drops a hand-placed one.
   const setPlanetRadius = (v: number) => { customRef.current = null; setPlanetRadiusState(v); };
   const setPlanetSpeed = (v: number) => { customRef.current = null; setPlanetSpeedState(v); };
   const setTarget = (t: TargetId) => { customRef.current = null; setTargetState(t); };
+  const setStarMass = (i: number, v: number) =>
+    setMassMul(prev => { const next = [...prev]; next[i] = v; return next; });
 
   const onPickPreset = (id: string) => {
     const p = getPreset(id);
@@ -469,11 +476,13 @@ export default function TrinaryStars() {
     setTargetState(p.target);
     setPlanetRadiusState(p.planetRadius);
     setPlanetSpeedState(p.planetSpeed);
+    setMassMul([1, 1, 1]);
+    setStarSoft(p.starSoft);
   };
 
   // Set the launch speed to the local circular speed √(M/r) for the target.
   const onAutoCircular = () => {
-    const stars = getPreset(presetId).make();
+    const stars = buildStars(getPreset(presetId), massMul);
     const f = orbitFrame(stars, target);
     const v = Math.sqrt(f.mass / Math.max(0.05, planetRadius));
     setPlanetSpeed(Math.round(v / 0.05) * 0.05);
@@ -549,10 +558,28 @@ export default function TrinaryStars() {
         </Section>
 
         <Section title="Chaos demo" icon="∿" defaultOpen>
-          <Slider label="Ghost planets" value={ghostCount} min={1} max={16} step={1}
+          <Slider label="Ghost planets" value={ghostCount} min={1} max={120} step={1}
             onChange={setGhostCount} format={v => `${v}`} />
           <Slider label="Perturbation ε" value={epsExp} min={-5} max={-1} step={0.5}
             onChange={setEpsExp} format={v => `10^${v.toFixed(1)}`} />
+        </Section>
+
+        <Section title="Stars" icon="☉">
+          <Slider label="Star 1 mass · gold" value={massMul[0]} min={0.1} max={4} step={0.05}
+            onChange={v => setStarMass(0, v)} format={v => (baseMasses[0] * v).toFixed(2)} />
+          <Slider label="Star 2 mass · orange" value={massMul[1]} min={0.1} max={4} step={0.05}
+            onChange={v => setStarMass(1, v)} format={v => (baseMasses[1] * v).toFixed(2)} />
+          <Slider label="Star 3 mass · blue" value={massMul[2]} min={0.1} max={4} step={0.05}
+            onChange={v => setStarMass(2, v)} format={v => (baseMasses[2] * v).toFixed(2)} />
+          <Slider label="Softening" value={starSoft} min={0.005} max={0.3} step={0.005}
+            onChange={setStarSoft} format={v => v.toFixed(3)} />
+          <button style={{ ...btnStyle, width: '100%', flex: 'none' }}
+            onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.starSoft); }}>
+            ⟲ Reset star masses
+          </button>
+          <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
+            Equal masses keep a preset’s character (just faster); uneven ones detune it — e.g. nudge a mass to watch the figure-eight fall into chaos. Softening sets how gently close passes are smoothed.
+          </div>
         </Section>
 
         <Section title="Planet launch" icon="◐" defaultOpen>
