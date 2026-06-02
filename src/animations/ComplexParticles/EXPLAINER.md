@@ -22,7 +22,7 @@ directly, so the view *projects* it down into the 3-D scene on screen.
 ## Projection modes
 
 - **Perspective** — a 4-D camera divide: `(x, y, u, v)` maps to
-  `(x, y, u) / (3 + v)`. Points with larger `v` shrink toward the centre,
+  `(x, y, u) / (3 + v)`. Points with larger `v` shrink toward the center,
   just as a 3-D camera makes distant things look smaller.
 - **Stereographic** — first place every point on the unit 3-sphere (scale it
   to length 1), then project from the pole: `(x, y, u) / (1 − v)`. It's the
@@ -47,9 +47,9 @@ unit quaternions `a` (left) and `b` (right). Picking them independently
 reaches every 4-D rotation. Rotating *before* projecting is what lets you
 view the 4-D shape from new angles.
 
-## Colour (domain colouring)
+## Color (domain coloring)
 
-Colour encodes a complex number's **argument** (its angle) as hue and its
-**magnitude** as brightness. Switch **Colour by** between *Domain* (colour by
-the input `z`) and *Range* (colour by the output `f(z)`) to see how the
+Color encodes a complex number's **argument** (its angle) as hue and its
+**magnitude** as brightness. Switch **Color by** between *Domain* (color by
+the input `z`) and *Range* (color by the output `f(z)`) to see how the
 function rearranges the plane.

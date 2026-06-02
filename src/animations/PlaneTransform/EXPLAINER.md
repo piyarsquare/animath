@@ -1,22 +1,22 @@
 # Plane Transform
 
 Shows a complex function **f : ℂ → ℂ** as a *transformation of the plane*.
-The input pane is a coloured grid of points `z = x + iy`; the output pane
+The input pane is a colored grid of points `z = x + iy`; the output pane
 shows where each point lands, `w = f(z)`.
 
 ## Reading the two panes
 
-- **Same colour = same point.** A patch of colour in the input pane tells you
-  *which* input it is; find that colour in the output pane to see where `f`
+- **Same color = same point.** A patch of color in the input pane tells you
+  *which* input it is; find that color in the output pane to see where `f`
   sent it.
 - **Conformal maps** (like `z²`, `eᶻ`, `1/z`) preserve angles: grid lines
   that cross at right angles in the input still cross at right angles in the
   output, even where the map stretches and bends them.
 
-## Colour
+## Color
 
 Hue is the **argument** of `z` (its angle around the origin); brightness and
-the tile pattern encode magnitude. Because the colour rides along with each
+the tile pattern encode magnitude. Because the color rides along with each
 point, you can watch how `f` rotates, stretches, folds, or tears the plane.
 
 ## Multi-valued functions and the branch index
@@ -40,7 +40,7 @@ To get a single-valued function we pick a **branch** — a consistent choice of
 | z^(p/q) | selects which of the `q` distinct roots you see |
 
 The **branch cut** is the line (here, the negative real axis) where the
-chosen angle jumps by `2π`; you'll see a colour discontinuity along it.
+chosen angle jumps by `2π`; you'll see a color discontinuity along it.
 Stepping the branch index walks you onto the next *sheet* of the function's
 Riemann surface — the multi-storey surface on which the function finally
 becomes single-valued.

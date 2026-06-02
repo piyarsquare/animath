@@ -323,7 +323,7 @@ export default function PlaneTransform() {
           )}
         </Section>
 
-        <Section title="Colour" icon="◐" defaultOpen>
+        <Section title="Color" icon="◐" defaultOpen>
           <Pills
             label="Mode"
             options={colourPills}
@@ -346,8 +346,8 @@ export default function PlaneTransform() {
             min={1} max={6} step={0.5}
             onChange={setPointSize} format={v => v.toFixed(1)} />
           <Slider label="Density (per side)" value={density}
-            min={40} max={400} step={20}
-            onChange={setDensity} format={v => `${v}×${v}`} />
+            min={40} max={900} step={20}
+            onChange={setDensity} format={v => `${v}×${v} (${((v * v) / 1e6).toFixed(2)}M)`} />
         </Section>
 
         <Section title="About" icon="ⓘ">

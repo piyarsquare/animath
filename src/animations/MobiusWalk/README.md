@@ -1,6 +1,6 @@
 # Mobius Walk
 
-A short on-rails stroll through a subtly twisted corridor. The hallway appears ordinary until you realise left and right have swapped. A gentle iridescent shader colours the walls while small objects line the passage.
+A short on-rails stroll through a subtly twisted corridor. The hallway appears ordinary until you realize left and right have swapped. A gentle iridescent shader colors the walls while small objects line the passage.
 
 Import `MobiusWalk` and mount it like any other `<Canvas3D>` scene.
 

@@ -14,9 +14,9 @@ global property (sortedness) arising from purely local actions.
 
 | Agent | Local rule | Classic sort it echoes |
 |---|---|---|
-| **Standard** | compare a random *adjacent* neighbour, swap if out of order | Bubble sort |
-| **Blind Date** | compare a random agent *anywhere*, swap if misordered | randomised compare-swap |
-| **Nomadic** | drift left while smaller than the left neighbour | Insertion sort |
+| **Standard** | compare a random *adjacent* neighbor, swap if out of order | Bubble sort |
+| **Blind Date** | compare a random agent *anywhere*, swap if misordered | randomized compare-swap |
+| **Nomadic** | drift left while smaller than the left neighbor | Insertion sort |
 | **Patrolling** | keep a heading, swap on contact, reverse when settled | Cocktail-shaker sort |
 | **Perfectionist** | scan the whole right tail, pull the minimum into place | Selection sort |
 
@@ -29,7 +29,7 @@ global property (sortedness) arising from purely local actions.
 - **Mixed populations** often beat any single type. Long-range movers
   (Blind Date, Perfectionist) do the coarse work while local refiners
   (Standard, Patrolling, Nomadic) clean up behind them — a division of
-  labour.
+  labor.
 
 ## The knobs
 

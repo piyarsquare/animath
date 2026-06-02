@@ -18,11 +18,11 @@ over and over. Either the values stay bounded forever, or they blow up
   takes absolute values of the real and imaginary parts before squaring; the
   Tricorn (the "mandelbar") conjugates `z` each step.
 
-## Escape time and colour
+## Escape time and color
 
 A point counts as escaped once `|z|` passes an **escape radius**. The number
-of steps it took is the **escape time**, and that count drives the colour.
-Smooth colouring blends between whole-number counts using `log|z|`, so the
+of steps it took is the **escape time**, and that count drives the color.
+Smooth coloring blends between whole-number counts using `log|z|`, so the
 bands don't look stepped. The interior — points that never escape within the
 iteration cap — is drawn solid.
 
@@ -32,6 +32,6 @@ iteration cap — is drawn solid.
   Mandelbrot; higher powers give `(k − 1)`-fold symmetry.
 - **Iterations** — how long we test each point before giving up. More
   iterations resolve finer filaments but cost more time.
-- **Colouring mode** — escape velocity, limit magnitude, or a blend of both.
+- **Coloring mode** — escape velocity, limit magnitude, or a blend of both.
 - **Click the fractal** to trace an **orbit**: the path
   `z₀ → z₁ → z₂ → …` for the point you clicked.

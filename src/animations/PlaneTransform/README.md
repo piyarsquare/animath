@@ -1,6 +1,6 @@
 # Plane transform
 
-Visualises a complex function `f : ℂ → ℂ` as a transformation of the
+Visualizes a complex function `f : ℂ → ℂ` as a transformation of the
 plane: the left (or top) pane shows a colored grid of input points
 `z = x + iy`; the right (or bottom) pane shows the same colored points
 at their output positions `w = f(z)`. The colors are carried with each
@@ -28,7 +28,7 @@ output.
 
 ## Why two panes?
 
-This visualisation is the classical "domain coloring" diagram from
+This visualization is the classical "domain coloring" diagram from
 textbooks like Needham's *Visual Complex Analysis* and Wegert's
 *Visual Complex Functions*. The 4D-embedded view in
 [Complex Particles](#/) shows the function's graph; this view shows

@@ -125,14 +125,16 @@
 }
 
 /* ---------- Drawer / scrim ---------- */
+/* Transparent rather than a dark overlay: tapping outside still closes the
+   drawer, but the animation stays fully visible so you can watch settings
+   changes take effect live. */
 .as-scrim {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: transparent;
   z-index: 99;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 200ms ease;
 }
 .as-scrim.as-open { opacity: 1; pointer-events: auto; }
 

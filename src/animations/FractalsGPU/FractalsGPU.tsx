@@ -465,7 +465,7 @@ export default function FractalsGPU() {
             format={v => String(v)} />
         </Section>
 
-        <Section title="Colour" icon="◐">
+        <Section title="Color" icon="◐">
           <Select label="Palette"
             options={[
               { value: 0, label: 'Rainbow' },
@@ -474,7 +474,7 @@ export default function FractalsGPU() {
               { value: 3, label: 'Gray' },
             ]}
             value={palette} onChange={setPalette} />
-          <Pills label="Colouring"
+          <Pills label="Coloring"
             options={[
               { value: 'escape', label: 'Escape' },
               { value: 'limit', label: 'Limit' },
@@ -539,7 +539,7 @@ export default function FractalsGPU() {
             }}
             onClick={() => setAnimating(a => !a)}
           >
-            {animating ? 'Stop colour cycle' : 'Start colour cycle'}
+            {animating ? 'Stop color cycle' : 'Start color cycle'}
           </button>
           <button
             className="cp-pills"

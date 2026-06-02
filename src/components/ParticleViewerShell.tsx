@@ -132,9 +132,9 @@ export default function ParticleViewerShell({
           )}
         </Section>
 
-        <Section title="Colour" icon="◑">
+        <Section title="Color" icon="◑">
           <Pills
-            label="Colour by"
+            label="Color by"
             options={[
               { value: ColourBy.Domain, label: 'Domain' },
               { value: ColourBy.Range, label: 'Range' },
