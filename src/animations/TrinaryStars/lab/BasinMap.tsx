@@ -1,157 +1,189 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Slider, Pills } from '../../../components/ControlPanel';
-import { getPreset, buildStars, launchPlanet, orbitFrame } from '../presets';
-import { runPlanet } from './runner';
-import type { Planet, Star } from '../physics';
-import type { Outcome } from '../analysis/types';
+import {
+  basinContext, computeBasinPixel, OUTCOME_RGB, OUTCOME_CODE,
+  type BasinConfig, type BasinMode, type Domain,
+} from './basin';
+import { BasinPool } from './basinPool';
 import type { EnsembleConfig } from './rng';
 
-const DEG = Math.PI / 180;
-type Mode = 'pos' | 'radspeed' | 'anglespeed';
-interface Domain { a0: number; a1: number; b0: number; b1: number; }
+const HAS_WORKERS = typeof Worker !== 'undefined';
 
-const OUTCOME_RGB: Record<Outcome, [number, number, number]> = {
-  happy: [70, 217, 138], survived: [120, 170, 255], 'planet-ejected': [120, 95, 232],
-  'planet-destroyed': [255, 110, 60], blowup: [80, 80, 80],
-};
-const OUTCOME_CODE: Outcome[] = ['happy', 'survived', 'planet-ejected', 'planet-destroyed', 'blowup'];
-
-const DEFAULT_DOMAIN: Record<Mode, Domain> = {
+const DEFAULT_DOMAIN: Record<BasinMode, Domain> = {
   pos: { a0: -4, a1: 4, b0: -4, b1: 4 },
   radspeed: { a0: 0.3, a1: 5, b0: 0.3, b1: 1.5 },
   anglespeed: { a0: 0, a1: 360, b0: 0.3, b1: 1.5 },
 };
-const AXIS_LABELS: Record<Mode, [string, string]> = {
+const AXIS_LABELS: Record<BasinMode, [string, string]> = {
   pos: ['start x', 'start y'], radspeed: ['radius', 'speed × circular'], anglespeed: ['angle (°)', 'speed × circular'],
 };
 
+interface DimResult { D: number; alpha: number; boundary: number; pts: [number, number][] }
+
+function DimPlot({ dim }: { dim: DimResult }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const cv = ref.current; const ctx = cv?.getContext('2d'); if (!cv || !ctx) return;
+    const W = cv.width, H = cv.height, pad = 6;
+    ctx.fillStyle = '#0a0e16'; ctx.fillRect(0, 0, W, H);
+    const xs = dim.pts.map(p => p[0]), ys = dim.pts.map(p => p[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const X = (x: number) => pad + (W - 2 * pad) * (x1 === x0 ? 0.5 : (x - x0) / (x1 - x0));
+    const Y = (y: number) => H - pad - (H - 2 * pad) * (y1 === y0 ? 0.5 : (y - y0) / (y1 - y0));
+    // fitted line
+    ctx.strokeStyle = 'rgba(255,212,0,0.6)'; ctx.beginPath(); ctx.moveTo(X(x0), Y(y0)); ctx.lineTo(X(x1), Y(y1)); ctx.stroke();
+    ctx.fillStyle = '#66f0ff';
+    for (const [x, y] of dim.pts) { ctx.beginPath(); ctx.arc(X(x), Y(y), 2.5, 0, 7); ctx.fill(); }
+  }, [dim]);
+  return <canvas ref={ref} width={150} height={70} style={{ width: 150, height: 70, borderRadius: 4, display: 'block' }} />;
+}
+
 export default function BasinMap({ cfg }: { cfg: EnsembleConfig }) {
-  const [mode, setMode] = useState<Mode>('pos');
+  const [mode, setMode] = useState<BasinMode>('pos');
   const [res, setRes] = useState(128);
-  const [samples, setSamples] = useState(1); // S → S² subsamples (neighborhood averaging)
+  const [samples, setSamples] = useState(1);
   const [domain, setDomain] = useState<Domain>(DEFAULT_DOMAIN.pos);
   const [posRule, setPosRule] = useState<'rest' | 'tangential'>('tangential');
   const [posSpeedFrac, setPosSpeedFrac] = useState(0.9);
   const [fixedAngle, setFixedAngle] = useState(0);
   const [fixedRadius, setFixedRadius] = useState(2);
   const [fixedRetro, setFixedRetro] = useState(false);
+  const [engine, setEngine] = useState<'workers' | 'cpu'>(HAS_WORKERS ? 'workers' : 'cpu');
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [hover, setHover] = useState<string>('');
+  const [hover, setHover] = useState('');
+  const [dim, setDim] = useState<DimResult | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const dragRef = useRef<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const rafRef = useRef(0);
   const runIdRef = useRef(0);
+  const poolRef = useRef<BasinPool | null>(null);
   const outGridRef = useRef<Uint8Array>(new Uint8Array(0));
   const tGridRef = useRef<Float32Array>(new Float32Array(0));
 
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
-  const stateRef = useRef({ mode, domain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro });
-  stateRef.current = { mode, domain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro };
+  const st = { mode, domain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro, engine };
+  const stateRef = useRef(st); stateRef.current = st;
 
-  const makePlanet = (stars: Star[], ax: number, by: number, st: typeof stateRef.current, targetMass: number, Mtot: number): Planet => {
-    if (st.mode === 'pos') {
-      if (st.posRule === 'rest') return { x: ax, y: by, vx: 0, vy: 0, ax: 0, ay: 0 };
-      const r = Math.hypot(ax, by) || 1e-6;
-      const v = st.posSpeedFrac * Math.sqrt(Mtot / r);
-      return { x: ax, y: by, vx: v * (-by / r), vy: v * (ax / r), ax: 0, ay: 0 };
+  const measureDimension = () => {
+    const N = stateRef.current.res;
+    const out = outGridRef.current;
+    if (out.length !== N * N) return;
+    const sizes: number[] = [];
+    for (let s = 1; s <= Math.min(32, N >> 2); s *= 2) sizes.push(s);
+    const pts: [number, number][] = [];
+    for (const s of sizes) {
+      let boxes = 0;
+      for (let by = 0; by < N; by += s) for (let bx = 0; bx < N; bx += s) {
+        let first = -1, mixed = false;
+        for (let j = by; j < Math.min(by + s, N) && !mixed; j++) {
+          for (let i = bx; i < Math.min(bx + s, N); i++) {
+            const o = out[j * N + i];
+            if (first < 0) first = o; else if (o !== first) { mixed = true; break; }
+          }
+        }
+        if (mixed) boxes++;
+      }
+      if (boxes > 0) pts.push([Math.log(1 / s), Math.log(boxes)]);
     }
-    if (st.mode === 'radspeed') {
-      const v = by * Math.sqrt(targetMass / Math.max(0.05, ax));
-      return launchPlanet(stars, cfgRef.current.target, ax, v, st.fixedAngle * DEG, st.fixedRetro);
+    const nn = pts.length;
+    let sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (const [x, y] of pts) { sx += x; sy += y; sxx += x * x; sxy += x * y; }
+    const D = nn > 1 ? (nn * sxy - sx * sy) / (nn * sxx - sx * sx) : 0;
+    let bd = 0, pr = 0;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const c = out[j * N + i];
+      if (i + 1 < N) { pr++; if (out[j * N + i + 1] !== c) bd++; }
+      if (j + 1 < N) { pr++; if (out[(j + 1) * N + i] !== c) bd++; }
     }
-    const v = by * Math.sqrt(targetMass / Math.max(0.05, st.fixedRadius));
-    return launchPlanet(stars, cfgRef.current.target, st.fixedRadius, v, ax * DEG, st.fixedRetro);
+    setDim({ D, alpha: 2 - D, boundary: pr ? bd / pr : 0, pts });
   };
+
+  const stop = () => { runIdRef.current++; cancelAnimationFrame(rafRef.current); poolRef.current?.dispose(); poolRef.current = null; setBusy(false); };
 
   const render = () => {
     cancelAnimationFrame(rafRef.current);
+    poolRef.current?.dispose(); poolRef.current = null;
     const runId = ++runIdRef.current;
     const cfgNow = cfgRef.current;
-    const st = { ...stateRef.current };
-    const N = st.res;
-    const S = st.samples;
-    const preset = getPreset(cfgNow.presetId);
-    const refStars = buildStars(preset, cfgNow.massMul);
-    const targetMass = orbitFrame(refStars, cfgNow.target).mass;
-    const Mtot = refStars.reduce((m, s) => m + s.mass, 0);
-    const { a0, a1, b0, b1 } = st.domain;
-
-    const cv = canvasRef.current!;
-    cv.width = N; cv.height = N;
+    const s = stateRef.current;
+    const N = s.res;
+    const bc: BasinConfig = {
+      mode: s.mode, domain: s.domain, res: N, samples: s.samples,
+      posRule: s.posRule, posSpeedFrac: s.posSpeedFrac, fixedAngle: s.fixedAngle, fixedRadius: s.fixedRadius, fixedRetro: s.fixedRetro,
+    };
+    const cv = canvasRef.current!; cv.width = N; cv.height = N;
     const ctx = cv.getContext('2d')!;
     const img = ctx.createImageData(N, N);
-    const outGrid = new Uint8Array(N * N);
-    const tGrid = new Float32Array(N * N);
+    const outGrid = new Uint8Array(N * N); const tGrid = new Float32Array(N * N);
     outGridRef.current = outGrid; tGridRef.current = tGrid;
+    setDim(null); setBusy(true); setProgress(0);
+    let painted = 0; const total = N * N;
 
-    setBusy(true);
+    const paint = (start: number, rgb: Uint8Array, out: Uint8Array, tt: Float32Array, cnt: number) => {
+      for (let k = 0; k < cnt; k++) {
+        const p = start + k, o = p * 4;
+        img.data[o] = rgb[k * 3]; img.data[o + 1] = rgb[k * 3 + 1]; img.data[o + 2] = rgb[k * 3 + 2]; img.data[o + 3] = 255;
+        outGrid[p] = out[k]; tGrid[p] = tt[k];
+      }
+      painted += cnt;
+    };
+
+    if (s.engine === 'workers' && HAS_WORKERS) {
+      try {
+        const size = Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1));
+        const pool = new BasinPool(size,
+          (b) => { if (runId !== runIdRef.current) return; paint(b.start, b.rgb, b.out, b.t, b.count); ctx.putImageData(img, 0, 0); setProgress(painted / total); },
+          () => { if (runId !== runIdRef.current) return; ctx.putImageData(img, 0, 0); setBusy(false); measureDimension(); });
+        poolRef.current = pool;
+        pool.run(cfgNow, bc);
+        return;
+      } catch { /* fall through to CPU */ }
+    }
+    // CPU progressive
+    const bctx = basinContext(cfgNow, bc);
     let p = 0;
-    const total = N * N;
-
     const chunk = () => {
       if (runId !== runIdRef.current) return;
       const t0 = performance.now();
       while (p < total && performance.now() - t0 < 24) {
-        const i = p % N, j = Math.floor(p / N);
-        let cr = 0, cg = 0, cb = 0;
-        let centerOut = 0, centerT = 0;
-        const sub = S * S;
-        for (let sj = 0; sj < S; sj++) for (let si = 0; si < S; si++) {
-          const fx = (i + (si + 0.5) / S) / N;
-          const fy = (j + (sj + 0.5) / S) / N;
-          const ax = a0 + (a1 - a0) * fx;
-          const by = b1 - (b1 - b0) * fy; // top row = b1
-          const stars = buildStars(preset, cfgNow.massMul);
-          const r = runPlanet(cfgNow, stars, makePlanet(stars, ax, by, st, targetMass, Mtot));
-          const base = OUTCOME_RGB[r.outcome];
-          const tb = 0.28 + 0.72 * Math.min(1, r.tSim / cfgNow.tMax);
-          cr += base[0] * tb; cg += base[1] * tb; cb += base[2] * tb;
-          if (si === 0 && sj === 0) { centerOut = OUTCOME_CODE.indexOf(r.outcome); centerT = r.tSim; }
-        }
+        const px = computeBasinPixel(bctx, p);
         const o = p * 4;
-        img.data[o] = cr / sub; img.data[o + 1] = cg / sub; img.data[o + 2] = cb / sub; img.data[o + 3] = 255;
-        outGrid[p] = centerOut; tGrid[p] = centerT;
-        p++;
+        img.data[o] = px.r; img.data[o + 1] = px.g; img.data[o + 2] = px.b; img.data[o + 3] = 255;
+        outGrid[p] = px.out; tGrid[p] = px.t; p++;
       }
-      ctx.putImageData(img, 0, 0);
-      setProgress(p / total);
-      if (p < total) { rafRef.current = requestAnimationFrame(chunk); }
-      else setBusy(false);
+      ctx.putImageData(img, 0, 0); setProgress(p / total);
+      if (p < total) rafRef.current = requestAnimationFrame(chunk);
+      else { setBusy(false); measureDimension(); }
     };
     rafRef.current = requestAnimationFrame(chunk);
   };
 
-  const stop = () => { runIdRef.current++; cancelAnimationFrame(rafRef.current); setBusy(false); };
-
-  // Reset the domain (and clear) whenever the mapped plane or the system changes.
   useEffect(() => { setDomain(DEFAULT_DOMAIN[mode]); /* eslint-disable-next-line */ }, [mode]);
-  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+  useEffect(() => () => { cancelAnimationFrame(rafRef.current); poolRef.current?.dispose(); }, []);
 
-  const switchMode = (m: Mode) => { stop(); setMode(m); };
+  const switchMode = (m: BasinMode) => { stop(); setMode(m); };
 
   // --- Drag-to-zoom ---
   const onDown = (e: React.PointerEvent) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    dragRef.current = { x0: e.clientX - rect.left, y0: e.clientY - rect.top, x1: e.clientX - rect.left, y1: e.clientY - rect.top };
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    dragRef.current = { x0: e.clientX - r.left, y0: e.clientY - r.top, x1: e.clientX - r.left, y1: e.clientY - r.top };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
   const onMove = (e: React.PointerEvent) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const i = Math.min(res - 1, Math.max(0, Math.floor(((e.clientX - rect.left) / rect.width) * res)));
-    const j = Math.min(res - 1, Math.max(0, Math.floor(((e.clientY - rect.top) / rect.height) * res)));
-    const out = outGridRef.current[j * res + i];
-    const tt = tGridRef.current[j * res + i];
-    const { a0, a1, b0, b1 } = domain;
-    const ax = a0 + (a1 - a0) * ((i + 0.5) / res);
-    const by = b1 - (b1 - b0) * ((j + 0.5) / res);
-    const [la, lb] = AXIS_LABELS[mode];
-    if (tGridRef.current.length) setHover(`${la}=${ax.toFixed(2)} · ${lb}=${by.toFixed(2)} → ${OUTCOME_CODE[out]} @ t=${tt.toFixed(0)}`);
-
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const i = Math.min(res - 1, Math.max(0, Math.floor(((e.clientX - r.left) / r.width) * res)));
+    const j = Math.min(res - 1, Math.max(0, Math.floor(((e.clientY - r.top) / r.height) * res)));
+    if (tGridRef.current.length) {
+      const ax = domain.a0 + (domain.a1 - domain.a0) * ((i + 0.5) / res);
+      const by = domain.b1 - (domain.b1 - domain.b0) * ((j + 0.5) / res);
+      const [la, lb] = AXIS_LABELS[mode];
+      setHover(`${la}=${ax.toFixed(2)} · ${lb}=${by.toFixed(2)} → ${OUTCOME_CODE[outGridRef.current[j * res + i]]} @ t=${tGridRef.current[j * res + i].toFixed(0)}`);
+    }
     if (dragRef.current) {
-      dragRef.current.x1 = e.clientX - rect.left; dragRef.current.y1 = e.clientY - rect.top;
+      dragRef.current.x1 = e.clientX - r.left; dragRef.current.y1 = e.clientY - r.top;
       const d = dragRef.current, ov = overlayRef.current;
       if (ov) {
         ov.style.display = 'block';
@@ -164,26 +196,20 @@ export default function BasinMap({ cfg }: { cfg: EnsembleConfig }) {
     const d = dragRef.current; dragRef.current = null;
     if (overlayRef.current) overlayRef.current.style.display = 'none';
     if (!d) return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    if (Math.abs(d.x1 - d.x0) < 6 || Math.abs(d.y1 - d.y0) < 6) return; // treat as click
-    const nx0 = Math.min(d.x0, d.x1) / rect.width, nx1 = Math.max(d.x0, d.x1) / rect.width;
-    const ny0 = Math.min(d.y0, d.y1) / rect.height, ny1 = Math.max(d.y0, d.y1) / rect.height;
-    const { a0, a1, b0, b1 } = domain;
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    if (Math.abs(d.x1 - d.x0) < 6 || Math.abs(d.y1 - d.y0) < 6) return;
+    const nx0 = Math.min(d.x0, d.x1) / r.width, nx1 = Math.max(d.x0, d.x1) / r.width;
+    const ny0 = Math.min(d.y0, d.y1) / r.height, ny1 = Math.max(d.y0, d.y1) / r.height;
     setDomain({
-      a0: a0 + (a1 - a0) * nx0, a1: a0 + (a1 - a0) * nx1,
-      b0: b1 - (b1 - b0) * ny1, b1: b1 - (b1 - b0) * ny0,
+      a0: domain.a0 + (domain.a1 - domain.a0) * nx0, a1: domain.a0 + (domain.a1 - domain.a0) * nx1,
+      b0: domain.b1 - (domain.b1 - domain.b0) * ny1, b1: domain.b1 - (domain.b1 - domain.b0) * ny0,
     });
-    setTimeout(render, 0); // recompute the zoomed region
+    setTimeout(render, 0);
   };
 
-  const panel: React.CSSProperties = {
-    background: 'rgba(12,16,24,0.6)', border: '1px solid rgba(120,150,200,0.18)', borderRadius: 10, padding: 12,
-  };
+  const panel: React.CSSProperties = { background: 'rgba(12,16,24,0.6)', border: '1px solid rgba(120,150,200,0.18)', borderRadius: 10, padding: 12 };
   const h3: React.CSSProperties = { margin: '0 0 8px', font: '600 12px/1.2 ui-monospace, monospace', color: '#9ec7ff', letterSpacing: 0.4 };
-  const btn: React.CSSProperties = {
-    padding: '6px 14px', borderRadius: 6, border: '1px solid var(--cp-border, #2a3550)',
-    background: 'rgba(255,255,255,0.06)', color: '#e8edf6', cursor: 'pointer', fontSize: 13,
-  };
+  const btn: React.CSSProperties = { padding: '6px 14px', borderRadius: 6, border: '1px solid var(--cp-border, #2a3550)', background: 'rgba(255,255,255,0.06)', color: '#e8edf6', cursor: 'pointer', fontSize: 13 };
 
   return (
     <div style={{ ...panel, marginBottom: 12 }}>
@@ -193,7 +219,7 @@ export default function BasinMap({ cfg }: { cfg: EnsembleConfig }) {
         <div>
           <Pills label="Plane" value={mode} options={[
             { value: 'pos', label: 'Start position' }, { value: 'radspeed', label: 'Radius × speed' }, { value: 'anglespeed', label: 'Angle × speed' },
-          ]} onChange={(v) => switchMode(v as Mode)} />
+          ]} onChange={(v) => switchMode(v as BasinMode)} />
           {mode === 'pos' && (
             <>
               <Pills label="Launch from each point" value={posRule}
@@ -203,27 +229,29 @@ export default function BasinMap({ cfg }: { cfg: EnsembleConfig }) {
                 <Slider label="Speed × circular" value={posSpeedFrac} min={0.2} max={1.6} step={0.05} onChange={setPosSpeedFrac} format={v => v.toFixed(2)} />}
             </>
           )}
-          {mode === 'radspeed' &&
-            <Slider label="Fixed angle (°)" value={fixedAngle} min={0} max={360} step={5} onChange={setFixedAngle} format={v => `${v}`} />}
-          {mode === 'anglespeed' &&
-            <Slider label="Fixed radius" value={fixedRadius} min={0.3} max={6} step={0.1} onChange={setFixedRadius} format={v => v.toFixed(1)} />}
-          {mode !== 'pos' &&
-            <Pills label="Direction" value={fixedRetro ? 1 : 0}
-              options={[{ value: 0, label: 'Prograde' }, { value: 1, label: 'Retrograde' }]} onChange={(v) => setFixedRetro(v === 1)} />}
+          {mode === 'radspeed' && <Slider label="Fixed angle (°)" value={fixedAngle} min={0} max={360} step={5} onChange={setFixedAngle} format={v => `${v}`} />}
+          {mode === 'anglespeed' && <Slider label="Fixed radius" value={fixedRadius} min={0.3} max={6} step={0.1} onChange={setFixedRadius} format={v => v.toFixed(1)} />}
+          {mode !== 'pos' && <Pills label="Direction" value={fixedRetro ? 1 : 0} options={[{ value: 0, label: 'Prograde' }, { value: 1, label: 'Retrograde' }]} onChange={(v) => setFixedRetro(v === 1)} />}
           <Pills label="Resolution" value={res} options={[96, 128, 192, 256].map(r => ({ value: r, label: `${r}²` }))} onChange={setRes} />
-          <Pills label="Samples / pixel" value={samples}
-            options={[{ value: 1, label: '1 (crisp)' }, { value: 2, label: '4 (smooth)' }, { value: 3, label: '9 (smoother)' }]}
-            onChange={setSamples} />
+          <Pills label="Samples / pixel" value={samples} options={[{ value: 1, label: '1 (crisp)' }, { value: 2, label: '4 (smooth)' }, { value: 3, label: '9' }]} onChange={setSamples} />
+          {HAS_WORKERS && <Pills label="Engine" value={engine} options={[{ value: 'workers', label: `Workers ×${Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1))}` }, { value: 'cpu', label: 'CPU' }]} onChange={(v) => setEngine(v as 'workers' | 'cpu')} />}
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button style={{ ...btn, background: busy ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }}
-              onClick={busy ? stop : render}>{busy ? '❚❚ Stop' : '▦ Render map'}</button>
+            <button style={{ ...btn, background: busy ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }} onClick={busy ? stop : render}>{busy ? '❚❚ Stop' : '▦ Render map'}</button>
             <button style={btn} onClick={() => { setDomain(DEFAULT_DOMAIN[mode]); setTimeout(render, 0); }}>⤢ Reset zoom</button>
           </div>
-          {busy && (
-            <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', marginTop: 8 }}>
-              <div style={{ height: '100%', width: `${progress * 100}%`, background: '#46d98a', borderRadius: 3 }} />
+          {busy && <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', marginTop: 8 }}><div style={{ height: '100%', width: `${progress * 100}%`, background: '#46d98a', borderRadius: 3 }} /></div>}
+
+          {dim && (
+            <div style={{ display: 'flex', gap: 12, marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <DimPlot dim={dim} />
+              <div style={{ font: '12px/1.5 ui-monospace, monospace' }}>
+                <div>boundary dimension&nbsp;<b style={{ color: '#ffd27f' }}>D ≈ {dim.D.toFixed(3)}</b></div>
+                <div>uncertainty exponent&nbsp;<b style={{ color: '#66f0ff' }}>α ≈ {dim.alpha.toFixed(3)}</b></div>
+                <div style={{ color: '#9aa7bd' }}>boundary pixels {(dim.boundary * 100).toFixed(0)}%</div>
+              </div>
             </div>
           )}
+
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px', marginTop: 10, font: '11px ui-monospace, monospace' }}>
             {OUTCOME_CODE.filter(o => o !== 'blowup').map(o => (
               <span key={o} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -232,7 +260,7 @@ export default function BasinMap({ cfg }: { cfg: EnsembleConfig }) {
             ))}
           </div>
           <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 8 }}>
-            One pixel = one exact starting condition (no averaging at 1×), integrated to its fate. Hue = outcome, brightness = how long it lasted. Drag a box on the map to zoom in — the boundaries stay intricate at every scale: that filigree is the three-body problem’s fractal final-state sensitivity. Higher resolution / samples are slower.
+            One pixel = one exact starting condition, integrated to its fate. Hue = outcome, brightness = how long it lasted. Drag a box to zoom — the boundaries stay intricate at every scale: that filigree is the three-body problem’s fractal final-state sensitivity. D is the box-counting dimension of the boundary (1 = smooth, →2 = space-filling); α = 2−D is the uncertainty exponent (smaller = more unpredictable: 10× better precision only sharpens the forecast by 10^α).
           </div>
         </div>
 
