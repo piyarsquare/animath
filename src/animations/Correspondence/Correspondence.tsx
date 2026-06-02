@@ -4,6 +4,7 @@ import { useResponsive } from '../../styles/responsive';
 import { ShellSettings, ShellActions, useAppHeader } from '../../components/AppShell';
 import { Section, Slider, Select } from '../../components/ControlPanel';
 import Readme from '../../components/Readme';
+import PlaybackFloater from './PlaybackFloater';
 import readmeText from './README.md?raw';
 
 export default function Correspondence() {
@@ -82,6 +83,44 @@ export default function Correspondence() {
 
   useAppHeader('Mandelbrot ↔ Julia', `c = ${c.real.toFixed(3)} ${c.imag >= 0 ? '+' : '-'} ${Math.abs(c.imag).toFixed(3)}i`);
 
+  // The action controls live in two places at once: the drawer's Actions tab
+  // and the on-screen PlaybackFloater. Defining them once keeps both in sync.
+  // Speed lives here (an action) rather than in Settings.
+  const playbackControls = (
+    <>
+      <ActionButton
+        label={selecting ? 'Tap Mandelbrot to pick…' : 'Pick Julia c by tap'}
+        active={selecting}
+        onClick={() => setSelecting(true)}
+      />
+      <ActionButton
+        label={drawingPath ? 'Finish drawing path' : 'Draw c-path'}
+        active={drawingPath}
+        onClick={() => setDrawingPath(p => !p)}
+      />
+      <ActionButton
+        label="Clear path"
+        disabled={path.length === 0}
+        onClick={() => setPath([])}
+      />
+      <ActionButton
+        label={playing ? 'Stop playback' : 'Play path'}
+        primary
+        disabled={path.length < 2}
+        onClick={playing ? stopPath : playPath}
+      />
+      {playing && (
+        <ActionButton
+          label={paused ? 'Resume' : 'Pause'}
+          onClick={() => setPaused(p => !p)}
+        />
+      )}
+      <Slider label="Speed" value={speed}
+        min={0.005} max={0.5} step={0.005}
+        onChange={setSpeed} format={v => v.toFixed(3)} />
+    </>
+  );
+
   return (
     <>
       <div style={{
@@ -124,6 +163,10 @@ export default function Correspondence() {
           </div>
         </div>
       </div>
+
+      <PlaybackFloater title="Playback">
+        {playbackControls}
+      </PlaybackFloater>
 
       <ShellSettings>
         <Section title="Iterations" icon="↻" defaultOpen>
@@ -176,12 +219,6 @@ export default function Correspondence() {
           </div>
         </Section>
 
-        <Section title="Path playback" icon="▷">
-          <Slider label="Speed" value={speed}
-            min={0.005} max={0.5} step={0.005}
-            onChange={setSpeed} format={v => v.toFixed(3)} />
-        </Section>
-
         <Section title="About" icon="ⓘ">
           <Readme markdown={readmeText} />
           <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', marginTop: 8 }}>
@@ -192,33 +229,7 @@ export default function Correspondence() {
 
       <ShellActions>
         <div className="cp-section-body">
-          <ActionButton
-            label={selecting ? 'Tap Mandelbrot to pick…' : 'Pick Julia c by tap'}
-            active={selecting}
-            onClick={() => setSelecting(true)}
-          />
-          <ActionButton
-            label={drawingPath ? 'Finish drawing path' : 'Draw c-path'}
-            active={drawingPath}
-            onClick={() => setDrawingPath(p => !p)}
-          />
-          <ActionButton
-            label="Clear path"
-            disabled={path.length === 0}
-            onClick={() => setPath([])}
-          />
-          <ActionButton
-            label={playing ? 'Stop playback' : 'Play path'}
-            primary
-            disabled={path.length < 2}
-            onClick={playing ? stopPath : playPath}
-          />
-          {playing && (
-            <ActionButton
-              label={paused ? 'Resume' : 'Pause'}
-              onClick={() => setPaused(p => !p)}
-            />
-          )}
+          {playbackControls}
         </div>
       </ShellActions>
     </>

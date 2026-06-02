@@ -1013,8 +1013,8 @@ export default function StableMarriage() {
         <DistributionChart
           dataA={rankStats.menRanks}
           dataB={rankStats.womenRanks}
-          colorA="#3b82f6"
-          colorB="#ec4899"
+          colorA="#60a5fa"
+          colorB="#f472b6"
           labelA="Men"
           labelB="Women"
         />
