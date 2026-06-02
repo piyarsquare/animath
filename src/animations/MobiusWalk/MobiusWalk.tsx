@@ -30,6 +30,9 @@ const WRITE_REACH = 8;     // how far the gaze can reach a wall to write on
 const MAX_WRITE = 60;      // max text decals kept
 const INK = '#ffef6b';
 
+const MINI_UP = new THREE.Vector3(0, 1, 0);
+const MINI_BG = new THREE.Color(0x0a0c16);
+
 type MoveKey = 'fwd' | 'back' | 'left' | 'right';
 
 interface SceneCtx {
@@ -58,9 +61,39 @@ interface SceneCtx {
   writing: THREE.Group;
   writeMeshes: THREE.Mesh[];
   raycaster: THREE.Raycaster;
+  miniScene: THREE.Scene;
+  miniCam: THREE.PerspectiveCamera;
+  miniBand: THREE.Mesh;
+  miniMarker: THREE.Mesh;
   stridePhase: number;
   bufW: number;
   bufH: number;
+}
+
+/**
+ * Mini-map band geometry: a ribbon following the centreline, coloured magenta on
+ * one long edge and cyan on the other. On a plain ring the two colours stay on
+ * the same sides; with the half-twist they swap as you go round — so the map
+ * itself shows whether the corridor is a Möbius strip.
+ */
+function makeMiniBandGeometry(params: CorridorParams): THREE.BufferGeometry {
+  const segs = 220, halfW = 2.6;
+  const g = new THREE.BufferGeometry();
+  const pos: number[] = [], col: number[] = [];
+  const cA = new THREE.Color(0xff3bd0), cB = new THREE.Color(0x37d6ff);
+  for (let i = 0; i <= segs; i++) {
+    const { center, n } = frameAt(i / segs, params);
+    const a = center.clone().addScaledVector(n, halfW);
+    const b = center.clone().addScaledVector(n, -halfW);
+    pos.push(a.x, a.y, a.z, b.x, b.y, b.z);
+    col.push(cA.r, cA.g, cA.b, cB.r, cB.g, cB.b);
+  }
+  const idx: number[] = [];
+  for (let i = 0; i < segs; i++) { const a = i * 2, c = (i + 1) * 2; idx.push(a, c, c + 1, a, c + 1, a + 1); }
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx); g.computeBoundingSphere();
+  return g;
 }
 
 function flicker(kind: FlickerKind, t: number, seed: number, amp: number): number {
@@ -162,6 +195,7 @@ export default function MobiusWalk() {
   const [thirdPerson, setThirdPerson] = useState(true);
   const [markers, setMarkers] = useState(true);
   const [bloomOn, setBloomOn] = useState(true);
+  const [miniMap, setMiniMap] = useState(true);
   const [wallText, setWallText] = useState('MÖBIUS');
 
   useAppHeader('Möbius Walk', twist ? 'twisted corridor' : 'untwisted corridor');
@@ -183,9 +217,11 @@ export default function MobiusWalk() {
   const thirdRef = useRef(thirdPerson);
   const bloomRef = useRef(bloomOn);
   const wallTextRef = useRef(wallText);
+  const miniRef = useRef(true);
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
   useEffect(() => { thirdRef.current = thirdPerson; }, [thirdPerson]);
   useEffect(() => { bloomRef.current = bloomOn; }, [bloomOn]);
+  useEffect(() => { miniRef.current = miniMap; }, [miniMap]);
   useEffect(() => { wallTextRef.current = wallText; }, [wallText]);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
@@ -255,11 +291,27 @@ export default function MobiusWalk() {
 
     const raycaster = new THREE.Raycaster();
 
+    // Mini-map: an inset 3-D view of the loop, rendered into the corner.
+    const miniScene = new THREE.Scene();
+    const miniCam = new THREE.PerspectiveCamera(34, 1, 0.1, 500);
+    const miniBand = new THREE.Mesh(
+      makeMiniBandGeometry(params),
+      new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }),
+    );
+    miniScene.add(miniBand);
+    const miniMarker = new THREE.Mesh(
+      new THREE.ConeGeometry(1.1, 2.8, 12),
+      new THREE.MeshBasicMaterial({ color: 0xffe14d }),
+    );
+    miniScene.add(miniMarker);
+
     const c: SceneCtx = {
       scene, camera, renderer, composer, bloom, mesh, decal, character,
       ambient, hemi, moon, fill, lights, flames, params, theme, ambientBase: theme.lighting.ambient, hemiBase: 0,
       trail, trailPos, trailCount: 0, trailLast: null,
-      writing, writeMeshes: [], raycaster, stridePhase: 0, bufW, bufH,
+      writing, writeMeshes: [], raycaster,
+      miniScene, miniCam, miniBand, miniMarker,
+      stridePhase: 0, bufW, bufH,
     };
     ctxRef.current = c;
     applyTheme(c, theme, ambientMul);
@@ -361,6 +413,33 @@ export default function MobiusWalk() {
 
       if (bloomRef.current) cx.composer.render();
       else cx.renderer.render(cx.scene, cx.camera);
+
+      // Mini-map: an orbiting inset view of the loop with the avatar marker,
+      // drawn into the top-right corner via a scissored viewport.
+      if (miniRef.current) {
+        const r = cx.renderer, el = r.domElement, dpr = r.getPixelRatio();
+        const Wc = el.clientWidth, Hc = el.clientHeight;
+        const mm = Math.min(150, Math.floor(Math.min(Wc, Hc) * 0.34)), gg = 12;
+        const vx = (Wc - gg - mm) * dpr, vy = (Hc - gg - mm) * dpr, vw = mm * dpr, vh = mm * dpr;
+
+        cx.miniMarker.position.copy(f.center).addScaledVector(f.b, 1.7);
+        cx.miniMarker.quaternion.setFromUnitVectors(MINI_UP, facing);
+        const rad = cx.params.radius, ang = time * 0.18, D = rad * 2.6;
+        cx.miniCam.position.set(Math.cos(ang) * D, Math.sin(ang) * D, rad * 1.7);
+        cx.miniCam.up.set(0, 0, 1);
+        cx.miniCam.lookAt(0, 0, 0);
+
+        r.setScissorTest(true);
+        r.setViewport(vx, vy, vw, vh);
+        r.setScissor(vx, vy, vw, vh);
+        r.setClearColor(MINI_BG, 1);
+        r.clear(true, true, false);
+        r.render(cx.miniScene, cx.miniCam);
+        r.setScissorTest(false);
+        r.setViewport(0, 0, el.width, el.height);
+        r.setClearColor(0x000000, 0);
+      }
+
       rafRef.current = requestAnimationFrame(animate);
     };
     rafRef.current = requestAnimationFrame(animate);
@@ -387,6 +466,7 @@ export default function MobiusWalk() {
     const params: CorridorParams = { ...c.params, tiltTurns: twist ? 1 : 0, width };
     c.mesh.geometry.dispose(); c.mesh.geometry = makeCorridorGeometry(params);
     c.decal.geometry.dispose(); c.decal.geometry = makeFloorDecalGeometry(params);
+    c.miniBand.geometry.dispose(); c.miniBand.geometry = makeMiniBandGeometry(params);
     c.params = params; clearTrail(); clearWriting();
   }, [twist, width, clearTrail, clearWriting]);
 
@@ -428,6 +508,8 @@ export default function MobiusWalk() {
       c.decal.geometry.dispose(); ((c.decal.material as THREE.MeshBasicMaterial).map)?.dispose(); (c.decal.material as THREE.Material).dispose();
       c.trail.geometry.dispose(); (c.trail.material as THREE.Material).dispose();
       for (const m of c.writeMeshes) { m.geometry.dispose(); (m.material as THREE.MeshBasicMaterial).map?.dispose(); (m.material as THREE.Material).dispose(); }
+      c.miniBand.geometry.dispose(); (c.miniBand.material as THREE.Material).dispose();
+      c.miniMarker.geometry.dispose(); (c.miniMarker.material as THREE.Material).dispose();
       c.character.dispose();
       c.composer.dispose();
     }
@@ -458,6 +540,19 @@ export default function MobiusWalk() {
 
       <MovePad onSet={setKey} onWrite={requestStamp} />
 
+      {miniMap && (
+        <div style={{
+          position: 'absolute', top: 12, right: 12, width: 150, height: 150,
+          pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.18)',
+          borderRadius: 8, boxShadow: '0 4px 14px rgba(0,0,0,0.45)',
+        }}>
+          <div style={{
+            position: 'absolute', top: 4, left: 8, fontSize: 10, letterSpacing: '0.08em',
+            color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase',
+          }}>Map</div>
+        </div>
+      )}
+
       <div style={{
         position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
         color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
@@ -471,6 +566,7 @@ export default function MobiusWalk() {
           <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
           <Checkbox label="Floor markers (UP arrows)" checked={markers} onChange={setMarkers} />
           <Checkbox label="Cinematic bloom (GPU)" checked={bloomOn} onChange={setBloomOn} />
+          <Checkbox label="Mini-map" checked={miniMap} onChange={setMiniMap} />
           <Slider label="Corridor width" value={width} min={0.8} max={4} step={0.1} onChange={setWidth} format={(v) => v.toFixed(1)} />
           <Slider label="Ambient light" value={ambientMul} min={0} max={2.5} step={0.05} onChange={setAmbientMul} format={(v) => `${Math.round(v * 100)}%`} />
           <Slider label="Move speed" value={moveSpeed} min={1} max={14} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
