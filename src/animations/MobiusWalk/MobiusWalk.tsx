@@ -4,7 +4,8 @@ import Canvas3D from '@/components/Canvas3D';
 import { makeCorridorGeometry, DEFAULT_PARAMS, paramToFrame } from './corridorGeometry';
 import { corridorMaterial } from './shaders/corridorMaterial';
 import { instantiateObjects } from './objects';
-import { ShellActions, useAppHeader } from '../../components/AppShell';
+import { ShellActions, useAppHeader, useAppExplainer } from '../../components/AppShell';
+import explainerText from './EXPLAINER.md?raw';
 
 export interface MobiusWalkProps {
   speed?: number;
@@ -16,6 +17,7 @@ export default function MobiusWalk({ speed = 2 }: MobiusWalkProps) {
   const [twist, setTwist] = useState(true);
 
   useAppHeader('Möbius Walk', twist ? 'twisted corridor' : 'untwisted corridor');
+  useAppExplainer(explainerText);
 
   const onMount = React.useCallback(({ scene, camera, renderer }: {
     scene: THREE.Scene;

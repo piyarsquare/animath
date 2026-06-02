@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import * as THREE from 'three';
 import { useViewportGestures } from '../../lib/useViewportGestures';
+import { PALETTE_GLSL } from '../../lib/colormaps';
 
 export interface Complex {
   real: number;
@@ -83,23 +84,7 @@ export default function FractalPane({
     uniform int power;
     uniform int palette;
     uniform float offset;
-    vec3 paletteColor(float t, int scheme){
-      if(scheme==0){
-        return vec3(
-          sin(0.024*(t)+0.0)*0.5+0.5,
-          sin(0.024*(t)+2.0)*0.5+0.5,
-          sin(0.024*(t)+4.0)*0.5+0.5
-        );
-      }else if(scheme==1){
-        float r = min(255.0, t*3.0);
-        float g = clamp(t*3.0-255.0,0.0,255.0);
-        float b = max(0.0,t*3.0-510.0);
-        return vec3(r,g,b)/255.0;
-      }else if(scheme==2){
-        return vec3(0.0, t/2.0, t)/255.0;
-      }
-      return vec3(t,t,t)/255.0;
-    }
+    ${PALETTE_GLSL}
     void main(){
       vec2 pos = vec2(mix(view.x,view.y,vUv.x), mix(view.z,view.w,vUv.y));
       vec2 z = fType==0 ? vec2(0.0) : pos;

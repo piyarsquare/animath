@@ -73,7 +73,10 @@
 .as-bar-btn-dim { opacity: 0.4; }
 
 .as-bar-title {
-  flex: 1;
+  /* Don't grow: take only the width the name/formula needs (shrinking with
+     ellipsis when cramped) so the controls stay clustered on the left rather
+     than the trailing buttons being pushed to the far edge. */
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -87,6 +90,9 @@
   color: var(--as-fg);
   text-align: left;
 }
+
+/* Eats the remaining bar width after the control cluster. */
+.as-bar-spacer { flex: 1 1 auto; min-width: 0; }
 .as-bar-title:hover { background: var(--as-hover); }
 .as-bar-title-name {
   font-weight: 600;
@@ -119,14 +125,16 @@
 }
 
 /* ---------- Drawer / scrim ---------- */
+/* Transparent rather than a dark overlay: tapping outside still closes the
+   drawer, but the animation stays fully visible so you can watch settings
+   changes take effect live. */
 .as-scrim {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: transparent;
   z-index: 99;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 200ms ease;
 }
 .as-scrim.as-open { opacity: 1; pointer-events: auto; }
 
@@ -242,3 +250,119 @@
 /* ---------- Sections shared with old ControlPanel ---------- */
 .as-tab-body .cp-section { border-bottom: 1px solid var(--as-border); }
 .as-tab-body .cp-section:last-child { border-bottom: none; }
+
+/* ---------- Help / explainer popup ---------- */
+.as-help-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  /* Respect notches/home indicator when the popup is full-height on phones. */
+  padding-top: max(24px, env(safe-area-inset-top, 0));
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 0));
+}
+
+.as-help-modal {
+  width: 100%;
+  max-width: 680px;
+  max-height: 100%;
+  background: var(--as-bg);
+  border: 1px solid var(--as-border);
+  border-radius: 12px;
+  box-shadow: var(--as-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.as-help-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 18px;
+  border-bottom: 1px solid var(--as-border);
+  flex-shrink: 0;
+}
+.as-help-title {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.as-help-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 22px 24px;
+}
+
+/* Markdown typography for the explainer body. */
+.as-help-body .markdown-body {
+  color: var(--as-fg-dim);
+  font-size: 14.5px;
+  line-height: 1.62;
+}
+.as-help-body .markdown-body h1 {
+  color: var(--as-fg);
+  font-size: 22px;
+  margin: 18px 0 8px;
+}
+.as-help-body .markdown-body h2 {
+  color: var(--as-fg);
+  font-size: 17px;
+  margin: 22px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--as-border);
+}
+.as-help-body .markdown-body h3 {
+  color: var(--as-fg);
+  font-size: 15px;
+  margin: 16px 0 6px;
+}
+.as-help-body .markdown-body p { margin: 8px 0; }
+.as-help-body .markdown-body a { color: var(--as-accent); }
+.as-help-body .markdown-body strong { color: var(--as-fg); }
+.as-help-body .markdown-body ul,
+.as-help-body .markdown-body ol { padding-left: 22px; margin: 8px 0; }
+.as-help-body .markdown-body li { margin: 4px 0; }
+.as-help-body .markdown-body code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.92em;
+  color: var(--as-fg);
+}
+.as-help-body .markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  font-size: 13.5px;
+}
+.as-help-body .markdown-body th,
+.as-help-body .markdown-body td {
+  border: 1px solid var(--as-border);
+  padding: 7px 10px;
+  text-align: left;
+}
+.as-help-body .markdown-body th {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--as-fg);
+  font-weight: 600;
+}
+.as-help-body .markdown-body blockquote {
+  margin: 10px 0;
+  padding: 2px 14px;
+  border-left: 3px solid var(--as-accent);
+  color: var(--as-fg-dim);
+}
+
+@media (max-width: 600px) {
+  .as-help-scrim { padding: 0; }
+  .as-help-modal { max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+}

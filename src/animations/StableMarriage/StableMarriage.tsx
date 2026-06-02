@@ -20,7 +20,8 @@ import {
   Zap
 } from 'lucide-react';
 import './stableMarriage.css';
-import { useAppHeader } from '../../components/AppShell';
+import { useAppHeader, useAppExplainer } from '../../components/AppShell';
+import explainerText from './EXPLAINER.md?raw';
 
 const MAX_POPULATION = 100;
 const ROW_HEIGHT = 64;
@@ -516,6 +517,7 @@ const DistributionChart = ({
 
 export default function StableMarriage() {
   useAppHeader('Stable Marriage');
+  useAppExplainer(explainerText);
   const [appMode, setAppMode] = useState<'visualizer' | 'lab'>('visualizer');
 
   const [n, setN] = useState(20);
@@ -1013,8 +1015,8 @@ export default function StableMarriage() {
         <DistributionChart
           dataA={rankStats.menRanks}
           dataB={rankStats.womenRanks}
-          colorA="#3b82f6"
-          colorB="#ec4899"
+          colorA="#60a5fa"
+          colorB="#f472b6"
           labelA="Men"
           labelB="Women"
         />

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import ParticleViewerShell from '../../components/ParticleViewerShell';
 import { Select } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
+import explainerText from './EXPLAINER.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import { vertexShader, fragmentShader } from './shaders';
 import { loadParticleTextures } from '../../lib/textures';
@@ -316,6 +317,7 @@ export default function ComplexParticles({
         onChangeIndex: setFunctionIndex,
       }}
       readme={readmeText}
+      explainer={explainerText}
     />
   );
 }

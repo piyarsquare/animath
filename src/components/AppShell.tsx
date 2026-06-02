@@ -1,6 +1,10 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import './AppShell.css';
+import ActionFloater from './ActionFloater';
+
+// Lazily loaded so `marked` only enters the bundle when a help popup is opened.
+const Readme = React.lazy(() => import('./Readme'));
 
 export interface AppDescriptor {
   /** Hash route (no leading `#`, e.g. `/` or `/fractals`). */
@@ -9,6 +13,8 @@ export interface AppDescriptor {
   name: string;
   /** Optional emoji or single character used as a list-icon. */
   icon?: string;
+  /** One-line description shown on the menu screen's gallery cards. */
+  blurb?: string;
 }
 
 /** Apps register their function picker via useAppFunctions so the AppShell's
@@ -31,6 +37,11 @@ export interface AppShellState {
   /** DOM nodes — portal targets — for the Settings and Actions drawer tabs. */
   settingsTargetRef: React.RefObject<HTMLDivElement | null>;
   actionsTargetRef: React.RefObject<HTMLDivElement | null>;
+  /** Portal target for the floating ActionFloater (a mirror of the actions). */
+  actionsFloaterRef: React.RefObject<HTMLDivElement | null>;
+  /** Lets an app suppress the generic floating action panel when it ships its
+   *  own (e.g. Correspondence's PlaybackFloater). */
+  setActionFloaterOff: (off: boolean) => void;
   /** Whether the registered app has populated each tab. */
   hasSettings: boolean;
   hasActions: boolean;
@@ -40,6 +51,9 @@ export interface AppShellState {
   /** Function registration (or null when the active app has no function picker). */
   functions: AppFunctionsRegistration | null;
   setFunctions: (reg: AppFunctionsRegistration | null) => void;
+  /** Markdown explainer for the active app (the "?" help popup), or null. */
+  explainer: string | null;
+  setExplainer: (md: string | null) => void;
 }
 
 const AppShellContext = createContext<AppShellState | null>(null);
@@ -60,8 +74,12 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
   const [hasSettings, setHasSettings] = useState(false);
   const [hasActions, setHasActions] = useState(false);
   const [functions, setFunctions] = useState<AppFunctionsRegistration | null>(null);
+  const [explainer, setExplainer] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [actionFloaterOff, setActionFloaterOff] = useState(false);
   const settingsTargetRef = useRef<HTMLDivElement | null>(null);
   const actionsTargetRef = useRef<HTMLDivElement | null>(null);
+  const actionsFloaterRef = useRef<HTMLDivElement | null>(null);
 
   // Reset header + tab flags when the active app changes.
   useEffect(() => {
@@ -69,26 +87,37 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     setHasSettings(false);
     setHasActions(false);
     setFunctions(null);
+    setExplainer(null);
+    setHelpOpen(false);
+    setActionFloaterOff(false);
     setTab('apps');
   }, [currentHash]);
 
-  // Escape closes drawer.
+  // Escape closes the help popup, then the drawer.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setHelpOpen(false);
+      setOpen(false);
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const current = apps.find(a => a.hash === currentHash) ?? apps[0];
-  const titleName = header.title ?? current?.name ?? '';
+  const isHome = currentHash === '/';
+  const current = apps.find(a => a.hash === currentHash);
+  const titleName = header.title ?? (isHome ? 'animath' : current?.name) ?? '';
   const subtitle = header.subtitle;
   const hasFunctions = functions != null;
+  const hasExplainer = explainer != null;
 
   const ctx = useMemo<AppShellState>(() => ({
     title: header.title,
     subtitle: header.subtitle,
     settingsTargetRef,
     actionsTargetRef,
+    actionsFloaterRef,
+    setActionFloaterOff,
     hasSettings,
     hasActions,
     setHasSettings,
@@ -96,7 +125,9 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     setHeader,
     functions,
     setFunctions,
-  }), [header.title, header.subtitle, hasSettings, hasActions, functions]);
+    explainer,
+    setExplainer,
+  }), [header.title, header.subtitle, hasSettings, hasActions, functions, explainer]);
 
   const openWithTab = useCallback((t: Tab) => { setTab(t); setOpen(true); }, []);
 
@@ -104,6 +135,14 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     <AppShellContext.Provider value={ctx}>
       <div className="as-shell">
         <header className="as-bar">
+          {currentHash !== '/' && (
+            <button
+              className="as-bar-btn"
+              aria-label="Menu screen"
+              title="Menu"
+              onClick={() => onNavigate('/')}
+            >⌂</button>
+          )}
           <button
             className="as-bar-btn"
             aria-label="Apps"
@@ -136,10 +175,27 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
             title="Actions"
             onClick={() => openWithTab('actions')}
           >▶</button>
+          <button
+            className={`as-bar-btn ${hasExplainer ? '' : 'as-bar-btn-dim'}`}
+            aria-label="Explainer"
+            title="What am I looking at?"
+            onClick={() => { if (hasExplainer) setHelpOpen(true); }}
+          >?</button>
+          {/* Absorbs the leftover width so the controls cluster on the left
+              instead of the actions stretching to the far right. */}
+          <div className="as-bar-spacer" />
         </header>
 
         <div className="as-content">
           {children}
+          {/* Floating, draggable mirror of the app's actions. Always mounted so
+              its portal target persists; hidden when the app has no actions or
+              ships its own floater. */}
+          <ActionFloater
+            active={hasActions && !actionFloaterOff}
+            title={titleName}
+            bodyRef={actionsFloaterRef}
+          />
         </div>
 
         <div className={`as-scrim ${open ? 'as-open' : ''}`} onClick={() => setOpen(false)} />
@@ -198,6 +254,36 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
             {!hasActions && <div className="as-empty">No actions for this view.</div>}
           </div>
         </aside>
+
+        {helpOpen && explainer && (
+          <div
+            className="as-help-scrim"
+            onClick={() => setHelpOpen(false)}
+            role="presentation"
+          >
+            <div
+              className="as-help-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`${titleName} — explainer`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="as-help-header">
+                <h2 className="as-help-title">{titleName}</h2>
+                <button
+                  className="as-bar-btn"
+                  aria-label="Close explainer"
+                  onClick={() => setHelpOpen(false)}
+                >×</button>
+              </div>
+              <div className="as-help-body">
+                <Suspense fallback={<div className="as-empty">Loading…</div>}>
+                  <Readme markdown={explainer} />
+                </Suspense>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppShellContext.Provider>
   );
@@ -276,6 +362,19 @@ export function useAppFunctions(reg: AppFunctionsRegistration | null) {
   }, [shell, names, current, onChange]);
 }
 
+/** Register the active app's markdown explainer, shown by the top-bar "?"
+ *  button in a popup. Apps that don't call this leave the button dimmed.
+ *  Content lives in standalone `EXPLAINER.md` files imported with `?raw`, so
+ *  it can be edited without touching component code. */
+export function useAppExplainer(markdown: string | null) {
+  const shell = useContext(AppShellContext);
+  useEffect(() => {
+    if (!shell) return;
+    shell.setExplainer(markdown);
+    return () => shell.setExplainer(null);
+  }, [shell, markdown]);
+}
+
 /** Render children into the drawer's Settings tab. */
 export function ShellSettings({ children }: { children: React.ReactNode }) {
   const shell = useShell();
@@ -291,17 +390,33 @@ export function ShellSettings({ children }: { children: React.ReactNode }) {
   return createPortal(<>{children}</>, shell.settingsTargetRef.current);
 }
 
-/** Render children into the drawer's Actions tab. */
+/** Render children into BOTH the drawer's Actions tab and the floating
+ *  ActionFloater, so the two stay in sync. The floater's body target is always
+ *  mounted, so by the time this child's effect runs both refs are populated. */
 export function ShellActions({ children }: { children: React.ReactNode }) {
   const shell = useShell();
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    if (shell.actionsTargetRef.current) {
-      setReady(true);
-      shell.setHasActions(true);
-    }
+    setReady(true);
+    shell.setHasActions(true);
     return () => shell.setHasActions(false);
   }, [shell]);
-  if (!ready || !shell.actionsTargetRef.current) return null;
-  return createPortal(<>{children}</>, shell.actionsTargetRef.current);
+  if (!ready) return null;
+  return (
+    <>
+      {shell.actionsTargetRef.current && createPortal(<>{children}</>, shell.actionsTargetRef.current)}
+      {shell.actionsFloaterRef.current && createPortal(<>{children}</>, shell.actionsFloaterRef.current)}
+    </>
+  );
+}
+
+/** Suppress the generic floating action panel for apps that provide their own
+ *  (e.g. Correspondence's PlaybackFloater with its scrubber). */
+export function useActionFloaterOff() {
+  const shell = useContext(AppShellContext);
+  useEffect(() => {
+    if (!shell) return;
+    shell.setActionFloaterOff(true);
+    return () => shell.setActionFloaterOff(false);
+  }, [shell]);
 }

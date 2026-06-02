@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { ShellSettings, useAppHeader, useAppFunctions } from '../../components/AppShell';
+import { ShellSettings, useAppHeader, useAppFunctions, useAppExplainer } from '../../components/AppShell';
 import { Section, Slider, Pills, Select } from '../../components/ControlPanel';
 import Readme from '../../components/Readme';
 import readmeText from './README.md?raw';
+import explainerText from './EXPLAINER.md?raw';
 import {
   functionNames, functionFormulas, POW_PQ_INDEX,
   applyComplexBranch, complexPowRational,
@@ -55,6 +56,7 @@ export default function PlaneTransform() {
     ? `z^(${expP}/${expQ})`
     : functionFormulas[fnName];
   useAppHeader(fnName, fnFormula);
+  useAppExplainer(explainerText);
   useAppFunctions({
     names: functionNames,
     current: fnName,
@@ -321,7 +323,7 @@ export default function PlaneTransform() {
           )}
         </Section>
 
-        <Section title="Colour" icon="◐" defaultOpen>
+        <Section title="Color" icon="◐" defaultOpen>
           <Pills
             label="Mode"
             options={colourPills}
@@ -344,8 +346,8 @@ export default function PlaneTransform() {
             min={1} max={6} step={0.5}
             onChange={setPointSize} format={v => v.toFixed(1)} />
           <Slider label="Density (per side)" value={density}
-            min={40} max={400} step={20}
-            onChange={setDensity} format={v => `${v}×${v}`} />
+            min={40} max={900} step={20}
+            onChange={setDensity} format={v => `${v}×${v} (${((v * v) / 1e6).toFixed(2)}M)`} />
         </Section>
 
         <Section title="About" icon="ⓘ">

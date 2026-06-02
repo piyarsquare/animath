@@ -1,10 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import FractalPane, { Complex, ViewBounds } from './FractalPane';
 import { useResponsive } from '../../styles/responsive';
-import { ShellSettings, ShellActions, useAppHeader } from '../../components/AppShell';
+import { ShellSettings, ShellActions, useAppHeader, useAppExplainer, useActionFloaterOff } from '../../components/AppShell';
 import { Section, Slider, Select } from '../../components/ControlPanel';
 import Readme from '../../components/Readme';
+import PlaybackFloater from './PlaybackFloater';
 import readmeText from './README.md?raw';
+import explainerText from './EXPLAINER.md?raw';
+import { PALETTE_OPTIONS } from '../../lib/colormaps';
 
 export default function Correspondence() {
   const { isMobile } = useResponsive();
@@ -26,6 +29,7 @@ export default function Correspondence() {
   const pausedRef = useRef(false);
   const animRef = useRef<number>();
   const progressRef = useRef(0);
+  const [progress, setProgress] = useState(0); // 0..1 position along the c-path
   const [playing, setPlaying] = useState(false);
   const playingRef = useRef(false);
 
@@ -41,19 +45,24 @@ export default function Correspondence() {
 
   const handlePathChange = (pts: Complex[]) => {
     setPath(pts);
+    progressRef.current = 0;
+    setProgress(0);
   };
 
   const playPath = () => {
     if (path.length < 2) return;
     cancelAnimationFrame(animRef.current!);
-    progressRef.current = 0;
+    // Resume from the current scrubbed position if we're partway through,
+    // otherwise start from the top.
+    if (progressRef.current >= path.length - 1) progressRef.current = 0;
+    setProgress(progressRef.current / (path.length - 1));
     setPaused(false);
     setPlaying(true);
 
     const step = () => {
       if (!playingRef.current) return;
       if (!pausedRef.current) {
-        const idx = Math.floor(progressRef.current);
+        const idx = Math.min(Math.floor(progressRef.current), path.length - 2);
         const t = progressRef.current - idx;
         const p0 = path[idx];
         const p1 = path[idx + 1];
@@ -65,9 +74,12 @@ export default function Correspondence() {
         progressRef.current += speedRef.current;
         if (progressRef.current >= path.length - 1) {
           setC(path[path.length - 1]);
+          progressRef.current = path.length - 1;
+          setProgress(1);
           setPlaying(false);
           return;
         }
+        setProgress(progressRef.current / (path.length - 1));
       }
       animRef.current = requestAnimationFrame(step);
     };
@@ -80,7 +92,66 @@ export default function Correspondence() {
     cancelAnimationFrame(animRef.current!);
   };
 
+  // Jump to a normalized position (0..1) along the path. Used by the floater's
+  // side scrubber; grabbing it while playing pauses so the user stays in control.
+  const seek = (t01: number) => {
+    if (path.length < 2) return;
+    const maxPos = path.length - 1;
+    const pos = Math.max(0, Math.min(maxPos, t01 * maxPos));
+    progressRef.current = pos;
+    setProgress(pos / maxPos);
+    if (playingRef.current) setPaused(true);
+    const idx = Math.min(Math.floor(pos), maxPos - 1);
+    const t = pos - idx;
+    const p0 = path[idx];
+    const p1 = path[idx + 1];
+    setC({
+      real: p0.real * (1 - t) + p1.real * t,
+      imag: p0.imag * (1 - t) + p1.imag * t,
+    });
+  };
+
   useAppHeader('Mandelbrot ↔ Julia', `c = ${c.real.toFixed(3)} ${c.imag >= 0 ? '+' : '-'} ${Math.abs(c.imag).toFixed(3)}i`);
+  useAppExplainer(explainerText);
+  useActionFloaterOff(); // we ship our own PlaybackFloater (with the scrubber)
+
+  // The action controls live in two places at once: the drawer's Actions tab
+  // and the on-screen PlaybackFloater. Defining them once keeps both in sync.
+  // Speed lives here (an action) rather than in Settings.
+  const playbackControls = (
+    <>
+      <ActionButton
+        label={selecting ? 'Tap Mandelbrot to pick…' : 'Pick Julia c by tap'}
+        active={selecting}
+        onClick={() => setSelecting(true)}
+      />
+      <ActionButton
+        label={drawingPath ? 'Finish drawing path' : 'Draw c-path'}
+        active={drawingPath}
+        onClick={() => setDrawingPath(p => !p)}
+      />
+      <ActionButton
+        label="Clear path"
+        disabled={path.length === 0}
+        onClick={() => { stopPath(); setPath([]); progressRef.current = 0; setProgress(0); }}
+      />
+      <ActionButton
+        label={playing ? 'Stop playback' : 'Play path'}
+        primary
+        disabled={path.length < 2}
+        onClick={playing ? stopPath : playPath}
+      />
+      {playing && (
+        <ActionButton
+          label={paused ? 'Resume' : 'Pause'}
+          onClick={() => setPaused(p => !p)}
+        />
+      )}
+      <Slider label="Speed" value={speed}
+        min={0.005} max={0.5} step={0.005}
+        onChange={setSpeed} format={v => v.toFixed(3)} />
+    </>
+  );
 
   return (
     <>
@@ -125,6 +196,15 @@ export default function Correspondence() {
         </div>
       </div>
 
+      <PlaybackFloater
+        title="Playback"
+        progress={progress}
+        onScrub={seek}
+        scrubDisabled={path.length < 2}
+      >
+        {playbackControls}
+      </PlaybackFloater>
+
       <ShellSettings>
         <Section title="Iterations" icon="↻" defaultOpen>
           <Slider label="Max iterations" value={iter}
@@ -135,12 +215,7 @@ export default function Correspondence() {
 
         <Section title="Mandelbrot palette" icon="◐" defaultOpen>
           <Select label="Palette"
-            options={[
-              { value: 0, label: 'Rainbow' },
-              { value: 1, label: 'Fire' },
-              { value: 2, label: 'Ocean' },
-              { value: 3, label: 'Gray' },
-            ]}
+            options={PALETTE_OPTIONS}
             value={paletteM} onChange={setPaletteM} />
           <Slider label="Offset" value={offsetM}
             min={0} max={255} step={1}
@@ -149,12 +224,7 @@ export default function Correspondence() {
 
         <Section title="Julia palette" icon="◑">
           <Select label="Palette"
-            options={[
-              { value: 0, label: 'Rainbow' },
-              { value: 1, label: 'Fire' },
-              { value: 2, label: 'Ocean' },
-              { value: 3, label: 'Gray' },
-            ]}
+            options={PALETTE_OPTIONS}
             value={paletteJ} onChange={setPaletteJ} />
           <Slider label="Offset" value={offsetJ}
             min={0} max={255} step={1}
@@ -176,12 +246,6 @@ export default function Correspondence() {
           </div>
         </Section>
 
-        <Section title="Path playback" icon="▷">
-          <Slider label="Speed" value={speed}
-            min={0.005} max={0.5} step={0.005}
-            onChange={setSpeed} format={v => v.toFixed(3)} />
-        </Section>
-
         <Section title="About" icon="ⓘ">
           <Readme markdown={readmeText} />
           <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', marginTop: 8 }}>
@@ -192,33 +256,7 @@ export default function Correspondence() {
 
       <ShellActions>
         <div className="cp-section-body">
-          <ActionButton
-            label={selecting ? 'Tap Mandelbrot to pick…' : 'Pick Julia c by tap'}
-            active={selecting}
-            onClick={() => setSelecting(true)}
-          />
-          <ActionButton
-            label={drawingPath ? 'Finish drawing path' : 'Draw c-path'}
-            active={drawingPath}
-            onClick={() => setDrawingPath(p => !p)}
-          />
-          <ActionButton
-            label="Clear path"
-            disabled={path.length === 0}
-            onClick={() => setPath([])}
-          />
-          <ActionButton
-            label={playing ? 'Stop playback' : 'Play path'}
-            primary
-            disabled={path.length < 2}
-            onClick={playing ? stopPath : playPath}
-          />
-          {playing && (
-            <ActionButton
-              label={paused ? 'Resume' : 'Pause'}
-              onClick={() => setPaused(p => !p)}
-            />
-          )}
+          {playbackControls}
         </div>
       </ShellActions>
     </>
