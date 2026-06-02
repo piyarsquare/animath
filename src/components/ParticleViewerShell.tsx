@@ -2,7 +2,7 @@ import React from 'react';
 import Canvas3D from './Canvas3D';
 import Readme from './Readme';
 import { Section, Slider, Pills, Select, Checkbox } from './ControlPanel';
-import { ShellSettings, ShellActions, useAppHeader, useAppFunctions, useAppExplainer } from './AppShell';
+import { ShellSettings, ShellActions, useAppHeader, useAppFunctions, useAppExplainer, useActionFloaterOff } from './AppShell';
 import QuarterTurnFloater from '../controls/QuarterTurnFloater';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../config/defaults';
 import { useResponsive } from '../styles/responsive';
@@ -53,6 +53,9 @@ export default function ParticleViewerShell({
 
   useAppHeader(functionName, functionFormula);
   useAppExplainer(explainer ?? null);
+  // The QuarterTurnFloater already provides reset / drop-axis / 4D turns on
+  // screen, so suppress the generic ActionFloater here to avoid a duplicate.
+  useActionFloaterOff();
   useAppFunctions(functionList ? {
     names: functionList.names,
     current: functionList.names[functionList.currentIndex] ?? '',
