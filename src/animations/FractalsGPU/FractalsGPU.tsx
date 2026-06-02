@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import Readme from '../../components/Readme';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
+import { PALETTE_GLSL, PALETTE_OPTIONS } from '../../lib/colormaps';
 import { useResponsive } from '../../styles/responsive';
 import { useViewportGestures } from '../../lib/useViewportGestures';
 import { ShellSettings, ShellActions, useAppHeader, useAppExplainer } from '../../components/AppShell';
@@ -91,23 +92,7 @@ export default function FractalsGPU() {
     const int MAX_ITER = 1000;
     const int MAX_POWER = 100;
 
-    vec3 paletteColor(float t, int scheme) {
-      if(scheme==0){
-        return vec3(
-          sin(0.024*(t)+0.0)*0.5+0.5,
-          sin(0.024*(t)+2.0)*0.5+0.5,
-          sin(0.024*(t)+4.0)*0.5+0.5
-        );
-      }else if(scheme==1){
-        float r = min(255.0, t*3.0);
-        float g = clamp(t*3.0-255.0,0.0,255.0);
-        float b = max(0.0,t*3.0-510.0);
-        return vec3(r,g,b)/255.0;
-      }else if(scheme==2){
-        return vec3(0.0, t/2.0, t)/255.0;
-      }
-      return vec3(t,t,t)/255.0;
-    }
+    ${PALETTE_GLSL}
 
     void main(){
       // type: 0=Mandelbrot, 1=Julia, 2=Burning Ship, 3=Tricorn
@@ -467,12 +452,7 @@ export default function FractalsGPU() {
 
         <Section title="Color" icon="◐">
           <Select label="Palette"
-            options={[
-              { value: 0, label: 'Rainbow' },
-              { value: 1, label: 'Fire' },
-              { value: 2, label: 'Ocean' },
-              { value: 3, label: 'Gray' },
-            ]}
+            options={PALETTE_OPTIONS}
             value={palette} onChange={setPalette} />
           <Pills label="Coloring"
             options={[
@@ -484,12 +464,7 @@ export default function FractalsGPU() {
             onChange={setColorMode} />
           {colorMode !== 'escape' && (
             <Select label="Inside palette"
-              options={[
-                { value: 0, label: 'Rainbow' },
-                { value: 1, label: 'Fire' },
-                { value: 2, label: 'Ocean' },
-                { value: 3, label: 'Gray' },
-              ]}
+              options={PALETTE_OPTIONS}
               value={insidePalette} onChange={setInsidePalette} />
           )}
         </Section>

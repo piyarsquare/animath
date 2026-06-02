@@ -7,6 +7,7 @@ import Readme from '../../components/Readme';
 import PlaybackFloater from './PlaybackFloater';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
+import { PALETTE_OPTIONS } from '../../lib/colormaps';
 
 export default function Correspondence() {
   const { isMobile } = useResponsive();
@@ -213,12 +214,7 @@ export default function Correspondence() {
 
         <Section title="Mandelbrot palette" icon="◐" defaultOpen>
           <Select label="Palette"
-            options={[
-              { value: 0, label: 'Rainbow' },
-              { value: 1, label: 'Fire' },
-              { value: 2, label: 'Ocean' },
-              { value: 3, label: 'Gray' },
-            ]}
+            options={PALETTE_OPTIONS}
             value={paletteM} onChange={setPaletteM} />
           <Slider label="Offset" value={offsetM}
             min={0} max={255} step={1}
@@ -227,12 +223,7 @@ export default function Correspondence() {
 
         <Section title="Julia palette" icon="◑">
           <Select label="Palette"
-            options={[
-              { value: 0, label: 'Rainbow' },
-              { value: 1, label: 'Fire' },
-              { value: 2, label: 'Ocean' },
-              { value: 3, label: 'Gray' },
-            ]}
+            options={PALETTE_OPTIONS}
             value={paletteJ} onChange={setPaletteJ} />
           <Slider label="Offset" value={offsetJ}
             min={0} max={255} step={1}
