@@ -22,15 +22,34 @@
   max-width: calc(100vw - 32px);
 }
 
-.pf-collapsed { padding: 4px; width: auto; }
+.pf-collapsed {
+  padding: 3px;
+  width: auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+}
+
+.pf-grip-collapsed {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  border-radius: 6px;
+  padding: 0 2px;
+}
+.pf-grip-collapsed:hover { background: rgba(255, 255, 255, 0.06); }
+.pf-grip-collapsed:active { cursor: grabbing; }
 
 .pf-toggle {
   background: transparent;
   border: none;
-  color: #f0f0f3;
-  font-size: 16px;
-  width: 36px;
-  height: 36px;
+  color: var(--cp-accent, #ffd400);
+  font-size: 14px;
+  width: 34px;
+  height: 34px;
   border-radius: 6px;
   cursor: pointer;
   display: flex;

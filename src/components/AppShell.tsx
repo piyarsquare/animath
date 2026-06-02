@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import './AppShell.css';
+import ActionFloater from './ActionFloater';
 
 // Lazily loaded so `marked` only enters the bundle when a help popup is opened.
 const Readme = React.lazy(() => import('./Readme'));
@@ -36,6 +37,11 @@ export interface AppShellState {
   /** DOM nodes — portal targets — for the Settings and Actions drawer tabs. */
   settingsTargetRef: React.RefObject<HTMLDivElement | null>;
   actionsTargetRef: React.RefObject<HTMLDivElement | null>;
+  /** Portal target for the floating ActionFloater (a mirror of the actions). */
+  actionsFloaterRef: React.RefObject<HTMLDivElement | null>;
+  /** Lets an app suppress the generic floating action panel when it ships its
+   *  own (e.g. Correspondence's PlaybackFloater). */
+  setActionFloaterOff: (off: boolean) => void;
   /** Whether the registered app has populated each tab. */
   hasSettings: boolean;
   hasActions: boolean;
@@ -70,8 +76,10 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
   const [functions, setFunctions] = useState<AppFunctionsRegistration | null>(null);
   const [explainer, setExplainer] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [actionFloaterOff, setActionFloaterOff] = useState(false);
   const settingsTargetRef = useRef<HTMLDivElement | null>(null);
   const actionsTargetRef = useRef<HTMLDivElement | null>(null);
+  const actionsFloaterRef = useRef<HTMLDivElement | null>(null);
 
   // Reset header + tab flags when the active app changes.
   useEffect(() => {
@@ -81,6 +89,7 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     setFunctions(null);
     setExplainer(null);
     setHelpOpen(false);
+    setActionFloaterOff(false);
     setTab('apps');
   }, [currentHash]);
 
@@ -107,6 +116,8 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     subtitle: header.subtitle,
     settingsTargetRef,
     actionsTargetRef,
+    actionsFloaterRef,
+    setActionFloaterOff,
     hasSettings,
     hasActions,
     setHasSettings,
@@ -177,6 +188,14 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
 
         <div className="as-content">
           {children}
+          {/* Floating, draggable mirror of the app's actions. Always mounted so
+              its portal target persists; hidden when the app has no actions or
+              ships its own floater. */}
+          <ActionFloater
+            active={hasActions && !actionFloaterOff}
+            title={titleName}
+            bodyRef={actionsFloaterRef}
+          />
         </div>
 
         <div className={`as-scrim ${open ? 'as-open' : ''}`} onClick={() => setOpen(false)} />
@@ -371,17 +390,33 @@ export function ShellSettings({ children }: { children: React.ReactNode }) {
   return createPortal(<>{children}</>, shell.settingsTargetRef.current);
 }
 
-/** Render children into the drawer's Actions tab. */
+/** Render children into BOTH the drawer's Actions tab and the floating
+ *  ActionFloater, so the two stay in sync. The floater's body target is always
+ *  mounted, so by the time this child's effect runs both refs are populated. */
 export function ShellActions({ children }: { children: React.ReactNode }) {
   const shell = useShell();
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    if (shell.actionsTargetRef.current) {
-      setReady(true);
-      shell.setHasActions(true);
-    }
+    setReady(true);
+    shell.setHasActions(true);
     return () => shell.setHasActions(false);
   }, [shell]);
-  if (!ready || !shell.actionsTargetRef.current) return null;
-  return createPortal(<>{children}</>, shell.actionsTargetRef.current);
+  if (!ready) return null;
+  return (
+    <>
+      {shell.actionsTargetRef.current && createPortal(<>{children}</>, shell.actionsTargetRef.current)}
+      {shell.actionsFloaterRef.current && createPortal(<>{children}</>, shell.actionsFloaterRef.current)}
+    </>
+  );
+}
+
+/** Suppress the generic floating action panel for apps that provide their own
+ *  (e.g. Correspondence's PlaybackFloater with its scrubber). */
+export function useActionFloaterOff() {
+  const shell = useContext(AppShellContext);
+  useEffect(() => {
+    if (!shell) return;
+    shell.setActionFloaterOff(true);
+    return () => shell.setActionFloaterOff(false);
+  }, [shell]);
 }

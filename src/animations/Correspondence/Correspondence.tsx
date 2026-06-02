@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import FractalPane, { Complex, ViewBounds } from './FractalPane';
 import { useResponsive } from '../../styles/responsive';
-import { ShellSettings, ShellActions, useAppHeader, useAppExplainer } from '../../components/AppShell';
+import { ShellSettings, ShellActions, useAppHeader, useAppExplainer, useActionFloaterOff } from '../../components/AppShell';
 import { Section, Slider, Select } from '../../components/ControlPanel';
 import Readme from '../../components/Readme';
 import PlaybackFloater from './PlaybackFloater';
@@ -113,6 +113,7 @@ export default function Correspondence() {
 
   useAppHeader('Mandelbrot ↔ Julia', `c = ${c.real.toFixed(3)} ${c.imag >= 0 ? '+' : '-'} ${Math.abs(c.imag).toFixed(3)}i`);
   useAppExplainer(explainerText);
+  useActionFloaterOff(); // we ship our own PlaybackFloater (with the scrubber)
 
   // The action controls live in two places at once: the drawer's Actions tab
   // and the on-screen PlaybackFloater. Defining them once keeps both in sync.
