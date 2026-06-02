@@ -27,6 +27,7 @@ export default function Correspondence() {
   const pausedRef = useRef(false);
   const animRef = useRef<number>();
   const progressRef = useRef(0);
+  const [progress, setProgress] = useState(0); // 0..1 position along the c-path
   const [playing, setPlaying] = useState(false);
   const playingRef = useRef(false);
 
@@ -42,19 +43,24 @@ export default function Correspondence() {
 
   const handlePathChange = (pts: Complex[]) => {
     setPath(pts);
+    progressRef.current = 0;
+    setProgress(0);
   };
 
   const playPath = () => {
     if (path.length < 2) return;
     cancelAnimationFrame(animRef.current!);
-    progressRef.current = 0;
+    // Resume from the current scrubbed position if we're partway through,
+    // otherwise start from the top.
+    if (progressRef.current >= path.length - 1) progressRef.current = 0;
+    setProgress(progressRef.current / (path.length - 1));
     setPaused(false);
     setPlaying(true);
 
     const step = () => {
       if (!playingRef.current) return;
       if (!pausedRef.current) {
-        const idx = Math.floor(progressRef.current);
+        const idx = Math.min(Math.floor(progressRef.current), path.length - 2);
         const t = progressRef.current - idx;
         const p0 = path[idx];
         const p1 = path[idx + 1];
@@ -66,9 +72,12 @@ export default function Correspondence() {
         progressRef.current += speedRef.current;
         if (progressRef.current >= path.length - 1) {
           setC(path[path.length - 1]);
+          progressRef.current = path.length - 1;
+          setProgress(1);
           setPlaying(false);
           return;
         }
+        setProgress(progressRef.current / (path.length - 1));
       }
       animRef.current = requestAnimationFrame(step);
     };
@@ -79,6 +88,25 @@ export default function Correspondence() {
     setPlaying(false);
     setPaused(false);
     cancelAnimationFrame(animRef.current!);
+  };
+
+  // Jump to a normalized position (0..1) along the path. Used by the floater's
+  // side scrubber; grabbing it while playing pauses so the user stays in control.
+  const seek = (t01: number) => {
+    if (path.length < 2) return;
+    const maxPos = path.length - 1;
+    const pos = Math.max(0, Math.min(maxPos, t01 * maxPos));
+    progressRef.current = pos;
+    setProgress(pos / maxPos);
+    if (playingRef.current) setPaused(true);
+    const idx = Math.min(Math.floor(pos), maxPos - 1);
+    const t = pos - idx;
+    const p0 = path[idx];
+    const p1 = path[idx + 1];
+    setC({
+      real: p0.real * (1 - t) + p1.real * t,
+      imag: p0.imag * (1 - t) + p1.imag * t,
+    });
   };
 
   useAppHeader('Mandelbrot ↔ Julia', `c = ${c.real.toFixed(3)} ${c.imag >= 0 ? '+' : '-'} ${Math.abs(c.imag).toFixed(3)}i`);
@@ -101,7 +129,7 @@ export default function Correspondence() {
       <ActionButton
         label="Clear path"
         disabled={path.length === 0}
-        onClick={() => setPath([])}
+        onClick={() => { stopPath(); setPath([]); progressRef.current = 0; setProgress(0); }}
       />
       <ActionButton
         label={playing ? 'Stop playback' : 'Play path'}
@@ -164,7 +192,12 @@ export default function Correspondence() {
         </div>
       </div>
 
-      <PlaybackFloater title="Playback">
+      <PlaybackFloater
+        title="Playback"
+        progress={progress}
+        onScrub={seek}
+        scrubDisabled={path.length < 2}
+      >
         {playbackControls}
       </PlaybackFloater>
 

@@ -1,10 +1,11 @@
-/* PlaybackFloater — bottom-right floating panel for the Correspondence
-   action controls. Shares the visual language of PlaneCurveFloater. */
+/* PlaybackFloater — draggable floating panel (default: bottom-left) for the
+   Correspondence action controls, with a vertical scrubber down the side.
+   Shares the visual language of PlaneCurveFloater. */
 
 .pf {
   position: absolute;
   bottom: 16px;
-  right: 16px;
+  left: 16px;
   z-index: 30;
   display: flex;
   flex-direction: column;
@@ -17,11 +18,11 @@
   padding: 10px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  width: 230px;
+  width: 248px;
   max-width: calc(100vw - 32px);
 }
 
-.pf-collapsed { padding: 4px; }
+.pf-collapsed { padding: 4px; width: auto; }
 
 .pf-toggle {
   background: transparent;
@@ -38,13 +39,25 @@
 }
 .pf-toggle:hover { background: rgba(255, 255, 255, 0.08); }
 
+/* Header doubles as the drag handle. */
 .pf-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 6px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.pf-header:active { cursor: grabbing; }
+
+.pf-grip {
+  color: #6b6b73;
+  font-size: 13px;
+  line-height: 1;
 }
 
 .pf-title {
+  flex: 1;
   font-size: 11px;
   color: #9b9ba3;
   font-weight: 700;
@@ -67,9 +80,65 @@
 }
 .pf-close:hover { background: rgba(255, 255, 255, 0.08); color: #f0f0f3; }
 
-/* The action buttons + speed slider are rendered as children; stack them. */
+/* Controls column + scrubber column, side by side. */
+.pf-main {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
 .pf-body {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* ---- Vertical scrubber ---- */
+.pf-scrubber {
+  flex-shrink: 0;
+  width: 22px;
+  display: flex;
+  justify-content: center;
+  padding: 2px 0;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.pf-scrubber-disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
+.pf-scrubber-track {
+  position: relative;
+  width: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  /* Slightly inset so the thumb at the extremes isn't clipped. */
+  margin: 8px 0;
+  flex: 1;
+}
+
+.pf-scrubber-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 3px;
+  background: var(--cp-accent, #ffd400);
+}
+
+.pf-scrubber-thumb {
+  position: absolute;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--cp-accent, #ffd400);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, 50%);
+  pointer-events: none;
 }
