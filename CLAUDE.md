@@ -188,10 +188,16 @@ hand-rolling inputs so every app looks consistent.
 Each app lives in `src/animations/<Name>/` and typically contains:
 
 - A main `.tsx` component (the whole animation + its controls).
-- `README.md` — longer write-up rendered in the **About** section (`import md from './README.md?raw'`).
-- `EXPLAINER.md` — short "what am I looking at" text for the **?** popup (`?raw`).
+- `EXPLAINER.md` — short "what am I looking at" text for the **?** popup (`?raw`);
+  shipped by nearly every app.
+- `README.md` — *optional* longer write-up for the **About** section
+  (`import md from './README.md?raw'`). `ParticleViewerShell` viewers render it
+  automatically; custom apps render it if they choose, and some (e.g. the Trinary
+  System) ship none.
+- Optional helper `.ts` modules — pull simulation/algorithm logic and data out of
+  the component (e.g. `physics.ts` + `presets.ts`, or `corridorGeometry.ts`).
 - Optional `shaders/` directory (GLSL kept as inline template strings).
-- Optional `.css` for CSS/DOM apps, plus any helper `.ts` modules.
+- Optional `.css` for CSS/DOM apps.
 
 Inside the component, an app: (1) holds its own state with `useState`/`useRef`;
 (2) calls `useAppHeader` (and `useAppExplainer`, optionally `useAppFunctions`);

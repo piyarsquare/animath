@@ -34,18 +34,30 @@ differs.
 ```
 src/animations/MyApp/
 ├── MyApp.tsx        # the component (default export)
-├── README.md        # longer write-up → in-app "About" section
-├── EXPLAINER.md     # short "what am I looking at?" → the ? popup
+├── EXPLAINER.md     # short "what am I looking at?" → the ? popup  (recommended for every app)
+├── README.md        # optional: longer write-up → in-app "About" section
+├── physics.ts       # optional: pull simulation / algorithm logic out of the component
+├── presets.ts       # optional: data tables, configurations, named presets
 ├── shaders/         # optional: GLSL as inline template strings (index.ts)
 └── myApp.css        # optional: for CSS/DOM apps
 ```
 
-- `README.md` and `EXPLAINER.md` are imported as raw text — they never touch
-  component code and can be edited freely:
+- `EXPLAINER.md` is the one doc nearly every app ships — it powers the **?**
+  popup and is registered with `useAppExplainer`. `README.md` is **optional**:
+  it backs the in-app **About** section, which the `ParticleViewerShell` viewers
+  render automatically and other apps render if they choose. A custom canvas app
+  can skip `README.md` entirely (the Trinary System module ships only an
+  `EXPLAINER.md`).
+- Both are imported as raw text — they never touch component code and can be
+  edited freely:
   ```ts
-  import readmeText from './README.md?raw';
   import explainerText from './EXPLAINER.md?raw';
+  import readmeText from './README.md?raw';   // only if you have one
   ```
+- Pull non-trivial simulation/algorithm logic into sibling `.ts` modules
+  (`physics.ts`, `presets.ts`, geometry helpers, …) so the `.tsx` stays focused
+  on state + rendering + controls. See `TrinaryStars/` (physics + presets) and
+  `MobiusWalk/` (corridorGeometry + objects) for the pattern.
 - Keep the component's **default export** the app itself; the router imports it
   lazily.
 
@@ -104,7 +116,7 @@ import {
 
 | API | What it does |
 |-----|--------------|
-| `useAppHeader(title, subtitle?)` | Sets the top-bar title and an optional monospace subtitle (e.g. a formula). |
+| `useAppHeader(title, subtitle?)` | Sets the top-bar title and an optional monospace subtitle — a formula, a current preset name, whatever labels the active state. |
 | `useAppExplainer(markdown \| null)` | Supplies the **?** popup content. Pass your imported `explainerText`. |
 | `useAppFunctions({ names, current, onChange } \| null)` | Registers a flat function list so the **ƒ** button + Function tab can switch it without opening Settings. Omit if your app has no "function". |
 | `<ShellSettings>…</ShellSettings>` | Portals its children into the drawer's **Settings** tab. |
@@ -191,8 +203,11 @@ return <Canvas3D onMount={onMount} />;
 > **Critical gotcha:** `onMount` runs once and closes over whatever state it
 > captured. If a control needs to change the scene, either read the latest value
 > through a `ref` updated by `useEffect`, or include it in the `useCallback`
-> deps so `Canvas3D` re-mounts. (This is exactly the bug that broke the old
-> MobiusWalk twist toggle.)
+> deps so `Canvas3D` re-mounts. `TrinaryStars` is the model: a stable
+> `useCallback` `onMount`, a `refs.current` object the loop reads each frame for
+> live slider values, and a returned cleanup that `cancelAnimationFrame`s and
+> disposes textures. (Capturing stale state here is exactly the bug that broke
+> the old MobiusWalk twist toggle.)
 
 ### 4D particle viewer — `ParticleViewerShell` + `lib/particles`
 
@@ -276,7 +291,8 @@ Manual checklist before opening a PR:
 
 - [ ] App appears on the landing menu and in the drawer's Apps tab.
 - [ ] Top-bar title (and formula, if any) shows via `useAppHeader`.
-- [ ] **?** button opens your `EXPLAINER.md`; **About** shows your `README.md`.
+- [ ] **?** button opens your `EXPLAINER.md` (and the **About** section shows
+      your `README.md`, if you ship one).
 - [ ] Settings/Actions render and the dimmed buttons light up appropriately.
 - [ ] Works on a narrow viewport; gestures don't fight page scroll.
 - [ ] No console errors; rAF loops and listeners are cleaned up on navigation away.
@@ -289,8 +305,9 @@ Manual checklist before opening a PR:
 | File | Why |
 |------|-----|
 | `src/animations/MyApp/MyApp.tsx` | the component |
-| `src/animations/MyApp/README.md` | About text (`?raw`) |
-| `src/animations/MyApp/EXPLAINER.md` | ? popup text (`?raw`) |
+| `src/animations/MyApp/EXPLAINER.md` | ? popup text (`?raw`) — recommended |
+| `src/animations/MyApp/README.md` | About text (`?raw`) — optional |
+| `src/animations/MyApp/*.ts` | optional logic/data helpers (physics, presets, geometry) |
 | `src/index.tsx` | lazy route registration |
 | `src/apps.ts` | catalog entry (drawer + menu) |
 | `src/components/AppShell.tsx` | integration hooks/components (import only) |
