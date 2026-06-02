@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { paramToFrame, DEFAULT_PARAMS } from './corridorGeometry';
+import { paramToFrame, DEFAULT_PARAMS, CorridorParams } from './corridorGeometry';
 
 export type ObjKind = 'painting' | 'helix' | 'arrow';
 
@@ -57,7 +57,7 @@ export const OBJECTS: HallObject[] = [
   { t: 0.85, kind: 'arrow'   , offset: [ 0,   -1.2] }
 ];
 
-export function instantiateObjects(): THREE.Group {
+export function instantiateObjects(params: CorridorParams = DEFAULT_PARAMS): THREE.Group {
   const group = new THREE.Group();
   for (const obj of OBJECTS) {
     const base =
@@ -68,7 +68,7 @@ export function instantiateObjects(): THREE.Group {
       obj.t,
       obj.offset[0],
       obj.offset[1],
-      DEFAULT_PARAMS
+      params
     );
     base.position.copy(position);
     base.quaternion.copy(quaternion);
@@ -78,4 +78,19 @@ export function instantiateObjects(): THREE.Group {
     obj.mesh = base;
   }
   return group;
+}
+
+/** Free the geometries/materials/textures of a group built by instantiateObjects. */
+export function disposeObjects(group: THREE.Group): void {
+  group.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    mesh.geometry?.dispose?.();
+    const mat = mesh.material as THREE.Material | THREE.Material[] | undefined;
+    const mats = Array.isArray(mat) ? mat : mat ? [mat] : [];
+    for (const m of mats) {
+      const withMap = m as THREE.Material & { map?: THREE.Texture | null };
+      withMap.map?.dispose?.();
+      m.dispose();
+    }
+  });
 }

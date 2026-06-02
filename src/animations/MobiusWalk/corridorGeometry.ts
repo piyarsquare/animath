@@ -17,72 +17,80 @@ export const DEFAULT_PARAMS: CorridorParams = {
   tiltTurns: 1          // single half-twist
 };
 
-/** Returns a BufferGeometry whose *inside* face points inward. */
+/**
+ * A closed, rectangular-section tube that follows the twisting centreline — an
+ * enclosed corridor (ceiling, both walls, floor) rather than two loose panels.
+ * After one lap the cross-section has rotated by π·tiltTurns, so the floor and
+ * ceiling have swapped: a Möbius corridor.
+ */
 export function makeCorridorGeometry(
   p: CorridorParams = DEFAULT_PARAMS
 ): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();
   const verts: number[] = [];
-  const norms: number[] = [];
-  const uvs  : number[] = [];
+  const uvs: number[] = [];
+
+  // Cross-section perimeter corners (n, b), walked around the rectangle.
+  const corners: [number, number][] = [
+    [ p.width,  p.height],  // 0: ceiling-right
+    [-p.width,  p.height],  // 1: ceiling-left
+    [-p.width, -p.height],  // 2: floor-left
+    [ p.width, -p.height],  // 3: floor-right
+  ];
+  const ring = corners.length;
 
   for (let i = 0; i <= p.segments; i++) {
-    const t  = i / p.segments;        // [0,1]
-    const φ  = 2 * Math.PI * t;       // angle along ring
-    const τ  = Math.PI * p.tiltTurns * t; // twist
-
-    // Centreline point in world space (circle in XY-plane).
-    const cx = p.radius * Math.cos(φ);
-    const cy = p.radius * Math.sin(φ);
-    const cz = 0;
-
-    // Tangent, normal, binormal (Frenet frame on circle).
-    const tangent   = new THREE.Vector3(-Math.sin(φ),  Math.cos(φ), 0).normalize();
-    const normalRef = new THREE.Vector3(-Math.cos(φ), -Math.sin(φ), 0).normalize(); // points outward
-    const binormal  = new THREE.Vector3(0, 0, 1);                                   // Z-up
-
-    // Rotate cross-section by τ around tangent -> gives Möbius twist.
-    const qTwist = new THREE.Quaternion().setFromAxisAngle(tangent, τ);
-    const n = normalRef.clone().applyQuaternion(qTwist);
-    const b = binormal .clone().applyQuaternion(qTwist);
-
-    // Four vertices per ring segment:  ⎡+w,+h⎤ ⎡+w,‑h⎤ ⎡‑w,+h⎤ ⎡‑w,‑h⎤
-    const offsets: [number, number][] = [
-      [ p.width,  p.height],
-      [ p.width, -p.height],
-      [-p.width,  p.height],
-      [-p.width, -p.height]
-    ];
-
-    for (const [u, v] of offsets) {
-      const pos = new THREE.Vector3(cx, cy, cz)
-        .addScaledVector(n, u)
-        .addScaledVector(b, v);
+    const t = i / p.segments;
+    const { center, n, b } = frameAt(t, p);
+    corners.forEach(([u, v], k) => {
+      const pos = center.clone().addScaledVector(n, u).addScaledVector(b, v);
       verts.push(pos.x, pos.y, pos.z);
-      norms.push(-n.x, -n.y, -n.z); // inside normals
-      uvs  .push(t, (v > 0 ? 1 : 0));
-    }
+      uvs.push(t * p.radius, k / ring);
+    });
   }
 
   const indices: number[] = [];
-  const ringVerts = 4;
   for (let i = 0; i < p.segments; i++) {
-    const a = i * ringVerts;
-    const b = (i + 1) * ringVerts;
-    // connect corresponding quad strips (two triangles each)
-    for (let j = 0; j < ringVerts; j += 2) {
-      const jn = j ^ 1; // 0↔→1, 2↔→3
-      indices.push(a + j,   b + j,   b + jn);
-      indices.push(a + j,   b + jn,  a + jn);
+    const a = i * ring;
+    const c = (i + 1) * ring;
+    for (let k = 0; k < ring; k++) {
+      const k1 = (k + 1) % ring;
+      indices.push(a + k, c + k, c + k1);
+      indices.push(a + k, c + k1, a + k1);
     }
   }
 
   g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-  g.setAttribute('normal'  , new THREE.Float32BufferAttribute(norms, 3));
-  g.setAttribute('uv'      , new THREE.Float32BufferAttribute(uvs , 2));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   g.setIndex(indices);
+  g.computeVertexNormals();
   g.computeBoundingSphere();
   return g;
+}
+
+/** Frenet-style frame on the (twisting) corridor centreline at parameter t. */
+export interface CorridorFrame {
+  center: THREE.Vector3;   // point on the centreline
+  tangent: THREE.Vector3;  // direction of travel (increasing t)
+  n: THREE.Vector3;        // cross-section "horizontal" axis (twists)
+  b: THREE.Vector3;        // cross-section "up" axis (twists)
+}
+
+/** The twisting frame at t ∈ [0,1]. Going once around, n and b rotate by
+ *  π·tiltTurns — that half-turn is what makes the corridor a Möbius strip. */
+export function frameAt(t: number, p: CorridorParams = DEFAULT_PARAMS): CorridorFrame {
+  const φ = 2 * Math.PI * t;
+  const τ = Math.PI * p.tiltTurns * t;
+
+  const center = new THREE.Vector3(p.radius * Math.cos(φ), p.radius * Math.sin(φ), 0);
+  const tangent = new THREE.Vector3(-Math.sin(φ), Math.cos(φ), 0).normalize();
+  const normalRef = new THREE.Vector3(-Math.cos(φ), -Math.sin(φ), 0).normalize(); // outward
+  const binormal = new THREE.Vector3(0, 0, 1);                                    // Z-up
+
+  const qTwist = new THREE.Quaternion().setFromAxisAngle(tangent, τ);
+  const n = normalRef.applyQuaternion(qTwist);
+  const b = binormal.applyQuaternion(qTwist);
+  return { center, tangent, n, b };
 }
 
 /** Maps (t∈[0,1], u, v) → world position & quaternion for orienting child meshes. */
@@ -92,20 +100,9 @@ export function paramToFrame(
   v: number,
   p: CorridorParams = DEFAULT_PARAMS
 ): { position: THREE.Vector3; quaternion: THREE.Quaternion } {
-  const φ  = 2 * Math.PI * t;
-  const τ  = Math.PI * p.tiltTurns * t;
+  const { center, tangent, n, b } = frameAt(t, p);
 
-  const cx = p.radius * Math.cos(φ);
-  const cy = p.radius * Math.sin(φ);
-  const tangent   = new THREE.Vector3(-Math.sin(φ),  Math.cos(φ), 0).normalize();
-  const normalRef = new THREE.Vector3(-Math.cos(φ), -Math.sin(φ), 0).normalize();
-  const binormal  = new THREE.Vector3(0, 0, 1);
-
-  const qTwist = new THREE.Quaternion().setFromAxisAngle(tangent, τ);
-  const n = normalRef.applyQuaternion(qTwist);
-  const b = binormal .applyQuaternion(qTwist);
-
-  const pos = new THREE.Vector3(cx, cy, 0)
+  const pos = center.clone()
     .addScaledVector(n, u)
     .addScaledVector(b, v);
 
