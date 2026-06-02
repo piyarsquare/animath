@@ -255,6 +255,13 @@ A 4D point `(x, y, u, v)` maps to 3D via: **Perspective** (divide by `3 + v`),
   you're editing.
 - **State** is local `useState`/`useRef` only (no global store/context except the
   AppShell context, which you consume via the provided hooks).
+- **Persisted settings**: `usePersistentState(key, initial)` (`lib/usePersistentState.ts`)
+  is a drop-in `useState` that mirrors to `localStorage` (namespaced
+  `animath:<version>:<app>:<field>`), so a user's controls survive a reload. Pass
+  `key = null` to opt out. The particle viewers persist through
+  `useParticleState({ storageKey })`; `clearPersistedState(namespace)` powers the
+  "Reset settings to defaults" action. Persist *settings*, not transient view
+  state (camera orbit/pan) or derived values.
 - **Shaders**: GLSL as inline template strings under per-app `shaders/`.
 - **Markdown**: `README.md` (About) and `EXPLAINER.md` (?) imported via `?raw`.
 - **Base-aware asset paths**: load public assets with `import.meta.env.BASE_URL`

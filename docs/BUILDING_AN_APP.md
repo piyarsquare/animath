@@ -275,6 +275,15 @@ re-implementing.
 - **Mobile first.** Use `useResponsive()` from `src/styles/responsive.ts` for
   breakpoints, and `touchAction: 'none'` on gesture surfaces. The shell already
   reserves iOS safe-area insets.
+- **Persisting settings (optional).** To make a control survive a reload, swap
+  its `useState` for `usePersistentState(key, initial)` from
+  `src/lib/usePersistentState.ts` — a drop-in that mirrors to `localStorage`
+  under a namespaced key (e.g. `` `${'my-app'}:speed` ``). Persist *settings*
+  (sliders, toggles, selects), not transient view state (camera orbit/pan) or
+  derived values. Add a "Reset settings to defaults" button that calls
+  `clearPersistedState('my-app')` then `window.location.reload()`. Particle
+  viewers get this for free via `useParticleState({ storageKey })` +
+  `ParticleViewerShell`'s `settingsStorageKey` prop — see `ComplexParticles`.
 - **Imports.** `@/` maps to `src/`; relative `../../` also works. Match the file
   you're editing.
 

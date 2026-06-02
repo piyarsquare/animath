@@ -9,9 +9,13 @@ import {
   functionNames, functionFormulas, POW_PQ_INDEX,
   applyComplexBranch, complexPowRational,
 } from '../../lib/complexMath';
+import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
 import { vertexShader, fragmentShader } from './shaders';
 import PlaneCurveFloater, { type StandardCurveName } from './PlaneCurveFloater';
 import { buildStandardCurve, type CurvePoint } from './standardCurves';
+
+/** localStorage namespace for this viewer's saved settings. */
+const STORAGE_KEY = 'plane-transform';
 
 type ColourMode = 0 | 1 | 2;
 const COLOUR_MODE_LABELS: Record<ColourMode, string> = {
@@ -36,18 +40,19 @@ interface PaneRefs {
  * each colored point ends up at its f(z) location.
  */
 export default function PlaneTransform() {
-  const [functionIndex, setFunctionIndex] = useState(() =>
-    Math.max(0, functionNames.indexOf('sin')),
+  const [functionIndex, setFunctionIndex] = usePersistentState(
+    `${STORAGE_KEY}:functionIndex`, Math.max(0, functionNames.indexOf('sin')),
   );
-  const [expP, setExpP] = useState(1);
-  const [expQ, setExpQ] = useState(2);
-  const [branchIndex, setBranchIndex] = useState(0);
-  const [density, setDensity] = useState(240);          // points per side
-  const [pointSize, setPointSize] = useState(2.5);
-  const [viewExtent, setViewExtent] = useState(3);      // half-side of visible square
-  const [colourMode, setColourMode] = useState<ColourMode>(0);
-  const [saturation, setSaturation] = useState(0.85);
-  const [intensity, setIntensity] = useState(1.0);
+  const [expP, setExpP] = usePersistentState(`${STORAGE_KEY}:expP`, 1);
+  const [expQ, setExpQ] = usePersistentState(`${STORAGE_KEY}:expQ`, 2);
+  const [branchIndex, setBranchIndex] = usePersistentState(`${STORAGE_KEY}:branchIndex`, 0);
+  const [density, setDensity] = usePersistentState(`${STORAGE_KEY}:density`, 240);          // points per side
+  const [pointSize, setPointSize] = usePersistentState(`${STORAGE_KEY}:pointSize`, 2.5);
+  const [viewExtent, setViewExtent] = usePersistentState(`${STORAGE_KEY}:viewExtent`, 3);   // half-side of visible square
+  const [colourMode, setColourMode] = usePersistentState<ColourMode>(`${STORAGE_KEY}:colourMode`, 0);
+  const [saturation, setSaturation] = usePersistentState(`${STORAGE_KEY}:saturation`, 0.85);
+  const [intensity, setIntensity] = usePersistentState(`${STORAGE_KEY}:intensity`, 1.0);
+  // Drawn curve + draw toggle are transient per-session state, not persisted.
   const [curve, setCurve] = useState<CurvePoint[]>([]);
   const [drawMode, setDrawMode] = useState(false);
 
@@ -353,6 +358,22 @@ export default function PlaneTransform() {
         <Section title="About" icon="ⓘ">
           <Readme markdown={readmeText} />
         </Section>
+
+        <button
+          style={{
+            margin: '4px 0', padding: '12px 16px', borderRadius: 6,
+            border: '1px solid var(--cp-border)',
+            background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
+            cursor: 'pointer', fontSize: 14, fontWeight: 600,
+          }}
+          onClick={() => {
+            clearPersistedState(STORAGE_KEY);
+            window.location.reload();
+          }}
+          title="Forget saved settings and restore the defaults"
+        >
+          Reset settings to defaults
+        </button>
       </ShellSettings>
     </>
   );

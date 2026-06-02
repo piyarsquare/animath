@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import ParticleViewerShell from '../../components/ParticleViewerShell';
 import { Select } from '../../components/ControlPanel';
@@ -12,7 +12,11 @@ import {
   createParticleGeometry, rebuildGeometryBuffers, redistributeAdaptive,
   createAxes, startAnimationLoop, shapeNames,
 } from '../../lib/particles';
+import { usePersistentState } from '../../lib/usePersistentState';
 import type { ViewPoint } from '../../lib/particles';
+
+/** localStorage namespace for this viewer's saved settings. */
+const STORAGE_KEY = 'complex-particles';
 import {
   applyComplex, complexPowRational,
   functionNames, functionFormulas, POW_PQ_INDEX,
@@ -41,19 +45,20 @@ export default function ComplexParticles({
   onViewPointChange,
   viewPoint,
 }: ComplexParticlesProps) {
-  const state = useParticleState({ count, viewPoint, onViewPointChange });
+  const state = useParticleState({ count, viewPoint, onViewPointChange, storageKey: STORAGE_KEY });
   const controls = useViewControls(state);
   useUniformSync(state);
 
-  const [functionIndex, setFunctionIndex] = useState(() => {
+  const defaultFunctionIndex = (() => {
     const idx = functionNames.indexOf(selectedFunction);
     return idx >= 0 ? idx : 0;
-  });
-  const [expP, setExpP] = useState(p);
-  const [expQ, setExpQ] = useState(q);
-  const [branchCount, setBranchCount] = useState(branches);
-  const [branchIndices, setBranchIndices] = useState<number[]>([0, 1, 2]);
-  const [branchStyle, setBranchStyle] = useState<BranchStyle>('color');
+  })();
+  const [functionIndex, setFunctionIndex] = usePersistentState(`${STORAGE_KEY}:functionIndex`, defaultFunctionIndex);
+  const [expP, setExpP] = usePersistentState(`${STORAGE_KEY}:expP`, p);
+  const [expQ, setExpQ] = usePersistentState(`${STORAGE_KEY}:expQ`, q);
+  const [branchCount, setBranchCount] = usePersistentState(`${STORAGE_KEY}:branchCount`, branches);
+  const [branchIndices, setBranchIndices] = usePersistentState<number[]>(`${STORAGE_KEY}:branchIndices`, [0, 1, 2]);
+  const [branchStyle, setBranchStyle] = usePersistentState<BranchStyle>(`${STORAGE_KEY}:branchStyle`, 'color');
 
   const sceneRef = useRef<THREE.Scene>();
   const pointsRef = useRef<THREE.Points[]>([]);
@@ -318,6 +323,7 @@ export default function ComplexParticles({
       }}
       readme={readmeText}
       explainer={explainerText}
+      settingsStorageKey={STORAGE_KEY}
     />
   );
 }

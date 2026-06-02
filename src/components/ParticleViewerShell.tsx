@@ -7,6 +7,7 @@ import QuarterTurnFloater from '../controls/QuarterTurnFloater';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../config/defaults';
 import { useResponsive } from '../styles/responsive';
 import { planes } from '../math/constants';
+import { clearPersistedState } from '../lib/usePersistentState';
 import {
   ColorStyle, ColourBy, AXIS_COLORS,
   shapeNames, textureNames, viewTypes, motionModes, dropModes,
@@ -41,11 +42,15 @@ export interface ParticleViewerShellProps {
   readme: string;
   /** Markdown explainer for the top-bar "?" help popup. */
   explainer?: string;
+  /** localStorage namespace whose saved settings the "Reset settings" action
+   *  clears. Omit on ephemeral viewers to hide the button. */
+  settingsStorageKey?: string;
 }
 
 export default function ParticleViewerShell({
   state, controls, onMount,
   functionName, functionFormula, functionPicker, variantExtras, functionList, readme, explainer,
+  settingsStorageKey,
 }: ParticleViewerShellProps) {
   const { isMobile, isTablet } = useResponsive();
   const compact = isMobile || isTablet;
@@ -227,6 +232,25 @@ export default function ParticleViewerShell({
           >
             Reset orientation
           </button>
+
+          {settingsStorageKey && (
+            <button
+              style={{
+                marginTop: 8,
+                padding: '12px 16px', borderRadius: 6,
+                border: '1px solid var(--cp-border)',
+                background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
+                cursor: 'pointer', fontSize: 14, fontWeight: 600,
+              }}
+              onClick={() => {
+                clearPersistedState(settingsStorageKey);
+                window.location.reload();
+              }}
+              title="Forget saved settings and restore the defaults"
+            >
+              Reset settings to defaults
+            </button>
+          )}
 
           <div className="cp-row-label" style={{ marginTop: 8, marginBottom: 4 }}>Drop axis</div>
           <Pills
