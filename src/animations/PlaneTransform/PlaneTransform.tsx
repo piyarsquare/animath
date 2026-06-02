@@ -1,11 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { ShellSettings, useAppHeader } from '../../components/AppShell';
+import { ShellSettings, useAppHeader, useAppFunctions } from '../../components/AppShell';
 import { Section, Slider, Pills, Select } from '../../components/ControlPanel';
 import Readme from '../../components/Readme';
 import readmeText from './README.md?raw';
-import { functionNames, functionFormulas, POW_PQ_INDEX } from '../../lib/complexMath';
+import {
+  functionNames, functionFormulas, POW_PQ_INDEX,
+  applyComplexBranch, complexPowRational,
+} from '../../lib/complexMath';
 import { vertexShader, fragmentShader } from './shaders';
+import PlaneCurveFloater, { type StandardCurveName } from './PlaneCurveFloater';
+import { buildStandardCurve, type CurvePoint } from './standardCurves';
 
 type ColourMode = 0 | 1 | 2;
 const COLOUR_MODE_LABELS: Record<ColourMode, string> = {
@@ -42,12 +47,22 @@ export default function PlaneTransform() {
   const [colourMode, setColourMode] = useState<ColourMode>(0);
   const [saturation, setSaturation] = useState(0.85);
   const [intensity, setIntensity] = useState(1.0);
+  const [curve, setCurve] = useState<CurvePoint[]>([]);
+  const [drawMode, setDrawMode] = useState(false);
 
   const fnName = functionNames[functionIndex];
   const fnFormula = functionIndex === POW_PQ_INDEX
     ? `z^(${expP}/${expQ})`
     : functionFormulas[fnName];
   useAppHeader(fnName, fnFormula);
+  useAppFunctions({
+    names: functionNames,
+    current: fnName,
+    onChange: (name) => {
+      const i = functionNames.indexOf(name);
+      if (i >= 0) setFunctionIndex(i);
+    },
+  });
 
   // Containers + refs for the two panes.
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -194,12 +209,30 @@ export default function PlaneTransform() {
     }
   }, [viewExtent, functionIndex, expP, expQ, branchIndex, pointSize, colourMode, saturation, intensity]);
 
+  // Map a curve through the active complex function to get the output polyline.
+  const outputCurve = useMemo<CurvePoint[]>(() => {
+    if (curve.length === 0) return [];
+    const tmp = new THREE.Vector2();
+    return curve.map(([x, y]) => {
+      tmp.set(x, y);
+      const w = functionIndex === POW_PQ_INDEX
+        ? complexPowRational(tmp, expP, expQ === 0 ? 1 : expQ)
+        : applyComplexBranch(tmp, functionIndex, branchIndex);
+      return [w.x, w.y] as CurvePoint;
+    });
+  }, [curve, functionIndex, expP, expQ, branchIndex]);
+
+  const handleStandardCurve = (id: StandardCurveName) => {
+    setCurve(buildStandardCurve(id, viewExtent));
+  };
+
   const PaneLabel = ({ children }: { children: React.ReactNode }) => (
     <div style={{
       position: 'absolute', top: 8, left: 12,
       color: '#9b9ba3', fontSize: 12, letterSpacing: 0.06,
       fontFamily: 'ui-monospace, SF Mono, Menlo, monospace',
       textTransform: 'uppercase', pointerEvents: 'none', userSelect: 'none',
+      zIndex: 2,
     }}>{children}</div>
   );
 
@@ -226,13 +259,35 @@ export default function PlaneTransform() {
           background: '#1a1a22',
         }}
       >
-        <div ref={inputMountRef} style={paneStyle}>
+        <InputPane
+          mountRef={inputMountRef}
+          viewExtent={viewExtent}
+          drawMode={drawMode}
+          curve={curve}
+          onAppendCurve={(pt, fresh) => {
+            setCurve(prev => fresh ? [pt] : [...prev, pt]);
+          }}
+          onWheelZoom={(factor) => setViewExtent(v => Math.min(20, Math.max(0.2, v * factor)))}
+        >
           <PaneLabel>Input · z = x + iy</PaneLabel>
-        </div>
-        <div ref={outputMountRef} style={paneStyle}>
+        </InputPane>
+        <OutputPane
+          mountRef={outputMountRef}
+          viewExtent={viewExtent}
+          curve={outputCurve}
+          onWheelZoom={(factor) => setViewExtent(v => Math.min(20, Math.max(0.2, v * factor)))}
+        >
           <PaneLabel>Output · w = f(z)</PaneLabel>
-        </div>
+        </OutputPane>
       </div>
+
+      <PlaneCurveFloater
+        drawMode={drawMode}
+        onToggleDraw={() => setDrawMode(d => !d)}
+        onStandardCurve={handleStandardCurve}
+        onClear={() => { setCurve([]); setDrawMode(false); }}
+        hasCurve={curve.length > 0}
+      />
 
       <ShellSettings>
         <Section title="Function" icon="ƒ" defaultOpen>
@@ -298,6 +353,217 @@ export default function PlaneTransform() {
         </Section>
       </ShellSettings>
     </>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ *  Pane sub-components.                                              *
+ *  Both render the Three.js canvas + an SVG overlay sized to the     *
+ *  centered square in which the renderer draws. The input pane also  *
+ *  owns the pointer handlers that capture freehand curve strokes.    *
+ * ------------------------------------------------------------------ */
+
+function useInscribedSquare(ref: React.RefObject<HTMLDivElement>) {
+  const [box, setBox] = useState({ w: 0, h: 0, size: 0, offX: 0, offY: 0 });
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      const size = Math.min(r.width, r.height);
+      setBox({
+        w: r.width, h: r.height, size,
+        offX: (r.width - size) / 2,
+        offY: (r.height - size) / 2,
+      });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return box;
+}
+
+interface PaneCommon {
+  mountRef: React.RefObject<HTMLDivElement>;
+  viewExtent: number;
+  curve: CurvePoint[];
+  onWheelZoom: (factor: number) => void;
+  children?: React.ReactNode;
+}
+
+function CurveSvg({ box, viewExtent, points }: {
+  box: { w: number; h: number; size: number; offX: number; offY: number };
+  viewExtent: number;
+  points: CurvePoint[];
+}) {
+  if (box.size === 0 || points.length === 0) return null;
+  const cx = box.offX + box.size / 2;
+  const cy = box.offY + box.size / 2;
+  const sx = box.size / (2 * viewExtent);
+  // Clip wildly-large points (e.g. 1/z near origin) so the path stays inside
+  // the SVG; matches the shader's `length(pos) > 1e3` cap.
+  const MAX = 1e3;
+  const d = points.map(([x, y], i) => {
+    const cx0 = Math.max(-MAX, Math.min(MAX, x));
+    const cy0 = Math.max(-MAX, Math.min(MAX, y));
+    const px = cx + cx0 * sx;
+    const py = cy - cy0 * sx;
+    return `${i === 0 ? 'M' : 'L'} ${px.toFixed(2)} ${py.toFixed(2)}`;
+  }).join(' ');
+  return (
+    <svg
+      width={box.w} height={box.h}
+      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}
+    >
+      <path d={d} stroke="#ffffff" strokeOpacity={0.9} strokeWidth={2}
+            fill="none" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function InputPane({
+  mountRef, viewExtent, drawMode, curve, onAppendCurve, onWheelZoom, children,
+}: PaneCommon & {
+  drawMode: boolean;
+  onAppendCurve: (pt: CurvePoint, fresh: boolean) => void;
+}) {
+  const box = useInscribedSquare(mountRef);
+  const drawingRef = useRef(false);
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ dist: number } | null>(null);
+
+  const toMath = (clientX: number, clientY: number): CurvePoint | null => {
+    const el = mountRef.current; if (!el || box.size === 0) return null;
+    const r = el.getBoundingClientRect();
+    const sx = box.size / (2 * viewExtent);
+    const cx = r.left + box.offX + box.size / 2;
+    const cy = r.top  + box.offY + box.size / 2;
+    return [(clientX - cx) / sx, -(clientY - cy) / sx];
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointersRef.current.size >= 2) {
+      // Starting a pinch — drop any in-progress freehand stroke.
+      drawingRef.current = false;
+      const pts = [...pointersRef.current.values()];
+      pinchRef.current = { dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) };
+      return;
+    }
+
+    if (drawMode) {
+      const p = toMath(e.clientX, e.clientY);
+      if (!p) return;
+      drawingRef.current = true;
+      onAppendCurve(p, true);
+    }
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    const rec = pointersRef.current.get(e.pointerId);
+    if (!rec) return;
+    rec.x = e.clientX; rec.y = e.clientY;
+
+    if (pointersRef.current.size >= 2 && pinchRef.current) {
+      const pts = [...pointersRef.current.values()];
+      const newDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (newDist > 1e-3 && pinchRef.current.dist > 1e-3) {
+        const factor = pinchRef.current.dist / newDist;
+        onWheelZoom(factor);
+      }
+      pinchRef.current.dist = newDist;
+      return;
+    }
+
+    if (drawingRef.current) {
+      const p = toMath(e.clientX, e.clientY);
+      if (p) onAppendCurve(p, false);
+    }
+  };
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) pinchRef.current = null;
+    if (pointersRef.current.size === 0) drawingRef.current = false;
+  };
+
+  const onWheel = (e: React.WheelEvent) => {
+    const factor = Math.exp(e.deltaY * 0.0015);
+    onWheelZoom(factor);
+  };
+
+  return (
+    <div
+      ref={mountRef}
+      style={{
+        ...paneStyle,
+        cursor: drawMode ? 'crosshair' : 'default',
+        touchAction: 'none',
+      }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onWheel={onWheel}
+    >
+      {children}
+      <CurveSvg box={box} viewExtent={viewExtent} points={curve} />
+    </div>
+  );
+}
+
+function OutputPane({
+  mountRef, viewExtent, curve, onWheelZoom, children,
+}: PaneCommon) {
+  const box = useInscribedSquare(mountRef);
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ dist: number } | null>(null);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointersRef.current.size === 2) {
+      const pts = [...pointersRef.current.values()];
+      pinchRef.current = { dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) };
+    }
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    const rec = pointersRef.current.get(e.pointerId);
+    if (!rec) return;
+    rec.x = e.clientX; rec.y = e.clientY;
+    if (pointersRef.current.size >= 2 && pinchRef.current) {
+      const pts = [...pointersRef.current.values()];
+      const newDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (newDist > 1e-3 && pinchRef.current.dist > 1e-3) {
+        onWheelZoom(pinchRef.current.dist / newDist);
+      }
+      pinchRef.current.dist = newDist;
+    }
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) pinchRef.current = null;
+  };
+  const onWheel = (e: React.WheelEvent) => {
+    onWheelZoom(Math.exp(e.deltaY * 0.0015));
+  };
+
+  return (
+    <div
+      ref={mountRef}
+      style={{ ...paneStyle, touchAction: 'none' }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onWheel={onWheel}
+    >
+      {children}
+      <CurveSvg box={box} viewExtent={viewExtent} points={curve} />
+    </div>
   );
 }
 

@@ -2,7 +2,7 @@ import React from 'react';
 import Canvas3D from './Canvas3D';
 import Readme from './Readme';
 import { Section, Slider, Pills, Select, Checkbox } from './ControlPanel';
-import { ShellSettings, ShellActions, useAppHeader } from './AppShell';
+import { ShellSettings, ShellActions, useAppHeader, useAppFunctions } from './AppShell';
 import QuarterTurnFloater from '../controls/QuarterTurnFloater';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../config/defaults';
 import { useResponsive } from '../styles/responsive';
@@ -30,18 +30,34 @@ export interface ParticleViewerShellProps {
   functionFormula: string;
   functionPicker: React.ReactNode;
   variantExtras?: React.ReactNode;
+  /** Optional registration for the top-bar ƒ function picker. Apps that have
+   *  a flat list of named functions should pass it; the drawer's Function tab
+   *  will mirror the Settings → Function selector. */
+  functionList?: {
+    names: readonly string[];
+    currentIndex: number;
+    onChangeIndex: (i: number) => void;
+  };
   readme: string;
 }
 
 export default function ParticleViewerShell({
   state, controls, onMount,
-  functionName, functionFormula, functionPicker, variantExtras, readme,
+  functionName, functionFormula, functionPicker, variantExtras, functionList, readme,
 }: ParticleViewerShellProps) {
   const { isMobile, isTablet } = useResponsive();
   const compact = isMobile || isTablet;
   const gestures = useGestureRotation(state);
 
   useAppHeader(functionName, functionFormula);
+  useAppFunctions(functionList ? {
+    names: functionList.names,
+    current: functionList.names[functionList.currentIndex] ?? '',
+    onChange: (name) => {
+      const i = functionList.names.indexOf(name);
+      if (i >= 0) functionList.onChangeIndex(i);
+    },
+  } : null);
 
   return (
     <>
