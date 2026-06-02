@@ -4,7 +4,7 @@
 .af {
   position: absolute;
   bottom: 16px;
-  right: 16px;
+  left: 16px;
   z-index: 35;
   background: rgba(12, 12, 16, 0.72);
   backdrop-filter: blur(8px);
