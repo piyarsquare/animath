@@ -32,3 +32,10 @@ full lap rolls the whole world 180°: you end up standing where the *ceiling*
 used to be, upside-down relative to where you started. Keep going and a second
 lap brings you back. That's the genuine topology of the strip, felt underfoot
 rather than just described.
+
+To make the flip unmistakable you leave a **red trail** on the floor as you
+walk, and the floor carries **"UP" arrows**. Come around one lap and you'll see
+your own trail — and the arrows — running across the *ceiling* above you,
+reversed: proof that floor and ceiling are one and the same surface. Switch
+**themes** for different scenery, and toggle first/third-person to watch
+yourself laying the trail.

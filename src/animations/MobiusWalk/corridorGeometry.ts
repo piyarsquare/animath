@@ -128,3 +128,44 @@ export function paramToFrame(
   const q = new THREE.Quaternion().setFromRotationMatrix(m);
   return { position: pos, quaternion: q };
 }
+
+/**
+ * A flat ribbon running the length of the corridor, centred on the floor and
+ * sitting just above it — the carrier for the floor-marker decal. Its UV runs
+ * 0..(laps) along the length so a repeating marker texture tiles down it; the
+ * width maps v 0..1 across the strip.
+ */
+export function makeFloorDecalGeometry(
+  p: CorridorParams = DEFAULT_PARAMS,
+  halfWidth = 0.55,
+): THREE.BufferGeometry {
+  const g = new THREE.BufferGeometry();
+  const verts: number[] = [];
+  const uvs: number[] = [];
+  const tilesPerLap = 16;
+
+  for (let i = 0; i <= p.segments; i++) {
+    const t = i / p.segments;
+    const { center, n, b } = frameAt(t, p);
+    // floor sits at b = -height; lift a hair so it doesn't z-fight the floor.
+    const base = center.clone().addScaledVector(b, -(p.height - 0.02));
+    const a = base.clone().addScaledVector(n, halfWidth);
+    const c = base.clone().addScaledVector(n, -halfWidth);
+    verts.push(a.x, a.y, a.z, c.x, c.y, c.z);
+    const along = t * tilesPerLap;
+    uvs.push(along, 0, along, 1);
+  }
+
+  const indices: number[] = [];
+  for (let i = 0; i < p.segments; i++) {
+    const a = i * 2, c = (i + 1) * 2;
+    indices.push(a, c, c + 1, a, c + 1, a + 1);
+  }
+
+  g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  g.setIndex(indices);
+  g.computeVertexNormals();
+  g.computeBoundingSphere();
+  return g;
+}
