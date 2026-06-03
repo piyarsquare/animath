@@ -177,7 +177,7 @@ vec2 applyComplex(vec2 z, int t){
 vec3 project(vec4 p, int mode){
   if(mode==0){ return p.xyz / (3.0 + p.w); }
   if(mode==1){ vec4 n = normalize(p); return n.xyz / (1.0 - n.w); }
-  if(mode==2){ vec2 xy = vec2(p.x, p.y); float w = p.w; float z = p.z; return vec3(2.0*xy*w, w*w + p.x*p.x - xy.y*xy.y - z*z); }
+  if(mode==2){ float d = max(dot(p,p), 1e-6); return vec3(2.0*(p.x*p.z + p.y*p.w), 2.0*(p.y*p.z - p.x*p.w), p.x*p.x + p.y*p.y - p.z*p.z - p.w*p.w) / d; }
   if(mode==3) return vec3(p.y, p.z, p.w);
   if(mode==4) return vec3(p.x, p.z, p.w);
   if(mode==5) return vec3(p.x, p.y, p.w);
