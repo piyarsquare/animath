@@ -1,8 +1,8 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Slider, Pills } from '../../../components/ControlPanel';
 import {
-  basinContext, computeBasinPixel, basinPlanetAt, OUTCOME_RGB, OUTCOME_CODE,
-  type BasinConfig, type BasinMode, type Domain,
+  basinContext, computeBasinPixel, basinPlanetAt, chaosColor, CHAOS_LAMBDA_MAX, OUTCOME_RGB, OUTCOME_CODE,
+  type BasinConfig, type BasinMode, type BasinMetric, type Domain,
 } from './basin';
 import { BasinPool } from './basinPool';
 import type { EnsembleConfig } from './rng';
@@ -53,6 +53,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   const [mode, setMode] = useState<BasinMode>('pos');
   const [res, setRes] = useState(128);
   const [samples, setSamples] = useState(1);
+  const [metric, setMetric] = useState<BasinMetric>('fate');
   const [domain, setDomain] = useState<Domain>(DEFAULT_DOMAIN.pos);
   const [posRule, setPosRule] = useState<'rest' | 'tangential'>('tangential');
   const [posSpeedFrac, setPosSpeedFrac] = useState(0.9);
@@ -76,7 +77,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
 
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
   const boxRef = useRef(system?.box); boxRef.current = system?.box;
-  const st = { mode, domain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro, engine };
+  const st = { mode, metric, domain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro, engine };
   const stateRef = useRef(st); stateRef.current = st;
 
   // In the radius×speed plane the map shares the ensemble's sampling box, so
@@ -85,7 +86,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     ? { a0: system.box.rMin, a1: system.box.rMax, b0: system.box.fMin, b1: system.box.fMax }
     : domain;
   const currentBc = (): BasinConfig => ({
-    mode, domain: effDomain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro,
+    mode, metric, domain: effDomain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro,
   });
   const goObservatory = (i: number, j: number) => {
     const d = effDomain;
@@ -147,7 +148,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       ? { a0: boxRef.current.rMin, a1: boxRef.current.rMax, b0: boxRef.current.fMin, b1: boxRef.current.fMax }
       : s.domain;
     const bc: BasinConfig = {
-      mode: s.mode, domain: dom, res: N, samples: s.samples,
+      mode: s.mode, metric: s.metric, domain: dom, res: N, samples: s.samples,
       posRule: s.posRule, posSpeedFrac: s.posSpeedFrac, fixedAngle: s.fixedAngle, fixedRadius: s.fixedRadius, fixedRetro: s.fixedRetro,
     };
     const cv = canvasRef.current!; cv.width = N; cv.height = N;
@@ -224,7 +225,11 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       const ax = effDomain.a0 + (effDomain.a1 - effDomain.a0) * ((i + 0.5) / res);
       const by = effDomain.b1 - (effDomain.b1 - effDomain.b0) * ((j + 0.5) / res);
       const [la, lb] = AXIS_LABELS[mode];
-      setHover(`${la}=${ax.toFixed(2)} · ${lb}=${by.toFixed(2)} → ${OUTCOME_CODE[outGridRef.current[j * res + i]]} @ t=${tGridRef.current[j * res + i].toFixed(0)} · click to open in single run`);
+      const v = tGridRef.current[j * res + i];
+      const detail = metric === 'chaos'
+        ? `λ=${v.toFixed(3)} (${v > 0.05 ? 'chaotic' : 'regular'})`
+        : `${OUTCOME_CODE[outGridRef.current[j * res + i]]} @ t=${v.toFixed(0)}`;
+      setHover(`${la}=${ax.toFixed(2)} · ${lb}=${by.toFixed(2)} → ${detail} · click to open in single run`);
     }
     if (dragRef.current) {
       dragRef.current.x1 = e.clientX - r.left; dragRef.current.y1 = e.clientY - r.top;
@@ -287,6 +292,9 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
           <Pills label="Plane" value={mode} options={[
             { value: 'pos', label: 'Start position' }, { value: 'radspeed', label: 'Radius × speed' }, { value: 'anglespeed', label: 'Angle × speed' },
           ]} onChange={(v) => switchMode(v as BasinMode)} />
+          <Pills label="Colour by" value={metric} options={[
+            { value: 'fate', label: 'Fate' }, { value: 'chaos', label: 'Chaos (λ)' },
+          ]} onChange={(v) => setMetric(v as BasinMetric)} />
           {mode === 'pos' && (
             <>
               <Pills label="Launch from each point" value={posRule}
@@ -328,15 +336,29 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             </div>
           )}
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px', marginTop: 10, font: '11px ui-monospace, monospace' }}>
-            {OUTCOME_CODE.filter(o => o !== 'blowup').map(o => (
-              <span key={o} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: `rgb(${OUTCOME_RGB[o].join(',')})` }} />{o}
-              </span>
-            ))}
-          </div>
+          {metric === 'fate' ? (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px', marginTop: 10, font: '11px ui-monospace, monospace' }}>
+              {OUTCOME_CODE.filter(o => o !== 'blowup').map(o => (
+                <span key={o} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: `rgb(${OUTCOME_RGB[o].join(',')})` }} />{o}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div style={{ marginTop: 10, font: '11px ui-monospace, monospace', color: '#9aa7bd' }}>
+              <div style={{
+                height: 10, borderRadius: 3, marginBottom: 2,
+                background: `linear-gradient(90deg, rgb(${chaosColor(0).join(',')}), rgb(${chaosColor(0.2).join(',')}), rgb(${chaosColor(0.31).join(',')}), rgb(${chaosColor(0.4).join(',')}))`,
+              }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>regular  λ=0</span><span>chaotic  λ≥{CHAOS_LAMBDA_MAX}</span>
+              </div>
+            </div>
+          )}
           <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 8 }}>
-            One pixel = one exact starting condition, integrated to its fate. Hue = outcome, brightness = how long it lasted. Drag a box to zoom — the boundaries stay intricate at every scale: that filigree is the three-body problem’s fractal final-state sensitivity. D is the box-counting dimension of the boundary (1 = smooth, →2 = space-filling); α = 2−D is the uncertainty exponent (smaller = more unpredictable: 10× better precision only sharpens the forecast by 10^α).
+            One pixel = one exact starting condition. {metric === 'fate'
+              ? 'Hue = outcome, brightness = how long it lasted.'
+              : 'Colour = the planet’s Lyapunov exponent λ — how fast its future becomes unpredictable (blue = regular orbits, red = strongly chaotic).'} Drag a box to zoom — the boundaries stay intricate at every scale: the three-body problem’s fractal final-state sensitivity. D is the box-counting dimension of the boundary (1 = smooth, →2 = space-filling); α = 2−D is the uncertainty exponent.
           </div>
         </div>
 

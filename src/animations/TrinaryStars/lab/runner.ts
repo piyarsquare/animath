@@ -3,11 +3,13 @@
  *  Pure and deterministic — the same engine that powers the live Observatory,
  *  so ensemble statistics agree with what you see in the single-run view. */
 
-import { step, type SimState, type Planet, type Star } from '../physics';
+import { step, lyapunovRenorm, type SimState, type Planet, type Star } from '../physics';
 import { getPreset, buildStars, launchPlanet, orbitFrame } from '../presets';
 import { Analyzer } from '../analysis/analyzer';
 import type { Outcome, RunResult } from '../analysis/types';
 import type { EnsembleConfig, RunParams } from './rng';
+
+const LYAP_D0 = 1e-9, LYAP_RENORM = 0.5;
 
 /** Coarser than the live view (0.05) — fine enough for statistics, ~2× faster. */
 export const SAMPLE_DT_BATCH = 0.1;
@@ -86,4 +88,30 @@ export function runOne(cfg: EnsembleConfig, params: RunParams): RunResult {
 export function runPlanet(cfg: EnsembleConfig, stars: Star[], planet: Planet): RunResult {
   const { s, blowup } = simulate(cfg, stars, planet);
   return resultOf(s, blowup, { radius: 0, speed: 0, angleDeg: 0, retro: false, seed: 0 });
+}
+
+/** Finite-time largest Lyapunov exponent for one explicit planet IC (Benettin
+ *  shadow), plus its outcome — used by the basin "chaos map". */
+export function runPlanetLyap(cfg: EnsembleConfig, stars: Star[], planet: Planet): { lambda: number; outcome: Outcome } {
+  const dt = getPreset(cfg.presetId).dt;
+  const shadow: Planet = { ...planet, x: planet.x + LYAP_D0 };
+  const sim: SimState = {
+    stars, planets: [planet, shadow], t: 0, dtBase: dt, G: 1,
+    starSoft: cfg.starSoft, planetSoft: 0.05,
+  };
+  const an = new Analyzer(cfg.classify, stars, planet);
+  const maxSteps = Math.round(cfg.tMax / dt);
+  let nextSample = SAMPLE_DT_BATCH, nextRenorm = LYAP_RENORM, sum = 0, blowup = false;
+  for (let n = 0; n < maxSteps; n++) {
+    step(sim, dt);
+    if (!Number.isFinite(planet.x) || Math.abs(planet.x) > 1e4 || Math.abs(planet.y) > 1e4) { blowup = true; break; }
+    if (sim.t >= nextRenorm) { sum += lyapunovRenorm(planet, shadow, LYAP_D0); nextRenorm = sim.t + LYAP_RENORM; }
+    if (sim.t >= nextSample) {
+      an.push(sim.t, stars, planet);
+      nextSample = sim.t + SAMPLE_DT_BATCH;
+      if (an.fateNow() !== 'bound') break;
+    }
+  }
+  const s = an.snapshot();
+  return { lambda: sum / Math.max(s.t, 1e-6), outcome: outcomeOf(s, blowup) };
 }
