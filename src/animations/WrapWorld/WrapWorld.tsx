@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import { ShellActions, ShellSettings, useAppHeader, useAppExplainer } from '../../components/AppShell';
 import { Section, Slider, Select } from '../../components/ControlPanel';
+import { makeFootprintTrail, FootprintTrail } from './footprints';
 import explainerText from './EXPLAINER.md?raw';
 
 /**
@@ -21,8 +22,9 @@ const K = 2;              // render (2K+1)^2 cells around the player
 const EYE = 1.7;
 const LOOK_SENS = 0.0035;
 const MAX_PITCH = 1.35;
-const TRAIL_MAX = 4000;
-const TRAIL_SPACING = 0.4;
+const TRAIL_MAX = 1500;
+const TRAIL_SPACING = 1.1;   // distance between footprints
+const UP_Y = new THREE.Vector3(0, 1, 0);
 
 type MoveKey = 'fwd' | 'back' | 'left' | 'right';
 
@@ -62,17 +64,6 @@ function labelTexture(label: string, color: number): THREE.CanvasTexture {
   return t;
 }
 
-function dotTexture(): THREE.CanvasTexture {
-  const s = 64;
-  const cvs = document.createElement('canvas'); cvs.width = cvs.height = s;
-  const ctx = cvs.getContext('2d')!;
-  const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, s, s);
-  const t = new THREE.CanvasTexture(cvs); t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
 function floorTexture(): THREE.CanvasTexture {
   const s = 256;
   const cvs = document.createElement('canvas'); cvs.width = cvs.height = s;
@@ -93,8 +84,8 @@ interface Built {
 }
 
 /** One copy of the fundamental domain: pillars + a colored boundary square +
- *  a (shared) trail. */
-function buildCell(trailGeo: THREE.BufferGeometry, dot: THREE.Texture): Built {
+ *  the (shared) footprint trail. */
+function buildCell(foot: FootprintTrail): Built {
   const group = new THREE.Group();
   const disposers: (() => void)[] = [];
 
@@ -140,14 +131,11 @@ function buildCell(trailGeo: THREE.BufferGeometry, dot: THREE.Texture): Built {
   group.add(new THREE.LineSegments(edgeGeo, edgeMat));
   disposers.push(() => { edgeGeo.dispose(); edgeMat.dispose(); });
 
-  // shared trail (base coords); appears in every cell, mirrored where the cell is.
-  const trailMat = new THREE.PointsMaterial({
-    size: 0.55, map: dot, color: 0xff3344, transparent: true, sizeAttenuation: true, depthWrite: false,
-  });
-  const pts = new THREE.Points(trailGeo, trailMat);
-  pts.frustumCulled = false;
-  group.add(pts);
-  disposers.push(() => trailMat.dispose());
+  // shared footprint trail (base coords); appears in every cell, mirrored where
+  // the cell is — so the arrow's left/right colors swap on the Klein bottle.
+  const fp = new THREE.Mesh(foot.geometry, foot.material);
+  fp.frustumCulled = false;
+  group.add(fp);
 
   return { group, dispose: () => disposers.forEach((d) => d()) };
 }
@@ -167,7 +155,7 @@ export default function WrapWorld() {
   const ctxRef = useRef<{
     renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera;
     cells: { group: THREE.Group }[]; floor: THREE.Mesh;
-    trailGeo: THREE.BufferGeometry; trailPos: Float32Array; trailCount: number; trailLast: THREE.Vector2 | null;
+    foot: FootprintTrail; trailLast: THREE.Vector2 | null;
     cellDisposers: (() => void)[];
   } | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -197,16 +185,12 @@ export default function WrapWorld() {
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
 
-    const dot = dotTexture();
-    const trailPos = new Float32Array(TRAIL_MAX * 3);
-    const trailGeo = new THREE.BufferGeometry();
-    trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
-    trailGeo.setDrawRange(0, 0);
+    const foot = makeFootprintTrail(TRAIL_MAX);
 
     const cells: { group: THREE.Group }[] = [];
     const cellDisposers: (() => void)[] = [];
     for (let i = 0; i < (2 * K + 1) * (2 * K + 1); i++) {
-      const built = buildCell(trailGeo, dot);
+      const built = buildCell(foot);
       built.group.matrixAutoUpdate = false;
       scene.add(built.group);
       cells.push({ group: built.group });
@@ -218,7 +202,7 @@ export default function WrapWorld() {
 
     ctxRef.current = {
       renderer, scene, camera, cells, floor,
-      trailGeo, trailPos, trailCount: 0, trailLast: null, cellDisposers,
+      foot, trailLast: null, cellDisposers,
     };
 
     clockRef.current.start();
@@ -264,19 +248,20 @@ export default function WrapWorld() {
         }
       }
 
-      // Trail in base (quotient) coords, so it recurs in every cell.
-      const bxI = Math.round(px / L), bzJ = Math.round(pz / L);
-      const bx = px - bxI * L;
-      let bz = pz - bzJ * L;
-      if (klein && (bxI & 1)) bz = -bz;
-      if (!c.trailLast || c.trailLast.distanceTo(new THREE.Vector2(px, pz)) > TRAIL_SPACING) {
-        if (c.trailCount >= TRAIL_MAX) { c.trailPos.copyWithin(0, 3); c.trailCount--; }
-        const o = c.trailCount * 3;
-        c.trailPos[o] = bx; c.trailPos[o + 1] = 0.08; c.trailPos[o + 2] = bz;
-        c.trailCount++;
-        c.trailLast = new THREE.Vector2(px, pz);
-        (c.trailGeo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
-        c.trailGeo.setDrawRange(0, c.trailCount);
+      // Footprints in base (quotient) coords, so they recur in every cell —
+      // mirrored where the cell is mirrored (Klein), swapping the arrow's
+      // left/right colors.
+      const cur = new THREE.Vector2(px, pz);
+      if (!c.trailLast || c.trailLast.distanceTo(cur) > TRAIL_SPACING) {
+        const sz = klein && (I0 & 1) ? -1 : 1;
+        const bx = px - I0 * L;
+        const bz = sz * (pz - J0 * L);
+        let dwx: number, dwz: number;
+        if (c.trailLast) { dwx = px - c.trailLast.x; dwz = pz - c.trailLast.y; }
+        else { dwx = Math.sin(yawRef.current); dwz = -Math.cos(yawRef.current); }
+        const len = Math.hypot(dwx, dwz) || 1;
+        c.foot.append(new THREE.Vector3(bx, 0, bz), new THREE.Vector3(dwx / len, 0, sz * dwz / len), UP_Y);
+        c.trailLast = cur;
       }
 
       c.renderer.render(c.scene, c.camera);
@@ -288,7 +273,7 @@ export default function WrapWorld() {
 
   const clearTrail = useCallback(() => {
     const c = ctxRef.current; if (!c) return;
-    c.trailCount = 0; c.trailLast = null; c.trailGeo.setDrawRange(0, 0);
+    c.foot.clear(); c.trailLast = null;
   }, []);
 
   // Switching space clears the trail (its base coords differ under the new gluing).
@@ -310,7 +295,7 @@ export default function WrapWorld() {
     const c = ctxRef.current; ctxRef.current = null;
     if (c) {
       c.cellDisposers.forEach((d) => d());
-      c.trailGeo.dispose();
+      c.foot.dispose();
       c.floor.geometry.dispose();
       ((c.floor.material as THREE.MeshStandardMaterial).map)?.dispose();
       (c.floor.material as THREE.Material).dispose();

@@ -41,6 +41,12 @@ export const apps: AppDescriptor[] = [
     blurb: 'Walk a flat torus or Klein bottle; landmarks repeat — and come back mirrored on the Klein bottle.',
   },
   {
+    hash: '/projective-plane',
+    name: 'Projective Plane',
+    icon: '◓',
+    blurb: 'Walk RP² as a little planet — opposite points are the same, so the far side is your world, mirrored.',
+  },
+  {
     hash: '/stable-marriage',
     name: 'Stable Marriage',
     icon: '♥',

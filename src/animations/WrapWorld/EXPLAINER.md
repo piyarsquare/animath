@@ -26,7 +26,10 @@ having passed the **same numbered pillars** again.
 
 ## Reading it
 
-Drop a **red trail** as you walk; because the trail lives on the surface, it
-reappears in every copy of the world — straight on the torus, **mirror-flipped**
-across the red gluing on the Klein bottle. The boundary squares show the tiling;
+You leave **oriented footprints** — little arrows pointing the way you walked,
+with a **cyan left half** and a **magenta right half** (and a gold underside).
+Because they live on the surface they reappear in every copy of the world:
+identical on the torus, but **mirror-reversed** across the red gluing on the
+Klein bottle, where the cyan and magenta halves **swap sides**. That colour swap
+is the orientation flip, made visible. The boundary squares show the tiling —
 **red edges flip, blue edges glue straight.**
