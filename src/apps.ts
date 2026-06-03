@@ -29,16 +29,10 @@ export const apps: AppDescriptor[] = [
     blurb: 'See how every point of the Mandelbrot set seeds its own Julia set.',
   },
   {
-    hash: '/mobius',
-    name: 'Möbius Walk',
+    hash: '/topology-walk',
+    name: 'Topology Walk',
     icon: '∞',
-    blurb: 'Walk a twisting corridor — loop, Möbius, multi-twist, or trefoil knot — in first person.',
-  },
-  {
-    hash: '/wrap-world',
-    name: 'Wrap-World',
-    icon: '⌗',
-    blurb: 'Walk a flat torus or Klein bottle; landmarks repeat — and come back mirrored on the Klein bottle.',
+    blurb: 'Walk a closed surface in first person — twisting corridor or flat torus / Klein bottle — and read the topology off your own footprints.',
   },
   {
     hash: '/stable-marriage',

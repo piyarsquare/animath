@@ -11,7 +11,7 @@
 1. **[Complex Particles](https://piyarsquare.github.io/animath/#/)** – 3D representation of four-dimensional complex functions. Includes the former *Complex Roots* (`z^(p/q)`) and *Complex Multibranch* (multi-sheeted maps for `sqrt`, `ln`, etc.) as built-in modes.
 2. **[Fractals](https://piyarsquare.github.io/animath/#/fractals)** – GPU-accelerated Mandelbrot / Julia / Burning Ship / Tricorn viewer with optional orbit-tracing mode.
 3. **[Correspondence](https://piyarsquare.github.io/animath/#/correspondence)** – side-by-side Mandelbrot–Julia explorer; pick or draw paths through `c`.
-4. **[Möbius Walk](https://piyarsquare.github.io/animath/#/mobius)** – first-person stroll through a twisted corridor.
+4. **[Topology Walk](https://piyarsquare.github.io/animath/#/topology-walk)** – first-person walk on a closed surface: a twisting / knotted corridor or a flat torus / Klein bottle, with shared footprints, avatar and third-person view.
 5. **[Stable Marriage](https://piyarsquare.github.io/animath/#/stable-marriage)** – step through the Gale–Shapley algorithm with bias and consensus controls.
 6. **[Agentic Sorting](https://piyarsquare.github.io/animath/#/agentic-sorting)** – concurrent sorting simulation where autonomous agents with distinct strategies produce emergent order.
 
@@ -92,7 +92,7 @@ src/
 │   ├── FractalsGPU/        # GPU Mandelbrot / Julia / Burning Ship / Tricorn
 │   ├── Correspondence/     # Mandelbrot ↔ Julia split view
 │   ├── Fractals/           # legacy CPU fractal renderer (unreachable, kept for reference)
-│   ├── MobiusWalk/         # first-person corridor walk
+│   ├── TopologyWalk/       # first-person walk: corridor + flat torus / Klein bottle
 │   ├── StableMarriage/     # Gale–Shapley visualiser + heatmap lab
 │   └── AgenticSorting/     # concurrent agent-based sorting
 │
