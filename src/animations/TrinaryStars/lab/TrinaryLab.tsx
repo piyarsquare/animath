@@ -10,12 +10,19 @@ import { sampleParams, type EnsembleConfig } from './rng';
 import { WorkerPool } from './pool';
 import { sweepCell, type SweepCell } from './sweep';
 import { GpuRunner, gpuAvailable } from './gpu';
-import BasinMap from './BasinMap';
+import BasinMap, { type BasinHandle } from './BasinMap';
 import MiniSim from './MiniSim';
 
 const HAS_WORKERS = typeof Worker !== 'undefined';
 const HAS_GPU = gpuAvailable();
 type Engine = 'cpu' | 'workers' | 'gpu';
+type ViewMode = 'simple' | 'advanced';
+
+const EXPERIMENTS = [
+  { id: 'destiny', icon: '▦', title: 'Map a planet’s destiny', desc: 'Colour every starting point by how it ends — and watch the fates interleave into a fractal. (Pythagorean)' },
+  { id: 'orbit', icon: '◎', title: 'Where can it orbit?', desc: 'Which launch radius & speed keep a planet bound around the binary? (Binary + Star)' },
+  { id: 'census', icon: '∑', title: 'Census of fates', desc: 'Launch thousands of random worlds and tally how often chaos ends happily.' },
+] as const;
 const TILE_COUNT = 8;
 
 /** Read the lab config carried in the URL hash query (for shareable links). */
@@ -204,6 +211,8 @@ export default function TrinaryLab() {
     return 'workers';
   });
   const [copied, setCopied] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => (U.get('vm') === 'advanced' ? 'advanced' : 'simple'));
+  const basinRef = useRef<BasinHandle>(null);
 
   // Parameter sweep state.
   const SWEEP_N = 16;
@@ -230,11 +239,11 @@ export default function TrinaryLab() {
       p: presetId, tg: target, n: String(targetN), tm: String(tMax),
       r0: String(rMin), r1: String(rMax), f0: String(fMin), f1: String(fMax),
       rt: allowRetro ? '1' : '0', hl: String(habLo), hh: String(habHi),
-      sd: String(baseSeed), e: engine,
+      sd: String(baseSeed), e: engine, vm: viewMode,
     });
     const base = (window.location.hash.split('?')[0] || '#/trinary-lab').replace(/^#/, '');
     window.history.replaceState(null, '', `#${base}?${q.toString()}`);
-  }, [presetId, target, targetN, tMax, rMin, rMax, fMin, fMax, allowRetro, habLo, habHi, baseSeed, engine]);
+  }, [presetId, target, targetN, tMax, rMin, rMax, fMin, fMax, allowRetro, habLo, habHi, baseSeed, engine, viewMode]);
 
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
   const targetNRef = useRef(targetN); targetNRef.current = targetN;
@@ -380,6 +389,13 @@ export default function TrinaryLab() {
 
   const onPickPreset = (id: string) => { setPresetId(id); setTarget(getPreset(id).target); };
 
+  // Curated one-click experiments for Simple mode.
+  const runExperiment = (id: 'destiny' | 'orbit' | 'census') => {
+    if (id === 'census') { running ? pause() : start(); return; }
+    if (id === 'destiny') { onPickPreset('pythagorean'); window.setTimeout(() => basinRef.current?.setPlane('pos'), 0); }
+    else { onPickPreset('binary'); window.setTimeout(() => basinRef.current?.setPlane('radspeed'), 0); }
+  };
+
   // --- Parameter sweep (its own chunked CPU loop) ---
   const sweepTick = () => {
     if (!sweepBusyRef.current) return;
@@ -447,6 +463,14 @@ export default function TrinaryLab() {
     padding: '8px 16px', borderRadius: 6, border: '1px solid var(--cp-border, #2a3550)',
     background: 'rgba(255,255,255,0.06)', color: '#e8edf6', cursor: 'pointer', fontSize: 14,
   };
+  const cardStyle: React.CSSProperties = {
+    textAlign: 'left', padding: '12px 14px', borderRadius: 8, border: '1px solid var(--cp-border, #2a3550)',
+    background: 'rgba(255,255,255,0.04)', color: '#e8edf6', cursor: 'pointer',
+  };
+  const tab = (active: boolean): React.CSSProperties => ({
+    padding: '7px 16px', border: 'none', cursor: 'pointer', fontSize: 13, textTransform: 'capitalize',
+    background: active ? 'rgba(102,240,255,0.18)' : 'transparent', color: active ? '#cfe8ff' : '#8a96ad',
+  });
 
   const targetOptions: { value: TargetId; label: string }[] = [
     { value: 'bary', label: 'Barycenter' }, { value: 's0', label: 'Star 1' },
@@ -460,21 +484,34 @@ export default function TrinaryLab() {
       color: '#cfe0f5', font: '13px/1.5 system-ui, sans-serif', padding: '12px 14px 40px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div style={{ display: 'inline-flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--cp-border, #2a3550)' }}>
+          {(['simple', 'advanced'] as ViewMode[]).map(m => (
+            <button key={m} onClick={() => setViewMode(m)} style={tab(viewMode === m)}>{m}</button>
+          ))}
+        </div>
         <button style={btn} onClick={() => { window.location.hash = '#/trinary'; }}>← Single run</button>
-        <button style={{ ...btn, background: running ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }}
-          onClick={running ? pause : start}>{running ? '❚❚ Pause' : (n > 0 && n < targetN ? '▶ Resume' : '▶ Run ensemble')}</button>
-        <button style={btn} onClick={reset}>↺ Reset</button>
-        <button style={btn} title="New random ensemble seed" onClick={() => setBaseSeed((Math.random() * 4294967296) >>> 0)}>🎲 Reseed</button>
+        {viewMode === 'advanced' && (
+          <>
+            <button style={{ ...btn, background: running ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }}
+              onClick={running ? pause : start}>{running ? '❚❚ Pause' : (n > 0 && n < targetN ? '▶ Resume' : '▶ Run ensemble')}</button>
+            <button style={btn} onClick={reset}>↺ Reset</button>
+            <button style={btn} title="New random ensemble seed" onClick={() => setBaseSeed((Math.random() * 4294967296) >>> 0)}>🎲 Reseed</button>
+          </>
+        )}
         <div style={{ flex: 1 }} />
         <span style={{ font: '12px ui-monospace, monospace', color: '#6f7f99' }}>
           {rate > 0 ? `${rate.toFixed(0)} worlds/s` : ''}
         </span>
-        <button style={btn} onClick={copyLink}>{copied ? '✓ Copied' : '🔗 Copy link'}</button>
-        <button style={btn} onClick={exportJSON} disabled={!agg}>⬇ JSON</button>
-        <button style={btn} onClick={exportCSV} disabled={!agg}>⬇ CSV</button>
+        {viewMode === 'advanced' && (
+          <>
+            <button style={btn} onClick={copyLink}>{copied ? '✓ Copied' : '🔗 Copy link'}</button>
+            <button style={btn} onClick={exportJSON} disabled={!agg}>⬇ JSON</button>
+            <button style={btn} onClick={exportCSV} disabled={!agg}>⬇ CSV</button>
+          </>
+        )}
       </div>
 
-      {/* Completion meter */}
+      {(viewMode === 'advanced' || running || n > 0) && (
       <div style={{ ...panel, marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
           <span style={{ font: '700 26px/1 ui-monospace, monospace', color: '#fff' }}>{n.toLocaleString()}</span>
@@ -487,8 +524,34 @@ export default function TrinaryLab() {
           <div style={{ height: '100%', width: `${Math.min(100, (n / targetN) * 100)}%`, background: '#46d98a', transition: 'width 0.1s' }} />
         </div>
       </div>
+      )}
 
-      {/* Setup: controls + a view of the space being sampled */}
+      {viewMode === 'simple' && (
+        <>
+          <div style={{ ...panel, marginBottom: 12 }}>
+            <h3 style={h3}>PICK AN EXPERIMENT</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+              {EXPERIMENTS.map(e => (
+                <button key={e.id} style={cardStyle} onClick={() => runExperiment(e.id)}>
+                  <div style={{ fontSize: 20, color: '#9ec7ff' }}>{e.icon}</div>
+                  <div style={{ fontWeight: 600, color: '#cfe8ff', margin: '4px 0 2px' }}>{e.title}</div>
+                  <div style={{ font: '12px/1.4 system-ui', color: '#9aa7bd' }}>{e.desc}</div>
+                </button>
+              ))}
+            </div>
+            <div style={{ font: '12px/1.5 system-ui', color: '#6f7f99', marginTop: 8 }}>
+              Pick one to start. After a map appears, <b style={{ color: '#cfe8ff' }}>drag a box on it to zoom into the chaos</b>; change the system below to compare. Switch to <b style={{ color: '#cfe8ff' }}>Advanced</b> for every control.
+            </div>
+          </div>
+          <div style={{ ...panel, marginBottom: 12 }}>
+            <h3 style={h3}>SYSTEM</h3>
+            <Pills options={PRESETS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
+            <div style={{ font: '12px/1.5 system-ui', color: '#9aa7bd', marginTop: 4 }}>{preset.blurb}</div>
+          </div>
+        </>
+      )}
+
+      {viewMode === 'advanced' && (
       <div style={{ ...panel, marginBottom: 12 }}>
         <h3 style={h3}>SETUP — THE SPACE OF SIMULATIONS</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1.5fr) minmax(260px, 1fr)', gap: 18, alignItems: 'start' }}>
@@ -533,10 +596,12 @@ export default function TrinaryLab() {
           </div>
         </div>
       </div>
+      )}
 
-      <BasinMap cfg={cfg} />
+      <BasinMap ref={basinRef} cfg={cfg} />
 
       {/* Two-column body */}
+      {(viewMode === 'advanced' || running || n > 0) && (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
         {/* Live sample + outcomes */}
         <div style={panel}>
@@ -574,6 +639,7 @@ export default function TrinaryLab() {
         </div>
 
         {/* Distributions */}
+        {viewMode === 'advanced' && (
         <div style={panel}>
           <h3 style={h3}>DISTRIBUTIONS (sharpen as N grows)</h3>
           <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', margin: '2px 0' }}>habitable fraction of lifetime</div>
@@ -583,8 +649,10 @@ export default function TrinaryLab() {
           <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', margin: '8px 0 2px' }}>time to star ejection (happy runs)</div>
           <Histogram data={agg?.histEject ?? []} max={agg?.histMax.eject ?? 1} color="#ffd27f" domain={['0', tMax.toFixed(0)]} />
         </div>
+        )}
 
         {/* Records */}
+        {viewMode === 'advanced' && (
         <div style={panel}>
           <h3 style={h3}>LONGEST STABLE ERAS</h3>
           <table style={{ width: '100%', borderCollapse: 'collapse', font: '11px ui-monospace, monospace' }}>
@@ -609,8 +677,10 @@ export default function TrinaryLab() {
             </tbody>
           </table>
         </div>
+        )}
 
         {/* Parameter sweep */}
+        {viewMode === 'advanced' && (
         <div style={panel}>
           <h3 style={h3}>PARAMETER SWEEP — {SWEEP_N}×{SWEEP_N} grid</h3>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
@@ -635,8 +705,16 @@ export default function TrinaryLab() {
             <Slider label="Runs per cell" value={sweepRuns} min={4} max={64} step={4} onChange={setSweepRuns} format={v => `${v}`} />
           </div>
         </div>
+        )}
 
       </div>
+      )}
+
+      {viewMode === 'simple' && (
+        <div style={{ font: '12px/1.5 system-ui', color: '#6f7f99', textAlign: 'center', padding: '10px 0' }}>
+          Ready for more? <b style={{ color: '#cfe8ff', cursor: 'pointer' }} onClick={() => setViewMode('advanced')}>Switch to Advanced</b> for orbit targets, custom sampling ranges, the habitable band, the parameter sweep, sharable links and data export.
+        </div>
+      )}
     </div>
   );
 }

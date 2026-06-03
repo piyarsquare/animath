@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Slider, Pills } from '../../../components/ControlPanel';
 import {
   basinContext, computeBasinPixel, OUTCOME_RGB, OUTCOME_CODE,
@@ -38,7 +38,9 @@ function DimPlot({ dim }: { dim: DimResult }) {
   return <canvas ref={ref} width={150} height={70} style={{ width: 150, height: 70, borderRadius: 4, display: 'block' }} />;
 }
 
-export default function BasinMap({ cfg }: { cfg: EnsembleConfig }) {
+export interface BasinHandle { render: () => void; setPlane: (m: BasinMode) => void; }
+
+const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig }>(function BasinMap({ cfg }, ref) {
   const [mode, setMode] = useState<BasinMode>('pos');
   const [res, setRes] = useState(128);
   const [samples, setSamples] = useState(1);
@@ -166,6 +168,12 @@ export default function BasinMap({ cfg }: { cfg: EnsembleConfig }) {
 
   const switchMode = (m: BasinMode) => { stop(); setMode(m); };
 
+  // Imperative handle so the lab's Simple-mode experiment buttons can drive it.
+  useImperativeHandle(ref, () => ({
+    render,
+    setPlane: (m: BasinMode) => { stop(); setMode(m); setDomain(DEFAULT_DOMAIN[m]); window.setTimeout(() => render(), 60); },
+  }), []);
+
   // --- Drag-to-zoom ---
   const onDown = (e: React.PointerEvent) => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -281,4 +289,6 @@ export default function BasinMap({ cfg }: { cfg: EnsembleConfig }) {
       </div>
     </div>
   );
-}
+});
+
+export default BasinMap;

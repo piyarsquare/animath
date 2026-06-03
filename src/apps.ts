@@ -43,7 +43,7 @@ export const apps: AppDescriptor[] = [
   {
     hash: '/trinary-lab',
     name: 'Trinary Lab',
-    icon: '📊',
+    icon: '▦',
     blurb: 'Run thousands of trinary worlds and tally how often chaos ends happily.',
   },
   {
