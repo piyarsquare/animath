@@ -32,7 +32,13 @@ export const apps: AppDescriptor[] = [
     hash: '/mobius',
     name: 'Möbius Walk',
     icon: '∞',
-    blurb: 'Take an on-rails stroll through a corridor with a hidden half-twist.',
+    blurb: 'Walk a twisting corridor — loop, Möbius, multi-twist, or trefoil knot — in first person.',
+  },
+  {
+    hash: '/wrap-world',
+    name: 'Wrap-World',
+    icon: '⌗',
+    blurb: 'Walk a flat torus or Klein bottle; landmarks repeat — and come back mirrored on the Klein bottle.',
   },
   {
     hash: '/stable-marriage',

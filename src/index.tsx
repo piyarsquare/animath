@@ -10,6 +10,7 @@ const Fractals2D = React.lazy(() => import('./animations/Fractals/Fractals2D'));
 const Correspondence = React.lazy(() => import('./animations/Correspondence/Correspondence'));
 const PlaneTransform = React.lazy(() => import('./animations/PlaneTransform/PlaneTransform'));
 const MobiusWalk = React.lazy(() => import('./animations/MobiusWalk/MobiusWalk'));
+const WrapWorld = React.lazy(() => import('./animations/WrapWorld/WrapWorld'));
 const StableMarriage = React.lazy(() => import('./animations/StableMarriage/StableMarriage'));
 const AgenticSorting = React.lazy(() => import('./animations/AgenticSorting/AgenticSorting'));
 
@@ -21,6 +22,7 @@ const routes: Record<string, React.ComponentType> = {
   '/fractals-cpu': Fractals2D,
   '/correspondence': Correspondence,
   '/mobius': MobiusWalk,
+  '/wrap-world': WrapWorld,
   '/stable-marriage': StableMarriage,
   '/agentic-sorting': AgenticSorting,
 };
