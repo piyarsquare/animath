@@ -7,6 +7,12 @@ import {
 import { BasinPool } from './basinPool';
 import type { EnsembleConfig } from './rng';
 
+export interface BasinSystem {
+  target: string; onTarget: (t: string) => void; targetOptions: { value: string; label: string }[];
+  massMul: number[]; onMass: (i: number, v: number) => void; baseMasses: number[];
+  starSoft: number; onStarSoft: (v: number) => void; onReset: () => void;
+}
+
 const HAS_WORKERS = typeof Worker !== 'undefined';
 
 const DEFAULT_DOMAIN: Record<BasinMode, Domain> = {
@@ -40,7 +46,7 @@ function DimPlot({ dim }: { dim: DimResult }) {
 
 export interface BasinHandle { render: () => void; setPlane: (m: BasinMode) => void; }
 
-const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig }>(function BasinMap({ cfg }, ref) {
+const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSystem }>(function BasinMap({ cfg, system }, ref) {
   const [mode, setMode] = useState<BasinMode>('pos');
   const [res, setRes] = useState(128);
   const [samples, setSamples] = useState(1);
@@ -222,9 +228,23 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig }>(function Basin
   return (
     <div style={{ ...panel, marginBottom: 12 }}>
       <h3 style={h3}>BASIN MAP — fractal portrait of fates</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 1fr) minmax(260px, 360px)', gap: 18, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 18, alignItems: 'start' }}>
         {/* Controls */}
         <div>
+          {system && (
+            <div style={{ marginBottom: 8 }}>
+              {mode !== 'pos' && <Pills label="Orbit around" options={system.targetOptions} value={system.target} onChange={system.onTarget} />}
+              <Slider label="Star 1 mass · gold" value={system.massMul[0]} min={0.1} max={4} step={0.05} onChange={(v) => system.onMass(0, v)} format={(v) => (system.baseMasses[0] * v).toFixed(2)} />
+              <Slider label="Star 2 mass · orange" value={system.massMul[1]} min={0.1} max={4} step={0.05} onChange={(v) => system.onMass(1, v)} format={(v) => (system.baseMasses[1] * v).toFixed(2)} />
+              <Slider label="Star 3 mass · blue" value={system.massMul[2]} min={0.1} max={4} step={0.05} onChange={(v) => system.onMass(2, v)} format={(v) => (system.baseMasses[2] * v).toFixed(2)} />
+              <Slider label="Softening" value={system.starSoft} min={0.005} max={0.3} step={0.005} onChange={system.onStarSoft} format={(v) => v.toFixed(3)} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button style={{ ...btn, padding: '5px 12px', fontSize: 12 }} onClick={system.onReset}>⟲ Reset stars</button>
+                <span style={{ font: '11px system-ui', color: '#6f7f99' }}>then Render to apply</span>
+              </div>
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '10px 0' }} />
+            </div>
+          )}
           <Pills label="Plane" value={mode} options={[
             { value: 'pos', label: 'Start position' }, { value: 'radspeed', label: 'Radius × speed' }, { value: 'anglespeed', label: 'Angle × speed' },
           ]} onChange={(v) => switchMode(v as BasinMode)} />
@@ -273,7 +293,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig }>(function Basin
         </div>
 
         {/* Map */}
-        <div>
+        <div style={{ maxWidth: 460, width: '100%' }}>
           <div style={{ position: 'relative', width: '100%' }}>
             <canvas ref={canvasRef} width={res} height={res}
               style={{ width: '100%', aspectRatio: '1', borderRadius: 6, display: 'block', cursor: 'crosshair', imageRendering: samples === 1 ? 'pixelated' : 'auto', touchAction: 'none', background: '#0a0e16' }}

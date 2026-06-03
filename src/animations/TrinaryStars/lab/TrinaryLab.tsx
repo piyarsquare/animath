@@ -200,6 +200,9 @@ export default function TrinaryLab() {
   const [habHi, setHabHi] = useState(() => pNum(U, 'hh', DEFAULT_CLASSIFY.habHi));
   const [targetN, setTargetN] = useState(() => pNum(U, 'n', 4000));
   const [baseSeed, setBaseSeed] = useState(() => pNum(U, 'sd', 1234567) >>> 0);
+  const [massMul, setMassMul] = useState<number[]>(() => [pNum(U, 'm0', 1), pNum(U, 'm1', 1), pNum(U, 'm2', 1)]);
+  const [starSoft, setStarSoft] = useState<number>(() => pNum(U, 'ss', preset.starSoft));
+  const baseMasses = useMemo(() => getPreset(presetId).make().map(s => s.mass), [presetId]);
 
   const [running, setRunning] = useState(false);
   const [agg, setAgg] = useState<AggSnapshot | null>(null);
@@ -228,10 +231,10 @@ export default function TrinaryLab() {
   const sweepBusyRef = useRef(false);
 
   const cfg: EnsembleConfig = useMemo(() => ({
-    presetId, target, massMul: [1, 1, 1], starSoft: preset.starSoft,
+    presetId, target, massMul, starSoft,
     classify: { ...DEFAULT_CLASSIFY, habLo, habHi },
     tMax, rMin, rMax, fMin, fMax, allowRetro, baseSeed,
-  }), [presetId, target, preset.starSoft, habLo, habHi, tMax, rMin, rMax, fMin, fMax, allowRetro, baseSeed]);
+  }), [presetId, target, massMul, starSoft, habLo, habHi, tMax, rMin, rMax, fMin, fMax, allowRetro, baseSeed]);
 
   // Keep the URL in sync so the current configuration is shareable/reproducible.
   useEffect(() => {
@@ -239,11 +242,12 @@ export default function TrinaryLab() {
       p: presetId, tg: target, n: String(targetN), tm: String(tMax),
       r0: String(rMin), r1: String(rMax), f0: String(fMin), f1: String(fMax),
       rt: allowRetro ? '1' : '0', hl: String(habLo), hh: String(habHi),
+      m0: String(massMul[0]), m1: String(massMul[1]), m2: String(massMul[2]), ss: String(starSoft),
       sd: String(baseSeed), e: engine, vm: viewMode,
     });
     const base = (window.location.hash.split('?')[0] || '#/trinary-lab').replace(/^#/, '');
     window.history.replaceState(null, '', `#${base}?${q.toString()}`);
-  }, [presetId, target, targetN, tMax, rMin, rMax, fMin, fMax, allowRetro, habLo, habHi, baseSeed, engine, viewMode]);
+  }, [presetId, target, targetN, tMax, rMin, rMax, fMin, fMax, allowRetro, habLo, habHi, massMul, starSoft, baseSeed, engine, viewMode]);
 
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
   const targetNRef = useRef(targetN); targetNRef.current = targetN;
@@ -387,7 +391,11 @@ export default function TrinaryLab() {
   // Changing the configuration or engine invalidates accumulated stats.
   useEffect(() => { reset(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [cfg, engine]);
 
-  const onPickPreset = (id: string) => { setPresetId(id); setTarget(getPreset(id).target); };
+  const onPickPreset = (id: string) => {
+    setPresetId(id); setTarget(getPreset(id).target);
+    setMassMul([1, 1, 1]); setStarSoft(getPreset(id).starSoft);
+  };
+  const setStarMass = (i: number, v: number) => setMassMul(prev => { const nx = [...prev]; nx[i] = v; return nx; });
 
   // Curated one-click experiments for Simple mode.
   const runExperiment = (id: 'destiny' | 'orbit' | 'census') => {
@@ -598,7 +606,11 @@ export default function TrinaryLab() {
       </div>
       )}
 
-      <BasinMap ref={basinRef} cfg={cfg} />
+      <BasinMap ref={basinRef} cfg={cfg} system={{
+        target, onTarget: (t) => setTarget(t as TargetId), targetOptions,
+        massMul, onMass: setStarMass, baseMasses, starSoft, onStarSoft: setStarSoft,
+        onReset: () => { setMassMul([1, 1, 1]); setStarSoft(preset.starSoft); },
+      }} />
 
       {/* Two-column body */}
       {(viewMode === 'advanced' || running || n > 0) && (
