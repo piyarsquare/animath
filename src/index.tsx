@@ -10,6 +10,8 @@ const Fractals2D = React.lazy(() => import('./animations/Fractals/Fractals2D'));
 const Correspondence = React.lazy(() => import('./animations/Correspondence/Correspondence'));
 const PlaneTransform = React.lazy(() => import('./animations/PlaneTransform/PlaneTransform'));
 const MobiusWalk = React.lazy(() => import('./animations/MobiusWalk/MobiusWalk'));
+const TrinaryStars = React.lazy(() => import('./animations/TrinaryStars/TrinaryStars'));
+const TrinaryLab = React.lazy(() => import('./animations/TrinaryStars/lab/TrinaryLab'));
 const StableMarriage = React.lazy(() => import('./animations/StableMarriage/StableMarriage'));
 const AgenticSorting = React.lazy(() => import('./animations/AgenticSorting/AgenticSorting'));
 
@@ -21,6 +23,8 @@ const routes: Record<string, React.ComponentType> = {
   '/fractals-cpu': Fractals2D,
   '/correspondence': Correspondence,
   '/mobius': MobiusWalk,
+  '/trinary': TrinaryStars,
+  '/trinary-lab': TrinaryLab,
   '/stable-marriage': StableMarriage,
   '/agentic-sorting': AgenticSorting,
 };
@@ -38,11 +42,13 @@ function Router(): JSX.Element {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const Component = routes[hash] ?? Menu;
+  // Routes may carry a `?query` (e.g. the lab's shareable config); match on path.
+  const path = hash.split('?')[0];
+  const Component = routes[path] ?? Menu;
   const navigate = (h: string) => { window.location.hash = '#' + h; };
 
   return (
-    <AppShell apps={apps} currentHash={hash} onNavigate={navigate}>
+    <AppShell apps={apps} currentHash={path} onNavigate={navigate}>
       <React.Suspense fallback={<div style={{ background: '#000', width: '100%', height: '100%' }} />}>
         <Component />
       </React.Suspense>
