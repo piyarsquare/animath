@@ -33,6 +33,11 @@ used to be, upside-down relative to where you started. Keep going and a second
 lap brings you back. That's the genuine topology of the strip, felt underfoot
 rather than just described.
 
+The **Space** menu swaps the geometry you're walking through: a plain **loop**
+(torus), the **Möbius** half-twist, **double / triple** twists, and a **trefoil
+knot**. The mini-map redraws to match — its edge colours swap around a Möbius
+loop but stay put on a plain one, and you can watch the knot tie itself.
+
 To make the flip unmistakable you leave a **red trail** on the floor as you
 walk, and the floor carries **"UP" arrows**. Come around one lap and you'll see
 your own trail — and the arrows — running across the *ceiling* above you,

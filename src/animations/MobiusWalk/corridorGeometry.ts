@@ -2,19 +2,29 @@ import * as THREE from 'three';
 
 /** Parameters that make the hall "feel" endless without revealing the twist. */
 export interface CorridorParams {
-  radius: number;       // radius of centreline circle
+  space: 'loop' | 'knot';  // centreline: a circle, or a torus knot
+  radius: number;       // radius of centreline circle (loop)
   width: number;        // corridor half-width
   height: number;       // corridor half-height
   segments: number;     // longitudinal segments (>= 500 looks smooth)
   tiltTurns: number;    // half-twists: 1 → Möbius, 2 → double twist …
+  knotP: number;        // torus-knot winds (knotP, knotQ); (2,3) = trefoil
+  knotQ: number;
+  knotR: number;        // knot's torus major radius
+  knotr: number;        // knot's torus minor radius
 }
 
 export const DEFAULT_PARAMS: CorridorParams = {
+  space: 'loop',
   radius: 20,
   width : 1.5,
   height: 2.5,
   segments: 800,
-  tiltTurns: 1          // single half-twist
+  tiltTurns: 1,         // single half-twist
+  knotP: 2,
+  knotQ: 3,
+  knotR: 18,
+  knotr: 8,
 };
 
 /**
@@ -44,7 +54,7 @@ export function makeCorridorGeometry(
   ];
   const ring = corners.length;
   const wallSpan = [2 * p.width, 2 * p.height, 2 * p.width, 2 * p.height];
-  const circumference = 2 * Math.PI * p.radius;
+  const circumference = centerlineLength(p);
 
   for (let i = 0; i <= p.segments; i++) {
     const t = i / p.segments;
@@ -89,9 +99,13 @@ export interface CorridorFrame {
   b: THREE.Vector3;        // cross-section "up" axis (twists)
 }
 
-/** The twisting frame at t ∈ [0,1]. Going once around, n and b rotate by
- *  π·tiltTurns — that half-turn is what makes the corridor a Möbius strip. */
+/** The frame at t ∈ [0,1]. For a loop the cross-section rotates by π·tiltTurns
+ *  per lap (the Möbius half-turn at tiltTurns=1); for a torus knot the frame is
+ *  carried by the host torus's surface normal so it stays smooth around the
+ *  knot. */
 export function frameAt(t: number, p: CorridorParams = DEFAULT_PARAMS): CorridorFrame {
+  if (p.space === 'knot') return knotFrame(t, p);
+
   const φ = 2 * Math.PI * t;
   const τ = Math.PI * p.tiltTurns * t;
 
@@ -104,6 +118,49 @@ export function frameAt(t: number, p: CorridorParams = DEFAULT_PARAMS): Corridor
   const n = normalRef.applyQuaternion(qTwist);
   const b = binormal.applyQuaternion(qTwist);
   return { center, tangent, n, b };
+}
+
+function knotCenter(t: number, p: CorridorParams): THREE.Vector3 {
+  const θ = 2 * Math.PI * t;
+  const A = p.knotP * θ, C = p.knotQ * θ;
+  const rr = p.knotR + p.knotr * Math.cos(C);
+  return new THREE.Vector3(rr * Math.cos(A), rr * Math.sin(A), p.knotr * Math.sin(C));
+}
+
+function knotFrame(t: number, p: CorridorParams): CorridorFrame {
+  const center = knotCenter(t, p);
+  const e = 1e-4;
+  const tangent = knotCenter(t + e, p).sub(knotCenter(t - e, p)).normalize();
+  const θ = 2 * Math.PI * t, A = p.knotP * θ, C = p.knotQ * θ;
+  // Outward normal of the host torus — a smooth framing reference.
+  const ref = new THREE.Vector3(Math.cos(C) * Math.cos(A), Math.cos(C) * Math.sin(A), Math.sin(C));
+  const b = ref.addScaledVector(tangent, -ref.dot(tangent)).normalize();
+  const n = new THREE.Vector3().crossVectors(b, tangent).normalize();
+  if (p.tiltTurns) {
+    const q = new THREE.Quaternion().setFromAxisAngle(tangent, Math.PI * p.tiltTurns * t);
+    n.applyQuaternion(q); b.applyQuaternion(q);
+  }
+  return { center, tangent, n, b };
+}
+
+/** Laps before the frame returns to itself (the camera phase wraps at this). */
+export function spacePeriod(p: CorridorParams = DEFAULT_PARAMS): number {
+  if (p.space === 'knot') return 1;
+  return Math.abs(p.tiltTurns) % 2 === 1 ? 2 : 1;
+}
+
+/** Approximate arc length of the centreline (drives walk speed across spaces). */
+export function centerlineLength(p: CorridorParams = DEFAULT_PARAMS): number {
+  if (p.space !== 'knot') return 2 * Math.PI * p.radius;
+  const N = 600;
+  let len = 0;
+  let prev = knotCenter(0, p);
+  for (let i = 1; i <= N; i++) {
+    const c = knotCenter(i / N, p);
+    len += c.distanceTo(prev);
+    prev = c;
+  }
+  return len;
 }
 
 /** Maps (t∈[0,1], u, v) → world position & quaternion for orienting child meshes. */

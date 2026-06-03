@@ -7,7 +7,19 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import Canvas3D from '@/components/Canvas3D';
 import {
   makeCorridorGeometry, makeFloorDecalGeometry, DEFAULT_PARAMS, frameAt, CorridorParams,
+  spacePeriod, centerlineLength,
 } from './corridorGeometry';
+
+/** Walkable spaces, mapping a friendly name to centreline + twist parameters. */
+const SPACES: { id: string; label: string; params: Partial<CorridorParams> }[] = [
+  { id: 'loop', label: 'Loop (torus)', params: { space: 'loop', tiltTurns: 0 } },
+  { id: 'mobius', label: 'Möbius (½ twist)', params: { space: 'loop', tiltTurns: 1 } },
+  { id: 'double', label: 'Double twist', params: { space: 'loop', tiltTurns: 2 } },
+  { id: 'triple', label: 'Triple twist', params: { space: 'loop', tiltTurns: 3 } },
+  { id: 'trefoil', label: 'Trefoil knot', params: { space: 'knot', tiltTurns: 0 } },
+];
+const spaceParams = (id: string): Partial<CorridorParams> =>
+  (SPACES.find((s) => s.id === id) ?? SPACES[1]).params;
 import { makeCorridorMaterial } from './shaders/corridorMaterial';
 import { makeCharacter, Character } from './character';
 import {
@@ -58,6 +70,8 @@ interface SceneCtx {
   lights: THREE.PointLight[];
   flames: THREE.Sprite[];
   params: CorridorParams;
+  length: number;   // centreline arc length
+  period: number;   // laps before the frame repeats
   theme: MobiusTheme;
   ambientBase: number;
   hemiBase: number;
@@ -194,7 +208,7 @@ function applyTheme(c: SceneCtx, theme: MobiusTheme, ambientMul: number) {
 }
 
 export default function MobiusWalk() {
-  const [twist, setTwist] = useState(true);
+  const [spaceId, setSpaceId] = useState('mobius');
   const [moveSpeed, setMoveSpeed] = useState(6);
   const [width, setWidth] = useState(DEFAULT_PARAMS.width);
   const [ambientMul, setAmbientMul] = useState(1);
@@ -207,7 +221,7 @@ export default function MobiusWalk() {
   const [miniMap, setMiniMap] = useState(true);
   const [wallText, setWallText] = useState('MÖBIUS');
 
-  useAppHeader('Möbius Walk', twist ? 'twisted corridor' : 'untwisted corridor');
+  useAppHeader('Möbius Walk', (SPACES.find((s) => s.id === spaceId) ?? SPACES[1]).label);
   useAppExplainer(explainerText);
 
   const ctxRef = useRef<SceneCtx | null>(null);
@@ -222,7 +236,7 @@ export default function MobiusWalk() {
   const keysRef = useRef<Record<MoveKey, boolean>>({ fwd: false, back: false, left: false, right: false });
   const stampRef = useRef(false);
   const speedRef = useRef(moveSpeed);
-  const twistRef = useRef(twist);
+  const spaceRef = useRef(spaceId);
   const thirdRef = useRef(thirdPerson);
   const bloomRef = useRef(bloomOn);
   const wallTextRef = useRef(wallText);
@@ -240,7 +254,7 @@ export default function MobiusWalk() {
     scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer;
   }) => {
     const theme = THEMES.find((t) => t.id === themeId) ?? DEFAULT_THEME;
-    const params: CorridorParams = { ...DEFAULT_PARAMS, tiltTurns: twistRef.current ? 1 : 0, width };
+    const params: CorridorParams = { ...DEFAULT_PARAMS, ...spaceParams(spaceRef.current), width };
 
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = theme.lighting.exposure;
@@ -316,7 +330,9 @@ export default function MobiusWalk() {
 
     const c: SceneCtx = {
       scene, camera, renderer, composer, bloom, mesh, decal, character,
-      ambient, hemi, moon, fill, lights, flames, params, theme, ambientBase: theme.lighting.ambient, hemiBase: 0,
+      ambient, hemi, moon, fill, lights, flames, params,
+      length: centerlineLength(params), period: spacePeriod(params),
+      theme, ambientBase: theme.lighting.ambient, hemiBase: 0,
       trail, trailPos, trailCount: 0, trailLast: null,
       writing, writeMeshes: [], raycaster,
       miniScene, miniCam, miniBand, miniMarker,
@@ -346,8 +362,8 @@ export default function MobiusWalk() {
         cx.stridePhase += dt * speedRef.current * 1.6;
       }
 
-      const circ = 2 * Math.PI * cx.params.radius;
-      const period = cx.params.tiltTurns % 2 === 1 ? 2 : 1;
+      const circ = cx.length;
+      const period = cx.period;
       const t = (((sRef.current / circ) % period) + period) % period;
       const f = frameAt(t, cx.params);
 
@@ -442,7 +458,8 @@ export default function MobiusWalk() {
 
         cx.miniMarker.position.copy(f.center).addScaledVector(f.b, 1.7);
         cx.miniMarker.quaternion.setFromUnitVectors(MINI_UP, facing);
-        const rad = cx.params.radius, ang = time * 0.18, Dm = rad * 2.6;
+        const rad = cx.params.space === 'knot' ? cx.params.knotR + cx.params.knotr : cx.params.radius;
+        const ang = time * 0.18, Dm = rad * 2.6;
         cx.miniCam.position.set(Math.cos(ang) * Dm, Math.sin(ang) * Dm, rad * 1.7);
         cx.miniCam.up.set(0, 0, 1);
         cx.miniCam.lookAt(0, 0, 0);
@@ -479,14 +496,15 @@ export default function MobiusWalk() {
 
   // Twist or width changes reshape the corridor; rebuild geometry, clear marks.
   useEffect(() => {
-    twistRef.current = twist;
+    spaceRef.current = spaceId;
     const c = ctxRef.current; if (!c) return;
-    const params: CorridorParams = { ...c.params, tiltTurns: twist ? 1 : 0, width };
+    const params: CorridorParams = { ...DEFAULT_PARAMS, ...spaceParams(spaceId), width };
     c.mesh.geometry.dispose(); c.mesh.geometry = makeCorridorGeometry(params);
     c.decal.geometry.dispose(); c.decal.geometry = makeFloorDecalGeometry(params);
     c.miniBand.geometry.dispose(); c.miniBand.geometry = makeMiniBandGeometry(params);
-    c.params = params; clearTrail(); clearWriting();
-  }, [twist, width, clearTrail, clearWriting]);
+    c.params = params; c.length = centerlineLength(params); c.period = spacePeriod(params);
+    clearTrail(); clearWriting();
+  }, [spaceId, width, clearTrail, clearWriting]);
 
   useEffect(() => {
     const c = ctxRef.current; if (c) applyTheme(c, THEMES.find((t) => t.id === themeId) ?? DEFAULT_THEME, ambientMul);
@@ -580,6 +598,7 @@ export default function MobiusWalk() {
 
       <ShellSettings>
         <Section title="Scene" icon="∞" defaultOpen>
+          <Select label="Space" options={SPACES.map((s) => ({ value: s.id, label: s.label }))} value={spaceId} onChange={setSpaceId} />
           <Select label="Theme" options={THEMES.map((t) => ({ value: t.id, label: t.label }))} value={themeId} onChange={setThemeId} />
           <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
           <Checkbox label="Floor markers (UP arrows)" checked={markers} onChange={setMarkers} />
@@ -609,9 +628,6 @@ export default function MobiusWalk() {
 
       <ShellActions>
         <div className="cp-section-body">
-          <button style={actionBtn(twist)} onClick={() => setTwist((t) => !t)}>
-            {twist ? 'Disable twist (plain loop)' : 'Enable Möbius twist'}
-          </button>
           <button style={actionBtn(false)} onClick={clearTrail}>Clear trail</button>
           <button style={actionBtn(false)} onClick={clearWriting}>Clear writing</button>
         </div>
