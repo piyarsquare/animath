@@ -26,7 +26,7 @@ export interface ParticleViewerShellProps {
     scene: import('three').Scene;
     camera: import('three').PerspectiveCamera;
     renderer: import('three').WebGLRenderer;
-  }) => void;
+  }) => void | (() => void);
   functionName: string;
   functionFormula: string;
   functionPicker: React.ReactNode;

@@ -196,7 +196,9 @@ within the shell (see `Menu.tsx`).
 ### Custom Three.js scene — `Canvas3D`
 
 `Canvas3D` owns the scene/camera/renderer lifecycle and resize handling. You get
-a one-time `onMount({ scene, camera, renderer })` callback.
+a one-time `onMount({ scene, camera, renderer })` callback. **Return a cleanup
+function** and `Canvas3D` calls it on unmount/remount (just before it disposes
+the renderer) — cancel your render loop and dispose geometries/textures there.
 
 ```tsx
 import Canvas3D, { type CanvasContext } from '../../components/Canvas3D';
@@ -211,8 +213,12 @@ const onMount = useCallback((ctx: CanvasContext) => {
     raf = requestAnimationFrame(tick);
   };
   tick();
-  // NOTE: Canvas3D disposes the renderer on unmount, but YOU own your rAF loop.
-  // Cancel it (see gotchas) to avoid leaks.
+  // Canvas3D disposes the renderer, but YOU own the rAF loop and your own
+  // geometries/textures. Return a cleanup so they don't leak on remount:
+  return () => {
+    cancelAnimationFrame(raf);
+    // geometry.dispose(); material.dispose(); texture.dispose(); …
+  };
 }, [/* deps */]);
 
 return <Canvas3D onMount={onMount} />;
@@ -221,11 +227,12 @@ return <Canvas3D onMount={onMount} />;
 > **Critical gotcha:** `onMount` runs once and closes over whatever state it
 > captured. If a control needs to change the scene, either read the latest value
 > through a `ref` updated by `useEffect`, or include it in the `useCallback`
-> deps so `Canvas3D` re-mounts. `TrinaryStars` is the model: a stable
-> `useCallback` `onMount`, a `refs.current` object the loop reads each frame for
-> live slider values, and a returned cleanup that `cancelAnimationFrame`s and
-> disposes textures. (Capturing stale state here is exactly the bug that broke
-> the old MobiusWalk twist toggle.)
+> deps so `Canvas3D` re-mounts. The model is a stable `useCallback` `onMount`, a
+> `refs.current` object the loop reads each frame for live slider values, and the
+> returned cleanup above. (Capturing stale state here is exactly the bug that
+> broke the old MobiusWalk twist toggle.) If you'd rather not return a cleanup,
+> the alternative is to stash the rAF id / disposables in a `ref` and cancel them
+> from a separate `useEffect` teardown — but the returned cleanup is simpler.
 
 ### 4D particle viewer — `ParticleViewerShell` + `lib/particles`
 
