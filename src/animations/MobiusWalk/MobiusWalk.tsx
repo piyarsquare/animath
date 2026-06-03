@@ -367,13 +367,15 @@ export default function MobiusWalk() {
       cx.character.stride(cx.stridePhase);
 
       if (thirdRef.current) {
-        // Pull back a little on narrow (portrait) aspects, where the small
-        // horizontal FOV magnifies the avatar.
+        // Keep the avatar centred (target it directly) and scale the camera
+        // back + up on narrow/portrait aspects, where the small horizontal FOV
+        // otherwise magnifies it into a legs-in-face view.
         const aspect = cx.camera.aspect || 1;
-        const distScale = Math.min(1.7, Math.max(1, 1 / Math.min(aspect, 1)));
-        const D = 3.2 * distScale;
-        const camPos = foot.clone().addScaledVector(facing, -D).addScaledVector(up, 2.2 + pitch * 1.6);
-        const target = foot.clone().addScaledVector(up, 1.4).addScaledVector(facing, 0.5);
+        const distScale = Math.min(1.6, Math.max(1, 1 / Math.min(aspect, 1)));
+        const D = 3.0 * distScale;
+        const H = 2.1 + (distScale - 1) * 0.9 + pitch * 1.6;
+        const camPos = foot.clone().addScaledVector(facing, -D).addScaledVector(up, H);
+        const target = foot.clone().addScaledVector(up, 1.2);
         cx.camera.up.copy(up); cx.camera.position.copy(camPos); cx.camera.lookAt(target);
       } else {
         cx.camera.up.copy(up); cx.camera.position.copy(eye); cx.camera.lookAt(eye.clone().add(lookDir));
