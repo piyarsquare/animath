@@ -66,3 +66,36 @@ coloring", "modulus surface", etc.) so the matrix isn't overwhelming. Guard
 against degenerate/duplicate assignments (e.g. two axes bound to the same
 coordinate) with a gentle warning rather than a hard block — sometimes the
 collapse is instructive.
+
+### Faithful (normalized) Hopf projection
+
+The current `project` mode 2 / shader "Hopf" is a Hopf-*style* quadratic variant
+`(2xv, 2yv, x²+v²−y²−u²)`, not the textbook map, so it doesn't match the clean
+"ratio `z/f` on the Riemann sphere" interpretation. Replace (or add alongside) it
+with the genuine Hopf map of the complex pair `(z₁, z₂) = (z, f)`:
+
+  H = ( 2·Re(z·conj(f)), 2·Im(z·conj(f)), |z|² − |f|² ) / (|z|² + |f|²)
+
+which lands every particle on the unit sphere S². Then the plot reads exactly:
+**latitude = |z|/|f|** (equator where equal; poles where `f→0` / `z→0`),
+**longitude = arg(z) − arg(f)**. Sanity checks for the guide/EXPLAINER:
+`f = c·z` collapses to a single point (move it with `|c|`/`arg c`); `f = z + c`
+and `f = z²` each cover the sphere once (Möbius); `exp` wraps it infinitely.
+Consider keeping the old variant as a separate "Hopf (stylized)" option if its
+look is liked.
+
+### "Hopf study" mode: freeze the 4D orientation + in-app guide
+
+The 4D spinner/rotation is applied *before* the Hopf map, which remixes input and
+output coordinates and breaks the `z/f` reading. For learning Hopf we want a
+static, identity-orientation view.
+
+- A one-tap **"Hopf study"** preset (or an auto-hint when Hopf is selected) that
+  sets Motion → Fixed and resets the 4D orientation to identity, so the
+  latitude/longitude reading holds.
+- Optionally suppress / disable the spinners (above) while in this mode, or warn
+  that spinning invalidates the ratio interpretation.
+- Ship a short **Hopf reading guide** in EXPLAINER.md (the ladder: `c·z` → a
+  single point; `z+c`, `z²` → sphere once; `exp` → infinite wrap), plus the
+  latitude/longitude legend. A faint sphere wireframe + pole/equator labels would
+  help enormously.
