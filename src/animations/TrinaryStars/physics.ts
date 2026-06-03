@@ -26,6 +26,9 @@ export interface Planet {
   x: number; y: number;
   vx: number; vy: number;
   ax: number; ay: number;
+  /** When false, the planet has been consumed/ejected and is frozen — the
+   *  integrator skips it. Undefined is treated as alive. */
+  alive?: boolean;
 }
 
 export interface SimState {
@@ -86,7 +89,7 @@ export function step(state: SimState, dt: number): void {
 
   // a(x) at the current positions.
   computeStarAccel(stars, G, ss2);
-  for (const p of planets) computePlanetAccel(p, stars, G, ps2);
+  for (const p of planets) if (p.alive !== false) computePlanetAccel(p, stars, G, ps2);
 
   // Half kick, then full drift.
   for (const s of stars) {
@@ -94,17 +97,19 @@ export function step(state: SimState, dt: number): void {
     s.x += dt * s.vx; s.y += dt * s.vy;
   }
   for (const p of planets) {
+    if (p.alive === false) continue;
     p.vx += half * p.ax; p.vy += half * p.ay;
     p.x += dt * p.vx; p.y += dt * p.vy;
   }
 
   // a(x) at the new positions, then the second half kick.
   computeStarAccel(stars, G, ss2);
-  for (const p of planets) computePlanetAccel(p, stars, G, ps2);
+  for (const p of planets) if (p.alive !== false) computePlanetAccel(p, stars, G, ps2);
   for (const s of stars) {
     s.vx += half * s.ax; s.vy += half * s.ay;
   }
   for (const p of planets) {
+    if (p.alive === false) continue;
     p.vx += half * p.ax; p.vy += half * p.ay;
   }
 

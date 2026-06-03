@@ -116,13 +116,16 @@ export default function TrinaryStars() {
   const [habLo, setHabLo] = useState(DEFAULT_CLASSIFY.habLo);
   const [habHi, setHabHi] = useState(DEFAULT_CLASSIFY.habHi);
   const [calmThresh, setCalmThresh] = useState(DEFAULT_CLASSIFY.calmThresh);
+  const [collisionRadius, setCollisionRadius] = useState(0.12); // planet consumed within this of a star (0 = pass-through)
   const [labSnap, setLabSnap] = useState<Snapshot | null>(null);
 
   const preset = getPreset(presetId);
   useAppHeader('Trinary System', preset.name);
   useAppExplainer(explainerText);
 
-  const classify: ClassifyParams = { ...DEFAULT_CLASSIFY, lumExp, habLo, habHi, calmThresh };
+  // The collision radius also bounds the analyzer's "destroyed" test so the era
+  // timeline agrees with what you see consumed on screen.
+  const classify: ClassifyParams = { ...DEFAULT_CLASSIFY, lumExp, habLo, habHi, calmThresh, rKill: Math.max(collisionRadius, 1e-4) };
 
   // Base (untuned) star masses for this preset, for labelling the mass sliders.
   const baseMasses = useMemo(() => getPreset(presetId).make().map(s => s.mass), [presetId]);
@@ -130,9 +133,9 @@ export default function TrinaryStars() {
   // Live params the animation loop / pointer handlers read without re-mounting.
   const refs = useRef({
     speed, trailLen, showTrails, paused,
-    ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft, classify,
+    ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft, classify, collisionRadius,
   });
-  refs.current = { speed, trailLen, showTrails, paused, ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft, classify };
+  refs.current = { speed, trailLen, showTrails, paused, ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft, classify, collisionRadius };
 
   // A hand-placed launch (position + velocity). When set it overrides the
   // parametric target/radius/speed seeding until a launch control changes.
@@ -195,6 +198,24 @@ export default function TrinaryStars() {
     // Streaming classifier for the reference planet (planets[0]).
     let analyzer: Analyzer | null = null;
     let nextSampleT = SAMPLE_DT;
+
+    // Brief flares where planets are consumed by a star.
+    const flares: { sprite: THREE.Sprite; born: number }[] = [];
+    const FLARE_LIFE = 700;
+    function spawnFlare(wx: number, wz: number) {
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowTex, color: 0xffb060, transparent: true, opacity: 1,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      }));
+      sprite.position.set(wx, 0, wz);
+      sprite.scale.setScalar(0.3);
+      scene.add(sprite);
+      flares.push({ sprite, born: performance.now() });
+    }
+    function clearFlares() {
+      for (const f of flares) { scene.remove(f.sprite); (f.sprite.material as THREE.Material).dispose(); }
+      flares.length = 0;
+    }
 
     function disposePlanets() {
       for (const m of planetMeshes) {
@@ -280,6 +301,7 @@ export default function TrinaryStars() {
       analyzer = new Analyzer(refs.current.classify, sim.stars, sim.planets[0]);
       nextSampleT = SAMPLE_DT;
       setLabSnap(analyzer.snapshot());
+      clearFlares();
     }
 
     /** Re-scatter the ghosts around the reference planet's *current* state,
@@ -419,9 +441,26 @@ export default function TrinaryStars() {
         steps = Math.min(400, Math.max(0, steps));
         for (let s = 0; s < steps; s++) step(sim, dt);
 
+        // Consume planets that fall into a star.
+        const Rc = r.collisionRadius;
+        if (Rc > 0 && steps > 0) {
+          for (let i = 0; i < sim.planets.length; i++) {
+            const p = sim.planets[i];
+            if (p.alive === false) continue;
+            for (let s = 0; s < 3; s++) {
+              if (Math.hypot(sim.stars[s].x - p.x, sim.stars[s].y - p.y) < Rc) {
+                p.alive = false;
+                spawnFlare(simX(p.x), simZ(p.y));
+                break;
+              }
+            }
+          }
+        }
+
         if (r.showTrails && steps > 0) {
           for (let i = 0; i < 3; i++) starTrails[i].push(simX(sim.stars[i].x), 0, simZ(sim.stars[i].y));
           for (let i = 0; i < sim.planets.length; i++) {
+            if (sim.planets[i].alive === false) continue;
             planetTrails[i]?.push(simX(sim.planets[i].x), 0, simZ(sim.planets[i].y));
           }
         }
@@ -440,7 +479,25 @@ export default function TrinaryStars() {
         starGlows[i].position.set(wx, 0, wz);
       }
       for (let i = 0; i < sim.planets.length; i++) {
-        planetMeshes[i]?.position.set(simX(sim.planets[i].x), 0, simZ(sim.planets[i].y));
+        const m = planetMeshes[i];
+        if (!m) continue;
+        const alive = sim.planets[i].alive !== false;
+        m.visible = alive;
+        if (alive) m.position.set(simX(sim.planets[i].x), 0, simZ(sim.planets[i].y));
+      }
+
+      // Fade and retire consumption flares.
+      const now = performance.now();
+      for (let k = flares.length - 1; k >= 0; k--) {
+        const a = (now - flares[k].born) / FLARE_LIFE;
+        if (a >= 1) {
+          scene.remove(flares[k].sprite);
+          (flares[k].sprite.material as THREE.Material).dispose();
+          flares.splice(k, 1);
+        } else {
+          (flares[k].sprite.material as THREE.SpriteMaterial).opacity = 1 - a;
+          flares[k].sprite.scale.setScalar(0.3 + a * 1.4);
+        }
       }
 
       // Trails: visibility + show/hide.
@@ -593,12 +650,14 @@ export default function TrinaryStars() {
             onChange={v => setStarMass(2, v)} format={v => (baseMasses[2] * v).toFixed(2)} />
           <Slider label="Softening" value={starSoft} min={0.005} max={0.3} step={0.005}
             onChange={setStarSoft} format={v => v.toFixed(3)} />
+          <Slider label="Star size (collision)" value={collisionRadius} min={0} max={0.5} step={0.01}
+            onChange={setCollisionRadius} format={v => (v === 0 ? 'off' : v.toFixed(2))} />
           <button style={{ ...btnStyle, width: '100%', flex: 'none' }}
             onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.starSoft); }}>
             ⟲ Reset star masses
           </button>
           <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
-            Equal masses keep a preset’s character (just faster); uneven ones detune it — e.g. nudge a mass to watch the figure-eight fall into chaos. Softening sets how gently close passes are smoothed.
+            Equal masses keep a preset’s character (just faster); uneven ones detune it — e.g. nudge a mass to watch the figure-eight fall into chaos. Softening sets how gently close passes are smoothed. Star size sets how close a planet must come to be consumed (0 = passes through).
           </div>
         </Section>
 

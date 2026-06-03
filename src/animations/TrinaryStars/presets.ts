@@ -34,6 +34,16 @@ function star(x: number, y: number, vx: number, vy: number, mass: number): Star 
   return { x, y, vx, vy, ax: 0, ay: 0, mass };
 }
 
+/** Šuvakov–Dmitrašinović equal-mass periodic choreography: two stars at ±(1,0)
+ *  share velocity (p1,p2); the third sits at the origin moving at -2(p1,p2). */
+function choreography(p1: number, p2: number): Star[] {
+  return recenter([
+    star(-1, 0, p1, p2, 1),
+    star(1, 0, p1, p2, 1),
+    star(0, 0, -2 * p1, -2 * p2, 1),
+  ]);
+}
+
 /** Shift to the centre-of-mass frame: zero net position and net momentum so
  *  the system stays framed instead of drifting off screen. */
 export function recenter(stars: Star[]): Star[] {
@@ -66,6 +76,17 @@ export const PRESETS: Preset[] = [
     starSoft: 0.01,
     target: 'bary',
     planetRadius: 1.8,
+    planetSpeed: 1.1,
+  },
+  {
+    id: 'moth',
+    name: 'Moth',
+    blurb: 'A mesmerizing three-body "ballet" (Šuvakov–Dmitrašinović Moth): three equal stars retracing one periodic figure. Exquisitely delicate — the faintest nudge eventually tips it into chaos.',
+    make: () => choreography(0.46444, 0.39606),
+    dt: 0.0004,
+    starSoft: 0.0025,
+    target: 'bary',
+    planetRadius: 2.2,
     planetSpeed: 1.1,
   },
   {
