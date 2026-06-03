@@ -303,7 +303,20 @@ Follow **docs/BUILDING_AN_APP.md**. In short:
    render controls in `<ShellSettings>` / `<ShellActions>` with `ControlPanel`
    primitives. For 4D particle viewers, build on `ParticleViewerShell` +
    `lib/particles` (copy ComplexParticles).
-5. `npm run build` must pass.
+5. Document *your* app: add its row to the **Routing** table above and a line to
+   the repository-layout tree (and to `README.md`). Append — don't reorder.
+6. `npm run build` must pass.
+
+> **Parallel branches.** Several app branches are often in flight at once
+> (frequently in separate agent threads). The framework keeps that conflict-free
+> because each app is a self-contained folder; the only shared files a new app
+> edits — `index.tsx`, `apps.ts`, `CLAUDE.md`, `README.md` — are all **append-only**.
+> Add new entries at the **end** of each list/table, never reorder existing ones,
+> and touch only your own app's lines. Before opening/finalizing a PR,
+> `git fetch && git merge origin/main`, resolve any shared-file overlap by
+> *keeping every app's entries*, and re-run `npm run build`. Merge order doesn't
+> matter — the re-sync is cheap because the edits are additive. See
+> **docs/BUILDING_AN_APP.md §8** for the full workflow.
 
 ### Deployment
 

@@ -100,6 +100,24 @@ export const apps: AppDescriptor[] = [
 > decides *what the user can discover*. Forgetting `apps.ts` makes the app
 > reachable only by typing the hash.
 
+**Append, don't reorder.** Add your `routes` entry and `AppDescriptor` at the
+**end** of their respective lists, and your `lazy` import next to the others.
+These two files are the shared coordination points every new app touches, so
+keeping edits additive (new lines at the bottom) is what lets several app
+branches merge without conflicts — see [§8](#8-working-on-several-apps-at-once).
+Don't re-sort or reformat the existing entries.
+
+### 3c. Docs — your app's own paragraph
+
+Your PR also **owns the documentation for your app** — don't rely on a separate
+docs pass to backfill it. As additive edits (same append rule):
+
+- **`CLAUDE.md`** — add one row to the **Routing** table and one line to the
+  repository-layout tree under `src/animations/`.
+- **`README.md`** — add your app to the app list and the repo tree.
+
+Keep it to *your* app's lines only; leave everyone else's untouched.
+
 ---
 
 ## 4. Integrate with the AppShell
@@ -305,11 +323,63 @@ Manual checklist before opening a PR:
 - [ ] Settings/Actions render and the dimmed buttons light up appropriately.
 - [ ] Works on a narrow viewport; gestures don't fight page scroll.
 - [ ] No console errors; rAF loops and listeners are cleaned up on navigation away.
+- [ ] Docs updated for your app (`CLAUDE.md` route table + tree, `README.md`) — [§3c](#3c-docs--your-apps-own-paragraph).
+- [ ] Latest `main` merged in and `npm run build` re-run — [§8](#8-working-on-several-apps-at-once).
 - [ ] `npm run build` is green.
 
 ---
 
-## 8. Quick reference — files you'll touch
+## 8. Working on several apps at once
+
+Multiple app branches (often in separate agent threads) can be in flight at the
+same time. The framework is built to make that safe: **each app is a
+self-contained folder, so the bulk of every branch never overlaps.** The only
+files two app branches both touch are the shared coordination points:
+
+- `src/index.tsx` (route map) and `src/apps.ts` (catalog)
+- `CLAUDE.md` and `README.md` (the route table + repo tree)
+
+All four are edited **additively** (§3a–3c). Git auto-merges additive edits in
+different regions, so independent app branches normally merge with **no
+conflicts, in any order**. Two rules keep it that way:
+
+1. **Append, never reorder.** New entries go at the bottom of each list/table.
+   Don't re-sort, rename, or reformat existing lines — that's what turns a clean
+   auto-merge into a conflict.
+2. **Own only your app's lines.** Touch the shared files solely to add *your*
+   app. Leave other apps' rows, routes, and catalog entries alone.
+
+### Merge / PR workflow for a new app
+
+Because `main` moves under you while you work, **re-sync before you open (or
+finalize) the PR** so your branch reflects the latest set of apps:
+
+```bash
+git fetch origin
+git merge origin/main          # or: git rebase origin/main
+# resolve any conflicts — for the shared files it's almost always
+# "keep both": your new entry AND theirs. Never delete another app's lines.
+npm run build                  # MUST pass again after the merge
+```
+
+Then push and open the PR. Concretely:
+
+1. Build your app on its own branch; register it and write its docs (§3).
+2. `git fetch && git merge origin/main`; resolve the shared-file edits by
+   keeping every app's entries (yours + any that landed while you worked).
+3. `npm run build` — green — then verify the app still loads (§7).
+4. Push and open the PR. If another app's PR merges before yours, repeat step 2;
+   the re-sync is cheap precisely because the edits are additive.
+
+> **Why this matters here:** the docs-refresh PR that introduced this guide is
+> expected to land first and establish the structure above. App branches in
+> flight should pull `main` afterward, then add their own route-table row, tree
+> line, and catalog entry as part of their PR — so the docs stay correct as each
+> app merges, with no central catch-up pass.
+
+---
+
+## 9. Quick reference — files you'll touch
 
 | File | Why |
 |------|-----|
@@ -317,8 +387,10 @@ Manual checklist before opening a PR:
 | `src/animations/MyApp/EXPLAINER.md` | ? popup text (`?raw`) — recommended |
 | `src/animations/MyApp/README.md` | About text (`?raw`) — optional |
 | `src/animations/MyApp/*.ts` | optional logic/data helpers (physics, presets, geometry) |
-| `src/index.tsx` | lazy route registration |
-| `src/apps.ts` | catalog entry (drawer + menu) |
+| `src/index.tsx` | lazy route registration (append) |
+| `src/apps.ts` | catalog entry — drawer + menu (append) |
+| `CLAUDE.md` | route-table row + repo-tree line for your app (append) |
+| `README.md` | app list + repo-tree entry for your app (append) |
 | `src/components/AppShell.tsx` | integration hooks/components (import only) |
 | `src/components/ControlPanel.tsx` | form primitives (import only) |
 | `src/components/Canvas3D.tsx` | Three.js wrapper (import only) |
