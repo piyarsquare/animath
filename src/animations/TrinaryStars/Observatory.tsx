@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import type { Bin, Snapshot } from './analysis/types';
+import type { Bin, Snapshot } from '@/lib/nbody';
 
 const BIN_COLOR: Record<Bin, string> = {
   both: '#46d98a',      // habitable AND calm — paradise

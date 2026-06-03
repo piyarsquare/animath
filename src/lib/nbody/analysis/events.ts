@@ -2,7 +2,7 @@
  *  planet escaping the system. (Destruction is a simple distance test handled in
  *  the analyzer.) */
 
-import type { Planet, Star } from '../physics';
+import type { Planet, Star } from '../integrator';
 import { planetEnergy } from './classify';
 
 /** Mass-weighted centre of position and velocity of a set of stars. */

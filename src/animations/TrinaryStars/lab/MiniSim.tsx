@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { step, type SimState } from '../physics';
-import { getPreset, buildStars, launchPlanet, orbitFrame } from '../presets';
+import { step, getPreset, buildStars, launchPlanet, orbitFrame, type SimState } from '@/lib/nbody';
 import type { EnsembleConfig } from './rng';
 
 const STAR_COLORS = ['#ffd27f', '#ff7043', '#9ec7ff'];

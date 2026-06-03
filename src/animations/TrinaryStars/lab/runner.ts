@@ -3,10 +3,10 @@
  *  Pure and deterministic — the same engine that powers the live Observatory,
  *  so ensemble statistics agree with what you see in the single-run view. */
 
-import { step, lyapunovRenorm, type SimState, type Planet, type Star } from '../physics';
-import { getPreset, buildStars, launchPlanet, orbitFrame } from '../presets';
-import { Analyzer } from '../analysis/analyzer';
-import type { Outcome, RunResult } from '../analysis/types';
+import {
+  step, lyapunovRenorm, getPreset, buildStars, launchPlanet, orbitFrame, Analyzer,
+  type SimState, type Planet, type Star, type Outcome, type RunResult,
+} from '@/lib/nbody';
 import type { EnsembleConfig, RunParams } from './rng';
 
 const LYAP_D0 = 1e-9, LYAP_RENORM = 0.5;

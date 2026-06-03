@@ -4,7 +4,7 @@
  * deterministically on reset.
  */
 
-import type { Planet, Star } from './physics';
+import type { Planet, Star } from './integrator';
 
 /** What the planet is launched into orbit around:
  *  the system barycenter, one specific star, or the inner two-star binary. */

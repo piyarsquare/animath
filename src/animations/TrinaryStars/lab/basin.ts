@@ -1,10 +1,8 @@
 /** Pure basin-map computation, shared by the main thread and basin workers.
  *  One pixel = one exact, deterministic world integrated to its fate. */
 
-import { getPreset, buildStars, launchPlanet, orbitFrame } from '../presets';
+import { getPreset, buildStars, launchPlanet, orbitFrame, type Planet, type Star, type Outcome } from '@/lib/nbody';
 import { runPlanet, runPlanetLyap } from './runner';
-import type { Planet, Star } from '../physics';
-import type { Outcome } from '../analysis/types';
 import type { EnsembleConfig } from './rng';
 
 const DEG = Math.PI / 180;

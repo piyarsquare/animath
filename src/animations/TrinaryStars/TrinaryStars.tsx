@@ -3,10 +3,10 @@ import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import { ShellActions, ShellSettings, useAppExplainer, useAppHeader } from '../../components/AppShell';
 import { Section, Slider, Pills, Select } from '../../components/ControlPanel';
-import { step, cloudSpread, lyapunovRenorm, type SimState, type Planet, type Star } from './physics';
-import { PRESETS, getPreset, buildStars, orbitFrame, launchPlanet, type TargetId } from './presets';
-import { Analyzer } from './analysis/analyzer';
-import { DEFAULT_CLASSIFY, type ClassifyParams, type Snapshot } from './analysis/types';
+import {
+  step, cloudSpread, lyapunovRenorm, PRESETS, getPreset, buildStars, orbitFrame, launchPlanet, Analyzer, DEFAULT_CLASSIFY,
+  type SimState, type Planet, type Star, type TargetId, type ClassifyParams, type Snapshot,
+} from '@/lib/nbody';
 import Observatory from './Observatory';
 import SkyView, { type SkyData } from './SkyView';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';

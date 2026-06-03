@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppHeader } from '../../../components/AppShell';
 import { Slider, Pills } from '../../../components/ControlPanel';
-import { PRESETS, getPreset, type TargetId } from '../presets';
-import { DEFAULT_CLASSIFY } from '../analysis/types';
-import type { Outcome, RunResult } from '../analysis/types';
+import { PRESETS, getPreset, DEFAULT_CLASSIFY, type TargetId, type Outcome, type RunResult } from '@/lib/nbody';
 import { Aggregator, OUTCOMES, type AggSnapshot } from './ensemble';
 import { runOne, targetMassOf } from './runner';
 import { sampleParams, type EnsembleConfig } from './rng';

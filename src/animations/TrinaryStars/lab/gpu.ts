@@ -11,8 +11,7 @@
  * storage buffers) to avoid long single-dispatch GPU timeouts.
  */
 
-import { getPreset, buildStars, launchPlanet } from '../presets';
-import type { Outcome, RunResult } from '../analysis/types';
+import { getPreset, buildStars, launchPlanet, type Outcome, type RunResult } from '@/lib/nbody';
 import type { EnsembleConfig, RunParams } from './rng';
 
 export function gpuAvailable(): boolean {
