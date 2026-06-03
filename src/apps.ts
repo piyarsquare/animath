@@ -47,6 +47,12 @@ export const apps: AppDescriptor[] = [
     blurb: 'Run thousands of trinary worlds and tally how often chaos ends happily.',
   },
   {
+    hash: '/cr3bp',
+    name: 'Restricted 3-Body',
+    icon: '◇',
+    blurb: 'The co-rotating frame, Lagrange points, Hill regions and Poincaré sections of the restricted three-body problem.',
+  },
+  {
     hash: '/stable-marriage',
     name: 'Stable Marriage',
     icon: '♥',

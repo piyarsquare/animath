@@ -684,6 +684,7 @@ export default function TrinaryStars() {
             {skyOn ? '🌅 Exit planet sky' : '🌅 View from the planet'}
           </button>
           <button style={btnStyle} onClick={() => { window.location.hash = '#/trinary-lab'; }}>📊 Open statistics lab</button>
+          <button style={btnStyle} onClick={() => { window.location.hash = '#/cr3bp'; }}>◇ Lagrange frame (restricted 3-body)</button>
           <Slider label="Speed" value={speed} min={0.1} max={4} step={0.1}
             onChange={setSpeed} format={v => `${v.toFixed(1)}×`} />
         </div>
