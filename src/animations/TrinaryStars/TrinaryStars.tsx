@@ -8,6 +8,7 @@ import { PRESETS, getPreset, buildStars, orbitFrame, launchPlanet, type TargetId
 import { Analyzer } from './analysis/analyzer';
 import { DEFAULT_CLASSIFY, type ClassifyParams, type Snapshot } from './analysis/types';
 import Observatory from './Observatory';
+import SkyView, { type SkyData } from './SkyView';
 import explainerText from './EXPLAINER.md?raw';
 
 const STAR_COLORS = [0xffd27f, 0xff7043, 0x9ec7ff];
@@ -117,7 +118,11 @@ export default function TrinaryStars() {
   const [habHi, setHabHi] = useState(DEFAULT_CLASSIFY.habHi);
   const [calmThresh, setCalmThresh] = useState(DEFAULT_CLASSIFY.calmThresh);
   const [collisionRadius, setCollisionRadius] = useState(0.12); // planet consumed within this of a star (0 = pass-through)
+  const [skyOn, setSkyOn] = useState(false);
+  const [dayLen, setDayLen] = useState(0.8);  // sim-time per planet day (spin)
+  const [tilt, setTilt] = useState(0.4);      // axial tilt → seasonal sun-height drift
   const [labSnap, setLabSnap] = useState<Snapshot | null>(null);
+  const skyRef = useRef<SkyData | null>(null);
 
   const preset = getPreset(presetId);
   useAppHeader('Trinary System', preset.name);
@@ -486,6 +491,18 @@ export default function TrinaryStars() {
         if (alive) m.position.set(simX(sim.planets[i].x), 0, simZ(sim.planets[i].y));
       }
 
+      // Feed the planet's-eye sky view (reference planet).
+      {
+        const ref0 = sim.planets[0];
+        const lum = refs.current.classify.lumExp;
+        if (ref0) {
+          skyRef.current = {
+            t: sim.t, px: ref0.x, py: ref0.y, Sref: analyzer?.Sref ?? 1,
+            stars: sim.stars.map(s => ({ x: s.x, y: s.y, L: Math.pow(s.mass, lum) })),
+          };
+        }
+      }
+
       // Fade and retire consumption flares.
       const now = performance.now();
       for (let k = flares.length - 1; k >= 0; k--) {
@@ -604,6 +621,8 @@ export default function TrinaryStars() {
         {placeMode && <div style={{ color: '#ffd27f' }}>click + drag to launch</div>}
       </div>
 
+      {skyOn && <SkyView dataRef={skyRef} dayLen={dayLen} tilt={tilt} />}
+
       <Observatory snapshot={labSnap} />
 
       <ShellActions>
@@ -616,6 +635,9 @@ export default function TrinaryStars() {
             {placeMode ? '✛ Placing — click + drag on the scene' : '✛ Place planet by hand'}
           </button>
           <button style={btnStyle} onClick={() => api.current?.scatter()}>✦ Scatter ghosts here</button>
+          <button style={{ ...placeBtnStyle, background: skyOn ? 'rgba(255, 212, 0, 0.18)' : 'rgba(255,255,255,0.06)' }} onClick={() => setSkyOn(s => !s)}>
+            {skyOn ? '🌅 Exit planet sky' : '🌅 View from the planet'}
+          </button>
           <button style={btnStyle} onClick={() => { window.location.hash = '#/trinary-lab'; }}>📊 Open statistics lab</button>
           <Slider label="Speed" value={speed} min={0.1} max={4} step={0.1}
             onChange={setSpeed} format={v => `${v.toFixed(1)}×`} />
@@ -677,6 +699,22 @@ export default function TrinaryStars() {
           </button>
           <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
             Radius &amp; speed are measured from the body you orbit. Pick a star for a tight inner (S-type) orbit; the barycenter or inner binary for a wide one.
+          </div>
+        </Section>
+
+        <Section title="Planet sky" icon="🌅">
+          <Pills
+            label="View from the planet"
+            options={[{ value: 1, label: 'On' }, { value: 0, label: 'Off' }]}
+            value={skyOn ? 1 : 0}
+            onChange={v => setSkyOn(v === 1)}
+          />
+          <Slider label="Day length (spin)" value={dayLen} min={0.1} max={3} step={0.1}
+            onChange={setDayLen} format={v => v.toFixed(1)} />
+          <Slider label="Axial tilt (seasons)" value={tilt} min={0} max={0.6} step={0.05}
+            onChange={setTilt} format={v => v.toFixed(2)} />
+          <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
+            Stand on the planet and watch the suns wheel overhead. Spin sets the day; tilt makes their noon height drift over the (chaotic, irregular) year. The sky’s colour tracks the climate — frozen dark to searing white.
           </div>
         </Section>
 
