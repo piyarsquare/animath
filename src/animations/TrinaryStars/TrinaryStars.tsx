@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import { ShellActions, ShellSettings, useAppExplainer, useAppHeader } from '../../components/AppShell';
 import { Section, Slider, Pills } from '../../components/ControlPanel';
-import { step, cloudSpread, type SimState, type Planet, type Star } from './physics';
+import { step, cloudSpread, lyapunovRenorm, type SimState, type Planet, type Star } from './physics';
 import { PRESETS, getPreset, buildStars, orbitFrame, launchPlanet, type TargetId } from './presets';
 import { Analyzer } from './analysis/analyzer';
 import { DEFAULT_CLASSIFY, type ClassifyParams, type Snapshot } from './analysis/types';
@@ -158,6 +158,7 @@ export default function TrinaryStars() {
 
   const spreadElRef = useRef<HTMLSpanElement>(null);
   const timeElRef = useRef<HTMLSpanElement>(null);
+  const lyapElRef = useRef<HTMLSpanElement>(null);
 
   const onMount = useCallback(({ scene, camera, renderer }: {
     scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer;
@@ -206,6 +207,13 @@ export default function TrinaryStars() {
     const sim: SimState = {
       stars: [], planets: [], t: 0, dtBase: 0.002, G: 1, starSoft: 0.02, planetSoft: 0.05,
     };
+
+    // Largest Lyapunov exponent via Benettin renormalization of a hidden shadow
+    // planet (appended after the visible ghosts). λ = Σ log(d/d0) / elapsed time.
+    let nGhosts = 0;       // count of visible planets (reference + ghosts)
+    let shadowIdx = -1;    // index of the Lyapunov shadow in sim.planets
+    let lyapSum = 0, nextRenorm = 0, lyap = 0;
+    const LYAP_D0 = 1e-7, LYAP_RENORM = 0.25;
 
     // Streaming classifier for the reference planet (planets[0]).
     let analyzer: Analyzer | null = null;
@@ -297,9 +305,14 @@ export default function TrinaryStars() {
       sim.starSoft = refs.current.starSoft;
       sim.dtBase = p.dt;
       sim.planets = seedPlanets();
+      nGhosts = sim.planets.length;
+      // Append the hidden Lyapunov shadow, offset from the reference.
+      const r0 = sim.planets[0];
+      sim.planets.push({ x: r0.x + LYAP_D0, y: r0.y, vx: r0.vx, vy: r0.vy, ax: 0, ay: 0, alive: true });
+      shadowIdx = nGhosts;
+      lyapSum = 0; nextRenorm = LYAP_RENORM; lyap = 0;
       sim.t = 0;
-      const n = sim.planets.length;
-      if (planetMeshes.length !== n) buildPlanetMeshes(n);
+      if (planetMeshes.length !== nGhosts) buildPlanetMeshes(nGhosts);
       for (const t of starTrails) t.reset();
       for (const t of planetTrails) t.reset();
       // Scale star sizes/glow by mass.
@@ -322,13 +335,18 @@ export default function TrinaryStars() {
       const ref = sim.planets[0];
       if (!ref) return;
       const eps = Math.pow(10, refs.current.epsExp);
-      const n = sim.planets.length;
-      for (let i = 1; i < n; i++) {
-        const ang = (2 * Math.PI * (i - 1)) / Math.max(1, n - 1);
+      for (let i = 1; i < nGhosts; i++) {
+        const ang = (2 * Math.PI * (i - 1)) / Math.max(1, nGhosts - 1);
         sim.planets[i].x = ref.x + eps * Math.cos(ang);
         sim.planets[i].y = ref.y + eps * Math.sin(ang);
         sim.planets[i].vx = ref.vx;
         sim.planets[i].vy = ref.vy;
+      }
+      // Reset the shadow + Lyapunov accumulation to the new reference state.
+      if (shadowIdx >= 0) {
+        const sh = sim.planets[shadowIdx];
+        sh.x = ref.x + LYAP_D0; sh.y = ref.y; sh.vx = ref.vx; sh.vy = ref.vy; sh.alive = true;
+        lyapSum = 0; nextRenorm = sim.t + LYAP_RENORM; lyap = 0;
       }
       for (const t of planetTrails) t.reset();
     }
@@ -451,12 +469,24 @@ export default function TrinaryStars() {
         const simSeconds = r.speed * realDt;
         let steps = Math.round(simSeconds / dt);
         steps = Math.min(400, Math.max(0, steps));
-        for (let s = 0; s < steps; s++) step(sim, dt);
+        for (let s = 0; s < steps; s++) {
+          step(sim, dt);
+          // Benettin renormalization of the shadow at a fixed sim-time cadence.
+          if (shadowIdx >= 0 && sim.t >= nextRenorm) {
+            const ref0 = sim.planets[0];
+            if (ref0.alive !== false) {
+              lyapSum += lyapunovRenorm(ref0, sim.planets[shadowIdx], LYAP_D0);
+              lyap = lyapSum / Math.max(sim.t, 1e-6);
+            }
+            nextRenorm = sim.t + LYAP_RENORM;
+          }
+        }
 
-        // Consume planets that fall into a star.
+        // Consume planets that fall into a star (visible planets only — the
+        // shadow is a measurement probe and is never consumed).
         const Rc = r.collisionRadius;
         if (Rc > 0 && steps > 0) {
-          for (let i = 0; i < sim.planets.length; i++) {
+          for (let i = 0; i < nGhosts; i++) {
             const p = sim.planets[i];
             if (p.alive === false) continue;
             for (let s = 0; s < 3; s++) {
@@ -533,8 +563,15 @@ export default function TrinaryStars() {
       uiAccum += realDt;
       if (uiAccum > 0.1) {
         uiAccum = 0;
-        if (spreadElRef.current) spreadElRef.current.textContent = cloudSpread(sim.planets).toExponential(2);
+        if (spreadElRef.current) spreadElRef.current.textContent = cloudSpread(sim.planets, nGhosts).toExponential(2);
         if (timeElRef.current) timeElRef.current.textContent = sim.t.toFixed(1);
+        if (lyapElRef.current) {
+          const chaotic = lyap > 0.05;
+          lyapElRef.current.textContent = sim.t > 2
+            ? `${lyap.toFixed(3)}  (τ≈${(1 / Math.max(lyap, 1e-6)).toFixed(1)})  ${chaotic ? 'chaotic' : 'regular'}`
+            : '…';
+          lyapElRef.current.style.color = sim.t > 2 ? (chaotic ? '#ff7043' : '#46d98a') : '#9ec7ff';
+        }
         if (analyzer) setLabSnap(analyzer.snapshot());
       }
 
@@ -624,6 +661,7 @@ export default function TrinaryStars() {
         pointerEvents: 'none', backdropFilter: 'blur(4px)',
       }}>
         <div>cloud spread&nbsp; <span ref={spreadElRef} style={{ color: GHOST_COLOR_HEX }}>0.00e+0</span></div>
+        <div>Lyapunov λ&nbsp;&nbsp; <span ref={lyapElRef} style={{ color: '#9ec7ff' }}>…</span></div>
         <div>sim time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span ref={timeElRef} style={{ color: '#9ec7ff' }}>0.0</span></div>
         {placeMode && <div style={{ color: '#ffd27f' }}>click + drag to launch</div>}
       </div>
