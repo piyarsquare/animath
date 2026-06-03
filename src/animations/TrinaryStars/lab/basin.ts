@@ -97,3 +97,11 @@ export function computeBasinRange(cfg: EnsembleConfig, bc: BasinConfig, start: n
   }
   return { rgb, out, t };
 }
+
+/** The exact planet initial condition at an (ax, by) point of the chosen plane —
+ *  used to hand a clicked basin pixel to the single-run Observatory. */
+export function basinPlanetAt(cfg: EnsembleConfig, bc: BasinConfig, ax: number, by: number): Planet {
+  const ctx = basinContext(cfg, bc);
+  const stars = buildStars(getPreset(cfg.presetId), cfg.massMul);
+  return makePlanet(ctx, stars, ax, by);
+}

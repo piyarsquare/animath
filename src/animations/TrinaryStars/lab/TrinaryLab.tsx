@@ -610,6 +610,9 @@ export default function TrinaryLab() {
         target, onTarget: (t) => setTarget(t as TargetId), targetOptions,
         massMul, onMass: setStarMass, baseMasses, starSoft, onStarSoft: setStarSoft,
         onReset: () => { setMassMul([1, 1, 1]); setStarSoft(preset.starSoft); },
+        box: { rMin, rMax, fMin, fMax },
+        onBox: (b) => { setRMin(b.rMin); setRMax(b.rMax); setFMin(b.fMin); setFMax(b.fMax); },
+        onRunCensus: () => { if (!running) start(); },
       }} />
 
       {/* Two-column body */}

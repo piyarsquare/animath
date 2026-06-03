@@ -84,15 +84,28 @@ class Trail {
   }
 }
 
+/** A world can be handed to the Observatory via the URL hash query (e.g. by a
+ *  click on the lab's basin map): system + an exact planet initial condition. */
+function navQuery(): URLSearchParams { return new URLSearchParams(window.location.hash.split('?')[1] ?? ''); }
+function navNum(u: URLSearchParams, k: string, d: number) { const v = u.get(k); const n = v == null ? NaN : parseFloat(v); return Number.isFinite(n) ? n : d; }
+
 export default function TrinaryStars() {
-  const [presetId, setPresetId] = useState(PRESETS[0].id);
-  const [target, setTargetState] = useState<TargetId>(PRESETS[0].target);
+  const qRef = useRef<URLSearchParams | null>(null);
+  if (!qRef.current) qRef.current = navQuery();
+  const Q = qRef.current;
+  const qPreset = Q.get('p') ?? PRESETS[0].id;
+  const initialCustom = Q.get('px') != null
+    ? { x: navNum(Q, 'px', 0), y: navNum(Q, 'py', 0), vx: navNum(Q, 'vx', 0), vy: navNum(Q, 'vy', 0) }
+    : null;
+
+  const [presetId, setPresetId] = useState(qPreset);
+  const [target, setTargetState] = useState<TargetId>((Q.get('tg') as TargetId) ?? getPreset(qPreset).target);
   const [ghostCount, setGhostCount] = useState(12);
   const [epsExp, setEpsExp] = useState(-3);      // perturbation ε = 10^epsExp
-  const [planetRadius, setPlanetRadiusState] = useState(PRESETS[0].planetRadius);
-  const [planetSpeed, setPlanetSpeedState] = useState(PRESETS[0].planetSpeed);
-  const [massMul, setMassMul] = useState<number[]>([1, 1, 1]);   // per-star mass multipliers
-  const [starSoft, setStarSoft] = useState(PRESETS[0].starSoft); // close-encounter softening
+  const [planetRadius, setPlanetRadiusState] = useState(getPreset(qPreset).planetRadius);
+  const [planetSpeed, setPlanetSpeedState] = useState(getPreset(qPreset).planetSpeed);
+  const [massMul, setMassMul] = useState<number[]>([navNum(Q, 'm0', 1), navNum(Q, 'm1', 1), navNum(Q, 'm2', 1)]); // per-star mass multipliers
+  const [starSoft, setStarSoft] = useState(navNum(Q, 'ss', getPreset(qPreset).starSoft)); // close-encounter softening
   const [speed, setSpeed] = useState(1);          // sim-seconds per real-second
   const [trailLen, setTrailLen] = useState(500);
   const [showTrails, setShowTrails] = useState(true);
@@ -123,7 +136,7 @@ export default function TrinaryStars() {
 
   // A hand-placed launch (position + velocity). When set it overrides the
   // parametric target/radius/speed seeding until a launch control changes.
-  const customRef = useRef<{ x: number; y: number; vx: number; vy: number } | null>(null);
+  const customRef = useRef<{ x: number; y: number; vx: number; vy: number } | null>(initialCustom);
 
   // Imperative handles populated by onMount and called by control effects/buttons.
   const api = useRef<{ reset: () => void; scatter: () => void } | null>(null);

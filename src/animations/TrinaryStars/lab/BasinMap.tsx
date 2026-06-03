@@ -1,16 +1,19 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Slider, Pills } from '../../../components/ControlPanel';
 import {
-  basinContext, computeBasinPixel, OUTCOME_RGB, OUTCOME_CODE,
+  basinContext, computeBasinPixel, basinPlanetAt, OUTCOME_RGB, OUTCOME_CODE,
   type BasinConfig, type BasinMode, type Domain,
 } from './basin';
 import { BasinPool } from './basinPool';
 import type { EnsembleConfig } from './rng';
 
+export interface SamplingBox { rMin: number; rMax: number; fMin: number; fMax: number }
 export interface BasinSystem {
   target: string; onTarget: (t: string) => void; targetOptions: { value: string; label: string }[];
   massMul: number[]; onMass: (i: number, v: number) => void; baseMasses: number[];
   starSoft: number; onStarSoft: (v: number) => void; onReset: () => void;
+  /** The ensemble's radius × speed sampling box — shared with the radspeed plane. */
+  box: SamplingBox; onBox: (b: SamplingBox) => void; onRunCensus: () => void;
 }
 
 const HAS_WORKERS = typeof Worker !== 'undefined';
@@ -72,8 +75,30 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   const tGridRef = useRef<Float32Array>(new Float32Array(0));
 
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
+  const boxRef = useRef(system?.box); boxRef.current = system?.box;
   const st = { mode, domain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro, engine };
   const stateRef = useRef(st); stateRef.current = st;
+
+  // In the radius×speed plane the map shares the ensemble's sampling box, so
+  // zooming the map re-aims the census (and vice-versa).
+  const effDomain: Domain = (mode === 'radspeed' && system?.box)
+    ? { a0: system.box.rMin, a1: system.box.rMax, b0: system.box.fMin, b1: system.box.fMax }
+    : domain;
+  const currentBc = (): BasinConfig => ({
+    mode, domain: effDomain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro,
+  });
+  const goObservatory = (i: number, j: number) => {
+    const d = effDomain;
+    const ax = d.a0 + (d.a1 - d.a0) * ((i + 0.5) / res);
+    const by = d.b1 - (d.b1 - d.b0) * ((j + 0.5) / res);
+    const planet = basinPlanetAt(cfg, currentBc(), ax, by);
+    const q = new URLSearchParams({
+      p: cfg.presetId, tg: cfg.target,
+      m0: String(cfg.massMul[0]), m1: String(cfg.massMul[1]), m2: String(cfg.massMul[2]), ss: String(cfg.starSoft),
+      px: planet.x.toFixed(5), py: planet.y.toFixed(5), vx: planet.vx.toFixed(5), vy: planet.vy.toFixed(5),
+    });
+    window.location.hash = `#/trinary?${q.toString()}`;
+  };
 
   const measureDimension = () => {
     const N = stateRef.current.res;
@@ -118,8 +143,11 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     const cfgNow = cfgRef.current;
     const s = stateRef.current;
     const N = s.res;
+    const dom = (s.mode === 'radspeed' && boxRef.current)
+      ? { a0: boxRef.current.rMin, a1: boxRef.current.rMax, b0: boxRef.current.fMin, b1: boxRef.current.fMax }
+      : s.domain;
     const bc: BasinConfig = {
-      mode: s.mode, domain: s.domain, res: N, samples: s.samples,
+      mode: s.mode, domain: dom, res: N, samples: s.samples,
       posRule: s.posRule, posSpeedFrac: s.posSpeedFrac, fixedAngle: s.fixedAngle, fixedRadius: s.fixedRadius, fixedRetro: s.fixedRetro,
     };
     const cv = canvasRef.current!; cv.width = N; cv.height = N;
@@ -169,7 +197,9 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     rafRef.current = requestAnimationFrame(chunk);
   };
 
-  useEffect(() => { setDomain(DEFAULT_DOMAIN[mode]); /* eslint-disable-next-line */ }, [mode]);
+  // The radspeed plane derives its domain from the shared census box, so only
+  // reset the internal domain for the other planes.
+  useEffect(() => { if (mode !== 'radspeed') setDomain(DEFAULT_DOMAIN[mode]); /* eslint-disable-next-line */ }, [mode]);
   useEffect(() => () => { cancelAnimationFrame(rafRef.current); poolRef.current?.dispose(); }, []);
 
   const switchMode = (m: BasinMode) => { stop(); setMode(m); };
@@ -191,10 +221,10 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     const i = Math.min(res - 1, Math.max(0, Math.floor(((e.clientX - r.left) / r.width) * res)));
     const j = Math.min(res - 1, Math.max(0, Math.floor(((e.clientY - r.top) / r.height) * res)));
     if (tGridRef.current.length) {
-      const ax = domain.a0 + (domain.a1 - domain.a0) * ((i + 0.5) / res);
-      const by = domain.b1 - (domain.b1 - domain.b0) * ((j + 0.5) / res);
+      const ax = effDomain.a0 + (effDomain.a1 - effDomain.a0) * ((i + 0.5) / res);
+      const by = effDomain.b1 - (effDomain.b1 - effDomain.b0) * ((j + 0.5) / res);
       const [la, lb] = AXIS_LABELS[mode];
-      setHover(`${la}=${ax.toFixed(2)} · ${lb}=${by.toFixed(2)} → ${OUTCOME_CODE[outGridRef.current[j * res + i]]} @ t=${tGridRef.current[j * res + i].toFixed(0)}`);
+      setHover(`${la}=${ax.toFixed(2)} · ${lb}=${by.toFixed(2)} → ${OUTCOME_CODE[outGridRef.current[j * res + i]]} @ t=${tGridRef.current[j * res + i].toFixed(0)} · click to open in single run`);
     }
     if (dragRef.current) {
       dragRef.current.x1 = e.clientX - r.left; dragRef.current.y1 = e.clientY - r.top;
@@ -211,14 +241,23 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     if (overlayRef.current) overlayRef.current.style.display = 'none';
     if (!d) return;
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    if (Math.abs(d.x1 - d.x0) < 6 || Math.abs(d.y1 - d.y0) < 6) return;
+    const dx = Math.abs(d.x1 - d.x0), dy = Math.abs(d.y1 - d.y0);
+    if (dx < 6 && dy < 6) { // a click → open that exact world in the Observatory
+      const i = Math.min(res - 1, Math.max(0, Math.floor((d.x0 / r.width) * res)));
+      const j = Math.min(res - 1, Math.max(0, Math.floor((d.y0 / r.height) * res)));
+      goObservatory(i, j);
+      return;
+    }
+    if (dx < 6 || dy < 6) return; // degenerate selection
     const nx0 = Math.min(d.x0, d.x1) / r.width, nx1 = Math.max(d.x0, d.x1) / r.width;
     const ny0 = Math.min(d.y0, d.y1) / r.height, ny1 = Math.max(d.y0, d.y1) / r.height;
-    setDomain({
-      a0: domain.a0 + (domain.a1 - domain.a0) * nx0, a1: domain.a0 + (domain.a1 - domain.a0) * nx1,
-      b0: domain.b1 - (domain.b1 - domain.b0) * ny1, b1: domain.b1 - (domain.b1 - domain.b0) * ny0,
-    });
-    setTimeout(render, 0);
+    const nd: Domain = {
+      a0: effDomain.a0 + (effDomain.a1 - effDomain.a0) * nx0, a1: effDomain.a0 + (effDomain.a1 - effDomain.a0) * nx1,
+      b0: effDomain.b1 - (effDomain.b1 - effDomain.b0) * ny1, b1: effDomain.b1 - (effDomain.b1 - effDomain.b0) * ny0,
+    };
+    if (mode === 'radspeed' && system?.onBox) system.onBox({ rMin: nd.a0, rMax: nd.a1, fMin: nd.b0, fMax: nd.b1 });
+    else setDomain(nd);
+    setTimeout(render, mode === 'radspeed' ? 40 : 0);
   };
 
   const panel: React.CSSProperties = { background: 'rgba(12,16,24,0.6)', border: '1px solid rgba(120,150,200,0.18)', borderRadius: 10, padding: 12 };
@@ -265,7 +304,16 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
           {HAS_WORKERS && <Pills label="Engine" value={engine} options={[{ value: 'workers', label: `Workers ×${Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1))}` }, { value: 'cpu', label: 'CPU' }]} onChange={(v) => setEngine(v as 'workers' | 'cpu')} />}
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button style={{ ...btn, background: busy ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }} onClick={busy ? stop : render}>{busy ? '❚❚ Stop' : '▦ Render map'}</button>
-            <button style={btn} onClick={() => { setDomain(DEFAULT_DOMAIN[mode]); setTimeout(render, 0); }}>⤢ Reset zoom</button>
+            <button style={btn} onClick={() => {
+              if (mode === 'radspeed' && system?.onBox) {
+                const d = DEFAULT_DOMAIN.radspeed;
+                system.onBox({ rMin: d.a0, rMax: d.a1, fMin: d.b0, fMax: d.b1 });
+              } else setDomain(DEFAULT_DOMAIN[mode]);
+              setTimeout(render, 40);
+            }}>⤢ Reset zoom</button>
+            {mode === 'radspeed' && system?.onRunCensus && (
+              <button style={btn} title="Run the ensemble on this radius × speed box" onClick={system.onRunCensus}>∑ Census this box</button>
+            )}
           </div>
           {busy && <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', marginTop: 8 }}><div style={{ height: '100%', width: `${progress * 100}%`, background: '#46d98a', borderRadius: 3 }} /></div>}
 
@@ -301,8 +349,8 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             <div ref={overlayRef} style={{ position: 'absolute', display: 'none', border: '1px solid #66f0ff', background: 'rgba(102,240,255,0.12)', pointerEvents: 'none' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', font: '10px ui-monospace, monospace', color: '#6f7f99', marginTop: 3 }}>
-            <span>{AXIS_LABELS[mode][0]} {domain.a0.toFixed(2)}…{domain.a1.toFixed(2)}</span>
-            <span>{AXIS_LABELS[mode][1]} {domain.b0.toFixed(2)}…{domain.b1.toFixed(2)}</span>
+            <span>{AXIS_LABELS[mode][0]} {effDomain.a0.toFixed(2)}…{effDomain.a1.toFixed(2)}</span>
+            <span>{AXIS_LABELS[mode][1]} {effDomain.b0.toFixed(2)}…{effDomain.b1.toFixed(2)}</span>
           </div>
           <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', marginTop: 4, minHeight: 16 }}>{hover || 'Hover the map to inspect a starting condition.'}</div>
         </div>
