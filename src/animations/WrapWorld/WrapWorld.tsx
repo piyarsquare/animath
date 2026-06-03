@@ -2,9 +2,16 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import { ShellActions, ShellSettings, useAppHeader, useAppExplainer } from '../../components/AppShell';
-import { Section, Slider, Select } from '../../components/ControlPanel';
+import { Section, Slider, Select, Checkbox } from '../../components/ControlPanel';
 import { makeFootprintTrail, FootprintTrail } from './footprints';
+import { makeCharacter, Character } from '../MobiusWalk/character';
 import explainerText from './EXPLAINER.md?raw';
+
+/** Phone-ish layout → default to first-person (a chase cam is cramped). */
+function isCramped(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.innerHeight >= window.innerWidth || Math.min(window.innerWidth, window.innerHeight) < 560;
+}
 
 /**
  * A first-person walk on a FLAT closed surface — the torus or the Klein bottle.
@@ -143,19 +150,23 @@ function buildCell(foot: FootprintTrail): Built {
 export default function WrapWorld() {
   const [space, setSpace] = useState<'torus' | 'klein'>('torus');
   const [moveSpeed, setMoveSpeed] = useState(7);
+  const [thirdPerson, setThirdPerson] = useState(() => !isCramped());
 
   useAppHeader('Wrap-World', space === 'klein' ? 'flat Klein bottle' : 'flat torus');
   useAppExplainer(explainerText);
 
   const spaceRef = useRef(space);
   const speedRef = useRef(moveSpeed);
+  const thirdRef = useRef(thirdPerson);
   useEffect(() => { spaceRef.current = space; }, [space]);
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
+  useEffect(() => { thirdRef.current = thirdPerson; }, [thirdPerson]);
 
   const ctxRef = useRef<{
     renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera;
     cells: { group: THREE.Group }[]; floor: THREE.Mesh;
     foot: FootprintTrail; trailLast: THREE.Vector2 | null;
+    character: Character; stridePhase: number;
     cellDisposers: (() => void)[];
   } | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -186,6 +197,8 @@ export default function WrapWorld() {
     scene.add(floor);
 
     const foot = makeFootprintTrail(TRAIL_MAX);
+    const character = makeCharacter();
+    scene.add(character.group);
 
     const cells: { group: THREE.Group }[] = [];
     const cellDisposers: (() => void)[] = [];
@@ -202,7 +215,7 @@ export default function WrapWorld() {
 
     ctxRef.current = {
       renderer, scene, camera, cells, floor,
-      foot, trailLast: null, cellDisposers,
+      foot, trailLast: null, character, stridePhase: 0, cellDisposers,
     };
 
     clockRef.current.start();
@@ -218,20 +231,44 @@ export default function WrapWorld() {
       const k = keysRef.current;
       const fwd = (k.fwd ? 1 : 0) - (k.back ? 1 : 0);
       const strafe = (k.right ? 1 : 0) - (k.left ? 1 : 0);
-      if (fwd || strafe) {
+      const moving = !!(fwd || strafe);
+      if (moving) {
         const v = speedRef.current * dt;
         const sy = Math.sin(yawRef.current), cy = Math.cos(yawRef.current);
         // forward = (sin yaw, -cos yaw); right = (cos yaw, sin yaw)
         pxRef.current += (fwd * sy + strafe * cy) * v;
         pzRef.current += (fwd * -cy + strafe * sy) * v;
+        c.stridePhase += dt * speedRef.current * 1.4;
       }
       const px = pxRef.current, pz = pzRef.current;
 
-      // Camera.
       const yaw = yawRef.current, pitch = pitchRef.current, cp = Math.cos(pitch);
-      const look = new THREE.Vector3(Math.sin(yaw) * cp, Math.sin(pitch), -Math.cos(yaw) * cp);
-      c.camera.position.set(px, EYE, pz);
-      c.camera.lookAt(px + look.x, EYE + look.y, pz + look.z);
+      const forward = new THREE.Vector3(Math.sin(yaw), 0, -Math.cos(yaw)); // heading on the floor
+
+      // Avatar at the player position, facing the heading.
+      const charRight = new THREE.Vector3().crossVectors(UP_Y, forward).normalize();
+      c.character.group.position.set(px, 0, pz);
+      c.character.group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(charRight, UP_Y, forward));
+      c.character.group.visible = thirdRef.current;
+      c.character.stride(c.stridePhase);
+
+      // Camera: first-person eye, or a chase cam behind the avatar.
+      if (thirdRef.current) {
+        const aspect = c.camera.aspect || 1;
+        const distScale = Math.min(1.6, Math.max(1, 1 / Math.min(aspect, 1)));
+        const D = 3.2 * distScale;
+        const camPos = new THREE.Vector3(px, 0, pz)
+          .addScaledVector(forward, -D)
+          .addScaledVector(UP_Y, 2.2 + pitch * 1.6);
+        c.camera.up.set(0, 1, 0);
+        c.camera.position.copy(camPos);
+        c.camera.lookAt(px + forward.x * 0.5, 1.3, pz + forward.z * 0.5);
+      } else {
+        const look = new THREE.Vector3(Math.sin(yaw) * cp, Math.sin(pitch), -Math.cos(yaw) * cp);
+        c.camera.up.set(0, 1, 0);
+        c.camera.position.set(px, EYE, pz);
+        c.camera.lookAt(px + look.x, EYE + look.y, pz + look.z);
+      }
       c.floor.position.set(px, 0, pz);
       (c.floor.material as THREE.MeshStandardMaterial).map!.offset.set(px / 3, -pz / 3);
 
@@ -296,6 +333,7 @@ export default function WrapWorld() {
     if (c) {
       c.cellDisposers.forEach((d) => d());
       c.foot.dispose();
+      c.character.dispose();
       c.floor.geometry.dispose();
       ((c.floor.material as THREE.MeshStandardMaterial).map)?.dispose();
       (c.floor.material as THREE.Material).dispose();
@@ -342,6 +380,7 @@ export default function WrapWorld() {
             value={space}
             onChange={(v) => setSpace(v as 'torus' | 'klein')}
           />
+          <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
           <Slider label="Walk speed" value={moveSpeed} min={2} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
           <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>
             Red edges are glued with a flip on the Klein bottle; blue edges glue straight.

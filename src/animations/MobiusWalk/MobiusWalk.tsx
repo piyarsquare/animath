@@ -22,6 +22,7 @@ const spaceParams = (id: string): Partial<CorridorParams> =>
   (SPACES.find((s) => s.id === id) ?? SPACES[1]).params;
 import { makeCorridorMaterial } from './shaders/corridorMaterial';
 import { makeCharacter, Character } from './character';
+import { makeFootprintTrail, FootprintTrail } from '../WrapWorld/footprints';
 import {
   THEMES, DEFAULT_THEME, MobiusTheme, FlickerKind, floorMarkerTexture, glowTexture,
 } from './themes';
@@ -34,9 +35,8 @@ const LOOK_SENS = 0.0035;
 const MAX_PITCH = 1.2;
 const MAX_LIGHTS = 6;
 
-const TRAIL_MAX_PAIRS = 2200;
-const TRAIL_SPACING = 0.3;
-const TRAIL_HALF_W = 0.14;
+const FOOT_MAX = 1400;
+const TRAIL_SPACING = 1.4;
 
 const WRITE_REACH = 8;     // how far the gaze can reach a wall to write on
 const MAX_WRITE = 60;      // max text decals kept
@@ -75,10 +75,8 @@ interface SceneCtx {
   theme: MobiusTheme;
   ambientBase: number;
   hemiBase: number;
-  trail: THREE.Mesh;
-  trailPos: Float32Array;
-  trailCount: number;
-  trailLast: THREE.Vector3 | null;
+  foot: FootprintTrail;
+  footLast: THREE.Vector3 | null;
   writing: THREE.Group;
   writeMeshes: THREE.Mesh[];
   raycaster: THREE.Raycaster;
@@ -271,19 +269,12 @@ export default function MobiusWalk() {
     const character = makeCharacter(); scene.add(character.group);
     const glow = glowTexture();
 
-    const trailPos = new Float32Array(TRAIL_MAX_PAIRS * 2 * 3);
-    const trailIndex = new Uint16Array((TRAIL_MAX_PAIRS - 1) * 6);
-    for (let i = 0; i < TRAIL_MAX_PAIRS - 1; i++) {
-      const o = i * 6, v = i * 2;
-      trailIndex[o] = v; trailIndex[o + 1] = v + 1; trailIndex[o + 2] = v + 2;
-      trailIndex[o + 3] = v + 1; trailIndex[o + 4] = v + 3; trailIndex[o + 5] = v + 2;
-    }
-    const trailGeo = new THREE.BufferGeometry();
-    trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
-    trailGeo.setIndex(new THREE.BufferAttribute(trailIndex, 1));
-    trailGeo.setDrawRange(0, 0);
-    const trail = new THREE.Mesh(trailGeo, new THREE.MeshBasicMaterial({ color: 0xff2740, side: THREE.DoubleSide }));
-    trail.frustumCulled = false; scene.add(trail);
+    // Footprint trail (arrows with an "F"). On the Möbius corridor the floor
+    // becomes the ceiling after a lap, so a footprint seen later from overhead
+    // shows the back of the F — reversed — directly displaying the flip.
+    const foot = makeFootprintTrail(FOOT_MAX);
+    const footMesh = new THREE.Mesh(foot.geometry, foot.material);
+    footMesh.frustumCulled = false; scene.add(footMesh);
 
     const writing = new THREE.Group(); scene.add(writing);
 
@@ -333,7 +324,7 @@ export default function MobiusWalk() {
       ambient, hemi, moon, fill, lights, flames, params,
       length: centerlineLength(params), period: spacePeriod(params),
       theme, ambientBase: theme.lighting.ambient, hemiBase: 0,
-      trail, trailPos, trailCount: 0, trailLast: null,
+      foot, footLast: null,
       writing, writeMeshes: [], raycaster,
       miniScene, miniCam, miniBand, miniMarker,
       stridePhase: 0, bufW, bufH,
@@ -425,19 +416,13 @@ export default function MobiusWalk() {
         } else spr.visible = false;
       }
 
-      const floorPt = foot.clone().addScaledVector(up, 0.03);
-      if (moving && (!cx.trailLast || floorPt.distanceTo(cx.trailLast) > TRAIL_SPACING)) {
-        if (cx.trailCount >= TRAIL_MAX_PAIRS) { cx.trailPos.copyWithin(0, 6); cx.trailCount--; }
-        const o = cx.trailCount * 6;
-        cx.trailPos[o] = floorPt.x + right.x * TRAIL_HALF_W;
-        cx.trailPos[o + 1] = floorPt.y + right.y * TRAIL_HALF_W;
-        cx.trailPos[o + 2] = floorPt.z + right.z * TRAIL_HALF_W;
-        cx.trailPos[o + 3] = floorPt.x - right.x * TRAIL_HALF_W;
-        cx.trailPos[o + 4] = floorPt.y - right.y * TRAIL_HALF_W;
-        cx.trailPos[o + 5] = floorPt.z - right.z * TRAIL_HALF_W;
-        cx.trailCount++; cx.trailLast = floorPt.clone();
-        (cx.trail.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
-        cx.trail.geometry.setDrawRange(0, Math.max(0, (cx.trailCount - 1) * 6));
+      // Footprints on the floor, oriented along travel; up = the (twisting)
+      // surface normal, so they ride the Möbius twist and read reversed overhead.
+      if (moving && (!cx.footLast || foot.distanceTo(cx.footLast) > TRAIL_SPACING)) {
+        const dir = cx.footLast ? foot.clone().sub(cx.footLast) : facing.clone();
+        if (dir.lengthSq() < 1e-6) dir.copy(facing);
+        cx.foot.append(foot.clone(), dir, up);
+        cx.footLast = foot.clone();
       }
 
       const w = cx.renderer.domElement.width, h = cx.renderer.domElement.height;
@@ -483,7 +468,7 @@ export default function MobiusWalk() {
 
   const clearTrail = useCallback(() => {
     const c = ctxRef.current; if (!c) return;
-    c.trailCount = 0; c.trailLast = null; c.trail.geometry.setDrawRange(0, 0);
+    c.foot.clear(); c.footLast = null;
   }, []);
   const clearWriting = useCallback(() => {
     const c = ctxRef.current; if (!c) return;
@@ -542,7 +527,7 @@ export default function MobiusWalk() {
     if (c) {
       c.mesh.geometry.dispose(); (c.mesh.material as THREE.MeshPhysicalMaterial).map?.dispose(); (c.mesh.material as THREE.Material).dispose();
       c.decal.geometry.dispose(); ((c.decal.material as THREE.MeshBasicMaterial).map)?.dispose(); (c.decal.material as THREE.Material).dispose();
-      c.trail.geometry.dispose(); (c.trail.material as THREE.Material).dispose();
+      c.foot.dispose();
       for (const m of c.writeMeshes) { m.geometry.dispose(); (m.material as THREE.MeshBasicMaterial).map?.dispose(); (m.material as THREE.Material).dispose(); }
       c.miniBand.geometry.dispose(); (c.miniBand.material as THREE.Material).dispose();
       c.miniMarker.geometry.dispose(); (c.miniMarker.material as THREE.Material).dispose();

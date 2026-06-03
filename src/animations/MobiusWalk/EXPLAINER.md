@@ -38,10 +38,11 @@ The **Space** menu swaps the geometry you're walking through: a plain **loop**
 knot**. The mini-map redraws to match — its edge colours swap around a Möbius
 loop but stay put on a plain one, and you can watch the knot tie itself.
 
-To make the flip unmistakable you leave a **red trail** on the floor as you
-walk, and the floor carries **"UP" arrows**. Come around one lap and you'll see
-your own trail — and the arrows — running across the *ceiling* above you,
-reversed: proof that floor and ceiling are one and the same surface. You can
+To make the flip unmistakable you leave **footprints** — arrows with the letter
+**F** (for *forward*) inside them — and the floor carries **"UP" arrows**. Come
+around one lap and you'll see your footprints — and the arrows — running across
+the *ceiling* above you, now seen from beneath so the **F reads backwards**:
+proof that floor and ceiling are one and the same surface. You can
 also **press Space (or the ✎ button) to write on the walls** in glowing ink and
 find your message again, flipped, when you pass it from the other side. Switch
 **themes** for different scenery and lighting — flickering torches, pulsing
