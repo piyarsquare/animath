@@ -1,5 +1,15 @@
 # Animath Architecture & Consolidation Guide
 
+> **Historical note (kept for background).** This document was the *design
+> proposal* that motivated the consolidation work. The codebase was refactored in
+> its spirit — the duplicated complex viewers became the shared `src/lib/particles`
+> engine plus `ParticleViewerShell`, complex math moved to `lib/complexMath.ts`,
+> and textures to `lib/textures.ts` — but the concrete folder names below
+> (`core/`, `widgets/`, `ui/`) were **not** adopted. Shared code actually lives in
+> `src/components/` and `src/lib/`. For the current structure and the
+> hook-based AppShell framework, see **CLAUDE.md**; to build a new app, see
+> **docs/BUILDING_AN_APP.md**. Treat this file as background only.
+
 This document provides a detailed analysis of the repository structure, identifies the core primitives, and proposes a consolidated architecture for better maintainability and extensibility.
 
 ---

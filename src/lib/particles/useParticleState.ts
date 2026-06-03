@@ -2,12 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { ProjectionMode } from '../viewpoint';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
+import { usePersistentState } from '../usePersistentState';
 import { ViewPoint, ColorStyle, ColourBy, Axis, motionModes, dropModes } from './types';
 
 export interface UseParticleStateOptions {
   count?: number;
   viewPoint?: ViewPoint;
   onViewPointChange?: (vp: ViewPoint) => void;
+  /** When set, the viewer's serializable settings persist to localStorage under
+   *  this namespace (e.g. 'complex-particles') and are restored on reload.
+   *  Omit to keep the viewer ephemeral. */
+  storageKey?: string;
 }
 
 export function useParticleState(options: UseParticleStateOptions = {}) {
@@ -15,48 +20,59 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount,
     viewPoint,
     onViewPointChange,
+    storageKey,
   } = options;
 
-  // ---- Rendering state ----
-  const [saturation, setSaturation] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.saturation);
-  const [particleCount, setParticleCount] = useState(count);
-  const [cameraZ, setCameraZ] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.cameraZ);
-  // Camera orbit: spherical coords around the origin. 1-finger drag updates
-  // these without touching the 4D quaternion rotation.
+  // Build a per-field persistence key, or null to fall back to ephemeral state.
+  const pk = (name: string) => (storageKey ? `${storageKey}:${name}` : null);
+
+  // ---- Rendering state (persisted) ----
+  const [saturation, setSaturation] = usePersistentState(pk('saturation'), COMPLEX_PARTICLES_DEFAULTS.initial.saturation);
+  const [particleCount, setParticleCount] = usePersistentState(pk('particleCount'), count);
+  const [cameraZ, setCameraZ] = usePersistentState(pk('cameraZ'), COMPLEX_PARTICLES_DEFAULTS.initial.cameraZ);
+  // Camera orbit + pan are transient "looking" state, not settings — they reset
+  // each session (and the Reset orientation button clears them), so they are
+  // intentionally NOT persisted.
   const [azimuth, setAzimuth] = useState(0);
   const [elevation, setElevation] = useState(0);
-  // Pan offset: shifts the look-at target away from the origin. 2-finger drag
-  // (or Shift+drag on desktop) updates these. Position and look-at both
-  // translate by this vector, so the visible scene appears to follow the
-  // finger (Maps convention).
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
   const [panZ, setPanZ] = useState(0);
-  const [size, setSize] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.size);
-  const [opacity, setOpacity] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.opacity);
-  const [intensity, setIntensity] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.intensity);
-  const [shimmer, setShimmer] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.shimmer);
-  const [hueShift, setHueShift] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.hueShift);
-  const [jitter, setJitter] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.jitter);
-  const [axisWidth, setAxisWidth] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.axisWidth);
+  const [size, setSize] = usePersistentState(pk('size'), COMPLEX_PARTICLES_DEFAULTS.initial.size);
+  const [opacity, setOpacity] = usePersistentState(pk('opacity'), COMPLEX_PARTICLES_DEFAULTS.initial.opacity);
+  const [intensity, setIntensity] = usePersistentState(pk('intensity'), COMPLEX_PARTICLES_DEFAULTS.initial.intensity);
+  const [shimmer, setShimmer] = usePersistentState(pk('shimmer'), COMPLEX_PARTICLES_DEFAULTS.initial.shimmer);
+  const [hueShift, setHueShift] = usePersistentState(pk('hueShift'), COMPLEX_PARTICLES_DEFAULTS.initial.hueShift);
+  const [jitter, setJitter] = usePersistentState(pk('jitter'), COMPLEX_PARTICLES_DEFAULTS.initial.jitter);
+  const [axisWidth, setAxisWidth] = usePersistentState(pk('axisWidth'), COMPLEX_PARTICLES_DEFAULTS.initial.axisWidth);
   /** Half-side of the sampled grid in input-space units. */
-  const [gridExtent, setGridExtent] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.gridExtent);
+  const [gridExtent, setGridExtent] = usePersistentState(pk('gridExtent'), COMPLEX_PARTICLES_DEFAULTS.initial.gridExtent);
   /** When true, sample more densely where |f'(z)| is large. */
-  const [adaptive, setAdaptive] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.adaptive);
+  const [adaptive, setAdaptive] = usePersistentState(pk('adaptive'), COMPLEX_PARTICLES_DEFAULTS.initial.adaptive);
   /** Exponent biasing strength for adaptive sampling. */
-  const [adaptiveAlpha, setAdaptiveAlpha] = useState(COMPLEX_PARTICLES_DEFAULTS.initial.adaptiveAlpha);
-  const [objectMode, setObjectMode] = useState(false);
-  const [shapeIndex, setShapeIndex] = useState(1);
-  const [textureIndex, setTextureIndex] = useState(0);
+  const [adaptiveAlpha, setAdaptiveAlpha] = usePersistentState(pk('adaptiveAlpha'), COMPLEX_PARTICLES_DEFAULTS.initial.adaptiveAlpha);
+  const [objectMode, setObjectMode] = usePersistentState(pk('objectMode'), false);
+  const [shapeIndex, setShapeIndex] = usePersistentState(pk('shapeIndex'), 1);
+  const [textureIndex, setTextureIndex] = usePersistentState(pk('textureIndex'), 0);
   const [realView, setRealView] = useState(false);
-  const [colourStyle, setColourStyle] = useState<ColorStyle>(ColorStyle.HSV);
-  const [colourBy, setColourBy] = useState<ColourBy>(ColourBy.Domain);
+  const [colourStyle, setColourStyle] = usePersistentState<ColorStyle>(pk('colourStyle'), ColorStyle.HSV);
+  const [colourBy, setColourBy] = usePersistentState<ColourBy>(pk('colourBy'), ColourBy.Domain);
 
   // ---- View / projection state ----
-  const [viewType, setViewType] = useState<ProjectionMode>(ProjectionMode.Perspective);
-  const [viewMotion, setViewMotion] = useState<(typeof motionModes)[number]>('Quaternion');
-  const [dropAxis, setDropAxis] = useState<(typeof dropModes)[number]>('None');
-  const [proj, setProj] = useState(ProjectionMode.Perspective);
+  const [viewType, setViewType] = usePersistentState<ProjectionMode>(pk('viewType'), ProjectionMode.Perspective);
+  const [viewMotion, setViewMotion] = usePersistentState<(typeof motionModes)[number]>(pk('viewMotion'), 'Quaternion');
+  const [dropAxis, setDropAxis] = usePersistentState<(typeof dropModes)[number]>(pk('dropAxis'), 'None');
+  // `proj` is the projection actually applied to the shader (vs. `viewType`, the
+  // user's pick). Seed it from the restored viewType + dropAxis so a reloaded
+  // Stereo/Hopf/Drop view renders correctly from the first frame instead of
+  // snapping back to Perspective.
+  const [proj, setProj] = useState(
+    dropAxis === 'DropX' ? ProjectionMode.DropX
+      : dropAxis === 'DropY' ? ProjectionMode.DropY
+      : dropAxis === 'DropU' ? ProjectionMode.DropU
+      : dropAxis === 'DropV' ? ProjectionMode.DropV
+      : viewType,
+  );
   const [orientationMatrix, setOrientationMatrix] = useState<number[][]>([
     [0, 0, 0, 0],
     [0, 0, 0, 0],
