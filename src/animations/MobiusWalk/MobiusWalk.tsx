@@ -431,17 +431,19 @@ export default function MobiusWalk() {
       else cx.renderer.render(cx.scene, cx.camera);
 
       // Mini-map: an orbiting inset view of the loop with the avatar marker,
-      // drawn into the top-right corner via a scissored viewport.
+      // drawn into the top-right corner via a scissored viewport. Coordinates
+      // are CSS pixels (lower-left origin) — three multiplies by the pixel ratio
+      // internally, so we must NOT pre-multiply by dpr.
       if (miniRef.current) {
-        const r = cx.renderer, el = r.domElement, dpr = r.getPixelRatio();
+        const r = cx.renderer, el = r.domElement;
         const Wc = el.clientWidth, Hc = el.clientHeight;
         const mm = Math.min(150, Math.floor(Math.min(Wc, Hc) * 0.34)), gg = 12;
-        const vx = (Wc - gg - mm) * dpr, vy = (Hc - gg - mm) * dpr, vw = mm * dpr, vh = mm * dpr;
+        const vx = Wc - gg - mm, vy = Hc - gg - mm, vw = mm, vh = mm;
 
         cx.miniMarker.position.copy(f.center).addScaledVector(f.b, 1.7);
         cx.miniMarker.quaternion.setFromUnitVectors(MINI_UP, facing);
-        const rad = cx.params.radius, ang = time * 0.18, D = rad * 2.6;
-        cx.miniCam.position.set(Math.cos(ang) * D, Math.sin(ang) * D, rad * 1.7);
+        const rad = cx.params.radius, ang = time * 0.18, Dm = rad * 2.6;
+        cx.miniCam.position.set(Math.cos(ang) * Dm, Math.sin(ang) * Dm, rad * 1.7);
         cx.miniCam.up.set(0, 0, 1);
         cx.miniCam.lookAt(0, 0, 0);
 
@@ -452,7 +454,7 @@ export default function MobiusWalk() {
         r.clear(true, true, false);
         r.render(cx.miniScene, cx.miniCam);
         r.setScissorTest(false);
-        r.setViewport(0, 0, el.width, el.height);
+        r.setViewport(0, 0, Wc, Hc);
         r.setClearColor(0x000000, 0);
       }
 
