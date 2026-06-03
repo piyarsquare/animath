@@ -23,7 +23,7 @@ const EYE = 1.7;
 const LOOK_SENS = 0.0035;
 const MAX_PITCH = 1.35;
 const TRAIL_MAX = 1500;
-const TRAIL_SPACING = 1.1;   // distance between footprints
+const TRAIL_SPACING = 1.6;   // distance between footprints
 const UP_Y = new THREE.Vector3(0, 1, 0);
 
 type MoveKey = 'fwd' | 'back' | 'left' | 'right';

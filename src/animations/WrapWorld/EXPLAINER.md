@@ -26,10 +26,13 @@ having passed the **same numbered pillars** again.
 
 ## Reading it
 
-You leave **oriented footprints** — little arrows pointing the way you walked,
-with a **cyan left half** and a **magenta right half** (and a gold underside).
+You leave **oriented footprints** — arrows pointing the way you walked, each
+with the letter **F** (for *forward*) inside it and a **cyan left / magenta
+right** pair of halves. You laid them to read correctly from where you stood.
 Because they live on the surface they reappear in every copy of the world:
 identical on the torus, but **mirror-reversed** across the red gluing on the
-Klein bottle, where the cyan and magenta halves **swap sides**. That colour swap
-is the orientation flip, made visible. The boundary squares show the tiling —
-**red edges flip, blue edges glue straight.**
+Klein bottle — there the **F comes back as Ⅎ** and the cyan/magenta halves swap
+sides. A plain arrow would look the same mirrored; the **F can't hide a
+reflection**, so it's the clearest possible signature of the orientation flip.
+The boundary squares show the tiling — **red edges flip, blue edges glue
+straight.**
