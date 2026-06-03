@@ -9,6 +9,7 @@ import { Analyzer } from './analysis/analyzer';
 import { DEFAULT_CLASSIFY, type ClassifyParams, type Snapshot } from './analysis/types';
 import Observatory from './Observatory';
 import SkyView, { type SkyData } from './SkyView';
+import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
 
 const STAR_COLORS = [0xffd27f, 0xff7043, 0x9ec7ff];
@@ -89,6 +90,8 @@ class Trail {
  *  click on the lab's basin map): system + an exact planet initial condition. */
 function navQuery(): URLSearchParams { return new URLSearchParams(window.location.hash.split('?')[1] ?? ''); }
 function navNum(u: URLSearchParams, k: string, d: number) { const v = u.get(k); const n = v == null ? NaN : parseFloat(v); return Number.isFinite(n) ? n : d; }
+/** localStorage key namespace for the Observatory's persisted settings. */
+const PK = (field: string) => `trinary:${field}`;
 
 export default function TrinaryStars() {
   const qRef = useRef<URLSearchParams | null>(null);
@@ -99,29 +102,33 @@ export default function TrinaryStars() {
     ? { x: navNum(Q, 'px', 0), y: navNum(Q, 'py', 0), vx: navNum(Q, 'vx', 0), vy: navNum(Q, 'vy', 0) }
     : null;
 
-  const [presetId, setPresetId] = useState(qPreset);
-  const [target, setTargetState] = useState<TargetId>((Q.get('tg') as TargetId) ?? getPreset(qPreset).target);
-  const [ghostCount, setGhostCount] = useState(12);
-  const [epsExp, setEpsExp] = useState(-3);      // perturbation ε = 10^epsExp
-  const [planetRadius, setPlanetRadiusState] = useState(getPreset(qPreset).planetRadius);
-  const [planetSpeed, setPlanetSpeedState] = useState(getPreset(qPreset).planetSpeed);
-  const [massMul, setMassMul] = useState<number[]>([navNum(Q, 'm0', 1), navNum(Q, 'm1', 1), navNum(Q, 'm2', 1)]); // per-star mass multipliers
-  const [starSoft, setStarSoft] = useState(navNum(Q, 'ss', getPreset(qPreset).starSoft)); // close-encounter softening
-  const [speed, setSpeed] = useState(1);          // sim-seconds per real-second
-  const [trailLen, setTrailLen] = useState(500);
-  const [showTrails, setShowTrails] = useState(true);
-  const [paused, setPaused] = useState(false);
-  const [placeMode, setPlaceMode] = useState(false);
+  // A world handed in via the URL (basin-map click) must win over stored
+  // settings, so the system fields opt out of persistence in that case.
+  const fromLink = initialCustom != null;
+
+  const [presetId, setPresetId] = usePersistentState(fromLink ? null : PK('presetId'), qPreset);
+  const [target, setTargetState] = usePersistentState<TargetId>(fromLink ? null : PK('target'), (Q.get('tg') as TargetId) ?? getPreset(presetId).target);
+  const [ghostCount, setGhostCount] = usePersistentState(PK('ghostCount'), 12);
+  const [epsExp, setEpsExp] = usePersistentState(PK('epsExp'), -3);      // perturbation ε = 10^epsExp
+  const [planetRadius, setPlanetRadiusState] = usePersistentState(PK('planetRadius'), getPreset(presetId).planetRadius);
+  const [planetSpeed, setPlanetSpeedState] = usePersistentState(PK('planetSpeed'), getPreset(presetId).planetSpeed);
+  const [massMul, setMassMul] = usePersistentState<number[]>(fromLink ? null : PK('massMul'), [navNum(Q, 'm0', 1), navNum(Q, 'm1', 1), navNum(Q, 'm2', 1)]); // per-star mass multipliers
+  const [starSoft, setStarSoft] = usePersistentState(fromLink ? null : PK('starSoft'), navNum(Q, 'ss', getPreset(presetId).starSoft)); // close-encounter softening
+  const [speed, setSpeed] = usePersistentState(PK('speed'), 1);          // sim-seconds per real-second
+  const [trailLen, setTrailLen] = usePersistentState(PK('trailLen'), 500);
+  const [showTrails, setShowTrails] = usePersistentState(PK('showTrails'), true);
+  const [paused, setPaused] = useState(false);       // transient — not persisted
+  const [placeMode, setPlaceMode] = useState(false); // transient — not persisted
   // Climate-classification knobs (habitable band as multiples of launch insolation).
-  const [lumExp, setLumExp] = useState(DEFAULT_CLASSIFY.lumExp);
-  const [habLo, setHabLo] = useState(DEFAULT_CLASSIFY.habLo);
-  const [habHi, setHabHi] = useState(DEFAULT_CLASSIFY.habHi);
-  const [calmThresh, setCalmThresh] = useState(DEFAULT_CLASSIFY.calmThresh);
-  const [collisionRadius, setCollisionRadius] = useState(0.12); // planet consumed within this of a star (0 = pass-through)
-  const [skyOn, setSkyOn] = useState(false);
-  const [dayLen, setDayLen] = useState(0.8);  // sim-time per planet day (spin)
-  const [tilt, setTilt] = useState(0.4);      // axial tilt → seasonal sun-height drift
-  const [labSnap, setLabSnap] = useState<Snapshot | null>(null);
+  const [lumExp, setLumExp] = usePersistentState(PK('lumExp'), DEFAULT_CLASSIFY.lumExp);
+  const [habLo, setHabLo] = usePersistentState(PK('habLo'), DEFAULT_CLASSIFY.habLo);
+  const [habHi, setHabHi] = usePersistentState(PK('habHi'), DEFAULT_CLASSIFY.habHi);
+  const [calmThresh, setCalmThresh] = usePersistentState(PK('calmThresh'), DEFAULT_CLASSIFY.calmThresh);
+  const [collisionRadius, setCollisionRadius] = usePersistentState(PK('collisionRadius'), 0.12); // 0 = pass-through
+  const [skyOn, setSkyOn] = usePersistentState(PK('skyOn'), false);
+  const [dayLen, setDayLen] = usePersistentState(PK('dayLen'), 0.8);  // sim-time per planet day (spin)
+  const [tilt, setTilt] = usePersistentState(PK('tilt'), 0.4);      // axial tilt → seasonal sun-height drift
+  const [labSnap, setLabSnap] = useState<Snapshot | null>(null);     // derived — not persisted
   const skyRef = useRef<SkyData | null>(null);
 
   const preset = getPreset(presetId);
@@ -741,6 +748,16 @@ export default function TrinaryStars() {
             value={showTrails ? 1 : 0}
             onChange={v => setShowTrails(v === 1)}
           />
+        </Section>
+
+        <Section title="Settings" icon="⚙">
+          <button style={{ ...btnStyle, width: '100%', flex: 'none' }}
+            onClick={() => { clearPersistedState('trinary'); window.location.hash = '#/trinary'; window.location.reload(); }}>
+            ↺ Reset settings to defaults
+          </button>
+          <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
+            Your settings (system, masses, climate band, sky, trails…) are saved on this device and restored on reload. This clears them.
+          </div>
         </Section>
       </ShellSettings>
     </>
