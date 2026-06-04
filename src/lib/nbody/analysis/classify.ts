@@ -1,6 +1,6 @@
 /** Pure scalar measurements of the planet's situation in the star field. */
 
-import type { Planet, Star } from '../physics';
+import type { Planet, Star } from '../integrator';
 import type { ClimateState } from './types';
 
 /** Total starlight reaching the planet: Σ L_i / (d_i² + soft²). */

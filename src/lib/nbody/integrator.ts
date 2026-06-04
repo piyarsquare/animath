@@ -121,15 +121,33 @@ export function step(state: SimState, dt: number): void {
  * reference planet (index 0). This is the headline "unpredictability" number —
  * it grows roughly exponentially while the dynamics are chaotic.
  */
-export function cloudSpread(planets: Planet[]): number {
-  if (planets.length < 2) return 0;
+export function cloudSpread(planets: Planet[], count = planets.length): number {
+  const n = Math.min(count, planets.length);
+  if (n < 2) return 0;
   const ref = planets[0];
   let max = 0;
-  for (let i = 1; i < planets.length; i++) {
+  for (let i = 1; i < n; i++) {
     const dx = planets[i].x - ref.x;
     const dy = planets[i].y - ref.y;
     const d = Math.hypot(dx, dy);
     if (d > max) max = d;
   }
   return max;
+}
+
+/**
+ * One Benettin renormalization step for the largest Lyapunov exponent: given a
+ * reference planet and a nearby "shadow", returns log(separation / d0) and
+ * rescales the shadow back to distance d0 along the current separation. Summing
+ * the returned values over elapsed time gives λ.
+ */
+export function lyapunovRenorm(ref: Planet, shadow: Planet, d0: number): number {
+  const dx = shadow.x - ref.x, dy = shadow.y - ref.y;
+  const dvx = shadow.vx - ref.vx, dvy = shadow.vy - ref.vy;
+  const d = Math.sqrt(dx * dx + dy * dy + dvx * dvx + dvy * dvy);
+  if (d <= 0) return 0;
+  const f = d0 / d;
+  shadow.x = ref.x + dx * f; shadow.y = ref.y + dy * f;
+  shadow.vx = ref.vx + dvx * f; shadow.vy = ref.vy + dvy * f;
+  return Math.log(d / d0);
 }

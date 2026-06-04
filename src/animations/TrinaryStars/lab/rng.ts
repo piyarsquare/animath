@@ -2,8 +2,7 @@
  *  a run is fully reproduced by its (base seed, index), so any interesting
  *  world can be reloaded or shared. */
 
-import type { TargetId } from '../presets';
-import type { ClassifyParams } from '../analysis/types';
+import type { TargetId, ClassifyParams } from '@/lib/nbody';
 
 /** Fast, decent 32-bit PRNG. */
 export function mulberry32(seed: number): () => number {

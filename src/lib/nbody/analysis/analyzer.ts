@@ -6,7 +6,7 @@
  * compact segment/event list — so it scales to long runs and big ensembles.
  */
 
-import type { Planet, Star } from '../physics';
+import type { Planet, Star } from '../integrator';
 import { insolation, planetEnergy, minStarDist, climateOf } from './classify';
 import { detectEjection, planetEscaped } from './events';
 import type { Bin, ClassifyParams, LabEvent, PlanetFate, Segment, Snapshot } from './types';

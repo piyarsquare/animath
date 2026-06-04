@@ -2,7 +2,7 @@
  *  histograms that sharpen as samples arrive, and a leaderboard of the longest
  *  stable eras. O(1) memory per stat — no run list retained. */
 
-import type { Outcome, RunResult } from '../analysis/types';
+import type { Outcome, RunResult } from '@/lib/nbody';
 
 export const OUTCOMES: Outcome[] = ['happy', 'survived', 'planet-ejected', 'planet-destroyed', 'blowup'];
 export const HIST_BINS = 24;

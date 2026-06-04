@@ -2,18 +2,18 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import { ShellActions, ShellSettings, useAppExplainer, useAppHeader } from '../../components/AppShell';
-import { Section, Slider, Pills } from '../../components/ControlPanel';
-import { step, cloudSpread, type SimState, type Planet, type Star } from './physics';
-import { PRESETS, getPreset, buildStars, orbitFrame, launchPlanet, type TargetId } from './presets';
-import { Analyzer } from './analysis/analyzer';
-import { DEFAULT_CLASSIFY, type ClassifyParams, type Snapshot } from './analysis/types';
+import { Section, Slider, Pills, Select } from '../../components/ControlPanel';
+import {
+  step, cloudSpread, lyapunovRenorm, SCENARIOS, getScenario, buildStars, orbitFrame, launchPlanet, Analyzer, DEFAULT_CLASSIFY,
+  type SimState, type Planet, type Star, type TargetId, type ClassifyParams, type Snapshot,
+} from '@/lib/nbody';
 import Observatory from './Observatory';
 import SkyView, { type SkyData } from './SkyView';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
 
 const STAR_COLORS = [0xffd27f, 0xff7043, 0x9ec7ff];
-const REF_COLOR = 0x66f0ff;
+const REF_COLOR = 0x4df08a; // the planet: a vivid green, distinct from the gold/orange/blue stars
 const GHOST_COLOR = 0xff5fa2;
 const GHOST_COLOR_HEX = '#ff5fa2';
 const TRAIL_MAX = 2000; // points stored per body; visible length is a live slider.
@@ -93,11 +93,55 @@ function navNum(u: URLSearchParams, k: string, d: number) { const v = u.get(k); 
 /** localStorage key namespace for the Observatory's persisted settings. */
 const PK = (field: string) => `trinary:${field}`;
 
+/** Anchor point (in sim coords) for a reference-frame selector: a star, a pair's
+ *  centre of mass, or the system barycenter. */
+function frameAnchor(stars: Star[], key: string): { x: number; y: number } {
+  const com = (idx: number[]) => {
+    let M = 0, x = 0, y = 0;
+    for (const i of idx) { const s = stars[i]; M += s.mass; x += s.mass * s.x; y += s.mass * s.y; }
+    return { x: x / M, y: y / M };
+  };
+  switch (key) {
+    case 's0': return { x: stars[0].x, y: stars[0].y };
+    case 's1': return { x: stars[1].x, y: stars[1].y };
+    case 's2': return { x: stars[2].x, y: stars[2].y };
+    case 'c01': return com([0, 1]);
+    case 'c02': return com([0, 2]);
+    case 'c12': return com([1, 2]);
+    default: return com([0, 1, 2]); // barycenter
+  }
+}
+
+/** A pure view transform: put `center` at the origin, and (unless align='none')
+ *  rotate so the direction to `align` lies on +x. Physics is unchanged. */
+function frameTransform(stars: Star[], center: string, align: string): (x: number, y: number) => { x: number; y: number } {
+  const C = frameAnchor(stars, center);
+  let c = 1, s = 0;
+  if (align !== 'none') {
+    const A = frameAnchor(stars, align);
+    const ang = Math.atan2(A.y - C.y, A.x - C.x);
+    c = Math.cos(ang); s = Math.sin(ang);
+  }
+  return (x, y) => { const dx = x - C.x, dy = y - C.y; return { x: dx * c + dy * s, y: -dx * s + dy * c }; };
+}
+
+const FRAME_ANCHORS = [
+  { value: 'bary', label: 'Barycenter' },
+  { value: 's0', label: 'Star 1' }, { value: 's1', label: 'Star 2' }, { value: 's2', label: 'Star 3' },
+  { value: 'c01', label: 'COM ⟨1,2⟩' }, { value: 'c02', label: 'COM ⟨1,3⟩' }, { value: 'c12', label: 'COM ⟨2,3⟩' },
+];
+const FRAME_PRESETS: { label: string; c: string; a: string }[] = [
+  { label: 'Inertial', c: 'bary', a: 'none' },
+  { label: 'Star 1 fixed', c: 's0', a: 's1' },
+  { label: 'Binary axis', c: 'c01', a: 's1' },
+  { label: '⟨2,3⟩ on x', c: 'bary', a: 'c12' },
+];
+
 export default function TrinaryStars() {
   const qRef = useRef<URLSearchParams | null>(null);
   if (!qRef.current) qRef.current = navQuery();
   const Q = qRef.current;
-  const qPreset = Q.get('p') ?? PRESETS[0].id;
+  const qPreset = Q.get('p') ?? SCENARIOS[0].id;
   const initialCustom = Q.get('px') != null
     ? { x: navNum(Q, 'px', 0), y: navNum(Q, 'py', 0), vx: navNum(Q, 'vx', 0), vy: navNum(Q, 'vy', 0) }
     : null;
@@ -107,16 +151,19 @@ export default function TrinaryStars() {
   const fromLink = initialCustom != null;
 
   const [presetId, setPresetId] = usePersistentState(fromLink ? null : PK('presetId'), qPreset);
-  const [target, setTargetState] = usePersistentState<TargetId>(fromLink ? null : PK('target'), (Q.get('tg') as TargetId) ?? getPreset(presetId).target);
+  const [target, setTargetState] = usePersistentState<TargetId>(fromLink ? null : PK('target'), (Q.get('tg') as TargetId) ?? getScenario(presetId).launch.target);
   const [ghostCount, setGhostCount] = usePersistentState(PK('ghostCount'), 12);
   const [epsExp, setEpsExp] = usePersistentState(PK('epsExp'), -3);      // perturbation ε = 10^epsExp
-  const [planetRadius, setPlanetRadiusState] = usePersistentState(PK('planetRadius'), getPreset(presetId).planetRadius);
-  const [planetSpeed, setPlanetSpeedState] = usePersistentState(PK('planetSpeed'), getPreset(presetId).planetSpeed);
+  const [planetRadius, setPlanetRadiusState] = usePersistentState(PK('planetRadius'), getScenario(presetId).launch.radius);
+  const [planetSpeed, setPlanetSpeedState] = usePersistentState(PK('planetSpeed'), getScenario(presetId).launch.speed);
   const [massMul, setMassMul] = usePersistentState<number[]>(fromLink ? null : PK('massMul'), [navNum(Q, 'm0', 1), navNum(Q, 'm1', 1), navNum(Q, 'm2', 1)]); // per-star mass multipliers
-  const [starSoft, setStarSoft] = usePersistentState(fromLink ? null : PK('starSoft'), navNum(Q, 'ss', getPreset(presetId).starSoft)); // close-encounter softening
+  const [starSoft, setStarSoft] = usePersistentState(fromLink ? null : PK('starSoft'), navNum(Q, 'ss', getScenario(presetId).system.softening)); // close-encounter softening
   const [speed, setSpeed] = usePersistentState(PK('speed'), 1);          // sim-seconds per real-second
   const [trailLen, setTrailLen] = usePersistentState(PK('trailLen'), 500);
   const [showTrails, setShowTrails] = usePersistentState(PK('showTrails'), true);
+  const [frameCenter, setFrameCenter] = usePersistentState(PK('frameCenter'), 'bary'); // reference-frame origin
+  const [frameAlign, setFrameAlign] = usePersistentState(PK('frameAlign'), 'none');     // reference-frame +x direction
+  const [obsMode, setObsMode] = usePersistentState<'simple' | 'advanced'>(PK('obsMode'), 'simple'); // Settings detail level
   const [paused, setPaused] = useState(false);       // transient — not persisted
   const [placeMode, setPlaceMode] = useState(false); // transient — not persisted
   // Climate-classification knobs (habitable band as multiples of launch insolation).
@@ -131,7 +178,7 @@ export default function TrinaryStars() {
   const [labSnap, setLabSnap] = useState<Snapshot | null>(null);     // derived — not persisted
   const skyRef = useRef<SkyData | null>(null);
 
-  const preset = getPreset(presetId);
+  const preset = getScenario(presetId);
   useAppHeader('Trinary System', preset.name);
   useAppExplainer(explainerText);
 
@@ -140,14 +187,15 @@ export default function TrinaryStars() {
   const classify: ClassifyParams = { ...DEFAULT_CLASSIFY, lumExp, habLo, habHi, calmThresh, rKill: Math.max(collisionRadius, 1e-4) };
 
   // Base (untuned) star masses for this preset, for labelling the mass sliders.
-  const baseMasses = useMemo(() => getPreset(presetId).make().map(s => s.mass), [presetId]);
+  const baseMasses = useMemo(() => getScenario(presetId).system.makeStars().map(s => s.mass), [presetId]);
 
   // Live params the animation loop / pointer handlers read without re-mounting.
   const refs = useRef({
     speed, trailLen, showTrails, paused,
     ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft, classify, collisionRadius,
+    frameCenter, frameAlign,
   });
-  refs.current = { speed, trailLen, showTrails, paused, ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft, classify, collisionRadius };
+  refs.current = { speed, trailLen, showTrails, paused, ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft, classify, collisionRadius, frameCenter, frameAlign };
 
   // A hand-placed launch (position + velocity). When set it overrides the
   // parametric target/radius/speed seeding until a launch control changes.
@@ -158,6 +206,7 @@ export default function TrinaryStars() {
 
   const spreadElRef = useRef<HTMLSpanElement>(null);
   const timeElRef = useRef<HTMLSpanElement>(null);
+  const lyapElRef = useRef<HTMLSpanElement>(null);
 
   const onMount = useCallback(({ scene, camera, renderer }: {
     scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer;
@@ -207,22 +256,30 @@ export default function TrinaryStars() {
       stars: [], planets: [], t: 0, dtBase: 0.002, G: 1, starSoft: 0.02, planetSoft: 0.05,
     };
 
+    // Largest Lyapunov exponent via Benettin renormalization of a hidden shadow
+    // planet (appended after the visible ghosts). λ = Σ log(d/d0) / elapsed time.
+    let nGhosts = 0;       // count of visible planets (reference + ghosts)
+    let shadowIdx = -1;    // index of the Lyapunov shadow in sim.planets
+    let lyapSum = 0, nextRenorm = 0, lyap = 0;
+    const LYAP_D0 = 1e-7, LYAP_RENORM = 0.25;
+
     // Streaming classifier for the reference planet (planets[0]).
     let analyzer: Analyzer | null = null;
     let nextSampleT = SAMPLE_DT;
 
     // Brief flares where planets are consumed by a star.
-    const flares: { sprite: THREE.Sprite; born: number }[] = [];
+    // Flares are stored in sim coords so they follow the active reference frame.
+    const flares: { sprite: THREE.Sprite; born: number; sx: number; sy: number }[] = [];
     const FLARE_LIFE = 700;
-    function spawnFlare(wx: number, wz: number) {
+    let lastFrameKey = '';
+    function spawnFlare(sx: number, sy: number) {
       const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
         map: glowTex, color: 0xffb060, transparent: true, opacity: 1,
         blending: THREE.AdditiveBlending, depthWrite: false,
       }));
-      sprite.position.set(wx, 0, wz);
       sprite.scale.setScalar(0.3);
       scene.add(sprite);
-      flares.push({ sprite, born: performance.now() });
+      flares.push({ sprite, born: performance.now(), sx, sy });
     }
     function clearFlares() {
       for (const f of flares) { scene.remove(f.sprite); (f.sprite.material as THREE.Material).dispose(); }
@@ -292,14 +349,19 @@ export default function TrinaryStars() {
 
     /** Full deterministic reset: re-seed stars + planets from the active preset. */
     function reset() {
-      const p = getPreset(refs.current.presetId);
+      const p = getScenario(refs.current.presetId);
       sim.stars = buildStars(p, refs.current.massMul);
       sim.starSoft = refs.current.starSoft;
-      sim.dtBase = p.dt;
+      sim.dtBase = p.system.dt;
       sim.planets = seedPlanets();
+      nGhosts = sim.planets.length;
+      // Append the hidden Lyapunov shadow, offset from the reference.
+      const r0 = sim.planets[0];
+      sim.planets.push({ x: r0.x + LYAP_D0, y: r0.y, vx: r0.vx, vy: r0.vy, ax: 0, ay: 0, alive: true });
+      shadowIdx = nGhosts;
+      lyapSum = 0; nextRenorm = LYAP_RENORM; lyap = 0;
       sim.t = 0;
-      const n = sim.planets.length;
-      if (planetMeshes.length !== n) buildPlanetMeshes(n);
+      if (planetMeshes.length !== nGhosts) buildPlanetMeshes(nGhosts);
       for (const t of starTrails) t.reset();
       for (const t of planetTrails) t.reset();
       // Scale star sizes/glow by mass.
@@ -322,13 +384,18 @@ export default function TrinaryStars() {
       const ref = sim.planets[0];
       if (!ref) return;
       const eps = Math.pow(10, refs.current.epsExp);
-      const n = sim.planets.length;
-      for (let i = 1; i < n; i++) {
-        const ang = (2 * Math.PI * (i - 1)) / Math.max(1, n - 1);
+      for (let i = 1; i < nGhosts; i++) {
+        const ang = (2 * Math.PI * (i - 1)) / Math.max(1, nGhosts - 1);
         sim.planets[i].x = ref.x + eps * Math.cos(ang);
         sim.planets[i].y = ref.y + eps * Math.sin(ang);
         sim.planets[i].vx = ref.vx;
         sim.planets[i].vy = ref.vy;
+      }
+      // Reset the shadow + Lyapunov accumulation to the new reference state.
+      if (shadowIdx >= 0) {
+        const sh = sim.planets[shadowIdx];
+        sh.x = ref.x + LYAP_D0; sh.y = ref.y; sh.vx = ref.vx; sh.vy = ref.vy; sh.alive = true;
+        lyapSum = 0; nextRenorm = sim.t + LYAP_RENORM; lyap = 0;
       }
       for (const t of planetTrails) t.reset();
     }
@@ -446,34 +513,40 @@ export default function TrinaryStars() {
       const realDt = Math.min(clock.getDelta(), 0.05);
       const r = refs.current;
 
+      let didStep = false;
       if (!r.paused) {
         const dt = sim.dtBase ?? 0.002;
         const simSeconds = r.speed * realDt;
         let steps = Math.round(simSeconds / dt);
         steps = Math.min(400, Math.max(0, steps));
-        for (let s = 0; s < steps; s++) step(sim, dt);
+        didStep = steps > 0;
+        for (let s = 0; s < steps; s++) {
+          step(sim, dt);
+          // Benettin renormalization of the shadow at a fixed sim-time cadence.
+          if (shadowIdx >= 0 && sim.t >= nextRenorm) {
+            const ref0 = sim.planets[0];
+            if (ref0.alive !== false) {
+              lyapSum += lyapunovRenorm(ref0, sim.planets[shadowIdx], LYAP_D0);
+              lyap = lyapSum / Math.max(sim.t, 1e-6);
+            }
+            nextRenorm = sim.t + LYAP_RENORM;
+          }
+        }
 
-        // Consume planets that fall into a star.
+        // Consume planets that fall into a star (visible planets only — the
+        // shadow is a measurement probe and is never consumed).
         const Rc = r.collisionRadius;
         if (Rc > 0 && steps > 0) {
-          for (let i = 0; i < sim.planets.length; i++) {
+          for (let i = 0; i < nGhosts; i++) {
             const p = sim.planets[i];
             if (p.alive === false) continue;
             for (let s = 0; s < 3; s++) {
               if (Math.hypot(sim.stars[s].x - p.x, sim.stars[s].y - p.y) < Rc) {
                 p.alive = false;
-                spawnFlare(simX(p.x), simZ(p.y));
+                spawnFlare(p.x, p.y);
                 break;
               }
             }
-          }
-        }
-
-        if (r.showTrails && steps > 0) {
-          for (let i = 0; i < 3; i++) starTrails[i].push(simX(sim.stars[i].x), 0, simZ(sim.stars[i].y));
-          for (let i = 0; i < sim.planets.length; i++) {
-            if (sim.planets[i].alive === false) continue;
-            planetTrails[i]?.push(simX(sim.planets[i].x), 0, simZ(sim.planets[i].y));
           }
         }
 
@@ -484,9 +557,29 @@ export default function TrinaryStars() {
         }
       }
 
-      // Sync meshes to state.
+      // Reference frame: a pure view transform (anchor → origin, align → +x).
+      const tf = frameTransform(sim.stars, r.frameCenter, r.frameAlign);
+      const fkey = `${r.frameCenter}|${r.frameAlign}`;
+      if (fkey !== lastFrameKey) {
+        for (const t of starTrails) t.reset();
+        for (const t of planetTrails) t.reset();
+        lastFrameKey = fkey;
+      }
+
+      // Trails (recorded in the active frame, so a co-rotating path appears).
+      if (didStep && r.showTrails) {
+        for (let i = 0; i < 3; i++) { const f = tf(sim.stars[i].x, sim.stars[i].y); starTrails[i].push(simX(f.x), 0, simZ(f.y)); }
+        for (let i = 0; i < sim.planets.length; i++) {
+          if (sim.planets[i].alive === false) continue;
+          const f = tf(sim.planets[i].x, sim.planets[i].y);
+          planetTrails[i]?.push(simX(f.x), 0, simZ(f.y));
+        }
+      }
+
+      // Sync meshes to state (through the frame transform).
       for (let i = 0; i < 3; i++) {
-        const wx = simX(sim.stars[i].x), wz = simZ(sim.stars[i].y);
+        const f = tf(sim.stars[i].x, sim.stars[i].y);
+        const wx = simX(f.x), wz = simZ(f.y);
         starMeshes[i].position.set(wx, 0, wz);
         starGlows[i].position.set(wx, 0, wz);
       }
@@ -495,7 +588,7 @@ export default function TrinaryStars() {
         if (!m) continue;
         const alive = sim.planets[i].alive !== false;
         m.visible = alive;
-        if (alive) m.position.set(simX(sim.planets[i].x), 0, simZ(sim.planets[i].y));
+        if (alive) { const f = tf(sim.planets[i].x, sim.planets[i].y); m.position.set(simX(f.x), 0, simZ(f.y)); }
       }
 
       // Feed the planet's-eye sky view (reference planet).
@@ -506,6 +599,9 @@ export default function TrinaryStars() {
           skyRef.current = {
             t: sim.t, px: ref0.x, py: ref0.y, Sref: analyzer?.Sref ?? 1,
             stars: sim.stars.map(s => ({ x: s.x, y: s.y, L: Math.pow(s.mass, lum) })),
+            // Once the planet falls into a star there's no surface to stand on —
+            // the sky view detonates and goes dark.
+            dead: ref0.alive === false,
           };
         }
       }
@@ -521,6 +617,8 @@ export default function TrinaryStars() {
         } else {
           (flares[k].sprite.material as THREE.SpriteMaterial).opacity = 1 - a;
           flares[k].sprite.scale.setScalar(0.3 + a * 1.4);
+          const f = tf(flares[k].sx, flares[k].sy);
+          flares[k].sprite.position.set(simX(f.x), 0, simZ(f.y));
         }
       }
 
@@ -533,8 +631,15 @@ export default function TrinaryStars() {
       uiAccum += realDt;
       if (uiAccum > 0.1) {
         uiAccum = 0;
-        if (spreadElRef.current) spreadElRef.current.textContent = cloudSpread(sim.planets).toExponential(2);
+        if (spreadElRef.current) spreadElRef.current.textContent = cloudSpread(sim.planets, nGhosts).toExponential(2);
         if (timeElRef.current) timeElRef.current.textContent = sim.t.toFixed(1);
+        if (lyapElRef.current) {
+          const chaotic = lyap > 0.05;
+          lyapElRef.current.textContent = sim.t > 2
+            ? `${lyap.toFixed(3)}  (τ≈${(1 / Math.max(lyap, 1e-6)).toFixed(1)})  ${chaotic ? 'chaotic' : 'regular'}`
+            : '…';
+          lyapElRef.current.style.color = sim.t > 2 ? (chaotic ? '#ff7043' : '#46d98a') : '#9ec7ff';
+        }
         if (analyzer) setLabSnap(analyzer.snapshot());
       }
 
@@ -568,19 +673,19 @@ export default function TrinaryStars() {
     setMassMul(prev => { const next = [...prev]; next[i] = v; return next; });
 
   const onPickPreset = (id: string) => {
-    const p = getPreset(id);
+    const p = getScenario(id);
     customRef.current = null;
     setPresetId(id);
-    setTargetState(p.target);
-    setPlanetRadiusState(p.planetRadius);
-    setPlanetSpeedState(p.planetSpeed);
+    setTargetState(p.launch.target);
+    setPlanetRadiusState(p.launch.radius);
+    setPlanetSpeedState(p.launch.speed);
     setMassMul([1, 1, 1]);
-    setStarSoft(p.starSoft);
+    setStarSoft(p.system.softening);
   };
 
   // Set the launch speed to the local circular speed √(M/r) for the target.
   const onAutoCircular = () => {
-    const stars = buildStars(getPreset(presetId), massMul);
+    const stars = buildStars(getScenario(presetId), massMul);
     const f = orbitFrame(stars, target);
     const v = Math.sqrt(f.mass / Math.max(0.05, planetRadius));
     setPlanetSpeed(Math.round(v / 0.05) * 0.05);
@@ -597,7 +702,7 @@ export default function TrinaryStars() {
     { value: 's0', label: 'Star 1' },
     { value: 's1', label: 'Star 2' },
     { value: 's2', label: 'Star 3' },
-    ...(preset.hasBinary ? [{ value: 'binary' as TargetId, label: 'Inner binary' }] : []),
+    ...(preset.system.hasBinary ? [{ value: 'binary' as TargetId, label: 'Inner binary' }] : []),
   ];
 
   const btnStyle: React.CSSProperties = {
@@ -624,6 +729,7 @@ export default function TrinaryStars() {
         pointerEvents: 'none', backdropFilter: 'blur(4px)',
       }}>
         <div>cloud spread&nbsp; <span ref={spreadElRef} style={{ color: GHOST_COLOR_HEX }}>0.00e+0</span></div>
+        <div>Lyapunov λ&nbsp;&nbsp; <span ref={lyapElRef} style={{ color: '#9ec7ff' }}>…</span></div>
         <div>sim time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span ref={timeElRef} style={{ color: '#9ec7ff' }}>0.0</span></div>
         {placeMode && <div style={{ color: '#ffd27f' }}>click + drag to launch</div>}
       </div>
@@ -652,9 +758,20 @@ export default function TrinaryStars() {
       </ShellActions>
 
       <ShellSettings>
+        <div style={{ display: 'flex', gap: 4, padding: '2px 2px 10px' }}>
+          {(['simple', 'advanced'] as const).map(m => (
+            <button key={m} onClick={() => setObsMode(m)}
+              style={{
+                ...btnStyle, flex: 1, textTransform: 'capitalize',
+                background: obsMode === m ? 'rgba(102,240,255,0.18)' : 'rgba(255,255,255,0.06)',
+                color: obsMode === m ? '#bfefff' : undefined,
+              }}>{m}</button>
+          ))}
+        </div>
+
         <Section title="System" icon="✸" defaultOpen>
           <Pills
-            options={PRESETS.map(p => ({ value: p.id, label: p.name }))}
+            options={SCENARIOS.map(p => ({ value: p.id, label: p.name }))}
             value={presetId}
             onChange={onPickPreset}
           />
@@ -670,6 +787,7 @@ export default function TrinaryStars() {
             onChange={setEpsExp} format={v => `10^${v.toFixed(1)}`} />
         </Section>
 
+        {obsMode === 'advanced' && (
         <Section title="Stars" icon="☉">
           <Slider label="Star 1 mass · gold" value={massMul[0]} min={0.1} max={4} step={0.05}
             onChange={v => setStarMass(0, v)} format={v => (baseMasses[0] * v).toFixed(2)} />
@@ -682,13 +800,14 @@ export default function TrinaryStars() {
           <Slider label="Star size (collision)" value={collisionRadius} min={0} max={0.5} step={0.01}
             onChange={setCollisionRadius} format={v => (v === 0 ? 'off' : v.toFixed(2))} />
           <button style={{ ...btnStyle, width: '100%', flex: 'none' }}
-            onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.starSoft); }}>
+            onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); }}>
             ⟲ Reset star masses
           </button>
           <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
             Equal masses keep a preset’s character (just faster); uneven ones detune it — e.g. nudge a mass to watch the figure-eight fall into chaos. Softening sets how gently close passes are smoothed. Star size sets how close a planet must come to be consumed (0 = passes through).
           </div>
         </Section>
+        )}
 
         <Section title="Planet launch" icon="◐" defaultOpen>
           <Pills
@@ -709,6 +828,7 @@ export default function TrinaryStars() {
           </div>
         </Section>
 
+        {obsMode === 'advanced' && (<>
         <Section title="Planet sky" icon="🌅">
           <Pills
             label="View from the planet"
@@ -738,6 +858,7 @@ export default function TrinaryStars() {
             The habitable band is set relative to the planet’s starlight at launch (L = mᵝ). The timeline below classifies every moment as Paradise / Warm·precarious / Calm·barren / Chaotic.
           </div>
         </Section>
+        </>)}
 
         <Section title="View" icon="◑">
           <Slider label="Trail length" value={trailLen} min={0} max={TRAIL_MAX} step={50}
@@ -749,6 +870,26 @@ export default function TrinaryStars() {
             onChange={v => setShowTrails(v === 1)}
           />
         </Section>
+
+        {obsMode === 'advanced' && (
+        <Section title="Reference frame" icon="✛">
+          <Select label="Center on" value={frameCenter} onChange={setFrameCenter} options={FRAME_ANCHORS} />
+          <Select label="Align +x to" value={frameAlign} onChange={setFrameAlign}
+            options={[{ value: 'none', label: 'None (inertial)' }, ...FRAME_ANCHORS]} />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
+            {FRAME_PRESETS.map(p => (
+              <button key={p.label} style={{ ...btnStyle, flex: 'none', padding: '6px 10px', fontSize: 12 }}
+                onClick={() => { setFrameCenter(p.c); setFrameAlign(p.a); }}>{p.label}</button>
+            ))}
+            <button style={{ ...btnStyle, flex: 'none', padding: '6px 10px', fontSize: 12 }}
+              disabled={frameCenter === 'bary' && frameAlign === 'none'}
+              onClick={() => { setFrameCenter('bary'); setFrameAlign('none'); }}>⟲ Reset frame</button>
+          </div>
+          <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
+            A pure viewpoint — the physics is unchanged. In a rotating frame the planet appears to swerve (the Coriolis / centrifugal look), which is exactly how co-orbital, Trojan and horseshoe paths become visible. Trails reset when you change the frame.
+          </div>
+        </Section>
+        )}
 
         <Section title="Settings" icon="⚙">
           <button style={{ ...btnStyle, width: '100%', flex: 'none' }}

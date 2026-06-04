@@ -3,7 +3,7 @@
  *  the main thread, which aggregates them. Pausing lets in-flight jobs drain;
  *  the handing pointer persists so resume continues without overlap. */
 
-import type { RunResult } from '../analysis/types';
+import type { RunResult } from '@/lib/nbody';
 import type { EnsembleConfig } from './rng';
 
 const JOB = 48;
