@@ -214,11 +214,14 @@ have no "Reset to defaults" shell integration; Trinary Lab persists via the URL
 instead. There's no default path from "registered a `ShellSettings` control" to
 "it survives a reload."
 
-### I. CSS is globally scoped and already colliding
-AppShell and Agentic Sorting **both define a global `.as-bar`** (and share the
-`as-` prefix) — separated today only by DOM subtree, i.e. a latent bug waiting on
-a stray reorder. Stable Marriage sidesteps it only by using a private `--sm-*`
-prefix. There is no CSS-scoping convention for apps.
+### I. CSS is globally scoped (one collision fixed; convention still missing)
+AppShell and Agentic Sorting both defined a global `.as-bar` — separated only by
+DOM subtree, a latent bug. **Fixed in this branch:** Agentic Sorting's bar family
+was renamed `as-bar*` → `as-arena-bar*` (folded under its existing `as-arena-`
+namespace), so the only exact clash with the shell is gone. The broader risk
+remains: the app still shares the shell's `as-` prefix (`as-button`, `as-card`,
+`as-header`, …), and Stable Marriage dodges clashes only via a private `--sm-*`
+prefix — there is still **no CSS-scoping convention for apps**.
 
 ### J. Doc drift (now reconciled)
 `CLAUDE.md` claimed Fractals (GPU) used the legacy `ToggleMenu`; in fact
@@ -274,9 +277,9 @@ for the design conversation:
 - [x] **`CLAUDE.md` doc-drift fixed** (§J): `ToggleMenu` re-attributed to the
       legacy Fractals2D, and the repo-layout tree + routing table updated for the
       `MobiusWalk → TopologyWalk` rename (with `#/mobius`, `#/wrap-world` redirects).
-- [ ] **Remaining low-risk quick win** (a bug, not a redesign): the duplicate
-      global `.as-bar` CSS rule shared by `AppShell.css` and `agenticSorting.css`
-      (§I) — rename the app's class or scope it.
+- [x] **`.as-bar` CSS collision fixed** (§I): Agentic Sorting's bar family renamed
+      `as-bar*` → `as-arena-bar*`, removing the only exact clash with the shell.
+      (A general app CSS-scoping convention is still open.)
 - [ ] For the chosen theme, draft the shared-API change against `AppShell` /
       `ControlPanel` and check it against the anchor snapshots **and the six new
       manuals** so no app regresses.

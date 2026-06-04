@@ -254,9 +254,9 @@ export default function AgenticSorting() {
   }, [isRunning, simulationSpeed, runSimulationStep]);
 
   const getBarClass = (item: AgentItem): string => {
-    if (item.status === 'swapping') return 'as-bar as-bar-swapping';
-    if (item.status === 'active') return 'as-bar as-bar-active';
-    return `as-bar ${AGENT_TYPES[item.type].cssClass}`;
+    if (item.status === 'swapping') return 'as-arena-bar as-arena-bar-swapping';
+    if (item.status === 'active') return 'as-arena-bar as-arena-bar-active';
+    return `as-arena-bar ${AGENT_TYPES[item.type].cssClass}`;
   };
 
   return (
@@ -379,11 +379,11 @@ export default function AgenticSorting() {
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className="as-bar-column"
+                  className="as-arena-bar-column"
                   style={{ width: `${100 / items.length}%` }}
                 >
                   <div
-                    className={`${getBarClass(item)}${display === 'dots' ? ' as-bar-dot' : ''}`}
+                    className={`${getBarClass(item)}${display === 'dots' ? ' as-arena-bar-dot' : ''}`}
                     // Bars: column from the midline, length = |value|/2 %.
                     // Dots: a small circle at vertical position = 50% + value/2,
                     //       offset by half the dot size (set in CSS) to center.
