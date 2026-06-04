@@ -4,7 +4,7 @@
  *  so ensemble statistics agree with what you see in the single-run view. */
 
 import {
-  step, lyapunovRenorm, getPreset, buildStars, launchPlanet, orbitFrame, Analyzer,
+  step, lyapunovRenorm, getScenario, buildStars, launchPlanet, orbitFrame, Analyzer,
   type SimState, type Planet, type Star, type Outcome, type RunResult,
 } from '@/lib/nbody';
 import type { EnsembleConfig, RunParams } from './rng';
@@ -17,13 +17,13 @@ const DEG = Math.PI / 180;
 
 /** Mass governing circular speed for the ensemble's orbit target. */
 export function targetMassOf(cfg: EnsembleConfig): number {
-  const stars = buildStars(getPreset(cfg.presetId), cfg.massMul);
+  const stars = buildStars(getScenario(cfg.presetId), cfg.massMul);
   return orbitFrame(stars, cfg.target).mass;
 }
 
 /** Integrate one world to a terminal outcome (or the time budget). */
 function simulate(cfg: EnsembleConfig, stars: Star[], planet: Planet) {
-  const dt = getPreset(cfg.presetId).dt;
+  const dt = getScenario(cfg.presetId).system.dt;
   const sim: SimState = {
     stars, planets: [planet], t: 0, dtBase: dt, G: 1,
     starSoft: cfg.starSoft, planetSoft: 0.05,
@@ -76,7 +76,7 @@ function resultOf(s: ReturnType<Analyzer['snapshot']>, blowup: boolean, params: 
 }
 
 export function runOne(cfg: EnsembleConfig, params: RunParams): RunResult {
-  const stars = buildStars(getPreset(cfg.presetId), cfg.massMul);
+  const stars = buildStars(getScenario(cfg.presetId), cfg.massMul);
   const planet = launchPlanet(stars, cfg.target, params.radius, params.speed, params.angleDeg * DEG, params.retro);
   const { s, blowup } = simulate(cfg, stars, planet);
   return resultOf(s, blowup, params);
@@ -93,7 +93,7 @@ export function runPlanet(cfg: EnsembleConfig, stars: Star[], planet: Planet): R
 /** Finite-time largest Lyapunov exponent for one explicit planet IC (Benettin
  *  shadow), plus its outcome — used by the basin "chaos map". */
 export function runPlanetLyap(cfg: EnsembleConfig, stars: Star[], planet: Planet): { lambda: number; outcome: Outcome } {
-  const dt = getPreset(cfg.presetId).dt;
+  const dt = getScenario(cfg.presetId).system.dt;
   const shadow: Planet = { ...planet, x: planet.x + LYAP_D0 };
   const sim: SimState = {
     stars, planets: [planet, shadow], t: 0, dtBase: dt, G: 1,

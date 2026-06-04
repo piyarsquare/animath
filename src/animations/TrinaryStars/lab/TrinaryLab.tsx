@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppHeader } from '../../../components/AppShell';
 import { Slider, Pills } from '../../../components/ControlPanel';
-import { PRESETS, getPreset, DEFAULT_CLASSIFY, type TargetId, type Outcome, type RunResult } from '@/lib/nbody';
+import { SCENARIOS, getScenario, DEFAULT_CLASSIFY, type TargetId, type Outcome, type RunResult } from '@/lib/nbody';
 import { Aggregator, OUTCOMES, type AggSnapshot } from './ensemble';
 import { runOne, targetMassOf } from './runner';
 import { sampleParams, type EnsembleConfig } from './rng';
@@ -16,9 +16,12 @@ const HAS_GPU = gpuAvailable();
 type Engine = 'cpu' | 'workers' | 'gpu';
 type ViewMode = 'simple' | 'advanced';
 
+// Curated one-click experiments for Simple mode. Each (except the open-ended
+// census) names the scenario and basin plane it sets up *by id*, so the
+// scenario name shown to the user is derived from the registry, not duplicated.
 const EXPERIMENTS = [
-  { id: 'destiny', icon: '▦', title: 'Map a planet’s destiny', desc: 'Colour every starting point by how it ends — and watch the fates interleave into a fractal. (Pythagorean)' },
-  { id: 'orbit', icon: '◎', title: 'Where can it orbit?', desc: 'Which launch radius & speed keep a planet bound around the binary? (Binary + Star)' },
+  { id: 'destiny', icon: '▦', scenarioId: 'pythagorean', plane: 'pos', title: 'Map a planet’s destiny', desc: 'Colour every starting point by how it ends — and watch the fates interleave into a fractal.' },
+  { id: 'orbit', icon: '◎', scenarioId: 'binary', plane: 'radspeed', title: 'Where can it orbit?', desc: 'Which launch radius & speed keep a planet bound around the binary?' },
   { id: 'census', icon: '∑', title: 'Census of fates', desc: 'Launch thousands of random worlds and tally how often chaos ends happily.' },
 ] as const;
 const TILE_COUNT = 8;
@@ -185,9 +188,9 @@ export default function TrinaryLab() {
   if (!urlRef.current) urlRef.current = labParams();
   const U = urlRef.current;
 
-  const [presetId, setPresetId] = useState(() => U.get('p') ?? PRESETS[0].id);
-  const preset = getPreset(presetId);
-  const [target, setTarget] = useState<TargetId>(() => (U.get('tg') as TargetId) ?? preset.target);
+  const [presetId, setPresetId] = useState(() => U.get('p') ?? SCENARIOS[0].id);
+  const preset = getScenario(presetId);
+  const [target, setTarget] = useState<TargetId>(() => (U.get('tg') as TargetId) ?? preset.launch.target);
   const [tMax, setTMax] = useState(() => pNum(U, 'tm', 180));
   const [rMin, setRMin] = useState(() => pNum(U, 'r0', 0.6));
   const [rMax, setRMax] = useState(() => pNum(U, 'r1', 4));
@@ -199,8 +202,8 @@ export default function TrinaryLab() {
   const [targetN, setTargetN] = useState(() => pNum(U, 'n', 4000));
   const [baseSeed, setBaseSeed] = useState(() => pNum(U, 'sd', 1234567) >>> 0);
   const [massMul, setMassMul] = useState<number[]>(() => [pNum(U, 'm0', 1), pNum(U, 'm1', 1), pNum(U, 'm2', 1)]);
-  const [starSoft, setStarSoft] = useState<number>(() => pNum(U, 'ss', preset.starSoft));
-  const baseMasses = useMemo(() => getPreset(presetId).make().map(s => s.mass), [presetId]);
+  const [starSoft, setStarSoft] = useState<number>(() => pNum(U, 'ss', preset.system.softening));
+  const baseMasses = useMemo(() => getScenario(presetId).system.makeStars().map(s => s.mass), [presetId]);
 
   const [running, setRunning] = useState(false);
   const [agg, setAgg] = useState<AggSnapshot | null>(null);
@@ -390,16 +393,17 @@ export default function TrinaryLab() {
   useEffect(() => { reset(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [cfg, engine]);
 
   const onPickPreset = (id: string) => {
-    setPresetId(id); setTarget(getPreset(id).target);
-    setMassMul([1, 1, 1]); setStarSoft(getPreset(id).starSoft);
+    setPresetId(id); setTarget(getScenario(id).launch.target);
+    setMassMul([1, 1, 1]); setStarSoft(getScenario(id).system.softening);
   };
   const setStarMass = (i: number, v: number) => setMassMul(prev => { const nx = [...prev]; nx[i] = v; return nx; });
 
-  // Curated one-click experiments for Simple mode.
-  const runExperiment = (id: 'destiny' | 'orbit' | 'census') => {
+  const runExperiment = (id: typeof EXPERIMENTS[number]['id']) => {
     if (id === 'census') { running ? pause() : start(); return; }
-    if (id === 'destiny') { onPickPreset('pythagorean'); window.setTimeout(() => basinRef.current?.setPlane('pos'), 0); }
-    else { onPickPreset('binary'); window.setTimeout(() => basinRef.current?.setPlane('radspeed'), 0); }
+    const exp = EXPERIMENTS.find(e => e.id === id);
+    if (!exp || !('scenarioId' in exp)) return;
+    onPickPreset(exp.scenarioId);
+    window.setTimeout(() => basinRef.current?.setPlane(exp.plane), 0);
   };
 
   // --- Parameter sweep (its own chunked CPU loop) ---
@@ -481,7 +485,7 @@ export default function TrinaryLab() {
   const targetOptions: { value: TargetId; label: string }[] = [
     { value: 'bary', label: 'Barycenter' }, { value: 's0', label: 'Star 1' },
     { value: 's1', label: 'Star 2' }, { value: 's2', label: 'Star 3' },
-    ...(preset.hasBinary ? [{ value: 'binary' as TargetId, label: 'Inner binary' }] : []),
+    ...(preset.system.hasBinary ? [{ value: 'binary' as TargetId, label: 'Inner binary' }] : []),
   ];
 
   return (
@@ -541,7 +545,9 @@ export default function TrinaryLab() {
                 <button key={e.id} style={cardStyle} onClick={() => runExperiment(e.id)}>
                   <div style={{ fontSize: 20, color: '#9ec7ff' }}>{e.icon}</div>
                   <div style={{ fontWeight: 600, color: '#cfe8ff', margin: '4px 0 2px' }}>{e.title}</div>
-                  <div style={{ font: '12px/1.4 system-ui', color: '#9aa7bd' }}>{e.desc}</div>
+                  <div style={{ font: '12px/1.4 system-ui', color: '#9aa7bd' }}>
+                    {e.desc}{'scenarioId' in e ? ` (${getScenario(e.scenarioId).name})` : ''}
+                  </div>
                 </button>
               ))}
             </div>
@@ -551,7 +557,7 @@ export default function TrinaryLab() {
           </div>
           <div style={{ ...panel, marginBottom: 12 }}>
             <h3 style={h3}>SYSTEM</h3>
-            <Pills options={PRESETS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
+            <Pills options={SCENARIOS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
             <div style={{ font: '12px/1.5 system-ui', color: '#9aa7bd', marginTop: 4 }}>{preset.blurb}</div>
           </div>
         </>
@@ -564,7 +570,7 @@ export default function TrinaryLab() {
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0 18px' }}>
               <div style={{ gridColumn: '1 / -1' }}>
-                <Pills options={PRESETS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
+                <Pills options={SCENARIOS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
               </div>
               <Pills label="Orbit around" options={targetOptions} value={target} onChange={setTarget} />
               <Pills label="Engine" value={engine}
@@ -607,7 +613,7 @@ export default function TrinaryLab() {
       <BasinMap ref={basinRef} cfg={cfg} system={{
         target, onTarget: (t) => setTarget(t as TargetId), targetOptions,
         massMul, onMass: setStarMass, baseMasses, starSoft, onStarSoft: setStarSoft,
-        onReset: () => { setMassMul([1, 1, 1]); setStarSoft(preset.starSoft); },
+        onReset: () => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); },
         box: { rMin, rMax, fMin, fMax },
         onBox: (b) => { setRMin(b.rMin); setRMax(b.rMax); setFMin(b.fMin); setFMax(b.fMax); },
         onRunCensus: () => { if (!running) start(); },

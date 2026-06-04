@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { step, getPreset, buildStars, launchPlanet, orbitFrame, type SimState } from '@/lib/nbody';
+import { step, getScenario, buildStars, launchPlanet, orbitFrame, type SimState } from '@/lib/nbody';
 import type { EnsembleConfig } from './rng';
 
 const STAR_COLORS = ['#ffd27f', '#ff7043', '#9ec7ff'];
@@ -32,7 +32,7 @@ export default function MiniSim({ cfg, running, size = 200, steps = 140 }: {
 
     function reseed() {
       const c = cfgRef.current;
-      const preset = getPreset(c.presetId);
+      const preset = getScenario(c.presetId);
       const stars = buildStars(preset, c.massMul);
       const f = orbitFrame(stars, c.target);
       const radius = c.rMin + (c.rMax - c.rMin) * Math.random();
@@ -41,7 +41,7 @@ export default function MiniSim({ cfg, running, size = 200, steps = 140 }: {
       const ang = Math.random() * Math.PI * 2;
       const retro = c.allowRetro && Math.random() < 0.5;
       const planet = launchPlanet(stars, c.target, radius, v, ang, retro);
-      sim = { stars, planets: [planet], t: 0, dtBase: preset.dt, G: 1, starSoft: c.starSoft, planetSoft: 0.05 };
+      sim = { stars, planets: [planet], t: 0, dtBase: preset.system.dt, G: 1, starSoft: c.starSoft, planetSoft: 0.05 };
       trail = [];
     }
     reseed();
@@ -49,10 +49,10 @@ export default function MiniSim({ cfg, running, size = 200, steps = 140 }: {
     const frame = () => {
       raf = requestAnimationFrame(frame);
       const c = cfgRef.current;
-      const preset = getPreset(c.presetId);
+      const preset = getScenario(c.presetId);
 
       if (runRef.current && sim) {
-        for (let i = 0; i < steps; i++) step(sim, preset.dt);
+        for (let i = 0; i < steps; i++) step(sim, preset.system.dt);
         const p = sim.planets[0];
         trail.push([p.x, p.y]);
         if (trail.length > 64) trail.shift();

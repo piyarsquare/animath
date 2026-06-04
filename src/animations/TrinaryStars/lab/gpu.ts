@@ -11,7 +11,7 @@
  * storage buffers) to avoid long single-dispatch GPU timeouts.
  */
 
-import { getPreset, buildStars, launchPlanet, type Outcome, type RunResult } from '@/lib/nbody';
+import { getScenario, buildStars, launchPlanet, type Outcome, type RunResult } from '@/lib/nbody';
 import type { EnsembleConfig, RunParams } from './rng';
 
 export function gpuAvailable(): boolean {
@@ -144,7 +144,7 @@ export class GpuRunner {
   async runBatch(cfg: EnsembleConfig, params: RunParams[]): Promise<RunResult[]> {
     const dev = this.device;
     const count = params.length;
-    const preset = getPreset(cfg.presetId);
+    const preset = getScenario(cfg.presetId);
     const stars = buildStars(preset, cfg.massMul);
     const cls = cfg.classify;
 
@@ -177,7 +177,7 @@ export class GpuRunner {
     }
 
     // --- Uniform config ---
-    const dt = preset.dt;
+    const dt = preset.system.dt;
     const uni = new Float32Array([
       dt, cfg.tMax, 0.1, cls.lumExp,
       cfg.starSoft * cfg.starSoft, 0.05 * 0.05, cls.insolSoft2, cls.rKill,

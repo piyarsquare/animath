@@ -1,7 +1,7 @@
 /** Pure basin-map computation, shared by the main thread and basin workers.
  *  One pixel = one exact, deterministic world integrated to its fate. */
 
-import { getPreset, buildStars, launchPlanet, orbitFrame, type Planet, type Star, type Outcome } from '@/lib/nbody';
+import { getScenario, buildStars, launchPlanet, orbitFrame, type Planet, type Star, type Outcome } from '@/lib/nbody';
 import { runPlanet, runPlanetLyap } from './runner';
 import type { EnsembleConfig } from './rng';
 
@@ -49,12 +49,12 @@ export function chaosColor(lambda: number): [number, number, number] {
 
 interface Ctx {
   cfg: EnsembleConfig; bc: BasinConfig;
-  preset: ReturnType<typeof getPreset>;
+  preset: ReturnType<typeof getScenario>;
   targetMass: number; Mtot: number;
 }
 
 export function basinContext(cfg: EnsembleConfig, bc: BasinConfig): Ctx {
-  const preset = getPreset(cfg.presetId);
+  const preset = getScenario(cfg.presetId);
   const refStars = buildStars(preset, cfg.massMul);
   return {
     cfg, bc, preset,
@@ -130,6 +130,6 @@ export function computeBasinRange(cfg: EnsembleConfig, bc: BasinConfig, start: n
  *  used to hand a clicked basin pixel to the single-run Observatory. */
 export function basinPlanetAt(cfg: EnsembleConfig, bc: BasinConfig, ax: number, by: number): Planet {
   const ctx = basinContext(cfg, bc);
-  const stars = buildStars(getPreset(cfg.presetId), cfg.massMul);
+  const stars = buildStars(getScenario(cfg.presetId), cfg.massMul);
   return makePlanet(ctx, stars, ax, by);
 }

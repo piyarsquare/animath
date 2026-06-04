@@ -4,7 +4,7 @@ import Canvas3D from '@/components/Canvas3D';
 import { ShellActions, ShellSettings, useAppExplainer, useAppHeader } from '../../components/AppShell';
 import { Section, Slider, Pills, Select } from '../../components/ControlPanel';
 import {
-  step, cloudSpread, lyapunovRenorm, PRESETS, getPreset, buildStars, orbitFrame, launchPlanet, Analyzer, DEFAULT_CLASSIFY,
+  step, cloudSpread, lyapunovRenorm, SCENARIOS, getScenario, buildStars, orbitFrame, launchPlanet, Analyzer, DEFAULT_CLASSIFY,
   type SimState, type Planet, type Star, type TargetId, type ClassifyParams, type Snapshot,
 } from '@/lib/nbody';
 import Observatory from './Observatory';
@@ -141,7 +141,7 @@ export default function TrinaryStars() {
   const qRef = useRef<URLSearchParams | null>(null);
   if (!qRef.current) qRef.current = navQuery();
   const Q = qRef.current;
-  const qPreset = Q.get('p') ?? PRESETS[0].id;
+  const qPreset = Q.get('p') ?? SCENARIOS[0].id;
   const initialCustom = Q.get('px') != null
     ? { x: navNum(Q, 'px', 0), y: navNum(Q, 'py', 0), vx: navNum(Q, 'vx', 0), vy: navNum(Q, 'vy', 0) }
     : null;
@@ -151,13 +151,13 @@ export default function TrinaryStars() {
   const fromLink = initialCustom != null;
 
   const [presetId, setPresetId] = usePersistentState(fromLink ? null : PK('presetId'), qPreset);
-  const [target, setTargetState] = usePersistentState<TargetId>(fromLink ? null : PK('target'), (Q.get('tg') as TargetId) ?? getPreset(presetId).target);
+  const [target, setTargetState] = usePersistentState<TargetId>(fromLink ? null : PK('target'), (Q.get('tg') as TargetId) ?? getScenario(presetId).launch.target);
   const [ghostCount, setGhostCount] = usePersistentState(PK('ghostCount'), 12);
   const [epsExp, setEpsExp] = usePersistentState(PK('epsExp'), -3);      // perturbation ε = 10^epsExp
-  const [planetRadius, setPlanetRadiusState] = usePersistentState(PK('planetRadius'), getPreset(presetId).planetRadius);
-  const [planetSpeed, setPlanetSpeedState] = usePersistentState(PK('planetSpeed'), getPreset(presetId).planetSpeed);
+  const [planetRadius, setPlanetRadiusState] = usePersistentState(PK('planetRadius'), getScenario(presetId).launch.radius);
+  const [planetSpeed, setPlanetSpeedState] = usePersistentState(PK('planetSpeed'), getScenario(presetId).launch.speed);
   const [massMul, setMassMul] = usePersistentState<number[]>(fromLink ? null : PK('massMul'), [navNum(Q, 'm0', 1), navNum(Q, 'm1', 1), navNum(Q, 'm2', 1)]); // per-star mass multipliers
-  const [starSoft, setStarSoft] = usePersistentState(fromLink ? null : PK('starSoft'), navNum(Q, 'ss', getPreset(presetId).starSoft)); // close-encounter softening
+  const [starSoft, setStarSoft] = usePersistentState(fromLink ? null : PK('starSoft'), navNum(Q, 'ss', getScenario(presetId).system.softening)); // close-encounter softening
   const [speed, setSpeed] = usePersistentState(PK('speed'), 1);          // sim-seconds per real-second
   const [trailLen, setTrailLen] = usePersistentState(PK('trailLen'), 500);
   const [showTrails, setShowTrails] = usePersistentState(PK('showTrails'), true);
@@ -177,7 +177,7 @@ export default function TrinaryStars() {
   const [labSnap, setLabSnap] = useState<Snapshot | null>(null);     // derived — not persisted
   const skyRef = useRef<SkyData | null>(null);
 
-  const preset = getPreset(presetId);
+  const preset = getScenario(presetId);
   useAppHeader('Trinary System', preset.name);
   useAppExplainer(explainerText);
 
@@ -186,7 +186,7 @@ export default function TrinaryStars() {
   const classify: ClassifyParams = { ...DEFAULT_CLASSIFY, lumExp, habLo, habHi, calmThresh, rKill: Math.max(collisionRadius, 1e-4) };
 
   // Base (untuned) star masses for this preset, for labelling the mass sliders.
-  const baseMasses = useMemo(() => getPreset(presetId).make().map(s => s.mass), [presetId]);
+  const baseMasses = useMemo(() => getScenario(presetId).system.makeStars().map(s => s.mass), [presetId]);
 
   // Live params the animation loop / pointer handlers read without re-mounting.
   const refs = useRef({
@@ -348,10 +348,10 @@ export default function TrinaryStars() {
 
     /** Full deterministic reset: re-seed stars + planets from the active preset. */
     function reset() {
-      const p = getPreset(refs.current.presetId);
+      const p = getScenario(refs.current.presetId);
       sim.stars = buildStars(p, refs.current.massMul);
       sim.starSoft = refs.current.starSoft;
-      sim.dtBase = p.dt;
+      sim.dtBase = p.system.dt;
       sim.planets = seedPlanets();
       nGhosts = sim.planets.length;
       // Append the hidden Lyapunov shadow, offset from the reference.
@@ -669,19 +669,19 @@ export default function TrinaryStars() {
     setMassMul(prev => { const next = [...prev]; next[i] = v; return next; });
 
   const onPickPreset = (id: string) => {
-    const p = getPreset(id);
+    const p = getScenario(id);
     customRef.current = null;
     setPresetId(id);
-    setTargetState(p.target);
-    setPlanetRadiusState(p.planetRadius);
-    setPlanetSpeedState(p.planetSpeed);
+    setTargetState(p.launch.target);
+    setPlanetRadiusState(p.launch.radius);
+    setPlanetSpeedState(p.launch.speed);
     setMassMul([1, 1, 1]);
-    setStarSoft(p.starSoft);
+    setStarSoft(p.system.softening);
   };
 
   // Set the launch speed to the local circular speed √(M/r) for the target.
   const onAutoCircular = () => {
-    const stars = buildStars(getPreset(presetId), massMul);
+    const stars = buildStars(getScenario(presetId), massMul);
     const f = orbitFrame(stars, target);
     const v = Math.sqrt(f.mass / Math.max(0.05, planetRadius));
     setPlanetSpeed(Math.round(v / 0.05) * 0.05);
@@ -698,7 +698,7 @@ export default function TrinaryStars() {
     { value: 's0', label: 'Star 1' },
     { value: 's1', label: 'Star 2' },
     { value: 's2', label: 'Star 3' },
-    ...(preset.hasBinary ? [{ value: 'binary' as TargetId, label: 'Inner binary' }] : []),
+    ...(preset.system.hasBinary ? [{ value: 'binary' as TargetId, label: 'Inner binary' }] : []),
   ];
 
   const btnStyle: React.CSSProperties = {
@@ -756,7 +756,7 @@ export default function TrinaryStars() {
       <ShellSettings>
         <Section title="System" icon="✸" defaultOpen>
           <Pills
-            options={PRESETS.map(p => ({ value: p.id, label: p.name }))}
+            options={SCENARIOS.map(p => ({ value: p.id, label: p.name }))}
             value={presetId}
             onChange={onPickPreset}
           />
@@ -784,7 +784,7 @@ export default function TrinaryStars() {
           <Slider label="Star size (collision)" value={collisionRadius} min={0} max={0.5} step={0.01}
             onChange={setCollisionRadius} format={v => (v === 0 ? 'off' : v.toFixed(2))} />
           <button style={{ ...btnStyle, width: '100%', flex: 'none' }}
-            onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.starSoft); }}>
+            onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); }}>
             ⟲ Reset star masses
           </button>
           <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
