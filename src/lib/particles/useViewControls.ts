@@ -102,8 +102,11 @@ export function useViewControls(state: ParticleState) {
     const { L, R } = quarterQuat(plane, θ);
     const startL = rotLRef.current.clone();
     const startR = rotRRef.current.clone();
+    // Compose in the world frame: the shader applies p ↦ uRotL · p · conj(uRotR),
+    // so accumulating the turn means premultiplying both L and R (uRotL = L·startL,
+    // uRotR = R·startR). This matches the convention the animation loop uses.
     const endL = L.clone().multiply(startL).normalize();
-    const endR = startR.clone().multiply(R.conjugate()).normalize();
+    const endR = R.clone().multiply(startR).normalize();
     const duration = 1000;
     const start = performance.now();
     const step = (now: number) => {
@@ -138,7 +141,7 @@ export function useViewControls(state: ParticleState) {
     if (materialsRef.current.length === 0) return;
     const { L, R } = quarterQuat(plane, theta);
     rotLRef.current.copy(L.clone().multiply(rotLRef.current).normalize());
-    rotRRef.current.copy(rotRRef.current.clone().multiply(R.conjugate()).normalize());
+    rotRRef.current.copy(R.clone().multiply(rotRRef.current).normalize());
     materialsRef.current.forEach(m => {
       m.uniforms.uRotL.value.w = rotLRef.current.w;
       m.uniforms.uRotL.value.v.set(rotLRef.current.x, rotLRef.current.y, rotLRef.current.z);
