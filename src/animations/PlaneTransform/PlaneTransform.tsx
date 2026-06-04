@@ -13,6 +13,10 @@ import { usePersistentState, clearPersistedState } from '../../lib/usePersistent
 import { vertexShader, fragmentShader } from './shaders';
 import PlaneCurveFloater, { type StandardCurveName } from './PlaneCurveFloater';
 import { buildStandardCurve, type CurvePoint } from './standardCurves';
+import {
+  sampleInputPositions, clipFromMath, mathFromClip,
+  type GridMode, type PlaneMode,
+} from './polarViews';
 
 /** localStorage namespace for this viewer's saved settings. */
 const STORAGE_KEY = 'plane-transform';
@@ -49,6 +53,8 @@ export default function PlaneTransform() {
   const [density, setDensity] = usePersistentState(`${STORAGE_KEY}:density`, 240);          // points per side
   const [pointSize, setPointSize] = usePersistentState(`${STORAGE_KEY}:pointSize`, 2.5);
   const [viewExtent, setViewExtent] = usePersistentState(`${STORAGE_KEY}:viewExtent`, 3);   // half-side of visible square
+  const [gridMode, setGridMode] = usePersistentState<GridMode>(`${STORAGE_KEY}:gridMode`, 'cartesian');
+  const [planeMode, setPlaneMode] = usePersistentState<PlaneMode>(`${STORAGE_KEY}:planeMode`, 'cartesian');
   const [colourMode, setColourMode] = usePersistentState<ColourMode>(`${STORAGE_KEY}:colourMode`, 0);
   const [saturation, setSaturation] = usePersistentState(`${STORAGE_KEY}:saturation`, 0.85);
   const [intensity, setIntensity] = usePersistentState(`${STORAGE_KEY}:intensity`, 1.0);
@@ -99,21 +105,13 @@ export default function PlaneTransform() {
   // viewExtent for the input pane and apply f then divide for the output pane.
   useEffect(() => {
     const n = density * density;
-    const inputPos = new Float32Array(n * 2);
+    const inputPos = sampleInputPositions(gridMode, density, viewExtent);
     const seeds    = new Float32Array(n * 4);
-    let k = 0;
-    for (let i = 0; i < density; i++) {
-      for (let j = 0; j < density; j++) {
-        const x = (i / (density - 1) - 0.5) * 2 * viewExtent;
-        const y = (j / (density - 1) - 0.5) * 2 * viewExtent;
-        inputPos[2 * k]     = x;
-        inputPos[2 * k + 1] = y;
-        seeds[4 * k]     = Math.random();
-        seeds[4 * k + 1] = Math.random();
-        seeds[4 * k + 2] = Math.random();
-        seeds[4 * k + 3] = Math.random();
-        k++;
-      }
+    for (let k = 0; k < n; k++) {
+      seeds[4 * k]     = Math.random();
+      seeds[4 * k + 1] = Math.random();
+      seeds[4 * k + 2] = Math.random();
+      seeds[4 * k + 3] = Math.random();
     }
     const geom = new THREE.BufferGeometry();
     geom.setAttribute('inputPos', new THREE.BufferAttribute(inputPos, 2));
@@ -125,7 +123,7 @@ export default function PlaneTransform() {
     if (outputPane.current.points) outputPane.current.points.geometry = geom;
 
     return () => geom.dispose();
-  }, [density, viewExtent]);
+  }, [density, viewExtent, gridMode]);
 
   // Mount and tear down both renderers.
   useEffect(() => {
@@ -144,6 +142,7 @@ export default function PlaneTransform() {
         uniforms: {
           viewExtent:    { value: viewExtent },
           transform:     { value: transform },
+          planeMode:     { value: planeMode === 'logpolar' ? 1 : 0 },
           functionType:  { value: functionIndex },
           exponentP:     { value: expP },
           exponentQ:     { value: expQ === 0 ? 1 : expQ },
@@ -205,6 +204,7 @@ export default function PlaneTransform() {
     for (const pane of [inputPane.current, outputPane.current]) {
       const m = pane.material; if (!m) continue;
       m.uniforms.viewExtent.value   = viewExtent;
+      m.uniforms.planeMode.value    = planeMode === 'logpolar' ? 1 : 0;
       m.uniforms.functionType.value = functionIndex;
       m.uniforms.exponentP.value    = expP;
       m.uniforms.exponentQ.value    = expQ === 0 ? 1 : expQ;
@@ -214,7 +214,7 @@ export default function PlaneTransform() {
       m.uniforms.saturation.value   = saturation;
       m.uniforms.intensity.value    = intensity;
     }
-  }, [viewExtent, functionIndex, expP, expQ, branchIndex, pointSize, colourMode, saturation, intensity]);
+  }, [viewExtent, planeMode, functionIndex, expP, expQ, branchIndex, pointSize, colourMode, saturation, intensity]);
 
   // Map a curve through the active complex function to get the output polyline.
   const outputCurve = useMemo<CurvePoint[]>(() => {
@@ -269,6 +269,7 @@ export default function PlaneTransform() {
         <InputPane
           mountRef={inputMountRef}
           viewExtent={viewExtent}
+          planeMode={planeMode}
           drawMode={drawMode}
           curve={curve}
           onAppendCurve={(pt, fresh) => {
@@ -281,6 +282,7 @@ export default function PlaneTransform() {
         <OutputPane
           mountRef={outputMountRef}
           viewExtent={viewExtent}
+          planeMode={planeMode}
           curve={outputCurve}
           onWheelZoom={(factor) => setViewExtent(v => Math.min(20, Math.max(0.2, v * factor)))}
         >
@@ -344,6 +346,24 @@ export default function PlaneTransform() {
         </Section>
 
         <Section title="View" icon="◑">
+          <Pills<GridMode>
+            label="Grid"
+            options={[
+              { value: 'cartesian', label: 'Cartesian' },
+              { value: 'polar', label: 'Polar' },
+            ]}
+            value={gridMode}
+            onChange={setGridMode}
+          />
+          <Pills<PlaneMode>
+            label="Plane"
+            options={[
+              { value: 'cartesian', label: 'Cartesian' },
+              { value: 'logpolar', label: 'Log-polar' },
+            ]}
+            value={planeMode}
+            onChange={setPlaneMode}
+          />
           <Slider label="Extent (±)" value={viewExtent}
             min={0.5} max={10} step={0.5}
             onChange={setViewExtent} format={v => v.toFixed(1)} />
@@ -410,28 +430,31 @@ function useInscribedSquare(ref: React.RefObject<HTMLDivElement>) {
 interface PaneCommon {
   mountRef: React.RefObject<HTMLDivElement>;
   viewExtent: number;
+  planeMode: PlaneMode;
   curve: CurvePoint[];
   onWheelZoom: (factor: number) => void;
   children?: React.ReactNode;
 }
 
-function CurveSvg({ box, viewExtent, points }: {
+function CurveSvg({ box, viewExtent, planeMode, points }: {
   box: { w: number; h: number; size: number; offX: number; offY: number };
   viewExtent: number;
+  planeMode: PlaneMode;
   points: CurvePoint[];
 }) {
   if (box.size === 0 || points.length === 0) return null;
   const cx = box.offX + box.size / 2;
   const cy = box.offY + box.size / 2;
-  const sx = box.size / (2 * viewExtent);
-  // Clip wildly-large points (e.g. 1/z near origin) so the path stays inside
-  // the SVG; matches the shader's `length(pos) > 1e3` cap.
-  const MAX = 1e3;
+  const half = box.size / 2;
+  // Map each math point through the same transform the shader uses (Cartesian
+  // or log-polar), then place it within the inscribed square. Clamp the NDC so
+  // a stray point at infinity can't blow the path out to a huge bounding box.
   const d = points.map(([x, y], i) => {
-    const cx0 = Math.max(-MAX, Math.min(MAX, x));
-    const cy0 = Math.max(-MAX, Math.min(MAX, y));
-    const px = cx + cx0 * sx;
-    const py = cy - cy0 * sx;
+    let [nx, ny] = clipFromMath(x, y, planeMode, viewExtent);
+    nx = Math.max(-1e4, Math.min(1e4, nx));
+    ny = Math.max(-1e4, Math.min(1e4, ny));
+    const px = cx + nx * half;
+    const py = cy - ny * half;
     return `${i === 0 ? 'M' : 'L'} ${px.toFixed(2)} ${py.toFixed(2)}`;
   }).join(' ');
   return (
@@ -446,7 +469,7 @@ function CurveSvg({ box, viewExtent, points }: {
 }
 
 function InputPane({
-  mountRef, viewExtent, drawMode, curve, onAppendCurve, onWheelZoom, children,
+  mountRef, viewExtent, planeMode, drawMode, curve, onAppendCurve, onWheelZoom, children,
 }: PaneCommon & {
   drawMode: boolean;
   onAppendCurve: (pt: CurvePoint, fresh: boolean) => void;
@@ -459,10 +482,14 @@ function InputPane({
   const toMath = (clientX: number, clientY: number): CurvePoint | null => {
     const el = mountRef.current; if (!el || box.size === 0) return null;
     const r = el.getBoundingClientRect();
-    const sx = box.size / (2 * viewExtent);
-    const cx = r.left + box.offX + box.size / 2;
-    const cy = r.top  + box.offY + box.size / 2;
-    return [(clientX - cx) / sx, -(clientY - cy) / sx];
+    const half = box.size / 2;
+    const cx = r.left + box.offX + half;
+    const cy = r.top  + box.offY + half;
+    // Pixel → NDC → math, inverting whichever plane layout is active so a
+    // freehand stroke in the (possibly unrolled) input pane maps to real z.
+    const nx = (clientX - cx) / half;
+    const ny = -(clientY - cy) / half;
+    return mathFromClip(nx, ny, planeMode, viewExtent);
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -533,13 +560,13 @@ function InputPane({
       onWheel={onWheel}
     >
       {children}
-      <CurveSvg box={box} viewExtent={viewExtent} points={curve} />
+      <CurveSvg box={box} viewExtent={viewExtent} planeMode={planeMode} points={curve} />
     </div>
   );
 }
 
 function OutputPane({
-  mountRef, viewExtent, curve, onWheelZoom, children,
+  mountRef, viewExtent, planeMode, curve, onWheelZoom, children,
 }: PaneCommon) {
   const box = useInscribedSquare(mountRef);
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
@@ -585,7 +612,7 @@ function OutputPane({
       onWheel={onWheel}
     >
       {children}
-      <CurveSvg box={box} viewExtent={viewExtent} points={curve} />
+      <CurveSvg box={box} viewExtent={viewExtent} planeMode={planeMode} points={curve} />
     </div>
   );
 }

@@ -8,6 +8,7 @@ attribute vec4 seed;
 
 uniform float viewExtent;
 uniform int   transform;
+uniform int   planeMode;   // 0 = Cartesian plot, 1 = log-polar (unrolled) plot
 uniform int   functionType;
 uniform int   exponentP;
 uniform int   exponentQ;
@@ -15,6 +16,8 @@ uniform int   branchIndex;
 uniform float pointSize;
 
 varying vec2 vSourcePos;
+
+const float VS_PI = 3.14159265359;
 
 // ---------- Complex helpers (matched to ComplexParticles' shader) ----------
 vec2 complexSqrt    (vec2 z){float r=length(z);float t=atan(z.y,z.x);float sr=sqrt(r);return vec2(sr*cos(t*0.5),sr*sin(t*0.5));}
@@ -92,10 +95,21 @@ vec2 applyComplex(vec2 z, int t){
 void main(){
   vSourcePos = inputPos;
   vec2 pos = transform == 1 ? applyComplex(inputPos, functionType) : inputPos;
-  // Clip giants so we don't lose all colour to one stray point at infinity.
-  if(length(pos) > 1e3) pos = normalize(pos)*1e3;
-  // Map to clip space using viewExtent (= half-side of the visible square).
-  gl_Position = vec4(pos / viewExtent, 0.0, 1.0);
+
+  vec2 ndc;
+  if(planeMode == 1){
+    // Log-polar "unrolled" plot: x = arg/π across, y = log|·| up.
+    // Mirrors clipFromMath() in polarViews.ts — keep the two in sync.
+    float r = length(pos);
+    float logSpan = max(log(viewExtent), 1.0);
+    ndc = vec2(atan(pos.y, pos.x) / VS_PI, log(max(r, 1e-4)) / logSpan);
+  } else {
+    // Cartesian plot. Clip giants so one stray point at infinity doesn't
+    // wash out the colour, then scale by viewExtent (= half visible side).
+    if(length(pos) > 1e3) pos = normalize(pos)*1e3;
+    ndc = pos / viewExtent;
+  }
+  gl_Position = vec4(ndc, 0.0, 1.0);
   gl_PointSize = pointSize;
 }
 `;
