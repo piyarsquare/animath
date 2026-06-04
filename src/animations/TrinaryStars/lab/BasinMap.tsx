@@ -1,5 +1,9 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Slider, Pills } from '../../../components/ControlPanel';
+import { starPaths } from './runner';
+
+/** Star-trajectory overlay colours (gold / orange / blue), matching the stars. */
+const STAR_RGB = ['255,210,127', '255,112,67', '158,199,255'];
 import {
   basinContext, computeBasinPixel, basinPlanetAt, chaosColor, CHAOS_LAMBDA_MAX, OUTCOME_RGB, OUTCOME_CODE,
   statColor, STAT_LABEL, STAT_ORDER, basinTargets, exactRunParams, statRunParams, statPixelSeed,
@@ -66,7 +70,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   const [samples, setSamples] = useState(1);
   const [metric, setMetric] = useState<BasinMetric>('fate');
   const [lens, setLens] = useState<BasinLens>('exact');
-  const [statMetric, setStatMetric] = useState<StatMetric>('happy');
+  const [statMetric, setStatMetric] = useState<StatMetric>('hab');
   const [statRuns, setStatRuns] = useState(6);
   const [domain, setDomain] = useState<Domain>(DEFAULT_DOMAIN.pos);
   const [posRule, setPosRule] = useState<'rest' | 'tangential'>('tangential');
@@ -79,8 +83,10 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   const [progress, setProgress] = useState(0);
   const [hover, setHover] = useState('');
   const [dim, setDim] = useState<DimResult | null>(null);
+  const [showStars, setShowStars] = useState(true);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const starCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const rafRef = useRef(0);
@@ -98,6 +104,10 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   const boxRef = useRef(system?.box); boxRef.current = system?.box;
   const st = { mode, metric, lens, statMetric, statRuns, domain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro, engine };
   const stateRef = useRef(st); stateRef.current = st;
+
+  // The stars' trajectories are identical for every run (the planet is a test
+  // mass), so integrate them once and reuse — only their inputs matter.
+  const starTracks = useMemo(() => starPaths(cfg), [cfg.presetId, cfg.starSoft, cfg.tMax, cfg.massMul[0], cfg.massMul[1], cfg.massMul[2]]);
 
   // In the radius×speed plane the map shares the ensemble's sampling box, so
   // zooming the map re-aims the census (and vice-versa).
@@ -362,6 +372,31 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   useEffect(() => { if (mode !== 'radspeed') setDomain(DEFAULT_DOMAIN[mode]); /* eslint-disable-next-line */ }, [mode]);
   useEffect(() => () => { cancelAnimationFrame(rafRef.current); poolRef.current?.dispose(); gpuRef.current?.dispose(); }, []);
 
+  // Overlay the stars' orbits on the position plane (where the axes are real x,y
+  // space). A separate transparent canvas above the map, so the progressive map
+  // repaint never erases it. Cleared on the other planes (their axes aren't x,y).
+  useEffect(() => {
+    const cv = starCanvasRef.current; const ctx = cv?.getContext('2d');
+    if (!cv || !ctx) return;
+    const W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    if (mode !== 'pos' || !showStars) return;
+    const d = effDomain;
+    const X = (x: number) => ((x - d.a0) / (d.a1 - d.a0)) * W;
+    const Y = (y: number) => ((d.b1 - y) / (d.b1 - d.b0)) * H;
+    starTracks.forEach((path, k) => {
+      if (path.length < 2) return;
+      const rgb = STAR_RGB[k % STAR_RGB.length];
+      ctx.strokeStyle = `rgba(${rgb},0.55)`; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(X(path[0].x), Y(path[0].y));
+      for (let i = 1; i < path.length; i++) ctx.lineTo(X(path[i].x), Y(path[i].y));
+      ctx.stroke();
+      // start position marker
+      ctx.fillStyle = `rgb(${rgb})`;
+      ctx.beginPath(); ctx.arc(X(path[0].x), Y(path[0].y), 3.5, 0, 7); ctx.fill();
+    });
+  }, [starTracks, effDomain.a0, effDomain.a1, effDomain.b0, effDomain.b1, mode, showStars]);
+
   const switchMode = (m: BasinMode) => { stop(); setMode(m); };
 
   // Imperative handle so the lab's Simple-mode experiment buttons can drive it.
@@ -467,6 +502,8 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
           {mode === 'radspeed' && lens === 'exact' && <Slider label="Fixed angle (°)" value={fixedAngle} min={0} max={360} step={5} onChange={setFixedAngle} format={v => `${v}`} />}
           {mode === 'anglespeed' && lens === 'exact' && <Slider label="Fixed radius" value={fixedRadius} min={0.3} max={6} step={0.1} onChange={setFixedRadius} format={v => v.toFixed(1)} />}
           {mode !== 'pos' && lens === 'exact' && <Pills label="Direction" value={fixedRetro ? 1 : 0} options={[{ value: 0, label: 'Prograde' }, { value: 1, label: 'Retrograde' }]} onChange={(v) => setFixedRetro(v === 1)} />}
+          {mode === 'pos' && <Pills label="Star paths" value={showStars ? 1 : 0}
+            options={[{ value: 1, label: 'Show' }, { value: 0, label: 'Hide' }]} onChange={(v) => setShowStars(v === 1)} />}
           <Pills label="Resolution" value={res}
             options={(lens === 'stat' ? [48, 64, 96, 128] : [96, 128, 192, 256]).map(r => ({ value: r, label: `${r}²` }))}
             onChange={setRes} />
@@ -499,7 +536,6 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
               <button style={btn} title="Run the ensemble on this radius × speed box" onClick={system.onRunCensus}>∑ Census this box</button>
             )}
           </div>
-          {busy && <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', marginTop: 8 }}><div style={{ height: '100%', width: `${progress * 100}%`, background: '#46d98a', borderRadius: 3 }} /></div>}
 
           {dim && (
             <div style={{ display: 'flex', gap: 12, marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -556,7 +592,19 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             <canvas ref={canvasRef} width={res} height={res}
               style={{ width: '100%', aspectRatio: '1', borderRadius: 6, display: 'block', cursor: 'crosshair', imageRendering: samples === 1 ? 'pixelated' : 'auto', touchAction: 'none', background: '#0a0e16' }}
               onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={() => setHover('')} />
+            <canvas ref={starCanvasRef} width={600} height={600}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: 6, pointerEvents: 'none' }} />
             <div ref={overlayRef} style={{ position: 'absolute', display: 'none', border: '1px solid #66f0ff', background: 'rgba(102,240,255,0.12)', pointerEvents: 'none' }} />
+            {busy && (
+              <div style={{ position: 'absolute', left: 8, right: 8, bottom: 8, pointerEvents: 'none' }}>
+                <div style={{ font: '10px ui-monospace, monospace', color: '#dfeaff', textShadow: '0 1px 3px #000', marginBottom: 3 }}>
+                  rendering… {Math.round(progress * 100)}%
+                </div>
+                <div style={{ height: 5, borderRadius: 3, background: 'rgba(0,0,0,0.55)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${progress * 100}%`, background: '#46d98a', borderRadius: 3 }} />
+                </div>
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', font: '10px ui-monospace, monospace', color: '#6f7f99', marginTop: 3 }}>
             <span>{AXIS_LABELS[mode][0]} {effDomain.a0.toFixed(2)}…{effDomain.a1.toFixed(2)}</span>

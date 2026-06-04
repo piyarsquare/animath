@@ -55,16 +55,28 @@ export function chaosColor(lambda: number): [number, number, number] {
   return stops[stops.length - 1][1];
 }
 
-/** Statistical-lens palette: a dark→bright ramp per outcome fraction. */
-export const STAT_RAMP: Record<StatMetric, [number, number, number]> = {
-  happy: [70, 217, 138], hab: [102, 240, 255], destroyed: [255, 112, 67], survived: [120, 170, 255],
-};
 export const STAT_LABEL: Record<StatMetric, string> = {
   happy: 'happy %', hab: 'mean habitable', destroyed: 'destroyed %', survived: 'survived %',
 };
-export function statColor(metric: StatMetric, v: number): [number, number, number] {
-  const [cr, cg, cb] = STAT_RAMP[metric];
-  return [10 + (cr - 10) * v, 14 + (cg - 14) * v, 22 + (cb - 22) * v];
+
+/** Magma-style ramp for the statistical lens. Crucially, 0 maps to a *visible*
+ *  deep indigo — not the near-black panel background (10,14,22) — so a map of a
+ *  rare outcome (e.g. happy endings) reads as structure rather than a blank
+ *  square. The mild gamma lifts small fractions into the visible part of the
+ *  ramp; the metric only sets the legend, not the hue. */
+const MAGMA: [number, [number, number, number]][] = [
+  [0.0, [24, 16, 58]], [0.25, [92, 30, 116]], [0.5, [186, 54, 98]], [0.75, [242, 124, 62]], [1.0, [252, 236, 162]],
+];
+export function statColor(_metric: StatMetric, v: number): [number, number, number] {
+  const x = Math.pow(Math.min(1, Math.max(0, v)), 0.6);
+  for (let i = 1; i < MAGMA.length; i++) {
+    if (x <= MAGMA[i][0]) {
+      const [x0, c0] = MAGMA[i - 1], [x1, c1] = MAGMA[i];
+      const f = (x - x0) / (x1 - x0 || 1);
+      return [c0[0] + (c1[0] - c0[0]) * f, c0[1] + (c1[1] - c0[1]) * f, c0[2] + (c1[2] - c0[2]) * f];
+    }
+  }
+  return MAGMA[MAGMA.length - 1][1];
 }
 
 interface Ctx {

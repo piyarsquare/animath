@@ -21,6 +21,27 @@ export function targetMassOf(cfg: EnsembleConfig): number {
   return orbitFrame(stars, cfg.target).mass;
 }
 
+export interface StarPathPoint { x: number; y: number; }
+
+/** The stars' trajectories over the simulation budget. The planet is a test
+ *  mass, so these are identical for every run — which lets the Destiny Map's
+ *  position plane overlay them once for spatial context. One polyline per star,
+ *  in world coordinates, sampled to ~`maxPts` points. */
+export function starPaths(cfg: EnsembleConfig, maxPts = 700): StarPathPoint[][] {
+  const preset = getScenario(cfg.presetId);
+  const stars = buildStars(preset, cfg.massMul);
+  const dt = preset.system.dt;
+  const sim: SimState = { stars, planets: [], t: 0, dtBase: dt, G: 1, starSoft: cfg.starSoft, planetSoft: 0.05 };
+  const steps = Math.max(1, Math.round(cfg.tMax / dt));
+  const stride = Math.max(1, Math.floor(steps / maxPts));
+  const paths: StarPathPoint[][] = stars.map(() => []);
+  for (let n = 0; n <= steps; n++) {
+    if (n % stride === 0) for (let k = 0; k < stars.length; k++) paths[k].push({ x: stars[k].x, y: stars[k].y });
+    step(sim, dt);
+  }
+  return paths;
+}
+
 /** Integrate one world to a terminal outcome (or the time budget). */
 function simulate(cfg: EnsembleConfig, stars: Star[], planet: Planet) {
   const dt = getScenario(cfg.presetId).system.dt;
