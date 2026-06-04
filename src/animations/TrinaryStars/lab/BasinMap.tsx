@@ -292,7 +292,9 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     const outGrid = new Uint8Array(N * N), tGrid = new Float32Array(N * N), statGrid = new Float32Array(N * N * 4);
     outGridRef.current = outGrid; tGridRef.current = tGrid; statGridRef.current = statGrid;
     statReadyRef.current = false;
-    setDim(null); setBusy(true); setProgress(0);
+    // Keep any previous dimension readout visible while the new map computes
+    // (it's replaced when measureDimension finishes) so the panel doesn't reflow.
+    setBusy(true); setProgress(0);
     let painted = 0; const total = N * N;
 
     const paint = (start: number, rgb: Uint8Array, out: Uint8Array, tt: Float32Array, stat: Float32Array, cnt: number) => {
@@ -541,14 +543,20 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             )}
           </div>
 
-          {dim && (
-            <div style={{ display: 'flex', gap: 12, marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <DimPlot dim={dim} />
-              <div style={{ font: '12px/1.5 ui-monospace, monospace' }}>
-                <div>boundary dimension&nbsp;<b style={{ color: '#ffd27f' }}>D ≈ {dim.D.toFixed(3)}</b></div>
-                <div>uncertainty exponent&nbsp;<b style={{ color: '#66f0ff' }}>α ≈ {dim.alpha.toFixed(3)}</b></div>
-                <div style={{ color: '#9aa7bd' }}>boundary pixels {(dim.boundary * 100).toFixed(0)}%</div>
-              </div>
+          {lens === 'exact' && (
+            <div style={{ marginTop: 10, minHeight: 78 }}>
+              {dim ? (
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <DimPlot dim={dim} />
+                  <div style={{ font: '12px/1.5 ui-monospace, monospace' }}>
+                    <div>boundary dimension&nbsp;<b style={{ color: '#ffd27f' }}>D ≈ {dim.D.toFixed(3)}</b></div>
+                    <div>uncertainty exponent&nbsp;<b style={{ color: '#66f0ff' }}>α ≈ {dim.alpha.toFixed(3)}</b></div>
+                    <div style={{ color: '#9aa7bd' }}>boundary pixels {(dim.boundary * 100).toFixed(0)}%</div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ font: '11px/1.5 system-ui', color: '#4a566b' }}>The boundary’s box-counting dimension appears here after a render.</div>
+              )}
             </div>
           )}
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useAppHeader } from '../../../components/AppShell';
+import { useAppHeader, ShellSettings } from '../../../components/AppShell';
 import { Slider, Pills, Section } from '../../../components/ControlPanel';
 import { SCENARIOS, getScenario, DEFAULT_CLASSIFY, type TargetId, type Outcome, type RunResult } from '@/lib/nbody';
 import { Aggregator, OUTCOMES, type AggSnapshot } from './ensemble';
@@ -133,7 +133,6 @@ function LaunchSpace({ rMin, rMax, fMin, fMax, allowRetro }: {
 
 export default function TrinaryLab() {
   const [instrument, setInstrument] = useState<Instrument>(() => (labParams().get('inst') === 'census' ? 'census' : 'map'));
-  useAppHeader('Trinary Lab', instrument === 'map' ? 'destiny map' : 'ensemble census');
 
   // Initialise from a shareable URL config, if present.
   const urlRef = useRef<URLSearchParams | null>(null);
@@ -142,6 +141,7 @@ export default function TrinaryLab() {
 
   const [presetId, setPresetId] = useState(() => U.get('p') ?? SCENARIOS[0].id);
   const preset = getScenario(presetId);
+  useAppHeader('Trinary Lab', `${preset.name} · ${instrument === 'map' ? 'destiny map' : 'census'}`);
   const [target, setTarget] = useState<TargetId>(() => (U.get('tg') as TargetId) ?? preset.launch.target);
   const [tMax, setTMax] = useState(() => pNum(U, 'tm', 180));
   const [rMin, setRMin] = useState(() => pNum(U, 'r0', 0.6));
@@ -386,10 +386,38 @@ export default function TrinaryLab() {
   });
 
   return (
-    <div style={{
-      position: 'absolute', inset: 0, overflow: 'auto', background: '#05060a',
-      color: '#cfe0f5', font: '13px/1.5 system-ui, sans-serif', padding: '12px 14px 40px',
-    }}>
+    <>
+      {/* Shared system setup lives in the app's native Settings drawer (the ⚙
+          panel every app gets), so both instruments draw from one place and the
+          page body holds only instrument-specific controls + visualisations. */}
+      <ShellSettings>
+        <Section title="System" icon="✸" defaultOpen>
+          <Pills options={SCENARIOS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
+          <div style={{ font: '12px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '4px 2px' }}>{preset.blurb}</div>
+          <Pills label="Orbit around" options={targetOptions} value={target} onChange={setTarget} />
+        </Section>
+        <Section title="Star masses & physics" icon="✷">
+          <Slider label="Star 1 mass · gold" value={massMul[0]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(0, v)} format={(v) => (baseMasses[0] * v).toFixed(2)} />
+          <Slider label="Star 2 mass · orange" value={massMul[1]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(1, v)} format={(v) => (baseMasses[1] * v).toFixed(2)} />
+          <Slider label="Star 3 mass · blue" value={massMul[2]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(2, v)} format={(v) => (baseMasses[2] * v).toFixed(2)} />
+          <Slider label="Softening" value={starSoft} min={0.005} max={0.3} step={0.005} onChange={setStarSoft} format={(v) => v.toFixed(3)} />
+          <button style={{ ...btn, padding: '5px 12px', fontSize: 12, marginTop: 4 }}
+            onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); }}>⟲ Reset stars</button>
+        </Section>
+        <Section title="Simulation & climate" icon="⏱" defaultOpen>
+          <Slider label="Time budget / world" value={tMax} min={60} max={400} step={20} onChange={setTMax} format={v => v.toFixed(0)} />
+          <Slider label="Habitable floor (×ref)" value={habLo} min={0.1} max={1} step={0.05} onChange={setHabLo} format={v => v.toFixed(2)} />
+          <Slider label="Habitable ceiling (×ref)" value={habHi} min={1} max={6} step={0.25} onChange={setHabHi} format={v => v.toFixed(2)} />
+          <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 2 }}>
+            How long each world is integrated, and the insolation band counted as habitable — used by <b style={{ color: '#9aa7bd' }}>both</b> instruments.
+          </div>
+        </Section>
+      </ShellSettings>
+
+      <div style={{
+        position: 'absolute', inset: 0, overflow: 'auto', background: '#05060a',
+        color: '#cfe0f5', font: '13px/1.5 system-ui, sans-serif', padding: '12px 14px 40px',
+      }}>
       {/* Top bar: instrument selector + per-instrument actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
         <div style={{ display: 'inline-flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--cp-border, #2a3550)' }}>
@@ -416,30 +444,6 @@ export default function TrinaryLab() {
             <button style={btn} onClick={exportCSV} disabled={!agg}>⬇ CSV</button>
           </>
         )}
-      </div>
-
-      {/* Shared system setup — one source of truth for both instruments. */}
-      <div style={{ ...panel, marginBottom: 12 }}>
-        <h3 style={h3}>SYSTEM — three stars, shared by both instruments</h3>
-        <Pills options={SCENARIOS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
-        <div style={{ font: '12px/1.5 system-ui', color: '#9aa7bd', margin: '4px 0 6px' }}>{preset.blurb}</div>
-        <Pills label="Orbit around" options={targetOptions} value={target} onChange={setTarget} />
-        <Section title="Star masses & physics" icon="✷">
-          <Slider label="Star 1 mass · gold" value={massMul[0]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(0, v)} format={(v) => (baseMasses[0] * v).toFixed(2)} />
-          <Slider label="Star 2 mass · orange" value={massMul[1]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(1, v)} format={(v) => (baseMasses[1] * v).toFixed(2)} />
-          <Slider label="Star 3 mass · blue" value={massMul[2]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(2, v)} format={(v) => (baseMasses[2] * v).toFixed(2)} />
-          <Slider label="Softening" value={starSoft} min={0.005} max={0.3} step={0.005} onChange={setStarSoft} format={(v) => v.toFixed(3)} />
-          <button style={{ ...btn, padding: '5px 12px', fontSize: 12, marginTop: 4 }}
-            onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); }}>⟲ Reset stars</button>
-        </Section>
-        <Section title="Simulation & climate" icon="⏱" defaultOpen>
-          <Slider label="Time budget / world" value={tMax} min={60} max={400} step={20} onChange={setTMax} format={v => v.toFixed(0)} />
-          <Slider label="Habitable floor (×ref)" value={habLo} min={0.1} max={1} step={0.05} onChange={setHabLo} format={v => v.toFixed(2)} />
-          <Slider label="Habitable ceiling (×ref)" value={habHi} min={1} max={6} step={0.25} onChange={setHabHi} format={v => v.toFixed(2)} />
-          <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 2 }}>
-            How long each world is integrated, and the insolation band counted as habitable — used by <b style={{ color: '#9aa7bd' }}>both</b> the Destiny Map and the Census.
-          </div>
-        </Section>
       </div>
 
       {/* ── Destiny Map instrument ─────────────────────────────────────── */}
@@ -590,6 +594,7 @@ export default function TrinaryLab() {
           </div>
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }
