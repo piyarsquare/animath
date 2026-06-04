@@ -44,7 +44,7 @@ const AXIS_LABELS: Record<BasinMode, [string, string]> = {
 
 interface DimResult { D: number; alpha: number; boundary: number; pts: [number, number][] }
 
-function DimPlot({ dim }: { dim: DimResult }) {
+function DimPlot({ dim, w = 104, h = 60 }: { dim: DimResult; w?: number; h?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const cv = ref.current; const ctx = cv?.getContext('2d'); if (!cv || !ctx) return;
@@ -59,7 +59,7 @@ function DimPlot({ dim }: { dim: DimResult }) {
     ctx.fillStyle = '#66f0ff';
     for (const [x, y] of dim.pts) { ctx.beginPath(); ctx.arc(X(x), Y(y), 2.5, 0, 7); ctx.fill(); }
   }, [dim]);
-  return <canvas ref={ref} width={150} height={70} style={{ width: 150, height: 70, borderRadius: 4, display: 'block' }} />;
+  return <canvas ref={ref} width={w} height={h} style={{ width: w, height: h, borderRadius: 4, display: 'block', flex: 'none' }} />;
 }
 
 export interface BasinHandle { render: () => void; setPlane: (m: BasinMode) => void; }
@@ -543,15 +543,16 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             )}
           </div>
 
+          {/* Fixed height + persists across renders, so it never reflows the panel. */}
           {lens === 'exact' && (
-            <div style={{ marginTop: 10, minHeight: 78 }}>
+            <div style={{ marginTop: 10, height: 68, overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
               {dim ? (
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                   <DimPlot dim={dim} />
-                  <div style={{ font: '12px/1.5 ui-monospace, monospace' }}>
-                    <div>boundary dimension&nbsp;<b style={{ color: '#ffd27f' }}>D ≈ {dim.D.toFixed(3)}</b></div>
-                    <div>uncertainty exponent&nbsp;<b style={{ color: '#66f0ff' }}>α ≈ {dim.alpha.toFixed(3)}</b></div>
-                    <div style={{ color: '#9aa7bd' }}>boundary pixels {(dim.boundary * 100).toFixed(0)}%</div>
+                  <div style={{ font: '11px/1.45 ui-monospace, monospace', whiteSpace: 'nowrap' }}>
+                    <div>boundary&nbsp;<b style={{ color: '#ffd27f' }}>D ≈ {dim.D.toFixed(3)}</b></div>
+                    <div>uncertainty&nbsp;<b style={{ color: '#66f0ff' }}>α ≈ {dim.alpha.toFixed(3)}</b></div>
+                    <div style={{ color: '#9aa7bd' }}>boundary {(dim.boundary * 100).toFixed(0)}%</div>
                   </div>
                 </div>
               ) : (
