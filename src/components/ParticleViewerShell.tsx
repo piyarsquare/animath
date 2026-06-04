@@ -105,6 +105,9 @@ export default function ParticleViewerShell({
 
   const toggleSpin = (plane: Plane, dir: 1 | -1) => {
     const key = `${plane}:${dir}`;
+    // Activating a spin switches Motion to Fixed so the continuous rotation
+    // shows directly, rather than stacking on top of the Quaternion auto-tumble.
+    if (!spins[key] && state.viewMotion !== 'Fixed') controls.handleMotion('Fixed');
     setSpins(s => ({ ...s, [key]: !s[key] }));
   };
 
