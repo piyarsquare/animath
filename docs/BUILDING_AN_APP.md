@@ -237,8 +237,9 @@ return <Canvas3D onMount={onMount} />;
 ### 4D particle viewer — `ParticleViewerShell` + `lib/particles`
 
 This is the highest-leverage path: you get the standard **Function / Camera /
-Color / Particles / Motion / Detail / About** sections, the `QuarterTurnFloater`,
-camera-orbit/pan/zoom gestures, the rAF loop and uniform syncing for free.
+Color / Particles / Motion / Detail / About** sections, the `QuarterTurnControls`
+(4D turns + spin, in the Actions panel), camera-orbit/pan/zoom gestures, the rAF
+loop and uniform syncing for free.
 
 **Copy `src/animations/ComplexParticles/ComplexParticles.tsx`** — it is the
 smallest, canonical consumer. The shape is:

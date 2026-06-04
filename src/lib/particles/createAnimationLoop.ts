@@ -21,6 +21,8 @@ export interface AnimationLoopDeps {
   dropAxisRef: React.MutableRefObject<string>;
   rotLRef: React.MutableRefObject<THREE.Quaternion>;
   rotRRef: React.MutableRefObject<THREE.Quaternion>;
+  /** Multiplier on the drawn axis half-length (1 or π). */
+  axisScaleRef: React.MutableRefObject<number>;
   viewPointRef: React.MutableRefObject<ViewPoint>;
   onViewPointChangeRef: React.MutableRefObject<((vp: ViewPoint) => void) | undefined>;
   orientationRef: React.MutableRefObject<string>;
@@ -32,7 +34,7 @@ export function startAnimationLoop(deps: AnimationLoopDeps): void {
     renderer, scene, camera,
     materialsRef, axisRefs,
     realViewRef, projRef, viewMotionRef, dropAxisRef,
-    rotLRef, rotRRef, viewPointRef, onViewPointChangeRef,
+    rotLRef, rotRRef, axisScaleRef, viewPointRef, onViewPointChangeRef,
     orientationRef, setOrientationMatrix,
   } = deps;
 
@@ -137,11 +139,12 @@ export function startAnimationLoop(deps: AnimationLoopDeps): void {
       axis.line.computeLineDistances();
     };
 
-    updateAxis(axisRefs.x.current, new THREE.Vector4(-AXIS_LENGTH, 0, 0, 0), new THREE.Vector4(AXIS_LENGTH, 0, 0, 0));
+    const aLen = AXIS_LENGTH * axisScaleRef.current;
+    updateAxis(axisRefs.x.current, new THREE.Vector4(-aLen, 0, 0, 0), new THREE.Vector4(aLen, 0, 0, 0));
     if (axisRefs.y.current) axisRefs.y.current.line.visible = !realViewRef.current;
-    updateAxis(axisRefs.y.current, new THREE.Vector4(0, -AXIS_LENGTH, 0, 0), new THREE.Vector4(0, AXIS_LENGTH, 0, 0));
-    updateAxis(axisRefs.u.current, new THREE.Vector4(0, 0, -AXIS_LENGTH, 0), new THREE.Vector4(0, 0, AXIS_LENGTH, 0));
-    updateAxis(axisRefs.v.current, new THREE.Vector4(0, 0, 0, -AXIS_LENGTH), new THREE.Vector4(0, 0, 0, AXIS_LENGTH));
+    updateAxis(axisRefs.y.current, new THREE.Vector4(0, -aLen, 0, 0), new THREE.Vector4(0, aLen, 0, 0));
+    updateAxis(axisRefs.u.current, new THREE.Vector4(0, 0, -aLen, 0), new THREE.Vector4(0, 0, aLen, 0));
+    updateAxis(axisRefs.v.current, new THREE.Vector4(0, 0, 0, -aLen), new THREE.Vector4(0, 0, 0, aLen));
 
     // Compute orientation matrix
     const ex = project(quatRotate4D(new THREE.Vector4(1, 0, 0, 0), L, R), projRef.current);

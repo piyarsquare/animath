@@ -35,6 +35,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // intentionally NOT persisted.
   const [azimuth, setAzimuth] = useState(0);
   const [elevation, setElevation] = useState(0);
+  const [roll, setRoll] = useState(0);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
   const [panZ, setPanZ] = useState(0);
@@ -45,8 +46,12 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [hueShift, setHueShift] = usePersistentState(pk('hueShift'), COMPLEX_PARTICLES_DEFAULTS.initial.hueShift);
   const [jitter, setJitter] = usePersistentState(pk('jitter'), COMPLEX_PARTICLES_DEFAULTS.initial.jitter);
   const [axisWidth, setAxisWidth] = usePersistentState(pk('axisWidth'), COMPLEX_PARTICLES_DEFAULTS.initial.axisWidth);
-  /** Half-side of the sampled grid in input-space units. */
-  const [gridExtent, setGridExtent] = usePersistentState(pk('gridExtent'), COMPLEX_PARTICLES_DEFAULTS.initial.gridExtent);
+  // Sampled-domain half-widths, independent per axis (a rectangular input box),
+  // plus a unit multiplier (1 or π) applied to both extents and the reference
+  // axes — handy for trig functions whose natural scale is π.
+  const [extentX, setExtentX] = usePersistentState(pk('extentX'), COMPLEX_PARTICLES_DEFAULTS.initial.extentX);
+  const [extentY, setExtentY] = usePersistentState(pk('extentY'), COMPLEX_PARTICLES_DEFAULTS.initial.extentY);
+  const [axisScale, setAxisScale] = usePersistentState(pk('axisScale'), COMPLEX_PARTICLES_DEFAULTS.initial.axisScale);
   /** When true, sample more densely where |f'(z)| is large. */
   const [adaptive, setAdaptive] = usePersistentState(pk('adaptive'), COMPLEX_PARTICLES_DEFAULTS.initial.adaptive);
   /** Exponent biasing strength for adaptive sampling. */
@@ -57,6 +62,10 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [realView, setRealView] = useState(false);
   const [colourStyle, setColourStyle] = usePersistentState<ColorStyle>(pk('colourStyle'), ColorStyle.HSV);
   const [colourBy, setColourBy] = usePersistentState<ColourBy>(pk('colourBy'), ColourBy.Domain);
+  // Torus radius scale: when true, the Torus mapping derives each fiber's donut
+  // from log(1+|z|) and log(1+|f|) instead of the raw magnitudes, spreading the
+  // nesting across orders of magnitude. Only affects the Torus projection.
+  const [logRadius, setLogRadius] = usePersistentState(pk('logRadius'), false);
 
   // ---- View / projection state ----
   const [viewType, setViewType] = usePersistentState<ProjectionMode>(pk('viewType'), ProjectionMode.Perspective);
@@ -73,6 +82,11 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
       : dropAxis === 'DropV' ? ProjectionMode.DropV
       : viewType,
   );
+  // Torus → Hopf "fiber collapse" scrub (0 = full Torus, 1 = full Hopf). This is
+  // transient exploratory view state, so it is not persisted.
+  const [fiberCollapse, setFiberCollapse] = useState(0);
+  // Whether to draw the faint sphere/donut reference scaffolding.
+  const [showScaffold, setShowScaffold] = usePersistentState(pk('showScaffold'), true);
   const [orientationMatrix, setOrientationMatrix] = useState<number[][]>([
     [0, 0, 0, 0],
     [0, 0, 0, 0],
@@ -109,6 +123,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   useEffect(() => { viewMotionRef.current = viewMotion; }, [viewMotion]);
   const dropAxisRef = useRef(dropAxis);
   useEffect(() => { dropAxisRef.current = dropAxis; }, [dropAxis]);
+  const axisScaleRef = useRef(axisScale);
+  useEffect(() => { axisScaleRef.current = axisScale; }, [axisScale]);
   const orientationRef = useRef('');
 
   // ---- Sync external viewPoint prop → rotation refs + uniforms ----
@@ -132,6 +148,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     cameraZ, setCameraZ,
     azimuth, setAzimuth,
     elevation, setElevation,
+    roll, setRoll,
     panX, setPanX,
     panY, setPanY,
     panZ, setPanZ,
@@ -142,7 +159,10 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     hueShift, setHueShift,
     jitter, setJitter,
     axisWidth, setAxisWidth,
-    gridExtent, setGridExtent,
+    extentX, setExtentX,
+    extentY, setExtentY,
+    axisScale, setAxisScale,
+    axisScaleRef,
     adaptive, setAdaptive,
     adaptiveAlpha, setAdaptiveAlpha,
     objectMode, setObjectMode,
@@ -151,12 +171,15 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     realView, setRealView,
     colourStyle, setColourStyle,
     colourBy, setColourBy,
+    logRadius, setLogRadius,
 
     // View state + setters
     viewType, setViewType,
     viewMotion, setViewMotion,
     dropAxis, setDropAxis,
     proj, setProj,
+    fiberCollapse, setFiberCollapse,
+    showScaffold, setShowScaffold,
     orientationMatrix, setOrientationMatrix,
 
     // Three.js object refs

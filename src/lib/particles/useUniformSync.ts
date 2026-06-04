@@ -79,11 +79,15 @@ export function useUniformSync(state: ParticleState): void {
       ty + r * Math.sin(el),
       tz + r * Math.cos(el) * Math.cos(az),
     );
+    cam.up.set(0, 1, 0);
     cam.lookAt(tx, ty, tz);
+    // Roll spins the camera about its own view axis (ambient "Roll" orbit in
+    // Hopf/Torus). lookAt resets orientation, so apply roll after it.
+    if (state.roll) cam.rotateZ(state.roll);
     // Keep the world matrix fresh so basis-vector reads from elsewhere
     // (e.g. the gesture hook computing pan) reflect the new orientation.
     cam.updateMatrixWorld(true);
-  }, [state.cameraZ, state.azimuth, state.elevation, state.panX, state.panY, state.panZ]);
+  }, [state.cameraZ, state.azimuth, state.elevation, state.roll, state.panX, state.panY, state.panZ]);
 
   useEffect(() => {
     if (rendererRef.current) {
@@ -115,6 +119,10 @@ export function useUniformSync(state: ParticleState): void {
   useEffect(() => {
     materialsRef.current.forEach(m => { m.uniforms.uColourBy.value = state.colourBy; });
   }, [state.colourBy]);
+
+  useEffect(() => {
+    materialsRef.current.forEach(m => { m.uniforms.uLogRadius.value = state.logRadius ? 1 : 0; });
+  }, [state.logRadius]);
 
   // The geometry rebuild (uniform or adaptive) now lives in each viewer, so
   // it can depend on the selected function when adaptive sampling is on.

@@ -85,8 +85,9 @@ animath/
     │   └── ToggleMenu.tsx      # legacy collapsible menu (still used by FractalsGPU)
     │
     ├── controls/
-    │   ├── QuarterTurnFloater.tsx  # floating 4D quarter-turn + drop-axis cluster
-    │   ├── QuarterTurnFloater.css
+    │   ├── QuarterTurnControls.tsx # 4D eighth-turn + spin + drop-axis controls
+    │   │                            #   (rendered in the standard Actions panel)
+    │   ├── QuarterTurnControls.css
     │   └── QuarterTurnBar.tsx      # older inline 4D rotation bar
     │
     ├── lib/
@@ -208,8 +209,9 @@ inside `<ShellSettings>` / `<ShellActions>` using the `ControlPanel` primitives.
 
 The complex viewers are powered by the **`src/lib/particles` engine** plus the
 turnkey `ParticleViewerShell` component, which together provide the standard
-**Function / Camera / Color / Particles / Motion / Detail / About** sections, the
-`QuarterTurnFloater`, gesture handling, and the rAF loop out of the box. The flow
+**Function / Domain / Camera / Color / Particles / Motion / Detail / About** sections, the
+`QuarterTurnControls` (in the Actions panel), gesture handling, and the rAF loop
+out of the box. The flow
 is: `useParticleState` (state) → `useViewControls` (orientation/projection
 controls) → build geometry/axes in `Canvas3D`'s `onMount` → `useUniformSync`
 pushes React state into shader uniforms → `startAnimationLoop` runs the rAF loop.
@@ -235,8 +237,15 @@ Particle viewers split **looking** (gestures) from **navigating** (buttons):
 - **1-finger / mouse drag** orbits the camera (never the 4D rotation).
 - **2-finger drag** (or `Shift`+drag) pans the look-at target.
 - **2-finger pinch / wheel** zooms.
-- **QuarterTurnFloater** (bottom-left of the canvas): tap a plane for a 90°
-  animated turn, **hold** for continuous rotation; includes reset + drop-axis.
+- **QuarterTurnControls** (in the **Actions** panel — the draggable ActionFloater
+  and the drawer's Actions tab): tap a ↻/↺ button for a single **eighth turn**
+  (45°); the small toggle under each button starts/stops a **continuous spin** in
+  that plane and direction (multiple compose, e.g. xy + uv = an isoclinic double
+  rotation). One **Spin speed** slider sets the rate. Includes reset + drop-axis.
+  The rows are **context-sensitive**: in the nonlinear **Hopf/Torus**
+  projections (where a 4D turn deforms the image), they switch to three ambient
+  **Yaw / Pitch / Roll** controls that orbit the 3D camera rigidly instead of
+  rotating the 4D pre-image; the six 4D planes return in the linear projections.
 
 Fractal viewers: drag to pan, pinch/wheel to zoom, and **Trace mode** (Actions
 drawer) spawns an iteration orbit from a tapped point.

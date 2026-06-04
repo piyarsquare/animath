@@ -58,9 +58,10 @@ Buttons for tabs an app doesn't populate are dimmed. The shell also adds iOS
 safe-area padding so the bottom of the screen stays visible behind Safari's URL
 bar and the home indicator.
 
-The Complex Particles viewer adds a small floating **quarter-turn** cluster in
-the bottom-left corner of the canvas for direct 4D plane rotations (tap for 90°,
-hold for continuous rotation).
+The Complex Particles viewer puts its **4D rotation controls** in the standard
+Actions panel (the draggable floating panel + the drawer's Actions tab): tap a
+plane button for an eighth turn (45°), or flip the toggle under it to spin that
+plane continuously.
 
 ---
 
@@ -122,7 +123,7 @@ src/
 │   └── ToggleMenu.tsx      # collapsible menu (legacy, used by FractalsGPU)
 │
 ├── controls/
-│   └── QuarterTurnFloater  # floating 4D quarter-turn cluster
+│   └── QuarterTurnControls # 4D eighth-turn + spin controls (Actions panel)
 │
 ├── lib/
 │   ├── particles/          # shared particle-viewer engine
@@ -204,9 +205,10 @@ The particle viewers use a clean split between **looking** (gestures) and
   Never touches the 4D rotation.
 * **2-finger drag** (or `Shift` + drag) pans the look-at target.
 * **2-finger pinch** / **mouse wheel** zooms.
-* **Quarter-turn floater** (bottom-left of the canvas) — tap a plane button
-  for a 90° animated turn, **hold** for continuous rotation. Includes a
-  "Reset orientation" row.
+* **4D rotation controls** (in the Actions panel) — tap a plane button for an
+  eighth turn (45°); the toggle under each button starts/stops a continuous
+  spin in that plane and direction (multiple compose into double rotations), with
+  one speed slider. Includes drop-axis and a "Reset orientation" row.
 
 The fractal viewers use:
 
