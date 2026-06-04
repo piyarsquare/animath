@@ -104,6 +104,22 @@ export default function ParticleViewerShell({
             value={state.viewType}
             onChange={controls.handleViewType}
           />
+          {state.viewType === ProjectionMode.Torus && (
+            <Slider
+              label="Collapse → Hopf"
+              value={state.fiberCollapse}
+              min={0} max={1} step={0.01}
+              onChange={controls.handleFiberCollapse}
+              format={v => v === 0 ? 'torus' : v === 1 ? 'sphere' : v.toFixed(2)}
+            />
+          )}
+          {(state.viewType === ProjectionMode.Torus || state.viewType === ProjectionMode.Hopf) && (
+            <Checkbox
+              label="Reference scaffold"
+              checked={state.showScaffold}
+              onChange={state.setShowScaffold}
+            />
+          )}
           <Pills
             label="Motion"
             options={motionModes.map(m => ({ value: m, label: m }))}

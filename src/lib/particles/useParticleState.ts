@@ -73,6 +73,11 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
       : dropAxis === 'DropV' ? ProjectionMode.DropV
       : viewType,
   );
+  // Torus → Hopf "fiber collapse" scrub (0 = full Torus, 1 = full Hopf). This is
+  // transient exploratory view state, so it is not persisted.
+  const [fiberCollapse, setFiberCollapse] = useState(0);
+  // Whether to draw the faint sphere/donut reference scaffolding.
+  const [showScaffold, setShowScaffold] = usePersistentState(pk('showScaffold'), true);
   const [orientationMatrix, setOrientationMatrix] = useState<number[][]>([
     [0, 0, 0, 0],
     [0, 0, 0, 0],
@@ -157,6 +162,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     viewMotion, setViewMotion,
     dropAxis, setDropAxis,
     proj, setProj,
+    fiberCollapse, setFiberCollapse,
+    showScaffold, setShowScaffold,
     orientationMatrix, setOrientationMatrix,
 
     // Three.js object refs

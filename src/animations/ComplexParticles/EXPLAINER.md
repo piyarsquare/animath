@@ -41,7 +41,9 @@ directly, so the view *projects* it down into the 3-D scene on screen.
   nested donuts (Clifford tori) filling space. `arg z` walks around the hole,
   `arg f` around the tube, and `|z|/|f|` chooses which donut. Each Hopf fiber
   becomes a `(1,1)` circle winding around its donut — exactly the points that
-  the **Hopf** view squashes together.
+  the **Hopf** view squashes together. The **Collapse → Hopf** slider scrubs
+  between the two so you can watch those fiber circles shrink to points, and the
+  **Reference scaffold** toggle draws the faint donuts / sphere they live on.
 - **Drop axis** — the bluntest projection: just forget one of the four
   coordinates and keep the other three (an orthographic slice).
 

@@ -6,6 +6,8 @@ export { useGestureRotation } from './useGestureRotation';
 export { createParticleGeometry, rebuildGeometryBuffers, redistributeAdaptive } from './createParticleGeometry';
 export type { AdaptiveOptions } from './createParticleGeometry';
 export { createAxes, AXIS_LENGTH } from './createAxes';
+export { createHopfScaffold } from './createHopfScaffold';
+export type { HopfScaffold } from './createHopfScaffold';
 export { startAnimationLoop } from './createAnimationLoop';
 export type { AnimationLoopDeps } from './createAnimationLoop';
 export type { ViewPoint, Axis } from './types';

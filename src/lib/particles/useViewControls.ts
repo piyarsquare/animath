@@ -8,7 +8,7 @@ import type { ParticleState } from './useParticleState';
 export function useViewControls(state: ParticleState) {
   const {
     materialsRef, rotLRef, rotRRef, viewPointRef, onViewPointChangeRef,
-    projRef, setViewType, setViewMotion, setDropAxis, setProj,
+    projRef, setViewType, setViewMotion, setDropAxis, setProj, setFiberCollapse,
     viewType, dropAxis,
   } = state;
 
@@ -66,8 +66,25 @@ export function useViewControls(state: ParticleState) {
   }
 
   function handleViewType(t: ProjectionMode) {
+    setFiberCollapse(0);
     setViewType(t);
     applyView(t, dropAxis);
+  }
+
+  /**
+   * Scrub the Torus → Hopf "fiber collapse" (0 = full Torus, 1 = full Hopf) by
+   * manually driving the projection cross-fade uniforms. At intermediate values
+   * the (1,1) fiber circles of the nested donuts shrink toward the single points
+   * the Hopf map identifies them with. Only meaningful while the Torus view is
+   * active (the projection Pills reset it via {@link handleViewType}).
+   */
+  function handleFiberCollapse(value: number) {
+    setFiberCollapse(value);
+    materialsRef.current.forEach(m => {
+      m.uniforms.uProjMode.value = ProjectionMode.Torus;
+      m.uniforms.uProjTarget.value = ProjectionMode.Hopf;
+      m.uniforms.uProjAlpha.value = value;
+    });
   }
 
   function handleMotion(m: (typeof motionModes)[number]) {
@@ -132,5 +149,5 @@ export function useViewControls(state: ParticleState) {
     onViewPointChangeRef.current?.(viewPointRef.current);
   }
 
-  return { handleViewType, handleMotion, handleDropAxis, turn, snapToStandardView, rotateBy };
+  return { handleViewType, handleMotion, handleDropAxis, handleFiberCollapse, turn, snapToStandardView, rotateBy };
 }
