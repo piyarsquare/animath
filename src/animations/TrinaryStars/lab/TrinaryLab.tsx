@@ -450,7 +450,7 @@ export default function TrinaryLab() {
             <b style={{ color: '#cfe8ff' }}> Exact</b> lens each pixel is one precise world — its boundaries stay fractal at
             every zoom. With the <b style={{ color: '#cfe8ff' }}>Statistical</b> lens each pixel is a mini-census of many
             worlds, painting the odds of a happy ending. <b style={{ color: '#cfe8ff' }}>Drag a box</b> to zoom; <b style={{ color: '#cfe8ff' }}>click</b> a
-            point to open that world in the single-run Observatory.
+            point to open that world in the single-run Observatory (in a new tab, so your map stays put).
           </div>
           <BasinMap ref={basinRef} cfg={cfg} system={{
             box: { rMin, rMax, fMin, fMax },

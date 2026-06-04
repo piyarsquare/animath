@@ -133,13 +133,40 @@ export function statPixelSeed(cfg: EnsembleConfig, p: number): number {
   return (cfg.baseSeed ^ Math.imul(p + 1, 0x9e3779b9)) >>> 0;
 }
 
+/** Raw planet IC for an exact position-plane pixel (mirrors `makePlanet`'s pos
+ *  branch). The position plane's worlds are starting *places*, not radius/speed/
+ *  angle launches, so the GPU path uploads these states directly. */
+export function exactPosPlanet(cfg: EnsembleConfig, bc: BasinConfig, Mtot: number, i: number, j: number): Planet {
+  const [ax, by] = basinAxByCenter(bc, i, j);
+  return bc.posRule === 'rest' ? posRestIC(ax, by) : posTangentialIC(Mtot, ax, by, bc.posSpeedFrac, false);
+}
+
+/** Raw planet IC for one statistical-lens sample on the position plane (mirrors
+ *  `makeStatPlanet`'s pos branch, including the retro-then-speed draw order). */
+export function statPosPlanet(cfg: EnsembleConfig, bc: BasinConfig, Mtot: number, i: number, j: number, rng: () => number): Planet {
+  const [ax, by] = basinAxByCenter(bc, i, j);
+  const retro = cfg.allowRetro ? rng() < 0.5 : false;
+  const f = cfg.fMin + (cfg.fMax - cfg.fMin) * rng();
+  return posTangentialIC(Mtot, ax, by, f, retro);
+}
+
+/** Position-plane initial conditions. A planet placed at (ax, by) either at rest
+ *  or launched tangentially (perpendicular to its radius from the origin) at
+ *  `speedFrac` × the local circular speed √(Mtot/r); `retro` flips the sense.
+ *  Shared by the CPU pixel and the map's GPU raw-IC path so the two agree. */
+export function posRestIC(ax: number, by: number): Planet {
+  return { x: ax, y: by, vx: 0, vy: 0, ax: 0, ay: 0 };
+}
+export function posTangentialIC(Mtot: number, ax: number, by: number, speedFrac: number, retro: boolean): Planet {
+  const r = Math.hypot(ax, by) || 1e-6;
+  const v = speedFrac * Math.sqrt(Mtot / r) * (retro ? -1 : 1);
+  return { x: ax, y: by, vx: v * (-by / r), vy: v * (ax / r), ax: 0, ay: 0 };
+}
+
 function makePlanet(ctx: Ctx, stars: Star[], ax: number, by: number): Planet {
   const { bc, cfg, targetMass, Mtot } = ctx;
   if (bc.mode === 'pos') {
-    if (bc.posRule === 'rest') return { x: ax, y: by, vx: 0, vy: 0, ax: 0, ay: 0 };
-    const r = Math.hypot(ax, by) || 1e-6;
-    const v = bc.posSpeedFrac * Math.sqrt(Mtot / r);
-    return { x: ax, y: by, vx: v * (-by / r), vy: v * (ax / r), ax: 0, ay: 0 };
+    return bc.posRule === 'rest' ? posRestIC(ax, by) : posTangentialIC(Mtot, ax, by, bc.posSpeedFrac, false);
   }
   if (bc.mode === 'radspeed') {
     const v = by * Math.sqrt(targetMass / Math.max(0.05, ax));
@@ -157,10 +184,8 @@ function makeStatPlanet(ctx: Ctx, stars: Star[], ax: number, by: number, rng: ()
   const { bc, cfg, targetMass, Mtot } = ctx;
   const retro = cfg.allowRetro ? rng() < 0.5 : false;
   if (bc.mode === 'pos') {
-    const r = Math.hypot(ax, by) || 1e-6;
     const f = cfg.fMin + (cfg.fMax - cfg.fMin) * rng();
-    const v = f * Math.sqrt(Mtot / r) * (retro ? -1 : 1);
-    return { x: ax, y: by, vx: v * (-by / r), vy: v * (ax / r), ax: 0, ay: 0 };
+    return posTangentialIC(Mtot, ax, by, f, retro);
   }
   if (bc.mode === 'radspeed') {
     const v = by * Math.sqrt(targetMass / Math.max(0.05, ax));

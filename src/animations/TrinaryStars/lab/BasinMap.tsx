@@ -3,17 +3,19 @@ import { Slider, Pills } from '../../../components/ControlPanel';
 import {
   basinContext, computeBasinPixel, basinPlanetAt, chaosColor, CHAOS_LAMBDA_MAX, OUTCOME_RGB, OUTCOME_CODE,
   statColor, STAT_LABEL, STAT_ORDER, basinTargets, exactRunParams, statRunParams, statPixelSeed,
+  exactPosPlanet, statPosPlanet,
   type BasinConfig, type BasinMode, type BasinMetric, type BasinLens, type StatMetric, type Domain,
 } from './basin';
 import { BasinPool } from './basinPool';
-import { GpuRunner, gpuAvailable } from './gpu';
+import { GpuRunner, gpuAvailable, type PlanetIC } from './gpu';
 import { mulberry32, type EnsembleConfig, type RunParams } from './rng';
 
-/** The map's GPU lane covers the radius×speed and angle×speed planes coloured by
- *  fate (exact or statistical) — the cases whose worlds are a radius/speed/angle
- *  launch the WebGPU runner already understands. Other cases use Workers/CPU. */
-function gpuSupportsMap(mode: BasinMode, metric: BasinMetric, lens: BasinLens): boolean {
-  return mode !== 'pos' && (lens === 'stat' || metric === 'fate');
+/** The map's GPU lane covers every plane coloured by fate (exact) or by the
+ *  statistical lens — the position plane uploads raw ICs, the radius×speed and
+ *  angle×speed planes use radius/speed/angle launches. Only the chaos/λ metric
+ *  (a Lyapunov shadow the shader doesn't compute) stays on Workers/CPU. */
+function gpuSupportsMap(metric: BasinMetric, lens: BasinLens): boolean {
+  return lens === 'stat' || metric === 'fate';
 }
 
 export interface SamplingBox { rMin: number; rMax: number; fMin: number; fMax: number }
@@ -115,7 +117,12 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       m0: String(cfg.massMul[0]), m1: String(cfg.massMul[1]), m2: String(cfg.massMul[2]), ss: String(cfg.starSoft),
       px: planet.x.toFixed(5), py: planet.y.toFixed(5), vx: planet.vx.toFixed(5), vy: planet.vy.toFixed(5),
     });
-    window.location.hash = `#/trinary?${q.toString()}`;
+    // Open the run in a new tab so the Lab — and the map you just computed —
+    // stays put. Pixel-click is a user gesture, so this isn't popup-blocked;
+    // fall back to in-place navigation only if the browser refuses the window.
+    const url = `${window.location.origin}${window.location.pathname}#/trinary?${q.toString()}`;
+    const win = window.open(url, '_blank', 'noopener');
+    if (!win) window.location.hash = `#/trinary?${q.toString()}`;
   };
 
   const measureDimension = () => {
@@ -168,18 +175,29 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   ) => {
     const gpu = gpuRef.current ?? (gpuRef.current = await GpuRunner.create());
     const N = bc.res, total = N * N;
-    const { targetMass } = basinTargets(cfgNow);
+    const { targetMass, Mtot } = basinTargets(cfgNow);
+    const isPos = bc.mode === 'pos';
     if (bc.lens === 'exact') {
       const CHUNK = 4096;
       for (let start = 0; start < total; start += CHUNK) {
         if (runId !== runIdRef.current) return;
         const count = Math.min(CHUNK, total - start);
-        const params: RunParams[] = new Array(count);
-        for (let k = 0; k < count; k++) {
-          const p = start + k;
-          params[k] = exactRunParams(cfgNow, bc, targetMass, p % N, Math.floor(p / N))!;
+        let res;
+        if (isPos) {
+          const ics: PlanetIC[] = new Array(count);
+          for (let k = 0; k < count; k++) {
+            const p = start + k;
+            ics[k] = exactPosPlanet(cfgNow, bc, Mtot, p % N, Math.floor(p / N));
+          }
+          res = await gpu.runBatchIC(cfgNow, ics);
+        } else {
+          const params: RunParams[] = new Array(count);
+          for (let k = 0; k < count; k++) {
+            const p = start + k;
+            params[k] = exactRunParams(cfgNow, bc, targetMass, p % N, Math.floor(p / N))!;
+          }
+          res = await gpu.runBatch(cfgNow, params);
         }
-        const res = await gpu.runBatch(cfgNow, params);
         if (runId !== runIdRef.current) return;
         const rgb = new Uint8Array(count * 3), out = new Uint8Array(count), tt = new Float32Array(count), stat = new Float32Array(count * 4);
         for (let k = 0; k < count; k++) {
@@ -196,13 +214,24 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       for (let start = 0; start < total; start += PIX_CHUNK) {
         if (runId !== runIdRef.current) return;
         const count = Math.min(PIX_CHUNK, total - start);
-        const params: RunParams[] = new Array(count * K);
-        for (let k = 0; k < count; k++) {
-          const p = start + k, i = p % N, j = Math.floor(p / N);
-          const rng = mulberry32(statPixelSeed(cfgNow, p));
-          for (let q = 0; q < K; q++) params[k * K + q] = statRunParams(cfgNow, bc, targetMass, i, j, rng)!;
+        let res;
+        if (isPos) {
+          const ics: PlanetIC[] = new Array(count * K);
+          for (let k = 0; k < count; k++) {
+            const p = start + k, i = p % N, j = Math.floor(p / N);
+            const rng = mulberry32(statPixelSeed(cfgNow, p));
+            for (let q = 0; q < K; q++) ics[k * K + q] = statPosPlanet(cfgNow, bc, Mtot, i, j, rng);
+          }
+          res = await gpu.runBatchIC(cfgNow, ics);
+        } else {
+          const params: RunParams[] = new Array(count * K);
+          for (let k = 0; k < count; k++) {
+            const p = start + k, i = p % N, j = Math.floor(p / N);
+            const rng = mulberry32(statPixelSeed(cfgNow, p));
+            for (let q = 0; q < K; q++) params[k * K + q] = statRunParams(cfgNow, bc, targetMass, i, j, rng)!;
+          }
+          res = await gpu.runBatch(cfgNow, params);
         }
-        const res = await gpu.runBatch(cfgNow, params);
         if (runId !== runIdRef.current) return;
         const rgb = new Uint8Array(count * 3), out = new Uint8Array(count), tt = new Float32Array(count), stat = new Float32Array(count * 4);
         for (let k = 0; k < count; k++) {
@@ -300,7 +329,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       rafRef.current = requestAnimationFrame(chunk);
     };
 
-    if (s.engine === 'gpu' && HAS_GPU && gpuSupportsMap(s.mode, s.metric, s.lens)) {
+    if (s.engine === 'gpu' && HAS_GPU && gpuSupportsMap(s.metric, s.lens)) {
       renderGpu(runId, cfgNow, bc, paint, tick, onDone)
         .catch(() => { gpuRef.current = null; if (runId === runIdRef.current) viaWorkersOrCpu(false); });
       return;
@@ -361,7 +390,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
         : metric === 'chaos'
           ? `λ=${v.toFixed(3)} (${v > 0.05 ? 'chaotic' : 'regular'})`
           : `${OUTCOME_CODE[outGridRef.current[j * res + i]]} @ t=${v.toFixed(0)}`;
-      setHover(`${la}=${ax.toFixed(2)} · ${lb}=${by.toFixed(2)} → ${detail} · click to open in single run`);
+      setHover(`${la}=${ax.toFixed(2)} · ${lb}=${by.toFixed(2)} → ${detail} · click to open in a new tab`);
     }
     if (dragRef.current) {
       dragRef.current.x1 = e.clientX - r.left; dragRef.current.y1 = e.clientY - r.top;
@@ -447,12 +476,12 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             ...(HAS_WORKERS ? [{ value: 'workers', label: `Workers ×${Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1))}` }] : []),
             { value: 'cpu', label: 'CPU' },
           ]} onChange={(v) => setEngine(v as BasinEngine)} />}
-          {engine === 'gpu' && !gpuSupportsMap(mode, metric, lens) && (
+          {engine === 'gpu' && !gpuSupportsMap(metric, lens) && (
             <div style={{ font: '11px/1.5 system-ui', color: '#ffd27f', marginTop: 4 }}>
-              ⚠ The GPU lane covers the radius×speed and angle×speed planes coloured by Fate. This view ({mode === 'pos' ? 'position plane' : 'chaos/λ'}) will render on Workers instead.
+              ⚠ The GPU lane doesn’t compute the chaos/λ exponent — this view will render on Workers instead.
             </div>
           )}
-          {engine === 'gpu' && gpuSupportsMap(mode, metric, lens) && (
+          {engine === 'gpu' && gpuSupportsMap(metric, lens) && (
             <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 4 }}>
               ⚡ Experimental WebGPU: 32-bit precision, so fine fractal detail can differ slightly from Workers/CPU. Falls back automatically on error.
             </div>
