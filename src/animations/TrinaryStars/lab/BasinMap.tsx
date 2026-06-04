@@ -2,17 +2,16 @@ import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } f
 import { Slider, Pills } from '../../../components/ControlPanel';
 import {
   basinContext, computeBasinPixel, basinPlanetAt, chaosColor, CHAOS_LAMBDA_MAX, OUTCOME_RGB, OUTCOME_CODE,
-  type BasinConfig, type BasinMode, type BasinMetric, type Domain,
+  statColor, STAT_LABEL,
+  type BasinConfig, type BasinMode, type BasinMetric, type BasinLens, type StatMetric, type Domain,
 } from './basin';
 import { BasinPool } from './basinPool';
 import type { EnsembleConfig } from './rng';
 
 export interface SamplingBox { rMin: number; rMax: number; fMin: number; fMax: number }
 export interface BasinSystem {
-  target: string; onTarget: (t: string) => void; targetOptions: { value: string; label: string }[];
-  massMul: number[]; onMass: (i: number, v: number) => void; baseMasses: number[];
-  starSoft: number; onStarSoft: (v: number) => void; onReset: () => void;
-  /** The ensemble's radius × speed sampling box — shared with the radspeed plane. */
+  /** The ensemble's radius × speed sampling box — shared with the radspeed plane,
+   *  so zooming the map re-aims the Census (and vice-versa). */
   box: SamplingBox; onBox: (b: SamplingBox) => void; onRunCensus: () => void;
 }
 
@@ -54,6 +53,9 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   const [res, setRes] = useState(128);
   const [samples, setSamples] = useState(1);
   const [metric, setMetric] = useState<BasinMetric>('fate');
+  const [lens, setLens] = useState<BasinLens>('exact');
+  const [statMetric, setStatMetric] = useState<StatMetric>('happy');
+  const [statRuns, setStatRuns] = useState(6);
   const [domain, setDomain] = useState<Domain>(DEFAULT_DOMAIN.pos);
   const [posRule, setPosRule] = useState<'rest' | 'tangential'>('tangential');
   const [posSpeedFrac, setPosSpeedFrac] = useState(0.9);
@@ -77,7 +79,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
 
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
   const boxRef = useRef(system?.box); boxRef.current = system?.box;
-  const st = { mode, metric, domain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro, engine };
+  const st = { mode, metric, lens, statMetric, statRuns, domain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro, engine };
   const stateRef = useRef(st); stateRef.current = st;
 
   // In the radius×speed plane the map shares the ensemble's sampling box, so
@@ -86,7 +88,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     ? { a0: system.box.rMin, a1: system.box.rMax, b0: system.box.fMin, b1: system.box.fMax }
     : domain;
   const currentBc = (): BasinConfig => ({
-    mode, metric, domain: effDomain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro,
+    mode, metric, lens, statRuns, statMetric, domain: effDomain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro,
   });
   const goObservatory = (i: number, j: number) => {
     const d = effDomain;
@@ -102,6 +104,9 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   };
 
   const measureDimension = () => {
+    // Box-counting the basin boundary is meaningful only for the exact fate map;
+    // statistical and chaos maps are smooth, so skip it there.
+    if (stateRef.current.lens !== 'exact' || stateRef.current.metric !== 'fate') return;
     const N = stateRef.current.res;
     const out = outGridRef.current;
     if (out.length !== N * N) return;
@@ -148,7 +153,8 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       ? { a0: boxRef.current.rMin, a1: boxRef.current.rMax, b0: boxRef.current.fMin, b1: boxRef.current.fMax }
       : s.domain;
     const bc: BasinConfig = {
-      mode: s.mode, metric: s.metric, domain: dom, res: N, samples: s.samples,
+      mode: s.mode, metric: s.metric, lens: s.lens, statRuns: s.statRuns, statMetric: s.statMetric,
+      domain: dom, res: N, samples: s.samples,
       posRule: s.posRule, posSpeedFrac: s.posSpeedFrac, fixedAngle: s.fixedAngle, fixedRadius: s.fixedRadius, fixedRetro: s.fixedRetro,
     };
     const cv = canvasRef.current!; cv.width = N; cv.height = N;
@@ -226,9 +232,11 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       const by = effDomain.b1 - (effDomain.b1 - effDomain.b0) * ((j + 0.5) / res);
       const [la, lb] = AXIS_LABELS[mode];
       const v = tGridRef.current[j * res + i];
-      const detail = metric === 'chaos'
-        ? `λ=${v.toFixed(3)} (${v > 0.05 ? 'chaotic' : 'regular'})`
-        : `${OUTCOME_CODE[outGridRef.current[j * res + i]]} @ t=${v.toFixed(0)}`;
+      const detail = lens === 'stat'
+        ? `${STAT_LABEL[statMetric]} ${(v * 100).toFixed(0)}% (of ${statRuns} worlds)`
+        : metric === 'chaos'
+          ? `λ=${v.toFixed(3)} (${v > 0.05 ? 'chaotic' : 'regular'})`
+          : `${OUTCOME_CODE[outGridRef.current[j * res + i]]} @ t=${v.toFixed(0)}`;
       setHover(`${la}=${ax.toFixed(2)} · ${lb}=${by.toFixed(2)} → ${detail} · click to open in single run`);
     }
     if (dragRef.current) {
@@ -271,31 +279,30 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
 
   return (
     <div style={{ ...panel, marginBottom: 12 }}>
-      <h3 style={h3}>BASIN MAP — fractal portrait of fates</h3>
+      <h3 style={h3}>DESTINY MAP — {lens === 'stat' ? 'statistical portrait of fates' : 'fractal portrait of fates'}</h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 18, alignItems: 'start' }}>
         {/* Controls */}
         <div>
-          {system && (
-            <div style={{ marginBottom: 8 }}>
-              {mode !== 'pos' && <Pills label="Orbit around" options={system.targetOptions} value={system.target} onChange={system.onTarget} />}
-              <Slider label="Star 1 mass · gold" value={system.massMul[0]} min={0.1} max={4} step={0.05} onChange={(v) => system.onMass(0, v)} format={(v) => (system.baseMasses[0] * v).toFixed(2)} />
-              <Slider label="Star 2 mass · orange" value={system.massMul[1]} min={0.1} max={4} step={0.05} onChange={(v) => system.onMass(1, v)} format={(v) => (system.baseMasses[1] * v).toFixed(2)} />
-              <Slider label="Star 3 mass · blue" value={system.massMul[2]} min={0.1} max={4} step={0.05} onChange={(v) => system.onMass(2, v)} format={(v) => (system.baseMasses[2] * v).toFixed(2)} />
-              <Slider label="Softening" value={system.starSoft} min={0.005} max={0.3} step={0.005} onChange={system.onStarSoft} format={(v) => v.toFixed(3)} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <button style={{ ...btn, padding: '5px 12px', fontSize: 12 }} onClick={system.onReset}>⟲ Reset stars</button>
-                <span style={{ font: '11px system-ui', color: '#6f7f99' }}>then Render to apply</span>
-              </div>
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '10px 0' }} />
-            </div>
-          )}
           <Pills label="Plane" value={mode} options={[
             { value: 'pos', label: 'Start position' }, { value: 'radspeed', label: 'Radius × speed' }, { value: 'anglespeed', label: 'Angle × speed' },
           ]} onChange={(v) => switchMode(v as BasinMode)} />
-          <Pills label="Colour by" value={metric} options={[
-            { value: 'fate', label: 'Fate' }, { value: 'chaos', label: 'Chaos (λ)' },
-          ]} onChange={(v) => setMetric(v as BasinMetric)} />
-          {mode === 'pos' && (
+          <Pills label="Lens" value={lens} options={[
+            { value: 'exact', label: 'Exact (1 world/px)' }, { value: 'stat', label: 'Statistical' },
+          ]} onChange={(v) => { stop(); setLens(v as BasinLens); setRes(r => Math.min(r, v === 'stat' ? 96 : 256)); }} />
+          {lens === 'exact' ? (
+            <Pills label="Colour by" value={metric} options={[
+              { value: 'fate', label: 'Fate' }, { value: 'chaos', label: 'Chaos (λ)' },
+            ]} onChange={(v) => setMetric(v as BasinMetric)} />
+          ) : (
+            <>
+              <Pills label="Show" value={statMetric} options={[
+                { value: 'happy', label: 'Happy %' }, { value: 'hab', label: 'Habitable' },
+                { value: 'destroyed', label: 'Destroyed %' }, { value: 'survived', label: 'Survived %' },
+              ]} onChange={(v) => setStatMetric(v as StatMetric)} />
+              <Slider label="Worlds / pixel" value={statRuns} min={2} max={32} step={2} onChange={setStatRuns} format={v => `${v}`} />
+            </>
+          )}
+          {mode === 'pos' && lens === 'exact' && (
             <>
               <Pills label="Launch from each point" value={posRule}
                 options={[{ value: 'tangential', label: 'Tangential' }, { value: 'rest', label: 'At rest' }]}
@@ -304,11 +311,13 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
                 <Slider label="Speed × circular" value={posSpeedFrac} min={0.2} max={1.6} step={0.05} onChange={setPosSpeedFrac} format={v => v.toFixed(2)} />}
             </>
           )}
-          {mode === 'radspeed' && <Slider label="Fixed angle (°)" value={fixedAngle} min={0} max={360} step={5} onChange={setFixedAngle} format={v => `${v}`} />}
-          {mode === 'anglespeed' && <Slider label="Fixed radius" value={fixedRadius} min={0.3} max={6} step={0.1} onChange={setFixedRadius} format={v => v.toFixed(1)} />}
-          {mode !== 'pos' && <Pills label="Direction" value={fixedRetro ? 1 : 0} options={[{ value: 0, label: 'Prograde' }, { value: 1, label: 'Retrograde' }]} onChange={(v) => setFixedRetro(v === 1)} />}
-          <Pills label="Resolution" value={res} options={[96, 128, 192, 256].map(r => ({ value: r, label: `${r}²` }))} onChange={setRes} />
-          <Pills label="Samples / pixel" value={samples} options={[{ value: 1, label: '1 (crisp)' }, { value: 2, label: '4 (smooth)' }, { value: 3, label: '9' }]} onChange={setSamples} />
+          {mode === 'radspeed' && lens === 'exact' && <Slider label="Fixed angle (°)" value={fixedAngle} min={0} max={360} step={5} onChange={setFixedAngle} format={v => `${v}`} />}
+          {mode === 'anglespeed' && lens === 'exact' && <Slider label="Fixed radius" value={fixedRadius} min={0.3} max={6} step={0.1} onChange={setFixedRadius} format={v => v.toFixed(1)} />}
+          {mode !== 'pos' && lens === 'exact' && <Pills label="Direction" value={fixedRetro ? 1 : 0} options={[{ value: 0, label: 'Prograde' }, { value: 1, label: 'Retrograde' }]} onChange={(v) => setFixedRetro(v === 1)} />}
+          <Pills label="Resolution" value={res}
+            options={(lens === 'stat' ? [48, 64, 96, 128] : [96, 128, 192, 256]).map(r => ({ value: r, label: `${r}²` }))}
+            onChange={setRes} />
+          {lens === 'exact' && <Pills label="Samples / pixel" value={samples} options={[{ value: 1, label: '1 (crisp)' }, { value: 2, label: '4 (smooth)' }, { value: 3, label: '9' }]} onChange={setSamples} />}
           {HAS_WORKERS && <Pills label="Engine" value={engine} options={[{ value: 'workers', label: `Workers ×${Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1))}` }, { value: 'cpu', label: 'CPU' }]} onChange={(v) => setEngine(v as 'workers' | 'cpu')} />}
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button style={{ ...btn, background: busy ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }} onClick={busy ? stop : render}>{busy ? '❚❚ Stop' : '▦ Render map'}</button>
@@ -336,7 +345,17 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             </div>
           )}
 
-          {metric === 'fate' ? (
+          {lens === 'stat' ? (
+            <div style={{ marginTop: 10, font: '11px ui-monospace, monospace', color: '#9aa7bd' }}>
+              <div style={{
+                height: 10, borderRadius: 3, marginBottom: 2,
+                background: `linear-gradient(90deg, rgb(${statColor(statMetric, 0).join(',')}), rgb(${statColor(statMetric, 0.5).join(',')}), rgb(${statColor(statMetric, 1).join(',')}))`,
+              }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>{STAT_LABEL[statMetric]} 0%</span><span>100%</span>
+              </div>
+            </div>
+          ) : metric === 'fate' ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px', marginTop: 10, font: '11px ui-monospace, monospace' }}>
               {OUTCOME_CODE.filter(o => o !== 'blowup').map(o => (
                 <span key={o} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -356,9 +375,11 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             </div>
           )}
           <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 8 }}>
-            One pixel = one exact starting condition. {metric === 'fate'
-              ? 'Hue = outcome, brightness = how long it lasted.'
-              : 'Colour = the planet’s Lyapunov exponent λ — how fast its future becomes unpredictable (blue = regular orbits, red = strongly chaotic).'} Drag a box to zoom — the boundaries stay intricate at every scale: the three-body problem’s fractal final-state sensitivity. D is the box-counting dimension of the boundary (1 = smooth, →2 = space-filling); α = 2−D is the uncertainty exponent.
+            {lens === 'stat'
+              ? `Each pixel is a mini-census: ${statRuns} worlds that share these axes but randomise the other launch dimensions, coloured by ${STAT_LABEL[statMetric]}. The Exact lens shows one world per pixel — switch to it to see the fractal final-state boundaries underneath these smooth statistics.`
+              : metric === 'fate'
+                ? 'One pixel = one exact starting condition. Hue = outcome, brightness = how long it lasted. Drag a box to zoom — the boundaries stay intricate at every scale: the three-body problem’s fractal final-state sensitivity. D is the box-counting dimension of the boundary (1 = smooth, →2 = space-filling); α = 2−D is the uncertainty exponent.'
+                : 'One pixel = one exact starting condition. Colour = the planet’s Lyapunov exponent λ — how fast its future becomes unpredictable (blue = regular orbits, red = strongly chaotic). Drag a box to zoom.'}
           </div>
         </div>
 
