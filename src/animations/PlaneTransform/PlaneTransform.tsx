@@ -42,6 +42,9 @@ interface PaneRefs {
  * canvas, stacked top-bottom on a tall one. Same point cloud renders into
  * both panes — the second pane's vertex shader runs the selected function so
  * each colored point ends up at its f(z) location.
+ *
+ * The View section offers a polar sampling grid (rings + rays) and a log-polar
+ * plane layout (plot at (arg, log|·|)) — see polarViews.ts.
  */
 export default function PlaneTransform() {
   const [functionIndex, setFunctionIndex] = usePersistentState(
