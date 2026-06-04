@@ -268,6 +268,9 @@ for the design conversation:
 
 - [ ] Confirm with the maintainer which seams to tackle first (action model vs.
       Settings layout vs. single-source controls vs. the primitive set).
+- [ ] **Retire the in-drawer app-switcher** (maintainer-directed, §7): drop the
+      ☰ Apps drawer tab and let the landing gallery be the sole app picker. Shared
+      `AppShell` change — flag before editing.
 - [x] **`CLAUDE.md` doc-drift fixed** (§J): `ToggleMenu` re-attributed to the
       legacy Fractals2D, and the repo-layout tree + routing table updated for the
       `MobiusWalk → TopologyWalk` rename (with `#/mobius`, `#/wrap-world` redirects).
@@ -279,3 +282,38 @@ for the design conversation:
       manuals** so no app regresses.
 - [ ] Keep shared-file edits append-friendly and re-sync with `main` before
       finalizing (per `CLAUDE.md`'s parallel-branches guidance).
+
+---
+
+## 7. Directed change: navigate by gallery, not an in-drawer app-switcher
+
+**Decision (maintainer, this session).** Keep the landing **gallery** (`/` route,
+`Menu.tsx`) as the single place to choose an app, and **drop the in-drawer Apps
+list** — jumping app-to-app from inside an app isn't needed. This also serves the
+"make the menu bar make more sense" goal by tightening the top bar.
+
+**Why it fits the review.** The ☰ **Apps** drawer tab is the one fully generic,
+app-agnostic tab (§2); it duplicates the gallery's job as an in-app switcher.
+Removing it makes the drawer purely about the *current* app
+(Function / Settings / Actions) and leaves one navigation path:
+**⌂ Home → gallery → app**.
+
+**Scope when implemented** (a shared `AppShell` change — flag + re-sync per the
+parallel-branch rule):
+- `AppShell.tsx` / `AppShell.css`: remove the **Apps** drawer tab and its body;
+  the drawer reduces to **Function · Settings · Actions**.
+- Top bar: the **☰ Apps** button becomes redundant with **⌂ Home** — remove it (or
+  repoint it at Home). Resulting bar: `⌂ Home · ƒ Function · Title · ⚙ Settings ·
+  ▶ Actions · ?`.
+- `Menu.tsx` (gallery) and `apps.ts` are **unchanged** by this step — the catalog
+  still drives the gallery and the router.
+- Verify Home + every app's deep links still navigate; `npm run build` green.
+
+**Open sub-decisions (for implementation time):**
+- Remove the ☰ button entirely, or keep a single Home-only affordance?
+- Once Apps is gone, which tab should the drawer open on by default (Settings)?
+
+**Separate, decided later:** *which* apps to trim from the catalog (`apps.ts`), and
+whether trimmed apps are **retired** (route removed) or **hidden but URL-reachable**
+(kept in routing, dropped from the gallery) — the `#/fractals-cpu` legacy CPU
+fractals are an existing precedent for "routed but not in the catalog."
