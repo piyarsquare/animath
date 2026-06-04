@@ -209,7 +209,7 @@ inside `<ShellSettings>` / `<ShellActions>` using the `ControlPanel` primitives.
 
 The complex viewers are powered by the **`src/lib/particles` engine** plus the
 turnkey `ParticleViewerShell` component, which together provide the standard
-**Function / Camera / Color / Particles / Motion / Detail / About** sections, the
+**Function / Domain / Camera / Color / Particles / Motion / Detail / About** sections, the
 `QuarterTurnControls` (in the Actions panel), gesture handling, and the rAF loop
 out of the box. The flow
 is: `useParticleState` (state) → `useViewControls` (orientation/projection

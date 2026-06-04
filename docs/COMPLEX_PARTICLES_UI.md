@@ -136,7 +136,7 @@ The 19 functions (name → formula):
 
 ### 4.3 Settings tab
 
-Seven collapsible **Sections** (`ControlPanel.tsx` primitives: Section, Slider,
+Eight collapsible **Sections** (`ControlPanel.tsx` primitives: Section, Slider,
 Pills, Select, Checkbox). Each section has an icon + chevron; **Function** and
 **Camera** start open, the rest collapsed.
 
@@ -150,6 +150,17 @@ Pills, Select, Checkbox). Each section has an icon + chevron; **Function** and
   each copy uses), and **Differentiate by** — Select *color / intensity / shape*
   (how the copies are told apart: hue offset, brightness falloff, or shape
   cycling).
+
+**▦ Domain**
+- **Units** — Pills: **×1 / ×π** (default ×1). A multiplier on both domain
+  extents *and* the reference axis lengths; ×π lets trig functions be sampled
+  over ±nπ in one tap. When ×π is active the extent sliders read in π (e.g.
+  "2.0π").
+- **X extent (±)** — Slider 1–12 (default 4): half-width of the sampled domain
+  on the x (real) axis.
+- **Y extent (±)** — Slider 1–12 (default 4): half-width on the y (imaginary)
+  axis. Decoupled from X, so the sampled input box can be rectangular. Effective
+  sampled half-width on each axis is `extent × Units`.
 
 **◐ Camera** *(open by default)*
 - **Projection** — Pills: **Perspective · Stereo · Hopf · Torus** (the 4-D→3-D
@@ -195,8 +206,6 @@ Pills, Select, Checkbox). Each section has an icon + chevron; **Function** and
 
 **⚙ Detail**
 - **Particle count** — Slider 1,000–250,000 (default 80k; labeled in "k").
-- **Grid extent (±)** — Slider 1–12 (default 4; half-side of the sampled input
-  grid).
 - **Adaptive density** — Checkbox (default off): sample more densely where
   `|f′(z)|` is large.
 - *(Adaptive on)* **Sharpness (α)** — Slider 0–3 (default 1; how aggressively
@@ -301,8 +310,8 @@ Yaw/Pitch/Roll.
 
 `usePersistentState` mirrors most **settings** to `localStorage` (namespace
 `animath:<v>:complex-particles:<field>`), so they survive reloads: function/p/q/
-branches, all color/particle/motion/detail values, projection type, motion mode,
-drop axis, scaffold toggle, torus radius scale.
+branches, domain extents (X/Y) + units, all color/particle/motion/detail values,
+projection type, motion mode, drop axis, scaffold toggle, torus radius scale.
 
 **Not** persisted (transient "looking" state): camera azimuth/elevation/**roll**/
 pan, the Torus collapse scrub, real-view flag, and the spin toggles. "Reset

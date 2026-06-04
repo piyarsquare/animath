@@ -76,6 +76,8 @@ export default function ComplexParticles({
   useEffect(() => {
     const geom = state.geometryRef.current;
     if (!geom) return;
+    const exX = state.extentX * state.axisScale;
+    const exY = state.extentY * state.axisScale;
     if (state.adaptive) {
       const evalFn = (x: number, z: number) => {
         const pt = new THREE.Vector2(x, z);
@@ -84,15 +86,16 @@ export default function ComplexParticles({
           : applyComplex(pt, functionIndex);
         return { x: out.x, y: out.y };
       };
-      redistributeAdaptive(geom, state.particleCount, state.gridExtent, {
+      redistributeAdaptive(geom, state.particleCount, exX, exY, {
         evalFn,
         alpha: state.adaptiveAlpha,
       });
     } else {
-      rebuildGeometryBuffers(geom, state.particleCount, state.gridExtent);
+      rebuildGeometryBuffers(geom, state.particleCount, exX, exY);
     }
   }, [
-    state.adaptive, state.adaptiveAlpha, state.particleCount, state.gridExtent,
+    state.adaptive, state.adaptiveAlpha, state.particleCount,
+    state.extentX, state.extentY, state.axisScale,
     functionIndex, expP, expQ,
   ]);
 
@@ -217,7 +220,11 @@ export default function ComplexParticles({
       });
       state.texturesRef.current = textures;
 
-      const geometry = createParticleGeometry(state.particleCount, state.gridExtent);
+      const geometry = createParticleGeometry(
+        state.particleCount,
+        state.extentX * state.axisScale,
+        state.extentY * state.axisScale,
+      );
       state.geometryRef.current = geometry;
 
       state.materialsRef.current = [];
@@ -262,6 +269,7 @@ export default function ComplexParticles({
         dropAxisRef: state.dropAxisRef,
         rotLRef: state.rotLRef,
         rotRRef: state.rotRRef,
+        axisScaleRef: state.axisScaleRef,
         viewPointRef: state.viewPointRef,
         onViewPointChangeRef: state.onViewPointChangeRef,
         orientationRef: state.orientationRef,

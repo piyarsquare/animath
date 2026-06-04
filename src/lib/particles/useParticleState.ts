@@ -46,8 +46,12 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [hueShift, setHueShift] = usePersistentState(pk('hueShift'), COMPLEX_PARTICLES_DEFAULTS.initial.hueShift);
   const [jitter, setJitter] = usePersistentState(pk('jitter'), COMPLEX_PARTICLES_DEFAULTS.initial.jitter);
   const [axisWidth, setAxisWidth] = usePersistentState(pk('axisWidth'), COMPLEX_PARTICLES_DEFAULTS.initial.axisWidth);
-  /** Half-side of the sampled grid in input-space units. */
-  const [gridExtent, setGridExtent] = usePersistentState(pk('gridExtent'), COMPLEX_PARTICLES_DEFAULTS.initial.gridExtent);
+  // Sampled-domain half-widths, independent per axis (a rectangular input box),
+  // plus a unit multiplier (1 or π) applied to both extents and the reference
+  // axes — handy for trig functions whose natural scale is π.
+  const [extentX, setExtentX] = usePersistentState(pk('extentX'), COMPLEX_PARTICLES_DEFAULTS.initial.extentX);
+  const [extentY, setExtentY] = usePersistentState(pk('extentY'), COMPLEX_PARTICLES_DEFAULTS.initial.extentY);
+  const [axisScale, setAxisScale] = usePersistentState(pk('axisScale'), COMPLEX_PARTICLES_DEFAULTS.initial.axisScale);
   /** When true, sample more densely where |f'(z)| is large. */
   const [adaptive, setAdaptive] = usePersistentState(pk('adaptive'), COMPLEX_PARTICLES_DEFAULTS.initial.adaptive);
   /** Exponent biasing strength for adaptive sampling. */
@@ -119,6 +123,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   useEffect(() => { viewMotionRef.current = viewMotion; }, [viewMotion]);
   const dropAxisRef = useRef(dropAxis);
   useEffect(() => { dropAxisRef.current = dropAxis; }, [dropAxis]);
+  const axisScaleRef = useRef(axisScale);
+  useEffect(() => { axisScaleRef.current = axisScale; }, [axisScale]);
   const orientationRef = useRef('');
 
   // ---- Sync external viewPoint prop → rotation refs + uniforms ----
@@ -153,7 +159,10 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     hueShift, setHueShift,
     jitter, setJitter,
     axisWidth, setAxisWidth,
-    gridExtent, setGridExtent,
+    extentX, setExtentX,
+    extentY, setExtentY,
+    axisScale, setAxisScale,
+    axisScaleRef,
     adaptive, setAdaptive,
     adaptiveAlpha, setAdaptiveAlpha,
     objectMode, setObjectMode,

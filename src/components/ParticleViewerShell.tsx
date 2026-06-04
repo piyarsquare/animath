@@ -176,6 +176,26 @@ export default function ParticleViewerShell({
           {variantExtras}
         </Section>
 
+        <Section title="Domain" icon="▦">
+          <Pills
+            label="Units"
+            options={[
+              { value: 1, label: '×1' },
+              { value: Math.PI, label: '×π' },
+            ]}
+            value={state.axisScale}
+            onChange={state.setAxisScale}
+          />
+          <Slider label="X extent (±)" value={state.extentX}
+            min={R.extent.min} max={R.extent.max} step={R.extent.step}
+            onChange={state.setExtentX}
+            format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`} />
+          <Slider label="Y extent (±)" value={state.extentY}
+            min={R.extent.min} max={R.extent.max} step={R.extent.step}
+            onChange={state.setExtentY}
+            format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`} />
+        </Section>
+
         <Section title="Camera" icon="◐" defaultOpen>
           <Pills
             label="Projection"
@@ -305,9 +325,6 @@ export default function ParticleViewerShell({
           <Slider label="Particle count" value={state.particleCount}
             min={R.particleCount.min} max={R.particleCount.max} step={R.particleCount.step}
             onChange={state.setParticleCount} format={v => `${(v / 1000).toFixed(0)}k`} />
-          <Slider label="Grid extent (±)" value={state.gridExtent}
-            min={R.gridExtent.min} max={R.gridExtent.max} step={R.gridExtent.step}
-            onChange={state.setGridExtent} format={v => v.toFixed(1)} />
           <Checkbox label="Adaptive density"
             checked={state.adaptive} onChange={state.setAdaptive} />
           {state.adaptive && (
