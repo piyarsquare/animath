@@ -5,7 +5,7 @@ import { starPaths } from './runner';
 /** Star-trajectory overlay colours (gold / orange / blue), matching the stars. */
 const STAR_RGB = ['255,210,127', '255,112,67', '158,199,255'];
 import {
-  basinContext, computeBasinPixel, basinPlanetAt, chaosRamp, CHAOS_LAMBDA_MAX, OUTCOME_RGB, OUTCOME_CODE,
+  computeBasinRange, basinPlanetAt, chaosRamp, CHAOS_LAMBDA_MAX, OUTCOME_RGB, OUTCOME_CODE,
   statColor, statRamp, STAT_LABEL, STAT_ORDER, basinTargets, exactRunParams, statRunParams, statPixelSeed,
   exactPosPlanet, statPosPlanet,
   type BasinConfig, type BasinMode, type BasinMetric, type BasinLens, type StatMetric, type Domain,
@@ -350,19 +350,19 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             return;
           } catch { /* fall through to CPU */ }
         }
-        const bctx = basinContext(cfgNow, bc);
+        // Batch a row or so per frame: worlds in a block share the star field,
+        // so the integration is amortised, while we still yield to keep painting.
+        const blk = Math.max(N, 64);
         let p = 0;
         const chunk = () => {
           if (runId !== runIdRef.current) return;
           const t0 = performance.now();
-          while (p < total && performance.now() - t0 < 24) {
-            const px = computeBasinPixel(bctx, p);
-            const o = p * 4;
-            img.data[o] = px.r; img.data[o + 1] = px.g; img.data[o + 2] = px.b; img.data[o + 3] = 255;
-            outGrid[p] = px.out; tGrid[p] = px.t;
-            statGrid[p * 4] = px.stat[0]; statGrid[p * 4 + 1] = px.stat[1]; statGrid[p * 4 + 2] = px.stat[2]; statGrid[p * 4 + 3] = px.stat[3];
-            p++;
-          }
+          do {
+            const cnt = Math.min(blk, total - p);
+            const b = computeBasinRange(cfgNow, bc, p, cnt);
+            paint(p, b.rgb, b.out, b.t, b.stat, cnt);
+            p += cnt;
+          } while (p < total && performance.now() - t0 < 24);
           flush(); setProgress(p / total);
           if (p < total) rafRef.current = requestAnimationFrame(chunk);
           else stageDone();

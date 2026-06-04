@@ -136,3 +136,79 @@ export function runPlanetLyap(cfg: EnsembleConfig, stars: Star[], planet: Planet
   const s = an.snapshot();
   return { lambda: sum / Math.max(s.t, 1e-6), outcome: outcomeOf(s, blowup) };
 }
+
+const BATCH_PARAMS: RunParams = { radius: 0, speed: 0, angleDeg: 0, retro: false, seed: 0 };
+
+/** Batched fate runner: integrate many planets against ONE shared star
+ *  integration. The planets are test masses, so the stars' trajectory is
+ *  independent of them — which makes this *bit-identical* to running each planet
+ *  alone, while the (dominant) star work is paid once for the whole batch rather
+ *  than once per planet. Planets resolve and freeze independently (`alive=false`,
+ *  which `step` then skips), so each keeps the exact outcome/timing it would have
+ *  had solo. Star integration stops as soon as every planet has resolved. */
+export function runBatchFate(cfg: EnsembleConfig, stars: Star[], planets: Planet[]): RunResult[] {
+  const dt = getScenario(cfg.presetId).system.dt;
+  const maxSteps = Math.round(cfg.tMax / dt);
+  const sim: SimState = { stars, planets, t: 0, dtBase: dt, G: 1, starSoft: cfg.starSoft, planetSoft: 0.05 };
+  const an = planets.map(p => new Analyzer(cfg.classify, stars, p));
+  const nextSample = new Float64Array(planets.length).fill(SAMPLE_DT_BATCH);
+  const blowup = new Uint8Array(planets.length);
+  const done = new Uint8Array(planets.length);
+  let alive = planets.length;
+  for (let n = 0; n < maxSteps && alive > 0; n++) {
+    step(sim, dt);
+    for (let k = 0; k < planets.length; k++) {
+      if (done[k]) continue;
+      const p = planets[k];
+      if (!Number.isFinite(p.x) || Math.abs(p.x) > 1e4 || Math.abs(p.y) > 1e4) {
+        blowup[k] = 1; done[k] = 1; p.alive = false; alive--; continue;
+      }
+      if (sim.t >= nextSample[k]) {
+        an[k].push(sim.t, stars, p);
+        nextSample[k] = sim.t + SAMPLE_DT_BATCH;
+        if (an[k].fateNow() !== 'bound') { done[k] = 1; p.alive = false; alive--; }
+      }
+    }
+  }
+  return planets.map((_, k) => resultOf(an[k].snapshot(), blowup[k] === 1, BATCH_PARAMS));
+}
+
+/** Batched finite-time Lyapunov runner (chaos lens): the same idea with a
+ *  Benettin shadow per planet. Each (planet, shadow) pair renormalises against
+ *  itself, so pairs stay independent and bit-identical to `runPlanetLyap`; the
+ *  shared star integration is paid once. */
+export function runBatchLyap(cfg: EnsembleConfig, stars: Star[], planets: Planet[]): { lambda: number; outcome: Outcome }[] {
+  const dt = getScenario(cfg.presetId).system.dt;
+  const maxSteps = Math.round(cfg.tMax / dt);
+  const shadows = planets.map(p => ({ ...p, x: p.x + LYAP_D0 }));
+  const all: Planet[] = [];
+  for (let k = 0; k < planets.length; k++) { all.push(planets[k]); all.push(shadows[k]); }
+  const sim: SimState = { stars, planets: all, t: 0, dtBase: dt, G: 1, starSoft: cfg.starSoft, planetSoft: 0.05 };
+  const an = planets.map(p => new Analyzer(cfg.classify, stars, p));
+  const nextSample = new Float64Array(planets.length).fill(SAMPLE_DT_BATCH);
+  const nextRenorm = new Float64Array(planets.length).fill(LYAP_RENORM);
+  const sum = new Float64Array(planets.length);
+  const blowup = new Uint8Array(planets.length);
+  const done = new Uint8Array(planets.length);
+  let alive = planets.length;
+  for (let n = 0; n < maxSteps && alive > 0; n++) {
+    step(sim, dt);
+    for (let k = 0; k < planets.length; k++) {
+      if (done[k]) continue;
+      const p = planets[k], sh = shadows[k];
+      if (!Number.isFinite(p.x) || Math.abs(p.x) > 1e4 || Math.abs(p.y) > 1e4) {
+        blowup[k] = 1; done[k] = 1; p.alive = false; sh.alive = false; alive--; continue;
+      }
+      if (sim.t >= nextRenorm[k]) { sum[k] += lyapunovRenorm(p, sh, LYAP_D0); nextRenorm[k] = sim.t + LYAP_RENORM; }
+      if (sim.t >= nextSample[k]) {
+        an[k].push(sim.t, stars, p);
+        nextSample[k] = sim.t + SAMPLE_DT_BATCH;
+        if (an[k].fateNow() !== 'bound') { done[k] = 1; p.alive = false; sh.alive = false; alive--; }
+      }
+    }
+  }
+  return planets.map((_, k) => {
+    const s = an[k].snapshot();
+    return { lambda: sum[k] / Math.max(s.t, 1e-6), outcome: outcomeOf(s, blowup[k] === 1) };
+  });
+}

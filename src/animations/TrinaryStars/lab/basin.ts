@@ -2,7 +2,7 @@
  *  One pixel = one exact, deterministic world integrated to its fate. */
 
 import { getScenario, buildStars, launchPlanet, orbitFrame, type Planet, type Star, type Outcome } from '@/lib/nbody';
-import { runPlanet, runPlanetLyap } from './runner';
+import { runPlanet, runPlanetLyap, runBatchFate, runBatchLyap } from './runner';
 import { mulberry32, type EnsembleConfig, type RunParams } from './rng';
 
 const DEG = Math.PI / 180;
@@ -283,17 +283,114 @@ export function computeBasinPixel(ctx: Ctx, p: number): BasinPixel {
 
 export interface BasinBlock { rgb: Uint8Array; out: Uint8Array; t: Float32Array; stat: Float32Array; }
 
+/** Cap on planets integrated together in one shared star integration, to bound
+ *  per-batch Analyzer memory. The star work is shared within each chunk; a job is
+ *  only a few hundred pixels, so this rarely splits except for big stat runs. */
+const MAX_BATCH = 4096;
+
+/** Run a flat list of planet ICs against the shared star field in memory-bounded
+ *  chunks (each chunk gets its own fresh, identically-built stars, since `step`
+ *  integrates the stars in place). Bit-identical to running each planet alone. */
+function runFateBatched(cfg: EnsembleConfig, preset: ReturnType<typeof getScenario>, planets: Planet[]) {
+  const res: ReturnType<typeof runBatchFate> = [];
+  for (let off = 0; off < planets.length; off += MAX_BATCH) {
+    const chunk = planets.slice(off, off + MAX_BATCH);
+    const part = runBatchFate(cfg, buildStars(preset, cfg.massMul), chunk);
+    for (const r of part) res.push(r);
+  }
+  return res;
+}
+function runLyapBatched(cfg: EnsembleConfig, preset: ReturnType<typeof getScenario>, planets: Planet[]) {
+  const res: ReturnType<typeof runBatchLyap> = [];
+  for (let off = 0; off < planets.length; off += MAX_BATCH) {
+    const chunk = planets.slice(off, off + MAX_BATCH);
+    const part = runBatchLyap(cfg, buildStars(preset, cfg.massMul), chunk);
+    for (const r of part) res.push(r);
+  }
+  return res;
+}
+
+/** Compute a contiguous pixel range. Within the range, every world shares the
+ *  *same* star field (the planet is a test mass), so we integrate the stars once
+ *  per batch and step all the worlds alongside them — bit-identical to the
+ *  per-pixel path (`computeBasinPixel`), but far faster because the dominant star
+ *  work is amortised over the whole block instead of repeated per pixel. */
 export function computeBasinRange(cfg: EnsembleConfig, bc: BasinConfig, start: number, count: number): BasinBlock {
   const ctx = basinContext(cfg, bc);
+  const { preset } = ctx;
   const rgb = new Uint8Array(count * 3);
   const out = new Uint8Array(count);
   const t = new Float32Array(count);
   const stat = new Float32Array(count * 4);
+  const N = bc.res;
+  const { a0, a1, b0, b1 } = bc.domain;
+  const icStars = buildStars(preset, cfg.massMul); // initial stars for building launch ICs
+
+  if (bc.lens === 'stat') {
+    const K = Math.max(1, Math.round(bc.statRuns));
+    const planets: Planet[] = [];
+    for (let k = 0; k < count; k++) {
+      const p = start + k, i = p % N, j = Math.floor(p / N);
+      const ax = a0 + (a1 - a0) * ((i + 0.5) / N);
+      const by = b1 - (b1 - b0) * ((j + 0.5) / N);
+      const rng = mulberry32(statPixelSeed(cfg, p));
+      for (let r = 0; r < K; r++) planets.push(makeStatPlanet(ctx, icStars, ax, by, rng));
+    }
+    const results = runFateBatched(cfg, preset, planets);
+    for (let k = 0; k < count; k++) {
+      let happy = 0, destroyed = 0, survived = 0, habSum = 0;
+      for (let r = 0; r < K; r++) {
+        const res = results[k * K + r];
+        if (res.outcome === 'happy') happy++;
+        else if (res.outcome === 'planet-destroyed') destroyed++;
+        else if (res.outcome === 'survived') survived++;
+        habSum += res.habitableFraction;
+      }
+      const sv: [number, number, number, number] = [happy / K, habSum / K, destroyed / K, survived / K];
+      const v = sv[STAT_ORDER.indexOf(bc.statMetric)];
+      const [r, g, b] = statColor(bc.statMetric, v);
+      rgb[k * 3] = r; rgb[k * 3 + 1] = g; rgb[k * 3 + 2] = b; out[k] = 0; t[k] = v;
+      stat[k * 4] = sv[0]; stat[k * 4 + 1] = sv[1]; stat[k * 4 + 2] = sv[2]; stat[k * 4 + 3] = sv[3];
+    }
+    return { rgb, out, t, stat };
+  }
+
+  // Exact lens (fate or chaos): S² subsamples per pixel, all sharing the stars.
+  const S = bc.samples, sub = S * S, chaos = bc.metric === 'chaos';
+  const planets: Planet[] = [];
   for (let k = 0; k < count; k++) {
-    const px = computeBasinPixel(ctx, start + k);
-    rgb[k * 3] = px.r; rgb[k * 3 + 1] = px.g; rgb[k * 3 + 2] = px.b;
-    stat[k * 4] = px.stat[0]; stat[k * 4 + 1] = px.stat[1]; stat[k * 4 + 2] = px.stat[2]; stat[k * 4 + 3] = px.stat[3];
-    out[k] = px.out; t[k] = px.t;
+    const p = start + k, i = p % N, j = Math.floor(p / N);
+    for (let sj = 0; sj < S; sj++) for (let si = 0; si < S; si++) {
+      const ax = a0 + (a1 - a0) * ((i + (si + 0.5) / S) / N);
+      const by = b1 - (b1 - b0) * ((j + (sj + 0.5) / S) / N);
+      planets.push(makePlanet(ctx, icStars, ax, by));
+    }
+  }
+  if (chaos) {
+    const results = runLyapBatched(cfg, preset, planets);
+    for (let k = 0; k < count; k++) {
+      let cr = 0, cg = 0, cb = 0;
+      for (let m = 0; m < sub; m++) {
+        const { lambda } = results[k * sub + m];
+        const [r, g, b] = chaosColor(lambda);
+        cr += r; cg += g; cb += b;
+        if (m === 0) { out[k] = lambda > 0.05 ? 1 : 0; t[k] = lambda; }
+      }
+      rgb[k * 3] = cr / sub; rgb[k * 3 + 1] = cg / sub; rgb[k * 3 + 2] = cb / sub;
+    }
+  } else {
+    const results = runFateBatched(cfg, preset, planets);
+    for (let k = 0; k < count; k++) {
+      let cr = 0, cg = 0, cb = 0;
+      for (let m = 0; m < sub; m++) {
+        const res = results[k * sub + m];
+        const base = OUTCOME_RGB[res.outcome];
+        const tb = 0.28 + 0.72 * Math.min(1, res.tSim / cfg.tMax);
+        cr += base[0] * tb; cg += base[1] * tb; cb += base[2] * tb;
+        if (m === 0) { out[k] = OUTCOME_CODE.indexOf(res.outcome); t[k] = res.tSim; }
+      }
+      rgb[k * 3] = cr / sub; rgb[k * 3 + 1] = cg / sub; rgb[k * 3 + 2] = cb / sub;
+    }
   }
   return { rgb, out, t, stat };
 }
