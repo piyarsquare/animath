@@ -35,6 +35,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // intentionally NOT persisted.
   const [azimuth, setAzimuth] = useState(0);
   const [elevation, setElevation] = useState(0);
+  const [roll, setRoll] = useState(0);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
   const [panZ, setPanZ] = useState(0);
@@ -137,6 +138,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     cameraZ, setCameraZ,
     azimuth, setAzimuth,
     elevation, setElevation,
+    roll, setRoll,
     panX, setPanX,
     panY, setPanY,
     panZ, setPanZ,

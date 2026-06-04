@@ -4,16 +4,17 @@ import Readme from './Readme';
 import { Section, Slider, Pills, Select, Checkbox } from './ControlPanel';
 import { ShellSettings, ShellActions, useAppHeader, useAppFunctions, useAppExplainer } from './AppShell';
 import QuarterTurnControls from '../controls/QuarterTurnControls';
+import type { TurnItem, AxisLetter } from '../controls/QuarterTurnControls';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../config/defaults';
 import { useResponsive } from '../styles/responsive';
-import { Plane } from '../math/constants';
+import { planes, Plane } from '../math/constants';
 import { clearPersistedState } from '../lib/usePersistentState';
 import {
   ColorStyle, ColourBy, AXIS_COLORS,
   shapeNames, textureNames, viewTypes, motionModes,
   useGestureRotation,
 } from '../lib/particles';
-import type { ParticleState } from '../lib/particles';
+import type { ParticleState, ViewAxis } from '../lib/particles';
 import type { useViewControls } from '../lib/particles';
 import { ProjectionMode } from '../lib/viewpoint';
 
@@ -67,19 +68,30 @@ export default function ParticleViewerShell({
     },
   } : null);
 
-  // Continuous "spinners": each `${plane}:${dir}` key that is on feeds a
-  // constant angular increment into controls.rotateBy every frame (the same
-  // path the hold-to-rotate gesture used). Multiple active spins compose. This
-  // is transient view state, so it lives here (not in persisted ParticleState),
+  // Hopf/Torus projections are nonlinear in the 4D coordinates, so a 4D plane
+  // rotation before the map deforms the image. In those modes the turn/spin
+  // controls instead orbit the ambient 3D view (Yaw/Pitch/Roll of the camera),
+  // which stays rigid; the six 4D planes return in the linear projections.
+  // A drop axis overrides viewType with a linear Drop projection, so only treat
+  // the view as Hopf/Torus when no drop axis is active.
+  const ambient = state.dropAxis === 'None'
+    && (state.viewType === ProjectionMode.Hopf || state.viewType === ProjectionMode.Torus);
+
+  // Continuous "spinners": each `${id}:${dir}` key that is on feeds a constant
+  // angular increment every frame — into controls.rotateBy (4D) or
+  // controls.orbitBy (ambient view). Multiple active spins compose. This is
+  // transient view state, so it lives here (not in persisted ParticleState),
   // and above <ShellActions> so the drawer + floater copies stay in sync.
   const [spins, setSpins] = useState<Record<string, boolean>>({});
   const [spinSpeed, setSpinSpeed] = useState(1.2); // rad/s
   const spinsRef = useRef(spins);
   const speedRef = useRef(spinSpeed);
-  const rotateByRef = useRef(controls.rotateBy);
+  const ambientRef = useRef(ambient);
+  const controlsRef = useRef(controls);
   spinsRef.current = spins;
   speedRef.current = spinSpeed;
-  rotateByRef.current = controls.rotateBy;
+  ambientRef.current = ambient;
+  controlsRef.current = controls;
   const anySpin = Object.values(spins).some(Boolean);
 
   useEffect(() => {
@@ -90,12 +102,15 @@ export default function ParticleViewerShell({
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       const active = spinsRef.current;
+      const c = controlsRef.current;
       for (const key in active) {
         if (!active[key]) continue;
         const sep = key.indexOf(':');
-        const plane = key.slice(0, sep) as Plane;
+        const id = key.slice(0, sep);
         const dir = Number(key.slice(sep + 1));
-        rotateByRef.current(plane, dir * speedRef.current * dt);
+        const delta = dir * speedRef.current * dt;
+        if (ambientRef.current) c.orbitBy(id as ViewAxis, delta);
+        else c.rotateBy(id as Plane, delta);
       }
       raf = requestAnimationFrame(step);
     };
@@ -103,13 +118,48 @@ export default function ParticleViewerShell({
     return () => cancelAnimationFrame(raf);
   }, [anySpin]);
 
-  const toggleSpin = (plane: Plane, dir: 1 | -1) => {
-    const key = `${plane}:${dir}`;
+  // Switching between the 4D-plane and ambient-view controls clears any running
+  // spin so a spin of the wrong kind can't linger without a visible toggle.
+  useEffect(() => { setSpins({}); }, [ambient]);
+
+  const toggleSpin = (id: string, dir: 1 | -1) => {
+    const key = `${id}:${dir}`;
     // Activating a spin switches Motion to Fixed so the continuous rotation
     // shows directly, rather than stacking on top of the Quaternion auto-tumble.
     if (!spins[key] && state.viewMotion !== 'Fixed') controls.handleMotion('Fixed');
     setSpins(s => ({ ...s, [key]: !s[key] }));
   };
+
+  const handleTurn = (id: string, dir: 1 | -1) => {
+    if (ambient) controls.orbitTurn(id as ViewAxis, dir);
+    else controls.turn(id as Plane, dir);
+  };
+
+  const axisColor = (letter: AxisLetter) => {
+    const key = letter.toLowerCase() as 'x' | 'y' | 'u' | 'v';
+    return `hsl(${((AXIS_COLORS[key] + state.hueShift) % 1) * 360},100%,60%)`;
+  };
+
+  const turnItems: TurnItem[] = ambient
+    ? [
+        { id: 'Yaw', label: 'Yaw', cwLabel: 'yaw right (orbit view)', ccwLabel: 'yaw left (orbit view)' },
+        { id: 'Pitch', label: 'Pitch', cwLabel: 'pitch up (orbit view)', ccwLabel: 'pitch down (orbit view)' },
+        { id: 'Roll', label: 'Roll', cwLabel: 'roll clockwise (orbit view)', ccwLabel: 'roll counter-clockwise (orbit view)' },
+      ]
+    : planes.map(p => {
+        const [a, b] = [p[0] as AxisLetter, p[1] as AxisLetter];
+        return {
+          id: p,
+          label: (
+            <span className="qtc-plane">
+              <span style={{ color: axisColor(a) }}>{a}</span>
+              <span style={{ color: axisColor(b) }}>{b}</span>
+            </span>
+          ),
+          cwLabel: `${p} clockwise`,
+          ccwLabel: `${p} counter-clockwise`,
+        };
+      });
 
   return (
     <>
@@ -267,17 +317,15 @@ export default function ParticleViewerShell({
       <ShellActions>
         <div className="cp-section-body">
           <QuarterTurnControls
-            onTurn={controls.turn}
+            items={turnItems}
+            onTurn={handleTurn}
             spins={spins}
             onToggleSpin={toggleSpin}
             onStopAllSpins={() => setSpins({})}
             spinSpeed={spinSpeed}
             onSpinSpeedChange={setSpinSpeed}
             onReset={controls.snapToStandardView}
-            getAxisColor={(letter) => {
-              const key = letter.toLowerCase() as 'x' | 'y' | 'u' | 'v';
-              return `hsl(${((AXIS_COLORS[key] + state.hueShift) % 1) * 360},100%,60%)`;
-            }}
+            getAxisColor={axisColor}
             dropAxis={state.dropAxis}
             onDropAxisChange={controls.handleDropAxis}
           />

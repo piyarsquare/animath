@@ -2,6 +2,7 @@ export { useParticleState } from './useParticleState';
 export type { ParticleState, UseParticleStateOptions } from './useParticleState';
 export { useUniformSync } from './useUniformSync';
 export { useViewControls } from './useViewControls';
+export type { ViewAxis } from './useViewControls';
 export { useGestureRotation } from './useGestureRotation';
 export { createParticleGeometry, rebuildGeometryBuffers, redistributeAdaptive } from './createParticleGeometry';
 export type { AdaptiveOptions } from './createParticleGeometry';

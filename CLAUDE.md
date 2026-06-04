@@ -242,6 +242,10 @@ Particle viewers split **looking** (gestures) from **navigating** (buttons):
   (45°); the small toggle under each button starts/stops a **continuous spin** in
   that plane and direction (multiple compose, e.g. xy + uv = an isoclinic double
   rotation). One **Spin speed** slider sets the rate. Includes reset + drop-axis.
+  The rows are **context-sensitive**: in the nonlinear **Hopf/Torus**
+  projections (where a 4D turn deforms the image), they switch to three ambient
+  **Yaw / Pitch / Roll** controls that orbit the 3D camera rigidly instead of
+  rotating the 4D pre-image; the six 4D planes return in the linear projections.
 
 Fractal viewers: drag to pan, pinch/wheel to zoom, and **Trace mode** (Actions
 drawer) spawns an iteration orbit from a tapped point.
