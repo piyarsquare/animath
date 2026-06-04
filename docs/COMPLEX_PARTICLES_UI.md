@@ -212,6 +212,11 @@ Hosts the **rotation controls** (`QuarterTurnControls.tsx`) and resets. The body
 is a compact grid; column layout is `[label] [spin] [↻] [↺] [spin]`, with a
 header row reading **spin ↻ ↺ spin**.
 
+*(Torus only)* Above the grid, the two Torus projection controls — **Collapse →
+Hopf** (slider) and **Radius scale** (Linear / Log) — are mirrored here from the
+Camera settings, so they're reachable from the floating panel during
+exploration. See §4.3 Camera for what they do.
+
 **The grid is context-sensitive to the projection:**
 
 - **Linear projections** (Perspective, Stereo, or any Drop axis): **six rows,
