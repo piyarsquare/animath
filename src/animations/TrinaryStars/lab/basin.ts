@@ -3,7 +3,7 @@
 
 import { getScenario, buildStars, launchPlanet, orbitFrame, type Planet, type Star, type Outcome } from '@/lib/nbody';
 import { runPlanet, runPlanetLyap } from './runner';
-import { mulberry32, type EnsembleConfig } from './rng';
+import { mulberry32, type EnsembleConfig, type RunParams } from './rng';
 
 const DEG = Math.PI / 180;
 
@@ -73,14 +73,64 @@ interface Ctx {
   targetMass: number; Mtot: number;
 }
 
-export function basinContext(cfg: EnsembleConfig, bc: BasinConfig): Ctx {
-  const preset = getScenario(cfg.presetId);
-  const refStars = buildStars(preset, cfg.massMul);
+/** Mass governing circular speed for the orbit target, and the total system
+ *  mass (governs the position plane's tangential launches). Shared by the CPU
+ *  context and the map's GPU path, which builds launch params on the main
+ *  thread before dispatching. */
+export function basinTargets(cfg: EnsembleConfig): { targetMass: number; Mtot: number } {
+  const refStars = buildStars(getScenario(cfg.presetId), cfg.massMul);
   return {
-    cfg, bc, preset,
     targetMass: orbitFrame(refStars, cfg.target).mass,
     Mtot: refStars.reduce((m, s) => m + s.mass, 0),
   };
+}
+
+export function basinContext(cfg: EnsembleConfig, bc: BasinConfig): Ctx {
+  const preset = getScenario(cfg.presetId);
+  const { targetMass, Mtot } = basinTargets(cfg);
+  return { cfg, bc, preset, targetMass, Mtot };
+}
+
+/** The (ax, by) plane coordinate at the centre of pixel (i, j). */
+export function basinAxByCenter(bc: BasinConfig, i: number, j: number): [number, number] {
+  const { a0, a1, b0, b1 } = bc.domain, N = bc.res;
+  return [a0 + (a1 - a0) * ((i + 0.5) / N), b1 - (b1 - b0) * ((j + 0.5) / N)];
+}
+
+/** Launch params (radius/speed/angle/retro) for an exact pixel, in the
+ *  radius×speed and angle×speed planes — these match the CPU `makePlanet`
+ *  exactly, so the GPU runner reproduces the same worlds. Returns null for the
+ *  position plane (its ICs aren't a radius/speed/angle launch). */
+export function exactRunParams(cfg: EnsembleConfig, bc: BasinConfig, targetMass: number, i: number, j: number): RunParams | null {
+  const [ax, by] = basinAxByCenter(bc, i, j);
+  if (bc.mode === 'radspeed') {
+    return { radius: ax, speed: by * Math.sqrt(targetMass / Math.max(0.05, ax)), angleDeg: bc.fixedAngle, retro: bc.fixedRetro, seed: 0 };
+  }
+  if (bc.mode === 'anglespeed') {
+    return { radius: bc.fixedRadius, speed: by * Math.sqrt(targetMass / Math.max(0.05, bc.fixedRadius)), angleDeg: ax, retro: bc.fixedRetro, seed: 0 };
+  }
+  return null;
+}
+
+/** Launch params for one statistical-lens sample (complementary dims drawn from
+ *  `rng`), matching `makeStatPlanet`. Returns null for the position plane. */
+export function statRunParams(cfg: EnsembleConfig, bc: BasinConfig, targetMass: number, i: number, j: number, rng: () => number): RunParams | null {
+  const [ax, by] = basinAxByCenter(bc, i, j);
+  const retro = cfg.allowRetro ? rng() < 0.5 : false;
+  if (bc.mode === 'radspeed') {
+    return { radius: ax, speed: by * Math.sqrt(targetMass / Math.max(0.05, ax)), angleDeg: 360 * rng(), retro, seed: 0 };
+  }
+  if (bc.mode === 'anglespeed') {
+    const radius = cfg.rMin + (cfg.rMax - cfg.rMin) * rng();
+    return { radius, speed: by * Math.sqrt(targetMass / Math.max(0.05, radius)), angleDeg: ax, retro, seed: 0 };
+  }
+  return null;
+}
+
+/** Seed for a pixel's statistical mini-ensemble — identical on the CPU and GPU
+ *  paths so the two agree pixel-for-pixel. */
+export function statPixelSeed(cfg: EnsembleConfig, p: number): number {
+  return (cfg.baseSeed ^ Math.imul(p + 1, 0x9e3779b9)) >>> 0;
 }
 
 function makePlanet(ctx: Ctx, stars: Star[], ax: number, by: number): Planet {
@@ -121,10 +171,20 @@ function makeStatPlanet(ctx: Ctx, stars: Star[], ax: number, by: number, rng: ()
   return launchPlanet(stars, cfg.target, radius, v, ax * DEG, retro);
 }
 
+/** A computed pixel: display colour, the centre world's outcome code + time
+ *  (hover/box-counting), and — for the statistical lens — all four outcome
+ *  fractions, kept so the map can recolour between them without recomputing. */
+export interface BasinPixel {
+  r: number; g: number; b: number; out: number; t: number;
+  stat: [number, number, number, number]; // happy, hab, destroyed, survived
+}
+
+export const STAT_ORDER: StatMetric[] = ['happy', 'hab', 'destroyed', 'survived'];
+
 /** Compute one statistical pixel: average `statRuns` worlds (complementary
- *  launch dims randomised from a per-pixel seeded stream) and paint the chosen
- *  outcome fraction. `out` is unused (0); `t` carries that fraction, for hover. */
-function computeStatPixel(ctx: Ctx, p: number): { r: number; g: number; b: number; out: number; t: number } {
+ *  launch dims randomised from a per-pixel seeded stream) into the four outcome
+ *  fractions; colour by the chosen one (the other three ride along for recolour). */
+function computeStatPixel(ctx: Ctx, p: number): BasinPixel {
   const { cfg, bc, preset } = ctx;
   const N = bc.res;
   const { a0, a1, b0, b1 } = bc.domain;
@@ -132,7 +192,7 @@ function computeStatPixel(ctx: Ctx, p: number): { r: number; g: number; b: numbe
   const ax = a0 + (a1 - a0) * ((i + 0.5) / N);
   const by = b1 - (b1 - b0) * ((j + 0.5) / N);
   const K = Math.max(1, Math.round(bc.statRuns));
-  const rng = mulberry32(((cfg.baseSeed ^ Math.imul(p + 1, 0x9e3779b9)) >>> 0));
+  const rng = mulberry32(statPixelSeed(cfg, p));
   let happy = 0, destroyed = 0, survived = 0, habSum = 0;
   for (let k = 0; k < K; k++) {
     const stars = buildStars(preset, cfg.massMul);
@@ -142,17 +202,17 @@ function computeStatPixel(ctx: Ctx, p: number): { r: number; g: number; b: numbe
     else if (r.outcome === 'survived') survived++;
     habSum += r.habitableFraction;
   }
-  const v = bc.statMetric === 'happy' ? happy / K
-    : bc.statMetric === 'destroyed' ? destroyed / K
-    : bc.statMetric === 'survived' ? survived / K
-    : habSum / K;
+  const stat: [number, number, number, number] = [happy / K, habSum / K, destroyed / K, survived / K];
+  const v = stat[STAT_ORDER.indexOf(bc.statMetric)];
   const [r, g, b] = statColor(bc.statMetric, v);
-  return { r, g, b, out: 0, t: v };
+  return { r, g, b, out: 0, t: v, stat };
 }
+
+const NO_STAT: [number, number, number, number] = [0, 0, 0, 0];
 
 /** Compute one pixel: averaged RGB over S² subsamples, plus the centre
  *  subsample's outcome code and resolution time (for hover + box-counting). */
-export function computeBasinPixel(ctx: Ctx, p: number): { r: number; g: number; b: number; out: number; t: number } {
+export function computeBasinPixel(ctx: Ctx, p: number): BasinPixel {
   const { cfg, bc, preset } = ctx;
   if (bc.lens === 'stat') return computeStatPixel(ctx, p);
   const N = bc.res, S = bc.samples;
@@ -180,22 +240,24 @@ export function computeBasinPixel(ctx: Ctx, p: number): { r: number; g: number; 
     }
   }
   const sub = S * S;
-  return { r: cr / sub, g: cg / sub, b: cb / sub, out: centerOut, t: centerT };
+  return { r: cr / sub, g: cg / sub, b: cb / sub, out: centerOut, t: centerT, stat: NO_STAT };
 }
 
-export interface BasinBlock { rgb: Uint8Array; out: Uint8Array; t: Float32Array; }
+export interface BasinBlock { rgb: Uint8Array; out: Uint8Array; t: Float32Array; stat: Float32Array; }
 
 export function computeBasinRange(cfg: EnsembleConfig, bc: BasinConfig, start: number, count: number): BasinBlock {
   const ctx = basinContext(cfg, bc);
   const rgb = new Uint8Array(count * 3);
   const out = new Uint8Array(count);
   const t = new Float32Array(count);
+  const stat = new Float32Array(count * 4);
   for (let k = 0; k < count; k++) {
     const px = computeBasinPixel(ctx, start + k);
     rgb[k * 3] = px.r; rgb[k * 3 + 1] = px.g; rgb[k * 3 + 2] = px.b;
+    stat[k * 4] = px.stat[0]; stat[k * 4 + 1] = px.stat[1]; stat[k * 4 + 2] = px.stat[2]; stat[k * 4 + 3] = px.stat[3];
     out[k] = px.out; t[k] = px.t;
   }
-  return { rgb, out, t };
+  return { rgb, out, t, stat };
 }
 
 /** The exact planet initial condition at an (ax, by) point of the chosen plane —

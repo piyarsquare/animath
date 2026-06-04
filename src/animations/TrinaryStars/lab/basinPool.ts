@@ -4,7 +4,7 @@
 import type { BasinConfig } from './basin';
 import type { EnsembleConfig } from './rng';
 
-export interface BasinBlockMsg { start: number; count: number; rgb: Uint8Array; out: Uint8Array; t: Float32Array; }
+export interface BasinBlockMsg { start: number; count: number; rgb: Uint8Array; out: Uint8Array; t: Float32Array; stat: Float32Array; }
 
 export class BasinPool {
   private workers: Worker[] = [];

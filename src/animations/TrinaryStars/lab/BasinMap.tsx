@@ -2,11 +2,19 @@ import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } f
 import { Slider, Pills } from '../../../components/ControlPanel';
 import {
   basinContext, computeBasinPixel, basinPlanetAt, chaosColor, CHAOS_LAMBDA_MAX, OUTCOME_RGB, OUTCOME_CODE,
-  statColor, STAT_LABEL,
+  statColor, STAT_LABEL, STAT_ORDER, basinTargets, exactRunParams, statRunParams, statPixelSeed,
   type BasinConfig, type BasinMode, type BasinMetric, type BasinLens, type StatMetric, type Domain,
 } from './basin';
 import { BasinPool } from './basinPool';
-import type { EnsembleConfig } from './rng';
+import { GpuRunner, gpuAvailable } from './gpu';
+import { mulberry32, type EnsembleConfig, type RunParams } from './rng';
+
+/** The map's GPU lane covers the radius×speed and angle×speed planes coloured by
+ *  fate (exact or statistical) — the cases whose worlds are a radius/speed/angle
+ *  launch the WebGPU runner already understands. Other cases use Workers/CPU. */
+function gpuSupportsMap(mode: BasinMode, metric: BasinMetric, lens: BasinLens): boolean {
+  return mode !== 'pos' && (lens === 'stat' || metric === 'fate');
+}
 
 export interface SamplingBox { rMin: number; rMax: number; fMin: number; fMax: number }
 export interface BasinSystem {
@@ -16,6 +24,8 @@ export interface BasinSystem {
 }
 
 const HAS_WORKERS = typeof Worker !== 'undefined';
+const HAS_GPU = gpuAvailable();
+type BasinEngine = 'gpu' | 'workers' | 'cpu';
 
 const DEFAULT_DOMAIN: Record<BasinMode, Domain> = {
   pos: { a0: -4, a1: 4, b0: -4, b1: 4 },
@@ -62,7 +72,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   const [fixedAngle, setFixedAngle] = useState(0);
   const [fixedRadius, setFixedRadius] = useState(2);
   const [fixedRetro, setFixedRetro] = useState(false);
-  const [engine, setEngine] = useState<'workers' | 'cpu'>(HAS_WORKERS ? 'workers' : 'cpu');
+  const [engine, setEngine] = useState<BasinEngine>(HAS_GPU ? 'gpu' : HAS_WORKERS ? 'workers' : 'cpu');
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [hover, setHover] = useState('');
@@ -74,8 +84,13 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   const rafRef = useRef(0);
   const runIdRef = useRef(0);
   const poolRef = useRef<BasinPool | null>(null);
+  const gpuRef = useRef<GpuRunner | null>(null);
   const outGridRef = useRef<Uint8Array>(new Uint8Array(0));
   const tGridRef = useRef<Float32Array>(new Float32Array(0));
+  // Per-pixel [happy, hab, destroyed, survived] fractions for the statistical
+  // lens, kept so "Show" can recolour the map without recomputing.
+  const statGridRef = useRef<Float32Array>(new Float32Array(0));
+  const statReadyRef = useRef(false);
 
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
   const boxRef = useRef(system?.box); boxRef.current = system?.box;
@@ -142,6 +157,77 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
 
   const stop = () => { runIdRef.current++; cancelAnimationFrame(rafRef.current); poolRef.current?.dispose(); poolRef.current = null; setBusy(false); };
 
+  /** Render the supported planes on the GPU: build each pixel's launch params on
+   *  the main thread (so they match the CPU exactly), dispatch in batches, then
+   *  paint outcomes (exact) or reduce the mini-ensemble into fractions (stat).
+   *  Rejects on any GPU failure so the caller can fall back to Workers/CPU. */
+  const renderGpu = async (
+    runId: number, cfgNow: EnsembleConfig, bc: BasinConfig,
+    paint: (start: number, rgb: Uint8Array, out: Uint8Array, tt: Float32Array, stat: Float32Array, cnt: number) => void,
+    onProgress: () => void, onDone: () => void,
+  ) => {
+    const gpu = gpuRef.current ?? (gpuRef.current = await GpuRunner.create());
+    const N = bc.res, total = N * N;
+    const { targetMass } = basinTargets(cfgNow);
+    if (bc.lens === 'exact') {
+      const CHUNK = 4096;
+      for (let start = 0; start < total; start += CHUNK) {
+        if (runId !== runIdRef.current) return;
+        const count = Math.min(CHUNK, total - start);
+        const params: RunParams[] = new Array(count);
+        for (let k = 0; k < count; k++) {
+          const p = start + k;
+          params[k] = exactRunParams(cfgNow, bc, targetMass, p % N, Math.floor(p / N))!;
+        }
+        const res = await gpu.runBatch(cfgNow, params);
+        if (runId !== runIdRef.current) return;
+        const rgb = new Uint8Array(count * 3), out = new Uint8Array(count), tt = new Float32Array(count), stat = new Float32Array(count * 4);
+        for (let k = 0; k < count; k++) {
+          const r = res[k], base = OUTCOME_RGB[r.outcome], tb = 0.28 + 0.72 * Math.min(1, r.tSim / cfgNow.tMax);
+          rgb[k * 3] = base[0] * tb; rgb[k * 3 + 1] = base[1] * tb; rgb[k * 3 + 2] = base[2] * tb;
+          out[k] = OUTCOME_CODE.indexOf(r.outcome); tt[k] = r.tSim;
+        }
+        paint(start, rgb, out, tt, stat, count);
+        onProgress();
+      }
+    } else {
+      const K = Math.max(1, Math.round(bc.statRuns));
+      const PIX_CHUNK = Math.max(32, Math.floor(4096 / K)); // ~4k worlds per dispatch
+      for (let start = 0; start < total; start += PIX_CHUNK) {
+        if (runId !== runIdRef.current) return;
+        const count = Math.min(PIX_CHUNK, total - start);
+        const params: RunParams[] = new Array(count * K);
+        for (let k = 0; k < count; k++) {
+          const p = start + k, i = p % N, j = Math.floor(p / N);
+          const rng = mulberry32(statPixelSeed(cfgNow, p));
+          for (let q = 0; q < K; q++) params[k * K + q] = statRunParams(cfgNow, bc, targetMass, i, j, rng)!;
+        }
+        const res = await gpu.runBatch(cfgNow, params);
+        if (runId !== runIdRef.current) return;
+        const rgb = new Uint8Array(count * 3), out = new Uint8Array(count), tt = new Float32Array(count), stat = new Float32Array(count * 4);
+        for (let k = 0; k < count; k++) {
+          let happy = 0, dest = 0, surv = 0, habSum = 0;
+          for (let q = 0; q < K; q++) {
+            const r = res[k * K + q];
+            if (r.outcome === 'happy') happy++;
+            else if (r.outcome === 'planet-destroyed') dest++;
+            else if (r.outcome === 'survived') surv++;
+            habSum += r.habitableFraction;
+          }
+          const frac = [happy / K, habSum / K, dest / K, surv / K];
+          stat[k * 4] = frac[0]; stat[k * 4 + 1] = frac[1]; stat[k * 4 + 2] = frac[2]; stat[k * 4 + 3] = frac[3];
+          const v = frac[STAT_ORDER.indexOf(bc.statMetric)];
+          const [cr, cg, cb] = statColor(bc.statMetric, v);
+          rgb[k * 3] = cr; rgb[k * 3 + 1] = cg; rgb[k * 3 + 2] = cb;
+          out[k] = 0; tt[k] = v;
+        }
+        paint(start, rgb, out, tt, stat, count);
+        onProgress();
+      }
+    }
+    onDone();
+  };
+
   const render = () => {
     cancelAnimationFrame(rafRef.current);
     poolRef.current?.dispose(); poolRef.current = null;
@@ -160,54 +246,92 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     const cv = canvasRef.current!; cv.width = N; cv.height = N;
     const ctx = cv.getContext('2d')!;
     const img = ctx.createImageData(N, N);
-    const outGrid = new Uint8Array(N * N); const tGrid = new Float32Array(N * N);
-    outGridRef.current = outGrid; tGridRef.current = tGrid;
+    const outGrid = new Uint8Array(N * N), tGrid = new Float32Array(N * N), statGrid = new Float32Array(N * N * 4);
+    outGridRef.current = outGrid; tGridRef.current = tGrid; statGridRef.current = statGrid;
+    statReadyRef.current = false;
     setDim(null); setBusy(true); setProgress(0);
     let painted = 0; const total = N * N;
 
-    const paint = (start: number, rgb: Uint8Array, out: Uint8Array, tt: Float32Array, cnt: number) => {
+    const paint = (start: number, rgb: Uint8Array, out: Uint8Array, tt: Float32Array, stat: Float32Array, cnt: number) => {
       for (let k = 0; k < cnt; k++) {
         const p = start + k, o = p * 4;
         img.data[o] = rgb[k * 3]; img.data[o + 1] = rgb[k * 3 + 1]; img.data[o + 2] = rgb[k * 3 + 2]; img.data[o + 3] = 255;
         outGrid[p] = out[k]; tGrid[p] = tt[k];
+        statGrid[p * 4] = stat[k * 4]; statGrid[p * 4 + 1] = stat[k * 4 + 1]; statGrid[p * 4 + 2] = stat[k * 4 + 2]; statGrid[p * 4 + 3] = stat[k * 4 + 3];
       }
       painted += cnt;
     };
-
-    if (s.engine === 'workers' && HAS_WORKERS) {
-      try {
-        const size = Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1));
-        const pool = new BasinPool(size,
-          (b) => { if (runId !== runIdRef.current) return; paint(b.start, b.rgb, b.out, b.t, b.count); ctx.putImageData(img, 0, 0); setProgress(painted / total); },
-          () => { if (runId !== runIdRef.current) return; ctx.putImageData(img, 0, 0); setBusy(false); measureDimension(); });
-        poolRef.current = pool;
-        pool.run(cfgNow, bc);
-        return;
-      } catch { /* fall through to CPU */ }
-    }
-    // CPU progressive
-    const bctx = basinContext(cfgNow, bc);
-    let p = 0;
-    const chunk = () => {
+    const flush = () => { if (runId === runIdRef.current) ctx.putImageData(img, 0, 0); };
+    const tick = () => { flush(); setProgress(painted / total); };
+    const onDone = () => {
       if (runId !== runIdRef.current) return;
-      const t0 = performance.now();
-      while (p < total && performance.now() - t0 < 24) {
-        const px = computeBasinPixel(bctx, p);
-        const o = p * 4;
-        img.data[o] = px.r; img.data[o + 1] = px.g; img.data[o + 2] = px.b; img.data[o + 3] = 255;
-        outGrid[p] = px.out; tGrid[p] = px.t; p++;
-      }
-      ctx.putImageData(img, 0, 0); setProgress(p / total);
-      if (p < total) rafRef.current = requestAnimationFrame(chunk);
-      else { setBusy(false); measureDimension(); }
+      flush(); setBusy(false); statReadyRef.current = bc.lens === 'stat'; measureDimension();
     };
-    rafRef.current = requestAnimationFrame(chunk);
+
+    const viaWorkersOrCpu = (preferCpu: boolean) => {
+      if (!preferCpu && HAS_WORKERS) {
+        try {
+          const size = Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1));
+          const pool = new BasinPool(size,
+            (b) => { if (runId !== runIdRef.current) return; paint(b.start, b.rgb, b.out, b.t, b.stat, b.count); tick(); },
+            () => onDone());
+          poolRef.current = pool;
+          pool.run(cfgNow, bc);
+          return;
+        } catch { /* fall through to CPU */ }
+      }
+      const bctx = basinContext(cfgNow, bc);
+      let p = 0;
+      const chunk = () => {
+        if (runId !== runIdRef.current) return;
+        const t0 = performance.now();
+        while (p < total && performance.now() - t0 < 24) {
+          const px = computeBasinPixel(bctx, p);
+          const o = p * 4;
+          img.data[o] = px.r; img.data[o + 1] = px.g; img.data[o + 2] = px.b; img.data[o + 3] = 255;
+          outGrid[p] = px.out; tGrid[p] = px.t;
+          statGrid[p * 4] = px.stat[0]; statGrid[p * 4 + 1] = px.stat[1]; statGrid[p * 4 + 2] = px.stat[2]; statGrid[p * 4 + 3] = px.stat[3];
+          p++;
+        }
+        flush(); setProgress(p / total);
+        if (p < total) rafRef.current = requestAnimationFrame(chunk);
+        else onDone();
+      };
+      rafRef.current = requestAnimationFrame(chunk);
+    };
+
+    if (s.engine === 'gpu' && HAS_GPU && gpuSupportsMap(s.mode, s.metric, s.lens)) {
+      renderGpu(runId, cfgNow, bc, paint, tick, onDone)
+        .catch(() => { gpuRef.current = null; if (runId === runIdRef.current) viaWorkersOrCpu(false); });
+      return;
+    }
+    viaWorkersOrCpu(s.engine === 'cpu');
+  };
+
+  /** Recolour an already-computed statistical map to a different "Show" metric —
+   *  no resimulation, since every pixel kept all four fractions. */
+  const recolorStat = (m: StatMetric) => {
+    const N = stateRef.current.res;
+    const sg = statGridRef.current;
+    const cv = canvasRef.current; const ctx = cv?.getContext('2d');
+    if (!cv || !ctx || !statReadyRef.current || sg.length !== N * N * 4) return;
+    const img = ctx.createImageData(N, N);
+    const idx = STAT_ORDER.indexOf(m);
+    const tGrid = tGridRef.current;
+    for (let p = 0; p < N * N; p++) {
+      const v = sg[p * 4 + idx];
+      const [r, g, b] = statColor(m, v);
+      const o = p * 4;
+      img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b; img.data[o + 3] = 255;
+      tGrid[p] = v;
+    }
+    ctx.putImageData(img, 0, 0);
   };
 
   // The radspeed plane derives its domain from the shared census box, so only
   // reset the internal domain for the other planes.
   useEffect(() => { if (mode !== 'radspeed') setDomain(DEFAULT_DOMAIN[mode]); /* eslint-disable-next-line */ }, [mode]);
-  useEffect(() => () => { cancelAnimationFrame(rafRef.current); poolRef.current?.dispose(); }, []);
+  useEffect(() => () => { cancelAnimationFrame(rafRef.current); poolRef.current?.dispose(); gpuRef.current?.dispose(); }, []);
 
   const switchMode = (m: BasinMode) => { stop(); setMode(m); };
 
@@ -298,7 +422,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
               <Pills label="Show" value={statMetric} options={[
                 { value: 'happy', label: 'Happy %' }, { value: 'hab', label: 'Habitable' },
                 { value: 'destroyed', label: 'Destroyed %' }, { value: 'survived', label: 'Survived %' },
-              ]} onChange={(v) => setStatMetric(v as StatMetric)} />
+              ]} onChange={(v) => { const m = v as StatMetric; setStatMetric(m); if (!busy) recolorStat(m); }} />
               <Slider label="Worlds / pixel" value={statRuns} min={2} max={32} step={2} onChange={setStatRuns} format={v => `${v}`} />
             </>
           )}
@@ -318,7 +442,21 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             options={(lens === 'stat' ? [48, 64, 96, 128] : [96, 128, 192, 256]).map(r => ({ value: r, label: `${r}²` }))}
             onChange={setRes} />
           {lens === 'exact' && <Pills label="Samples / pixel" value={samples} options={[{ value: 1, label: '1 (crisp)' }, { value: 2, label: '4 (smooth)' }, { value: 3, label: '9' }]} onChange={setSamples} />}
-          {HAS_WORKERS && <Pills label="Engine" value={engine} options={[{ value: 'workers', label: `Workers ×${Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1))}` }, { value: 'cpu', label: 'CPU' }]} onChange={(v) => setEngine(v as 'workers' | 'cpu')} />}
+          {(HAS_WORKERS || HAS_GPU) && <Pills label="Engine" value={engine} options={[
+            ...(HAS_GPU ? [{ value: 'gpu', label: 'GPU (exp)' }] : []),
+            ...(HAS_WORKERS ? [{ value: 'workers', label: `Workers ×${Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1))}` }] : []),
+            { value: 'cpu', label: 'CPU' },
+          ]} onChange={(v) => setEngine(v as BasinEngine)} />}
+          {engine === 'gpu' && !gpuSupportsMap(mode, metric, lens) && (
+            <div style={{ font: '11px/1.5 system-ui', color: '#ffd27f', marginTop: 4 }}>
+              ⚠ The GPU lane covers the radius×speed and angle×speed planes coloured by Fate. This view ({mode === 'pos' ? 'position plane' : 'chaos/λ'}) will render on Workers instead.
+            </div>
+          )}
+          {engine === 'gpu' && gpuSupportsMap(mode, metric, lens) && (
+            <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 4 }}>
+              ⚡ Experimental WebGPU: 32-bit precision, so fine fractal detail can differ slightly from Workers/CPU. Falls back automatically on error.
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button style={{ ...btn, background: busy ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }} onClick={busy ? stop : render}>{busy ? '❚❚ Stop' : '▦ Render map'}</button>
             <button style={btn} onClick={() => {

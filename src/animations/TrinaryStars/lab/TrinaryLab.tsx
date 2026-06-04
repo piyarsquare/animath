@@ -432,6 +432,14 @@ export default function TrinaryLab() {
           <button style={{ ...btn, padding: '5px 12px', fontSize: 12, marginTop: 4 }}
             onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); }}>⟲ Reset stars</button>
         </Section>
+        <Section title="Simulation & climate" icon="⏱" defaultOpen>
+          <Slider label="Time budget / world" value={tMax} min={60} max={400} step={20} onChange={setTMax} format={v => v.toFixed(0)} />
+          <Slider label="Habitable floor (×ref)" value={habLo} min={0.1} max={1} step={0.05} onChange={setHabLo} format={v => v.toFixed(2)} />
+          <Slider label="Habitable ceiling (×ref)" value={habHi} min={1} max={6} step={0.25} onChange={setHabHi} format={v => v.toFixed(2)} />
+          <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 2 }}>
+            How long each world is integrated, and the insolation band counted as habitable — used by <b style={{ color: '#9aa7bd' }}>both</b> the Destiny Map and the Census.
+          </div>
+        </Section>
       </div>
 
       {/* ── Destiny Map instrument ─────────────────────────────────────── */}
@@ -486,13 +494,10 @@ export default function TrinaryLab() {
                     </div>
                   )}
                   <Slider label="Runs (target N)" value={targetN} min={500} max={20000} step={500} onChange={setTargetN} format={v => v.toLocaleString()} />
-                  <Slider label="Time budget / run" value={tMax} min={60} max={400} step={20} onChange={setTMax} format={v => v.toFixed(0)} />
                   <Slider label="Launch radius min" value={rMin} min={0.2} max={6} step={0.1} onChange={v => setRMin(Math.min(v, rMax))} format={v => v.toFixed(1)} />
                   <Slider label="Launch radius max" value={rMax} min={0.2} max={8} step={0.1} onChange={v => setRMax(Math.max(v, rMin))} format={v => v.toFixed(1)} />
                   <Slider label="Speed × circular min" value={fMin} min={0.2} max={1.5} step={0.05} onChange={v => setFMin(Math.min(v, fMax))} format={v => v.toFixed(2)} />
                   <Slider label="Speed × circular max" value={fMax} min={0.2} max={1.8} step={0.05} onChange={v => setFMax(Math.max(v, fMin))} format={v => v.toFixed(2)} />
-                  <Slider label="Habitable floor (×ref)" value={habLo} min={0.1} max={1} step={0.05} onChange={setHabLo} format={v => v.toFixed(2)} />
-                  <Slider label="Habitable ceiling (×ref)" value={habHi} min={1} max={6} step={0.25} onChange={setHabHi} format={v => v.toFixed(2)} />
                   <div style={{ gridColumn: '1 / -1' }}>
                     <Pills label="Launch direction" options={[{ value: 1, label: 'Pro + retro' }, { value: 0, label: 'Prograde only' }]}
                       value={allowRetro ? 1 : 0} onChange={v => setAllowRetro(v === 1)} />

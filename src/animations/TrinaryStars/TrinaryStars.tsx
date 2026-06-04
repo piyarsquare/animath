@@ -13,7 +13,7 @@ import { usePersistentState, clearPersistedState } from '../../lib/usePersistent
 import explainerText from './EXPLAINER.md?raw';
 
 const STAR_COLORS = [0xffd27f, 0xff7043, 0x9ec7ff];
-const REF_COLOR = 0x66f0ff;
+const REF_COLOR = 0x4df08a; // the planet: a vivid green, distinct from the gold/orange/blue stars
 const GHOST_COLOR = 0xff5fa2;
 const GHOST_COLOR_HEX = '#ff5fa2';
 const TRAIL_MAX = 2000; // points stored per body; visible length is a live slider.
@@ -878,6 +878,9 @@ export default function TrinaryStars() {
               <button key={p.label} style={{ ...btnStyle, flex: 'none', padding: '6px 10px', fontSize: 12 }}
                 onClick={() => { setFrameCenter(p.c); setFrameAlign(p.a); }}>{p.label}</button>
             ))}
+            <button style={{ ...btnStyle, flex: 'none', padding: '6px 10px', fontSize: 12 }}
+              disabled={frameCenter === 'bary' && frameAlign === 'none'}
+              onClick={() => { setFrameCenter('bary'); setFrameAlign('none'); }}>⟲ Reset frame</button>
           </div>
           <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
             A pure viewpoint — the physics is unchanged. In a rotating frame the planet appears to swerve (the Coriolis / centrifugal look), which is exactly how co-orbital, Trojan and horseshoe paths become visible. Trails reset when you change the frame.
