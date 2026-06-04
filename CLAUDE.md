@@ -66,6 +66,8 @@ animath/
     │   ├── Fractals/            # legacy CPU 2D fractals (routed at #/fractals-cpu)
     │   ├── Correspondence/      # Mandelbrot ↔ Julia split-pane explorer
     │   ├── MobiusWalk/          # first-person Möbius corridor walk
+    │   ├── TrinaryStars/        # three-body planet sandbox (Observatory) + ensemble Lab
+    │   │                        #   (Trinary.tsx hosts both as tabs; engine in lib/nbody)
     │   ├── StableMarriage/      # Gale–Shapley visualiser + heatmap lab (CSS/DOM)
     │   └── AgenticSorting/      # concurrent agent-based sorting (CSS/DOM)
     │
@@ -90,6 +92,7 @@ animath/
     │   └── QuarterTurnBar.tsx      # older inline 4D rotation bar
     │
     ├── lib/
+    │   ├── nbody/              # shared gravitational engine: integrator + scenarios + analysis
     │   ├── particles/          # shared particle-viewer engine (see below)
     │   │   ├── index.ts                # public re-exports
     │   │   ├── types.ts                # ColorStyle, ColourBy, shapeNames, viewTypes, …
@@ -135,6 +138,7 @@ from `src/apps.ts`.
 | `#/fractals-cpu`     | `Fractals2D`     | Legacy CPU 2D fractals                      |
 | `#/correspondence`   | `Correspondence` | Mandelbrot ↔ Julia split view               |
 | `#/mobius`           | `MobiusWalk`     | Möbius corridor walk                        |
+| `#/trinary`          | `Trinary`        | Three-star system: Observatory sandbox + Lab as tabs (`#/trinary-lab` opens the Lab) |
 | `#/stable-marriage`  | `StableMarriage` | Gale–Shapley algorithm + heatmap lab        |
 | `#/agentic-sorting`  | `AgenticSorting` | Concurrent agent-based sorting              |
 

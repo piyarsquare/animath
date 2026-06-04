@@ -163,6 +163,7 @@ export default function TrinaryStars() {
   const [showTrails, setShowTrails] = usePersistentState(PK('showTrails'), true);
   const [frameCenter, setFrameCenter] = usePersistentState(PK('frameCenter'), 'bary'); // reference-frame origin
   const [frameAlign, setFrameAlign] = usePersistentState(PK('frameAlign'), 'none');     // reference-frame +x direction
+  const [obsMode, setObsMode] = usePersistentState<'simple' | 'advanced'>(PK('obsMode'), 'simple'); // Settings detail level
   const [paused, setPaused] = useState(false);       // transient — not persisted
   const [placeMode, setPlaceMode] = useState(false); // transient — not persisted
   // Climate-classification knobs (habitable band as multiples of launch insolation).
@@ -754,6 +755,17 @@ export default function TrinaryStars() {
       </ShellActions>
 
       <ShellSettings>
+        <div style={{ display: 'flex', gap: 4, padding: '2px 2px 10px' }}>
+          {(['simple', 'advanced'] as const).map(m => (
+            <button key={m} onClick={() => setObsMode(m)}
+              style={{
+                ...btnStyle, flex: 1, textTransform: 'capitalize',
+                background: obsMode === m ? 'rgba(102,240,255,0.18)' : 'rgba(255,255,255,0.06)',
+                color: obsMode === m ? '#bfefff' : undefined,
+              }}>{m}</button>
+          ))}
+        </div>
+
         <Section title="System" icon="✸" defaultOpen>
           <Pills
             options={SCENARIOS.map(p => ({ value: p.id, label: p.name }))}
@@ -772,6 +784,7 @@ export default function TrinaryStars() {
             onChange={setEpsExp} format={v => `10^${v.toFixed(1)}`} />
         </Section>
 
+        {obsMode === 'advanced' && (
         <Section title="Stars" icon="☉">
           <Slider label="Star 1 mass · gold" value={massMul[0]} min={0.1} max={4} step={0.05}
             onChange={v => setStarMass(0, v)} format={v => (baseMasses[0] * v).toFixed(2)} />
@@ -791,6 +804,7 @@ export default function TrinaryStars() {
             Equal masses keep a preset’s character (just faster); uneven ones detune it — e.g. nudge a mass to watch the figure-eight fall into chaos. Softening sets how gently close passes are smoothed. Star size sets how close a planet must come to be consumed (0 = passes through).
           </div>
         </Section>
+        )}
 
         <Section title="Planet launch" icon="◐" defaultOpen>
           <Pills
@@ -811,6 +825,7 @@ export default function TrinaryStars() {
           </div>
         </Section>
 
+        {obsMode === 'advanced' && (<>
         <Section title="Planet sky" icon="🌅">
           <Pills
             label="View from the planet"
@@ -840,6 +855,7 @@ export default function TrinaryStars() {
             The habitable band is set relative to the planet’s starlight at launch (L = mᵝ). The timeline below classifies every moment as Paradise / Warm·precarious / Calm·barren / Chaotic.
           </div>
         </Section>
+        </>)}
 
         <Section title="View" icon="◑">
           <Slider label="Trail length" value={trailLen} min={0} max={TRAIL_MAX} step={50}
@@ -852,6 +868,7 @@ export default function TrinaryStars() {
           />
         </Section>
 
+        {obsMode === 'advanced' && (
         <Section title="Reference frame" icon="✛">
           <Select label="Center on" value={frameCenter} onChange={setFrameCenter} options={FRAME_ANCHORS} />
           <Select label="Align +x to" value={frameAlign} onChange={setFrameAlign}
@@ -866,6 +883,7 @@ export default function TrinaryStars() {
             A pure viewpoint — the physics is unchanged. In a rotating frame the planet appears to swerve (the Coriolis / centrifugal look), which is exactly how co-orbital, Trojan and horseshoe paths become visible. Trails reset when you change the frame.
           </div>
         </Section>
+        )}
 
         <Section title="Settings" icon="⚙">
           <button style={{ ...btnStyle, width: '100%', flex: 'none' }}

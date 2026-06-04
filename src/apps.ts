@@ -38,13 +38,7 @@ export const apps: AppDescriptor[] = [
     hash: '/trinary',
     name: 'Trinary System',
     icon: '✸',
-    blurb: 'Drop a planet into a three-star system and watch sensitive dependence erase its future.',
-  },
-  {
-    hash: '/trinary-lab',
-    name: 'Trinary Lab',
-    icon: '▦',
-    blurb: 'Run thousands of trinary worlds and tally how often chaos ends happily.',
+    blurb: 'Drop a planet into a three-star system and watch sensitive dependence erase its future — then open the Lab to run thousands of worlds and tally how often chaos ends happily.',
   },
   {
     hash: '/stable-marriage',

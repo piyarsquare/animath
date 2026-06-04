@@ -14,8 +14,9 @@ reachable directly by hash route.
 3. **[Fractals](https://piyarsquare.github.io/animath/#/fractals)** – GPU-accelerated Mandelbrot / Julia / Burning Ship / Tricorn viewer with optional orbit-tracing mode.
 4. **[Correspondence](https://piyarsquare.github.io/animath/#/correspondence)** – side-by-side Mandelbrot–Julia explorer; pick or draw paths through `c`.
 5. **[Möbius Walk](https://piyarsquare.github.io/animath/#/mobius)** – first-person stroll through a twisted corridor.
-6. **[Stable Marriage](https://piyarsquare.github.io/animath/#/stable-marriage)** – step through the Gale–Shapley algorithm with bias and consensus controls.
-7. **[Agentic Sorting](https://piyarsquare.github.io/animath/#/agentic-sorting)** – concurrent sorting simulation where autonomous agents with distinct strategies produce emergent order.
+6. **[Trinary System](https://piyarsquare.github.io/animath/#/trinary)** – drop a planet into a chaotic three-star system and watch its future diverge; an in-app **Lab** tab runs thousands of worlds and maps their fates into fractal "destiny" portraits and statistics.
+7. **[Stable Marriage](https://piyarsquare.github.io/animath/#/stable-marriage)** – step through the Gale–Shapley algorithm with bias and consensus controls.
+8. **[Agentic Sorting](https://piyarsquare.github.io/animath/#/agentic-sorting)** – concurrent sorting simulation where autonomous agents with distinct strategies produce emergent order.
 
 ---
 
