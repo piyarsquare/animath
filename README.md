@@ -6,14 +6,17 @@
   <a href="https://piyarsquare.github.io/animath/">Live demo</a>
 </p>
 
-## Apps
+The landing page (`#/`) is a gallery of every app; the cards below are also
+reachable directly by hash route.
 
-1. **[Complex Particles](https://piyarsquare.github.io/animath/#/)** – 3D representation of four-dimensional complex functions. Includes the former *Complex Roots* (`z^(p/q)`) and *Complex Multibranch* (multi-sheeted maps for `sqrt`, `ln`, etc.) as built-in modes.
-2. **[Fractals](https://piyarsquare.github.io/animath/#/fractals)** – GPU-accelerated Mandelbrot / Julia / Burning Ship / Tricorn viewer with optional orbit-tracing mode.
-3. **[Correspondence](https://piyarsquare.github.io/animath/#/correspondence)** – side-by-side Mandelbrot–Julia explorer; pick or draw paths through `c`.
-4. **[Topology Walk](https://piyarsquare.github.io/animath/#/topology-walk)** – first-person walk on a closed surface: a twisting / knotted corridor or a flat torus / Klein bottle, with shared footprints, avatar and third-person view.
-5. **[Stable Marriage](https://piyarsquare.github.io/animath/#/stable-marriage)** – step through the Gale–Shapley algorithm with bias and consensus controls.
-6. **[Agentic Sorting](https://piyarsquare.github.io/animath/#/agentic-sorting)** – concurrent sorting simulation where autonomous agents with distinct strategies produce emergent order.
+1. **[Complex Particles](https://piyarsquare.github.io/animath/#/complex-particles)** – 3D representation of four-dimensional complex functions. Includes the former *Complex Roots* (`z^(p/q)`) and *Complex Multibranch* (multi-sheeted maps for `sqrt`, `ln`, etc.) as built-in modes.
+2. **[Plane Transform](https://piyarsquare.github.io/animath/#/plane-transform)** – watch a complex function `f : ℂ → ℂ` warp a coloured grid of the plane, input pane beside output pane.
+3. **[Fractals](https://piyarsquare.github.io/animath/#/fractals)** – GPU-accelerated Mandelbrot / Julia / Burning Ship / Tricorn viewer with optional orbit-tracing mode.
+4. **[Correspondence](https://piyarsquare.github.io/animath/#/correspondence)** – side-by-side Mandelbrot–Julia explorer; pick or draw paths through `c`.
+5. **[Topology Walk](https://piyarsquare.github.io/animath/#/topology-walk)** – first-person walk on a closed surface: a twisting / knotted corridor or a flat torus / Klein bottle, with shared footprints, avatar and third-person view.
+6. **[Trinary System](https://piyarsquare.github.io/animath/#/trinary)** – drop a planet into a chaotic three-star system and watch its future diverge; an in-app **Lab** tab runs thousands of worlds and maps their fates into fractal "destiny" portraits and statistics.
+7. **[Stable Marriage](https://piyarsquare.github.io/animath/#/stable-marriage)** – step through the Gale–Shapley algorithm with bias and consensus controls.
+8. **[Agentic Sorting](https://piyarsquare.github.io/animath/#/agentic-sorting)** – concurrent sorting simulation where autonomous agents with distinct strategies produce emergent order.
 
 ---
 
@@ -37,17 +40,29 @@ Goals:
 
 ## 2 The app shell
 
-Every route is wrapped in a persistent `AppShell` that provides:
+The default route (`#/`) is a **landing menu** — a gallery of cards, one per
+app. Every other route is wrapped in a persistent `AppShell` that provides a top
+bar with these buttons (left to right):
 
-* A top bar showing the current app's name and (where relevant) a formula.
-* Three menu buttons: **Apps** (☰), **Settings** (⚙), and **Actions** (▶).
-  Each opens a side drawer to that tab directly.
-* iOS safe-area padding so the bottom of the screen stays visible behind
-  Safari's URL bar and the home indicator.
+* **⌂ Home** — back to the landing menu (hidden on the menu itself).
+* **☰ Apps** — opens the drawer's Apps tab to switch animations.
+* **ƒ Function** — switch the active function/variant where an app offers one
+  (dimmed otherwise).
+* **Title** — the current app's name plus an optional monospace formula;
+  clicking it jumps to the Settings tab.
+* **⚙ Settings** — the app's parameter controls.
+* **▶ Actions** — one-shot actions (reset, modes, …); these are mirrored into a
+  draggable on-canvas floater.
+* **? Explainer** — a "what am I looking at?" popup with a short write-up.
 
-The Complex Particles viewer also adds a small floating **quarter-turn**
-cluster in the bottom-left corner of the canvas for direct 4D plane
-rotations (tap for 90°, hold for continuous rotation).
+Buttons for tabs an app doesn't populate are dimmed. The shell also adds iOS
+safe-area padding so the bottom of the screen stays visible behind Safari's URL
+bar and the home indicator.
+
+The Complex Particles viewer puts its **4D rotation controls** in the standard
+Actions panel (the draggable floating panel + the drawer's Actions tab): tap a
+plane button for an eighth turn (45°), or flip the toggle under it to spin that
+plane continuously.
 
 ---
 
@@ -84,20 +99,24 @@ merging to `main`), see [docs/PREVIEW_DEPLOYS.md](./docs/PREVIEW_DEPLOYS.md).
 
 ```
 src/
-├── index.tsx               # entry: hash-based router + AppShell
-├── App.tsx                 # default route (Complex Particles)
+├── index.tsx               # entry: hash-based router + AppShell, lazy route map
+├── App.tsx                 # default Complex Particles route (lazy wrapper)
+├── apps.ts                 # app registry: drives the router AND the landing menu
 │
-├── animations/             # one folder per app, each with its own README
+├── animations/             # one folder per app, each with README + EXPLAINER
 │   ├── ComplexParticles/   # 4D complex-function viewer (Particles + Roots + Multibranch)
+│   ├── PlaneTransform/     # f as a transformation of the coloured plane
 │   ├── FractalsGPU/        # GPU Mandelbrot / Julia / Burning Ship / Tricorn
 │   ├── Correspondence/     # Mandelbrot ↔ Julia split view
-│   ├── Fractals/           # legacy CPU fractal renderer (unreachable, kept for reference)
+│   ├── Fractals/           # legacy CPU fractal renderer (routed at #/fractals-cpu)
 │   ├── TopologyWalk/       # first-person walk: corridor + flat torus / Klein bottle
 │   ├── StableMarriage/     # Gale–Shapley visualiser + heatmap lab
 │   └── AgenticSorting/     # concurrent agent-based sorting
 │
-├── components/             # shared UI
-│   ├── AppShell.tsx        # global chrome: top bar + drawer + tabs
+├── components/             # shared shell + UI
+│   ├── AppShell.tsx        # global chrome: top bar + drawer + tabs + integration hooks
+│   ├── ActionFloater.tsx   # draggable on-canvas mirror of the Actions tab
+│   ├── Menu.tsx            # landing gallery rendered at the `/` route
 │   ├── ParticleViewerShell # wraps Canvas3D + standard 7 sections for the particle viewers
 │   ├── ControlPanel.tsx    # form primitives (Section / Slider / Pills / Select / Checkbox)
 │   ├── Canvas3D.tsx        # Three.js scene + camera + resize wrapper
@@ -105,7 +124,7 @@ src/
 │   └── ToggleMenu.tsx      # collapsible menu (legacy, used by FractalsGPU)
 │
 ├── controls/
-│   └── QuarterTurnFloater  # floating 4D quarter-turn cluster
+│   └── QuarterTurnControls # 4D eighth-turn + spin controls (Actions panel)
 │
 ├── lib/
 │   ├── particles/          # shared particle-viewer engine
@@ -115,12 +134,13 @@ src/
 │   │   ├── useParticleState.ts
 │   │   ├── useUniformSync.ts
 │   │   ├── useViewControls.ts
-│   │   ├── useGestureRotation.ts   # camera-orbit + zoom gestures
-│   │   └── types.ts                # ProjectionMode, ColorStyle, shapeNames, …
+│   │   ├── useGestureRotation.ts   # camera-orbit + pan + zoom gestures
+│   │   └── types.ts                # ColorStyle, ColourBy, shapeNames, viewTypes, …
 │   ├── useViewportGestures.ts      # pan + pinch-zoom + tap for 2D viewers
-│   ├── viewpoint.ts                # 4D → 3D projection helpers
-│   ├── complexMath.ts              # complex arithmetic + function names
-│   └── textures.ts                 # particle texture factory
+│   ├── viewpoint.ts                # 4D → 3D projection helpers + ProjectionMode
+│   ├── complexMath.ts              # complex arithmetic + function names/formulas
+│   ├── colormaps.ts                # GLSL palettes for the fractal viewers
+│   └── textures.ts                 # particle texture factory (incl. base-aware HDR)
 │
 ├── math/
 │   ├── constants.ts        # plane names, QUARTER constant
@@ -131,30 +151,41 @@ src/
 └── types/uniforms.d.ts     # shader uniform type declarations
 ```
 
-For architectural notes and the consolidation history that produced the
-current shape, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+For a hands-on walkthrough of adding a module, see
+[docs/BUILDING_AN_APP.md](./docs/BUILDING_AN_APP.md). For background on the
+consolidation that produced the current shape, see
+[ARCHITECTURE.md](./ARCHITECTURE.md) (a historical design proposal — the layout
+above is the source of truth).
 
 ---
 
 ## 5 Adding a new animation
 
-1. Create `src/animations/MyAnimation/MyAnimation.tsx` and (optionally) a
-   `README.md` next to it loaded via `import md from './README.md?raw'`.
-2. Add a route entry in `src/index.tsx`:
+The full, copy-pasteable walkthrough lives in
+[docs/BUILDING_AN_APP.md](./docs/BUILDING_AN_APP.md). The short version:
+
+1. Create `src/animations/MyAnimation/MyAnimation.tsx`, plus a `README.md`
+   (the in-app **About** section) and `EXPLAINER.md` (the **?** popup), both
+   loaded via `import md from './README.md?raw'`.
+2. Register the lazy route in `src/index.tsx`:
    ```ts
    const MyAnimation = React.lazy(() => import('./animations/MyAnimation/MyAnimation'));
-   const apps: AppDescriptor[] = [
-     // …existing entries…
-     { hash: '/my-animation', name: 'My Animation', icon: '◆' },
-   ];
    const routes = {
      // …existing routes…
      '/my-animation': MyAnimation,
    };
    ```
-3. Inside the component, call `useAppHeader('My Animation', 'optional formula')`
-   to populate the top bar, and render `<ShellSettings>` / `<ShellActions>`
-   for controls.
+3. Register the catalogue entry in `src/apps.ts` (this drives both the drawer's
+   Apps tab and the landing menu):
+   ```ts
+   export const apps: AppDescriptor[] = [
+     // …existing entries…
+     { hash: '/my-animation', name: 'My Animation', icon: '◆', blurb: 'One-line teaser.' },
+   ];
+   ```
+4. Inside the component, call `useAppHeader('My Animation', 'optional formula')`
+   and `useAppExplainer(explainerText)`, then render `<ShellSettings>` /
+   `<ShellActions>` for controls (built from the `ControlPanel` primitives).
 
 Three.js animations can wrap `Canvas3D`. For particle-style 4D viewers,
 `ParticleViewerShell` plus the `src/lib/particles` hooks gives you the
@@ -175,9 +206,10 @@ The particle viewers use a clean split between **looking** (gestures) and
   Never touches the 4D rotation.
 * **2-finger drag** (or `Shift` + drag) pans the look-at target.
 * **2-finger pinch** / **mouse wheel** zooms.
-* **Quarter-turn floater** (bottom-left of the canvas) — tap a plane button
-  for a 90° animated turn, **hold** for continuous rotation. Includes a
-  "Reset orientation" row.
+* **4D rotation controls** (in the Actions panel) — tap a plane button for an
+  eighth turn (45°); the toggle under each button starts/stops a continuous
+  spin in that plane and direction (multiple compose into double rotations), with
+  one speed slider. Includes drop-axis and a "Reset orientation" row.
 
 The fractal viewers use:
 

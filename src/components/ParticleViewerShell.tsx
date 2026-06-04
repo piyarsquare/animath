@@ -1,18 +1,20 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Canvas3D from './Canvas3D';
 import Readme from './Readme';
 import { Section, Slider, Pills, Select, Checkbox } from './ControlPanel';
-import { ShellSettings, ShellActions, useAppHeader, useAppFunctions, useAppExplainer, useActionFloaterOff } from './AppShell';
-import QuarterTurnFloater from '../controls/QuarterTurnFloater';
+import { ShellSettings, ShellActions, useAppHeader, useAppFunctions, useAppExplainer } from './AppShell';
+import QuarterTurnControls from '../controls/QuarterTurnControls';
+import type { TurnItem, AxisLetter } from '../controls/QuarterTurnControls';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../config/defaults';
 import { useResponsive } from '../styles/responsive';
-import { planes } from '../math/constants';
+import { planes, Plane } from '../math/constants';
+import { clearPersistedState } from '../lib/usePersistentState';
 import {
   ColorStyle, ColourBy, AXIS_COLORS,
-  shapeNames, textureNames, viewTypes, motionModes, dropModes,
+  shapeNames, textureNames, viewTypes, motionModes,
   useGestureRotation,
 } from '../lib/particles';
-import type { ParticleState } from '../lib/particles';
+import type { ParticleState, ViewAxis } from '../lib/particles';
 import type { useViewControls } from '../lib/particles';
 import { ProjectionMode } from '../lib/viewpoint';
 
@@ -25,7 +27,7 @@ export interface ParticleViewerShellProps {
     scene: import('three').Scene;
     camera: import('three').PerspectiveCamera;
     renderer: import('three').WebGLRenderer;
-  }) => void;
+  }) => void | (() => void);
   functionName: string;
   functionFormula: string;
   functionPicker: React.ReactNode;
@@ -41,11 +43,15 @@ export interface ParticleViewerShellProps {
   readme: string;
   /** Markdown explainer for the top-bar "?" help popup. */
   explainer?: string;
+  /** localStorage namespace whose saved settings the "Reset settings" action
+   *  clears. Omit on ephemeral viewers to hide the button. */
+  settingsStorageKey?: string;
 }
 
 export default function ParticleViewerShell({
   state, controls, onMount,
   functionName, functionFormula, functionPicker, variantExtras, functionList, readme, explainer,
+  settingsStorageKey,
 }: ParticleViewerShellProps) {
   const { isMobile, isTablet } = useResponsive();
   const compact = isMobile || isTablet;
@@ -53,9 +59,6 @@ export default function ParticleViewerShell({
 
   useAppHeader(functionName, functionFormula);
   useAppExplainer(explainer ?? null);
-  // The QuarterTurnFloater already provides reset / drop-axis / 4D turns on
-  // screen, so suppress the generic ActionFloater here to avoid a duplicate.
-  useActionFloaterOff();
   useAppFunctions(functionList ? {
     names: functionList.names,
     current: functionList.names[functionList.currentIndex] ?? '',
@@ -64,6 +67,99 @@ export default function ParticleViewerShell({
       if (i >= 0) functionList.onChangeIndex(i);
     },
   } : null);
+
+  // Hopf/Torus projections are nonlinear in the 4D coordinates, so a 4D plane
+  // rotation before the map deforms the image. In those modes the turn/spin
+  // controls instead orbit the ambient 3D view (Yaw/Pitch/Roll of the camera),
+  // which stays rigid; the six 4D planes return in the linear projections.
+  // A drop axis overrides viewType with a linear Drop projection, so only treat
+  // the view as Hopf/Torus when no drop axis is active.
+  const ambient = state.dropAxis === 'None'
+    && (state.viewType === ProjectionMode.Hopf || state.viewType === ProjectionMode.Torus);
+
+  // Continuous "spinners": each `${id}:${dir}` key that is on feeds a constant
+  // angular increment every frame — into controls.rotateBy (4D) or
+  // controls.orbitBy (ambient view). Multiple active spins compose. This is
+  // transient view state, so it lives here (not in persisted ParticleState),
+  // and above <ShellActions> so the drawer + floater copies stay in sync.
+  const [spins, setSpins] = useState<Record<string, boolean>>({});
+  const [spinSpeed, setSpinSpeed] = useState(1.2); // rad/s
+  const spinsRef = useRef(spins);
+  const speedRef = useRef(spinSpeed);
+  const ambientRef = useRef(ambient);
+  const controlsRef = useRef(controls);
+  spinsRef.current = spins;
+  speedRef.current = spinSpeed;
+  ambientRef.current = ambient;
+  controlsRef.current = controls;
+  const anySpin = Object.values(spins).some(Boolean);
+
+  useEffect(() => {
+    if (!anySpin) return;
+    let raf = 0;
+    let last = performance.now();
+    const step = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const active = spinsRef.current;
+      const c = controlsRef.current;
+      for (const key in active) {
+        if (!active[key]) continue;
+        const sep = key.indexOf(':');
+        const id = key.slice(0, sep);
+        const dir = Number(key.slice(sep + 1));
+        const delta = dir * speedRef.current * dt;
+        if (ambientRef.current) c.orbitBy(id as ViewAxis, delta);
+        else c.rotateBy(id as Plane, delta);
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [anySpin]);
+
+  // Switching between the 4D-plane and ambient-view controls clears any running
+  // spin so a spin of the wrong kind can't linger without a visible toggle.
+  useEffect(() => { setSpins({}); }, [ambient]);
+
+  const toggleSpin = (id: string, dir: 1 | -1) => {
+    const key = `${id}:${dir}`;
+    // Activating a spin switches Motion to Fixed so the continuous rotation
+    // shows directly, rather than stacking on top of the Quaternion auto-tumble.
+    if (!spins[key] && state.viewMotion !== 'Fixed') controls.handleMotion('Fixed');
+    setSpins(s => ({ ...s, [key]: !s[key] }));
+  };
+
+  const handleTurn = (id: string, dir: 1 | -1) => {
+    if (ambient) controls.orbitTurn(id as ViewAxis, dir);
+    else controls.turn(id as Plane, dir);
+  };
+
+  const axisColor = (letter: AxisLetter) => {
+    const key = letter.toLowerCase() as 'x' | 'y' | 'u' | 'v';
+    return `hsl(${((AXIS_COLORS[key] + state.hueShift) % 1) * 360},100%,60%)`;
+  };
+
+  const turnItems: TurnItem[] = ambient
+    ? [
+        { id: 'Yaw', label: 'Yaw', cwLabel: 'yaw right (orbit view)', ccwLabel: 'yaw left (orbit view)' },
+        { id: 'Pitch', label: 'Pitch', cwLabel: 'pitch up (orbit view)', ccwLabel: 'pitch down (orbit view)' },
+        { id: 'Roll', label: 'Roll', cwLabel: 'roll clockwise (orbit view)', ccwLabel: 'roll counter-clockwise (orbit view)' },
+      ]
+    : planes.map(p => {
+        const [a, b] = [p[0] as AxisLetter, p[1] as AxisLetter];
+        return {
+          id: p,
+          label: (
+            <span className="qtc-plane">
+              <span style={{ color: axisColor(a) }}>{a}</span>
+              <span style={{ color: axisColor(b) }}>{b}</span>
+            </span>
+          ),
+          cwLabel: `${p} clockwise`,
+          ccwLabel: `${p} counter-clockwise`,
+        };
+      });
 
   return (
     <>
@@ -74,22 +170,30 @@ export default function ParticleViewerShell({
         <Canvas3D onMount={onMount} />
       </div>
 
-      <QuarterTurnFloater
-        onTurn={controls.turn}
-        onRotateBy={controls.rotateBy}
-        onReset={controls.snapToStandardView}
-        getAxisColor={(letter) => {
-          const key = letter.toLowerCase() as 'x' | 'y' | 'u' | 'v';
-          return `hsl(${((AXIS_COLORS[key] + state.hueShift) % 1) * 360},100%,60%)`;
-        }}
-        dropAxis={state.dropAxis}
-        onDropAxisChange={controls.handleDropAxis}
-      />
-
       <ShellSettings>
         <Section title="Function" icon="ƒ" defaultOpen>
           {functionPicker}
           {variantExtras}
+        </Section>
+
+        <Section title="Domain" icon="▦">
+          <Pills
+            label="Units"
+            options={[
+              { value: 1, label: '×1' },
+              { value: Math.PI, label: '×π' },
+            ]}
+            value={state.axisScale}
+            onChange={state.setAxisScale}
+          />
+          <Slider label="X extent (±)" value={state.extentX}
+            min={R.extent.min} max={R.extent.max} step={R.extent.step}
+            onChange={state.setExtentX}
+            format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`} />
+          <Slider label="Y extent (±)" value={state.extentY}
+            min={R.extent.min} max={R.extent.max} step={R.extent.step}
+            onChange={state.setExtentY}
+            format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`} />
         </Section>
 
         <Section title="Camera" icon="◐" defaultOpen>
@@ -99,6 +203,33 @@ export default function ParticleViewerShell({
             value={state.viewType}
             onChange={controls.handleViewType}
           />
+          {state.viewType === ProjectionMode.Torus && (
+            <Slider
+              label="Collapse → Hopf"
+              value={state.fiberCollapse}
+              min={0} max={1} step={0.01}
+              onChange={controls.handleFiberCollapse}
+              format={v => v === 0 ? 'torus' : v === 1 ? 'sphere' : v.toFixed(2)}
+            />
+          )}
+          {state.viewType === ProjectionMode.Torus && (
+            <Pills
+              label="Radius scale"
+              options={[
+                { value: 0, label: 'Linear' },
+                { value: 1, label: 'Log' },
+              ]}
+              value={state.logRadius ? 1 : 0}
+              onChange={v => state.setLogRadius(v === 1)}
+            />
+          )}
+          {(state.viewType === ProjectionMode.Torus || state.viewType === ProjectionMode.Hopf) && (
+            <Checkbox
+              label="Reference scaffold"
+              checked={state.showScaffold}
+              onChange={state.setShowScaffold}
+            />
+          )}
           <Pills
             label="Motion"
             options={motionModes.map(m => ({ value: m, label: m }))}
@@ -194,9 +325,6 @@ export default function ParticleViewerShell({
           <Slider label="Particle count" value={state.particleCount}
             min={R.particleCount.min} max={R.particleCount.max} step={R.particleCount.step}
             onChange={state.setParticleCount} format={v => `${(v / 1000).toFixed(0)}k`} />
-          <Slider label="Grid extent (±)" value={state.gridExtent}
-            min={R.gridExtent.min} max={R.gridExtent.max} step={R.gridExtent.step}
-            onChange={state.setGridExtent} format={v => v.toFixed(1)} />
           <Checkbox label="Adaptive density"
             checked={state.adaptive} onChange={state.setAdaptive} />
           {state.adaptive && (
@@ -216,47 +344,54 @@ export default function ParticleViewerShell({
 
       <ShellActions>
         <div className="cp-section-body">
-          <button
-            style={{
-              padding: '12px 16px', borderRadius: 6,
-              border: '1px solid var(--cp-border)',
-              background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
-              cursor: 'pointer', fontSize: 14, fontWeight: 600,
-            }}
-            onClick={controls.snapToStandardView}
-          >
-            Reset orientation
-          </button>
+          {state.viewType === ProjectionMode.Torus && (
+            <>
+              <Slider
+                label="Collapse → Hopf"
+                value={state.fiberCollapse}
+                min={0} max={1} step={0.01}
+                onChange={controls.handleFiberCollapse}
+                format={v => v === 0 ? 'torus' : v === 1 ? 'sphere' : v.toFixed(2)}
+              />
+              <Pills
+                label="Radius scale"
+                options={[
+                  { value: 0, label: 'Linear' },
+                  { value: 1, label: 'Log' },
+                ]}
+                value={state.logRadius ? 1 : 0}
+                onChange={v => state.setLogRadius(v === 1)}
+              />
+            </>
+          )}
 
-          <div className="cp-row-label" style={{ marginTop: 8, marginBottom: 4 }}>Drop axis</div>
-          <Pills
-            options={dropModes.map(d => ({ value: d, label: d.replace('Drop', '') }))}
-            value={state.dropAxis}
-            onChange={controls.handleDropAxis}
+          <QuarterTurnControls
+            items={turnItems}
+            onTurn={handleTurn}
+            spins={spins}
+            onToggleSpin={toggleSpin}
+            onStopAllSpins={() => setSpins({})}
+            spinSpeed={spinSpeed}
+            onSpinSpeedChange={setSpinSpeed}
+            onReset={controls.snapToStandardView}
+            getAxisColor={axisColor}
+            dropAxis={state.dropAxis}
+            onDropAxisChange={controls.handleDropAxis}
           />
 
-          <div className="cp-row-label" style={{ marginTop: 8, marginBottom: 4 }}>4D quarter turns</div>
-          <div className="cp-quarter">
-            <div />
-            <div className="cp-quarter-label" style={{ textAlign: 'center' }}>↻</div>
-            <div className="cp-quarter-label" style={{ textAlign: 'center' }}>↺</div>
-            {planes.map(p => {
-              const colorOf = (letter: string) => {
-                const key = letter.toLowerCase() as 'x' | 'y' | 'u' | 'v';
-                return `hsl(${((AXIS_COLORS[key] + state.hueShift) % 1) * 360},100%,60%)`;
-              };
-              return (
-                <React.Fragment key={p}>
-                  <div className="cp-quarter-label" style={{ alignSelf: 'center' }}>
-                    <span style={{ color: colorOf(p[0]) }}>{p[0]}</span>
-                    <span style={{ color: colorOf(p[1]) }}>{p[1]}</span>
-                  </div>
-                  <button onClick={() => controls.turn(p, 1)}>↻ {p}</button>
-                  <button onClick={() => controls.turn(p, -1)}>↺ {p}</button>
-                </React.Fragment>
-              );
-            })}
-          </div>
+          {settingsStorageKey && (
+            <button
+              className="qtc-reset"
+              style={{ marginTop: 8 }}
+              onClick={() => {
+                clearPersistedState(settingsStorageKey);
+                window.location.reload();
+              }}
+              title="Forget saved settings and restore the defaults"
+            >
+              Reset settings to defaults
+            </button>
+          )}
         </div>
       </ShellActions>
     </>

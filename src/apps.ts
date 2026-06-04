@@ -35,6 +35,12 @@ export const apps: AppDescriptor[] = [
     blurb: 'Walk a closed surface in first person — twisting corridor or flat torus / Klein bottle — and read the topology off your own footprints.',
   },
   {
+    hash: '/trinary',
+    name: 'Trinary System',
+    icon: '✸',
+    blurb: 'Drop a planet into a three-star system and watch sensitive dependence erase its future — then open the Lab to run thousands of worlds and tally how often chaos ends happily.',
+  },
+  {
     hash: '/stable-marriage',
     name: 'Stable Marriage',
     icon: '♥',

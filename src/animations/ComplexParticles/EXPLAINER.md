@@ -28,10 +28,22 @@ directly, so the view *projects* it down into the 3-D scene on screen.
   to length 1), then project from the pole: `(x, y, u) / (1 − v)`. It's the
   4-D analogue of flattening a globe into a map, and it's *conformal* —
   small shapes keep their form.
-- **Hopf** — uses the **Hopf fibration**, the famous map S³ → S² that fills
-  the 3-sphere with interlocking circles (the *Hopf fibers*). Whole circles
-  collapse to single directions, so the linking and twisting of the data
-  shows up as nested tori.
+- **Hopf** — the **Hopf fibration** S³ → S², which places each particle on a
+  sphere according to the **ratio `z / f(z)`**. Read the sphere as:
+  *latitude* = `|z| / |f|` (equator where they're equal; one pole where the
+  output vanishes, the other where the input does), and *longitude* =
+  `arg(z) − arg(f)`. A whole circle of points (input and output rotated by a
+  common phase — a *Hopf fiber*) collapses to a single point. So `f = c·z`
+  collapses to one point, `f = z + c` covers the sphere once, and `eᶻ` wraps it
+  infinitely. (For this reading to hold, keep the 4-D orientation fixed — a
+  spin mixes input and output before the map.)
+- **Torus** — the same Hopf data with the fibers left *intact*: a stack of
+  nested donuts (Clifford tori) filling space. `arg z` walks around the hole,
+  `arg f` around the tube, and `|z|/|f|` chooses which donut. Each Hopf fiber
+  becomes a `(1,1)` circle winding around its donut — exactly the points that
+  the **Hopf** view squashes together. The **Collapse → Hopf** slider scrubs
+  between the two so you can watch those fiber circles shrink to points, and the
+  **Reference scaffold** toggle draws the faint donuts / sphere they live on.
 - **Drop axis** — the bluntest projection: just forget one of the four
   coordinates and keep the other three (an orthographic slice).
 
