@@ -7,10 +7,12 @@
 > shell. **Captured as built** from the source on the default branch — this is a snapshot
 > of behavior, not a specification, written in the present tense.
 
-> **In-flight work (not on `main`).** An active branch
-> `claude/complex-viewer-polar-views-fApMG` is adding **polar / log-polar plane views**
-> (a new `polarViews.ts`, a shader change, and EXPLAINER edits). That work is **not yet
-> merged** and is **not** documented here; this manual describes the current `main` state.
+> **Polar / log-polar views — now on `main`.** The **polar input grid** and **log-polar
+> plane layout** (a `polarViews.ts` helper, a vertex-shader branch, and EXPLAINER edits)
+> have **merged to `main`** (PR #179; originally developed on
+> `claude/complex-viewer-polar-views-fApMG`). They are shipped, not pending, and are
+> documented throughout this manual (see the **Grid** and **Plane** controls in §4 and the
+> log-polar notes in §8).
 
 ---
 
@@ -152,6 +154,8 @@ The `p`/`q` inputs are hand-rolled `<input type="number">` rows (using `cp-row` 
 ### View (`◑` icon) — starts closed
 | Control | Type | Label | Range / options | Default | Behavior |
 |---|---|---|---|---|---|
+| Grid | `Pills` | `Grid` | `Cartesian`, `Polar` | `Cartesian` | Input **sampling** mode (`gridMode`). `Cartesian` lays the cloud on a square mesh over `[-extent, +extent]²`; `Polar` samples a grid of **log-spaced rings × evenly-spaced rays** (radius from `extent·1e-3` out to `extent`, `density` rays sweeping `[0, 2π)`), so you watch circles `\|z\|=r` and rays `arg z=θ` bend into their images. Rebuilds the geometry. |
+| Plane | `Pills` | `Plane` | `Cartesian`, `Log-polar` | `Cartesian` | Plane / **layout** mode (`planeMode`). `Cartesian` plots each (possibly transformed) point directly; `Log-polar` **unrolls** the plane to `(arg, log\|·\|)` — angle across, log-radius up. Switches the vertex shader's NDC mapping (`planeMode` uniform) and the SVG overlay's `clipFromMath` in lockstep. |
 | Extent (±) | `Slider` | `Extent (±)` | min 0.5, max 10, step 0.5 | `3` | Half-side of the visible square; rebuilds geometry. Readout `toFixed(1)`. (Pinch/wheel zoom can drive `viewExtent` to the wider [0.2, 20] range.) |
 | Point size | `Slider` | `Point size` | min 1, max 6, step 0.5 | `2.5` | GL point size; readout `toFixed(1)`. |
 | Density (per side) | `Slider` | `Density (per side)` | min 40, max 900, step 20 | `240` | Points per side; rebuilds the cloud. Readout `N×N (M)` millions, e.g. `240×240 (0.06M)`. |
@@ -227,6 +231,10 @@ Triggered by the top-bar **?** button; content from `EXPLAINER.md`. It explains:
 - **Conformal maps** (`z²`, `eᶻ`, `1/z`) preserve angles — right-angle grid crossings stay
   right-angled even where the map stretches and bends.
 - **Color:** hue = argument of `z`; brightness/tile pattern encode magnitude.
+- **Polar grid and the log-polar plane:** the two **View** toggles — `Polar` samples the
+  input on log-spaced circles and radial spokes; `Log-polar` unrolls the plane to
+  `(arg, log|·|)` so multiplication becomes a translation, `zⁿ` a shear, and `ln` flattens
+  the strip into a square (combining the two yields a clean square lattice).
 - **Multi-valued functions and the branch index:** `√z`, `ln z`, `z^(p/q)` are
   multi-valued because the argument `θ` is defined only up to `2π`. A **branch** is a
   consistent choice of `θ`; the **branch index `k`** offsets it (√z: +k·π; ln z: +k·2π to
@@ -247,8 +255,30 @@ functions indexed `0..18` matching `functionNames`: `linear (identity)`, `sqrt` 
 `reciprocalCube`, `joukowski (½(z+1/z))`, `rational22 ((z²+1)/(z²−1))`,
 `essentialExpInv (e^{1/z})`, `branchSqrtPoly (√(z(z−1)(z+1)))`, `gamma (Γ)`, `cubeRoot`,
 `zMinus1OverZPlus1 ((z−1)/(z+1))`, and `powPQ (z^(p/q))`. The input pane uses the identity
-(`transform = 0`); the output pane uses `transform = 1`. Output positions are divided by
-`viewExtent` to map into clip space.
+(`transform = 0`); the output pane uses `transform = 1`.
+
+**Input sampling (Grid).** The point cloud is built by `sampleInputPositions(gridMode, …)`
+in `polarViews.ts`. In **Cartesian** grid mode it is a square mesh over
+`[-viewExtent, +viewExtent]²`. In **Polar** grid mode it is `density` **log-spaced rings**
+(radius `viewExtent·1e-3 … viewExtent`) × `density` **evenly-spaced rays** over `[0, 2π)`
+(end-exclusive so no ray is doubled), so each ring/ray of the input cloud reads as a clean
+circle/spoke. The grid mode only changes *where the input points sit*; both panes still
+render the same cloud and the output shader still applies `f`.
+
+**Plane layout (Cartesian vs log-polar).** The vertex shader maps a (possibly transformed)
+point to NDC two ways, selected by the `planeMode` uniform:
+- **Cartesian (`planeMode = 0`):** clamp giants (`length > 1e3` → radius-`1e3` sphere, so a
+  point near infinity from `1/z` doesn't wash out the view), then divide by `viewExtent`.
+- **Log-polar (`planeMode = 1`):** plot the *unrolled* plane — `x → atan2(y, x)/π` across
+  (so `arg ∈ [-π, π]` fills `[-1, 1]`) and `y → log|z| / logSpan` up, where
+  `logSpan = max(log(viewExtent), 1)`. In this layout multiplication by a constant is a
+  rigid translation, **`exp` becomes a vertical ramp**, **`z^n` becomes a shear**, and `ln`
+  flattens the annular strip into a square; the branch cut sits on the left/right edges.
+
+This log-polar mapping lives in **both** the vertex shader and `clipFromMath` in
+`polarViews.ts`, which must stay in sync (the file header flags this). Freehand drawing
+inverts it via `mathFromClip` so a stroke in the unrolled input pane still maps back to the
+real `z`.
 
 **Color encoding** (fragment shader, keyed on the source `z`):
 - **Smooth (0):** hue from `arg(z)`; value banded by `fract(log(r)/0.5)` → concentric
@@ -260,7 +290,10 @@ All three use HSV→RGB with the user `saturation`, scaled by `intensity`.
 
 **Standard curves** are sampled in TypeScript (`standardCurves.ts`) densely enough that
 even strongly-warping functions yield smooth output polylines, then re-mapped through the
-complex math in `complexMath.ts`.
+complex math in `complexMath.ts`. The SVG overlay (`CurveSvg`) places each curve point with
+the **same** `clipFromMath(x, y, planeMode, viewExtent)` the GPU points use, so the white
+input/output polylines line up with the point cloud under either plane layout (NDC is
+clamped to ±`1e4` so a point at infinity can't blow out the path's bounding box).
 
 ---
 
@@ -269,7 +302,7 @@ complex math in `complexMath.ts`.
 Uses `usePersistentState` under the `plane-transform` localStorage namespace.
 
 **Persisted** (survive reload): `functionIndex`, `expP`, `expQ`, `branchIndex`, `density`,
-`pointSize`, `viewExtent`, `colourMode`, `saturation`, `intensity`.
+`pointSize`, `viewExtent`, `gridMode`, `planeMode`, `colourMode`, `saturation`, `intensity`.
 
 **Transient** (plain `useState`, reset each session): the drawn `curve` and `drawMode`,
 plus derived/layout state (`horizontal` orientation, inscribed-square box, pointer maps).
@@ -285,7 +318,8 @@ plus derived/layout state (`horizontal` orientation, inscribed-square box, point
 | Main component, panes, settings, uniform sync, curve mapping | `src/animations/PlaneTransform/PlaneTransform.tsx` |
 | Curve floater UI (toggle/draw/standard/clear) | `src/animations/PlaneTransform/PlaneCurveFloater.tsx` |
 | Curve floater styling | `src/animations/PlaneTransform/PlaneCurveFloater.css` |
-| Vertex + fragment shaders (function switch, coloring) | `src/animations/PlaneTransform/shaders/index.ts` |
+| Vertex + fragment shaders (function switch, coloring, log-polar branch) | `src/animations/PlaneTransform/shaders/index.ts` |
+| Polar input sampler + Cartesian/log-polar NDC mapping (`clipFromMath`/`mathFromClip`) | `src/animations/PlaneTransform/polarViews.ts` |
 | Standard-curve point builders | `src/animations/PlaneTransform/standardCurves.ts` |
 | About text (Settings → About) | `src/animations/PlaneTransform/README.md` |
 | Explainer text (? popup) | `src/animations/PlaneTransform/EXPLAINER.md` |

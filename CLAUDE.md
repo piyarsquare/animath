@@ -65,7 +65,7 @@ animath/
     │   ├── FractalsGPU/         # GPU Mandelbrot / Julia / Burning Ship / Tricorn
     │   ├── Fractals/            # legacy CPU 2D fractals (routed at #/fractals-cpu)
     │   ├── Correspondence/      # Mandelbrot ↔ Julia split-pane explorer
-    │   ├── MobiusWalk/          # first-person Möbius corridor walk
+    │   ├── TopologyWalk/        # first-person walk on a closed surface: twisting corridor + flat torus / Klein bottle
     │   ├── TrinaryStars/        # three-body planet sandbox (Observatory) + ensemble Lab
     │   │                        #   (Trinary.tsx hosts both as tabs; engine in lib/nbody)
     │   ├── StableMarriage/      # Gale–Shapley visualiser + heatmap lab (CSS/DOM)
@@ -84,7 +84,7 @@ animath/
     │   ├── ControlPanel.css
     │   ├── Canvas3D.tsx        # Three.js scene + camera + renderer + resize wrapper
     │   ├── Readme.tsx          # in-app markdown renderer (marked)
-    │   └── ToggleMenu.tsx      # legacy collapsible menu (still used by FractalsGPU)
+    │   └── ToggleMenu.tsx      # legacy collapsible menu (used by the legacy Fractals2D)
     │
     ├── controls/
     │   ├── QuarterTurnControls.tsx # 4D eighth-turn + spin + drop-axis controls
@@ -138,7 +138,7 @@ from `src/apps.ts`.
 | `#/fractals`         | `FractalsGPU`    | GPU Mandelbrot / Julia / Burning Ship / Tricorn |
 | `#/fractals-cpu`     | `Fractals2D`     | Legacy CPU 2D fractals                      |
 | `#/correspondence`   | `Correspondence` | Mandelbrot ↔ Julia split view               |
-| `#/mobius`           | `MobiusWalk`     | Möbius corridor walk                        |
+| `#/topology-walk`    | `TopologyWalk`   | First-person walk on a closed surface (twisting corridor / flat torus / Klein); `#/mobius` and `#/wrap-world` redirect here |
 | `#/trinary`          | `Trinary`        | Three-star system: Observatory sandbox + Lab as tabs (`#/trinary-lab` opens the Lab) |
 | `#/stable-marriage`  | `StableMarriage` | Gale–Shapley algorithm + heatmap lab        |
 | `#/agentic-sorting`  | `AgenticSorting` | Concurrent agent-based sorting              |

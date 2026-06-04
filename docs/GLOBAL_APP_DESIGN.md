@@ -43,16 +43,20 @@ interface manual per remaining app — same structure (layout → shared-chrome 
 
 | Document | App / route | Headline seam(s) |
 |---|---|---|
-| `docs/PLANE_TRANSFORM_UI.md` | Plane Transform `#/plane-transform` | Ships its own `PlaneCurveFloater` that bypasses `ShellActions`/`ActionFloater` (the Actions tab/button are dead); function picker exposed in 3 places; two disagreeing zoom clamps. *(In-flight: `claude/complex-viewer-polar-views-fApMG` adds polar/log-polar views.)* |
-| `docs/FRACTALS_GPU_UI.md` | Fractals (GPU) `#/fractals` | Uses the standard drawer — but **`CLAUDE.md` still claims it uses the legacy `ToggleMenu` (stale doc)**; the four-family selector lives in Settings, not the `ƒ` picker; Actions are hand-styled buttons; no persistence. |
+| `docs/PLANE_TRANSFORM_UI.md` | Plane Transform `#/plane-transform` | Ships its own `PlaneCurveFloater` that bypasses `ShellActions`/`ActionFloater` (the Actions tab/button are dead); function picker exposed in 3 places; two disagreeing zoom clamps. *(Polar grid + log-polar plane views shipped via #179.)* |
+| `docs/FRACTALS_GPU_UI.md` | Fractals (GPU) `#/fractals` | Uses the standard drawer (`CLAUDE.md` had mis-attributed the legacy `ToggleMenu` to it — corrected in this branch; `ToggleMenu` actually serves only the legacy Fractals2D); the four-family selector lives in Settings, not the `ƒ` picker; Actions are hand-styled buttons; no persistence. |
 | `docs/CORRESPONDENCE_UI.md` | Mandelbrot ↔ Julia `#/correspondence` | `useActionFloaterOff()` + a bespoke `PlaybackFloater` just to get a timeline/scrubber; actions mounted in 3 DOM spots; independent per-pane controls with no link/sync; no persistence. |
-| `docs/MOBIUS_WALK_UI.md` | Möbius Walk `#/mobius` | Empty Settings/Function tabs; lone twist toggle is a hand-rolled button in Actions; toggling forces a full `Canvas3D` remount; the app's rAF loop has no cleanup. *(In-flight: `claude/mobius-walk-fix` reworks toward "TopologyWalk".)* |
+| `docs/TOPOLOGY_WALK_UI.md` | Topology Walk `#/topology-walk` | **Now conforms to the shell** (real `ShellSettings`/`ShellActions` + `ControlPanel` primitives) — the #174 rewrite resolved the former Möbius Walk's seams (empty tabs, hand-rolled twist toggle, remount-on-toggle). Remaining: no settings persistence; the per-app `WorldEngine` could move to `src/lib/`. *(Supersedes the former `MOBIUS_WALK_UI.md`; `#/mobius` and `#/wrap-world` redirect here.)* |
 | `docs/STABLE_MARRIAGE_UI.md` | Stable Marriage `#/stable-marriage` | Bypasses the shell almost entirely (only header + explainer); all controls hand-rolled with a private `--sm-*` token set; its own in-page Visualizer/Lab mode toggle; no persistence. |
 | `docs/AGENTIC_SORTING_UI.md` | Agentic Sorting `#/agentic-sorting` | Bypasses the shell almost entirely; **CSS class collision — both AppShell and this app define a global `.as-bar`** (and share the `as-` prefix); no persistence; a redundant in-page subtitle. |
 
-> The two anchors (`COMPLEX_PARTICLES_UI.md`, `TRINARY_UI_SNAPSHOT.md`) still live
-> on their own branches; the six above are written here against the current `main`
-> code. Complex Particles and Trinary are not re-documented in this branch.
+> **Update (after merging `main`).** The two anchors are now **on `main`** as well
+> (`COMPLEX_PARTICLES_UI.md` via #178; `TRINARY_UI_SNAPSHOT.md` + `TRINARY_ROADMAP.md`
+> via #177), so all eight manuals now sit together in `docs/`. The former
+> `MOBIUS_WALK_UI.md` was replaced by `TOPOLOGY_WALK_UI.md` after the #174 rename.
+> Caveat: `TRINARY_UI_SNAPSHOT.md` predates #177's Observatory+Lab unification, so it
+> still describes the old two-catalog-entry structure. Complex Particles and Trinary
+> are not re-documented in this branch.
 
 ### Supporting design / roadmap docs
 
@@ -170,9 +174,16 @@ shell, at a glance (nine views):
 | Plane Transform | ✅ | **dead** (own floater instead) | ✅ `PlaneCurveFloater` | mixed (+ raw inputs) | partial |
 | Fractals (GPU) | ✅ | drawer + generic floater | — | **hand-styled buttons** | ❌ |
 | Correspondence | ✅ | **own** (`useActionFloaterOff`) | ✅ `PlaybackFloater` | **hand-rolled** | ❌ |
-| Möbius Walk | ❌ (empty) | drawer + generic floater (1 toggle) | — | **hand-rolled button** | ❌ |
+| Topology Walk | ✅ (3 sections) | drawer + generic floater | — | `ControlPanel` | ❌ |
 | Stable Marriage | ❌ (in-page cards) | **in-page** | — | **hand-rolled (`--sm-*`)** | ❌ |
 | Agentic Sorting | ❌ (in-page sidebar) | **in-page** | — | **hand-rolled** | ❌ |
+
+> **Merging `main` flipped two rows the right way.** Topology Walk (formerly
+> Möbius Walk, an empty-tabs / hand-rolled-button example) now conforms after the
+> #174 rewrite, and Plane Transform's polar views shipped (#179). Trinary is now a
+> single catalog entry with Observatory + Lab as internal tabs (#177) — still two
+> *views*, one app. The remaining ❌ persistence and in-page-action rows are the
+> live targets.
 
 Reading down the columns, the recurring seams (extending §3 with what the new
 manuals surfaced):
@@ -182,15 +193,19 @@ Across the nine views we see *four* patterns: drawer + generic floater (the
 particle viewers), a **bespoke floater that suppresses the generic one**
 (Correspondence; effectively Plane Transform), a **single in-page bar** (Trinary
 Lab, Stable Marriage, Agentic Sorting), and an **empty/dead** Actions surface
-(Möbius, Plane Transform). The generic `ActionFloater`'s "always mirror the
-Actions tab" assumption is the single thing apps most often opt out of.
+(Plane Transform). The generic `ActionFloater`'s "always mirror the Actions tab"
+assumption is the single thing apps most often opt out of. *(Topology Walk was a
+fifth case — empty tabs — until #174 moved it onto the standard drawer + floater.)*
 
 ### G. `ControlPanel` primitives are bypassed whenever they fall short
 Every app that hand-rolls controls does so for the **same missing pieces**: a
 **number field** (Plane Transform's `p`/`q`, Fractals' Julia `c`), a **toggle /
-"active" action button** (Möbius twist, Fractals actions), and **transport/seek**
-(Correspondence's scrubber). The two DOM apps reinvent the entire kit with private
-token sets rather than extend the shared primitives.
+"active" action button** (Fractals' actions, and Topology Walk's still-inline-styled
+Actions buttons), and **transport/seek** (Correspondence's scrubber). The two DOM
+apps reinvent the entire kit with private token sets rather than extend the shared
+primitives. *(The #174 rewrite already moved Topology Walk's Settings onto
+`ControlPanel`, leaving only its Actions buttons hand-styled — evidence the gap is
+specifically in the action-button + number-field primitives.)*
 
 ### H. Persistence is the exception, not the rule
 Only the two engine-backed viewers (Complex Particles, Trinary Observatory) use
@@ -205,12 +220,17 @@ AppShell and Agentic Sorting **both define a global `.as-bar`** (and share the
 a stray reorder. Stable Marriage sidesteps it only by using a private `--sm-*`
 prefix. There is no CSS-scoping convention for apps.
 
-### J. Doc drift
-`CLAUDE.md` states Fractals (GPU) still uses the legacy `ToggleMenu`; the code
-uses the standard drawer and never imports `ToggleMenu`. With FractalsGPU — its
-last cited consumer — off it, `ToggleMenu` appears to be dead code, and the
-CLAUDE.md claim is stale (a fix to flag before editing, per the parallel-branch
-rule).
+### J. Doc drift (now reconciled)
+`CLAUDE.md` claimed Fractals (GPU) used the legacy `ToggleMenu`; in fact
+FractalsGPU uses the standard drawer and never imports it — `ToggleMenu` is **not**
+dead, it just lives only in the **legacy Fractals2D** (`#/fractals-cpu`). The #174
+Topology Walk rename also left the `CLAUDE.md` repo-layout tree + routing table
+still saying `MobiusWalk` / `#/mobius`. Both are **corrected in this branch** (the
+`ToggleMenu` line now points at Fractals2D; the layout/routing rows now read
+`TopologyWalk` / `#/topology-walk` with the legacy redirects noted). Lesson for the
+redesign: the shared `CLAUDE.md` tree + routing table drift whenever an app is
+renamed or retired without a deliberate sweep — a cheap consistency checklist (or
+generating that table from `apps.ts` + `index.tsx`) would prevent it.
 
 ---
 
@@ -229,11 +249,13 @@ for the design conversation:
 4. **A conditional-control helper** so mode-dependent controls reveal/disable
    consistently and discoverably.
 5. **Shared-engine extraction precedent.** Continue the `lib/particles/` /
-   `lib/nbody/` pattern: app-agnostic, React/Three-free cores under `src/lib/`.
+   `lib/nbody/` pattern (the latter now merged via #177): app-agnostic,
+   React/Three-free cores under `src/lib/`. Topology Walk's `WorldEngine` is the
+   next obvious candidate to lift out of its app folder.
 6. **Grow the primitive set** to cover the gaps apps hand-roll around (§G): a
    `NumberField`, a toggle / "active" action button, and a **transport/seek**
    (play + scrubber) control. This alone would let Plane Transform, Fractals,
-   Möbius, and Correspondence drop bespoke widgets.
+   Topology Walk, and Correspondence drop bespoke widgets.
 7. **A CSS-scoping convention** (per-app class prefix or a scoped root) so app
    stylesheets cannot collide with the shell — and fix the existing `.as-bar`
    clash (§I).
@@ -246,9 +268,12 @@ for the design conversation:
 
 - [ ] Confirm with the maintainer which seams to tackle first (action model vs.
       Settings layout vs. single-source controls vs. the primitive set).
-- [ ] **Low-risk quick wins first** (bugs, not redesigns): fix the stale
-      `CLAUDE.md` `ToggleMenu` claim (§J) and the duplicate global `.as-bar`
-      CSS rule (§I). Flag the `CLAUDE.md` edit before making it.
+- [x] **`CLAUDE.md` doc-drift fixed** (§J): `ToggleMenu` re-attributed to the
+      legacy Fractals2D, and the repo-layout tree + routing table updated for the
+      `MobiusWalk → TopologyWalk` rename (with `#/mobius`, `#/wrap-world` redirects).
+- [ ] **Remaining low-risk quick win** (a bug, not a redesign): the duplicate
+      global `.as-bar` CSS rule shared by `AppShell.css` and `agenticSorting.css`
+      (§I) — rename the app's class or scope it.
 - [ ] For the chosen theme, draft the shared-API change against `AppShell` /
       `ControlPanel` and check it against the anchor snapshots **and the six new
       manuals** so no app regresses.
