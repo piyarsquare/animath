@@ -99,6 +99,9 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   // lens, kept so "Show" can recolour the map without recomputing.
   const statGridRef = useRef<Float32Array>(new Float32Array(0));
   const statReadyRef = useRef(false);
+  // Resolution currently on the canvas — varies during a progressive render, so
+  // hover/click/recolour index the grids by this, not the target `res` state.
+  const paintedResRef = useRef(128);
 
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
   const boxRef = useRef(system?.box); boxRef.current = system?.box;
@@ -118,9 +121,9 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     mode, metric, lens, statRuns, statMetric, domain: effDomain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro,
   });
   const goObservatory = (i: number, j: number) => {
-    const d = effDomain;
-    const ax = d.a0 + (d.a1 - d.a0) * ((i + 0.5) / res);
-    const by = d.b1 - (d.b1 - d.b0) * ((j + 0.5) / res);
+    const d = effDomain, pr = paintedResRef.current;
+    const ax = d.a0 + (d.a1 - d.a0) * ((i + 0.5) / pr);
+    const by = d.b1 - (d.b1 - d.b0) * ((j + 0.5) / pr);
     const planet = basinPlanetAt(cfg, currentBc(), ax, by);
     const q = new URLSearchParams({
       p: cfg.presetId, tg: cfg.target,
@@ -143,7 +146,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     // and the chaos map (the regular/chaotic frontier) — both store a categorical
     // `out` grid. The statistical lens is smooth, so skip it there.
     if (stateRef.current.lens !== 'exact') return;
-    const N = stateRef.current.res;
+    const N = paintedResRef.current;
     const out = outGridRef.current;
     if (out.length !== N * N) return;
     const sizes: number[] = [];
@@ -277,86 +280,98 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     const runId = ++runIdRef.current;
     const cfgNow = cfgRef.current;
     const s = stateRef.current;
-    const N = s.res;
     const dom = (s.mode === 'radspeed' && boxRef.current)
       ? { a0: boxRef.current.rMin, a1: boxRef.current.rMax, b0: boxRef.current.fMin, b1: boxRef.current.fMax }
       : s.domain;
-    const bc: BasinConfig = {
-      mode: s.mode, metric: s.metric, lens: s.lens, statRuns: s.statRuns, statMetric: s.statMetric,
-      domain: dom, res: N, samples: s.samples,
-      posRule: s.posRule, posSpeedFrac: s.posSpeedFrac, fixedAngle: s.fixedAngle, fixedRadius: s.fixedRadius, fixedRetro: s.fixedRetro,
-    };
-    const cv = canvasRef.current!; cv.width = N; cv.height = N;
-    const ctx = cv.getContext('2d')!;
-    const img = ctx.createImageData(N, N);
-    const outGrid = new Uint8Array(N * N), tGrid = new Float32Array(N * N), statGrid = new Float32Array(N * N * 4);
-    outGridRef.current = outGrid; tGridRef.current = tGrid; statGridRef.current = statGrid;
+    const T = s.res;
+    // Progressive: a quick coarse whole-map pass (or two) before the full one,
+    // so structure appears almost immediately and then sharpens.
+    const stages = Array.from(new Set([Math.min(T, 48), Math.min(T, 96), T])).sort((a, b) => a - b);
     statReadyRef.current = false;
     // Keep any previous dimension readout visible while the new map computes
     // (it's replaced when measureDimension finishes) so the panel doesn't reflow.
     setBusy(true); setProgress(0);
-    let painted = 0; const total = N * N;
 
-    const paint = (start: number, rgb: Uint8Array, out: Uint8Array, tt: Float32Array, stat: Float32Array, cnt: number) => {
-      for (let k = 0; k < cnt; k++) {
-        const p = start + k, o = p * 4;
-        img.data[o] = rgb[k * 3]; img.data[o + 1] = rgb[k * 3 + 1]; img.data[o + 2] = rgb[k * 3 + 2]; img.data[o + 3] = 255;
-        outGrid[p] = out[k]; tGrid[p] = tt[k];
-        statGrid[p * 4] = stat[k * 4]; statGrid[p * 4 + 1] = stat[k * 4 + 1]; statGrid[p * 4 + 2] = stat[k * 4 + 2]; statGrid[p * 4 + 3] = stat[k * 4 + 3];
-      }
-      painted += cnt;
-    };
-    const flush = () => { if (runId === runIdRef.current) ctx.putImageData(img, 0, 0); };
-    const tick = () => { flush(); setProgress(painted / total); };
-    const onDone = () => {
-      if (runId !== runIdRef.current) return;
-      flush(); setBusy(false); statReadyRef.current = bc.lens === 'stat'; measureDimension();
-    };
-
-    const viaWorkersOrCpu = (preferCpu: boolean) => {
-      if (!preferCpu && HAS_WORKERS) {
-        try {
-          const size = Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1));
-          const pool = new BasinPool(size,
-            (b) => { if (runId !== runIdRef.current) return; paint(b.start, b.rgb, b.out, b.t, b.stat, b.count); tick(); },
-            () => onDone());
-          poolRef.current = pool;
-          pool.run(cfgNow, bc);
-          return;
-        } catch { /* fall through to CPU */ }
-      }
-      const bctx = basinContext(cfgNow, bc);
-      let p = 0;
-      const chunk = () => {
-        if (runId !== runIdRef.current) return;
-        const t0 = performance.now();
-        while (p < total && performance.now() - t0 < 24) {
-          const px = computeBasinPixel(bctx, p);
-          const o = p * 4;
-          img.data[o] = px.r; img.data[o + 1] = px.g; img.data[o + 2] = px.b; img.data[o + 3] = 255;
-          outGrid[p] = px.out; tGrid[p] = px.t;
-          statGrid[p * 4] = px.stat[0]; statGrid[p * 4 + 1] = px.stat[1]; statGrid[p * 4 + 2] = px.stat[2]; statGrid[p * 4 + 3] = px.stat[3];
-          p++;
-        }
-        flush(); setProgress(p / total);
-        if (p < total) rafRef.current = requestAnimationFrame(chunk);
-        else onDone();
+    const renderStage = (stageIdx: number) => {
+      const N = stages[stageIdx];
+      const isFinal = stageIdx === stages.length - 1;
+      const bc: BasinConfig = {
+        mode: s.mode, metric: s.metric, lens: s.lens, statRuns: s.statRuns, statMetric: s.statMetric,
+        domain: dom, res: N, samples: s.samples,
+        posRule: s.posRule, posSpeedFrac: s.posSpeedFrac, fixedAngle: s.fixedAngle, fixedRadius: s.fixedRadius, fixedRetro: s.fixedRetro,
       };
-      rafRef.current = requestAnimationFrame(chunk);
+      const cv = canvasRef.current!; cv.width = N; cv.height = N;
+      const ctx = cv.getContext('2d')!;
+      const img = ctx.createImageData(N, N);
+      const outGrid = new Uint8Array(N * N), tGrid = new Float32Array(N * N), statGrid = new Float32Array(N * N * 4);
+      outGridRef.current = outGrid; tGridRef.current = tGrid; statGridRef.current = statGrid; paintedResRef.current = N;
+      let painted = 0; const total = N * N;
+
+      const paint = (start: number, rgb: Uint8Array, out: Uint8Array, tt: Float32Array, stat: Float32Array, cnt: number) => {
+        for (let k = 0; k < cnt; k++) {
+          const p = start + k, o = p * 4;
+          img.data[o] = rgb[k * 3]; img.data[o + 1] = rgb[k * 3 + 1]; img.data[o + 2] = rgb[k * 3 + 2]; img.data[o + 3] = 255;
+          outGrid[p] = out[k]; tGrid[p] = tt[k];
+          statGrid[p * 4] = stat[k * 4]; statGrid[p * 4 + 1] = stat[k * 4 + 1]; statGrid[p * 4 + 2] = stat[k * 4 + 2]; statGrid[p * 4 + 3] = stat[k * 4 + 3];
+        }
+        painted += cnt;
+      };
+      const flush = () => { if (runId === runIdRef.current) ctx.putImageData(img, 0, 0); };
+      const tick = () => { flush(); setProgress(painted / total); };
+      const stageDone = () => {
+        if (runId !== runIdRef.current) return;
+        flush();
+        if (isFinal) { setBusy(false); statReadyRef.current = bc.lens === 'stat'; measureDimension(); }
+        else renderStage(stageIdx + 1);
+      };
+
+      const viaWorkersOrCpu = (preferCpu: boolean) => {
+        if (!preferCpu && HAS_WORKERS) {
+          try {
+            const size = Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1));
+            const pool = new BasinPool(size,
+              (b) => { if (runId !== runIdRef.current) return; paint(b.start, b.rgb, b.out, b.t, b.stat, b.count); tick(); },
+              () => stageDone());
+            poolRef.current = pool;
+            pool.run(cfgNow, bc);
+            return;
+          } catch { /* fall through to CPU */ }
+        }
+        const bctx = basinContext(cfgNow, bc);
+        let p = 0;
+        const chunk = () => {
+          if (runId !== runIdRef.current) return;
+          const t0 = performance.now();
+          while (p < total && performance.now() - t0 < 24) {
+            const px = computeBasinPixel(bctx, p);
+            const o = p * 4;
+            img.data[o] = px.r; img.data[o + 1] = px.g; img.data[o + 2] = px.b; img.data[o + 3] = 255;
+            outGrid[p] = px.out; tGrid[p] = px.t;
+            statGrid[p * 4] = px.stat[0]; statGrid[p * 4 + 1] = px.stat[1]; statGrid[p * 4 + 2] = px.stat[2]; statGrid[p * 4 + 3] = px.stat[3];
+            p++;
+          }
+          flush(); setProgress(p / total);
+          if (p < total) rafRef.current = requestAnimationFrame(chunk);
+          else stageDone();
+        };
+        rafRef.current = requestAnimationFrame(chunk);
+      };
+
+      if (s.engine === 'gpu' && HAS_GPU && gpuSupportsMap(s.metric, s.lens)) {
+        renderGpu(runId, cfgNow, bc, paint, tick, stageDone)
+          .catch(() => { gpuRef.current = null; if (runId === runIdRef.current) viaWorkersOrCpu(false); });
+        return;
+      }
+      viaWorkersOrCpu(s.engine === 'cpu');
     };
 
-    if (s.engine === 'gpu' && HAS_GPU && gpuSupportsMap(s.metric, s.lens)) {
-      renderGpu(runId, cfgNow, bc, paint, tick, onDone)
-        .catch(() => { gpuRef.current = null; if (runId === runIdRef.current) viaWorkersOrCpu(false); });
-      return;
-    }
-    viaWorkersOrCpu(s.engine === 'cpu');
+    renderStage(0);
   };
 
   /** Recolour an already-computed statistical map to a different "Show" metric —
    *  no resimulation, since every pixel kept all four fractions. */
   const recolorStat = (m: StatMetric) => {
-    const N = stateRef.current.res;
+    const N = paintedResRef.current;
     const sg = statGridRef.current;
     const cv = canvasRef.current; const ctx = cv?.getContext('2d');
     if (!cv || !ctx || !statReadyRef.current || sg.length !== N * N * 4) return;
@@ -419,18 +434,19 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   };
   const onMove = (e: React.PointerEvent) => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const i = Math.min(res - 1, Math.max(0, Math.floor(((e.clientX - r.left) / r.width) * res)));
-    const j = Math.min(res - 1, Math.max(0, Math.floor(((e.clientY - r.top) / r.height) * res)));
+    const pr = paintedResRef.current;
+    const i = Math.min(pr - 1, Math.max(0, Math.floor(((e.clientX - r.left) / r.width) * pr)));
+    const j = Math.min(pr - 1, Math.max(0, Math.floor(((e.clientY - r.top) / r.height) * pr)));
     if (tGridRef.current.length) {
-      const ax = effDomain.a0 + (effDomain.a1 - effDomain.a0) * ((i + 0.5) / res);
-      const by = effDomain.b1 - (effDomain.b1 - effDomain.b0) * ((j + 0.5) / res);
+      const ax = effDomain.a0 + (effDomain.a1 - effDomain.a0) * ((i + 0.5) / pr);
+      const by = effDomain.b1 - (effDomain.b1 - effDomain.b0) * ((j + 0.5) / pr);
       const [la, lb] = AXIS_LABELS[mode];
-      const v = tGridRef.current[j * res + i];
+      const v = tGridRef.current[j * pr + i];
       const detail = lens === 'stat'
         ? `${STAT_LABEL[statMetric]} ${(v * 100).toFixed(0)}% (of ${statRuns} worlds)`
         : metric === 'chaos'
           ? `λ=${v.toFixed(3)} (${v > 0.05 ? 'chaotic' : 'regular'})`
-          : `${OUTCOME_CODE[outGridRef.current[j * res + i]]} @ t=${v.toFixed(0)}`;
+          : `${OUTCOME_CODE[outGridRef.current[j * pr + i]]} @ t=${v.toFixed(0)}`;
       setHover(`${la}=${ax.toFixed(2)} · ${lb}=${by.toFixed(2)} → ${detail} · click to open in a new tab`);
     }
     if (dragRef.current) {
@@ -450,8 +466,9 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const dx = Math.abs(d.x1 - d.x0), dy = Math.abs(d.y1 - d.y0);
     if (dx < 6 && dy < 6) { // a click → open that exact world in the Observatory
-      const i = Math.min(res - 1, Math.max(0, Math.floor((d.x0 / r.width) * res)));
-      const j = Math.min(res - 1, Math.max(0, Math.floor((d.y0 / r.height) * res)));
+      const pr = paintedResRef.current;
+      const i = Math.min(pr - 1, Math.max(0, Math.floor((d.x0 / r.width) * pr)));
+      const j = Math.min(pr - 1, Math.max(0, Math.floor((d.y0 / r.height) * pr)));
       goObservatory(i, j);
       return;
     }
