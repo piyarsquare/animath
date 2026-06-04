@@ -1,0 +1,126 @@
+/* Quarter-turn / spin controls, rendered inside the standard Actions panel
+   (the drawer's Actions tab + the draggable ActionFloater) rather than a
+   bespoke floater. Compact grid of single-eighth-turn buttons with a
+   continuous-spin toggle under each, axis-coloured plane labels, a drop-axis
+   row, and reset. Mirrors the old QuarterTurnFloater look. */
+
+.qtc {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.qtc-grid {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: 4px;
+  align-items: center;
+}
+
+.qtc-label {
+  font-size: 11px;
+  color: #9b9ba3;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0 4px;
+  text-align: center;
+}
+
+/* Plane labels (e.g. "XY") render each letter in its axis colour. */
+.qtc-plane {
+  display: inline-flex;
+  gap: 1px;
+  font-weight: 700;
+  justify-content: center;
+}
+
+/* Each direction column stacks the eighth-turn button over its spin toggle. */
+.qtc-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: stretch;
+}
+
+.qtc-btn {
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f0f0f3;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.qtc-btn:hover { background: rgba(255, 255, 255, 0.12); }
+.qtc-btn:active { background: var(--cp-accent, #ffd400); color: #000; }
+
+/* Continuous-spin toggle that sits under each turn button. Off: a faint bar
+   echoing the turn's arrow; on: filled accent with a slow pulse so it's clear
+   something is spinning. */
+.qtc-spin {
+  height: 16px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: #7a7a82;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.qtc-spin:hover { background: rgba(255, 255, 255, 0.08); color: #f0f0f3; }
+.qtc-spin-on {
+  background: var(--cp-accent, #ffd400);
+  border-color: var(--cp-accent, #ffd400);
+  color: #000;
+  animation: qtc-pulse 1.1s ease-in-out infinite;
+}
+@keyframes qtc-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.qtc-drop-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+}
+.qtc-drop-btn {
+  height: 28px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f0f0f3;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.qtc-drop-btn:hover { background: rgba(255, 255, 255, 0.12); }
+.qtc-drop-btn-active {
+  background: var(--cp-accent, #ffd400);
+  color: #000;
+  border-color: var(--cp-accent, #ffd400);
+}
+
+.qtc-reset,
+.qtc-stop {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #f0f0f3;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.qtc-reset:hover,
+.qtc-stop:hover { background: rgba(255, 255, 255, 0.08); }

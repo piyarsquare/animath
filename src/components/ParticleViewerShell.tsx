@@ -1,16 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Canvas3D from './Canvas3D';
 import Readme from './Readme';
 import { Section, Slider, Pills, Select, Checkbox } from './ControlPanel';
-import { ShellSettings, ShellActions, useAppHeader, useAppFunctions, useAppExplainer, useActionFloaterOff } from './AppShell';
-import QuarterTurnFloater from '../controls/QuarterTurnFloater';
+import { ShellSettings, ShellActions, useAppHeader, useAppFunctions, useAppExplainer } from './AppShell';
+import QuarterTurnControls from '../controls/QuarterTurnControls';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../config/defaults';
 import { useResponsive } from '../styles/responsive';
-import { planes } from '../math/constants';
+import { Plane } from '../math/constants';
 import { clearPersistedState } from '../lib/usePersistentState';
 import {
   ColorStyle, ColourBy, AXIS_COLORS,
-  shapeNames, textureNames, viewTypes, motionModes, dropModes,
+  shapeNames, textureNames, viewTypes, motionModes,
   useGestureRotation,
 } from '../lib/particles';
 import type { ParticleState } from '../lib/particles';
@@ -58,9 +58,6 @@ export default function ParticleViewerShell({
 
   useAppHeader(functionName, functionFormula);
   useAppExplainer(explainer ?? null);
-  // The QuarterTurnFloater already provides reset / drop-axis / 4D turns on
-  // screen, so suppress the generic ActionFloater here to avoid a duplicate.
-  useActionFloaterOff();
   useAppFunctions(functionList ? {
     names: functionList.names,
     current: functionList.names[functionList.currentIndex] ?? '',
@@ -70,6 +67,47 @@ export default function ParticleViewerShell({
     },
   } : null);
 
+  // Continuous "spinners": each `${plane}:${dir}` key that is on feeds a
+  // constant angular increment into controls.rotateBy every frame (the same
+  // path the hold-to-rotate gesture used). Multiple active spins compose. This
+  // is transient view state, so it lives here (not in persisted ParticleState),
+  // and above <ShellActions> so the drawer + floater copies stay in sync.
+  const [spins, setSpins] = useState<Record<string, boolean>>({});
+  const [spinSpeed, setSpinSpeed] = useState(1.2); // rad/s
+  const spinsRef = useRef(spins);
+  const speedRef = useRef(spinSpeed);
+  const rotateByRef = useRef(controls.rotateBy);
+  spinsRef.current = spins;
+  speedRef.current = spinSpeed;
+  rotateByRef.current = controls.rotateBy;
+  const anySpin = Object.values(spins).some(Boolean);
+
+  useEffect(() => {
+    if (!anySpin) return;
+    let raf = 0;
+    let last = performance.now();
+    const step = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const active = spinsRef.current;
+      for (const key in active) {
+        if (!active[key]) continue;
+        const sep = key.indexOf(':');
+        const plane = key.slice(0, sep) as Plane;
+        const dir = Number(key.slice(sep + 1));
+        rotateByRef.current(plane, dir * speedRef.current * dt);
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [anySpin]);
+
+  const toggleSpin = (plane: Plane, dir: 1 | -1) => {
+    const key = `${plane}:${dir}`;
+    setSpins(s => ({ ...s, [key]: !s[key] }));
+  };
+
   return (
     <>
       <div
@@ -78,18 +116,6 @@ export default function ParticleViewerShell({
       >
         <Canvas3D onMount={onMount} />
       </div>
-
-      <QuarterTurnFloater
-        onTurn={controls.turn}
-        onRotateBy={controls.rotateBy}
-        onReset={controls.snapToStandardView}
-        getAxisColor={(letter) => {
-          const key = letter.toLowerCase() as 'x' | 'y' | 'u' | 'v';
-          return `hsl(${((AXIS_COLORS[key] + state.hueShift) % 1) * 360},100%,60%)`;
-        }}
-        dropAxis={state.dropAxis}
-        onDropAxisChange={controls.handleDropAxis}
-      />
 
       <ShellSettings>
         <Section title="Function" icon="ƒ" defaultOpen>
@@ -237,27 +263,26 @@ export default function ParticleViewerShell({
 
       <ShellActions>
         <div className="cp-section-body">
-          <button
-            style={{
-              padding: '12px 16px', borderRadius: 6,
-              border: '1px solid var(--cp-border)',
-              background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
-              cursor: 'pointer', fontSize: 14, fontWeight: 600,
+          <QuarterTurnControls
+            onTurn={controls.turn}
+            spins={spins}
+            onToggleSpin={toggleSpin}
+            onStopAllSpins={() => setSpins({})}
+            spinSpeed={spinSpeed}
+            onSpinSpeedChange={setSpinSpeed}
+            onReset={controls.snapToStandardView}
+            getAxisColor={(letter) => {
+              const key = letter.toLowerCase() as 'x' | 'y' | 'u' | 'v';
+              return `hsl(${((AXIS_COLORS[key] + state.hueShift) % 1) * 360},100%,60%)`;
             }}
-            onClick={controls.snapToStandardView}
-          >
-            Reset orientation
-          </button>
+            dropAxis={state.dropAxis}
+            onDropAxisChange={controls.handleDropAxis}
+          />
 
           {settingsStorageKey && (
             <button
-              style={{
-                marginTop: 8,
-                padding: '12px 16px', borderRadius: 6,
-                border: '1px solid var(--cp-border)',
-                background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
-                cursor: 'pointer', fontSize: 14, fontWeight: 600,
-              }}
+              className="qtc-reset"
+              style={{ marginTop: 8 }}
               onClick={() => {
                 clearPersistedState(settingsStorageKey);
                 window.location.reload();
@@ -267,36 +292,6 @@ export default function ParticleViewerShell({
               Reset settings to defaults
             </button>
           )}
-
-          <div className="cp-row-label" style={{ marginTop: 8, marginBottom: 4 }}>Drop axis</div>
-          <Pills
-            options={dropModes.map(d => ({ value: d, label: d.replace('Drop', '') }))}
-            value={state.dropAxis}
-            onChange={controls.handleDropAxis}
-          />
-
-          <div className="cp-row-label" style={{ marginTop: 8, marginBottom: 4 }}>4D quarter turns</div>
-          <div className="cp-quarter">
-            <div />
-            <div className="cp-quarter-label" style={{ textAlign: 'center' }}>↻</div>
-            <div className="cp-quarter-label" style={{ textAlign: 'center' }}>↺</div>
-            {planes.map(p => {
-              const colorOf = (letter: string) => {
-                const key = letter.toLowerCase() as 'x' | 'y' | 'u' | 'v';
-                return `hsl(${((AXIS_COLORS[key] + state.hueShift) % 1) * 360},100%,60%)`;
-              };
-              return (
-                <React.Fragment key={p}>
-                  <div className="cp-quarter-label" style={{ alignSelf: 'center' }}>
-                    <span style={{ color: colorOf(p[0]) }}>{p[0]}</span>
-                    <span style={{ color: colorOf(p[1]) }}>{p[1]}</span>
-                  </div>
-                  <button onClick={() => controls.turn(p, 1)}>↻ {p}</button>
-                  <button onClick={() => controls.turn(p, -1)}>↺ {p}</button>
-                </React.Fragment>
-              );
-            })}
-          </div>
         </div>
       </ShellActions>
     </>

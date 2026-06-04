@@ -5,7 +5,12 @@ don't reorder. These are unprioritized sketches, not commitments.
 
 ## Particle / 4D viewers
 
-### Auto-spin ("spinners") for the quarter-turn / rotation buttons
+### Auto-spin ("spinners") for the quarter-turn / rotation buttons — ✅ implemented
+
+Shipped in `QuarterTurnControls` (in the standard Actions panel): a spin toggle
+under each ↻/↺ button starts/stops a continuous rotation in that plane and
+direction, multiple compose, and a single global speed slider sets the rate.
+Spin on/off is kept as transient view state (not persisted). Original sketch:
 
 Add a way to make a 4D rotation run *continuously* so the projection spins
 smoothly along that axis of rotation, instead of only stepping 90° per tap or
