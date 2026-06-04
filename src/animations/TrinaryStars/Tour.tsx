@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 /**
  * A small, self-contained guided tour: a sequence of dismissable cards shown
@@ -12,6 +12,13 @@ export default function Tour({ steps, onClose }: { steps: TourStep[]; onClose: (
   const [i, setI] = useState(0);
   const last = i === steps.length - 1;
   const step = steps[i];
+
+  // Escape closes the tour, matching the rest of the app's overlays.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   return (
     <div style={scrim} onClick={onClose}>
