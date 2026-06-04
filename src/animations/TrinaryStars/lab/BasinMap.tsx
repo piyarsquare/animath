@@ -5,8 +5,8 @@ import { starPaths } from './runner';
 /** Star-trajectory overlay colours (gold / orange / blue), matching the stars. */
 const STAR_RGB = ['255,210,127', '255,112,67', '158,199,255'];
 import {
-  basinContext, computeBasinPixel, basinPlanetAt, chaosColor, CHAOS_LAMBDA_MAX, OUTCOME_RGB, OUTCOME_CODE,
-  statColor, STAT_LABEL, STAT_ORDER, basinTargets, exactRunParams, statRunParams, statPixelSeed,
+  basinContext, computeBasinPixel, basinPlanetAt, chaosRamp, CHAOS_LAMBDA_MAX, OUTCOME_RGB, OUTCOME_CODE,
+  statColor, statRamp, STAT_LABEL, STAT_ORDER, basinTargets, exactRunParams, statRunParams, statPixelSeed,
   exactPosPlanet, statPosPlanet,
   type BasinConfig, type BasinMode, type BasinMetric, type BasinLens, type StatMetric, type Domain,
 } from './basin';
@@ -84,6 +84,10 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   const [hover, setHover] = useState('');
   const [dim, setDim] = useState<DimResult | null>(null);
   const [showStars, setShowStars] = useState(true);
+  // Continuous maps (chaos λ, statistical fractions) can stretch their colour
+  // ramp to the data on screen, re-fit on every render/zoom, to expose structure.
+  const [autoFit, setAutoFit] = useState(true);
+  const [colorRange, setColorRange] = useState<[number, number] | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const starCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -102,6 +106,12 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   // Resolution currently on the canvas — varies during a progressive render, so
   // hover/click/recolour index the grids by this, not the target `res` state.
   const paintedResRef = useRef(128);
+  const autoFitRef = useRef(autoFit); autoFitRef.current = autoFit;
+  const statMetricRef = useRef(statMetric); statMetricRef.current = statMetric;
+  // Identifies what the value grids currently hold, so an idle recolour only
+  // runs when it matches the view: `${res}|${stat | metric}`.
+  const gridKeyRef = useRef('');
+  const currentGridKey = () => `${paintedResRef.current}|${stateRef.current.lens === 'stat' ? 'stat' : stateRef.current.metric}`;
 
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
   const boxRef = useRef(system?.box); boxRef.current = system?.box;
@@ -321,8 +331,11 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       const stageDone = () => {
         if (runId !== runIdRef.current) return;
         flush();
-        if (isFinal) { setBusy(false); statReadyRef.current = bc.lens === 'stat'; measureDimension(); }
-        else renderStage(stageIdx + 1);
+        if (isFinal) {
+          setBusy(false); statReadyRef.current = bc.lens === 'stat';
+          gridKeyRef.current = `${N}|${bc.lens === 'stat' ? 'stat' : bc.metric}`;
+          measureDimension(); applyColor();
+        } else renderStage(stageIdx + 1);
       };
 
       const viaWorkersOrCpu = (preferCpu: boolean) => {
@@ -368,24 +381,45 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     renderStage(0);
   };
 
-  /** Recolour an already-computed statistical map to a different "Show" metric —
-   *  no resimulation, since every pixel kept all four fractions. */
-  const recolorStat = (m: StatMetric) => {
+  /** Recolour an already-computed continuous map (chaos λ or a statistical
+   *  fraction) from the stored per-pixel values — no resimulation. With auto-fit
+   *  the ramp is stretched to the data's 2nd–98th percentile; otherwise it uses
+   *  the absolute range (λ∈[0,λmax], fraction∈[0,1]). Fate maps are categorical,
+   *  so they keep their inline colouring. */
+  const applyColor = () => {
     const N = paintedResRef.current;
-    const sg = statGridRef.current;
     const cv = canvasRef.current; const ctx = cv?.getContext('2d');
-    if (!cv || !ctx || !statReadyRef.current || sg.length !== N * N * 4) return;
+    if (!cv || !ctx) return;
+    const s = stateRef.current;
+    const isStat = s.lens === 'stat';
+    const isChaos = s.lens === 'exact' && s.metric === 'chaos';
+    if (!isStat && !isChaos) { setColorRange(null); return; }
+    const sg = statGridRef.current, tg = tGridRef.current;
+    if (isStat && sg.length !== N * N * 4) return;
+    if (isChaos && tg.length < N * N) return;
+    const idx = isStat ? STAT_ORDER.indexOf(statMetricRef.current) : 0;
+    const valAt = isStat ? (p: number) => sg[p * 4 + idx] : (p: number) => tg[p];
+    const auto = autoFitRef.current;
+    let lo = 0, hi = isStat ? 1 : CHAOS_LAMBDA_MAX;
+    if (auto) {
+      const arr = new Float64Array(N * N);
+      for (let p = 0; p < N * N; p++) arr[p] = valAt(p);
+      arr.sort();
+      lo = arr[Math.floor(0.02 * (arr.length - 1))];
+      hi = arr[Math.floor(0.98 * (arr.length - 1))];
+      if (!(hi > lo)) { lo = arr[0]; hi = arr[arr.length - 1]; if (!(hi > lo)) hi = lo + 1e-9; }
+    }
+    const span = hi - lo || 1;
     const img = ctx.createImageData(N, N);
-    const idx = STAT_ORDER.indexOf(m);
-    const tGrid = tGridRef.current;
     for (let p = 0; p < N * N; p++) {
-      const v = sg[p * 4 + idx];
-      const [r, g, b] = statColor(m, v);
-      const o = p * 4;
-      img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b; img.data[o + 3] = 255;
-      tGrid[p] = v;
+      const v = valAt(p);
+      const x = auto ? (v - lo) / span : (isStat ? Math.pow(v, 0.6) : v / CHAOS_LAMBDA_MAX);
+      const [r, g, b] = isStat ? statRamp(x) : chaosRamp(x);
+      const o = p * 4; img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b; img.data[o + 3] = 255;
+      if (isStat) tg[p] = v; // keep hover reading the shown metric
     }
     ctx.putImageData(img, 0, 0);
+    setColorRange([lo, hi]);
   };
 
   // The radspeed plane derives its domain from the shared census box, so only
@@ -509,9 +543,14 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
               <Pills label="Show" value={statMetric} options={[
                 { value: 'happy', label: 'Happy %' }, { value: 'hab', label: 'Habitable' },
                 { value: 'destroyed', label: 'Destroyed %' }, { value: 'survived', label: 'Survived %' },
-              ]} onChange={(v) => { const m = v as StatMetric; setStatMetric(m); if (!busy) recolorStat(m); }} />
+              ]} onChange={(v) => { const m = v as StatMetric; statMetricRef.current = m; setStatMetric(m); if (!busy && gridKeyRef.current === currentGridKey()) applyColor(); }} />
               <Slider label="Worlds / pixel" value={statRuns} min={2} max={32} step={2} onChange={setStatRuns} format={v => `${v}`} />
             </>
+          )}
+          {(lens === 'stat' || metric === 'chaos') && (
+            <Pills label="Colour range" value={autoFit ? 1 : 0}
+              options={[{ value: 1, label: 'Auto-fit' }, { value: 0, label: 'Absolute' }]}
+              onChange={(v) => { autoFitRef.current = v === 1; setAutoFit(v === 1); if (!busy && gridKeyRef.current === currentGridKey()) applyColor(); }} />
           )}
           {mode === 'pos' && lens === 'exact' && (
             <>
@@ -582,10 +621,11 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             <div style={{ marginTop: 10, font: '11px ui-monospace, monospace', color: '#9aa7bd' }}>
               <div style={{
                 height: 10, borderRadius: 3, marginBottom: 2,
-                background: `linear-gradient(90deg, rgb(${statColor(statMetric, 0).join(',')}), rgb(${statColor(statMetric, 0.5).join(',')}), rgb(${statColor(statMetric, 1).join(',')}))`,
+                background: `linear-gradient(90deg, rgb(${statRamp(0).join(',')}), rgb(${statRamp(0.5).join(',')}), rgb(${statRamp(1).join(',')}))`,
               }} />
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>{STAT_LABEL[statMetric]} 0%</span><span>100%</span>
+                <span>{STAT_LABEL[statMetric]} {colorRange ? `${(colorRange[0] * 100).toFixed(0)}%` : '0%'}</span>
+                <span>{colorRange ? `${(colorRange[1] * 100).toFixed(0)}%` : '100%'}{autoFit ? ' · auto' : ''}</span>
               </div>
             </div>
           ) : metric === 'fate' ? (
@@ -600,10 +640,11 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             <div style={{ marginTop: 10, font: '11px ui-monospace, monospace', color: '#9aa7bd' }}>
               <div style={{
                 height: 10, borderRadius: 3, marginBottom: 2,
-                background: `linear-gradient(90deg, rgb(${chaosColor(0).join(',')}), rgb(${chaosColor(0.2).join(',')}), rgb(${chaosColor(0.31).join(',')}), rgb(${chaosColor(0.4).join(',')}))`,
+                background: `linear-gradient(90deg, rgb(${chaosRamp(0).join(',')}), rgb(${chaosRamp(0.33).join(',')}), rgb(${chaosRamp(0.66).join(',')}), rgb(${chaosRamp(1).join(',')}))`,
               }} />
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>regular  λ=0</span><span>chaotic  λ≥{CHAOS_LAMBDA_MAX}</span>
+                <span>regular  λ={colorRange ? colorRange[0].toFixed(2) : '0'}</span>
+                <span>chaotic  λ{colorRange ? `=${colorRange[1].toFixed(2)}` : `≥${CHAOS_LAMBDA_MAX}`}{autoFit ? ' · auto' : ''}</span>
               </div>
             </div>
           )}

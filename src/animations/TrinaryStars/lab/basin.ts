@@ -40,11 +40,9 @@ export const OUTCOME_CODE: Outcome[] = ['happy', 'survived', 'planet-ejected', '
 /** Lyapunov λ → colour: regular (deep blue) through green/amber to chaotic
  *  (red). Saturates around λ ≈ 0.4. */
 export const CHAOS_LAMBDA_MAX = 0.4;
-export function chaosColor(lambda: number): [number, number, number] {
-  const x = Math.min(1, Math.max(0, lambda / CHAOS_LAMBDA_MAX));
-  const stops: [number, [number, number, number]][] = [
-    [0, [18, 30, 90]], [0.5, [90, 200, 130]], [0.78, [240, 210, 90]], [1, [240, 70, 50]],
-  ];
+/** Generic stop-interpolated ramp on x ∈ [0,1]. */
+function ramp(stops: [number, [number, number, number]][], x: number): [number, number, number] {
+  x = Math.min(1, Math.max(0, x));
   for (let i = 1; i < stops.length; i++) {
     if (x <= stops[i][0]) {
       const [x0, c0] = stops[i - 1], [x1, c1] = stops[i];
@@ -54,6 +52,13 @@ export function chaosColor(lambda: number): [number, number, number] {
   }
   return stops[stops.length - 1][1];
 }
+const CHAOS_STOPS: [number, [number, number, number]][] = [
+  [0, [18, 30, 90]], [0.5, [90, 200, 130]], [0.78, [240, 210, 90]], [1, [240, 70, 50]],
+];
+/** Lyapunov colour ramp on a normalised x ∈ [0,1] — used directly when the map
+ *  auto-fits its colour range to the data. */
+export function chaosRamp(x: number): [number, number, number] { return ramp(CHAOS_STOPS, x); }
+export function chaosColor(lambda: number): [number, number, number] { return chaosRamp(lambda / CHAOS_LAMBDA_MAX); }
 
 export const STAT_LABEL: Record<StatMetric, string> = {
   happy: 'happy %', hab: 'mean habitable', destroyed: 'destroyed %', survived: 'survived %',
@@ -67,16 +72,12 @@ export const STAT_LABEL: Record<StatMetric, string> = {
 const MAGMA: [number, [number, number, number]][] = [
   [0.0, [24, 16, 58]], [0.25, [92, 30, 116]], [0.5, [186, 54, 98]], [0.75, [242, 124, 62]], [1.0, [252, 236, 162]],
 ];
+/** Magma ramp on a normalised x ∈ [0,1] — used directly when the map auto-fits. */
+export function statRamp(x: number): [number, number, number] { return ramp(MAGMA, x); }
+/** Absolute stat colour: a mild gamma lifts small fractions into the visible part
+ *  of the ramp (the metric only sets the legend, not the hue). */
 export function statColor(_metric: StatMetric, v: number): [number, number, number] {
-  const x = Math.pow(Math.min(1, Math.max(0, v)), 0.6);
-  for (let i = 1; i < MAGMA.length; i++) {
-    if (x <= MAGMA[i][0]) {
-      const [x0, c0] = MAGMA[i - 1], [x1, c1] = MAGMA[i];
-      const f = (x - x0) / (x1 - x0 || 1);
-      return [c0[0] + (c1[0] - c0[0]) * f, c0[1] + (c1[1] - c0[1]) * f, c0[2] + (c1[2] - c0[2]) * f];
-    }
-  }
-  return MAGMA[MAGMA.length - 1][1];
+  return statRamp(Math.pow(Math.min(1, Math.max(0, v)), 0.6));
 }
 
 interface Ctx {
