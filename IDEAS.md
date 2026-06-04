@@ -99,3 +99,23 @@ static, identity-orientation view.
   single point; `z+c`, `z²` → sphere once; `exp` → infinite wrap), plus the
   latitude/longitude legend. A faint sphere wireframe + pole/equator labels would
   help enormously.
+
+### Clifford-torus ("un-collapsed Hopf") projection — IMPLEMENTED
+
+Added as `ProjectionMode.Torus` (a new "Torus" view-type option). It's the Hopf
+data with the fibers left intact: normalize `(z1,z2)=(z,f)` onto S³ and
+stereographically project from the `(0,0,0,1)` pole, which simplifies to
+`(X,Y,Z) = (x, y, u) / (|p| − v)`. `arg z` runs around the hole, `arg f` around
+the tube, `|z|/|f|` selects the nested donut, overall scale is dropped. Each Hopf
+fiber is a `(1,1)` curve on its donut — the points the Hopf sphere collapses.
+
+Follow-ups still open:
+- The **killer demo**: a smooth transition (or a single slider) that morphs Torus
+  → Hopf so you literally watch the `(1,1)` fiber circles shrink to points. The
+  projection-interpolation machinery (`uProjAlpha` mix in `useViewControls`)
+  already cross-fades between modes; a dedicated "collapse fibers" control would
+  make the relationship unmistakable.
+- Optional faint donut/sphere wireframe scaffolding and pole/core-circle labels.
+- Note the stereographic pole (points with `z→0` and `f` near `+i|f|`) sends
+  particles toward infinity; consider a soft clamp or an alternate projection
+  pole if it's visually distracting for some functions.

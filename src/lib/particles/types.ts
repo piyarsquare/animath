@@ -28,7 +28,8 @@ export const textureNames = ['none', 'checker', 'speckled', 'stone', 'metal', 'r
 export const viewTypes = [
   ['Perspective', ProjectionMode.Perspective],
   ['Stereo', ProjectionMode.Stereo],
-  ['Hopf', ProjectionMode.Hopf]
+  ['Hopf', ProjectionMode.Hopf],
+  ['Torus', ProjectionMode.Torus]
 ] as const;
 
 export const motionModes = ['Quaternion', 'Fixed'] as const;

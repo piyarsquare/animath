@@ -181,6 +181,7 @@ vec3 project(vec4 p, int mode){
   if(mode==3) return vec3(p.y, p.z, p.w);
   if(mode==4) return vec3(p.x, p.z, p.w);
   if(mode==5) return vec3(p.x, p.y, p.w);
+  if(mode==7){ float d = max(length(p), 1e-6); float denom = max(d - p.w, 1e-4); return vec3(p.x, p.y, p.z) / denom; }
   return          vec3(p.x, p.y, p.z);
 }
 vec3 hsv2rgb(vec3 c){vec4 K = vec4(1., 2./3., 1./3., 3.);vec3 p = abs(fract(c.xxx + K.xyz)*6. - K.www);return c.z * mix(K.xxx, clamp(p-K.xxx, 0., 1.), c.y);}
