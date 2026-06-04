@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+// Reference geometry for the Hopf (sphere) and Torus (nested donuts) views.
+
 /** Scene-space scale applied to projected particle positions (the vertex
  *  shader multiplies `project(...)` by this factor), so the scaffold geometry
  *  must use the same scale to register with the particles. */
