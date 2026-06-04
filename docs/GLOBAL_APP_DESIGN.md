@@ -10,7 +10,9 @@
 > markdown snapshots of their interfaces and how their components are arranged.
 > Those documents are the raw material. This file indexes them and synthesizes
 > the shared surface + the seams worth consolidating, so the redesign starts from
-> what was actually built rather than from scratch.
+> what was actually built rather than from scratch. This branch also **extends the
+> set with an interface manual for every remaining catalog app** (§1), so all nine
+> app views now have a code-free snapshot to evaluate against the shell.
 
 This is a living working document, not a spec. Append as the picture sharpens.
 
@@ -32,6 +34,25 @@ These two are the anchors: each independently inventories the *shared* chrome
 (§2 of Trinary, §1–§5 of Complex Particles) and then lists where that chrome
 chafes for its app. The overlap between their two "seams" lists is exactly where
 reusable consolidation pays off most.
+
+### Interface manuals written in this branch
+
+To bring every catalog app up to the anchors' level, this branch adds a code-free
+interface manual per remaining app — same structure (layout → shared-chrome usage
+→ controls → a closing "seams" section). They sit alongside this file in `docs/`:
+
+| Document | App / route | Headline seam(s) |
+|---|---|---|
+| `docs/PLANE_TRANSFORM_UI.md` | Plane Transform `#/plane-transform` | Ships its own `PlaneCurveFloater` that bypasses `ShellActions`/`ActionFloater` (the Actions tab/button are dead); function picker exposed in 3 places; two disagreeing zoom clamps. *(In-flight: `claude/complex-viewer-polar-views-fApMG` adds polar/log-polar views.)* |
+| `docs/FRACTALS_GPU_UI.md` | Fractals (GPU) `#/fractals` | Uses the standard drawer — but **`CLAUDE.md` still claims it uses the legacy `ToggleMenu` (stale doc)**; the four-family selector lives in Settings, not the `ƒ` picker; Actions are hand-styled buttons; no persistence. |
+| `docs/CORRESPONDENCE_UI.md` | Mandelbrot ↔ Julia `#/correspondence` | `useActionFloaterOff()` + a bespoke `PlaybackFloater` just to get a timeline/scrubber; actions mounted in 3 DOM spots; independent per-pane controls with no link/sync; no persistence. |
+| `docs/MOBIUS_WALK_UI.md` | Möbius Walk `#/mobius` | Empty Settings/Function tabs; lone twist toggle is a hand-rolled button in Actions; toggling forces a full `Canvas3D` remount; the app's rAF loop has no cleanup. *(In-flight: `claude/mobius-walk-fix` reworks toward "TopologyWalk".)* |
+| `docs/STABLE_MARRIAGE_UI.md` | Stable Marriage `#/stable-marriage` | Bypasses the shell almost entirely (only header + explainer); all controls hand-rolled with a private `--sm-*` token set; its own in-page Visualizer/Lab mode toggle; no persistence. |
+| `docs/AGENTIC_SORTING_UI.md` | Agentic Sorting `#/agentic-sorting` | Bypasses the shell almost entirely; **CSS class collision — both AppShell and this app define a global `.as-bar`** (and share the `as-` prefix); no persistence; a redundant in-page subtitle. |
+
+> The two anchors (`COMPLEX_PARTICLES_UI.md`, `TRINARY_UI_SNAPSHOT.md`) still live
+> on their own branches; the six above are written here against the current `main`
+> code. Complex Particles and Trinary are not re-documented in this branch.
 
 ### Supporting design / roadmap docs
 
@@ -135,10 +156,68 @@ in **both** apps are the strongest candidates for a reusable fix.
 
 ---
 
-## 4. Directions for refining common elements (to be discussed)
+## 4. The same seams recur in every app (the redesign evidence)
 
-Candidate reusable improvements implied by §3 — **not yet decided**, captured for
-the design conversation:
+The six new manuals confirm the anchors' seams are not app-specific quirks — the
+same handful of patterns show up almost everywhere. Conformance to the shared
+shell, at a glance (nine views):
+
+| App / view | Settings via `ShellSettings`? | Actions surface | Own floater? | Controls | Persists? |
+|---|---|---|---|---|---|
+| Complex Particles | ✅ (7 sections) | drawer + generic floater | — | `ControlPanel` | ✅ |
+| Trinary · Observatory | ✅ | drawer + generic floater | — | `ControlPanel` | ✅ |
+| Trinary · Lab | partial (split w/ page body) | **in-page bar** | — | mixed | URL, not local |
+| Plane Transform | ✅ | **dead** (own floater instead) | ✅ `PlaneCurveFloater` | mixed (+ raw inputs) | partial |
+| Fractals (GPU) | ✅ | drawer + generic floater | — | **hand-styled buttons** | ❌ |
+| Correspondence | ✅ | **own** (`useActionFloaterOff`) | ✅ `PlaybackFloater` | **hand-rolled** | ❌ |
+| Möbius Walk | ❌ (empty) | drawer + generic floater (1 toggle) | — | **hand-rolled button** | ❌ |
+| Stable Marriage | ❌ (in-page cards) | **in-page** | — | **hand-rolled (`--sm-*`)** | ❌ |
+| Agentic Sorting | ❌ (in-page sidebar) | **in-page** | — | **hand-rolled** | ❌ |
+
+Reading down the columns, the recurring seams (extending §3 with what the new
+manuals surfaced):
+
+### F. The action model is genuinely unsettled
+Across the nine views we see *four* patterns: drawer + generic floater (the
+particle viewers), a **bespoke floater that suppresses the generic one**
+(Correspondence; effectively Plane Transform), a **single in-page bar** (Trinary
+Lab, Stable Marriage, Agentic Sorting), and an **empty/dead** Actions surface
+(Möbius, Plane Transform). The generic `ActionFloater`'s "always mirror the
+Actions tab" assumption is the single thing apps most often opt out of.
+
+### G. `ControlPanel` primitives are bypassed whenever they fall short
+Every app that hand-rolls controls does so for the **same missing pieces**: a
+**number field** (Plane Transform's `p`/`q`, Fractals' Julia `c`), a **toggle /
+"active" action button** (Möbius twist, Fractals actions), and **transport/seek**
+(Correspondence's scrubber). The two DOM apps reinvent the entire kit with private
+token sets rather than extend the shared primitives.
+
+### H. Persistence is the exception, not the rule
+Only the two engine-backed viewers (Complex Particles, Trinary Observatory) use
+`usePersistentState`. The four shader/DOM apps reset every control on reload and
+have no "Reset to defaults" shell integration; Trinary Lab persists via the URL
+instead. There's no default path from "registered a `ShellSettings` control" to
+"it survives a reload."
+
+### I. CSS is globally scoped and already colliding
+AppShell and Agentic Sorting **both define a global `.as-bar`** (and share the
+`as-` prefix) — separated today only by DOM subtree, i.e. a latent bug waiting on
+a stray reorder. Stable Marriage sidesteps it only by using a private `--sm-*`
+prefix. There is no CSS-scoping convention for apps.
+
+### J. Doc drift
+`CLAUDE.md` states Fractals (GPU) still uses the legacy `ToggleMenu`; the code
+uses the standard drawer and never imports `ToggleMenu`. With FractalsGPU — its
+last cited consumer — off it, `ToggleMenu` appears to be dead code, and the
+CLAUDE.md claim is stale (a fix to flag before editing, per the parallel-branch
+rule).
+
+---
+
+## 5. Directions for refining common elements (to be discussed)
+
+Candidate reusable improvements implied by §3–§4 — **not yet decided**, captured
+for the design conversation:
 
 1. **One action model.** Decide the canonical home for an app's actions (floater
    vs. drawer vs. in-page bar) and make the shell support it uniformly, so apps
@@ -151,15 +230,27 @@ the design conversation:
    consistently and discoverably.
 5. **Shared-engine extraction precedent.** Continue the `lib/particles/` /
    `lib/nbody/` pattern: app-agnostic, React/Three-free cores under `src/lib/`.
+6. **Grow the primitive set** to cover the gaps apps hand-roll around (§G): a
+   `NumberField`, a toggle / "active" action button, and a **transport/seek**
+   (play + scrubber) control. This alone would let Plane Transform, Fractals,
+   Möbius, and Correspondence drop bespoke widgets.
+7. **A CSS-scoping convention** (per-app class prefix or a scoped root) so app
+   stylesheets cannot collide with the shell — and fix the existing `.as-bar`
+   clash (§I).
+8. **Persistence by default** for `ShellSettings`-registered controls, with the
+   shell owning a uniform "Reset to defaults" (§H).
 
 ---
 
-## 5. Next steps
+## 6. Next steps
 
 - [ ] Confirm with the maintainer which seams to tackle first (action model vs.
-      Settings layout vs. single-source controls).
+      Settings layout vs. single-source controls vs. the primitive set).
+- [ ] **Low-risk quick wins first** (bugs, not redesigns): fix the stale
+      `CLAUDE.md` `ToggleMenu` claim (§J) and the duplicate global `.as-bar`
+      CSS rule (§I). Flag the `CLAUDE.md` edit before making it.
 - [ ] For the chosen theme, draft the shared-API change against `AppShell` /
-      `ControlPanel` and check it against *both* anchor snapshots so no app
-      regresses.
+      `ControlPanel` and check it against the anchor snapshots **and the six new
+      manuals** so no app regresses.
 - [ ] Keep shared-file edits append-friendly and re-sync with `main` before
       finalizing (per `CLAUDE.md`'s parallel-branches guidance).
