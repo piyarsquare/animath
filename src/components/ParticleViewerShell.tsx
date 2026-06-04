@@ -212,6 +212,11 @@ export default function ParticleViewerShell({
             onChange={state.setCameraZ}
             format={v => v.toFixed(1)}
           />
+          <Checkbox
+            label="Log radius"
+            checked={state.logRadius}
+            onChange={state.setLogRadius}
+          />
           {!compact && (
             <table className="cp-orient-matrix">
               <thead>

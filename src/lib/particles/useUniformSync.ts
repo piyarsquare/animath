@@ -120,6 +120,10 @@ export function useUniformSync(state: ParticleState): void {
     materialsRef.current.forEach(m => { m.uniforms.uColourBy.value = state.colourBy; });
   }, [state.colourBy]);
 
+  useEffect(() => {
+    materialsRef.current.forEach(m => { m.uniforms.uLogRadius.value = state.logRadius ? 1 : 0; });
+  }, [state.logRadius]);
+
   // The geometry rebuild (uniform or adaptive) now lives in each viewer, so
   // it can depend on the selected function when adaptive sampling is on.
   // (Previously: rebuildGeometryBuffers on count/extent change.)

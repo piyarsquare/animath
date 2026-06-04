@@ -58,6 +58,11 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [realView, setRealView] = useState(false);
   const [colourStyle, setColourStyle] = usePersistentState<ColorStyle>(pk('colourStyle'), ColorStyle.HSV);
   const [colourBy, setColourBy] = usePersistentState<ColourBy>(pk('colourBy'), ColourBy.Domain);
+  // Log-radius remap: compress the 4D point's distance from the origin as
+  // log(1 + r), taming functions that blow up (exp, gamma, 1/z) so they stay
+  // in view. Applied before projection; mostly affects Perspective/Drop modes
+  // (Stereo/Hopf normalise the radius away).
+  const [logRadius, setLogRadius] = usePersistentState(pk('logRadius'), false);
 
   // ---- View / projection state ----
   const [viewType, setViewType] = usePersistentState<ProjectionMode>(pk('viewType'), ProjectionMode.Perspective);
@@ -158,6 +163,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     realView, setRealView,
     colourStyle, setColourStyle,
     colourBy, setColourBy,
+    logRadius, setLogRadius,
 
     // View state + setters
     viewType, setViewType,

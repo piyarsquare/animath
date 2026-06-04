@@ -163,6 +163,10 @@ Pills, Select, Checkbox). Each section has an icon + chevron; **Function** and
   changes when you use the turn buttons).
 - **Distance** — Slider 2–50 (camera distance / zoom; shares state with
   pinch/wheel).
+- **Log radius** — Checkbox (default off): compress each 4-D point's distance
+  from the origin as `log(1 + r)` before projecting, taming functions that blow
+  up (exp, gamma, 1/z) so they stay in view. Mostly affects Perspective/Drop
+  modes; Stereo and Hopf normalise the radius away so it has little effect there.
 - **Orientation matrix** *(desktop only, hidden on mobile/tablet)* — a read-only
   3×4 table showing the current 4-D→3-D basis (columns x, y, v, u, color-coded
   headers), updated live as the object rotates.
@@ -292,7 +296,7 @@ Yaw/Pitch/Roll.
 `usePersistentState` mirrors most **settings** to `localStorage` (namespace
 `animath:<v>:complex-particles:<field>`), so they survive reloads: function/p/q/
 branches, all color/particle/motion/detail values, projection type, motion mode,
-drop axis, scaffold toggle.
+drop axis, scaffold toggle, log-radius toggle.
 
 **Not** persisted (transient "looking" state): camera azimuth/elevation/**roll**/
 pan, the Torus collapse scrub, real-view flag, and the spin toggles. "Reset

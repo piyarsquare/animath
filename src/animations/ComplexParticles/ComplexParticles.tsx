@@ -155,6 +155,7 @@ export default function ComplexParticles({
         textureIndex: { value: state.textureIndex },
         uColourStyle: { value: state.colourStyle },
         uColourBy: { value: state.colourBy },
+        uLogRadius: { value: state.logRadius ? 1 : 0 },
         uRotL: { value: { w: 1, v: new THREE.Vector3() } },
         uRotR: { value: { w: 1, v: new THREE.Vector3() } },
         uProjMode: { value: state.projRef.current },
