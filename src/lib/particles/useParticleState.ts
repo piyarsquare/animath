@@ -58,10 +58,9 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [realView, setRealView] = useState(false);
   const [colourStyle, setColourStyle] = usePersistentState<ColorStyle>(pk('colourStyle'), ColorStyle.HSV);
   const [colourBy, setColourBy] = usePersistentState<ColourBy>(pk('colourBy'), ColourBy.Domain);
-  // Log-radius remap: compress the 4D point's distance from the origin as
-  // log(1 + r), taming functions that blow up (exp, gamma, 1/z) so they stay
-  // in view. Applied before projection; mostly affects Perspective/Drop modes
-  // (Stereo/Hopf normalise the radius away).
+  // Torus radius scale: when true, the Torus mapping derives each fiber's donut
+  // from log(1+|z|) and log(1+|f|) instead of the raw magnitudes, spreading the
+  // nesting across orders of magnitude. Only affects the Torus projection.
   const [logRadius, setLogRadius] = usePersistentState(pk('logRadius'), false);
 
   // ---- View / projection state ----

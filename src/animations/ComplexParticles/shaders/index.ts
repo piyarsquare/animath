@@ -182,7 +182,17 @@ vec3 project(vec4 p, int mode){
   if(mode==3) return vec3(p.y, p.z, p.w);
   if(mode==4) return vec3(p.x, p.z, p.w);
   if(mode==5) return vec3(p.x, p.y, p.w);
-  if(mode==7){ float d = max(length(p), 1e-6); float denom = max(d - p.w, 1e-4); return vec3(p.x, p.y, p.z) / denom; }
+  if(mode==7){
+    // The donut a fiber lands on is set by the ratio |z| : |f|. With uLogRadius
+    // on, remap each magnitude through log(1+r) (angles kept) so the nesting
+    // spreads across orders of magnitude instead of crowding near |z|≈|f|.
+    vec4 q = p;
+    if(uLogRadius==1){
+      float rz = length(q.xy); if(rz>1e-6) q.xy *= log(1.0+rz)/rz;
+      float rf = length(q.zw); if(rf>1e-6) q.zw *= log(1.0+rf)/rf;
+    }
+    float d = max(length(q), 1e-6); float denom = max(d - q.w, 1e-4); return q.xyz / denom;
+  }
   return          vec3(p.x, p.y, p.z);
 }
 vec3 hsv2rgb(vec3 c){vec4 K = vec4(1., 2./3., 1./3., 3.);vec3 p = abs(fract(c.xxx + K.xyz)*6. - K.www);return c.z * mix(K.xxx, clamp(p-K.xxx, 0., 1.), c.y);}
@@ -212,7 +222,7 @@ vec3 calcColour(vec2 z, vec2 f){
     col = mix(vec3(dot(col, vec3(0.3333))), col, saturation);
     return col * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
 }
-void main(){vec2 z = vec2(position.x, position.z);vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec4 jitter = (seed*2. - 1.) * jitterAmp;vec4 p4 = vec4(z.x, z.y, f.x, f.y) + jitter;if(uLogRadius==1){float r=length(p4);if(r>1e-6) p4*=log(1.0+r)/r;}float t = time*0.3;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f);}`;
+void main(){vec2 z = vec2(position.x, position.z);vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec4 jitter = (seed*2. - 1.) * jitterAmp;vec4 p4 = vec4(z.x, z.y, f.x, f.y) + jitter;float t = time*0.3;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f);}`;
 
 export const fragmentShader = `
 uniform float opacity;

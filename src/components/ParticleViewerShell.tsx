@@ -192,6 +192,17 @@ export default function ParticleViewerShell({
               format={v => v === 0 ? 'torus' : v === 1 ? 'sphere' : v.toFixed(2)}
             />
           )}
+          {state.viewType === ProjectionMode.Torus && (
+            <Pills
+              label="Radius scale"
+              options={[
+                { value: 0, label: 'Linear' },
+                { value: 1, label: 'Log' },
+              ]}
+              value={state.logRadius ? 1 : 0}
+              onChange={v => state.setLogRadius(v === 1)}
+            />
+          )}
           {(state.viewType === ProjectionMode.Torus || state.viewType === ProjectionMode.Hopf) && (
             <Checkbox
               label="Reference scaffold"
@@ -211,11 +222,6 @@ export default function ParticleViewerShell({
             min={R.cameraZ.min} max={R.cameraZ.max} step={R.cameraZ.step}
             onChange={state.setCameraZ}
             format={v => v.toFixed(1)}
-          />
-          <Checkbox
-            label="Log radius"
-            checked={state.logRadius}
-            onChange={state.setLogRadius}
           />
           {!compact && (
             <table className="cp-orient-matrix">
