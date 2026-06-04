@@ -599,6 +599,9 @@ export default function TrinaryStars() {
           skyRef.current = {
             t: sim.t, px: ref0.x, py: ref0.y, Sref: analyzer?.Sref ?? 1,
             stars: sim.stars.map(s => ({ x: s.x, y: s.y, L: Math.pow(s.mass, lum) })),
+            // Once the planet falls into a star there's no surface to stand on —
+            // the sky view detonates and goes dark.
+            dead: ref0.alive === false,
           };
         }
       }

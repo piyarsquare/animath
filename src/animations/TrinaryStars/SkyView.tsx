@@ -5,7 +5,12 @@ export interface SkyData {
   px: number; py: number;
   stars: { x: number; y: number; L: number }[];
   Sref: number;
+  /** Reference planet has fallen into a star — the surface (and its sky) is gone. */
+  dead?: boolean;
 }
+
+/** Duration of the "swallowed by a star" white-out before the view holds dark. */
+const EXPLODE_MS = 1100;
 
 const STAR_TINT = ['#ffe7b0', '#ff9a6a', '#bcd4ff'];
 
@@ -35,6 +40,9 @@ export default function SkyView({ dataRef, dayLen, tilt }: {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dayLenRef = useRef(dayLen); dayLenRef.current = dayLen;
   const tiltRef = useRef(tilt); tiltRef.current = tilt;
+  // Timestamp the planet's destruction so the white-out can be timed; cleared
+  // when the planet is alive again (e.g. after a replay/reset).
+  const deadAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     const cv = canvasRef.current; const ctx = cv?.getContext('2d');
@@ -51,6 +59,37 @@ export default function SkyView({ dataRef, dayLen, tilt }: {
       const d = dataRef.current;
       ctx.clearRect(0, 0, W, H);
       if (!d) return;
+
+      // Destruction: a star has swallowed the planet. Detonate (a blinding
+      // white-out that flares orange and expands) then hold the view dark —
+      // there is no longer a surface to stand on.
+      if (d.dead) {
+        if (deadAtRef.current === null) deadAtRef.current = performance.now();
+        const p = (performance.now() - deadAtRef.current) / EXPLODE_MS;
+        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+        if (p < 1) {
+          const up = p < 0.12 ? p / 0.12 : Math.max(0, 1 - (p - 0.12) / 0.88);
+          const cx = W / 2, cy = horizon, rad = (0.15 + 1.5 * p) * Math.hypot(W, H);
+          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+          g.addColorStop(0, `rgba(255,255,250,${up})`);
+          g.addColorStop(0.3, `rgba(255,206,130,${up * 0.95})`);
+          g.addColorStop(0.7, `rgba(255,110,50,${up * 0.6})`);
+          g.addColorStop(1, 'rgba(40,10,0,0)');
+          ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+          if (p < 0.18) { ctx.fillStyle = `rgba(255,255,255,${(0.18 - p) / 0.18 * 0.9})`; ctx.fillRect(0, 0, W, H); }
+        } else {
+          ctx.textAlign = 'center';
+          ctx.font = 'bold 15px ui-monospace, monospace';
+          ctx.fillStyle = 'rgba(255,96,64,0.9)';
+          ctx.fillText('PLANET DESTROYED', W / 2, H * 0.46);
+          ctx.font = '11px ui-monospace, monospace';
+          ctx.fillStyle = 'rgba(207,224,245,0.5)';
+          ctx.fillText('a star swallowed your world — the sky is gone', W / 2, H * 0.46 + 20);
+          ctx.textAlign = 'start';
+        }
+        return;
+      }
+      deadAtRef.current = null;
 
       // Per-sun apparent geometry.
       const heading = (2 * Math.PI * d.t) / Math.max(0.05, dayLenRef.current);
