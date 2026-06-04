@@ -306,7 +306,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     // (it's replaced when measureDimension finishes) so the panel doesn't reflow.
     setBusy(true); setProgress(0);
 
-    const renderStage = (stageIdx: number) => {
+    const renderStage = (stageIdx: number, prev: { data: Uint8ClampedArray; res: number } | null) => {
       const N = stages[stageIdx];
       const isFinal = stageIdx === stages.length - 1;
       const bc: BasinConfig = {
@@ -317,6 +317,21 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       const cv = canvasRef.current!; cv.width = N; cv.height = N;
       const ctx = cv.getContext('2d')!;
       const img = ctx.createImageData(N, N);
+      // Seed this (finer) pass with the previous coarse result, upscaled nearest-
+      // neighbour, so the map sharpens in place instead of rebuilding from blank —
+      // each not-yet-computed pixel keeps showing its coarse colour until the
+      // finer value lands on top.
+      if (prev) {
+        const src = prev.data, M = prev.res, d = img.data;
+        for (let y = 0; y < N; y++) {
+          const sy = Math.min(M - 1, (y * M / N) | 0);
+          for (let x = 0; x < N; x++) {
+            const so = (sy * M + Math.min(M - 1, (x * M / N) | 0)) * 4, o = (y * N + x) * 4;
+            d[o] = src[so]; d[o + 1] = src[so + 1]; d[o + 2] = src[so + 2]; d[o + 3] = 255;
+          }
+        }
+        if (runId === runIdRef.current) ctx.putImageData(img, 0, 0);
+      }
       const outGrid = new Uint8Array(N * N), tGrid = new Float32Array(N * N), statGrid = new Float32Array(N * N * 4);
       outGridRef.current = outGrid; tGridRef.current = tGrid; statGridRef.current = statGrid; paintedResRef.current = N;
       let painted = 0; const total = N * N;
@@ -340,7 +355,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
           gridKeyRef.current = `${N}|${bc.lens === 'stat' ? 'stat' : bc.metric}`;
           setRenderedFrame(bc.frame ?? 'bary');
           measureDimension(); applyColor();
-        } else renderStage(stageIdx + 1);
+        } else renderStage(stageIdx + 1, { data: img.data, res: N });
       };
 
       const viaWorkersOrCpu = (preferCpu: boolean) => {
@@ -383,7 +398,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       viaWorkersOrCpu(s.engine === 'cpu');
     };
 
-    renderStage(0);
+    renderStage(0, null);
   };
 
   /** Recolour an already-computed continuous map (chaos λ or a statistical
