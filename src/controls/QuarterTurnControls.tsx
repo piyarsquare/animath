@@ -30,9 +30,10 @@ export interface QuarterTurnControlsProps {
 /**
  * The 4D rotation controls for particle viewers, rendered inside the standard
  * Actions panel (so the draggable ActionFloater and the drawer's Actions tab
- * both carry them). A tap on a ↻/↺ button is a single eighth turn; the small
- * toggle under each button starts/stops a *continuous* spin in that plane and
- * direction. Multiple spins compose (e.g. xy + uv → an isoclinic double
+ * both carry them). Each plane is one compact row of four equal buttons:
+ * `[spin ↻] [↻] [↺] [spin ↺]`. A tap on a centre ↻/↺ button is a single eighth
+ * turn; the flanking spin toggles start/stop a *continuous* spin in that plane
+ * and direction. Multiple spins compose (e.g. xy + uv → an isoclinic double
  * rotation), and a single speed slider sets the rate for all of them.
  */
 export default function QuarterTurnControls({
@@ -45,18 +46,25 @@ export default function QuarterTurnControls({
     <div className="qtc">
       <div className="qtc-grid">
         <div />
-        <div className="qtc-label">↻</div>
-        <div className="qtc-label">↺</div>
-        {planes.map(p => (
-          <Row
-            key={p}
-            plane={p}
-            onTurn={onTurn}
-            spins={spins}
-            onToggleSpin={onToggleSpin}
-            getAxisColor={getAxisColor}
-          />
-        ))}
+        <div className="qtc-hdr">spin</div>
+        <div className="qtc-hdr">↻</div>
+        <div className="qtc-hdr">↺</div>
+        <div className="qtc-hdr">spin</div>
+        {planes.map(p => {
+          const [a, b] = [p[0] as AxisLetter, p[1] as AxisLetter];
+          return (
+            <div key={p} className="qtc-row" style={{ display: 'contents' }}>
+              <div className="qtc-label qtc-plane">
+                <span style={getAxisColor ? { color: getAxisColor(a) } : undefined}>{a}</span>
+                <span style={getAxisColor ? { color: getAxisColor(b) } : undefined}>{b}</span>
+              </div>
+              <SpinToggle plane={p} dir={1} arrow="↻" on={!!spins[`${p}:1`]} onToggleSpin={onToggleSpin} />
+              <TurnButton plane={p} dir={1} arrow="↻" onTurn={onTurn} />
+              <TurnButton plane={p} dir={-1} arrow="↺" onTurn={onTurn} />
+              <SpinToggle plane={p} dir={-1} arrow="↺" on={!!spins[`${p}:-1`]} onToggleSpin={onToggleSpin} />
+            </div>
+          );
+        })}
       </div>
 
       <Slider
@@ -99,54 +107,42 @@ export default function QuarterTurnControls({
   );
 }
 
-function Row({
-  plane, onTurn, spins, onToggleSpin, getAxisColor,
-}: {
-  plane: Plane;
-  onTurn: (p: Plane, d: 1 | -1) => void;
-  spins: Record<string, boolean>;
-  onToggleSpin: (p: Plane, d: 1 | -1) => void;
-  getAxisColor?: (axis: AxisLetter) => string;
-}) {
-  const [a, b] = [plane[0] as AxisLetter, plane[1] as AxisLetter];
-  return (
-    <>
-      <div className="qtc-label qtc-plane" style={{ alignSelf: 'center' }}>
-        <span style={getAxisColor ? { color: getAxisColor(a) } : undefined}>{a}</span>
-        <span style={getAxisColor ? { color: getAxisColor(b) } : undefined}>{b}</span>
-      </div>
-      <TurnCell plane={plane} dir={1} arrow="↻" onTurn={onTurn} on={!!spins[`${plane}:1`]} onToggleSpin={onToggleSpin} />
-      <TurnCell plane={plane} dir={-1} arrow="↺" onTurn={onTurn} on={!!spins[`${plane}:-1`]} onToggleSpin={onToggleSpin} />
-    </>
-  );
-}
-
-function TurnCell({
-  plane, dir, arrow, onTurn, on, onToggleSpin,
+function TurnButton({
+  plane, dir, arrow, onTurn,
 }: {
   plane: Plane;
   dir: 1 | -1;
   arrow: string;
   onTurn: (p: Plane, d: 1 | -1) => void;
+}) {
+  const sense = dir === 1 ? 'clockwise' : 'counter-clockwise';
+  return (
+    <button
+      className="qtc-btn"
+      onClick={() => onTurn(plane, dir)}
+      aria-label={`${plane} ${sense} eighth turn`}
+      title={`${plane} ${sense} — eighth turn (45°)`}
+    >{arrow}</button>
+  );
+}
+
+function SpinToggle({
+  plane, dir, arrow, on, onToggleSpin,
+}: {
+  plane: Plane;
+  dir: 1 | -1;
+  arrow: string;
   on: boolean;
   onToggleSpin: (p: Plane, d: 1 | -1) => void;
 }) {
   const sense = dir === 1 ? 'clockwise' : 'counter-clockwise';
   return (
-    <div className="qtc-cell">
-      <button
-        className="qtc-btn"
-        onClick={() => onTurn(plane, dir)}
-        aria-label={`${plane} ${sense} eighth turn`}
-        title={`${plane} ${sense} — eighth turn (45°)`}
-      >{arrow}</button>
-      <button
-        className={`qtc-spin ${on ? 'qtc-spin-on' : ''}`}
-        onClick={() => onToggleSpin(plane, dir)}
-        aria-pressed={on}
-        aria-label={`${on ? 'Stop' : 'Start'} continuous ${sense} spin in ${plane}`}
-        title={`${on ? 'Stop' : 'Start'} spinning ${plane} ${arrow}`}
-      >{arrow}</button>
-    </div>
+    <button
+      className={`qtc-spin ${on ? 'qtc-spin-on' : ''}`}
+      onClick={() => onToggleSpin(plane, dir)}
+      aria-pressed={on}
+      aria-label={`${on ? 'Stop' : 'Start'} continuous ${sense} spin in ${plane}`}
+      title={`${on ? 'Stop' : 'Start'} spinning ${plane} ${arrow}`}
+    >{arrow}</button>
   );
 }
