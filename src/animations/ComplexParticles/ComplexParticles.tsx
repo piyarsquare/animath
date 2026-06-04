@@ -10,10 +10,11 @@ import { loadParticleTextures } from '../../lib/textures';
 import {
   useParticleState, useUniformSync, useViewControls,
   createParticleGeometry, rebuildGeometryBuffers, redistributeAdaptive,
-  createAxes, startAnimationLoop, shapeNames,
+  createAxes, createHopfScaffold, startAnimationLoop, shapeNames,
 } from '../../lib/particles';
 import { usePersistentState } from '../../lib/usePersistentState';
-import type { ViewPoint } from '../../lib/particles';
+import { ProjectionMode } from '../../lib/viewpoint';
+import type { ViewPoint, HopfScaffold } from '../../lib/particles';
 
 /** localStorage namespace for this viewer's saved settings. */
 const STORAGE_KEY = 'complex-particles';
@@ -62,6 +63,7 @@ export default function ComplexParticles({
 
   const sceneRef = useRef<THREE.Scene>();
   const pointsRef = useRef<THREE.Points[]>([]);
+  const scaffoldRef = useRef<HopfScaffold>();
   const branchIndicesRef = useRef(branchIndices);
 
   useEffect(() => {
@@ -74,6 +76,8 @@ export default function ComplexParticles({
   useEffect(() => {
     const geom = state.geometryRef.current;
     if (!geom) return;
+    const exX = state.extentX * state.axisScale;
+    const exY = state.extentY * state.axisScale;
     if (state.adaptive) {
       const evalFn = (x: number, z: number) => {
         const pt = new THREE.Vector2(x, z);
@@ -82,15 +86,16 @@ export default function ComplexParticles({
           : applyComplex(pt, functionIndex);
         return { x: out.x, y: out.y };
       };
-      redistributeAdaptive(geom, state.particleCount, state.gridExtent, {
+      redistributeAdaptive(geom, state.particleCount, exX, exY, {
         evalFn,
         alpha: state.adaptiveAlpha,
       });
     } else {
-      rebuildGeometryBuffers(geom, state.particleCount, state.gridExtent);
+      rebuildGeometryBuffers(geom, state.particleCount, exX, exY);
     }
   }, [
-    state.adaptive, state.adaptiveAlpha, state.particleCount, state.gridExtent,
+    state.adaptive, state.adaptiveAlpha, state.particleCount,
+    state.extentX, state.extentY, state.axisScale,
     functionIndex, expP, expQ,
   ]);
 
@@ -153,6 +158,7 @@ export default function ComplexParticles({
         textureIndex: { value: state.textureIndex },
         uColourStyle: { value: state.colourStyle },
         uColourBy: { value: state.colourBy },
+        uLogRadius: { value: state.logRadius ? 1 : 0 },
         uRotL: { value: { w: 1, v: new THREE.Vector3() } },
         uRotR: { value: { w: 1, v: new THREE.Vector3() } },
         uProjMode: { value: state.projRef.current },
@@ -184,6 +190,20 @@ export default function ComplexParticles({
     }
   }, [branchCount]);
 
+  // Show the sphere scaffold in the Hopf view (or once the Torus → Hopf collapse
+  // is past halfway) and the donut scaffold in the Torus view; hide both in the
+  // flat/perspective projections.
+  useEffect(() => {
+    const s = scaffoldRef.current;
+    if (!s) return;
+    const showSphere = state.viewType === ProjectionMode.Hopf
+      || (state.viewType === ProjectionMode.Torus && state.fiberCollapse >= 0.5);
+    const showTorus = state.viewType === ProjectionMode.Torus && state.fiberCollapse < 0.5;
+    s.group.visible = state.showScaffold && (showSphere || showTorus);
+    s.sphereGroup.visible = showSphere;
+    s.torusGroup.visible = showTorus;
+  }, [state.viewType, state.fiberCollapse, state.showScaffold]);
+
   const onMount = React.useCallback(
     (ctx: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => {
       const { scene, camera, renderer } = ctx;
@@ -200,7 +220,11 @@ export default function ComplexParticles({
       });
       state.texturesRef.current = textures;
 
-      const geometry = createParticleGeometry(state.particleCount, state.gridExtent);
+      const geometry = createParticleGeometry(
+        state.particleCount,
+        state.extentX * state.axisScale,
+        state.extentY * state.axisScale,
+      );
       state.geometryRef.current = geometry;
 
       state.materialsRef.current = [];
@@ -219,6 +243,19 @@ export default function ComplexParticles({
       state.uAxisRef.current = axes.u;
       state.vAxisRef.current = axes.v;
 
+      // Faint reference geometry for the Hopf sphere / nested Clifford-torus
+      // donuts. Apply the initial visibility here (the effect below only fires
+      // on later state changes), then it's kept in sync by that effect.
+      const scaffold = createHopfScaffold(scene);
+      scaffoldRef.current = scaffold;
+      {
+        const showSphere = state.viewType === ProjectionMode.Hopf;
+        const showTorus = state.viewType === ProjectionMode.Torus;
+        scaffold.sphereGroup.visible = showSphere;
+        scaffold.torusGroup.visible = showTorus;
+        scaffold.group.visible = state.showScaffold && (showSphere || showTorus);
+      }
+
       state.viewPointRef.current = { L: state.rotLRef.current.clone(), R: state.rotRRef.current.clone() };
       state.onViewPointChangeRef.current?.(state.viewPointRef.current);
 
@@ -232,6 +269,7 @@ export default function ComplexParticles({
         dropAxisRef: state.dropAxisRef,
         rotLRef: state.rotLRef,
         rotRRef: state.rotRRef,
+        axisScaleRef: state.axisScaleRef,
         viewPointRef: state.viewPointRef,
         onViewPointChangeRef: state.onViewPointChangeRef,
         orientationRef: state.orientationRef,

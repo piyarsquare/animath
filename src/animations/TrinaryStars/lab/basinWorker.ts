@@ -7,6 +7,6 @@ import { computeBasinRange } from './basin';
 const ctx: any = self;
 ctx.onmessage = (e: MessageEvent) => {
   const { cfg, bc, start, count } = e.data;
-  const { rgb, out, t } = computeBasinRange(cfg, bc, start, count);
-  ctx.postMessage({ start, count, rgb, out, t }, [rgb.buffer, out.buffer, t.buffer]);
+  const { rgb, out, t, stat } = computeBasinRange(cfg, bc, start, count);
+  ctx.postMessage({ start, count, rgb, out, t, stat }, [rgb.buffer, out.buffer, t.buffer, stat.buffer]);
 };

@@ -19,6 +19,21 @@ Hue is the **argument** of `z` (its angle around the origin); brightness and
 the tile pattern encode magnitude. Because the color rides along with each
 point, you can watch how `f` rotates, stretches, folds, or tears the plane.
 
+## Polar grid and the log-polar plane
+
+Two **View** toggles change how the plane is drawn:
+
+- **Grid: Polar** samples the input on concentric (log-spaced) circles and
+  radial spokes instead of a square mesh — so you watch circles `|z| = r` and
+  rays `arg z = θ` get bent into their image curves.
+- **Plane: Log-polar** *unrolls* the plane: each point is plotted at
+  `(arg, log|·|)` — angle across, log-radius up. Here multiplication by a
+  constant becomes a translation, `zⁿ` becomes a linear shear, and `ln` flattens
+  the strip into a square. The branch cut sits on the left/right edges.
+
+Combine them — *Polar grid + Log-polar plane* turns the input into a clean
+square lattice, which makes the shears and translations easy to read.
+
 ## Multi-valued functions and the branch index
 
 Some functions don't have a single answer. **√z**, **ln z**, and

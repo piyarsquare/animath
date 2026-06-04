@@ -11,9 +11,11 @@
  * storage buffers) to avoid long single-dispatch GPU timeouts.
  */
 
-import { getPreset, buildStars, launchPlanet } from '../presets';
-import type { Outcome, RunResult } from '../analysis/types';
+import { getScenario, buildStars, launchPlanet, type Outcome, type RunResult } from '@/lib/nbody';
 import type { EnsembleConfig, RunParams } from './rng';
+
+/** A raw planet initial condition (position + velocity). */
+export type PlanetIC = { x: number; y: number; vx: number; vy: number };
 
 export function gpuAvailable(): boolean {
   return typeof navigator !== 'undefined' && !!(navigator as any).gpu;
@@ -141,11 +143,30 @@ export class GpuRunner {
     return new GpuRunner(device, pipeline);
   }
 
-  /** Run one batch of worlds and return their RunResults. */
+  /** Run one batch of worlds, parameterised as radius/speed/angle launches, and
+   *  return their RunResults. */
   async runBatch(cfg: EnsembleConfig, params: RunParams[]): Promise<RunResult[]> {
+    const stars = buildStars(getScenario(cfg.presetId), cfg.massMul);
+    const planets = params.map(pr => launchPlanet(stars, cfg.target, pr.radius, pr.speed, pr.angleDeg * DEG, pr.retro));
+    return this.simulate(cfg, planets, params);
+  }
+
+  /** Run one batch from raw planet initial conditions (x, y, vx, vy). The shader
+   *  integrates from raw state, so this needs no WGSL change — it's used by the
+   *  Destiny Map's position plane, whose pixels are starting *places*, not a
+   *  radius/speed/angle launch. The radius/speed/etc. result fields are left 0
+   *  (the map doesn't read them). */
+  async runBatchIC(cfg: EnsembleConfig, planets: PlanetIC[]): Promise<RunResult[]> {
+    return this.simulate(cfg, planets, null);
+  }
+
+  /** Shared GPU integration of a batch of explicit planet states against the
+   *  config's star system. `echo`, when present, supplies the launch params to
+   *  copy into each RunResult; otherwise those fields are zeroed. */
+  private async simulate(cfg: EnsembleConfig, planets: PlanetIC[], echo: RunParams[] | null): Promise<RunResult[]> {
     const dev = this.device;
-    const count = params.length;
-    const preset = getPreset(cfg.presetId);
+    const count = planets.length;
+    const preset = getScenario(cfg.presetId);
     const stars = buildStars(preset, cfg.massMul);
     const cls = cfg.classify;
 
@@ -153,8 +174,7 @@ export class GpuRunner {
     const bodies = new Float32Array(count * 4 * 4);
     const acc = new Float32Array(count * 3 * 4);
     for (let r = 0; r < count; r++) {
-      const pr = params[r];
-      const planet = launchPlanet(stars, cfg.target, pr.radius, pr.speed, pr.angleDeg * DEG, pr.retro);
+      const planet = planets[r];
       const b = r * 16;
       bodies[b] = planet.x; bodies[b + 1] = planet.y; bodies[b + 2] = planet.vx; bodies[b + 3] = planet.vy;
       for (let s = 0; s < 3; s++) {
@@ -178,7 +198,7 @@ export class GpuRunner {
     }
 
     // --- Uniform config ---
-    const dt = preset.dt;
+    const dt = preset.system.dt;
     const uni = new Float32Array([
       dt, cfg.tMax, 0.1, cls.lumExp,
       cfg.starSoft * cfg.starSoft, 0.05 * 0.05, cls.insolSoft2, cls.rKill,
@@ -232,7 +252,7 @@ export class GpuRunner {
       const outcome: Outcome = status === 1 ? 'planet-destroyed'
         : status === 2 ? 'planet-ejected'
         : ej >= 0 ? 'happy' : 'survived';
-      const pr = params[r];
+      const pr = echo ? echo[r] : null;
       results.push({
         tSim: t, outcome,
         habitableFraction: t > 0 ? hab / t : 0,
@@ -242,7 +262,7 @@ export class GpuRunner {
         ejectedStar: ej >= 0 ? ej : -1,
         tEject: tEj,
         planetFate: fate,
-        radius: pr.radius, speed: pr.speed, angleDeg: pr.angleDeg, retro: pr.retro, seed: pr.seed,
+        radius: pr ? pr.radius : 0, speed: pr ? pr.speed : 0, angleDeg: pr ? pr.angleDeg : 0, retro: pr ? pr.retro : false, seed: pr ? pr.seed : 0,
       });
     }
     return results;

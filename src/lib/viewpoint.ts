@@ -7,7 +7,8 @@ export enum ProjectionMode {
   DropX       = 3,
   DropY,
   DropU,
-  DropV
+  DropV,
+  Torus
 }
 
 export type Axis4D = 'xy' | 'xu' | 'xv' | 'yu' | 'yv' | 'uv';
@@ -64,9 +65,26 @@ export function makeUnitQuat(angle: number, axis: Axis4D): {L: THREE.Vector4, R:
 export function project(p: THREE.Vector4, mode: ProjectionMode): THREE.Vector3{
   if(mode===ProjectionMode.Perspective) return new THREE.Vector3(p.x,p.y,p.z).multiplyScalar(1/(3+p.w));
   if(mode===ProjectionMode.Stereo){ const n=p.clone().normalize(); return new THREE.Vector3(n.x,n.y,n.z).multiplyScalar(1/(1-n.w)); }
-  if(mode===ProjectionMode.Hopf){ const xy=new THREE.Vector2(p.x,p.y); const w=p.w; const z=p.z; return new THREE.Vector3(2*xy.x*w,2*xy.y*w, w*w+p.x*p.x-xy.y*xy.y - z*z); }
+  if(mode===ProjectionMode.Hopf){
+    // Faithful Hopf map of the complex pair (z1,z2) = (x+iy, u+iv) = (z, f):
+    //   H = ( 2 Re(z1 conj z2), 2 Im(z1 conj z2), |z1|^2 - |z2|^2 ) / |(z1,z2)|^2
+    // Lands every particle on the unit sphere S^2: latitude encodes |z|/|f|,
+    // longitude encodes arg(z) - arg(f).
+    const x=p.x, y=p.y, u=p.z, v=p.w;
+    const d=(x*x+y*y+u*u+v*v)||1e-6;
+    return new THREE.Vector3(2*(x*u+y*v)/d, 2*(y*u-x*v)/d, (x*x+y*y-u*u-v*v)/d);
+  }
   if(mode===ProjectionMode.DropX) return new THREE.Vector3(p.y,p.z,p.w);
   if(mode===ProjectionMode.DropY) return new THREE.Vector3(p.x,p.z,p.w);
   if(mode===ProjectionMode.DropU) return new THREE.Vector3(p.x,p.y,p.w);
+  if(mode===ProjectionMode.Torus){
+    // Clifford-torus / "un-collapsed Hopf" view: normalize (z1,z2)=(z,f) onto
+    // S^3, then stereographically project from the (0,0,0,1) pole. arg(z) runs
+    // around the hole, arg(f) around the tube, and |z|/|f| selects which nested
+    // donut; the overall scale is discarded.
+    const d = Math.hypot(p.x,p.y,p.z,p.w) || 1e-6;
+    const denom = Math.max(d - p.w, 1e-4);
+    return new THREE.Vector3(p.x/denom, p.y/denom, p.z/denom);
+  }
   return new THREE.Vector3(p.x,p.y,p.z);
 }

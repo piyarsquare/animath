@@ -5,10 +5,15 @@ import { quarterQuat } from '../../math/quat4';
 import { dropModes, motionModes } from './types';
 import type { ParticleState } from './useParticleState';
 
+/** Ambient 3D view-rotation axes, used by the Hopf/Torus orbit controls. */
+export type ViewAxis = 'Yaw' | 'Pitch' | 'Roll';
+
+const ELEV_LIMIT = Math.PI / 2 - 0.01; // matches the gesture-orbit pitch clamp
+
 export function useViewControls(state: ParticleState) {
   const {
     materialsRef, rotLRef, rotRRef, viewPointRef, onViewPointChangeRef,
-    projRef, setViewType, setViewMotion, setDropAxis, setProj,
+    projRef, setViewType, setViewMotion, setDropAxis, setProj, setFiberCollapse,
     viewType, dropAxis,
   } = state;
 
@@ -60,14 +65,32 @@ export function useViewControls(state: ParticleState) {
     // Camera also returns to its default vantage point.
     state.setAzimuth(0);
     state.setElevation(0);
+    state.setRoll(0);
     state.setPanX(0);
     state.setPanY(0);
     state.setPanZ(0);
   }
 
   function handleViewType(t: ProjectionMode) {
+    setFiberCollapse(0);
     setViewType(t);
     applyView(t, dropAxis);
+  }
+
+  /**
+   * Scrub the Torus → Hopf "fiber collapse" (0 = full Torus, 1 = full Hopf) by
+   * manually driving the projection cross-fade uniforms. At intermediate values
+   * the (1,1) fiber circles of the nested donuts shrink toward the single points
+   * the Hopf map identifies them with. Only meaningful while the Torus view is
+   * active (the projection Pills reset it via {@link handleViewType}).
+   */
+  function handleFiberCollapse(value: number) {
+    setFiberCollapse(value);
+    materialsRef.current.forEach(m => {
+      m.uniforms.uProjMode.value = ProjectionMode.Torus;
+      m.uniforms.uProjTarget.value = ProjectionMode.Hopf;
+      m.uniforms.uProjAlpha.value = value;
+    });
   }
 
   function handleMotion(m: (typeof motionModes)[number]) {
@@ -85,8 +108,11 @@ export function useViewControls(state: ParticleState) {
     const { L, R } = quarterQuat(plane, θ);
     const startL = rotLRef.current.clone();
     const startR = rotRRef.current.clone();
+    // Compose in the world frame: the shader applies p ↦ uRotL · p · conj(uRotR),
+    // so accumulating the turn means premultiplying both L and R (uRotL = L·startL,
+    // uRotR = R·startR). This matches the convention the animation loop uses.
     const endL = L.clone().multiply(startL).normalize();
-    const endR = startR.clone().multiply(R.conjugate()).normalize();
+    const endR = R.clone().multiply(startR).normalize();
     const duration = 1000;
     const start = performance.now();
     const step = (now: number) => {
@@ -121,7 +147,7 @@ export function useViewControls(state: ParticleState) {
     if (materialsRef.current.length === 0) return;
     const { L, R } = quarterQuat(plane, theta);
     rotLRef.current.copy(L.clone().multiply(rotLRef.current).normalize());
-    rotRRef.current.copy(rotRRef.current.clone().multiply(R.conjugate()).normalize());
+    rotRRef.current.copy(R.clone().multiply(rotRRef.current).normalize());
     materialsRef.current.forEach(m => {
       m.uniforms.uRotL.value.w = rotLRef.current.w;
       m.uniforms.uRotL.value.v.set(rotLRef.current.x, rotLRef.current.y, rotLRef.current.z);
@@ -132,5 +158,36 @@ export function useViewControls(state: ParticleState) {
     onViewPointChangeRef.current?.(viewPointRef.current);
   }
 
-  return { handleViewType, handleMotion, handleDropAxis, turn, snapToStandardView, rotateBy };
+  /**
+   * Rotate the *ambient 3D view* (the camera), not the 4D pre-image. Used in
+   * Hopf/Torus, where a 4D rotation before the nonlinear map deforms the image:
+   * orbiting the camera keeps the picture rigid. Yaw spins around the vertical,
+   * Pitch tilts up/down (clamped like the gesture orbit), Roll spins about the
+   * view axis.
+   */
+  function orbitBy(axis: ViewAxis, theta: number) {
+    if (axis === 'Yaw') state.setAzimuth(a => a + theta);
+    else if (axis === 'Pitch') state.setElevation(e => Math.max(-ELEV_LIMIT, Math.min(ELEV_LIMIT, e + theta)));
+    else state.setRoll(r => r + theta);
+  }
+
+  /** Animated eighth turn (45°) of the ambient view, mirroring {@link turn}. */
+  function orbitTurn(axis: ViewAxis, dir: 1 | -1) {
+    const total = (QUARTER / 2) * dir;
+    const duration = 400;
+    const start = performance.now();
+    let last = 0;
+    const step = (now: number) => {
+      const p = Math.min((now - start) / duration, 1);
+      orbitBy(axis, (p - last) * total);
+      last = p;
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  return {
+    handleViewType, handleMotion, handleDropAxis, handleFiberCollapse,
+    turn, snapToStandardView, rotateBy, orbitBy, orbitTurn,
+  };
 }

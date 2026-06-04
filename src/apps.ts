@@ -29,22 +29,16 @@ export const apps: AppDescriptor[] = [
     blurb: 'See how every point of the Mandelbrot set seeds its own Julia set.',
   },
   {
-    hash: '/mobius',
-    name: 'Möbius Walk',
+    hash: '/topology-walk',
+    name: 'Topology Walk',
     icon: '∞',
-    blurb: 'Take an on-rails stroll through a corridor with a hidden half-twist.',
+    blurb: 'Walk a closed surface in first person — twisting corridor or flat torus / Klein bottle — and read the topology off your own footprints.',
   },
   {
     hash: '/trinary',
     name: 'Trinary System',
     icon: '✸',
-    blurb: 'Drop a planet into a three-star system and watch sensitive dependence erase its future.',
-  },
-  {
-    hash: '/trinary-lab',
-    name: 'Trinary Lab',
-    icon: '▦',
-    blurb: 'Run thousands of trinary worlds and tally how often chaos ends happily.',
+    blurb: 'Drop a planet into a three-star system and watch sensitive dependence erase its future — then open the Lab to run thousands of worlds and tally how often chaos ends happily.',
   },
   {
     hash: '/stable-marriage',

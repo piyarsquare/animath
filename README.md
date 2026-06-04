@@ -13,9 +13,10 @@ reachable directly by hash route.
 2. **[Plane Transform](https://piyarsquare.github.io/animath/#/plane-transform)** – watch a complex function `f : ℂ → ℂ` warp a coloured grid of the plane, input pane beside output pane.
 3. **[Fractals](https://piyarsquare.github.io/animath/#/fractals)** – GPU-accelerated Mandelbrot / Julia / Burning Ship / Tricorn viewer with optional orbit-tracing mode.
 4. **[Correspondence](https://piyarsquare.github.io/animath/#/correspondence)** – side-by-side Mandelbrot–Julia explorer; pick or draw paths through `c`.
-5. **[Möbius Walk](https://piyarsquare.github.io/animath/#/mobius)** – first-person stroll through a twisted corridor.
-6. **[Stable Marriage](https://piyarsquare.github.io/animath/#/stable-marriage)** – step through the Gale–Shapley algorithm with bias and consensus controls.
-7. **[Agentic Sorting](https://piyarsquare.github.io/animath/#/agentic-sorting)** – concurrent sorting simulation where autonomous agents with distinct strategies produce emergent order.
+5. **[Topology Walk](https://piyarsquare.github.io/animath/#/topology-walk)** – first-person walk on a closed surface: a twisting / knotted corridor or a flat torus / Klein bottle, with shared footprints, avatar and third-person view.
+6. **[Trinary System](https://piyarsquare.github.io/animath/#/trinary)** – drop a planet into a chaotic three-star system and watch its future diverge; an in-app **Lab** tab runs thousands of worlds and maps their fates into fractal "destiny" portraits and statistics.
+7. **[Stable Marriage](https://piyarsquare.github.io/animath/#/stable-marriage)** – step through the Gale–Shapley algorithm with bias and consensus controls.
+8. **[Agentic Sorting](https://piyarsquare.github.io/animath/#/agentic-sorting)** – concurrent sorting simulation where autonomous agents with distinct strategies produce emergent order.
 
 ---
 
@@ -58,9 +59,10 @@ Buttons for tabs an app doesn't populate are dimmed. The shell also adds iOS
 safe-area padding so the bottom of the screen stays visible behind Safari's URL
 bar and the home indicator.
 
-The Complex Particles viewer adds a small floating **quarter-turn** cluster in
-the bottom-left corner of the canvas for direct 4D plane rotations (tap for 90°,
-hold for continuous rotation).
+The Complex Particles viewer puts its **4D rotation controls** in the standard
+Actions panel (the draggable floating panel + the drawer's Actions tab): tap a
+plane button for an eighth turn (45°), or flip the toggle under it to spin that
+plane continuously.
 
 ---
 
@@ -107,7 +109,7 @@ src/
 │   ├── FractalsGPU/        # GPU Mandelbrot / Julia / Burning Ship / Tricorn
 │   ├── Correspondence/     # Mandelbrot ↔ Julia split view
 │   ├── Fractals/           # legacy CPU fractal renderer (routed at #/fractals-cpu)
-│   ├── MobiusWalk/         # first-person corridor walk
+│   ├── TopologyWalk/       # first-person walk: corridor + flat torus / Klein bottle
 │   ├── StableMarriage/     # Gale–Shapley visualiser + heatmap lab
 │   └── AgenticSorting/     # concurrent agent-based sorting
 │
@@ -122,7 +124,7 @@ src/
 │   └── ToggleMenu.tsx      # collapsible menu (legacy, used by FractalsGPU)
 │
 ├── controls/
-│   └── QuarterTurnFloater  # floating 4D quarter-turn cluster
+│   └── QuarterTurnControls # 4D eighth-turn + spin controls (Actions panel)
 │
 ├── lib/
 │   ├── particles/          # shared particle-viewer engine
@@ -204,9 +206,10 @@ The particle viewers use a clean split between **looking** (gestures) and
   Never touches the 4D rotation.
 * **2-finger drag** (or `Shift` + drag) pans the look-at target.
 * **2-finger pinch** / **mouse wheel** zooms.
-* **Quarter-turn floater** (bottom-left of the canvas) — tap a plane button
-  for a 90° animated turn, **hold** for continuous rotation. Includes a
-  "Reset orientation" row.
+* **4D rotation controls** (in the Actions panel) — tap a plane button for an
+  eighth turn (45°); the toggle under each button starts/stops a continuous
+  spin in that plane and direction (multiple compose into double rotations), with
+  one speed slider. Includes drop-axis and a "Reset orientation" row.
 
 The fractal viewers use:
 
