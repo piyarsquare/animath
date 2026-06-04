@@ -128,17 +128,21 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       px: planet.x.toFixed(5), py: planet.y.toFixed(5), vx: planet.vx.toFixed(5), vy: planet.vy.toFixed(5),
     });
     // Open the run in a new tab so the Lab — and the map you just computed —
-    // stays put. Pixel-click is a user gesture, so this isn't popup-blocked;
-    // fall back to in-place navigation only if the browser refuses the window.
+    // stays put. Don't pass the 'noopener' feature: it makes window.open return
+    // null even on success, which previously tripped the fallback and advanced
+    // *this* tab too. Instead clear `opener` by hand, and fall back to in-place
+    // navigation only when the window genuinely didn't open (popup blocked).
     const url = `${window.location.origin}${window.location.pathname}#/trinary?${q.toString()}`;
-    const win = window.open(url, '_blank', 'noopener');
-    if (!win) window.location.hash = `#/trinary?${q.toString()}`;
+    const win = window.open(url, '_blank');
+    if (win) win.opener = null;
+    else window.location.hash = `#/trinary?${q.toString()}`;
   };
 
   const measureDimension = () => {
-    // Box-counting the basin boundary is meaningful only for the exact fate map;
-    // statistical and chaos maps are smooth, so skip it there.
-    if (stateRef.current.lens !== 'exact' || stateRef.current.metric !== 'fate') return;
+    // Box-counting the boundary applies to the exact fate map (outcome regions)
+    // and the chaos map (the regular/chaotic frontier) — both store a categorical
+    // `out` grid. The statistical lens is smooth, so skip it there.
+    if (stateRef.current.lens !== 'exact') return;
     const N = stateRef.current.res;
     const out = outGridRef.current;
     if (out.length !== N * N) return;
@@ -582,7 +586,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
               ? `Each pixel is a mini-census: ${statRuns} worlds that share these axes but randomise the other launch dimensions, coloured by ${STAT_LABEL[statMetric]}. The Exact lens shows one world per pixel — switch to it to see the fractal final-state boundaries underneath these smooth statistics.`
               : metric === 'fate'
                 ? 'One pixel = one exact starting condition. Hue = outcome, brightness = how long it lasted. Drag a box to zoom — the boundaries stay intricate at every scale: the three-body problem’s fractal final-state sensitivity. D is the box-counting dimension of the boundary (1 = smooth, →2 = space-filling); α = 2−D is the uncertainty exponent.'
-                : 'One pixel = one exact starting condition. Colour = the planet’s Lyapunov exponent λ — how fast its future becomes unpredictable (blue = regular orbits, red = strongly chaotic). Drag a box to zoom.'}
+                : 'One pixel = one exact starting condition. Colour = the planet’s Lyapunov exponent λ — how fast its future becomes unpredictable (blue = regular orbits, red = strongly chaotic). Drag a box to zoom. D is the box-counting dimension of the regular/chaotic frontier.'}
           </div>
         </div>
 
