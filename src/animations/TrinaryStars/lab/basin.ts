@@ -14,6 +14,9 @@ export type BasinMetric = 'fate' | 'chaos';
 export type BasinLens = 'exact' | 'stat';
 /** Which outcome fraction the statistical lens paints. */
 export type StatMetric = 'happy' | 'hab' | 'destroyed' | 'survived';
+/** Reference frame for the position plane: the barycentre (inertial), or one of
+ *  the three stars (a co-moving frame centred on that star at t = 0). */
+export type FrameId = 'bary' | 's0' | 's1' | 's2';
 export interface Domain { a0: number; a1: number; b0: number; b1: number; }
 export interface BasinConfig {
   mode: BasinMode;
@@ -29,6 +32,7 @@ export interface BasinConfig {
   fixedAngle: number;
   fixedRadius: number;
   fixedRetro: boolean;
+  frame?: FrameId;          // position-plane reference frame (defaults to 'bary')
 }
 
 export const OUTCOME_RGB: Record<Outcome, [number, number, number]> = {
@@ -84,6 +88,32 @@ interface Ctx {
   cfg: EnsembleConfig; bc: BasinConfig;
   preset: ReturnType<typeof getScenario>;
   targetMass: number; Mtot: number;
+  /** Position-plane frame origin's t = 0 world state (zero for the barycentre). */
+  origin: FrameOrigin;
+}
+
+export interface FrameOrigin { x: number; y: number; vx: number; vy: number; }
+const ZERO_ORIGIN: FrameOrigin = { x: 0, y: 0, vx: 0, vy: 0 };
+let _frameCache: { key: string; o: FrameOrigin } | null = null;
+
+/** The t = 0 world state of a position-plane reference frame's origin. The
+ *  barycentre is exactly zero (stars are recentred), so the 'bary' frame leaves
+ *  every initial condition untouched; a star frame returns that star's launch
+ *  position and velocity, so placing a planet there co-moves it with the star. */
+export function frameOrigin(cfg: EnsembleConfig, frame: FrameId = 'bary'): FrameOrigin {
+  if (frame === 'bary') return ZERO_ORIGIN;
+  const key = `${cfg.presetId}|${cfg.massMul.join(',')}|${frame}`;
+  if (_frameCache && _frameCache.key === key) return _frameCache.o;
+  const f = orbitFrame(buildStars(getScenario(cfg.presetId), cfg.massMul), frame);
+  const o: FrameOrigin = { x: f.cx, y: f.cy, vx: f.cvx, vy: f.cvy };
+  _frameCache = { key, o };
+  return o;
+}
+
+/** Carry a frame-relative IC into world coordinates by adding the frame origin's
+ *  position and velocity (a no-op for the barycentre frame). */
+function withOrigin(p: Planet, o: FrameOrigin): Planet {
+  return { x: p.x + o.x, y: p.y + o.y, vx: p.vx + o.vx, vy: p.vy + o.vy, ax: 0, ay: 0 };
 }
 
 /** Mass governing circular speed for the orbit target, and the total system
@@ -101,7 +131,7 @@ export function basinTargets(cfg: EnsembleConfig): { targetMass: number; Mtot: n
 export function basinContext(cfg: EnsembleConfig, bc: BasinConfig): Ctx {
   const preset = getScenario(cfg.presetId);
   const { targetMass, Mtot } = basinTargets(cfg);
-  return { cfg, bc, preset, targetMass, Mtot };
+  return { cfg, bc, preset, targetMass, Mtot, origin: frameOrigin(cfg, bc.frame) };
 }
 
 /** The (ax, by) plane coordinate at the centre of pixel (i, j). */
@@ -151,7 +181,8 @@ export function statPixelSeed(cfg: EnsembleConfig, p: number): number {
  *  angle launches, so the GPU path uploads these states directly. */
 export function exactPosPlanet(cfg: EnsembleConfig, bc: BasinConfig, Mtot: number, i: number, j: number): Planet {
   const [ax, by] = basinAxByCenter(bc, i, j);
-  return bc.posRule === 'rest' ? posRestIC(ax, by) : posTangentialIC(Mtot, ax, by, bc.posSpeedFrac, false);
+  const ic = bc.posRule === 'rest' ? posRestIC(ax, by) : posTangentialIC(Mtot, ax, by, bc.posSpeedFrac, false);
+  return withOrigin(ic, frameOrigin(cfg, bc.frame));
 }
 
 /** Raw planet IC for one statistical-lens sample on the position plane (mirrors
@@ -160,7 +191,7 @@ export function statPosPlanet(cfg: EnsembleConfig, bc: BasinConfig, Mtot: number
   const [ax, by] = basinAxByCenter(bc, i, j);
   const retro = cfg.allowRetro ? rng() < 0.5 : false;
   const f = cfg.fMin + (cfg.fMax - cfg.fMin) * rng();
-  return posTangentialIC(Mtot, ax, by, f, retro);
+  return withOrigin(posTangentialIC(Mtot, ax, by, f, retro), frameOrigin(cfg, bc.frame));
 }
 
 /** Position-plane initial conditions. A planet placed at (ax, by) either at rest
@@ -179,7 +210,8 @@ export function posTangentialIC(Mtot: number, ax: number, by: number, speedFrac:
 function makePlanet(ctx: Ctx, stars: Star[], ax: number, by: number): Planet {
   const { bc, cfg, targetMass, Mtot } = ctx;
   if (bc.mode === 'pos') {
-    return bc.posRule === 'rest' ? posRestIC(ax, by) : posTangentialIC(Mtot, ax, by, bc.posSpeedFrac, false);
+    const ic = bc.posRule === 'rest' ? posRestIC(ax, by) : posTangentialIC(Mtot, ax, by, bc.posSpeedFrac, false);
+    return withOrigin(ic, ctx.origin);
   }
   if (bc.mode === 'radspeed') {
     const v = by * Math.sqrt(targetMass / Math.max(0.05, ax));
@@ -198,7 +230,7 @@ function makeStatPlanet(ctx: Ctx, stars: Star[], ax: number, by: number, rng: ()
   const retro = cfg.allowRetro ? rng() < 0.5 : false;
   if (bc.mode === 'pos') {
     const f = cfg.fMin + (cfg.fMax - cfg.fMin) * rng();
-    return posTangentialIC(Mtot, ax, by, f, retro);
+    return withOrigin(posTangentialIC(Mtot, ax, by, f, retro), ctx.origin);
   }
   if (bc.mode === 'radspeed') {
     const v = by * Math.sqrt(targetMass / Math.max(0.05, ax));

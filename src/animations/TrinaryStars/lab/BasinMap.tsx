@@ -8,7 +8,7 @@ import {
   computeBasinRange, basinPlanetAt, chaosRamp, CHAOS_LAMBDA_MAX, OUTCOME_RGB, OUTCOME_CODE,
   statColor, statRamp, STAT_LABEL, STAT_ORDER, basinTargets, exactRunParams, statRunParams, statPixelSeed,
   exactPosPlanet, statPosPlanet,
-  type BasinConfig, type BasinMode, type BasinMetric, type BasinLens, type StatMetric, type Domain,
+  type BasinConfig, type BasinMode, type BasinMetric, type BasinLens, type StatMetric, type Domain, type FrameId,
 } from './basin';
 import { BasinPool } from './basinPool';
 import { GpuRunner, gpuAvailable, type PlanetIC } from './gpu';
@@ -75,6 +75,10 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   const [domain, setDomain] = useState<Domain>(DEFAULT_DOMAIN.pos);
   const [posRule, setPosRule] = useState<'rest' | 'tangential'>('tangential');
   const [posSpeedFrac, setPosSpeedFrac] = useState(0.9);
+  const [frame, setFrame] = useState<FrameId>('bary');
+  // The frame the on-screen map was actually rendered in, so the star overlay
+  // matches the pixels even before the live `frame` selection is re-rendered.
+  const [renderedFrame, setRenderedFrame] = useState<FrameId>('bary');
   const [fixedAngle, setFixedAngle] = useState(0);
   const [fixedRadius, setFixedRadius] = useState(2);
   const [fixedRetro, setFixedRetro] = useState(false);
@@ -115,7 +119,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
 
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
   const boxRef = useRef(system?.box); boxRef.current = system?.box;
-  const st = { mode, metric, lens, statMetric, statRuns, domain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro, engine };
+  const st = { mode, metric, lens, statMetric, statRuns, domain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro, frame, engine };
   const stateRef = useRef(st); stateRef.current = st;
 
   // The stars' trajectories are identical for every run (the planet is a test
@@ -128,7 +132,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     ? { a0: system.box.rMin, a1: system.box.rMax, b0: system.box.fMin, b1: system.box.fMax }
     : domain;
   const currentBc = (): BasinConfig => ({
-    mode, metric, lens, statRuns, statMetric, domain: effDomain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro,
+    mode, metric, lens, statRuns, statMetric, domain: effDomain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro, frame,
   });
   const goObservatory = (i: number, j: number) => {
     const d = effDomain, pr = paintedResRef.current;
@@ -308,7 +312,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       const bc: BasinConfig = {
         mode: s.mode, metric: s.metric, lens: s.lens, statRuns: s.statRuns, statMetric: s.statMetric,
         domain: dom, res: N, samples: s.samples,
-        posRule: s.posRule, posSpeedFrac: s.posSpeedFrac, fixedAngle: s.fixedAngle, fixedRadius: s.fixedRadius, fixedRetro: s.fixedRetro,
+        posRule: s.posRule, posSpeedFrac: s.posSpeedFrac, fixedAngle: s.fixedAngle, fixedRadius: s.fixedRadius, fixedRetro: s.fixedRetro, frame: s.frame,
       };
       const cv = canvasRef.current!; cv.width = N; cv.height = N;
       const ctx = cv.getContext('2d')!;
@@ -334,6 +338,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
         if (isFinal) {
           setBusy(false); statReadyRef.current = bc.lens === 'stat';
           gridKeyRef.current = `${N}|${bc.lens === 'stat' ? 'stat' : bc.metric}`;
+          setRenderedFrame(bc.frame ?? 'bary');
           measureDimension(); applyColor();
         } else renderStage(stageIdx + 1);
       };
@@ -439,18 +444,29 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     const d = effDomain;
     const X = (x: number) => ((x - d.a0) / (d.a1 - d.a0)) * W;
     const Y = (y: number) => ((d.b1 - y) / (d.b1 - d.b0)) * H;
+    // In a star frame the paths are drawn relative to that star's own motion, so
+    // it sits pinned at the origin and the others loop around it.
+    const fIdx = renderedFrame === 's0' ? 0 : renderedFrame === 's1' ? 1 : renderedFrame === 's2' ? 2 : -1;
+    const o = fIdx >= 0 ? starTracks[fIdx] : null;
     starTracks.forEach((path, k) => {
       if (path.length < 2) return;
+      const ox = (i: number) => o ? path[i].x - o[Math.min(i, o.length - 1)].x : path[i].x;
+      const oy = (i: number) => o ? path[i].y - o[Math.min(i, o.length - 1)].y : path[i].y;
       const rgb = STAR_RGB[k % STAR_RGB.length];
       ctx.strokeStyle = `rgba(${rgb},0.55)`; ctx.lineWidth = 1.4;
-      ctx.beginPath(); ctx.moveTo(X(path[0].x), Y(path[0].y));
-      for (let i = 1; i < path.length; i++) ctx.lineTo(X(path[i].x), Y(path[i].y));
+      ctx.beginPath(); ctx.moveTo(X(ox(0)), Y(oy(0)));
+      for (let i = 1; i < path.length; i++) ctx.lineTo(X(ox(i)), Y(oy(i)));
       ctx.stroke();
       // start position marker
       ctx.fillStyle = `rgb(${rgb})`;
-      ctx.beginPath(); ctx.arc(X(path[0].x), Y(path[0].y), 3.5, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(X(ox(0)), Y(oy(0)), 3.5, 0, 7); ctx.fill();
     });
-  }, [starTracks, effDomain.a0, effDomain.a1, effDomain.b0, effDomain.b1, mode, showStars]);
+    if (o) { // crosshair at the co-moving frame centre
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1;
+      const cx = X(0), cy = Y(0);
+      ctx.beginPath(); ctx.moveTo(cx - 6, cy); ctx.lineTo(cx + 6, cy); ctx.moveTo(cx, cy - 6); ctx.lineTo(cx, cy + 6); ctx.stroke();
+    }
+  }, [starTracks, effDomain.a0, effDomain.a1, effDomain.b0, effDomain.b1, mode, showStars, renderedFrame]);
 
   const switchMode = (m: BasinMode) => { stop(); setMode(m); };
 
@@ -561,6 +577,14 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
                 <Slider label="Speed × circular" value={posSpeedFrac} min={0.2} max={1.6} step={0.05} onChange={setPosSpeedFrac} format={v => v.toFixed(2)} />}
             </>
           )}
+          {mode === 'pos' && (
+            <Pills label="Reference frame" value={frame}
+              options={[
+                { value: 'bary', label: 'Barycentre' },
+                { value: 's0', label: 'Star A' }, { value: 's1', label: 'Star B' }, { value: 's2', label: 'Star C' },
+              ]}
+              onChange={(v) => setFrame(v as FrameId)} />
+          )}
           {mode === 'radspeed' && lens === 'exact' && <Slider label="Fixed angle (°)" value={fixedAngle} min={0} max={360} step={5} onChange={setFixedAngle} format={v => `${v}`} />}
           {mode === 'anglespeed' && lens === 'exact' && <Slider label="Fixed radius" value={fixedRadius} min={0.3} max={6} step={0.1} onChange={setFixedRadius} format={v => v.toFixed(1)} />}
           {mode !== 'pos' && lens === 'exact' && <Pills label="Direction" value={fixedRetro ? 1 : 0} options={[{ value: 0, label: 'Prograde' }, { value: 1, label: 'Retrograde' }]} onChange={(v) => setFixedRetro(v === 1)} />}
@@ -655,6 +679,11 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
                 ? 'One pixel = one exact starting condition. Hue = outcome, brightness = how long it lasted. Drag a box to zoom — the boundaries stay intricate at every scale: the three-body problem’s fractal final-state sensitivity. D is the box-counting dimension of the boundary (1 = smooth, →2 = space-filling); α = 2−D is the uncertainty exponent.'
                 : 'One pixel = one exact starting condition. Colour = the planet’s Lyapunov exponent λ — how fast its future becomes unpredictable (blue = regular orbits, red = strongly chaotic). Drag a box to zoom. D is the box-counting dimension of the regular/chaotic frontier.'}
           </div>
+          {mode === 'pos' && frame !== 'bary' && (
+            <div style={{ font: '11px/1.5 system-ui', color: '#8aa0c8', marginTop: 6 }}>
+              Frame co-moving with <b>{frame === 's0' ? 'Star A' : frame === 's1' ? 'Star B' : 'Star C'}</b>: each pixel is a start offset from that star, launched with the star’s own velocity, so destinies are read relative to a moving star (⌖ marks it, pinned at the origin while the others orbit).
+            </div>
+          )}
         </div>
 
         {/* Map */}
