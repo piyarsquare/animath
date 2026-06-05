@@ -336,7 +336,9 @@ against `main` (no new commits) before editing.
 - On the landing gallery itself, ☰ now opens an empty Settings drawer — harmless,
   but could be hidden on `/` if it bothers anyone. *(still open)*
 
-**Separate, decided later:** *which* apps to trim from the catalog (`apps.ts`), and
-whether trimmed apps are **retired** (route removed) or **hidden but URL-reachable**
-(kept in routing, dropped from the gallery) — `#/fractals-cpu` is the existing
-precedent for "routed but not in the catalog."
+**Catalog trim — decided: keep all apps.** The question of *which* apps to trim
+from the catalog (`apps.ts`) was raised and the maintainer chose to **keep all
+eight**. No catalog or route changes were made. (Were any app to be trimmed in
+future, the two mechanisms remain: **retire** = route removed, or **hide but
+URL-reachable** = dropped from the gallery but kept in routing, per the existing
+`#/fractals-cpu` precedent.)
