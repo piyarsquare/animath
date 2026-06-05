@@ -18,6 +18,17 @@ export enum ColourBy {
   Range = 1
 }
 
+export enum JitterMode {
+  /** Scatter the sampling: perturb the domain point, then evaluate f there, so
+   *  the particle stays exactly on the graph surface of f (a denser/irregular
+   *  sampling of the same surface). This is the default. */
+  Scatter = 0,
+  /** Fuzz the cloud: evaluate f at the clean lattice point, then add an
+   *  independent 4D offset to the assembled (x, y, Re f, Im f) point, pushing it
+   *  off the surface on all four axes (a soft cloud around the surface). */
+  Fuzz = 1
+}
+
 export interface Axis {
   line: THREE.Line;
 }

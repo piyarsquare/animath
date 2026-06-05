@@ -23,6 +23,7 @@ uniform float hueShift;
 uniform float saturation;
 uniform float realView;
 uniform float jitterAmp;
+uniform int   uJitterMode;
 uniform int   shapeType;
 uniform int   branchIndex;
 uniform int   exponentP;
@@ -222,7 +223,13 @@ vec3 calcColour(vec2 z, vec2 f){
     col = mix(vec3(dot(col, vec3(0.3333))), col, saturation);
     return col * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
 }
-void main(){vec2 z = vec2(position.x, position.z);vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec4 jitter = (seed*2. - 1.) * jitterAmp;vec4 p4 = vec4(z.x, z.y, f.x, f.y) + jitter;float t = time*0.3;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f);}`;
+// Jitter has two modes (uJitterMode). 0 = Scatter the sampling: perturb the
+// domain point z by the 4D seed's xy, then evaluate f there, so the particle
+// stays exactly on the graph surface of f. 1 = Fuzz the cloud: evaluate f at the
+// clean z, then add the full independent 4D offset to (x, y, Re f, Im f), pushing
+// the point off the surface on all four axes. Colour uses the effective z/f, so
+// it stays consistent in both modes.
+void main(){vec2 z = vec2(position.x, position.z);vec4 jit = (seed*2. - 1.) * jitterAmp;if(uJitterMode==0) z += jit.xy;vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec4 p4 = vec4(z.x, z.y, f.x, f.y);if(uJitterMode==1) p4 += jit;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f);}`;
 
 export const fragmentShader = `
 uniform float opacity;

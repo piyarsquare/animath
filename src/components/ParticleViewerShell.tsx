@@ -10,7 +10,7 @@ import { useResponsive } from '../styles/responsive';
 import { planes, Plane } from '../math/constants';
 import { clearPersistedState } from '../lib/usePersistentState';
 import {
-  ColorStyle, ColourBy, AXIS_COLORS,
+  ColorStyle, ColourBy, JitterMode, AXIS_COLORS,
   shapeNames, textureNames, viewTypes, motionModes,
   useGestureRotation,
 } from '../lib/particles';
@@ -313,6 +313,15 @@ export default function ParticleViewerShell({
           <Slider label="Jitter" value={state.jitter}
             min={R.jitter.min} max={R.jitter.max} step={R.jitter.step}
             onChange={state.setJitter} format={v => v.toFixed(3)} />
+          <Pills
+            label="Jitter mode"
+            options={[
+              { value: JitterMode.Scatter, label: 'Scatter' },
+              { value: JitterMode.Fuzz, label: 'Fuzz' },
+            ]}
+            value={state.jitterMode}
+            onChange={state.setJitterMode}
+          />
         </Section>
 
         <Section title="Detail" icon="⚙">

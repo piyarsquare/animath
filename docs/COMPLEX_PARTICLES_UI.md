@@ -203,6 +203,9 @@ Pills, Select, Checkbox). Each section has an icon + chevron; **Function** and
 **〜 Motion**
 - **Shimmer** — Slider 0–1 (default 0; per-particle brightness oscillation).
 - **Jitter** — Slider 0–0.5 (default 0.1; positional noise).
+- **Jitter mode** — Pills *Scatter* / *Fuzz* (default Scatter). Scatter perturbs
+  the sampled domain point and re-evaluates f (particles stay on the surface);
+  Fuzz offsets the 4-D point off the surface on all four axes.
 
 **⚙ Detail**
 - **Particle count** — Slider 1,000–250,000 (default 80k; labeled in "k").
