@@ -70,6 +70,47 @@
         <h2>Working notes</h2>
         <!-- Newest entry first. data-type ∈ decision | code | finding | blocker | milestone -->
         <ol class="timeline">
+          <li class="tl" data-type="finding">
+            <p class="tl-time">22:40</p>
+            <span class="chip chip-finding">Finding</span>
+            <h3>Diagnosed the current Klein scheme + the design fork</h3>
+            <p class="why"><strong>Why:</strong> The user reports walking the Klein
+            bottle and ending up "on the other side of the floor / up is now down,"
+            and wants the flip to feel smooth like the Möbius walk — but the current
+            flat engine can't produce that experience, so I needed to pin down what
+            it actually does before proposing a fix.</p>
+            <p>Read <code>flatEngine.ts</code>, <code>corridorEngine.ts</code>,
+            <code>engine.ts</code>, <code>TopologyWalk.tsx</code>, EXPLAINER.
+            Key facts:</p>
+            <ul>
+              <li>The Klein bottle exists <strong>only</strong> in the
+              <code>flat</code> family (<code>SURFACES</code> in
+              <code>engine.ts</code>). The corridor family has loop / Möbius /
+              double / triple / trefoil — no Klein.</li>
+              <li>The flat engine is <strong>intrinsically flat</strong>: camera
+              <code>up</code> is hard-pinned to <code>(0,1,0)</code> and eye height
+              to <code>+EYE</code> every frame (<code>flatEngine.ts:205,211</code>).
+              The "flip" is realised <em>only</em> by z-mirroring odd columns of the
+              tiled universal cover (<code>sz = klein &amp;&amp; (I&amp;1) ? -1 :
+              1</code>, line 223). The player <strong>never rolls or flips</strong>;
+              you only see landmarks/footprints come back mirror-reversed.</li>
+              <li>So the "up is now down" experience the user describes is literally
+              not producible by the current flat Klein — that sensation belongs to
+              the Möbius <em>corridor</em>, whose smooth roll comes from riding a
+              continuously-twisting swept frame (<code>up = f.b</code>, the binormal
+              from <code>frameAt()</code>; <code>corridorEngine.ts:281,304,306</code>).</li>
+              <li>Mathematically the current flat scheme is a <em>correct</em> flat
+              Klein bottle (glide-reflection gluing). So "not correct" is a
+              <strong>presentation</strong> disagreement, not a math bug — the user
+              wants to feel the orientation flip, which the intrinsic-flat design
+              deliberately suppresses.</li>
+            </ul>
+            <p>Crucial constraint to surface: the Klein bottle <strong>cannot embed
+            in ℝ³ without self-intersection</strong>, so there is no "free" globally
+            smooth walk-on tube the way the Möbius strip has one. A smooth roll is
+            possible only via an <em>immersion</em> (figure-8 / pinched bottle).
+            This makes the next step a genuine design fork → asking the user.</p>
+          </li>
           <li class="tl" data-type="milestone">
             <p class="tl-time">22:32</p>
             <span class="chip chip-milestone">Milestone</span>
