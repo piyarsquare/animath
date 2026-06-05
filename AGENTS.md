@@ -58,9 +58,10 @@ Three manually-invoked Claude Code skills live in `.claude/skills/` (slash
 commands; they never auto-invoke): **`/start-session`** (orient + open a progress
 report), **`/handoff`** (distil the session, using `npm run build` for status), and
 **`/three-hats`** (parallel design review from three lenses). Session notes are
-committed under `docs/sessions/{progress,handoff}/<branch-slug>/` — one folder per
-branch (slug = branch name, `claude/` stripped) so parallel branches don't collide.
-See CLAUDE.md → "Agent session skills" for details.
+committed as self-contained **HTML** (styled by `docs/sessions/report.css`) under
+`docs/sessions/{progress,handoff}/<branch-slug>/` — one folder per branch (slug =
+branch name, `claude/` stripped) so parallel branches don't collide. See CLAUDE.md →
+"Agent session skills" for details.
 
 ---
 

@@ -350,7 +350,8 @@ slash command; they never auto-invoke):
   maintainer · architecture consultant · math-viz & pedagogy) in parallel, then
   synthesizes.
 
-Progress reports and handoffs are **committed** under
+Progress reports and handoffs are **committed** as self-contained **HTML**
+documents (styled by `docs/sessions/report.css`) under
 `docs/sessions/{progress,handoff}/<branch-slug>/` — partitioned **per branch** so
 parallel branches never collide (the slug is the branch name with `claude/`
 stripped and `/`→`-`; keep branch names short and topical). The shared
