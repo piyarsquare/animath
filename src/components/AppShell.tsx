@@ -65,11 +65,11 @@ export interface AppShellProps {
   children: React.ReactNode;
 }
 
-type Tab = 'apps' | 'functions' | 'settings' | 'actions';
+type Tab = 'settings' | 'actions';
 
 export function AppShell({ apps, currentHash, onNavigate, children }: AppShellProps) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>('apps');
+  const [tab, setTab] = useState<Tab>('settings');
   const [header, setHeader] = useState<{ title?: string; subtitle?: string }>({});
   const [hasSettings, setHasSettings] = useState(false);
   const [hasActions, setHasActions] = useState(false);
@@ -90,7 +90,7 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     setExplainer(null);
     setHelpOpen(false);
     setActionFloaterOff(false);
-    setTab('apps');
+    setTab('settings');
   }, [currentHash]);
 
   // Escape closes the help popup, then the drawer.
@@ -108,7 +108,6 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
   const current = apps.find(a => a.hash === currentHash);
   const titleName = header.title ?? (isHome ? 'animath' : current?.name) ?? '';
   const subtitle = header.subtitle;
-  const hasFunctions = functions != null;
   const hasExplainer = explainer != null;
 
   const ctx = useMemo<AppShellState>(() => ({
@@ -138,48 +137,38 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
           {currentHash !== '/' && (
             <button
               className="as-bar-btn"
-              aria-label="Menu screen"
-              title="Menu"
+              aria-label="Home"
+              title="Home"
               onClick={() => onNavigate('/')}
             >⌂</button>
           )}
           <button
             className="as-bar-btn"
-            aria-label="Apps"
-            title="Apps"
-            onClick={() => openWithTab('apps')}
+            aria-label="Menu"
+            title="Menu"
+            onClick={() => openWithTab('settings')}
           >☰</button>
           <button
-            className={`as-bar-btn ${hasFunctions ? '' : 'as-bar-btn-dim'}`}
-            aria-label="Function"
-            title="Function"
-            onClick={() => openWithTab('functions')}
-          >ƒ</button>
-          <button
             className="as-bar-title"
-            onClick={() => openWithTab(hasSettings ? 'settings' : 'apps')}
-            aria-label="Show settings"
+            onClick={() => openWithTab('settings')}
+            aria-label="Open menu"
           >
             <span className="as-bar-title-name">{titleName}</span>
             {subtitle && <span className="as-bar-title-formula">{subtitle}</span>}
           </button>
           <button
-            className={`as-bar-btn ${hasSettings ? '' : 'as-bar-btn-dim'}`}
-            aria-label="Settings"
-            title="Settings"
-            onClick={() => openWithTab('settings')}
-          >⚙</button>
-          <button
             className={`as-bar-btn ${hasActions ? '' : 'as-bar-btn-dim'}`}
             aria-label="Actions"
             title="Actions"
+            disabled={!hasActions}
             onClick={() => openWithTab('actions')}
           >▶</button>
           <button
             className={`as-bar-btn ${hasExplainer ? '' : 'as-bar-btn-dim'}`}
-            aria-label="Explainer"
-            title="What am I looking at?"
-            onClick={() => { if (hasExplainer) setHelpOpen(true); }}
+            aria-label="About"
+            title="About"
+            disabled={!hasExplainer}
+            onClick={() => setHelpOpen(true)}
           >?</button>
           {/* Absorbs the leftover width so the controls cluster on the left
               instead of the actions stretching to the far right. */}
@@ -206,14 +195,6 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
           </div>
           <div className="as-tabs">
             <button
-              className={`as-tab ${tab === 'apps' ? 'as-active' : ''}`}
-              onClick={() => setTab('apps')}
-            >Apps</button>
-            <button
-              className={`as-tab ${tab === 'functions' ? 'as-active' : ''} ${!hasFunctions ? 'as-empty-tab' : ''}`}
-              onClick={() => setTab('functions')}
-            >Function</button>
-            <button
               className={`as-tab ${tab === 'settings' ? 'as-active' : ''} ${!hasSettings ? 'as-empty-tab' : ''}`}
               onClick={() => setTab('settings')}
             >Settings</button>
@@ -225,26 +206,6 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
 
           {/* Mount all panels but only show the active one; the Settings/
               Actions panes own DOM refs that child apps portal into. */}
-          <div className="as-tab-body" style={{ display: tab === 'apps' ? 'block' : 'none' }}>
-            <AppList apps={apps} currentHash={currentHash} onPick={(h) => {
-              onNavigate(h);
-              setOpen(false);
-            }} />
-          </div>
-          <div className="as-tab-body" style={{ display: tab === 'functions' ? 'block' : 'none' }}>
-            {functions ? (
-              <FunctionList
-                names={functions.names}
-                current={functions.current}
-                onPick={(name) => {
-                  functions.onChange(name);
-                  setOpen(false);
-                }}
-              />
-            ) : (
-              <div className="as-empty">No function picker for this view.</div>
-            )}
-          </div>
           <div className="as-tab-body" style={{ display: tab === 'settings' ? 'block' : 'none' }}>
             <div ref={settingsTargetRef} />
             {!hasSettings && <div className="as-empty">No settings for this view.</div>}
@@ -289,44 +250,6 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
   );
 }
 
-function AppList({ apps, currentHash, onPick }: {
-  apps: AppDescriptor[]; currentHash: string; onPick: (hash: string) => void;
-}) {
-  return (
-    <div className="as-app-list">
-      {apps.map(app => (
-        <button
-          key={app.hash}
-          className={`as-app-item ${app.hash === currentHash ? 'as-active' : ''}`}
-          onClick={() => onPick(app.hash)}
-        >
-          <span className="as-app-item-icon">{app.icon ?? '•'}</span>
-          <span className="as-app-item-name">{app.name}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function FunctionList({ names, current, onPick }: {
-  names: readonly string[]; current: string; onPick: (name: string) => void;
-}) {
-  return (
-    <div className="as-app-list">
-      {names.map(name => (
-        <button
-          key={name}
-          className={`as-app-item ${name === current ? 'as-active' : ''}`}
-          onClick={() => onPick(name)}
-        >
-          <span className="as-app-item-icon">ƒ</span>
-          <span className="as-app-item-name">{name}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 /* ------------------------------------------------------------ *
  * Hooks and portal slots for app authors.                       *
  * ------------------------------------------------------------ */
@@ -346,10 +269,12 @@ export function useAppHeader(title: string | undefined, subtitle?: string) {
   }, [shell, title, subtitle]);
 }
 
-/** Register the active function list / current selection / change handler so
- *  the top-bar ƒ button and the Function drawer tab can drive it. Apps that
- *  don't have a function picker simply never call this — the button stays
- *  dimmed and the tab shows an empty-state message. */
+/** Register the active function list / current selection / change handler.
+ *  NOTE: the top-bar ƒ button and the Function drawer tab were removed in the
+ *  menu-bar simplification — function selection now lives in each app's Settings
+ *  (e.g. a `Select`). This registration is therefore currently inert; it's kept
+ *  for API compatibility (existing callers don't need to change) and possible
+ *  future reuse, but has no visible effect today. */
 export function useAppFunctions(reg: AppFunctionsRegistration | null) {
   const shell = useContext(AppShellContext);
   const names = reg?.names;

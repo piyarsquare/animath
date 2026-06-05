@@ -87,16 +87,21 @@ describe an individual module's components:
 
 ## 2. The shared surface today (synthesized from the snapshots)
 
-What *every* app inherits from `AppShell`, per the two inventories:
+What *every* app inherits from `AppShell`. **(Updated: the menu-bar simplification
+in this branch — §7 — changed the top bar and drawer; the current state is below,
+with the pre-change form noted where the seam analysis in §3/§4 still refers to
+it.)**
 
-- **Top bar (48px, fixed).** Left-clustered icon buttons: **⌂ Home · ☰ Apps ·
-  ƒ Function · [Title/formula] · ⚙ Settings · ▶ Actions · ? Explainer**. Buttons
-  dim to ~40% when their target is empty. Title click → Settings; title shows an
-  optional monospace subtitle (formula / scenario name). Driven by `useAppHeader`.
-- **Drawer (slides from the left, ~340px).** Four tabs: **Apps · Function ·
-  Settings · Actions**. Apps and Function are generic lists; **Settings** and
-  **Actions** are *portal targets* an app fills via `<ShellSettings>` /
-  `<ShellActions>`. Tab labels dim when empty. Scrim / Esc closes.
+- **Top bar (48px, fixed).** Left-clustered icon buttons: **⌂ Home · ☰ Menu ·
+  [Title/formula] · ▶ Actions · ? About**. ⌂ Home → landing gallery; ☰ Menu and
+  the Title both open the drawer on **Settings**; ▶ opens Actions; **? About** is
+  the explainer popup. Empty ▶/? are dimmed **and disabled**. Driven by
+  `useAppHeader`. *(Pre-change: also had ☰ Apps, a ƒ Function button, and a
+  separate ⚙ Settings gear.)*
+- **Drawer (slides from the left, ~340px).** Two tabs: **Settings · Actions** —
+  both *portal targets* an app fills via `<ShellSettings>` / `<ShellActions>`;
+  defaults to Settings. Scrim / Esc closes. *(Pre-change: four tabs — Apps ·
+  Function · Settings · Actions — where Apps/Function were generic lists.)*
 - **Action Floater.** A draggable on-canvas panel that mirrors the Actions tab
   (same portal source), collapsed to a ▶ + drag grip. Suppressible via
   `useActionFloaterOff()` for apps that ship their own.
@@ -271,9 +276,10 @@ for the design conversation:
 
 - [ ] Confirm with the maintainer which seams to tackle first (action model vs.
       Settings layout vs. single-source controls vs. the primitive set).
-- [ ] **Retire the in-drawer app-switcher** (maintainer-directed, §7): drop the
-      ☰ Apps drawer tab and let the landing gallery be the sole app picker. Shared
-      `AppShell` change — flag before editing.
+- [x] **Menu-bar simplified** (maintainer-directed, §7): dropped the in-drawer
+      Apps list *and* the Function picker, collapsed the ⚙ gear into the ☰ menu
+      button, relabelled to **⌂ Home · ☰ Menu · Title · ▶ Actions · ? About**;
+      drawer is now **Settings · Actions**. Shared `AppShell` change — build green.
 - [x] **`CLAUDE.md` doc-drift fixed** (§J): `ToggleMenu` re-attributed to the
       legacy Fractals2D, and the repo-layout tree + routing table updated for the
       `MobiusWalk → TopologyWalk` rename (with `#/mobius`, `#/wrap-world` redirects).
@@ -288,35 +294,49 @@ for the design conversation:
 
 ---
 
-## 7. Directed change: navigate by gallery, not an in-drawer app-switcher
+## 7. Implemented: menu-bar simplification
 
-**Decision (maintainer, this session).** Keep the landing **gallery** (`/` route,
-`Menu.tsx`) as the single place to choose an app, and **drop the in-drawer Apps
-list** — jumping app-to-app from inside an app isn't needed. This also serves the
-"make the menu bar make more sense" goal by tightening the top bar.
+**Goal (maintainer).** Keep the landing **gallery** (`/` route, `Menu.tsx`) as the
+single place to choose an app — no app-to-app jumping from inside an app — and make
+the top bar "make more sense." Done in this branch as a shared `AppShell` change.
 
-**Why it fits the review.** The ☰ **Apps** drawer tab is the one fully generic,
-app-agnostic tab (§2); it duplicates the gallery's job as an in-app switcher.
-Removing it makes the drawer purely about the *current* app
-(Function / Settings / Actions) and leaves one navigation path:
-**⌂ Home → gallery → app**.
+**The bar, before → after:**
 
-**Scope when implemented** (a shared `AppShell` change — flag + re-sync per the
-parallel-branch rule):
-- `AppShell.tsx` / `AppShell.css`: remove the **Apps** drawer tab and its body;
-  the drawer reduces to **Function · Settings · Actions**.
-- Top bar: the **☰ Apps** button becomes redundant with **⌂ Home** — remove it (or
-  repoint it at Home). Resulting bar: `⌂ Home · ƒ Function · Title · ⚙ Settings ·
-  ▶ Actions · ?`.
-- `Menu.tsx` (gallery) and `apps.ts` are **unchanged** by this step — the catalog
-  still drives the gallery and the router.
-- Verify Home + every app's deep links still navigate; `npm run build` green.
+```
+Before:  ⌂ Home   ☰ Apps   ƒ Function   [Title→Settings]   ⚙ Settings   ▶ Actions   ? Explainer
+After:   ⌂ Home   ☰ Menu   [Title→Settings]   ▶ Actions   ? About
+         drawer: Apps · Function · Settings · Actions   →   Settings · Actions  (default Settings)
+```
 
-**Open sub-decisions (for implementation time):**
-- Remove the ☰ button entirely, or keep a single Home-only affordance?
-- Once Apps is gone, which tab should the drawer open on by default (Settings)?
+**What changed (all in `AppShell.tsx`):**
+- **Dropped the in-drawer Apps list** (tab + body + the internal `AppList`). The
+  gallery is the sole app picker; `apps.ts` / `Menu.tsx` / routing are unchanged
+  (the `apps` prop still resolves the current app's title).
+- **Dropped the Function picker** (the ƒ bar button + Function tab + `FunctionList`).
+  Function selection already lives in each app's **Settings** (Complex Particles'
+  Settings → Function selector; Plane Transform's `Select label="Function"`), so
+  nothing is stranded. `useAppFunctions` is kept exported but **inert** (documented
+  in the hook), so no app file needed editing — a later cleanup can remove it and
+  its two callers.
+- **Collapsed ⚙ into ☰.** The hamburger ☰ is now the sole Settings opener (so is a
+  click on the Title); the standalone gear is gone. The drawer defaults to Settings
+  and resets there on app change.
+- **Relabelled / tidied:** ⌂ → "Home" (was "Menu"); ☰ → "Menu"; the `?` button →
+  "About" (still the explainer popup). Empty **▶**/**?** are now `disabled` as well
+  as dimmed, so a dimmed button is never a dead-end.
+
+**Verified:** `npm run build` green; no other app files touched; this was re-synced
+against `main` (no new commits) before editing.
+
+**Follow-ups (not done):**
+- Dead CSS: `.as-app-list` / `.as-app-item*` in `AppShell.css` are now unused
+  (were the Apps/Function lists) — safe to delete in a later sweep.
+- The inert `useAppFunctions` hook + its two callers can be removed once we're sure
+  the registration won't be reused.
+- On the landing gallery itself, ☰ now opens an empty Settings drawer — harmless,
+  but could be hidden on `/` if it bothers anyone.
 
 **Separate, decided later:** *which* apps to trim from the catalog (`apps.ts`), and
 whether trimmed apps are **retired** (route removed) or **hidden but URL-reachable**
-(kept in routing, dropped from the gallery) — the `#/fractals-cpu` legacy CPU
-fractals are an existing precedent for "routed but not in the catalog."
+(kept in routing, dropped from the gallery) — `#/fractals-cpu` is the existing
+precedent for "routed but not in the catalog."
