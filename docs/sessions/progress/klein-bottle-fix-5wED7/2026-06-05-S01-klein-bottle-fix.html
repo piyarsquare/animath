@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Progress · 2026-06-05-S01 Klein Bottle Fix</title>
+  <link rel="stylesheet" href="../../report.css">
+  <script defer src="../../report.js"></script>
+  <!-- Machine-readable metadata: consumed by build-index.mjs to build the dashboard.
+       Keep it accurate; update status/build as the session progresses. -->
+  <script type="application/json" class="report-meta">
+  {
+    "kind": "progress",
+    "session": "2026-06-05-S01",
+    "date": "2026-06-05",
+    "title": "Klein Bottle Fix",
+    "branch": "claude/klein-bottle-fix-5wED7",
+    "slug": "klein-bottle-fix-5wED7",
+    "status": "in-progress",
+    "build": "unknown",
+    "followup": null,
+    "pr": null
+  }
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">Progress report</p>
+    <h1>2026-06-05-S01 — Klein Bottle Fix</h1>
+    <dl class="meta">
+      <div><dt>Branch</dt><dd><code>claude/klein-bottle-fix-5wED7</code> · slug <code>klein-bottle-fix-5wED7</code></dd></div>
+      <div><dt>App(s)</dt><dd><code>src/animations/TopologyWalk/</code> — first-person walk on a closed surface</dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-warn">not yet run</span></dd></div>
+    </dl>
+    <p class="lineage">Session lineage: this (first tracked session on this branch)</p>
+  </header>
+
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+
+      <div class="toolbar">
+        <button type="button" data-action="expand-all">Expand all</button>
+        <button type="button" data-action="collapse-all">Collapse all</button>
+      </div>
+
+      <section>
+        <h2>Session purpose</h2>
+        <p>Correct the Klein bottle implementation in the Topology Walker
+        (<code>src/animations/TopologyWalk/</code>) — the first-person "walk on a
+        closed surface" app whose surface modes include a flat torus and a Klein
+        bottle.</p>
+      </section>
+
+      <section>
+        <h2>Previous session</h2>
+        <p>New branch — no prior handoff under
+        <code>docs/sessions/handoff/klein-bottle-fix-5wED7/</code>. The single
+        most-recent handoff across all branches is
+        <a href="../../handoff/better-reports/2026-06-05-S01-rich-html-reports.html">better-reports
+        · S01 — Rich HTML Reports</a> (status: completed, build passed, PR
+        <a href="https://github.com/piyarsquare/animath/pull/183">#183</a>). That
+        work was docs/tooling only (the session-report component kit) and is
+        <strong>unrelated</strong> to this session's Klein bottle focus — noted here
+        only so nothing is lost.</p>
+      </section>
+
+      <section class="log">
+        <h2>Working notes</h2>
+        <!-- Newest entry first. data-type ∈ decision | code | finding | blocker | milestone -->
+        <ol class="timeline">
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">22:32</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Session started</h3>
+            <p class="why"><strong>Why:</strong> Establish the branch, session log,
+            and orientation before any implementation work begins.</p>
+            <p>On branch <code>claude/klein-bottle-fix-5wED7</code> (clean working
+            tree). Resolved slug <code>klein-bottle-fix-5wED7</code>, created the
+            per-branch progress/handoff folders, and read the latest handoff for
+            continuity. The TopologyWalk app holds the flat-torus / Klein logic in
+            <code>flatEngine.ts</code> (plus <code>corridorEngine.ts</code>,
+            <code>character.ts</code>, <code>themes.ts</code>, shaders). Awaiting
+            user direction on the specific Klein bottle correction.</p>
+          </li>
+        </ol>
+      </section>
+
+      <p class="callout callout-note"><span class="callout-label">Note</span>
+      Per the start-session protocol, no investigation or code changes have begun
+      yet — this report is the session scaffold. Next step is the user's direction
+      on what exactly is wrong with the current Klein bottle behaviour.</p>
+
+    </div><!-- /.content -->
+  </div><!-- /.body -->
+</main>
+</body>
+</html>
