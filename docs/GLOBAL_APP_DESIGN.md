@@ -333,8 +333,8 @@ against `main` (no new commits) before editing.
 **Follow-ups:**
 - ~~Dead `.as-app*` CSS~~ and ~~the inert `useAppFunctions` hook + callers~~ — both
   removed in the cleanup pass (see the Function-picker bullet above).
-- On the landing gallery itself, ☰ now opens an empty Settings drawer — harmless,
-  but could be hidden on `/` if it bothers anyone. *(still open)*
+- ~~On the landing gallery, ☰ opened an empty Settings drawer~~ — the ☰ button is
+  now hidden on the `/` route (the gallery is its own picker), alongside ⌂ Home.
 
 **Catalog trim — decided: keep all apps.** The question of *which* apps to trim
 from the catalog (`apps.ts`) was raised and the maintainer chose to **keep all

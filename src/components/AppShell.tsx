@@ -124,12 +124,14 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
               onClick={() => onNavigate('/')}
             >⌂</button>
           )}
-          <button
-            className="as-bar-btn"
-            aria-label="Menu"
-            title="Menu"
-            onClick={() => openWithTab('settings')}
-          >☰</button>
+          {currentHash !== '/' && (
+            <button
+              className="as-bar-btn"
+              aria-label="Menu"
+              title="Menu"
+              onClick={() => openWithTab('settings')}
+            >☰</button>
+          )}
           <button
             className="as-bar-title"
             onClick={() => openWithTab('settings')}
