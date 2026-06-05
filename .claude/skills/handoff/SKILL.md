@@ -25,58 +25,83 @@ fix, investigate, or run any code (except `npm run build` for build status).
 ## Path & Filename Convention
 
 Session logs are committed and partitioned per branch:
-`docs/sessions/handoff/<branch-slug>/YYYY-MM-DD-SNN-description.md` — the filename
-must match the progress report exactly, and the `<branch-slug>` folder must match
-the one the progress report lives in.
+`docs/sessions/handoff/<branch-slug>/YYYY-MM-DD-SNN-description.html` — the filename
+must match the progress report exactly (including the `.html` extension), and the
+`<branch-slug>` folder must match the one the progress report lives in.
 
 ## Document Structure
 
-Follow the structure of existing handoffs in `docs/sessions/handoff/`. The format
-adapts to the session type, but always includes:
+The handoff is a **self-contained HTML document** (we use HTML, not Markdown, for
+the richer rendering) linking the shared stylesheet at `../../report.css` (the
+relative path from `docs/sessions/handoff/<branch-slug>/`). Follow the structure of
+existing handoffs in `docs/sessions/handoff/`. The format adapts to the session
+type, but always includes the sections below:
 
-```markdown
-# Handoff: YYYY-MM-DD-SNN Description
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Handoff · YYYY-MM-DD-SNN Description</title>
+  <link rel="stylesheet" href="../../report.css">
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">Handoff</p>
+    <h1>YYYY-MM-DD-SNN — Description</h1>
+    <dl class="meta">
+      <div><dt>Status</dt><dd><span class="badge badge-ok">Completed</span> [or In Progress / Design Only / Investigation Only + brief qualifier]</dd></div>
+      <div><dt>Branch</dt><dd><code>[git branch]</code> — pushed: [yes/no]</dd></div>
+      <div><dt>PR</dt><dd>[#number + title, or "none"]</dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-ok">npm run build: passed</span> [or badge-bad + first error, or badge-warn "not run" + reason]</dd></div>
+    </dl>
+    <p>[One-sentence summary of what this session was.]</p>
+  </header>
 
-## Status: [Completed | In Progress | Design Only | Investigation Only] (brief qualifier)
+  <section>
+    <h2>What changed</h2> <!-- or "What we found" (investigation) / "The problem" (design) -->
+    <p>Concrete description of changes, findings, or design decisions. Use
+    <code>&lt;pre&gt;</code>, <code>&lt;table&gt;</code>, etc. where they help the
+    next agent understand quickly.</p>
+  </section>
 
-One-sentence summary of what this session was.
+  <section>
+    <h2>Key files</h2>
+    <table>
+      <thead><tr><th>File</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td><code>src/path/to/file.tsx:line</code></td><td>What it does / why it matters</td></tr>
+      </tbody>
+    </table>
+  </section>
 
-## Branch / PR
+  <section>
+    <h2>Pending / not done</h2>
+    <p>What was NOT completed. Be specific — include commands ready to run,
+    decisions not yet made, validation not yet performed.</p>
+  </section>
 
-- Branch: [git branch] — pushed: [yes/no]
-- PR: [#number + title, or "none"]
+  <section>
+    <h2>Context</h2>
+    <ul>
+      <li>Links to related sessions (previous and next).</li>
+      <li>Cross-cutting concerns (shared-file / parallel-branch overlap,
+      persisted-settings keys touched).</li>
+    </ul>
+  </section>
 
-## What Changed
-(or "What We Found" for investigation sessions, "The Problem" for design sessions)
-
-Concrete description of changes, findings, or design decisions. Include code
-snippets, data, or tables where they help the next agent understand quickly.
-
-## Key Files
-
-| File | Role |
-|------|------|
-| `src/path/to/file.tsx:line` | What it does / why it matters |
-
-## Pending / Not Done
-
-What was NOT completed. Be specific — include commands ready to run, decisions not
-yet made, validation not yet performed.
-
-## Context
-
-- Links to related sessions (previous and next)
-- Any cross-cutting concerns the next agent needs to know (e.g. shared-file /
-  parallel-branch overlap, persisted-settings keys touched)
-
-## Build Status
-
-`npm run build`: passed / failed (first error: …), or "not run" with reason.
+  <!-- Self-Reflection section appended here (see below). -->
+</main>
+</body>
+</html>
 ```
 
-After the document, append the **Self-Reflection Protocol**
-(`.claude/prompts/self-reflection.md`) — read that file and add its section to the
-end of the handoff.
+After the document body, append the **Self-Reflection Protocol**
+(`.claude/prompts/self-reflection.md`) — read that file and add its section, **as
+the HTML `<section class="self-reflection">` shown there**, just before
+`</main>`.
 
 ## Rules
 

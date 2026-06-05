@@ -13,12 +13,13 @@ progress report, and present context. Do NOT start any implementation work.
 ## Path Convention (read first)
 
 Session logs are **committed to the repo** and partitioned **per branch** so
-parallel branches never collide. Everything this session writes goes under a
-branch-slug folder:
+parallel branches never collide. Each report is a **self-contained HTML document**
+(we use HTML, not Markdown, for the richer rendering — tables, badges, collapsible
+sections). Everything this session writes goes under a branch-slug folder:
 
 ```
-docs/sessions/progress/<branch-slug>/YYYY-MM-DD-SNN-description.md
-docs/sessions/handoff/<branch-slug>/YYYY-MM-DD-SNN-description.md
+docs/sessions/progress/<branch-slug>/YYYY-MM-DD-SNN-description.html
+docs/sessions/handoff/<branch-slug>/YYYY-MM-DD-SNN-description.html
 ```
 
 `<branch-slug>` = the current branch (`git branch --show-current`) with the
@@ -49,8 +50,8 @@ short and topical** so the folders stay tidy.
    `src/apps.ts`, `CLAUDE.md`, `README.md`) are **append-only** — never reorder
    existing entries.
 6. **Create the progress report** at
-   `docs/sessions/progress/<branch-slug>/YYYY-MM-DD-SNN-description.md` with the
-   initial structure below.
+   `docs/sessions/progress/<branch-slug>/YYYY-MM-DD-SNN-description.html` with the
+   initial HTML structure below.
 7. **Present a summary** of the last handoff: status, what was done, what's pending.
    Then wait for the user to direct what to work on.
 
@@ -70,26 +71,59 @@ presenting the summary:
 
 ## Progress Report Initial Structure
 
-```markdown
-# Progress: YYYY-MM-DD-SNN Description
+Write a **self-contained HTML document** linking the shared stylesheet at
+`../../report.css` (the relative path from `docs/sessions/progress/<branch-slug>/`).
+Use real HTML structure — tables, `<details>`, badges — not Markdown. Start from
+this skeleton:
 
-## Session Purpose
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Progress · YYYY-MM-DD-SNN Description</title>
+  <link rel="stylesheet" href="../../report.css">
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">Progress report</p>
+    <h1>YYYY-MM-DD-SNN — Description</h1>
+    <dl class="meta">
+      <div><dt>Branch</dt><dd><code>&lt;active git branch&gt;</code> · slug <code>&lt;branch-slug&gt;</code></dd></div>
+      <div><dt>App(s)</dt><dd>src/animations/&lt;Name&gt;/ — or "shell / framework" / "docs"</dd></div>
+      <div><dt>Build</dt><dd><span class="badge">not yet run</span></dd></div>
+    </dl>
+  </header>
 
-[User's stated focus]
+  <section>
+    <h2>Session purpose</h2>
+    <p>[User's stated focus]</p>
+  </section>
 
-## Repo Context
+  <section>
+    <h2>Previous session</h2>
+    <p>[One-line summary of the latest handoff, with a relative link to its file]</p>
+  </section>
 
-- Branch: [active git branch]
-- App(s) in play: [src/animations/<Name>/ or "shell / framework" or "docs"]
-
-## Previous Session
-
-[One-line summary of latest handoff with filename reference]
-
----
-
-(Working notes will be prepended below as the session progresses)
+  <section class="log">
+    <h2>Working notes</h2>
+    <!-- Prepend the newest entry directly below; one <article class="entry"> per
+         state transition. Each entry states WHAT happened and WHY. -->
+    <article class="entry">
+      <h3>[Entry title]</h3>
+      <p class="why"><strong>Why:</strong> [reason for this transition]</p>
+      <p>[what happened]</p>
+    </article>
+  </section>
+</main>
+</body>
+</html>
 ```
+
+Badge classes for the Build line: `badge badge-ok` (passed), `badge badge-bad`
+(failed), `badge badge-warn` (not run / unknown).
 
 ## Progress Report Rule
 
