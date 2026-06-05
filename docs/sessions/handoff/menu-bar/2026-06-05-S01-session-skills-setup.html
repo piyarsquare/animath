@@ -5,6 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Handoff · 2026-06-05-S01 Session Skills Setup</title>
   <link rel="stylesheet" href="../../report.css">
+  <script defer src="../../report.js"></script>
+  <script type="application/json" class="report-meta">
+  {
+    "kind": "handoff",
+    "session": "2026-06-05-S01",
+    "date": "2026-06-05",
+    "title": "Session Skills Setup",
+    "branch": "claude/menu-bar",
+    "slug": "menu-bar",
+    "status": "completed",
+    "build": "passed",
+    "followup": "low",
+    "pr": { "num": 181, "url": "https://github.com/piyarsquare/animath/pull/181" }
+  }
+  </script>
 </head>
 <body>
 <main class="report">
@@ -14,114 +29,75 @@
     <dl class="meta">
       <div><dt>Status</dt><dd><span class="badge badge-ok">Completed</span> — PR merged</dd></div>
       <div><dt>Branch</dt><dd><code>claude/menu-bar</code> — pushed: yes</dd></div>
-      <div><dt>PR</dt><dd><a href="https://github.com/piyarsquare/animath/pull/181">#181</a> “Global app design: simplify the shared menu bar + add agent session skills” (replaced closed #180) — merged</dd></div>
+      <div><dt>PR</dt><dd><a href="https://github.com/piyarsquare/animath/pull/181">#181</a> — merged</dd></div>
       <div><dt>Build</dt><dd><span class="badge badge-ok">npm run build: passed</span></dd></div>
     </dl>
     <p>Ported three agent session skills into animath, established committed
-    per-branch session logs, transitioned report format to HTML, renamed the working
+    per-branch session logs, moved the report format to HTML, renamed the working
     branch, and reopened the (since-merged) PR.</p>
   </header>
 
-  <section>
-    <h2>What changed</h2>
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
 
-    <h3>Agent session skills</h3>
-    <p>Three manually-invoked skills committed to <code>.claude/skills/</code>,
-    adapted from a generic Python/biology origin to animath’s reality:</p>
-    <table>
-      <thead><tr><th>Skill</th><th>What it does</th></tr></thead>
-      <tbody>
-        <tr><td><code>/start-session</code></td><td>Resolve branch slug, find the latest handoff for this branch, open a dated progress report, orient the agent</td></tr>
-        <tr><td><code>/handoff</code></td><td>Distil the session to a handoff using <code>npm run build</code> for status; append self-reflection</td></tr>
-        <tr><td><code>/three-hats</code></td><td>Run a plan through three expert lenses in parallel (maintainer · architect · math-pedagogy), then synthesise</td></tr>
-      </tbody>
-    </table>
-    <p>Key adaptations: <code>pytest</code> → <code>npm run build</code> (the only CI
-    check); three-hats roles recast for animath; full-discipline progress cadence
-    kept. Shared protocol at <code>.claude/prompts/self-reflection.md</code>,
-    referenced by path (no native include in Claude Code skills).</p>
+      <section>
+        <h2>What changed</h2>
+        <p>Three manually-invoked skills under <code>.claude/skills/</code>, adapted
+        from a generic Python/biology origin to animath’s reality; committed,
+        per-branch session logs; and a first move to HTML reports.</p>
+        <p class="callout callout-gotcha"><span class="callout-label">Gotcha</span>
+        A GitHub-UI branch rename closes the branch’s open PRs (it cost us #180). Worth
+        a note for the next agent.</p>
+      </section>
 
-    <h3>Report format: HTML</h3>
-    <p>Session reports are <strong>self-contained HTML</strong> (not Markdown) for
-    richer rendering, styled by the shared <code>docs/sessions/report.css</code>
-    (linked as <code>../../report.css</code>). All three skills + the self-reflection
-    protocol were updated to emit/append HTML.</p>
+      <section>
+        <h2>Key files</h2>
+        <table>
+          <thead><tr><th data-sort>File</th><th data-sort>Role</th></tr></thead>
+          <tbody>
+            <tr><td><a class="codelink" href="https://github.com/piyarsquare/animath/blob/main/.claude/skills/start-session/SKILL.md"><code>.claude/skills/start-session/SKILL.md</code></a></td><td>Orient + open the progress report</td></tr>
+            <tr><td><a class="codelink" href="https://github.com/piyarsquare/animath/blob/main/.claude/skills/handoff/SKILL.md"><code>.claude/skills/handoff/SKILL.md</code></a></td><td>Distil the session; build status; self-reflect</td></tr>
+            <tr><td><a class="codelink" href="https://github.com/piyarsquare/animath/blob/main/.claude/skills/three-hats/SKILL.md"><code>.claude/skills/three-hats/SKILL.md</code></a></td><td>Three-lens design review</td></tr>
+            <tr><td><a class="codelink" href="https://github.com/piyarsquare/animath/blob/main/docs/sessions/report.css"><code>docs/sessions/report.css</code></a></td><td>Shared stylesheet for all reports</td></tr>
+          </tbody>
+        </table>
+      </section>
 
-    <h3>Session log convention</h3>
-    <p>Logs are <strong>committed</strong> and partitioned per branch:
-    <code>docs/sessions/{progress,handoff}/&lt;branch-slug&gt;/YYYY-MM-DD-SNN-description.html</code>,
-    where <code>&lt;branch-slug&gt;</code> = branch name, <code>claude/</code> stripped,
-    <code>/</code>→<code>-</code>. The folder is a pure function of the branch (no
-    shared index to merge), so concurrent branches can never write the same path.</p>
+      <section>
+        <h2>Pending / not done</h2>
+        <ul>
+          <li>Make the HTML reports <em>actually rich</em> — handled next on
+          <code>claude/better-reports</code>.</li>
+          <li>Queued in <code>IDEAS.md</code>: the Hopf fiber-trace overlay and
+          color-as-a-fourth-channel ideas for Complex Particles.</li>
+        </ul>
+      </section>
 
-    <h3>Branch rename + PR reopen</h3>
-    <p><code>claude/global-app-design-refactor-OjG5Q</code> → <code>claude/menu-bar</code>
-    (slug <code>menu-bar</code>). The GitHub UI rename closed #180 rather than
-    retargeting it; #181 was opened from the same branch and later merged (squash).</p>
-  </section>
+      <section>
+        <h2>Context</h2>
+        <ul>
+          <li>First tracked session; no prior handoff.</li>
+          <li>Shared-file touches (<code>CLAUDE.md</code>, <code>AGENTS.md</code>,
+          <code>.gitignore</code>) were append/section edits — consistent with the
+          append-only parallel-branch rule.</li>
+        </ul>
+      </section>
 
-  <section>
-    <h2>Key files</h2>
-    <table>
-      <thead><tr><th>File</th><th>Role</th></tr></thead>
-      <tbody>
-        <tr><td><code>.claude/skills/start-session/SKILL.md</code></td><td>Start-session skill — orient, open HTML progress report</td></tr>
-        <tr><td><code>.claude/skills/handoff/SKILL.md</code></td><td>Handoff skill — build status, distil, self-reflect (HTML)</td></tr>
-        <tr><td><code>.claude/skills/three-hats/SKILL.md</code></td><td>Three-hats design-review skill (HTML outputs)</td></tr>
-        <tr><td><code>.claude/prompts/self-reflection.md</code></td><td>Shared self-reflection protocol (HTML section)</td></tr>
-        <tr><td><code>docs/sessions/report.css</code></td><td>Shared stylesheet for all session reports</td></tr>
-        <tr><td><code>docs/sessions/progress/menu-bar/2026-06-05-S01-session-skills-setup.html</code></td><td>This session’s progress report</td></tr>
-        <tr><td><code>CLAUDE.md</code> / <code>AGENTS.md</code> (tails)</td><td>Announce the skills + the committed-HTML, per-branch convention</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section>
-    <h2>Pending / not done</h2>
-    <ul>
-      <li>Nothing blocking — PR #181 merged; the HTML transition is the last change.</li>
-      <li>Queued in <code>IDEAS.md</code> for a later thread: the Hopf <em>fiber-trace
-      overlay</em> and <em>color-as-a-fourth-channel</em> ideas for Complex Particles.</li>
-      <li>The system-prompt branch directive still names the old branch — cosmetic;
-      all git ops target <code>claude/menu-bar</code>.</li>
-    </ul>
-  </section>
-
-  <section>
-    <h2>Context</h2>
-    <ul>
-      <li>First tracked session under the per-branch convention; no prior handoff.</li>
-      <li>Shared-file touches (<code>CLAUDE.md</code>, <code>AGENTS.md</code>,
-      <code>.gitignore</code>) were append/section edits — consistent with the
-      append-only parallel-branch rule.</li>
-    </ul>
-  </section>
-
-  <section class="self-reflection">
-    <h2>Self-reflection</h2>
-    <ol>
-      <li><strong>What would you do with another session?</strong> Dogfood
-      <code>/three-hats</code> on a real animath design question (e.g. the Hopf
-      fiber-overlay idea) — the skill is written but never exercised.</li>
-      <li><strong>What would you change about what you produced?</strong> The
-      three-hats expert files land in the <code>progress/</code> folder; a dedicated
-      <code>reviews/</code> subfolder might read more cleanly.</li>
-      <li><strong>What were you not asked that you think is important?</strong> Whether
-      old Markdown reports elsewhere should be migrated — for now only this session’s
-      pair was converted.</li>
-      <li><strong>What did we both overlook?</strong> That a GitHub UI branch-rename
-      closes the branch’s open PRs (it cost us #180). Worth a one-line note in the
-      docs.</li>
-      <li><strong>What did you find difficult?</strong> The squash-merge left the
-      branch 1-behind/20-ahead; had to reset onto <code>origin/main</code> to keep the
-      next diff clean.</li>
-      <li><strong>What would have made this task easier?</strong> A GitHub MCP / CLI
-      branch-rename tool would have let the rename preserve the PR atomically.</li>
-      <li><strong>Follow-up value:</strong> <span class="badge badge-ok">LOW</span> —
-      skills complete, PR merged, convention documented and committed; only polish
-      (PR review, idea backlog) remains.</li>
-    </ol>
-  </section>
+      <section class="self-reflection">
+        <h2>Self-reflection</h2>
+        <ol>
+          <li><strong>What would you do with another session?</strong> Dogfood <code>/three-hats</code> on a real design question.</li>
+          <li><strong>What would you change about what you produced?</strong> The thin HTML looked like Markdown — addressed on <code>better-reports</code>.</li>
+          <li><strong>What were you not asked that you think is important?</strong> Whether other Markdown docs should migrate (left alone for now).</li>
+          <li><strong>What did we both overlook?</strong> That a GitHub UI rename closes open PRs.</li>
+          <li><strong>What did you find difficult?</strong> The squash-merge left the branch 1-behind/20-ahead; reset onto <code>origin/main</code> to keep the diff clean.</li>
+          <li><strong>What would have made this task easier?</strong> A GitHub branch-rename tool to preserve the PR atomically.</li>
+          <li><strong>Follow-up value:</strong> <span class="badge badge-ok">LOW</span> — skills complete, PR merged, convention documented.</li>
+        </ol>
+      </section>
+    </div><!-- /.content -->
+  </div><!-- /.body -->
 </main>
 </body>
 </html>
