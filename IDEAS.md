@@ -124,3 +124,78 @@ Follow-ups:
 - Open: the stereographic pole (points with `z→0` and `f` near `+i|f|`) sends
   particles toward infinity; consider a soft clamp or an alternate projection
   pole if it's visually distracting for some functions.
+
+### Flexible "color by" — choose source *and* quantity
+
+Today **Color → Color by** is a binary `ColourBy` (Domain = `z` vs Range = `f`),
+and the colormap is hardwired as `arg → hue`, `|·| → value`. Open it up so the
+user can pick **which quantity** drives the colour, independently of the source:
+
+- **Source:** input `z` or output `f(z)` (already the Domain/Range switch).
+- **Quantity:** magnitude `|·|`, argument/phase `arg`, real part, or imaginary
+  part — e.g. colour by **|z|** or **|f(z)|** (the specific ask) instead of the
+  current phase-driven hue.
+- Possibly let hue and brightness be driven by *different* quantities (e.g. hue
+  from `arg f`, value from `|z|`).
+
+This is the colour slice of the broader **Unified channel-mapping control** idea
+above; if that lands, this is just its colour row. Short of the full matrix, ship a
+small `Pills`/`Select` pair (source × quantity) in the Color section. Implement in
+the shader's `calcColour` (`ComplexParticles/shaders/index.ts`) behind a couple of
+uniforms; persist the selection via `useParticleState`.
+
+### Explicit domain bounds (lower/upper) with a ± lock
+
+The sampled domain is currently symmetric half-widths (`extentX`, `extentY`, so the
+box is always `[-ext, +ext]`). Let the user set **independent lower and upper
+bounds** per axis (`xMin/xMax`, `yMin/yMax`), with a **lock toggle** that ties them
+to a symmetric `±a` (today's behaviour) and, when unlocked, allows an off-centre
+window (e.g. `x ∈ [0, 6]`).
+
+- Replace/augment the two extent sliders with min/max number inputs per axis plus a
+  "± lock" checkbox; locked keeps `min = −max` and shows a single magnitude.
+- Thread through `createParticleGeometry` / `rebuildGeometryBuffers` /
+  `redistributeAdaptive` (which currently centre the grid at 0 via `*spanX`/2) so
+  they sample `[xMin, xMax] × [yMin, yMax]`.
+- Keep the `axisScale` (×1 / ×π) multiplier working with the new bounds.
+- Pairs with the number-input commit-on-blur idea below.
+
+### More functions, better organized (+ a generic quadratic; stretch: custom f)
+
+Grow and organize the function list (`lib/complexMath.ts` name/formula tables + the
+shader `applyComplex` switch in `ComplexParticles/shaders/index.ts`):
+
+- **Add functions:** `cot` (= cos/sin), `arcsin`, `arccos` (note these are
+  multivalued — `arcsin z = −i·ln(iz + √(1−z²))`, `arccos z = −i·ln(z + i√(1−z²))`;
+  reuse the existing `branchIndex` plumbing for sheet selection).
+- **Generic quadratic** `a·z² + b·z + c` with user-set coefficients `a, b, c`
+  (complex, or at least real) exposed as inputs — a parameterized family rather than
+  a fixed entry. (Generalize later to a generic polynomial.)
+- **Organization:** group the (now long) list into categories — polynomial /
+  rational, roots & log (multivalued), trig & inverse-trig, exp & essential, special
+  (Γ, Joukowski, Möbius) — via `Select` optgroups or a category `Pills` + `Select`,
+  so the picker stays scannable.
+- **Stretch — "write your own function":** a custom complex expression the user
+  types (e.g. `z^2 + 1/z`). Hard because the math runs in GLSL: options are a tiny
+  expression→GLSL compiler injected into the shader (recompile on change), or a CPU
+  evaluator (already needed for adaptive sampling) plus a generic GLSL interpreter.
+  Big task — treat the generic-quadratic/polynomial path as the pragmatic middle
+  ground to ship first.
+
+### Number inputs: commit on Enter/blur, with revert (shared ControlPanel)
+
+Wherever a control takes a *typed* number, **don't apply the change keystroke by
+keystroke** — wait until the user presses **Enter** or **leaves the field**, then
+validate and commit. If the committed value is invalid/unsatisfactory (out of range,
+unparseable, or it makes the view degenerate), **revert to the previous value**,
+ideally with a small popup/toast explaining why.
+
+- This is a **shared `ControlPanel` change** (affects every app, not just Complex
+  Particles): add a number-entry primitive (or a "commit on blur/Enter" mode for the
+  existing `Slider`'s numeric field and any raw inputs — the exponent `p/q`, the new
+  domain bounds, the quadratic coefficients).
+- Keep an internal "draft" string while typing; on commit, parse + clamp to the
+  control's `min`/`max`/`step`; on failure restore the last good value and signal it.
+- Especially important for the domain-bounds and quadratic-coefficient inputs above,
+  where intermediate keystrokes (an empty box, a lone "−") would otherwise
+  momentarily break the render.
