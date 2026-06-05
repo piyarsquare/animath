@@ -336,4 +336,21 @@ Follow **docs/BUILDING_AN_APP.md**. In short:
 Pushing to `main` triggers the **Deploy demo** GitHub Pages workflow
 (`npm ci && npm run build`, uploads `dist/`); it also accepts manual dispatch.
 For per-PR preview URLs, see `docs/PREVIEW_DEPLOYS.md`.
+
+### Agent session skills (`.claude/skills/`)
+
+Three manually-invoked Claude Code skills support the session workflow (type the
+slash command; they never auto-invoke):
+
+- **`/start-session`** — reads the latest handoff, opens a progress report, and
+  orients (branch + which app, the append-only parallel-branch rule). Run it first.
+- **`/handoff`** — distills the session into a handoff doc; uses `npm run build`
+  (the only CI check) for status and appends the self-reflection protocol.
+- **`/three-hats <plan>`** — reviews a plan/design from three lenses (framework
+  maintainer · architecture consultant · math-viz & pedagogy) in parallel, then
+  synthesizes.
+
+Progress reports and handoffs are written under `docs/sessions/{progress,handoff}/`
+and are **gitignored** (local per-clone memory). The shared self-reflection protocol
+lives at `.claude/prompts/self-reflection.md`.
 </content>

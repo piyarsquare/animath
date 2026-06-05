@@ -1,2 +1,10 @@
 node_modules/
 dist/
+
+# Local-only agent session logs (progress reports + handoffs from the
+# /start-session and /handoff skills). The directories are kept (.gitkeep);
+# the generated notes stay local per clone.
+docs/sessions/progress/*
+docs/sessions/handoff/*
+!docs/sessions/progress/.gitkeep
+!docs/sessions/handoff/.gitkeep

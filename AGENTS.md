@@ -52,6 +52,15 @@ GLSL is kept inline as template strings under each app's `shaders/` directory.
 Run `npm run build` before opening a pull request — it must pass. There are
 currently no automated tests, linter, or formatter.
 
+## Session Skills
+
+Three manually-invoked Claude Code skills live in `.claude/skills/` (slash
+commands; they never auto-invoke): **`/start-session`** (orient + open a progress
+report), **`/handoff`** (distil the session, using `npm run build` for status), and
+**`/three-hats`** (parallel design review from three lenses). Session notes go to
+`docs/sessions/{progress,handoff}/` and are gitignored. See CLAUDE.md → "Agent
+session skills" for details.
+
 ---
 
 These instructions apply repository-wide.
