@@ -20,6 +20,16 @@ import { ProjectionMode } from '../lib/viewpoint';
 
 const R = COMPLEX_PARTICLES_DEFAULTS.ranges;
 
+/** Format an orientation-matrix entry to a fixed width so the monospace columns
+ *  don't reflow as signs flip: a leading non-breaking space stands in for the
+ *  minus on non-negative values, so every cell is the same length. (Also folds
+ *  "-0.00" down to "0.00".) */
+function fmtMatrixCell(v: number): string {
+  let s = v.toFixed(2);
+  if (s === '-0.00') s = '0.00';
+  return s.startsWith('-') ? s : ` ${s}`;
+}
+
 export interface ParticleViewerShellProps {
   state: ParticleState;
   controls: ReturnType<typeof useViewControls>;
@@ -242,7 +252,7 @@ export default function ParticleViewerShell({
               <tbody>
                 {state.orientationMatrix.map((row, i) => (
                   <tr key={i}>
-                    {row.map((v, j) => <td key={j}>{v.toFixed(2)}</td>)}
+                    {row.map((v, j) => <td key={j}>{fmtMatrixCell(v)}</td>)}
                   </tr>
                 ))}
               </tbody>
