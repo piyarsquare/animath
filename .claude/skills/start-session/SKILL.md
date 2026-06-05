@@ -10,25 +10,48 @@ argument-hint: "[session focus, one sentence]"
 Initialize a new working session on **animath**. Read the latest handoff, create a
 progress report, and present context. Do NOT start any implementation work.
 
+## Path Convention (read first)
+
+Session logs are **committed to the repo** and partitioned **per branch** so
+parallel branches never collide. Everything this session writes goes under a
+branch-slug folder:
+
+```
+docs/sessions/progress/<branch-slug>/YYYY-MM-DD-SNN-description.md
+docs/sessions/handoff/<branch-slug>/YYYY-MM-DD-SNN-description.md
+```
+
+`<branch-slug>` = the current branch (`git branch --show-current`) with the
+`claude/` prefix stripped and any `/` turned into `-` — e.g. `claude/menu-bar`
+→ `menu-bar`. The folder name is a pure function of the branch (no shared index
+to merge), so two branches can never write the same path. **Keep branch names
+short and topical** so the folders stay tidy.
+
 ## Steps
 
-1. **Find the latest handoff** — list `docs/sessions/handoff/`, sort by filename,
-   read the last one. (If the directory is empty, note that this is the first
-   tracked session.)
-2. **Determine the session number** — check `docs/sessions/progress/` for today's
-   date. If files exist for today (e.g., `2026-06-05-S03-...`), the next session is
-   S04. If none exist for today, start at S01.
-3. **Get the session focus** — use `$ARGUMENTS` if provided, otherwise ask the user
+1. **Resolve the branch slug** — run `git branch --show-current`, strip a leading
+   `claude/`, replace `/` with `-`. Use it for every path below; create the
+   `docs/sessions/{progress,handoff}/<branch-slug>/` folders if they don't exist.
+2. **Find the latest handoff for this branch** — list
+   `docs/sessions/handoff/<branch-slug>/`, sort by filename, read the last one. If
+   that folder is empty (new branch), fall back to the single most-recent handoff
+   across all branch folders for continuity, and note that this is the first
+   tracked session on this branch.
+3. **Determine the session number** — check
+   `docs/sessions/progress/<branch-slug>/` for today's date. If files exist for
+   today (e.g., `2026-06-05-S03-...`), the next session is S04. If none exist for
+   today, start at S01.
+4. **Get the session focus** — use `$ARGUMENTS` if provided, otherwise ask the user
    (one sentence).
-4. **Orient in the repo** — note the **active git branch** and, if the focus names
-   one, **which app** (`src/animations/<Name>/`) is in play. Skim `CLAUDE.md` /
-   `AGENTS.md` for any conventions relevant to the focus. Remember the
-   parallel-branch rule: shared files (`src/index.tsx`, `src/apps.ts`, `CLAUDE.md`,
-   `README.md`) are **append-only** — never reorder existing entries.
-5. **Create the progress report** at
-   `docs/sessions/progress/YYYY-MM-DD-SNN-description.md` with the initial structure
-   below.
-6. **Present a summary** of the last handoff: status, what was done, what's pending.
+5. **Orient in the repo** — note which **app** (`src/animations/<Name>/`) the focus
+   names, if any. Skim `CLAUDE.md` / `AGENTS.md` for any conventions relevant to the
+   focus. Remember the parallel-branch rule: shared files (`src/index.tsx`,
+   `src/apps.ts`, `CLAUDE.md`, `README.md`) are **append-only** — never reorder
+   existing entries.
+6. **Create the progress report** at
+   `docs/sessions/progress/<branch-slug>/YYYY-MM-DD-SNN-description.md` with the
+   initial structure below.
+7. **Present a summary** of the last handoff: status, what was done, what's pending.
    Then wait for the user to direct what to work on.
 
 ## Continuity
@@ -84,8 +107,8 @@ it wasn't written, it didn't happen.
   will rely on it to understand what happened, what was decided, and why. Without
   the Why, the record is incomplete and decisions become unauditable.
 - Do NOT begin any implementation, investigation, or code changes.
-- Do NOT run scripts or explore the codebase beyond reading the handoff and the
-  orientation skim in step 4.
+- Do NOT run scripts or explore the codebase beyond resolving the branch slug,
+  reading the handoff, and the orientation skim in step 5.
 - After presenting the summary, STOP and wait for the user to direct next steps.
 - The description in the filename should be lowercase-hyphenated, 2–5 words, derived
   from the session focus.

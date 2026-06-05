@@ -57,9 +57,10 @@ currently no automated tests, linter, or formatter.
 Three manually-invoked Claude Code skills live in `.claude/skills/` (slash
 commands; they never auto-invoke): **`/start-session`** (orient + open a progress
 report), **`/handoff`** (distil the session, using `npm run build` for status), and
-**`/three-hats`** (parallel design review from three lenses). Session notes go to
-`docs/sessions/{progress,handoff}/` and are gitignored. See CLAUDE.md → "Agent
-session skills" for details.
+**`/three-hats`** (parallel design review from three lenses). Session notes are
+committed under `docs/sessions/{progress,handoff}/<branch-slug>/` — one folder per
+branch (slug = branch name, `claude/` stripped) so parallel branches don't collide.
+See CLAUDE.md → "Agent session skills" for details.
 
 ---
 

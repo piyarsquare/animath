@@ -11,18 +11,23 @@ fix, investigate, or run any code (except `npm run build` for build status).
 
 ## Steps
 
-1. Find the current session's progress report in `docs/sessions/progress/` (most
-   recent by filename).
-2. Read the progress report to understand what happened this session.
-3. Run `npm run build` to get current build status (`tsc && vite build` — the only
+1. Resolve the **branch slug**: `git branch --show-current`, strip a leading
+   `claude/`, replace `/` with `-` (e.g. `claude/menu-bar` → `menu-bar`).
+2. Find the current session's progress report in
+   `docs/sessions/progress/<branch-slug>/` (most recent by filename).
+3. Read the progress report to understand what happened this session.
+4. Run `npm run build` to get current build status (`tsc && vite build` — the only
    CI check), unless it was already run recently in this session. Note the result
    (pass / fail + first error).
-4. Write the handoff to `docs/sessions/handoff/` with the **same filename** as the
-   progress report.
+5. Write the handoff to `docs/sessions/handoff/<branch-slug>/` with the **same
+   filename** as the progress report (create the folder if needed).
 
-## Filename Convention
+## Path & Filename Convention
 
-`YYYY-MM-DD-SNN-description.md` — must match the progress report name exactly.
+Session logs are committed and partitioned per branch:
+`docs/sessions/handoff/<branch-slug>/YYYY-MM-DD-SNN-description.md` — the filename
+must match the progress report exactly, and the `<branch-slug>` folder must match
+the one the progress report lives in.
 
 ## Document Structure
 

@@ -26,14 +26,16 @@ codebase first (`CLAUDE.md`, `AGENTS.md`, the relevant `src/animations/<App>/`, 
 
 **Every agent writes its complete output to a file.** Nothing is lost to context.
 
-File naming convention (matches the current session's progress report — get the
-`YYYY-MM-DD-SNN` identifier from the most recent file in `docs/sessions/progress/`;
-if there is no progress report yet, use today's date with `S01`):
+Resolve the **branch slug** first: `git branch --show-current`, strip a leading
+`claude/`, replace `/` with `-`. All outputs go in that branch's folder, matching
+the current session's progress report — get the `YYYY-MM-DD-SNN` identifier from the
+most recent file in `docs/sessions/progress/<branch-slug>/`; if there is no progress
+report yet, use today's date with `S01`:
 
-- `docs/sessions/progress/{YYYY-MM-DD-SNN}-expert-maintainer.md` — Framework Maintainer
-- `docs/sessions/progress/{YYYY-MM-DD-SNN}-expert-consultant.md` — Architecture Consultant
-- `docs/sessions/progress/{YYYY-MM-DD-SNN}-expert-pedagogy.md` — Math-Viz & Pedagogy
-- `docs/sessions/progress/{YYYY-MM-DD-SNN}-expert-synthesis.md` — Convergence Analysis
+- `docs/sessions/progress/<branch-slug>/{YYYY-MM-DD-SNN}-expert-maintainer.md` — Framework Maintainer
+- `docs/sessions/progress/<branch-slug>/{YYYY-MM-DD-SNN}-expert-consultant.md` — Architecture Consultant
+- `docs/sessions/progress/<branch-slug>/{YYYY-MM-DD-SNN}-expert-pedagogy.md` — Math-Viz & Pedagogy
+- `docs/sessions/progress/<branch-slug>/{YYYY-MM-DD-SNN}-expert-synthesis.md` — Convergence Analysis
 
 Each agent must be instructed to write its complete analysis to its designated file
 using the Write tool.

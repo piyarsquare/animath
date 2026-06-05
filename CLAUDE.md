@@ -350,7 +350,9 @@ slash command; they never auto-invoke):
   maintainer · architecture consultant · math-viz & pedagogy) in parallel, then
   synthesizes.
 
-Progress reports and handoffs are written under `docs/sessions/{progress,handoff}/`
-and are **gitignored** (local per-clone memory). The shared self-reflection protocol
-lives at `.claude/prompts/self-reflection.md`.
+Progress reports and handoffs are **committed** under
+`docs/sessions/{progress,handoff}/<branch-slug>/` — partitioned **per branch** so
+parallel branches never collide (the slug is the branch name with `claude/`
+stripped and `/`→`-`; keep branch names short and topical). The shared
+self-reflection protocol lives at `.claude/prompts/self-reflection.md`.
 </content>
