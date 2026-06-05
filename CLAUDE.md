@@ -65,7 +65,7 @@ animath/
     │   ├── FractalsGPU/         # GPU Mandelbrot / Julia / Burning Ship / Tricorn
     │   ├── Fractals/            # legacy CPU 2D fractals (routed at #/fractals-cpu)
     │   ├── Correspondence/      # Mandelbrot ↔ Julia split-pane explorer
-    │   ├── MobiusWalk/          # first-person Möbius corridor walk
+    │   ├── TopologyWalk/        # first-person walk on a closed surface: twisting corridor + flat torus / Klein bottle
     │   ├── TrinaryStars/        # three-body planet sandbox (Observatory) + ensemble Lab
     │   │                        #   (Trinary.tsx hosts both as tabs; engine in lib/nbody)
     │   ├── StableMarriage/      # Gale–Shapley visualiser + heatmap lab (CSS/DOM)
@@ -84,7 +84,7 @@ animath/
     │   ├── ControlPanel.css
     │   ├── Canvas3D.tsx        # Three.js scene + camera + renderer + resize wrapper
     │   ├── Readme.tsx          # in-app markdown renderer (marked)
-    │   └── ToggleMenu.tsx      # legacy collapsible menu (still used by FractalsGPU)
+    │   └── ToggleMenu.tsx      # legacy collapsible menu (used by the legacy Fractals2D)
     │
     ├── controls/
     │   ├── QuarterTurnControls.tsx # 4D eighth-turn + spin + drop-axis controls
@@ -138,7 +138,7 @@ from `src/apps.ts`.
 | `#/fractals`         | `FractalsGPU`    | GPU Mandelbrot / Julia / Burning Ship / Tricorn |
 | `#/fractals-cpu`     | `Fractals2D`     | Legacy CPU 2D fractals                      |
 | `#/correspondence`   | `Correspondence` | Mandelbrot ↔ Julia split view               |
-| `#/mobius`           | `MobiusWalk`     | Möbius corridor walk                        |
+| `#/topology-walk`    | `TopologyWalk`   | First-person walk on a closed surface (twisting corridor / flat torus / Klein); `#/mobius` and `#/wrap-world` redirect here |
 | `#/trinary`          | `Trinary`        | Three-star system: Observatory sandbox + Lab as tabs (`#/trinary-lab` opens the Lab) |
 | `#/stable-marriage`  | `StableMarriage` | Gale–Shapley algorithm + heatmap lab        |
 | `#/agentic-sorting`  | `AgenticSorting` | Concurrent agent-based sorting              |
@@ -336,4 +336,23 @@ Follow **docs/BUILDING_AN_APP.md**. In short:
 Pushing to `main` triggers the **Deploy demo** GitHub Pages workflow
 (`npm ci && npm run build`, uploads `dist/`); it also accepts manual dispatch.
 For per-PR preview URLs, see `docs/PREVIEW_DEPLOYS.md`.
+
+### Agent session skills (`.claude/skills/`)
+
+Three manually-invoked Claude Code skills support the session workflow (type the
+slash command; they never auto-invoke):
+
+- **`/start-session`** — reads the latest handoff, opens a progress report, and
+  orients (branch + which app, the append-only parallel-branch rule). Run it first.
+- **`/handoff`** — distills the session into a handoff doc; uses `npm run build`
+  (the only CI check) for status and appends the self-reflection protocol.
+- **`/three-hats <plan>`** — reviews a plan/design from three lenses (framework
+  maintainer · architecture consultant · math-viz & pedagogy) in parallel, then
+  synthesizes.
+
+Progress reports and handoffs are **committed** under
+`docs/sessions/{progress,handoff}/<branch-slug>/` — partitioned **per branch** so
+parallel branches never collide (the slug is the branch name with `claude/`
+stripped and `/`→`-`; keep branch names short and topical). The shared
+self-reflection protocol lives at `.claude/prompts/self-reflection.md`.
 </content>

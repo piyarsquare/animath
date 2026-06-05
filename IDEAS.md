@@ -124,3 +124,138 @@ Follow-ups:
 - Open: the stereographic pole (points with `z→0` and `f` near `+i|f|`) sends
   particles toward infinity; consider a soft clamp or an alternate projection
   pole if it's visually distracting for some functions.
+
+### Flexible "color by" — choose source *and* quantity
+
+Today **Color → Color by** is a binary `ColourBy` (Domain = `z` vs Range = `f`),
+and the colormap is hardwired as `arg → hue`, `|·| → value`. Open it up so the
+user can pick **which quantity** drives the colour, independently of the source:
+
+- **Source:** input `z` or output `f(z)` (already the Domain/Range switch).
+- **Quantity:** magnitude `|·|`, argument/phase `arg`, real part, or imaginary
+  part — e.g. colour by **|z|** or **|f(z)|** (the specific ask) instead of the
+  current phase-driven hue.
+- Possibly let hue and brightness be driven by *different* quantities (e.g. hue
+  from `arg f`, value from `|z|`).
+
+This is the colour slice of the broader **Unified channel-mapping control** idea
+above; if that lands, this is just its colour row. Short of the full matrix, ship a
+small `Pills`/`Select` pair (source × quantity) in the Color section. Implement in
+the shader's `calcColour` (`ComplexParticles/shaders/index.ts`) behind a couple of
+uniforms; persist the selection via `useParticleState`.
+
+### Explicit domain bounds (lower/upper) with a ± lock
+
+The sampled domain is currently symmetric half-widths (`extentX`, `extentY`, so the
+box is always `[-ext, +ext]`). Let the user set **independent lower and upper
+bounds** per axis (`xMin/xMax`, `yMin/yMax`), with a **lock toggle** that ties them
+to a symmetric `±a` (today's behaviour) and, when unlocked, allows an off-centre
+window (e.g. `x ∈ [0, 6]`).
+
+- Replace/augment the two extent sliders with min/max number inputs per axis plus a
+  "± lock" checkbox; locked keeps `min = −max` and shows a single magnitude.
+- Thread through `createParticleGeometry` / `rebuildGeometryBuffers` /
+  `redistributeAdaptive` (which currently centre the grid at 0 via `*spanX`/2) so
+  they sample `[xMin, xMax] × [yMin, yMax]`.
+- Keep the `axisScale` (×1 / ×π) multiplier working with the new bounds.
+- Pairs with the number-input commit-on-blur idea below.
+
+### More functions, better organized (+ a generic quadratic; stretch: custom f)
+
+Grow and organize the function list (`lib/complexMath.ts` name/formula tables + the
+shader `applyComplex` switch in `ComplexParticles/shaders/index.ts`):
+
+- **Add functions:** `cot` (= cos/sin), `arcsin`, `arccos` (note these are
+  multivalued — `arcsin z = −i·ln(iz + √(1−z²))`, `arccos z = −i·ln(z + i√(1−z²))`;
+  reuse the existing `branchIndex` plumbing for sheet selection).
+- **Generic quadratic** `a·z² + b·z + c` with user-set coefficients `a, b, c`
+  (complex, or at least real) exposed as inputs — a parameterized family rather than
+  a fixed entry. (Generalize later to a generic polynomial.)
+- **Organization:** group the (now long) list into categories — polynomial /
+  rational, roots & log (multivalued), trig & inverse-trig, exp & essential, special
+  (Γ, Joukowski, Möbius) — via `Select` optgroups or a category `Pills` + `Select`,
+  so the picker stays scannable.
+- **Stretch — "write your own function":** a custom complex expression the user
+  types (e.g. `z^2 + 1/z`). Hard because the math runs in GLSL: options are a tiny
+  expression→GLSL compiler injected into the shader (recompile on change), or a CPU
+  evaluator (already needed for adaptive sampling) plus a generic GLSL interpreter.
+  Big task — treat the generic-quadratic/polynomial path as the pragmatic middle
+  ground to ship first.
+
+### Number inputs: commit on Enter/blur, with revert (shared ControlPanel)
+
+Wherever a control takes a *typed* number, **don't apply the change keystroke by
+keystroke** — wait until the user presses **Enter** or **leaves the field**, then
+validate and commit. If the committed value is invalid/unsatisfactory (out of range,
+unparseable, or it makes the view degenerate), **revert to the previous value**,
+ideally with a small popup/toast explaining why.
+
+- This is a **shared `ControlPanel` change** (affects every app, not just Complex
+  Particles): add a number-entry primitive (or a "commit on blur/Enter" mode for the
+  existing `Slider`'s numeric field and any raw inputs — the exponent `p/q`, the new
+  domain bounds, the quadratic coefficients).
+- Keep an internal "draft" string while typing; on commit, parse + clamp to the
+  control's `min`/`max`/`step`; on failure restore the last good value and signal it.
+- Especially important for the domain-bounds and quadratic-coefficient inputs above,
+  where intermediate keystrokes (an empty box, a lone "−") would otherwise
+  momentarily break the render.
+
+### Show the actual Hopf fibers (the interlocking circles)
+
+**Motivation.** The iconic Hopf-fibration image — linked Villarceau circles packed
+into nested tori — is a picture of **S³** (stereographically dropped into ℝ³). Our
+**Torus** mode already *is* that S³ chart, yet you never see the circles, and the
+reason is fundamental: a particle is `(z, f(z))`, so the cloud is a **2-D surface**
+(the graph of f), not a sampling of fibers. The classic image is built by sampling
+many **base points on S²** and drawing each one's **whole fiber circle**; we instead
+plot where the function's graph *lands*. Hopf mode then collapses each fiber to a
+point on the base S² by design. So neither current mode draws a fiber. The missing
+dimension is precisely the **common phase** `θ` in `(e^{iθ}z, e^{iθ}f)` — the U(1)
+orbit, which *is* the Hopf fiber. (You can't fill a 3-manifold with a 2-manifold of
+points; you have to add the fiber back.)
+
+**Feature: a fiber-trace overlay.** Behind a toggle, for a sampled set of base
+points draw the full Hopf circle
+
+  `θ ↦ stereo( normalize( e^{iθ}·(z, f) ) )`,  θ ∈ [0, 2π)
+
+as a line loop in the **Torus (S³)** view, colored by its base point (i.e. by the
+ratio `z/f`, exactly what Hopf mode shows). Then:
+
+- The existing **Collapse → Hopf** slider (`uProjAlpha`) animates each circle
+  *shrinking to its base point* — the fibration's defining move, made visible.
+- Sampling base points along **circles of latitude on S²** (constant `|z|/|f|`)
+  yields clean **nested Clifford-torus** donuts that register with the existing
+  reference scaffold (`createHopfScaffold.ts`); sampling a 2-D grid packs the ball.
+- Ties the abstract picture back to *our* object: the circles you see are the
+  common-phase orbits of the function's graph points. (For generic f each graph
+  point sits on a distinct fiber — `f(e^{iθ}z) = e^{iθ}f(z)` only for homogeneous
+  degree-1 f — so for the textbook nested-tori look, sample base points directly on
+  S² rather than reusing the domain grid.)
+- Implementation: a separate `LineSegments`/`LineLoop` overlay (not the point
+  cloud), generated from a "fibers to draw" sample-density control; reuse the Torus
+  projection math in `viewpoint.ts` / `shaders/index.ts:186`. Keep it off by default
+  (it's a study aid, and dense fibers get busy). Pairs with the "Hopf study" mode.
+
+### Color as a fourth channel (spend color on a dropped axis, not on phase)
+
+**Motivation.** Today color is **domain coloring** (`arg`→hue, `|·|`→value of `z` or
+`f`; `calcColour` in `ComplexParticles/shaders/index.ts:201`) — but that information
+is *already* in the geometry, so color is a legibility aid, **not an independent
+axis**. An alternative is to let color carry one of the four coordinates the
+projection would otherwise **discard**, giving a no-distortion 4-D view: 3 axes in
+space + 1 axis in color (e.g. show `(x, y, u)` in space and encode `v` as hue or
+brightness).
+
+- This is the "color row" of the broader **Unified channel-mapping control** idea
+  above — implement it there if that lands, or as a standalone **"Drop → color"**
+  projection variant (a Drop-axis mode that maps the dropped coordinate to color
+  instead of throwing it away).
+- Honest trade-offs to document: faithful in a single frame (no projection loss),
+  but color is a perceptually coarse channel (hard to read precise values), it
+  **can't show linking/continuity** the way geometry can, and you lose color for
+  phase while it's in use. A diverging/cyclic ramp + a small legend would help.
+- Caveat (and the reason this is *separate* from the fiber idea): color-as-dimension
+  does **not** reveal the interlocking circles — "interlocking" is an embedded-in-ℝ³
+  phenomenon you only get by drawing the fiber curves (above). Color can label
+  *which* fiber a point belongs to, not make two loops visibly thread each other.

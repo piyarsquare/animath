@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { ProjectionMode } from '../viewpoint';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import { usePersistentState } from '../usePersistentState';
-import { ViewPoint, ColorStyle, ColourBy, Axis, motionModes, dropModes } from './types';
+import { ViewPoint, ColorStyle, ColourBy, JitterMode, Axis, motionModes, dropModes } from './types';
 
 export interface UseParticleStateOptions {
   count?: number;
@@ -45,6 +45,9 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [shimmer, setShimmer] = usePersistentState(pk('shimmer'), COMPLEX_PARTICLES_DEFAULTS.initial.shimmer);
   const [hueShift, setHueShift] = usePersistentState(pk('hueShift'), COMPLEX_PARTICLES_DEFAULTS.initial.hueShift);
   const [jitter, setJitter] = usePersistentState(pk('jitter'), COMPLEX_PARTICLES_DEFAULTS.initial.jitter);
+  // How the Jitter amount is applied: Scatter (perturb the domain, stay on the
+  // surface — default) or Fuzz (offset the 4D point off the surface). See JitterMode.
+  const [jitterMode, setJitterMode] = usePersistentState<JitterMode>(pk('jitterMode'), JitterMode.Scatter);
   const [axisWidth, setAxisWidth] = usePersistentState(pk('axisWidth'), COMPLEX_PARTICLES_DEFAULTS.initial.axisWidth);
   // Sampled-domain half-widths, independent per axis (a rectangular input box),
   // plus a unit multiplier (1 or π) applied to both extents and the reference
@@ -158,6 +161,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     shimmer, setShimmer,
     hueShift, setHueShift,
     jitter, setJitter,
+    jitterMode, setJitterMode,
     axisWidth, setAxisWidth,
     extentX, setExtentX,
     extentY, setExtentY,

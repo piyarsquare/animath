@@ -379,7 +379,7 @@
   }
 }
 
-.as-bar-column {
+.as-arena-bar-column {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -388,7 +388,7 @@
   position: relative;
 }
 
-.as-bar {
+.as-arena-bar {
   width: 75%;
   border-radius: 999px;
   position: absolute;
@@ -398,7 +398,7 @@
 /* Dot variant: a small fixed-size circle whose vertical position is set
    inline. The component reads --as-dot-size to center it on its value. */
 :root { --as-dot-size: 10px; }
-.as-bar.as-bar-dot {
+.as-arena-bar.as-arena-bar-dot {
   width: var(--as-dot-size);
   height: var(--as-dot-size);
   border-radius: 50%;
@@ -410,13 +410,13 @@
   :root { --as-dot-size: 8px; }
 }
 
-.as-bar-swapping {
+.as-arena-bar-swapping {
   background: #fff;
   box-shadow: 0 0 15px #fff;
   z-index: 20;
 }
 
-.as-bar-active {
+.as-arena-bar-active {
   background: #facc15;
   box-shadow: 0 0 10px rgba(250, 204, 21, 0.6);
   z-index: 10;

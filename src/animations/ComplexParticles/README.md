@@ -29,5 +29,8 @@ intensity, or particle shape.
   hexagon / pyramid), texture (procedural checker / speckled / stone /
   metal, or HDR royal), and a light-background toggle.
 - **Motion** — shimmer (time-varying brightness) and jitter (positional
-  noise).
+  noise), with a **Jitter mode**: *Scatter* (the default) perturbs the
+  sampled domain point and re-evaluates f, so particles stay on the surface
+  (a denser, irregular sampling of the same graph); *Fuzz* offsets the
+  assembled 4-D point off the surface on all four axes (a soft cloud).
 - **Detail** — particle count and axis line width.

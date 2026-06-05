@@ -34,6 +34,10 @@ export function useUniformSync(state: ParticleState): void {
   }, [state.jitter]);
 
   useEffect(() => {
+    materialsRef.current.forEach(m => { m.uniforms.uJitterMode.value = state.jitterMode; });
+  }, [state.jitterMode]);
+
+  useEffect(() => {
     materialsRef.current.forEach(m => { m.uniforms.hueShift.value = state.hueShift; });
     const setAxisHue = (ref: typeof xAxisRef, hue: number) => {
       if (ref.current) {

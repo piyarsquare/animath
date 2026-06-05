@@ -17,18 +17,6 @@ export interface AppDescriptor {
   blurb?: string;
 }
 
-/** Apps register their function picker via useAppFunctions so the AppShell's
- *  top-bar ƒ button can show / change the active function without the user
- *  having to dig into the Settings tab. */
-export interface AppFunctionsRegistration {
-  /** List of function names in the order to display. */
-  names: readonly string[];
-  /** Currently-selected function name. */
-  current: string;
-  /** Called when the user picks a different function from the drawer. */
-  onChange: (name: string) => void;
-}
-
 export interface AppShellState {
   /** Title shown in the bar (defaults to the registered AppDescriptor name). */
   title?: string;
@@ -49,8 +37,6 @@ export interface AppShellState {
   setHasActions: (v: boolean) => void;
   setHeader: (h: { title?: string; subtitle?: string }) => void;
   /** Function registration (or null when the active app has no function picker). */
-  functions: AppFunctionsRegistration | null;
-  setFunctions: (reg: AppFunctionsRegistration | null) => void;
   /** Markdown explainer for the active app (the "?" help popup), or null. */
   explainer: string | null;
   setExplainer: (md: string | null) => void;
@@ -65,15 +51,14 @@ export interface AppShellProps {
   children: React.ReactNode;
 }
 
-type Tab = 'apps' | 'functions' | 'settings' | 'actions';
+type Tab = 'settings' | 'actions';
 
 export function AppShell({ apps, currentHash, onNavigate, children }: AppShellProps) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>('apps');
+  const [tab, setTab] = useState<Tab>('settings');
   const [header, setHeader] = useState<{ title?: string; subtitle?: string }>({});
   const [hasSettings, setHasSettings] = useState(false);
   const [hasActions, setHasActions] = useState(false);
-  const [functions, setFunctions] = useState<AppFunctionsRegistration | null>(null);
   const [explainer, setExplainer] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [actionFloaterOff, setActionFloaterOff] = useState(false);
@@ -86,11 +71,10 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     setHeader({});
     setHasSettings(false);
     setHasActions(false);
-    setFunctions(null);
     setExplainer(null);
     setHelpOpen(false);
     setActionFloaterOff(false);
-    setTab('apps');
+    setTab('settings');
   }, [currentHash]);
 
   // Escape closes the help popup, then the drawer.
@@ -108,7 +92,6 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
   const current = apps.find(a => a.hash === currentHash);
   const titleName = header.title ?? (isHome ? 'animath' : current?.name) ?? '';
   const subtitle = header.subtitle;
-  const hasFunctions = functions != null;
   const hasExplainer = explainer != null;
 
   const ctx = useMemo<AppShellState>(() => ({
@@ -123,11 +106,9 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     setHasSettings,
     setHasActions,
     setHeader,
-    functions,
-    setFunctions,
     explainer,
     setExplainer,
-  }), [header.title, header.subtitle, hasSettings, hasActions, functions, explainer]);
+  }), [header.title, header.subtitle, hasSettings, hasActions, explainer]);
 
   const openWithTab = useCallback((t: Tab) => { setTab(t); setOpen(true); }, []);
 
@@ -138,48 +119,40 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
           {currentHash !== '/' && (
             <button
               className="as-bar-btn"
-              aria-label="Menu screen"
-              title="Menu"
+              aria-label="Home"
+              title="Home"
               onClick={() => onNavigate('/')}
             >⌂</button>
           )}
-          <button
-            className="as-bar-btn"
-            aria-label="Apps"
-            title="Apps"
-            onClick={() => openWithTab('apps')}
-          >☰</button>
-          <button
-            className={`as-bar-btn ${hasFunctions ? '' : 'as-bar-btn-dim'}`}
-            aria-label="Function"
-            title="Function"
-            onClick={() => openWithTab('functions')}
-          >ƒ</button>
+          {currentHash !== '/' && (
+            <button
+              className="as-bar-btn"
+              aria-label="Menu"
+              title="Menu"
+              onClick={() => openWithTab('settings')}
+            >☰</button>
+          )}
           <button
             className="as-bar-title"
-            onClick={() => openWithTab(hasSettings ? 'settings' : 'apps')}
-            aria-label="Show settings"
+            onClick={() => openWithTab('settings')}
+            aria-label="Open menu"
           >
             <span className="as-bar-title-name">{titleName}</span>
             {subtitle && <span className="as-bar-title-formula">{subtitle}</span>}
           </button>
           <button
-            className={`as-bar-btn ${hasSettings ? '' : 'as-bar-btn-dim'}`}
-            aria-label="Settings"
-            title="Settings"
-            onClick={() => openWithTab('settings')}
-          >⚙</button>
-          <button
             className={`as-bar-btn ${hasActions ? '' : 'as-bar-btn-dim'}`}
             aria-label="Actions"
             title="Actions"
+            disabled={!hasActions}
             onClick={() => openWithTab('actions')}
           >▶</button>
           <button
             className={`as-bar-btn ${hasExplainer ? '' : 'as-bar-btn-dim'}`}
-            aria-label="Explainer"
-            title="What am I looking at?"
-            onClick={() => { if (hasExplainer) setHelpOpen(true); }}
+            aria-label="About"
+            title="About"
+            disabled={!hasExplainer}
+            onClick={() => setHelpOpen(true)}
           >?</button>
           {/* Absorbs the leftover width so the controls cluster on the left
               instead of the actions stretching to the far right. */}
@@ -206,14 +179,6 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
           </div>
           <div className="as-tabs">
             <button
-              className={`as-tab ${tab === 'apps' ? 'as-active' : ''}`}
-              onClick={() => setTab('apps')}
-            >Apps</button>
-            <button
-              className={`as-tab ${tab === 'functions' ? 'as-active' : ''} ${!hasFunctions ? 'as-empty-tab' : ''}`}
-              onClick={() => setTab('functions')}
-            >Function</button>
-            <button
               className={`as-tab ${tab === 'settings' ? 'as-active' : ''} ${!hasSettings ? 'as-empty-tab' : ''}`}
               onClick={() => setTab('settings')}
             >Settings</button>
@@ -225,26 +190,6 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
 
           {/* Mount all panels but only show the active one; the Settings/
               Actions panes own DOM refs that child apps portal into. */}
-          <div className="as-tab-body" style={{ display: tab === 'apps' ? 'block' : 'none' }}>
-            <AppList apps={apps} currentHash={currentHash} onPick={(h) => {
-              onNavigate(h);
-              setOpen(false);
-            }} />
-          </div>
-          <div className="as-tab-body" style={{ display: tab === 'functions' ? 'block' : 'none' }}>
-            {functions ? (
-              <FunctionList
-                names={functions.names}
-                current={functions.current}
-                onPick={(name) => {
-                  functions.onChange(name);
-                  setOpen(false);
-                }}
-              />
-            ) : (
-              <div className="as-empty">No function picker for this view.</div>
-            )}
-          </div>
           <div className="as-tab-body" style={{ display: tab === 'settings' ? 'block' : 'none' }}>
             <div ref={settingsTargetRef} />
             {!hasSettings && <div className="as-empty">No settings for this view.</div>}
@@ -289,44 +234,6 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
   );
 }
 
-function AppList({ apps, currentHash, onPick }: {
-  apps: AppDescriptor[]; currentHash: string; onPick: (hash: string) => void;
-}) {
-  return (
-    <div className="as-app-list">
-      {apps.map(app => (
-        <button
-          key={app.hash}
-          className={`as-app-item ${app.hash === currentHash ? 'as-active' : ''}`}
-          onClick={() => onPick(app.hash)}
-        >
-          <span className="as-app-item-icon">{app.icon ?? '•'}</span>
-          <span className="as-app-item-name">{app.name}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function FunctionList({ names, current, onPick }: {
-  names: readonly string[]; current: string; onPick: (name: string) => void;
-}) {
-  return (
-    <div className="as-app-list">
-      {names.map(name => (
-        <button
-          key={name}
-          className={`as-app-item ${name === current ? 'as-active' : ''}`}
-          onClick={() => onPick(name)}
-        >
-          <span className="as-app-item-icon">ƒ</span>
-          <span className="as-app-item-name">{name}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 /* ------------------------------------------------------------ *
  * Hooks and portal slots for app authors.                       *
  * ------------------------------------------------------------ */
@@ -344,22 +251,6 @@ export function useAppHeader(title: string | undefined, subtitle?: string) {
     if (!shell) return;
     shell.setHeader({ title, subtitle });
   }, [shell, title, subtitle]);
-}
-
-/** Register the active function list / current selection / change handler so
- *  the top-bar ƒ button and the Function drawer tab can drive it. Apps that
- *  don't have a function picker simply never call this — the button stays
- *  dimmed and the tab shows an empty-state message. */
-export function useAppFunctions(reg: AppFunctionsRegistration | null) {
-  const shell = useContext(AppShellContext);
-  const names = reg?.names;
-  const current = reg?.current;
-  const onChange = reg?.onChange;
-  useEffect(() => {
-    if (!shell) return;
-    shell.setFunctions(reg ? { names: reg.names, current: reg.current, onChange: reg.onChange } : null);
-    return () => shell.setFunctions(null);
-  }, [shell, names, current, onChange]);
 }
 
 /** Register the active app's markdown explainer, shown by the top-bar "?"

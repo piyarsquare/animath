@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Canvas3D from './Canvas3D';
 import Readme from './Readme';
 import { Section, Slider, Pills, Select, Checkbox } from './ControlPanel';
-import { ShellSettings, ShellActions, useAppHeader, useAppFunctions, useAppExplainer } from './AppShell';
+import { ShellSettings, ShellActions, useAppHeader, useAppExplainer } from './AppShell';
 import QuarterTurnControls from '../controls/QuarterTurnControls';
 import type { TurnItem, AxisLetter } from '../controls/QuarterTurnControls';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../config/defaults';
@@ -10,7 +10,7 @@ import { useResponsive } from '../styles/responsive';
 import { planes, Plane } from '../math/constants';
 import { clearPersistedState } from '../lib/usePersistentState';
 import {
-  ColorStyle, ColourBy, AXIS_COLORS,
+  ColorStyle, ColourBy, JitterMode, AXIS_COLORS,
   shapeNames, textureNames, viewTypes, motionModes,
   useGestureRotation,
 } from '../lib/particles';
@@ -19,6 +19,16 @@ import type { useViewControls } from '../lib/particles';
 import { ProjectionMode } from '../lib/viewpoint';
 
 const R = COMPLEX_PARTICLES_DEFAULTS.ranges;
+
+/** Format an orientation-matrix entry to a fixed width so the monospace columns
+ *  don't reflow as signs flip: a leading non-breaking space stands in for the
+ *  minus on non-negative values, so every cell is the same length. (Also folds
+ *  "-0.00" down to "0.00".) */
+function fmtMatrixCell(v: number): string {
+  let s = v.toFixed(2);
+  if (s === '-0.00') s = '0.00';
+  return s.startsWith('-') ? s : ` ${s}`;
+}
 
 export interface ParticleViewerShellProps {
   state: ParticleState;
@@ -32,14 +42,6 @@ export interface ParticleViewerShellProps {
   functionFormula: string;
   functionPicker: React.ReactNode;
   variantExtras?: React.ReactNode;
-  /** Optional registration for the top-bar ƒ function picker. Apps that have
-   *  a flat list of named functions should pass it; the drawer's Function tab
-   *  will mirror the Settings → Function selector. */
-  functionList?: {
-    names: readonly string[];
-    currentIndex: number;
-    onChangeIndex: (i: number) => void;
-  };
   readme: string;
   /** Markdown explainer for the top-bar "?" help popup. */
   explainer?: string;
@@ -50,7 +52,7 @@ export interface ParticleViewerShellProps {
 
 export default function ParticleViewerShell({
   state, controls, onMount,
-  functionName, functionFormula, functionPicker, variantExtras, functionList, readme, explainer,
+  functionName, functionFormula, functionPicker, variantExtras, readme, explainer,
   settingsStorageKey,
 }: ParticleViewerShellProps) {
   const { isMobile, isTablet } = useResponsive();
@@ -59,14 +61,6 @@ export default function ParticleViewerShell({
 
   useAppHeader(functionName, functionFormula);
   useAppExplainer(explainer ?? null);
-  useAppFunctions(functionList ? {
-    names: functionList.names,
-    current: functionList.names[functionList.currentIndex] ?? '',
-    onChange: (name) => {
-      const i = functionList.names.indexOf(name);
-      if (i >= 0) functionList.onChangeIndex(i);
-    },
-  } : null);
 
   // Hopf/Torus projections are nonlinear in the 4D coordinates, so a 4D plane
   // rotation before the map deforms the image. In those modes the turn/spin
@@ -258,7 +252,7 @@ export default function ParticleViewerShell({
               <tbody>
                 {state.orientationMatrix.map((row, i) => (
                   <tr key={i}>
-                    {row.map((v, j) => <td key={j}>{v.toFixed(2)}</td>)}
+                    {row.map((v, j) => <td key={j}>{fmtMatrixCell(v)}</td>)}
                   </tr>
                 ))}
               </tbody>
@@ -319,6 +313,15 @@ export default function ParticleViewerShell({
           <Slider label="Jitter" value={state.jitter}
             min={R.jitter.min} max={R.jitter.max} step={R.jitter.step}
             onChange={state.setJitter} format={v => v.toFixed(3)} />
+          <Pills
+            label="Jitter mode"
+            options={[
+              { value: JitterMode.Scatter, label: 'Scatter' },
+              { value: JitterMode.Fuzz, label: 'Fuzz' },
+            ]}
+            value={state.jitterMode}
+            onChange={state.setJitterMode}
+          />
         </Section>
 
         <Section title="Detail" icon="⚙">

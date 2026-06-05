@@ -150,6 +150,7 @@ export default function ComplexParticles({
         intensity: { value: styled && branchStyle === 'intensity' ? state.intensity * (1 - b * 0.3) : state.intensity },
         shimmerAmp: { value: state.shimmer },
         jitterAmp: { value: state.jitter },
+        uJitterMode: { value: state.jitterMode },
         hueShift: { value: styled && branchStyle === 'color' ? (state.hueShift + b / 3) % 1 : state.hueShift },
         saturation: { value: state.saturation },
         realView: { value: state.realViewRef.current ? 1 : 0 },
@@ -354,11 +355,6 @@ export default function ComplexParticles({
       functionFormula={displayFormula}
       functionPicker={functionPicker}
       variantExtras={variantExtras}
-      functionList={{
-        names: functionNames,
-        currentIndex: functionIndex,
-        onChangeIndex: setFunctionIndex,
-      }}
       readme={readmeText}
       explainer={explainerText}
       settingsStorageKey={STORAGE_KEY}
