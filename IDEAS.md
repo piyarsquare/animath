@@ -72,7 +72,13 @@ against degenerate/duplicate assignments (e.g. two axes bound to the same
 coordinate) with a gentle warning rather than a hard block — sometimes the
 collapse is instructive.
 
-### Faithful (normalized) Hopf projection
+### Faithful (normalized) Hopf projection — ✅ implemented
+
+Shipped in #178: `project` mode `Hopf` (in both `lib/viewpoint.ts` and the shader)
+is now the genuine normalized Hopf map `H = (2·Re(z·conj f), 2·Im(z·conj f),
+|z|²−|f|²)/(|z|²+|f|²)`, landing every particle on S² with latitude = `|z|/|f|`
+and longitude = `arg z − arg f`. The stylized quadratic variant was replaced (not
+kept as a separate option). Original sketch:
 
 The current `project` mode 2 / shader "Hopf" is a Hopf-*style* quadratic variant
 `(2xv, 2yv, x²+v²−y²−u²)`, not the textbook map, so it doesn't match the clean
@@ -89,7 +95,15 @@ and `f = z²` each cover the sphere once (Möbius); `exp` wraps it infinitely.
 Consider keeping the old variant as a separate "Hopf (stylized)" option if its
 look is liked.
 
-### "Hopf study" mode: freeze the 4D orientation + in-app guide
+### "Hopf study" mode: freeze the 4D orientation + in-app guide — ✅ implemented
+
+Shipped a **Hopf study view** button (Camera panel, shown in Hopf/Torus): it
+forces the Hopf projection, sets Motion → Fixed, stops any spins, and snaps the
+4D orientation back to identity in one tap, so the latitude/longitude reading
+holds. The EXPLAINER already carries the reading ladder (`c·z` → point; `z+c`,
+`z²` → sphere once; `exp` → infinite wrap) and the latitude/longitude legend.
+Open follow-up: a faint sphere wireframe is provided by the existing reference
+scaffold, but pole/equator *labels* are still unlabeled. Original sketch:
 
 The 4D spinner/rotation is applied *before* the Hopf map, which remixes input and
 output coordinates and breaks the `z/f` reading. For learning Hopf we want a
@@ -125,7 +139,16 @@ Follow-ups:
   particles toward infinity; consider a soft clamp or an alternate projection
   pole if it's visually distracting for some functions.
 
-### Flexible "color by" — choose source *and* quantity
+### Flexible "color by" — choose source *and* quantity — ✅ implemented
+
+Shipped a **Quantity** picker in the Color section (`ColourQuantity`): the source
+stays the Domain/Range switch, and the new control chooses which scalar drives the
+colour wheel (hue) — **Phase** (classic `arg → hue`), **Magnitude** (colour by
+`|z|` / `|f|`), **Real**, or **Imag**. Brightness keeps tracking `|·|` for
+legibility. Implemented behind `uColourQty` in `calcColour`
+(`ComplexParticles/shaders/index.ts`) and persisted via `useParticleState`.
+Not yet done: driving hue and brightness from *different* quantities (the broader
+matrix idea below). Original sketch:
 
 Today **Color → Color by** is a binary `ColourBy` (Domain = `z` vs Range = `f`),
 and the colormap is hardwired as `arg → hue`, `|·| → value`. Open it up so the

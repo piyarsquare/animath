@@ -10,7 +10,7 @@ import { useResponsive } from '../styles/responsive';
 import { planes, Plane } from '../math/constants';
 import { clearPersistedState } from '../lib/usePersistentState';
 import {
-  ColorStyle, ColourBy, JitterMode, AXIS_COLORS,
+  ColorStyle, ColourBy, ColourQuantity, JitterMode, AXIS_COLORS,
   shapeNames, textureNames, viewTypes, motionModes,
   useGestureRotation,
 } from '../lib/particles';
@@ -129,6 +129,18 @@ export default function ParticleViewerShell({
     else controls.turn(id as Plane, dir);
   };
 
+  // "Hopf study": the one-tap preset for reading the Hopf sphere. The 4D
+  // spinner/rotation is applied *before* the Hopf map, which remixes input and
+  // output and breaks the z/f reading, so this forces the Hopf projection,
+  // freezes the motion, stops any spins, and snaps the 4D orientation back to
+  // identity — leaving latitude = |z|/|f| and longitude = arg(z) − arg(f) intact.
+  const enterHopfStudy = () => {
+    controls.handleViewType(ProjectionMode.Hopf);
+    controls.handleMotion('Fixed');
+    setSpins({});
+    controls.snapToStandardView();
+  };
+
   const axisColor = (letter: AxisLetter) => {
     const key = letter.toLowerCase() as 'x' | 'y' | 'u' | 'v';
     return `hsl(${((AXIS_COLORS[key] + state.hueShift) % 1) * 360},100%,60%)`;
@@ -224,6 +236,16 @@ export default function ParticleViewerShell({
               onChange={state.setShowScaffold}
             />
           )}
+          {(state.viewType === ProjectionMode.Torus || state.viewType === ProjectionMode.Hopf) && (
+            <button
+              className="qtc-reset"
+              style={{ marginTop: 4 }}
+              onClick={enterHopfStudy}
+              title="Switch to Hopf, freeze the motion, and reset the 4D orientation so latitude = |z|/|f| and longitude = arg(z) − arg(f) read cleanly"
+            >
+              Hopf study view
+            </button>
+          )}
           <Pills
             label="Motion"
             options={motionModes.map(m => ({ value: m, label: m }))}
@@ -269,6 +291,17 @@ export default function ParticleViewerShell({
             ]}
             value={state.colourBy}
             onChange={state.setColourBy}
+          />
+          <Select
+            label="Quantity"
+            options={[
+              { value: ColourQuantity.Phase, label: 'Phase (arg)' },
+              { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
+              { value: ColourQuantity.Real, label: 'Real part' },
+              { value: ColourQuantity.Imag, label: 'Imag part' },
+            ]}
+            value={state.colourQuantity}
+            onChange={state.setColourQuantity}
           />
           <Pills
             label="Style"

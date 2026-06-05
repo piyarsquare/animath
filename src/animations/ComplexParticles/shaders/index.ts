@@ -35,6 +35,7 @@ uniform int   uProjTarget;
 uniform float uProjAlpha;
 uniform int   uColourStyle;
 uniform int   uColourBy;
+uniform int   uColourQty;
 uniform int   uLogRadius;
 attribute float size;
 attribute vec4 seed;
@@ -203,7 +204,15 @@ vec3 calcColour(vec2 z, vec2 f){
     vec2 w = (uColourBy==0) ? z : f;
     float r = length(w);
     float angle = atan(w.y, w.x);
-    float hue = fract(angle/TAU + 1.0 + hueShift);
+    // param is the [0,1) position on the colour wheel. The quantity selector
+    // chooses which scalar of w it tracks: phase (classic), log-modulus (colour
+    // by |z|/|f|), or the real/imag part squashed into [0,1] via tanh.
+    float param;
+    if(uColourQty==1)      param = fract(0.5*log(r+1e-6));   // modulus (log, cyclic)
+    else if(uColourQty==2) param = 0.5 + 0.5*tanh(w.x);      // real part
+    else if(uColourQty==3) param = 0.5 + 0.5*tanh(w.y);      // imag part
+    else                   param = angle/TAU + 1.0;          // phase (default)
+    float hue = fract(param + hueShift);
     float val = 0.5*(1.+tanh(log(r+1e-6)));
     if(uColourStyle==0){
         val = mix(val, val*(0.75+0.25*sin(TAU*log(r))), 0.5);
@@ -216,7 +225,7 @@ vec3 calcColour(vec2 z, vec2 f){
     if(uColourStyle==2){
         return hsv2rgb(vec3(hue, saturation, 1.0)) * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
     }
-    float t   = (angle/3.14159265 + 1.)*0.5;
+    float t   = fract(param);
     vec3 colA = vec3(0.2,0.4,0.95);
     vec3 colB = vec3(0.95,0.9,0.2);
     vec3 col  = mix(colA,colB,t)*val;

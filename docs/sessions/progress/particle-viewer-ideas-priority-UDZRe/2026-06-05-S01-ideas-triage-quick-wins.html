@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Progress · 2026-06-05-S01 Particle-viewer ideas triage + quick wins</title>
+  <link rel="stylesheet" href="../../report.css">
+  <script defer src="../../report.js"></script>
+  <script type="application/json" class="report-meta">
+  {
+    "kind": "progress",
+    "session": "2026-06-05-S01",
+    "date": "2026-06-05",
+    "title": "Particle-viewer ideas triage + quick wins",
+    "branch": "claude/particle-viewer-ideas-priority-UDZRe",
+    "slug": "particle-viewer-ideas-priority-UDZRe",
+    "status": "in-progress",
+    "build": "passed",
+    "followup": null,
+    "pr": null
+  }
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">Progress report</p>
+    <h1>2026-06-05-S01 — Particle-viewer ideas triage + quick wins</h1>
+    <dl class="meta">
+      <div><dt>Branch</dt><dd><code>claude/particle-viewer-ideas-priority-UDZRe</code> · slug <code>particle-viewer-ideas-priority-UDZRe</code></dd></div>
+      <div><dt>App(s)</dt><dd><code>src/animations/ComplexParticles/</code> + <code>src/lib/particles/</code></dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-ok">npm run build: passed</span></dd></div>
+    </dl>
+    <p class="lineage">Session lineage: this (first tracked session on this branch)</p>
+  </header>
+
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+
+      <div class="toolbar">
+        <button type="button" data-action="expand-all">Expand all</button>
+        <button type="button" data-action="collapse-all">Collapse all</button>
+      </div>
+
+      <section>
+        <h2>Session purpose</h2>
+        <p>Triage the outstanding Complex Particles ideas in <code>IDEAS.md</code> by
+        bang-for-the-buck (easiest + highest payoff first), then implement the top
+        quick wins — verifying first that they aren't already shipped.</p>
+      </section>
+
+      <section>
+        <h2>Previous session</h2>
+        <p>First tracked session on this branch. Latest handoff across branches is an
+        unrelated topic — <a href="../better-reports/2026-06-05-S01-rich-html-reports.html">better-reports · S01</a>
+        (rich HTML session reports, PR #183, completed). Its "pending" list notes that
+        the Hopf fiber-trace overlay and color-as-a-fourth-channel ideas remain queued.</p>
+      </section>
+
+      <section>
+        <h2>Bang-for-buck ranking (outstanding items)</h2>
+        <p>Quick wins: (1) Hopf study mode + guide, (2) flexible "color by" quantity,
+        (3) faithful Hopf — <em>already shipped</em>, (4) add functions + organize.
+        Medium: explicit domain bounds, commit-on-blur number inputs, color-as-4th-channel,
+        polar toggles. Large: generic quadratic / custom f, Hopf fiber overlay, unified
+        channel-mapping matrix.</p>
+        <p class="callout callout-decision"><span class="callout-label">Decision</span>
+        Implement the two remaining quick wins from the recommended cluster —
+        <strong>Hopf study mode</strong> and <strong>flexible color-by quantity</strong> —
+        since #3 (faithful Hopf) is already done. Both are self-contained to
+        ComplexParticles + the particles engine and low-risk.</p>
+      </section>
+
+      <section class="log">
+        <h2>Working notes</h2>
+        <ol class="timeline">
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">23:05</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Both quick wins implemented; <code>npm run build</code> passes</h3>
+            <p class="why"><strong>Why:</strong> Ship the two recommended quick wins the user greenlit.</p>
+            <p><strong>Flexible color-by:</strong> new <code>ColourQuantity</code> enum +
+            persisted <code>colourQuantity</code> state, <code>uColourQty</code> uniform,
+            refactored <code>calcColour</code> to drive the colour wheel from a chosen
+            scalar (phase / magnitude / real / imag), and a <code>Quantity</code> Select
+            in the Color section. <strong>Hopf study view:</strong> a one-tap button in
+            the Camera panel (Hopf/Torus) that forces Hopf, sets Motion → Fixed, stops
+            spins, and resets the 4D orientation. EXPLAINER + IDEAS.md updated.</p>
+          </li>
+          <li class="tl" data-type="gotcha">
+            <p class="tl-time">23:00</p>
+            <span class="chip chip-finding">Gotcha</span>
+            <h3>Backticks in a GLSL comment broke the JS template literal</h3>
+            <p class="why"><strong>Why:</strong> The shader source is a JS backtick string; a stray backtick in a comment ended it early (TS1005).</p>
+            <p>Removed the backticks from the <code>param</code> comment. Also had to run
+            <code>npm ci</code> — the sandbox had no <code>node_modules</code>, so the
+            first build failed on missing <code>vite/client</code> types.</p>
+          </li>
+          <li class="tl" data-type="finding">
+            <p class="tl-time">22:54</p>
+            <span class="chip chip-finding">Finding</span>
+            <h3>Faithful Hopf map is already implemented (idea is stale)</h3>
+            <p class="why"><strong>Why:</strong> Avoid duplicating work the user explicitly asked me to check for.</p>
+            <p>Commit #178 already replaced the stylized quadratic with the normalized
+            Hopf map in both <code>viewpoint.ts</code> (project mode Hopf) and the shader
+            (<code>project</code> mode 2): <code>H = (2·Re(z·z̄′), 2·Im(z·z̄′), |z|²−|f|²)/|·|²</code>.
+            The "Faithful Hopf" entry in <code>IDEAS.md</code> is therefore out of date.</p>
+          </li>
+          <li class="tl" data-type="finding">
+            <p class="tl-time">22:54</p>
+            <span class="chip chip-finding">Finding</span>
+            <h3>Clifford-torus, collapse slider, scaffold, log-radius all shipped</h3>
+            <p class="why"><strong>Why:</strong> Scope the remaining Hopf-related work accurately.</p>
+            <p>Torus view, <code>Collapse → Hopf</code> slider (<code>uProjAlpha</code>),
+            reference scaffold, and a Torus log-radius toggle (<code>uLogRadius</code>) are
+            in place. Missing Hopf piece is only the one-tap "study" preset that freezes
+            the 4D orientation so the latitude/longitude reading holds.</p>
+          </li>
+          <li class="tl" data-type="decision">
+            <p class="tl-time">22:50</p>
+            <span class="chip chip-decision">Decision</span>
+            <h3>Ranked IDEAS.md by bang-for-buck and picked the quick-win cluster</h3>
+            <p class="why"><strong>Why:</strong> User asked for an effort-vs-payoff ordering, then to implement, after checking for duplicate work.</p>
+            <p>Read all of <code>IDEAS.md</code> + the ComplexParticles/particles source
+            to gauge effort. Recommended cluster: Hopf study → faithful Hopf → flexible
+            color-by → more functions.</p>
+          </li>
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">22:48</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Session started</h3>
+            <p class="why"><strong>Why:</strong> User invoked start-session to open the working log for this branch.</p>
+            <p>New branch, no prior handoff; orientation done against CLAUDE.md and the
+            particle-viewer engine.</p>
+          </li>
+        </ol>
+      </section>
+
+    </div><!-- /.content -->
+  </div><!-- /.body -->
+</main>
+</body>
+</html>

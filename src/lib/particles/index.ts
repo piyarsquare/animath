@@ -13,6 +13,6 @@ export { startAnimationLoop } from './createAnimationLoop';
 export type { AnimationLoopDeps } from './createAnimationLoop';
 export type { ViewPoint, Axis } from './types';
 export {
-  ColorStyle, ColourBy, JitterMode,
+  ColorStyle, ColourBy, ColourQuantity, JitterMode,
   shapeNames, textureNames, viewTypes, motionModes, dropModes, AXIS_COLORS,
 } from './types';

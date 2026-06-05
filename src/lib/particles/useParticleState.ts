@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { ProjectionMode } from '../viewpoint';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import { usePersistentState } from '../usePersistentState';
-import { ViewPoint, ColorStyle, ColourBy, JitterMode, Axis, motionModes, dropModes } from './types';
+import { ViewPoint, ColorStyle, ColourBy, ColourQuantity, JitterMode, Axis, motionModes, dropModes } from './types';
 
 export interface UseParticleStateOptions {
   count?: number;
@@ -65,6 +65,9 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [realView, setRealView] = useState(false);
   const [colourStyle, setColourStyle] = usePersistentState<ColorStyle>(pk('colourStyle'), ColorStyle.HSV);
   const [colourBy, setColourBy] = usePersistentState<ColourBy>(pk('colourBy'), ColourBy.Domain);
+  // Which scalar of the chosen source drives the colour wheel (hue). Phase keeps
+  // the classic domain-colouring look; Modulus colours by |z| / |f|, etc.
+  const [colourQuantity, setColourQuantity] = usePersistentState<ColourQuantity>(pk('colourQuantity'), ColourQuantity.Phase);
   // Torus radius scale: when true, the Torus mapping derives each fiber's donut
   // from log(1+|z|) and log(1+|f|) instead of the raw magnitudes, spreading the
   // nesting across orders of magnitude. Only affects the Torus projection.
@@ -175,6 +178,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     realView, setRealView,
     colourStyle, setColourStyle,
     colourBy, setColourBy,
+    colourQuantity, setColourQuantity,
     logRadius, setLogRadius,
 
     // View state + setters

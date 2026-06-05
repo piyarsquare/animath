@@ -36,7 +36,9 @@ directly, so the view *projects* it down into the 3-D scene on screen.
   common phase — a *Hopf fiber*) collapses to a single point. So `f = c·z`
   collapses to one point, `f = z + c` covers the sphere once, and `eᶻ` wraps it
   infinitely. (For this reading to hold, keep the 4-D orientation fixed — a
-  spin mixes input and output before the map.)
+  spin mixes input and output before the map. The **Hopf study view** button in
+  the Camera panel does this in one tap: it forces Hopf, freezes the motion,
+  stops any spins, and resets the orientation to identity.)
 - **Torus** — the same Hopf data with the fibers left *intact*: a stack of
   nested donuts (Clifford tori) filling space. `arg z` walks around the hole,
   `arg f` around the tube, and `|z|/|f|` chooses which donut. Each Hopf fiber
@@ -61,7 +63,12 @@ view the 4-D shape from new angles.
 
 ## Color (domain coloring)
 
-Color encodes a complex number's **argument** (its angle) as hue and its
-**magnitude** as brightness. Switch **Color by** between *Domain* (color by
+By default, color encodes a complex number's **argument** (its angle) as hue and
+its **magnitude** as brightness. Switch **Color by** between *Domain* (color by
 the input `z`) and *Range* (color by the output `f(z)`) to see how the
 function rearranges the plane.
+
+The **Quantity** picker chooses *which* scalar of that number drives the color
+wheel: **Phase** (the classic angle→hue, above), **Magnitude** (hue tracks
+`|·|`, so you can literally color by `|z|` or `|f|`), or the **Real** / **Imag**
+part. Brightness keeps tracking magnitude for legibility.

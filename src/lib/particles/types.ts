@@ -18,6 +18,17 @@ export enum ColourBy {
   Range = 1
 }
 
+/** Which scalar quantity of the chosen source (z or f) drives the colour wheel.
+ *  Phase is the classic domain-colouring choice (hue = arg); the others "spend"
+ *  hue on a different quantity (e.g. Modulus → colour by |z| / |f|). Brightness
+ *  always tracks magnitude for legibility. */
+export enum ColourQuantity {
+  Phase = 0,
+  Modulus = 1,
+  Real = 2,
+  Imag = 3
+}
+
 export enum JitterMode {
   /** Scatter the sampling: perturb the domain point, then evaluate f there, so
    *  the particle stays exactly on the graph surface of f (a denser/irregular
