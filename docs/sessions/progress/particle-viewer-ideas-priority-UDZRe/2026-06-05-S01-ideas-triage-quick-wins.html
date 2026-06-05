@@ -75,6 +75,22 @@
       <section class="log">
         <h2>Working notes</h2>
         <ol class="timeline">
+          <li class="tl" data-type="code">
+            <p class="tl-time">23:20</p>
+            <span class="chip chip-code">Code</span>
+            <h3>Brightness under independent control + confirmed torus orientation</h3>
+            <p class="why"><strong>Why:</strong> User asked to make brightness selectable too, and to confirm the Clifford-torus angle/nesting convention.</p>
+            <p>Renamed the hue picker to <strong>Hue</strong> and added a
+            <strong>Brightness</strong> picker (both <code>ColourQuantity</code>): the
+            value channel is now driven by phase/magnitude/real/imag independently of
+            hue, via a new <code>uBrightnessQty</code> uniform. Defaults unchanged
+            (hue=phase, brightness=magnitude). <strong>Torus check:</strong> a
+            numerical script (<code>/tmp/torus_check.mjs</code>) confirms the
+            projection — <code>arg z</code> traces constant-Z circles around the
+            central axis (around the hole), <code>arg f</code> traces the tube
+            cross-section, and large <code>|z|/|f|</code> → inner core / <code>|f|</code>
+            dominant → outer donut. EXPLAINER now states the inner/outer rule.</p>
+          </li>
           <li class="tl" data-type="milestone">
             <p class="tl-time">23:05</p>
             <span class="chip chip-milestone">Milestone</span>

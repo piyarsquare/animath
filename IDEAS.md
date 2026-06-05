@@ -141,14 +141,16 @@ Follow-ups:
 
 ### Flexible "color by" — choose source *and* quantity — ✅ implemented
 
-Shipped a **Quantity** picker in the Color section (`ColourQuantity`): the source
-stays the Domain/Range switch, and the new control chooses which scalar drives the
-colour wheel (hue) — **Phase** (classic `arg → hue`), **Magnitude** (colour by
-`|z|` / `|f|`), **Real**, or **Imag**. Brightness keeps tracking `|·|` for
-legibility. Implemented behind `uColourQty` in `calcColour`
-(`ComplexParticles/shaders/index.ts`) and persisted via `useParticleState`.
-Not yet done: driving hue and brightness from *different* quantities (the broader
-matrix idea below). Original sketch:
+Shipped **Hue** and **Brightness** pickers in the Color section (`ColourQuantity`):
+the source stays the Domain/Range switch, and the two controls independently
+choose which scalar drives hue and value — **Phase** (classic `arg → hue`),
+**Magnitude** (colour/shade by `|z|` / `|f|`), **Real**, or **Imag**. Defaults
+reproduce classic domain coloring (hue = phase, brightness = magnitude), and the
+two can now be driven by *different* quantities. Implemented behind `uColourQty`
+and `uBrightnessQty` in `calcColour` (`ComplexParticles/shaders/index.ts`) and
+persisted via `useParticleState`. (Brightness applies to the HSV / Dual-hue
+styles; the Modulus-bands and Phase-only styles fix their own value by design.)
+Original sketch:
 
 Today **Color → Color by** is a binary `ColourBy` (Domain = `z` vs Range = `f`),
 and the colormap is hardwired as `arg → hue`, `|·| → value`. Open it up so the

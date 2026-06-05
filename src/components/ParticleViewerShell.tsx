@@ -293,7 +293,7 @@ export default function ParticleViewerShell({
             onChange={state.setColourBy}
           />
           <Select
-            label="Quantity"
+            label="Hue"
             options={[
               { value: ColourQuantity.Phase, label: 'Phase (arg)' },
               { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
@@ -302,6 +302,17 @@ export default function ParticleViewerShell({
             ]}
             value={state.colourQuantity}
             onChange={state.setColourQuantity}
+          />
+          <Select
+            label="Brightness"
+            options={[
+              { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
+              { value: ColourQuantity.Phase, label: 'Phase (arg)' },
+              { value: ColourQuantity.Real, label: 'Real part' },
+              { value: ColourQuantity.Imag, label: 'Imag part' },
+            ]}
+            value={state.brightnessQuantity}
+            onChange={state.setBrightnessQuantity}
           />
           <Pills
             label="Style"

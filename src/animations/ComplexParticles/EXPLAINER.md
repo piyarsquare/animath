@@ -41,7 +41,10 @@ directly, so the view *projects* it down into the 3-D scene on screen.
   stops any spins, and resets the orientation to identity.)
 - **Torus** — the same Hopf data with the fibers left *intact*: a stack of
   nested donuts (Clifford tori) filling space. `arg z` walks around the hole,
-  `arg f` around the tube, and `|z|/|f|` chooses which donut. Each Hopf fiber
+  `arg f` around the tube, and `|z|/|f|` chooses which donut — a large ratio
+  (`|z| > |f|`) hugs the tight inner core circle, while `|f| > |z|` swells to the
+  big outer donuts. The `|z| = |f|` surface is the central Clifford torus. Each
+  Hopf fiber
   becomes a `(1,1)` circle winding around its donut — exactly the points that
   the **Hopf** view squashes together. The **Collapse → Hopf** slider scrubs
   between the two so you can watch those fiber circles shrink to points, and the
@@ -68,7 +71,11 @@ its **magnitude** as brightness. Switch **Color by** between *Domain* (color by
 the input `z`) and *Range* (color by the output `f(z)`) to see how the
 function rearranges the plane.
 
-The **Quantity** picker chooses *which* scalar of that number drives the color
-wheel: **Phase** (the classic angle→hue, above), **Magnitude** (hue tracks
-`|·|`, so you can literally color by `|z|` or `|f|`), or the **Real** / **Imag**
-part. Brightness keeps tracking magnitude for legibility.
+The **Hue** and **Brightness** pickers choose *which* scalar of that number
+drives each channel, independently: **Phase** (the classic angle→hue),
+**Magnitude** (so you can literally color — or shade — by `|z|` / `|f|`), or the
+**Real** / **Imag** part. The defaults reproduce classic domain coloring (hue =
+phase, brightness = magnitude); set hue = Magnitude and brightness = Phase to
+swap them, or drive both from the real part, etc. (Brightness applies to the
+**HSV** and **Dual-hue** styles; the **Modulus bands** and **Phase only** styles
+fix their own brightness by design.)

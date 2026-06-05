@@ -68,6 +68,9 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // Which scalar of the chosen source drives the colour wheel (hue). Phase keeps
   // the classic domain-colouring look; Modulus colours by |z| / |f|, etc.
   const [colourQuantity, setColourQuantity] = usePersistentState<ColourQuantity>(pk('colourQuantity'), ColourQuantity.Phase);
+  // Which scalar drives the brightness (value) channel, independently of hue.
+  // Defaults to Modulus = magnitude (the classic |·| → brightness).
+  const [brightnessQuantity, setBrightnessQuantity] = usePersistentState<ColourQuantity>(pk('brightnessQuantity'), ColourQuantity.Modulus);
   // Torus radius scale: when true, the Torus mapping derives each fiber's donut
   // from log(1+|z|) and log(1+|f|) instead of the raw magnitudes, spreading the
   // nesting across orders of magnitude. Only affects the Torus projection.
@@ -179,6 +182,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     colourStyle, setColourStyle,
     colourBy, setColourBy,
     colourQuantity, setColourQuantity,
+    brightnessQuantity, setBrightnessQuantity,
     logRadius, setLogRadius,
 
     // View state + setters
