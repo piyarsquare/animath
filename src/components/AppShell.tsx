@@ -17,18 +17,6 @@ export interface AppDescriptor {
   blurb?: string;
 }
 
-/** Apps register their function picker via useAppFunctions so the AppShell's
- *  top-bar ƒ button can show / change the active function without the user
- *  having to dig into the Settings tab. */
-export interface AppFunctionsRegistration {
-  /** List of function names in the order to display. */
-  names: readonly string[];
-  /** Currently-selected function name. */
-  current: string;
-  /** Called when the user picks a different function from the drawer. */
-  onChange: (name: string) => void;
-}
-
 export interface AppShellState {
   /** Title shown in the bar (defaults to the registered AppDescriptor name). */
   title?: string;
@@ -49,8 +37,6 @@ export interface AppShellState {
   setHasActions: (v: boolean) => void;
   setHeader: (h: { title?: string; subtitle?: string }) => void;
   /** Function registration (or null when the active app has no function picker). */
-  functions: AppFunctionsRegistration | null;
-  setFunctions: (reg: AppFunctionsRegistration | null) => void;
   /** Markdown explainer for the active app (the "?" help popup), or null. */
   explainer: string | null;
   setExplainer: (md: string | null) => void;
@@ -73,7 +59,6 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
   const [header, setHeader] = useState<{ title?: string; subtitle?: string }>({});
   const [hasSettings, setHasSettings] = useState(false);
   const [hasActions, setHasActions] = useState(false);
-  const [functions, setFunctions] = useState<AppFunctionsRegistration | null>(null);
   const [explainer, setExplainer] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [actionFloaterOff, setActionFloaterOff] = useState(false);
@@ -86,7 +71,6 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     setHeader({});
     setHasSettings(false);
     setHasActions(false);
-    setFunctions(null);
     setExplainer(null);
     setHelpOpen(false);
     setActionFloaterOff(false);
@@ -122,11 +106,9 @@ export function AppShell({ apps, currentHash, onNavigate, children }: AppShellPr
     setHasSettings,
     setHasActions,
     setHeader,
-    functions,
-    setFunctions,
     explainer,
     setExplainer,
-  }), [header.title, header.subtitle, hasSettings, hasActions, functions, explainer]);
+  }), [header.title, header.subtitle, hasSettings, hasActions, explainer]);
 
   const openWithTab = useCallback((t: Tab) => { setTab(t); setOpen(true); }, []);
 
@@ -267,24 +249,6 @@ export function useAppHeader(title: string | undefined, subtitle?: string) {
     if (!shell) return;
     shell.setHeader({ title, subtitle });
   }, [shell, title, subtitle]);
-}
-
-/** Register the active function list / current selection / change handler.
- *  NOTE: the top-bar ƒ button and the Function drawer tab were removed in the
- *  menu-bar simplification — function selection now lives in each app's Settings
- *  (e.g. a `Select`). This registration is therefore currently inert; it's kept
- *  for API compatibility (existing callers don't need to change) and possible
- *  future reuse, but has no visible effect today. */
-export function useAppFunctions(reg: AppFunctionsRegistration | null) {
-  const shell = useContext(AppShellContext);
-  const names = reg?.names;
-  const current = reg?.current;
-  const onChange = reg?.onChange;
-  useEffect(() => {
-    if (!shell) return;
-    shell.setFunctions(reg ? { names: reg.names, current: reg.current, onChange: reg.onChange } : null);
-    return () => shell.setFunctions(null);
-  }, [shell, names, current, onChange]);
 }
 
 /** Register the active app's markdown explainer, shown by the top-bar "?"

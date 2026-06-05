@@ -205,39 +205,6 @@
   padding: 4px 0;
 }
 
-/* ---------- App picker list ---------- */
-.as-app-list {
-  display: flex;
-  flex-direction: column;
-}
-.as-app-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 18px;
-  background: transparent;
-  border: none;
-  color: var(--as-fg);
-  cursor: pointer;
-  font-size: 15px;
-  text-align: left;
-  border-bottom: 1px solid var(--as-border);
-}
-.as-app-item:hover { background: var(--as-hover); }
-.as-app-item-icon {
-  font-size: 18px;
-  width: 24px;
-  flex-shrink: 0;
-  text-align: center;
-}
-.as-app-item-name { flex: 1; }
-.as-app-item.as-active {
-  background: rgba(255, 212, 0, 0.1);
-  border-left: 3px solid var(--as-accent);
-  padding-left: 15px;
-}
-.as-app-item.as-active .as-app-item-name { font-weight: 700; }
-
 /* ---------- Empty state ---------- */
 .as-empty {
   padding: 28px 18px;

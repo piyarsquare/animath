@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Canvas3D from './Canvas3D';
 import Readme from './Readme';
 import { Section, Slider, Pills, Select, Checkbox } from './ControlPanel';
-import { ShellSettings, ShellActions, useAppHeader, useAppFunctions, useAppExplainer } from './AppShell';
+import { ShellSettings, ShellActions, useAppHeader, useAppExplainer } from './AppShell';
 import QuarterTurnControls from '../controls/QuarterTurnControls';
 import type { TurnItem, AxisLetter } from '../controls/QuarterTurnControls';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../config/defaults';
@@ -32,14 +32,6 @@ export interface ParticleViewerShellProps {
   functionFormula: string;
   functionPicker: React.ReactNode;
   variantExtras?: React.ReactNode;
-  /** Optional registration for the top-bar ƒ function picker. Apps that have
-   *  a flat list of named functions should pass it; the drawer's Function tab
-   *  will mirror the Settings → Function selector. */
-  functionList?: {
-    names: readonly string[];
-    currentIndex: number;
-    onChangeIndex: (i: number) => void;
-  };
   readme: string;
   /** Markdown explainer for the top-bar "?" help popup. */
   explainer?: string;
@@ -50,7 +42,7 @@ export interface ParticleViewerShellProps {
 
 export default function ParticleViewerShell({
   state, controls, onMount,
-  functionName, functionFormula, functionPicker, variantExtras, functionList, readme, explainer,
+  functionName, functionFormula, functionPicker, variantExtras, readme, explainer,
   settingsStorageKey,
 }: ParticleViewerShellProps) {
   const { isMobile, isTablet } = useResponsive();
@@ -59,14 +51,6 @@ export default function ParticleViewerShell({
 
   useAppHeader(functionName, functionFormula);
   useAppExplainer(explainer ?? null);
-  useAppFunctions(functionList ? {
-    names: functionList.names,
-    current: functionList.names[functionList.currentIndex] ?? '',
-    onChange: (name) => {
-      const i = functionList.names.indexOf(name);
-      if (i >= 0) functionList.onChangeIndex(i);
-    },
-  } : null);
 
   // Hopf/Torus projections are nonlinear in the 4D coordinates, so a 4D plane
   // rotation before the map deforms the image. In those modes the turn/spin

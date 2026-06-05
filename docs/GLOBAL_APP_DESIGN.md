@@ -315,9 +315,11 @@ After:   ⌂ Home   ☰ Menu   [Title→Settings]   ▶ Actions   ? About
 - **Dropped the Function picker** (the ƒ bar button + Function tab + `FunctionList`).
   Function selection already lives in each app's **Settings** (Complex Particles'
   Settings → Function selector; Plane Transform's `Select label="Function"`), so
-  nothing is stranded. `useAppFunctions` is kept exported but **inert** (documented
-  in the hook), so no app file needed editing — a later cleanup can remove it and
-  its two callers.
+  nothing is stranded. The whole `useAppFunctions` plumbing was then removed
+  outright — the hook + `AppFunctionsRegistration`, the two callers
+  (`ParticleViewerShell`, `PlaneTransform`), `ParticleViewerShell`'s now-dead
+  `functionList` prop (and ComplexParticles passing it), and the orphaned
+  `.as-app-list` / `.as-app-item*` CSS.
 - **Collapsed ⚙ into ☰.** The hamburger ☰ is now the sole Settings opener (so is a
   click on the Title); the standalone gear is gone. The drawer defaults to Settings
   and resets there on app change.
@@ -328,13 +330,11 @@ After:   ⌂ Home   ☰ Menu   [Title→Settings]   ▶ Actions   ? About
 **Verified:** `npm run build` green; no other app files touched; this was re-synced
 against `main` (no new commits) before editing.
 
-**Follow-ups (not done):**
-- Dead CSS: `.as-app-list` / `.as-app-item*` in `AppShell.css` are now unused
-  (were the Apps/Function lists) — safe to delete in a later sweep.
-- The inert `useAppFunctions` hook + its two callers can be removed once we're sure
-  the registration won't be reused.
+**Follow-ups:**
+- ~~Dead `.as-app*` CSS~~ and ~~the inert `useAppFunctions` hook + callers~~ — both
+  removed in the cleanup pass (see the Function-picker bullet above).
 - On the landing gallery itself, ☰ now opens an empty Settings drawer — harmless,
-  but could be hidden on `/` if it bothers anyone.
+  but could be hidden on `/` if it bothers anyone. *(still open)*
 
 **Separate, decided later:** *which* apps to trim from the catalog (`apps.ts`), and
 whether trimmed apps are **retired** (route removed) or **hidden but URL-reachable**

@@ -354,11 +354,6 @@ export default function ComplexParticles({
       functionFormula={displayFormula}
       functionPicker={functionPicker}
       variantExtras={variantExtras}
-      functionList={{
-        names: functionNames,
-        currentIndex: functionIndex,
-        onChangeIndex: setFunctionIndex,
-      }}
       readme={readmeText}
       explainer={explainerText}
       settingsStorageKey={STORAGE_KEY}

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { ShellSettings, useAppHeader, useAppFunctions, useAppExplainer } from '../../components/AppShell';
+import { ShellSettings, useAppHeader, useAppExplainer } from '../../components/AppShell';
 import { Section, Slider, Pills, Select } from '../../components/ControlPanel';
 import Readme from '../../components/Readme';
 import readmeText from './README.md?raw';
@@ -71,14 +71,6 @@ export default function PlaneTransform() {
     : functionFormulas[fnName];
   useAppHeader(fnName, fnFormula);
   useAppExplainer(explainerText);
-  useAppFunctions({
-    names: functionNames,
-    current: fnName,
-    onChange: (name) => {
-      const i = functionNames.indexOf(name);
-      if (i >= 0) setFunctionIndex(i);
-    },
-  });
 
   // Containers + refs for the two panes.
   const wrapperRef = useRef<HTMLDivElement>(null);
