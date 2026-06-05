@@ -71,59 +71,31 @@ presenting the summary:
 
 ## Progress Report Initial Structure
 
-Write a **self-contained HTML document** linking the shared stylesheet at
-`../../report.css` (the relative path from `docs/sessions/progress/<branch-slug>/`).
-Use real HTML structure — tables, `<details>`, badges — not Markdown. Start from
-this skeleton:
+Copy the canonical skeleton `docs/sessions/_template-progress.html` to the report
+path and fill in the `[bracketed]` placeholders. It is a **self-contained HTML
+document** that links the shared stylesheet (`../../report.css`) and enhancer
+(`../../report.js`), and carries a machine-readable `report-meta` JSON island the
+dashboard generator reads — keep that island accurate (update `status`/`build`/`pr`
+as the session progresses).
 
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Progress · YYYY-MM-DD-SNN Description</title>
-  <link rel="stylesheet" href="../../report.css">
-</head>
-<body>
-<main class="report">
-  <header>
-    <p class="kicker">Progress report</p>
-    <h1>YYYY-MM-DD-SNN — Description</h1>
-    <dl class="meta">
-      <div><dt>Branch</dt><dd><code>&lt;active git branch&gt;</code> · slug <code>&lt;branch-slug&gt;</code></dd></div>
-      <div><dt>App(s)</dt><dd>src/animations/&lt;Name&gt;/ — or "shell / framework" / "docs"</dd></div>
-      <div><dt>Build</dt><dd><span class="badge">not yet run</span></dd></div>
-    </dl>
-  </header>
+Author with the components the stylesheet/script already provide — don't hand-roll
+markup:
 
-  <section>
-    <h2>Session purpose</h2>
-    <p>[User's stated focus]</p>
-  </section>
+- **Working notes = a timeline.** Each state transition is one
+  `<li class="tl" data-type="…">` inside `<ol class="timeline">`, **newest first**.
+  `data-type` ∈ `decision | code | finding | blocker | milestone` (sets the dot
+  colour + chip). Give each a `<p class="tl-time">HH:MM</p>`, a `<span class="chip
+  chip-…">`, an `<h3>` (WHAT), and `<p class="why"><strong>Why:</strong> …</p>`.
+- **Callouts** to flag things: `<p class="callout callout-{note|warn|decision|gotcha}">`.
+- **Table of contents** builds itself from `<nav class="toc" data-autobuild>` — no
+  manual upkeep; just write `<h2>` sections inside `<div class="content">`. Heading
+  ids, anchors, scroll-spy, expand/collapse-all and back-to-top come from
+  `report.js`. (It all degrades gracefully with JS off.)
+- **Badges** on the Build line: `badge-ok` (passed) / `badge-bad` (failed) /
+  `badge-warn` (not run).
 
-  <section>
-    <h2>Previous session</h2>
-    <p>[One-line summary of the latest handoff, with a relative link to its file]</p>
-  </section>
-
-  <section class="log">
-    <h2>Working notes</h2>
-    <!-- Prepend the newest entry directly below; one <article class="entry"> per
-         state transition. Each entry states WHAT happened and WHY. -->
-    <article class="entry">
-      <h3>[Entry title]</h3>
-      <p class="why"><strong>Why:</strong> [reason for this transition]</p>
-      <p>[what happened]</p>
-    </article>
-  </section>
-</main>
-</body>
-</html>
-```
-
-Badge classes for the Build line: `badge badge-ok` (passed), `badge badge-bad`
-(failed), `badge badge-warn` (not run / unknown).
+The richness lives in `report.css` / `report.js`; keep the report itself simple,
+semantic HTML.
 
 ## Progress Report Rule
 

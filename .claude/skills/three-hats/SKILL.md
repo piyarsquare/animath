@@ -38,9 +38,13 @@ report yet, use today's date with `S01`:
 - `docs/sessions/progress/<branch-slug>/{YYYY-MM-DD-SNN}-expert-synthesis.html` — Convergence Analysis
 
 Each file is a **self-contained HTML document** (we use HTML, not Markdown, for the
-richer rendering) linking the shared stylesheet at `../../report.css`. Each agent
-must be instructed to write its complete analysis to its designated file using the
-Write tool.
+richer rendering) using the `docs/sessions/_template-progress.html` skeleton as a
+starting point: link `../../report.css` + `../../report.js`, wrap the body in
+`<main class="report"><div class="body"><nav class="toc" data-autobuild></nav><div
+class="content">…</div></div></main>`, and include a `report-meta` JSON island
+(`"kind":"three-hats"`). Use the stylesheet's components (callouts, tables,
+chips). Each agent must be instructed to write its complete analysis to its
+designated file using the Write tool.
 
 ## Execution
 

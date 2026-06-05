@@ -351,9 +351,15 @@ slash command; they never auto-invoke):
   synthesizes.
 
 Progress reports and handoffs are **committed** as self-contained **HTML**
-documents (styled by `docs/sessions/report.css`) under
-`docs/sessions/{progress,handoff}/<branch-slug>/` — partitioned **per branch** so
-parallel branches never collide (the slug is the branch name with `claude/`
-stripped and `/`→`-`; keep branch names short and topical). The shared
-self-reflection protocol lives at `.claude/prompts/self-reflection.md`.
+documents under `docs/sessions/{progress,handoff}/<branch-slug>/` — partitioned
+**per branch** so parallel branches never collide (the slug is the branch name with
+`claude/` stripped and `/`→`-`; keep branch names short and topical). They share
+`docs/sessions/report.css` (styling: timeline, sticky auto-TOC, callouts, badges)
+and `docs/sessions/report.js` (progressive enhancement — TOC build, scroll-spy,
+sortable tables; degrades gracefully). Skills copy the `docs/sessions/_template-*.html`
+skeletons. Each report embeds a `report-meta` JSON island; `node
+docs/sessions/build-index.mjs` regenerates the `docs/sessions/index.html` dashboard
+from them (the `/handoff` skill runs it). Note: GitHub shows `.html` as source —
+open these locally (or via Pages) for the full rendering. The shared self-reflection
+protocol lives at `.claude/prompts/self-reflection.md`.
 </content>
