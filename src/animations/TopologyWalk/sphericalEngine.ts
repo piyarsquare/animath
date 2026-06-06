@@ -36,7 +36,9 @@ interface Beacon { dir: THREE.Vector3; color: number }
 // Landmarks scattered (deliberately *not* antipodally symmetric on their own, so
 // the plain sphere looks different front-to-back; ℝP² adds the antipodal twins).
 const BEACONS: Beacon[] = [
-  { dir: new THREE.Vector3(0, 1, 0).normalize(), color: 0xff5a5a },
+  // Offset from the north pole so it sits a few metres to the *side* of the
+  // spawn point (player starts at up = +Y) instead of swallowing the camera.
+  { dir: new THREE.Vector3(0.22, 1, -0.18).normalize(), color: 0xff5a5a },
   { dir: new THREE.Vector3(1, 0.2, 0.1).normalize(), color: 0x5ad1ff },
   { dir: new THREE.Vector3(0.1, 0.1, 1).normalize(), color: 0x8aff6a },
   { dir: new THREE.Vector3(-0.8, 0.3, 0.6).normalize(), color: 0xffd24a },
@@ -44,23 +46,47 @@ const BEACONS: Beacon[] = [
   { dir: new THREE.Vector3(-0.4, -0.7, 0.3).normalize(), color: 0xff9a3d },
 ];
 
-/** Lat/long grid on a dark planet, to make motion and rotation legible. */
+/**
+ * Lat/long grid over a checkered land, bright enough to read clearly against the
+ * near-black sky and dense enough that motion + rotation are legible. The checker
+ * gives surface texture (so you can tell you're moving even between grid lines);
+ * the emphasised equator + prime meridian give an absolute frame of reference.
+ */
+const LON = 24;  // longitude cells (meridians)
+const LAT = 16;  // latitude cells (parallels)
 function planetTexture(): THREE.CanvasTexture {
-  const s = 512;
+  const s = 1024;
   const cvs = document.createElement('canvas'); cvs.width = cvs.height = s;
   const ctx = cvs.getContext('2d')!;
-  ctx.fillStyle = '#14202e'; ctx.fillRect(0, 0, s, s);
-  ctx.strokeStyle = '#26405a'; ctx.lineWidth = 2;
-  for (let i = 0; i <= 12; i++) {
-    const x = (i / 12) * s;
+
+  // checkered terrain — two clearly-lit land tones
+  const cw = s / LON, ch = s / LAT;
+  for (let i = 0; i < LON; i++) {
+    for (let j = 0; j < LAT; j++) {
+      ctx.fillStyle = ((i + j) & 1) ? '#5c809b' : '#476a85';
+      ctx.fillRect(i * cw, j * ch, cw + 1, ch + 1);
+    }
+  }
+
+  // fine grid lines
+  ctx.strokeStyle = '#9cc0d8'; ctx.lineWidth = 2;
+  for (let i = 0; i <= LON; i++) {
+    const x = (i / LON) * s;
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, s); ctx.stroke();
   }
-  for (let j = 0; j <= 8; j++) {
-    const y = (j / 8) * s;
+  for (let j = 0; j <= LAT; j++) {
+    const y = (j / LAT) * s;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(s, y); ctx.stroke();
   }
+
+  // emphasised equator (mid latitude row) + prime meridian (left edge)
+  ctx.strokeStyle = '#e6f2fb'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(0, s / 2); ctx.lineTo(s, s / 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(2, s); ctx.stroke();
+
   const t = new THREE.CanvasTexture(cvs);
   t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
   return t;
 }
 
@@ -103,7 +129,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   // the planet
   const planetGeo = new THREE.SphereGeometry(R, 64, 48);
   const planetTex = planetTexture();
-  const planetMat = new THREE.MeshStandardMaterial({ map: planetTex, color: 0x9fb4c8, roughness: 0.95, metalness: 0.0 });
+  const planetMat = new THREE.MeshStandardMaterial({ map: planetTex, color: 0xffffff, roughness: 0.9, metalness: 0.0 });
   ownGeos.push(planetGeo); ownMats.push(planetMat);
   root.add(new THREE.Mesh(planetGeo, planetMat));
 
