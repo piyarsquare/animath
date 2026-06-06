@@ -54,6 +54,14 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // axes — handy for trig functions whose natural scale is π.
   const [extentX, setExtentX] = usePersistentState(pk('extentX'), COMPLEX_PARTICLES_DEFAULTS.initial.extentX);
   const [extentY, setExtentY] = usePersistentState(pk('extentY'), COMPLEX_PARTICLES_DEFAULTS.initial.extentY);
+  // Domain bounds. When `boundsLock` is true (default) the box is the symmetric
+  // [-extentX, +extentX] × [-extentY, +extentY] driven by the extent sliders
+  // above; when unlocked, these independent min/max define an off-centre window.
+  const [boundsLock, setBoundsLock] = usePersistentState(pk('boundsLock'), true);
+  const [xMin, setXMin] = usePersistentState(pk('xMin'), -COMPLEX_PARTICLES_DEFAULTS.initial.extentX);
+  const [xMax, setXMax] = usePersistentState(pk('xMax'), COMPLEX_PARTICLES_DEFAULTS.initial.extentX);
+  const [yMin, setYMin] = usePersistentState(pk('yMin'), -COMPLEX_PARTICLES_DEFAULTS.initial.extentY);
+  const [yMax, setYMax] = usePersistentState(pk('yMax'), COMPLEX_PARTICLES_DEFAULTS.initial.extentY);
   const [axisScale, setAxisScale] = usePersistentState(pk('axisScale'), COMPLEX_PARTICLES_DEFAULTS.initial.axisScale);
   /** When true, sample more densely where |f'(z)| is large. */
   const [adaptive, setAdaptive] = usePersistentState(pk('adaptive'), COMPLEX_PARTICLES_DEFAULTS.initial.adaptive);
@@ -171,6 +179,11 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     axisWidth, setAxisWidth,
     extentX, setExtentX,
     extentY, setExtentY,
+    boundsLock, setBoundsLock,
+    xMin, setXMin,
+    xMax, setXMax,
+    yMin, setYMin,
+    yMax, setYMax,
     axisScale, setAxisScale,
     axisScaleRef,
     adaptive, setAdaptive,

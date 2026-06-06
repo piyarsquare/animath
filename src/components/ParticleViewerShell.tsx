@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Canvas3D from './Canvas3D';
 import Readme from './Readme';
-import { Section, Slider, Pills, Select, Checkbox } from './ControlPanel';
+import { Section, Slider, Pills, Select, Checkbox, NumberInput } from './ControlPanel';
 import { ShellSettings, ShellActions, useAppHeader, useAppExplainer } from './AppShell';
 import QuarterTurnControls from '../controls/QuarterTurnControls';
 import type { TurnItem, AxisLetter } from '../controls/QuarterTurnControls';
@@ -141,6 +141,22 @@ export default function ParticleViewerShell({
     controls.snapToStandardView();
   };
 
+  // Toggling the ± lock seeds the other representation so the view doesn't jump:
+  // unlocking copies the symmetric extents into min/max; re-locking collapses the
+  // (possibly off-centre) window back to a symmetric half-width.
+  const onBoundsLockChange = (locked: boolean) => {
+    if (locked) {
+      state.setExtentX((state.xMax - state.xMin) / 2);
+      state.setExtentY((state.yMax - state.yMin) / 2);
+    } else {
+      state.setXMin(-state.extentX);
+      state.setXMax(state.extentX);
+      state.setYMin(-state.extentY);
+      state.setYMax(state.extentY);
+    }
+    state.setBoundsLock(locked);
+  };
+
   const axisColor = (letter: AxisLetter) => {
     const key = letter.toLowerCase() as 'x' | 'y' | 'u' | 'v';
     return `hsl(${((AXIS_COLORS[key] + state.hueShift) % 1) * 360},100%,60%)`;
@@ -192,14 +208,30 @@ export default function ParticleViewerShell({
             value={state.axisScale}
             onChange={state.setAxisScale}
           />
-          <Slider label="X extent (±)" value={state.extentX}
-            min={R.extent.min} max={R.extent.max} step={R.extent.step}
-            onChange={state.setExtentX}
-            format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`} />
-          <Slider label="Y extent (±)" value={state.extentY}
-            min={R.extent.min} max={R.extent.max} step={R.extent.step}
-            onChange={state.setExtentY}
-            format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`} />
+          <Checkbox
+            label="± symmetric bounds"
+            checked={state.boundsLock}
+            onChange={onBoundsLockChange}
+          />
+          {state.boundsLock ? (
+            <>
+              <Slider label="X extent (±)" value={state.extentX}
+                min={R.extent.min} max={R.extent.max} step={R.extent.step}
+                onChange={state.setExtentX}
+                format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`} />
+              <Slider label="Y extent (±)" value={state.extentY}
+                min={R.extent.min} max={R.extent.max} step={R.extent.step}
+                onChange={state.setExtentY}
+                format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`} />
+            </>
+          ) : (
+            <>
+              <NumberInput label="X min" value={state.xMin} step={0.5} onChange={state.setXMin} />
+              <NumberInput label="X max" value={state.xMax} step={0.5} onChange={state.setXMax} />
+              <NumberInput label="Y min" value={state.yMin} step={0.5} onChange={state.setYMin} />
+              <NumberInput label="Y max" value={state.yMax} step={0.5} onChange={state.setYMax} />
+            </>
+          )}
         </Section>
 
         <Section title="Camera" icon="◐" defaultOpen>

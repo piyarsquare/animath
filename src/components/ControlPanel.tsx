@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './ControlPanel.css';
 
 /**
@@ -121,6 +121,65 @@ export function Select<T extends string | number>({ label, options, groups, valu
               <option key={String(opt.value)} value={opt.value}>{opt.label}</option>
             ))}
       </select>
+    </label>
+  );
+}
+
+interface NumberInputProps {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  /** Round committed values to integers. */
+  integer?: boolean;
+  /** Optional extra control rendered to the right of the field (e.g. a lock). */
+  suffix?: React.ReactNode;
+}
+
+/**
+ * A number field that commits **only on Enter or blur**, not per keystroke, then
+ * clamps to [min, max] (and rounds if `integer`). An unparseable entry reverts to
+ * the last good value; Escape cancels the edit. Keeps intermediate states (an
+ * empty box, a lone "−") from momentarily breaking whatever consumes the value.
+ */
+export function NumberInput({ label, value, onChange, min, max, step = 1, integer = false, suffix }: NumberInputProps) {
+  const [draft, setDraft] = useState(String(value));
+  const [editing, setEditing] = useState(false);
+  // While not actively editing, keep the field mirroring the source of truth.
+  useEffect(() => { if (!editing) setDraft(String(value)); }, [value, editing]);
+
+  const commit = () => {
+    setEditing(false);
+    let n = parseFloat(draft);
+    if (!isFinite(n)) { setDraft(String(value)); return; } // revert
+    if (integer) n = Math.round(n);
+    if (min !== undefined) n = Math.max(min, n);
+    if (max !== undefined) n = Math.min(max, n);
+    setDraft(String(n));
+    if (n !== value) onChange(n);
+  };
+
+  return (
+    <label className="cp-row">
+      <div className="cp-row-label"><span>{label}</span></div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <input
+          type="number"
+          value={draft}
+          step={step}
+          style={{ flex: 1, minWidth: 0 }}
+          onFocus={() => setEditing(true)}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => {
+            if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); }
+            else if (e.key === 'Escape') { setDraft(String(value)); setEditing(false); (e.target as HTMLInputElement).blur(); }
+          }}
+        />
+        {suffix}
+      </div>
     </label>
   );
 }

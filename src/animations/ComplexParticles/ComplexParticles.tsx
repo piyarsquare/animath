@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import ParticleViewerShell from '../../components/ParticleViewerShell';
-import { Select } from '../../components/ControlPanel';
+import { Select, NumberInput } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
@@ -61,6 +61,16 @@ export default function ComplexParticles({
   const [branchIndices, setBranchIndices] = usePersistentState<number[]>(`${STORAGE_KEY}:branchIndices`, [0, 1, 2]);
   const [branchStyle, setBranchStyle] = usePersistentState<BranchStyle>(`${STORAGE_KEY}:branchStyle`, 'color');
 
+  // Effective sampling box (× axisScale). Locked → symmetric ±extent; unlocked →
+  // the independent min/max window.
+  const effectiveBounds = (): [number, number, number, number] => {
+    const sc = state.axisScale;
+    if (state.boundsLock) {
+      return [-state.extentX * sc, state.extentX * sc, -state.extentY * sc, state.extentY * sc];
+    }
+    return [state.xMin * sc, state.xMax * sc, state.yMin * sc, state.yMax * sc];
+  };
+
   const sceneRef = useRef<THREE.Scene>();
   const pointsRef = useRef<THREE.Points[]>([]);
   const scaffoldRef = useRef<HopfScaffold>();
@@ -76,8 +86,7 @@ export default function ComplexParticles({
   useEffect(() => {
     const geom = state.geometryRef.current;
     if (!geom) return;
-    const exX = state.extentX * state.axisScale;
-    const exY = state.extentY * state.axisScale;
+    const [bxMin, bxMax, byMin, byMax] = effectiveBounds();
     if (state.adaptive) {
       const evalFn = (x: number, z: number) => {
         const pt = new THREE.Vector2(x, z);
@@ -86,16 +95,17 @@ export default function ComplexParticles({
           : applyComplex(pt, functionIndex);
         return { x: out.x, y: out.y };
       };
-      redistributeAdaptive(geom, state.particleCount, exX, exY, {
+      redistributeAdaptive(geom, state.particleCount, bxMin, bxMax, byMin, byMax, {
         evalFn,
         alpha: state.adaptiveAlpha,
       });
     } else {
-      rebuildGeometryBuffers(geom, state.particleCount, exX, exY);
+      rebuildGeometryBuffers(geom, state.particleCount, bxMin, bxMax, byMin, byMax);
     }
   }, [
     state.adaptive, state.adaptiveAlpha, state.particleCount,
     state.extentX, state.extentY, state.axisScale,
+    state.boundsLock, state.xMin, state.xMax, state.yMin, state.yMax,
     functionIndex, expP, expQ,
   ]);
 
@@ -223,11 +233,8 @@ export default function ComplexParticles({
       });
       state.texturesRef.current = textures;
 
-      const geometry = createParticleGeometry(
-        state.particleCount,
-        state.extentX * state.axisScale,
-        state.extentY * state.axisScale,
-      );
+      const [bxMin, bxMax, byMin, byMax] = effectiveBounds();
+      const geometry = createParticleGeometry(state.particleCount, bxMin, bxMax, byMin, byMax);
       state.geometryRef.current = geometry;
 
       state.materialsRef.current = [];
@@ -299,18 +306,10 @@ export default function ComplexParticles({
         onChange={setFunctionIndex}
       />
       {isPowPQ && (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <label className="cp-row" style={{ flex: 1 }}>
-            <div className="cp-row-label"><span>p</span></div>
-            <input type="number" value={expP} step={1}
-              onChange={e => setExpP(parseInt(e.target.value, 10) || 0)} />
-          </label>
-          <label className="cp-row" style={{ flex: 1 }}>
-            <div className="cp-row-label"><span>q</span></div>
-            <input type="number" value={expQ} step={1}
-              onChange={e => setExpQ(parseInt(e.target.value, 10) || 1)} />
-          </label>
-        </div>
+        <>
+          <NumberInput label="p" value={expP} integer onChange={setExpP} />
+          <NumberInput label="q" value={expQ} integer onChange={setExpQ} />
+        </>
       )}
     </>
   );
