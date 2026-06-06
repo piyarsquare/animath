@@ -135,13 +135,14 @@ export default function ParticleViewerShell({
 
   // "Hopf study": the one-tap preset for reading the Hopf sphere. The 4D
   // spinner/rotation is applied *before* the Hopf map, which remixes input and
-  // output and breaks the z/f reading, so this clears any drop axis, forces the
-  // Hopf projection, freezes the motion, stops any spins, and snaps the 4D
-  // orientation back to identity. The projection/orientation work lives in
-  // controls.enterHopfStudy; spins are shell-local, so clear them here.
+  // output and breaks the z/f reading, so this forces the Hopf projection,
+  // freezes the motion, stops any spins, and snaps the 4D orientation back to
+  // identity — leaving latitude = |z|/|f| and longitude = arg(z) − arg(f) intact.
   const enterHopfStudy = () => {
+    controls.handleViewType(ProjectionMode.Hopf);
+    controls.handleMotion('Fixed');
     setSpins({});
-    controls.enterHopfStudy();
+    controls.snapToStandardView();
   };
 
   // Toggling the ± lock seeds the other representation so the view doesn't jump:

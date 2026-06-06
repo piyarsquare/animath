@@ -97,23 +97,6 @@ export function useViewControls(state: ParticleState) {
     setViewMotion(m);
   }
 
-  /**
-   * One-tap "Hopf study" preset: force the Hopf projection, freeze motion, and
-   * reset the 4D orientation so latitude = |z|/|f| and longitude = arg z − arg f
-   * read cleanly. A drop axis would override the projection (applyView routes
-   * through it), so clear it here and animate straight to Hopf — done in the
-   * controls layer to avoid the stale-`dropAxis`-closure problem of sequencing
-   * setDropAxis + handleViewType in a single event handler.
-   */
-  function enterHopfStudy() {
-    setDropAxis('None');
-    setFiberCollapse(0);
-    setViewType(ProjectionMode.Hopf);
-    setViewMotion('Fixed');
-    snapToStandardView();
-    animateTo(ProjectionMode.Hopf);
-  }
-
   function handleDropAxis(d: (typeof dropModes)[number]) {
     if (d !== 'None') snapToStandardView();
     setDropAxis(d);
@@ -205,7 +188,6 @@ export function useViewControls(state: ParticleState) {
 
   return {
     handleViewType, handleMotion, handleDropAxis, handleFiberCollapse,
-    enterHopfStudy,
     turn, snapToStandardView, rotateBy, orbitBy, orbitTurn,
   };
 }

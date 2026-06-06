@@ -357,3 +357,25 @@ the Hopf/Torus view (a Cartesian grid under-samples one side of the fiber circle
 verified the faint fraction drops 23% → 0% at `b = 2`). Bypassed while adaptive
 density is on. Open: let radial patterns honour an annulus (`rMin > 0`); a phyllotaxis
 / sunflower option; and per-pattern density controls (ring/spoke counts).
+
+### Hopf study preset refinements (clear drop axis; preset polish) — ⏳ deferred
+
+The **Hopf study view** button (`ParticleViewerShell.enterHopfStudy`) calls
+`controls.handleViewType(ProjectionMode.Hopf)`, but `handleViewType` routes the
+projection through the *current* `dropAxis` (`applyView(t, dropAxis)` in
+`useViewControls.ts`). So if a `DropX/Y/U/V` axis is active, the button lands on
+the drop projection, not Hopf — the latitude/longitude reading it promises never
+appears. (Flagged in PR review, P2.)
+
+- **Fix:** clear the drop axis as part of the preset and animate straight to Hopf.
+  Note the trap: sequencing `setDropAxis('None')` then `handleViewType(Hopf)` in
+  one handler still reads the **stale** `dropAxis` closure, so the clear-and-switch
+  must happen in the controls layer (e.g. a `controls.enterHopfStudy()` that calls
+  `setDropAxis('None')` + `animateTo(Hopf)` directly). A prototype of exactly this
+  was written and then backed out to batch it with other study-mode polish.
+- **While here, consider:** should picking Hopf/Torus from the projection Pills
+  *also* clear an active drop axis? Today a drop silently overrides those views, so
+  the Pills have the same "nothing happens" surprise. Decide whether drop-axis and
+  the nonlinear projections should be mutually exclusive in the UI.
+- **Other study-mode polish:** an auto-hint when Hopf is selected with a non-identity
+  orientation; optionally disabling the spinners while in study mode.

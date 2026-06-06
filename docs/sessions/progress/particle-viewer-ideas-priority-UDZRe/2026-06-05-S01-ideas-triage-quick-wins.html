@@ -121,6 +121,20 @@
       <section class="log">
         <h2>Working notes</h2>
         <ol class="timeline">
+          <li class="tl" data-type="decision">
+            <p class="tl-time">03:45</p>
+            <span class="chip chip-decision">Decision</span>
+            <h3>PR review: fixed the zero-q note; deferred the Hopf-study one</h3>
+            <p class="why"><strong>Why:</strong> Two P2 review notes — keep the cheap correctness fix, batch the study-mode change into a future polish effort.</p>
+            <p><strong>Resolved:</strong> <code>z^(p/q)</code> now coerces <code>q=0 → 1</code>
+            in the NumberInput onChange, so the header/saved value can't claim
+            <code>z^(p/0)</code> while the render silently uses 1 (negative q stays allowed).
+            <strong>Deferred:</strong> the Hopf-study button still routes through the active
+            drop axis (so a Drop projection isn't cleared before forcing Hopf) — a prototype
+            fix in <code>useViewControls.enterHopfStudy</code> was written, then backed out
+            and recorded in <code>IDEAS.md</code> ("Hopf study preset refinements") for a
+            dedicated study-mode pass. Build green.</p>
+          </li>
           <li class="tl" data-type="milestone">
             <p class="tl-time">03:25</p>
             <span class="chip chip-milestone">Milestone</span>
