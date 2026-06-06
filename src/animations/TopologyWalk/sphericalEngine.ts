@@ -153,12 +153,8 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   let radius = opts.planetRadius > 0 ? opts.planetRadius : R0;
   let colorCells = opts.colorCells;
   let showInner = opts.innerShell;
-  // Twin shell radius: "same radius" (mirror, on the glass's inner face) vs the
-  // shrunk nested shell. The antipodal map −I is an isometry, so the honest twin is
-  // the same size — the nested shell is just an exploded view to separate it.
-  let innerSameRadius = opts.innerSameRadius;
-  // Glass opacity of the outer planet while the inner shell is shown (shared with
-  // the flat worlds' floor-opacity knob); lower it to see further inside.
+  // Glass opacity of the planet while the glued underside is shown (shared with the
+  // flat worlds' floor-opacity knob); lower it to see the reflection through it.
   let glassOpacity = opts.floorOpacity;
 
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -273,49 +269,52 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   antipode.visible = rp2;
   root.add(antipode);
 
-  // ── "The other side, inside" ──────────────────────────────────────────────
-  // The ℝP² gluing carried on a second sphere via the antipodal map T(x) = −k·x.
-  // With k = 1 this is the true gluing: the antipodal map is an isometry, so the
-  // twin is the SAME size as the planet, sharing its surface — you stand on the
-  // outer face (normal out) and the twin lives on the inner face (normal in), the
-  // spherical glass-floor + mirrored-underside. We render it a hair inside
-  // (k = SAME) so the two faces don't z-fight. The shrunk shell (k = NEST) is the
-  // same thing exploded inward, to separate the twin from your feet.
-  // Either way the twin points radially INWARD (its up-normal opposes yours): −I
-  // already lands your antipode −d straight underfoot and reverses orientation;
-  // aiming each twin inward parks that reversal on the vertical axis, so it reads
-  // as a mirror/reflection of you hanging just under the glass.
-  const INNER_K_SAME = 0.98;
-  const INNER_K_NEST = 0.52;
-  let innerK = innerSameRadius ? INNER_K_SAME : INNER_K_NEST;
-  const innerPlanetMat = new THREE.MeshStandardMaterial({ map: planetTex, color: 0x9fb4c8, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide });
-  ownMats.push(innerPlanetMat);
-  const innerPlanet = new THREE.Mesh(new THREE.SphereGeometry(radius * innerK, 48, 32), innerPlanetMat);
-  root.add(innerPlanet);
+  // ── The glued underside (ℝP² mirror floor) ─────────────────────────────────
+  // The spherical port of the flat Klein floor: ONE glassy planet, and the "other
+  // side" is the SAME surface decor reflected straight down through it — a radial
+  // reflection across radius R (direction kept, each prop flipped to point inward).
+  // There is no second ground; you look through the glass at the reflected forest /
+  // colonnade and beacons hanging just beneath your feet, top pointing out and the
+  // reflection pointing in on the one surface. (Radial mirror, matching the Klein
+  // floor's scale(1,−1,−1). Note this is your local reflection, not the antipodal
+  // gluing partner −d — on a sphere those are different points.)
+  const UNDER_K = 0.997;  // a hair inside so the reflection doesn't z-fight the glass
+  const under = new THREE.Group();
+  under.scale.setScalar(UNDER_K);
+  under.visible = false;
+  const underBeacons = landmarks.clone(true);
+  under.add(underBeacons);
+  const underSkins = new THREE.Group();
+  const underSkinProps: { group: THREE.Group; dir: THREE.Vector3 }[] = [];
+  for (const sp of skinProps) {
+    const g = sp.group.clone(true);
+    underSkins.add(g);
+    underSkinProps.push({ group: g, dir: sp.dir });
+  }
+  underSkins.visible = colorCells;
+  under.add(underSkins);
+  root.add(under);
 
-  const inner = new THREE.Group();
-  inner.scale.setScalar(-innerK);
-  let innerClone = landmarks.clone(true);
-  function orientInnerClone() {
-    for (let i = 0; i < innerClone.children.length && i < BEACONS.length; i++) {
-      // point the twin radially inward (normal reversed) by aiming local +y at −dir;
-      // the group's −k scale then turns that into "up = toward the planet centre".
-      innerClone.children[i].quaternion.setFromUnitVectors(upY, BEACONS[i].dir.clone().negate());
+  // Reflect every prop radially: keep its surface position, aim it INWARD (up → −dir),
+  // so it hangs below the glass directly under its twin on top.
+  function placeUnder() {
+    for (let i = 0; i < underBeacons.children.length && i < BEACONS.length; i++) {
+      underBeacons.children[i].position.copy(BEACONS[i].dir).multiplyScalar(radius);
+      underBeacons.children[i].quaternion.setFromUnitVectors(upY, BEACONS[i].dir.clone().negate());
+    }
+    for (const sp of underSkinProps) {
+      sp.group.position.copy(sp.dir).multiplyScalar(radius);
+      sp.group.quaternion.setFromUnitVectors(upY, sp.dir.clone().negate());
     }
   }
-  orientInnerClone();
-  inner.add(innerClone);
-  const footInner = new THREE.Mesh(foot.geometry, foot.material);
-  footInner.frustumCulled = false;
-  inner.add(footInner);
-  root.add(inner);
+  placeUnder();
 
-  // The inner shell is only meaningful where antipodes are actually glued (ℝP²).
-  // Showing it turns the outer planet to glass so the inner world reads through.
+  // The underside is only meaningful on ℝP² (antipodes glued). Showing it turns the
+  // planet to glass so the reflection reads through; it's hidden when the glass is
+  // near-solid (nothing to see) — exactly the flat floor's showUnder gate.
   function applyInnerShell() {
     const on = showInner && rp2;
-    inner.visible = on;
-    innerPlanet.visible = on;
+    under.visible = on && glassOpacity < 0.97;
     if (on) {
       planetMat.transparent = true;
       planetMat.opacity = glassOpacity;
@@ -343,42 +342,29 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     for (let i = 0; i < beaconGroups.length; i++) {
       beaconGroups[i].position.copy(BEACONS[i].dir).multiplyScalar(radius);
     }
-    // The antipodal twins (outer far side) and the inner-shell landmarks are both
-    // clones, so rebuild them from the re-seated originals; resize the inner shell.
+    // The antipodal twins and the underside reflection are both clones, so rebuild
+    // the antipode and re-seat the reflected props at the new radius.
     antipode.remove(antiClone);
     antiClone = landmarks.clone(true);
     antipode.add(antiClone);
-    inner.remove(innerClone);
-    innerClone = landmarks.clone(true);
-    orientInnerClone();
-    inner.add(innerClone);
-    innerPlanet.geometry.dispose();
-    innerPlanet.geometry = new THREE.SphereGeometry(radius * innerK, 48, 32);
     placeSkins();
+    placeUnder();
     camera.far = radius * 5; camera.updateProjectionMatrix();
     clearTrail();
   }
 
-  // Show / hide the cover skins (trees ⇄ columns + the seam ring). The landmarks
-  // and trail are unaffected; only the terrain reveals which cover sheet you're on.
+  // Show / hide the cover skins (trees ⇄ columns + the seam ring), and their
+  // reflection on the underside. Only the terrain reveals which cover sheet you're on.
   function setColorCells(on: boolean) {
     colorCells = on;
     mapState.colored = on;
     skins.visible = on;
+    underSkins.visible = on;
   }
 
-  // Toggle the inner co-identification shell (and the outer planet's glassiness).
+  // Toggle the glued underside (and the planet's glassiness).
   function setInnerShell(on: boolean) { showInner = on; applyInnerShell(); }
   function setFloorOpacity(o: number) { glassOpacity = o; applyInnerShell(); }
-  // Switch the twin between same-radius (mirror, on the inner face) and the shrunk
-  // nested shell. Only the radius changes; the twin keeps its inward orientation.
-  function setInnerSameRadius(on: boolean) {
-    innerSameRadius = on;
-    innerK = innerSameRadius ? INNER_K_SAME : INNER_K_NEST;
-    inner.scale.setScalar(-innerK);
-    innerPlanet.geometry.dispose();
-    innerPlanet.geometry = new THREE.SphereGeometry(radius * innerK, 48, 32);
-  }
 
   const character = makeCharacter();
   root.add(character.group);
@@ -501,7 +487,6 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     setRadius,
     setColorCells,
     setInnerShell,
-    setInnerSameRadius,
     setFloorOpacity,
     getSphereState: () => mapState,
     dispose: () => {
@@ -509,7 +494,6 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
       foot.dispose();
       character.dispose();
       planet.geometry.dispose();
-      innerPlanet.geometry.dispose();
       seamRing.geometry.dispose();
       planetTex.dispose();
       ownGeos.forEach((g) => g.dispose());

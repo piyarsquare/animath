@@ -82,16 +82,10 @@ export interface EngineOptions {
   /** Spherical worlds: planet radius in world units. A bigger planet dilutes the
    *  (fixed-by-Gauss–Bonnet) curvature, so it feels locally flatter. */
   planetRadius: number;
-  /** Spherical ℝP²: draw a concentric inner shell carrying the antipodally-glued
-   *  far side (point-reflected + shrunk inward), with the outer planet turned
-   *  glassy — so the point straight below your feet is your identified antipode. */
+  /** Spherical ℝP²: turn the planet to glass and show its glued underside — the
+   *  surface decor reflected radially straight down (the other face), the spherical
+   *  port of the flat worlds' glass floor + mirrored underside. */
   innerShell: boolean;
-  /** Spherical ℝP²: render the twin at (essentially) the SAME radius as the planet,
-   *  on its glassy inner face — the antipodal map is an isometry, so the twin is
-   *  the same size, only its normal points inward. When false, the twin is the
-   *  shrunk concentric shell nested well inside. Either way the twin points inward
-   *  (orientation-reversed), straight below your feet. */
-  innerSameRadius: boolean;
 }
 
 /**
@@ -163,7 +157,6 @@ export interface WorldEngine {
   setColorCells?(on: boolean): void;
   setRadius?(r: number): void;
   setInnerShell?(on: boolean): void;
-  setInnerSameRadius?(on: boolean): void;
   clearWriting?(): void;
   /** Flat worlds only: current position/heading in the fundamental domain. */
   getMapState?(): FlatMapState | null;

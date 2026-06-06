@@ -104,26 +104,16 @@ Two readouts help you keep your bearings on the planet:
   bottle's flip wrapped onto a sphere. The flat worlds have the matching **Colour
   each cover cell** knob, which tints every tiled copy of the fundamental domain so
   you can watch yourself cross from one cover cell to the next.
-- **Inner shell — the glued other side (ℝP²):** turns the planet to glass and
-  hangs a smaller, point-reflected copy of the world *inside* it. The inner-shell
-  point straight below your feet is your **identified antipode** — the very point
-  ℝP² glues you to — shown **mirror-reversed**, because the antipodal map flips
-  orientation. Drop a beacon, walk to its far side, and its glued image is right
-  there beneath the ground. It's the spherical echo of the Klein bottle's glass
-  floor and mirrored underside: the "other face" of a one-sided world, seen
-  through the floor. (It's only a *representation* — ℝP² can't truly fit in 3-D
-  without self-intersecting — but the gluing it shows is exact.)
-  - **Twin shell:** the antipodal map is an **isometry** — it preserves distance,
-    so your glued self is the **same size** as you, not smaller. **Same radius
-    (mirror)** shows this honestly: the twin rides the planet's own glassy inner
-    face, you on the outer face pointing out, the twin on the inner face pointing
-    in — the spherical version of the flat worlds' glass floor + mirrored
-    underside. **Shrunk (nested)** is the same twin exploded onto a small inner
-    globe, pulled away from your feet so you can see it as a separate world below.
-    Either way the twin points **inward** (its up-normal opposes yours) and reads
-    mirror-reversed, because the antipodal map (the point inversion **−I**) flips
-    orientation. (The Klein bottle's gluing is instead a *glide reflection*, which
-    flips one horizontal axis with up untouched — hence its left/right mirror.)
+- **Glass floor — the glued underside (ℝP²):** turns the planet to glass so you can
+  see the **other face** through it — the exact spherical port of the flat worlds'
+  glass floor + mirrored underside. The same surface decor (the forest/colonnade and
+  beacons) is reflected **straight down through the surface** — same spot, same
+  radius, each prop flipped to point **inward** — so you stand on the surface with
+  everything pointing **out**, and its reflection hangs just beneath pointing **in**,
+  on the one glass shell. Turn the **Planet glass** knob down toward clear to see it.
+  (It's a *radial reflection*, the same kind the Klein floor uses; on a sphere this
+  is your local reflection, which is **not** the same point as your antipodal gluing
+  partner −d — those coincide on the Klein bottle but not here.)
 
 ## Reading the footprints
 
