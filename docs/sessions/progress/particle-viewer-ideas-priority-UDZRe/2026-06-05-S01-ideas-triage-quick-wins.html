@@ -75,6 +75,27 @@
       <section class="log">
         <h2>Working notes</h2>
         <ol class="timeline">
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">01:10</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Worked the rest of the list "all the way through"</h3>
+            <p class="why"><strong>Why:</strong> User asked to continue through every remaining idea.</p>
+            <p>Shipped, each as its own commit with a green build: (1) <strong>confirm
+            guard</strong> on Reset settings; (2) <strong>Clifford-torus polish</strong> —
+            soft pole-clamp (POLE_EPS) + scaffold labels; (3) <strong>domain bounds + ±
+            lock</strong> with a new commit-on-blur <code>NumberInput</code>; (4) generic
+            <strong>quadratic</strong> a·z²+b·z+c with complex coefficients; (5)
+            <strong>polar / log-polar</strong> input &amp; output charts (<code>CoordMode</code>);
+            (6) the <strong>Hopf fiber-trace overlay</strong> (<code>createHopfFibers</code>).
+            Documented in EXPLAINER + IDEAS.</p>
+          </li>
+          <li class="tl" data-type="decision">
+            <p class="tl-time">01:10</p>
+            <span class="chip chip-decision">Decision</span>
+            <h3>Deferred the unified channel-mapping matrix; folded "color as 4th channel"</h3>
+            <p class="why"><strong>Why:</strong> The matrix is a large refactor that would re-architect 4-vector assembly and conflict with the granular controls just shipped; "color as 4th channel" is already reachable via Drop-axis + Hue/Brightness pickers.</p>
+            <p>Both recorded in IDEAS with rationale; the matrix's cheaper slices are all now in place.</p>
+          </li>
           <li class="tl" data-type="code">
             <p class="tl-time">00:05</p>
             <span class="chip chip-code">Code</span>

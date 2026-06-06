@@ -60,7 +60,15 @@ independently, each with an optional **log-radius** sub-toggle.
   evenly-spaced tilted planes.
 - Pairs naturally with the spinner idea and with the channel-mapping idea below.
 
-### Unified channel-mapping control (axes + color from any source/coordinate)
+### Unified channel-mapping control (axes + color from any source/coordinate) — ⏳ deferred (foundation in place)
+
+Deliberately left as a dedicated future effort. Its cheaper slices have all
+landed and proven out the plumbing: the **Hue**/**Brightness** quantity pickers
+(colour from source × {phase, modulus, real, imag}), the **Input/Output charts**
+(Cartesian / polar / log-polar per plane), the **Drop-axis** projections, and the
+parameterized functions. The full matrix would re-architect the 4-vector assembly
+to be assignment-driven and subsume those as special cases — a big change best
+done on its own, not bolted on at the end of the granular work. Original sketch:
 
 Generalize the hardwired plotting into one control surface. Today the 4-vector is
 fixed as `(Re z, Im z, Re f, Im f)` and color is `arg`→hue + `|·|`→value, chosen
