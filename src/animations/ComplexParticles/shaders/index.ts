@@ -216,7 +216,12 @@ vec3 project(vec4 p, int mode){
       float rz = length(q.xy); if(rz>1e-6) q.xy *= log(1.0+rz)/rz;
       float rf = length(q.zw); if(rf>1e-6) q.zw *= log(1.0+rf)/rf;
     }
-    float d = max(length(q), 1e-6); float denom = max(d - q.w, 1e-4); return q.xyz / denom;
+    // Soft floor (POLE_EPS in quadrature) keeps the projection pole from sending
+    // particles to infinity — matches viewpoint.ts POLE_EPS.
+    float d = max(length(q), 1e-6);
+    float dw = d - q.w;
+    float denom = max(sqrt(dw*dw + (0.08*d)*(0.08*d)), 1e-4);
+    return q.xyz / denom;
   }
   return          vec3(p.x, p.y, p.z);
 }

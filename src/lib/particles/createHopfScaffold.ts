@@ -30,6 +30,37 @@ function circle(radius: number, color: number, opacity: number): THREE.LineLoop 
   return new THREE.LineLoop(g, m);
 }
 
+/** A small camera-facing text label (canvas → sprite). Returns the sprite plus
+ *  its texture/material so they can be tracked for disposal. */
+function makeLabel(text: string, cssColor: string): { sprite: THREE.Sprite; tex: THREE.Texture; mat: THREE.SpriteMaterial } {
+  const pad = 8;
+  const font = 'bold 44px system-ui, sans-serif';
+  const measure = document.createElement('canvas').getContext('2d')!;
+  measure.font = font;
+  const w = Math.ceil(measure.measureText(text).width) + pad * 2;
+  const h = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+  ctx.font = font;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // Faint dark halo so the label stays readable over light/dark backgrounds.
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.strokeText(text, w / 2, h / 2);
+  ctx.fillStyle = cssColor;
+  ctx.fillText(text, w / 2, h / 2);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.minFilter = THREE.LinearFilter;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.85, depthWrite: false, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  // Scale to keep a roughly constant on-screen aspect; ~0.5 scene units tall.
+  sprite.scale.set(0.5 * (w / h), 0.5, 1);
+  return { sprite, tex, mat };
+}
+
 /** Build faint reference geometry for the Hopf / Torus views: the unit Riemann
  *  sphere (with equator + poles) and a stack of nested Clifford-torus donuts
  *  (with the two core circles). The donuts are the stereographic images of the
@@ -48,6 +79,13 @@ export function createHopfScaffold(scene: THREE.Scene): HopfScaffold {
   const torusGroup = new THREE.Group();
   group.add(sphereGroup, torusGroup);
 
+  const addLabel = (parent: THREE.Group, text: string, color: string, x: number, y: number, z: number) => {
+    const { sprite, tex, mat } = makeLabel(text, color);
+    sprite.position.set(x, y, z);
+    parent.add(sprite);
+    disposables.push(tex, mat);
+  };
+
   // ---- Hopf sphere ----
   const sphereGeo = track(new THREE.SphereGeometry(SCALE, 32, 20));
   const wireGeo = track(new THREE.WireframeGeometry(sphereGeo));
@@ -65,6 +103,10 @@ export function createHopfScaffold(scene: THREE.Scene): HopfScaffold {
     dot.position.set(0, 0, sgn * SCALE);
     sphereGroup.add(dot);
   });
+  // Sphere labels: poles (f→0 at +Z, z→0 at −Z) and the |z|=|f| equator.
+  addLabel(sphereGroup, 'f → 0', '#ffffff', 0, 0, SCALE + 0.28);
+  addLabel(sphereGroup, 'z → 0', '#ffffff', 0, 0, -SCALE - 0.28);
+  addLabel(sphereGroup, '|z| = |f|', '#66ccff', SCALE + 0.45, 0, 0);
 
   // ---- Nested Clifford-torus donuts ----
   const etas = [30, 45, 60].map(d => d * Math.PI / 180);
@@ -90,6 +132,11 @@ export function createHopfScaffold(scene: THREE.Scene): HopfScaffold {
     axisGeo,
     track(new THREE.LineBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 0.35, depthWrite: false })),
   ));
+  // Torus labels: the two core circles (f→0 on the unit XY circle, z→0 on the
+  // Z axis) and the angle directions (arg z around the hole, arg f around tube).
+  addLabel(torusGroup, 'f → 0', '#ffcc44', SCALE + 0.4, 0, 0);
+  addLabel(torusGroup, 'z → 0', '#ffcc44', 0, 0, SCALE * 2.2);
+  addLabel(torusGroup, 'arg z (hole)', '#ff8866', 0, SCALE * 1.7, 0);
 
   scene.add(group);
 

@@ -13,6 +13,11 @@ export enum ProjectionMode {
 
 export type Axis4D = 'xy' | 'xu' | 'xv' | 'yu' | 'yv' | 'uv';
 
+/** Soft floor (in quadrature) on the Torus stereographic denominator, so points
+ *  near the projection pole map to a bounded radius instead of infinity. Shared
+ *  with the shader's mode-7 projection. */
+export const POLE_EPS = 0.08;
+
 export function norm(q: THREE.Vector4){
   const l = Math.hypot(q.x,q.y,q.z,q.w) || 1;
   q.divideScalar(l);
@@ -81,9 +86,11 @@ export function project(p: THREE.Vector4, mode: ProjectionMode): THREE.Vector3{
     // Clifford-torus / "un-collapsed Hopf" view: normalize (z1,z2)=(z,f) onto
     // S^3, then stereographically project from the (0,0,0,1) pole. arg(z) runs
     // around the hole, arg(f) around the tube, and |z|/|f| selects which nested
-    // donut; the overall scale is discarded.
+    // donut; the overall scale is discarded. The denominator gets a soft floor
+    // (POLE_EPS, in quadrature) so points at the projection pole bend toward a
+    // bounded radius instead of shooting to infinity.
     const d = Math.hypot(p.x,p.y,p.z,p.w) || 1e-6;
-    const denom = Math.max(d - p.w, 1e-4);
+    const denom = Math.hypot(d - p.w, POLE_EPS * d) || 1e-4;
     return new THREE.Vector3(p.x/denom, p.y/denom, p.z/denom);
   }
   return new THREE.Vector3(p.x,p.y,p.z);
