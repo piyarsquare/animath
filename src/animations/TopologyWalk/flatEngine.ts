@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makeFootprintTrail, FootprintTrail } from './footprints';
+import { makeFootprintTrail } from './footprints';
 import { makeCharacter, Character } from './character';
 import { EngineDeps, EngineOptions, FrameInput, WorldEngine } from './engine';
 
@@ -170,8 +170,10 @@ function makeTreeProp(d: SharedDecor, i: number): THREE.Group {
 }
 
 /** One copy of the fundamental domain: the landmarks (in both forms, one shown
- *  at a time), a coloured boundary square, and the shared footprint trail. */
-function buildCell(d: SharedDecor, foot: FootprintTrail): Built {
+ *  at a time) and a coloured boundary square. The footprint trail is *not* a
+ *  child of the cell — it is tiled separately, relative to the player's own
+ *  cell, so it can sit on the correct side of the glass (see the frame loop). */
+function buildCell(d: SharedDecor): Built {
   const group = new THREE.Group();
   const disposers: (() => void)[] = [];
 
@@ -221,18 +223,6 @@ function buildCell(d: SharedDecor, foot: FootprintTrail): Built {
   group.add(new THREE.LineSegments(edgeGeo, edgeMat));
   disposers.push(() => { edgeGeo.dispose(); edgeMat.dispose(); });
 
-  // shared footprint trail (base coords); appears in every cell, mirrored where
-  // the cell is — so the arrow's left/right colors swap on the Klein bottle and
-  // (through the glass floor) read as the trail seen from the other side.
-  const fp = new THREE.Mesh(foot.geometry, foot.material);
-  fp.frustumCulled = false;
-  group.add(fp);
-  // A second trail mesh on the underside, so the footprints read reversed
-  // through the glass — the same trail seen from the other face.
-  const ufp = new THREE.Mesh(foot.geometry, foot.material);
-  ufp.frustumCulled = false;
-  under.add(ufp);
-
   return { group, trees, columns, under, underTrees, underColumns, ghost: null, dispose: () => disposers.forEach((dd) => dd()) };
 }
 
@@ -245,11 +235,13 @@ function buildCell(d: SharedDecor, foot: FootprintTrail): Built {
  * On the Klein bottle, every other column of cells is mirror-reflected (the red
  * edges glue with a flip). To make that flip legible rather than invisible, the
  * two orientation classes wear different skins — **columns** on one, **trees** on
- * the mirror — over a glassy floor through which the (reversed) footprints of the
- * other side show. So walking across a red edge you watch the columns ahead turn
- * into trees and your own trail come back reversed; cross the blue edges and
- * nothing changes. There is no consistent way to skin the whole world with one
- * form — that impossibility *is* the Klein bottle's non-orientability.
+ * the mirror — over a glassy floor. You drop one footprint per step on the side
+ * you walk; the trail is tiled *relative to your own cell*, so a neighbour that
+ * differs by a twist re-expresses your prints on the underside of the glass,
+ * mirror-reversed. Walk the twist back to the start and your earlier prints slide
+ * under the glass (you're now on the other side); cross the blue (roll) edges and
+ * nothing flips. There is no consistent way to skin the whole world with one form
+ * — that impossibility *is* the Klein bottle's non-orientability.
  */
 export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngine {
   const { scene, camera, renderer } = deps;
@@ -304,14 +296,30 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
 
   const cells: Built[] = [];
   for (let i = 0; i < (2 * K + 1) * (2 * K + 1); i++) {
-    const built = buildCell(decor, foot);
+    const built = buildCell(decor);
     built.group.matrixAutoUpdate = false;
     root.add(built.group);
     cells.push(built);
   }
 
+  // The footprint trail lives in true (cover) coordinates and is tiled around the
+  // player with its own per-cell meshes — one per rendered cell, sharing the one
+  // trail buffer — so each tile can land the trail on the correct side of the
+  // glass relative to the player (top when same orientation, underside when the
+  // tile differs by a twist). See the frame loop for the relative transform.
+  const footMeshes: THREE.Mesh[] = [];
+  for (let i = 0; i < (2 * K + 1) * (2 * K + 1); i++) {
+    const fm = new THREE.Mesh(foot.geometry, foot.material);
+    fm.frustumCulled = false;
+    fm.matrixAutoUpdate = false;
+    root.add(fm);
+    footMeshes.push(fm);
+  }
+
   const M = new THREE.Matrix4();
   const S = new THREE.Matrix4();
+  const Mf = new THREE.Matrix4();
+  const Sf = new THREE.Matrix4();
 
   // Twin avatars are allocated lazily — one per cell — only once the player turns
   // projection on, so the default walk pays nothing for them.
@@ -430,19 +438,40 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
             cell.ghost.group.visible = false;
           }
         }
+
+        // Tile the (cover-coordinate) trail into this cell *relative to the
+        // player's own cell*, so the home copy is the identity — you always see
+        // your own footprints upright, on top, on the side you walk. A neighbour
+        // an odd number of columns away differs from you by a twist (an
+        // orientation flip), so its copy of the trail drops to the underside of
+        // the glass and reads mirror-reversed: same forward direction (the twist
+        // mirrors the transverse axis, not your heading), swapped chirality. Even
+        // offsets are pure translations and stay on top. Walking the twist back
+        // to the start is exactly what slides your old prints under the glass.
+        const fm = footMeshes[idx - 1];
+        if (klein && ((di & 1) !== 0)) {
+          Sf.makeScale(1, -1, -1); // reflect under the floor (y) + mirror twist (z)
+          Mf.makeTranslation(di * L, 0, (2 * J0 + dj) * L).multiply(Sf);
+          fm.visible = showUnder;
+        } else {
+          Mf.makeTranslation(di * L, 0, dj * L);
+          fm.visible = true;
+        }
+        fm.matrix.copy(Mf);
       }
     }
 
-    // Footprints in base (quotient) coords, so they recur in every cell —
-    // mirrored where the cell is mirrored (Klein), swapping the arrow's
-    // left/right colors.
+    // One footprint per step, stored in true (cover) coordinates on the side the
+    // player is actually walking. The tiling above is what re-expresses it on the
+    // far side of the glass once you've crossed the twist; here we just record
+    // the real path.
     const cur = new THREE.Vector2(px, pz);
     if (!trailLast || trailLast.distanceTo(cur) > TRAIL_SPACING) {
       let dwx: number, dwz: number;
       if (trailLast) { dwx = px - trailLast.x; dwz = pz - trailLast.y; }
       else { dwx = Math.sin(yaw); dwz = -Math.cos(yaw); }
       const len = Math.hypot(dwx, dwz) || 1;
-      foot.append(new THREE.Vector3(bx, 0, bz), new THREE.Vector3(dwx / len, 0, sz0 * dwz / len), UP_Y);
+      foot.append(new THREE.Vector3(px, 0, pz), new THREE.Vector3(dwx / len, 0, dwz / len), UP_Y);
       trailLast = cur;
     }
 

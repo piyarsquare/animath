@@ -47,17 +47,21 @@ show a seam, the view tiles that tile seamlessly in every direction (the
   impossible to miss, the two mirror-classes wear different skins — **columns**
   on one side, **trees** on the other (each landmark keeps its colour, so "the
   red one" stays the red one whichever form it takes). Cross a **red** edge and
-  you watch the columns ahead become trees and your own footprints come back
-  reversed. Turn the **floor opacity** down and you can look *through* the glass to
-  the **other side of the world** — the opposite face hanging below, wearing the
-  opposite skin (trees beneath your columns), with the trail reversed. Crossing
-  the twist once lands you on that opposite side, so to come back to an
-  *identical* copy of yourself you must cross it **twice**: the twist takes twice
-  as long to walk as the roll. (Project your avatar and you'll see your true
-  copies repeat every *other* square across the twist for exactly this reason.)
-  Cross the **blue** edges and nothing changes. Crucially there is **no way to
-  skin the whole world with one form**: trees and columns can never be made
-  consistent everywhere. That impossibility *is* the Klein bottle's
+  you watch the columns ahead become trees. You drop **one footprint per step, on
+  the side you're walking** — and here's the tell: walk the **twist** direction
+  all the way around and, back near where you started, your *earlier* footprints
+  now hang **under the glass**, mirror-reversed (still pointing the way you
+  walked — the twist mirrors your left/right, not your heading). The fresh print
+  you lay on top sits **mirror-opposite the buried one**. That's because crossing
+  the twist put you on the **other side** of the surface; to return to an
+  *identical* copy of yourself you must cross it **twice** (the twist takes twice
+  as long to walk as the roll). Turn the **floor opacity** down to see it clearly
+  — the other side hanging below, opposite skin and reversed trail. Cross the
+  **blue** (roll) edges instead and **nothing flips**: you stay on the same side,
+  your prints stay on top. (Project your avatar and you'll see your true copies
+  repeat every *other* square across the twist for exactly this reason.) Crucially
+  there is **no way to skin the whole world with one form**: trees and columns can
+  never be made consistent everywhere. That impossibility *is* the Klein bottle's
   **non-orientability**.
 
 ## Reading the footprints

@@ -70,6 +70,45 @@
         <h2>Working notes</h2>
         <!-- Newest entry first. data-type ∈ decision | code | finding | blocker | milestone -->
         <ol class="timeline">
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">02:30</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Footprint model rebuilt: one print per step, on the side you walk</h3>
+            <p class="why"><strong>Why:</strong> User spec — "the character should
+            emit one F per move and on only one side of the surface, the one he is
+            walking on. If he walks the twisted direction he reaches the start and
+            finds his footsteps on the other side of the world (through the floor)
+            and reversed (but pointing the same forward direction)… the new F is
+            mirror opposite the one under the ground. Crossing the roll direction
+            this does not happen." The old model was wrong: it stored the trail in a
+            fixed base frame and drew it in every cell on <em>both</em> sides (a
+            permanent top + reflected-under pair), tied to absolute cell parity.</p>
+            <ul>
+              <li>The trail is now stored in <strong>true cover coordinates</strong>
+              (one append per step, on the player's side) and decoupled from the
+              cell groups — its own set of meshes sharing the one trail buffer.</li>
+              <li>Each frame the trail is tiled <strong>relative to the player's own
+              cell</strong>: the home copy is the identity (your own prints always
+              upright, on top), even-Δcolumn neighbours are translations (stay on
+              top), and odd-Δcolumn neighbours — which differ from you by one twist,
+              an orientation flip — get <code>scale(1,−1,−1)</code>: reflected under
+              the glass <em>and</em> z-mirrored, so the prints read reversed with the
+              same forward heading (the twist mirrors the transverse axis, not your
+              heading).</li>
+              <li>Consequence (verified by hand on the z≈0 core): walk +x one cell,
+              your prior cell's prints reappear directly <em>under</em> the new ones,
+              reversed; two cells later they're back on top, upright. Roll (Δcolumn
+              even, z-translation) never flips side. This is exactly the spec.</li>
+              <li>Removed the per-cell <code>fp</code>/<code>ufp</code> meshes; kept
+              the underside <em>decor</em>. <code>npm run build</code>:
+              <span class="badge badge-ok">passed</span>.</li>
+            </ul>
+            <p class="callout callout-note"><span class="callout-label">Unverified</span>
+            Logic checked with explicit coordinate traces, but not eyeballed (no
+            headless WebGL). The walk-through to confirm is: head +x along the core,
+            cross one red edge, drop the floor opacity, and confirm the earlier
+            prints sit reversed under the fresh ones.</p>
+          </li>
           <li class="tl" data-type="bugfix">
             <p class="tl-time">01:45</p>
             <span class="chip chip-bugfix">Fix</span>
