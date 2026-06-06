@@ -163,6 +163,49 @@ export function complexBranchSqrtPolyBranch(z: THREE.Vector2, branch: number): T
   return complexSqrtBranch(q, branch);
 }
 
+/** Cotangent cos(z)/sin(z) (single-valued, poles where sin z = 0). */
+export function complexCot(z: THREE.Vector2): THREE.Vector2 {
+  const s = complexSin(z);
+  const c = complexCos(z);
+  let d = s.x * s.x + s.y * s.y;
+  if (d < 1e-4) d = 1e-4;
+  return new THREE.Vector2((c.x * s.x + c.y * s.y) / d, (c.y * s.x - c.x * s.y) / d);
+}
+
+/** 1 − z², the radicand shared by the inverse-trig functions. */
+function oneMinusSquare(z: THREE.Vector2): THREE.Vector2 {
+  return new THREE.Vector2(1 - (z.x * z.x - z.y * z.y), -(2 * z.x * z.y));
+}
+
+/** Multivalued arcsin: −i·ln(iz + √(1−z²)). The ln carries the branch (the
+ *  ±2π·k sheets); the inner sqrt stays principal. */
+export function complexArcsin(z: THREE.Vector2, branch = 0): THREE.Vector2 {
+  const s = complexSqrt(oneMinusSquare(z));
+  const iz = new THREE.Vector2(-z.y, z.x);
+  const w = new THREE.Vector2(iz.x + s.x, iz.y + s.y);
+  const lnw = complexLnBranch(w, branch);
+  return new THREE.Vector2(lnw.y, -lnw.x); // −i · ln w
+}
+
+/** Multivalued arccos: −i·ln(z + i√(1−z²)), branch on the ln (the ±2π·k sheets). */
+export function complexArccos(z: THREE.Vector2, branch = 0): THREE.Vector2 {
+  const s = complexSqrt(oneMinusSquare(z));
+  const is = new THREE.Vector2(-s.y, s.x); // i · sqrt
+  const w = new THREE.Vector2(z.x + is.x, z.y + is.y);
+  const lnw = complexLnBranch(w, branch);
+  return new THREE.Vector2(lnw.y, -lnw.x); // −i · ln w
+}
+
+/** Generic quadratic a·z² + b·z + c with complex coefficients. */
+export function complexQuadratic(
+  z: THREE.Vector2, a: THREE.Vector2, b: THREE.Vector2, c: THREE.Vector2,
+): THREE.Vector2 {
+  const z2 = complexSquare(z);
+  const az2 = new THREE.Vector2(a.x * z2.x - a.y * z2.y, a.x * z2.y + a.y * z2.x);
+  const bz = new THREE.Vector2(b.x * z.x - b.y * z.y, b.x * z.y + b.y * z.x);
+  return new THREE.Vector2(az2.x + bz.x + c.x, az2.y + bz.y + c.y);
+}
+
 /** Apply one of the named complex functions by index. Mirrors the shader's
  *  applyComplex dispatch — cases 0..17 cover the named functions; case 18
  *  (powPQ) needs the p/q parameters and is handled by complexPowRational
@@ -187,6 +230,9 @@ export function applyComplex(z: THREE.Vector2, t: number): THREE.Vector2 {
     case 15: return complexGamma(z);
     case 16: return complexCubeRoot(z);
     case 17: return complexZMinus1OverZPlus1(z);
+    case 19: return complexCot(z);
+    case 20: return complexArcsin(z);
+    case 21: return complexArccos(z);
     default: return z.clone();
   }
 }
@@ -212,18 +258,27 @@ export function applyComplexBranch(z: THREE.Vector2, t: number, branch: number):
     case 15: return complexGamma(z);
     case 16: return complexCubeRoot(z);
     case 17: return complexZMinus1OverZPlus1(z);
+    case 19: return complexCot(z);
+    case 20: return complexArcsin(z, branch);
+    case 21: return complexArccos(z, branch);
     default: return z.clone();
   }
 }
 
+// Append-only: the numeric index is persisted (functionIndex) and drives the
+// shader's applyComplex switch, so add new functions at the END, never reorder.
 export const functionNames = [
   'linear', 'sqrt', 'square', 'ln', 'exp', 'sin', 'cos', 'tan', 'inverse',
   'cube', 'reciprocalCube', 'joukowski', 'rational22', 'essentialExpInv',
-  'branchSqrtPoly', 'gamma', 'cubeRoot', 'zMinus1OverZPlus1', 'powPQ'
+  'branchSqrtPoly', 'gamma', 'cubeRoot', 'zMinus1OverZPlus1', 'powPQ',
+  'cot', 'arcsin', 'arccos', 'quadratic'
 ];
 
 /** Index of the z^(p/q) rational-power function in {@link functionNames}. */
 export const POW_PQ_INDEX = 18;
+
+/** Index of the parameterized quadratic a·z²+b·z+c in {@link functionNames}. */
+export const QUADRATIC_INDEX = 22;
 
 export const functionFormulas: Record<string, string> = {
   linear: 'z',
@@ -244,5 +299,21 @@ export const functionFormulas: Record<string, string> = {
   gamma: '\u0393(z)',
   cubeRoot: '\u221Bz',
   zMinus1OverZPlus1: '(z-1)/(z+1)',
-  powPQ: 'z^(p/q)'
+  powPQ: 'z^(p/q)',
+  cot: 'cos(z)/sin(z)',
+  arcsin: 'arcsin(z)',
+  arccos: 'arccos(z)',
+  quadratic: 'a·z² + b·z + c'
 };
+
+/** Function picker grouping: each category lists member indices into
+ *  {@link functionNames}. Presentation only \u2014 values stay the numeric indices,
+ *  so reordering categories never affects persisted selections. Covers every
+ *  index exactly once; append new functions to the appropriate category. */
+export const functionCategories: { label: string; members: number[] }[] = [
+  { label: 'Polynomial & rational', members: [0, 2, 9, 22, 8, 10, 12] },
+  { label: 'Roots & log (multivalued)', members: [1, 16, 18, 3, 14] },
+  { label: 'Trig & inverse-trig', members: [5, 6, 7, 19, 20, 21] },
+  { label: 'Exp & essential', members: [4, 13] },
+  { label: 'Special', members: [15, 11, 17] }
+];

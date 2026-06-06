@@ -35,7 +35,16 @@ turning while held.
 - Nice-to-have: a master "stop all spins" control, and respect reduced-motion
   preferences.
 
-### Polar coordinate toggles for input and/or output
+### Polar coordinate toggles for input and/or output — ✅ implemented
+
+Shipped as **Input chart** / **Output chart** pickers in the Domain section
+(`CoordMode`: Cartesian / Polar / Log-polar). Each replots its plane as
+`(|·|, arg)` or `(log|·|, arg)` before the 4-vector is assembled (via
+`chartCoord` in the shader, uniforms `uInCoord` / `uOutCoord`); colour keeps the
+raw Cartesian value. Log-polar output makes `exp` the identity; log-polar on both
+flattens `zⁿ`/roots into linear shears. A genuine `(r, α)` input grid now exists
+as the **Polar** option of the new domain **Sampling** picker (see below). Not yet
+done: a phase-unwrap option for the `arg` seam. Original sketch:
 
 Let the input domain and the output be plotted in **polar** instead of Cartesian,
 independently, each with an optional **log-radius** sub-toggle.
@@ -51,7 +60,15 @@ independently, each with an optional **log-radius** sub-toggle.
   evenly-spaced tilted planes.
 - Pairs naturally with the spinner idea and with the channel-mapping idea below.
 
-### Unified channel-mapping control (axes + color from any source/coordinate)
+### Unified channel-mapping control (axes + color from any source/coordinate) — ⏳ deferred (foundation in place)
+
+Deliberately left as a dedicated future effort. Its cheaper slices have all
+landed and proven out the plumbing: the **Hue**/**Brightness** quantity pickers
+(colour from source × {phase, modulus, real, imag}), the **Input/Output charts**
+(Cartesian / polar / log-polar per plane), the **Drop-axis** projections, and the
+parameterized functions. The full matrix would re-architect the 4-vector assembly
+to be assignment-driven and subsume those as special cases — a big change best
+done on its own, not bolted on at the end of the granular work. Original sketch:
 
 Generalize the hardwired plotting into one control surface. Today the 4-vector is
 fixed as `(Re z, Im z, Re f, Im f)` and color is `arg`→hue + `|·|`→value, chosen
@@ -72,7 +89,13 @@ against degenerate/duplicate assignments (e.g. two axes bound to the same
 coordinate) with a gentle warning rather than a hard block — sometimes the
 collapse is instructive.
 
-### Faithful (normalized) Hopf projection
+### Faithful (normalized) Hopf projection — ✅ implemented
+
+Shipped in #178: `project` mode `Hopf` (in both `lib/viewpoint.ts` and the shader)
+is now the genuine normalized Hopf map `H = (2·Re(z·conj f), 2·Im(z·conj f),
+|z|²−|f|²)/(|z|²+|f|²)`, landing every particle on S² with latitude = `|z|/|f|`
+and longitude = `arg z − arg f`. The stylized quadratic variant was replaced (not
+kept as a separate option). Original sketch:
 
 The current `project` mode 2 / shader "Hopf" is a Hopf-*style* quadratic variant
 `(2xv, 2yv, x²+v²−y²−u²)`, not the textbook map, so it doesn't match the clean
@@ -89,7 +112,15 @@ and `f = z²` each cover the sphere once (Möbius); `exp` wraps it infinitely.
 Consider keeping the old variant as a separate "Hopf (stylized)" option if its
 look is liked.
 
-### "Hopf study" mode: freeze the 4D orientation + in-app guide
+### "Hopf study" mode: freeze the 4D orientation + in-app guide — ✅ implemented
+
+Shipped a **Hopf study view** button (Camera panel, shown in Hopf/Torus): it
+forces the Hopf projection, sets Motion → Fixed, stops any spins, and snaps the
+4D orientation back to identity in one tap, so the latitude/longitude reading
+holds. The EXPLAINER already carries the reading ladder (`c·z` → point; `z+c`,
+`z²` → sphere once; `exp` → infinite wrap) and the latitude/longitude legend. The
+reference scaffold now also carries text labels (sphere poles `f→0`/`z→0`, the
+`|z|=|f|` equator, and the torus cores + `arg z` direction). Original sketch:
 
 The 4D spinner/rotation is applied *before* the Hopf map, which remixes input and
 output coordinates and breaks the `z/f` reading. For learning Hopf we want a
@@ -125,7 +156,18 @@ Follow-ups:
   particles toward infinity; consider a soft clamp or an alternate projection
   pole if it's visually distracting for some functions.
 
-### Flexible "color by" — choose source *and* quantity
+### Flexible "color by" — choose source *and* quantity — ✅ implemented
+
+Shipped **Hue** and **Brightness** pickers in the Color section (`ColourQuantity`):
+the source stays the Domain/Range switch, and the two controls independently
+choose which scalar drives hue and value — **Phase** (classic `arg → hue`),
+**Magnitude** (colour/shade by `|z|` / `|f|`), **Real**, or **Imag**. Defaults
+reproduce classic domain coloring (hue = phase, brightness = magnitude), and the
+two can now be driven by *different* quantities. Implemented behind `uColourQty`
+and `uBrightnessQty` in `calcColour` (`ComplexParticles/shaders/index.ts`) and
+persisted via `useParticleState`. (Brightness applies to the HSV / Dual-hue
+styles; the Modulus-bands and Phase-only styles fix their own value by design.)
+Original sketch:
 
 Today **Color → Color by** is a binary `ColourBy` (Domain = `z` vs Range = `f`),
 and the colormap is hardwired as `arg → hue`, `|·| → value`. Open it up so the
@@ -144,7 +186,14 @@ small `Pills`/`Select` pair (source × quantity) in the Color section. Implement
 the shader's `calcColour` (`ComplexParticles/shaders/index.ts`) behind a couple of
 uniforms; persist the selection via `useParticleState`.
 
-### Explicit domain bounds (lower/upper) with a ± lock
+### Explicit domain bounds (lower/upper) with a ± lock — ✅ implemented
+
+Shipped a **± symmetric bounds** lock in the Domain section: locked keeps the
+classic symmetric `±extent` sliders; unlocked exposes independent X/Y min/max
+(as two-thumb **RangeSlider**s) for off-centre windows like `x ∈ [0, 6]`. The
+geometry builders now take explicit `(xMin,xMax,yMin,yMax)`, `axisScale` still
+applies, and toggling the lock seeds the other representation so the view doesn't
+jump. Original sketch:
 
 The sampled domain is currently symmetric half-widths (`extentX`, `extentY`, so the
 box is always `[-ext, +ext]`). Let the user set **independent lower and upper
@@ -161,6 +210,17 @@ window (e.g. `x ∈ [0, 6]`).
 - Pairs with the number-input commit-on-blur idea below.
 
 ### More functions, better organized (+ a generic quadratic; stretch: custom f)
+
+Partly done: `cot`, `arcsin`, `arccos` are shipped (in both `lib/complexMath.ts`
+and the shader `applyComplex` switch, appended at indices 19–21 so persisted
+selections stay stable), and the picker is now grouped into categories via the
+new `functionCategories` table + `Select` `groups` (optgroup) support. The
+inverse-trig pair is branch-aware (the `ln` carries the ±2π·k sheets; inner sqrt
+principal) and was checked numerically against known values. The **generic
+quadratic** `a·z²+b·z+c` (complex coefficients, index 22) also shipped — wired
+through `uQuadA/B/C` + the adaptive CPU path, with the coefficients editable via
+the commit-on-blur `NumberInput`. Still open: the **custom-f** stretch goal (a
+typed expression → GLSL). Original sketch:
 
 Grow and organize the function list (`lib/complexMath.ts` name/formula tables + the
 shader `applyComplex` switch in `ComplexParticles/shaders/index.ts`):
@@ -182,7 +242,13 @@ shader `applyComplex` switch in `ComplexParticles/shaders/index.ts`):
   Big task — treat the generic-quadratic/polynomial path as the pragmatic middle
   ground to ship first.
 
-### Number inputs: commit on Enter/blur, with revert (shared ControlPanel)
+### Number inputs: commit on Enter/blur, with revert (shared ControlPanel) — ✅ implemented
+
+Shipped a shared `ControlPanel` **NumberInput** primitive: keeps a draft string
+while typing, commits only on Enter/blur, clamps to `min`/`max` (rounds if
+`integer`), reverts an unparseable entry, and cancels on Escape. Used for the
+`z^(p/q)` p/q fields and the quadratic coefficients. (No toast on revert — it
+restores the last good value silently.) Original sketch:
 
 Wherever a control takes a *typed* number, **don't apply the change keystroke by
 keystroke** — wait until the user presses **Enter** or **leaves the field**, then
@@ -200,7 +266,17 @@ ideally with a small popup/toast explaining why.
   where intermediate keystrokes (an empty box, a lone "−") would otherwise
   momentarily break the render.
 
-### Show the actual Hopf fibers (the interlocking circles)
+### Show the actual Hopf fibers (the interlocking circles) — ✅ implemented
+
+Shipped a **Hopf fibers** toggle + **Fiber density** slider (Camera section, Torus
+view), backed by `createHopfFibers.ts`: it samples base points on S² directly (a
+grid over latitude η and longitude ψ) and draws each one's full circle
+`θ ↦ stereo(normalize(e^{iθ}·(z₁,z₂)))` as a `LineLoop`, in the same normalized
+stereographic chart + SCALE as the particles/scaffold, coloured by base point.
+Open follow-ups: have the **Collapse → Hopf** slider also shrink the fiber circles
+to their base points (currently the fibers just hide past the half-way collapse),
+and an option to seed fibers from the *function's own* graph points rather than a
+uniform S² grid. Original sketch:
 
 **Motivation.** The iconic Hopf-fibration image — linked Villarceau circles packed
 into nested tori — is a picture of **S³** (stereographically dropped into ℝ³). Our
@@ -237,7 +313,15 @@ ratio `z/f`, exactly what Hopf mode shows). Then:
   projection math in `viewpoint.ts` / `shaders/index.ts:186`. Keep it off by default
   (it's a study aid, and dense fibers get busy). Pairs with the "Hopf study" mode.
 
-### Color as a fourth channel (spend color on a dropped axis, not on phase)
+### Color as a fourth channel (spend color on a dropped axis, not on phase) — ⚠️ largely covered
+
+Effectively achievable today by combining a **Drop axis** projection with the
+**Hue**/**Brightness** quantity pickers: drop a coordinate spatially, then bind
+hue (or brightness) to the matching source + quantity — e.g. Drop V in space and
+set Hue = Imag of the Range, which paints the discarded `v = Im f` onto color for
+a no-projection-loss 4-D view. A dedicated auto-binding "Drop → color" variant
+was judged redundant given those controls already exist; revisit it as the colour
+row of the unified channel-mapping matrix below. Original sketch:
 
 **Motivation.** Today color is **domain coloring** (`arg`→hue, `|·|`→value of `z` or
 `f`; `calcColour` in `ComplexParticles/shaders/index.ts:201`) — but that information
@@ -259,3 +343,39 @@ brightness).
   does **not** reveal the interlocking circles — "interlocking" is an embedded-in-ℝ³
   phenomenon you only get by drawing the fiber curves (above). Color can label
   *which* fiber a point belongs to, not make two loops visibly thread each other.
+
+### Domain sampling patterns (grid / polar / rings / spokes / web / squares / random) — ✅ implemented
+
+Shipped a **Sampling** picker in the Domain section (`SamplePattern`) that lays the
+domain points out as a Cartesian **Grid** (default), **Polar** lattice, concentric
+**Rings**, radial **Spokes**, a **Web** (rings + spokes), concentric **Squares**, or
+**Random** scatter. Built in `createParticleGeometry.ts` (`fillPattern`); radial
+patterns sample a disk of radius max(halfX, halfY) centred on the box, the others
+use the box; each fills exactly `count` points. Beyond the visual variety, **Polar**
+spreads points evenly in `arg z`, which keeps near-linear maps (`f ≈ b·z`) crisp in
+the Hopf/Torus view (a Cartesian grid under-samples one side of the fiber circle —
+verified the faint fraction drops 23% → 0% at `b = 2`). Bypassed while adaptive
+density is on. Open: let radial patterns honour an annulus (`rMin > 0`); a phyllotaxis
+/ sunflower option; and per-pattern density controls (ring/spoke counts).
+
+### Hopf study preset refinements (clear drop axis; preset polish) — ⏳ deferred
+
+The **Hopf study view** button (`ParticleViewerShell.enterHopfStudy`) calls
+`controls.handleViewType(ProjectionMode.Hopf)`, but `handleViewType` routes the
+projection through the *current* `dropAxis` (`applyView(t, dropAxis)` in
+`useViewControls.ts`). So if a `DropX/Y/U/V` axis is active, the button lands on
+the drop projection, not Hopf — the latitude/longitude reading it promises never
+appears. (Flagged in PR review, P2.)
+
+- **Fix:** clear the drop axis as part of the preset and animate straight to Hopf.
+  Note the trap: sequencing `setDropAxis('None')` then `handleViewType(Hopf)` in
+  one handler still reads the **stale** `dropAxis` closure, so the clear-and-switch
+  must happen in the controls layer (e.g. a `controls.enterHopfStudy()` that calls
+  `setDropAxis('None')` + `animateTo(Hopf)` directly). A prototype of exactly this
+  was written and then backed out to batch it with other study-mode polish.
+- **While here, consider:** should picking Hopf/Torus from the projection Pills
+  *also* clear an active drop axis? Today a drop silently overrides those views, so
+  the Pills have the same "nothing happens" surprise. Decide whether drop-axis and
+  the nonlinear projections should be mutually exclusive in the UI.
+- **Other study-mode polish:** an auto-hint when Hopf is selected with a non-identity
+  orientation; optionally disabling the spinners while in study mode.

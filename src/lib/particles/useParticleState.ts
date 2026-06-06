@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { ProjectionMode } from '../viewpoint';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import { usePersistentState } from '../usePersistentState';
-import { ViewPoint, ColorStyle, ColourBy, JitterMode, Axis, motionModes, dropModes } from './types';
+import { ViewPoint, ColorStyle, ColourBy, ColourQuantity, CoordMode, SamplePattern, JitterMode, Axis, motionModes, dropModes } from './types';
 
 export interface UseParticleStateOptions {
   count?: number;
@@ -54,7 +54,18 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // axes — handy for trig functions whose natural scale is π.
   const [extentX, setExtentX] = usePersistentState(pk('extentX'), COMPLEX_PARTICLES_DEFAULTS.initial.extentX);
   const [extentY, setExtentY] = usePersistentState(pk('extentY'), COMPLEX_PARTICLES_DEFAULTS.initial.extentY);
+  // Domain bounds. When `boundsLock` is true (default) the box is the symmetric
+  // [-extentX, +extentX] × [-extentY, +extentY] driven by the extent sliders
+  // above; when unlocked, these independent min/max define an off-centre window.
+  const [boundsLock, setBoundsLock] = usePersistentState(pk('boundsLock'), true);
+  const [xMin, setXMin] = usePersistentState(pk('xMin'), -COMPLEX_PARTICLES_DEFAULTS.initial.extentX);
+  const [xMax, setXMax] = usePersistentState(pk('xMax'), COMPLEX_PARTICLES_DEFAULTS.initial.extentX);
+  const [yMin, setYMin] = usePersistentState(pk('yMin'), -COMPLEX_PARTICLES_DEFAULTS.initial.extentY);
+  const [yMax, setYMax] = usePersistentState(pk('yMax'), COMPLEX_PARTICLES_DEFAULTS.initial.extentY);
   const [axisScale, setAxisScale] = usePersistentState(pk('axisScale'), COMPLEX_PARTICLES_DEFAULTS.initial.axisScale);
+  // How the (non-adaptive) domain grid is laid out: Cartesian grid, polar,
+  // rings, spokes, web, squares, or random scatter.
+  const [samplePattern, setSamplePattern] = usePersistentState<SamplePattern>(pk('samplePattern'), SamplePattern.Grid);
   /** When true, sample more densely where |f'(z)| is large. */
   const [adaptive, setAdaptive] = usePersistentState(pk('adaptive'), COMPLEX_PARTICLES_DEFAULTS.initial.adaptive);
   /** Exponent biasing strength for adaptive sampling. */
@@ -65,10 +76,16 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [realView, setRealView] = useState(false);
   const [colourStyle, setColourStyle] = usePersistentState<ColorStyle>(pk('colourStyle'), ColorStyle.HSV);
   const [colourBy, setColourBy] = usePersistentState<ColourBy>(pk('colourBy'), ColourBy.Domain);
-  // Torus radius scale: when true, the Torus mapping derives each fiber's donut
-  // from log(1+|z|) and log(1+|f|) instead of the raw magnitudes, spreading the
-  // nesting across orders of magnitude. Only affects the Torus projection.
-  const [logRadius, setLogRadius] = usePersistentState(pk('logRadius'), false);
+  // Which scalar of the chosen source drives the colour wheel (hue). Phase keeps
+  // the classic domain-colouring look; Modulus colours by |z| / |f|, etc.
+  const [colourQuantity, setColourQuantity] = usePersistentState<ColourQuantity>(pk('colourQuantity'), ColourQuantity.Phase);
+  // Which scalar drives the brightness (value) channel, independently of hue.
+  // Defaults to Modulus = magnitude (the classic |·| → brightness).
+  const [brightnessQuantity, setBrightnessQuantity] = usePersistentState<ColourQuantity>(pk('brightnessQuantity'), ColourQuantity.Modulus);
+  // Coordinate chart for the input z and output f planes before they form the
+  // 4-vector (Cartesian / Polar / Log-polar). Colour stays Cartesian.
+  const [inputCoord, setInputCoord] = usePersistentState<CoordMode>(pk('inputCoord'), CoordMode.Cartesian);
+  const [outputCoord, setOutputCoord] = usePersistentState<CoordMode>(pk('outputCoord'), CoordMode.Cartesian);
 
   // ---- View / projection state ----
   const [viewType, setViewType] = usePersistentState<ProjectionMode>(pk('viewType'), ProjectionMode.Perspective);
@@ -90,6 +107,9 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [fiberCollapse, setFiberCollapse] = useState(0);
   // Whether to draw the faint sphere/donut reference scaffolding.
   const [showScaffold, setShowScaffold] = usePersistentState(pk('showScaffold'), true);
+  // Hopf fiber-trace overlay (Torus view): toggle + how many fibers per latitude.
+  const [showFibers, setShowFibers] = usePersistentState(pk('showFibers'), false);
+  const [fiberDensity, setFiberDensity] = usePersistentState(pk('fiberDensity'), 12);
   const [orientationMatrix, setOrientationMatrix] = useState<number[][]>([
     [0, 0, 0, 0],
     [0, 0, 0, 0],
@@ -165,8 +185,14 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     axisWidth, setAxisWidth,
     extentX, setExtentX,
     extentY, setExtentY,
+    boundsLock, setBoundsLock,
+    xMin, setXMin,
+    xMax, setXMax,
+    yMin, setYMin,
+    yMax, setYMax,
     axisScale, setAxisScale,
     axisScaleRef,
+    samplePattern, setSamplePattern,
     adaptive, setAdaptive,
     adaptiveAlpha, setAdaptiveAlpha,
     objectMode, setObjectMode,
@@ -175,7 +201,10 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     realView, setRealView,
     colourStyle, setColourStyle,
     colourBy, setColourBy,
-    logRadius, setLogRadius,
+    colourQuantity, setColourQuantity,
+    brightnessQuantity, setBrightnessQuantity,
+    inputCoord, setInputCoord,
+    outputCoord, setOutputCoord,
 
     // View state + setters
     viewType, setViewType,
@@ -184,6 +213,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     proj, setProj,
     fiberCollapse, setFiberCollapse,
     showScaffold, setShowScaffold,
+    showFibers, setShowFibers,
+    fiberDensity, setFiberDensity,
     orientationMatrix, setOrientationMatrix,
 
     // Three.js object refs

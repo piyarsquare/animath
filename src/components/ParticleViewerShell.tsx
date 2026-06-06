@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Canvas3D from './Canvas3D';
 import Readme from './Readme';
-import { Section, Slider, Pills, Select, Checkbox } from './ControlPanel';
+import { Section, Slider, Pills, Select, Checkbox, RangeSlider } from './ControlPanel';
 import { ShellSettings, ShellActions, useAppHeader, useAppExplainer } from './AppShell';
 import QuarterTurnControls from '../controls/QuarterTurnControls';
 import type { TurnItem, AxisLetter } from '../controls/QuarterTurnControls';
@@ -10,7 +10,8 @@ import { useResponsive } from '../styles/responsive';
 import { planes, Plane } from '../math/constants';
 import { clearPersistedState } from '../lib/usePersistentState';
 import {
-  ColorStyle, ColourBy, JitterMode, AXIS_COLORS,
+  ColorStyle, ColourBy, ColourQuantity, CoordMode, coordModeNames,
+  SamplePattern, samplePatternNames, JitterMode, AXIS_COLORS,
   shapeNames, textureNames, viewTypes, motionModes,
   useGestureRotation,
 } from '../lib/particles';
@@ -41,7 +42,10 @@ export interface ParticleViewerShellProps {
   functionName: string;
   functionFormula: string;
   functionPicker: React.ReactNode;
+  /** Extra controls appended to the Function section (e.g. per-function params). */
   variantExtras?: React.ReactNode;
+  /** Extra controls appended to the Domain section (e.g. the branch range). */
+  domainExtras?: React.ReactNode;
   readme: string;
   /** Markdown explainer for the top-bar "?" help popup. */
   explainer?: string;
@@ -52,7 +56,7 @@ export interface ParticleViewerShellProps {
 
 export default function ParticleViewerShell({
   state, controls, onMount,
-  functionName, functionFormula, functionPicker, variantExtras, readme, explainer,
+  functionName, functionFormula, functionPicker, variantExtras, domainExtras, readme, explainer,
   settingsStorageKey,
 }: ParticleViewerShellProps) {
   const { isMobile, isTablet } = useResponsive();
@@ -129,6 +133,34 @@ export default function ParticleViewerShell({
     else controls.turn(id as Plane, dir);
   };
 
+  // "Hopf study": the one-tap preset for reading the Hopf sphere. The 4D
+  // spinner/rotation is applied *before* the Hopf map, which remixes input and
+  // output and breaks the z/f reading, so this forces the Hopf projection,
+  // freezes the motion, stops any spins, and snaps the 4D orientation back to
+  // identity — leaving latitude = |z|/|f| and longitude = arg(z) − arg(f) intact.
+  const enterHopfStudy = () => {
+    controls.handleViewType(ProjectionMode.Hopf);
+    controls.handleMotion('Fixed');
+    setSpins({});
+    controls.snapToStandardView();
+  };
+
+  // Toggling the ± lock seeds the other representation so the view doesn't jump:
+  // unlocking copies the symmetric extents into min/max; re-locking collapses the
+  // (possibly off-centre) window back to a symmetric half-width.
+  const onBoundsLockChange = (locked: boolean) => {
+    if (locked) {
+      state.setExtentX((state.xMax - state.xMin) / 2);
+      state.setExtentY((state.yMax - state.yMin) / 2);
+    } else {
+      state.setXMin(-state.extentX);
+      state.setXMax(state.extentX);
+      state.setYMin(-state.extentY);
+      state.setYMax(state.extentY);
+    }
+    state.setBoundsLock(locked);
+  };
+
   const axisColor = (letter: AxisLetter) => {
     const key = letter.toLowerCase() as 'x' | 'y' | 'u' | 'v';
     return `hsl(${((AXIS_COLORS[key] + state.hueShift) % 1) * 360},100%,60%)`;
@@ -180,14 +212,59 @@ export default function ParticleViewerShell({
             value={state.axisScale}
             onChange={state.setAxisScale}
           />
-          <Slider label="X extent (±)" value={state.extentX}
-            min={R.extent.min} max={R.extent.max} step={R.extent.step}
-            onChange={state.setExtentX}
-            format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`} />
-          <Slider label="Y extent (±)" value={state.extentY}
-            min={R.extent.min} max={R.extent.max} step={R.extent.step}
-            onChange={state.setExtentY}
-            format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`} />
+          <Select
+            label="Sampling"
+            options={samplePatternNames.map((name, i) => ({ value: i as SamplePattern, label: name }))}
+            value={state.samplePattern}
+            onChange={state.setSamplePattern}
+          />
+          <Checkbox
+            label="± symmetric bounds"
+            checked={state.boundsLock}
+            onChange={onBoundsLockChange}
+          />
+          {state.boundsLock ? (
+            <>
+              <Slider label="X extent (±)" value={state.extentX}
+                min={R.extent.min} max={R.extent.max} step={R.extent.step}
+                onChange={state.setExtentX}
+                format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`} />
+              <Slider label="Y extent (±)" value={state.extentY}
+                min={R.extent.min} max={R.extent.max} step={R.extent.step}
+                onChange={state.setExtentY}
+                format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`} />
+            </>
+          ) : (
+            <>
+              <RangeSlider
+                label="X range"
+                min={-R.extent.max} max={R.extent.max} step={R.extent.step}
+                valueMin={state.xMin} valueMax={state.xMax}
+                onChange={(lo, hi) => { state.setXMin(lo); state.setXMax(hi); }}
+                format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`}
+              />
+              <RangeSlider
+                label="Y range"
+                min={-R.extent.max} max={R.extent.max} step={R.extent.step}
+                valueMin={state.yMin} valueMax={state.yMax}
+                onChange={(lo, hi) => { state.setYMin(lo); state.setYMax(hi); }}
+                format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`}
+              />
+            </>
+          )}
+          <Select
+            label="Input chart"
+            options={coordModeNames.map((name, i) => ({ value: i as CoordMode, label: name }))}
+            value={state.inputCoord}
+            onChange={state.setInputCoord}
+          />
+          <Select
+            label="Output chart"
+            options={coordModeNames.map((name, i) => ({ value: i as CoordMode, label: name }))}
+            value={state.outputCoord}
+            onChange={state.setOutputCoord}
+          />
+          {domainExtras}
         </Section>
 
         <Section title="Camera" icon="◐" defaultOpen>
@@ -206,23 +283,38 @@ export default function ParticleViewerShell({
               format={v => v === 0 ? 'torus' : v === 1 ? 'sphere' : v.toFixed(2)}
             />
           )}
-          {state.viewType === ProjectionMode.Torus && (
-            <Pills
-              label="Radius scale"
-              options={[
-                { value: 0, label: 'Linear' },
-                { value: 1, label: 'Log' },
-              ]}
-              value={state.logRadius ? 1 : 0}
-              onChange={v => state.setLogRadius(v === 1)}
-            />
-          )}
           {(state.viewType === ProjectionMode.Torus || state.viewType === ProjectionMode.Hopf) && (
             <Checkbox
               label="Reference scaffold"
               checked={state.showScaffold}
               onChange={state.setShowScaffold}
             />
+          )}
+          {state.viewType === ProjectionMode.Torus && (
+            <Checkbox
+              label="Hopf fibers"
+              checked={state.showFibers}
+              onChange={state.setShowFibers}
+            />
+          )}
+          {state.viewType === ProjectionMode.Torus && state.showFibers && (
+            <Slider
+              label="Fiber density"
+              value={state.fiberDensity}
+              min={4} max={36} step={1}
+              onChange={state.setFiberDensity}
+              format={v => `${v}/ring`}
+            />
+          )}
+          {(state.viewType === ProjectionMode.Torus || state.viewType === ProjectionMode.Hopf) && (
+            <button
+              className="qtc-reset"
+              style={{ marginTop: 4 }}
+              onClick={enterHopfStudy}
+              title="Switch to Hopf, freeze the motion, and reset the 4D orientation so latitude = |z|/|f| and longitude = arg(z) − arg(f) read cleanly"
+            >
+              Hopf study view
+            </button>
           )}
           <Pills
             label="Motion"
@@ -269,6 +361,29 @@ export default function ParticleViewerShell({
             ]}
             value={state.colourBy}
             onChange={state.setColourBy}
+          />
+          <Select
+            label="Hue"
+            options={[
+              { value: ColourQuantity.Phase, label: 'Phase (arg)' },
+              { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
+              { value: ColourQuantity.Real, label: 'Real part' },
+              { value: ColourQuantity.Imag, label: 'Imag part' },
+            ]}
+            value={state.colourQuantity}
+            onChange={state.setColourQuantity}
+          />
+          <Select
+            label="Brightness"
+            options={[
+              { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
+              { value: ColourQuantity.Uniform, label: 'Uniform (flat)' },
+              { value: ColourQuantity.Phase, label: 'Phase (arg)' },
+              { value: ColourQuantity.Real, label: 'Real part' },
+              { value: ColourQuantity.Imag, label: 'Imag part' },
+            ]}
+            value={state.brightnessQuantity}
+            onChange={state.setBrightnessQuantity}
           />
           <Pills
             label="Style"
@@ -348,24 +463,13 @@ export default function ParticleViewerShell({
       <ShellActions>
         <div className="cp-section-body">
           {state.viewType === ProjectionMode.Torus && (
-            <>
-              <Slider
-                label="Collapse → Hopf"
-                value={state.fiberCollapse}
-                min={0} max={1} step={0.01}
-                onChange={controls.handleFiberCollapse}
-                format={v => v === 0 ? 'torus' : v === 1 ? 'sphere' : v.toFixed(2)}
-              />
-              <Pills
-                label="Radius scale"
-                options={[
-                  { value: 0, label: 'Linear' },
-                  { value: 1, label: 'Log' },
-                ]}
-                value={state.logRadius ? 1 : 0}
-                onChange={v => state.setLogRadius(v === 1)}
-              />
-            </>
+            <Slider
+              label="Collapse → Hopf"
+              value={state.fiberCollapse}
+              min={0} max={1} step={0.01}
+              onChange={controls.handleFiberCollapse}
+              format={v => v === 0 ? 'torus' : v === 1 ? 'sphere' : v.toFixed(2)}
+            />
           )}
 
           <QuarterTurnControls
@@ -387,6 +491,7 @@ export default function ParticleViewerShell({
               className="qtc-reset"
               style={{ marginTop: 8 }}
               onClick={() => {
+                if (!window.confirm('Reset all settings to their defaults? This clears your saved settings and reloads the page.')) return;
                 clearPersistedState(settingsStorageKey);
                 window.location.reload();
               }}

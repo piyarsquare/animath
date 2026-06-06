@@ -28,6 +28,9 @@ uniform int   shapeType;
 uniform int   branchIndex;
 uniform int   exponentP;
 uniform int   exponentQ;
+uniform vec2  uQuadA;
+uniform vec2  uQuadB;
+uniform vec2  uQuadC;
 uniform quat  uRotL;
 uniform quat  uRotR;
 uniform int   uProjMode;
@@ -35,7 +38,10 @@ uniform int   uProjTarget;
 uniform float uProjAlpha;
 uniform int   uColourStyle;
 uniform int   uColourBy;
-uniform int   uLogRadius;
+uniform int   uColourQty;
+uniform int   uBrightnessQty;
+uniform int   uInCoord;
+uniform int   uOutCoord;
 attribute float size;
 attribute vec4 seed;
 varying vec3 vColor;
@@ -153,6 +159,29 @@ vec2 complexPowRational(vec2 z, int p, int q){
   return vec2(rpq * cos(ang), rpq * sin(ang));
 }
 
+vec2 complexCot(vec2 z){vec2 s=complexSin(z);vec2 c=complexCos(z);float d=s.x*s.x+s.y*s.y;if(d<1e-4) d=1e-4;return vec2((c.x*s.x+c.y*s.y)/d,(c.y*s.x-c.x*s.y)/d);}
+
+// Multivalued inverse trig. The ln carries the branch (±2π·k sheets); the inner
+// sqrt stays principal. arcsin = -i ln(iz + sqrt(1-z^2)); arccos = -i ln(z + i sqrt(1-z^2)).
+vec2 complexArcsin(vec2 z, int branch){
+  vec2 omz2 = vec2(1.0 - (z.x*z.x - z.y*z.y), -(2.0*z.x*z.y));
+  vec2 s = complexSqrt(omz2);
+  vec2 w = vec2(-z.y + s.x, z.x + s.y);
+  vec2 lnw = complexLnBranch(w, branch);
+  return vec2(lnw.y, -lnw.x);
+}
+vec2 complexArccos(vec2 z, int branch){
+  vec2 omz2 = vec2(1.0 - (z.x*z.x - z.y*z.y), -(2.0*z.x*z.y));
+  vec2 s = complexSqrt(omz2);
+  vec2 w = vec2(z.x - s.y, z.y + s.x);
+  vec2 lnw = complexLnBranch(w, branch);
+  return vec2(lnw.y, -lnw.x);
+}
+
+vec2 complexQuadratic(vec2 z){
+  return complexMul(uQuadA, complexSquare(z)) + complexMul(uQuadB, z) + uQuadC;
+}
+
 vec2 applyComplex(vec2 z, int t){
   if(t==0)  return z;
   if(t==1)  return complexSqrtBranch(z, branchIndex);
@@ -173,6 +202,10 @@ vec2 applyComplex(vec2 z, int t){
   if(t==16) return complexCbrt(z);
   if(t==17) return complexZMinus1OverZPlus1(z);
   if(t==18) return complexPowRational(z, exponentP, exponentQ);
+  if(t==19) return complexCot(z);
+  if(t==20) return complexArcsin(z, branchIndex);
+  if(t==21) return complexArccos(z, branchIndex);
+  if(t==22) return complexQuadratic(z);
   return z;
 }
 
@@ -184,15 +217,13 @@ vec3 project(vec4 p, int mode){
   if(mode==4) return vec3(p.x, p.z, p.w);
   if(mode==5) return vec3(p.x, p.y, p.w);
   if(mode==7){
-    // The donut a fiber lands on is set by the ratio |z| : |f|. With uLogRadius
-    // on, remap each magnitude through log(1+r) (angles kept) so the nesting
-    // spreads across orders of magnitude instead of crowding near |z|≈|f|.
-    vec4 q = p;
-    if(uLogRadius==1){
-      float rz = length(q.xy); if(rz>1e-6) q.xy *= log(1.0+rz)/rz;
-      float rf = length(q.zw); if(rf>1e-6) q.zw *= log(1.0+rf)/rf;
-    }
-    float d = max(length(q), 1e-6); float denom = max(d - q.w, 1e-4); return q.xyz / denom;
+    // Clifford-torus / "un-collapsed Hopf": stereographic from the (0,0,0,1)
+    // pole. Soft floor (POLE_EPS in quadrature) keeps the pole from sending
+    // particles to infinity — matches viewpoint.ts POLE_EPS.
+    float d = max(length(p), 1e-6);
+    float dw = d - p.w;
+    float denom = max(sqrt(dw*dw + (0.08*d)*(0.08*d)), 1e-4);
+    return p.xyz / denom;
   }
   return          vec3(p.x, p.y, p.z);
 }
@@ -203,10 +234,25 @@ vec3 calcColour(vec2 z, vec2 f){
     vec2 w = (uColourBy==0) ? z : f;
     float r = length(w);
     float angle = atan(w.y, w.x);
-    float hue = fract(angle/TAU + 1.0 + hueShift);
-    float val = 0.5*(1.+tanh(log(r+1e-6)));
+    // param is the [0,1) position on the colour wheel. The quantity selector
+    // chooses which scalar of w it tracks: phase (classic), log-modulus (colour
+    // by |z|/|f|), or the real/imag part squashed into [0,1] via tanh.
+    float param;
+    if(uColourQty==1)      param = fract(0.5*log(r+1e-6));   // modulus (log, cyclic)
+    else if(uColourQty==2) param = 0.5 + 0.5*tanh(w.x);      // real part
+    else if(uColourQty==3) param = 0.5 + 0.5*tanh(w.y);      // imag part
+    else                   param = angle/TAU + 1.0;          // phase (default)
+    float hue = fract(param + hueShift);
+    // Brightness (value) is driven independently of hue. Magnitude (the default)
+    // gives the classic |.| -> brightness; the other quantities squash into [0,1].
+    float val;
+    if(uBrightnessQty==0)      val = fract(angle/TAU + 0.5);          // phase
+    else if(uBrightnessQty==2) val = 0.5 + 0.5*tanh(w.x);            // real part
+    else if(uBrightnessQty==3) val = 0.5 + 0.5*tanh(w.y);            // imag part
+    else if(uBrightnessQty==4) val = 1.0;                            // uniform
+    else                       val = 0.5*(1.0+tanh(log(r+1e-6)));    // magnitude
     if(uColourStyle==0){
-        val = mix(val, val*(0.75+0.25*sin(TAU*log(r))), 0.5);
+        if(uBrightnessQty!=4) val = mix(val, val*(0.75+0.25*sin(TAU*log(r))), 0.5);
         return hsv2rgb(vec3(hue, saturation, val)) * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
     }
     if(uColourStyle==1){
@@ -216,12 +262,20 @@ vec3 calcColour(vec2 z, vec2 f){
     if(uColourStyle==2){
         return hsv2rgb(vec3(hue, saturation, 1.0)) * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
     }
-    float t   = (angle/3.14159265 + 1.)*0.5;
+    float t   = fract(param);
     vec3 colA = vec3(0.2,0.4,0.95);
     vec3 colB = vec3(0.95,0.9,0.2);
     vec3 col  = mix(colA,colB,t)*val;
     col = mix(vec3(dot(col, vec3(0.3333))), col, saturation);
     return col * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
+}
+// Chart a complex value before it enters the 4-vector: Cartesian (0), Polar (1)
+// = (|c|, arg c), or Log-polar (2) = (log|c|, arg c). Colour keeps the raw value.
+vec2 chartCoord(vec2 c, int mode){
+  if(mode==0) return c;
+  float r = length(c);
+  float a = atan(c.y, c.x);
+  return vec2(mode==2 ? log(r+1e-6) : r, a);
 }
 // Jitter has two modes (uJitterMode). 0 = Scatter the sampling: perturb the
 // domain point z by the 4D seed's xy, then evaluate f there, so the particle
@@ -229,7 +283,7 @@ vec3 calcColour(vec2 z, vec2 f){
 // clean z, then add the full independent 4D offset to (x, y, Re f, Im f), pushing
 // the point off the surface on all four axes. Colour uses the effective z/f, so
 // it stays consistent in both modes.
-void main(){vec2 z = vec2(position.x, position.z);vec4 jit = (seed*2. - 1.) * jitterAmp;if(uJitterMode==0) z += jit.xy;vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec4 p4 = vec4(z.x, z.y, f.x, f.y);if(uJitterMode==1) p4 += jit;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f);}`;
+void main(){vec2 z = vec2(position.x, position.z);vec4 jit = (seed*2. - 1.) * jitterAmp;if(uJitterMode==0) z += jit.xy;vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec2 zPlot = chartCoord(z, uInCoord);vec2 fPlot = chartCoord(f, uOutCoord);vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);if(uJitterMode==1) p4 += jit;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f);}`;
 
 export const fragmentShader = `
 uniform float opacity;

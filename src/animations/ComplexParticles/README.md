@@ -11,13 +11,13 @@ encodes either the input or the output complex number.
 Pick any of the standard analytic functions from the dropdown, or
 choose **powPQ** to enter integer `p` and `q` and visualize `z^(p/q)`.
 
-## Branches
+## Branches (Riemann sheets)
 
-Multi-valued functions (`sqrt`, `ln`, `√(z(z-1)(z+1))`, and `z^(p/q)`
-when `p/q` is non-integer) admit multiple branches. Increase **Branches**
-to 2 or 3 to render several sheets simultaneously, set each sheet's
-branch index, and choose whether to differentiate them by color,
-intensity, or particle shape.
+Multi-valued functions (`sqrt`, `ln`, `cbrt`, `arcsin`, `arccos`,
+`√(z(z-1)(z+1))`, and `z^(p/q)` when `p/q` is non-integer) admit multiple
+branches. In the **Domain** panel, set the **Branch min** / **Branch max**
+sheet indices to draw a contiguous range of sheets at once (e.g. `0…2`, or a
+symmetric `-1…1`); single-valued functions ignore it.
 
 ## Controls
 

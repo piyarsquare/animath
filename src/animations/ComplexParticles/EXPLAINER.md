@@ -36,16 +36,45 @@ directly, so the view *projects* it down into the 3-D scene on screen.
   common phase — a *Hopf fiber*) collapses to a single point. So `f = c·z`
   collapses to one point, `f = z + c` covers the sphere once, and `eᶻ` wraps it
   infinitely. (For this reading to hold, keep the 4-D orientation fixed — a
-  spin mixes input and output before the map.)
+  spin mixes input and output before the map. The **Hopf study view** button in
+  the Camera panel does this in one tap: it forces Hopf, freezes the motion,
+  stops any spins, and resets the orientation to identity.)
 - **Torus** — the same Hopf data with the fibers left *intact*: a stack of
   nested donuts (Clifford tori) filling space. `arg z` walks around the hole,
-  `arg f` around the tube, and `|z|/|f|` chooses which donut. Each Hopf fiber
+  `arg f` around the tube, and `|z|/|f|` chooses which donut — a large ratio
+  (`|z| > |f|`) hugs the tight inner core circle, while `|f| > |z|` swells to the
+  big outer donuts. The `|z| = |f|` surface is the central Clifford torus. Each
+  Hopf fiber
   becomes a `(1,1)` circle winding around its donut — exactly the points that
   the **Hopf** view squashes together. The **Collapse → Hopf** slider scrubs
   between the two so you can watch those fiber circles shrink to points, and the
-  **Reference scaffold** toggle draws the faint donuts / sphere they live on.
+  **Reference scaffold** toggle draws the faint donuts / sphere they live on. The
+  **Hopf fibers** toggle overlays the iconic interlocking circles themselves —
+  the common-phase orbits `θ ↦ e^{iθ}·(z, f)` — sampled directly on the base
+  sphere (not the function graph), each linking every other, coloured by base
+  point. **Fiber density** sets how many per donut.
 - **Drop axis** — the bluntest projection: just forget one of the four
   coordinates and keep the other three (an orthographic slice).
+
+## Coordinate charts (Domain panel)
+
+The **Input chart** and **Output chart** pickers replot the input `z` and the
+output `f` in **Polar** `(|·|, arg)` or **Log-polar** `(log|·|, arg)` before the
+4-D point is assembled (color still uses the raw Cartesian values). These are the
+natural charts for several families: in **log-polar output**, `eᶻ` becomes the
+identity (`log|eᶻ| = Re z`, `arg eᶻ = Im z`), so its trumpet flattens to a plane;
+with **both** in log-polar, `zⁿ` and the roots `√z`/`∛z` become *linear shears*,
+so their Riemann sheets flatten into evenly-spaced tilted planes.
+
+## Sampling pattern (Domain panel)
+
+**Sampling** chooses how the domain points are laid out before `f` is applied:
+**Grid** (the Cartesian default), **Polar**, **Rings**, **Spokes**, **Web**,
+**Squares**, or **Random**. Beyond looking different, the layout changes which
+structure is sampled evenly: **Polar** spreads points uniformly in `arg z`, which
+keeps near-linear maps (`f ≈ b·z`) crisp in the Hopf/Torus view — where a uniform
+Cartesian grid would leave one side of the fiber circle under-sampled. (Sampling
+is bypassed while **Adaptive density** is on.)
 
 ## 4-D rotations (the quarter-turn controls)
 
@@ -61,7 +90,18 @@ view the 4-D shape from new angles.
 
 ## Color (domain coloring)
 
-Color encodes a complex number's **argument** (its angle) as hue and its
-**magnitude** as brightness. Switch **Color by** between *Domain* (color by
+By default, color encodes a complex number's **argument** (its angle) as hue and
+its **magnitude** as brightness. Switch **Color by** between *Domain* (color by
 the input `z`) and *Range* (color by the output `f(z)`) to see how the
 function rearranges the plane.
+
+The **Hue** and **Brightness** pickers choose *which* scalar of that number
+drives each channel, independently: **Phase** (the classic angle→hue),
+**Magnitude** (so you can literally color — or shade — by `|z|` / `|f|`), or the
+**Real** / **Imag** part. Brightness also offers **Uniform (flat)** — every
+particle at full value, so color reads as pure hue with no magnitude shading. The
+defaults reproduce classic domain coloring (hue = phase, brightness = magnitude);
+set hue = Magnitude and brightness = Phase to swap them, or drive both from the
+real part, etc. (Brightness applies to the
+**HSV** and **Dual-hue** styles; the **Modulus bands** and **Phase only** styles
+fix their own brightness by design.)
