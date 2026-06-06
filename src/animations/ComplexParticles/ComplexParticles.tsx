@@ -10,7 +10,7 @@ import { loadParticleTextures } from '../../lib/textures';
 import {
   useParticleState, useUniformSync, useViewControls,
   createParticleGeometry, rebuildGeometryBuffers, redistributeAdaptive,
-  createAxes, createHopfScaffold, createHopfFibers, startAnimationLoop, shapeNames,
+  createAxes, createHopfScaffold, createHopfFibers, startAnimationLoop,
 } from '../../lib/particles';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { ProjectionMode } from '../../lib/viewpoint';
@@ -18,6 +18,8 @@ import type { ViewPoint, HopfScaffold, HopfFibers } from '../../lib/particles';
 
 /** localStorage namespace for this viewer's saved settings. */
 const STORAGE_KEY = 'complex-particles';
+/** Cap on how many Riemann sheets (particle sets) can be drawn at once. */
+const MAX_SHEETS = 12;
 import {
   applyComplex, complexPowRational, complexQuadratic,
   functionNames, functionFormulas, functionCategories, POW_PQ_INDEX, QUADRATIC_INDEX,
@@ -36,8 +38,6 @@ export interface ComplexParticlesProps {
   onViewPointChange?: (view: ViewPoint) => void;
   viewPoint?: ViewPoint;
 }
-
-type BranchStyle = 'color' | 'intensity' | 'shape';
 
 export default function ComplexParticles({
   count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount,
@@ -59,9 +59,12 @@ export default function ComplexParticles({
   const [functionIndex, setFunctionIndex] = usePersistentState(`${STORAGE_KEY}:functionIndex`, defaultFunctionIndex);
   const [expP, setExpP] = usePersistentState(`${STORAGE_KEY}:expP`, p);
   const [expQ, setExpQ] = usePersistentState(`${STORAGE_KEY}:expQ`, q);
-  const [branchCount, setBranchCount] = usePersistentState(`${STORAGE_KEY}:branchCount`, branches);
-  const [branchIndices, setBranchIndices] = usePersistentState<number[]>(`${STORAGE_KEY}:branchIndices`, [0, 1, 2]);
-  const [branchStyle, setBranchStyle] = usePersistentState<BranchStyle>(`${STORAGE_KEY}:branchStyle`, 'color');
+  // Riemann-sheet range. The viewer draws one particle set per sheet, at branch
+  // index branchMin..branchMax (multivalued functions read it; single-valued
+  // ignore it). Capped at MAX_SHEETS to keep the draw count sane.
+  const [branchMin, setBranchMin] = usePersistentState(`${STORAGE_KEY}:branchMin`, 0);
+  const [branchMax, setBranchMax] = usePersistentState(`${STORAGE_KEY}:branchMax`, branches - 1);
+  const branchCount = Math.max(1, branchMax - branchMin + 1);
   // Coefficients for the generic quadratic a·z²+b·z+c (each [Re, Im]); default a=1
   // (so the out-of-the-box quadratic is z²).
   const [quadA, setQuadA] = usePersistentState<Complex2>(`${STORAGE_KEY}:quadA`, [1, 0]);
@@ -82,7 +85,6 @@ export default function ComplexParticles({
   const pointsRef = useRef<THREE.Points[]>([]);
   const scaffoldRef = useRef<HopfScaffold>();
   const fibersRef = useRef<HopfFibers>();
-  const branchIndicesRef = useRef(branchIndices);
 
   useEffect(() => {
     state.materialsRef.current.forEach(m => { m.uniforms.functionType.value = functionIndex; });
@@ -134,39 +136,14 @@ export default function ComplexParticles({
     });
   }, [quadA, quadB, quadC]);
 
-  useEffect(() => {
-    branchIndicesRef.current = branchIndices;
-    state.materialsRef.current.forEach((m, i) => {
-      m.uniforms.branchIndex.value = branchIndices[i] ?? 0;
-    });
-  }, [branchIndices]);
-
+  // Each particle set renders the sheet at branchMin + i.
   useEffect(() => {
     state.materialsRef.current.forEach((m, i) => {
-      m.uniforms.intensity.value = (branchCount > 1 && branchStyle === 'intensity')
-        ? state.intensity * (1 - i * 0.3)
-        : state.intensity;
+      m.uniforms.branchIndex.value = branchMin + i;
     });
-  }, [state.intensity, branchStyle, branchCount]);
-
-  useEffect(() => {
-    state.materialsRef.current.forEach((m, i) => {
-      m.uniforms.hueShift.value = (branchCount > 1 && branchStyle === 'color')
-        ? (state.hueShift + i / 3) % 1
-        : state.hueShift;
-    });
-  }, [state.hueShift, branchStyle, branchCount]);
-
-  useEffect(() => {
-    state.materialsRef.current.forEach((m, i) => {
-      m.uniforms.shapeType.value = (branchCount > 1 && branchStyle === 'shape')
-        ? (state.shapeIndex + i) % shapeNames.length
-        : state.shapeIndex;
-    });
-  }, [state.shapeIndex, branchStyle, branchCount]);
+  }, [branchMin, branchMax]);
 
   function createBranchMaterial(b: number) {
-    const styled = branchCount > 1;
     return new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0 },
@@ -178,14 +155,14 @@ export default function ComplexParticles({
         uQuadB: { value: new THREE.Vector2(quadB[0], quadB[1]) },
         uQuadC: { value: new THREE.Vector2(quadC[0], quadC[1]) },
         globalSize: { value: state.size },
-        intensity: { value: styled && branchStyle === 'intensity' ? state.intensity * (1 - b * 0.3) : state.intensity },
+        intensity: { value: state.intensity },
         shimmerAmp: { value: state.shimmer },
         jitterAmp: { value: state.jitter },
         uJitterMode: { value: state.jitterMode },
-        hueShift: { value: styled && branchStyle === 'color' ? (state.hueShift + b / 3) % 1 : state.hueShift },
+        hueShift: { value: state.hueShift },
         saturation: { value: state.saturation },
         realView: { value: state.realViewRef.current ? 1 : 0 },
-        shapeType: { value: styled && branchStyle === 'shape' ? (state.shapeIndex + b) % shapeNames.length : state.shapeIndex },
+        shapeType: { value: state.shapeIndex },
         tex: { value: state.texturesRef.current[state.textureIndex] ?? new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) },
         textureIndex: { value: state.textureIndex },
         uColourStyle: { value: state.colourStyle },
@@ -200,7 +177,7 @@ export default function ComplexParticles({
         uProjMode: { value: state.projRef.current },
         uProjTarget: { value: state.projRef.current },
         uProjAlpha: { value: 0 },
-        branchIndex: { value: branchIndicesRef.current[b] ?? 0 },
+        branchIndex: { value: branchMin + b },
       },
       vertexShader,
       fragmentShader,
@@ -382,41 +359,28 @@ export default function ComplexParticles({
     </>
   );
 
-  const variantExtras = (
+  // Riemann-sheet range (multivalued functions only). Kept ≤ MAX_SHEETS sheets
+  // and min ≤ max by nudging the partner bound. Lives in the Domain section.
+  const branchControls = (
     <>
-      <Select
-        label="Branches"
-        options={[1, 2, 3].map(n => ({ value: n, label: String(n) }))}
-        value={branchCount}
-        onChange={setBranchCount}
+      <NumberInput
+        label="Branch min (sheet)"
+        value={branchMin}
+        integer
+        onChange={v => {
+          const nv = Math.min(v, branchMax);
+          setBranchMin(Math.max(nv, branchMax - (MAX_SHEETS - 1)));
+        }}
       />
-      {branchCount > 1 && (
-        <>
-          <div className="cp-row">
-            <div className="cp-row-label"><span>Branch indices</span></div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {Array.from({ length: branchCount }).map((_, i) => (
-                <input
-                  key={i}
-                  type="number"
-                  value={branchIndices[i] ?? 0}
-                  onChange={e => {
-                    const arr = [...branchIndices];
-                    arr[i] = parseInt(e.target.value, 10);
-                    setBranchIndices(arr);
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-          <Select
-            label="Differentiate by"
-            options={(['color', 'intensity', 'shape'] as const).map(s => ({ value: s, label: s }))}
-            value={branchStyle}
-            onChange={setBranchStyle}
-          />
-        </>
-      )}
+      <NumberInput
+        label="Branch max (sheet)"
+        value={branchMax}
+        integer
+        onChange={v => {
+          const nv = Math.max(v, branchMin);
+          setBranchMax(Math.min(nv, branchMin + (MAX_SHEETS - 1)));
+        }}
+      />
     </>
   );
 
@@ -428,7 +392,7 @@ export default function ComplexParticles({
       functionName={displayName}
       functionFormula={displayFormula}
       functionPicker={functionPicker}
-      variantExtras={variantExtras}
+      domainExtras={branchControls}
       readme={readmeText}
       explainer={explainerText}
       settingsStorageKey={STORAGE_KEY}

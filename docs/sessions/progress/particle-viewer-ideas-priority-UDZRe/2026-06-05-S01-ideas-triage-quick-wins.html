@@ -121,6 +121,18 @@
       <section class="log">
         <h2>Working notes</h2>
         <ol class="timeline">
+          <li class="tl" data-type="code">
+            <p class="tl-time">01:35</p>
+            <span class="chip chip-code">Code</span>
+            <h3>Branches → a sheet range in the Domain panel (dropped differentiation)</h3>
+            <p class="why"><strong>Why:</strong> User asked to move Branches into Domain, give up per-branch differentiation, and set it as a range.</p>
+            <p>Replaced the <code>branchCount</code> Select + per-sheet index inputs +
+            "Differentiate by" with <strong>Branch min / Branch max</strong>
+            <code>NumberInput</code>s (≤ <code>MAX_SHEETS</code>), rendered in the Domain
+            section via a new <code>domainExtras</code> shell prop. Each particle set draws
+            sheet <code>branchMin + i</code>; removed the hue/intensity/shape per-branch
+            override effects (uniform styling now). Updated README.</p>
+          </li>
           <li class="tl" data-type="decision">
             <p class="tl-time">01:10</p>
             <span class="chip chip-decision">Decision</span>

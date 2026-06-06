@@ -41,7 +41,10 @@ export interface ParticleViewerShellProps {
   functionName: string;
   functionFormula: string;
   functionPicker: React.ReactNode;
+  /** Extra controls appended to the Function section (e.g. per-function params). */
   variantExtras?: React.ReactNode;
+  /** Extra controls appended to the Domain section (e.g. the branch range). */
+  domainExtras?: React.ReactNode;
   readme: string;
   /** Markdown explainer for the top-bar "?" help popup. */
   explainer?: string;
@@ -52,7 +55,7 @@ export interface ParticleViewerShellProps {
 
 export default function ParticleViewerShell({
   state, controls, onMount,
-  functionName, functionFormula, functionPicker, variantExtras, readme, explainer,
+  functionName, functionFormula, functionPicker, variantExtras, domainExtras, readme, explainer,
   settingsStorageKey,
 }: ParticleViewerShellProps) {
   const { isMobile, isTablet } = useResponsive();
@@ -244,6 +247,7 @@ export default function ParticleViewerShell({
             value={state.outputCoord}
             onChange={state.setOutputCoord}
           />
+          {domainExtras}
         </Section>
 
         <Section title="Camera" icon="◐" defaultOpen>
