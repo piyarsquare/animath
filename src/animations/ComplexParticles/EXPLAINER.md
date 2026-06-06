@@ -48,7 +48,11 @@ directly, so the view *projects* it down into the 3-D scene on screen.
   becomes a `(1,1)` circle winding around its donut — exactly the points that
   the **Hopf** view squashes together. The **Collapse → Hopf** slider scrubs
   between the two so you can watch those fiber circles shrink to points, and the
-  **Reference scaffold** toggle draws the faint donuts / sphere they live on.
+  **Reference scaffold** toggle draws the faint donuts / sphere they live on. The
+  **Hopf fibers** toggle overlays the iconic interlocking circles themselves —
+  the common-phase orbits `θ ↦ e^{iθ}·(z, f)` — sampled directly on the base
+  sphere (not the function graph), each linking every other, coloured by base
+  point. **Fiber density** sets how many per donut.
 - **Drop axis** — the bluntest projection: just forget one of the four
   coordinates and keep the other three (an orthographic slice).
 

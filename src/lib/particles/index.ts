@@ -9,6 +9,8 @@ export type { AdaptiveOptions } from './createParticleGeometry';
 export { createAxes, AXIS_LENGTH } from './createAxes';
 export { createHopfScaffold } from './createHopfScaffold';
 export type { HopfScaffold } from './createHopfScaffold';
+export { createHopfFibers } from './createHopfFibers';
+export type { HopfFibers } from './createHopfFibers';
 export { startAnimationLoop } from './createAnimationLoop';
 export type { AnimationLoopDeps } from './createAnimationLoop';
 export type { ViewPoint, Axis } from './types';

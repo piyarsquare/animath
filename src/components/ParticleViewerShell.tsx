@@ -280,6 +280,22 @@ export default function ParticleViewerShell({
               onChange={state.setShowScaffold}
             />
           )}
+          {state.viewType === ProjectionMode.Torus && (
+            <Checkbox
+              label="Hopf fibers"
+              checked={state.showFibers}
+              onChange={state.setShowFibers}
+            />
+          )}
+          {state.viewType === ProjectionMode.Torus && state.showFibers && (
+            <Slider
+              label="Fiber density"
+              value={state.fiberDensity}
+              min={4} max={36} step={1}
+              onChange={state.setFiberDensity}
+              format={v => `${v}/ring`}
+            />
+          )}
           {(state.viewType === ProjectionMode.Torus || state.viewType === ProjectionMode.Hopf) && (
             <button
               className="qtc-reset"

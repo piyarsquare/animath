@@ -242,7 +242,17 @@ ideally with a small popup/toast explaining why.
   where intermediate keystrokes (an empty box, a lone "−") would otherwise
   momentarily break the render.
 
-### Show the actual Hopf fibers (the interlocking circles)
+### Show the actual Hopf fibers (the interlocking circles) — ✅ implemented
+
+Shipped a **Hopf fibers** toggle + **Fiber density** slider (Camera section, Torus
+view), backed by `createHopfFibers.ts`: it samples base points on S² directly (a
+grid over latitude η and longitude ψ) and draws each one's full circle
+`θ ↦ stereo(normalize(e^{iθ}·(z₁,z₂)))` as a `LineLoop`, in the same normalized
+stereographic chart + SCALE as the particles/scaffold, coloured by base point.
+Open follow-ups: have the **Collapse → Hopf** slider also shrink the fiber circles
+to their base points (currently the fibers just hide past the half-way collapse),
+and an option to seed fibers from the *function's own* graph points rather than a
+uniform S² grid. Original sketch:
 
 **Motivation.** The iconic Hopf-fibration image — linked Villarceau circles packed
 into nested tori — is a picture of **S³** (stereographically dropped into ℝ³). Our

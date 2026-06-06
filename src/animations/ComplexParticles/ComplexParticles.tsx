@@ -10,11 +10,11 @@ import { loadParticleTextures } from '../../lib/textures';
 import {
   useParticleState, useUniformSync, useViewControls,
   createParticleGeometry, rebuildGeometryBuffers, redistributeAdaptive,
-  createAxes, createHopfScaffold, startAnimationLoop, shapeNames,
+  createAxes, createHopfScaffold, createHopfFibers, startAnimationLoop, shapeNames,
 } from '../../lib/particles';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { ProjectionMode } from '../../lib/viewpoint';
-import type { ViewPoint, HopfScaffold } from '../../lib/particles';
+import type { ViewPoint, HopfScaffold, HopfFibers } from '../../lib/particles';
 
 /** localStorage namespace for this viewer's saved settings. */
 const STORAGE_KEY = 'complex-particles';
@@ -81,6 +81,7 @@ export default function ComplexParticles({
   const sceneRef = useRef<THREE.Scene>();
   const pointsRef = useRef<THREE.Points[]>([]);
   const scaffoldRef = useRef<HopfScaffold>();
+  const fibersRef = useRef<HopfFibers>();
   const branchIndicesRef = useRef(branchIndices);
 
   useEffect(() => {
@@ -239,6 +240,23 @@ export default function ComplexParticles({
     s.torusGroup.visible = showTorus;
   }, [state.viewType, state.fiberCollapse, state.showScaffold]);
 
+  // Hopf fibers show in the Torus view (before the collapse swallows them).
+  const fibersVisible = state.showFibers
+    && state.viewType === ProjectionMode.Torus
+    && state.fiberCollapse < 0.5;
+  useEffect(() => {
+    if (fibersRef.current) fibersRef.current.group.visible = fibersVisible;
+  }, [fibersVisible]);
+
+  // Rebuild the fiber overlay when the density changes (skips until mounted).
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    fibersRef.current?.dispose();
+    fibersRef.current = createHopfFibers(sceneRef.current, state.fiberDensity);
+    fibersRef.current.group.visible = fibersVisible;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.fiberDensity]);
+
   const onMount = React.useCallback(
     (ctx: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => {
       const { scene, camera, renderer } = ctx;
@@ -287,6 +305,12 @@ export default function ComplexParticles({
         scaffold.torusGroup.visible = showTorus;
         scaffold.group.visible = state.showScaffold && (showSphere || showTorus);
       }
+
+      const fibers = createHopfFibers(scene, state.fiberDensity);
+      fibersRef.current = fibers;
+      fibers.group.visible = state.showFibers
+        && state.viewType === ProjectionMode.Torus
+        && state.fiberCollapse < 0.5;
 
       state.viewPointRef.current = { L: state.rotLRef.current.clone(), R: state.rotRRef.current.clone() };
       state.onViewPointChangeRef.current?.(state.viewPointRef.current);
