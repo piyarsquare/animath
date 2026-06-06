@@ -153,6 +153,8 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   let radius = opts.planetRadius > 0 ? opts.planetRadius : R0;
   let colorCells = opts.colorCells;
   let showInner = opts.innerShell;
+  // Render the inner-shell twin upside-down (normal reversed) rather than upright.
+  let innerFlip = opts.innerFlip;
   // Glass opacity of the outer planet while the inner shell is shown (shared with
   // the flat worlds' floor-opacity knob); lower it to see further inside.
   let glassOpacity = opts.floorOpacity;
@@ -283,9 +285,22 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   const innerPlanet = new THREE.Mesh(new THREE.SphereGeometry(radius * INNER_K, 48, 32), innerPlanetMat);
   root.add(innerPlanet);
 
+  // The inner group's position map is T(x) = −INNER_K·x for both styles — that's
+  // what lands your antipode straight underfoot. The −I in it already reverses
+  // orientation (the upright/mirror twin). To get the *upside-down* twin we cannot
+  // use another global linear map (the props are radial, so position and "up" would
+  // transform together), so we re-orient each twin to point radially INWARD: that
+  // flips only the normal, parking −I's reversal on the vertical axis instead.
   const inner = new THREE.Group();
   inner.scale.set(-INNER_K, -INNER_K, -INNER_K);
   let innerClone = landmarks.clone(true);
+  function orientInnerClone() {
+    for (let i = 0; i < innerClone.children.length && i < BEACONS.length; i++) {
+      const aim = innerFlip ? BEACONS[i].dir.clone().negate() : BEACONS[i].dir;
+      innerClone.children[i].quaternion.setFromUnitVectors(upY, aim);
+    }
+  }
+  orientInnerClone();
   inner.add(innerClone);
   const footInner = new THREE.Mesh(foot.geometry, foot.material);
   footInner.frustumCulled = false;
@@ -332,6 +347,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     antipode.add(antiClone);
     inner.remove(innerClone);
     innerClone = landmarks.clone(true);
+    orientInnerClone();
     inner.add(innerClone);
     innerPlanet.geometry.dispose();
     innerPlanet.geometry = new THREE.SphereGeometry(radius * INNER_K, 48, 32);
@@ -351,6 +367,8 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   // Toggle the inner co-identification shell (and the outer planet's glassiness).
   function setInnerShell(on: boolean) { showInner = on; applyInnerShell(); }
   function setFloorOpacity(o: number) { glassOpacity = o; applyInnerShell(); }
+  // Flip the inner twin between upright (mirror) and upside-down (normal reversed).
+  function setInnerFlip(on: boolean) { innerFlip = on; orientInnerClone(); }
 
   const character = makeCharacter();
   root.add(character.group);
@@ -473,6 +491,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     setRadius,
     setColorCells,
     setInnerShell,
+    setInnerFlip,
     setFloorOpacity,
     getSphereState: () => mapState,
     dispose: () => {

@@ -113,6 +113,15 @@ Two readouts help you keep your bearings on the planet:
   floor and mirrored underside: the "other face" of a one-sided world, seen
   through the floor. (It's only a *representation* — ℝP² can't truly fit in 3-D
   without self-intersecting — but the gluing it shows is exact.)
+  - **Twin orientation:** the antipodal map is the point inversion **−I**, which
+    flips *all three* axes — so its orientation-reversal can be parked either on a
+    horizontal axis (**Upright (mirror)**: the twin stands the same way up, just
+    left-right mirrored) or on the vertical one (**Upside-down (normal flip)**: the
+    twin hangs head-to-head through the glass, its up-normal opposite yours). Same
+    gluing, two equally honest pictures — flip between them to feel why "mirror"
+    and "upside-down" are the *same* move on a one-sided surface. (By contrast the
+    Klein bottle's gluing is a *glide reflection*, which only ever flips one
+    horizontal axis with up untouched — hence its always-left/right mirror style.)
 
 ## Reading the footprints
 

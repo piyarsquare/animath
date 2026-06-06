@@ -86,6 +86,10 @@ export interface EngineOptions {
    *  far side (point-reflected + shrunk inward), with the outer planet turned
    *  glassy — so the point straight below your feet is your identified antipode. */
   innerShell: boolean;
+  /** Spherical ℝP²: render the inner shell's twin upside-down (normal reversed,
+   *  head-to-head through the glass) — the normal-flip factoring of the antipodal
+   *  map −I — instead of upright/mirror-reversed. */
+  innerFlip: boolean;
 }
 
 /**
@@ -157,6 +161,7 @@ export interface WorldEngine {
   setColorCells?(on: boolean): void;
   setRadius?(r: number): void;
   setInnerShell?(on: boolean): void;
+  setInnerFlip?(on: boolean): void;
   clearWriting?(): void;
   /** Flat worlds only: current position/heading in the fundamental domain. */
   getMapState?(): FlatMapState | null;
