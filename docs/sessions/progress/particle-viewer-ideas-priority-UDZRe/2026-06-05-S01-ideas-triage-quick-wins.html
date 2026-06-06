@@ -76,6 +76,20 @@
         <h2>Working notes</h2>
         <ol class="timeline">
           <li class="tl" data-type="code">
+            <p class="tl-time">00:05</p>
+            <span class="chip chip-code">Code</span>
+            <h3>Added cot / arcsin / arccos + grouped the function picker</h3>
+            <p class="why"><strong>Why:</strong> Next quick win — cheap content + usability for the now-long function list.</p>
+            <p>Added <code>cot</code> (cos/sin) and the multivalued <code>arcsin</code>/
+            <code>arccos</code> (<code>−i·ln(...)</code>, branch on the ln) to both
+            <code>complexMath.ts</code> and the shader, appended at indices 19–21 so
+            persisted <code>functionIndex</code> values stay stable. Verified the JS
+            against known values (arcsin(0.5)=π/6, arcsin(2)→complex, cot(π/4)=1, …).
+            Added a <code>functionCategories</code> table + backward-compatible
+            <code>groups</code> (optgroup) support to the shared <code>Select</code>, and
+            the picker now shows five categories.</p>
+          </li>
+          <li class="tl" data-type="code">
             <p class="tl-time">23:20</p>
             <span class="chip chip-code">Code</span>
             <h3>Brightness under independent control + confirmed torus orientation</h3>

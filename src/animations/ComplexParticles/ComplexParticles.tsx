@@ -20,7 +20,7 @@ import type { ViewPoint, HopfScaffold } from '../../lib/particles';
 const STORAGE_KEY = 'complex-particles';
 import {
   applyComplex, complexPowRational,
-  functionNames, functionFormulas, POW_PQ_INDEX,
+  functionNames, functionFormulas, functionCategories, POW_PQ_INDEX,
 } from '../../lib/complexMath';
 
 export type { ViewPoint };
@@ -285,11 +285,16 @@ export default function ComplexParticles({
   const displayName = isPowPQ ? `z^(${expP}/${expQ})` : currentName;
   const displayFormula = isPowPQ ? `p = ${expP}, q = ${expQ}` : functionFormulas[currentName];
 
+  const functionGroups = functionCategories.map(cat => ({
+    label: cat.label,
+    options: cat.members.map(idx => ({ value: idx, label: functionNames[idx] })),
+  }));
+
   const functionPicker = (
     <>
       <Select
         label="Function"
-        options={functionNames.map((name, idx) => ({ value: idx, label: name }))}
+        groups={functionGroups}
         value={functionIndex}
         onChange={setFunctionIndex}
       />

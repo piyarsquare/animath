@@ -87,15 +87,21 @@ export function Pills<T extends string | number>({ label, options, value, onChan
   );
 }
 
+type Option<T> = { value: T; label: string };
+
 interface SelectProps<T extends string | number> {
   label: string;
-  options: { value: T; label: string }[];
+  /** Flat option list. Mutually exclusive with {@link groups}. */
+  options?: Option<T>[];
+  /** Grouped options, rendered as <optgroup>s. Mutually exclusive with options. */
+  groups?: { label: string; options: Option<T>[] }[];
   value: T;
   onChange: (v: T) => void;
 }
 
-export function Select<T extends string | number>({ label, options, value, onChange }: SelectProps<T>) {
-  const isNumeric = options.length > 0 && typeof options[0].value === 'number';
+export function Select<T extends string | number>({ label, options, groups, value, onChange }: SelectProps<T>) {
+  const sample = groups?.[0]?.options[0] ?? options?.[0];
+  const isNumeric = typeof sample?.value === 'number';
   return (
     <label className="cp-row">
       <div className="cp-row-label"><span>{label}</span></div>
@@ -103,9 +109,17 @@ export function Select<T extends string | number>({ label, options, value, onCha
         value={value}
         onChange={e => onChange((isNumeric ? Number(e.target.value) : e.target.value) as T)}
       >
-        {options.map(opt => (
-          <option key={String(opt.value)} value={opt.value}>{opt.label}</option>
-        ))}
+        {groups
+          ? groups.map(g => (
+              <optgroup key={g.label} label={g.label}>
+                {g.options.map(opt => (
+                  <option key={String(opt.value)} value={opt.value}>{opt.label}</option>
+                ))}
+              </optgroup>
+            ))
+          : options?.map(opt => (
+              <option key={String(opt.value)} value={opt.value}>{opt.label}</option>
+            ))}
       </select>
     </label>
   );

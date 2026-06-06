@@ -155,6 +155,25 @@ vec2 complexPowRational(vec2 z, int p, int q){
   return vec2(rpq * cos(ang), rpq * sin(ang));
 }
 
+vec2 complexCot(vec2 z){vec2 s=complexSin(z);vec2 c=complexCos(z);float d=s.x*s.x+s.y*s.y;if(d<1e-4) d=1e-4;return vec2((c.x*s.x+c.y*s.y)/d,(c.y*s.x-c.x*s.y)/d);}
+
+// Multivalued inverse trig. The ln carries the branch (±2π·k sheets); the inner
+// sqrt stays principal. arcsin = -i ln(iz + sqrt(1-z^2)); arccos = -i ln(z + i sqrt(1-z^2)).
+vec2 complexArcsin(vec2 z, int branch){
+  vec2 omz2 = vec2(1.0 - (z.x*z.x - z.y*z.y), -(2.0*z.x*z.y));
+  vec2 s = complexSqrt(omz2);
+  vec2 w = vec2(-z.y + s.x, z.x + s.y);
+  vec2 lnw = complexLnBranch(w, branch);
+  return vec2(lnw.y, -lnw.x);
+}
+vec2 complexArccos(vec2 z, int branch){
+  vec2 omz2 = vec2(1.0 - (z.x*z.x - z.y*z.y), -(2.0*z.x*z.y));
+  vec2 s = complexSqrt(omz2);
+  vec2 w = vec2(z.x - s.y, z.y + s.x);
+  vec2 lnw = complexLnBranch(w, branch);
+  return vec2(lnw.y, -lnw.x);
+}
+
 vec2 applyComplex(vec2 z, int t){
   if(t==0)  return z;
   if(t==1)  return complexSqrtBranch(z, branchIndex);
@@ -175,6 +194,9 @@ vec2 applyComplex(vec2 z, int t){
   if(t==16) return complexCbrt(z);
   if(t==17) return complexZMinus1OverZPlus1(z);
   if(t==18) return complexPowRational(z, exponentP, exponentQ);
+  if(t==19) return complexCot(z);
+  if(t==20) return complexArcsin(z, branchIndex);
+  if(t==21) return complexArccos(z, branchIndex);
   return z;
 }
 

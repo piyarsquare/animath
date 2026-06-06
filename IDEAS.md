@@ -187,6 +187,14 @@ window (e.g. `x ∈ [0, 6]`).
 
 ### More functions, better organized (+ a generic quadratic; stretch: custom f)
 
+Partly done: `cot`, `arcsin`, `arccos` are shipped (in both `lib/complexMath.ts`
+and the shader `applyComplex` switch, appended at indices 19–21 so persisted
+selections stay stable), and the picker is now grouped into categories via the
+new `functionCategories` table + `Select` `groups` (optgroup) support. The
+inverse-trig pair is branch-aware (the `ln` carries the ±2π·k sheets; inner sqrt
+principal) and was checked numerically against known values. Still open: the
+**generic quadratic** `a·z²+b·z+c` and the **custom-f** stretch goal. Original sketch:
+
 Grow and organize the function list (`lib/complexMath.ts` name/formula tables + the
 shader `applyComplex` switch in `ComplexParticles/shaders/index.ts`):
 
