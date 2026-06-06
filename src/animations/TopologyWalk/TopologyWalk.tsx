@@ -213,7 +213,7 @@ export default function TopologyWalk() {
       }}>
         {isCorridor
           ? 'Drag to look · WASD / arrows move · Space (or ✎) writes your text on the wall'
-          : 'Drag to look · WASD / arrows or the pad to walk · landmarks repeat — mirrored on the Klein bottle'}
+          : 'Drag to look · WASD / arrows or the pad to walk · landmarks repeat — columns turn to trees across the Klein flip'}
       </div>
 
       <ShellSettings>
@@ -230,7 +230,7 @@ export default function TopologyWalk() {
           <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>
             {isCorridor
               ? 'Walk a lap of the Möbius corridor and the floor rolls up into the ceiling.'
-              : 'Red edges glue with a flip on the Klein bottle; blue edges glue straight.'}
+              : 'Red edges glue with a flip on the Klein bottle (columns ↔ trees across them); blue edges glue straight.'}
           </div>
         </Section>
 

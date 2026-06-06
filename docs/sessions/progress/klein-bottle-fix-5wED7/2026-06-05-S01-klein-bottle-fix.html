@@ -17,7 +17,7 @@
     "branch": "claude/klein-bottle-fix-5wED7",
     "slug": "klein-bottle-fix-5wED7",
     "status": "in-progress",
-    "build": "unknown",
+    "build": "passed",
     "followup": null,
     "pr": null
   }
@@ -31,7 +31,7 @@
     <dl class="meta">
       <div><dt>Branch</dt><dd><code>claude/klein-bottle-fix-5wED7</code> · slug <code>klein-bottle-fix-5wED7</code></dd></div>
       <div><dt>App(s)</dt><dd><code>src/animations/TopologyWalk/</code> — first-person walk on a closed surface</dd></div>
-      <div><dt>Build</dt><dd><span class="badge badge-warn">not yet run</span></dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-ok">passed</span> · <code>npm run build</code></dd></div>
     </dl>
     <p class="lineage">Session lineage: this (first tracked session on this branch)</p>
   </header>
@@ -70,6 +70,83 @@
         <h2>Working notes</h2>
         <!-- Newest entry first. data-type ∈ decision | code | finding | blocker | milestone -->
         <ol class="timeline">
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">23:30</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>v1 landed — flat Klein flip is now legible; build green</h3>
+            <p class="why"><strong>Why:</strong> Deliver the sharp-flip v1 the user
+            asked to start with, leaving the smooth morph as a clean follow-up.</p>
+            <p>Changes:</p>
+            <ul>
+              <li><code>flatEngine.ts</code>: extracted shared decor resources
+              (<code>makeSharedDecor</code>) so geometries/materials/textures are
+              built once and only meshes are per-cell; each cell now carries a
+              <code>trees</code> and a <code>columns</code> group toggled per frame
+              by red-crossing parity (<code>flipped = klein &amp;&amp; (I&amp;1)</code>).
+              Torus shows columns everywhere (orientable → no swap). Each landmark
+              keeps its identifying colour across both forms; the numbered/arrow
+              decal is retained on both (still reverses under the mirror).</li>
+              <li>Floor is now glassy (translucent, double-sided, low roughness) so
+              the mirrored trail reads as the underside seen through the glass.</li>
+              <li>EXPLAINER + in-app hints updated to describe the columns⇄trees
+              flip and the one-sidedness lesson.</li>
+              <li><code>npm ci</code> then <code>npm run build</code>: <span
+              class="badge badge-ok">passed</span> (the earlier failure was just a
+              missing <code>node_modules</code>, not the code).</li>
+            </ul>
+            <p class="callout callout-note"><span class="callout-label">Next</span>
+            Visual verification in the running app (couldn't eyeball it here), then
+            the deferred <strong>smooth morph band</strong>: interpolate
+            column→tree across a strip near the red edge instead of snapping, and
+            consider a matching glass-underside camera/foot treatment.</p>
+          </li>
+          <li class="tl" data-type="code">
+            <p class="tl-time">23:05</p>
+            <span class="chip chip-code">Code</span>
+            <h3>Building v1: trees ⇄ columns per parity + glass floor (flat Klein)</h3>
+            <p class="why"><strong>Why:</strong> User confirmed the engine shape:
+            keep the seamless universal-cover <em>tiling</em> (the mirrored square
+            ahead <em>is</em> "the underside" you walk into — no void, no avatar
+            duplication, matching how the torus already renders a single avatar).
+            So the flip is made legible by decor + glass, not by teleporting or
+            rolling.</p>
+            <p>Plan, scoped to a sharp v1 (smooth morph deferred): refactor
+            <code>flatEngine.ts</code> to (1) build shared decor resources once and
+            instantiate per cell — each cell carries a <code>trees</code> group and
+            a <code>columns</code> group, toggled per frame by the cell's
+            red-crossing parity <code>(I&amp;1)</code> (Klein only; torus stays
+            columns everywhere → orientable, no swap); (2) keep the numbered/arrow
+            decals on both as landmark + mirror cue; (3) make the floor glassy
+            (translucent, double-sided) so the mirrored trail reads as "seen through
+            the glass." Read <code>footprints.ts</code> (trail lifts 0.12 above
+            surface, chirality follows the parent transform — already correct) and
+            <code>character.ts</code> (single avatar, unaffected).</p>
+          </li>
+          <li class="tl" data-type="decision">
+            <p class="tl-time">22:55</p>
+            <span class="chip chip-decision">Decision</span>
+            <h3>Direction chosen: flat world first, flip made legible via a "glass underside" reading</h3>
+            <p class="why"><strong>Why:</strong> The user wants both presentations
+            eventually, but to start with the <em>flat</em> world and fix the real
+            complaint — that the orientation flip currently produces no felt/visible
+            event. Their framing keeps the flat embedding (no roll) but dramatizes
+            the flip.</p>
+            <p>User's design: crossing the red (flip) edge presents the
+            <strong>underside of the tile</strong> — a glass floor through which the
+            earlier footprints are seen <em>reversed</em>, and distinct decor per
+            orientation class (e.g. <strong>trees on one side, columns on the
+            other</strong>). Sharp swap at the boundary <em>now</em>; a smooth
+            morph band (trees ⇄ columns across the seam) is the <em>later</em>
+            enhancement. Topologically sound: an orientation-reversing crossing =
+            passing to the other face of a 2-sided rendering of a 1-sided surface;
+            the glass/underside is a faithful metaphor. Key subtlety to honour: the
+            surface is <strong>one-sided</strong>, so "trees vs columns" can't be a
+            global top/bottom label — it must be tied to local red-crossing parity
+            (flips on red, preserved on blue), which is exactly the existing
+            <code>(I&amp;1)</code> column parity. Open fork before building:
+            continuous mirrored <em>tiling</em> (keep "no teleport") vs single-tile
+            <em>flip-and-wrap</em>.</p>
+          </li>
           <li class="tl" data-type="finding">
             <p class="tl-time">22:40</p>
             <span class="chip chip-finding">Finding</span>

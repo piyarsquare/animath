@@ -60,34 +60,122 @@ function floorTexture(): THREE.CanvasTexture {
   return t;
 }
 
-interface Built { group: THREE.Group; dispose: () => void }
+/**
+ * Geometry + materials for the landmarks, built once and shared across every
+ * rendered cell (meshes are still per-cell, but the heavy buffers/textures are
+ * not). Each landmark has two forms keyed by orientation class: a **column** and
+ * a **tree** of the same identifying colour. The flat Klein bottle shows columns
+ * on one class of cell and trees on the mirror class, so crossing the red (flip)
+ * edge swaps every landmark from one form to the other — the orientation flip
+ * made impossible to miss. Both forms carry the same numbered/arrow decal, which
+ * additionally reads reversed through a mirrored cell.
+ */
+interface SharedDecor {
+  columnGeo: THREE.CylinderGeometry;
+  trunkGeo: THREE.CylinderGeometry;
+  foliageGeo: THREE.ConeGeometry;
+  decalGeo: THREE.PlaneGeometry;
+  columnMats: THREE.MeshStandardMaterial[];
+  foliageMats: THREE.MeshStandardMaterial[];
+  trunkMat: THREE.MeshStandardMaterial;
+  decalMats: THREE.MeshBasicMaterial[];
+  decalTexs: THREE.CanvasTexture[];
+  dispose: () => void;
+}
 
-/** One copy of the fundamental domain: pillars + a colored boundary square +
- *  the (shared) footprint trail. */
-function buildCell(foot: FootprintTrail): Built {
+function makeSharedDecor(): SharedDecor {
+  const columnGeo = new THREE.CylinderGeometry(0.8, 0.8, 3.2, 18);
+  const trunkGeo = new THREE.CylinderGeometry(0.32, 0.4, 2.0, 12);
+  const foliageGeo = new THREE.ConeGeometry(1.35, 3.0, 14);
+  const decalGeo = new THREE.PlaneGeometry(1.5, 1.5);
+
+  const columnMats: THREE.MeshStandardMaterial[] = [];
+  const foliageMats: THREE.MeshStandardMaterial[] = [];
+  const decalMats: THREE.MeshBasicMaterial[] = [];
+  const decalTexs: THREE.CanvasTexture[] = [];
+
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.85 });
+
+  for (const p of PILLARS) {
+    columnMats.push(new THREE.MeshStandardMaterial({
+      color: p.color, emissive: p.color, emissiveIntensity: 0.3, roughness: 0.5, side: THREE.DoubleSide,
+    }));
+    // Foliage keeps the landmark's identifying colour (so "the red one" stays the
+    // red one whether it's a tree or a column), tinted toward leafy green.
+    const leaf = new THREE.Color(p.color).lerp(new THREE.Color(0x3a8a3a), 0.55);
+    foliageMats.push(new THREE.MeshStandardMaterial({
+      color: leaf, emissive: leaf, emissiveIntensity: 0.18, roughness: 0.7,
+    }));
+    const tex = labelTexture(p.label, p.color);
+    decalTexs.push(tex);
+    decalMats.push(new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+  }
+
+  return {
+    columnGeo, trunkGeo, foliageGeo, decalGeo,
+    columnMats, foliageMats, trunkMat, decalMats, decalTexs,
+    dispose: () => {
+      columnGeo.dispose(); trunkGeo.dispose(); foliageGeo.dispose(); decalGeo.dispose();
+      trunkMat.dispose();
+      columnMats.forEach((m) => m.dispose());
+      foliageMats.forEach((m) => m.dispose());
+      decalMats.forEach((m) => m.dispose());
+      decalTexs.forEach((t) => t.dispose());
+    },
+  };
+}
+
+interface Built {
+  group: THREE.Group;
+  trees: THREE.Group;
+  columns: THREE.Group;
+  dispose: () => void;
+}
+
+/** A single landmark in column form: a coloured pillar + its numbered decal. */
+function makeColumnProp(d: SharedDecor, i: number): THREE.Group {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(d.columnGeo, d.columnMats[i]);
+  body.position.y = 1.6;
+  g.add(body);
+  const decal = new THREE.Mesh(d.decalGeo, d.decalMats[i]);
+  decal.position.set(0.82, 1.9, 0);
+  decal.rotation.y = Math.PI / 2; // face +x
+  g.add(decal);
+  return g;
+}
+
+/** The same landmark in tree form: trunk + coloured foliage + its decal. */
+function makeTreeProp(d: SharedDecor, i: number): THREE.Group {
+  const g = new THREE.Group();
+  const trunk = new THREE.Mesh(d.trunkGeo, d.trunkMat);
+  trunk.position.y = 1.0;
+  g.add(trunk);
+  const foliage = new THREE.Mesh(d.foliageGeo, d.foliageMats[i]);
+  foliage.position.y = 3.2;
+  g.add(foliage);
+  const decal = new THREE.Mesh(d.decalGeo, d.decalMats[i]);
+  decal.position.set(0.82, 1.9, 0);
+  decal.rotation.y = Math.PI / 2; // face +x
+  g.add(decal);
+  return g;
+}
+
+/** One copy of the fundamental domain: the landmarks (in both forms, one shown
+ *  at a time), a coloured boundary square, and the shared footprint trail. */
+function buildCell(d: SharedDecor, foot: FootprintTrail): Built {
   const group = new THREE.Group();
   const disposers: (() => void)[] = [];
 
-  for (const p of PILLARS) {
-    const cellPillar = new THREE.Group();
-    cellPillar.position.set(p.x, 0, p.z);
-    const bodyGeo = new THREE.CylinderGeometry(0.8, 0.8, 3.2, 18);
-    const bodyMat = new THREE.MeshStandardMaterial({
-      color: p.color, emissive: p.color, emissiveIntensity: 0.3, roughness: 0.5, side: THREE.DoubleSide,
-    });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 1.6;
-    cellPillar.add(body);
-    const tex = labelTexture(p.label, p.color);
-    const decalGeo = new THREE.PlaneGeometry(1.5, 1.5);
-    const decalMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false });
-    const decal = new THREE.Mesh(decalGeo, decalMat);
-    decal.position.set(0.82, 1.9, 0);
-    decal.rotation.y = Math.PI / 2; // face +x
-    cellPillar.add(decal);
-    group.add(cellPillar);
-    disposers.push(() => { bodyGeo.dispose(); bodyMat.dispose(); decalGeo.dispose(); decalMat.dispose(); tex.dispose(); });
+  const trees = new THREE.Group();
+  const columns = new THREE.Group();
+  for (let i = 0; i < PILLARS.length; i++) {
+    const p = PILLARS[i];
+    const col = makeColumnProp(d, i); col.position.set(p.x, 0, p.z); columns.add(col);
+    const tree = makeTreeProp(d, i); tree.position.set(p.x, 0, p.z); trees.add(tree);
   }
+  group.add(trees);
+  group.add(columns);
 
   // boundary square: left/right edges red (the "flip" gluing on a Klein
   // bottle), top/bottom edges blue.
@@ -111,12 +199,13 @@ function buildCell(foot: FootprintTrail): Built {
   disposers.push(() => { edgeGeo.dispose(); edgeMat.dispose(); });
 
   // shared footprint trail (base coords); appears in every cell, mirrored where
-  // the cell is — so the arrow's left/right colors swap on the Klein bottle.
+  // the cell is — so the arrow's left/right colors swap on the Klein bottle and
+  // (through the glass floor) read as the trail seen from the other side.
   const fp = new THREE.Mesh(foot.geometry, foot.material);
   fp.frustumCulled = false;
   group.add(fp);
 
-  return { group, dispose: () => disposers.forEach((d) => d()) };
+  return { group, trees, columns, dispose: () => disposers.forEach((dd) => dd()) };
 }
 
 /**
@@ -124,6 +213,15 @@ function buildCell(foot: FootprintTrail): Built {
  * bottle; the edge-gluing is shown by tiling the fundamental domain (the
  * universal cover) around the player, so movement is ordinary flat walking —
  * nothing flips locally, you only discover the topology by travelling.
+ *
+ * On the Klein bottle, every other column of cells is mirror-reflected (the red
+ * edges glue with a flip). To make that flip legible rather than invisible, the
+ * two orientation classes wear different skins — **columns** on one, **trees** on
+ * the mirror — over a glassy floor through which the (reversed) footprints of the
+ * other side show. So walking across a red edge you watch the columns ahead turn
+ * into trees and your own trail come back reversed; cross the blue edges and
+ * nothing changes. There is no consistent way to skin the whole world with one
+ * form — that impossibility *is* the Klein bottle's non-orientability.
  */
 export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngine {
   const { scene, camera, renderer } = deps;
@@ -150,23 +248,27 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
   dir.position.set(0.4, 1, 0.3);
   root.add(dir);
 
-  const floorMat = new THREE.MeshStandardMaterial({ map: floorTexture(), roughness: 0.9, metalness: 0.0 });
+  // A glassy floor: translucent + double-sided, so the trail shows "through" it
+  // and the underside reads as the other face of the surface.
+  const floorMat = new THREE.MeshStandardMaterial({
+    map: floorTexture(), color: 0x2a3a52, roughness: 0.18, metalness: 0.1,
+    transparent: true, opacity: 0.72, side: THREE.DoubleSide,
+  });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry((2 * K + 3) * L, (2 * K + 3) * L), floorMat);
   floor.rotation.x = -Math.PI / 2;
   root.add(floor);
 
+  const decor = makeSharedDecor();
   const foot = makeFootprintTrail(TRAIL_MAX);
   const character = makeCharacter();
   root.add(character.group);
 
-  const cells: { group: THREE.Group }[] = [];
-  const cellDisposers: (() => void)[] = [];
+  const cells: Built[] = [];
   for (let i = 0; i < (2 * K + 1) * (2 * K + 1); i++) {
-    const built = buildCell(foot);
+    const built = buildCell(decor, foot);
     built.group.matrixAutoUpdate = false;
     root.add(built.group);
-    cells.push({ group: built.group });
-    cellDisposers.push(built.dispose);
+    cells.push(built);
   }
 
   const M = new THREE.Matrix4();
@@ -214,16 +316,23 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
     floor.position.set(px, 0, pz);
     (floor.material as THREE.MeshStandardMaterial).map!.offset.set(px / 3, -pz / 3);
 
-    // Tile the fundamental domain around the player.
+    // Tile the fundamental domain around the player. On the Klein bottle, odd
+    // columns are mirror-reflected (the red flip) and wear the alternate skin
+    // (trees vs columns); the torus shows columns everywhere (orientable).
     const I0 = Math.round(px / L), J0 = Math.round(pz / L);
     let idx = 0;
     for (let di = -K; di <= K; di++) {
       for (let dj = -K; dj <= K; dj++) {
         const I = I0 + di, J = J0 + dj;
-        const sz = klein && (I & 1) ? -1 : 1;
+        const flipped = klein && (I & 1) !== 0;
+        const sz = flipped ? -1 : 1;
         S.makeScale(1, 1, sz);
         M.makeTranslation(I * L, 0, J * L).multiply(S);
-        cells[idx++].group.matrix.copy(M);
+        const cell = cells[idx++];
+        cell.group.matrix.copy(M);
+        // Trees on the flipped class, columns otherwise (torus: columns only).
+        cell.trees.visible = flipped;
+        cell.columns.visible = !flipped;
       }
     }
 
@@ -253,7 +362,8 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
     setSurface: (id) => { klein = id === 'klein'; clearTrail(); },
     dispose: () => {
       scene.remove(root);
-      cellDisposers.forEach((d) => d());
+      cells.forEach((c) => c.dispose());
+      decor.dispose();
       foot.dispose();
       character.dispose();
       floor.geometry.dispose();

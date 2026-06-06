@@ -43,10 +43,16 @@ show a seam, the view tiles that tile seamlessly in every direction (the
 - **Flat torus:** both pairs of edges glue **straight** (like Asteroids /
   Pac-Man). Every repeated copy of a pillar looks identical.
 - **Klein bottle:** one pair of edges (the **red** ones) glues with a **flip**,
-  so every other column of the world is **mirror-reversed**. You discover this
-  only by travelling and reading a familiar landmark returned backwards — never
-  by anything strange happening locally. That mirror-gluing is what makes the
-  Klein bottle **non-orientable**.
+  so every other column of the world is **mirror-reversed**. To make that flip
+  impossible to miss, the two mirror-classes wear different skins — **columns**
+  on one side, **trees** on the other (each landmark keeps its colour, so "the
+  red one" stays the red one whichever form it takes). Cross a **red** edge and
+  you watch the columns ahead become trees and your own footprints come back
+  reversed — seen, as it were, through the glassy floor from the **underside** of
+  the tile. Cross the **blue** edges and nothing changes. Crucially there is **no
+  way to skin the whole world with one form**: trees and columns can never be
+  made consistent everywhere. That impossibility *is* the Klein bottle's
+  **non-orientability**.
 
 ## Reading the footprints
 
