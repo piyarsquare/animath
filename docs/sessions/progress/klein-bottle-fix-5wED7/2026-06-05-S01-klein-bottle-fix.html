@@ -71,6 +71,35 @@
         <!-- Newest entry first. data-type ∈ decision | code | finding | blocker | milestone -->
         <ol class="timeline">
           <li class="tl" data-type="milestone">
+            <p class="tl-time">01:25</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Underside world — clear the glass to see the other side</h3>
+            <p class="why"><strong>Why:</strong> User picked "render a mirrored
+            underside world" (via AskUserQuestion) so the floor-opacity knob
+            literally reveals the columns/trees on the other side, not empty
+            space.</p>
+            <ul>
+              <li>Each cell gains an <code>under</code> group (scaled
+              <code>y = −1</code>, hung below the glass) holding
+              <code>underTrees</code>/<code>underColumns</code> built from the same
+              shared decor (extra meshes, no extra buffers) plus a reflected trail
+              mesh. The underside wears the <em>opposite</em> skin to the top at the
+              same cell (trees beneath your columns) — the genuine other face.</li>
+              <li>Gated on opacity: <code>showUnder = floorOpacityVal &lt; 0.95</code>,
+              so a solid floor pays nothing; otherwise <code>under.visible</code> +
+              the two skins toggle alongside the top.</li>
+              <li>Default floor opacity lowered to <strong>0.6</strong> so the glass
+              + reveal read out of the box.</li>
+              <li>EXPLAINER expanded (underside, twist-takes-twice reasoning).
+              <code>npm run build</code>: <span class="badge badge-ok">passed</span>.</li>
+            </ul>
+            <p class="callout callout-note"><span class="callout-label">Note to user</span>
+            Yes — the progress report has a milestone entry for every step (v1
+            trees/columns, projecting avatar, twin-period fix + knob + defaults, and
+            this underside world). Still unverified by eye (no headless WebGL here);
+            a walk-through is the main outstanding check.</p>
+          </li>
+          <li class="tl" data-type="milestone">
             <p class="tl-time">00:55</p>
             <span class="chip chip-milestone">Milestone</span>
             <h3>Twin-period bug fixed · floor-opacity knob · defaults → Klein + avatar on</h3>

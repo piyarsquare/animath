@@ -129,6 +129,12 @@ interface Built {
   group: THREE.Group;
   trees: THREE.Group;
   columns: THREE.Group;
+  /** Reflected copy of the decor hanging below the glass floor — the Klein
+   *  "other side", shown with the opposite skin and revealed by clearing the
+   *  floor. Held in `under` (scaled y=-1); its two skins toggle like the top. */
+  under: THREE.Group;
+  underTrees: THREE.Group;
+  underColumns: THREE.Group;
   /** Per-cell "twin" avatar, built lazily the first time projection is enabled. */
   ghost: Character | null;
   dispose: () => void;
@@ -171,13 +177,25 @@ function buildCell(d: SharedDecor, foot: FootprintTrail): Built {
 
   const trees = new THREE.Group();
   const columns = new THREE.Group();
+  // The other-side copy hangs below the glass, reflected through the floor
+  // (scale y = -1) and wearing the opposite skin. Hidden until the floor is
+  // cleared enough to peek through.
+  const under = new THREE.Group();
+  under.scale.y = -1;
+  under.visible = false;
+  const underTrees = new THREE.Group();
+  const underColumns = new THREE.Group();
   for (let i = 0; i < PILLARS.length; i++) {
     const p = PILLARS[i];
     const col = makeColumnProp(d, i); col.position.set(p.x, 0, p.z); columns.add(col);
     const tree = makeTreeProp(d, i); tree.position.set(p.x, 0, p.z); trees.add(tree);
+    const ucol = makeColumnProp(d, i); ucol.position.set(p.x, 0, p.z); underColumns.add(ucol);
+    const utree = makeTreeProp(d, i); utree.position.set(p.x, 0, p.z); underTrees.add(utree);
   }
+  under.add(underTrees, underColumns);
   group.add(trees);
   group.add(columns);
+  group.add(under);
 
   // boundary square: left/right edges red (the "flip" gluing on a Klein
   // bottle), top/bottom edges blue.
@@ -206,8 +224,13 @@ function buildCell(d: SharedDecor, foot: FootprintTrail): Built {
   const fp = new THREE.Mesh(foot.geometry, foot.material);
   fp.frustumCulled = false;
   group.add(fp);
+  // A second trail mesh on the underside, so the footprints read reversed
+  // through the glass — the same trail seen from the other face.
+  const ufp = new THREE.Mesh(foot.geometry, foot.material);
+  ufp.frustumCulled = false;
+  under.add(ufp);
 
-  return { group, trees, columns, ghost: null, dispose: () => disposers.forEach((dd) => dd()) };
+  return { group, trees, columns, under, underTrees, underColumns, ghost: null, dispose: () => disposers.forEach((dd) => dd()) };
 }
 
 /**
@@ -229,6 +252,7 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
   const { scene, camera, renderer } = deps;
   let klein = opts.surfaceId === 'klein';
   let projectAvatar = opts.projectAvatar;
+  let floorOpacityVal = opts.floorOpacity;
 
   // player state
   let px = 2, pz = 2;
@@ -262,6 +286,7 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
   floor.rotation.x = -Math.PI / 2;
   root.add(floor);
   function applyFloorOpacity(o: number) {
+    floorOpacityVal = o;
     floorMat.opacity = o;
     floorMat.visible = o > 0.01;
     // Clear glass shouldn't occlude depth, so the far side reads through it.
@@ -362,6 +387,8 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
     // Tile the fundamental domain around the player. On the Klein bottle, odd
     // columns are mirror-reflected (the red flip) and wear the alternate skin
     // (trees vs columns); the torus shows columns everywhere (orientable).
+    // Skip the under-floor copy once the glass is solid enough to hide it.
+    const showUnder = floorOpacityVal < 0.95;
     let idx = 0;
     for (let di = -K; di <= K; di++) {
       for (let dj = -K; dj <= K; dj++) {
@@ -375,6 +402,12 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
         // Trees on the flipped class, columns otherwise (torus: columns only).
         cell.trees.visible = flipped;
         cell.columns.visible = !flipped;
+        // The underside is the other face: opposite skin, reflected below.
+        cell.under.visible = showUnder;
+        if (showUnder) {
+          cell.underTrees.visible = !flipped;
+          cell.underColumns.visible = flipped;
+        }
         // Project a twin into this cell — but ONLY where the cell has the same
         // orientation as you. Crossing the twist once leaves you mirror-reversed
         // (the "opposite side"), so the nearest identical copy of you is two

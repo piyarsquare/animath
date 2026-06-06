@@ -51,7 +51,7 @@ export default function TopologyWalk() {
   const [bloom, setBloom] = useState(() => !isCramped());
   const [miniMap, setMiniMap] = useState(true);
   const [projectAvatar, setProjectAvatar] = useState(true);
-  const [floorOpacity, setFloorOpacity] = useState(0.72);
+  const [floorOpacity, setFloorOpacity] = useState(0.6);
   const [wallText, setWallText] = useState('MÖBIUS');
 
   const def = surfaceDef(surfaceId);

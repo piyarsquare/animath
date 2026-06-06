@@ -48,10 +48,16 @@ show a seam, the view tiles that tile seamlessly in every direction (the
   on one side, **trees** on the other (each landmark keeps its colour, so "the
   red one" stays the red one whichever form it takes). Cross a **red** edge and
   you watch the columns ahead become trees and your own footprints come back
-  reversed — seen, as it were, through the glassy floor from the **underside** of
-  the tile. Cross the **blue** edges and nothing changes. Crucially there is **no
-  way to skin the whole world with one form**: trees and columns can never be
-  made consistent everywhere. That impossibility *is* the Klein bottle's
+  reversed. Turn the **floor opacity** down and you can look *through* the glass to
+  the **other side of the world** — the opposite face hanging below, wearing the
+  opposite skin (trees beneath your columns), with the trail reversed. Crossing
+  the twist once lands you on that opposite side, so to come back to an
+  *identical* copy of yourself you must cross it **twice**: the twist takes twice
+  as long to walk as the roll. (Project your avatar and you'll see your true
+  copies repeat every *other* square across the twist for exactly this reason.)
+  Cross the **blue** edges and nothing changes. Crucially there is **no way to
+  skin the whole world with one form**: trees and columns can never be made
+  consistent everywhere. That impossibility *is* the Klein bottle's
   **non-orientability**.
 
 ## Reading the footprints
