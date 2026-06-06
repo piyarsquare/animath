@@ -224,14 +224,14 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   };
 
   const skins = new THREE.Group();
-  const skinProps: { group: THREE.Group; dir: THREE.Vector3 }[] = [];
+  const skinProps: { group: THREE.Group; dir: THREE.Vector3; kind: 'tree' | 'column' }[] = [];
   const golden = Math.PI * (3 - Math.sqrt(5));
   for (let i = 0; i < SKIN_N; i++) {
     const zc = (i + 0.5) / SKIN_N;            // hemisphere z ∈ (0,1]
     const rr = Math.sqrt(1 - zc * zc), th = golden * i;
     const d = new THREE.Vector3(rr * Math.cos(th), rr * Math.sin(th), zc).normalize();
-    const tree = makeTree(); skins.add(tree); skinProps.push({ group: tree, dir: d.clone() });
-    const col = makeColumn(); skins.add(col); skinProps.push({ group: col, dir: d.clone().negate() });
+    const tree = makeTree(); skins.add(tree); skinProps.push({ group: tree, dir: d.clone(), kind: 'tree' });
+    const col = makeColumn(); skins.add(col); skinProps.push({ group: col, dir: d.clone().negate(), kind: 'column' });
   }
   const seamMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffe08a, emissiveIntensity: 0.4, roughness: 0.5 });
   ownMats.push(seamMat);
@@ -270,24 +270,30 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   root.add(antipode);
 
   // ── The glued underside (ℝP² mirror floor) ─────────────────────────────────
-  // The spherical port of the flat Klein floor: ONE glassy planet, and the "other
-  // side" is the SAME surface decor reflected straight down through it — a radial
-  // reflection across radius R (direction kept, each prop flipped to point inward).
-  // There is no second ground; you look through the glass at the reflected forest /
-  // colonnade and beacons hanging just beneath your feet, top pointing out and the
-  // reflection pointing in on the one surface. (Radial mirror, matching the Klein
-  // floor's scale(1,−1,−1). Note this is your local reflection, not the antipodal
-  // gluing partner −d — on a sphere those are different points.)
+  // The spherical port of the flat Klein floor: ONE glassy planet whose "other
+  // side" hangs straight down through the surface — a radial reflection across
+  // radius R (direction kept, each prop flipped to point inward), wearing the
+  // OPPOSITE skin. So a tree on top has a column directly beneath it on the inner
+  // face, and vice versa: the two glued ℝP² representatives, stacked through the
+  // glass. There is no second ground; you look through the glass at the inverted
+  // colonnade/forest just below your feet. (Matches the Klein floor's trees ⇄
+  // columns flip; the placement is the local radial mirror, while the opposite
+  // skin shows the antipodal partner's terrain.)
   const UNDER_K = 0.997;  // a hair inside so the reflection doesn't z-fight the glass
   const under = new THREE.Group();
   under.scale.setScalar(UNDER_K);
   under.visible = false;
   const underBeacons = landmarks.clone(true);
   under.add(underBeacons);
+  // The underside wears the OPPOSITE skin: a column under every tree and a tree
+  // under every column. Because trees live on z>0 and columns on z<0 as antipodal
+  // pairs, the opposite skin at a point is exactly that point's antipode's terrain —
+  // so the inner face shows the partner ℝP² glues you to. (Same idea as the flat
+  // Klein floor, whose underside also flips trees ⇄ columns.)
   const underSkins = new THREE.Group();
   const underSkinProps: { group: THREE.Group; dir: THREE.Vector3 }[] = [];
   for (const sp of skinProps) {
-    const g = sp.group.clone(true);
+    const g = sp.kind === 'tree' ? makeColumn() : makeTree();
     underSkins.add(g);
     underSkinProps.push({ group: g, dir: sp.dir });
   }

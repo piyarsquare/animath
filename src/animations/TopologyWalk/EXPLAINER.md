@@ -105,15 +105,14 @@ Two readouts help you keep your bearings on the planet:
   each cover cell** knob, which tints every tiled copy of the fundamental domain so
   you can watch yourself cross from one cover cell to the next.
 - **Glass floor — the glued underside (ℝP²):** turns the planet to glass so you can
-  see the **other face** through it — the exact spherical port of the flat worlds'
-  glass floor + mirrored underside. The same surface decor (the forest/colonnade and
-  beacons) is reflected **straight down through the surface** — same spot, same
-  radius, each prop flipped to point **inward** — so you stand on the surface with
-  everything pointing **out**, and its reflection hangs just beneath pointing **in**,
-  on the one glass shell. Turn the **Planet glass** knob down toward clear to see it.
-  (It's a *radial reflection*, the same kind the Klein floor uses; on a sphere this
-  is your local reflection, which is **not** the same point as your antipodal gluing
-  partner −d — those coincide on the Klein bottle but not here.)
+  see the **other face** through it — the spherical port of the flat worlds' glass
+  floor + mirrored underside. The surface decor hangs **straight down through the
+  surface** (same spot, same radius, flipped to point **inward**) wearing the
+  **opposite skin**: stand by a **tree** and a **column** hangs directly beneath it
+  on the inner face, and vice versa. Because trees live on one hemisphere and
+  columns on the other as antipodal twins, that opposite skin underfoot is exactly
+  the terrain of the point ℝP² **glues** you to — your two representatives stacked
+  through the glass. Turn the **Planet glass** knob down toward clear to see it.
 
 ## Reading the footprints
 
