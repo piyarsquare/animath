@@ -277,7 +277,7 @@ export default function TopologyWalk() {
             <Slider label="Planet radius" value={planetRadius} min={12} max={90} step={2} onChange={setPlanetRadius} format={(v) => `${Math.round(v)} m`} />
           )}
           {isSpherical && (
-            <Checkbox label="Glass floor: the glued underside (ℝP²)" checked={innerShell} onChange={setInnerShell} />
+            <Checkbox label="Glass floor — see the underside" checked={innerShell} onChange={setInnerShell} />
           )}
           {isSpherical && innerShell && (
             <Slider label="Planet glass" value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />

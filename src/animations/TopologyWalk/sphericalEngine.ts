@@ -315,11 +315,12 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   }
   placeUnder();
 
-  // The underside is only meaningful on ℝP² (antipodes glued). Showing it turns the
-  // planet to glass so the reflection reads through; it's hidden when the glass is
-  // near-solid (nothing to see) — exactly the flat floor's showUnder gate.
+  // Turn the planet to glass and reveal the glued underside. The reflection reads
+  // through the glass; it's hidden when the glass is near-solid (nothing to see) —
+  // exactly the flat floor's showUnder gate. Works on the plain sphere too (a mirror
+  // floor); on ℝP² the opposite skin underfoot is genuinely the glued antipode.
   function applyInnerShell() {
-    const on = showInner && rp2;
+    const on = showInner;
     under.visible = on && glassOpacity < 0.97;
     if (on) {
       planetMat.transparent = true;
