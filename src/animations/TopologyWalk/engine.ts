@@ -124,8 +124,11 @@ export interface SphereMapState {
   bearing: number;
   landmarks: SphereLandmark[];
   rp2: boolean;
-  /** Whether the two cover hemispheres are currently tinted warm/cool. */
+  /** Whether the cover skins (trees ⇄ columns) are currently shown. */
   colored: boolean;
+  /** Player radial-up and forward unit vectors, for the ℝP² square-map chart. */
+  up: [number, number, number];
+  fwd: [number, number, number];
 }
 
 /**

@@ -90,18 +90,20 @@ onto a **curved** world — a small planet — which is the third **Setting**:
 
 Two readouts help you keep your bearings on the planet:
 
-- **Mini-map (sphere):** a flattened latitude × longitude map with the numbered,
-  colour-coded landmarks (their **antipodal twins** also appear, dimmed, on ℝP²)
-  and an arrow for you, pointing along your compass bearing.
-- **Colour the cover hemispheres:** the sphere is the **double cover** of ℝP² —
-  the two longitudinal halves are antipodal twins, so each holds exactly one of
-  every glued pair. Tinting them **warm vs cool** makes the two cover sheets
-  visible: cross the seam meridian and the ground changes colour, telling you
-  you've walked into the *other* representative of the same ℝP² point. (On the
-  plain sphere it's just two painted hemispheres.) The flat worlds have the
-  matching **Colour each cover cell** knob, which tints every tiled copy of the
-  fundamental domain so you can watch yourself cross from one cover cell to the
-  next.
+- **Mini-map:** on the plain **sphere**, a flattened latitude × longitude map with
+  the numbered, colour-coded landmarks and a compass arrow for you. On **ℝP²** it
+  switches to a *fundamental-domain square* in the same style as the torus/Klein
+  maps — but with **both** pairs of opposite edges glued with a flip (that's the
+  antipodal identification, and it's the unique square gluing with χ = 1). Your
+  marker is charted into the square and turns **amber on the far cover sheet**.
+- **Trees ⇄ columns (cover skins):** the sphere is the **double cover** of ℝP² —
+  the two hemispheres (split at the `z = 0` seam, marked by a glowing ring) are
+  antipodal twins, so each holds exactly one of every glued pair. One sheet grows a
+  **forest**, the other a **colonnade**, placed in antipodal pairs: so on ℝP² every
+  glued point is a *tree on one sheet and a column on the other* — the Klein
+  bottle's flip wrapped onto a sphere. The flat worlds have the matching **Colour
+  each cover cell** knob, which tints every tiled copy of the fundamental domain so
+  you can watch yourself cross from one cover cell to the next.
 - **Inner shell — the glued other side (ℝP²):** turns the planet to glass and
   hangs a smaller, point-reflected copy of the world *inside* it. The inner-shell
   point straight below your feet is your **identified antipode** — the very point

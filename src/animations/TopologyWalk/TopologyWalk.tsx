@@ -265,7 +265,7 @@ export default function TopologyWalk() {
           )}
           {(isFlat || isSpherical) && (
             <Checkbox
-              label={isSpherical ? 'Colour the cover hemispheres' : 'Colour each cover cell'}
+              label={isSpherical ? 'Cover skins (trees ⇄ columns)' : 'Colour each cover cell'}
               checked={colorCells}
               onChange={setColorCells}
             />
@@ -278,6 +278,9 @@ export default function TopologyWalk() {
           )}
           {isSpherical && (
             <Checkbox label="Inner shell: the glued other side (ℝP²)" checked={innerShell} onChange={setInnerShell} />
+          )}
+          {isSpherical && innerShell && (
+            <Slider label="Planet glass" value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
           )}
           <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
           <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>
@@ -485,7 +488,12 @@ function SphereMiniMap({ getState }: { getState: () => SphereMapState | null }) 
     cvs.width = SIZE * dpr; cvs.height = SIZE * dpr;
     ctx.scale(dpr, dpr);
     let raf = 0;
-    const loop = () => { drawSphereMap(ctx, SIZE, getState()); raf = requestAnimationFrame(loop); };
+    const loop = () => {
+      const st = getState();
+      if (st && st.rp2) drawRP2Square(ctx, SIZE, st);
+      else drawSphereMap(ctx, SIZE, st);
+      raf = requestAnimationFrame(loop);
+    };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [getState]);
@@ -516,13 +524,14 @@ function drawSphereMap(ctx: CanvasRenderingContext2D, size: number, st: SphereMa
   const px = (lon: number) => x0 + ((((lon + Math.PI) % TAU) + TAU) % TAU) / TAU * w;
   const py = (lat: number) => y0 + (Math.PI / 2 - lat) / Math.PI * w;
 
-  // domain interior (+ optional hemisphere tint matching the 3D cover colours)
+  // domain interior (+ hemisphere tint matching the 3D cover skins: the z>0 /
+  // lon>0 half is the forest, the z<0 / lon<0 half the colonnade).
   ctx.fillStyle = 'rgba(40,54,80,0.5)';
   ctx.fillRect(x0, y0, w, w);
   if (st && st.colored) {
-    ctx.globalAlpha = 0.4;
-    ctx.fillStyle = '#ff7a4d'; ctx.fillRect(x0, y0, w / 2, w);
-    ctx.fillStyle = '#4da6ff'; ctx.fillRect(x0 + w / 2, y0, w / 2, w);
+    ctx.globalAlpha = 0.38;
+    ctx.fillStyle = '#c2cad6'; ctx.fillRect(x0, y0, w / 2, w);        // lon<0 columns
+    ctx.fillStyle = '#3f9a48'; ctx.fillRect(x0 + w / 2, y0, w / 2, w); // lon>0 trees
     ctx.globalAlpha = 1;
   }
 
@@ -572,4 +581,103 @@ function drawSphereMap(ctx: CanvasRenderingContext2D, size: number, st: SphereMa
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.fillText(st.rp2 ? 'ℝP² · antipodes glued' : 'Sphere', size / 2, size - 6);
+}
+
+// Chart S² → the "both-pairs-flipped" square fundamental domain of ℝP². Take the
+// z≥0 representative (so the chart boundary is the z=0 seam — the same place the
+// trees/columns swap), orthographically project that hemisphere to the unit disk
+// (x,y), then radially stretch the disk out to the square. Antipodal sphere points
+// then land on antipodal (negated) square points, which is exactly the square's
+// (x,y)~(−x,−y) gluing.
+function rp2Square(x: number, y: number, z: number, flip: boolean): [number, number] {
+  let X = x, Y = y;
+  if (flip) { X = -X; Y = -Y; }
+  const m = Math.max(Math.abs(X), Math.abs(Y));
+  if (m < 1e-6) return [0, 0];
+  const s = Math.hypot(X, Y) / m; // 1 … √2, maps the disk onto the square
+  return [X * s, Y * s];
+}
+
+const MAP_PURPLE = '#b070ff';
+
+/**
+ * The ℝP² fundamental domain in the torus/Klein square style: a square whose
+ * BOTH pairs of opposite edges glue with a flip (the antipodal identification).
+ * The player and landmarks are charted in via {@link rp2Square}; the player marker
+ * turns amber on the z<0 cover sheet (the "column" side). Each ℝP² point appears
+ * once — the square is the quotient, so there are no antipodal twins to draw.
+ */
+function drawRP2Square(ctx: CanvasRenderingContext2D, size: number, st: SphereMapState) {
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = 'rgba(10,12,20,0.72)';
+  ctx.fillRect(0, 0, size, size);
+
+  const m = 24, w = size - 2 * m, x0 = m, y0 = m, x1 = x0 + w, y1 = y0 + w;
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  // square coords (sx,sy ∈ −1..1, +y up) → canvas
+  const toX = (sx: number) => cx + sx * (w / 2);
+  const toY = (sy: number) => cy - sy * (w / 2);
+
+  ctx.fillStyle = 'rgba(46,60,86,0.4)';
+  ctx.fillRect(x0, y0, w, w);
+
+  const seg = (ax: number, ay: number, bx: number, by: number, col: string) => {
+    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+  };
+  // top/bottom pair red, left/right pair purple — both flip-glued.
+  seg(x0, y0, x1, y0, MAP_RED);
+  seg(x0, y1, x1, y1, MAP_RED);
+  seg(x0, y0, x0, y1, MAP_PURPLE);
+  seg(x1, y0, x1, y1, MAP_PURPLE);
+
+  // identification chevrons (apex-right at angle 0). Both pairs reverse: top → ,
+  // bottom ← ; right ↑ , left ↓. Single on the top/bottom pair, double on left/right.
+  const chev = (px: number, py: number, ang: number, col: string, dbl: boolean) => {
+    ctx.save(); ctx.translate(px, py); ctx.rotate(ang);
+    ctx.strokeStyle = col; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const tip = (o: number) => { ctx.beginPath(); ctx.moveTo(-3 + o, -4.5); ctx.lineTo(3 + o, 0); ctx.lineTo(-3 + o, 4.5); ctx.stroke(); };
+    tip(2); if (dbl) tip(-4);
+    ctx.restore();
+  };
+  chev(cx, y0, 0, MAP_RED, false);              // top → +x
+  chev(cx, y1, Math.PI, MAP_RED, false);        // bottom → −x (flip)
+  chev(x1, cy, -Math.PI / 2, MAP_PURPLE, true); // right → up (+y)
+  chev(x0, cy, Math.PI / 2, MAP_PURPLE, true);  // left → down (−y, flip)
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1; ctx.strokeRect(x0, y0, w, w);
+
+  // landmarks (each ℝP² point once)
+  for (const lm of st.landmarks) {
+    const cl = Math.cos(lm.lat);
+    const dx = cl * Math.cos(lm.lon), dy = Math.sin(lm.lat), dz = cl * Math.sin(lm.lon);
+    const [sx, sy] = rp2Square(dx, dy, dz, dz < 0);
+    ctx.beginPath(); ctx.arc(toX(sx), toY(sy), 3.2, 0, Math.PI * 2);
+    ctx.fillStyle = '#' + new THREE.Color(lm.color).getHexString(); ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.stroke();
+  }
+
+  // player marker: charted position + a heading from a small forward step taken on
+  // the SAME representative sheet (so it doesn't jump when crossing the seam).
+  const [ux, uy, uz] = st.up, [fx, fy, fz] = st.fwd;
+  const flip = uz < 0;
+  const [psx, psy] = rp2Square(ux, uy, uz, flip);
+  const e = 0.06, ce = Math.cos(e), se = Math.sin(e);
+  let ax = ux * ce + fx * se, ay = uy * ce + fy * se, az = uz * ce + fz * se;
+  const al = Math.hypot(ax, ay, az) || 1; ax /= al; ay /= al; az /= al;
+  const [qsx, qsy] = rp2Square(ax, ay, az, flip);
+  const px = toX(psx), py = toY(psy);
+  const ang = Math.atan2(toY(qsy) - py, toX(qsx) - px);
+  ctx.save(); ctx.translate(px, py); ctx.rotate(ang);
+  ctx.beginPath();
+  ctx.moveTo(8, 0); ctx.lineTo(-5, -5.5); ctx.lineTo(-2, 0); ctx.lineTo(-5, 5.5); ctx.closePath();
+  ctx.fillStyle = flip ? '#ffd24a' : '#8ef0ff';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.65)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.restore();
+
+  ctx.font = '9px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText(flip ? 'ℝP² · column sheet' : 'ℝP² · both pairs flip', size / 2, size - 7);
 }

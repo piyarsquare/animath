@@ -105,13 +105,13 @@ function makeBeacon(b: Beacon, geos: THREE.BufferGeometry[], mats: THREE.Materia
 const LON = 24;  // longitude cells (meridians)
 const LAT = 16;  // latitude cells (parallels)
 
-// The two longitudinal hemispheres (lon ∈ [0,π) and [π,2π)) are antipodal twins:
-// every antipodal pair {p, −p} has exactly one member in each. So on ℝP² they are
-// the two sheets of the sphere's double cover — tint them to see yourself cross
-// from one cover sheet to the other (the dividing meridians are the gluing circle).
-const COVER_WARM = '#ff7a4d';
-const COVER_COOL = '#4da6ff';
-function planetTexture(coverTint: boolean): THREE.CanvasTexture {
+// The two cover hemispheres are keyed on sign(z): trees where z>0, columns where
+// z<0, so the seam is the z=0 meridian great circle (through both poles). The
+// antipodal map negates z, so it swaps the skins — on ℝP² every glued pair {p,−p}
+// is a tree on one sheet and a column on the other, exactly the Klein flip wrapped
+// onto a sphere. (The same sign(z) split is where the square-map chart's
+// representative flips, so all the readouts agree.)
+function planetTexture(): THREE.CanvasTexture {
   const s = 1024;
   const cvs = document.createElement('canvas'); cvs.width = cvs.height = s;
   const ctx = cvs.getContext('2d')!;
@@ -136,24 +136,10 @@ function planetTexture(coverTint: boolean): THREE.CanvasTexture {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(s, y); ctx.stroke();
   }
 
-  // cover tint: wash the two longitudinal hemispheres in warm / cool, leaving the
-  // checker + grid legible underneath. The seam is the meridian great circle that
-  // glues to its antipode on ℝP².
-  if (coverTint) {
-    ctx.globalAlpha = 0.4;
-    ctx.fillStyle = COVER_WARM; ctx.fillRect(0, 0, s / 2, s);
-    ctx.fillStyle = COVER_COOL; ctx.fillRect(s / 2, 0, s / 2, s);
-    ctx.globalAlpha = 1;
-  }
-
   // emphasised equator (mid latitude row) + prime meridian (left edge)
   ctx.strokeStyle = '#e6f2fb'; ctx.lineWidth = 5;
   ctx.beginPath(); ctx.moveTo(0, s / 2); ctx.lineTo(s, s / 2); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(2, s); ctx.stroke();
-  // mark the hemisphere seam (the lon = π meridian, at the texture's mid-x) so the
-  // gluing circle reads even before you tint.
-  ctx.strokeStyle = 'rgba(230,242,251,0.6)'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(s / 2, 0); ctx.lineTo(s / 2, s); ctx.stroke();
 
   const t = new THREE.CanvasTexture(cvs);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -167,6 +153,9 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   let radius = opts.planetRadius > 0 ? opts.planetRadius : R0;
   let colorCells = opts.colorCells;
   let showInner = opts.innerShell;
+  // Glass opacity of the outer planet while the inner shell is shown (shared with
+  // the flat worlds' floor-opacity knob); lower it to see further inside.
+  let glassOpacity = opts.floorOpacity;
 
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1;
@@ -187,9 +176,8 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   const ownGeos: THREE.BufferGeometry[] = [];
   const ownMats: THREE.Material[] = [];
 
-  // the planet (geometry is rebuilt when the radius slider changes; the texture is
-  // swapped when the cover tint toggles)
-  let planetTex = planetTexture(colorCells);
+  // the planet (geometry is rebuilt when the radius slider changes)
+  const planetTex = planetTexture();
   const planetMat = new THREE.MeshStandardMaterial({ map: planetTex, color: 0xffffff, roughness: 0.9, metalness: 0.0 });
   ownMats.push(planetMat);
   const planet = new THREE.Mesh(new THREE.SphereGeometry(radius, 64, 48), planetMat);
@@ -208,6 +196,58 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     landmarks.add(g);
   }
   root.add(landmarks);
+
+  // ── Cover skins: a forest on the z>0 sheet, a colonnade on z<0 ───────────────
+  // Generic trees and columns marking the two cover hemispheres. They are placed
+  // in antipodal pairs (tree at d, column at −d), so on ℝP² every glued point {d,−d}
+  // is a tree on one sheet and a column on the other — the Klein flip on a sphere.
+  // A glowing ring marks the z=0 seam great circle where the two skins meet.
+  const SKIN_N = 30;
+  const treeTrunkGeo = new THREE.CylinderGeometry(0.18, 0.26, 1.6, 8);
+  const treeLeafGeo = new THREE.ConeGeometry(0.9, 2.2, 10);
+  const colGeo = new THREE.CylinderGeometry(0.42, 0.42, 2.6, 12);
+  const treeTrunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.9 });
+  const treeLeafMat = new THREE.MeshStandardMaterial({ color: 0x3f9a48, roughness: 0.8 });
+  const colMat = new THREE.MeshStandardMaterial({ color: 0xc2cad6, roughness: 0.65 });
+  ownGeos.push(treeTrunkGeo, treeLeafGeo, colGeo);
+  ownMats.push(treeTrunkMat, treeLeafMat, colMat);
+  const makeTree = () => {
+    const g = new THREE.Group();
+    const t = new THREE.Mesh(treeTrunkGeo, treeTrunkMat); t.position.y = 0.8; g.add(t);
+    const f = new THREE.Mesh(treeLeafGeo, treeLeafMat); f.position.y = 2.3; g.add(f);
+    return g;
+  };
+  const makeColumn = () => {
+    const g = new THREE.Group();
+    const c = new THREE.Mesh(colGeo, colMat); c.position.y = 1.3; g.add(c);
+    return g;
+  };
+
+  const skins = new THREE.Group();
+  const skinProps: { group: THREE.Group; dir: THREE.Vector3 }[] = [];
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < SKIN_N; i++) {
+    const zc = (i + 0.5) / SKIN_N;            // hemisphere z ∈ (0,1]
+    const rr = Math.sqrt(1 - zc * zc), th = golden * i;
+    const d = new THREE.Vector3(rr * Math.cos(th), rr * Math.sin(th), zc).normalize();
+    const tree = makeTree(); skins.add(tree); skinProps.push({ group: tree, dir: d.clone() });
+    const col = makeColumn(); skins.add(col); skinProps.push({ group: col, dir: d.clone().negate() });
+  }
+  const seamMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffe08a, emissiveIntensity: 0.4, roughness: 0.5 });
+  ownMats.push(seamMat);
+  const seamRing = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.12, 8, 96), seamMat);
+  skins.add(seamRing);
+  function placeSkins() {
+    for (const sp of skinProps) {
+      sp.group.position.copy(sp.dir).multiplyScalar(radius);
+      sp.group.quaternion.setFromUnitVectors(upY, sp.dir);
+    }
+    seamRing.geometry.dispose();
+    seamRing.geometry = new THREE.TorusGeometry(radius, 0.12, 8, 96);
+  }
+  placeSkins();
+  skins.visible = colorCells;
+  root.add(skins);
 
   // footprint trail (true world coords on the fixed planet)
   const foot = makeFootprintTrail(TRAIL_MAX);
@@ -260,9 +300,9 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     innerPlanet.visible = on;
     if (on) {
       planetMat.transparent = true;
-      planetMat.opacity = 0.34;
+      planetMat.opacity = glassOpacity;
       planetMat.side = THREE.DoubleSide;
-      planetMat.depthWrite = false;
+      planetMat.depthWrite = glassOpacity >= 0.98;
     } else {
       planetMat.transparent = false;
       planetMat.opacity = 1;
@@ -295,26 +335,22 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     inner.add(innerClone);
     innerPlanet.geometry.dispose();
     innerPlanet.geometry = new THREE.SphereGeometry(radius * INNER_K, 48, 32);
+    placeSkins();
     camera.far = radius * 5; camera.updateProjectionMatrix();
     clearTrail();
   }
 
-  // Swap the planet skin between the plain checker and the cover-tinted one. The
-  // landmarks/trail are unaffected; only the ground reveals which sheet you're on.
-  // Both planet shells share the texture, so update each material's map.
+  // Show / hide the cover skins (trees ⇄ columns + the seam ring). The landmarks
+  // and trail are unaffected; only the terrain reveals which cover sheet you're on.
   function setColorCells(on: boolean) {
-    if (on === colorCells) return;
     colorCells = on;
     mapState.colored = on;
-    const next = planetTexture(colorCells);
-    planetMat.map = next; planetMat.needsUpdate = true;
-    innerPlanetMat.map = next; innerPlanetMat.needsUpdate = true;
-    planetTex.dispose();
-    planetTex = next;
+    skins.visible = on;
   }
 
   // Toggle the inner co-identification shell (and the outer planet's glassiness).
   function setInnerShell(on: boolean) { showInner = on; applyInnerShell(); }
+  function setFloorOpacity(o: number) { glassOpacity = o; applyInnerShell(); }
 
   const character = makeCharacter();
   root.add(character.group);
@@ -337,6 +373,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   // player's lat/lon/bearing are refreshed each frame.
   const mapState: SphereMapState = {
     lat: Math.PI / 2, lon: 0, bearing: 0, rp2, colored: colorCells,
+    up: [0, 1, 0], fwd: [0, 0, -1],
     landmarks: BEACONS.map((b) => ({
       lat: Math.asin(b.dir.y), lon: Math.atan2(b.dir.z, b.dir.x), color: b.color,
     })),
@@ -395,6 +432,8 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
       eastT.copy(up).cross(northT);
       mapState.bearing = Math.atan2(fwd.dot(eastT), fwd.dot(northT));
     }
+    mapState.up[0] = up.x; mapState.up[1] = up.y; mapState.up[2] = up.z;
+    mapState.fwd[0] = fwd.x; mapState.fwd[1] = fwd.y; mapState.fwd[2] = fwd.z;
 
     // avatar: feet on the surface, +Z = heading, +Y = radial up (matches flat)
     tmpRight.copy(up).cross(fwd).normalize();
@@ -434,6 +473,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     setRadius,
     setColorCells,
     setInnerShell,
+    setFloorOpacity,
     getSphereState: () => mapState,
     dispose: () => {
       scene.remove(root);
@@ -441,6 +481,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
       character.dispose();
       planet.geometry.dispose();
       innerPlanet.geometry.dispose();
+      seamRing.geometry.dispose();
       planetTex.dispose();
       ownGeos.forEach((g) => g.dispose());
       // Sprite badges own a CanvasTexture each; release those too.
