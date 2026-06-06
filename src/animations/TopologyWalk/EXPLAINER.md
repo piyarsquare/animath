@@ -84,8 +84,14 @@ so it's the clearest possible signature of an orientation flip.
 ## Walking it
 
 Drag to look, use **WASD / arrow keys** (or the on-screen pad) to move, and
-toggle **third-person** to watch your avatar lay the trail. In the flat worlds you
-can also **project your avatar into every cell** to watch your twins walk the
-universal cover in lockstep — mirror-reversed across the Klein bottle's flip, so
-you literally see your reflected double striding the other way. There's no
-autopilot — you go where you steer.
+toggle **third-person** to watch your avatar lay the trail. In the flat worlds a
+**mini-map** shows the **fundamental domain** — the glued square, its edges
+marked with identification arrows (matching arrows are the same edge: the
+**red** left/right pair glues with a *flip*, the **blue** top/bottom pair glues
+*straight*) — with a marker for where you are and which way you face. Watch it as
+you cross an edge: the marker wraps to the opposite side, flipped on the red
+pair, and turns amber once you're on the Klein bottle's mirror side. You can also
+**project your avatar into every cell** to watch your twins walk the universal
+cover in lockstep — mirror-reversed across the Klein bottle's flip, so you
+literally see your reflected double striding the other way. There's no autopilot
+— you go where you steer.

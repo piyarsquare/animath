@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { makeFootprintTrail } from './footprints';
 import { makeCharacter, Character } from './character';
-import { EngineDeps, EngineOptions, FrameInput, WorldEngine } from './engine';
+import { EngineDeps, EngineOptions, FrameInput, WorldEngine, FlatMapState } from './engine';
 
 const L = 30;             // fundamental-domain side
 const K = 2;              // render (2K+1)^2 cells around the player
@@ -254,6 +254,9 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
   let stridePhase = 0;
   let trailLast: THREE.Vector2 | null = null;
 
+  // Live position/heading inside the fundamental domain, sampled by the mini-map.
+  const mapState: FlatMapState = { u: 0.5, v: 0.5, hx: 0, hz: -1, flipped: false, klein };
+
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1;
   camera.fov = 75; camera.near = 0.05; camera.far = 400; camera.updateProjectionMatrix();
@@ -387,6 +390,17 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
     const bx = px - I0 * L;
     const bz = sz0 * (pz - J0 * L);
 
+    // Mini-map sample: position in the domain (0..1) plus heading in the domain
+    // frame. Reducing through sz0 means the x-wrap already mirrors v on the Klein
+    // bottle, so the marker re-enters the far edge flipped — the gluing made live.
+    mapState.u = bx / L + 0.5;
+    mapState.v = bz / L + 0.5;
+    const mhx = forward.x, mhz = sz0 * forward.z, mhl = Math.hypot(mhx, mhz) || 1;
+    mapState.hx = mhx / mhl;
+    mapState.hz = mhz / mhl;
+    mapState.flipped = klein && (I0 & 1) !== 0;
+    mapState.klein = klein;
+
     // Shared local pose for the twin avatars; each cell's own matrix then mirrors
     // it where that cell is mirrored.
     if (projectAvatar) ensureGhosts();
@@ -485,6 +499,7 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
     setSurface: (id) => { klein = id === 'klein'; clearTrail(); },
     setProjectAvatar: (on) => { projectAvatar = on; if (on) ensureGhosts(); },
     setFloorOpacity: (o) => applyFloorOpacity(o),
+    getMapState: () => mapState,
     dispose: () => {
       scene.remove(root);
       cells.forEach((c) => { c.ghost?.dispose(); c.dispose(); });

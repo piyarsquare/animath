@@ -6,7 +6,7 @@ import { Section, Slider, Select, Pills, Checkbox } from '../../components/Contr
 import { THEMES, DEFAULT_THEME } from './themes';
 import { DEFAULT_PARAMS } from './corridorGeometry';
 import {
-  Family, SURFACES, surfaceDef, EngineDeps, EngineOptions, WorldEngine,
+  Family, SURFACES, surfaceDef, EngineDeps, EngineOptions, WorldEngine, FlatMapState,
 } from './engine';
 import { makeCorridorEngine } from './corridorEngine';
 import { makeFlatEngine } from './flatEngine';
@@ -146,6 +146,7 @@ export default function TopologyWalk() {
 
   const clearTrail = useCallback(() => { ctxRef.current?.engine.clearTrail(); }, []);
   const clearWriting = useCallback(() => { ctxRef.current?.engine.clearWriting?.(); }, []);
+  const getMapState = useCallback(() => ctxRef.current?.engine.getMapState?.() ?? null, []);
 
   useEffect(() => {
     const map: Record<string, MoveKey> = {
@@ -211,6 +212,8 @@ export default function TopologyWalk() {
         </div>
       )}
 
+      {!isCorridor && miniMap && <FlatMiniMap getState={getMapState} />}
+
       <div style={{
         position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
         color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
@@ -232,6 +235,9 @@ export default function TopologyWalk() {
           <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
           {!isCorridor && (
             <Checkbox label="Project avatar into every cell" checked={projectAvatar} onChange={setProjectAvatar} />
+          )}
+          {!isCorridor && (
+            <Checkbox label="Mini-map (fundamental domain)" checked={miniMap} onChange={setMiniMap} />
           )}
           {!isCorridor && (
             <Slider label="Floor opacity" value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
@@ -326,4 +332,99 @@ function padBtn(style: React.CSSProperties): React.CSSProperties {
     backdropFilter: 'blur(6px)', cursor: 'pointer', touchAction: 'none',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   };
+}
+
+/**
+ * A top-down map of the flat world's **fundamental domain**: the glued square,
+ * its edges marked with identification arrows (single on the straight-glued blue
+ * pair, double on the left/right pair — which point opposite ways for the Klein
+ * flip, the same way for the torus), and a marker for the player's position and
+ * heading inside it. The marker wraps across edges exactly as the world does, and
+ * turns amber on the Klein bottle's mirror side.
+ */
+function FlatMiniMap({ getState }: { getState: () => FlatMapState | null }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    const cvs = canvasRef.current; if (!cvs) return;
+    const ctx = cvs.getContext('2d'); if (!ctx) return;
+    const SIZE = 150;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cvs.width = SIZE * dpr; cvs.height = SIZE * dpr;
+    ctx.scale(dpr, dpr);
+    let raf = 0;
+    const loop = () => { drawFlatMap(ctx, SIZE, getState()); raf = requestAnimationFrame(loop); };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [getState]);
+  return (
+    <div style={{
+      position: 'absolute', top: 12, right: 12, width: 150, height: 150,
+      pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.18)',
+      borderRadius: 8, boxShadow: '0 4px 14px rgba(0,0,0,0.45)', overflow: 'hidden',
+    }}>
+      <canvas ref={canvasRef} style={{ width: 150, height: 150, display: 'block' }} />
+      <div style={{
+        position: 'absolute', top: 4, left: 8, fontSize: 10, letterSpacing: '0.08em',
+        color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase',
+      }}>Map</div>
+    </div>
+  );
+}
+
+const MAP_RED = '#ff4060', MAP_BLUE = '#4080ff', MAP_TEAL = '#34d6c0';
+
+function drawFlatMap(ctx: CanvasRenderingContext2D, size: number, st: FlatMapState | null) {
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = 'rgba(10,12,20,0.72)';
+  ctx.fillRect(0, 0, size, size);
+
+  const m = 24, w = size - 2 * m, x0 = m, y0 = m, x1 = x0 + w, y1 = y0 + w;
+  const klein = st ? st.klein : true;
+  const lr = klein ? MAP_RED : MAP_TEAL; // left/right edges: flip (red) vs straight (teal)
+
+  // domain interior
+  ctx.fillStyle = 'rgba(46,60,86,0.4)';
+  ctx.fillRect(x0, y0, w, w);
+
+  const seg = (ax: number, ay: number, bx: number, by: number, col: string) => {
+    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+  };
+  seg(x0, y0, x1, y0, MAP_BLUE); // top
+  seg(x0, y1, x1, y1, MAP_BLUE); // bottom
+  seg(x0, y0, x0, y1, lr);       // left
+  seg(x1, y0, x1, y1, lr);       // right
+
+  // Identification arrows: an apex-right chevron, rotated. Single on the straight
+  // (blue) pair, double on the left/right pair; the right edge points the
+  // opposite way on the Klein flip, the same way on the torus.
+  const chev = (cx: number, cy: number, ang: number, col: string, dbl: boolean) => {
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
+    ctx.strokeStyle = col; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const tip = (o: number) => { ctx.beginPath(); ctx.moveTo(-3 + o, -4.5); ctx.lineTo(3 + o, 0); ctx.lineTo(-3 + o, 4.5); ctx.stroke(); };
+    tip(2); if (dbl) tip(-4);
+    ctx.restore();
+  };
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  chev(cx, y0, 0, MAP_BLUE, false);                          // top → +x
+  chev(cx, y1, 0, MAP_BLUE, false);                          // bottom → +x (straight)
+  chev(x0, cy, Math.PI / 2, lr, true);                       // left → down
+  chev(x1, cy, klein ? -Math.PI / 2 : Math.PI / 2, lr, true); // right: up (flip) / down (straight)
+
+  if (!st) return;
+
+  // player marker: a chevron at (u,v), pointing along the heading (+z is up)
+  const px = x0 + st.u * w, py = y0 + (1 - st.v) * w;
+  ctx.save(); ctx.translate(px, py); ctx.rotate(Math.atan2(-st.hz, st.hx));
+  ctx.beginPath();
+  ctx.moveTo(8, 0); ctx.lineTo(-5, -5.5); ctx.lineTo(-2, 0); ctx.lineTo(-5, 5.5); ctx.closePath();
+  ctx.fillStyle = st.flipped ? '#ffd24a' : '#8ef0ff';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.65)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.restore();
+
+  ctx.font = '9px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText(klein ? (st.flipped ? 'Klein · mirror side' : 'Klein bottle') : 'Flat torus', size / 2, size - 7);
 }

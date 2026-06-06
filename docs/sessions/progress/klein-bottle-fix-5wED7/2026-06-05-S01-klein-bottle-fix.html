@@ -71,6 +71,32 @@
         <!-- Newest entry first. data-type ∈ decision | code | finding | blocker | milestone -->
         <ol class="timeline">
           <li class="tl" data-type="milestone">
+            <p class="tl-time">03:05</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Mini-map of the fundamental domain (square + identified edges)</h3>
+            <p class="why"><strong>Why:</strong> User asked for "a mini map with the
+            location of the person and the edge geometry … a map of the square that
+            shows the identified edges."</p>
+            <ul>
+              <li>Flat engine now publishes a <code>FlatMapState</code> each frame
+              (position <code>u,v</code> in the domain, heading, mirror-side flag,
+              gluing style), exposed via a new optional <code>getMapState()</code> on
+              the shared <code>WorldEngine</code> interface. The reduction through
+              <code>sz0</code> means the marker already wraps <em>flipped</em> on the
+              Klein x-edge for free.</li>
+              <li>New <code>FlatMiniMap</code> overlay (HTML canvas, own rAF, click-
+              through) draws the glued square with identification arrows — single
+              chevrons on the straight blue (top/bottom) pair, double chevrons on the
+              left/right pair pointing opposite ways for the Klein flip and the same
+              way for the torus — plus a heading marker that turns amber on the
+              mirror side and a caption.</li>
+              <li>Wired a "Mini-map (fundamental domain)" toggle into the flat World
+              settings (reusing the existing <code>miniMap</code> state); corridor
+              map unchanged. EXPLAINER updated. <code>npm run build</code>:
+              <span class="badge badge-ok">passed</span>.</li>
+            </ul>
+          </li>
+          <li class="tl" data-type="milestone">
             <p class="tl-time">02:30</p>
             <span class="chip chip-milestone">Milestone</span>
             <h3>Footprint model rebuilt: one print per step, on the side you walk</h3>

@@ -77,6 +77,21 @@ export interface EngineOptions {
 }
 
 /**
+ * Snapshot of the player's whereabouts on a flat surface, for the mini-map: the
+ * position inside the fundamental domain (`u`,`v` ∈ 0..1, with the domain frame's
+ * +z pointing "up"), the heading in that same frame, whether you're currently on
+ * the mirror (odd) side of the Klein bottle, and how the left/right edges glue.
+ */
+export interface FlatMapState {
+  u: number;
+  v: number;
+  hx: number;
+  hz: number;
+  flipped: boolean;
+  klein: boolean;
+}
+
+/**
  * A self-contained world: it owns all of its Three.js objects (added to the
  * shared scene on creation, removed and disposed on `dispose`), advances and
  * renders one frame at a time, and exposes optional setters for the controls
@@ -100,4 +115,6 @@ export interface WorldEngine {
   setProjectAvatar?(on: boolean): void;
   setFloorOpacity?(o: number): void;
   clearWriting?(): void;
+  /** Flat worlds only: current position/heading in the fundamental domain. */
+  getMapState?(): FlatMapState | null;
 }
