@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Three Hats · Math-Viz & Pedagogy — Stable Marriage</title>
+  <link rel="stylesheet" href="../../report.css">
+  <script defer src="../../report.js"></script>
+  <script type="application/json" class="report-meta">
+  {
+    "kind": "three-hats",
+    "session": "2026-06-06-S01",
+    "date": "2026-06-06",
+    "title": "Three Hats — Math-Viz & Pedagogy (Stable Marriage)",
+    "branch": "claude/stable-marriage-styling-ulMPt",
+    "slug": "stable-marriage-styling-ulMPt",
+    "status": "completed",
+    "build": "unknown",
+    "followup": null,
+    "pr": null
+  }
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">Three Hats review · Math-Visualization &amp; Pedagogy lens</p>
+    <h1>Stable Marriage — Is the picture <em>true</em>?</h1>
+    <dl class="meta">
+      <div><dt>Branch</dt><dd><code>claude/stable-marriage-styling-ulMPt</code> · slug <code>stable-marriage-styling-ulMPt</code></dd></div>
+      <div><dt>App</dt><dd><code>src/animations/StableMarriage/</code></dd></div>
+      <div><dt>Reviewer</dt><dd>Math-Viz &amp; Pedagogy Expert (mathematician-educator)</dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-warn">not run (review only)</span></dd></div>
+    </dl>
+  </header>
+
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+
+      <div class="toolbar">
+        <button type="button" data-action="expand-all">Expand all</button>
+        <button type="button" data-action="collapse-all">Collapse all</button>
+      </div>
+
+      <section>
+        <h2>Summary &amp; stance</h2>
+        <p>
+          I reviewed the Stable Marriage app as the person who would actually use it to teach
+          Gale–Shapley and stable matching. The app is visually polished and the stability check is
+          honest and correct. But the <strong>central pedagogical claim is broken by the model the code
+          actually runs</strong>: the simulation is a <em>mixed-proposer, two-sided</em> process, while the
+          EXPLAINER teaches the <em>classic one-sided</em> Gale–Shapley theorem (proposer-optimality /
+          receiver-pessimality). Those two things are not the same algorithm, and at the default
+          settings the app does <em>not</em> demonstrate the theorem it claims to demonstrate.
+        </p>
+        <p class="callout callout-warn">
+          <span class="callout-label">Headline</span>
+          The text promises proposer-optimal Gale–Shapley. The engine runs a randomized two-sided
+          matching market with a "bias" knob. The stability guarantee survives the substitution; the
+          optimality guarantee <strong>does not</strong>. This is the one thing a careful learner will get
+          wrong because of the app.
+        </p>
+      </section>
+
+      <section>
+        <h2>1. Mathematical fidelity</h2>
+
+        <h3>1a. The engine is not classic Gale–Shapley</h3>
+        <p>
+          Classic Gale–Shapley is <em>one-sided</em>: a fixed set (say men) proposes; the other set
+          (women) only ever receives, accepts/defers, and rejects. Women never propose. This asymmetry
+          is the entire source of the proposer-optimal / receiver-pessimal result.
+        </p>
+        <p>
+          The code instead picks, <em>each step</em>, which side proposes, by a coin flip weighted by
+          <code>bias</code> (<code>StableMarriage.tsx:620–624</code>):
+        </p>
+        <pre>let proposerType: 'man' | 'woman' = 'man';
+const biasProb = bias / 100;
+if (validMen.length &gt; 0 &amp;&amp; validWomen.length === 0) proposerType = 'man';
+else if (validWomen.length &gt; 0 &amp;&amp; validMen.length === 0) proposerType = 'woman';
+else proposerType = Math.random() &lt; biasProb ? 'man' : 'woman';</pre>
+        <p>
+          So a "woman" can <em>propose</em> down <em>her own</em> preference list
+          (<code>:639</code> reads <code>womenPrefs[proposerId][...]</code> and advances
+          <code>womenNextProposal</code>), and a "man" can be a <em>receiver</em> who defers
+          (<code>:651–663</code>). Both sides hold a <code>nextProposal</code> pointer. This is a
+          <strong>two-sided proposal market</strong>, not Gale–Shapley.
+        </p>
+        <p class="callout callout-note">
+          <span class="callout-label">Note</span>
+          The default is <code>bias = 50</code> (<code>:533</code>) — i.e. a <em>symmetric</em> coin
+          flip. At the default the app shows neither men-proposing nor women-proposing GS; it shows a
+          50/50 mixed process. That is the worst possible default for teaching the asymmetry the
+          EXPLAINER spends a whole section on.
+        </p>
+
+        <h3>1b. Does the two-sided process even produce a stable matching?</h3>
+        <p>
+          Interestingly, <strong>yes</strong> — and the app's own stability checker confirms it
+          empirically. A deferred-acceptance process where each agent proposes down its own list in
+          order, and each recipient keeps only its most-preferred suitor seen so far, still terminates
+          at a matching with no blocking pair: once <em>x</em> proposes to <em>y</em> and is rejected (or
+          later bumped), <em>y</em> permanently holds someone <em>y</em> prefers to <em>x</em>, so
+          <em>(x,y)</em> can never block. The mixed-proposer schedule only changes <em>which</em> stable
+          matching you land on, not stability itself. So the stability story is sound. The
+          <em>optimality</em> story is the casualty.
+        </p>
+
+        <h3>1c. The stability verifier is correct</h3>
+        <p>
+          <code>verifyStability</code> (<code>:99–132</code>) does exactly the right thing: for every
+          unmatched man/woman pair it checks whether <em>both</em> strictly prefer each other to their
+          current partners, treating an unmatched person as having a partner at rank +∞
+          (<code>:117</code>, <code>:121</code>). Using <code>indexOf</code> on the preference list to get
+          a rank, and "lower index = more preferred," is consistent throughout. I could not construct a
+          blocking pair it would miss. The "Stable: No blocking pairs detected" banner
+          (<code>:1028–1031</code>) is a truthful claim. Good — this is the mathematically load-bearing
+          part and it is right.
+        </p>
+
+        <h3>1d. Proposer-optimality / receiver-pessimality: claimed but not delivered</h3>
+        <p>EXPLAINER (<code>EXPLAINER.md:28–32</code>) states, unconditionally:</p>
+        <pre>The side that *proposes* does systematically better. Gale–Shapley produces
+the **proposer-optimal** stable matching: every proposer gets the best
+partner they could have in *any* stable matching, and every receiver gets
+their worst. The **Asker vs Asked** averages make this visible.</pre>
+        <p>This is true for <em>classic</em> GS. It is <strong>not</strong> true of what the app computes, for several compounding reasons:</p>
+        <ul>
+          <li>
+            <strong>Roles are not fixed.</strong> "Asker" / "Asked" in this code is assigned
+            <em>per match event</em> (<code>role: 'asker'</code> vs <code>'asked'</code> at
+            <code>:649–650</code>), and a single person flips role over the run as they get bumped and
+            re-propose. So "Asker average" is not "the proposing side's average"; it is "the average rank,
+            over all individuals, of the partner they were holding <em>in the role they happened to end in</em>."
+            That is a quantity with no clean theorem attached.
+          </li>
+          <li>
+            <strong>Proposer-optimality is a statement about a specific matching</strong> (the
+            men-optimal stable matching), reached by men-only proposing. The mixed schedule reaches
+            <em>some</em> stable matching, generally neither the man-optimal nor the woman-optimal one. So
+            "every proposer gets the best partner in any stable matching" is simply false for the run on
+            screen.
+          </li>
+          <li>
+            <strong>"Asker avg rank: …" is shown even at <code>bias = 50</code></strong>
+            (<code>:1005–1006</code>, <code>:986</code>), inviting the learner to read a proposer
+            advantage off a symmetric process. They'll see a difference (askers do tend to do better
+            <em>locally</em>, because proposing means moving down your <em>own</em> list while receiving
+            means accepting whoever shows up), and they'll mis-attribute it to the GS theorem.
+          </li>
+        </ul>
+        <p class="callout callout-gotcha">
+          <span class="callout-label">Gotcha</span>
+          To actually <em>demonstrate</em> the theorem, a learner must set <code>bias = 100</code>
+          (or <code>0</code>), at which point the process collapses to one-sided GS and "Asker = the
+          proposing side." Nothing in the UI or text tells them this. The default (50) actively hides the
+          phenomenon the app exists to teach.
+        </p>
+
+        <h3>1e. The Lab is statistically dishonest as labelled</h3>
+        <p>
+          Each heatmap cell is the result of <strong>exactly one</strong> simulation run. In
+          <code>runLabSimulation</code> (<code>:828–844</code>) each (corrM, corrW) cell calls
+          <code>runHeadlessSimulation(labN, labBias, corrM, corrW)</code> a single time and stores
+          <code>menAvg</code>, <code>womenAvg</code>, etc.
+        </p>
+        <pre>const metrics = runHeadlessSimulation(labN, labBias, corrM, corrW);
+results.push({ x: corrM*100, y: corrW*100,
+  diff: metrics.menAvg - metrics.womenAvg,
+  askerDiff: metrics.askerAvg - metrics.askedAvg, ...metrics });</pre>
+        <p>
+          The "average" in "Men Avg Rank" is therefore an average <em>over the n individuals in one
+          random instance</em> — not an average over many trials. With <code>n = 50</code> default
+          (<code>:544</code>) and a fresh random preference draw per cell, cell-to-cell variation is
+          dominated by sampling noise, not by the consensus parameters the axes claim to isolate. A
+          20×20 heatmap is 400 independent single-shot experiments; adjacent cells will differ by chance
+          as much as by signal. There is <strong>no trial-count control, no repetition, no error bar, no
+          smoothing.</strong> The README (<code>README.md:5</code>) even calls it "repeated headless
+          simulations to quantify how consensus and bias shape outcomes" — but the repetition is across
+          <em>grid cells</em>, not across trials per cell, so each data point is a sample of size one.
+        </p>
+        <p class="callout callout-warn">
+          <span class="callout-label">Honesty gap</span>
+          A heatmap with no replication presents single-draw noise as if it were a measured surface.
+          For a "Lab," this is the most serious math-honesty issue after the optimality mislabel. Minimum
+          fix: average each cell over <em>T</em> trials (expose <em>T</em> as a control) and ideally show
+          the spread. Even <em>T</em> = 10–20 would turn the heatmaps from impressionistic to honest.
+        </p>
+
+        <h3>1f. The "Consensus" generative model — reasonable, slightly mislabelled</h3>
+        <p>
+          <code>generatePreferences</code> (<code>:69–97</code>) gives each candidate a hidden
+          <code>quality ∈ [0,1)</code> and scores them as
+          <code>corr · quality + (1 − corr) · noise</code>, then sorts. At <code>corr = 0</code>
+          preferences are i.i.d. uniform-random; at <code>corr = 1</code> everyone shares the same
+          ranking (the quality order). This is a clean, standard "common-value vs private-value"
+          interpolation and I endorse it. Two caveats:
+        </p>
+        <ul>
+          <li>
+            The UI labels the knob <strong>"Consensus"</strong> in the visualizer
+            (<code>:873</code>, <code>:884</code>) but <code>corrM</code>/<code>corrW</code> in code and
+            <strong>"Men Consensus (0% → 100%)"</strong> on the heatmap axis (<code>:436</code>). The
+            EXPLAINER calls it "Consensus … how much everyone agrees on who is desirable"
+            (<code>EXPLAINER.md:36–38</code>). These are consistent, which is good — but "Consensus"
+            conflates two distinct things in the literature: <em>correlation of preferences</em> and
+            <em>agreement on a common ranking</em>. They coincide here only because the model is built
+            that way. Fine for an intro tool; worth a one-line disclosure.
+          </li>
+          <li>
+            <code>menQuality</code> drives <em>women's</em> ranking of men and vice-versa
+            (<code>:87–89</code>), which is correct (your desirability is judged by the other side). The
+            "Sort by popularity" toggle (<code>:808</code>, <code>:815</code>) orders the display by a
+            person's <em>own-side</em> quality used as the other side's signal — semantically this is
+            "sort by how desirable you are to the opposite group," which is the right notion of
+            popularity. Good, though the label could say so.
+          </li>
+        </ul>
+
+        <h3>1g. Subtle correctness footguns (not bugs today, but fragile)</h3>
+        <ul>
+          <li>
+            <strong>Unmatched survivors are possible and silently averaged out.</strong> The mixed
+            process can exhaust a person's list (the <code>validMen</code>/<code>validWomen</code> filters
+            at <code>:611–612</code> drop anyone with <code>next ≥ n</code>), and completion fires when no
+            valid proposer remains (<code>:614–618</code>), <em>not</em> when everyone is matched. In a
+            balanced market classic GS always produces a perfect matching, but this two-sided variant has
+            no such guarantee in general. The rank averages (<code>:761–792</code>) only sum over
+            <em>matched</em> people (<code>if (manMatch)</code>), so an instance with leftover singles
+            reports averages over a biased subsample without ever surfacing that someone went unmatched.
+            The "complete" banner and stability check would still say "stable" (an incomplete matching can
+            be stable), which is technically true but pedagogically misleading — the learner sees green
+            and assumes everyone paired up.
+          </li>
+          <li>
+            <code>verifyStability</code> uses <code>menPrefs[m].indexOf(...)</code> inside an O(n²) loop
+            with an inner <code>indexOf</code> = O(n³) overall (<code>:117–122</code>). Fine at n ≤ 100,
+            but it means stability is only checked at the end, never illustrated <em>during</em> the run.
+            See §2.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>2. Conceptual clarity — does the interaction <em>teach</em> the idea?</h2>
+
+        <h3>2a. The stepping shows proposals, but not <em>why</em> stability holds</h3>
+        <p>
+          The "aha" of Gale–Shapley is the <strong>invariant</strong>: once a receiver rejects/bumps a
+          suitor, they only ever trade <em>up</em>, so no rejected pair can later become a blocking pair.
+          The animation shows the <em>events</em> (active proposer glows amber, target glows purple,
+          <code>:287–297</code>) but never visualizes the <em>reason</em>. A rejection is rendered as
+          "nothing visibly happens" — when <code>rankNew &lt; rankCurrent</code> is false
+          (<code>:659</code>) the step simply advances a pointer with no on-screen consequence. The
+          learner sees musical chairs, not a monotone improvement argument.
+        </p>
+        <p class="callout callout-note">
+          <span class="callout-label">Pedagogy</span>
+          The single highest-value teaching addition would be to <em>show the rejection</em> (flash the
+          rejected edge red, show "she already prefers her current partner") and to surface a running
+          "no pair has ever both-preferred-and-been-rejected" invariant. That converts the app from
+          "watch pairs form" to "see why no blocking pair can survive."
+        </p>
+
+        <h3>2b. Preferences are largely invisible</h3>
+        <p>
+          The whole problem is <em>defined</em> by preference lists, yet the visualizer never shows a
+          person's ranked list. The only preference information surfaced is a single <code>Rank: #k</code>
+          badge on each matched person, and only for <code>n ≤ 30</code> (<code>:318</code>,
+          <code>:335</code>). A learner cannot answer "why did <em>he</em> propose to <em>her</em> first?"
+          because his list is hidden. Without seeing at least the active proposer's top-of-list, the
+          deferred-acceptance logic is opaque — proposals look arbitrary. AgenticSorting and Correspondence
+          both make their core object (the array; the c-value) directly visible and manipulable; here the
+          core object (the preference matrix) is hidden.
+        </p>
+
+        <h3>2c. The default view is the Visualizer, but its most teachable parameter is mis-set</h3>
+        <p>
+          As noted in §1d, <code>bias = 50</code> is the default. The most illuminating <em>first</em>
+          experience would be one-sided GS (bias 100) so that "Asker" cleanly equals "the men," the
+          proposer-optimal result is real, and the Asker-vs-Asked gap means what the EXPLAINER says it
+          means. The randomized default is the more "interesting research toy" but the less "teaches the
+          named theorem" default.
+        </p>
+
+        <h3>2d. Lab labels invite a causal misread</h3>
+        <p>
+          The four heatmaps (<code>:1135–1178</code>) are titled "Men Avg Rank," "Women Avg Rank,"
+          "Men Avg − Women Avg," "Asker Avg − Asked Avg." With a fixed <code>labBias</code> default of
+          <strong>100</strong> (<code>:545</code>) the Lab <em>does</em> run one-sided GS (good, and
+          inconsistent with the visualizer default of 50 — they should agree on what story they tell).
+          But because each cell is one trial (§1e), a learner sweeping consensus will see a noisy field
+          and may "discover" structure that is sampling artifact. The diverging blue↔pink scale
+          (<code>:374–384</code>) is a genuinely nice idea for showing which side wins, but it amplifies
+          noise near zero into visible colour.
+        </p>
+      </section>
+
+      <section>
+        <h2>3. Honest framing of EXPLAINER / README</h2>
+        <table>
+          <thead><tr><th>Claim</th><th>Where</th><th>Verdict</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>"this always terminates, and the result is always stable"</td>
+              <td>EXPLAINER.md:23–25</td>
+              <td><span class="badge badge-ok">True</span> for the engine; verifier confirms it.</td>
+            </tr>
+            <tr>
+              <td>"Gale–Shapley produces the proposer-optimal stable matching … every proposer gets the best partner … every receiver gets their worst"</td>
+              <td>EXPLAINER.md:28–32</td>
+              <td><span class="badge badge-bad">Misleading</span> — true of classic one-sided GS, but the app's <em>default</em> mixed-proposer model does not realize it. Stated as if the app demonstrates it unconditionally.</td>
+            </tr>
+            <tr>
+              <td>"Proposer bias — the share of proposals coming from the men's side. Slide it to watch the proposer advantage shift."</td>
+              <td>EXPLAINER.md:39–40</td>
+              <td><span class="badge badge-warn">Half-true</span> — never says that the theorem only holds at the extremes (0/100), nor that 50 means "neither side is the proposer." This is the single sentence that could rescue or doom the framing.</td>
+            </tr>
+            <tr>
+              <td>"mixed-proposer model" (only the README admits this)</td>
+              <td>README.md:3</td>
+              <td><span class="badge badge-warn">Buried</span> — the honest description of the model is in the README (which most users won't open), while the EXPLAINER (the ? popup, the thing they read) describes textbook GS.</td>
+            </tr>
+            <tr>
+              <td>"repeated headless simulations to quantify how consensus and bias shape outcomes"</td>
+              <td>README.md:5</td>
+              <td><span class="badge badge-bad">Overclaim</span> — one trial per cell; no replication (§1e). "Quantify" implies a measured estimate; it's a single draw.</td>
+            </tr>
+            <tr>
+              <td>EXPLAINER never discloses: leftover singles possible, averages over matched only</td>
+              <td>—</td>
+              <td><span class="badge badge-warn">Omission</span> — see §1g.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Against the house standard, the EXPLAINER's <em>prose</em> is good — it's the right length, has
+          the theorem and citation (Gale &amp; Shapley 1962), and matches the tone of AgenticSorting and
+          Correspondence. The Correspondence explainer is a model of honest hedging ("a theorem of Tan
+          Lei, at so-called Misiurewicz points"); the Stable Marriage explainer is <em>less</em> hedged
+          than its own implementation warrants. The fix is mostly textual, not structural.
+        </p>
+      </section>
+
+      <section>
+        <h2>4. Semantic hygiene / naming</h2>
+        <ul>
+          <li>
+            <strong>"men" / "women"</strong> — standard field terminology (the problem is literally
+            called the Stable <em>Marriage</em> problem), fine to keep, though the framework's other apps
+            are neutral. Not a correctness issue.
+          </li>
+          <li>
+            <strong>"Asker" / "Asked"</strong> vs <strong>"proposer" / "receiver"</strong> — the EXPLAINER
+            uses "proposer/receiver"; the UI uses "Asker/Asked" (<code>:986–990</code>, badges "A"/"R" at
+            <code>:330–332</code>). Two vocabularies for the same role is a minor friction. Worse, as
+            noted, "Asker" is a per-event role here, not "the proposing side," so the word carries the
+            wrong implication.
+          </li>
+          <li>
+            <strong>"Rank"</strong> is used consistently as 1-based preference position
+            (<code>rank + 1</code> at <code>:307</code>, <code>:765</code>) — good and conventional.
+          </li>
+          <li>
+            <strong>"Consensus"</strong> — see §1f; defensible but conflates two technical notions.
+          </li>
+          <li>
+            <strong>"quality"</strong> / "popularity" — reasonable lay terms for a latent desirability
+            score; the EXPLAINER doesn't use "quality" so there's no clash.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>5. Accessibility of the idea &amp; visual legibility</h2>
+        <ul>
+          <li>
+            <strong>Colour-vision deficiency.</strong> The semantic palette is blue (men) / pink (women)
+            / green (matched) / amber (active) / purple (target) (<code>stableMarriage.css:14–20</code>).
+            Blue vs pink is fine for most CVD types; <strong>green-vs-amber</strong> (matched vs active)
+            is risky for deuteranopia/protanopia, and the rank badges lean on green/blue/amber
+            (<code>:331–347</code>) carrying ordinal meaning by hue alone. The "Rank: #k" text label
+            mitigates this (redundant encoding) — good. But the heatmap legend
+            <code>hsl(120 → 0)</code> green-to-red (<code>:673</code>) is the classic CVD-hostile ramp;
+            and the diverging blue↔pink with a near-white centre (<code>:677</code>) makes "no
+            difference" hard to distinguish from light cells. Consider a perceptually-uniform / CVD-safe
+            ramp (viridis-like for sequential; blue–white–orange for diverging).
+          </li>
+          <li>
+            <strong>Motion.</strong> The scale/glow transitions (<code>:271</code>, <code>:289–296</code>)
+            are tasteful and aid attention (they mark <em>which</em> pair is acting). No
+            <code>prefers-reduced-motion</code> handling, but the motion is functional, not decorative,
+            so this is low priority.
+          </li>
+          <li>
+            <strong>Rank badge hidden for n &gt; 30</strong> (<code>:318</code>, <code>:335</code>) — a
+            reasonable density decision, but it means at the default-ish larger populations the only
+            per-person quantitative feedback vanishes, leaving just colour. Combined with §2b (no visible
+            preference lists), large-n runs are essentially "watch dots turn green."
+          </li>
+          <li>
+            <strong>The "aha" reachability.</strong> A motivated learner <em>can</em> reach stability
+            understanding via the Stability tab (correct, honest). They are <em>unlikely</em> to reach the
+            proposer-optimality "aha" without already knowing to set bias to 100 and to read "Asker" as
+            "the men" — i.e., they need the insight before the tool gives it to them. That inverts the
+            pedagogical goal.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>6. Styling gaps vs other labs (pedagogical impact only)</h2>
+        <p>
+          The styling brief notes Stable Marriage lags other labs. From the pedagogy lens the gap that
+          matters is not chrome polish but <em>information density of the core object</em>:
+        </p>
+        <ul>
+          <li>
+            AgenticSorting and Correspondence render their mathematical object continuously and let you
+            <em>manipulate</em> it (drag the array / pick c). Stable Marriage renders <em>derived</em>
+            badges but hides the preference matrix — the actual mathematical input. A small always-on
+            "preference card" for the active proposer (their top few choices, with the current target
+            highlighted) would close most of the conceptual gap and is cheap.
+          </li>
+          <li>
+            The app does not register <code>useAppFunctions</code> or use the shared
+            <code>ControlPanel</code> primitives; it hand-rolls controls in a self-contained dark panel
+            (<code>:859–927</code>). That's a framework-consistency point for the maintainer hat, but it
+            also means the controls don't get the shell's consistent affordances. Neutral from a pure
+            math-truth standpoint.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Verdict</h2>
+        <p><strong>Overall: Concerns — endorse the stability story, do not ship the optimality story as written.</strong> The app is attractive and its stability machinery is genuinely correct, but it currently teaches a theorem its default model does not realize, and its Lab presents single-draw noise as a measured surface.</p>
+
+        <h3>Would-change, prioritized</h3>
+        <ol>
+          <li>
+            <span class="badge badge-bad">HIGH</span> <strong>Reconcile model and claim.</strong> Either
+            (a) make the EXPLAINER honest that this is a <em>mixed-proposer market</em> and state the
+            proposer-optimality theorem as "set bias to 100% (one-sided) to see it" — and change the
+            visualizer default to <code>bias = 100</code> so the first experience demonstrates the named
+            result; or (b) restrict the visualizer to one-sided GS and keep "bias" only in the Lab. Today
+            the EXPLAINER (the ? popup) describes textbook GS while the engine runs something else at its
+            default.
+          </li>
+          <li>
+            <span class="badge badge-bad">HIGH</span> <strong>Replicate Lab cells.</strong> Average each
+            (corrM, corrW) cell over <em>T</em> trials (expose <em>T</em>; even 10–20 helps), and soften
+            the README's "quantify" claim. A heatmap without replication is not honest as a Lab.
+          </li>
+          <li>
+            <span class="badge badge-warn">MEDIUM</span> <strong>Show <em>why</em> stability holds.</strong>
+            Render rejections explicitly (red flash + "already prefers current partner") and consider a
+            live "no blocking pair has ever been rejected" invariant. This is the missing "aha."
+          </li>
+          <li>
+            <span class="badge badge-warn">MEDIUM</span> <strong>Surface the preference list</strong> of
+            at least the active proposer (and ideally on hover for everyone). The defining input should
+            not be hidden.
+          </li>
+          <li>
+            <span class="badge badge-warn">MEDIUM</span> <strong>Disclose incomplete matchings.</strong>
+            Report the number of unmatched people; don't let "Stable ✓" imply "everyone paired." Note that
+            rank averages cover matched people only.
+          </li>
+          <li>
+            <span class="badge badge-ok">LOW</span> <strong>Unify vocabulary</strong> (proposer/receiver
+            vs Asker/Asked) and pick CVD-safe heatmap ramps; keep the redundant text rank labels.
+          </li>
+        </ol>
+        <p>
+          None of these require abandoning the (genuinely interesting) two-sided market — they require
+          being <em>honest about which model is on screen</em> and giving the learner the controls and
+          visible objects to see the theorem when they want it.
+        </p>
+      </section>
+
+      <section class="self-reflection">
+        <h2>Self-reflection</h2>
+        <ol>
+          <li><strong>What would you do with another session?</strong> Empirically confirm my claim that the mixed-proposer process is always stable but generally non-optimal, by instrumenting <code>runHeadlessSimulation</code> to compare its output against true man-optimal and woman-optimal GS over many seeds — turning my reasoning into measured evidence the maintainer can trust.</li>
+          <li><strong>What would you change about what you produced?</strong> I asserted "the two-sided process is still stable" from an invariant argument rather than a proof or experiment; it is correct but I'd prefer to have run the code to demonstrate it rather than reason about it.</li>
+          <li><strong>What were you not asked that you think is important?</strong> Whether the <em>two-sided market</em> framing is itself a legitimate teaching goal (it is — it's close to models of decentralized matching). The app might be more honest re-pitched as "a matching market with a proposer-bias knob" rather than as a Gale–Shapley demonstrator.</li>
+          <li><strong>What did we both overlook?</strong> Performance/UX of <code>verifyStability</code> at n=100 (O(n³)) and the fact that stability is only ever checked at the very end — there's a missed chance to teach stability as a live invariant, not a post-hoc audit.</li>
+          <li><strong>What did you find difficult?</strong> Separating "the code has a bug" from "the code faithfully implements a <em>different</em> model than the text claims." The latter is the real issue and is easy to mistake for the former.</li>
+          <li><strong>What would have made this task easier?</strong> Being able to run the dev server to watch the default behaviour at bias=50 and confirm the Asker/Asked gap a learner would actually see; I reviewed statically.</li>
+          <li><strong>Follow-up value:</strong>
+              <span class="badge badge-warn">MEDIUM</span> — conclusions are sound on static reading, but an empirical confirmation of the stable-but-not-optimal claim and a measured look at Lab cell variance would harden the two HIGH-priority recommendations.</li>
+        </ol>
+      </section>
+
+    </div><!-- /.content -->
+  </div><!-- /.body -->
+</main>
+</body>
+</html>
