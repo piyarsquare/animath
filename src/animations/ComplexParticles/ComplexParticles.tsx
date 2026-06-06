@@ -191,6 +191,8 @@ export default function ComplexParticles({
         uColourBy: { value: state.colourBy },
         uColourQty: { value: state.colourQuantity },
         uBrightnessQty: { value: state.brightnessQuantity },
+        uInCoord: { value: state.inputCoord },
+        uOutCoord: { value: state.outputCoord },
         uLogRadius: { value: state.logRadius ? 1 : 0 },
         uRotL: { value: { w: 1, v: new THREE.Vector3() } },
         uRotR: { value: { w: 1, v: new THREE.Vector3() } },

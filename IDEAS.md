@@ -35,7 +35,16 @@ turning while held.
 - Nice-to-have: a master "stop all spins" control, and respect reduced-motion
   preferences.
 
-### Polar coordinate toggles for input and/or output
+### Polar coordinate toggles for input and/or output — ✅ implemented
+
+Shipped as **Input chart** / **Output chart** pickers in the Domain section
+(`CoordMode`: Cartesian / Polar / Log-polar). Each replots its plane as
+`(|·|, arg)` or `(log|·|, arg)` before the 4-vector is assembled (via
+`chartCoord` in the shader, uniforms `uInCoord` / `uOutCoord`); colour keeps the
+raw Cartesian value. Log-polar output makes `exp` the identity; log-polar on both
+flattens `zⁿ`/roots into linear shears. Not yet done: sampling the input on a
+genuine `(r, α)` grid (currently the Cartesian sample is just replotted), and a
+phase-unwrap option for the `arg` seam. Original sketch:
 
 Let the input domain and the output be plotted in **polar** instead of Cartesian,
 independently, each with an optional **log-radius** sub-toggle.
@@ -270,7 +279,15 @@ ratio `z/f`, exactly what Hopf mode shows). Then:
   projection math in `viewpoint.ts` / `shaders/index.ts:186`. Keep it off by default
   (it's a study aid, and dense fibers get busy). Pairs with the "Hopf study" mode.
 
-### Color as a fourth channel (spend color on a dropped axis, not on phase)
+### Color as a fourth channel (spend color on a dropped axis, not on phase) — ⚠️ largely covered
+
+Effectively achievable today by combining a **Drop axis** projection with the
+**Hue**/**Brightness** quantity pickers: drop a coordinate spatially, then bind
+hue (or brightness) to the matching source + quantity — e.g. Drop V in space and
+set Hue = Imag of the Range, which paints the discarded `v = Im f` onto color for
+a no-projection-loss 4-D view. A dedicated auto-binding "Drop → color" variant
+was judged redundant given those controls already exist; revisit it as the colour
+row of the unified channel-mapping matrix below. Original sketch:
 
 **Motivation.** Today color is **domain coloring** (`arg`→hue, `|·|`→value of `z` or
 `f`; `calcColour` in `ComplexParticles/shaders/index.ts:201`) — but that information

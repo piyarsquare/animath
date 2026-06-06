@@ -29,6 +29,18 @@ export enum ColourQuantity {
   Imag = 3
 }
 
+/** How the input (z) and output (f) planes are charted before being assembled
+ *  into the 4-vector: Cartesian (Re, Im), Polar (|·|, arg), or Log-polar
+ *  (log|·|, arg). In log-polar output, exp becomes the identity; in log-polar on
+ *  both, zⁿ / roots flatten into linear shears. Colour still uses Cartesian z/f. */
+export enum CoordMode {
+  Cartesian = 0,
+  Polar = 1,
+  LogPolar = 2
+}
+
+export const coordModeNames = ['Cartesian', 'Polar', 'Log-polar'] as const;
+
 export enum JitterMode {
   /** Scatter the sampling: perturb the domain point, then evaluate f there, so
    *  the particle stays exactly on the graph surface of f (a denser/irregular

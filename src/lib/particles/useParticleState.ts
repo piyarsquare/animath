@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { ProjectionMode } from '../viewpoint';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import { usePersistentState } from '../usePersistentState';
-import { ViewPoint, ColorStyle, ColourBy, ColourQuantity, JitterMode, Axis, motionModes, dropModes } from './types';
+import { ViewPoint, ColorStyle, ColourBy, ColourQuantity, CoordMode, JitterMode, Axis, motionModes, dropModes } from './types';
 
 export interface UseParticleStateOptions {
   count?: number;
@@ -83,6 +83,10 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // from log(1+|z|) and log(1+|f|) instead of the raw magnitudes, spreading the
   // nesting across orders of magnitude. Only affects the Torus projection.
   const [logRadius, setLogRadius] = usePersistentState(pk('logRadius'), false);
+  // Coordinate chart for the input z and output f planes before they form the
+  // 4-vector (Cartesian / Polar / Log-polar). Colour stays Cartesian.
+  const [inputCoord, setInputCoord] = usePersistentState<CoordMode>(pk('inputCoord'), CoordMode.Cartesian);
+  const [outputCoord, setOutputCoord] = usePersistentState<CoordMode>(pk('outputCoord'), CoordMode.Cartesian);
 
   // ---- View / projection state ----
   const [viewType, setViewType] = usePersistentState<ProjectionMode>(pk('viewType'), ProjectionMode.Perspective);
@@ -197,6 +201,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     colourQuantity, setColourQuantity,
     brightnessQuantity, setBrightnessQuantity,
     logRadius, setLogRadius,
+    inputCoord, setInputCoord,
+    outputCoord, setOutputCoord,
 
     // View state + setters
     viewType, setViewType,

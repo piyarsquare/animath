@@ -40,6 +40,8 @@ uniform int   uColourStyle;
 uniform int   uColourBy;
 uniform int   uColourQty;
 uniform int   uBrightnessQty;
+uniform int   uInCoord;
+uniform int   uOutCoord;
 uniform int   uLogRadius;
 attribute float size;
 attribute vec4 seed;
@@ -274,13 +276,21 @@ vec3 calcColour(vec2 z, vec2 f){
     col = mix(vec3(dot(col, vec3(0.3333))), col, saturation);
     return col * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
 }
+// Chart a complex value before it enters the 4-vector: Cartesian (0), Polar (1)
+// = (|c|, arg c), or Log-polar (2) = (log|c|, arg c). Colour keeps the raw value.
+vec2 chartCoord(vec2 c, int mode){
+  if(mode==0) return c;
+  float r = length(c);
+  float a = atan(c.y, c.x);
+  return vec2(mode==2 ? log(r+1e-6) : r, a);
+}
 // Jitter has two modes (uJitterMode). 0 = Scatter the sampling: perturb the
 // domain point z by the 4D seed's xy, then evaluate f there, so the particle
 // stays exactly on the graph surface of f. 1 = Fuzz the cloud: evaluate f at the
 // clean z, then add the full independent 4D offset to (x, y, Re f, Im f), pushing
 // the point off the surface on all four axes. Colour uses the effective z/f, so
 // it stays consistent in both modes.
-void main(){vec2 z = vec2(position.x, position.z);vec4 jit = (seed*2. - 1.) * jitterAmp;if(uJitterMode==0) z += jit.xy;vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec4 p4 = vec4(z.x, z.y, f.x, f.y);if(uJitterMode==1) p4 += jit;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f);}`;
+void main(){vec2 z = vec2(position.x, position.z);vec4 jit = (seed*2. - 1.) * jitterAmp;if(uJitterMode==0) z += jit.xy;vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec2 zPlot = chartCoord(z, uInCoord);vec2 fPlot = chartCoord(f, uOutCoord);vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);if(uJitterMode==1) p4 += jit;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f);}`;
 
 export const fragmentShader = `
 uniform float opacity;

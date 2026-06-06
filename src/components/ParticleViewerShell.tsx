@@ -10,7 +10,7 @@ import { useResponsive } from '../styles/responsive';
 import { planes, Plane } from '../math/constants';
 import { clearPersistedState } from '../lib/usePersistentState';
 import {
-  ColorStyle, ColourBy, ColourQuantity, JitterMode, AXIS_COLORS,
+  ColorStyle, ColourBy, ColourQuantity, CoordMode, coordModeNames, JitterMode, AXIS_COLORS,
   shapeNames, textureNames, viewTypes, motionModes,
   useGestureRotation,
 } from '../lib/particles';
@@ -232,6 +232,18 @@ export default function ParticleViewerShell({
               <NumberInput label="Y max" value={state.yMax} step={0.5} onChange={state.setYMax} />
             </>
           )}
+          <Select
+            label="Input chart"
+            options={coordModeNames.map((name, i) => ({ value: i as CoordMode, label: name }))}
+            value={state.inputCoord}
+            onChange={state.setInputCoord}
+          />
+          <Select
+            label="Output chart"
+            options={coordModeNames.map((name, i) => ({ value: i as CoordMode, label: name }))}
+            value={state.outputCoord}
+            onChange={state.setOutputCoord}
+          />
         </Section>
 
         <Section title="Camera" icon="◐" defaultOpen>

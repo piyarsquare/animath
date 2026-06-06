@@ -52,6 +52,16 @@ directly, so the view *projects* it down into the 3-D scene on screen.
 - **Drop axis** — the bluntest projection: just forget one of the four
   coordinates and keep the other three (an orthographic slice).
 
+## Coordinate charts (Domain panel)
+
+The **Input chart** and **Output chart** pickers replot the input `z` and the
+output `f` in **Polar** `(|·|, arg)` or **Log-polar** `(log|·|, arg)` before the
+4-D point is assembled (color still uses the raw Cartesian values). These are the
+natural charts for several families: in **log-polar output**, `eᶻ` becomes the
+identity (`log|eᶻ| = Re z`, `arg eᶻ = Im z`), so its trumpet flattens to a plane;
+with **both** in log-polar, `zⁿ` and the roots `√z`/`∛z` become *linear shears*,
+so their Riemann sheets flatten into evenly-spaced tilted planes.
+
 ## 4-D rotations (the quarter-turn controls)
 
 In 3-D you rotate *around an axis*; in 4-D you rotate *in a plane*. There are
