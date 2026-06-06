@@ -112,11 +112,11 @@ export default function ComplexParticles({
         alpha: state.adaptiveAlpha,
       });
     } else {
-      rebuildGeometryBuffers(geom, state.particleCount, bxMin, bxMax, byMin, byMax);
+      rebuildGeometryBuffers(geom, state.particleCount, bxMin, bxMax, byMin, byMax, state.samplePattern);
     }
   }, [
     state.adaptive, state.adaptiveAlpha, state.particleCount,
-    state.extentX, state.extentY, state.axisScale,
+    state.extentX, state.extentY, state.axisScale, state.samplePattern,
     state.boundsLock, state.xMin, state.xMax, state.yMin, state.yMax,
     functionIndex, expP, expQ, quadA, quadB, quadC,
   ]);
@@ -251,7 +251,7 @@ export default function ComplexParticles({
       state.texturesRef.current = textures;
 
       const [bxMin, bxMax, byMin, byMax] = effectiveBounds();
-      const geometry = createParticleGeometry(state.particleCount, bxMin, bxMax, byMin, byMax);
+      const geometry = createParticleGeometry(state.particleCount, bxMin, bxMax, byMin, byMax, state.samplePattern);
       state.geometryRef.current = geometry;
 
       state.materialsRef.current = [];

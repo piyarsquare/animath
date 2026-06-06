@@ -10,7 +10,8 @@ import { useResponsive } from '../styles/responsive';
 import { planes, Plane } from '../math/constants';
 import { clearPersistedState } from '../lib/usePersistentState';
 import {
-  ColorStyle, ColourBy, ColourQuantity, CoordMode, coordModeNames, JitterMode, AXIS_COLORS,
+  ColorStyle, ColourBy, ColourQuantity, CoordMode, coordModeNames,
+  SamplePattern, samplePatternNames, JitterMode, AXIS_COLORS,
   shapeNames, textureNames, viewTypes, motionModes,
   useGestureRotation,
 } from '../lib/particles';
@@ -210,6 +211,12 @@ export default function ParticleViewerShell({
             ]}
             value={state.axisScale}
             onChange={state.setAxisScale}
+          />
+          <Select
+            label="Sampling"
+            options={samplePatternNames.map((name, i) => ({ value: i as SamplePattern, label: name }))}
+            value={state.samplePattern}
+            onChange={state.setSamplePattern}
           />
           <Checkbox
             label="± symmetric bounds"

@@ -42,9 +42,9 @@ Shipped as **Input chart** / **Output chart** pickers in the Domain section
 `(|·|, arg)` or `(log|·|, arg)` before the 4-vector is assembled (via
 `chartCoord` in the shader, uniforms `uInCoord` / `uOutCoord`); colour keeps the
 raw Cartesian value. Log-polar output makes `exp` the identity; log-polar on both
-flattens `zⁿ`/roots into linear shears. Not yet done: sampling the input on a
-genuine `(r, α)` grid (currently the Cartesian sample is just replotted), and a
-phase-unwrap option for the `arg` seam. Original sketch:
+flattens `zⁿ`/roots into linear shears. A genuine `(r, α)` input grid now exists
+as the **Polar** option of the new domain **Sampling** picker (see below). Not yet
+done: a phase-unwrap option for the `arg` seam. Original sketch:
 
 Let the input domain and the output be plotted in **polar** instead of Cartesian,
 independently, each with an optional **log-radius** sub-toggle.
@@ -327,3 +327,17 @@ brightness).
   does **not** reveal the interlocking circles — "interlocking" is an embedded-in-ℝ³
   phenomenon you only get by drawing the fiber curves (above). Color can label
   *which* fiber a point belongs to, not make two loops visibly thread each other.
+
+### Domain sampling patterns (grid / polar / rings / spokes / web / squares / random) — ✅ implemented
+
+Shipped a **Sampling** picker in the Domain section (`SamplePattern`) that lays the
+domain points out as a Cartesian **Grid** (default), **Polar** lattice, concentric
+**Rings**, radial **Spokes**, a **Web** (rings + spokes), concentric **Squares**, or
+**Random** scatter. Built in `createParticleGeometry.ts` (`fillPattern`); radial
+patterns sample a disk of radius max(halfX, halfY) centred on the box, the others
+use the box; each fills exactly `count` points. Beyond the visual variety, **Polar**
+spreads points evenly in `arg z`, which keeps near-linear maps (`f ≈ b·z`) crisp in
+the Hopf/Torus view (a Cartesian grid under-samples one side of the fiber circle —
+verified the faint fraction drops 23% → 0% at `b = 2`). Bypassed while adaptive
+density is on. Open: let radial patterns honour an annulus (`rMin > 0`); a phyllotaxis
+/ sunflower option; and per-pattern density controls (ring/spoke counts).

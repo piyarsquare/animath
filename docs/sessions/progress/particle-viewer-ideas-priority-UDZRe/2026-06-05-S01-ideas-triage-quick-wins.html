@@ -121,6 +121,21 @@
       <section class="log">
         <h2>Working notes</h2>
         <ol class="timeline">
+          <li class="tl" data-type="finding">
+            <p class="tl-time">02:30</p>
+            <span class="chip chip-finding">Finding</span>
+            <h3>Diagnosed the "fuzzy Torus circle" + added domain sampling patterns</h3>
+            <p class="why"><strong>Why:</strong> User: with a=0 (f=b·z), b=1 gives an exact circle but b=2 is fuzzy even with jitter off.</p>
+            <p>Worked it out numerically: f=b·z is one Hopf fiber → the whole cloud is
+            one circle; the fuzz is <em>uneven sampling</em> — the Torus projection
+            stretches the loop near its pole (proximity = |f|/|z| = b), so a uniform
+            Cartesian grid under-samples one side (~23% of the loop faint at b=2). Fix:
+            a domain <strong>Sampling</strong> picker (<code>SamplePattern</code>: Grid /
+            Polar / Rings / Spokes / Web / Squares / Random) in
+            <code>createParticleGeometry.fillPattern</code>. <strong>Polar</strong> spreads
+            points evenly in arg z → faint fraction 23% → 0% at b=2 (verified). (Corrected
+            an earlier wrong guess that blamed jitter.)</p>
+          </li>
           <li class="tl" data-type="code">
             <p class="tl-time">01:55</p>
             <span class="chip chip-code">Code</span>

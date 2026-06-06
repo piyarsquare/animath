@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { ProjectionMode } from '../viewpoint';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import { usePersistentState } from '../usePersistentState';
-import { ViewPoint, ColorStyle, ColourBy, ColourQuantity, CoordMode, JitterMode, Axis, motionModes, dropModes } from './types';
+import { ViewPoint, ColorStyle, ColourBy, ColourQuantity, CoordMode, SamplePattern, JitterMode, Axis, motionModes, dropModes } from './types';
 
 export interface UseParticleStateOptions {
   count?: number;
@@ -63,6 +63,9 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [yMin, setYMin] = usePersistentState(pk('yMin'), -COMPLEX_PARTICLES_DEFAULTS.initial.extentY);
   const [yMax, setYMax] = usePersistentState(pk('yMax'), COMPLEX_PARTICLES_DEFAULTS.initial.extentY);
   const [axisScale, setAxisScale] = usePersistentState(pk('axisScale'), COMPLEX_PARTICLES_DEFAULTS.initial.axisScale);
+  // How the (non-adaptive) domain grid is laid out: Cartesian grid, polar,
+  // rings, spokes, web, squares, or random scatter.
+  const [samplePattern, setSamplePattern] = usePersistentState<SamplePattern>(pk('samplePattern'), SamplePattern.Grid);
   /** When true, sample more densely where |f'(z)| is large. */
   const [adaptive, setAdaptive] = usePersistentState(pk('adaptive'), COMPLEX_PARTICLES_DEFAULTS.initial.adaptive);
   /** Exponent biasing strength for adaptive sampling. */
@@ -193,6 +196,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     yMax, setYMax,
     axisScale, setAxisScale,
     axisScaleRef,
+    samplePattern, setSamplePattern,
     adaptive, setAdaptive,
     adaptiveAlpha, setAdaptiveAlpha,
     objectMode, setObjectMode,

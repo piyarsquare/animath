@@ -66,6 +66,16 @@ identity (`log|eᶻ| = Re z`, `arg eᶻ = Im z`), so its trumpet flattens to a p
 with **both** in log-polar, `zⁿ` and the roots `√z`/`∛z` become *linear shears*,
 so their Riemann sheets flatten into evenly-spaced tilted planes.
 
+## Sampling pattern (Domain panel)
+
+**Sampling** chooses how the domain points are laid out before `f` is applied:
+**Grid** (the Cartesian default), **Polar**, **Rings**, **Spokes**, **Web**,
+**Squares**, or **Random**. Beyond looking different, the layout changes which
+structure is sampled evenly: **Polar** spreads points uniformly in `arg z`, which
+keeps near-linear maps (`f ≈ b·z`) crisp in the Hopf/Torus view — where a uniform
+Cartesian grid would leave one side of the fiber circle under-sampled. (Sampling
+is bypassed while **Adaptive density** is on.)
+
 ## 4-D rotations (the quarter-turn controls)
 
 In 3-D you rotate *around an axis*; in 4-D you rotate *in a plane*. There are
