@@ -76,6 +76,12 @@ export interface EngineOptions {
   /** Flat worlds: floor opacity, 0 (clear glass) → 1 (solid). Lower it to see
    *  the columns/trees on the other side of the world. */
   floorOpacity: number;
+  /** Flat worlds: tint each tiled copy of the fundamental domain a different
+   *  colour, so the universal-cover tiling is visible as you walk between cells. */
+  colorCells: boolean;
+  /** Spherical worlds: planet radius in world units. A bigger planet dilutes the
+   *  (fixed-by-Gauss–Bonnet) curvature, so it feels locally flatter. */
+  planetRadius: number;
 }
 
 /**
@@ -91,6 +97,31 @@ export interface FlatMapState {
   hz: number;
   flipped: boolean;
   klein: boolean;
+}
+
+/** A landmark's position on the unit sphere, in (latitude, longitude) radians,
+ *  plus its identifying colour — consumed by the spherical mini-map. */
+export interface SphereLandmark {
+  lat: number;
+  lon: number;
+  color: number;
+}
+
+/**
+ * Snapshot of the player on a spherical world, for the mini-map: the player's
+ * latitude/longitude (radians) and compass bearing (0 = toward the north pole,
+ * increasing clockwise/eastward), the fixed landmark set, and whether antipodal
+ * points are identified (ℝP²), in which case each landmark also has a twin at the
+ * antipode.
+ */
+export interface SphereMapState {
+  lat: number;
+  lon: number;
+  bearing: number;
+  landmarks: SphereLandmark[];
+  rp2: boolean;
+  /** Whether the two cover hemispheres are currently tinted warm/cool. */
+  colored: boolean;
 }
 
 /**
@@ -116,7 +147,11 @@ export interface WorldEngine {
   setMiniMap?(on: boolean): void;
   setProjectAvatar?(on: boolean): void;
   setFloorOpacity?(o: number): void;
+  setColorCells?(on: boolean): void;
+  setRadius?(r: number): void;
   clearWriting?(): void;
   /** Flat worlds only: current position/heading in the fundamental domain. */
   getMapState?(): FlatMapState | null;
+  /** Spherical worlds only: current position/heading + landmarks on the sphere. */
+  getSphereState?(): SphereMapState | null;
 }

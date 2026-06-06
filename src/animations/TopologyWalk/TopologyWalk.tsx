@@ -6,7 +6,7 @@ import { Section, Slider, Select, Pills, Checkbox } from '../../components/Contr
 import { THEMES, DEFAULT_THEME } from './themes';
 import { DEFAULT_PARAMS } from './corridorGeometry';
 import {
-  Family, SURFACES, surfaceDef, EngineDeps, EngineOptions, WorldEngine, FlatMapState,
+  Family, SURFACES, surfaceDef, EngineDeps, EngineOptions, WorldEngine, FlatMapState, SphereMapState,
 } from './engine';
 import { makeCorridorEngine } from './corridorEngine';
 import { makeFlatEngine } from './flatEngine';
@@ -55,6 +55,8 @@ export default function TopologyWalk() {
   const [miniMap, setMiniMap] = useState(true);
   const [projectAvatar, setProjectAvatar] = useState(true);
   const [floorOpacity, setFloorOpacity] = useState(0.6);
+  const [colorCells, setColorCells] = useState(false);
+  const [planetRadius, setPlanetRadius] = useState(30);
   const [wallText, setWallText] = useState('MÖBIUS');
 
   const def = surfaceDef(surfaceId);
@@ -83,7 +85,7 @@ export default function TopologyWalk() {
   // Remember the last surface chosen in each world, so toggling Corridor↔Flat
   // returns you to where you were rather than always resetting.
   const lastByFamily = useRef<Record<Family, string>>({ corridor: 'mobius', flat: 'klein', spherical: 'sphere' });
-  const optsRef = useRef<EngineOptions>({ surfaceId, width, themeId, ambientMul, markers, bloom, miniMap, projectAvatar, floorOpacity });
+  const optsRef = useRef<EngineOptions>({ surfaceId, width, themeId, ambientMul, markers, bloom, miniMap, projectAvatar, floorOpacity, colorCells, planetRadius });
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
   const requestStamp = useCallback(() => { stampRef.current = true; }, []);
@@ -148,10 +150,13 @@ export default function TopologyWalk() {
   useEffect(() => { optsRef.current.miniMap = miniMap; ctxRef.current?.engine.setMiniMap?.(miniMap); }, [miniMap]);
   useEffect(() => { optsRef.current.projectAvatar = projectAvatar; ctxRef.current?.engine.setProjectAvatar?.(projectAvatar); }, [projectAvatar]);
   useEffect(() => { optsRef.current.floorOpacity = floorOpacity; ctxRef.current?.engine.setFloorOpacity?.(floorOpacity); }, [floorOpacity]);
+  useEffect(() => { optsRef.current.colorCells = colorCells; ctxRef.current?.engine.setColorCells?.(colorCells); }, [colorCells]);
+  useEffect(() => { optsRef.current.planetRadius = planetRadius; ctxRef.current?.engine.setRadius?.(planetRadius); }, [planetRadius]);
 
   const clearTrail = useCallback(() => { ctxRef.current?.engine.clearTrail(); }, []);
   const clearWriting = useCallback(() => { ctxRef.current?.engine.clearWriting?.(); }, []);
   const getMapState = useCallback(() => ctxRef.current?.engine.getMapState?.() ?? null, []);
+  const getSphereState = useCallback(() => ctxRef.current?.engine.getSphereState?.() ?? null, []);
 
   useEffect(() => {
     const map: Record<string, MoveKey> = {
@@ -219,6 +224,8 @@ export default function TopologyWalk() {
 
       {isFlat && miniMap && <FlatMiniMap getState={getMapState} />}
 
+      {isSpherical && miniMap && <SphereMiniMap getState={getSphereState} />}
+
       <div style={{
         position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
         color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
@@ -247,11 +254,25 @@ export default function TopologyWalk() {
           {isFlat && (
             <Checkbox label="Project avatar into every cell" checked={projectAvatar} onChange={setProjectAvatar} />
           )}
-          {isFlat && (
-            <Checkbox label="Mini-map (fundamental domain)" checked={miniMap} onChange={setMiniMap} />
+          {(isFlat || isSpherical) && (
+            <Checkbox
+              label={isSpherical ? 'Mini-map (sphere)' : 'Mini-map (fundamental domain)'}
+              checked={miniMap}
+              onChange={setMiniMap}
+            />
+          )}
+          {(isFlat || isSpherical) && (
+            <Checkbox
+              label={isSpherical ? 'Colour the cover hemispheres' : 'Colour each cover cell'}
+              checked={colorCells}
+              onChange={setColorCells}
+            />
           )}
           {isFlat && (
             <Slider label="Floor opacity" value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
+          )}
+          {isSpherical && (
+            <Slider label="Planet radius" value={planetRadius} min={12} max={90} step={2} onChange={setPlanetRadius} format={(v) => `${Math.round(v)} m`} />
           )}
           <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
           <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>
@@ -440,4 +461,110 @@ function drawFlatMap(ctx: CanvasRenderingContext2D, size: number, st: FlatMapSta
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.fillText(klein ? (st.flipped ? 'Klein · mirror side' : 'Klein bottle') : 'Flat torus', size / 2, size - 7);
+}
+
+/**
+ * An equirectangular (latitude × longitude) map of the spherical world: a grid,
+ * the emphasised equator + hemisphere-seam meridian, the colour-coded landmarks
+ * (plus their antipodal twins on ℝP²), and a chevron at the player's position
+ * pointing along the compass bearing. When the cover hemispheres are tinted in 3D,
+ * the map tints its two halves to match — the seam is the gluing circle of ℝP².
+ */
+function SphereMiniMap({ getState }: { getState: () => SphereMapState | null }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    const cvs = canvasRef.current; if (!cvs) return;
+    const ctx = cvs.getContext('2d'); if (!ctx) return;
+    const SIZE = 150;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cvs.width = SIZE * dpr; cvs.height = SIZE * dpr;
+    ctx.scale(dpr, dpr);
+    let raf = 0;
+    const loop = () => { drawSphereMap(ctx, SIZE, getState()); raf = requestAnimationFrame(loop); };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [getState]);
+  return (
+    <div style={{
+      position: 'absolute', top: 12, right: 12, width: 150, height: 150,
+      pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.18)',
+      borderRadius: 8, boxShadow: '0 4px 14px rgba(0,0,0,0.45)', overflow: 'hidden',
+    }}>
+      <canvas ref={canvasRef} style={{ width: 150, height: 150, display: 'block' }} />
+      <div style={{
+        position: 'absolute', top: 4, left: 8, fontSize: 10, letterSpacing: '0.08em',
+        color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase',
+      }}>Map</div>
+    </div>
+  );
+}
+
+const TAU = Math.PI * 2;
+
+function drawSphereMap(ctx: CanvasRenderingContext2D, size: number, st: SphereMapState | null) {
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = 'rgba(10,12,20,0.72)';
+  ctx.fillRect(0, 0, size, size);
+
+  const m = 16, w = size - 2 * m, x0 = m, y0 = m;
+  // map a (lat,lon) to canvas: lon -π..π → left..right, lat +π/2..-π/2 → top..bottom
+  const px = (lon: number) => x0 + ((((lon + Math.PI) % TAU) + TAU) % TAU) / TAU * w;
+  const py = (lat: number) => y0 + (Math.PI / 2 - lat) / Math.PI * w;
+
+  // domain interior (+ optional hemisphere tint matching the 3D cover colours)
+  ctx.fillStyle = 'rgba(40,54,80,0.5)';
+  ctx.fillRect(x0, y0, w, w);
+  if (st && st.colored) {
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = '#ff7a4d'; ctx.fillRect(x0, y0, w / 2, w);
+    ctx.fillStyle = '#4da6ff'; ctx.fillRect(x0 + w / 2, y0, w / 2, w);
+    ctx.globalAlpha = 1;
+  }
+
+  // graticule
+  ctx.strokeStyle = 'rgba(156,192,216,0.28)'; ctx.lineWidth = 1;
+  for (let i = 1; i < 6; i++) {
+    const gx = x0 + (i / 6) * w; ctx.beginPath(); ctx.moveTo(gx, y0); ctx.lineTo(gx, y0 + w); ctx.stroke();
+  }
+  for (let j = 1; j < 4; j++) {
+    const gy = y0 + (j / 4) * w; ctx.beginPath(); ctx.moveTo(x0, gy); ctx.lineTo(x0 + w, gy); ctx.stroke();
+  }
+  // emphasised equator + hemisphere seam meridian (lon = ±π/2 in this −π..π frame
+  // are the seam edges; the centre line lon = 0 is the prime meridian)
+  ctx.strokeStyle = 'rgba(230,242,251,0.65)'; ctx.lineWidth = 1.6;
+  const yeq = y0 + w / 2; ctx.beginPath(); ctx.moveTo(x0, yeq); ctx.lineTo(x0 + w, yeq); ctx.stroke();
+  ctx.strokeStyle = 'rgba(230,242,251,0.45)';
+  const xseam = x0 + w / 2; ctx.beginPath(); ctx.moveTo(xseam, y0); ctx.lineTo(xseam, y0 + w); ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1; ctx.strokeRect(x0, y0, w, w);
+
+  if (!st) return;
+
+  // landmarks (and antipodal twins on ℝP², drawn dimmer)
+  const dot = (lat: number, lon: number, color: number, alpha: number) => {
+    ctx.beginPath(); ctx.arc(px(lon), py(lat), 3.4, 0, TAU);
+    ctx.fillStyle = '#' + new THREE.Color(color).getHexString();
+    ctx.globalAlpha = alpha; ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.stroke();
+  };
+  for (const lm of st.landmarks) {
+    if (st.rp2) dot(-lm.lat, lm.lon + Math.PI, lm.color, 0.4);
+    dot(lm.lat, lm.lon, lm.color, 1);
+  }
+
+  // player marker: chevron at (lat,lon), pointing up (north) at bearing 0 then
+  // rotated clockwise by the compass bearing.
+  ctx.save(); ctx.translate(px(st.lon), py(st.lat)); ctx.rotate(st.bearing);
+  ctx.beginPath();
+  ctx.moveTo(0, -8); ctx.lineTo(5.5, 5); ctx.lineTo(0, 2); ctx.lineTo(-5.5, 5); ctx.closePath();
+  ctx.fillStyle = '#8ef0ff';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.65)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.restore();
+
+  ctx.font = '9px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText(st.rp2 ? 'ℝP² · antipodes glued' : 'Sphere', size / 2, size - 6);
 }

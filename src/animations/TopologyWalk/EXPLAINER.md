@@ -73,7 +73,10 @@ onto a **curved** world — a small planet — which is the third **Setting**:
 - **Sphere:** an ordinary round world (χ = 2). Walk a great circle and you return
   home after one lap, **facing the same way**. The curvature is real — a big
   planet feels flat underfoot (that's why Earth does), a small one curves away at
-  your feet — but you can never get rid of it: the total is pinned at 2π·χ.
+  your feet — but you can never get rid of it: the total is pinned at 2π·χ. The
+  **Planet radius** slider lets you feel exactly this: shrink the planet and the
+  horizon bends up at your toes; grow it and the ground flattens out, though the
+  *total* curvature never budges.
 - **Projective plane (ℝP²):** the *same* sphere with **antipodal points glued**
   (every point is identified with the one straight through the centre, χ = 1). The
   planet is decorated symmetrically, so the near and far sides look identical — but
@@ -84,6 +87,21 @@ onto a **curved** world — a small planet — which is the third **Setting**:
   and ℝP² is famously impossible to build in 3-D without the surface passing
   through itself (the **cross-cap**, **Roman surface**, and **Boy's surface** are
   the three classic ways to try).
+
+Two readouts help you keep your bearings on the planet:
+
+- **Mini-map (sphere):** a flattened latitude × longitude map with the numbered,
+  colour-coded landmarks (their **antipodal twins** also appear, dimmed, on ℝP²)
+  and an arrow for you, pointing along your compass bearing.
+- **Colour the cover hemispheres:** the sphere is the **double cover** of ℝP² —
+  the two longitudinal halves are antipodal twins, so each holds exactly one of
+  every glued pair. Tinting them **warm vs cool** makes the two cover sheets
+  visible: cross the seam meridian and the ground changes colour, telling you
+  you've walked into the *other* representative of the same ℝP² point. (On the
+  plain sphere it's just two painted hemispheres.) The flat worlds have the
+  matching **Colour each cover cell** knob, which tints every tiled copy of the
+  fundamental domain so you can watch yourself cross from one cover cell to the
+  next.
 
 ## Reading the footprints
 

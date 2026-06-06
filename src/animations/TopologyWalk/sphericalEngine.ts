@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { makeFootprintTrail } from './footprints';
 import { makeCharacter } from './character';
-import { EngineDeps, EngineOptions, FrameInput, WorldEngine } from './engine';
+import { EngineDeps, EngineOptions, FrameInput, WorldEngine, SphereMapState } from './engine';
 
 /**
  * The **positive-curvature** walk: a first-person stroll on a small planet.
@@ -25,26 +25,76 @@ import { EngineDeps, EngineOptions, FrameInput, WorldEngine } from './engine';
  * planet feels locally flat while a small one shows its shape at a glance.
  */
 
-const R = 30;          // planet radius
+const R0 = 30;         // default planet radius
 const EYE = 1.7;
 const TRAIL_MAX = 900;
 const TRAIL_SPACING = 1.6;
 const MAX_PITCH = 1.3;
 
-interface Beacon { dir: THREE.Vector3; color: number }
+interface Beacon { dir: THREE.Vector3; color: number; label: string }
 
 // Landmarks scattered (deliberately *not* antipodally symmetric on their own, so
 // the plain sphere looks different front-to-back; ℝP² adds the antipodal twins).
+// Each carries a distinct colour and a numbered label so individual landmarks are
+// easy to name and re-recognise after a lap — and so the mini-map can colour-code
+// them to match.
 const BEACONS: Beacon[] = [
   // Offset from the north pole so it sits a few metres to the *side* of the
   // spawn point (player starts at up = +Y) instead of swallowing the camera.
-  { dir: new THREE.Vector3(0.22, 1, -0.18).normalize(), color: 0xff5a5a },
-  { dir: new THREE.Vector3(1, 0.2, 0.1).normalize(), color: 0x5ad1ff },
-  { dir: new THREE.Vector3(0.1, 0.1, 1).normalize(), color: 0x8aff6a },
-  { dir: new THREE.Vector3(-0.8, 0.3, 0.6).normalize(), color: 0xffd24a },
-  { dir: new THREE.Vector3(0.5, -0.5, -0.7).normalize(), color: 0xc08aff },
-  { dir: new THREE.Vector3(-0.4, -0.7, 0.3).normalize(), color: 0xff9a3d },
+  { dir: new THREE.Vector3(0.22, 1, -0.18).normalize(), color: 0xff5a5a, label: '1' },
+  { dir: new THREE.Vector3(1, 0.2, 0.1).normalize(), color: 0x5ad1ff, label: '2' },
+  { dir: new THREE.Vector3(0.1, 0.1, 1).normalize(), color: 0x8aff6a, label: '3' },
+  { dir: new THREE.Vector3(-0.8, 0.3, 0.6).normalize(), color: 0xffd24a, label: '4' },
+  { dir: new THREE.Vector3(0.5, -0.5, -0.7).normalize(), color: 0xc08aff, label: '5' },
+  { dir: new THREE.Vector3(-0.4, -0.7, 0.3).normalize(), color: 0xff9a3d, label: '6' },
+  // A second wave, fleshing out the hemispheres so there is always a landmark in
+  // view and the lat/long position is unambiguous.
+  { dir: new THREE.Vector3(-1, 0.15, -0.2).normalize(), color: 0xff6ad5, label: '7' },
+  { dir: new THREE.Vector3(0.3, 0.5, -1).normalize(), color: 0x4ad6c0, label: '8' },
+  { dir: new THREE.Vector3(0.9, -0.3, 0.5).normalize(), color: 0xe0e060, label: '9' },
+  { dir: new THREE.Vector3(0, -1, 0.05).normalize(), color: 0xb0b0c0, label: '10' },
+  { dir: new THREE.Vector3(-0.5, 0.4, 0.9).normalize(), color: 0x7a9bff, label: '11' },
+  { dir: new THREE.Vector3(0.6, 0.7, 0.4).normalize(), color: 0xff8a8a, label: '12' },
 ];
+
+/** A camera-facing number badge for a beacon (so a landmark is identifiable from
+ *  any direction). On the ℝP² antipodal twin the parent's point reflection flips
+ *  the badge, which reads as the mirror-reversed label — exactly the cue we want. */
+function makeLabelSprite(label: string, color: number, mats: THREE.Material[]): THREE.Sprite {
+  const s = 128;
+  const cvs = document.createElement('canvas'); cvs.width = cvs.height = s;
+  const ctx = cvs.getContext('2d')!;
+  ctx.clearRect(0, 0, s, s);
+  ctx.beginPath(); ctx.arc(s / 2, s / 2, s * 0.42, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(8,10,16,0.78)'; ctx.fill();
+  ctx.lineWidth = 7; ctx.strokeStyle = '#' + new THREE.Color(color).getHexString(); ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${Math.round(s * 0.5)}px system-ui, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, s / 2, s * 0.54);
+  const tex = new THREE.CanvasTexture(cvs);
+  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const mat = new THREE.SpriteMaterial({ map: tex, depthTest: true, transparent: true });
+  mats.push(mat);
+  const sp = new THREE.Sprite(mat);
+  sp.scale.set(2.4, 2.4, 1);
+  return sp;
+}
+
+/** A glowing marker that stands radially on the planet's surface, topped by a
+ *  numbered badge. */
+function makeBeacon(b: Beacon, geos: THREE.BufferGeometry[], mats: THREE.Material[]): THREE.Group {
+  const g = new THREE.Group();
+  const coneGeo = new THREE.ConeGeometry(0.9, 3, 16);
+  const tipGeo = new THREE.SphereGeometry(0.55, 16, 12);
+  // DoubleSide so the antipodal (reflected) twin used for ℝP² isn't back-face culled.
+  const mat = new THREE.MeshStandardMaterial({ color: b.color, emissive: b.color, emissiveIntensity: 0.45, roughness: 0.5, side: THREE.DoubleSide });
+  geos.push(coneGeo, tipGeo); mats.push(mat);
+  const cone = new THREE.Mesh(coneGeo, mat); cone.position.y = 1.5; g.add(cone);
+  const tip = new THREE.Mesh(tipGeo, mat); tip.position.y = 3.3; g.add(tip);
+  const badge = makeLabelSprite(b.label, b.color, mats); badge.position.y = 5.0; g.add(badge);
+  return g;
+}
 
 /**
  * Lat/long grid over a checkered land, bright enough to read clearly against the
@@ -54,7 +104,14 @@ const BEACONS: Beacon[] = [
  */
 const LON = 24;  // longitude cells (meridians)
 const LAT = 16;  // latitude cells (parallels)
-function planetTexture(): THREE.CanvasTexture {
+
+// The two longitudinal hemispheres (lon ∈ [0,π) and [π,2π)) are antipodal twins:
+// every antipodal pair {p, −p} has exactly one member in each. So on ℝP² they are
+// the two sheets of the sphere's double cover — tint them to see yourself cross
+// from one cover sheet to the other (the dividing meridians are the gluing circle).
+const COVER_WARM = '#ff7a4d';
+const COVER_COOL = '#4da6ff';
+function planetTexture(coverTint: boolean): THREE.CanvasTexture {
   const s = 1024;
   const cvs = document.createElement('canvas'); cvs.width = cvs.height = s;
   const ctx = cvs.getContext('2d')!;
@@ -79,10 +136,24 @@ function planetTexture(): THREE.CanvasTexture {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(s, y); ctx.stroke();
   }
 
+  // cover tint: wash the two longitudinal hemispheres in warm / cool, leaving the
+  // checker + grid legible underneath. The seam is the meridian great circle that
+  // glues to its antipode on ℝP².
+  if (coverTint) {
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = COVER_WARM; ctx.fillRect(0, 0, s / 2, s);
+    ctx.fillStyle = COVER_COOL; ctx.fillRect(s / 2, 0, s / 2, s);
+    ctx.globalAlpha = 1;
+  }
+
   // emphasised equator (mid latitude row) + prime meridian (left edge)
   ctx.strokeStyle = '#e6f2fb'; ctx.lineWidth = 5;
   ctx.beginPath(); ctx.moveTo(0, s / 2); ctx.lineTo(s, s / 2); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(2, s); ctx.stroke();
+  // mark the hemisphere seam (the lon = π meridian, at the texture's mid-x) so the
+  // gluing circle reads even before you tint.
+  ctx.strokeStyle = 'rgba(230,242,251,0.6)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(s / 2, 0); ctx.lineTo(s / 2, s); ctx.stroke();
 
   const t = new THREE.CanvasTexture(cvs);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -90,26 +161,15 @@ function planetTexture(): THREE.CanvasTexture {
   return t;
 }
 
-/** A glowing marker that stands radially on the planet's surface. */
-function makeBeacon(color: number, geos: THREE.BufferGeometry[], mats: THREE.Material[]): THREE.Group {
-  const g = new THREE.Group();
-  const coneGeo = new THREE.ConeGeometry(0.9, 3, 16);
-  const tipGeo = new THREE.SphereGeometry(0.55, 16, 12);
-  // DoubleSide so the antipodal (reflected) twin used for ℝP² isn't back-face culled.
-  const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.45, roughness: 0.5, side: THREE.DoubleSide });
-  geos.push(coneGeo, tipGeo); mats.push(mat);
-  const cone = new THREE.Mesh(coneGeo, mat); cone.position.y = 1.5; g.add(cone);
-  const tip = new THREE.Mesh(tipGeo, mat); tip.position.y = 3.3; g.add(tip);
-  return g;
-}
-
 export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): WorldEngine {
   const { scene, camera, renderer } = deps;
   let rp2 = opts.surfaceId === 'rp2';
+  let radius = opts.planetRadius > 0 ? opts.planetRadius : R0;
+  let colorCells = opts.colorCells;
 
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1;
-  camera.fov = 75; camera.near = 0.05; camera.far = R * 5; camera.updateProjectionMatrix();
+  camera.fov = 75; camera.near = 0.05; camera.far = radius * 5; camera.updateProjectionMatrix();
   camera.up.set(0, 1, 0);
 
   scene.background = new THREE.Color(0x05070e);
@@ -126,19 +186,24 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   const ownGeos: THREE.BufferGeometry[] = [];
   const ownMats: THREE.Material[] = [];
 
-  // the planet
-  const planetGeo = new THREE.SphereGeometry(R, 64, 48);
-  const planetTex = planetTexture();
+  // the planet (geometry is rebuilt when the radius slider changes; the texture is
+  // swapped when the cover tint toggles)
+  let planetTex = planetTexture(colorCells);
   const planetMat = new THREE.MeshStandardMaterial({ map: planetTex, color: 0xffffff, roughness: 0.9, metalness: 0.0 });
-  ownGeos.push(planetGeo); ownMats.push(planetMat);
-  root.add(new THREE.Mesh(planetGeo, planetMat));
+  ownMats.push(planetMat);
+  const planet = new THREE.Mesh(new THREE.SphereGeometry(radius, 64, 48), planetMat);
+  root.add(planet);
 
-  // landmarks (one set on the surface)
+  // landmarks (one set on the surface). Each beacon group is kept so the radius
+  // slider can re-seat it at the new surface; the ℝP² antipodal twins are a clone.
+  const beaconGroups: THREE.Group[] = [];
   const landmarks = new THREE.Group();
+  const upY = new THREE.Vector3(0, 1, 0);
   for (const b of BEACONS) {
-    const g = makeBeacon(b.color, ownGeos, ownMats);
-    g.position.copy(b.dir).multiplyScalar(R);
-    g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.dir);
+    const g = makeBeacon(b, ownGeos, ownMats);
+    g.position.copy(b.dir).multiplyScalar(radius);
+    g.quaternion.setFromUnitVectors(upY, b.dir);
+    beaconGroups.push(g);
     landmarks.add(g);
   }
   root.add(landmarks);
@@ -155,12 +220,46 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   const antipode = new THREE.Group();
   antipode.scale.set(-1, -1, -1);
   antipode.matrixAutoUpdate = true;
-  antipode.add(landmarks.clone(true));
+  let antiClone = landmarks.clone(true);
+  antipode.add(antiClone);
   const footAnti = new THREE.Mesh(foot.geometry, foot.material);
   footAnti.frustumCulled = false;
   antipode.add(footAnti);
   antipode.visible = rp2;
   root.add(antipode);
+
+  // Rebuild the planet shell + re-seat the landmarks at a new radius. A bigger
+  // planet dilutes the curvature (Gauss–Bonnet pins ∫K dA = 2πχ regardless), so
+  // it feels locally flatter; the eye height and stride length stay in fixed world
+  // units. The trail is cleared because its points lived on the old shell.
+  function setRadius(r: number) {
+    if (r <= 0 || r === radius) return;
+    radius = r;
+    planet.geometry.dispose();
+    planet.geometry = new THREE.SphereGeometry(radius, 64, 48);
+    for (let i = 0; i < beaconGroups.length; i++) {
+      beaconGroups[i].position.copy(BEACONS[i].dir).multiplyScalar(radius);
+    }
+    // The antipodal twins are a clone, so rebuild it from the re-seated originals.
+    antipode.remove(antiClone);
+    antiClone = landmarks.clone(true);
+    antipode.add(antiClone);
+    camera.far = radius * 5; camera.updateProjectionMatrix();
+    clearTrail();
+  }
+
+  // Swap the planet skin between the plain checker and the cover-tinted one. The
+  // landmarks/trail are unaffected; only the ground reveals which sheet you're on.
+  function setColorCells(on: boolean) {
+    if (on === colorCells) return;
+    colorCells = on;
+    mapState.colored = on;
+    const next = planetTexture(colorCells);
+    planetMat.map = next;
+    planetMat.needsUpdate = true;
+    planetTex.dispose();
+    planetTex = next;
+  }
 
   const character = makeCharacter();
   root.add(character.group);
@@ -177,6 +276,16 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   const posW = new THREE.Vector3(), eye = new THREE.Vector3(), look = new THREE.Vector3();
   const camPos = new THREE.Vector3(), tmpRight = new THREE.Vector3();
   const basisM = new THREE.Matrix4();
+  const northT = new THREE.Vector3(), eastT = new THREE.Vector3();
+
+  // Mini-map state. Landmarks are fixed (lat = asin(y), lon = atan2(z, x)); the
+  // player's lat/lon/bearing are refreshed each frame.
+  const mapState: SphereMapState = {
+    lat: Math.PI / 2, lon: 0, bearing: 0, rp2, colored: colorCells,
+    landmarks: BEACONS.map((b) => ({
+      lat: Math.asin(b.dir.y), lon: Math.atan2(b.dir.z, b.dir.x), color: b.color,
+    })),
+  };
 
   function orthonormalize() {
     up.normalize();
@@ -213,11 +322,24 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     if (dyaw) turn(dyaw);
 
     const moving = !!(f || strafe);
-    if (f) stepForward((f * moveSpeed * dt) / R);
-    if (strafe) stepRight((strafe * moveSpeed * dt) / R);
+    if (f) stepForward((f * moveSpeed * dt) / radius);
+    if (strafe) stepRight((strafe * moveSpeed * dt) / radius);
     if (moving) { orthonormalize(); stridePhase += dt * moveSpeed * 1.4; }
 
-    posW.copy(up).multiplyScalar(R);
+    posW.copy(up).multiplyScalar(radius);
+
+    // Mini-map: latitude/longitude of the radial up, and the compass bearing of
+    // the heading (0 = toward the north pole, +clockwise/eastward). north tangent
+    // is +Y projected onto the tangent plane; east = up × north.
+    mapState.lat = Math.asin(Math.max(-1, Math.min(1, up.y)));
+    mapState.lon = Math.atan2(up.z, up.x);
+    northT.set(0, 1, 0).addScaledVector(up, -up.y);
+    if (northT.lengthSq() < 1e-6) { mapState.bearing = lastYaw; }
+    else {
+      northT.normalize();
+      eastT.copy(up).cross(northT);
+      mapState.bearing = Math.atan2(fwd.dot(eastT), fwd.dot(northT));
+    }
 
     // avatar: feet on the surface, +Z = heading, +Y = radial up (matches flat)
     tmpRight.copy(up).cross(fwd).normalize();
@@ -233,7 +355,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
       camera.position.copy(camPos);
       camera.lookAt(posW.x + up.x * 1.2, posW.y + up.y * 1.2, posW.z + up.z * 1.2);
     } else {
-      eye.copy(up).multiplyScalar(R + EYE);
+      eye.copy(up).multiplyScalar(radius + EYE);
       const cp = Math.cos(Math.max(-MAX_PITCH, Math.min(MAX_PITCH, pitch)));
       look.copy(fwd).multiplyScalar(cp).addScaledVector(up, Math.sin(pitch));
       camera.up.copy(up);
@@ -253,14 +375,19 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     family: 'spherical',
     frame,
     clearTrail,
-    setSurface: (id) => { rp2 = id === 'rp2'; antipode.visible = rp2; clearTrail(); },
+    setSurface: (id) => { rp2 = id === 'rp2'; antipode.visible = rp2; mapState.rp2 = rp2; clearTrail(); },
+    setRadius,
+    setColorCells,
+    getSphereState: () => mapState,
     dispose: () => {
       scene.remove(root);
       foot.dispose();
       character.dispose();
+      planet.geometry.dispose();
       planetTex.dispose();
       ownGeos.forEach((g) => g.dispose());
-      ownMats.forEach((m) => m.dispose());
+      // Sprite badges own a CanvasTexture each; release those too.
+      ownMats.forEach((m) => { (m as THREE.SpriteMaterial).map?.dispose?.(); m.dispose(); });
     },
   };
 }

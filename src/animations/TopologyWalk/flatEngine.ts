@@ -60,6 +60,16 @@ function floorTexture(): THREE.CanvasTexture {
   return t;
 }
 
+// A distinct, stable hue for each copy of the fundamental domain in the universal
+// cover. Golden-ratio steps in each axis keep neighbours well-separated and avoid
+// repeats over the few cells on screen; the result reads as a patchwork that makes
+// the tiling (and your motion between copies) obvious.
+const _cellCol = new THREE.Color();
+function cellColor(I: number, J: number): THREE.Color {
+  const hue = (((I * 0.61803399 + J * 0.27639320) % 1) + 1) % 1;
+  return _cellCol.setHSL(hue, 0.6, 0.55);
+}
+
 /**
  * Geometry + materials for the landmarks, built once and shared across every
  * rendered cell (meshes are still per-cell, but the heavy buffers/textures are
@@ -75,6 +85,8 @@ interface SharedDecor {
   trunkGeo: THREE.CylinderGeometry;
   foliageGeo: THREE.ConeGeometry;
   decalGeo: THREE.PlaneGeometry;
+  /** L×L floor tile, one tinted copy per cell when "colour the covers" is on. */
+  tileGeo: THREE.PlaneGeometry;
   columnMats: THREE.MeshStandardMaterial[];
   foliageMats: THREE.MeshStandardMaterial[];
   trunkMat: THREE.MeshStandardMaterial;
@@ -88,6 +100,7 @@ function makeSharedDecor(): SharedDecor {
   const trunkGeo = new THREE.CylinderGeometry(0.32, 0.4, 2.0, 12);
   const foliageGeo = new THREE.ConeGeometry(1.35, 3.0, 14);
   const decalGeo = new THREE.PlaneGeometry(1.5, 1.5);
+  const tileGeo = new THREE.PlaneGeometry(L, L);
 
   const columnMats: THREE.MeshStandardMaterial[] = [];
   const foliageMats: THREE.MeshStandardMaterial[] = [];
@@ -112,10 +125,10 @@ function makeSharedDecor(): SharedDecor {
   }
 
   return {
-    columnGeo, trunkGeo, foliageGeo, decalGeo,
+    columnGeo, trunkGeo, foliageGeo, decalGeo, tileGeo,
     columnMats, foliageMats, trunkMat, decalMats, decalTexs,
     dispose: () => {
-      columnGeo.dispose(); trunkGeo.dispose(); foliageGeo.dispose(); decalGeo.dispose();
+      columnGeo.dispose(); trunkGeo.dispose(); foliageGeo.dispose(); decalGeo.dispose(); tileGeo.dispose();
       trunkMat.dispose();
       columnMats.forEach((m) => m.dispose());
       foliageMats.forEach((m) => m.dispose());
@@ -135,6 +148,9 @@ interface Built {
   under: THREE.Group;
   underTrees: THREE.Group;
   underColumns: THREE.Group;
+  /** Translucent floor tile, tinted per (I,J) to make the cover tiling visible. */
+  tileMat: THREE.MeshBasicMaterial;
+  tile: THREE.Mesh;
   /** Per-cell "twin" avatar, built lazily the first time projection is enabled. */
   ghost: Character | null;
   dispose: () => void;
@@ -202,6 +218,20 @@ function buildCell(d: SharedDecor): Built {
   group.add(columns);
   group.add(under);
 
+  // A translucent tile filling the cell, tinted per (I,J) each frame so each copy
+  // of the fundamental domain in the universal cover reads as a distinct colour.
+  // Hidden unless "colour the covers" is on. depthWrite off so it doesn't occlude
+  // the glass reveal of the underside.
+  const tileMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide,
+  });
+  const tile = new THREE.Mesh(d.tileGeo, tileMat);
+  tile.rotation.x = -Math.PI / 2;
+  tile.position.y = 0.02;
+  tile.visible = false;
+  group.add(tile);
+  disposers.push(() => tileMat.dispose());
+
   // boundary square: left/right edges red (the "flip" gluing on a Klein
   // bottle), top/bottom edges blue.
   const h = L / 2, y = 0.04;
@@ -223,7 +253,7 @@ function buildCell(d: SharedDecor): Built {
   group.add(new THREE.LineSegments(edgeGeo, edgeMat));
   disposers.push(() => { edgeGeo.dispose(); edgeMat.dispose(); });
 
-  return { group, trees, columns, under, underTrees, underColumns, ghost: null, dispose: () => disposers.forEach((dd) => dd()) };
+  return { group, trees, columns, under, underTrees, underColumns, tileMat, tile, ghost: null, dispose: () => disposers.forEach((dd) => dd()) };
 }
 
 /**
@@ -248,6 +278,7 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
   let klein = opts.surfaceId === 'klein';
   let projectAvatar = opts.projectAvatar;
   let floorOpacityVal = opts.floorOpacity;
+  let colorCells = opts.colorCells;
 
   // player state
   let px = 2, pz = 2;
@@ -433,6 +464,9 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
           cell.underTrees.visible = !flipped;
           cell.underColumns.visible = flipped;
         }
+        // Tint this copy of the domain so the universal-cover tiling is visible.
+        cell.tile.visible = colorCells;
+        if (colorCells) cell.tileMat.color.copy(cellColor(I, J));
         // Project a twin into this cell — but ONLY where the cell has the same
         // orientation as you. Crossing the twist once leaves you mirror-reversed
         // (the "opposite side"), so the nearest identical copy of you is two
@@ -499,6 +533,7 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
     setSurface: (id) => { klein = id === 'klein'; clearTrail(); },
     setProjectAvatar: (on) => { projectAvatar = on; if (on) ensureGhosts(); },
     setFloorOpacity: (o) => applyFloorOpacity(o),
+    setColorCells: (on) => { colorCells = on; },
     getMapState: () => mapState,
     dispose: () => {
       scene.remove(root);
