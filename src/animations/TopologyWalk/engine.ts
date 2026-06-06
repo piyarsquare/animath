@@ -71,6 +71,9 @@ export interface EngineOptions {
   /** Flat worlds: draw a copy of the avatar in every tiled cell (mirrored where
    *  the cell is mirrored), so you watch your twins walk the universal cover. */
   projectAvatar: boolean;
+  /** Flat worlds: floor opacity, 0 (clear glass) → 1 (solid). Lower it to see
+   *  the columns/trees on the other side of the world. */
+  floorOpacity: number;
 }
 
 /**
@@ -95,5 +98,6 @@ export interface WorldEngine {
   setBloom?(on: boolean): void;
   setMiniMap?(on: boolean): void;
   setProjectAvatar?(on: boolean): void;
+  setFloorOpacity?(o: number): void;
   clearWriting?(): void;
 }

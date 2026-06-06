@@ -252,14 +252,22 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
   root.add(dir);
 
   // A glassy floor: translucent + double-sided, so the trail shows "through" it
-  // and the underside reads as the other face of the surface.
+  // and the underside reads as the other face of the surface. The opacity is a
+  // live knob — turn it down to clear glass to see the other side of the world.
   const floorMat = new THREE.MeshStandardMaterial({
     map: floorTexture(), color: 0x2a3a52, roughness: 0.18, metalness: 0.1,
-    transparent: true, opacity: 0.72, side: THREE.DoubleSide,
+    transparent: true, opacity: opts.floorOpacity, side: THREE.DoubleSide,
   });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry((2 * K + 3) * L, (2 * K + 3) * L), floorMat);
   floor.rotation.x = -Math.PI / 2;
   root.add(floor);
+  function applyFloorOpacity(o: number) {
+    floorMat.opacity = o;
+    floorMat.visible = o > 0.01;
+    // Clear glass shouldn't occlude depth, so the far side reads through it.
+    floorMat.depthWrite = o >= 0.98;
+  }
+  applyFloorOpacity(opts.floorOpacity);
 
   const decor = makeSharedDecor();
   const foot = makeFootprintTrail(TRAIL_MAX);
@@ -367,9 +375,15 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
         // Trees on the flipped class, columns otherwise (torus: columns only).
         cell.trees.visible = flipped;
         cell.columns.visible = !flipped;
-        // Project a twin into this cell (mirrored automatically by cell.matrix).
+        // Project a twin into this cell — but ONLY where the cell has the same
+        // orientation as you. Crossing the twist once leaves you mirror-reversed
+        // (the "opposite side"), so the nearest identical copy of you is two
+        // squares away across the twist (2L) but only one square away across the
+        // roll (L) — the twist takes twice as long to walk. The mirror-flipped
+        // cells in between hold no twin (that copy is on the far side).
         if (cell.ghost) {
-          if (projectAvatar) {
+          const mirroredRelHome = klein && ((I - I0) & 1) !== 0;
+          if (projectAvatar && !mirroredRelHome) {
             const isHome = I === I0 && J === J0;
             cell.ghost.group.position.set(bx, 0, bz);
             cell.ghost.group.quaternion.copy(gQuat);
@@ -405,6 +419,7 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
     clearTrail,
     setSurface: (id) => { klein = id === 'klein'; clearTrail(); },
     setProjectAvatar: (on) => { projectAvatar = on; if (on) ensureGhosts(); },
+    setFloorOpacity: (o) => applyFloorOpacity(o),
     dispose: () => {
       scene.remove(root);
       cells.forEach((c) => { c.ghost?.dispose(); c.dispose(); });

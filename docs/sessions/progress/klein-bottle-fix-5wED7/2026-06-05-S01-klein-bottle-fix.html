@@ -71,6 +71,41 @@
         <!-- Newest entry first. data-type ∈ decision | code | finding | blocker | milestone -->
         <ol class="timeline">
           <li class="tl" data-type="milestone">
+            <p class="tl-time">00:55</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Twin-period bug fixed · floor-opacity knob · defaults → Klein + avatar on</h3>
+            <p class="why"><strong>Why:</strong> User feedback — (1) twins were
+            wrongly appearing in the mirror-flipped squares ("they're on the
+            opposite side; the twist takes twice as long to walk as the roll"); (2)
+            wants a floor transparency knob to see the other side; (3) land on the
+            flat Klein world by default, with the avatar projection already on.</p>
+            <ul>
+              <li><strong>Bug fix</strong> (<code>flatEngine.ts</code>): a twin is
+              now projected only into cells with the <em>same orientation as the
+              home cell</em> — <code>mirroredRelHome = klein &amp;&amp; ((I−I0)&amp;1)</code>
+              suppresses the in-between flipped copies. Result: identical copies of
+              you repeat every <strong>2L across the twist</strong> but every
+              <strong>L across the roll</strong> — the twist takes twice as long to
+              walk, exactly as it should. (Decor still tiles every cell — only the
+              <em>avatar</em> respects the 2L twist period.)</li>
+              <li><strong>Floor-opacity knob</strong>: new shared option
+              <code>floorOpacity</code> + <code>setFloorOpacity</code>; live slider
+              ("Floor opacity", flat worlds only). Drops the glass floor from
+              translucent to clear (also disables its depth-write when clear so the
+              far side reads through).</li>
+              <li><strong>Defaults</strong> (<code>TopologyWalk.tsx</code>): start
+              on <code>klein</code> (flat) with <code>projectAvatar</code> on and
+              <code>lastByFamily.flat = 'klein'</code>.</li>
+              <li><code>npm run build</code>: <span class="badge badge-ok">passed</span>.</li>
+            </ul>
+            <p class="callout callout-note"><span class="callout-label">Open</span>
+            The knob fades the floor, but the single-plane tiling has no geometry
+            <em>below</em> it yet, so "see the columns/trees on the other side"
+            isn't literally satisfied — that needs a rendered mirrored
+            <strong>underside world</strong> (a bigger change). Flagged to the user
+            as the next step.</p>
+          </li>
+          <li class="tl" data-type="milestone">
             <p class="tl-time">00:10</p>
             <span class="chip chip-milestone">Milestone</span>
             <h3>Added "project avatar into every cell" option; build green</h3>
