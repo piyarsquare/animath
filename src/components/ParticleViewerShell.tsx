@@ -431,6 +431,7 @@ export default function ParticleViewerShell({
               className="qtc-reset"
               style={{ marginTop: 8 }}
               onClick={() => {
+                if (!window.confirm('Reset all settings to their defaults? This clears your saved settings and reloads the page.')) return;
                 clearPersistedState(settingsStorageKey);
                 window.location.reload();
               }}
