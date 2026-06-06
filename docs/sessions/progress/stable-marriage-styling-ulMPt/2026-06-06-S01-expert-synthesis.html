@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Three Hats · Convergence Analysis — Stable Marriage</title>
+  <link rel="stylesheet" href="../../report.css">
+  <script defer src="../../report.js"></script>
+  <script type="application/json" class="report-meta">
+  {
+    "kind": "three-hats",
+    "session": "2026-06-06-S01",
+    "date": "2026-06-06",
+    "title": "Three Hats — Convergence Analysis (Stable Marriage)",
+    "branch": "claude/stable-marriage-styling-ulMPt",
+    "slug": "stable-marriage-styling-ulMPt",
+    "status": "completed",
+    "build": "unknown",
+    "followup": null,
+    "pr": null
+  }
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">Three Hats · Convergence Analysis</p>
+    <h1>Stable Marriage — Three-Lens Code Review Synthesis</h1>
+    <dl class="meta">
+      <div><dt>Branch</dt><dd><code>claude/stable-marriage-styling-ulMPt</code></dd></div>
+      <div><dt>App</dt><dd><code>src/animations/StableMarriage/</code></dd></div>
+      <div><dt>Reviewers</dt><dd>Framework Maintainer · Architecture Consultant · Math-Viz &amp; Pedagogy</dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-warn">not run</span> (only CI gate is <code>npm run build</code>)</dd></div>
+    </dl>
+    <p class="lineage">Source reports:
+      <a href="2026-06-06-S01-expert-maintainer.html">Maintainer</a> ·
+      <a href="2026-06-06-S01-expert-consultant.html">Consultant</a> ·
+      <a href="2026-06-06-S01-expert-pedagogy.html">Pedagogy</a>
+    </p>
+  </header>
+
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+
+      <div class="toolbar">
+        <button type="button" data-action="expand-all">Expand all</button>
+        <button type="button" data-action="collapse-all">Collapse all</button>
+      </div>
+
+      <section>
+        <h2>Executive summary</h2>
+        <p>Three independent reviewers examined the Stable Marriage app expecting to
+        confirm a <em>styling</em> deficit. They converged instead on a more
+        consequential conclusion: <strong>the CSS is the strongest part of the file,
+        and the real problems are correctness, model-vs-claim mismatch, and
+        structural duplication.</strong> The headline framing of this branch
+        ("lacks advanced styling effects") is only partly right — the visual gap is
+        real but shallow and partly a side-effect of opting out of the AppShell
+        Actions floater. The deeper issues are mathematical and architectural.</p>
+
+        <p class="callout callout-decision"><span class="callout-label">Headline</span>
+        Do <strong>not</strong> ship a styling-only PR. The high-leverage first move
+        is to extract a single pure <code>galeShapley.ts</code> engine and reconcile
+        the visualization's mixed-proposer model with the one-sided theorem it
+        claims to teach. Styling polish should ride on top of those fixes.</p>
+      </section>
+
+      <section>
+        <h2>1 · Points of agreement (high confidence)</h2>
+
+        <table>
+          <thead><tr><th>Finding</th><th>M</th><th>C</th><th>P</th><th>Severity</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Gale–Shapley engine is implemented twice and has diverged.</strong>
+              <code>stepSimulation</code> (≈:593) and <code>runHeadlessSimulation</code> (≈:134)
+              duplicate the algorithm; their termination logic already differs.</td>
+              <td>✓</td><td>✓</td><td>—</td><td><span class="chip chip-blocker">High</span></td>
+            </tr>
+            <tr>
+              <td><strong>Model ≠ claim.</strong> The engine runs a <em>mixed-proposer,
+              two-sided</em> market (per-step coin flip weighted by <code>bias</code>,
+              default 50), but the EXPLAINER teaches classic one-sided GS and its
+              proposer-optimality / receiver-pessimality theorem — which does not hold
+              at the default.</td>
+              <td>✓ (minor)</td><td>✓</td><td>✓ (central)</td><td><span class="chip chip-blocker">High</span></td>
+            </tr>
+            <tr>
+              <td><strong>The CSS is good.</strong> Tokenised, responsive,
+              theme-aligned, 752 lines. The "styling gap" is shallow: no
+              <code>backdrop-filter</code> glass/floater treatment the peer labs use,
+              flat private palette, some hard-coded hexes — not a missing foundation.</td>
+              <td>✓</td><td>✓ (strongest part)</td><td>~ (CVD only)</td><td><span class="chip chip-finding">Med</span></td>
+            </tr>
+            <tr>
+              <td><strong>AppShell opt-out is permitted, not a regression.</strong> No
+              <code>ShellSettings</code>/<code>ShellActions</code>/<code>ControlPanel</code>,
+              no <code>usePersistentState</code> — but <code>AgenticSorting</code> sets
+              the same precedent for DOM apps.</td>
+              <td>✓</td><td>✓</td><td>—</td><td><span class="chip chip-finding">Low–Med</span></td>
+            </tr>
+            <tr>
+              <td><strong>Empty Population input → <code>NaN</code> → <code>Array(NaN)</code> crash.</strong>
+              The existing <code>NumberInput</code> primitive already solves this and
+              isn't used.</td>
+              <td>✓</td><td>✓</td><td>—</td><td><span class="chip chip-finding">Med</span></td>
+            </tr>
+            <tr>
+              <td><strong>Stability itself is sound.</strong> <code>verifyStability</code>
+              is correct and the two-sided process genuinely still produces a stable
+              matching — the stability story holds even though the optimality story
+              doesn't.</td>
+              <td>—</td><td>~</td><td>✓</td><td><span class="chip chip-milestone">Reassuring</span></td>
+            </tr>
+            <tr>
+              <td><strong>Extract a pure engine.</strong> The codebase convention
+              (<code>physics.ts</code>, <code>lib/nbody/</code>, <code>presets.ts</code>)
+              calls for a logic module; all reviewers who touched structure endorse a
+              <code>galeShapley.ts</code> extraction as the unlock.</td>
+              <td>✓</td><td>✓ (top rec)</td><td>—</td><td><span class="chip chip-decision">Action</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <p><small>M = Maintainer, C = Consultant, P = Pedagogy. ✓ raised it, ~ partial/related, — not addressed.</small></p>
+      </section>
+
+      <section>
+        <h2>2 · Points of tension (need a decision)</h2>
+
+        <h3>2.1 Is there even a "styling gap" worth a session?</h3>
+        <p>The branch premise says the app "lacks advanced styling effects." The
+        <strong>Consultant</strong> pushes back hardest: the CSS is the file's
+        strongest asset and a styling-only PR would be low value. The
+        <strong>Maintainer</strong> agrees the CSS is clean but identifies a concrete,
+        real gap — the flat palette and the absence of the glass/<code>backdrop-filter</code>
+        floater chrome the peer labs share — and attributes it to the Actions-floater
+        opt-out. The <strong>Pedagogy</strong> reviewer reframes "styling" as a
+        <em>legibility</em> problem (CVD-hostile green↔red and near-white diverging
+        heatmap ramps).
+        <br><strong>Tension:</strong> the user's stated goal is styling; two of three
+        reviewers think the highest-value work is elsewhere. Resolution below folds
+        styling into a correctness-first sequence rather than discarding it.</p>
+
+        <h3>3.2 Adopt the AppShell control surface, or keep DOM-app autonomy?</h3>
+        <p>Moving the transport/controls into <code>ShellActions</code> +
+        <code>ControlPanel</code> would (a) light up the dim ▶ Actions button, (b)
+        inherit the glass floater styling "for free," and (c) align with the headline
+        framework model — addressing the Maintainer's styling-gap and conformance
+        notes at once. But the Consultant notes the DOM-app opt-out is legitimate and
+        <code>AgenticSorting</code> does the same, so this is a <em>choice</em>, not a
+        bug fix. Doing it is the cleanest way to get "advanced styling" honestly; not
+        doing it keeps the app self-contained.</p>
+
+        <h3>2.3 How far to chase model-vs-claim?</h3>
+        <p>All three agree it's wrong, but the fix differs: Pedagogy suggests
+        defaulting <code>bias = 100</code> (true one-sided GS, theorem holds) <em>or</em>
+        relabelling the whole thing as a "matching market"; the Consultant treats the
+        variant's stability as a hypothesis worth a runtime check. The scope of the
+        relabel (UI strings, EXPLAINER, the "Asker avg rank" metric, the Stability
+        tab) is non-trivial and is a product decision, not purely technical.</p>
+      </section>
+
+      <section>
+        <h2>3 · Blind spots (none of the three covered)</h2>
+        <ul>
+          <li><strong>No build was run.</strong> Every report is static analysis; the
+          only CI gate (<code>npm run build</code> = <code>tsc &amp;&amp; vite build</code>)
+          has not been exercised on the current tree.</li>
+          <li><strong>Runtime verification of two hypotheses.</strong> The Consultant's
+          <code>runToCompletion</code> ref-timing concern and the variant-stability
+          claim both need a quick runtime check to confirm/deny.</li>
+          <li><strong>Performance at <code>MAX_POPULATION = 100</code></strong> was
+          flagged as a re-render concern but never measured (frame cost, layout
+          thrash from DOM animation, heatmap lab compute time).</li>
+          <li><strong>Accessibility beyond colour:</strong> keyboard navigation, ARIA
+          roles, and <code>prefers-reduced-motion</code> handling for the animated
+          transitions went unexamined.</li>
+          <li><strong>Mobile / responsive behaviour</strong> of the visualiser and the
+          heatmap Lab specifically (the CSS is "responsive" in general, but the dense
+          two-column matching view at small widths wasn't assessed).</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4 · Recommended action</h2>
+        <p>Synthesis of the three lenses into a correctness-first sequence. Styling is
+        not dropped — it is sequenced <em>after</em> the foundation so the polish lands
+        on honest, deduplicated code.</p>
+
+        <table>
+          <thead><tr><th>#</th><th>Step</th><th>Why / unlocks</th><th>Effort</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><strong>Extract <code>galeShapley.ts</code></strong> — one pure engine; <code>stepSimulation</code> and the headless runner both call it.</td><td>Kills the divergence hazard; makes the algorithm testable; de-risks every later change. Unanimous unlock.</td><td><span class="chip chip-code">M</span></td></tr>
+            <tr><td>2</td><td><strong>Reconcile model vs claim</strong> — pick: default <code>bias=100</code> (true one-sided GS) <em>or</em> relabel as a two-sided market and move the honest "mixed-proposer" note into the EXPLAINER; fix the "Asker avg rank" framing.</td><td>The app currently teaches a theorem it doesn't demonstrate. Product decision — confirm with user.</td><td><span class="chip chip-decision">Decision + M</span></td></tr>
+            <tr><td>3</td><td><strong>Pedagogy fixes</strong> — visualise rejections and the preference lists; replicate Lab heatmap cells (currently single-run noise sold as a surface); swap CVD-hostile ramps.</td><td>Makes the <em>why</em> of stability visible and the Lab statistically honest.</td><td><span class="chip chip-code">M–L</span></td></tr>
+            <tr><td>4</td><td><strong>Styling parity</strong> — either adopt <code>ShellActions</code>+<code>ControlPanel</code> (inherits glass floater chrome, lights the ▶ button) or layer <code>backdrop-filter</code>/palette polish into the existing CSS; consolidate the three parallel button systems and hard-coded hexes onto shell tokens.</td><td>The session's stated goal — now on solid footing.</td><td><span class="chip chip-code">M</span></td></tr>
+            <tr><td>5</td><td><strong>Hardening</strong> — use <code>NumberInput</code> for Population (NaN crash); adopt <code>usePersistentState</code>; render the shipped-but-unused <code>README.md</code>.</td><td>Closes small, agreed-upon gaps.</td><td><span class="chip chip-code">S</span></td></tr>
+            <tr><td>6</td><td><strong>Verify</strong> — <code>npm run build</code>; quick runtime check of the run-to-completion timing and variant stability.</td><td>Only CI gate; settles the two open hypotheses.</td><td><span class="chip chip-code">S</span></td></tr>
+          </tbody>
+        </table>
+
+        <p class="callout callout-warn"><span class="callout-label">Decision needed</span>
+        Step 2 is a product/pedagogy call (one-sided vs market) and Step 4 is a
+        framework call (adopt ShellActions vs keep autonomy). Both should be confirmed
+        with the user before implementation — they change scope materially. The user
+        framed this session as <em>styling</em>; the reviewers recommend a broader
+        correctness-first scope. That gap is the key thing to resolve next.</p>
+      </section>
+
+      <section>
+        <h2>Self-Reflection</h2>
+        <p><strong>Confidence.</strong> High on the convergent findings (engine
+        duplication, model-vs-claim, CSS quality) — three independent lenses reached
+        them separately, which is the strongest signal this format produces. Medium on
+        the exact line numbers: they come from the sub-agents' summaries and a couple
+        are approximate (≈:134, ≈:593) — verify against source before acting.</p>
+        <p><strong>What could be wrong.</strong> The synthesis inherits any shared
+        misread by the sub-agents (e.g. if the <code>bias</code> semantics were
+        misunderstood, all three and this synthesis would be wrong together — common
+        context isn't independence). The "variant is still stable" reassurance and the
+        run-to-completion timing concern are explicitly <em>hypotheses</em> pending a
+        runtime check; I have not run the app.</p>
+        <p><strong>Bias to flag.</strong> This synthesis actively reframes the user's
+        stated goal (styling) toward correctness. That is the honest reading of the
+        evidence, but the user may have sound reasons to want a styling-only pass
+        (e.g. a quick visual win) — I've surfaced the tension rather than silently
+        overriding it, and left Steps 2 and 4 as explicit user decisions.</p>
+        <p><strong>Not verified.</strong> No build run; no runtime observation; line
+        citations not re-checked against the file; performance/a11y/mobile blind spots
+        remain open.</p>
+      </section>
+
+    </div><!-- /.content -->
+  </div><!-- /.body -->
+</main>
+</body>
+</html>

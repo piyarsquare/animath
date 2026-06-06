@@ -63,6 +63,23 @@
       <section class="log">
         <h2>Working notes</h2>
         <ol class="timeline">
+          <li class="tl" data-type="finding">
+            <p class="tl-time">20:20</p>
+            <span class="chip chip-finding">Finding</span>
+            <h3>Three-hats review complete — correctness, not styling, is the headline</h3>
+            <p class="why"><strong>Why:</strong> User asked for an "ultracode" /three-hats
+            code review. Dispatched three parallel reviewers (Maintainer, Architecture
+            Consultant, Math-Viz &amp; Pedagogy); each wrote a full HTML report and I
+            synthesized a <a href="2026-06-06-S01-expert-synthesis.html">Convergence
+            Analysis</a>.</p>
+            <p>All three converged: the CSS is actually the strongest part of the file;
+            the real issues are (1) the Gale–Shapley engine implemented twice and
+            already diverged, (2) a mixed-proposer model that contradicts the one-sided
+            theorem the explainer teaches, and (3) statistically dishonest Lab heatmap
+            (single-run cells). Recommended a correctness-first sequence with styling
+            sequenced on top. Two scope decisions kicked to the user (one-sided vs
+            market model; adopt ShellActions vs keep DOM autonomy).</p>
+          </li>
           <li class="tl" data-type="milestone">
             <p class="tl-time">20:08</p>
             <span class="chip chip-milestone">Milestone</span>
