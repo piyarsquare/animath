@@ -64,6 +64,27 @@ show a seam, the view tiles that tile seamlessly in every direction (the
   never be made consistent everywhere. That impossibility *is* the Klein bottle's
   **non-orientability**.
 
+## The curved worlds
+
+Flat surfaces are special: they're exactly the closed surfaces whose curvature can
+be zero everywhere (Euler characteristic χ = 0). Push χ positive and you're forced
+onto a **curved** world — a small planet — which is the third **Setting**:
+
+- **Sphere:** an ordinary round world (χ = 2). Walk a great circle and you return
+  home after one lap, **facing the same way**. The curvature is real — a big
+  planet feels flat underfoot (that's why Earth does), a small one curves away at
+  your feet — but you can never get rid of it: the total is pinned at 2π·χ.
+- **Projective plane (ℝP²):** the *same* sphere with **antipodal points glued**
+  (every point is identified with the one straight through the centre, χ = 1). The
+  planet is decorated symmetrically, so the near and far sides look identical — but
+  your **footprints betray it**: laid on one side, they reappear on the far side
+  **mirror-reversed**, because the antipodal map flips orientation. A one-way trip
+  to the "other side" turns you into your mirror image; a second lap brings the
+  real you back. It's the Klein bottle's flip again, now wrapped onto a sphere —
+  and ℝP² is famously impossible to build in 3-D without the surface passing
+  through itself (the **cross-cap**, **Roman surface**, and **Boy's surface** are
+  the three classic ways to try).
+
 ## Reading the footprints
 
 In every world you leave **oriented footprints** — arrows pointing the way you
@@ -76,7 +97,8 @@ re-rendered:
 - **mirror-reversed** across any orientation flip — the F comes back as **Ⅎ** and
   the cyan/magenta halves swap. On the **Möbius** corridor you see this overhead
   after one lap (your footprints run across the ceiling, seen from beneath); on
-  the **Klein bottle** you see it across the red gluing.
+  the **Klein bottle** across the red gluing; and on the **projective plane** on
+  the far (antipodal) side of the planet.
 
 A plain arrow would look the same mirrored; the **F can't hide a reflection**,
 so it's the clearest possible signature of an orientation flip.

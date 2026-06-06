@@ -71,6 +71,43 @@
         <!-- Newest entry first. data-type ∈ decision | code | finding | blocker | milestone -->
         <ol class="timeline">
           <li class="tl" data-type="milestone">
+            <p class="tl-time">04:10</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>New spherical engine: walk the sphere &amp; the projective plane</h3>
+            <p class="why"><strong>Why:</strong> User wants a broad tour of closed
+            surfaces by first-person walking (new mode in Topology Walk). Chose to
+            start with the positive-curvature world (sphere + ℝP²), the same
+            geometry that underlies the three ℝP² immersions.</p>
+            <ul>
+              <li>New <code>makeSphericalEngine</code> (family <code>spherical</code>):
+              the planet is fixed at the origin and the <em>camera</em> walks great
+              circles by rotating the player's tangent frame {radial up, fwd, right}.
+              Movement integrates the great circle directly (no axis-sign Rodrigues
+              bookkeeping — explicit, orthonormality-preserving updates), relative
+              yaw-turn, pitch look, 1st/3rd person. Radius R=30 → a "small planet"
+              feel that shows curvature at a glance.</li>
+              <li><strong>ℝP²</strong> = the same sphere with antipodal points
+              identified: an <code>antipode</code> group at <code>scale(-1,-1,-1)</code>
+              (a point reflection — orientation-reversing on S²) holds the landmark
+              twins and a second trail mesh, so your footprints reappear on the far
+              side <em>mirror-reversed</em>. Beacons made DoubleSide so the reflected
+              twins don't back-face cull. Toggled by <code>setSurface</code>.</li>
+              <li>Registered surfaces <code>sphere</code> / <code>rp2</code> (family
+              spherical) in <code>engine.ts</code>; added the third "Curved (sphere)"
+              pill, gated the flat-only controls to <code>isFlat</code> (mini-map,
+              floor opacity, project-avatar no longer leak into spherical), wired
+              <code>makeEngine</code> + family records + help text. EXPLAINER gained a
+              "curved worlds" section. <code>npm run build</code>:
+              <span class="badge badge-ok">passed</span>.</li>
+            </ul>
+            <p class="callout callout-note"><span class="callout-label">Unverified / staged</span>
+            Built blind (no headless WebGL): worth checking the walk feel, strafe
+            handedness, and that the ℝP² trail really returns reversed at the antipode.
+            <strong>Next:</strong> the cross-cap / Roman / Boy's-surface embedding inset
+            — the part where the three ℝP² versions visibly differ — then the
+            hexagonal flat torus and a hyperbolic engine for genus-2.</p>
+          </li>
+          <li class="tl" data-type="milestone">
             <p class="tl-time">03:05</p>
             <span class="chip chip-milestone">Milestone</span>
             <h3>Mini-map of the fundamental domain (square + identified edges)</h3>

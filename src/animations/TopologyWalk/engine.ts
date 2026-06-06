@@ -16,7 +16,7 @@ import * as THREE from 'three';
  * The same torus shows up in both — as an extrinsic ring corridor (`loop`) and
  * as an intrinsic flat room (`torus`) — which is half the lesson.
  */
-export type Family = 'corridor' | 'flat';
+export type Family = 'corridor' | 'flat' | 'spherical';
 
 export interface SurfaceDef {
   id: string;
@@ -34,6 +34,8 @@ export const SURFACES: SurfaceDef[] = [
   { id: 'trefoil', label: 'Trefoil knot',      family: 'corridor', short: 'trefoil-knot corridor' },
   { id: 'torus',   label: 'Flat torus',        family: 'flat',     short: 'flat torus' },
   { id: 'klein',   label: 'Klein bottle',      family: 'flat',     short: 'flat Klein bottle' },
+  { id: 'sphere',  label: 'Sphere',            family: 'spherical', short: 'round sphere' },
+  { id: 'rp2',     label: 'Projective plane',  family: 'spherical', short: 'projective plane (ℝP²)' },
 ];
 
 export const surfaceDef = (id: string): SurfaceDef =>

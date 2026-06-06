@@ -10,6 +10,7 @@ import {
 } from './engine';
 import { makeCorridorEngine } from './corridorEngine';
 import { makeFlatEngine } from './flatEngine';
+import { makeSphericalEngine } from './sphericalEngine';
 import explainerText from './EXPLAINER.md?raw';
 
 const LOOK_SENS = 0.0035;
@@ -23,12 +24,14 @@ function isCramped(): boolean {
 }
 
 /** Canonical surface to land on when the player switches worlds. */
-const DEFAULT_SURFACE: Record<Family, string> = { corridor: 'mobius', flat: 'torus' };
+const DEFAULT_SURFACE: Record<Family, string> = { corridor: 'mobius', flat: 'torus', spherical: 'sphere' };
 
 type MoveKey = 'fwd' | 'back' | 'left' | 'right';
 
 function makeEngine(family: Family, deps: EngineDeps, opts: EngineOptions): WorldEngine {
-  return family === 'corridor' ? makeCorridorEngine(deps, opts) : makeFlatEngine(deps, opts);
+  if (family === 'corridor') return makeCorridorEngine(deps, opts);
+  if (family === 'spherical') return makeSphericalEngine(deps, opts);
+  return makeFlatEngine(deps, opts);
 }
 
 interface Ctx {
@@ -57,6 +60,8 @@ export default function TopologyWalk() {
   const def = surfaceDef(surfaceId);
   const family = def.family;
   const isCorridor = family === 'corridor';
+  const isFlat = family === 'flat';
+  const isSpherical = family === 'spherical';
 
   useAppHeader('Topology Walk', def.short);
   useAppExplainer(explainerText);
@@ -77,7 +82,7 @@ export default function TopologyWalk() {
   const surfaceRef = useRef(surfaceId);
   // Remember the last surface chosen in each world, so toggling Corridor↔Flat
   // returns you to where you were rather than always resetting.
-  const lastByFamily = useRef<Record<Family, string>>({ corridor: 'mobius', flat: 'klein' });
+  const lastByFamily = useRef<Record<Family, string>>({ corridor: 'mobius', flat: 'klein', spherical: 'sphere' });
   const optsRef = useRef<EngineOptions>({ surfaceId, width, themeId, ambientMul, markers, bloom, miniMap, projectAvatar, floorOpacity });
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
@@ -212,7 +217,7 @@ export default function TopologyWalk() {
         </div>
       )}
 
-      {!isCorridor && miniMap && <FlatMiniMap getState={getMapState} />}
+      {isFlat && miniMap && <FlatMiniMap getState={getMapState} />}
 
       <div style={{
         position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
@@ -220,33 +225,41 @@ export default function TopologyWalk() {
       }}>
         {isCorridor
           ? 'Drag to look · WASD / arrows move · Space (or ✎) writes your text on the wall'
-          : 'Drag to look · WASD / arrows or the pad to walk · landmarks repeat — columns turn to trees across the Klein flip'}
+          : isSpherical
+            ? 'Drag to look · WASD / arrows or the pad to walk a great circle around the planet'
+            : 'Drag to look · WASD / arrows or the pad to walk · landmarks repeat — columns turn to trees across the Klein flip'}
       </div>
 
       <ShellSettings>
         <Section title="World" icon="∞" defaultOpen>
           <Pills
             label="Setting"
-            options={[{ value: 'corridor', label: 'Corridor (hallway)' }, { value: 'flat', label: 'Open space' }]}
+            options={[
+              { value: 'corridor', label: 'Corridor (hallway)' },
+              { value: 'flat', label: 'Open space (flat)' },
+              { value: 'spherical', label: 'Curved (sphere)' },
+            ]}
             value={family}
             onChange={(v) => switchWorld(v as Family)}
           />
           <Select label="Surface" options={surfaceOptions} value={surfaceId} onChange={setSurfaceId} />
           <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
-          {!isCorridor && (
+          {isFlat && (
             <Checkbox label="Project avatar into every cell" checked={projectAvatar} onChange={setProjectAvatar} />
           )}
-          {!isCorridor && (
+          {isFlat && (
             <Checkbox label="Mini-map (fundamental domain)" checked={miniMap} onChange={setMiniMap} />
           )}
-          {!isCorridor && (
+          {isFlat && (
             <Slider label="Floor opacity" value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
           )}
           <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
           <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>
             {isCorridor
               ? 'Walk a lap of the Möbius corridor and the floor rolls up into the ceiling.'
-              : 'Red edges glue with a flip on the Klein bottle (columns ↔ trees across them); blue edges glue straight.'}
+              : isSpherical
+                ? 'A small planet (χ>0, positive curvature). On the projective plane antipodal points are the same spot, so your trail returns to the far side mirror-reversed.'
+                : 'Red edges glue with a flip on the Klein bottle (columns ↔ trees across them); blue edges glue straight.'}
           </div>
         </Section>
 
