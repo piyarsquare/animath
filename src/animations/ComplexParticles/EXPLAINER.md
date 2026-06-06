@@ -88,8 +88,10 @@ function rearranges the plane.
 The **Hue** and **Brightness** pickers choose *which* scalar of that number
 drives each channel, independently: **Phase** (the classic angle→hue),
 **Magnitude** (so you can literally color — or shade — by `|z|` / `|f|`), or the
-**Real** / **Imag** part. The defaults reproduce classic domain coloring (hue =
-phase, brightness = magnitude); set hue = Magnitude and brightness = Phase to
-swap them, or drive both from the real part, etc. (Brightness applies to the
+**Real** / **Imag** part. Brightness also offers **Uniform (flat)** — every
+particle at full value, so color reads as pure hue with no magnitude shading. The
+defaults reproduce classic domain coloring (hue = phase, brightness = magnitude);
+set hue = Magnitude and brightness = Phase to swap them, or drive both from the
+real part, etc. (Brightness applies to the
 **HSV** and **Dual-hue** styles; the **Modulus bands** and **Phase only** styles
 fix their own brightness by design.)

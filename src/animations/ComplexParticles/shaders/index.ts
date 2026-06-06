@@ -257,9 +257,10 @@ vec3 calcColour(vec2 z, vec2 f){
     if(uBrightnessQty==0)      val = fract(angle/TAU + 0.5);          // phase
     else if(uBrightnessQty==2) val = 0.5 + 0.5*tanh(w.x);            // real part
     else if(uBrightnessQty==3) val = 0.5 + 0.5*tanh(w.y);            // imag part
+    else if(uBrightnessQty==4) val = 1.0;                            // uniform
     else                       val = 0.5*(1.0+tanh(log(r+1e-6)));    // magnitude
     if(uColourStyle==0){
-        val = mix(val, val*(0.75+0.25*sin(TAU*log(r))), 0.5);
+        if(uBrightnessQty!=4) val = mix(val, val*(0.75+0.25*sin(TAU*log(r))), 0.5);
         return hsv2rgb(vec3(hue, saturation, val)) * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
     }
     if(uColourStyle==1){

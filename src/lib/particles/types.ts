@@ -26,7 +26,9 @@ export enum ColourQuantity {
   Phase = 0,
   Modulus = 1,
   Real = 2,
-  Imag = 3
+  Imag = 3,
+  /** Brightness only: every particle at full value (no magnitude shading). */
+  Uniform = 4
 }
 
 /** How the input (z) and output (f) planes are charted before being assembled

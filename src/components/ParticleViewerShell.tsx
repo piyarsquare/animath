@@ -371,6 +371,7 @@ export default function ParticleViewerShell({
             label="Brightness"
             options={[
               { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
+              { value: ColourQuantity.Uniform, label: 'Uniform (flat)' },
               { value: ColourQuantity.Phase, label: 'Phase (arg)' },
               { value: ColourQuantity.Real, label: 'Real part' },
               { value: ColourQuantity.Imag, label: 'Imag part' },
