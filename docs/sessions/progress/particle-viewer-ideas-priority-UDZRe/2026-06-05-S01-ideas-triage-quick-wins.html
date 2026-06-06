@@ -69,32 +69,128 @@
         Implement the two remaining quick wins from the recommended cluster —
         <strong>Hopf study mode</strong> and <strong>flexible color-by quantity</strong> —
         since #3 (faithful Hopf) is already done. Both are self-contained to
-        ComplexParticles + the particles engine and low-risk.</p>
+        ComplexParticles + the particles engine and low-risk. <em>(The session then
+        continued "all the way through" the rest of the list — see below.)</em></p>
+      </section>
+
+      <section>
+        <h2>What shipped</h2>
+        <p>Every item below is its own commit with a green <code>npm run build</code>,
+        pushed to <code>claude/particle-viewer-ideas-priority-UDZRe</code>.</p>
+        <table>
+          <thead><tr><th data-sort>Feature</th><th data-sort>Where</th><th data-sort>Commit</th></tr></thead>
+          <tbody>
+            <tr><td>Hopf study view + flexible color-by (Hue)</td><td>shader <code>calcColour</code>, ParticleViewerShell, controls</td><td><code>fff360f</code></td></tr>
+            <tr><td>Independent Brightness picker + torus-nesting doc</td><td>shader, types, state, shell, EXPLAINER</td><td><code>302cb21</code></td></tr>
+            <tr><td>cot / arcsin / arccos + grouped picker</td><td><code>complexMath.ts</code>, shader, <code>Select</code> groups</td><td><code>34d97ec</code></td></tr>
+            <tr><td>Confirm guard on Reset settings</td><td>ParticleViewerShell</td><td><code>3f1eb5c</code></td></tr>
+            <tr><td>Torus soft pole-clamp + scaffold labels</td><td><code>viewpoint.ts</code>, shader, <code>createHopfScaffold</code></td><td><code>6ac4492</code></td></tr>
+            <tr><td>Domain bounds + ± lock; NumberInput</td><td><code>ControlPanel</code>, geometry builders, state</td><td><code>27d9a94</code></td></tr>
+            <tr><td>Parameterized quadratic a·z²+b·z+c</td><td><code>complexMath.ts</code>, shader, ComplexParticles</td><td><code>ae98519</code></td></tr>
+            <tr><td>Polar / log-polar input &amp; output charts</td><td>shader <code>chartCoord</code>, <code>CoordMode</code>, shell</td><td><code>073b314</code></td></tr>
+            <tr><td>Hopf fiber-trace overlay</td><td><code>createHopfFibers.ts</code>, state, shell</td><td><code>93bb12d</code></td></tr>
+          </tbody>
+        </table>
+        <p class="callout callout-note"><span class="callout-label">Note</span>
+        The first commit (<code>302cb21</code> era) also marked the already-shipped
+        faithful-Hopf entry in <code>IDEAS.md</code>; every implemented idea was
+        annotated there with its status + open follow-ups.</p>
+      </section>
+
+      <section>
+        <h2>Outstanding / follow-ups</h2>
+        <ul>
+          <li><strong>Unified channel-mapping matrix</strong> — deferred as a dedicated
+          effort (would re-architect 4-vector assembly; its cheaper slices are now all in
+          place).</li>
+          <li><strong>Color as a fourth channel</strong> — judged already reachable via
+          Drop-axis + Hue/Brightness pickers; no separate mode built (recorded in IDEAS).</li>
+          <li><strong>Hopf fibers + Collapse slider</strong> — fibers currently hide past
+          the half-way collapse rather than shrinking circle→point with it; and an option
+          to seed fibers from the function's own graph points.</li>
+          <li><strong>Polar charts</strong> — sampling the input on a true <code>(r, α)</code>
+          grid (currently the Cartesian sample is replotted) and a phase-unwrap for the
+          <code>arg</code> seam.</li>
+          <li><strong>Custom-f</strong> — the quadratic is the middle ground; a typed
+          expression → GLSL compiler is still the big open stretch.</li>
+          <li><strong>Visual review needed</strong> — I can't see WebGL output here; the
+          Hopf fibers, scaffold labels, and polar charts are most worth eyeballing live.</li>
+        </ul>
       </section>
 
       <section class="log">
         <h2>Working notes</h2>
         <ol class="timeline">
-          <li class="tl" data-type="milestone">
-            <p class="tl-time">01:10</p>
-            <span class="chip chip-milestone">Milestone</span>
-            <h3>Worked the rest of the list "all the way through"</h3>
-            <p class="why"><strong>Why:</strong> User asked to continue through every remaining idea.</p>
-            <p>Shipped, each as its own commit with a green build: (1) <strong>confirm
-            guard</strong> on Reset settings; (2) <strong>Clifford-torus polish</strong> —
-            soft pole-clamp (POLE_EPS) + scaffold labels; (3) <strong>domain bounds + ±
-            lock</strong> with a new commit-on-blur <code>NumberInput</code>; (4) generic
-            <strong>quadratic</strong> a·z²+b·z+c with complex coefficients; (5)
-            <strong>polar / log-polar</strong> input &amp; output charts (<code>CoordMode</code>);
-            (6) the <strong>Hopf fiber-trace overlay</strong> (<code>createHopfFibers</code>).
-            Documented in EXPLAINER + IDEAS.</p>
-          </li>
           <li class="tl" data-type="decision">
             <p class="tl-time">01:10</p>
             <span class="chip chip-decision">Decision</span>
             <h3>Deferred the unified channel-mapping matrix; folded "color as 4th channel"</h3>
             <p class="why"><strong>Why:</strong> The matrix is a large refactor that would re-architect 4-vector assembly and conflict with the granular controls just shipped; "color as 4th channel" is already reachable via Drop-axis + Hue/Brightness pickers.</p>
-            <p>Both recorded in IDEAS with rationale; the matrix's cheaper slices are all now in place.</p>
+            <p>Both recorded in IDEAS with rationale; the matrix's cheaper slices are all now in place. (commit 589dc87)</p>
+          </li>
+          <li class="tl" data-type="code">
+            <p class="tl-time">00:55</p>
+            <span class="chip chip-code">Code</span>
+            <h3>Hopf fiber-trace overlay (the interlocking circles)</h3>
+            <p class="why"><strong>Why:</strong> Highest-payoff remaining item — the iconic picture the Torus chart could host but never showed.</p>
+            <p>New <code>createHopfFibers.ts</code> samples base points on S² (grid over
+            latitude η, longitude ψ) and draws each one's full common-phase orbit
+            <code>θ ↦ stereo(normalize(e^{iθ}(z₁,z₂)))</code> as a <code>LineLoop</code>, in
+            the same normalized stereographic chart + SCALE as the particles/scaffold,
+            coloured by base point. <strong>Hopf fibers</strong> toggle + <strong>Fiber
+            density</strong> slider in the Camera section (Torus only). (commit 93bb12d)</p>
+          </li>
+          <li class="tl" data-type="code">
+            <p class="tl-time">00:45</p>
+            <span class="chip chip-code">Code</span>
+            <h3>Polar / log-polar input &amp; output charts</h3>
+            <p class="why"><strong>Why:</strong> The natural charts for powers/roots/log/exp.</p>
+            <p><code>Input chart</code> / <code>Output chart</code> pickers
+            (<code>CoordMode</code>: Cartesian / Polar / Log-polar) replot each plane via a
+            shader <code>chartCoord</code> (uniforms <code>uInCoord</code>/<code>uOutCoord</code>)
+            before the 4-vector forms; colour keeps raw <code>z</code>/<code>f</code>.
+            Log-polar output ⇒ <code>exp</code> is the identity; both log-polar ⇒ <code>zⁿ</code>/roots
+            become linear shears. (commit 073b314)</p>
+          </li>
+          <li class="tl" data-type="code">
+            <p class="tl-time">00:35</p>
+            <span class="chip chip-code">Code</span>
+            <h3>Parameterized quadratic a·z²+b·z+c</h3>
+            <p class="why"><strong>Why:</strong> The pragmatic middle ground toward custom-f.</p>
+            <p>New <code>quadratic</code> function (index 22) with complex coefficients
+            (Re/Im via <code>NumberInput</code>), wired through <code>uQuadA/B/C</code> + the
+            adaptive-sampling CPU path; header shows the substituted formula. Defaults to
+            z². (commit ae98519)</p>
+          </li>
+          <li class="tl" data-type="code">
+            <p class="tl-time">00:25</p>
+            <span class="chip chip-code">Code</span>
+            <h3>Explicit domain bounds + ± lock, on a new commit-on-blur NumberInput</h3>
+            <p class="why"><strong>Why:</strong> Off-centre windows like x∈[0,6]; and stop intermediate keystrokes breaking the render.</p>
+            <p>Added a shared <code>ControlPanel</code> <strong>NumberInput</strong> (commits on
+            Enter/blur, clamps, reverts) and a <code>± symmetric bounds</code> lock to the
+            Domain section. Geometry builders now take explicit
+            <code>(xMin,xMax,yMin,yMax)</code>; the lock seeds the other representation so the
+            view doesn't jump. Retrofit p/q to NumberInput. (commit 27d9a94)</p>
+          </li>
+          <li class="tl" data-type="code">
+            <p class="tl-time">00:15</p>
+            <span class="chip chip-code">Code</span>
+            <h3>Clifford-torus polish: soft pole-clamp + scaffold labels</h3>
+            <p class="why"><strong>Why:</strong> Pole points shot to infinity; the scaffold lines were unlabeled.</p>
+            <p>Soft floor <code>POLE_EPS</code> (in quadrature, shared by
+            <code>viewpoint.ts</code> + shader) bounds the projection pole. Camera-facing
+            sprite labels on the scaffold: sphere poles (<code>f→0</code>/<code>z→0</code>),
+            <code>|z|=|f|</code> equator, torus cores + <code>arg z</code> direction.
+            (commit 6ac4492)</p>
+          </li>
+          <li class="tl" data-type="decision">
+            <p class="tl-time">00:10</p>
+            <span class="chip chip-decision">Decision</span>
+            <h3>Confirm guard on "Reset settings to defaults"</h3>
+            <p class="why"><strong>Why:</strong> User flagged it lives in the Actions panel and is too easy to hit by accident (it wipes saved settings + reloads).</p>
+            <p>Wrapped the handler in <code>window.confirm</code>; applies to every
+            particle viewer via the shell. (commit 3f1eb5c)</p>
           </li>
           <li class="tl" data-type="code">
             <p class="tl-time">00:05</p>
