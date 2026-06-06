@@ -58,7 +58,7 @@ export default function TopologyWalk() {
   const [colorCells, setColorCells] = useState(false);
   const [planetRadius, setPlanetRadius] = useState(30);
   const [innerShell, setInnerShell] = useState(false);
-  const [innerFlip, setInnerFlip] = useState(false);
+  const [innerSameRadius, setInnerSameRadius] = useState(true);
   const [wallText, setWallText] = useState('MÖBIUS');
 
   const def = surfaceDef(surfaceId);
@@ -87,7 +87,7 @@ export default function TopologyWalk() {
   // Remember the last surface chosen in each world, so toggling Corridor↔Flat
   // returns you to where you were rather than always resetting.
   const lastByFamily = useRef<Record<Family, string>>({ corridor: 'mobius', flat: 'klein', spherical: 'sphere' });
-  const optsRef = useRef<EngineOptions>({ surfaceId, width, themeId, ambientMul, markers, bloom, miniMap, projectAvatar, floorOpacity, colorCells, planetRadius, innerShell, innerFlip });
+  const optsRef = useRef<EngineOptions>({ surfaceId, width, themeId, ambientMul, markers, bloom, miniMap, projectAvatar, floorOpacity, colorCells, planetRadius, innerShell, innerSameRadius });
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
   const requestStamp = useCallback(() => { stampRef.current = true; }, []);
@@ -155,7 +155,7 @@ export default function TopologyWalk() {
   useEffect(() => { optsRef.current.colorCells = colorCells; ctxRef.current?.engine.setColorCells?.(colorCells); }, [colorCells]);
   useEffect(() => { optsRef.current.planetRadius = planetRadius; ctxRef.current?.engine.setRadius?.(planetRadius); }, [planetRadius]);
   useEffect(() => { optsRef.current.innerShell = innerShell; ctxRef.current?.engine.setInnerShell?.(innerShell); }, [innerShell]);
-  useEffect(() => { optsRef.current.innerFlip = innerFlip; ctxRef.current?.engine.setInnerFlip?.(innerFlip); }, [innerFlip]);
+  useEffect(() => { optsRef.current.innerSameRadius = innerSameRadius; ctxRef.current?.engine.setInnerSameRadius?.(innerSameRadius); }, [innerSameRadius]);
 
   const clearTrail = useCallback(() => { ctxRef.current?.engine.clearTrail(); }, []);
   const clearWriting = useCallback(() => { ctxRef.current?.engine.clearWriting?.(); }, []);
@@ -286,13 +286,13 @@ export default function TopologyWalk() {
           )}
           {isSpherical && innerShell && (
             <Pills
-              label="Twin orientation"
+              label="Twin shell"
               options={[
-                { value: 'upright', label: 'Upright (mirror)' },
-                { value: 'flipped', label: 'Upside-down (normal flip)' },
+                { value: 'same', label: 'Same radius (mirror)' },
+                { value: 'nested', label: 'Shrunk (nested)' },
               ]}
-              value={innerFlip ? 'flipped' : 'upright'}
-              onChange={(v) => setInnerFlip(v === 'flipped')}
+              value={innerSameRadius ? 'same' : 'nested'}
+              onChange={(v) => setInnerSameRadius(v === 'same')}
             />
           )}
           <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />

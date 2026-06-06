@@ -86,10 +86,12 @@ export interface EngineOptions {
    *  far side (point-reflected + shrunk inward), with the outer planet turned
    *  glassy — so the point straight below your feet is your identified antipode. */
   innerShell: boolean;
-  /** Spherical ℝP²: render the inner shell's twin upside-down (normal reversed,
-   *  head-to-head through the glass) — the normal-flip factoring of the antipodal
-   *  map −I — instead of upright/mirror-reversed. */
-  innerFlip: boolean;
+  /** Spherical ℝP²: render the twin at (essentially) the SAME radius as the planet,
+   *  on its glassy inner face — the antipodal map is an isometry, so the twin is
+   *  the same size, only its normal points inward. When false, the twin is the
+   *  shrunk concentric shell nested well inside. Either way the twin points inward
+   *  (orientation-reversed), straight below your feet. */
+  innerSameRadius: boolean;
 }
 
 /**
@@ -161,7 +163,7 @@ export interface WorldEngine {
   setColorCells?(on: boolean): void;
   setRadius?(r: number): void;
   setInnerShell?(on: boolean): void;
-  setInnerFlip?(on: boolean): void;
+  setInnerSameRadius?(on: boolean): void;
   clearWriting?(): void;
   /** Flat worlds only: current position/heading in the fundamental domain. */
   getMapState?(): FlatMapState | null;

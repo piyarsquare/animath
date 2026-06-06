@@ -153,8 +153,10 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   let radius = opts.planetRadius > 0 ? opts.planetRadius : R0;
   let colorCells = opts.colorCells;
   let showInner = opts.innerShell;
-  // Render the inner-shell twin upside-down (normal reversed) rather than upright.
-  let innerFlip = opts.innerFlip;
+  // Twin shell radius: "same radius" (mirror, on the glass's inner face) vs the
+  // shrunk nested shell. The antipodal map −I is an isometry, so the honest twin is
+  // the same size — the nested shell is just an exploded view to separate it.
+  let innerSameRadius = opts.innerSameRadius;
   // Glass opacity of the outer planet while the inner shell is shown (shared with
   // the flat worlds' floor-opacity knob); lower it to see further inside.
   let glassOpacity = opts.floorOpacity;
@@ -272,32 +274,33 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   root.add(antipode);
 
   // ── "The other side, inside" ──────────────────────────────────────────────
-  // A concentric inner shell carrying the antipodally-glued far side, via the map
-  // T(x) = −INNER_K · x (a point reflection composed with a shrink to radius
-  // INNER_K·R). Then the inner-shell point straight below your feet shows the
-  // cover content at your antipode −d — your identified partner — mirror-reversed
-  // (the point reflection flips orientation, exactly as the ℝP² gluing does). With
-  // the outer planet turned glassy you look down through the ground at it. This is
-  // the spherical analog of the flat engine's glass floor + mirrored underside.
-  const INNER_K = 0.52;
+  // The ℝP² gluing carried on a second sphere via the antipodal map T(x) = −k·x.
+  // With k = 1 this is the true gluing: the antipodal map is an isometry, so the
+  // twin is the SAME size as the planet, sharing its surface — you stand on the
+  // outer face (normal out) and the twin lives on the inner face (normal in), the
+  // spherical glass-floor + mirrored-underside. We render it a hair inside
+  // (k = SAME) so the two faces don't z-fight. The shrunk shell (k = NEST) is the
+  // same thing exploded inward, to separate the twin from your feet.
+  // Either way the twin points radially INWARD (its up-normal opposes yours): −I
+  // already lands your antipode −d straight underfoot and reverses orientation;
+  // aiming each twin inward parks that reversal on the vertical axis, so it reads
+  // as a mirror/reflection of you hanging just under the glass.
+  const INNER_K_SAME = 0.98;
+  const INNER_K_NEST = 0.52;
+  let innerK = innerSameRadius ? INNER_K_SAME : INNER_K_NEST;
   const innerPlanetMat = new THREE.MeshStandardMaterial({ map: planetTex, color: 0x9fb4c8, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide });
   ownMats.push(innerPlanetMat);
-  const innerPlanet = new THREE.Mesh(new THREE.SphereGeometry(radius * INNER_K, 48, 32), innerPlanetMat);
+  const innerPlanet = new THREE.Mesh(new THREE.SphereGeometry(radius * innerK, 48, 32), innerPlanetMat);
   root.add(innerPlanet);
 
-  // The inner group's position map is T(x) = −INNER_K·x for both styles — that's
-  // what lands your antipode straight underfoot. The −I in it already reverses
-  // orientation (the upright/mirror twin). To get the *upside-down* twin we cannot
-  // use another global linear map (the props are radial, so position and "up" would
-  // transform together), so we re-orient each twin to point radially INWARD: that
-  // flips only the normal, parking −I's reversal on the vertical axis instead.
   const inner = new THREE.Group();
-  inner.scale.set(-INNER_K, -INNER_K, -INNER_K);
+  inner.scale.setScalar(-innerK);
   let innerClone = landmarks.clone(true);
   function orientInnerClone() {
     for (let i = 0; i < innerClone.children.length && i < BEACONS.length; i++) {
-      const aim = innerFlip ? BEACONS[i].dir.clone().negate() : BEACONS[i].dir;
-      innerClone.children[i].quaternion.setFromUnitVectors(upY, aim);
+      // point the twin radially inward (normal reversed) by aiming local +y at −dir;
+      // the group's −k scale then turns that into "up = toward the planet centre".
+      innerClone.children[i].quaternion.setFromUnitVectors(upY, BEACONS[i].dir.clone().negate());
     }
   }
   orientInnerClone();
@@ -350,7 +353,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     orientInnerClone();
     inner.add(innerClone);
     innerPlanet.geometry.dispose();
-    innerPlanet.geometry = new THREE.SphereGeometry(radius * INNER_K, 48, 32);
+    innerPlanet.geometry = new THREE.SphereGeometry(radius * innerK, 48, 32);
     placeSkins();
     camera.far = radius * 5; camera.updateProjectionMatrix();
     clearTrail();
@@ -367,8 +370,15 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   // Toggle the inner co-identification shell (and the outer planet's glassiness).
   function setInnerShell(on: boolean) { showInner = on; applyInnerShell(); }
   function setFloorOpacity(o: number) { glassOpacity = o; applyInnerShell(); }
-  // Flip the inner twin between upright (mirror) and upside-down (normal reversed).
-  function setInnerFlip(on: boolean) { innerFlip = on; orientInnerClone(); }
+  // Switch the twin between same-radius (mirror, on the inner face) and the shrunk
+  // nested shell. Only the radius changes; the twin keeps its inward orientation.
+  function setInnerSameRadius(on: boolean) {
+    innerSameRadius = on;
+    innerK = innerSameRadius ? INNER_K_SAME : INNER_K_NEST;
+    inner.scale.setScalar(-innerK);
+    innerPlanet.geometry.dispose();
+    innerPlanet.geometry = new THREE.SphereGeometry(radius * innerK, 48, 32);
+  }
 
   const character = makeCharacter();
   root.add(character.group);
@@ -491,7 +501,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     setRadius,
     setColorCells,
     setInnerShell,
-    setInnerFlip,
+    setInnerSameRadius,
     setFloorOpacity,
     getSphereState: () => mapState,
     dispose: () => {

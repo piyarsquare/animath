@@ -113,15 +113,17 @@ Two readouts help you keep your bearings on the planet:
   floor and mirrored underside: the "other face" of a one-sided world, seen
   through the floor. (It's only a *representation* — ℝP² can't truly fit in 3-D
   without self-intersecting — but the gluing it shows is exact.)
-  - **Twin orientation:** the antipodal map is the point inversion **−I**, which
-    flips *all three* axes — so its orientation-reversal can be parked either on a
-    horizontal axis (**Upright (mirror)**: the twin stands the same way up, just
-    left-right mirrored) or on the vertical one (**Upside-down (normal flip)**: the
-    twin hangs head-to-head through the glass, its up-normal opposite yours). Same
-    gluing, two equally honest pictures — flip between them to feel why "mirror"
-    and "upside-down" are the *same* move on a one-sided surface. (By contrast the
-    Klein bottle's gluing is a *glide reflection*, which only ever flips one
-    horizontal axis with up untouched — hence its always-left/right mirror style.)
+  - **Twin shell:** the antipodal map is an **isometry** — it preserves distance,
+    so your glued self is the **same size** as you, not smaller. **Same radius
+    (mirror)** shows this honestly: the twin rides the planet's own glassy inner
+    face, you on the outer face pointing out, the twin on the inner face pointing
+    in — the spherical version of the flat worlds' glass floor + mirrored
+    underside. **Shrunk (nested)** is the same twin exploded onto a small inner
+    globe, pulled away from your feet so you can see it as a separate world below.
+    Either way the twin points **inward** (its up-normal opposes yours) and reads
+    mirror-reversed, because the antipodal map (the point inversion **−I**) flips
+    orientation. (The Klein bottle's gluing is instead a *glide reflection*, which
+    flips one horizontal axis with up untouched — hence its left/right mirror.)
 
 ## Reading the footprints
 
