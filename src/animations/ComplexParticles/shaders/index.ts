@@ -42,7 +42,6 @@ uniform int   uColourQty;
 uniform int   uBrightnessQty;
 uniform int   uInCoord;
 uniform int   uOutCoord;
-uniform int   uLogRadius;
 attribute float size;
 attribute vec4 seed;
 varying vec3 vColor;
@@ -218,20 +217,13 @@ vec3 project(vec4 p, int mode){
   if(mode==4) return vec3(p.x, p.z, p.w);
   if(mode==5) return vec3(p.x, p.y, p.w);
   if(mode==7){
-    // The donut a fiber lands on is set by the ratio |z| : |f|. With uLogRadius
-    // on, remap each magnitude through log(1+r) (angles kept) so the nesting
-    // spreads across orders of magnitude instead of crowding near |z|≈|f|.
-    vec4 q = p;
-    if(uLogRadius==1){
-      float rz = length(q.xy); if(rz>1e-6) q.xy *= log(1.0+rz)/rz;
-      float rf = length(q.zw); if(rf>1e-6) q.zw *= log(1.0+rf)/rf;
-    }
-    // Soft floor (POLE_EPS in quadrature) keeps the projection pole from sending
+    // Clifford-torus / "un-collapsed Hopf": stereographic from the (0,0,0,1)
+    // pole. Soft floor (POLE_EPS in quadrature) keeps the pole from sending
     // particles to infinity — matches viewpoint.ts POLE_EPS.
-    float d = max(length(q), 1e-6);
-    float dw = d - q.w;
+    float d = max(length(p), 1e-6);
+    float dw = d - p.w;
     float denom = max(sqrt(dw*dw + (0.08*d)*(0.08*d)), 1e-4);
-    return q.xyz / denom;
+    return p.xyz / denom;
   }
   return          vec3(p.x, p.y, p.z);
 }

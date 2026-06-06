@@ -171,7 +171,6 @@ export default function ComplexParticles({
         uBrightnessQty: { value: state.brightnessQuantity },
         uInCoord: { value: state.inputCoord },
         uOutCoord: { value: state.outputCoord },
-        uLogRadius: { value: state.logRadius ? 1 : 0 },
         uRotL: { value: { w: 1, v: new THREE.Vector3() } },
         uRotR: { value: { w: 1, v: new THREE.Vector3() } },
         uProjMode: { value: state.projRef.current },

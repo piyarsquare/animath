@@ -82,10 +82,6 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // Which scalar drives the brightness (value) channel, independently of hue.
   // Defaults to Modulus = magnitude (the classic |·| → brightness).
   const [brightnessQuantity, setBrightnessQuantity] = usePersistentState<ColourQuantity>(pk('brightnessQuantity'), ColourQuantity.Modulus);
-  // Torus radius scale: when true, the Torus mapping derives each fiber's donut
-  // from log(1+|z|) and log(1+|f|) instead of the raw magnitudes, spreading the
-  // nesting across orders of magnitude. Only affects the Torus projection.
-  const [logRadius, setLogRadius] = usePersistentState(pk('logRadius'), false);
   // Coordinate chart for the input z and output f planes before they form the
   // 4-vector (Cartesian / Polar / Log-polar). Colour stays Cartesian.
   const [inputCoord, setInputCoord] = usePersistentState<CoordMode>(pk('inputCoord'), CoordMode.Cartesian);
@@ -207,7 +203,6 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     colourBy, setColourBy,
     colourQuantity, setColourQuantity,
     brightnessQuantity, setBrightnessQuantity,
-    logRadius, setLogRadius,
     inputCoord, setInputCoord,
     outputCoord, setOutputCoord,
 

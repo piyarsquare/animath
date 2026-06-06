@@ -283,17 +283,6 @@ export default function ParticleViewerShell({
               format={v => v === 0 ? 'torus' : v === 1 ? 'sphere' : v.toFixed(2)}
             />
           )}
-          {state.viewType === ProjectionMode.Torus && (
-            <Pills
-              label="Radius scale"
-              options={[
-                { value: 0, label: 'Linear' },
-                { value: 1, label: 'Log' },
-              ]}
-              value={state.logRadius ? 1 : 0}
-              onChange={v => state.setLogRadius(v === 1)}
-            />
-          )}
           {(state.viewType === ProjectionMode.Torus || state.viewType === ProjectionMode.Hopf) && (
             <Checkbox
               label="Reference scaffold"
@@ -474,24 +463,13 @@ export default function ParticleViewerShell({
       <ShellActions>
         <div className="cp-section-body">
           {state.viewType === ProjectionMode.Torus && (
-            <>
-              <Slider
-                label="Collapse → Hopf"
-                value={state.fiberCollapse}
-                min={0} max={1} step={0.01}
-                onChange={controls.handleFiberCollapse}
-                format={v => v === 0 ? 'torus' : v === 1 ? 'sphere' : v.toFixed(2)}
-              />
-              <Pills
-                label="Radius scale"
-                options={[
-                  { value: 0, label: 'Linear' },
-                  { value: 1, label: 'Log' },
-                ]}
-                value={state.logRadius ? 1 : 0}
-                onChange={v => state.setLogRadius(v === 1)}
-              />
-            </>
+            <Slider
+              label="Collapse → Hopf"
+              value={state.fiberCollapse}
+              min={0} max={1} step={0.01}
+              onChange={controls.handleFiberCollapse}
+              format={v => v === 0 ? 'torus' : v === 1 ? 'sphere' : v.toFixed(2)}
+            />
           )}
 
           <QuarterTurnControls

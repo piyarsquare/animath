@@ -121,6 +121,20 @@
       <section class="log">
         <h2>Working notes</h2>
         <ol class="timeline">
+          <li class="tl" data-type="decision">
+            <p class="tl-time">03:10</p>
+            <span class="chip chip-decision">Decision</span>
+            <h3>Removed the Torus "Radius scale: Log" option (the fuzzy-circle culprit)</h3>
+            <p class="why"><strong>Why:</strong> User identified log-radius as what fuzzed the f=b·z circle, and judged it not useful — so we cut it.</p>
+            <p>Root cause (confirmed by rendering): log-radius applies <code>log(1+r)/r</code>
+            separately to |z| and |f|, which is nonlinear and breaks the scale-invariance
+            that collapses <code>f=b·z</code> to a single fiber circle — except at b=1
+            where |z|=|f| so both halves get the identical factor. Ripped out
+            <code>logRadius</code> state, the <code>uLogRadius</code> uniform + shader remap,
+            the sync effect, and both "Radius scale" Pills (Camera + Actions). Build green;
+            docs updated. (I'd been wrong 3× — jitter, sampling, motion — before the user
+            nailed it.)</p>
+          </li>
           <li class="tl" data-type="finding">
             <p class="tl-time">02:30</p>
             <span class="chip chip-finding">Finding</span>

@@ -133,10 +133,6 @@ export function useUniformSync(state: ParticleState): void {
   }, [state.brightnessQuantity]);
 
   useEffect(() => {
-    materialsRef.current.forEach(m => { m.uniforms.uLogRadius.value = state.logRadius ? 1 : 0; });
-  }, [state.logRadius]);
-
-  useEffect(() => {
     materialsRef.current.forEach(m => { m.uniforms.uInCoord.value = state.inputCoord; });
   }, [state.inputCoord]);
 
