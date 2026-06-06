@@ -28,6 +28,9 @@ uniform int   shapeType;
 uniform int   branchIndex;
 uniform int   exponentP;
 uniform int   exponentQ;
+uniform vec2  uQuadA;
+uniform vec2  uQuadB;
+uniform vec2  uQuadC;
 uniform quat  uRotL;
 uniform quat  uRotR;
 uniform int   uProjMode;
@@ -174,6 +177,10 @@ vec2 complexArccos(vec2 z, int branch){
   return vec2(lnw.y, -lnw.x);
 }
 
+vec2 complexQuadratic(vec2 z){
+  return complexMul(uQuadA, complexSquare(z)) + complexMul(uQuadB, z) + uQuadC;
+}
+
 vec2 applyComplex(vec2 z, int t){
   if(t==0)  return z;
   if(t==1)  return complexSqrtBranch(z, branchIndex);
@@ -197,6 +204,7 @@ vec2 applyComplex(vec2 z, int t){
   if(t==19) return complexCot(z);
   if(t==20) return complexArcsin(z, branchIndex);
   if(t==21) return complexArccos(z, branchIndex);
+  if(t==22) return complexQuadratic(z);
   return z;
 }
 

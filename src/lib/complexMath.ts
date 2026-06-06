@@ -196,6 +196,16 @@ export function complexArccos(z: THREE.Vector2, branch = 0): THREE.Vector2 {
   return new THREE.Vector2(lnw.y, -lnw.x); // −i · ln w
 }
 
+/** Generic quadratic a·z² + b·z + c with complex coefficients. */
+export function complexQuadratic(
+  z: THREE.Vector2, a: THREE.Vector2, b: THREE.Vector2, c: THREE.Vector2,
+): THREE.Vector2 {
+  const z2 = complexSquare(z);
+  const az2 = new THREE.Vector2(a.x * z2.x - a.y * z2.y, a.x * z2.y + a.y * z2.x);
+  const bz = new THREE.Vector2(b.x * z.x - b.y * z.y, b.x * z.y + b.y * z.x);
+  return new THREE.Vector2(az2.x + bz.x + c.x, az2.y + bz.y + c.y);
+}
+
 /** Apply one of the named complex functions by index. Mirrors the shader's
  *  applyComplex dispatch — cases 0..17 cover the named functions; case 18
  *  (powPQ) needs the p/q parameters and is handled by complexPowRational
@@ -261,11 +271,14 @@ export const functionNames = [
   'linear', 'sqrt', 'square', 'ln', 'exp', 'sin', 'cos', 'tan', 'inverse',
   'cube', 'reciprocalCube', 'joukowski', 'rational22', 'essentialExpInv',
   'branchSqrtPoly', 'gamma', 'cubeRoot', 'zMinus1OverZPlus1', 'powPQ',
-  'cot', 'arcsin', 'arccos'
+  'cot', 'arcsin', 'arccos', 'quadratic'
 ];
 
 /** Index of the z^(p/q) rational-power function in {@link functionNames}. */
 export const POW_PQ_INDEX = 18;
+
+/** Index of the parameterized quadratic a·z²+b·z+c in {@link functionNames}. */
+export const QUADRATIC_INDEX = 22;
 
 export const functionFormulas: Record<string, string> = {
   linear: 'z',
@@ -289,7 +302,8 @@ export const functionFormulas: Record<string, string> = {
   powPQ: 'z^(p/q)',
   cot: 'cos(z)/sin(z)',
   arcsin: 'arcsin(z)',
-  arccos: 'arccos(z)'
+  arccos: 'arccos(z)',
+  quadratic: 'a·z² + b·z + c'
 };
 
 /** Function picker grouping: each category lists member indices into
@@ -297,7 +311,7 @@ export const functionFormulas: Record<string, string> = {
  *  so reordering categories never affects persisted selections. Covers every
  *  index exactly once; append new functions to the appropriate category. */
 export const functionCategories: { label: string; members: number[] }[] = [
-  { label: 'Polynomial & rational', members: [0, 2, 9, 8, 10, 12] },
+  { label: 'Polynomial & rational', members: [0, 2, 9, 22, 8, 10, 12] },
   { label: 'Roots & log (multivalued)', members: [1, 16, 18, 3, 14] },
   { label: 'Trig & inverse-trig', members: [5, 6, 7, 19, 20, 21] },
   { label: 'Exp & essential', members: [4, 13] },

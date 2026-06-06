@@ -19,9 +19,11 @@ import type { ViewPoint, HopfScaffold } from '../../lib/particles';
 /** localStorage namespace for this viewer's saved settings. */
 const STORAGE_KEY = 'complex-particles';
 import {
-  applyComplex, complexPowRational,
-  functionNames, functionFormulas, functionCategories, POW_PQ_INDEX,
+  applyComplex, complexPowRational, complexQuadratic,
+  functionNames, functionFormulas, functionCategories, POW_PQ_INDEX, QUADRATIC_INDEX,
 } from '../../lib/complexMath';
+
+type Complex2 = [number, number];
 
 export type { ViewPoint };
 
@@ -60,6 +62,11 @@ export default function ComplexParticles({
   const [branchCount, setBranchCount] = usePersistentState(`${STORAGE_KEY}:branchCount`, branches);
   const [branchIndices, setBranchIndices] = usePersistentState<number[]>(`${STORAGE_KEY}:branchIndices`, [0, 1, 2]);
   const [branchStyle, setBranchStyle] = usePersistentState<BranchStyle>(`${STORAGE_KEY}:branchStyle`, 'color');
+  // Coefficients for the generic quadratic a·z²+b·z+c (each [Re, Im]); default a=1
+  // (so the out-of-the-box quadratic is z²).
+  const [quadA, setQuadA] = usePersistentState<Complex2>(`${STORAGE_KEY}:quadA`, [1, 0]);
+  const [quadB, setQuadB] = usePersistentState<Complex2>(`${STORAGE_KEY}:quadB`, [0, 0]);
+  const [quadC, setQuadC] = usePersistentState<Complex2>(`${STORAGE_KEY}:quadC`, [0, 0]);
 
   // Effective sampling box (× axisScale). Locked → symmetric ±extent; unlocked →
   // the independent min/max window.
@@ -92,7 +99,9 @@ export default function ComplexParticles({
         const pt = new THREE.Vector2(x, z);
         const out = functionIndex === POW_PQ_INDEX
           ? complexPowRational(pt, expP, expQ === 0 ? 1 : expQ)
-          : applyComplex(pt, functionIndex);
+          : functionIndex === QUADRATIC_INDEX
+            ? complexQuadratic(pt, new THREE.Vector2(quadA[0], quadA[1]), new THREE.Vector2(quadB[0], quadB[1]), new THREE.Vector2(quadC[0], quadC[1]))
+            : applyComplex(pt, functionIndex);
         return { x: out.x, y: out.y };
       };
       redistributeAdaptive(geom, state.particleCount, bxMin, bxMax, byMin, byMax, {
@@ -106,7 +115,7 @@ export default function ComplexParticles({
     state.adaptive, state.adaptiveAlpha, state.particleCount,
     state.extentX, state.extentY, state.axisScale,
     state.boundsLock, state.xMin, state.xMax, state.yMin, state.yMax,
-    functionIndex, expP, expQ,
+    functionIndex, expP, expQ, quadA, quadB, quadC,
   ]);
 
   useEffect(() => {
@@ -115,6 +124,14 @@ export default function ComplexParticles({
       m.uniforms.exponentQ.value = expQ === 0 ? 1 : expQ;
     });
   }, [expP, expQ]);
+
+  useEffect(() => {
+    state.materialsRef.current.forEach(m => {
+      m.uniforms.uQuadA.value.set(quadA[0], quadA[1]);
+      m.uniforms.uQuadB.value.set(quadB[0], quadB[1]);
+      m.uniforms.uQuadC.value.set(quadC[0], quadC[1]);
+    });
+  }, [quadA, quadB, quadC]);
 
   useEffect(() => {
     branchIndicesRef.current = branchIndices;
@@ -156,6 +173,9 @@ export default function ComplexParticles({
         functionType: { value: functionIndex },
         exponentP: { value: expP },
         exponentQ: { value: expQ === 0 ? 1 : expQ },
+        uQuadA: { value: new THREE.Vector2(quadA[0], quadA[1]) },
+        uQuadB: { value: new THREE.Vector2(quadB[0], quadB[1]) },
+        uQuadC: { value: new THREE.Vector2(quadC[0], quadC[1]) },
         globalSize: { value: state.size },
         intensity: { value: styled && branchStyle === 'intensity' ? state.intensity * (1 - b * 0.3) : state.intensity },
         shimmerAmp: { value: state.shimmer },
@@ -289,8 +309,20 @@ export default function ComplexParticles({
 
   const currentName = functionNames[functionIndex];
   const isPowPQ = functionIndex === POW_PQ_INDEX;
+  const isQuadratic = functionIndex === QUADRATIC_INDEX;
+  const fmtComplex = ([re, im]: Complex2): string => {
+    const r = Number(re.toFixed(3));
+    const i = Number(im.toFixed(3));
+    if (i === 0) return `${r}`;
+    if (r === 0) return i === 1 ? 'i' : i === -1 ? '−i' : `${i}i`;
+    return `${r}${i > 0 ? '+' : '−'}${Math.abs(i)}i`;
+  };
   const displayName = isPowPQ ? `z^(${expP}/${expQ})` : currentName;
-  const displayFormula = isPowPQ ? `p = ${expP}, q = ${expQ}` : functionFormulas[currentName];
+  const displayFormula = isPowPQ
+    ? `p = ${expP}, q = ${expQ}`
+    : isQuadratic
+      ? `(${fmtComplex(quadA)})·z² + (${fmtComplex(quadB)})·z + (${fmtComplex(quadC)})`
+      : functionFormulas[currentName];
 
   const functionGroups = functionCategories.map(cat => ({
     label: cat.label,
@@ -309,6 +341,16 @@ export default function ComplexParticles({
         <>
           <NumberInput label="p" value={expP} integer onChange={setExpP} />
           <NumberInput label="q" value={expQ} integer onChange={setExpQ} />
+        </>
+      )}
+      {isQuadratic && (
+        <>
+          <NumberInput label="a (Re)" value={quadA[0]} step={0.1} onChange={v => setQuadA([v, quadA[1]])} />
+          <NumberInput label="a (Im)" value={quadA[1]} step={0.1} onChange={v => setQuadA([quadA[0], v])} />
+          <NumberInput label="b (Re)" value={quadB[0]} step={0.1} onChange={v => setQuadB([v, quadB[1]])} />
+          <NumberInput label="b (Im)" value={quadB[1]} step={0.1} onChange={v => setQuadB([quadB[0], v])} />
+          <NumberInput label="c (Re)" value={quadC[0]} step={0.1} onChange={v => setQuadC([v, quadC[1]])} />
+          <NumberInput label="c (Im)" value={quadC[1]} step={0.1} onChange={v => setQuadC([quadC[0], v])} />
         </>
       )}
     </>
