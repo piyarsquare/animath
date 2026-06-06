@@ -342,7 +342,9 @@ export default function ComplexParticles({
       {isPowPQ && (
         <>
           <NumberInput label="p" value={expP} integer onChange={setExpP} />
-          <NumberInput label="q" value={expQ} integer onChange={setExpQ} />
+          {/* q = 0 is undefined (z^(p/0)); coerce to 1 so the header/saved value
+              matches what actually renders. Negative q stays allowed. */}
+          <NumberInput label="q" value={expQ} integer onChange={v => setExpQ(v === 0 ? 1 : v)} />
         </>
       )}
       {isQuadratic && (
