@@ -125,6 +125,57 @@ export function Select<T extends string | number>({ label, options, groups, valu
   );
 }
 
+interface RangeSliderProps {
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  valueMin: number;
+  valueMax: number;
+  onChange: (lo: number, hi: number) => void;
+  format?: (v: number) => string;
+}
+
+/**
+ * A two-thumb range slider (built from two overlapping native range inputs, so
+ * it stays keyboard- and touch-accessible). The lower thumb can't pass the upper
+ * and vice-versa. Reports both bounds on every drag.
+ */
+export function RangeSlider({ label, min, max, step, valueMin, valueMax, onChange, format }: RangeSliderProps) {
+  const fmt = format ?? ((v: number) => String(v));
+  const span = max - min || 1;
+  const loPct = ((Math.max(min, valueMin) - min) / span) * 100;
+  const hiPct = ((Math.min(max, valueMax) - min) / span) * 100;
+  return (
+    <div className="cp-row">
+      <div className="cp-row-label">
+        <span>{label}</span>
+        <span className="cp-row-value">{fmt(valueMin)} … {fmt(valueMax)}</span>
+      </div>
+      <div className="cp-dualrange">
+        <div className="cp-dualrange-rail" />
+        <div className="cp-dualrange-fill" style={{ left: `${loPct}%`, right: `${100 - hiPct}%` }} />
+        <input
+          type="range"
+          min={min} max={max} step={step}
+          value={valueMin}
+          // Raise the lower thumb above the upper when they bunch near the top,
+          // so it never gets stuck underneath and unreachable.
+          style={{ zIndex: loPct > 60 ? 5 : 3 }}
+          onChange={e => onChange(Math.min(parseFloat(e.target.value), valueMax), valueMax)}
+        />
+        <input
+          type="range"
+          min={min} max={max} step={step}
+          value={valueMax}
+          style={{ zIndex: 4 }}
+          onChange={e => onChange(valueMin, Math.max(parseFloat(e.target.value), valueMin))}
+        />
+      </div>
+    </div>
+  );
+}
+
 interface NumberInputProps {
   label: string;
   value: number;

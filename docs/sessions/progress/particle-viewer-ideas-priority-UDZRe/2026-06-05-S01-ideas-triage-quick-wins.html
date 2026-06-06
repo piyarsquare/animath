@@ -122,6 +122,17 @@
         <h2>Working notes</h2>
         <ol class="timeline">
           <li class="tl" data-type="code">
+            <p class="tl-time">01:55</p>
+            <span class="chip chip-code">Code</span>
+            <h3>Unlocked domain bounds → two-thumb range sliders; Uniform brightness</h3>
+            <p class="why"><strong>Why:</strong> User wanted the non-symmetric X/Y bounds as dual-ended sliders, and a flat-brightness option.</p>
+            <p>New shared <code>RangeSlider</code> (two overlapping native range inputs +
+            rail/fill, keyboard/touch accessible, thumbs can't cross) replaces the X/Y
+            min/max <code>NumberInput</code>s when unlocked. Added
+            <code>ColourQuantity.Uniform</code> to the Brightness picker (val = 1, and the
+            HSV magnitude-shimmer is skipped so it stays truly flat).</p>
+          </li>
+          <li class="tl" data-type="code">
             <p class="tl-time">01:35</p>
             <span class="chip chip-code">Code</span>
             <h3>Branches → a sheet range in the Domain panel (dropped differentiation)</h3>

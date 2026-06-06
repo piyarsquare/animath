@@ -238,6 +238,61 @@
   accent-color: var(--cp-accent);
 }
 
+/* Two-thumb range slider (RangeSlider) — two overlapping native range inputs
+   over a shared rail + fill. The inputs' tracks ignore pointer events so both
+   thumbs stay grabbable; only the thumbs capture the pointer. */
+.cp-dualrange {
+  position: relative;
+  height: 24px;
+  margin: 2px 0;
+}
+.cp-dualrange-rail,
+.cp-dualrange-fill {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 4px;
+  border-radius: 2px;
+}
+.cp-dualrange-rail {
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.15);
+}
+.cp-dualrange-fill { background: var(--cp-accent); }
+.cp-dualrange input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.cp-dualrange input[type="range"]::-webkit-slider-thumb {
+  pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--cp-accent);
+  border: 2px solid var(--cp-bg-solid);
+  cursor: pointer;
+}
+.cp-dualrange input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--cp-bg-solid);
+  border-radius: 50%;
+  background: var(--cp-accent);
+  cursor: pointer;
+}
+.cp-dualrange input[type="range"]::-moz-range-track { background: transparent; }
+
 /* Pill-button row (used for toolbars: view type, motion, etc.) */
 .cp-pills {
   display: flex;

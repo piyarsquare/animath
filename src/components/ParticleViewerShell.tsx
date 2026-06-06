@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Canvas3D from './Canvas3D';
 import Readme from './Readme';
-import { Section, Slider, Pills, Select, Checkbox, NumberInput } from './ControlPanel';
+import { Section, Slider, Pills, Select, Checkbox, RangeSlider } from './ControlPanel';
 import { ShellSettings, ShellActions, useAppHeader, useAppExplainer } from './AppShell';
 import QuarterTurnControls from '../controls/QuarterTurnControls';
 import type { TurnItem, AxisLetter } from '../controls/QuarterTurnControls';
@@ -229,10 +229,20 @@ export default function ParticleViewerShell({
             </>
           ) : (
             <>
-              <NumberInput label="X min" value={state.xMin} step={0.5} onChange={state.setXMin} />
-              <NumberInput label="X max" value={state.xMax} step={0.5} onChange={state.setXMax} />
-              <NumberInput label="Y min" value={state.yMin} step={0.5} onChange={state.setYMin} />
-              <NumberInput label="Y max" value={state.yMax} step={0.5} onChange={state.setYMax} />
+              <RangeSlider
+                label="X range"
+                min={-R.extent.max} max={R.extent.max} step={R.extent.step}
+                valueMin={state.xMin} valueMax={state.xMax}
+                onChange={(lo, hi) => { state.setXMin(lo); state.setXMax(hi); }}
+                format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`}
+              />
+              <RangeSlider
+                label="Y range"
+                min={-R.extent.max} max={R.extent.max} step={R.extent.step}
+                valueMin={state.yMin} valueMax={state.yMax}
+                onChange={(lo, hi) => { state.setYMin(lo); state.setYMax(hi); }}
+                format={v => state.axisScale === 1 ? v.toFixed(1) : `${v.toFixed(1)}π`}
+              />
             </>
           )}
           <Select
