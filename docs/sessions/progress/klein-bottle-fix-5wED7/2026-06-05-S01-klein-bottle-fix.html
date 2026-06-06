@@ -71,6 +71,38 @@
         <!-- Newest entry first. data-type ∈ decision | code | finding | blocker | milestone -->
         <ol class="timeline">
           <li class="tl" data-type="milestone">
+            <p class="tl-time">00:10</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Added "project avatar into every cell" option; build green</h3>
+            <p class="why"><strong>Why:</strong> User asked to add the projecting
+            avatar — render your twin in every tiled cell so you watch your
+            doppelgängers (mirror-reversed across the Klein flip) walk the universal
+            cover in lockstep.</p>
+            <p>Implementation:</p>
+            <ul>
+              <li>New shared option <code>projectAvatar</code> in
+              <code>engine.ts</code> (+ optional <code>setProjectAvatar</code>);
+              flat-worlds-only Checkbox in <code>TopologyWalk.tsx</code> ("Project
+              avatar into every cell").</li>
+              <li><code>flatEngine.ts</code>: per-cell ghost avatars built
+              <strong>lazily</strong> on first enable (default walk pays nothing).
+              Each cell gets one <code>Character</code>; per frame they share one
+              local pose <code>(bx, 0, bz)</code> with forward z pre-multiplied by
+              the home parity <code>sz0</code>, so the home twin lands exactly on
+              the player and every other cell's matrix mirrors its twin
+              automatically. The standalone avatar hides while projecting (home twin
+              stands in); in first person the home twin hides (you're inside it).</li>
+              <li>EXPLAINER updated. <code>npm run build</code>: <span class="badge
+              badge-ok">passed</span>.</li>
+            </ul>
+            <p class="callout callout-gotcha"><span class="callout-label">Gotcha</span>
+            The math hinges on the universal-cover identity that a quotient point at
+            local <code>(lx,lz)</code> appears in cell <code>(I,J)</code> at world
+            <code>(I·L+lx, J·L+(−1)<sup>I</sup>·lz)</code> — verified against the
+            Klein group relations before coding, and it's the same parity the
+            footprint trail already uses, so twins and trail stay consistent.</p>
+          </li>
+          <li class="tl" data-type="milestone">
             <p class="tl-time">23:30</p>
             <span class="chip chip-milestone">Milestone</span>
             <h3>v1 landed — flat Klein flip is now legible; build green</h3>

@@ -74,5 +74,8 @@ so it's the clearest possible signature of an orientation flip.
 ## Walking it
 
 Drag to look, use **WASD / arrow keys** (or the on-screen pad) to move, and
-toggle **third-person** to watch your avatar lay the trail. There's no
+toggle **third-person** to watch your avatar lay the trail. In the flat worlds you
+can also **project your avatar into every cell** to watch your twins walk the
+universal cover in lockstep — mirror-reversed across the Klein bottle's flip, so
+you literally see your reflected double striding the other way. There's no
 autopilot — you go where you steer.

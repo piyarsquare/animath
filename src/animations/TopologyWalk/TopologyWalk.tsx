@@ -50,6 +50,7 @@ export default function TopologyWalk() {
   const [markers, setMarkers] = useState(true);
   const [bloom, setBloom] = useState(() => !isCramped());
   const [miniMap, setMiniMap] = useState(true);
+  const [projectAvatar, setProjectAvatar] = useState(false);
   const [wallText, setWallText] = useState('MÖBIUS');
 
   const def = surfaceDef(surfaceId);
@@ -76,7 +77,7 @@ export default function TopologyWalk() {
   // Remember the last surface chosen in each world, so toggling Corridor↔Flat
   // returns you to where you were rather than always resetting.
   const lastByFamily = useRef<Record<Family, string>>({ corridor: 'mobius', flat: 'torus' });
-  const optsRef = useRef<EngineOptions>({ surfaceId, width, themeId, ambientMul, markers, bloom, miniMap });
+  const optsRef = useRef<EngineOptions>({ surfaceId, width, themeId, ambientMul, markers, bloom, miniMap, projectAvatar });
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
   const requestStamp = useCallback(() => { stampRef.current = true; }, []);
@@ -139,6 +140,7 @@ export default function TopologyWalk() {
   useEffect(() => { optsRef.current.markers = markers; ctxRef.current?.engine.setMarkers?.(markers); }, [markers]);
   useEffect(() => { optsRef.current.bloom = bloom; ctxRef.current?.engine.setBloom?.(bloom); }, [bloom]);
   useEffect(() => { optsRef.current.miniMap = miniMap; ctxRef.current?.engine.setMiniMap?.(miniMap); }, [miniMap]);
+  useEffect(() => { optsRef.current.projectAvatar = projectAvatar; ctxRef.current?.engine.setProjectAvatar?.(projectAvatar); }, [projectAvatar]);
 
   const clearTrail = useCallback(() => { ctxRef.current?.engine.clearTrail(); }, []);
   const clearWriting = useCallback(() => { ctxRef.current?.engine.clearWriting?.(); }, []);
@@ -226,6 +228,9 @@ export default function TopologyWalk() {
           />
           <Select label="Surface" options={surfaceOptions} value={surfaceId} onChange={setSurfaceId} />
           <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
+          {!isCorridor && (
+            <Checkbox label="Project avatar into every cell" checked={projectAvatar} onChange={setProjectAvatar} />
+          )}
           <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
           <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>
             {isCorridor

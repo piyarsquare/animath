@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { makeFootprintTrail, FootprintTrail } from './footprints';
-import { makeCharacter } from './character';
+import { makeCharacter, Character } from './character';
 import { EngineDeps, EngineOptions, FrameInput, WorldEngine } from './engine';
 
 const L = 30;             // fundamental-domain side
@@ -129,6 +129,8 @@ interface Built {
   group: THREE.Group;
   trees: THREE.Group;
   columns: THREE.Group;
+  /** Per-cell "twin" avatar, built lazily the first time projection is enabled. */
+  ghost: Character | null;
   dispose: () => void;
 }
 
@@ -205,7 +207,7 @@ function buildCell(d: SharedDecor, foot: FootprintTrail): Built {
   fp.frustumCulled = false;
   group.add(fp);
 
-  return { group, trees, columns, dispose: () => disposers.forEach((dd) => dd()) };
+  return { group, trees, columns, ghost: null, dispose: () => disposers.forEach((dd) => dd()) };
 }
 
 /**
@@ -226,6 +228,7 @@ function buildCell(d: SharedDecor, foot: FootprintTrail): Built {
 export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngine {
   const { scene, camera, renderer } = deps;
   let klein = opts.surfaceId === 'klein';
+  let projectAvatar = opts.projectAvatar;
 
   // player state
   let px = 2, pz = 2;
@@ -274,6 +277,20 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
   const M = new THREE.Matrix4();
   const S = new THREE.Matrix4();
 
+  // Twin avatars are allocated lazily — one per cell — only once the player turns
+  // projection on, so the default walk pays nothing for them.
+  let ghostsBuilt = false;
+  function ensureGhosts() {
+    if (ghostsBuilt) return;
+    for (const cell of cells) {
+      const g = makeCharacter();
+      g.group.visible = false;
+      cell.group.add(g.group);
+      cell.ghost = g;
+    }
+    ghostsBuilt = true;
+  }
+
   function clearTrail() { foot.clear(); trailLast = null; }
 
   function frame(input: FrameInput) {
@@ -294,7 +311,9 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
     const charRight = new THREE.Vector3().crossVectors(UP_Y, forward).normalize();
     character.group.position.set(px, 0, pz);
     character.group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(charRight, UP_Y, forward));
-    character.group.visible = input.thirdPerson;
+    // When projecting twins, the home-cell twin stands in for the player, so the
+    // standalone avatar steps aside to avoid drawing two in the same spot.
+    character.group.visible = input.thirdPerson && !projectAvatar;
     character.stride(stridePhase);
 
     if (input.thirdPerson) {
@@ -316,10 +335,25 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
     floor.position.set(px, 0, pz);
     (floor.material as THREE.MeshStandardMaterial).map!.offset.set(px / 3, -pz / 3);
 
+    // Player position in base (quotient) coords, reused by the trail and the
+    // twin avatars. sz0 bakes in the home cell's mirror parity so the home copy
+    // lands exactly on the player.
+    const I0 = Math.round(px / L), J0 = Math.round(pz / L);
+    const sz0 = klein && (I0 & 1) ? -1 : 1;
+    const bx = px - I0 * L;
+    const bz = sz0 * (pz - J0 * L);
+
+    // Shared local pose for the twin avatars; each cell's own matrix then mirrors
+    // it where that cell is mirrored.
+    if (projectAvatar) ensureGhosts();
+    const gForward = new THREE.Vector3(forward.x, 0, sz0 * forward.z).normalize();
+    const gRight = new THREE.Vector3().crossVectors(UP_Y, gForward).normalize();
+    const gQuat = new THREE.Quaternion().setFromRotationMatrix(
+      new THREE.Matrix4().makeBasis(gRight, UP_Y, gForward));
+
     // Tile the fundamental domain around the player. On the Klein bottle, odd
     // columns are mirror-reflected (the red flip) and wear the alternate skin
     // (trees vs columns); the torus shows columns everywhere (orientable).
-    const I0 = Math.round(px / L), J0 = Math.round(pz / L);
     let idx = 0;
     for (let di = -K; di <= K; di++) {
       for (let dj = -K; dj <= K; dj++) {
@@ -333,6 +367,19 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
         // Trees on the flipped class, columns otherwise (torus: columns only).
         cell.trees.visible = flipped;
         cell.columns.visible = !flipped;
+        // Project a twin into this cell (mirrored automatically by cell.matrix).
+        if (cell.ghost) {
+          if (projectAvatar) {
+            const isHome = I === I0 && J === J0;
+            cell.ghost.group.position.set(bx, 0, bz);
+            cell.ghost.group.quaternion.copy(gQuat);
+            cell.ghost.stride(stridePhase);
+            // In first person, hide your own copy — you're standing inside it.
+            cell.ghost.group.visible = !(isHome && !input.thirdPerson);
+          } else {
+            cell.ghost.group.visible = false;
+          }
+        }
       }
     }
 
@@ -341,14 +388,11 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
     // left/right colors.
     const cur = new THREE.Vector2(px, pz);
     if (!trailLast || trailLast.distanceTo(cur) > TRAIL_SPACING) {
-      const sz = klein && (I0 & 1) ? -1 : 1;
-      const bx = px - I0 * L;
-      const bz = sz * (pz - J0 * L);
       let dwx: number, dwz: number;
       if (trailLast) { dwx = px - trailLast.x; dwz = pz - trailLast.y; }
       else { dwx = Math.sin(yaw); dwz = -Math.cos(yaw); }
       const len = Math.hypot(dwx, dwz) || 1;
-      foot.append(new THREE.Vector3(bx, 0, bz), new THREE.Vector3(dwx / len, 0, sz * dwz / len), UP_Y);
+      foot.append(new THREE.Vector3(bx, 0, bz), new THREE.Vector3(dwx / len, 0, sz0 * dwz / len), UP_Y);
       trailLast = cur;
     }
 
@@ -360,9 +404,10 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
     frame,
     clearTrail,
     setSurface: (id) => { klein = id === 'klein'; clearTrail(); },
+    setProjectAvatar: (on) => { projectAvatar = on; if (on) ensureGhosts(); },
     dispose: () => {
       scene.remove(root);
-      cells.forEach((c) => c.dispose());
+      cells.forEach((c) => { c.ghost?.dispose(); c.dispose(); });
       decor.dispose();
       foot.dispose();
       character.dispose();

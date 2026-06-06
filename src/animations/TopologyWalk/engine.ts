@@ -68,6 +68,9 @@ export interface EngineOptions {
   markers: boolean;
   bloom: boolean;
   miniMap: boolean;
+  /** Flat worlds: draw a copy of the avatar in every tiled cell (mirrored where
+   *  the cell is mirrored), so you watch your twins walk the universal cover. */
+  projectAvatar: boolean;
 }
 
 /**
@@ -91,5 +94,6 @@ export interface WorldEngine {
   setMarkers?(on: boolean): void;
   setBloom?(on: boolean): void;
   setMiniMap?(on: boolean): void;
+  setProjectAvatar?(on: boolean): void;
   clearWriting?(): void;
 }
