@@ -166,6 +166,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   let rp2 = opts.surfaceId === 'rp2';
   let radius = opts.planetRadius > 0 ? opts.planetRadius : R0;
   let colorCells = opts.colorCells;
+  let showInner = opts.innerShell;
 
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1;
@@ -228,6 +229,50 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   antipode.visible = rp2;
   root.add(antipode);
 
+  // ── "The other side, inside" ──────────────────────────────────────────────
+  // A concentric inner shell carrying the antipodally-glued far side, via the map
+  // T(x) = −INNER_K · x (a point reflection composed with a shrink to radius
+  // INNER_K·R). Then the inner-shell point straight below your feet shows the
+  // cover content at your antipode −d — your identified partner — mirror-reversed
+  // (the point reflection flips orientation, exactly as the ℝP² gluing does). With
+  // the outer planet turned glassy you look down through the ground at it. This is
+  // the spherical analog of the flat engine's glass floor + mirrored underside.
+  const INNER_K = 0.52;
+  const innerPlanetMat = new THREE.MeshStandardMaterial({ map: planetTex, color: 0x9fb4c8, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide });
+  ownMats.push(innerPlanetMat);
+  const innerPlanet = new THREE.Mesh(new THREE.SphereGeometry(radius * INNER_K, 48, 32), innerPlanetMat);
+  root.add(innerPlanet);
+
+  const inner = new THREE.Group();
+  inner.scale.set(-INNER_K, -INNER_K, -INNER_K);
+  let innerClone = landmarks.clone(true);
+  inner.add(innerClone);
+  const footInner = new THREE.Mesh(foot.geometry, foot.material);
+  footInner.frustumCulled = false;
+  inner.add(footInner);
+  root.add(inner);
+
+  // The inner shell is only meaningful where antipodes are actually glued (ℝP²).
+  // Showing it turns the outer planet to glass so the inner world reads through.
+  function applyInnerShell() {
+    const on = showInner && rp2;
+    inner.visible = on;
+    innerPlanet.visible = on;
+    if (on) {
+      planetMat.transparent = true;
+      planetMat.opacity = 0.34;
+      planetMat.side = THREE.DoubleSide;
+      planetMat.depthWrite = false;
+    } else {
+      planetMat.transparent = false;
+      planetMat.opacity = 1;
+      planetMat.side = THREE.FrontSide;
+      planetMat.depthWrite = true;
+    }
+    planetMat.needsUpdate = true;
+  }
+  applyInnerShell();
+
   // Rebuild the planet shell + re-seat the landmarks at a new radius. A bigger
   // planet dilutes the curvature (Gauss–Bonnet pins ∫K dA = 2πχ regardless), so
   // it feels locally flatter; the eye height and stride length stay in fixed world
@@ -240,26 +285,36 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     for (let i = 0; i < beaconGroups.length; i++) {
       beaconGroups[i].position.copy(BEACONS[i].dir).multiplyScalar(radius);
     }
-    // The antipodal twins are a clone, so rebuild it from the re-seated originals.
+    // The antipodal twins (outer far side) and the inner-shell landmarks are both
+    // clones, so rebuild them from the re-seated originals; resize the inner shell.
     antipode.remove(antiClone);
     antiClone = landmarks.clone(true);
     antipode.add(antiClone);
+    inner.remove(innerClone);
+    innerClone = landmarks.clone(true);
+    inner.add(innerClone);
+    innerPlanet.geometry.dispose();
+    innerPlanet.geometry = new THREE.SphereGeometry(radius * INNER_K, 48, 32);
     camera.far = radius * 5; camera.updateProjectionMatrix();
     clearTrail();
   }
 
   // Swap the planet skin between the plain checker and the cover-tinted one. The
   // landmarks/trail are unaffected; only the ground reveals which sheet you're on.
+  // Both planet shells share the texture, so update each material's map.
   function setColorCells(on: boolean) {
     if (on === colorCells) return;
     colorCells = on;
     mapState.colored = on;
     const next = planetTexture(colorCells);
-    planetMat.map = next;
-    planetMat.needsUpdate = true;
+    planetMat.map = next; planetMat.needsUpdate = true;
+    innerPlanetMat.map = next; innerPlanetMat.needsUpdate = true;
     planetTex.dispose();
     planetTex = next;
   }
+
+  // Toggle the inner co-identification shell (and the outer planet's glassiness).
+  function setInnerShell(on: boolean) { showInner = on; applyInnerShell(); }
 
   const character = makeCharacter();
   root.add(character.group);
@@ -375,15 +430,17 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     family: 'spherical',
     frame,
     clearTrail,
-    setSurface: (id) => { rp2 = id === 'rp2'; antipode.visible = rp2; mapState.rp2 = rp2; clearTrail(); },
+    setSurface: (id) => { rp2 = id === 'rp2'; antipode.visible = rp2; mapState.rp2 = rp2; applyInnerShell(); clearTrail(); },
     setRadius,
     setColorCells,
+    setInnerShell,
     getSphereState: () => mapState,
     dispose: () => {
       scene.remove(root);
       foot.dispose();
       character.dispose();
       planet.geometry.dispose();
+      innerPlanet.geometry.dispose();
       planetTex.dispose();
       ownGeos.forEach((g) => g.dispose());
       // Sprite badges own a CanvasTexture each; release those too.

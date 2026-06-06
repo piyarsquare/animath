@@ -82,6 +82,10 @@ export interface EngineOptions {
   /** Spherical worlds: planet radius in world units. A bigger planet dilutes the
    *  (fixed-by-Gauss–Bonnet) curvature, so it feels locally flatter. */
   planetRadius: number;
+  /** Spherical ℝP²: draw a concentric inner shell carrying the antipodally-glued
+   *  far side (point-reflected + shrunk inward), with the outer planet turned
+   *  glassy — so the point straight below your feet is your identified antipode. */
+  innerShell: boolean;
 }
 
 /**
@@ -149,6 +153,7 @@ export interface WorldEngine {
   setFloorOpacity?(o: number): void;
   setColorCells?(on: boolean): void;
   setRadius?(r: number): void;
+  setInnerShell?(on: boolean): void;
   clearWriting?(): void;
   /** Flat worlds only: current position/heading in the fundamental domain. */
   getMapState?(): FlatMapState | null;

@@ -57,6 +57,7 @@ export default function TopologyWalk() {
   const [floorOpacity, setFloorOpacity] = useState(0.6);
   const [colorCells, setColorCells] = useState(false);
   const [planetRadius, setPlanetRadius] = useState(30);
+  const [innerShell, setInnerShell] = useState(false);
   const [wallText, setWallText] = useState('MÖBIUS');
 
   const def = surfaceDef(surfaceId);
@@ -85,7 +86,7 @@ export default function TopologyWalk() {
   // Remember the last surface chosen in each world, so toggling Corridor↔Flat
   // returns you to where you were rather than always resetting.
   const lastByFamily = useRef<Record<Family, string>>({ corridor: 'mobius', flat: 'klein', spherical: 'sphere' });
-  const optsRef = useRef<EngineOptions>({ surfaceId, width, themeId, ambientMul, markers, bloom, miniMap, projectAvatar, floorOpacity, colorCells, planetRadius });
+  const optsRef = useRef<EngineOptions>({ surfaceId, width, themeId, ambientMul, markers, bloom, miniMap, projectAvatar, floorOpacity, colorCells, planetRadius, innerShell });
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
   const requestStamp = useCallback(() => { stampRef.current = true; }, []);
@@ -152,6 +153,7 @@ export default function TopologyWalk() {
   useEffect(() => { optsRef.current.floorOpacity = floorOpacity; ctxRef.current?.engine.setFloorOpacity?.(floorOpacity); }, [floorOpacity]);
   useEffect(() => { optsRef.current.colorCells = colorCells; ctxRef.current?.engine.setColorCells?.(colorCells); }, [colorCells]);
   useEffect(() => { optsRef.current.planetRadius = planetRadius; ctxRef.current?.engine.setRadius?.(planetRadius); }, [planetRadius]);
+  useEffect(() => { optsRef.current.innerShell = innerShell; ctxRef.current?.engine.setInnerShell?.(innerShell); }, [innerShell]);
 
   const clearTrail = useCallback(() => { ctxRef.current?.engine.clearTrail(); }, []);
   const clearWriting = useCallback(() => { ctxRef.current?.engine.clearWriting?.(); }, []);
@@ -273,6 +275,9 @@ export default function TopologyWalk() {
           )}
           {isSpherical && (
             <Slider label="Planet radius" value={planetRadius} min={12} max={90} step={2} onChange={setPlanetRadius} format={(v) => `${Math.round(v)} m`} />
+          )}
+          {isSpherical && (
+            <Checkbox label="Inner shell: the glued other side (ℝP²)" checked={innerShell} onChange={setInnerShell} />
           )}
           <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
           <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>

@@ -102,6 +102,15 @@ Two readouts help you keep your bearings on the planet:
   matching **Colour each cover cell** knob, which tints every tiled copy of the
   fundamental domain so you can watch yourself cross from one cover cell to the
   next.
+- **Inner shell — the glued other side (ℝP²):** turns the planet to glass and
+  hangs a smaller, point-reflected copy of the world *inside* it. The inner-shell
+  point straight below your feet is your **identified antipode** — the very point
+  ℝP² glues you to — shown **mirror-reversed**, because the antipodal map flips
+  orientation. Drop a beacon, walk to its far side, and its glued image is right
+  there beneath the ground. It's the spherical echo of the Klein bottle's glass
+  floor and mirrored underside: the "other face" of a one-sided world, seen
+  through the floor. (It's only a *representation* — ℝP² can't truly fit in 3-D
+  without self-intersecting — but the gluing it shows is exact.)
 
 ## Reading the footprints
 
