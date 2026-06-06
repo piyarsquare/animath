@@ -70,6 +70,24 @@
         <h2>Working notes</h2>
         <!-- Newest entry first. data-type ∈ decision | code | finding | blocker | milestone -->
         <ol class="timeline">
+          <li class="tl" data-type="bugfix">
+            <p class="tl-time">01:45</p>
+            <span class="chip chip-bugfix">Fix</span>
+            <h3>Underside trail now reads reversed &amp; face-down (not face-up)</h3>
+            <p class="why"><strong>Why:</strong> User: "the forward marks only go on
+            the top surface and they are always set down face up." The underside
+            footprint mesh existed but the <code>under</code> group only reflected
+            in <strong>y</strong> — and a y-flip leaves a flat horizontal decal's
+            in-plane image (and apparent facing, viewed from above) unchanged, so
+            the underside prints rendered identical to the top (face-up).</p>
+            <p>Fix: the under group is now the genuine other-face transform,
+            <code>scale(1, −1, −1)</code> — reflected below the glass <em>and</em>
+            mirrored across the twist (z) axis. The chiral footprints now read
+            reversed and face-down through the glass; normals point down; and the
+            whole underside is the correct opposite-orientation copy (a proper
+            180°-about-x rotation, so lighting stays right). <code>npm run
+            build</code>: <span class="badge badge-ok">passed</span>.</p>
+          </li>
           <li class="tl" data-type="milestone">
             <p class="tl-time">01:25</p>
             <span class="chip chip-milestone">Milestone</span>

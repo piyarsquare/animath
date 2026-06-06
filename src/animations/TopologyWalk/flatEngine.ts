@@ -177,11 +177,14 @@ function buildCell(d: SharedDecor, foot: FootprintTrail): Built {
 
   const trees = new THREE.Group();
   const columns = new THREE.Group();
-  // The other-side copy hangs below the glass, reflected through the floor
-  // (scale y = -1) and wearing the opposite skin. Hidden until the floor is
-  // cleared enough to peek through.
+  // The other-side copy hangs below the glass, wearing the opposite skin. It is
+  // the genuine *other face*: reflected through the floor AND mirrored across the
+  // twist axis (z). The z-mirror matters for the chiral marks — a flat footprint
+  // decal viewed from above is unchanged by a y-flip alone, so without it the
+  // underside trail would render face-up, identical to the top. With it, the
+  // prints read reversed and face-down through the glass, as they should.
   const under = new THREE.Group();
-  under.scale.y = -1;
+  under.scale.set(1, -1, -1);
   under.visible = false;
   const underTrees = new THREE.Group();
   const underColumns = new THREE.Group();
