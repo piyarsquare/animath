@@ -118,9 +118,9 @@ Shipped a **Hopf study view** button (Camera panel, shown in Hopf/Torus): it
 forces the Hopf projection, sets Motion → Fixed, stops any spins, and snaps the
 4D orientation back to identity in one tap, so the latitude/longitude reading
 holds. The EXPLAINER already carries the reading ladder (`c·z` → point; `z+c`,
-`z²` → sphere once; `exp` → infinite wrap) and the latitude/longitude legend.
-Open follow-up: a faint sphere wireframe is provided by the existing reference
-scaffold, but pole/equator *labels* are still unlabeled. Original sketch:
+`z²` → sphere once; `exp` → infinite wrap) and the latitude/longitude legend. The
+reference scaffold now also carries text labels (sphere poles `f→0`/`z→0`, the
+`|z|=|f|` equator, and the torus cores + `arg z` direction). Original sketch:
 
 The 4D spinner/rotation is applied *before* the Hopf map, which remixes input and
 output coordinates and breaks the `z/f` reading. For learning Hopf we want a
@@ -186,7 +186,14 @@ small `Pills`/`Select` pair (source × quantity) in the Color section. Implement
 the shader's `calcColour` (`ComplexParticles/shaders/index.ts`) behind a couple of
 uniforms; persist the selection via `useParticleState`.
 
-### Explicit domain bounds (lower/upper) with a ± lock
+### Explicit domain bounds (lower/upper) with a ± lock — ✅ implemented
+
+Shipped a **± symmetric bounds** lock in the Domain section: locked keeps the
+classic symmetric `±extent` sliders; unlocked exposes independent X/Y min/max
+(as two-thumb **RangeSlider**s) for off-centre windows like `x ∈ [0, 6]`. The
+geometry builders now take explicit `(xMin,xMax,yMin,yMax)`, `axisScale` still
+applies, and toggling the lock seeds the other representation so the view doesn't
+jump. Original sketch:
 
 The sampled domain is currently symmetric half-widths (`extentX`, `extentY`, so the
 box is always `[-ext, +ext]`). Let the user set **independent lower and upper
@@ -209,8 +216,11 @@ and the shader `applyComplex` switch, appended at indices 19–21 so persisted
 selections stay stable), and the picker is now grouped into categories via the
 new `functionCategories` table + `Select` `groups` (optgroup) support. The
 inverse-trig pair is branch-aware (the `ln` carries the ±2π·k sheets; inner sqrt
-principal) and was checked numerically against known values. Still open: the
-**generic quadratic** `a·z²+b·z+c` and the **custom-f** stretch goal. Original sketch:
+principal) and was checked numerically against known values. The **generic
+quadratic** `a·z²+b·z+c` (complex coefficients, index 22) also shipped — wired
+through `uQuadA/B/C` + the adaptive CPU path, with the coefficients editable via
+the commit-on-blur `NumberInput`. Still open: the **custom-f** stretch goal (a
+typed expression → GLSL). Original sketch:
 
 Grow and organize the function list (`lib/complexMath.ts` name/formula tables + the
 shader `applyComplex` switch in `ComplexParticles/shaders/index.ts`):
@@ -232,7 +242,13 @@ shader `applyComplex` switch in `ComplexParticles/shaders/index.ts`):
   Big task — treat the generic-quadratic/polynomial path as the pragmatic middle
   ground to ship first.
 
-### Number inputs: commit on Enter/blur, with revert (shared ControlPanel)
+### Number inputs: commit on Enter/blur, with revert (shared ControlPanel) — ✅ implemented
+
+Shipped a shared `ControlPanel` **NumberInput** primitive: keeps a draft string
+while typing, commits only on Enter/blur, clamps to `min`/`max` (rounds if
+`integer`), reverts an unparseable entry, and cancels on Escape. Used for the
+`z^(p/q)` p/q fields and the quadratic coefficients. (No toast on revert — it
+restores the last good value silently.) Original sketch:
 
 Wherever a control takes a *typed* number, **don't apply the change keystroke by
 keystroke** — wait until the user presses **Enter** or **leaves the field**, then
