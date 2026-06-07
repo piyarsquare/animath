@@ -350,33 +350,19 @@ slash command; they never auto-invoke):
   maintainer · architecture consultant · math-viz & pedagogy) in parallel, then
   synthesizes.
 
-Progress reports and handoffs are **committed** as self-contained **HTML**
-documents under `docs/sessions/{progress,handoff}/<branch-slug>/` — partitioned
-**per branch** so parallel branches never collide (the slug is the branch name with
-`claude/` stripped and `/`→`-`; keep branch names short and topical). They share
-`docs/sessions/report.css` (styling: timeline, sticky auto-TOC, callouts, badges)
-and `docs/sessions/report.js` (progressive enhancement — TOC build, scroll-spy,
-sortable tables; degrades gracefully). Skills copy the `docs/sessions/_template-*.html`
-skeletons. Each report embeds a `report-meta` JSON island; `node
-docs/sessions/build-index.mjs` regenerates the `docs/sessions/index.html` dashboard
-from them (the `/handoff` skill runs it). The shared self-reflection protocol lives
-at `.claude/prompts/self-reflection.md`.
-
-**Viewing rendered reports.** GitHub shows `.html` as *source*, not rendered. Three
-ways to get the styled view:
-
-- **On a branch (live):** use githack, a Cloudflare-fronted renderer that serves any
-  branch/path —
-  `https://raw.githack.com/piyarsquare/animath/<branch>/docs/sessions/index.html`
-  (use the full branch name, not the slug). The dashboard's links are relative, so
-  clicking from the rendered index navigates to the rendered reports. githack caches
-  briefly; if a just-pushed change isn't showing, hard-refresh or append
-  `?v=<short-sha>`. The `/start-session` skill prints these links at session start.
-- **On `main` (deployed):** the production build copies `docs/sessions/` into
-  `dist/sessions/` (`docs/sessions/copy-to-dist.mjs`, run as the last step of
-  `npm run build`), so the dashboard lives at
-  `https://piyarsquare.github.io/animath/sessions/`. Each deployed page gets a
-  `noindex` meta injected at copy time, and nothing in the app links to it — the
-  reports are reachable but deliberately kept off to the side.
-- **Locally:** just open the `.html` file in a browser.
+Progress reports and handoffs are **committed** as **Markdown + YAML frontmatter**
+under `docs/sessions/{progress,handoff}/<branch-slug>/` — partitioned **per branch**
+so parallel branches never collide (the slug is the branch name with `claude/`
+stripped and `/`→`-`; keep branch names short and topical). The style is specified
+by `docs/sessions/REPORT_STYLE.md`; skills copy the `docs/sessions/_template-*.md`
+skeletons. Markdown reads natively on GitHub, and **`npm run sessions`**
+(`docs/sessions/build-sessions.mjs`) renders every branch's reports into the rich
+HTML view (`report.css` + `report.js`: timeline rail, sticky scroll-spy TOC,
+callouts, sortable tables) and builds a **cross-branch control center**
+(`docs/sessions/control-center.html`) that aggregates every active branch's reports
+into one searchable index. The build reads branch tips read-only (never modifies
+other branches), deduping each report to its most-recently-updated copy with
+provenance taken from the slug folder. The converter `docs/sessions/convert-html.mjs`
+turns the older hand-authored HTML reports into Markdown. The shared self-reflection
+protocol lives at `.claude/prompts/self-reflection.md`.
 </content>

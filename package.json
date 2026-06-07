@@ -3,9 +3,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "tsc && vite build && node docs/sessions/copy-to-dist.mjs",
+    "build": "tsc && vite build",
     "dev": "vite",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "shoot": "node scripts/shoot.mjs",
+    "sessions": "node docs/sessions/build-sessions.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.410.0",
@@ -19,6 +21,7 @@
     "@types/react-dom": "^18.2.0",
     "@types/three": "^0.177.0",
     "@vitejs/plugin-react": "^4.0.0",
+    "puppeteer": "^24.10.0",
     "typescript": "^5.2.2",
     "vite": "^5.0.0"
   }

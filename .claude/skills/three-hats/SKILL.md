@@ -32,19 +32,17 @@ the current session's progress report — get the `YYYY-MM-DD-SNN` identifier fr
 most recent file in `docs/sessions/progress/<branch-slug>/`; if there is no progress
 report yet, use today's date with `S01`:
 
-- `docs/sessions/progress/<branch-slug>/{YYYY-MM-DD-SNN}-expert-maintainer.html` — Framework Maintainer
-- `docs/sessions/progress/<branch-slug>/{YYYY-MM-DD-SNN}-expert-consultant.html` — Architecture Consultant
-- `docs/sessions/progress/<branch-slug>/{YYYY-MM-DD-SNN}-expert-pedagogy.html` — Math-Viz & Pedagogy
-- `docs/sessions/progress/<branch-slug>/{YYYY-MM-DD-SNN}-expert-synthesis.html` — Convergence Analysis
+- `docs/sessions/progress/<branch-slug>/{YYYY-MM-DD-SNN}-expert-maintainer.md` — Framework Maintainer
+- `docs/sessions/progress/<branch-slug>/{YYYY-MM-DD-SNN}-expert-consultant.md` — Architecture Consultant
+- `docs/sessions/progress/<branch-slug>/{YYYY-MM-DD-SNN}-expert-pedagogy.md` — Math-Viz & Pedagogy
+- `docs/sessions/progress/<branch-slug>/{YYYY-MM-DD-SNN}-expert-synthesis.md` — Convergence Analysis
 
-Each file is a **self-contained HTML document** (we use HTML, not Markdown, for the
-richer rendering) using the `docs/sessions/_template-progress.html` skeleton as a
-starting point: link `../../report.css` + `../../report.js`, wrap the body in
-`<main class="report"><div class="body"><nav class="toc" data-autobuild></nav><div
-class="content">…</div></div></main>`, and include a `report-meta` JSON island
-(`"kind":"three-hats"`). Use the stylesheet's components (callouts, tables,
-chips). Each agent must be instructed to write its complete analysis to its
-designated file using the Write tool.
+Each file is **Markdown + YAML frontmatter** following `docs/sessions/REPORT_STYLE.md`:
+open with frontmatter that includes `kind: three-hats` (plus `session`, `date`,
+`title`, `branch`, `slug`, `status`, `build`), then the analysis as `##` sections,
+with GitHub-alert callouts (`> [!IMPORTANT]` etc.) and Markdown tables. The reports
+read on GitHub as-is and `npm run sessions` renders them to the rich HTML view. Each
+agent must write its complete analysis to its designated file using the Write tool.
 
 ## Execution
 
@@ -54,13 +52,13 @@ Launch three agents **in parallel** using the Agent tool (subagent_type:
 1. The full text of the plan / proposal / question (and any context you gathered).
 2. Their role description (below).
 3. Instruction to produce a structured analysis of 300–600 lines.
-4. Instruction to **write the complete analysis** to the designated output file as a
-   self-contained HTML document linking `../../report.css` (use `<section>`,
-   `<table>`, `<pre>`, etc. — not Markdown).
+4. Instruction to **write the complete analysis** to the designated output file as
+   Markdown + YAML frontmatter (`##` sections, Markdown tables, fenced code,
+   `> [!…]` alert callouts) per `docs/sessions/REPORT_STYLE.md`.
 5. Instruction to end with a **Verdict** section: what they endorse, what concerns
    them, what they would change.
 6. The **Self-Reflection Protocol** (`.claude/prompts/self-reflection.md`) — each
-   expert reads that file and appends its Self-Reflection `<section>` (HTML) after
+   expert reads that file and appends a `## Self-reflection` section (Markdown) after
    their Verdict.
 
 ### Role 1: Framework Maintainer (AppShell steward)
