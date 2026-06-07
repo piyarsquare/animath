@@ -50,7 +50,11 @@ function Matrix({ inst, matching, rows, cols, event, blocking, size, labels, vie
               (event.proposer.side === 'A' && event.proposer.id === i && event.receiver.id === j) ||
               (event.proposer.side === 'B' && event.proposer.id === j && event.receiver.id === i));
             const rej = cur && event!.outcome === 'reject';
-            const cls = `sm2-mcell${matched ? ' matched' : ''}${cur ? (rej ? ' reject' : ' active') : ''}${blocking.has(`${i}-${j}`) ? ' blocking' : ''}`;
+            // the pair that was just broken by a bump (the "stole away" event)
+            const stolen = !!event && event.outcome === 'bump' && event.displaced !== undefined && (
+              (event.proposer.side === 'A' && i === event.displaced && j === event.receiver.id) ||
+              (event.proposer.side === 'B' && j === event.displaced && i === event.receiver.id));
+            const cls = `sm2-mcell${matched ? ' matched' : ''}${cur ? (rej ? ' reject' : ' active') : ''}${stolen ? ' stolen' : ''}${blocking.has(`${i}-${j}`) ? ' blocking' : ''}`;
             const bg = view === 'b' ? rankColor(bR) : view === 'diff' ? diffColor(d) : rankColor(aR);
             return (
               <div key={j} className={cls} style={{ height: size, background: bg }}

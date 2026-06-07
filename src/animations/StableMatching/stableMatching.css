@@ -44,7 +44,8 @@
 .sm2-mcell .br { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 9px; color: #fff; mix-blend-mode: difference; font-variant-numeric: tabular-nums; z-index: 1; }
 .sm2-mcell.matched { outline: 2px solid #4ade80; outline-offset: -2px; }
 .sm2-mcell.active { box-shadow: 0 0 0 2px #f0c040, 0 0 8px rgba(240,192,64,.6); z-index: 3; }       /* gold: proposing */
-.sm2-mcell.reject { animation: sm2-flash .5s; z-index: 3; }
+.sm2-mcell.reject { animation: sm2-flash .5s; z-index: 3; }       /* purple flash: just rejected */
+.sm2-mcell.stolen { animation: sm2-flash .5s; z-index: 3; }       /* purple flash: just bumped (stolen away) */
 .sm2-mcell.blocking { outline: 2px solid #c084fc; outline-offset: -2px; box-shadow: 0 0 7px rgba(192,132,252,.7); }  /* purple: blocking */
 @keyframes sm2-flash { 0% { box-shadow: 0 0 0 3px #c084fc; } 100% { box-shadow: 0 0 0 0 transparent; } }   /* purple: rejected/stolen */
 
