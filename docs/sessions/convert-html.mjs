@@ -102,3 +102,11 @@ export function htmlToMarkdown(html) {
 
   return `---\n${fm}\n---\n\n# ${meta.title || ""}\n\n${content}\n`;
 }
+
+// CLI: node convert-html.mjs <file.html>  → prints Markdown to stdout
+if (process.argv[1] && process.argv[1].endsWith("convert-html.mjs")) {
+  const { readFileSync } = await import("node:fs");
+  const f = process.argv[2];
+  if (!f) { console.error("usage: convert-html.mjs <file.html>"); process.exit(1); }
+  process.stdout.write(htmlToMarkdown(readFileSync(f, "utf8")));
+}

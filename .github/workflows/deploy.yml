@@ -3,6 +3,8 @@ name: Deploy demo
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '0 6 * * *'   # daily: refresh the control center with other branches' new reports
   workflow_dispatch:
 
 permissions:
@@ -19,6 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history so build-sessions can read every branch tip
+      - run: git fetch origin "+refs/heads/*:refs/remotes/origin/*"
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -28,8 +33,9 @@ jobs:
           # The Pages build doesn't screenshot anything; skip puppeteer's
           # ~150MB Chrome download (the cloud session installs it explicitly).
           PUPPETEER_SKIP_DOWNLOAD: 'true'
-      - uses: actions/configure-pages@v4
       - run: npm run build
+      - run: npm run sessions          # cross-branch control center → docs/sessions/{control-center.html,converted/}
+      - run: node docs/sessions/copy-sessions-to-dist.mjs   # → dist/sessions/ (noindex, off to the side)
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
         with:
