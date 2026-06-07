@@ -20,10 +20,11 @@ const NS = 'stable-matching';
  *    ranks (A's rank of B, top-left; B's rank of A, bottom-right). The matching
  *    (= current tentative holds) lights up; the active proposal rings; blocking
  *    pairs (if any, at the end) flag red. This is the algorithm, foregrounded. ── */
-function Matrix({ inst, matching, rows, cols, event, blocking, size, labels, view, gap }: {
+const TRAIL = 6; // how many recent failed entries to keep in the fading trail
+function Matrix({ inst, matching, rows, cols, event, blocking, size, labels, view, gap, trail }: {
   inst: Instance; matching: Matching; rows: number[]; cols: number[];
   event: ProposalEvent | null; blocking: Set<string>; size: number; labels: boolean;
-  view: 'both' | 'a' | 'b' | 'diff'; gap: number;
+  view: 'both' | 'a' | 'b' | 'diff'; gap: number; trail: Map<string, number>;
 }) {
   const n = inst.n;
   const showNums = size >= 30;
@@ -56,10 +57,12 @@ function Matrix({ inst, matching, rows, cols, event, blocking, size, labels, vie
               (event.proposer.side === 'B' && j === event.displaced && i === event.receiver.id));
             const cls = `sm2-mcell${matched ? ' matched' : ''}${cur ? (rej ? ' reject' : ' active') : ''}${stolen ? ' stolen' : ''}${blocking.has(`${i}-${j}`) ? ' blocking' : ''}`;
             const bg = view === 'b' ? rankColor(bR) : view === 'diff' ? diffColor(d) : rankColor(aR);
+            const age = trail.get(`${i}-${j}`);
             return (
               <div key={j} className={cls} style={{ height: size, background: bg }}
                 title={`A${i}→B${j} #${aR} · B${j}→A${i} #${bR}`}>
                 {view === 'both' && <span className="sm2-disc" style={{ background: rankColor(bR) }} />}
+                {age !== undefined && !cur && !stolen && <span className="sm2-trail" style={{ opacity: Math.max(0.12, 1 - age / TRAIL) }} />}
                 {showNums && (view === 'both'
                   ? <><span className="ar">{aR}</span><span className="br">{bR}</span></>
                   : <span className="br">{view === 'diff' ? (d > 0 ? `+${d}` : `${d}`) : view === 'a' ? aR : bR}</span>)}
@@ -128,6 +131,20 @@ export default function StableMatching() {
   const matching = useMemo(() => applyLog(n, result.log, step), [n, result, step]);
   const event = step > 0 ? result.log[step - 1] : null;
   const done = step >= total;
+
+  // short-lived trail of recently failed entries (rejected proposals + bumped pairs),
+  // keyed by matrix cell → age (0 = most recent), so they fade out over the next steps.
+  const trail = useMemo(() => {
+    const m = new Map<string, number>();
+    for (let k = step - 1; k >= Math.max(0, step - TRAIL); k--) {
+      const e = result.log[k]; if (!e) continue;
+      let cell: [number, number] | null = null;
+      if (e.outcome === 'reject') cell = e.proposer.side === 'A' ? [e.proposer.id, e.receiver.id] : [e.receiver.id, e.proposer.id];
+      else if (e.outcome === 'bump' && e.displaced !== undefined) cell = e.proposer.side === 'A' ? [e.displaced, e.receiver.id] : [e.receiver.id, e.displaced];
+      if (cell) { const key = `${cell[0]}-${cell[1]}`; if (!m.has(key)) m.set(key, (step - 1) - k); }
+    }
+    return m;
+  }, [result, step]);
 
   // total-rank accounting (welfare): lower = better
   const acct = useMemo(() => {
@@ -391,7 +408,7 @@ export default function StableMatching() {
             </div>
           </div>
           <div className="sm2-matrix-wrap" ref={matrixWrap}>
-            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} event={event} blocking={blocking} size={cellSize} labels={showLabels} view={cellView} gap={tight ? 0 : 3} />
+            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} event={event} blocking={blocking} size={cellSize} labels={showLabels} view={cellView} gap={tight ? 0 : 3} trail={trail} />
             {legend}
           </div>
         </div>

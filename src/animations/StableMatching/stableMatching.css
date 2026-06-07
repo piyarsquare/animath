@@ -46,6 +46,7 @@
 .sm2-mcell.active { box-shadow: 0 0 0 2px #f0c040, 0 0 8px rgba(240,192,64,.6); z-index: 3; }       /* gold: proposing */
 .sm2-mcell.reject { animation: sm2-flash .5s; z-index: 3; }       /* purple flash: just rejected */
 .sm2-mcell.stolen { animation: sm2-flash .5s; z-index: 3; }       /* purple flash: just bumped (stolen away) */
+.sm2-trail { position: absolute; inset: 0; border: 2px solid #c084fc; border-radius: inherit; pointer-events: none; }  /* fading trail of recent failures */
 .sm2-mcell.blocking { outline: 2px solid #c084fc; outline-offset: -2px; box-shadow: 0 0 7px rgba(192,132,252,.7); }  /* purple: blocking */
 @keyframes sm2-flash { 0% { box-shadow: 0 0 0 3px #c084fc; } 100% { box-shadow: 0 0 0 0 transparent; } }   /* purple: rejected/stolen */
 

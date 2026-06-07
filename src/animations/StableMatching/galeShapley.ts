@@ -90,7 +90,9 @@ export function market(inst: Instance, bias: number, seed: number): RunResult {
   const n = inst.n;
   const m = empty(n);
   const log: ProposalEvent[] = [];
-  const rnd = mulberry32(seed);
+  // offset the seed so the proposer randomness is independent of the stream that
+  // generated the preferences (which used mulberry32(seed) directly).
+  const rnd = mulberry32((seed ^ 0x9e3779b9) >>> 0);
   const nextA = new Array(n).fill(0);
   const nextB = new Array(n).fill(0);
   const maxLoops = n * n * 5;
