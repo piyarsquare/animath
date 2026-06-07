@@ -81,7 +81,9 @@ export function makeEuclideanCover(c: CoverDeps): CoverModel {
   for (let i = 0; i < (2 * K + 1) * (2 * K + 1); i++) {
     const group = new THREE.Group(); group.matrixAutoUpdate = false;
     const trees = new THREE.Group(), columns = new THREE.Group();
-    const under = new THREE.Group(); under.scale.set(1, -1, -1); under.visible = false;
+    // The mirrored underside hangs from the BOTTOM face of the glass slab (y=−thickness),
+    // so it reads clearly below the glass instead of being embedded in the slab.
+    const under = new THREE.Group(); under.scale.set(1, -1, -1); under.position.y = -thickness; under.visible = false;
     const underTrees = new THREE.Group(), underColumns = new THREE.Group();
     decor.props.forEach((_, j) => {
       columns.add(decor.makeColumn(j)); trees.add(decor.makeTree(j));
@@ -194,7 +196,10 @@ export function makeEuclideanCover(c: CoverDeps): CoverModel {
       floorTex.repeat.set((2 * K + 3) * side / 3, (2 * K + 3) * side / 3);
       scene.fog = new THREE.Fog(SKY, side * 0.7, side * 3);
     },
-    setFloorThickness: (t: number) => { thickness = t; rebuildFloorGeo(); },
+    setFloorThickness: (t: number) => {
+      thickness = t; rebuildFloorGeo();
+      for (const cell of cells) cell.under.position.y = -thickness;
+    },
     dispose: () => {
       foot.dispose(); floor.geometry.dispose(); floorTex.dispose(); floorMat.dispose();
     },

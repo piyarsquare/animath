@@ -121,12 +121,35 @@ export function makeSphericalCover(c: CoverDeps): CoverModel {
   antipode.add(antiClone);
   root.add(antipode);
 
+  // ── inner shell: the glued "other side", revealed through the glass planet. A
+  // radial mirror of the decor wearing the OPPOSITE skin (a column just inside
+  // every surface tree, a tree inside every column), pointing inward. The spherical
+  // port of the flat worlds' mirrored underside. ─────────────────────────────────
+  const K_IN = 0.997;
+  const inner = new THREE.Group();
+  inner.visible = false;
+  const innerProps: { g: THREE.Group; dir: THREE.Vector3 }[] = [];
+  decor.props.forEach((_, i) => {
+    const d = dirs[i];
+    const ic = decor.makeColumn(i); inner.add(ic); innerProps.push({ g: ic, dir: d.clone() });          // column under the tree
+    const it = decor.makeTree(i); inner.add(it); innerProps.push({ g: it, dir: d.clone().negate() });    // tree under the column
+  });
+  root.add(inner);
+  function placeInner() {
+    for (const { g, dir } of innerProps) {
+      g.position.copy(dir).multiplyScalar(R * K_IN);
+      g.quaternion.setFromUnitVectors(upY, dir.clone().negate()); // hang inward
+    }
+  }
+  placeInner();
+
   function applyGlass() {
     const g = glassState(glassOpacity, GLASS);
     planetMat.opacity = g.opacity;
     planetMat.depthWrite = g.depthWrite;
     planetMat.transparent = glassOpacity < 0.999;
     planetMat.needsUpdate = true;
+    inner.visible = g.showUnder;
   }
   applyGlass();
 
@@ -207,6 +230,7 @@ export function makeSphericalCover(c: CoverDeps): CoverModel {
     planet.geometry.dispose();
     planet.geometry = new THREE.SphereGeometry(R, 64, 48);
     placeDecor();
+    placeInner();
     antipode.remove(antiClone);
     antiClone = decorGroup.clone(true);
     antipode.add(antiClone);
