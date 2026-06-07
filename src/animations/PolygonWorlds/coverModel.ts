@@ -66,5 +66,7 @@ export interface CoverModel {
 
   /** Spherical only (planet radius); euclidean ignores. */
   setRadius?(r: number): void;
+  /** Live fundamental-square side (world units). */
+  setSquareSize?(v: number): void;
   dispose(): void;
 }

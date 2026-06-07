@@ -30,6 +30,9 @@ export interface SquareMapState {
   flipped: boolean;
 }
 
+export const DEFAULT_SQUARE_SIZE = 30;
+export const DEFAULT_FLOOR_THICKNESS = 1.2;
+
 /** The one engine the host drives — geometry-agnostic; it owns a CoverModel. */
 export interface PolygonEngine {
   frame(input: FrameInput): void;
@@ -37,6 +40,10 @@ export interface PolygonEngine {
   setFloorOpacity(o: number): void;
   setColorCells(on: boolean): void;
   setRadius(r: number): void;
+  /** Live fundamental-square side (world units). */
+  setSquareSize(v: number): void;
+  /** Live glass-floor slab thickness (world units). */
+  setFloorThickness(t: number): void;
   getMapState(): SquareMapState | null;
   dispose(): void;
 }

@@ -5,7 +5,10 @@ import { ShellActions, ShellSettings, useAppHeader, useAppExplainer } from '../.
 import { Section, Slider, Select, Checkbox } from '../../components/ControlPanel';
 import { WORLDS, worldById, WorldSpec } from './worldSpec';
 import { makeFundamentalSquareEngine } from './fundamentalSquareEngine';
-import { EngineDeps, PolygonEngine, SquareMapState } from './engineTypes';
+import {
+  EngineDeps, PolygonEngine, SquareMapState,
+  DEFAULT_SQUARE_SIZE, DEFAULT_FLOOR_THICKNESS,
+} from './engineTypes';
 import { drawSquareMap, SquareMapSpec, SquareEdgeSpec } from './squareMap';
 import explainerText from './EXPLAINER.md?raw';
 
@@ -23,6 +26,8 @@ export default function PolygonWorlds() {
   const [moveSpeed, setMoveSpeed] = useState(6);
   const [thirdPerson, setThirdPerson] = useState(true);
   const [floorOpacity, setFloorOpacity] = useState(0.35);
+  const [squareSize, setSquareSize] = useState(DEFAULT_SQUARE_SIZE);
+  const [floorThickness, setFloorThickness] = useState(DEFAULT_FLOOR_THICKNESS);
 
   const spec = worldById(worldId);
   useAppHeader('Polygon Worlds', spec.short);
@@ -39,6 +44,9 @@ export default function PolygonWorlds() {
   const speedRef = useRef(moveSpeed);
   const thirdRef = useRef(thirdPerson);
   const worldRef = useRef(spec);
+  const sizeRef = useRef(squareSize);
+  const thickRef = useRef(floorThickness);
+  const opacityRef = useRef(floorOpacity);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
 
@@ -47,7 +55,10 @@ export default function PolygonWorlds() {
   }) => {
     const deps: EngineDeps = { scene, camera, renderer };
     depsRef.current = deps;
-    engineRef.current = makeFundamentalSquareEngine(deps, worldRef.current);
+    engineRef.current = makeFundamentalSquareEngine(deps, worldRef.current, {
+      squareSize: sizeRef.current, floorThickness: thickRef.current,
+    });
+    engineRef.current.setFloorOpacity(opacityRef.current);
     clockRef.current.start();
     const animate = () => {
       const eng = engineRef.current;
@@ -74,12 +85,17 @@ export default function PolygonWorlds() {
     const deps = depsRef.current;
     if (!deps || !engineRef.current) return;
     engineRef.current.dispose();
-    engineRef.current = makeFundamentalSquareEngine(deps, spec);
+    engineRef.current = makeFundamentalSquareEngine(deps, spec, {
+      squareSize: sizeRef.current, floorThickness: thickRef.current,
+    });
+    engineRef.current.setFloorOpacity(opacityRef.current);
   }, [spec]);
 
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
   useEffect(() => { thirdRef.current = thirdPerson; }, [thirdPerson]);
-  useEffect(() => { engineRef.current?.setFloorOpacity(floorOpacity); }, [floorOpacity]);
+  useEffect(() => { opacityRef.current = floorOpacity; engineRef.current?.setFloorOpacity(floorOpacity); }, [floorOpacity]);
+  useEffect(() => { sizeRef.current = squareSize; engineRef.current?.setSquareSize(squareSize); }, [squareSize]);
+  useEffect(() => { thickRef.current = floorThickness; engineRef.current?.setFloorThickness(floorThickness); }, [floorThickness]);
 
   useEffect(() => {
     const map: Record<string, MoveKey> = {
@@ -139,6 +155,8 @@ export default function PolygonWorlds() {
         <Section title="World" icon="⬚" defaultOpen>
           <Select label="Gluing" options={worldOptions} value={worldId} onChange={setWorldId} />
           <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
+          <Slider label="Square size" value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
+          <Slider label="Floor thickness" value={floorThickness} min={0} max={6} step={0.2} onChange={setFloorThickness} format={(v) => `${v.toFixed(1)} m`} />
           <Slider label="Glass floor opacity" value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
           <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
           <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>
