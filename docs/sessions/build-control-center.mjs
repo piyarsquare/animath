@@ -11,12 +11,10 @@
  * WHICH copy's bytes to display when a path exists on several branches — it is
  * not provenance.
  *
- * Dedup rule: a report is identified by its PATH (which encodes the slug). The
- * same path can exist on many branches — anything merged to main is inherited by
- * every branch cut from main. We read the MOST RECENTLY UPDATED copy: among the
- * branches that hold a given path, pick the one whose last commit touching that
- * file is newest, and read its content there. Each report appears once, owned by
- * its slug, at its freshest revision.
+ * Display grouping is by SHORT branch name — the slug with the trailing 5-char
+ * random suffix stripped (e.g. stable-marriage-styling-ulMPt → stable-marriage-
+ * styling). The SESSION is the unit: each session lists its progress, handoff,
+ * and any connected sub-reports (three-hats, extra progress) together.
  *
  * Metadata comes from either an HTML <script class="report-meta"> island or
  * Markdown YAML frontmatter, so it works today and after the markdown migration.
@@ -72,9 +70,14 @@ const isReport = (p) =>
   /\.(html|md)$/.test(p) &&
   !/\/_/.test(p) && !/\/index\.html$/.test(p);
 
+// strip the Claude 5-char random suffix (mixed upper+lower) to get a short name
+function shortName(slug) {
+  const m = slug.match(/^(.*)-([A-Za-z0-9]{5})$/);
+  return m && /[A-Z]/.test(m[2]) && /[a-z]/.test(m[2]) ? m[1] : slug;
+}
+
 // 3 · for every (branch, report path), record the date that branch last touched it
-//     path -> { winner: {ref, fileDate}, copies: Set<ref> }
-const byPath = new Map();
+const byPath = new Map();                   // path -> { winner: {ref, fileDate}, copies: Set<ref> }
 for (const ref of branches) {
   const files = git(["ls-tree", "-r", "--name-only", ref, "--", "docs/sessions"])
     .split("\n").map(s => s.trim()).filter(isReport);
@@ -87,7 +90,7 @@ for (const ref of branches) {
   }
 }
 
-// 4 · read the freshest version of each distinct report and build the manifest
+// 4 · read the freshest copy of each distinct report → manifest entries
 const reports = [];
 for (const [path, rec] of byPath) {
   const { ref, fileDate } = rec.winner;
@@ -95,47 +98,60 @@ for (const [path, rec] of byPath) {
   const parts = path.split("/");                       // docs/sessions/<kind>/<slug>/<file>
   reports.push({
     slug: parts[3] || "?",                             // provenance = the slug folder
+    short: shortName(parts[3] || "?"),
     kind: meta.kind || parts[2] || "?",
     session: meta.session || null,
     title: meta.title || null,
     status: meta.status || null,
     build: meta.build || null,
     updated: fileDate,                                 // date of the surfaced (newest) copy
-    sourceRef: ref.replace(/^origin\//, ""),           // branch to fetch renderable bytes from (for the view link — NOT provenance)
+    sourceRef: ref.replace(/^origin\//, ""),           // branch to fetch renderable bytes from (view link only — NOT provenance)
     path,
   });
 }
 
-const byRecency = (a, b) => (b.updated || "").localeCompare(a.updated || "");
-reports.sort(byRecency);
+// 5 · roll up: short name → sessions → reports (session is the unit)
+const kindRank = { progress: 0, handoff: 1, "three-hats": 2 };
+const rank = (k) => (k in kindRank ? kindRank[k] : 9);
+const byRecency = (a, b) => (b || "").localeCompare(a || "");
 
-// 5 · human-readable control-center view — grouped by session home (slug)
-const slugs = new Map();
+const sessions = new Map();                  // `${slug}|${session}` -> { slug, short, session, reports }
 for (const r of reports) {
-  if (!slugs.has(r.slug)) slugs.set(r.slug, []);
-  slugs.get(r.slug).push(r);
+  const key = `${r.slug}|${r.session || "?"}`;
+  if (!sessions.has(key)) sessions.set(key, { slug: r.slug, short: r.short, session: r.session, reports: [] });
+  sessions.get(key).reports.push(r);
 }
-const slugOrder = [...slugs.entries()].sort((a, b) => byRecency(a[1][0], b[1][0]));
+for (const s of sessions.values()) {
+  s.reports.sort((a, b) => rank(a.kind) - rank(b.kind) || byRecency(a.updated, b.updated));
+  s.date = s.reports.map(r => r.updated || "").sort().slice(-1)[0] || "";
+  const primary = s.reports.find(r => r.kind === "handoff") || s.reports.find(r => r.kind === "progress") || s.reports[0];
+  s.title = primary.title; s.status = primary.status; s.build = primary.build;
+}
 
+const groups = new Map();                    // short -> [session]
+for (const s of sessions.values()) {
+  if (!groups.has(s.short)) groups.set(s.short, []);
+  groups.get(s.short).push(s);
+}
+for (const arr of groups.values()) arr.sort((a, b) => byRecency(a.date, b.date));
+const groupOrder = [...groups.entries()].sort((a, b) => byRecency(a[1][0].date, b[1][0].date));
+
+// 6 · console summary + machine manifest
 const totalCopies = [...byPath.values()].reduce((n, r) => n + r.copies.size, 0);
-console.log(`\nCross-branch session control center  (SPIKE · most-recent-version)`);
-console.log(`Scanned ${branches.length} origin branches · ${reports.length} distinct reports`
-  + ` (deduped from ${totalCopies} branch copies) · ${slugs.size} session homes\n`);
-
-for (const [slug, rs] of slugOrder) {
-  console.log(`■ ${slug}   (latest ${rs[0].updated.slice(0, 10)})`);
-  for (const r of rs) {
-    console.log(`    ${(r.kind || "?").padEnd(10)} ${(r.session || "?").padEnd(16)}`
-      + ` ${("[" + (r.status || "?") + "]").padEnd(15)} ${r.updated.slice(0, 10)}`
-      + `   ${r.title || r.path.split("/").pop()}`);
+const generated = new Date().toISOString();
+console.log(`\nCross-branch session control center  (SPIKE)`);
+console.log(`Scanned ${branches.length} origin branches · ${reports.length} reports (from ${totalCopies} copies)`
+  + ` · ${sessions.size} sessions · ${groups.size} branches\n`);
+for (const [short, ss] of groupOrder) {
+  console.log(`■ ${short}`);
+  for (const s of ss) {
+    console.log(`    ${(s.session || "?").padEnd(16)} [${s.status || "?"}]  ${s.date.slice(0, 10)}  ${s.title || ""}`);
+    for (const r of s.reports) console.log(`        · ${(r.kind || "?").padEnd(10)} ${r.title || r.path.split("/").pop()}`);
   }
   console.log("");
 }
-
-// 6 · machine manifest (feeds the explorer / search index)
-const generated = new Date().toISOString();
 console.log("----- manifest.json -----");
-console.log(JSON.stringify({ generated, reports }, null, 2));
+console.log(JSON.stringify({ generated, groups: groupOrder.map(([short, ss]) => ({ short, sessions: ss })) }, null, 2));
 
 // 7 · generate a viewable control-center page (SPIKE) next to this script
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -144,21 +160,31 @@ const viewUrl = (r) => `https://raw.githack.com/${REPO}/${r.sourceRef}/${r.path}
 const statusBadge = (s) => `<span class="badge ${({ completed: "badge-ok", "in-progress": "badge-warn" })[s] || "badge"}">${esc(s || "?")}</span>`;
 
 let groupsHtml = "";
-for (const [slug, rs] of slugOrder) {
-  let rows = "";
-  for (const r of rs) {
-    const hay = [slug, r.kind, r.session, r.status, r.title].map(x => (x || "").toLowerCase()).join(" ");
-    rows += `      <a class="cc-row" href="${esc(viewUrl(r))}" data-hay="${esc(hay)}" data-status="${esc(r.status || "")}">
-        <span class="chip chip-${esc(r.kind)}">${esc(r.kind)}</span>
-        <span class="cc-sid">${esc(r.session || "")}</span>
-        ${statusBadge(r.status)}
-        <span class="cc-date">${esc((r.updated || "").slice(0, 10))}</span>
-        <span class="cc-title">${esc(r.title || r.path.split("/").pop())}</span>
-      </a>\n`;
+for (const [short, ss] of groupOrder) {
+  let sHtml = "";
+  for (const s of ss) {
+    const hay = [short, s.slug, s.session, s.status, ...s.reports.map(r => r.title)].map(x => (x || "").toLowerCase()).join(" ");
+    let rows = "";
+    for (const r of s.reports) {
+      rows += `        <a class="cc-row" href="${esc(viewUrl(r))}">
+          <span class="chip chip-${esc(r.kind)}">${esc(r.kind)}</span>
+          <span class="cc-rtitle">${esc(r.title || r.path.split("/").pop())}</span>
+        </a>\n`;
+    }
+    sHtml += `      <article class="cc-session" data-hay="${esc(hay)}">
+        <div class="cc-shead">
+          <span class="cc-sid">${esc(s.session || "")}</span>
+          ${statusBadge(s.status)}
+          <span class="cc-date">${esc(s.date.slice(0, 10))}</span>
+          <span class="cc-stitle">${esc(s.title || "")}</span>
+        </div>
+        <div class="cc-reports">
+${rows}        </div>
+      </article>\n`;
   }
-  groupsHtml += `    <section class="cc-group" data-slug="${esc(slug)}">
-      <h2><code>${esc(slug)}</code> <span class="cc-count">${rs.length}</span></h2>
-${rows}    </section>\n`;
+  groupsHtml += `    <section class="cc-group" data-short="${esc(short)}">
+      <h2><code>${esc(short)}</code> <span class="cc-count">${ss.length} session${ss.length > 1 ? "s" : ""}</span></h2>
+${sHtml}    </section>\n`;
 }
 
 const ccHtml = `<!DOCTYPE html>
@@ -171,18 +197,22 @@ const ccHtml = `<!DOCTYPE html>
   <title>animath · session control center</title>
   <link rel="stylesheet" href="./report.css">
   <style>
-    .cc-tools{position:sticky;top:0;background:var(--bg,#0c0c10);padding:.6rem 0;z-index:2}
-    .cc-tools input{width:100%;max-width:32rem;padding:.5rem .7rem;border-radius:8px;
-      border:1px solid #333;background:#15151b;color:inherit;font:inherit}
-    .cc-group{margin:1.2rem 0}
-    .cc-count{opacity:.5;font-size:.8em}
-    .cc-row{display:grid;grid-template-columns:6.5rem 9rem 7rem 6rem 1fr;gap:.6rem;align-items:center;
-      padding:.5rem .6rem;border-radius:8px;text-decoration:none;color:inherit}
-    .cc-row:hover{background:#1b1b22}
-    .cc-row[hidden]{display:none}
-    .cc-sid,.cc-date{font-family:ui-monospace,monospace;font-size:.8rem;opacity:.8}
-    .cc-title{opacity:.95}
-    @media(max-width:680px){.cc-row{grid-template-columns:1fr;gap:.2rem}}
+    /* token-based so it stays readable in BOTH light and dark schemes */
+    .cc-tools{position:sticky;top:0;background:var(--bg);padding:.6rem 0;z-index:2;border-bottom:1px solid var(--border)}
+    .cc-tools input{width:100%;max-width:34rem;padding:.5rem .7rem;border-radius:8px;
+      border:1px solid var(--border);background:var(--panel);color:var(--fg);font:inherit}
+    .cc-group{margin:1.4rem 0}
+    .cc-count{opacity:.55;font-size:.78rem;font-weight:400}
+    .cc-session{border:1px solid var(--border);border-radius:8px;padding:.55rem .7rem;margin:.55rem 0;background:var(--panel)}
+    .cc-shead{display:flex;flex-wrap:wrap;align-items:center;gap:.55rem}
+    .cc-sid,.cc-date{font-family:ui-monospace,monospace;font-size:.78rem;color:var(--muted)}
+    .cc-stitle{font-weight:600}
+    .cc-reports{margin-top:.4rem;display:flex;flex-direction:column;gap:.15rem}
+    .cc-row{display:flex;align-items:center;gap:.55rem;padding:.3rem .45rem;border-radius:6px;
+      text-decoration:none;color:var(--fg)}
+    .cc-row:hover{background:var(--accent-soft)}
+    .cc-rtitle{color:var(--fg)}
+    .cc-session[hidden],.cc-group[hidden]{display:none}
   </style>
 </head>
 <body>
@@ -191,24 +221,24 @@ const ccHtml = `<!DOCTYPE html>
     <p class="kicker">animath · cross-branch</p>
     <h1>Session control center <span class="badge">spike</span></h1>
     <dl class="meta">
-      <div><dt>Reports</dt><dd>${reports.length} distinct · ${slugs.size} session homes</dd></div>
+      <div><dt>Scope</dt><dd>${sessions.size} sessions · ${reports.length} reports · ${groups.size} branches</dd></div>
       <div><dt>Generated</dt><dd>${generated.slice(0, 16).replace("T", " ")} · <code>build-control-center.mjs</code></dd></div>
     </dl>
-    <p class="lineage">Provenance = the slug folder. Each row opens the most-recently-updated
-    copy of that report, rendered live via githack from the branch that holds it.</p>
+    <p class="lineage">Grouped by short branch name · provenance = slug folder · each row opens the
+    most-recently-updated copy of that report, rendered live via githack.</p>
   </header>
   <div class="body"><div class="content">
-    <div class="cc-tools"><input id="q" type="search" placeholder="filter by slug / title / status / session…" autocomplete="off"></div>
+    <div class="cc-tools"><input id="q" type="search" placeholder="filter by branch / title / status / session…" autocomplete="off"></div>
 ${groupsHtml}  </div></div>
 </main>
 <script>
   const q = document.getElementById("q");
-  const rows = [...document.querySelectorAll(".cc-row")];
-  const groups = [...document.querySelectorAll(".cc-group")];
+  const sessionsEls = [...document.querySelectorAll(".cc-session")];
+  const groupsEls = [...document.querySelectorAll(".cc-group")];
   q.addEventListener("input", () => {
     const t = q.value.trim().toLowerCase();
-    for (const r of rows) r.hidden = t && !r.dataset.hay.includes(t);
-    for (const g of groups) g.hidden = ![...g.querySelectorAll(".cc-row")].some(r => !r.hidden);
+    for (const s of sessionsEls) s.hidden = t && !s.dataset.hay.includes(t);
+    for (const g of groupsEls) g.hidden = ![...g.querySelectorAll(".cc-session")].some(s => !s.hidden);
   });
 </script>
 </body>
@@ -217,4 +247,4 @@ ${groupsHtml}  </div></div>
 
 const outPath = join(dirname(fileURLToPath(import.meta.url)), "control-center.html");
 writeFileSync(outPath, ccHtml);
-console.log(`\ncontrol-center.html written (${reports.length} reports).`);
+console.log(`\ncontrol-center.html written (${sessions.size} sessions, ${reports.length} reports).`);
