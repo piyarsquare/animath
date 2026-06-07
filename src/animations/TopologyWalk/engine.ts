@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { OtherSide } from './otherSide';
 
 /**
  * Topology Walk hosts two interchangeable world *engines* behind one common
@@ -16,7 +17,7 @@ import * as THREE from 'three';
  * The same torus shows up in both — as an extrinsic ring corridor (`loop`) and
  * as an intrinsic flat room (`torus`) — which is half the lesson.
  */
-export type Family = 'corridor' | 'flat';
+export type Family = 'corridor' | 'flat' | 'spherical';
 
 export interface SurfaceDef {
   id: string;
@@ -34,6 +35,8 @@ export const SURFACES: SurfaceDef[] = [
   { id: 'trefoil', label: 'Trefoil knot',      family: 'corridor', short: 'trefoil-knot corridor' },
   { id: 'torus',   label: 'Flat torus',        family: 'flat',     short: 'flat torus' },
   { id: 'klein',   label: 'Klein bottle',      family: 'flat',     short: 'flat Klein bottle' },
+  { id: 'sphere',  label: 'Sphere',            family: 'spherical', short: 'round sphere' },
+  { id: 'rp2',     label: 'Projective plane',  family: 'spherical', short: 'projective plane (ℝP²)' },
 ];
 
 export const surfaceDef = (id: string): SurfaceDef =>
@@ -68,6 +71,65 @@ export interface EngineOptions {
   markers: boolean;
   bloom: boolean;
   miniMap: boolean;
+  /** Flat worlds: draw a copy of the avatar in every tiled cell (mirrored where
+   *  the cell is mirrored), so you watch your twins walk the universal cover. */
+  projectAvatar: boolean;
+  /** Flat worlds: floor opacity, 0 (clear glass) → 1 (solid). Lower it to see
+   *  the columns/trees on the other side of the world. */
+  floorOpacity: number;
+  /** Flat worlds: tint each tiled copy of the fundamental domain a different
+   *  colour, so the universal-cover tiling is visible as you walk between cells. */
+  colorCells: boolean;
+  /** Spherical worlds: planet radius in world units. A bigger planet dilutes the
+   *  (fixed-by-Gauss–Bonnet) curvature, so it feels locally flatter. */
+  planetRadius: number;
+  /** Spherical ℝP²: turn the planet to glass and show its glued underside — the
+   *  surface decor reflected radially straight down (the other face), the spherical
+   *  port of the flat worlds' glass floor + mirrored underside. */
+  innerShell: boolean;
+}
+
+/**
+ * Snapshot of the player's whereabouts on a flat surface, for the mini-map: the
+ * position inside the fundamental domain (`u`,`v` ∈ 0..1, with the domain frame's
+ * +z pointing "up"), the heading in that same frame, whether you're currently on
+ * the mirror (odd) side of the Klein bottle, and how the left/right edges glue.
+ */
+export interface FlatMapState {
+  u: number;
+  v: number;
+  hx: number;
+  hz: number;
+  flipped: boolean;
+  klein: boolean;
+}
+
+/** A landmark's position on the unit sphere, in (latitude, longitude) radians,
+ *  plus its identifying colour — consumed by the spherical mini-map. */
+export interface SphereLandmark {
+  lat: number;
+  lon: number;
+  color: number;
+}
+
+/**
+ * Snapshot of the player on a spherical world, for the mini-map: the player's
+ * latitude/longitude (radians) and compass bearing (0 = toward the north pole,
+ * increasing clockwise/eastward), the fixed landmark set, and whether antipodal
+ * points are identified (ℝP²), in which case each landmark also has a twin at the
+ * antipode.
+ */
+export interface SphereMapState {
+  lat: number;
+  lon: number;
+  bearing: number;
+  landmarks: SphereLandmark[];
+  rp2: boolean;
+  /** Whether the cover skins (trees ⇄ columns) are currently shown. */
+  colored: boolean;
+  /** Player radial-up and forward unit vectors, for the ℝP² square-map chart. */
+  up: [number, number, number];
+  fwd: [number, number, number];
 }
 
 /**
@@ -91,5 +153,28 @@ export interface WorldEngine {
   setMarkers?(on: boolean): void;
   setBloom?(on: boolean): void;
   setMiniMap?(on: boolean): void;
+  setProjectAvatar?(on: boolean): void;
+  setFloorOpacity?(o: number): void;
+  setColorCells?(on: boolean): void;
+  setRadius?(r: number): void;
+  setInnerShell?(on: boolean): void;
   clearWriting?(): void;
+  /** Flat worlds only: current position/heading in the fundamental domain. */
+  getMapState?(): FlatMapState | null;
+  /** Spherical worlds only: current position/heading + landmarks on the sphere. */
+  getSphereState?(): SphereMapState | null;
+
+  // ── "The other side" / normal-flip seam (surface-tour §4.1) ─────────────────
+  // The rectangular worlds (flat, spherical) each glue an opposite face behind
+  // the glass (see lib `otherSide.ts` / `glassSurface.ts`). These optionals are
+  // the uniform seam the roadmap normal-flip rides: the host will call
+  // `flipSide()` once at the player layer and each engine routes it to its own
+  // realisation. Declared now, unimplemented this session — corridor omits them.
+  /** Roadmap: somersault the player to the glued opposite face / inner shell. */
+  flipSide?(): void;
+  /** True when the player currently stands on the under / inner face. */
+  isFlipped?(): boolean;
+  /** A handle to the other-face decor when it is a single group (spherical inner
+   *  shell); flat returns `null` (its other side is the per-cell `under` set). */
+  getOtherSide?(): OtherSide | null;
 }
