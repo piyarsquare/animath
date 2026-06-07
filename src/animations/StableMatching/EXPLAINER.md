@@ -6,11 +6,12 @@ satisfies everyone's preferences.
 ## Reading the matrix
 
 Rows are group **A**, columns group **B**. Each cell is the potential pair
-(A_i, B_j), encoded as **two nested heatmaps**: the **square** is how A_i ranks B_j
-(blue), the **circle inside** is how B_j ranks A_i (pink). **Bright = top choice**,
-fading to dim for last. So a whole row is A_i's preferences read as a colour gradient,
-a whole column is B_j's. (Exact ranks show as numbers at small populations and as a
-tooltip on hover; with many people the heat carries it.)
+(A_i, B_j), encoded as **two nested heatmaps** sharing one diverging colour scale
+(**BuRd**: **blue = #1 choice → white → red = last**): the **square** is how A_i
+ranks B_j, the **circle inside** is how B_j ranks A_i. Shape — square vs circle —
+tells the two sides apart, not colour. So a row is A_i's preferences as a colour
+gradient, a column is B_j's. (Exact ranks show as numbers at small populations and on
+hover; with many people the heat carries it.)
 
 As the algorithm runs, **green cells are the current tentative matches**; the
 **gold ring** is the proposal happening now; a **red flash** is a rejection. A

@@ -27,10 +27,14 @@ function Matrix({ inst, matching, rows, cols, event, blocking }: {
   const n = inst.n;
   const size = Math.max(22, Math.min(56, Math.round(680 / (n + 1))));
   const showNums = n <= 8;
-  // rank → heat: best rank is bright/saturated, worst fades toward the background.
-  const heat = (hue: number, r: number) => {
-    const t = n > 1 ? 1 - (r - 1) / (n - 1) : 1;
-    return `hsl(${hue}, ${38 + t * 50}%, ${15 + t * 40}%)`;
+  // shared BuRd diverging scale: blue = best rank (1) → white → red = worst (n).
+  // Square (A) and circle (B) use the SAME scale; shape, not hue, tells them apart.
+  const BURD = [[33, 102, 172], [103, 169, 207], [247, 247, 247], [239, 138, 98], [178, 24, 43]];
+  const rankColor = (r: number) => {
+    const t = n > 1 ? (r - 1) / (n - 1) : 0;
+    const seg = t * (BURD.length - 1), i = Math.min(BURD.length - 2, Math.floor(seg)), f = seg - i;
+    const c = BURD[i].map((v, k) => Math.round(v + (BURD[i + 1][k] - v) * f));
+    return `rgb(${c[0]},${c[1]},${c[2]})`;
   };
   return (
     <div className="sm2-matrix" style={{ gridTemplateColumns: `2.2em repeat(${cols.length}, ${size}px)` }}>
@@ -48,9 +52,9 @@ function Matrix({ inst, matching, rows, cols, event, blocking }: {
             const rej = cur && event!.outcome === 'reject';
             const cls = `sm2-mcell${matched ? ' matched' : ''}${cur ? (rej ? ' reject' : ' active') : ''}${blocking.has(`${i}-${j}`) ? ' blocking' : ''}`;
             return (
-              <div key={j} className={cls} style={{ height: size, background: heat(210, aR) }}
+              <div key={j} className={cls} style={{ height: size, background: rankColor(aR) }}
                 title={`A${i} ranks B${j} #${aR} · B${j} ranks A${i} #${bR}`}>
-                <span className="sm2-disc" style={{ background: heat(330, bR) }} />
+                <span className="sm2-disc" style={{ background: rankColor(bR) }} />
                 {showNums && <><span className="ar">{aR}</span><span className="br">{bR}</span></>}
               </div>
             );
@@ -269,7 +273,7 @@ export default function StableMatching() {
           </div>
           <div className="sm2-matrix-wrap">
             <Matrix inst={inst} matching={matching} rows={rows} cols={cols} event={event} blocking={blocking} />
-            <p className="sm2-legend"><span className="k sq">square = A's rank of B</span><span className="k disc">circle = B's rank of A</span><span className="k scale">bright = #1 → dim = last</span><span className="k matched">held / matched</span><span className="k active">proposing</span><span className="k blocking">blocking</span></p>
+            <p className="sm2-legend"><span className="k sq">square = A's rank of B</span><span className="k disc">circle = B's rank of A</span><span className="k scale">blue #1 → red last</span><span className="k matched">held / matched</span><span className="k active">proposing</span><span className="k blocking">blocking</span></p>
           </div>
         </div>
       ) : (

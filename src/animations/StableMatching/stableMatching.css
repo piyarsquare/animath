@@ -37,8 +37,9 @@
 /* each cell: a SQUARE heat (A's rank of B) with a CIRCLE heat inside (B's rank of A) */
 .sm2-mcell { position: relative; border: 1px solid rgba(0,0,0,.45); border-radius: 5px; transition: box-shadow .15s; }
 .sm2-disc { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 58%; height: 58%; border-radius: 50%; }
-.sm2-mcell .ar { position: absolute; top: 1px; left: 3px; font-size: 9px; color: #dbe8fb; font-variant-numeric: tabular-nums; }
-.sm2-mcell .br { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 9px; color: #fbe2f0; font-variant-numeric: tabular-nums; z-index: 1; }
+/* white + difference blend → auto-contrasts on the light midtones and dark ends of BuRd */
+.sm2-mcell .ar { position: absolute; top: 1px; left: 3px; font-size: 9px; color: #fff; mix-blend-mode: difference; font-variant-numeric: tabular-nums; }
+.sm2-mcell .br { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 9px; color: #fff; mix-blend-mode: difference; font-variant-numeric: tabular-nums; z-index: 1; }
 .sm2-mcell.matched { outline: 2px solid #4ade80; outline-offset: -2px; }
 .sm2-mcell.active { box-shadow: 0 0 0 2px #f0c040, 0 0 8px rgba(240,192,64,.5); z-index: 3; }
 .sm2-mcell.reject { animation: sm2-flash .5s; z-index: 3; }
@@ -48,9 +49,9 @@
 .sm2-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 12px; color: #8b8b99; }
 .sm2-legend .k { display: inline-flex; align-items: center; gap: 6px; }
 .sm2-legend .k::before { content: ''; width: 13px; height: 13px; border-radius: 3px; border: 0; }
-.sm2-legend .k.sq::before { background: hsl(210, 80%, 45%); }
-.sm2-legend .k.disc::before { background: hsl(330, 80%, 50%); border-radius: 50%; }
-.sm2-legend .k.scale::before { width: 42px; background: linear-gradient(90deg, hsl(210,88%,55%), hsl(210,40%,16%)); }
+.sm2-legend .k.sq::before { background: rgb(103,169,207); }
+.sm2-legend .k.disc::before { background: rgb(103,169,207); border-radius: 50%; }
+.sm2-legend .k.scale::before { width: 46px; background: linear-gradient(90deg, rgb(33,102,172), rgb(247,247,247), rgb(178,24,43)); }
 .sm2-legend .k.matched::before { background: transparent; outline: 2px solid #4ade80; outline-offset: -2px; }
 .sm2-legend .k.active::before { background: transparent; box-shadow: 0 0 0 2px #f0c040; }
 .sm2-legend .k.blocking::before { background: transparent; outline: 2px solid #ef4444; outline-offset: -2px; }
