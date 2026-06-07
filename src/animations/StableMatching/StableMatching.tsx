@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity, AlertTriangle, FastForward, FlaskConical, Layers, Pause, Play,
   RotateCcw, Shuffle, SkipForward, ShieldCheck,
@@ -20,13 +20,12 @@ const NS = 'stable-matching';
  *    ranks (A's rank of B, top-left; B's rank of A, bottom-right). The matching
  *    (= current tentative holds) lights up; the active proposal rings; blocking
  *    pairs (if any, at the end) flag red. This is the algorithm, foregrounded. ── */
-function Matrix({ inst, matching, rows, cols, event, blocking }: {
+function Matrix({ inst, matching, rows, cols, event, blocking, size }: {
   inst: Instance; matching: Matching; rows: number[]; cols: number[];
-  event: ProposalEvent | null; blocking: Set<string>;
+  event: ProposalEvent | null; blocking: Set<string>; size: number;
 }) {
   const n = inst.n;
-  const size = Math.max(22, Math.min(56, Math.round(680 / (n + 1))));
-  const showNums = n <= 8;
+  const showNums = size >= 30;
   // shared BuRd diverging scale: blue = best rank (1) → white → red = worst (n).
   // Square (A) and circle (B) use the SAME scale; shape, not hue, tells them apart.
   const BURD = [[33, 102, 172], [103, 169, 207], [247, 247, 247], [239, 138, 98], [178, 24, 43]];
@@ -105,6 +104,8 @@ export default function StableMatching() {
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
   const timer = useRef<number | null>(null);
+  const matrixWrap = useRef<HTMLDivElement>(null);
+  const [cellSize, setCellSize] = useState(40);
 
   const inst = useMemo(() => generateInstance({ n, consensusA: consensusA / 100, consensusB: consensusB / 100, seed }), [n, consensusA, consensusB, seed]);
   const mode: Mode = useMemo(() => (proposer === 'market' ? { kind: 'market', bias, seed } : { kind: 'one-sided', proposer }), [proposer, bias, seed]);
@@ -148,6 +149,26 @@ export default function StableMatching() {
     timer.current = window.setInterval(() => setStep(s => { if (s >= total) { setPlaying(false); return s; } return s + 1; }), ms);
     return () => { if (timer.current) clearInterval(timer.current); };
   }, [playing, speed, total]);
+
+  // size the matrix so the whole grid fits the available width and height
+  useLayoutEffect(() => {
+    if (view !== 'visualizer') return;
+    const el = matrixWrap.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth;
+      const top = el.getBoundingClientRect().top;
+      const availH = window.innerHeight - top - 64;   // room for legend + bottom padding
+      const byW = (w - 40) / n - 3;                    // minus row header + per-cell gap
+      const byH = (availH - 22) / n - 3;               // minus column header
+      setCellSize(Math.max(12, Math.min(80, Math.floor(Math.min(byW, byH)))));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
+  }, [n, view]);
 
   const reset = useCallback(() => { setPlaying(false); setStep(0); }, []);
   const shuffle = useCallback(() => setSeed(s => (s * 1103515245 + 12345) & 0x7fffffff), [setSeed]);
@@ -200,7 +221,7 @@ export default function StableMatching() {
   const settings = (
     <ShellSettings>
       <Section title="Domain" icon="◷" defaultOpen>
-        <NumberInput label="Population (per side)" value={n} onChange={setN} min={3} max={16} integer />
+        <NumberInput label="Population (per side)" value={n} onChange={setN} min={3} max={60} integer />
         <Slider label="Consensus A" value={consensusA} min={0} max={100} step={1} onChange={setConsensusA} format={v => `${v}%`} />
         <Slider label="Consensus B" value={consensusB} min={0} max={100} step={1} onChange={setConsensusB} format={v => `${v}%`} />
         <NumberInput label="Seed" value={seed} onChange={setSeed} min={1} integer />
@@ -271,8 +292,8 @@ export default function StableMatching() {
               <span className="sm2-metric-sub">{!done ? 'finish the run to check' : blocking.size === 0 ? 'no pair would defect' : 'red cells would defect'}</span>
             </div>
           </div>
-          <div className="sm2-matrix-wrap">
-            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} event={event} blocking={blocking} />
+          <div className="sm2-matrix-wrap" ref={matrixWrap}>
+            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} event={event} blocking={blocking} size={cellSize} />
             <p className="sm2-legend"><span className="k sq">square = A's rank of B</span><span className="k disc">circle = B's rank of A</span><span className="k scale">blue #1 → red last</span><span className="k matched">held / matched</span><span className="k active">proposing</span><span className="k blocking">blocking</span></p>
           </div>
         </div>
