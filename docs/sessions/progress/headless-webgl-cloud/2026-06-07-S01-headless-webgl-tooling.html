@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Progress · 2026-06-07-S01 Headless software-WebGL tooling</title>
+  <link rel="stylesheet" href="../../report.css">
+  <script defer src="../../report.js"></script>
+  <script type="application/json" class="report-meta">
+  {
+    "kind": "progress",
+    "session": "2026-06-07-S01",
+    "date": "2026-06-07",
+    "title": "Headless software-WebGL tooling for cloud sessions",
+    "branch": "claude/headless-webgl-cloud-PxPGu",
+    "slug": "headless-webgl-cloud",
+    "status": "in-progress",
+    "build": "passed",
+    "followup": "low",
+    "pr": 187
+  }
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">Progress report</p>
+    <h1>2026-06-07-S01 — Headless software-WebGL tooling for cloud sessions</h1>
+    <dl class="meta">
+      <div><dt>Branch</dt><dd><code>claude/headless-webgl-cloud-PxPGu</code> · slug <code>headless-webgl-cloud</code></dd></div>
+      <div><dt>App(s)</dt><dd>tooling / framework (no app source touched)</dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-ok">passed</span></dd></div>
+      <div><dt>PR</dt><dd><a href="https://github.com/piyarsquare/animath/pull/187">#187</a></dd></div>
+    </dl>
+  </header>
+
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+
+      <div class="toolbar">
+        <button type="button" data-action="expand-all">Expand all</button>
+        <button type="button" data-action="collapse-all">Collapse all</button>
+      </div>
+
+      <section>
+        <h2>Session purpose</h2>
+        <p>Give cloud / CI sessions a way to actually <em>render and screenshot</em>
+        WebGL (Three.js) apps, which otherwise can't be visually verified there — the
+        container has no GPU and no browser, so only <code>npm run build</code> (a
+        type-check) runs. Add software-WebGL (ANGLE + SwiftShader) headless screenshot
+        tooling so a real frame can be captured, closing the verification loop for
+        WebGL changes such as the in-flight Klein-bottle fix.</p>
+      </section>
+
+      <section>
+        <h2>Previous session</h2>
+        <p>Latest handoff is an unrelated topic:
+        <a href="../../handoff/particle-viewer-ideas-priority-UDZRe/2026-06-05-S01-ideas-triage-quick-wins.html">2026-06-05-S01 — Particle-viewer ideas triage + quick wins</a>
+        (status <strong>completed</strong>, build passed, no PR). Nothing pending that
+        bears on this session; this is the first tracked session on the
+        <code>headless-webgl-cloud</code> branch.</p>
+      </section>
+
+      <section class="log">
+        <h2>Working notes</h2>
+        <ol class="timeline">
+
+          <li class="tl" data-type="decision">
+            <p class="tl-time">15:34</p>
+            <span class="chip chip-decision">Decision</span>
+            <h3>Retroactive session log under a nice-name slug</h3>
+            <p class="why"><strong>Why:</strong> <code>/start-session</code> was not run
+            before the work began; the user asked to run it now and clarified the
+            library convention.</p>
+            <p>Created this progress report after the fact. Per the user, the
+            <code>docs/sessions/</code> library should use <strong>nice names</strong> —
+            no <code>claude/</code> prefix, no hex suffix — so the slug is
+            <code>headless-webgl-cloud</code> (dropping the branch's <code>-PxPGu</code>
+            hex). Hex codes stay fine for git worktrees; the goal is nice branch names.</p>
+          </li>
+
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">~15:25</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Opened PR #187 → main</h3>
+            <p class="why"><strong>Why:</strong> the tooling is additive and branch-agnostic;
+            landing it on <code>main</code> lets every branch inherit WebGL screenshotting.</p>
+            <p>Pushed <code>claude/headless-webgl-cloud-PxPGu</code> and opened
+            <a href="https://github.com/piyarsquare/animath/pull/187">PR #187</a>
+            (&quot;Add headless software-WebGL setup for cloud sessions&quot;).</p>
+          </li>
+
+          <li class="tl" data-type="code">
+            <p class="tl-time">~15:20</p>
+            <span class="chip chip-code">Code</span>
+            <h3>Guarded the Pages deploy against the Chrome download</h3>
+            <p class="why"><strong>Why:</strong> the deploy only runs
+            <code>npm ci &amp;&amp; npm run build</code> and never screenshots, so it
+            shouldn't pull puppeteer's ~150&nbsp;MB Chrome.</p>
+            <p>Set <code>PUPPETEER_SKIP_DOWNLOAD=true</code> on the <code>npm ci</code>
+            step in <code>.github/workflows/deploy.yml</code>. Cloud sessions still get
+            Chrome via the explicit install script.</p>
+          </li>
+
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">earlier</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Headless software-WebGL setup added and verified end-to-end</h3>
+            <p class="why"><strong>Why:</strong> the core deliverable — make a real WebGL
+            frame renderable/screenshottable in a GPU-less, browser-less container.</p>
+            <p>Added <code>scripts/shoot.mjs</code> (headless Chromium with ANGLE +
+            SwiftShader, prints the live renderer string, screenshots a route),
+            <code>scripts/install_headless_webgl.sh</code> (idempotent, cloud-only,
+            PPA-tolerant provisioner), a <code>SessionStart</code> hook in
+            <code>.claude/settings.json</code>, the <code>puppeteer</code> devDependency +
+            <code>npm run shoot</code> alias, and <code>docs/HEADLESS_WEBGL.md</code>.
+            Verified in a cloud session: installed Chrome-for-Testing
+            <code>linux-148.0.7778.97</code>, <code>npm run build</code> passed, served the
+            app, and screenshotted <code>#/topology-walk</code> with the context reporting
+            <code>WebGL 2.0 … SwiftShader driver</code> — a fully rendered Three.js scene.</p>
+          </li>
+
+        </ol>
+      </section>
+
+      <p class="callout callout-gotcha"><span class="callout-label">Gotcha</span>
+      Puppeteer (not Playwright) was chosen because the default <strong>Trusted</strong>
+      network policy allowlists <code>storage.googleapis.com</code> (Chrome-for-Testing)
+      and <code>archive.ubuntu.com</code> (runtime libs), but not Playwright's
+      <code>cdn.playwright.dev</code>. The base image's third-party PPAs
+      (<code>deadsnakes</code>, <code>ondrej/php</code>) break <code>apt-get update</code>,
+      so the install script updates only the main Ubuntu sources.</p>
+
+      <p class="callout callout-note"><span class="callout-label">Note</span>
+      Process miss this session: implementation work happened <em>before</em>
+      <code>/start-session</code> was run, so this report is a backfill. The change was
+      self-contained tooling that touched no shared app-registry files
+      (<code>apps.ts</code>/<code>index.tsx</code>), so the append-only parallel-branch
+      rule was not at risk.</p>
+
+    </div><!-- /.content -->
+  </div><!-- /.body -->
+</main>
+</body>
+</html>
