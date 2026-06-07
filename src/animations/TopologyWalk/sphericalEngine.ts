@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import { makeFootprintTrail } from './footprints';
 import { makeCharacter } from './character';
 import { EngineDeps, EngineOptions, FrameInput, WorldEngine, SphereMapState } from './engine';
+import { glassState, applyGlass, GlassSpec } from './glassSurface';
+import { groupOtherSide, SideRef } from './otherSide';
+
+// Planet-glass opacity spec: the inner shell reveals below 0.97 (planet's feel).
+const SPHERE_GLASS: GlassSpec = { showUnderBelow: 0.97 };
 
 /**
  * The **positive-curvature** walk: a first-person stroll on a small planet.
@@ -300,6 +305,11 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   under.add(underSkins);
   root.add(under);
 
+  // "The other side" handle (surface-tour §4.1 flip seam): the single radial
+  // inner shell. `side` stays 'near' until the (deferred) normal-flip drives it.
+  const sideState: SideRef = { side: 'near' };
+  const otherSide = groupOtherSide(under, sideState);
+
   // Reflect every prop radially: keep its surface position, aim it INWARD (up → −dir),
   // so it hangs below the glass directly under its twin on top.
   function placeUnder() {
@@ -320,19 +330,12 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   // floor); on ℝP² the opposite skin underfoot is genuinely the glued antipode.
   function applyInnerShell() {
     const on = showInner;
-    under.visible = on && glassOpacity < 0.97;
-    if (on) {
-      planetMat.transparent = true;
-      planetMat.opacity = glassOpacity;
-      planetMat.side = THREE.DoubleSide;
-      planetMat.depthWrite = glassOpacity >= 0.98;
-    } else {
-      planetMat.transparent = false;
-      planetMat.opacity = 1;
-      planetMat.side = THREE.FrontSide;
-      planetMat.depthWrite = true;
-    }
-    planetMat.needsUpdate = true;
+    // Shared glass arithmetic; SPHERE_GLASS keeps the planet's own 0.97 reveal
+    // threshold. `enabled=on` turns the planet back to an opaque solid when the
+    // inner shell is off (nothing to see through).
+    const g = glassState(glassOpacity, SPHERE_GLASS);
+    under.visible = on && g.showUnder;
+    applyGlass(planetMat, g, on);
   }
   applyInnerShell();
 
@@ -485,6 +488,8 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     setInnerShell,
     setFloorOpacity,
     getSphereState: () => mapState,
+    getOtherSide: () => otherSide,
+    isFlipped: () => sideState.side === 'far',
     dispose: () => {
       scene.remove(root);
       foot.dispose();

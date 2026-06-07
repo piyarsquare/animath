@@ -11,6 +11,7 @@ import {
 import { makeCorridorEngine } from './corridorEngine';
 import { makeFlatEngine } from './flatEngine';
 import { makeSphericalEngine } from './sphericalEngine';
+import { drawSquareMap, rp2Square, SquareMapSpec, SquareEdgeSpec, SquareDot } from './squareMap';
 import explainerText from './EXPLAINER.md?raw';
 
 const LOOK_SENS = 0.0035;
@@ -65,6 +66,9 @@ export default function TopologyWalk() {
   const isCorridor = family === 'corridor';
   const isFlat = family === 'flat';
   const isSpherical = family === 'spherical';
+  // The two "rectangular" worlds: both glue a square fundamental domain and share
+  // the unified glass / mini-map / other-side presentation.
+  const isRect = isFlat || isSpherical;
 
   useAppHeader('Topology Walk', def.short);
   useAppExplainer(explainerText);
@@ -256,7 +260,7 @@ export default function TopologyWalk() {
           {isFlat && (
             <Checkbox label="Project avatar into every cell" checked={projectAvatar} onChange={setProjectAvatar} />
           )}
-          {(isFlat || isSpherical) && (
+          {isRect && (
             <Checkbox
               label={isSpherical ? 'Mini-map (sphere)' : 'Mini-map (fundamental domain)'}
               checked={miniMap}
@@ -266,17 +270,17 @@ export default function TopologyWalk() {
           {isFlat && (
             <Checkbox label="Colour each cover cell" checked={colorCells} onChange={setColorCells} />
           )}
-          {isFlat && (
-            <Slider label="Floor opacity" value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
-          )}
           {isSpherical && (
             <Slider label="Planet radius" value={planetRadius} min={12} max={90} step={2} onChange={setPlanetRadius} format={(v) => `${Math.round(v)} m`} />
           )}
+          {/* Glass floor "see the other side" — the spherical planet can be turned
+              back to a solid (the flat floor is always glass); the opacity slider is
+              shared by both rectangular worlds via the unified glass helper. */}
           {isSpherical && (
-            <Checkbox label="Glass floor — see the underside" checked={innerShell} onChange={setInnerShell} />
+            <Checkbox label="Glass floor — see the other side" checked={innerShell} onChange={setInnerShell} />
           )}
-          {isSpherical && innerShell && (
-            <Slider label="Planet glass" value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
+          {isRect && (isFlat || innerShell) && (
+            <Slider label="Glass floor opacity" value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
           )}
           <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
           <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>
@@ -390,7 +394,7 @@ function FlatMiniMap({ getState }: { getState: () => FlatMapState | null }) {
     cvs.width = SIZE * dpr; cvs.height = SIZE * dpr;
     ctx.scale(dpr, dpr);
     let raf = 0;
-    const loop = () => { drawFlatMap(ctx, SIZE, getState()); raf = requestAnimationFrame(loop); };
+    const loop = () => { drawSquareMap(ctx, SIZE, flatSquareSpec(getState())); raf = requestAnimationFrame(loop); };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [getState]);
@@ -411,60 +415,19 @@ function FlatMiniMap({ getState }: { getState: () => FlatMapState | null }) {
 
 const MAP_RED = '#ff4060', MAP_BLUE = '#4080ff', MAP_TEAL = '#34d6c0';
 
-function drawFlatMap(ctx: CanvasRenderingContext2D, size: number, st: FlatMapState | null) {
-  ctx.clearRect(0, 0, size, size);
-  ctx.fillStyle = 'rgba(10,12,20,0.72)';
-  ctx.fillRect(0, 0, size, size);
-
-  const m = 24, w = size - 2 * m, x0 = m, y0 = m, x1 = x0 + w, y1 = y0 + w;
+/** Build the {@link SquareMapSpec} for the flat world: top/bottom always glue
+ *  straight (blue); left/right flip (red) on the Klein bottle, straight (teal) on
+ *  the torus. The marker charts (u,v)→square coords and turns amber on the mirror
+ *  side. With no live state yet, the Klein default square is drawn (no marker). */
+function flatSquareSpec(st: FlatMapState | null): SquareMapSpec {
   const klein = st ? st.klein : true;
-  const lr = klein ? MAP_RED : MAP_TEAL; // left/right edges: flip (red) vs straight (teal)
-
-  // domain interior
-  ctx.fillStyle = 'rgba(46,60,86,0.4)';
-  ctx.fillRect(x0, y0, w, w);
-
-  const seg = (ax: number, ay: number, bx: number, by: number, col: string) => {
-    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
-  };
-  seg(x0, y0, x1, y0, MAP_BLUE); // top
-  seg(x0, y1, x1, y1, MAP_BLUE); // bottom
-  seg(x0, y0, x0, y1, lr);       // left
-  seg(x1, y0, x1, y1, lr);       // right
-
-  // Identification arrows: an apex-right chevron, rotated. Single on the straight
-  // (blue) pair, double on the left/right pair; the right edge points the
-  // opposite way on the Klein flip, the same way on the torus.
-  const chev = (cx: number, cy: number, ang: number, col: string, dbl: boolean) => {
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
-    ctx.strokeStyle = col; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    const tip = (o: number) => { ctx.beginPath(); ctx.moveTo(-3 + o, -4.5); ctx.lineTo(3 + o, 0); ctx.lineTo(-3 + o, 4.5); ctx.stroke(); };
-    tip(2); if (dbl) tip(-4);
-    ctx.restore();
-  };
-  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-  chev(cx, y0, 0, MAP_BLUE, false);                          // top → +x
-  chev(cx, y1, 0, MAP_BLUE, false);                          // bottom → +x (straight)
-  chev(x0, cy, Math.PI / 2, lr, true);                       // left → down
-  chev(x1, cy, klein ? -Math.PI / 2 : Math.PI / 2, lr, true); // right: up (flip) / down (straight)
-
-  if (!st) return;
-
-  // player marker: a chevron at (u,v), pointing along the heading (+z is up)
-  const px = x0 + st.u * w, py = y0 + (1 - st.v) * w;
-  ctx.save(); ctx.translate(px, py); ctx.rotate(Math.atan2(-st.hz, st.hx));
-  ctx.beginPath();
-  ctx.moveTo(8, 0); ctx.lineTo(-5, -5.5); ctx.lineTo(-2, 0); ctx.lineTo(-5, 5.5); ctx.closePath();
-  ctx.fillStyle = st.flipped ? '#ffd24a' : '#8ef0ff';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.65)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.restore();
-
-  ctx.font = '9px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  ctx.fillText(klein ? (st.flipped ? 'Klein · mirror side' : 'Klein bottle') : 'Flat torus', size / 2, size - 7);
+  const tb: SquareEdgeSpec = { color: MAP_BLUE, glue: 'straight', double: false };
+  const lr: SquareEdgeSpec = { color: klein ? MAP_RED : MAP_TEAL, glue: klein ? 'flip' : 'straight', double: true };
+  const marker = st
+    ? { sx: (st.u - 0.5) * 2, sy: (st.v - 0.5) * 2, angle: Math.atan2(-st.hz, st.hx), flipped: st.flipped }
+    : null;
+  const label = !st ? '' : klein ? (st.flipped ? 'Klein · mirror side' : 'Klein bottle') : 'Flat torus';
+  return { tb, lr, marker, dots: [], border: false, label };
 }
 
 /**
@@ -486,7 +449,7 @@ function SphereMiniMap({ getState }: { getState: () => SphereMapState | null }) 
     let raf = 0;
     const loop = () => {
       const st = getState();
-      if (st && st.rp2) drawRP2Square(ctx, SIZE, st);
+      if (st && st.rp2) drawSquareMap(ctx, SIZE, rp2SquareSpec(st));
       else drawSphereMap(ctx, SIZE, st);
       raf = requestAnimationFrame(loop);
     };
@@ -579,82 +542,26 @@ function drawSphereMap(ctx: CanvasRenderingContext2D, size: number, st: SphereMa
   ctx.fillText(st.rp2 ? 'ℝP² · antipodes glued' : 'Sphere', size / 2, size - 6);
 }
 
-// Chart S² → the "both-pairs-flipped" square fundamental domain of ℝP². Take the
-// z≥0 representative (so the chart boundary is the z=0 seam — the same place the
-// trees/columns swap), orthographically project that hemisphere to the unit disk
-// (x,y), then radially stretch the disk out to the square. Antipodal sphere points
-// then land on antipodal (negated) square points, which is exactly the square's
-// (x,y)~(−x,−y) gluing.
-function rp2Square(x: number, y: number, z: number, flip: boolean): [number, number] {
-  let X = x, Y = y;
-  if (flip) { X = -X; Y = -Y; }
-  const m = Math.max(Math.abs(X), Math.abs(Y));
-  if (m < 1e-6) return [0, 0];
-  const s = Math.hypot(X, Y) / m; // 1 … √2, maps the disk onto the square
-  return [X * s, Y * s];
-}
-
 const MAP_PURPLE = '#b070ff';
 
 /**
- * The ℝP² fundamental domain in the torus/Klein square style: a square whose
- * BOTH pairs of opposite edges glue with a flip (the antipodal identification).
- * The player and landmarks are charted in via {@link rp2Square}; the player marker
- * turns amber on the z<0 cover sheet (the "column" side). Each ℝP² point appears
- * once — the square is the quotient, so there are no antipodal twins to draw.
+ * Build the {@link SquareMapSpec} for the ℝP² fundamental domain: a square whose
+ * BOTH pairs of opposite edges glue with a flip (the antipodal identification),
+ * top/bottom red, left/right purple. The player and landmarks are charted in via
+ * {@link rp2Square}; the player marker turns amber on the z<0 cover sheet (the
+ * "column" side). Each ℝP² point appears once — the square is the quotient, so
+ * there are no antipodal twins to draw. The heading comes from a small forward
+ * step charted on the SAME representative sheet (so it doesn't jump at the seam);
+ * the square→canvas scale cancels in the angle, so it is computed in square coords.
  */
-function drawRP2Square(ctx: CanvasRenderingContext2D, size: number, st: SphereMapState) {
-  ctx.clearRect(0, 0, size, size);
-  ctx.fillStyle = 'rgba(10,12,20,0.72)';
-  ctx.fillRect(0, 0, size, size);
-
-  const m = 24, w = size - 2 * m, x0 = m, y0 = m, x1 = x0 + w, y1 = y0 + w;
-  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-  // square coords (sx,sy ∈ −1..1, +y up) → canvas
-  const toX = (sx: number) => cx + sx * (w / 2);
-  const toY = (sy: number) => cy - sy * (w / 2);
-
-  ctx.fillStyle = 'rgba(46,60,86,0.4)';
-  ctx.fillRect(x0, y0, w, w);
-
-  const seg = (ax: number, ay: number, bx: number, by: number, col: string) => {
-    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
-  };
-  // top/bottom pair red, left/right pair purple — both flip-glued.
-  seg(x0, y0, x1, y0, MAP_RED);
-  seg(x0, y1, x1, y1, MAP_RED);
-  seg(x0, y0, x0, y1, MAP_PURPLE);
-  seg(x1, y0, x1, y1, MAP_PURPLE);
-
-  // identification chevrons (apex-right at angle 0). Both pairs reverse: top → ,
-  // bottom ← ; right ↑ , left ↓. Single on the top/bottom pair, double on left/right.
-  const chev = (px: number, py: number, ang: number, col: string, dbl: boolean) => {
-    ctx.save(); ctx.translate(px, py); ctx.rotate(ang);
-    ctx.strokeStyle = col; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    const tip = (o: number) => { ctx.beginPath(); ctx.moveTo(-3 + o, -4.5); ctx.lineTo(3 + o, 0); ctx.lineTo(-3 + o, 4.5); ctx.stroke(); };
-    tip(2); if (dbl) tip(-4);
-    ctx.restore();
-  };
-  chev(cx, y0, 0, MAP_RED, false);              // top → +x
-  chev(cx, y1, Math.PI, MAP_RED, false);        // bottom → −x (flip)
-  chev(x1, cy, -Math.PI / 2, MAP_PURPLE, true); // right → up (+y)
-  chev(x0, cy, Math.PI / 2, MAP_PURPLE, true);  // left → down (−y, flip)
-
-  ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1; ctx.strokeRect(x0, y0, w, w);
-
-  // landmarks (each ℝP² point once)
-  for (const lm of st.landmarks) {
+function rp2SquareSpec(st: SphereMapState): SquareMapSpec {
+  const dots: SquareDot[] = st.landmarks.map((lm) => {
     const cl = Math.cos(lm.lat);
     const dx = cl * Math.cos(lm.lon), dy = Math.sin(lm.lat), dz = cl * Math.sin(lm.lon);
     const [sx, sy] = rp2Square(dx, dy, dz, dz < 0);
-    ctx.beginPath(); ctx.arc(toX(sx), toY(sy), 3.2, 0, Math.PI * 2);
-    ctx.fillStyle = '#' + new THREE.Color(lm.color).getHexString(); ctx.fill();
-    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.stroke();
-  }
+    return { sx, sy, color: lm.color };
+  });
 
-  // player marker: charted position + a heading from a small forward step taken on
-  // the SAME representative sheet (so it doesn't jump when crossing the seam).
   const [ux, uy, uz] = st.up, [fx, fy, fz] = st.fwd;
   const flip = uz < 0;
   const [psx, psy] = rp2Square(ux, uy, uz, flip);
@@ -662,18 +569,15 @@ function drawRP2Square(ctx: CanvasRenderingContext2D, size: number, st: SphereMa
   let ax = ux * ce + fx * se, ay = uy * ce + fy * se, az = uz * ce + fz * se;
   const al = Math.hypot(ax, ay, az) || 1; ax /= al; ay /= al; az /= al;
   const [qsx, qsy] = rp2Square(ax, ay, az, flip);
-  const px = toX(psx), py = toY(psy);
-  const ang = Math.atan2(toY(qsy) - py, toX(qsx) - px);
-  ctx.save(); ctx.translate(px, py); ctx.rotate(ang);
-  ctx.beginPath();
-  ctx.moveTo(8, 0); ctx.lineTo(-5, -5.5); ctx.lineTo(-2, 0); ctx.lineTo(-5, 5.5); ctx.closePath();
-  ctx.fillStyle = flip ? '#ffd24a' : '#8ef0ff';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.65)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.restore();
+  // canvas y is flipped vs square y, so the heading angle negates Δsy.
+  const angle = Math.atan2(-(qsy - psy), qsx - psx);
 
-  ctx.font = '9px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  ctx.fillText(flip ? 'ℝP² · column sheet' : 'ℝP² · both pairs flip', size / 2, size - 7);
+  return {
+    tb: { color: MAP_RED, glue: 'flip', double: false },
+    lr: { color: MAP_PURPLE, glue: 'flip', double: true },
+    marker: { sx: psx, sy: psy, angle, flipped: flip },
+    dots,
+    border: true,
+    label: flip ? 'ℝP² · column sheet' : 'ℝP² · both pairs flip',
+  };
 }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { OtherSide } from './otherSide';
 
 /**
  * Topology Walk hosts two interchangeable world *engines* behind one common
@@ -162,4 +163,18 @@ export interface WorldEngine {
   getMapState?(): FlatMapState | null;
   /** Spherical worlds only: current position/heading + landmarks on the sphere. */
   getSphereState?(): SphereMapState | null;
+
+  // ── "The other side" / normal-flip seam (surface-tour §4.1) ─────────────────
+  // The rectangular worlds (flat, spherical) each glue an opposite face behind
+  // the glass (see lib `otherSide.ts` / `glassSurface.ts`). These optionals are
+  // the uniform seam the roadmap normal-flip rides: the host will call
+  // `flipSide()` once at the player layer and each engine routes it to its own
+  // realisation. Declared now, unimplemented this session — corridor omits them.
+  /** Roadmap: somersault the player to the glued opposite face / inner shell. */
+  flipSide?(): void;
+  /** True when the player currently stands on the under / inner face. */
+  isFlipped?(): boolean;
+  /** A handle to the other-face decor when it is a single group (spherical inner
+   *  shell); flat returns `null` (its other side is the per-cell `under` set). */
+  getOtherSide?(): OtherSide | null;
 }

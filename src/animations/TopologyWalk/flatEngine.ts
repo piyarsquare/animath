@@ -2,8 +2,12 @@ import * as THREE from 'three';
 import { makeFootprintTrail } from './footprints';
 import { makeCharacter, Character } from './character';
 import { EngineDeps, EngineOptions, FrameInput, WorldEngine, FlatMapState } from './engine';
+import { glassState, GlassSpec } from './glassSurface';
+import { SideRef } from './otherSide';
 
 const L = 30;             // fundamental-domain side
+// Glass-floor opacity spec: the underside reveals below 0.95 (flat's own feel).
+const FLAT_GLASS: GlassSpec = { showUnderBelow: 0.95 };
 const K = 2;              // render (2K+1)^2 cells around the player
 const EYE = 1.7;
 const TRAIL_MAX = 1500;
@@ -279,6 +283,9 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
   let projectAvatar = opts.projectAvatar;
   let floorOpacityVal = opts.floorOpacity;
   let colorCells = opts.colorCells;
+  // Which face the player is on (surface-tour §4.1 flip seam); 'near' until the
+  // deferred normal-flip drives it.
+  const sideState: SideRef = { side: 'near' };
 
   // player state
   let px = 2, pz = 2;
@@ -316,10 +323,12 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
   root.add(floor);
   function applyFloorOpacity(o: number) {
     floorOpacityVal = o;
-    floorMat.opacity = o;
-    floorMat.visible = o > 0.01;
-    // Clear glass shouldn't occlude depth, so the far side reads through it.
-    floorMat.depthWrite = o >= 0.98;
+    // Shared glass arithmetic (opacity → visible / depthWrite); the underside
+    // reveal gate (showUnder) is read from the same spec in the frame loop.
+    const g = glassState(o, FLAT_GLASS);
+    floorMat.opacity = g.opacity;
+    floorMat.visible = g.visible;
+    floorMat.depthWrite = g.depthWrite;
   }
   applyFloorOpacity(opts.floorOpacity);
 
@@ -444,7 +453,7 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
     // columns are mirror-reflected (the red flip) and wear the alternate skin
     // (trees vs columns); the torus shows columns everywhere (orientable).
     // Skip the under-floor copy once the glass is solid enough to hide it.
-    const showUnder = floorOpacityVal < 0.95;
+    const showUnder = glassState(floorOpacityVal, FLAT_GLASS).showUnder;
     let idx = 0;
     for (let di = -K; di <= K; di++) {
       for (let dj = -K; dj <= K; dj++) {
@@ -535,6 +544,11 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
     setFloorOpacity: (o) => applyFloorOpacity(o),
     setColorCells: (on) => { colorCells = on; },
     getMapState: () => mapState,
+    // "The other side" (surface-tour §4.1 flip seam): flat's opposite face is the
+    // per-cell `under` collection, not a single group, so there is no group handle
+    // to hand out — the deferred normal-flip will drive it through the tile loop.
+    getOtherSide: () => null,
+    isFlipped: () => sideState.side === 'far',
     dispose: () => {
       scene.remove(root);
       cells.forEach((c) => { c.ghost?.dispose(); c.dispose(); });
