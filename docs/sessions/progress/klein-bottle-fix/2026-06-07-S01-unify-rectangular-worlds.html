@@ -71,6 +71,22 @@
           <li class="tl" data-type="milestone">
             <p class="tl-time">—</p>
             <span class="chip chip-milestone">Milestone</span>
+            <h3>Visually verified in-app (software WebGL) — HIGH debt discharged</h3>
+            <p class="why"><strong>Why:</strong> merged <code>origin/main</code> which
+            now carries the headless software-WebGL harness (#188, SwiftShader +
+            <code>npm run shoot</code>), so the refactor could finally be eyeballed.</p>
+            <p>Drove the real app (puppeteer) across all four surfaces. Confirmed:
+            Klein (columns⇄trees parity + red-flip mini-map), torus (columns
+            everywhere + opposite-skin underside through glass + teal-straight
+            mini-map), sphere (planet + inner-shell twins through 35% glass +
+            equirect chart), ℝP² (antipodal beacons + red/purple-flip mini-map).
+            The unified glass slider, "see the other side" label, and per-family
+            mini-map labels all render; the single <code>drawSquareMap</code> draws
+            all three square cases correctly. No regression vs the pre-merge build.</p>
+          </li>
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">—</p>
+            <span class="chip chip-milestone">Milestone</span>
             <h3>Unification complete — build green, awaiting in-app walkthrough</h3>
             <p class="why"><strong>Why:</strong> the parallel square-domain code is
             now folded into one shared presentation layer; <code>npm run build</code>
@@ -159,10 +175,11 @@
         </ol>
       </section>
 
-      <p class="callout callout-gotcha"><span class="callout-label">Gotcha</span>
-      No headless WebGL in this environment — the refactor is a pure behaviour-
-      preserving extraction, but the in-app walkthrough (HIGH verification debt
-      from S01) still needs a human eye before any merge.</p>
+      <p class="callout callout-note"><span class="callout-label">Resolved</span>
+      The S01 HIGH verification debt is cleared: after merging main's headless
+      software-WebGL harness (#188), the refactor was driven and screenshotted
+      across all four surfaces (Klein / torus / sphere / ℝP²) and reads correctly.
+      The animated normal-flip remains future work (seam only this session).</p>
 
     </div><!-- /.content -->
   </div><!-- /.body -->
