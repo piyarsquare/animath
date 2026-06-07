@@ -5,7 +5,7 @@ date: 2026-06-07
 title: Polygon Worlds — base layer, plan review, and report tooling
 branch: claude/polygon-worlds
 slug: polygon-worlds
-status: in-progress
+status: completed
 build: passed
 followup: high
 pr: https://github.com/piyarsquare/animath/pull/190
@@ -125,7 +125,19 @@ left intact. PR #190 opened.
 
 ## Next
 
-1. Wire the host to `analyzeSchema` (verified but unused).
-2. Phase‑0 spike: Cayley‑Klein kernel + invariant battery + the V = 1 gate.
-3. Then port Euclidean behind the kernel (keep old covers until green); spherical
-   via the corrected realization; hyperbolic octagon after a perf/culling spike.
+Session **handed off**. The complete build plan is written and is where the next
+session picks up:
+
+- 📋 **Plan:** [`docs/polygon-worlds-plan.md`](../../../polygon-worlds-plan.md) — soup‑to‑nuts.
+- 📨 **Handoff:** [`…/handoff/polygon-worlds/2026-06-07-S01-foundation-and-plan.md`](../../handoff/polygon-worlds/2026-06-07-S01-foundation-and-plan.md).
+
+Start at the plan's **§9 / M0 + Phase 0**: wire `analyzeSchema` into the host
+(zero‑risk), then build the Cayley–Klein kernel + `verify-geometry.ts` battery;
+freeze the kernel interface only once the battery is green; don't touch the working
+covers until each port is screenshot‑green.
+
+> [!NOTE]
+> The "V > 1 realizer" debt flagged above is **resolved** in the plan: realize the
+> smooth model (round sphere for κ>0) with the polygon as a *chart* — so we realize
+> every word (2‑gons, the 4‑gon and 6‑gon spheres/ℝP²) with no cone points, and
+> disclose the chart distortion.
