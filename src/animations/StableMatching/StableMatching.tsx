@@ -25,7 +25,13 @@ function Matrix({ inst, matching, rows, cols, event, blocking }: {
   event: ProposalEvent | null; blocking: Set<string>;
 }) {
   const n = inst.n;
-  const size = Math.max(26, Math.min(54, Math.round(640 / (n + 1))));
+  const size = Math.max(22, Math.min(56, Math.round(680 / (n + 1))));
+  const showNums = n <= 8;
+  // rank → heat: best rank is bright/saturated, worst fades toward the background.
+  const heat = (hue: number, r: number) => {
+    const t = n > 1 ? 1 - (r - 1) / (n - 1) : 1;
+    return `hsl(${hue}, ${38 + t * 50}%, ${15 + t * 40}%)`;
+  };
   return (
     <div className="sm2-matrix" style={{ gridTemplateColumns: `2.2em repeat(${cols.length}, ${size}px)` }}>
       <div className="sm2-corner" />
@@ -34,6 +40,7 @@ function Matrix({ inst, matching, rows, cols, event, blocking }: {
         <React.Fragment key={`r${i}`}>
           <div className="sm2-rhead">A{i}</div>
           {cols.map(j => {
+            const aR = inst.rankA[i][j] + 1, bR = inst.rankB[j][i] + 1;
             const matched = matching.a[i] === j;
             const cur = !!event && (
               (event.proposer.side === 'A' && event.proposer.id === i && event.receiver.id === j) ||
@@ -41,9 +48,10 @@ function Matrix({ inst, matching, rows, cols, event, blocking }: {
             const rej = cur && event!.outcome === 'reject';
             const cls = `sm2-mcell${matched ? ' matched' : ''}${cur ? (rej ? ' reject' : ' active') : ''}${blocking.has(`${i}-${j}`) ? ' blocking' : ''}`;
             return (
-              <div key={j} className={cls} style={{ height: size }} title={`A${i} ranks B${j} #${inst.rankA[i][j] + 1} · B${j} ranks A${i} #${inst.rankB[j][i] + 1}`}>
-                <span className="ar">{inst.rankA[i][j] + 1}</span>
-                <span className="br">{inst.rankB[j][i] + 1}</span>
+              <div key={j} className={cls} style={{ height: size, background: heat(210, aR) }}
+                title={`A${i} ranks B${j} #${aR} · B${j} ranks A${i} #${bR}`}>
+                <span className="sm2-disc" style={{ background: heat(330, bR) }} />
+                {showNums && <><span className="ar">{aR}</span><span className="br">{bR}</span></>}
               </div>
             );
           })}
@@ -261,7 +269,7 @@ export default function StableMatching() {
           </div>
           <div className="sm2-matrix-wrap">
             <Matrix inst={inst} matching={matching} rows={rows} cols={cols} event={event} blocking={blocking} />
-            <p className="sm2-legend"><span className="k ar">↖ A's rank of B</span><span className="k br">B's rank of A ↘</span><span className="k matched">held / matched</span><span className="k active">proposing</span><span className="k blocking">blocking pair</span></p>
+            <p className="sm2-legend"><span className="k sq">square = A's rank of B</span><span className="k disc">circle = B's rank of A</span><span className="k scale">bright = #1 → dim = last</span><span className="k matched">held / matched</span><span className="k active">proposing</span><span className="k blocking">blocking</span></p>
           </div>
         </div>
       ) : (

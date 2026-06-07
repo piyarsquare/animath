@@ -34,24 +34,26 @@
 .sm2-chead, .sm2-rhead { display: flex; align-items: center; justify-content: center; font-size: 12px; color: #9a9aa8; font-variant-numeric: tabular-nums; }
 .sm2-chead { padding-bottom: 2px; }
 .sm2-rhead { justify-content: flex-end; padding-right: 7px; }
-.sm2-mcell { position: relative; background: #14141b; border: 1px solid #23232c; border-radius: 5px; transition: background .15s, box-shadow .15s; }
-.sm2-mcell .ar { position: absolute; top: 2px; left: 4px; font-size: 10px; color: #6fa8ec; font-variant-numeric: tabular-nums; }
-.sm2-mcell .br { position: absolute; bottom: 2px; right: 4px; font-size: 10px; color: #e07ab0; font-variant-numeric: tabular-nums; }
-.sm2-mcell.matched { background: #16331f; border-color: #2f7a47; }
-.sm2-mcell.matched .ar, .sm2-mcell.matched .br { font-weight: 700; }
-.sm2-mcell.active { box-shadow: 0 0 0 2px #d6a93a; z-index: 2; }
-.sm2-mcell.reject { box-shadow: 0 0 0 2px #ef4444; animation: sm2-flash .5s; }
-.sm2-mcell.blocking { border-color: #ef4444; background: #2a1414; }
-@keyframes sm2-flash { from { background: #3a1a1a; } }
+/* each cell: a SQUARE heat (A's rank of B) with a CIRCLE heat inside (B's rank of A) */
+.sm2-mcell { position: relative; border: 1px solid rgba(0,0,0,.45); border-radius: 5px; transition: box-shadow .15s; }
+.sm2-disc { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 58%; height: 58%; border-radius: 50%; }
+.sm2-mcell .ar { position: absolute; top: 1px; left: 3px; font-size: 9px; color: #dbe8fb; font-variant-numeric: tabular-nums; }
+.sm2-mcell .br { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 9px; color: #fbe2f0; font-variant-numeric: tabular-nums; z-index: 1; }
+.sm2-mcell.matched { outline: 2px solid #4ade80; outline-offset: -2px; }
+.sm2-mcell.active { box-shadow: 0 0 0 2px #f0c040, 0 0 8px rgba(240,192,64,.5); z-index: 3; }
+.sm2-mcell.reject { animation: sm2-flash .5s; z-index: 3; }
+.sm2-mcell.blocking { outline: 2px solid #ef4444; outline-offset: -2px; }
+@keyframes sm2-flash { 0% { box-shadow: 0 0 0 3px #ef4444; } 100% { box-shadow: 0 0 0 0 transparent; } }
 
 .sm2-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 12px; color: #8b8b99; }
 .sm2-legend .k { display: inline-flex; align-items: center; gap: 6px; }
-.sm2-legend .k::before { content: ''; width: 12px; height: 12px; border-radius: 3px; border: 1px solid #33333f; }
-.sm2-legend .k.ar { color: #6fa8ec; } .sm2-legend .k.ar::before { border: 0; }
-.sm2-legend .k.br { color: #e07ab0; } .sm2-legend .k.br::before { border: 0; }
-.sm2-legend .k.matched::before { background: #16331f; border-color: #2f7a47; }
-.sm2-legend .k.active::before { box-shadow: 0 0 0 2px #d6a93a; }
-.sm2-legend .k.blocking::before { background: #2a1414; border-color: #ef4444; }
+.sm2-legend .k::before { content: ''; width: 13px; height: 13px; border-radius: 3px; border: 0; }
+.sm2-legend .k.sq::before { background: hsl(210, 80%, 45%); }
+.sm2-legend .k.disc::before { background: hsl(330, 80%, 50%); border-radius: 50%; }
+.sm2-legend .k.scale::before { width: 42px; background: linear-gradient(90deg, hsl(210,88%,55%), hsl(210,40%,16%)); }
+.sm2-legend .k.matched::before { background: transparent; outline: 2px solid #4ade80; outline-offset: -2px; }
+.sm2-legend .k.active::before { background: transparent; box-shadow: 0 0 0 2px #f0c040; }
+.sm2-legend .k.blocking::before { background: transparent; outline: 2px solid #ef4444; outline-offset: -2px; }
 
 /* actions (rendered into ShellActions) */
 .sm2-actions { display: flex; flex-direction: column; gap: 8px; }

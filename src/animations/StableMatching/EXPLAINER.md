@@ -6,9 +6,11 @@ satisfies everyone's preferences.
 ## Reading the matrix
 
 Rows are group **A**, columns group **B**. Each cell is the potential pair
-(A_i, B_j) and shows **two ranks**: how A_i ranks B_j (top-left, blue) and how B_j
-ranks A_i (bottom-right, pink) — **1 = top choice**. So a whole row is A_i's
-preferences read left-to-right, a whole column is B_j's.
+(A_i, B_j), encoded as **two nested heatmaps**: the **square** is how A_i ranks B_j
+(blue), the **circle inside** is how B_j ranks A_i (pink). **Bright = top choice**,
+fading to dim for last. So a whole row is A_i's preferences read as a colour gradient,
+a whole column is B_j's. (Exact ranks show as numbers at small populations and as a
+tooltip on hover; with many people the heat carries it.)
 
 As the algorithm runs, **green cells are the current tentative matches**; the
 **gold ring** is the proposal happening now; a **red flash** is a rejection. A
