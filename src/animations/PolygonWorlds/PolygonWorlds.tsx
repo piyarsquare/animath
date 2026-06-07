@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import { ShellActions, ShellSettings, useAppHeader, useAppExplainer } from '../../components/AppShell';
 import { Section, Slider, Select, Checkbox } from '../../components/ControlPanel';
-import { WORLDS, worldById, WorldSpec } from './worldSpec';
+import { WORLDS, worldById, WorldSpec, deriveGeometry } from './worldSpec';
 import { makeFundamentalSquareEngine } from './fundamentalSquareEngine';
 import {
   EngineDeps, PolygonEngine, SquareMapState,
@@ -14,10 +14,7 @@ import explainerText from './EXPLAINER.md?raw';
 
 const LOOK_SENS = 0.0035;
 const MAX_PITCH = 1.3;
-
-// Phase 1: the Euclidean worlds are live; the spherical cover (sphere / ℝP²)
-// lands next, so only the flat worlds are offered for now.
-const READY = new Set(['torus', 'klein']);
+const DEFAULT_RADIUS = 30;
 
 type MoveKey = 'fwd' | 'back' | 'left' | 'right';
 
@@ -28,8 +25,10 @@ export default function PolygonWorlds() {
   const [floorOpacity, setFloorOpacity] = useState(0.35);
   const [squareSize, setSquareSize] = useState(DEFAULT_SQUARE_SIZE);
   const [floorThickness, setFloorThickness] = useState(DEFAULT_FLOOR_THICKNESS);
+  const [planetRadius, setPlanetRadius] = useState(DEFAULT_RADIUS);
 
   const spec = worldById(worldId);
+  const isSpherical = deriveGeometry(spec).cover === 'spherical';
   useAppHeader('Polygon Worlds', spec.short);
   useAppExplainer(explainerText);
 
@@ -47,6 +46,7 @@ export default function PolygonWorlds() {
   const sizeRef = useRef(squareSize);
   const thickRef = useRef(floorThickness);
   const opacityRef = useRef(floorOpacity);
+  const radiusRef = useRef(planetRadius);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
 
@@ -59,6 +59,7 @@ export default function PolygonWorlds() {
       squareSize: sizeRef.current, floorThickness: thickRef.current,
     });
     engineRef.current.setFloorOpacity(opacityRef.current);
+    engineRef.current.setRadius(radiusRef.current);
     clockRef.current.start();
     const animate = () => {
       const eng = engineRef.current;
@@ -89,6 +90,7 @@ export default function PolygonWorlds() {
       squareSize: sizeRef.current, floorThickness: thickRef.current,
     });
     engineRef.current.setFloorOpacity(opacityRef.current);
+    engineRef.current.setRadius(radiusRef.current);
   }, [spec]);
 
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
@@ -96,6 +98,7 @@ export default function PolygonWorlds() {
   useEffect(() => { opacityRef.current = floorOpacity; engineRef.current?.setFloorOpacity(floorOpacity); }, [floorOpacity]);
   useEffect(() => { sizeRef.current = squareSize; engineRef.current?.setSquareSize(squareSize); }, [squareSize]);
   useEffect(() => { thickRef.current = floorThickness; engineRef.current?.setFloorThickness(floorThickness); }, [floorThickness]);
+  useEffect(() => { radiusRef.current = planetRadius; engineRef.current?.setRadius(planetRadius); }, [planetRadius]);
 
   useEffect(() => {
     const map: Record<string, MoveKey> = {
@@ -129,7 +132,7 @@ export default function PolygonWorlds() {
   const onPointerUp = () => { dragRef.current = null; };
 
   const getMapState = useCallback(() => engineRef.current?.getMapState() ?? null, []);
-  const worldOptions = WORLDS.filter((w) => READY.has(w.id)).map((w) => ({ value: w.id, label: w.label }));
+  const worldOptions = WORLDS.map((w) => ({ value: w.id, label: w.label }));
 
   return (
     <>
@@ -155,13 +158,21 @@ export default function PolygonWorlds() {
         <Section title="World" icon="⬚" defaultOpen>
           <Select label="Gluing" options={worldOptions} value={worldId} onChange={setWorldId} />
           <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
-          <Slider label="Square size" value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
-          <Slider label="Floor thickness" value={floorThickness} min={0} max={6} step={0.2} onChange={setFloorThickness} format={(v) => `${v.toFixed(1)} m`} />
-          <Slider label="Glass floor opacity" value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
+          {!isSpherical && (
+            <Slider label="Square size" value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
+          )}
+          {!isSpherical && (
+            <Slider label="Floor thickness" value={floorThickness} min={0} max={6} step={0.2} onChange={setFloorThickness} format={(v) => `${v.toFixed(1)} m`} />
+          )}
+          {isSpherical && (
+            <Slider label="Planet radius" value={planetRadius} min={12} max={90} step={2} onChange={setPlanetRadius} format={(v) => `${Math.round(v)} m`} />
+          )}
+          <Slider label={isSpherical ? 'Planet glass opacity' : 'Glass floor opacity'} value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
           <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
           <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>
-            One square, four gluings. {spec.orientable ? 'Orientable' : 'Non-orientable'} · χ = {spec.chi}.
-            Sphere and ℝP² (the curved worlds) are coming next.
+            One square, four gluings. {spec.orientable ? 'Orientable' : 'Non-orientable'} · χ = {spec.chi} ·
+            {isSpherical ? ' curved (sphere)' : ' flat'}.
+            {!spec.orientable && ' Crossing a flipped edge swaps trees ↔ columns.'}
           </div>
         </Section>
       </ShellSettings>

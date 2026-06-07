@@ -1,38 +1,31 @@
 import * as THREE from 'three';
-import { SquareMapState } from './engineTypes';
+import { SquareMapState, EngineDeps } from './engineTypes';
+import { WorldSpec } from './worldSpec';
+import { FundamentalSquareDecor } from './decor';
 
 /**
  * The one seam that genuinely differs between the four worlds: the **universal
- * cover**. χ=0 worlds (torus, Klein) live on the flat Euclidean plane, realised
- * by sliding an infinitely tiled square under a fixed player; χ>0 worlds (ℝP²,
- * sphere) live on the sphere, realised by walking the camera around a fixed
- * planet. These are different mathematical objects and are NOT merged — each is a
- * {@link CoverModel}. Everything else (decor, player layer, trail, glass,
- * other-side, mini-map, controls) is shared by the one facade engine.
+ * cover**, and with it the whole world-rendering. χ=0 worlds (torus, Klein) live
+ * on the flat Euclidean plane — a tiled square slid under a fixed player over a
+ * glass floor. χ>0 worlds (ℝP², sphere) live on the sphere — the decorated square
+ * charted onto a fixed planet the camera walks around. These are different
+ * mathematical objects and are NOT merged: each is a {@link CoverModel} that owns
+ * its own scene objects (floor/cells, or planet/skins), its movement integration,
+ * its camera placement, and the chart back to the fundamental square.
  *
- * Keeping this boundary explicit is also what keeps the Phase-2 morph possible:
- * a morph is "interpolate between two cover models", expressible only because the
- * cover is an interface rather than dissolved into the engine.
+ * The facade engine owns only what is genuinely shared — the avatar, the footprint
+ * trail, lights, and the frame orchestration — and asks the cover to move, place
+ * the camera, and report the player pose + square chart.
  *
- * A cover never touches decor meshes, trail buffers, glass, or UI — it only
- * integrates movement, places the camera, and reports *where* copies of the
- * decorated square go and *where* the player is on the square.
+ * Keeping this boundary explicit is also what keeps the planned gluing+curvature
+ * morph expressible ("interpolate between two covers").
  */
 
 /** The player as a point + tangent frame, cover-agnostic. */
 export interface PlayerPose {
-  position: THREE.Vector3; // world-space eye/foot reference
+  position: THREE.Vector3; // world-space foot reference
   up: THREE.Vector3;       // surface normal (local up)
   forward: THREE.Vector3;  // heading in the tangent plane
-}
-
-/** One placed copy of the decorated square to render this frame. */
-export interface SquarePlacement {
-  matrix: THREE.Matrix4;  // local(square)→world for this copy
-  face: 0 | 1;            // 0 = trees face, 1 = columns face (orientation class)
-  /** This copy differs from the player's home copy by an orientation flip, so its
-   *  trail/decor reads mirror-reversed (and its trail drops under the glass). */
-  reflected: boolean;
 }
 
 export interface CoverFrameInput {
@@ -45,28 +38,29 @@ export interface CoverFrameInput {
   thirdPerson: boolean;
 }
 
+export interface CoverDeps {
+  deps: EngineDeps;
+  root: THREE.Group;          // the cover adds its world objects here
+  spec: WorldSpec;
+  decor: FundamentalSquareDecor;
+  squareSize: number;
+  floorThickness: number;
+}
+
 export interface CoverModel {
   readonly kind: 'euclidean' | 'spherical';
 
-  /** Integrate one frame of movement + look, and place the given camera. */
+  /** Integrate one frame of movement + look, place the camera, and update the
+   *  cover's own world objects (tile placement / planet). */
   update(input: CoverFrameInput, camera: THREE.PerspectiveCamera): void;
 
-  /** Current player pose (after {@link update}). */
   pose(): PlayerPose;
-
-  /** The copies of the decorated square visible this frame. The facade owns the
-   *  meshes and assigns them to these placements. */
-  visibleSquares(): SquarePlacement[];
-
-  /** Where to lay the next footprint, in true world coords. */
-  trailSample(): { pos: THREE.Vector3; forward: THREE.Vector3; up: THREE.Vector3 };
-
-  /** Player charted back into the fundamental square, for the mini-map. */
   chart(): SquareMapState;
+  clearTrail(): void;
 
-  /** Spherical only (planet radius); euclidean ignores. */
-  setRadius?(r: number): void;
-  /** Live fundamental-square side (world units). */
+  setFloorOpacity?(o: number): void;
   setSquareSize?(v: number): void;
+  setFloorThickness?(t: number): void;
+  setRadius?(r: number): void;
   dispose(): void;
 }

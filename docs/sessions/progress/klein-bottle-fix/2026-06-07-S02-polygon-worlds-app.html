@@ -77,6 +77,33 @@
           <li class="tl" data-type="milestone">
             <p class="tl-time">—</p>
             <span class="chip chip-milestone">Milestone</span>
+            <h3>All four worlds live — spherical cover added</h3>
+            <p class="why"><strong>Why:</strong> complete Phase 1 (the static unified
+            engine across all four gluings).</p>
+            <p>Refactored to the honest architecture: <strong>one thin facade + two
+            cover models</strong>. Each cover now owns its own world-rendering + trail
+            (Euclidean: floor slab + tiled cells; spherical: planet + decor charted
+            onto the two hemispheres + seam great circle + antipodal twin for ℝP²);
+            the facade owns only lights, the avatar, and orchestration. New
+            <code>sphericalCover.ts</code> (great-circle walk, <code>sq2hemi</code>
+            square→hemisphere chart, <code>rp2Square</code> mini-map chart, planet
+            glass, radius knob). All four worlds + the per-world controls
+            (square-size/thickness for flat, planet-radius for curved) screenshot-
+            verified in headless WebGL. Sphere &amp; ℝP² share the square mini-map, as
+            requested. Build green.</p>
+          </li>
+          <li class="tl" data-type="code">
+            <p class="tl-time">—</p>
+            <span class="chip chip-code">Code</span>
+            <h3>Floor slab + tunable square size / floor thickness</h3>
+            <p class="why"><strong>Why:</strong> the thin floor blended into the void.</p>
+            <p>Glass floor is now a coloured, lit Box slab (brighter ground + grid),
+            with live "Square size" and "Floor thickness" knobs routed through the
+            engine + cover seam.</p>
+          </li>
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">—</p>
+            <span class="chip chip-milestone">Milestone</span>
             <h3>Euclidean vertical slice live + screenshot-verified</h3>
             <p class="why"><strong>Why:</strong> de-risk the new architecture end-to-end
             before writing the spherical cover.</p>
