@@ -54,10 +54,10 @@ export default function TopologyWalk() {
   const [bloom, setBloom] = useState(() => !isCramped());
   const [miniMap, setMiniMap] = useState(true);
   const [projectAvatar, setProjectAvatar] = useState(true);
-  const [floorOpacity, setFloorOpacity] = useState(0.6);
+  const [floorOpacity, setFloorOpacity] = useState(0.35);
   const [colorCells, setColorCells] = useState(false);
   const [planetRadius, setPlanetRadius] = useState(30);
-  const [innerShell, setInnerShell] = useState(false);
+  const [innerShell, setInnerShell] = useState(true);
   const [wallText, setWallText] = useState('MÖBIUS');
 
   const def = surfaceDef(surfaceId);
@@ -263,12 +263,8 @@ export default function TopologyWalk() {
               onChange={setMiniMap}
             />
           )}
-          {(isFlat || isSpherical) && (
-            <Checkbox
-              label={isSpherical ? 'Cover skins (trees ⇄ columns)' : 'Colour each cover cell'}
-              checked={colorCells}
-              onChange={setColorCells}
-            />
+          {isFlat && (
+            <Checkbox label="Colour each cover cell" checked={colorCells} onChange={setColorCells} />
           )}
           {isFlat && (
             <Slider label="Floor opacity" value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />

@@ -101,9 +101,10 @@ Two readouts help you keep your bearings on the planet:
   antipodal twins, so each holds exactly one of every glued pair. One sheet grows a
   **forest**, the other a **colonnade**, placed in antipodal pairs: so on ℝP² every
   glued point is a *tree on one sheet and a column on the other* — the Klein
-  bottle's flip wrapped onto a sphere. The flat worlds have the matching **Colour
-  each cover cell** knob, which tints every tiled copy of the fundamental domain so
-  you can watch yourself cross from one cover cell to the next.
+  bottle's flip wrapped onto a sphere. (Shown by default, as in the flat worlds.)
+  The flat worlds also have a **Colour each cover cell** knob, which tints every
+  tiled copy of the fundamental domain so you can watch yourself cross from one
+  cover cell to the next.
 - **Glass floor — the glued underside (ℝP²):** turns the planet to glass so you can
   see the **other face** through it — the spherical port of the flat worlds' glass
   floor + mirrored underside. The surface decor hangs **straight down through the

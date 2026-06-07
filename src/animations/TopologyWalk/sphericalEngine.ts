@@ -151,7 +151,6 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   const { scene, camera, renderer } = deps;
   let rp2 = opts.surfaceId === 'rp2';
   let radius = opts.planetRadius > 0 ? opts.planetRadius : R0;
-  let colorCells = opts.colorCells;
   let showInner = opts.innerShell;
   // Glass opacity of the planet while the glued underside is shown (shared with the
   // flat worlds' floor-opacity knob); lower it to see the reflection through it.
@@ -246,7 +245,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     seamRing.geometry = new THREE.TorusGeometry(radius, 0.12, 8, 96);
   }
   placeSkins();
-  skins.visible = colorCells;
+  skins.visible = true;   // cover skins (trees ⇄ columns) are always shown, like the flat worlds
   root.add(skins);
 
   // footprint trail (true world coords on the fixed planet)
@@ -297,7 +296,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     underSkins.add(g);
     underSkinProps.push({ group: g, dir: sp.dir });
   }
-  underSkins.visible = colorCells;
+  underSkins.visible = true;
   under.add(underSkins);
   root.add(under);
 
@@ -360,15 +359,6 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     clearTrail();
   }
 
-  // Show / hide the cover skins (trees ⇄ columns + the seam ring), and their
-  // reflection on the underside. Only the terrain reveals which cover sheet you're on.
-  function setColorCells(on: boolean) {
-    colorCells = on;
-    mapState.colored = on;
-    skins.visible = on;
-    underSkins.visible = on;
-  }
-
   // Toggle the glued underside (and the planet's glassiness).
   function setInnerShell(on: boolean) { showInner = on; applyInnerShell(); }
   function setFloorOpacity(o: number) { glassOpacity = o; applyInnerShell(); }
@@ -393,7 +383,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   // Mini-map state. Landmarks are fixed (lat = asin(y), lon = atan2(z, x)); the
   // player's lat/lon/bearing are refreshed each frame.
   const mapState: SphereMapState = {
-    lat: Math.PI / 2, lon: 0, bearing: 0, rp2, colored: colorCells,
+    lat: Math.PI / 2, lon: 0, bearing: 0, rp2, colored: true,
     up: [0, 1, 0], fwd: [0, 0, -1],
     landmarks: BEACONS.map((b) => ({
       lat: Math.asin(b.dir.y), lon: Math.atan2(b.dir.z, b.dir.x), color: b.color,
@@ -492,7 +482,6 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
     clearTrail,
     setSurface: (id) => { rp2 = id === 'rp2'; antipode.visible = rp2; mapState.rp2 = rp2; applyInnerShell(); clearTrail(); },
     setRadius,
-    setColorCells,
     setInnerShell,
     setFloorOpacity,
     getSphereState: () => mapState,
