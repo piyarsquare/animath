@@ -1,45 +1,56 @@
 # Stable Matching
 
-The **Gale–Shapley** algorithm, **stable matchings**, and who holds the power in a
-two-sided market.
+The **Gale–Shapley** algorithm, **stable matchings**, and how well a matching
+satisfies everyone's preferences.
 
-## The problem
+## Reading the matrix
 
-Two groups, **A** and **B**, each rank everyone in the other group. A **matching**
-pairs them up. A pair is **blocking** if two people *not* matched to each other would
-both rather be together than keep their current partners — they'd defect. A matching
-with **no blocking pair** is **stable**.
+Rows are group **A**, columns group **B**. Each cell is the potential pair
+(A_i, B_j) and shows **two ranks**: how A_i ranks B_j (top-left, blue) and how B_j
+ranks A_i (bottom-right, pink) — **1 = top choice**. So a whole row is A_i's
+preferences read left-to-right, a whole column is B_j's.
 
-## The hidden variable: a common preference
+As the algorithm runs, **green cells are the current tentative matches**; the
+**gold ring** is the proposal happening now; a **red flash** is a rejection. A
+matched pair stays green only while it survives — receivers keep trading **up**, so
+a held partner's rank only ever improves. That monotone "trade-up" is exactly *why*
+the result is stable.
 
-Every member has a latent **desirability** (the grey bar). Each person's ranked list
-blends that shared signal with private taste, controlled by **Consensus**:
+## Deferred acceptance
 
-- **0%** — pure private taste; everyone's list is different.
-- **100%** — everyone in a group ranks the other group *identically* (the shared
-  desirability order). Competition for the same few "stars" is fiercest.
+1. A free proposer proposes to its most-preferred partner not yet asked.
+2. The receiver **holds** whichever suitor it ranks best so far and rejects the rest.
+3. Rejected proposers move down their list and try again.
 
-So *Consensus is the weight on the common preference* — turn it up to watch the
-population agree.
+It always terminates at a **stable matching** — no **blocking pair**, i.e. no two
+people who both prefer each other to their current partners. If any survive (they
+can't, for a completed run) they light up red.
 
-## Who proposes (the modes)
+## The common preference — and the diagonal
 
-- **A proposes / B proposes** — classical one-sided Gale–Shapley. It always
-  terminates at a stable matching, and that matching is **proposer-optimal**: the
-  proposing side gets the best partner it could have in *any* stable matching, the
-  receiving side the worst. Set the default here to *see the theorem*.
-- **Market** — each step a (biased) coin picks who proposes. An idealized two-sided
-  market: still stable, but it lands on *some* stable matching, generally neither
-  extreme. The asker advantage here is **emergent**, not the 1962 theorem.
+Every member has a hidden **desirability**; each person's list blends that shared
+signal with private taste, weighted by **Consensus**:
 
-## The honest metric: proposer advantage
+- **0%** — pure private taste; everyone wants someone different.
+- **100%** — everyone in a group agrees on one ranking of the other group.
 
-How much does proposing actually matter? Run Gale–Shapley **from each side** and
-compare the two results — the **gap** between the best and worst stable matching a
-side can be in. That gap *is* the proposer advantage, and it's a property of the
-instance, not of the random order of proposals.
+Turn **Order by global preference** on (default) and the rows/columns sort by
+desirability. At high consensus the matched green cells snap to the **diagonal** —
+best-with-best — because everyone shares one order. (At low consensus the matches
+scatter; people simply want different things.)
 
-Its punchline: as **Consensus → 100%** the gap **collapses to zero** — under a fully
-shared common preference the stable matching is **unique** (best-with-best), so it no
-longer matters who proposes. The **Lab** sweeps both consensus dials and maps this
-surface; each cell averages many trials, so what you see is signal, not noise.
+## The metric: total rank
+
+The honest measure of a matching is **how good a partner everyone gets** — the
+**total rank** (sum of every matched person's partner-rank; **lower = happier**),
+shown per side and combined, with a distribution of who got their #1, #2, …
+Counter-intuitively, **low** consensus gives the **best** total rank: when people
+want different partners there's enough to go around; when everyone chases the same
+few "stars," most settle for worse. The **Lab** sweeps both consensus dials and maps
+this welfare surface, averaging many trials per cell so it's signal, not noise.
+
+## Who proposes
+
+- **A proposes / B proposes** — classical one-sided Gale–Shapley.
+- **Market** — a bias-weighted coin picks the proposer each step; still stable, but
+  no longer a canonical matching.

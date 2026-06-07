@@ -23,6 +23,18 @@ This is the first tracked session on the `stable-marriage-styling-ulMPt` branch.
 
 ## Working notes
 
+### 🟢 code · 21:10 — Redesign: matrix-centred, total-rank welfare, foreground the algorithm
+**Why:** First build was "too obscure" — algorithm/preferences hidden, proposer-advantage
+the wrong headline. User chose a **preference-matrix** centre, **total rank** as the
+metric, A/B labels for now, one-to-one (engine stays capacity-extensible).
+
+Rebuilt the visualizer around an A×B matrix: each cell shows both ranks; matches/holds
+light green, proposals ring gold, rejections flash, blocking pairs flag red. Headline is
+total rank (welfare, lower=happier) + distribution. Ordering by global preference is the
+default, so at high consensus the matches snap to the diagonal (best-with-best) and at low
+consensus they scatter (better welfare). Lab reframed to welfare surfaces. Build passes;
+screenshot-verified low- and full-consensus.
+
 ### 🟣 decision · 19:50 — Rebuild as a new app (`Stable Matching`, `#/stable-matching`)
 **Why:** User chose to write a clean new version alongside the old app and switch on
 completion, rather than repair in place. Locked: framework-native controls
