@@ -93,9 +93,66 @@ marker) gives the *extrinsic* one. Switching the embedding while the walk feels
 unchanged — *same walk, wildly different shape* — **is the lesson**. The same idea
 serves the Klein bottle (figure-8 / classic immersions) and the curved torus.
 
-## 4. Engine architecture
+## 4. Euler — telling the world from inside
 
-One app, one player layer (look/move/avatar/trail/mini-map), **three walk engines**
+The mini-map and the embedding inset are **god's-eye cheats**: they show the
+surface from outside. **Euler** (our walker) is an *intrinsic* being — he only ever
+has his own first-person view. The richest part of the app is the set of things
+Euler can *do* to deduce which world he is in without ever leaving it. The
+classification of §1–2 is the answer key; these are the experiments.
+
+### 4.1 The normal-flip — "dive through the floor"
+
+Before Euler can run the orientation experiments he needs to deliberately reach the
+**other side of the floor**: to invert his own normal (up-vector) and keep walking.
+The **glass floor** already lets him *see* the underside; the flip lets him *go*
+there.
+
+- **The move:** Euler somersaults through the surface — an eased ~1 s barrel-roll /
+  dive about his forward axis, camera rolling 180° as the floor sweeps past the near
+  plane and the world re-renders from below. The glass floor ramps transparent
+  through the dive and re-solidifies underfoot; the footprint trail stays continuous
+  across the flip. (Smooth-and-interesting is the requirement, so favour an
+  ease-in-out roll over a hard cut.)
+- **Flat torus (orientable):** the two faces are *extrinsically* distinct — the top
+  sheet vs the mirrored `under` world. Euler stays flipped until he flips back; both
+  faces are the *same* torus intrinsically, but in ℝ³ they are two surfaces.
+- **Klein bottle / ℝP² (non-orientable):** the punchline. Euler reaches the other
+  side **two ways** — flip through the floor *deliberately*, or just **walk across a
+  gluing edge**, which flips him *automatically* (the orientation reversal already
+  modelled by mirror-reversed footprints). Flip through, walk an orientation-
+  reversing loop, and he returns on the **starting** side: there was only ever one
+  side. That is the visceral proof of one-sidedness — and it is why the flip is
+  *instrument zero*, the control that makes the orientation experiments tangible.
+- **Sphere / ℝP² (spherical engine):** "the other side" is the **inner shell** (the
+  existing radial-mirror surface); the flip dives Euler from the outer skin to the
+  inside of the planet.
+
+### 4.2 Euler's instruments
+
+Each probe is something Euler *does*; the observation pins down the topology or the
+local geometry. All are engine-agnostic (flat / spherical / hyperbolic), so they
+compose with the shared player layer:
+
+| Euler's experiment | What he observes | What it diagnoses |
+|---|---|---|
+| **Walk straight, keep going** (follow a geodesic) | Do you return? after how far? facing the same way, rotated, or *mirror-flipped*? | Closedness + the holonomy of that loop → torus vs Klein (flip) vs sphere (always returns) |
+| **Drop breadcrumbs / leave a trail** | Does the path cross itself? Does it come back **mirror-reversed**? | Orientability — the signature "your trail returns left-handed" |
+| **Walk a triangle, sum the angles** | Excess over 180° | Local curvature sign: >180° spherical, =180° flat, <180° hyperbolic (Gauss–Bonnet, felt) |
+| **Pace a circle: radius vs circumference** | Is $C < 2\pi r$, $= 2\pi r$, or $> 2\pi r$? | The same three geometries, the metric way |
+| **Carry a "compass" around a loop** (parallel transport) | Does "north" come back rotated? flipped? | Holonomy = curvature enclosed; a flip = crossed an orientation-reversing path |
+| **Look into the distance / shine a light** | The **hall of mirrors**: how many copies of yourself, in what lattice? | The universal cover — the arrangement of self-images *is* the gluing pattern |
+
+The dual of §3: the embedding inset shows *"same walk, wildly different shape"* from
+outside; the instruments show *"same god's-eye square, but the inside feels
+different"* — torus vs Klein vs ℝP² told apart **without** the cheat view. The
+hall-of-mirrors probe is partly free in the flat engine already (it tiles the
+universal cover under the player), so it is the cheapest one to ship first.
+
+## 5. Engine architecture
+
+One app, one player layer (look/move/**normal-flip** (§4.1)/avatar/trail/mini-map),
+**three walk engines**
 keyed by geometry, plus extrinsic insets:
 
 | Engine | Geometry | Surfaces | Status |
@@ -116,13 +173,21 @@ Shared mechanics worth noting:
   $\mathbb{H}^2$ with the fundamental $4g$-gon; the deck group is a Fuchsian group.
   This is the hardest piece and the natural finale.
 
-## 5. Status & staged roadmap
+## 6. Status & staged roadmap
 
 - [x] Flat torus + Klein bottle (universal-cover tiling, columns↔trees skins).
 - [x] Footprint model: one print per step on the side you walk; crosses to the
       underside / antipode mirror-reversed across an orientation flip.
 - [x] Fundamental-domain **mini-map** (square + identified edges + player marker).
 - [x] **Spherical engine**: walk the sphere and $\mathbb{RP}^2$ (antipodal).
+- [ ] **Normal-flip — "dive through the floor"** (§4.1): Euler somersaults to the
+      opposite face, up-vector inverted — deliberate access to the other side (one
+      side on Klein/ℝP², two faces on the torus, inner shell on the sphere). Smooth
+      eased roll. *(Instrument zero — prereq for the orientation experiments.)*
+- [ ] **Euler's instruments** (§4.2): intrinsic probes — straight-line return,
+      mirror-reversed trail, triangle angle-sum, circle radius↔circumference,
+      compass holonomy, hall-of-mirrors. *(Tell the world from inside; start with
+      hall-of-mirrors — nearly free in the flat engine.)*
 - [ ] **Embedding inset**: cross-cap → Roman → Boy's surface, with the player's
       position dotted on the immersion. *(The headline "compare the three".)*
 - [ ] **Hexagonal flat torus**: hexagonal fundamental domain + lattice + hex
@@ -131,7 +196,7 @@ Shared mechanics worth noting:
 - [ ] Fill out the classification: higher genus, Dyck's surface, a "planet size"
       slider on the sphere to dial local-flatness, Klein-bottle immersion inset.
 
-## 6. Open questions
+## 7. Open questions
 
 - **Embedding inset rendering:** separate React/2-D canvas (like the current
   mini-map) vs. a second WebGL viewport with scissor (like the corridor mini-map)?
