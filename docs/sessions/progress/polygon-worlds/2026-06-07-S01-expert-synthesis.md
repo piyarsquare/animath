@@ -14,6 +14,76 @@ app: PolygonWorlds
 
 # Polygon Worlds geometry plan — three-hats convergence
 
+## Plan under review
+
+<details>
+<summary>Original request (verbatim)</summary>
+
+**PLAN — Polygon Worlds: the full geometry + skins + exploration layer**, built on
+the now-verified `surfaceSchema.ts` base (edge word → χ, orientability, curvature,
+classification, edge pairings; validated against the classification tables
+2-gon…8-gon). Scope of THIS plan: everything that builds ON the base layer, up to
+at least the 8-gon, with advanced two-sided skins and tools for
+exploration/discovery. Confirmed direction: "develop via edge-isometries" — realize
+the polygon in the curvature-κ model, edge pairings become isometries (the deck
+group Γ), walk geodesics, develop the universal cover around the player; curvature
+enters ONLY via the metric + corner angles.
+
+**GOAL:** one coherent engine where Euclid, sphere, and hyperbolic are the SAME
+pipeline at different κ, and the square…octagon are the same pipeline at different
+edge counts. No per-surface special cases (the current ad-hoc euclideanCover /
+sphericalCover, the lon/lat sphere hack, and the hardcoded WORLDS presets all
+retire).
+
+**PROPOSED ARCHITECTURE:**
+
+1. `Geometry` interface keyed by κ (one impl each): **Euclidean** (κ=0; ℝ²
+   isometries — translations, rotations, glide-reflections; straight geodesics),
+   **Spherical** (κ>0; S²⊂ℝ³; O(3); great circles — sphere, ℝP² and any χ>0 schema),
+   **Hyperbolic** (κ<0; ℍ² Poincaré/Beltrami–Klein disk; Möbius/SL(2,ℝ); arcs —
+   genus-2 octagon, 3-/4-cross-cap, χ<0). Each provides: point+tangent-frame type;
+   `geodesicStep(frame, dist)`; `isometryFromEdgePair(polygon, pairing)`;
+   `compose/inverse`; `develop`; and the regular polygon's vertex placement + corner
+   angle.
+2. **Polygon realization:** a regular geodesic 2n-gon whose corner angle =
+   2π / (vertices-per-class) so the glued surface is smooth (Gauss–Bonnet consistent
+   with χ). κ is chosen/solved so a regular 2n-gon with that angle exists (Euclidean
+   square = 90°; spherical square angle > the Euclidean value; hyperbolic octagon =
+   45°). The "stretch the sheet to fit the polygon".
+3. **Deck group** Γ = ⟨edge-pairing isometries⟩. Walk: integrate the player's
+   geodesic; when leaving the fundamental polygon, multiply by the deck element to
+   wrap back in (keep the player in the fundamental domain), and develop the
+   neighbouring copies for rendering ("project the infinite tile outward").
+4. **Presentation re-expressed on the develop model:** the two-sided sheet (trees on
+   one normal, columns on the opposite), authored in polygon-(u,v); a generalized
+   glass surface + mirrored "other side" / inner shell; per-copy decor placed by
+   developing the fundamental polygon's decor through Γ; the chiral footprint trail;
+   the normal-flip ("dive through the floor") as one shared player move. Skins must
+   work for orientable AND non-orientable cases and across κ (the trees↔columns swap
+   on a non-orientable loop falls out of Γ, not a hack).
+5. **Mini-map IS the edge diagram,** generalized from the square to the n-gon
+   (regular 2n-gon with the `EdgePairing` identification arrows + the player marker).
+6. **Tools for exploration & discovery:** edge-word picker (complexity ladder +
+   free edge-word entry, live χ/orientability/curvature); Euler's intrinsic
+   instruments (geodesic-return holonomy, mirror-reversed trail, triangle angle-sum,
+   circle circumference vs radius, parallel-transport compass, hall-of-mirrors);
+   normal-flip; optional extrinsic embedding inset (cross-cap/Roman/Boy for ℝP²;
+   figure-8 Klein; genus-2) — "same walk, wildly different shape".
+7. **Phasing:** P1 Euclidean general → P2 Spherical general (fix the lon/lat + ℝP²
+   bugs from the actual gluing) → P3 Hyperbolic (octagon genus-2, Poincaré, Fuchsian)
+   → P4 instruments + insets + free edge-word entry; the world-to-world morph
+   (curvature+gluing animation) as a later stretch.
+
+**REVIEW REQUEST:** does the single `Geometry`/develop abstraction genuinely unify
+κ∈{0,+,−} and n-gons 2…8 without per-case hacks? Where will it strain (κ→0 limit +
+Minkowski signature for hyperbolic; orientation-reversing isometries; regular-polygon
+angle solving; fundamental-domain vs unbounded develop; ℍ² tile-count perf)? Is the
+skin/glass/inner-shell/normal-flip presentation uniform across κ or per-κ? Are the
+tools well-founded and the phasing right? Flag anything to cut, resequence, or spike
+first.
+
+</details>
+
 Synthesis of three independent reviews of the plan to build the full
 **develop‑via‑edge‑isometries** geometry layer (square → octagon, κ ∈ {0, +, −})
 on top of the verified `surfaceSchema.ts` base. Full reviews:

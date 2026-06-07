@@ -44,17 +44,30 @@ with GitHub-alert callouts (`> [!IMPORTANT]` etc.) and Markdown tables. The repo
 read on GitHub as-is and `npm run sessions` renders them to the rich HTML view. Each
 agent must write its complete analysis to its designated file using the Write tool.
 
+> [!IMPORTANT]
+> **Every report is self-contained: embed the original request.** Right after the
+> H1, each report (all three experts **and** the synthesis) opens with a
+> `## Plan under review` section quoting the verbatim text the user supplied
+> (`$ARGUMENTS`) — wrapped in a collapsible
+> `<details><summary>Original request</summary> … </details>` block so it doesn't
+> dominate the page. A reader (or a future session) should be able to open any one
+> report and see exactly what was reviewed without scrolling the chat history.
+
 ## Execution
 
 Launch three agents **in parallel** using the Agent tool (subagent_type:
 "general-purpose"). Each agent receives:
 
-1. The full text of the plan / proposal / question (and any context you gathered).
+1. The full text of the plan / proposal / question (and any context you gathered) —
+   **pass the verbatim text**, since the agent must reproduce it (next item).
 2. Their role description (below).
 3. Instruction to produce a structured analysis of 300–600 lines.
-4. Instruction to **write the complete analysis** to the designated output file as
-   Markdown + YAML frontmatter (`##` sections, Markdown tables, fenced code,
-   `> [!…]` alert callouts) per `docs/sessions/REPORT_STYLE.md`.
+4. Instruction to open the report (right after the H1) with a `## Plan under review`
+   section quoting the **verbatim** request inside a collapsible
+   `<details><summary>Original request</summary> … </details>` block, then
+   **write the complete analysis** to the designated output file as Markdown + YAML
+   frontmatter (`##` sections, Markdown tables, fenced code, `> [!…]` alert
+   callouts) per `docs/sessions/REPORT_STYLE.md`.
 5. Instruction to end with a **Verdict** section: what they endorse, what concerns
    them, what they would change.
 6. The **Self-Reflection Protocol** (`.claude/prompts/self-reflection.md`) — each
@@ -138,7 +151,9 @@ Launch three agents **in parallel** using the Agent tool (subagent_type:
 
 ## After All Three Return
 
-Write a **Convergence Analysis** to the synthesis output file. It includes:
+Write a **Convergence Analysis** to the synthesis output file. Open it (right after
+the H1) with the same `## Plan under review` collapsible block holding the verbatim
+request, then the analysis:
 
 1. **Points of agreement** — where all three endorse the same thing (high
    confidence).
