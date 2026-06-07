@@ -70,6 +70,77 @@
         <h2>Working notes</h2>
         <!-- Newest entry first. data-type ∈ decision | code | finding | blocker | milestone -->
         <ol class="timeline">
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">07:30</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Cohesive picture: glass floor + tree/column pairing on by default in both rectangular worlds</h3>
+            <p class="why"><strong>Why:</strong> User wants the flat (torus/Klein)
+            and spherical (sphere/ℝP²) worlds to "come together into a single
+            cohesive picture" — the same see-through-the-floor, trees-on-top /
+            columns-underneath reading in both, on out of the box rather than
+            hidden behind sliders.</p>
+            <ul>
+              <li><strong>Flat (torus / Klein):</strong> glass floor + trees-on-top
+              / columns-underneath now on by default at <strong>35%</strong>
+              opacity.</li>
+              <li><strong>Spherical (sphere / ℝP²):</strong> glass floor on by
+              default; cover skins always shown; column-under-tree underside;
+              see-through at <strong>35%</strong>. Also fixed the glass floor doing
+              nothing on the default sphere surface (the opacity gate / shell wiring
+              wasn't reaching the spherical engine).</li>
+              <li><strong>Corridor (Möbius):</strong> left unchanged — its
+              continuous twist (floor rolling into the ceiling after a lap) already
+              carries the non-orientability, so the glass-floor / tree concept stays
+              a flat + spherical feature, per the user's call.</li>
+              <li>Shared opacity default is now <strong>35%</strong> for both the
+              flat floor and the planet glass (one knob value across both worlds).</li>
+              <li><code>npm run build</code>:
+              <span class="badge badge-ok">passed</span>.</li>
+            </ul>
+            <p class="callout callout-note"><span class="callout-label">Unverified (no headless WebGL)</span>
+            Two things to eyeball in-app: (1) whether 35% reads as <em>too</em>
+            glassy for the flat floor — if so, split into separate defaults (flat
+            floor vs planet glass) instead of one shared value; (2) the flat
+            "Colour each cover cell" tint still exists but defaults <em>off</em> —
+            flip it on by default if the user prefers.</p>
+          </li>
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">06:40</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>ℝP² "inner shell": see the glued other side inside the projective planet</h3>
+            <p class="why"><strong>Why:</strong> The spherical ℝP² needs the same
+            "look through the surface and see the identified other side" reading the
+            flat Klein floor gives — the antipodal gluing made literal.</p>
+            <ul>
+              <li>Added an inner shell inside the ℝP² planet so the glued far side
+              is visible from within, with a glass-opacity slider to dial the
+              reveal. Iterated the transform: first an upside-down (normal-flip)
+              twin, then a same-radius mirror, finally rebuilt as a <strong>radial
+              mirror</strong> matching the construction of the Klein floor so the two
+              worlds use the same conceptual move.</li>
+              <li>The ℝP² underside wears the <strong>opposite skin</strong> (column
+              under tree), the spherical analogue of the flat trees⇄columns flip.</li>
+              <li>ℝP² mini-map drawn as a square fundamental domain with the
+              antipodal edge identifications, alongside the trees⇄columns cover
+              skins. <code>npm run build</code>:
+              <span class="badge badge-ok">passed</span>.</li>
+            </ul>
+          </li>
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">05:40</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Spherical world polish: mini-map, planet-radius slider, markers, cover colouring</h3>
+            <p class="why"><strong>Why:</strong> Bring the new spherical engine up to
+            the legibility level of the flat worlds before unifying them.</p>
+            <ul>
+              <li>Added a spherical mini-map, a planet-radius slider, more landmark
+              markers, and per-cover-cell colouring.</li>
+              <li>Brightened the spherical planet and moved the spawn marker off the
+              camera so first-person spawn isn't staring at its own beacon.</li>
+              <li><code>npm run build</code>:
+              <span class="badge badge-ok">passed</span>.</li>
+            </ul>
+          </li>
           <li class="tl" data-type="note">
             <p class="tl-time">04:30</p>
             <span class="chip chip-note">Doc</span>
@@ -439,10 +510,45 @@
         </ol>
       </section>
 
-      <p class="callout callout-note"><span class="callout-label">Note</span>
-      Per the start-session protocol, no investigation or code changes have begun
-      yet — this report is the session scaffold. Next step is the user's direction
-      on what exactly is wrong with the current Klein bottle behaviour.</p>
+      <section>
+        <h2>Next session — unify the framework across the two rectangular worlds</h2>
+        <p>The branch now has two families that both glue a <strong>square
+        fundamental domain</strong> and both render the "see through the floor /
+        trees-on-top, columns-underneath" reading:</p>
+        <ul>
+          <li><strong>Flat family</strong> (<code>flatEngine.ts</code>) — torus and
+          Klein bottle, square with edge identifications, glass floor + underside
+          world.</li>
+          <li><strong>Spherical family</strong> (<code>sphericalEngine.ts</code>) —
+          sphere and ℝP², with the ℝP² inner shell as the spherical analogue of the
+          flat glass floor.</li>
+        </ul>
+        <p>They were built incrementally and now do <em>conceptually the same
+        thing</em> through largely parallel-but-separate code: glass-opacity gating,
+        cover-cell skins (trees ⇄ columns), the underside / inner-shell mirror, the
+        mini-map of the square domain, and per-cell colouring. The next session's
+        job is to <strong>unify that framework</strong> so the two rectangular worlds
+        share one mental model and, where sensible, one implementation:</p>
+        <ul>
+          <li>Reconcile the shared options (floor/glass opacity, cover colouring,
+          cover skins, mini-map) into a common surface-presentation layer instead of
+          two near-duplicate code paths and two sets of UI gating in
+          <code>TopologyWalk.tsx</code>.</li>
+          <li>Make the "mirror to the other side" move (flat glass underside ⇄ ℝP²
+          inner shell) a single shared concept — both are already built as radial
+          mirrors, so name/factor them the same way.</li>
+          <li>Decide the opacity-default question raised above: one shared 35% value
+          vs separate flat-floor / planet-glass defaults.</li>
+          <li>Mini-map: one square-fundamental-domain renderer parameterised by the
+          edge-identification rule (torus / Klein / ℝP²) rather than per-family
+          drawing code.</li>
+        </ul>
+        <p class="callout callout-note"><span class="callout-label">Verification debt</span>
+        All of the above was built without headless WebGL here, so the whole branch
+        still wants an in-app walk-through: flat trees/columns flip across the red
+        edge, the underside reading at 35%, the spherical walk feel + strafe
+        handedness, and the ℝP² inner shell / antipodal trail returning reversed.</p>
+      </section>
 
     </div><!-- /.content -->
   </div><!-- /.body -->
