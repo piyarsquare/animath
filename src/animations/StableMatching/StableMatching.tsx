@@ -10,8 +10,8 @@ import { usePersistentState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
 import { generateInstance, type Instance } from './model';
 import {
-  run, applyLog, oneSided, stats,
-  type Mode, type Side, type Matching, type ProposalEvent,
+  runRounds, applyLog, oneSided, stats,
+  type Schedule, type Side, type Matching, type ProposalEvent,
 } from './galeShapley';
 
 const NS = 'stable-matching';
@@ -20,10 +20,11 @@ const NS = 'stable-matching';
  *    ranks (A's rank of B, top-left; B's rank of A, bottom-right). The matching
  *    (= current tentative holds) lights up; the active proposal rings; blocking
  *    pairs (if any, at the end) flag red. This is the algorithm, foregrounded. ── */
-const TRAIL = 6; // how many recent failed entries to keep in the fading trail
-function Matrix({ inst, matching, rows, cols, event, blocking, size, labels, view, gap, trail }: {
+const TRAIL = 6; // how many recent rounds of failed entries to keep in the fading trail
+type Marker = 'active' | 'reject' | 'stolen';
+function Matrix({ inst, matching, rows, cols, markers, blocking, size, labels, view, gap, trail }: {
   inst: Instance; matching: Matching; rows: number[]; cols: number[];
-  event: ProposalEvent | null; blocking: Set<string>; size: number; labels: boolean;
+  markers: Map<string, Marker>; blocking: Set<string>; size: number; labels: boolean;
   view: 'both' | 'a' | 'b' | 'diff'; gap: number; trail: Map<string, number>;
 }) {
   const n = inst.n;
@@ -47,22 +48,15 @@ function Matrix({ inst, matching, rows, cols, event, blocking, size, labels, vie
           {cols.map(j => {
             const aR = inst.rankA[i][j] + 1, bR = inst.rankB[j][i] + 1, d = aR - bR;
             const matched = matching.a[i] === j;
-            const cur = !!event && (
-              (event.proposer.side === 'A' && event.proposer.id === i && event.receiver.id === j) ||
-              (event.proposer.side === 'B' && event.proposer.id === j && event.receiver.id === i));
-            const rej = cur && event!.outcome === 'reject';
-            // the pair that was just broken by a bump (the "stole away" event)
-            const stolen = !!event && event.outcome === 'bump' && event.displaced !== undefined && (
-              (event.proposer.side === 'A' && i === event.displaced && j === event.receiver.id) ||
-              (event.proposer.side === 'B' && j === event.displaced && i === event.receiver.id));
-            const cls = `sm2-mcell${matched ? ' matched' : ''}${cur ? (rej ? ' reject' : ' active') : ''}${stolen ? ' stolen' : ''}${blocking.has(`${i}-${j}`) ? ' blocking' : ''}`;
+            const mk = markers.get(`${i}-${j}`);   // this round: active (proposing) / reject / stolen
+            const cls = `sm2-mcell${matched ? ' matched' : ''}${mk ? ' ' + mk : ''}${blocking.has(`${i}-${j}`) ? ' blocking' : ''}`;
             const bg = view === 'b' ? rankColor(bR) : view === 'diff' ? diffColor(d) : rankColor(aR);
             const age = trail.get(`${i}-${j}`);
             return (
               <div key={j} className={cls} style={{ height: size, background: bg }}
                 title={`A${i}→B${j} #${aR} · B${j}→A${i} #${bR}`}>
                 {view === 'both' && <span className="sm2-disc" style={{ background: rankColor(bR) }} />}
-                {age !== undefined && !cur && !stolen && <span className="sm2-trail" style={{ opacity: Math.max(0.12, 1 - age / TRAIL) }} />}
+                {age !== undefined && !mk && <span className="sm2-trail" style={{ opacity: Math.max(0.12, 1 - age / TRAIL) }} />}
                 {showNums && (view === 'both'
                   ? <><span className="ar">{aR}</span><span className="br">{bR}</span></>
                   : <span className="br">{view === 'diff' ? (d > 0 ? `+${d}` : `${d}`) : view === 'a' ? aR : bR}</span>)}
@@ -107,7 +101,7 @@ export default function StableMatching() {
   const [seed, setSeed] = usePersistentState(`${NS}:seed`, 1);
   const [consensusA, setConsensusA] = usePersistentState(`${NS}:cA`, 0);
   const [consensusB, setConsensusB] = usePersistentState(`${NS}:cB`, 0);
-  const [proposer, setProposer] = usePersistentState<'A' | 'B' | 'market'>(`${NS}:proposer`, 'A');
+  const [schedule, setSchedule] = usePersistentState<Schedule>(`${NS}:schedule`, 'A');
   const [bias, setBias] = usePersistentState(`${NS}:bias`, 50);
   const [speed, setSpeed] = usePersistentState(`${NS}:speed`, 50);
   const [order, setOrder] = usePersistentState<'matchdiag' | 'settle' | 'attract' | 'index'>(`${NS}:order`, 'matchdiag');
@@ -123,28 +117,52 @@ export default function StableMatching() {
   const [cellSize, setCellSize] = useState(40);
 
   const inst = useMemo(() => generateInstance({ n, consensusA: consensusA / 100, consensusB: consensusB / 100, seed }), [n, consensusA, consensusB, seed]);
-  const mode: Mode = useMemo(() => (proposer === 'market' ? { kind: 'market', bias, seed } : { kind: 'one-sided', proposer }), [proposer, bias, seed]);
-  const result = useMemo(() => run(inst, mode), [inst, mode]);
-  const total = result.log.length;
+  const result = useMemo(() => runRounds(inst, schedule, bias, seed), [inst, schedule, bias, seed]);
+  const rounds = result.rounds;
+  const total = rounds.length;                                  // a "step" is now a whole round
   useEffect(() => { setStep(0); setPlaying(false); }, [result]);
 
-  const matching = useMemo(() => applyLog(n, result.log, step), [n, result, step]);
-  const event = step > 0 ? result.log[step - 1] : null;
+  // flatten round events (in order) + per-round cumulative counts, to rebuild the matching
+  const flat = useMemo(() => rounds.flatMap(r => r.events), [rounds]);
+  const roundEnd = useMemo(() => { const a: number[] = []; let c = 0; for (const r of rounds) { c += r.events.length; a.push(c); } return a; }, [rounds]);
+  const matching = useMemo(() => applyLog(n, flat, step === 0 ? 0 : roundEnd[step - 1]), [n, flat, roundEnd, step]);
   const done = step >= total;
+  const finalMatching = result.matching;
+
+  // markers for the round just applied: every proposal this round (active/reject), plus bumped pairs (stolen)
+  const markers = useMemo(() => {
+    const mk = new Map<string, Marker>();
+    if (step <= 0) return mk;
+    for (const e of rounds[step - 1].events) {
+      const pc = e.proposer.side === 'A' ? [e.proposer.id, e.receiver.id] : [e.receiver.id, e.proposer.id];
+      if (e.outcome === 'reject') mk.set(`${pc[0]}-${pc[1]}`, 'reject');
+      else {
+        mk.set(`${pc[0]}-${pc[1]}`, 'active');
+        if (e.outcome === 'bump' && e.displaced !== undefined) {
+          const dc = e.proposer.side === 'A' ? [e.displaced, e.receiver.id] : [e.receiver.id, e.displaced];
+          mk.set(`${dc[0]}-${dc[1]}`, 'stolen');
+        }
+      }
+    }
+    return mk;
+  }, [rounds, step]);
 
   // short-lived trail of recently failed entries (rejected proposals + bumped pairs),
   // keyed by matrix cell → age (0 = most recent), so they fade out over the next steps.
   const trail = useMemo(() => {
     const m = new Map<string, number>();
-    for (let k = step - 1; k >= Math.max(0, step - TRAIL); k--) {
-      const e = result.log[k]; if (!e) continue;
-      let cell: [number, number] | null = null;
-      if (e.outcome === 'reject') cell = e.proposer.side === 'A' ? [e.proposer.id, e.receiver.id] : [e.receiver.id, e.proposer.id];
-      else if (e.outcome === 'bump' && e.displaced !== undefined) cell = e.proposer.side === 'A' ? [e.displaced, e.receiver.id] : [e.receiver.id, e.displaced];
-      if (cell) { const key = `${cell[0]}-${cell[1]}`; if (!m.has(key)) m.set(key, (step - 1) - k); }
+    for (let k = step - 2; k >= Math.max(0, step - 1 - TRAIL); k--) { // current round (step-1) is shown via markers
+      const r = rounds[k]; if (!r) continue;
+      const age = (step - 1) - k;
+      for (const e of r.events) {
+        let cell: [number, number] | null = null;
+        if (e.outcome === 'reject') cell = e.proposer.side === 'A' ? [e.proposer.id, e.receiver.id] : [e.receiver.id, e.proposer.id];
+        else if (e.outcome === 'bump' && e.displaced !== undefined) cell = e.proposer.side === 'A' ? [e.displaced, e.receiver.id] : [e.receiver.id, e.displaced];
+        if (cell) { const key = `${cell[0]}-${cell[1]}`; if (!m.has(key)) m.set(key, age); }
+      }
     }
     return m;
-  }, [result, step]);
+  }, [rounds, step]);
 
   // total-rank accounting (welfare): lower = better
   const acct = useMemo(() => {
@@ -178,38 +196,41 @@ export default function StableMatching() {
     for (let j = 0; j < n; j++) { let s = 0; for (let i = 0; i < n; i++) s += inst.rankA[i][j]; b[j] = s / n; }
     return { a, b };
   }, [inst, n]);
-  const finalMatching = useMemo(() => applyLog(n, result.log, total), [n, result, total]);
-  // settle round = the last proposal that touched each member's final pairing
+  // settle round = the last round that touched each member's final pairing
   const settle = useMemo(() => {
     const lastA = new Array(n).fill(-1), lastB = new Array(n).fill(-1);
-    result.log.forEach((e, k) => {
-      if (e.outcome === 'reject') return;
-      (e.proposer.side === 'A' ? lastA : lastB)[e.proposer.id] = k;
-      (e.receiver.side === 'A' ? lastA : lastB)[e.receiver.id] = k;
-      if (e.outcome === 'bump' && e.displaced !== undefined) (e.proposer.side === 'A' ? lastA : lastB)[e.displaced] = k;
+    rounds.forEach((r, ri) => {
+      for (const e of r.events) {
+        if (e.outcome === 'reject') continue;
+        (e.proposer.side === 'A' ? lastA : lastB)[e.proposer.id] = ri;
+        (e.receiver.side === 'A' ? lastA : lastB)[e.receiver.id] = ri;
+        if (e.outcome === 'bump' && e.displaced !== undefined) (e.proposer.side === 'A' ? lastA : lastB)[e.displaced] = ri;
+      }
     });
     const A = new Array(n), B = new Array(n);
     for (let i = 0; i < n; i++) A[i] = finalMatching.a[i] === -1 ? Infinity : (lastA[i] >= 0 ? lastA[i] : Infinity);
     for (let j = 0; j < n; j++) B[j] = finalMatching.b[j] === -1 ? Infinity : (lastB[j] >= 0 ? lastB[j] : Infinity);
     return { A, B };
-  }, [result, n, finalMatching]);
+  }, [rounds, n, finalMatching]);
 
   // ordering basis: the FINAL matching (static layout) or, with live re-sort on,
-  // the matching/settle as it stands at the current step (the diagonal builds itself).
+  // the matching/settle as it stands at the current round (the diagonal builds itself).
   const orderBasis = useMemo(() => {
     if (!liveSort) return { match: finalMatching, settle };
     const lastA = new Array(n).fill(-1), lastB = new Array(n).fill(-1);
-    for (let k = 0; k < step; k++) {
-      const e = result.log[k]; if (!e || e.outcome === 'reject') continue;
-      (e.proposer.side === 'A' ? lastA : lastB)[e.proposer.id] = k;
-      (e.receiver.side === 'A' ? lastA : lastB)[e.receiver.id] = k;
-      if (e.outcome === 'bump' && e.displaced !== undefined) (e.proposer.side === 'A' ? lastA : lastB)[e.displaced] = k;
+    for (let k = 0; k < step && k < rounds.length; k++) {
+      for (const e of rounds[k].events) {
+        if (e.outcome === 'reject') continue;
+        (e.proposer.side === 'A' ? lastA : lastB)[e.proposer.id] = k;
+        (e.receiver.side === 'A' ? lastA : lastB)[e.receiver.id] = k;
+        if (e.outcome === 'bump' && e.displaced !== undefined) (e.proposer.side === 'A' ? lastA : lastB)[e.displaced] = k;
+      }
     }
     const A = new Array(n), B = new Array(n);
     for (let i = 0; i < n; i++) A[i] = matching.a[i] === -1 ? Infinity : (lastA[i] >= 0 ? lastA[i] : Infinity);
     for (let j = 0; j < n; j++) B[j] = matching.b[j] === -1 ? Infinity : (lastB[j] >= 0 ? lastB[j] : Infinity);
     return { match: matching, settle: { A, B } };
-  }, [liveSort, finalMatching, settle, step, matching, result, n]);
+  }, [liveSort, finalMatching, settle, step, matching, rounds, n]);
 
   const rows = useMemo(() => {
     const ids = Array.from({ length: n }, (_, i) => i);
@@ -260,13 +281,13 @@ export default function StableMatching() {
   const shuffle = useCallback(() => setSeed(s => (s * 1103515245 + 12345) & 0x7fffffff), [setSeed]);
 
   const narrate = (): string => {
-    if (!event) return total ? 'Press Play or Step to run deferred acceptance.' : 'No proposals needed.';
-    const { proposer: p, receiver: r, outcome, displaced } = event;
-    const pr = (p.side === 'A' ? inst.rankA[p.id][r.id] : inst.rankB[p.id][r.id]) + 1;
-    const P = `${p.side}${p.id}`, R = `${r.side}${r.id}`;
-    if (outcome === 'accept') return `${P} proposes to ${R} (its #${pr}) — ${R} is free and holds ${P}.`;
-    if (outcome === 'reject') return `${P} proposes to ${R} (its #${pr}) — ${R} prefers who it already holds and rejects ${P}.`;
-    return `${P} proposes to ${R} (its #${pr}) — ${R} prefers ${P}, holds ${P}, and releases ${p.side}${displaced} (now free).`;
+    if (step <= 0) return total ? 'Press Play or Step to run the rounds.' : 'No proposals needed.';
+    const r = rounds[step - 1];
+    const held = r.events.filter(e => e.outcome !== 'reject').length;
+    const bumps = r.events.filter(e => e.outcome === 'bump').length;
+    const rejects = r.events.filter(e => e.outcome === 'reject').length;
+    const proposals = held + rejects;
+    return `Round ${step}: all free ${r.side}'s proposed at once — ${proposals} proposal${proposals === 1 ? '' : 's'} → ${held} held${bumps ? ` (${bumps} by bumping)` : ''}, ${rejects} rejected.`;
   };
 
   /* ── Lab (welfare surfaces, replicated) ── */
@@ -313,8 +334,8 @@ export default function StableMatching() {
         <NumberInput label="Seed" value={seed} onChange={setSeed} min={1} integer />
       </Section>
       <Section title="Algorithm" icon="↻" defaultOpen>
-        <Pills label="Proposers" value={proposer} onChange={setProposer} options={[{ value: 'A', label: 'A proposes' }, { value: 'B', label: 'B proposes' }, { value: 'market', label: 'Market' }]} />
-        {proposer === 'market' && <Slider label="Bias toward A" value={bias} min={0} max={100} step={1} onChange={setBias} format={v => `${v}%`} />}
+        <Pills label="Schedule (who proposes each round)" value={schedule} onChange={setSchedule} options={[{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'alt', label: 'Alternate' }, { value: 'random', label: 'Random' }]} />
+        {schedule === 'random' && <Slider label="Bias toward A" value={bias} min={0} max={100} step={1} onChange={setBias} format={v => `${v}%`} />}
       </Section>
       <Section title="Display" icon="◧">
         <Pills label="Cell shows" value={cellView} onChange={setCellView} options={[{ value: 'both', label: 'Both (Lego)' }, { value: 'a', label: 'A→B' }, { value: 'b', label: 'B→A' }, { value: 'diff', label: 'Difference' }]} />
@@ -355,12 +376,11 @@ export default function StableMatching() {
     const cons = (consensusA === 0 && consensusB === 0) ? 'preferences are independent — everyone wants different partners'
       : (consensusA >= 80 && consensusB >= 80) ? 'both sides nearly share one ranking — everyone chases the same few'
       : `consensus A ${consensusA}% · B ${consensusB}% blends a shared ranking with private taste`;
-    const mech = proposer === 'market'
-      ? `each round a coin (${bias}% toward A) picks who proposes; that proposer asks its top remaining choice, and each receiver keeps its best offer so far and rejects the rest`
-      : `each free ${proposer} proposes to its first not-yet-asked choice, and each ${proposer === 'A' ? 'B' : 'A'} keeps the best proposer it has seen, rejecting the rest`;
-    const tail = done ? `Settled in ${total} proposals — total rank ${acct.combined} (avg #${acct.avg.toFixed(2)}).`
-      : total ? `${step} of ${total} proposals so far.` : 'Already stable.';
-    return `${n} A's and ${n} B's; ${cons}. With ${proposer === 'market' ? 'a two-sided market' : `${proposer} proposing`}, ${mech}. ${tail}`;
+    const sched = schedule === 'A' ? 'A proposes every round' : schedule === 'B' ? 'B proposes every round'
+      : schedule === 'alt' ? 'the sides strictly alternate (A, B, A, …)' : `a coin (${bias}% toward A) picks the proposing side each round`;
+    const tail = done ? `Settled in ${total} rounds — total rank ${acct.combined} (avg #${acct.avg.toFixed(2)}).`
+      : total ? `${step} of ${total} rounds so far.` : 'Already stable.';
+    return `${n} A's and ${n} B's; ${cons}. Each round the whole proposing side asks at once and every receiver keeps its single best offer (bumping if better), rejecting the rest; ${sched}. ${tail}`;
   })();
 
   const legend = (
@@ -383,7 +403,7 @@ export default function StableMatching() {
           <button className={view === 'visualizer' ? 'active' : ''} onClick={() => setView('visualizer')}><Layers size={15} />Visualizer</button>
           <button className={view === 'lab' ? 'active' : ''} onClick={() => setView('lab')}><FlaskConical size={15} />Lab</button>
         </div>
-        {view === 'visualizer' && <div className="sm2-progress">Proposal {step} / {total}{done ? ' · complete' : ''}</div>}
+        {view === 'visualizer' && <div className="sm2-progress">Round {step} / {total}{done ? ' · complete' : ''}</div>}
       </header>
 
       {view === 'visualizer' ? (
@@ -404,11 +424,11 @@ export default function StableMatching() {
             <div className={`sm2-metric stability ${!done ? '' : blocking.size === 0 ? 'ok' : 'bad'}`}>
               <span className="sm2-metric-label">{blocking.size === 0 ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />} Stability</span>
               <strong>{!done ? '—' : blocking.size === 0 ? 'Stable' : `${blocking.size} blocking`}</strong>
-              <span className="sm2-metric-sub">{!done ? 'finish the run to check' : blocking.size === 0 ? 'no pair would defect' : 'red cells would defect'}</span>
+              <span className="sm2-metric-sub">{!done ? 'finish the run to check' : blocking.size === 0 ? 'no pair would defect' : 'purple-ringed cells would defect'}</span>
             </div>
           </div>
           <div className="sm2-matrix-wrap" ref={matrixWrap}>
-            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} event={event} blocking={blocking} size={cellSize} labels={showLabels} view={cellView} gap={tight ? 0 : 3} trail={trail} />
+            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} markers={markers} blocking={blocking} size={cellSize} labels={showLabels} view={cellView} gap={tight ? 0 : 3} trail={trail} />
             {legend}
           </div>
         </div>

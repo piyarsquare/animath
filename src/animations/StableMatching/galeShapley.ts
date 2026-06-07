@@ -120,6 +120,71 @@ export function run(inst: Instance, mode: Mode): RunResult {
   return mode.kind === 'one-sided' ? oneSided(inst, mode.proposer) : market(inst, mode.bias, mode.seed);
 }
 
+/* ── Synchronous, round-based deferred acceptance ──────────────────────────────
+ * Each ROUND, a whole side proposes at once: every free member of the proposing
+ * side proposes to its best partner that hasn't rejected it; each receiver then
+ * looks at all the offers it got this round PLUS whoever it's already holding,
+ * keeps the single best, and rejects the rest. The schedule picks the proposing
+ * side per round:
+ *   'A' / 'B'  — always that side (classic one-sided GS, run in parallel rounds)
+ *   'alt'      — strictly alternating A, B, A, B, …
+ *   'random'   — a bias-weighted coin each round
+ */
+export type Schedule = 'A' | 'B' | 'alt' | 'random';
+export interface Round { side: Side; events: ProposalEvent[]; }
+export interface RoundsResult { rounds: Round[]; matching: Matching; }
+
+export function runRounds(inst: Instance, schedule: Schedule, bias = 50, seed = 1): RoundsResult {
+  const n = inst.n;
+  const m = empty(n);
+  const ptrA = new Array(n).fill(0), ptrB = new Array(n).fill(0);
+  const rng = mulberry32((seed ^ 0x9e3779b9) >>> 0);
+  const rounds: Round[] = [];
+  const maxRounds = n * n * 4;
+
+  for (let ri = 0; ri < maxRounds; ri++) {
+    const freeA: number[] = [], freeB: number[] = [];
+    for (let i = 0; i < n; i++) {
+      if (m.a[i] === -1 && ptrA[i] < n) freeA.push(i);
+      if (m.b[i] === -1 && ptrB[i] < n) freeB.push(i);
+    }
+    if (!freeA.length && !freeB.length) break;
+
+    let side: Side;
+    if (schedule === 'A') { if (!freeA.length) break; side = 'A'; }
+    else if (schedule === 'B') { if (!freeB.length) break; side = 'B'; }
+    else if (schedule === 'alt') { side = ri % 2 === 0 ? 'A' : 'B'; if (side === 'A' && !freeA.length) side = 'B'; else if (side === 'B' && !freeB.length) side = 'A'; }
+    else { side = rng() < bias / 100 ? 'A' : 'B'; if (side === 'A' && !freeA.length) side = 'B'; else if (side === 'B' && !freeB.length) side = 'A'; }
+
+    const proposers = side === 'A' ? freeA : freeB;
+    const prefsS = side === 'A' ? inst.prefsA : inst.prefsB;
+    const ptrS = side === 'A' ? ptrA : ptrB;
+    const matchS = side === 'A' ? m.a : m.b;
+    const matchO = side === 'A' ? m.b : m.a;
+    const rankO = side === 'A' ? inst.rankB : inst.rankA;  // a receiver's rank of a proposer
+    const other: Side = side === 'A' ? 'B' : 'A';
+
+    // all free proposers propose simultaneously to their current top choice
+    const byRecv = new Map<number, number[]>();
+    for (const p of proposers) { const t = prefsS[p][ptrS[p]]; if (!byRecv.has(t)) byRecv.set(t, []); byRecv.get(t)!.push(p); }
+
+    const events: ProposalEvent[] = [];
+    for (const [t, props] of byRecv) {
+      const prev = matchO[t];
+      let best = prev;
+      for (const p of props) if (best === -1 || rankO[t][p] < rankO[t][best]) best = p;
+      if (best !== prev) {
+        if (prev !== -1) { matchS[prev] = -1; ptrS[prev]++; }   // bumped: the old partner moves on
+        matchO[t] = best; matchS[best] = t;
+        events.push({ proposer: { side, id: best }, receiver: { side: other, id: t }, outcome: prev !== -1 ? 'bump' : 'accept', displaced: prev !== -1 ? prev : undefined });
+      }
+      for (const p of props) { if (p === best) continue; ptrS[p]++; events.push({ proposer: { side, id: p }, receiver: { side: other, id: t }, outcome: 'reject' }); }
+    }
+    rounds.push({ side, events });
+  }
+  return { rounds, matching: m };
+}
+
 /** Replay the first `upto` events into a matching (for step-through animation). */
 export function applyLog(n: number, log: ProposalEvent[], upto: number): Matching {
   const m = empty(n);
