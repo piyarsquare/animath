@@ -73,22 +73,40 @@ export function makeSphericalCover(c: CoverDeps): CoverModel {
   const planet = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 48), planetMat);
   root.add(planet);
 
-  // decor charted onto the sphere: trees on z≥0, columns at the antipode (z≤0)
+  // ── decor on the sphere ──────────────────────────────────────────────────────
+  // SPHERE (orientable, the pillowcase fold): the front face (trees) becomes the
+  // WHOLE outer surface — you only ever walk this one side — and the back face
+  // (columns) is the whole inner shell, seen only through the glass, never walked.
+  // ℝP² (non-orientable, antipodal): trees on the z≥0 hemisphere, columns on z<0,
+  // meeting at the seam great circle; crossing it / going antipodal flips you.
   const upY = new THREE.Vector3(0, 1, 0);
-  const dirs: THREE.Vector3[] = decor.props.map((p) => sq2hemi((p.u - 0.5) * 2, (p.v - 0.5) * 2));
+
+  /** Spread a square (u,v) over the WHOLE sphere (lon×lat) — the sphere's one skin. */
+  function fullDir(u: number, v: number): THREE.Vector3 {
+    const lon = (u - 0.5) * Math.PI * 2, lat = (v - 0.5) * Math.PI, cl = Math.cos(lat);
+    return new THREE.Vector3(cl * Math.cos(lon), Math.sin(lat), cl * Math.sin(lon));
+  }
+
   const decorGroup = new THREE.Group();
   const trees: THREE.Group[] = [];
-  const cols: THREE.Group[] = [];
-  decor.props.forEach((_, i) => {
+  const cols: THREE.Group[] = [];          // ℝP² only (columns share the outer surface)
+  const treeDirs: THREE.Vector3[] = [];
+  const colDirs: THREE.Vector3[] = [];     // ℝP² only
+  decor.props.forEach((p, i) => {
+    const td = rp2 ? sq2hemi((p.u - 0.5) * 2, (p.v - 0.5) * 2) : fullDir(p.u, p.v);
+    treeDirs.push(td);
     const tree = decor.makeTree(i); trees.push(tree); decorGroup.add(tree);
-    const col = decor.makeColumn(i); cols.push(col); decorGroup.add(col);
+    if (rp2) {
+      colDirs.push(td.clone().negate());
+      const col = decor.makeColumn(i); cols.push(col); decorGroup.add(col);
+    }
   });
   root.add(decorGroup);
 
-  // seam ring (z=0 great circle, the boundary of the square / where skins meet)
+  // seam ring (ℝP² only): the z=0 great circle where the two skins meet.
   const seamMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffe08a, emissiveIntensity: 0.4, roughness: 0.5 });
-  const seam = new THREE.Mesh(new THREE.TorusGeometry(R, 0.12, 8, 96), seamMat);
-  root.add(seam);
+  const seam = rp2 ? new THREE.Mesh(new THREE.TorusGeometry(R, 0.12, 8, 96), seamMat) : null;
+  if (seam) root.add(seam);
 
   // footprint trail (true world coords on the fixed planet)
   const foot = makeFootprintTrail(TRAIL_MAX);
@@ -98,41 +116,43 @@ export function makeSphericalCover(c: CoverDeps): CoverModel {
 
   function placeDecor() {
     decor.props.forEach((_, i) => {
-      const d = dirs[i];
-      trees[i].position.copy(d).multiplyScalar(R);
-      trees[i].quaternion.setFromUnitVectors(upY, d);
-      const nd = d.clone().negate();
-      cols[i].position.copy(nd).multiplyScalar(R);
-      cols[i].quaternion.setFromUnitVectors(upY, nd);
+      trees[i].position.copy(treeDirs[i]).multiplyScalar(R);
+      trees[i].quaternion.setFromUnitVectors(upY, treeDirs[i]);
+      if (rp2) {
+        cols[i].position.copy(colDirs[i]).multiplyScalar(R);
+        cols[i].quaternion.setFromUnitVectors(upY, colDirs[i]);
+      }
     });
-    seam.geometry.dispose();
-    seam.geometry = new THREE.TorusGeometry(R, 0.12, 8, 96);
+    if (seam) { seam.geometry.dispose(); seam.geometry = new THREE.TorusGeometry(R, 0.12, 8, 96); }
   }
   placeDecor();
 
-  // ℝP²: an antipodal twin (point reflection through the centre, orientation-
-  // reversing → the twin trail reads mirrored) holding clones of the decor + trail.
+  // ℝP² antipodal twin (point reflection through the centre, orientation-reversing
+  // → the twin trail reads mirrored). The plain sphere has no such identification.
   const antipode = new THREE.Group();
   antipode.scale.set(-1, -1, -1);
   antipode.visible = rp2;
-  const footAnti = new THREE.Mesh(foot.geometry, foot.material); footAnti.frustumCulled = false;
-  antipode.add(footAnti);
-  let antiClone = decorGroup.clone(true);
-  antipode.add(antiClone);
-  root.add(antipode);
+  let antiClone: THREE.Group | null = null;
+  if (rp2) {
+    const footAnti = new THREE.Mesh(foot.geometry, foot.material); footAnti.frustumCulled = false;
+    antipode.add(footAnti);
+    antiClone = decorGroup.clone(true);
+    antipode.add(antiClone);
+    root.add(antipode);
+  }
 
-  // ── inner shell: the glued "other side", revealed through the glass planet. A
-  // radial mirror of the decor wearing the OPPOSITE skin (a column just inside
-  // every surface tree, a tree inside every column), pointing inward. The spherical
-  // port of the flat worlds' mirrored underside. ─────────────────────────────────
+  // ── inner shell: the OTHER face, view-only through the glass planet ───────────
+  // Sphere: the whole columns back-face (the folded-away side). ℝP²: the opposite
+  // skin of each landmark (a column inside every tree, a tree inside every column).
   const K_IN = 0.997;
   const inner = new THREE.Group();
   inner.visible = false;
   const innerProps: { g: THREE.Group; dir: THREE.Vector3 }[] = [];
   decor.props.forEach((_, i) => {
-    const d = dirs[i];
-    const ic = decor.makeColumn(i); inner.add(ic); innerProps.push({ g: ic, dir: d.clone() });          // column under the tree
-    const it = decor.makeTree(i); inner.add(it); innerProps.push({ g: it, dir: d.clone().negate() });    // tree under the column
+    const ic = decor.makeColumn(i); inner.add(ic); innerProps.push({ g: ic, dir: treeDirs[i].clone() }); // column under each tree
+    if (rp2) {
+      const it = decor.makeTree(i); inner.add(it); innerProps.push({ g: it, dir: colDirs[i].clone() });  // tree under each column
+    }
   });
   root.add(inner);
   function placeInner() {
@@ -214,14 +234,17 @@ export function makeSphericalCover(c: CoverDeps): CoverModel {
   }
 
   function chart(): SquareMapState {
-    const flip = up.z < 0;
-    const [sx, sy] = rp2Square(up.x, up.y, up.z, flip);
+    // The chart's representative (z≥0) flips for z<0; that flip is a real mirror
+    // *sheet* only on ℝP² (non-orientable). The plain sphere is orientable — there
+    // is no mirror side — so its marker never turns amber.
+    const rep = up.z < 0;
+    const [sx, sy] = rp2Square(up.x, up.y, up.z, rep);
     const e = 0.06, ce = Math.cos(e), se = Math.sin(e);
     let ax = up.x * ce + fwd.x * se, ay = up.y * ce + fwd.y * se, az = up.z * ce + fwd.z * se;
     const al = Math.hypot(ax, ay, az) || 1; ax /= al; ay /= al; az /= al;
-    const [qx, qy] = rp2Square(ax, ay, az, flip);
+    const [qx, qy] = rp2Square(ax, ay, az, rep);
     let hx = qx - sx, hz = qy - sy; const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
-    return { u: (sx + 1) / 2, v: (sy + 1) / 2, hx, hz, flipped: flip };
+    return { u: (sx + 1) / 2, v: (sy + 1) / 2, hx, hz, flipped: rp2 && rep };
   }
 
   function setRadius(r: number) {
@@ -231,9 +254,11 @@ export function makeSphericalCover(c: CoverDeps): CoverModel {
     planet.geometry = new THREE.SphereGeometry(R, 64, 48);
     placeDecor();
     placeInner();
-    antipode.remove(antiClone);
-    antiClone = decorGroup.clone(true);
-    antipode.add(antiClone);
+    if (rp2 && antiClone) {
+      antipode.remove(antiClone);
+      antiClone = decorGroup.clone(true);
+      antipode.add(antiClone);
+    }
     camera.far = R * 5; camera.updateProjectionMatrix();
     foot.clear(); trailLast = null;
   }
@@ -247,7 +272,7 @@ export function makeSphericalCover(c: CoverDeps): CoverModel {
     dispose: () => {
       foot.dispose();
       planet.geometry.dispose(); planetTex.dispose(); planetMat.dispose();
-      seam.geometry.dispose(); seamMat.dispose();
+      seam?.geometry.dispose(); seamMat.dispose();
     },
   };
 }
