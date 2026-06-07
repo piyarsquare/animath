@@ -167,11 +167,6 @@ Pills, Select, Checkbox). Each section has an icon + chevron; **Function** and
   map; see §6). Switches interpolate smoothly on the GPU.
 - *(Torus only)* **Collapse → Hopf** — Slider 0–1 (label reads "torus" at 0,
   "sphere" at 1) scrubbing the Clifford-torus fibers collapsing to Hopf points.
-- *(Torus only)* **Radius scale** — Pills: **Linear / Log** (default Linear).
-  Chooses how the donut a fiber lands on is derived from the magnitudes: Linear
-  uses the raw ratio `|z| : |f|`; Log remaps each magnitude through `log(1+r)`
-  (angles unchanged) so the nested donuts spread across orders of magnitude
-  instead of crowding near `|z| ≈ |f|`. Affects only the Torus mapping.
 - *(Hopf or Torus)* **Reference scaffold** — Checkbox to draw the faint
   sphere/donut guide.
 - **Motion** — Pills: **Quaternion · Fixed**. *Quaternion* = a continuous
@@ -224,10 +219,9 @@ Hosts the **rotation controls** (`QuarterTurnControls.tsx`) and resets. The body
 is a compact grid; column layout is `[label] [spin] [↻] [↺] [spin]`, with a
 header row reading **spin ↻ ↺ spin**.
 
-*(Torus only)* Above the grid, the two Torus projection controls — **Collapse →
-Hopf** (slider) and **Radius scale** (Linear / Log) — are mirrored here from the
-Camera settings, so they're reachable from the floating panel during
-exploration. See §4.3 Camera for what they do.
+*(Torus only)* Above the grid, the **Collapse → Hopf** slider is mirrored here
+from the Camera settings, so it's reachable from the floating panel during
+exploration. See §4.3 Camera for what it does.
 
 **The grid is context-sensitive to the projection:**
 
@@ -314,7 +308,7 @@ Yaw/Pitch/Roll.
 `usePersistentState` mirrors most **settings** to `localStorage` (namespace
 `animath:<v>:complex-particles:<field>`), so they survive reloads: function/p/q/
 branches, domain extents (X/Y) + units, all color/particle/motion/detail values,
-projection type, motion mode, drop axis, scaffold toggle, torus radius scale.
+projection type, motion mode, drop axis, scaffold toggle.
 
 **Not** persisted (transient "looking" state): camera azimuth/elevation/**roll**/
 pan, the Torus collapse scrub, real-view flag, and the spin toggles. "Reset

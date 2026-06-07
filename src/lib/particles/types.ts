@@ -18,6 +18,47 @@ export enum ColourBy {
   Range = 1
 }
 
+/** Which scalar quantity of the chosen source (z or f) drives the colour wheel.
+ *  Phase is the classic domain-colouring choice (hue = arg); the others "spend"
+ *  hue on a different quantity (e.g. Modulus → colour by |z| / |f|). Brightness
+ *  always tracks magnitude for legibility. */
+export enum ColourQuantity {
+  Phase = 0,
+  Modulus = 1,
+  Real = 2,
+  Imag = 3,
+  /** Brightness only: every particle at full value (no magnitude shading). */
+  Uniform = 4
+}
+
+/** How the input (z) and output (f) planes are charted before being assembled
+ *  into the 4-vector: Cartesian (Re, Im), Polar (|·|, arg), or Log-polar
+ *  (log|·|, arg). In log-polar output, exp becomes the identity; in log-polar on
+ *  both, zⁿ / roots flatten into linear shears. Colour still uses Cartesian z/f. */
+export enum CoordMode {
+  Cartesian = 0,
+  Polar = 1,
+  LogPolar = 2
+}
+
+export const coordModeNames = ['Cartesian', 'Polar', 'Log-polar'] as const;
+
+/** How the domain points are laid out before f is applied. Radial patterns
+ *  sample a disk (radius = max half-extent, centred on the domain box); Grid /
+ *  Squares / Random use the rectangular box. Polar spreads points evenly in
+ *  arg z, which keeps near-linear maps (f ≈ b·z) crisp in the Hopf/Torus view. */
+export enum SamplePattern {
+  Grid = 0,
+  Polar = 1,
+  Rings = 2,
+  Spokes = 3,
+  Web = 4,
+  Squares = 5,
+  Random = 6
+}
+
+export const samplePatternNames = ['Grid', 'Polar', 'Rings', 'Spokes', 'Web', 'Squares', 'Random'] as const;
+
 export enum JitterMode {
   /** Scatter the sampling: perturb the domain point, then evaluate f there, so
    *  the particle stays exactly on the graph surface of f (a denser/irregular
