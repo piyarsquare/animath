@@ -35,7 +35,9 @@
 .sm2-chead { padding-bottom: 2px; }
 .sm2-rhead { justify-content: flex-end; padding-right: 7px; }
 /* each cell: a SQUARE heat (A's rank of B) with a CIRCLE heat inside (B's rank of A) */
-.sm2-mcell { position: relative; border: 1px solid rgba(0,0,0,.45); border-radius: 5px; transition: box-shadow .15s; }
+.sm2-mcell { position: relative; border-radius: 4px; transition: box-shadow .15s; }
+.sm2-matrix.tight .sm2-mcell { border-radius: 0; }
+.sm2-story { font-size: 13px; color: #b9b9c8; line-height: 1.5; margin: 0 0 10px; max-width: 82ch; }
 .sm2-disc { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 58%; height: 58%; border-radius: 50%; }
 /* white + difference blend → auto-contrasts on the light midtones and dark ends of BuRd */
 .sm2-mcell .ar { position: absolute; top: 1px; left: 3px; font-size: 9px; color: #fff; mix-blend-mode: difference; font-variant-numeric: tabular-nums; }

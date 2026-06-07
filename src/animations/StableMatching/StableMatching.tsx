@@ -20,39 +20,45 @@ const NS = 'stable-matching';
  *    ranks (A's rank of B, top-left; B's rank of A, bottom-right). The matching
  *    (= current tentative holds) lights up; the active proposal rings; blocking
  *    pairs (if any, at the end) flag red. This is the algorithm, foregrounded. ── */
-function Matrix({ inst, matching, rows, cols, event, blocking, size, labels }: {
+function Matrix({ inst, matching, rows, cols, event, blocking, size, labels, view, gap }: {
   inst: Instance; matching: Matching; rows: number[]; cols: number[];
   event: ProposalEvent | null; blocking: Set<string>; size: number; labels: boolean;
+  view: 'both' | 'a' | 'b' | 'diff'; gap: number;
 }) {
   const n = inst.n;
   const showNums = size >= 30;
   const BURD = [[33, 102, 172], [103, 169, 207], [247, 247, 247], [239, 138, 98], [178, 24, 43]];
-  const rankColor = (r: number) => {
-    const t = n > 1 ? (r - 1) / (n - 1) : 0;
-    const seg = t * (BURD.length - 1), i = Math.min(BURD.length - 2, Math.floor(seg)), f = seg - i;
+  const burd = (u: number) => {
+    const x = Math.max(0, Math.min(1, u));
+    const seg = x * (BURD.length - 1), i = Math.min(BURD.length - 2, Math.floor(seg)), f = seg - i;
     const c = BURD[i].map((v, k) => Math.round(v + (BURD[i + 1][k] - v) * f));
     return `rgb(${c[0]},${c[1]},${c[2]})`;
   };
+  const rankColor = (r: number) => burd(n > 1 ? (r - 1) / (n - 1) : 0);
+  const diffColor = (d: number) => burd(((n > 1 ? Math.max(-1, Math.min(1, d / (n - 1))) : 0) + 1) / 2);
   return (
-    <div className="sm2-matrix" style={{ gridTemplateColumns: `${labels ? '1.8em ' : ''}repeat(${cols.length}, ${size}px)` }}>
+    <div className={`sm2-matrix${gap === 0 ? ' tight' : ''}`} style={{ gap: `${gap}px`, gridTemplateColumns: `${labels ? '1.8em ' : ''}repeat(${cols.length}, ${size}px)` }}>
       {labels && <div className="sm2-corner" />}
       {labels && cols.map(j => <div key={`h${j}`} className="sm2-chead">{j}</div>)}
       {rows.map(i => (
         <React.Fragment key={`r${i}`}>
           {labels && <div className="sm2-rhead">{i}</div>}
           {cols.map(j => {
-            const aR = inst.rankA[i][j] + 1, bR = inst.rankB[j][i] + 1;
+            const aR = inst.rankA[i][j] + 1, bR = inst.rankB[j][i] + 1, d = aR - bR;
             const matched = matching.a[i] === j;
             const cur = !!event && (
               (event.proposer.side === 'A' && event.proposer.id === i && event.receiver.id === j) ||
               (event.proposer.side === 'B' && event.proposer.id === j && event.receiver.id === i));
             const rej = cur && event!.outcome === 'reject';
             const cls = `sm2-mcell${matched ? ' matched' : ''}${cur ? (rej ? ' reject' : ' active') : ''}${blocking.has(`${i}-${j}`) ? ' blocking' : ''}`;
+            const bg = view === 'b' ? rankColor(bR) : view === 'diff' ? diffColor(d) : rankColor(aR);
             return (
-              <div key={j} className={cls} style={{ height: size, background: rankColor(aR) }}
-                title={`A${i} ranks B${j} #${aR} · B${j} ranks A${i} #${bR}`}>
-                <span className="sm2-disc" style={{ background: rankColor(bR) }} />
-                {showNums && <><span className="ar">{aR}</span><span className="br">{bR}</span></>}
+              <div key={j} className={cls} style={{ height: size, background: bg }}
+                title={`A${i}→B${j} #${aR} · B${j}→A${i} #${bR}`}>
+                {view === 'both' && <span className="sm2-disc" style={{ background: rankColor(bR) }} />}
+                {showNums && (view === 'both'
+                  ? <><span className="ar">{aR}</span><span className="br">{bR}</span></>
+                  : <span className="br">{view === 'diff' ? (d > 0 ? `+${d}` : `${d}`) : view === 'a' ? aR : bR}</span>)}
               </div>
             );
           })}
@@ -97,8 +103,10 @@ export default function StableMatching() {
   const [proposer, setProposer] = usePersistentState<'A' | 'B' | 'market'>(`${NS}:proposer`, 'A');
   const [bias, setBias] = usePersistentState(`${NS}:bias`, 50);
   const [speed, setSpeed] = usePersistentState(`${NS}:speed`, 50);
-  const [order, setOrder] = usePersistentState<'attract' | 'index'>(`${NS}:order`, 'attract');
+  const [order, setOrder] = usePersistentState<'matchdiag' | 'settle' | 'attract' | 'index'>(`${NS}:order`, 'matchdiag');
   const [showLabels, setShowLabels] = usePersistentState(`${NS}:labels`, true);
+  const [cellView, setCellView] = usePersistentState<'both' | 'a' | 'b' | 'diff'>(`${NS}:cellView`, 'both');
+  const [tight, setTight] = usePersistentState(`${NS}:tight`, true);
 
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -148,8 +156,39 @@ export default function StableMatching() {
     for (let j = 0; j < n; j++) { let s = 0; for (let i = 0; i < n; i++) s += inst.rankA[i][j]; b[j] = s / n; }
     return { a, b };
   }, [inst, n]);
-  const rows = useMemo(() => { const ids = Array.from({ length: n }, (_, i) => i); return order === 'attract' ? ids.sort((x, y) => attract.a[x] - attract.a[y]) : ids; }, [n, order, attract]);
-  const cols = useMemo(() => { const ids = Array.from({ length: n }, (_, i) => i); return order === 'attract' ? ids.sort((x, y) => attract.b[x] - attract.b[y]) : ids; }, [n, order, attract]);
+  const finalMatching = useMemo(() => applyLog(n, result.log, total), [n, result, total]);
+  // settle round = the last proposal that touched each member's final pairing
+  const settle = useMemo(() => {
+    const lastA = new Array(n).fill(-1), lastB = new Array(n).fill(-1);
+    result.log.forEach((e, k) => {
+      if (e.outcome === 'reject') return;
+      (e.proposer.side === 'A' ? lastA : lastB)[e.proposer.id] = k;
+      (e.receiver.side === 'A' ? lastA : lastB)[e.receiver.id] = k;
+      if (e.outcome === 'bump' && e.displaced !== undefined) (e.proposer.side === 'A' ? lastA : lastB)[e.displaced] = k;
+    });
+    const A = new Array(n), B = new Array(n);
+    for (let i = 0; i < n; i++) A[i] = finalMatching.a[i] === -1 ? Infinity : (lastA[i] >= 0 ? lastA[i] : Infinity);
+    for (let j = 0; j < n; j++) B[j] = finalMatching.b[j] === -1 ? Infinity : (lastB[j] >= 0 ? lastB[j] : Infinity);
+    return { A, B };
+  }, [result, n, finalMatching]);
+
+  const rows = useMemo(() => {
+    const ids = Array.from({ length: n }, (_, i) => i);
+    if (order === 'index') return ids;
+    if (order === 'attract') return ids.sort((x, y) => attract.a[x] - attract.a[y]);
+    return ids.sort((x, y) => (settle.A[x] - settle.A[y]) || (attract.a[x] - attract.a[y])); // settle / matchdiag
+  }, [n, order, attract, settle]);
+  const cols = useMemo(() => {
+    const ids = Array.from({ length: n }, (_, i) => i);
+    if (order === 'index') return ids;
+    if (order === 'attract') return ids.sort((x, y) => attract.b[x] - attract.b[y]);
+    if (order === 'settle') return ids.sort((x, y) => (settle.B[x] - settle.B[y]) || (attract.b[x] - attract.b[y]));
+    // matchdiag: place each row's partner at the same ordinal → matches on the diagonal
+    const out: number[] = []; const used = new Set<number>();
+    for (const i of rows) { const p = finalMatching.a[i]; if (p !== -1 && !used.has(p)) { out.push(p); used.add(p); } }
+    for (let j = 0; j < n; j++) if (!used.has(j)) out.push(j);
+    return out;
+  }, [n, order, attract, settle, rows, finalMatching]);
 
   useEffect(() => {
     if (!playing) { if (timer.current) { clearInterval(timer.current); timer.current = null; } return; }
@@ -239,8 +278,10 @@ export default function StableMatching() {
         {proposer === 'market' && <Slider label="Bias toward A" value={bias} min={0} max={100} step={1} onChange={setBias} format={v => `${v}%`} />}
       </Section>
       <Section title="Display" icon="◧">
-        <Pills label="Order rows & columns" value={order} onChange={setOrder} options={[{ value: 'attract', label: 'By attractiveness' }, { value: 'index', label: 'Original' }]} />
+        <Pills label="Cell shows" value={cellView} onChange={setCellView} options={[{ value: 'both', label: 'Both (Lego)' }, { value: 'a', label: 'A→B' }, { value: 'b', label: 'B→A' }, { value: 'diff', label: 'Difference' }]} />
+        <Pills label="Order" value={order} onChange={setOrder} options={[{ value: 'matchdiag', label: 'Match diagonal' }, { value: 'settle', label: 'Settle round' }, { value: 'attract', label: 'Attractiveness' }, { value: 'index', label: 'Original' }]} />
         <Checkbox label="Show index labels" checked={showLabels} onChange={setShowLabels} />
+        <Checkbox label="Tight grid (no gaps)" checked={tight} onChange={setTight} />
       </Section>
     </ShellSettings>
   );
@@ -270,6 +311,30 @@ export default function StableMatching() {
 
   const maxHist = Math.max(1, ...acct.hist);
 
+  const story = (() => {
+    const cons = (consensusA === 0 && consensusB === 0) ? 'preferences are independent — everyone wants different partners'
+      : (consensusA >= 80 && consensusB >= 80) ? 'both sides nearly share one ranking — everyone chases the same few'
+      : `consensus A ${consensusA}% · B ${consensusB}% blends a shared ranking with private taste`;
+    const mech = proposer === 'market'
+      ? `each round a coin (${bias}% toward A) picks who proposes; that proposer asks its top remaining choice, and each receiver keeps its best offer so far and rejects the rest`
+      : `each free ${proposer} proposes to its first not-yet-asked choice, and each ${proposer === 'A' ? 'B' : 'A'} keeps the best proposer it has seen, rejecting the rest`;
+    const tail = done ? `Settled in ${total} proposals — total rank ${acct.combined} (avg #${acct.avg.toFixed(2)}).`
+      : total ? `${step} of ${total} proposals so far.` : 'Already stable.';
+    return `${n} A's and ${n} B's; ${cons}. With ${proposer === 'market' ? 'a two-sided market' : `${proposer} proposing`}, ${mech}. ${tail}`;
+  })();
+
+  const legend = (
+    <p className="sm2-legend">
+      {cellView === 'both' && <><span className="k sq">square = A→B rank</span><span className="k disc">circle = B→A rank</span></>}
+      {cellView === 'a' && <span className="k sq">colour = A's rank of B</span>}
+      {cellView === 'b' && <span className="k sq">colour = B's rank of A</span>}
+      {cellView === 'diff'
+        ? <span className="k scale diverge">blue = A keener · red = B keener</span>
+        : <span className="k scale">blue #1 → red last</span>}
+      <span className="k matched">held / matched</span><span className="k active">proposing</span><span className="k blocking">blocking</span>
+    </p>
+  );
+
   return (
     <div className="sm2-app">
       {settings}{actions}
@@ -283,6 +348,7 @@ export default function StableMatching() {
 
       {view === 'visualizer' ? (
         <div className="sm2-visualizer">
+          <p className="sm2-story">{story}</p>
           <div className="sm2-narrate">{narrate()}</div>
           <div className="sm2-metrics">
             <div className="sm2-metric big">
@@ -302,8 +368,8 @@ export default function StableMatching() {
             </div>
           </div>
           <div className="sm2-matrix-wrap" ref={matrixWrap}>
-            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} event={event} blocking={blocking} size={cellSize} labels={showLabels} />
-            <p className="sm2-legend"><span className="k sq">square = A's rank of B</span><span className="k disc">circle = B's rank of A</span><span className="k scale">blue #1 → red last</span><span className="k matched">held / matched</span><span className="k active">proposing</span><span className="k blocking">blocking</span></p>
+            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} event={event} blocking={blocking} size={cellSize} labels={showLabels} view={cellView} gap={tight ? 0 : 3} />
+            {legend}
           </div>
         </div>
       ) : (
