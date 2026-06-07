@@ -24,6 +24,10 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+        env:
+          # The Pages build doesn't screenshot anything; skip puppeteer's
+          # ~150MB Chrome download (the cloud session installs it explicitly).
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
       - uses: actions/configure-pages@v4
       - run: npm run build
       - uses: actions/configure-pages@v4
