@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Progress · 2026-06-07-S02 Polygon Worlds (new app)</title>
+  <link rel="stylesheet" href="../../report.css">
+  <script defer src="../../report.js"></script>
+  <script type="application/json" class="report-meta">
+  {
+    "kind": "progress",
+    "session": "2026-06-07-S02",
+    "date": "2026-06-07",
+    "title": "Polygon Worlds — unified fundamental-polygon app (Phase 1)",
+    "branch": "claude/klein-bottle-fix",
+    "slug": "klein-bottle-fix",
+    "status": "in-progress",
+    "build": "passing",
+    "followup": null,
+    "pr": 186
+  }
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">Progress report</p>
+    <h1>2026-06-07-S02 — Polygon Worlds (new app), Phase 1</h1>
+    <dl class="meta">
+      <div><dt>Branch</dt><dd><code>claude/klein-bottle-fix</code> · slug <code>klein-bottle-fix</code></dd></div>
+      <div><dt>App(s)</dt><dd>src/animations/PolygonWorlds/ (new)</dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-ok">npm run build ✓</span></dd></div>
+    </dl>
+    <p class="lineage">Session lineage: <a href="./2026-06-07-S01-unify-rectangular-worlds.html">S01 (unify)</a> ← this</p>
+  </header>
+
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+
+      <div class="toolbar">
+        <button type="button" data-action="expand-all">Expand all</button>
+        <button type="button" data-action="collapse-all">Collapse all</button>
+      </div>
+
+      <section>
+        <h2>Session purpose</h2>
+        <p>A deeper unification than S01's presentation pass: build the <strong>single
+        unified view</strong> the user described — ONE decorated fundamental square
+        (trees on one face, columns on the other) whose <em>edge-gluing knob</em>
+        selects among four worlds (torus / Klein / ℝP² / sphere), with curvature
+        <em>forced</em> by the topology. Decided (with the user) to build this as a
+        <strong>new app</strong> ("Polygon Worlds", <code>#/polygon-worlds</code>),
+        reusing the shared lib, leaving TopologyWalk untouched.</p>
+      </section>
+
+      <section>
+        <h2>Design decisions (user-confirmed)</h2>
+        <ul>
+          <li><strong>New app</strong>, not a TopologyWalk patch; vendors copies of
+          character/footprints/glassSurface/otherSide/squareMap so TopologyWalk stays byte-for-byte.</li>
+          <li><strong>One facade + two cover models</strong> (the honest verdict): the
+          universal cover genuinely changes type (Euclidean plane for χ=0, sphere for
+          χ&gt;0), so the cover stays an explicit <code>CoverModel</code> seam — which
+          also keeps the Phase-2 morph expressible ("interpolate between covers").</li>
+          <li><strong>Sphere = adjacent fold</strong> (pillowcase); the other three are
+          opposite-edge straight/flip.</li>
+          <li><strong>Static engine first</strong>; the choreographed gluing+curvature
+          <strong>morph is Phase 2</strong> (architected for, not built).</li>
+          <li>Third-person default ON; one square mini-map for all four.</li>
+        </ul>
+      </section>
+
+      <section class="log">
+        <h2>Working notes</h2>
+        <ol class="timeline">
+          <li class="tl" data-type="milestone">
+            <p class="tl-time">—</p>
+            <span class="chip chip-milestone">Milestone</span>
+            <h3>Euclidean vertical slice live + screenshot-verified</h3>
+            <p class="why"><strong>Why:</strong> de-risk the new architecture end-to-end
+            before writing the spherical cover.</p>
+            <p>New app builds (<code>npm run build</code> ✓) and renders in headless
+            software-WebGL. Drove it: <strong>Klein</strong> (red-flip square mini-map,
+            columns⇄trees parity, chiral footprint, glass underside) and <strong>torus</strong>
+            (teal-straight mini-map, columns everywhere, opposite-skin underside). The full
+            pipeline <code>worldSpec → deriveGeometry → euclideanCover →
+            fundamentalSquareEngine → drawSquareMap</code> works; third-person is default.</p>
+          </li>
+          <li class="tl" data-type="code">
+            <p class="tl-time">—</p>
+            <span class="chip chip-code">Code</span>
+            <h3>Scaffolded the new app + Phase-1 modules</h3>
+            <p class="why"><strong>Why:</strong> establish the knob model + cover seam.</p>
+            <p>New files: <code>worldSpec.ts</code> (the 4 gluings + <code>deriveGeometry</code>,
+            geometry forced from χ), <code>coverModel.ts</code> (the seam interface),
+            <code>euclideanCover.ts</code> (flat-plane cover, distilled from flatEngine),
+            <code>decor.ts</code> (shared numbered trees/columns, authored in unit-square uv),
+            <code>fundamentalSquareEngine.ts</code> (facade: decor copies, glass floor +
+            mirrored underside, trail, avatar, frame loop), <code>engineTypes.ts</code>,
+            <code>PolygonWorlds.tsx</code> (host), <code>EXPLAINER.md</code>. Registered in
+            apps.ts + index.tsx (append-only). Vendored 5 shared-lib files.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Next (remaining Phase 1)</h2>
+        <ol>
+          <li><code>sphericalCover.ts</code> — port sphericalEngine's great-circle walk;
+          wire ℝP² (antipodal) + sphere into the facade (planet, not floor).</li>
+          <li>Sphere <strong>adjacent-fold</strong> placement of the shared decor on the
+          two hemispheres (riskiest; fallback = sign(z) split).</li>
+          <li>Extend <code>squareMap.ts</code> to per-edge specs so the sphere's adjacent
+          arrows draw; light up all four worlds in the selector.</li>
+          <li>Glass = plane (euclidean) vs planet (spherical): a small per-cover GlassSurface;
+          re-add per-cell colour + avatar projection if wanted.</li>
+        </ol>
+      </section>
+
+      <p class="callout callout-note"><span class="callout-label">Phase 2</span>
+      The animated gluing+curvature morph between worlds — expressible because the
+      <code>CoverModel</code> boundary is explicit. Not started.</p>
+
+    </div>
+  </div>
+</main>
+</body>
+</html>

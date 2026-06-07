@@ -52,4 +52,10 @@ export const apps: AppDescriptor[] = [
     icon: '⇅',
     blurb: 'Watch autonomous agents with rival strategies race to sort a population of values.',
   },
+  {
+    hash: '/polygon-worlds',
+    name: 'Polygon Worlds',
+    icon: '⬚',
+    blurb: 'One decorated square, four worlds: glue its edges and let curvature follow — walk a torus, Klein bottle, projective plane or sphere in first person.',
+  },
 ];

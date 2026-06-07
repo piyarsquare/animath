@@ -13,6 +13,7 @@ const TopologyWalk = React.lazy(() => import('./animations/TopologyWalk/Topology
 const Trinary = React.lazy(() => import('./animations/TrinaryStars/Trinary'));
 const StableMarriage = React.lazy(() => import('./animations/StableMarriage/StableMarriage'));
 const AgenticSorting = React.lazy(() => import('./animations/AgenticSorting/AgenticSorting'));
+const PolygonWorlds = React.lazy(() => import('./animations/PolygonWorlds/PolygonWorlds'));
 
 const routes: Record<string, React.ComponentType> = {
   '/': Menu,
@@ -30,6 +31,7 @@ const routes: Record<string, React.ComponentType> = {
   '/trinary-lab': Trinary,
   '/stable-marriage': StableMarriage,
   '/agentic-sorting': AgenticSorting,
+  '/polygon-worlds': PolygonWorlds,
 };
 
 function getHash(): string {
