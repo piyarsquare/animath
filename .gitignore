@@ -1,2 +1,7 @@
 node_modules/
 dist/
+
+# Generated session site (rebuilt by `npm run sessions` / CI; never committed)
+docs/sessions/converted/
+docs/sessions/control-center.html
+docs/sessions/**/*.preview.html
