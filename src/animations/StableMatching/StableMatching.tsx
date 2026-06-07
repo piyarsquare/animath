@@ -107,6 +107,7 @@ export default function StableMatching() {
   const [showLabels, setShowLabels] = usePersistentState(`${NS}:labels`, true);
   const [cellView, setCellView] = usePersistentState<'both' | 'a' | 'b' | 'diff'>(`${NS}:cellView`, 'both');
   const [tight, setTight] = usePersistentState(`${NS}:tight`, true);
+  const [liveSort, setLiveSort] = usePersistentState(`${NS}:liveSort`, false);
 
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -172,23 +173,40 @@ export default function StableMatching() {
     return { A, B };
   }, [result, n, finalMatching]);
 
+  // ordering basis: the FINAL matching (static layout) or, with live re-sort on,
+  // the matching/settle as it stands at the current step (the diagonal builds itself).
+  const orderBasis = useMemo(() => {
+    if (!liveSort) return { match: finalMatching, settle };
+    const lastA = new Array(n).fill(-1), lastB = new Array(n).fill(-1);
+    for (let k = 0; k < step; k++) {
+      const e = result.log[k]; if (!e || e.outcome === 'reject') continue;
+      (e.proposer.side === 'A' ? lastA : lastB)[e.proposer.id] = k;
+      (e.receiver.side === 'A' ? lastA : lastB)[e.receiver.id] = k;
+      if (e.outcome === 'bump' && e.displaced !== undefined) (e.proposer.side === 'A' ? lastA : lastB)[e.displaced] = k;
+    }
+    const A = new Array(n), B = new Array(n);
+    for (let i = 0; i < n; i++) A[i] = matching.a[i] === -1 ? Infinity : (lastA[i] >= 0 ? lastA[i] : Infinity);
+    for (let j = 0; j < n; j++) B[j] = matching.b[j] === -1 ? Infinity : (lastB[j] >= 0 ? lastB[j] : Infinity);
+    return { match: matching, settle: { A, B } };
+  }, [liveSort, finalMatching, settle, step, matching, result, n]);
+
   const rows = useMemo(() => {
     const ids = Array.from({ length: n }, (_, i) => i);
     if (order === 'index') return ids;
     if (order === 'attract') return ids.sort((x, y) => attract.a[x] - attract.a[y]);
-    return ids.sort((x, y) => (settle.A[x] - settle.A[y]) || (attract.a[x] - attract.a[y])); // settle / matchdiag
-  }, [n, order, attract, settle]);
+    return ids.sort((x, y) => (orderBasis.settle.A[x] - orderBasis.settle.A[y]) || (attract.a[x] - attract.a[y])); // settle / matchdiag
+  }, [n, order, attract, orderBasis]);
   const cols = useMemo(() => {
     const ids = Array.from({ length: n }, (_, i) => i);
     if (order === 'index') return ids;
     if (order === 'attract') return ids.sort((x, y) => attract.b[x] - attract.b[y]);
-    if (order === 'settle') return ids.sort((x, y) => (settle.B[x] - settle.B[y]) || (attract.b[x] - attract.b[y]));
+    if (order === 'settle') return ids.sort((x, y) => (orderBasis.settle.B[x] - orderBasis.settle.B[y]) || (attract.b[x] - attract.b[y]));
     // matchdiag: place each row's partner at the same ordinal → matches on the diagonal
     const out: number[] = []; const used = new Set<number>();
-    for (const i of rows) { const p = finalMatching.a[i]; if (p !== -1 && !used.has(p)) { out.push(p); used.add(p); } }
+    for (const i of rows) { const p = orderBasis.match.a[i]; if (p !== -1 && !used.has(p)) { out.push(p); used.add(p); } }
     for (let j = 0; j < n; j++) if (!used.has(j)) out.push(j);
     return out;
-  }, [n, order, attract, settle, rows, finalMatching]);
+  }, [n, order, attract, orderBasis, rows]);
 
   useEffect(() => {
     if (!playing) { if (timer.current) { clearInterval(timer.current); timer.current = null; } return; }
@@ -296,6 +314,7 @@ export default function StableMatching() {
           <button className="sm2-btn" onClick={reset}><RotateCcw size={16} />Reset</button>
           <button className="sm2-btn" onClick={shuffle}><Shuffle size={16} />Shuffle</button>
           <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
+          <Checkbox label="Live re-sort (build the diagonal as it runs)" checked={liveSort} onChange={setLiveSort} />
         </div>
       ) : (
         <div className="sm2-actions">
