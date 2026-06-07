@@ -2,15 +2,21 @@
 /* SPIKE — cross-branch session "control center".
  *
  * Walks every origin/* branch, reads each branch TIP's docs/sessions/ reports
- * WITHOUT checking them out (via `git show <ref>:<path>`), extracts metadata
- * (HTML <script class="report-meta"> island, or Markdown YAML frontmatter), and
- * prints one unified manifest spanning all active branches.
+ * WITHOUT checking them out (via `git show <ref>:<path>`), and unifies them into
+ * one manifest spanning all active branches.
  *
- * This is the piece a per-branch generator fundamentally cannot do: it reads
- * branch tips, not the local working tree. Run after fetching:
+ * Dedup rule: a report is identified by its PATH (which already encodes the
+ * branch-slug folder). The same path can exist on many branches — e.g. anything
+ * merged to main is inherited by every branch cut from main. We surface the
+ * MOST RECENTLY UPDATED version: among the branches that hold a given path, pick
+ * the one whose last commit touching that file is newest, and read its content
+ * there. Each report therefore appears once, at its freshest revision.
+ *
+ * Metadata comes from either an HTML <script class="report-meta"> island or
+ * Markdown YAML frontmatter, so it works today and after the markdown migration.
+ *
+ * Dependency-free. Run after fetching:
  *     git fetch --all && node docs/sessions/build-control-center.mjs
- *
- * Dependency-free. Output: a human summary + a machine manifest (stdout).
  */
 import { execFileSync } from "node:child_process";
 
@@ -57,48 +63,69 @@ const isReport = (p) =>
   /\.(html|md)$/.test(p) &&
   !/\/_/.test(p) && !/\/index\.html$/.test(p);
 
-// 3 · walk every branch tip
-const reports = [];
-const branchInfo = [];
-
+// 3 · for every (branch, report path), record the date that branch last touched it
+//     path -> { winner: {ref, fileDate}, copies: Set<ref> }
+const byPath = new Map();
 for (const ref of branches) {
-  const lastCommit = git(["log", "-1", "--format=%cI", ref]).trim();
   const files = git(["ls-tree", "-r", "--name-only", ref, "--", "docs/sessions"])
     .split("\n").map(s => s.trim()).filter(isReport);
-  let n = 0;
   for (const path of files) {
-    const meta = extractMeta(path, git(["show", `${ref}:${path}`])) || {};
-    reports.push({
-      branch: ref.replace(/^origin\//, ""),
-      lastCommit,
-      kind: meta.kind || (path.includes("/handoff/") ? "handoff" : "progress"),
-      session: meta.session || null,
-      title: meta.title || null,
-      status: meta.status || null,
-      build: meta.build || null,
-      path,
-    });
-    n++;
+    const fileDate = git(["log", "-1", "--format=%cI", ref, "--", path]).trim();
+    const rec = byPath.get(path) || { winner: null, copies: new Set() };
+    rec.copies.add(ref);
+    if (!rec.winner || fileDate > rec.winner.fileDate) rec.winner = { ref, fileDate };
+    byPath.set(path, rec);
   }
-  branchInfo.push({ ref, lastCommit, reports: n });
 }
 
-const byRecency = (a, b) => (b.lastCommit || "").localeCompare(a.lastCommit || "");
-branchInfo.sort(byRecency);
-reports.sort((a, b) => byRecency(a, b) || (b.session || "").localeCompare(a.session || ""));
+// 4 · read the freshest version of each distinct report and build the manifest
+const reports = [];
+for (const [path, rec] of byPath) {
+  const { ref, fileDate } = rec.winner;
+  const meta = extractMeta(path, git(["show", `${ref}:${path}`])) || {};
+  const parts = path.split("/");                       // docs/sessions/<kind>/<slug>/<file>
+  reports.push({
+    slug: meta.slug || parts[3] || "?",
+    kind: meta.kind || parts[2] || "?",
+    session: meta.session || null,
+    title: meta.title || null,
+    status: meta.status || null,
+    build: meta.build || null,
+    updated: fileDate,
+    freshestOn: ref.replace(/^origin\//, ""),
+    inheritedOn: rec.copies.size,                       // how many branches carry this path
+    path,
+  });
+}
 
-// 4 · human-readable summary
-const withReports = branchInfo.filter(b => b.reports > 0);
-console.log(`\nCross-branch session control center  (SPIKE)`);
-console.log(`Scanned ${branches.length} origin branches · ${withReports.length} carry session reports · ${reports.length} reports total\n`);
-for (const b of withReports) {
-  console.log(`■ ${b.ref}   (last commit ${b.lastCommit.slice(0, 10)} · ${b.reports} report${b.reports > 1 ? "s" : ""})`);
-  for (const r of reports.filter(r => "origin/" + r.branch === b.ref)) {
-    console.log(`    ${(r.kind || "?").padEnd(10)} ${(r.session || "?").padEnd(16)} ${("[" + (r.status || "?") + "]").padEnd(16)} ${r.title || r.path.split("/").pop()}`);
+const byRecency = (a, b) => (b.updated || "").localeCompare(a.updated || "");
+reports.sort(byRecency);
+
+// 5 · human-readable control-center view — grouped by session home (slug)
+const slugs = new Map();
+for (const r of reports) {
+  if (!slugs.has(r.slug)) slugs.set(r.slug, []);
+  slugs.get(r.slug).push(r);
+}
+const slugOrder = [...slugs.entries()].sort((a, b) => byRecency(a[1][0], b[1][0]));
+
+const totalCopies = [...byPath.values()].reduce((n, r) => n + r.copies.size, 0);
+console.log(`\nCross-branch session control center  (SPIKE · most-recent-version)`);
+console.log(`Scanned ${branches.length} origin branches · ${reports.length} distinct reports`
+  + ` (deduped from ${totalCopies} branch copies) · ${slugs.size} session homes\n`);
+
+for (const [slug, rs] of slugOrder) {
+  console.log(`■ ${slug}   (latest ${rs[0].updated.slice(0, 10)})`);
+  for (const r of rs) {
+    const inh = r.inheritedOn > 1 ? ` ×${r.inheritedOn}` : "";
+    console.log(`    ${(r.kind || "?").padEnd(10)} ${(r.session || "?").padEnd(16)}`
+      + ` ${("[" + (r.status || "?") + "]").padEnd(15)} ${r.updated.slice(0, 10)}`
+      + ` @${r.freshestOn}${inh}`);
+    if (r.title) console.log(`               ${r.title}`);
   }
   console.log("");
 }
 
-// 5 · machine manifest (this is what would feed the explorer / search index)
+// 6 · machine manifest (feeds the explorer / search index)
 console.log("----- manifest.json -----");
-console.log(JSON.stringify({ generated: new Date().toISOString(), branches: branchInfo, reports }, null, 2));
+console.log(JSON.stringify({ generated: new Date().toISOString(), reports }, null, 2));
