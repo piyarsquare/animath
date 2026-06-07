@@ -5,12 +5,18 @@
  * WITHOUT checking them out (via `git show <ref>:<path>`), and unifies them into
  * one manifest spanning all active branches.
  *
- * Dedup rule: a report is identified by its PATH (which already encodes the
- * branch-slug folder). The same path can exist on many branches — e.g. anything
- * merged to main is inherited by every branch cut from main. We surface the
- * MOST RECENTLY UPDATED version: among the branches that hold a given path, pick
- * the one whose last commit touching that file is newest, and read its content
- * there. Each report therefore appears once, at its freshest revision.
+ * Provenance is the slug folder, full stop: a report at
+ * docs/sessions/<kind>/<slug>/<file> belongs to <slug>, regardless of which
+ * branches carry a copy. The "most recently updated" rule below only decides
+ * WHICH copy's bytes to display when a path exists on several branches — it is
+ * not provenance.
+ *
+ * Dedup rule: a report is identified by its PATH (which encodes the slug). The
+ * same path can exist on many branches — anything merged to main is inherited by
+ * every branch cut from main. We read the MOST RECENTLY UPDATED copy: among the
+ * branches that hold a given path, pick the one whose last commit touching that
+ * file is newest, and read its content there. Each report appears once, owned by
+ * its slug, at its freshest revision.
  *
  * Metadata comes from either an HTML <script class="report-meta"> island or
  * Markdown YAML frontmatter, so it works today and after the markdown migration.
@@ -85,15 +91,13 @@ for (const [path, rec] of byPath) {
   const meta = extractMeta(path, git(["show", `${ref}:${path}`])) || {};
   const parts = path.split("/");                       // docs/sessions/<kind>/<slug>/<file>
   reports.push({
-    slug: meta.slug || parts[3] || "?",
+    slug: parts[3] || "?",                             // provenance = the slug folder
     kind: meta.kind || parts[2] || "?",
     session: meta.session || null,
     title: meta.title || null,
     status: meta.status || null,
     build: meta.build || null,
-    updated: fileDate,
-    freshestOn: ref.replace(/^origin\//, ""),
-    inheritedOn: rec.copies.size,                       // how many branches carry this path
+    updated: fileDate,                                 // date of the surfaced (newest) copy
     path,
   });
 }
@@ -117,11 +121,9 @@ console.log(`Scanned ${branches.length} origin branches · ${reports.length} dis
 for (const [slug, rs] of slugOrder) {
   console.log(`■ ${slug}   (latest ${rs[0].updated.slice(0, 10)})`);
   for (const r of rs) {
-    const inh = r.inheritedOn > 1 ? ` ×${r.inheritedOn}` : "";
     console.log(`    ${(r.kind || "?").padEnd(10)} ${(r.session || "?").padEnd(16)}`
       + ` ${("[" + (r.status || "?") + "]").padEnd(15)} ${r.updated.slice(0, 10)}`
-      + ` @${r.freshestOn}${inh}`);
-    if (r.title) console.log(`               ${r.title}`);
+      + `   ${r.title || r.path.split("/").pop()}`);
   }
   console.log("");
 }
