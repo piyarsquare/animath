@@ -20,14 +20,12 @@ const NS = 'stable-matching';
  *    ranks (A's rank of B, top-left; B's rank of A, bottom-right). The matching
  *    (= current tentative holds) lights up; the active proposal rings; blocking
  *    pairs (if any, at the end) flag red. This is the algorithm, foregrounded. ── */
-function Matrix({ inst, matching, rows, cols, event, blocking, size }: {
+function Matrix({ inst, matching, rows, cols, event, blocking, size, labels }: {
   inst: Instance; matching: Matching; rows: number[]; cols: number[];
-  event: ProposalEvent | null; blocking: Set<string>; size: number;
+  event: ProposalEvent | null; blocking: Set<string>; size: number; labels: boolean;
 }) {
   const n = inst.n;
   const showNums = size >= 30;
-  // shared BuRd diverging scale: blue = best rank (1) → white → red = worst (n).
-  // Square (A) and circle (B) use the SAME scale; shape, not hue, tells them apart.
   const BURD = [[33, 102, 172], [103, 169, 207], [247, 247, 247], [239, 138, 98], [178, 24, 43]];
   const rankColor = (r: number) => {
     const t = n > 1 ? (r - 1) / (n - 1) : 0;
@@ -36,12 +34,12 @@ function Matrix({ inst, matching, rows, cols, event, blocking, size }: {
     return `rgb(${c[0]},${c[1]},${c[2]})`;
   };
   return (
-    <div className="sm2-matrix" style={{ gridTemplateColumns: `2.2em repeat(${cols.length}, ${size}px)` }}>
-      <div className="sm2-corner" />
-      {cols.map(j => <div key={`h${j}`} className="sm2-chead">B{j}</div>)}
+    <div className="sm2-matrix" style={{ gridTemplateColumns: `${labels ? '1.8em ' : ''}repeat(${cols.length}, ${size}px)` }}>
+      {labels && <div className="sm2-corner" />}
+      {labels && cols.map(j => <div key={`h${j}`} className="sm2-chead">{j}</div>)}
       {rows.map(i => (
         <React.Fragment key={`r${i}`}>
-          <div className="sm2-rhead">A{i}</div>
+          {labels && <div className="sm2-rhead">{i}</div>}
           {cols.map(j => {
             const aR = inst.rankA[i][j] + 1, bR = inst.rankB[j][i] + 1;
             const matched = matching.a[i] === j;
@@ -99,7 +97,8 @@ export default function StableMatching() {
   const [proposer, setProposer] = usePersistentState<'A' | 'B' | 'market'>(`${NS}:proposer`, 'A');
   const [bias, setBias] = usePersistentState(`${NS}:bias`, 50);
   const [speed, setSpeed] = usePersistentState(`${NS}:speed`, 50);
-  const [sortQ, setSortQ] = usePersistentState(`${NS}:sortQ`, true);
+  const [order, setOrder] = usePersistentState<'attract' | 'index'>(`${NS}:order`, 'attract');
+  const [showLabels, setShowLabels] = usePersistentState(`${NS}:labels`, true);
 
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -140,8 +139,17 @@ export default function StableMatching() {
     return s;
   }, [done, matching, inst, n]);
 
-  const rows = useMemo(() => { const ids = Array.from({ length: n }, (_, i) => i); return sortQ ? ids.sort((a, b) => inst.qualityA[b] - inst.qualityA[a]) : ids; }, [n, sortQ, inst]);
-  const cols = useMemo(() => { const ids = Array.from({ length: n }, (_, i) => i); return sortQ ? ids.sort((a, b) => inst.qualityB[b] - inst.qualityB[a]) : ids; }, [n, sortQ, inst]);
+  // average attractiveness = mean rank a member receives in the OTHER side's lists
+  // (lower = more wanted). A principled ordering derived from the preferences
+  // themselves; at high consensus it coincides with the shared desirability order.
+  const attract = useMemo(() => {
+    const a = new Array(n).fill(0), b = new Array(n).fill(0);
+    for (let i = 0; i < n; i++) { let s = 0; for (let j = 0; j < n; j++) s += inst.rankB[j][i]; a[i] = s / n; }
+    for (let j = 0; j < n; j++) { let s = 0; for (let i = 0; i < n; i++) s += inst.rankA[i][j]; b[j] = s / n; }
+    return { a, b };
+  }, [inst, n]);
+  const rows = useMemo(() => { const ids = Array.from({ length: n }, (_, i) => i); return order === 'attract' ? ids.sort((x, y) => attract.a[x] - attract.a[y]) : ids; }, [n, order, attract]);
+  const cols = useMemo(() => { const ids = Array.from({ length: n }, (_, i) => i); return order === 'attract' ? ids.sort((x, y) => attract.b[x] - attract.b[y]) : ids; }, [n, order, attract]);
 
   useEffect(() => {
     if (!playing) { if (timer.current) { clearInterval(timer.current); timer.current = null; } return; }
@@ -159,8 +167,8 @@ export default function StableMatching() {
       const w = el.clientWidth;
       const top = el.getBoundingClientRect().top;
       const availH = window.innerHeight - top - 64;   // room for legend + bottom padding
-      const byW = (w - 40) / n - 3;                    // minus row header + per-cell gap
-      const byH = (availH - 22) / n - 3;               // minus column header
+      const byW = (w - (showLabels ? 34 : 6)) / n - 3; // minus row header + per-cell gap
+      const byH = (availH - (showLabels ? 22 : 6)) / n - 3; // minus column header
       setCellSize(Math.max(12, Math.min(80, Math.floor(Math.min(byW, byH)))));
     };
     measure();
@@ -168,7 +176,7 @@ export default function StableMatching() {
     ro.observe(el);
     window.addEventListener('resize', measure);
     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
-  }, [n, view]);
+  }, [n, view, showLabels]);
 
   const reset = useCallback(() => { setPlaying(false); setStep(0); }, []);
   const shuffle = useCallback(() => setSeed(s => (s * 1103515245 + 12345) & 0x7fffffff), [setSeed]);
@@ -231,7 +239,8 @@ export default function StableMatching() {
         {proposer === 'market' && <Slider label="Bias toward A" value={bias} min={0} max={100} step={1} onChange={setBias} format={v => `${v}%`} />}
       </Section>
       <Section title="Display" icon="◧">
-        <Checkbox label="Order by global preference (reveals the diagonal at high consensus)" checked={sortQ} onChange={setSortQ} />
+        <Pills label="Order rows & columns" value={order} onChange={setOrder} options={[{ value: 'attract', label: 'By attractiveness' }, { value: 'index', label: 'Original' }]} />
+        <Checkbox label="Show index labels" checked={showLabels} onChange={setShowLabels} />
       </Section>
     </ShellSettings>
   );
@@ -293,7 +302,7 @@ export default function StableMatching() {
             </div>
           </div>
           <div className="sm2-matrix-wrap" ref={matrixWrap}>
-            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} event={event} blocking={blocking} size={cellSize} />
+            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} event={event} blocking={blocking} size={cellSize} labels={showLabels} />
             <p className="sm2-legend"><span className="k sq">square = A's rank of B</span><span className="k disc">circle = B's rank of A</span><span className="k scale">blue #1 → red last</span><span className="k matched">held / matched</span><span className="k active">proposing</span><span className="k blocking">blocking</span></p>
           </div>
         </div>
