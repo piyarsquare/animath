@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { makeCharacter } from './character';
-import { makeFundamentalSquareDecor } from './decor';
+import { makeFundamentalSquareDecor, DecorProp, DEFAULT_PROPS } from './decor';
 import { makeEuclideanCover } from './euclideanCover';
 import { makeSphericalCover } from './sphericalCover';
 import { CoverModel } from './coverModel';
@@ -15,6 +15,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 export interface EngineOptions {
   squareSize?: number;
   floorThickness?: number;
+  props?: readonly DecorProp[];
 }
 
 /**
@@ -37,7 +38,7 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
   dir.position.set(0.5, 1, 0.35);
   root.add(dir);
 
-  const decor = makeFundamentalSquareDecor();
+  const decor = makeFundamentalSquareDecor(opts.props ?? DEFAULT_PROPS);
 
   const coverDeps = { deps, root, spec, decor, squareSize, floorThickness };
   const cover: CoverModel = geom.cover === 'spherical'

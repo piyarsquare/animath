@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import { ShellActions, ShellSettings, useAppHeader, useAppExplainer } from '../../components/AppShell';
 import { Section, Slider, Select, Checkbox } from '../../components/ControlPanel';
 import { WORLDS, worldById, WorldSpec, deriveGeometry } from './worldSpec';
+import { generateProps, ARRANGEMENTS, ArrangementId } from './decor';
 import { makeFundamentalSquareEngine } from './fundamentalSquareEngine';
 import {
   EngineDeps, PolygonEngine, SquareMapState,
@@ -26,9 +27,12 @@ export default function PolygonWorlds() {
   const [squareSize, setSquareSize] = useState(DEFAULT_SQUARE_SIZE);
   const [floorThickness, setFloorThickness] = useState(DEFAULT_FLOOR_THICKNESS);
   const [planetRadius, setPlanetRadius] = useState(DEFAULT_RADIUS);
+  const [landmarkCount, setLandmarkCount] = useState(7);
+  const [arrangement, setArrangement] = useState<ArrangementId>('scattered');
 
   const spec = worldById(worldId);
   const isSpherical = deriveGeometry(spec).cover === 'spherical';
+  const props = useMemo(() => generateProps(landmarkCount, arrangement), [landmarkCount, arrangement]);
   useAppHeader('Polygon Worlds', spec.short);
   useAppExplainer(explainerText);
 
@@ -47,6 +51,7 @@ export default function PolygonWorlds() {
   const thickRef = useRef(floorThickness);
   const opacityRef = useRef(floorOpacity);
   const radiusRef = useRef(planetRadius);
+  const propsRef = useRef(props);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
 
@@ -56,7 +61,7 @@ export default function PolygonWorlds() {
     const deps: EngineDeps = { scene, camera, renderer };
     depsRef.current = deps;
     engineRef.current = makeFundamentalSquareEngine(deps, worldRef.current, {
-      squareSize: sizeRef.current, floorThickness: thickRef.current,
+      squareSize: sizeRef.current, floorThickness: thickRef.current, props: propsRef.current,
     });
     engineRef.current.setFloorOpacity(opacityRef.current);
     engineRef.current.setRadius(radiusRef.current);
@@ -80,18 +85,20 @@ export default function PolygonWorlds() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Rebuild the engine when the world changes (different cover/gluing).
+  // Rebuild the engine when the world changes (different cover/gluing) or when the
+  // landmark set changes (count/arrangement → the decor is rebuilt).
   useEffect(() => {
     worldRef.current = spec;
+    propsRef.current = props;
     const deps = depsRef.current;
     if (!deps || !engineRef.current) return;
     engineRef.current.dispose();
     engineRef.current = makeFundamentalSquareEngine(deps, spec, {
-      squareSize: sizeRef.current, floorThickness: thickRef.current,
+      squareSize: sizeRef.current, floorThickness: thickRef.current, props,
     });
     engineRef.current.setFloorOpacity(opacityRef.current);
     engineRef.current.setRadius(radiusRef.current);
-  }, [spec]);
+  }, [spec, props]);
 
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
   useEffect(() => { thirdRef.current = thirdPerson; }, [thirdPerson]);
@@ -158,6 +165,8 @@ export default function PolygonWorlds() {
         <Section title="World" icon="⬚" defaultOpen>
           <Select label="Gluing" options={worldOptions} value={worldId} onChange={setWorldId} />
           <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
+          <Slider label="Landmarks" value={landmarkCount} min={1} max={14} step={1} onChange={(v) => setLandmarkCount(Math.round(v))} format={(v) => `${Math.round(v)}`} />
+          <Select label="Arrangement" options={ARRANGEMENTS.map((a) => ({ value: a.id, label: a.label }))} value={arrangement} onChange={(v) => setArrangement(v as ArrangementId)} />
           {!isSpherical && (
             <Slider label="Square size" value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
           )}
