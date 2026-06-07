@@ -21,39 +21,36 @@ fix, investigate, or run any code (except `npm run build` for build status).
    (pass / fail + first error).
 5. Write the handoff to `docs/sessions/handoff/<branch-slug>/` with the **same
    filename** as the progress report (create the folder if needed).
-6. Regenerate the dashboard: run `node docs/sessions/build-index.mjs` (rewrites
-   `docs/sessions/index.html` from the reports' metadata islands).
+6. Regenerate the cross-branch control center: run `npm run sessions`
+   (`docs/sessions/build-sessions.mjs` — converts every branch's reports to
+   Markdown, renders the rich HTML, and rebuilds `control-center.html`).
 
 ## Path & Filename Convention
 
 Session logs are committed and partitioned per branch:
-`docs/sessions/handoff/<branch-slug>/YYYY-MM-DD-SNN-description.html` — the filename
-must match the progress report exactly (including the `.html` extension), and the
+`docs/sessions/handoff/<branch-slug>/YYYY-MM-DD-SNN-description.md` — the filename
+must match the progress report exactly (including the `.md` extension), and the
 `<branch-slug>` folder must match the one the progress report lives in.
 
 ## Document Structure
 
-Copy the canonical skeleton `docs/sessions/_template-handoff.html` and fill in the
-`[bracketed]` placeholders. It is a **self-contained HTML document** linking
-`../../report.css` + `../../report.js` and carrying a `report-meta` JSON island
-(keep it accurate — the dashboard reads it). Always includes: **status/branch/PR/
-build** in the header `dl.meta`; **What changed** (or "What we found" / "The
-problem"); **Key files**; **Pending / not done**; **Context**; **Self-reflection**.
+Copy `docs/sessions/_template-handoff.md` and fill in the `[bracketed]` parts. It is
+**Markdown + YAML frontmatter** (full spec: `docs/sessions/REPORT_STYLE.md`). The
+frontmatter carries **status / branch / pr / build** (keep it accurate — the control
+center indexes it). Always includes: **Summary**; **What changed** (or "What we
+found" / "The problem"); **Key files**; **Open / not done**; **Context**;
+**Self-reflection**.
 
-Use the stylesheet's components rather than hand-rolling:
+- **Key files** in a Markdown table. Make each `file:line` a real link pinned to the
+  commit `<SHA>` so it doesn't rot:
+  `[\`path:line\`](https://github.com/piyarsquare/animath/blob/<SHA>/<path>#L<line>)`.
+- **Callouts** use GitHub alerts for the one thing the next agent must know:
+  `> [!CAUTION]` (gotcha) / `> [!IMPORTANT]` (decision) / `> [!WARNING]` / `> [!NOTE]`.
+- Sections are `##` headings; the rendered view builds the TOC, anchors, and
+  scroll-spy automatically.
 
-- **Key files** in a `<table>` with `<th data-sort>` headers (sortable via
-  `report.js`). Make each `file:line` a real link — wrap it
-  `<a class="codelink" href="https://github.com/piyarsquare/animath/blob/<SHA>/<path>#L<line>"><code>path:line</code></a>`
-  and **pin to the commit `<SHA>`** so links don't rot.
-- **Callouts** for the one thing the next agent must know:
-  `<p class="callout callout-gotcha"><span class="callout-label">Gotcha</span>…</p>`.
-- The TOC, anchors and scroll-spy build themselves from the `<h2>` sections inside
-  `<div class="content">` — no manual upkeep.
-
-Append the **Self-Reflection Protocol** (`.claude/prompts/self-reflection.md`) as the
-HTML `<section class="self-reflection">` shown there, just before `</div>` (end of
-`.content`).
+Append the **Self-Reflection Protocol** (`.claude/prompts/self-reflection.md`) as a
+`## Self-reflection` section at the end (convert its HTML to the equivalent Markdown).
 
 ## Rules
 
