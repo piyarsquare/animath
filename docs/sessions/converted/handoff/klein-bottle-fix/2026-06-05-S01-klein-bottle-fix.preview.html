@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<!-- GENERATED from /home/user/animath/docs/sessions/converted/handoff/klein-bottle-fix/2026-06-05-S01-klein-bottle-fix.md by render-report.mjs — edit the .md, not this. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Klein Bottle Fix</title>
+  <link rel="stylesheet" href="../../../report.css">
+  <script defer src="../../../report.js"></script>
+  <script type="application/json" class="report-meta">
+{
+  "kind": "handoff",
+  "session": "2026-06-05-S01",
+  "date": "2026-06-05",
+  "title": "Klein Bottle Fix",
+  "branch": "claude/klein-bottle-fix",
+  "slug": "klein-bottle-fix",
+  "status": "in-progress",
+  "build": "passed",
+  "followup": "high",
+  "pr": null
+}
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">handoff</p>
+    <h1>Klein Bottle Fix</h1>
+    <dl class="meta">
+      <div><dt>Session</dt><dd>2026-06-05-S01</dd></div>
+      <div><dt>Branch</dt><dd><code>claude/klein-bottle-fix</code></dd></div>
+      <div><dt>Status</dt><dd><span class="badge badge-warn">in-progress</span></dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-ok">build: passed</span></dd></div>
+    </dl>
+  </header>
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+<h1>Klein Bottle Fix</h1>
+<h2>What changed</h2>
+<p>The session started from a presentation bug (the flat Klein bottle is intrinsically flat, so crossing the glue edge produced no felt event) and grew into a broad closed-surface tour. In commit order, grouped:</p>
+<ul>
+<li><strong>Flat Klein made legible</strong> — each universal-cover cell carries a <code>trees</code> and a <code>columns</code> group toggled by red-crossing parity (Klein only; torus shows columns everywhere). Glass floor + a real mirrored <strong>underside world</strong> (<code>under</code> group, <code>scale(1,−1,−1)</code>) wearing the <em>opposite</em> skin; footprint trail rebuilt to one print per step on the side you walk, returning reversed-and-face-down under the glass after a twist. Avatar can project into every cell with the correct 2L-twist / L-roll period.</li>
+<li><strong>Mini-map</strong> of the square fundamental domain with identification arrows (single chevrons on the roll pair, opposed double chevrons for the Klein flip), driven by a per-frame <code>FlatMapState</code>.</li>
+<li><strong>New spherical engine</strong> (<code>sphericalEngine.ts</code>) — walk great circles on a fixed planet; ℝP² = antipodal identification with a mirror-reversed twin trail. Registered <code>sphere</code> / <code>rp2</code> surfaces (family <code>spherical</code>), a third &quot;Curved (sphere)&quot; pill, mini-map, planet-radius slider, markers, per-cover-cell colouring.</li>
+<li><strong>ℝP² inner shell</strong> — the spherical analogue of the flat glass underside: a radial-mirror inner surface (rebuilt to match the Klein floor&#39;s construction after two earlier attempts) wearing the opposite skin (column under tree), revealed by the shared glass-opacity knob.</li>
+<li><strong>Cohesive-picture defaults (final commit)</strong> — glass floor + tree/column pairing now <strong>on by default</strong> in both rectangular worlds at <strong>35%</strong> opacity; fixed the glass floor doing nothing on the default sphere surface. Corridor (Möbius) left untouched.</li>
+</ul>
+<div class="callout callout-gotcha"><span class="callout-label">Caution</span>
+
+<p><strong>Gotcha</strong> Nothing here was verified in a running WebGL context — there is no headless GL in this environment. Every milestone&#39;s geometry/transform logic was checked by hand (coordinate traces), but the walk feel, strafe handedness, the flat trees⇄columns flip across the red edge, the underside reading at 35%, and the ℝP² inner-shell / antipodal-trail reversal all still need a human eye in the app. Treat the branch as <em>logically complete, visually unverified</em>.</p>
+
+</div>
+
+<h2>Key files</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/3c32618/src/animations/TopologyWalk/TopologyWalk.tsx#L45"><code>TopologyWalk.tsx:45</code></a></td>
+<td>Default state: spawns on <code>klein</code>, <code>floorOpacity=0.35</code> (L57), <code>colorCells=false</code> (L58), <code>innerShell=true</code> = the &quot;Glass floor — see the underside&quot; toggle (L60), <code>projectAvatar=true</code> (L56). Family gating for flat-only vs spherical-only controls.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/3c32618/src/animations/TopologyWalk/flatEngine.ts#L191"><code>flatEngine.ts:191</code></a></td>
+<td>Flat torus/Klein engine. Per-cell <code>under</code> group (<code>scale(1,−1,−1)</code>, L205) = the mirrored underside world with opposite skin; trees/columns parity toggle; glass floor + footprint trail. ~549 lines.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/3c32618/src/animations/TopologyWalk/sphericalEngine.ts#L273"><code>sphericalEngine.ts:273</code></a></td>
+<td>Spherical sphere/ℝP² engine. <code>applyInnerShell()</code> (L321) + <code>setFloorOpacity</code> (L364) drive the radial-mirror inner shell / glass; <code>glassOpacity</code> is shared with the flat floor-opacity knob (L155-157). ~500 lines (new this session).</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/3c32618/src/animations/TopologyWalk/engine.ts#L30"><code>engine.ts:30</code></a></td>
+<td><code>SURFACES</code> registry (3 families: corridor / flat / spherical) + <code>EngineOptions</code> (shared knobs: <code>miniMap</code>, <code>projectAvatar</code>, <code>floorOpacity</code>, …) + the <code>WorldEngine</code> interface with optional family-specific setters.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/3c32618/docs/topology-walk-surface-tour.md"><code>docs/topology-walk-surface-tour.md</code></a></td>
+<td>Roadmap: polygon+gluing organising idea, Gauss–Bonnet, the polygon ladder, three-engine architecture, status checklist, open questions (immersion inset, hyperbolic projection, how far to push).</td>
+</tr>
+<tr>
+<td><a href="../../progress/klein-bottle-fix/2026-06-05-S01-klein-bottle-fix.html"><code>…/progress/…/S01-klein-bottle-fix.html</code></a></td>
+<td>Full session timeline (every milestone) + the &quot;Next session — unify the framework&quot; section this handoff distills.</td>
+</tr>
+</tbody></table>
+<p>Code links are pinned to commit <code>3c32618</code> so they don&#39;t rot.</p>
+<h2>Pending / not done — next session: unify the two rectangular worlds</h2>
+<p>The flat family (torus/Klein) and the spherical family (sphere/ℝP²) both glue a <strong>square fundamental domain</strong> and now do conceptually the same thing (glass/opacity, trees⇄columns cover skins, the mirror-to-the-other-side move, the square mini-map, per-cell colouring) through largely parallel-but-separate code. The explicit goal for the next session is to <strong>unify that into one surface-presentation framework</strong>:</p>
+<ul>
+<li>Fold the duplicated presentation logic + the two sets of UI gating in <code>TopologyWalk.tsx</code> into a common layer rather than per-family paths.</li>
+<li>Make the &quot;mirror to the glued other side&quot; a single shared concept — flat glass underside ⇄ ℝP² inner shell are <em>both already built as radial mirrors</em>; name/factor them identically. (Note: the <code>innerShell</code> state already doubles as the flat &quot;glass floor&quot; toggle — partial unification is in place; finish it.)</li>
+<li>One square-fundamental-domain mini-map renderer parameterised by the edge-identification rule (torus / Klein / ℝP²).</li>
+<li><strong>Decision pending:</strong> the shared 35% opacity default is one value for both flat floor and planet glass — confirm with the user whether to keep it shared or split into separate defaults. Likewise the flat &quot;Colour each cover cell&quot; tint defaults off — ask whether to default it on too.</li>
+<li><strong>Verification debt:</strong> the in-app walk-through listed in the Gotcha above. This should happen before any PR.</li>
+</ul>
+<h2>Context</h2>
+<ul>
+<li>First (and so far only) tracked session on this branch; no prior handoff under <code>docs/sessions/handoff/klein-bottle-fix/</code>. The most recent cross-branch handoff (<a href="../../handoff/better-reports/2026-06-05-S01-rich-html-reports.html">better-reports · S01</a>, PR <a href="https://github.com/piyarsquare/animath/pull/183">#183</a>) was the docs/report tooling and is unrelated.</li>
+<li><strong>Shared-file overlap:</strong> all changes are confined to <code>src/animations/TopologyWalk/</code> + the roadmap doc + session reports — no edits to the append-only shared files (<code>index.tsx</code>, <code>apps.ts</code>, <code>README.md</code>, <code>CLAUDE.md</code>), so a <code>git merge origin/main</code> before any PR should be clean. TopologyWalk was already a registered route.</li>
+<li><strong>Persisted settings:</strong> TopologyWalk uses local <code>useState</code> (not <code>usePersistentState</code>), so the new defaults take effect immediately for everyone — no stale localStorage to clear.</li>
+<li>Not started (roadmap stretch): the cross-cap / Roman / Boy&#39;s-surface immersion inset, the hexagonal flat torus, and a hyperbolic engine for genus-2.</li>
+</ul>
+<h2>Self-reflection</h2>
+<ol>
+<li><strong>What would you do with another session?</strong> Exactly the stated next step: unify the flat and spherical square-domain code into one presentation framework, then do the in-app walk-through to convert the whole branch from &quot;logically complete&quot; to &quot;verified.&quot;</li>
+<li><strong>What would you change about what you produced?</strong> I built the spherical engine as a near-parallel copy of the flat one rather than factoring the shared surface-presentation concept up front — which is precisely the debt the next session has to pay. Earlier abstraction would have avoided the three-attempt iteration on the ℝP² inner shell.</li>
+<li><strong>What were you not asked that you think is important?</strong> Whether the flat floor and planet glass should really share one opacity value, and whether the cover-cell tint should default on — both flagged for the user.</li>
+<li><strong>What did we both overlook?</strong> No in-app verification was ever possible here, yet a lot of subtle chirality/handedness logic was shipped on hand-traced confidence. A screenshot or recorded walk from the user at any checkpoint would have de-risked it.</li>
+<li><strong>What did you find difficult?</strong> Reasoning about orientation-reversing transforms (the under-group <code>scale(1,−1,−1)</code>, the antipodal twin, the radial-mirror inner shell) correctly without being able to see the result — easy to get a sign or a face-cull wrong silently.</li>
+<li><strong>What would have made this task easier?</strong> Headless WebGL (or an agreed screenshot loop) so transform/lighting/handedness could be checked per commit instead of accumulating verification debt.</li>
+<li><strong>Follow-up value:</strong> HIGH — the branch is unverified visually and the unification refactor is explicitly the next session&#39;s job; output may be visually wrong in ways the build can&#39;t catch.</li>
+</ol>
+
+    </div>
+  </div>
+</main>
+</body>
+</html>

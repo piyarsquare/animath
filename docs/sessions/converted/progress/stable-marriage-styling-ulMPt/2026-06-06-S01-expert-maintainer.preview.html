@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<!-- GENERATED from /home/user/animath/docs/sessions/converted/progress/stable-marriage-styling-ulMPt/2026-06-06-S01-expert-maintainer.md by render-report.mjs — edit the .md, not this. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Three Hats — Framework Maintainer (Stable Marriage)</title>
+  <link rel="stylesheet" href="../../../report.css">
+  <script defer src="../../../report.js"></script>
+  <script type="application/json" class="report-meta">
+{
+  "kind": "three-hats",
+  "session": "2026-06-06-S01",
+  "date": "2026-06-06",
+  "title": "Three Hats — Framework Maintainer (Stable Marriage)",
+  "branch": "claude/stable-marriage-styling-ulMPt",
+  "slug": "stable-marriage-styling-ulMPt",
+  "status": "completed",
+  "build": "unknown",
+  "followup": null,
+  "pr": null
+}
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">three-hats</p>
+    <h1>Three Hats — Framework Maintainer (Stable Marriage)</h1>
+    <dl class="meta">
+      <div><dt>Session</dt><dd>2026-06-06-S01</dd></div>
+      <div><dt>Branch</dt><dd><code>claude/stable-marriage-styling-ulMPt</code></dd></div>
+      <div><dt>Status</dt><dd><span class="badge badge-ok">completed</span></dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-warn">build: unknown</span></dd></div>
+    </dl>
+  </header>
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+<h1>Three Hats — Framework Maintainer (Stable Marriage)</h1>
+<h2>Scope &amp; method</h2>
+<p>I reviewed the four subject files as-is — <code>StableMarriage.tsx</code> (1243 lines), <code>stableMarriage.css</code> (752 lines), <code>EXPLAINER.md</code>, <code>README.md</code> — against the framework contract in <code>CLAUDE.md</code>, the integration API in <code>components/AppShell.tsx</code>, the shared primitives in <code>components/ControlPanel.tsx</code>, and the closest peer lab, <code>AgenticSorting</code>. I also skimmed <code>Correspondence/PlaybackFloater.css</code> for the project&#39;s &quot;advanced effects&quot; vocabulary (backdrop-filter glass, draggable floaters). I did not run <code>npm run build</code>; this is a static read, so I flag the one place where I am uncertain about a compile-level concern.</p>
+<p>My lens is institutional. I care whether this app understands <em>why</em> the framework is shaped the way it is, whether it repeats abandoned patterns, whether it is safe to merge alongside the other in-flight branches, and whether the code is healthier or messier than the surrounding corpus. I am skeptical of cleverness that no app needs and biased toward working code.</p>
+<h2>Verdict up front</h2>
+<p>This is a <strong>competent, self-contained DOM/CSS lab that conforms to the framework where it matters and is parallel-branch safe</strong>. It correctly uses <code>useAppHeader</code> + <code>useAppExplainer</code>, ships both markdown files, scopes all CSS under <code>.sm-*</code>, and touches no shared files in its own folder. The Gale–Shapley core is essentially correct, with one subtle modelling caveat worth a sentence in the explainer. The biggest gaps are: (1) it <strong>hand-rolls its entire control/action surface inside the canvas</strong> instead of using <code>ShellSettings</code>/<code>ShellActions</code> — defensible by peer precedent but a real divergence from the bar/drawer model; (2) it <strong>persists nothing</strong> despite <code>usePersistentState</code> being the documented norm; and (3) the styling, while clean, is a notch below the &quot;advanced effects&quot; peers and duplicates a fair amount of chrome the framework already supplies. None of this blocks a merge. See the prioritized list in the <a href="#verdict">Verdict</a> section.</p>
+<h2>Framework / AppShell conformance</h2>
+<h3>What it does right</h3>
+<ul>
+<li><strong>Header + explainer hooks.</strong> <code>useAppHeader(&#39;Stable Marriage&#39;)</code> and <code>useAppExplainer(explainerText)</code> at <code>StableMarriage.tsx:519–520</code> are exactly the contract. The explainer is imported via <code>./EXPLAINER.md?raw</code> (line 24), matching the documented convention and the peer.</li>
+<li><strong>Self-contained folder.</strong> Everything lives under <code>src/animations/StableMarriage/</code>; the component imports only from <code>../../components/AppShell</code> and its own CSS. No edits to other apps&#39; code. This is the single most important parallel-branch property and it holds.</li>
+<li><strong>CSS namespacing.</strong> Every selector is prefixed <code>.sm-*</code> (or scoped under <code>.sm-app</code>, e.g. the token block at <code>stableMarriage.css:6–31</code>), so it cannot leak into the shell or a sibling app. The peer uses an <code>.as-*</code> prefix the same way. Good hygiene.</li>
+<li><strong>It does not fight the shell.</strong> The inline header at <code>StableMarriage.tsx:1182–1198</code> deliberately omits the app name (the comment at 1183–1184 shows the author understood the name lives in the bar) and keeps only a subtitle + mode toggle. That awareness is exactly what I want to see.</li>
+</ul>
+<h3>The divergence: hand-rolled UI vs ShellSettings / ShellActions</h3>
+<p>The framework&#39;s whole reason for existing is that apps render controls into the <strong>Settings</strong> and <strong>Actions</strong> drawer tabs (and the <code>ActionFloater</code>) via <code>/</code> portals (<code>AppShell.tsx:270–302</code>), built from the shared <code>ControlPanel</code> primitives (<code>Section</code>, <code>Slider</code>, <code>Pills</code>, <code>Select</code>, <code>Checkbox</code>). StableMarriage uses <strong>none</strong> of them. Its &quot;Visualizer Controls&quot;, play/step/finish/reset actions, and lab controls are all hand-built <code>, custom </code>, and custom `` components rendered inline in the canvas (<code>StableMarriage.tsx:859–952</code>, <code>1087–1133</code>).</p>
+<div class="callout callout-note"><span class="callout-label">Note</span>
+
+<p><strong>Context</strong> This is <strong>not unprecedented</strong>. The closest peer, <code>AgenticSorting</code>, does the same: it imports only <code>useAppHeader</code> + <code>useAppExplainer</code> (verified — <code>AgenticSorting.tsx:6</code> is its only AppShell import; no <code>Shell*</code> reference) and renders its own sidebar of cards. The grep confirms which apps <em>do</em> use the portals: ComplexParticles, PlaneTransform, the Trinary trio, TopologyWalk, FractalsGPU, Correspondence — i.e. the 3D/2D viewers, where the shell chrome is the only UI surface. The two CSS/DOM labs both opted out. So the maintainer-honest read is: <em>the DOM labs have established their own sub-convention of an in-canvas control panel.</em> StableMarriage follows the peer, not the headline framework.</p>
+
+</div>
+
+<div class="callout callout-warn"><span class="callout-label">Warning</span>
+
+<p><strong>Concern</strong> The cost is real, even if precedented. With a hand-rolled surface: (a) the bar&#39;s <strong>▶ Actions</strong> button stays dim and the Actions/Settings drawer reads &quot;No actions for this view&quot; / &quot;No settings for this view&quot; — a user who opens the drawer (the framework&#39;s primary affordance) finds nothing, which is mildly confusing; (b) the app reimplements buttons, sliders, number inputs, a collapsible-section feel, and tab styling that <code>ControlPanel.css</code> + <code>ControlPanel.tsx</code> already provide, including the touch-friendly range thumbs at <code>stableMarriage.css:733–748</code> that duplicate the peer&#39;s and the primitives&#39;; (c) it can drift visually from the rest of the suite. I would <em>not</em> demand a rewrite — the peer precedent makes that an over-correction — but the framework would be healthier if at least the transport controls (Play/Step/Finish/Reset) lived in <code>ShellActions</code> so the bar button lights up and the floater works. That is the single highest-leverage conformance change.</p>
+
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Contract</th>
+<th>Status</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>useAppHeader</code></td>
+<td>yes</td>
+<td>tsx:519</td>
+</tr>
+<tr>
+<td><code>useAppExplainer</code> + <code>EXPLAINER.md?raw</code></td>
+<td>yes</td>
+<td>tsx:24,520</td>
+</tr>
+<tr>
+<td><code>README.md</code> shipped</td>
+<td>yes (but unrendered — see below)</td>
+<td>README.md</td>
+</tr>
+<tr>
+<td><code>ShellSettings</code> / <code>ShellActions</code></td>
+<td>not used</td>
+<td>peer parity w/ AgenticSorting</td>
+</tr>
+<tr>
+<td><code>ControlPanel</code> primitives</td>
+<td>not used</td>
+<td>hand-rolled, tsx:259–280</td>
+</tr>
+<tr>
+<td><code>usePersistentState</code> for settings</td>
+<td>not used</td>
+<td>plain <code>useState</code> throughout</td>
+</tr>
+<tr>
+<td>Self-contained folder / no shared-file edits</td>
+<td>yes</td>
+<td>—</td>
+</tr>
+<tr>
+<td>CSS namespaced</td>
+<td>yes</td>
+<td><code>.sm-*</code></td>
+</tr>
+</tbody></table>
+<h3>README.md is shipped but never rendered</h3>
+<p>The app ships a <code>README.md</code> (the longer &quot;About&quot; write-up), but nothing imports it. <code>ParticleViewerShell</code> viewers render their README automatically; custom apps render it if they choose. StableMarriage chose not to — the longer description is dead content. Either wire it into an About surface or fold its one extra sentence into the EXPLAINER and drop the file. As-is it is the kind of orphan the tech-debt list warns about (cf. the &quot;Orphaned utilities&quot; item in <code>CLAUDE.md</code>).</p>
+<h2>Persistence (the missing usePersistentState)</h2>
+<p><code>CLAUDE.md</code> is explicit: &quot;<em>Persisted settings: <code>usePersistentState</code> … is a drop-in <code>useState</code> that mirrors to localStorage … so a user&#39;s controls survive a reload.</em>&quot; StableMarriage uses plain <code>useState</code> for every setting: <code>n</code>, <code>corrMen</code>, <code>corrWomen</code>, <code>bias</code>, <code>speed</code>, <code>sortByPopularity</code>, <code>appMode</code>, and the lab knobs (<code>StableMarriage.tsx:521–549</code>). On reload everything resets to defaults.</p>
+<div class="callout callout-decision"><span class="callout-label">Important</span>
+
+<p><strong>Recommendation</strong> These are textbook <em>settings</em> (not transient view state), so they should be <code>usePersistentState(&#39;stable-marriage:n&#39;, 20)</code> etc. This is a small, mechanical, low-risk change and a clear framework-norm gap. (To be fair, AgenticSorting also doesn&#39;t persist — the grep shows no <code>usePersistentState</code> in any animation file — so this is a corpus-wide soft spot, not a StableMarriage-specific sin. But &quot;the peer also skipped it&quot; is not a reason to keep skipping it.)</p>
+
+</div>
+
+<h2>Gale–Shapley correctness</h2>
+<p>There are two simulators: the interactive stepper (<code>stepSimulation</code>, <code>tsx:593–678</code>) and the headless batch runner for the lab (<code>runHeadlessSimulation</code>, <code>tsx:134–253</code>). They implement the <em>same</em> algorithm twice — a duplication concern I return to below — and both are essentially correct deferred-acceptance with a twist.</p>
+<h3>The &quot;mixed proposer&quot; model is non-standard but internally consistent</h3>
+<p>Classic Gale–Shapley has one fixed proposing side. This app lets <em>both</em> sides propose, choosing each round&#39;s proposer by a <code>bias</code> coin flip (<code>tsx:620–642</code>). A man holds a <code>menNextProposal</code> cursor and proposes down his own list; a woman does the symmetric thing. Acceptance is the standard &quot;receiver keeps whoever they prefer&quot; test (<code>tsx:647–664</code>). This is a legitimate generalization and it still converges and still produces a stable matching <em>at termination</em> — the receiver-improvement invariant holds regardless of which side proposes, because a receiver only ever trades up.</p>
+<div class="callout callout-note"><span class="callout-label">Note</span>
+
+<p><strong>Subtlety worth one sentence</strong> The classic <strong>proposer-optimality theorem</strong> (every proposer gets their best stable partner) is a property of the <em>single-side</em> algorithm. The EXPLAINER states it flatly under &quot;Proposer advantage.&quot; With a <em>mixed</em>-proposer process the matching reached is still stable but is <strong>not</strong> guaranteed to be the proposer-optimal one for either side — the outcome depends on the random proposal order. The Asker-vs-Asked averages the app shows are an empirical statistical effect (askers tend to do better), which is fine and pedagogically nice, but the explainer&#39;s phrasing (&quot;every proposer gets the best partner they could have in any stable matching&quot;) is the textbook theorem applied to a non-textbook process. I&#39;d soften it to &quot;the side that proposes tends to do better&quot; to stay honest. This is a math-pedagogy nit; flagging it for the pedagogy hat.</p>
+
+</div>
+
+<h3>Stability verification is correct</h3>
+<p><code>verifyStability</code> (<code>tsx:99–132</code>) does an O(n²) blocking-pair scan using <code>indexOf</code> rank lookups, treating an unmatched partner as rank +∞ so a single person plus anyone they both prefer counts as blocking. The completion path calls it and surfaces the count (<code>tsx:582–591</code>, banner at <code>tsx:1024–1038</code>). For a fully completed run this will correctly report zero. Logic is sound.</p>
+<h3>Termination guards</h3>
+<p>Both runners cap iterations at <code>n*n*5</code> (<code>tsx:142</code>, <code>tsx:700</code>), and the interactive path also treats <code>Object.keys(currentMatches).length &gt;= n*2</code> as complete (<code>tsx:671</code>). The <code>n*n*5</code> bound is generous-enough heuristic insurance rather than a tight theoretical bound, which is the pragmatic right call here. One minor smell: <code>completeSimulation</code> can be reached via two distinct branches (the &quot;no valid proposers&quot; branch at 614–618 and the &quot;everyone matched&quot; branch at 671–675); both are correct, but the dual exit makes the state machine slightly harder to read.</p>
+<h3>Performance footnote</h3>
+<p>Rank lookups use <code>Array.prototype.indexOf</code> on preference lists everywhere (<code>tsx:117–122</code>, <code>198–199</code>, <code>656–657</code>, <code>765</code>, …). That makes each acceptance test O(n) and the lab&#39;s per-cell simulation effectively O(n³)-ish; with the default lab of <code>n=50</code> at resolution 20 (400 cells) it is fine, but a precomputed inverse-rank table (<code>menRank[m][w]</code>) would be the standard fix and would make the lab snappier at higher resolutions. Not a bug — a known, acceptable shortcut.</p>
+<h2>Architecture &amp; maintainability</h2>
+<h3>One 1243-line file, two apps, duplicated engine</h3>
+<p>The file is a single component hosting two distinct experiences (Visualizer and Lab) plus four presentational sub-components (<code>Card</code>, <code>Button</code>, <code>PersonRow</code>, <code>Heatmap</code>, <code>DistributionChart</code>) plus two copies of the matching engine (<code>stepSimulation</code> and <code>runHeadlessSimulation</code>). <code>CLAUDE.md</code>&#39;s &quot;Anatomy of an app&quot; explicitly encourages pulling simulation logic into helper <code>.ts</code> modules (&quot;e.g. <code>physics.ts</code> + <code>presets.ts</code>&quot;), and the Trinary app&#39;s <code>lib/nbody</code> is the in-repo model. Here the algorithm lives inline and is written twice.</p>
+<div class="callout callout-decision"><span class="callout-label">Important</span>
+
+<p><strong>Recommendation</strong> Extract a single <code>galeShapley.ts</code> (preference generation + one step function + headless runner + stability check) and have both the stepper and the lab consume it. That removes the most dangerous maintenance hazard in the file: the two engines can silently diverge, and a future bug-fix to one will be missed in the other. The <code>Heatmap</code> and <code>DistributionChart</code> components could also move to their own files, but that is cosmetic next to the engine duplication.</p>
+
+</div>
+
+<h3>Custom Card / Button reinvent ControlPanel + AppShell idioms</h3>
+<p>The local <code>Card</code> (<code>tsx:255–257</code>) and <code>Button</code> (<code>tsx:259–280</code>) duplicate styling that the shared primitives and the shell chrome already carry. This is the same &quot;near-identical viewer&quot; smell the project already paid down once when it consolidated the three complex viewers into <code>lib/particles</code> — I&#39;d rather not see the DOM labs grow a parallel, un-shared mini-design-system. If AgenticSorting and StableMarriage both ship their own <code>Card</code>/<code>Button</code>/slider CSS, that is a future consolidation target, not net-new shared code today.</p>
+<h3>Imperative refs mirroring state</h3>
+<p>The four mirror refs (<code>matchesRef</code>, <code>nextProposalRef</code>, <code>statusRef</code>, <code>dataRef</code>, synced in the effects at <code>tsx:551–565</code>) exist so the <code>setInterval</code> callback can read fresh values without re-subscribing. This is a legitimate React pattern for an rAF/interval loop and the cleanup (<code>tsx:708–736</code>) is correct (interval cleared on status change <em>and</em> on unmount). It is, however, the kind of state-duplication that is easy to get wrong; it reads fine here but adds cognitive load. No change required.</p>
+<h3>Minor correctness/robustness nits</h3>
+<ul>
+<li><strong>NaN on empty number input.</strong> The population field does <code>Number.parseInt(e.target.value, 10)</code> inside <code>Math.max(4, …)</code> (<code>tsx:869</code>); clearing the field yields <code>NaN</code>, and <code>Math.max(4, NaN)</code> is <code>NaN</code>, which would feed <code>NaN</code> into <code>n</code>. The shared <code>ControlPanel.NumberInput</code> (<code>ControlPanel.tsx:198–236</code>) exists precisely to handle this (commit-on-blur, revert on unparseable). Another argument for using the primitive.</li>
+<li><strong>In-place sort of a fresh array.</strong> <code>orderedMen</code>/<code>orderedWomen</code> (<code>tsx:804–816</code>) sort an array created that render, so no external mutation — fine, but worth a comment.</li>
+<li><strong>Heatmap object key collision guard.</strong> The cell key <code>${point.x}-${point.y}-${index}</code> (<code>tsx:402</code>) leans on <code>index</code> to stay unique, which is correct but suggests x/y aren&#39;t reliably unique keys on their own.</li>
+</ul>
+<h2>Styling gap vs the other labs</h2>
+<p>The brief asks specifically about the &quot;styling gap vs other labs (advanced visual effects, transitions, polish).&quot; My read: <strong>the CSS is clean, well-tokenized, and genuinely responsive, but it is plainer than the project&#39;s showpieces and slightly out of step with the shell&#39;s palette.</strong></p>
+<ul>
+<li><strong>Good:</strong> a proper token block (<code>--sm-bg</code> … <code>--sm-shadow</code>, <code>stableMarriage.css:6–31</code>), semantic accent colors documented in the header comment, and a thorough mobile pass (<code>@media</code> blocks at 680–749) including touch-sized range thumbs. Transitions exist on the meaningful elements — person nodes scale/glow on active/target (<code>271, 287–297</code>), heatmap cells brighten on hover (<code>614–619</code>), distribution tooltips fade (<code>500–517</code>). This is solid, not neglected.</li>
+<li><strong>Below the bar set by peers:</strong> the &quot;advanced effects&quot; the prompt points at — <code>backdrop-filter: blur()</code> glass panels, draggable floaters with collapse states — live in <code>PlaybackFloater.css</code>/<code>PlaneCurveFloater.css</code> (e.g. the glass panel at <code>PlaybackFloater.css:13–19</code>). StableMarriage has none of that because it has no floater (it doesn&#39;t use the Actions surface). Its surfaces are flat opaque cards with a single box-shadow. That is the visible &quot;gap&quot;: it looks like a tidy dashboard, not like the rest of the animath suite.</li>
+<li><strong>Palette drift.</strong> The CSS comment claims it is &quot;matched to the AppShell chrome,&quot; but the tokens are an independent dark theme (<code>#0c0c10</code> background) and the primary button is hard-coded <code>#2563eb</code> (<code>112</code>), not a shell variable. AgenticSorting uses a different dark palette again (<code>#020617</code>). Each lab has invented its own near-but- not-identical dark theme. From a steward&#39;s chair this is the slow accretion of inconsistency the framework was meant to prevent.</li>
+<li><strong>Animation polish:</strong> matches &quot;pop&quot; via a border/background swap with no enter transition (a node going from unmatched → matched changes instantly; only the active/target scale is animated). A subtle transition on <code>.sm-person-matched</code> and a drawn &quot;proposal line&quot; between proposer and target would close most of the perceived polish gap without new dependencies. The Asker/Asked &quot;A&quot;/&quot;R&quot; badges (<code>tsx:330–333</code>) are a nice touch already.</li>
+</ul>
+<div class="callout callout-note"><span class="callout-label">Note</span>
+
+<p><strong>Maintainer&#39;s caution</strong> I&#39;d resist the temptation to chase &quot;advanced effects&quot; for their own sake. The right styling work here is <em>convergence</em> — move the transport controls into <code>ShellActions</code> so the app inherits the shared floater/glass treatment for free, and align the palette to the shell — not a bespoke particle-shader-grade effect that this DOM lab doesn&#39;t need. Polish that comes from using the framework is durable; polish that comes from a one-off CSS flourish is the next session&#39;s debt.</p>
+
+</div>
+
+<h2>Parallel-branch &amp; operational safety</h2>
+<ul>
+<li><strong>Append-only shared files:</strong> the app already exists in <code>apps.ts</code> and <code>index.tsx</code> (it&#39;s a shipped route), so this styling branch should be editing only files inside <code>src/animations/StableMarriage/</code>. Nothing in the four subject files touches a shared file. safe</li>
+<li><strong>No new dependencies:</strong> imports are React + <code>lucide-react</code> (already a project dep) + own CSS/MD. No bundle-size or supply-chain surprise.</li>
+<li><strong>No asset paths:</strong> the app loads no public assets, so the <code>import.meta.env.BASE_URL</code> / <code>/animath/</code> base concern doesn&#39;t apply here.</li>
+<li><strong>Build:</strong> I did not run <code>tsc &amp;&amp; vite build</code>. Reading the types, I see no obvious compile error — but the <em>only</em> CI gate is the build, so whoever finalizes must run it. One thing to watch: <code>HeatmapPoint</code> spreads <code>...metrics</code> after setting <code>diff</code>/<code>askerDiff</code> (<code>tsx:837–843</code>); the field order is fine and the spread doesn&#39;t overwrite them, but confirm the build is clean before merge. verify build</li>
+</ul>
+<h2>Verdict</h2>
+<h3>Endorse</h3>
+<ul>
+<li>Self-contained, namespaced, parallel-branch-safe. This is a good framework citizen on the dimensions that protect the rest of the suite.</li>
+<li>Correct header/explainer integration and a genuinely good, well-written EXPLAINER.</li>
+<li>A sound (if non-standard mixed-proposer) Gale–Shapley implementation with a correct stability check and reasonable termination guards.</li>
+<li>Clean, tokenized, responsive CSS with real mobile and touch handling.</li>
+</ul>
+<h3>Concerns</h3>
+<ul>
+<li>Hand-rolled UI bypasses <code>ShellSettings</code>/<code>ShellActions</code> and the <code>ControlPanel</code> primitives, leaving the bar&#39;s Actions button dim and the drawer empty. Precedented by AgenticSorting, but still a divergence from the headline model.</li>
+<li>No persistence despite <code>usePersistentState</code> being the documented norm.</li>
+<li>The matching engine is duplicated (stepper vs headless) — a real divergence hazard.</li>
+<li>Bespoke per-lab dark palette + flat cards leave it looking a notch below the floater/glass peers and subtly out of step with the shell.</li>
+<li>Shipped-but-unrendered <code>README.md</code>; an empty-input <code>NaN</code> edge in the population field.</li>
+</ul>
+<h3>What I would change (prioritized)</h3>
+<ol>
+<li><strong>Extract the engine to one <code>.ts</code> module</strong> consumed by both the stepper and the lab. Highest maintainability payoff; kills the divergence hazard.</li>
+<li><strong>Move the transport controls (Play/Step/Finish/Reset) into <code>ShellActions</code></strong> and the knobs into <code>ShellSettings</code> using <code>ControlPanel</code> primitives. Lights up the bar, gets the floater + glass treatment for free, and is the real fix for the &quot;styling gap.&quot;</li>
+<li><strong>Adopt <code>usePersistentState</code></strong> for n / consensus / bias / speed / sort / appMode / lab knobs. Mechanical, low-risk, on-spec.</li>
+<li><strong>Align the palette to the shell</strong> (use shell variables / a shared dark token set) rather than a private theme; resolve the comment that claims it already matches.</li>
+<li><strong>Soften the proposer-optimality claim</strong> in the EXPLAINER to reflect the mixed-proposer process; either render <code>README.md</code> or fold it in and delete it.</li>
+<li><em>Nice-to-have:</em> precompute inverse-rank tables (drop <code>indexOf</code>), add a matched-state enter transition / proposal line, fix the population-field <code>NaN</code> edge.</li>
+</ol>
+<p>Net: <strong>mergeable as a working app</strong>; the framework-conformance items (1–3) are what I&#39;d want addressed before I&#39;d hold it up as an exemplar of the pattern.</p>
+<h2>Self-reflection</h2>
+<ol>
+<li><strong>What would you do with another session?</strong> Run <code>npm run build</code> and actually exercise the app in the browser — several of my UI claims (dim Actions button, empty drawer, instant match pop) are inferred from the code, not observed. I&#39;d also diff this CSS against AgenticSorting&#39;s token set to quantify the &quot;each lab invents its own palette&quot; claim precisely.</li>
+<li><strong>What would you change about what you produced?</strong> I leaned on peer precedent (AgenticSorting also opts out of the portals) to soften the conformance criticism; a stricter reviewer might say both labs are wrong and the precedent is itself debt. I chose the pragmatic read but flagged both views.</li>
+<li><strong>What were you not asked that you think is important?</strong> Whether the DOM-lab &quot;in-canvas control panel&quot; should become a <em>sanctioned</em> sub-pattern in CLAUDE.md (with a shared component) or be migrated to the portals. Two apps doing the same off-spec thing is the moment to decide, not ignore.</li>
+<li><strong>What did we both overlook?</strong> Accessibility: the heatmap is mouse/hover-driven with click-to-pin but no keyboard path, and the custom controls lack the ARIA the shell primitives would supply. The brief&#39;s &quot;polish&quot; framing didn&#39;t surface a11y and I nearly missed it.</li>
+<li><strong>What did you find difficult?</strong> Judging the &quot;styling gap&quot; fairly without running the app — CSS reads tidy on paper, but perceived polish is a runtime property. I bounded my claims to what the source supports.</li>
+<li><strong>What would have made this task easier?</strong> A screenshot or a live preview URL, and a one-line statement of whether the DOM-lab in-canvas-panel pattern is considered sanctioned.</li>
+<li><strong>Follow-up value:</strong> MEDIUM — conclusions are sound from a static read, but a build + browser pass would confirm the UX claims and let me prioritize the styling work concretely.</li>
+</ol>
+
+    </div>
+  </div>
+</main>
+</body>
+</html>

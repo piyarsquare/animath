@@ -1,0 +1,34 @@
+name: Build session site
+
+# Cross-branch session "control center": on a push to ANY branch (plus a daily
+# refresh and manual dispatch), read every branch's reports, convert to Markdown,
+# render the rich HTML, and build the control center. Uploads the result as an
+# artifact. Flip the last step to a Pages deploy once the hosting model is settled.
+on:
+  push:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history so branch tips are available
+      - run: git fetch --all
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: node docs/sessions/build-sessions.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: session-site
+          path: |
+            docs/sessions/control-center.html
+            docs/sessions/converted
+            docs/sessions/report.css
+            docs/sessions/report.js

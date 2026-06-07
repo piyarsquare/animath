@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<!-- GENERATED from /home/user/animath/docs/sessions/converted/progress/particle-viewer-ideas-priority-UDZRe/2026-06-05-S01-ideas-triage-quick-wins.md by render-report.mjs — edit the .md, not this. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Particle-viewer ideas triage + quick wins</title>
+  <link rel="stylesheet" href="../../../report.css">
+  <script defer src="../../../report.js"></script>
+  <script type="application/json" class="report-meta">
+{
+  "kind": "progress",
+  "session": "2026-06-05-S01",
+  "date": "2026-06-05",
+  "title": "Particle-viewer ideas triage + quick wins",
+  "branch": "claude/particle-viewer-ideas-priority-UDZRe",
+  "slug": "particle-viewer-ideas-priority-UDZRe",
+  "status": "completed",
+  "build": "passed",
+  "followup": "low",
+  "pr": null
+}
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">progress</p>
+    <h1>Particle-viewer ideas triage + quick wins</h1>
+    <dl class="meta">
+      <div><dt>Session</dt><dd>2026-06-05-S01</dd></div>
+      <div><dt>Branch</dt><dd><code>claude/particle-viewer-ideas-priority-UDZRe</code></dd></div>
+      <div><dt>Status</dt><dd><span class="badge badge-ok">completed</span></dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-ok">build: passed</span></dd></div>
+    </dl>
+  </header>
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+<h1>Particle-viewer ideas triage + quick wins</h1>
+<h2>Session purpose</h2>
+<p>Triage the outstanding Complex Particles ideas in <code>IDEAS.md</code> by bang-for-the-buck (easiest + highest payoff first), then implement the top quick wins — verifying first that they aren&#39;t already shipped.</p>
+<h2>Previous session</h2>
+<p>First tracked session on this branch. Latest handoff across branches is an unrelated topic — <a href="../better-reports/2026-06-05-S01-rich-html-reports.html">better-reports · S01</a> (rich HTML session reports, PR #183, completed). Its &quot;pending&quot; list notes that the Hopf fiber-trace overlay and color-as-a-fourth-channel ideas remain queued.</p>
+<h2>Bang-for-buck ranking (outstanding items)</h2>
+<p>Quick wins: (1) Hopf study mode + guide, (2) flexible &quot;color by&quot; quantity, (3) faithful Hopf — <em>already shipped</em>, (4) add functions + organize. Medium: explicit domain bounds, commit-on-blur number inputs, color-as-4th-channel, polar toggles. Large: generic quadratic / custom f, Hopf fiber overlay, unified channel-mapping matrix.</p>
+<div class="callout callout-decision"><span class="callout-label">Important</span>
+
+<p><strong>Decision</strong> Implement the two remaining quick wins from the recommended cluster — <strong>Hopf study mode</strong> and <strong>flexible color-by quantity</strong> — since #3 (faithful Hopf) is already done. Both are self-contained to ComplexParticles + the particles engine and low-risk. <em>(The session then continued &quot;all the way through&quot; the rest of the list — see below.)</em></p>
+
+</div>
+
+<h2>What shipped</h2>
+<p>Every item below is its own commit with a green <code>npm run build</code>, pushed to <code>claude/particle-viewer-ideas-priority-UDZRe</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Where</th>
+<th>Commit</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Hopf study view + flexible color-by (Hue)</td>
+<td>shader <code>calcColour</code>, ParticleViewerShell, controls</td>
+<td><code>fff360f</code></td>
+</tr>
+<tr>
+<td>Independent Brightness picker + torus-nesting doc</td>
+<td>shader, types, state, shell, EXPLAINER</td>
+<td><code>302cb21</code></td>
+</tr>
+<tr>
+<td>cot / arcsin / arccos + grouped picker</td>
+<td><code>complexMath.ts</code>, shader, <code>Select</code> groups</td>
+<td><code>34d97ec</code></td>
+</tr>
+<tr>
+<td>Confirm guard on Reset settings</td>
+<td>ParticleViewerShell</td>
+<td><code>3f1eb5c</code></td>
+</tr>
+<tr>
+<td>Torus soft pole-clamp + scaffold labels</td>
+<td><code>viewpoint.ts</code>, shader, <code>createHopfScaffold</code></td>
+<td><code>6ac4492</code></td>
+</tr>
+<tr>
+<td>Domain bounds + ± lock; NumberInput</td>
+<td><code>ControlPanel</code>, geometry builders, state</td>
+<td><code>27d9a94</code></td>
+</tr>
+<tr>
+<td>Parameterized quadratic a·z²+b·z+c</td>
+<td><code>complexMath.ts</code>, shader, ComplexParticles</td>
+<td><code>ae98519</code></td>
+</tr>
+<tr>
+<td>Polar / log-polar input &amp; output charts</td>
+<td>shader <code>chartCoord</code>, <code>CoordMode</code>, shell</td>
+<td><code>073b314</code></td>
+</tr>
+<tr>
+<td>Hopf fiber-trace overlay</td>
+<td><code>createHopfFibers.ts</code>, state, shell</td>
+<td><code>93bb12d</code></td>
+</tr>
+</tbody></table>
+<div class="callout callout-note"><span class="callout-label">Note</span>
+
+<p><strong>Note</strong> The first commit (<code>302cb21</code> era) also marked the already-shipped faithful-Hopf entry in <code>IDEAS.md</code>; every implemented idea was annotated there with its status + open follow-ups.</p>
+
+</div>
+
+<h2>Outstanding / follow-ups</h2>
+<ul>
+<li><strong>Unified channel-mapping matrix</strong> — deferred as a dedicated effort (would re-architect 4-vector assembly; its cheaper slices are now all in place).</li>
+<li><strong>Color as a fourth channel</strong> — judged already reachable via Drop-axis + Hue/Brightness pickers; no separate mode built (recorded in IDEAS).</li>
+<li><strong>Hopf fibers + Collapse slider</strong> — fibers currently hide past the half-way collapse rather than shrinking circle→point with it; and an option to seed fibers from the function&#39;s own graph points.</li>
+<li><strong>Polar charts</strong> — sampling the input on a true <code>(r, α)</code> grid (currently the Cartesian sample is replotted) and a phase-unwrap for the <code>arg</code> seam.</li>
+<li><strong>Custom-f</strong> — the quadratic is the middle ground; a typed expression → GLSL compiler is still the big open stretch.</li>
+<li><strong>Visual review needed</strong> — I can&#39;t see WebGL output here; the Hopf fibers, scaffold labels, and polar charts are most worth eyeballing live.</li>
+</ul>
+<h2>Working notes</h2>
+<ol class="timeline">
+      <li class="tl" data-type="decision">
+        <p class="tl-time">03:45</p>
+        <span class="chip chip-decision">Decision</span>
+        <h3>PR review: fixed the zero-q note; deferred the Hopf-study one</h3>
+        <p class="why"><strong>Why:</strong> Two P2 review notes — keep the cheap correctness fix, batch the study-mode change into a future polish effort.</p>
+        <p><strong>Resolved:</strong> <code>z^(p/q)</code> now coerces <code>q=0 → 1</code> in the NumberInput onChange, so the header/saved value can&#39;t claim <code>z^(p/0)</code> while the render silently uses 1 (negative q stays allowed). <strong>Deferred:</strong> the Hopf-study button still routes through the active drop axis (so a Drop projection isn&#39;t cleared before forcing Hopf) — a prototype fix in <code>useViewControls.enterHopfStudy</code> was written, then backed out and recorded in <code>IDEAS.md</code> (&quot;Hopf study preset refinements&quot;) for a dedicated study-mode pass. Build green.</p>
+      </li>
+      <li class="tl" data-type="milestone">
+        <p class="tl-time">03:25</p>
+        <span class="chip chip-milestone">Milestone</span>
+        <h3>Session wrapped — 17 commits, build green, handoff written</h3>
+        <p class="why"><strong>Why:</strong> Worked the whole bang-for-buck list; only the two intentionally-big items (unified matrix, custom-f) remain.</p>
+        <p>Squared up the IDEAS.md status markers (domain bounds, NumberInput, generic quadratic, scaffold labels were shipped but unmarked). Remaining backlog: the unified channel-mapping matrix (deferred) and custom-f (needs an expr→GLSL compiler); plus small polish follow-ups (fiber-collapse animation, sampling annulus/density controls, phase-unwrap). See the handoff.</p>
+      </li>
+      <li class="tl" data-type="decision">
+        <p class="tl-time">03:10</p>
+        <span class="chip chip-decision">Decision</span>
+        <h3>Removed the Torus &quot;Radius scale: Log&quot; option (the fuzzy-circle culprit)</h3>
+        <p class="why"><strong>Why:</strong> User identified log-radius as what fuzzed the f=b·z circle, and judged it not useful — so we cut it.</p>
+        <p>Root cause (confirmed by rendering): log-radius applies <code>log(1+r)/r</code> separately to |z| and |f|, which is nonlinear and breaks the scale-invariance that collapses <code>f=b·z</code> to a single fiber circle — except at b=1 where |z|=|f| so both halves get the identical factor. Ripped out <code>logRadius</code> state, the <code>uLogRadius</code> uniform + shader remap, the sync effect, and both &quot;Radius scale&quot; Pills (Camera + Actions). Build green; docs updated. (I&#39;d been wrong 3× — jitter, sampling, motion — before the user nailed it.)</p>
+      </li>
+      <li class="tl" data-type="finding">
+        <p class="tl-time">02:30</p>
+        <span class="chip chip-finding">Finding</span>
+        <h3>Diagnosed the &quot;fuzzy Torus circle&quot; + added domain sampling patterns</h3>
+        <p class="why"><strong>Why:</strong> User: with a=0 (f=b·z), b=1 gives an exact circle but b=2 is fuzzy even with jitter off.</p>
+        <p>Worked it out numerically: f=b·z is one Hopf fiber → the whole cloud is one circle; the fuzz is <em>uneven sampling</em> — the Torus projection stretches the loop near its pole (proximity = |f|/|z| = b), so a uniform Cartesian grid under-samples one side (~23% of the loop faint at b=2). Fix: a domain <strong>Sampling</strong> picker (<code>SamplePattern</code>: Grid / Polar / Rings / Spokes / Web / Squares / Random) in <code>createParticleGeometry.fillPattern</code>. <strong>Polar</strong> spreads points evenly in arg z → faint fraction 23% → 0% at b=2 (verified). (Corrected an earlier wrong guess that blamed jitter.)</p>
+      </li>
+      <li class="tl" data-type="code">
+        <p class="tl-time">01:55</p>
+        <span class="chip chip-code">Code</span>
+        <h3>Unlocked domain bounds → two-thumb range sliders; Uniform brightness</h3>
+        <p class="why"><strong>Why:</strong> User wanted the non-symmetric X/Y bounds as dual-ended sliders, and a flat-brightness option.</p>
+        <p>New shared <code>RangeSlider</code> (two overlapping native range inputs + rail/fill, keyboard/touch accessible, thumbs can&#39;t cross) replaces the X/Y min/max <code>NumberInput</code>s when unlocked. Added <code>ColourQuantity.Uniform</code> to the Brightness picker (val = 1, and the HSV magnitude-shimmer is skipped so it stays truly flat).</p>
+      </li>
+      <li class="tl" data-type="code">
+        <p class="tl-time">01:35</p>
+        <span class="chip chip-code">Code</span>
+        <h3>Branches → a sheet range in the Domain panel (dropped differentiation)</h3>
+        <p class="why"><strong>Why:</strong> User asked to move Branches into Domain, give up per-branch differentiation, and set it as a range.</p>
+        <p>Replaced the <code>branchCount</code> Select + per-sheet index inputs + &quot;Differentiate by&quot; with <strong>Branch min / Branch max</strong> <code>NumberInput</code>s (≤ <code>MAX_SHEETS</code>), rendered in the Domain section via a new <code>domainExtras</code> shell prop. Each particle set draws sheet <code>branchMin + i</code>; removed the hue/intensity/shape per-branch override effects (uniform styling now). Updated README.</p>
+      </li>
+      <li class="tl" data-type="decision">
+        <p class="tl-time">01:10</p>
+        <span class="chip chip-decision">Decision</span>
+        <h3>Deferred the unified channel-mapping matrix; folded &quot;color as 4th channel&quot;</h3>
+        <p class="why"><strong>Why:</strong> The matrix is a large refactor that would re-architect 4-vector assembly and conflict with the granular controls just shipped; &quot;color as 4th channel&quot; is already reachable via Drop-axis + Hue/Brightness pickers.</p>
+        <p>Both recorded in IDEAS with rationale; the matrix&#39;s cheaper slices are all now in place. (commit 589dc87)</p>
+      </li>
+      <li class="tl" data-type="code">
+        <p class="tl-time">00:55</p>
+        <span class="chip chip-code">Code</span>
+        <h3>Hopf fiber-trace overlay (the interlocking circles)</h3>
+        <p class="why"><strong>Why:</strong> Highest-payoff remaining item — the iconic picture the Torus chart could host but never showed.</p>
+        <p>New <code>createHopfFibers.ts</code> samples base points on S² (grid over latitude η, longitude ψ) and draws each one&#39;s full common-phase orbit <code>θ ↦ stereo(normalize(e^{iθ}(z₁,z₂)))</code> as a <code>LineLoop</code>, in the same normalized stereographic chart + SCALE as the particles/scaffold, coloured by base point. <strong>Hopf fibers</strong> toggle + <strong>Fiber density</strong> slider in the Camera section (Torus only). (commit 93bb12d)</p>
+      </li>
+      <li class="tl" data-type="code">
+        <p class="tl-time">00:45</p>
+        <span class="chip chip-code">Code</span>
+        <h3>Polar / log-polar input &amp; output charts</h3>
+        <p class="why"><strong>Why:</strong> The natural charts for powers/roots/log/exp.</p>
+        <p><code>Input chart</code> / <code>Output chart</code> pickers (<code>CoordMode</code>: Cartesian / Polar / Log-polar) replot each plane via a shader <code>chartCoord</code> (uniforms <code>uInCoord</code>/<code>uOutCoord</code>) before the 4-vector forms; colour keeps raw <code>z</code>/<code>f</code>. Log-polar output ⇒ <code>exp</code> is the identity; both log-polar ⇒ <code>zⁿ</code>/roots become linear shears. (commit 073b314)</p>
+      </li>
+      <li class="tl" data-type="code">
+        <p class="tl-time">00:35</p>
+        <span class="chip chip-code">Code</span>
+        <h3>Parameterized quadratic a·z²+b·z+c</h3>
+        <p class="why"><strong>Why:</strong> The pragmatic middle ground toward custom-f.</p>
+        <p>New <code>quadratic</code> function (index 22) with complex coefficients (Re/Im via <code>NumberInput</code>), wired through <code>uQuadA/B/C</code> + the adaptive-sampling CPU path; header shows the substituted formula. Defaults to z². (commit ae98519)</p>
+      </li>
+      <li class="tl" data-type="code">
+        <p class="tl-time">00:25</p>
+        <span class="chip chip-code">Code</span>
+        <h3>Explicit domain bounds + ± lock, on a new commit-on-blur NumberInput</h3>
+        <p class="why"><strong>Why:</strong> Off-centre windows like x∈[0,6]; and stop intermediate keystrokes breaking the render.</p>
+        <p>Added a shared <code>ControlPanel</code> <strong>NumberInput</strong> (commits on Enter/blur, clamps, reverts) and a <code>± symmetric bounds</code> lock to the Domain section. Geometry builders now take explicit <code>(xMin,xMax,yMin,yMax)</code>; the lock seeds the other representation so the view doesn&#39;t jump. Retrofit p/q to NumberInput. (commit 27d9a94)</p>
+      </li>
+      <li class="tl" data-type="code">
+        <p class="tl-time">00:15</p>
+        <span class="chip chip-code">Code</span>
+        <h3>Clifford-torus polish: soft pole-clamp + scaffold labels</h3>
+        <p class="why"><strong>Why:</strong> Pole points shot to infinity; the scaffold lines were unlabeled.</p>
+        <p>Soft floor <code>POLE_EPS</code> (in quadrature, shared by <code>viewpoint.ts</code> + shader) bounds the projection pole. Camera-facing sprite labels on the scaffold: sphere poles (<code>f→0</code>/<code>z→0</code>), <code>|z|=|f|</code> equator, torus cores + <code>arg z</code> direction. (commit 6ac4492)</p>
+      </li>
+      <li class="tl" data-type="decision">
+        <p class="tl-time">00:10</p>
+        <span class="chip chip-decision">Decision</span>
+        <h3>Confirm guard on &quot;Reset settings to defaults&quot;</h3>
+        <p class="why"><strong>Why:</strong> User flagged it lives in the Actions panel and is too easy to hit by accident (it wipes saved settings + reloads).</p>
+        <p>Wrapped the handler in <code>window.confirm</code>; applies to every particle viewer via the shell. (commit 3f1eb5c)</p>
+      </li>
+      <li class="tl" data-type="code">
+        <p class="tl-time">00:05</p>
+        <span class="chip chip-code">Code</span>
+        <h3>Added cot / arcsin / arccos + grouped the function picker</h3>
+        <p class="why"><strong>Why:</strong> Next quick win — cheap content + usability for the now-long function list.</p>
+        <p>Added <code>cot</code> (cos/sin) and the multivalued <code>arcsin</code>/ <code>arccos</code> (<code>−i·ln(...)</code>, branch on the ln) to both <code>complexMath.ts</code> and the shader, appended at indices 19–21 so persisted <code>functionIndex</code> values stay stable. Verified the JS against known values (arcsin(0.5)=π/6, arcsin(2)→complex, cot(π/4)=1, …). Added a <code>functionCategories</code> table + backward-compatible <code>groups</code> (optgroup) support to the shared <code>Select</code>, and the picker now shows five categories.</p>
+      </li>
+      <li class="tl" data-type="code">
+        <p class="tl-time">23:20</p>
+        <span class="chip chip-code">Code</span>
+        <h3>Brightness under independent control + confirmed torus orientation</h3>
+        <p class="why"><strong>Why:</strong> User asked to make brightness selectable too, and to confirm the Clifford-torus angle/nesting convention.</p>
+        <p>Renamed the hue picker to <strong>Hue</strong> and added a <strong>Brightness</strong> picker (both <code>ColourQuantity</code>): the value channel is now driven by phase/magnitude/real/imag independently of hue, via a new <code>uBrightnessQty</code> uniform. Defaults unchanged (hue=phase, brightness=magnitude). <strong>Torus check:</strong> a numerical script (<code>/tmp/torus_check.mjs</code>) confirms the projection — <code>arg z</code> traces constant-Z circles around the central axis (around the hole), <code>arg f</code> traces the tube cross-section, and large <code>|z|/|f|</code> → inner core / <code>|f|</code> dominant → outer donut. EXPLAINER now states the inner/outer rule.</p>
+      </li>
+      <li class="tl" data-type="milestone">
+        <p class="tl-time">23:05</p>
+        <span class="chip chip-milestone">Milestone</span>
+        <h3>Both quick wins implemented; <code>npm run build</code> passes</h3>
+        <p class="why"><strong>Why:</strong> Ship the two recommended quick wins the user greenlit.</p>
+        <p><strong>Flexible color-by:</strong> new <code>ColourQuantity</code> enum + persisted <code>colourQuantity</code> state, <code>uColourQty</code> uniform, refactored <code>calcColour</code> to drive the colour wheel from a chosen scalar (phase / magnitude / real / imag), and a <code>Quantity</code> Select in the Color section. <strong>Hopf study view:</strong> a one-tap button in the Camera panel (Hopf/Torus) that forces Hopf, sets Motion → Fixed, stops spins, and resets the 4D orientation. EXPLAINER + IDEAS.md updated.</p>
+      </li>
+      <li class="tl" data-type="finding">
+        <p class="tl-time">22:54</p>
+        <span class="chip chip-finding">Finding</span>
+        <h3>Faithful Hopf map is already implemented (idea is stale)</h3>
+        <p class="why"><strong>Why:</strong> Avoid duplicating work the user explicitly asked me to check for.</p>
+        <p>Commit #178 already replaced the stylized quadratic with the normalized Hopf map in both <code>viewpoint.ts</code> (project mode Hopf) and the shader (<code>project</code> mode 2): <code>H = (2·Re(z·z̄′), 2·Im(z·z̄′), |z|²−|f|²)/|·|²</code>. The &quot;Faithful Hopf&quot; entry in <code>IDEAS.md</code> is therefore out of date.</p>
+      </li>
+      <li class="tl" data-type="finding">
+        <p class="tl-time">22:54</p>
+        <span class="chip chip-finding">Finding</span>
+        <h3>Clifford-torus, collapse slider, scaffold, log-radius all shipped</h3>
+        <p class="why"><strong>Why:</strong> Scope the remaining Hopf-related work accurately.</p>
+        <p>Torus view, <code>Collapse → Hopf</code> slider (<code>uProjAlpha</code>), reference scaffold, and a Torus log-radius toggle (<code>uLogRadius</code>) are in place. Missing Hopf piece is only the one-tap &quot;study&quot; preset that freezes the 4D orientation so the latitude/longitude reading holds.</p>
+      </li>
+      <li class="tl" data-type="decision">
+        <p class="tl-time">22:50</p>
+        <span class="chip chip-decision">Decision</span>
+        <h3>Ranked IDEAS.md by bang-for-buck and picked the quick-win cluster</h3>
+        <p class="why"><strong>Why:</strong> User asked for an effort-vs-payoff ordering, then to implement, after checking for duplicate work.</p>
+        <p>Read all of <code>IDEAS.md</code> + the ComplexParticles/particles source to gauge effort. Recommended cluster: Hopf study → faithful Hopf → flexible color-by → more functions.</p>
+      </li>
+      <li class="tl" data-type="milestone">
+        <p class="tl-time">22:48</p>
+        <span class="chip chip-milestone">Milestone</span>
+        <h3>Session started</h3>
+        <p class="why"><strong>Why:</strong> User invoked start-session to open the working log for this branch.</p>
+        <p>New branch, no prior handoff; orientation done against CLAUDE.md and the particle-viewer engine.</p>
+      </li>
+</ol>
+
+    </div>
+  </div>
+</main>
+</body>
+</html>

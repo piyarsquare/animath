@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<!-- GENERATED from /home/user/animath/docs/sessions/converted/progress/better-reports/2026-06-05-S01-rich-html-reports.md by render-report.mjs — edit the .md, not this. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Rich HTML Reports</title>
+  <link rel="stylesheet" href="../../../report.css">
+  <script defer src="../../../report.js"></script>
+  <script type="application/json" class="report-meta">
+{
+  "kind": "progress",
+  "session": "2026-06-05-S01",
+  "date": "2026-06-05",
+  "title": "Rich HTML Reports",
+  "branch": "claude/better-reports",
+  "slug": "better-reports",
+  "status": "completed",
+  "build": "passed",
+  "followup": "low",
+  "pr": "https://github.com/piyarsquare/animath/pull/183"
+}
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">progress</p>
+    <h1>Rich HTML Reports</h1>
+    <dl class="meta">
+      <div><dt>Session</dt><dd>2026-06-05-S01</dd></div>
+      <div><dt>Branch</dt><dd><code>claude/better-reports</code></dd></div>
+      <div><dt>Status</dt><dd><span class="badge badge-ok">completed</span></dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-ok">build: passed</span></dd></div>
+    </dl>
+  </header>
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+<h1>Rich HTML Reports</h1>
+<h2>Session purpose</h2>
+<p>The first HTML reports “looked like Markdown.” Make the format earn its keep: a timeline notes log, a sticky table of contents, cross-references and code deep-links, callouts, a cross-session dashboard — built so each report stays simple to author.</p>
+<h2>Design principle</h2>
+<div class="callout callout-decision"><span class="callout-label">Important</span>
+
+<p><strong>Decision</strong> Push richness into shared <code>report.css</code> + a small progressive <code>report.js</code>; keep each report simple, semantic HTML. Canonical skeletons live as <code>_template-*.html</code> so markup never drifts.</p>
+
+</div>
+
+<h2>Working notes</h2>
+<ol class="timeline">
+      <li class="tl" data-type="finding">
+        <p class="tl-time">16:40</p>
+        <span class="chip chip-finding">Finding</span>
+        <h3>The HTML transition was already merged — nothing lost</h3>
+        <p class="why"><strong>Why:</strong> needed to know the baseline after the branch was deleted.</p>
+        <p><code>main</code> already had <code>report.css</code> + the <code>.html</code> reports, so this branch enriches rather than rebuilds.</p>
+      </li>
+      <li class="tl" data-type="code">
+        <p class="tl-time">17:10</p>
+        <span class="chip chip-code">Code</span>
+        <h3>Rebuilt <code>report.css</code> as a component kit</h3>
+        <p class="why"><strong>Why:</strong> let reports be simple while looking rich.</p>
+        <p>CSS timeline (colour-coded by entry type), sticky TOC rail with scroll-spy states, callouts, chips, figures, diffstat bar, sortable-table affordance, print styles, dashboard cards.</p>
+      </li>
+      <li class="tl" data-type="code">
+        <p class="tl-time">17:25</p>
+        <span class="chip chip-code">Code</span>
+        <h3>Added <code>report.js</code> (progressive enhancement)</h3>
+        <p class="why"><strong>Why:</strong> auto-TOC + scroll-spy without per-report upkeep; works from <code>file://</code>.</p>
+        <p>Auto-builds the TOC from headings, assigns heading ids + anchors, scroll-spy highlighting, expand/collapse-all, sortable tables, back-to-top. Everything no-ops if JS is off.</p>
+      </li>
+      <li class="tl" data-type="code">
+        <p class="tl-time">17:45</p>
+        <span class="chip chip-code">Code</span>
+        <h3>Templates + cross-session dashboard generator</h3>
+        <p class="why"><strong>Why:</strong> single source of truth for markup; a corpus-level view.</p>
+        <p>Added <code>_template-progress.html</code>, <code>_template-handoff.html</code>, and a dependency-free <code>build-index.mjs</code> that reads each report’s JSON <code>report-meta</code> island and regenerates <code>index.html</code>.</p>
+      </li>
+      <li class="tl" data-type="code">
+        <p class="tl-time">18:05</p>
+        <span class="chip chip-code">Code</span>
+        <h3>Converted the worked examples + updated the skills/docs</h3>
+        <p class="why"><strong>Why:</strong> the existing reports should demonstrate the new format.</p>
+        <p>Re-rendered the menu-bar S01 progress + handoff richly; pointed the three skills at the templates + <code>report.js</code> + meta island; noted the dashboard in <code>CLAUDE.md</code> / <code>AGENTS.md</code>.</p>
+      </li>
+</ol>
+
+<h2>Viewing note</h2>
+<div class="callout callout-warn"><span class="callout-label">Warning</span>
+
+<p><strong>Heads-up</strong> github.com renders <code>.html</code> as <em>source</em>, not as a page. Open these locally in a browser for the full styling, or serve <code>docs/sessions/</code> via GitHub Pages (a possible follow-up).</p>
+
+</div>
+
+    </div>
+  </div>
+</main>
+</body>
+</html>

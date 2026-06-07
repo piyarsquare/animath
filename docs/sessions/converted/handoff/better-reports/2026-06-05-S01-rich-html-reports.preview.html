@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!-- GENERATED from /home/user/animath/docs/sessions/converted/handoff/better-reports/2026-06-05-S01-rich-html-reports.md by render-report.mjs — edit the .md, not this. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Rich HTML Reports</title>
+  <link rel="stylesheet" href="../../../report.css">
+  <script defer src="../../../report.js"></script>
+  <script type="application/json" class="report-meta">
+{
+  "kind": "handoff",
+  "session": "2026-06-05-S01",
+  "date": "2026-06-05",
+  "title": "Rich HTML Reports",
+  "branch": "claude/better-reports",
+  "slug": "better-reports",
+  "status": "completed",
+  "build": "passed",
+  "followup": "low",
+  "pr": "https://github.com/piyarsquare/animath/pull/183"
+}
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">handoff</p>
+    <h1>Rich HTML Reports</h1>
+    <dl class="meta">
+      <div><dt>Session</dt><dd>2026-06-05-S01</dd></div>
+      <div><dt>Branch</dt><dd><code>claude/better-reports</code></dd></div>
+      <div><dt>Status</dt><dd><span class="badge badge-ok">completed</span></dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-ok">build: passed</span></dd></div>
+    </dl>
+  </header>
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+<h1>Rich HTML Reports</h1>
+<h2>What changed</h2>
+<p>The richness now lives in shared assets; each report is simple, semantic HTML that opts into components. New capabilities: a colour-coded CSS <strong>timeline</strong> (entry types: decision/code/finding/blocker/ milestone), a <strong>sticky scroll-spy TOC</strong>, <strong>callouts</strong>, sortable tables, SHA-pinned <strong>code deep-links</strong>, and a generated <strong>cross-session dashboard</strong>.</p>
+<div class="callout callout-note"><span class="callout-label">Note</span>
+
+<p><strong>Design</strong> Push richness into <code>report.css</code> / <code>report.js</code>; keep each report simple. Canonical <code>_template-*.html</code> skeletons mean markup never drifts. <code>report.js</code> is progressive — everything degrades gracefully with JS off, so reports also work from <code>file://</code>.</p>
+
+</div>
+
+<div class="callout callout-warn"><span class="callout-label">Warning</span>
+
+<p><strong>Heads-up</strong> github.com renders <code>.html</code> as source. Open <code>docs/sessions/index.html</code> locally for the full view, or serve <code>docs/sessions/</code> via GitHub Pages (declined/deferred this session).</p>
+
+</div>
+
+<h2>Key files</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/fa3dd32/docs/sessions/report.css"><code>docs/sessions/report.css</code></a></td>
+<td>Visual engine — timeline, TOC, callouts, badges, print, dashboard cards</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/fa3dd32/docs/sessions/report.js"><code>docs/sessions/report.js</code></a></td>
+<td>Progressive enhancement — auto-TOC, scroll-spy, sortable tables, back-to-top</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/fa3dd32/docs/sessions/build-index.mjs"><code>docs/sessions/build-index.mjs</code></a></td>
+<td>Zero-dep generator → <code>index.html</code> dashboard (reads report-meta islands)</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/fa3dd32/docs/sessions/_template-progress.html"><code>docs/sessions/_template-progress.html</code></a></td>
+<td>Canonical progress skeleton the skills copy</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/fa3dd32/docs/sessions/_template-handoff.html"><code>docs/sessions/_template-handoff.html</code></a></td>
+<td>Canonical handoff skeleton the skills copy</td>
+</tr>
+</tbody></table>
+<h2>Pending / not done</h2>
+<ul>
+<li><strong>GitHub Pages</strong> for <code>docs/sessions/</code> — deferred; would give the reports a live rendered URL (touches the deploy workflow).</li>
+<li>Optional polish: a <code>reviews/</code> subfolder for three-hats expert files; syntax highlighting in `` blocks.</li>
+<li>Queued (unrelated, from S01 menu-bar): the Hopf fiber-trace overlay and color-as-a-fourth-channel ideas in <code>IDEAS.md</code>.</li>
+</ul>
+<h2>Context</h2>
+<ul>
+<li>Continues <a href="../menu-bar/2026-06-05-S01-session-skills-setup.html">menu-bar · S01</a>, whose handoff flagged “make the HTML reports actually rich”.</li>
+<li>The earlier Markdown→HTML switch landed in <code>main</code> as <a href="https://github.com/piyarsquare/animath/pull/182">#182</a>; this PR (#183) builds on it.</li>
+<li>Docs/tooling only — no app code or shared app files touched.</li>
+</ul>
+<h2>Self-reflection</h2>
+<ol>
+<li><strong>What would you do with another session?</strong> Set up Pages so the reports are viewable at a URL, and dogfood <code>/three-hats</code> to exercise that path of the kit.</li>
+<li><strong>What would you change about what you produced?</strong> The author can&#39;t preview rendering here; a tiny screenshot-in-CI or a Pages URL would close the feedback loop.</li>
+<li><strong>What were you not asked that you think is important?</strong> Whether to migrate the per-app <code>docs/*_UI.md</code> notes into this format — out of scope, left alone.</li>
+<li><strong>What did we both overlook?</strong> Nothing major; the file:// vs github.com rendering gap was surfaced early.</li>
+<li><strong>What did you find difficult?</strong> Verifying rich HTML without a browser — leaned on tag-balance checks and running the generator to validate the meta islands.</li>
+<li><strong>What would have made this task easier?</strong> A headless renderer in the sandbox to screenshot the result for review.</li>
+<li><strong>Follow-up value:</strong> LOW — feature complete and building; remaining items are Pages + optional polish.</li>
+</ol>
+
+    </div>
+  </div>
+</main>
+</body>
+</html>

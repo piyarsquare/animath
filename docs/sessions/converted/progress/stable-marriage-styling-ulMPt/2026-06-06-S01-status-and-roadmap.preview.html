@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<!-- GENERATED from /home/user/animath/docs/sessions/converted/progress/stable-marriage-styling-ulMPt/2026-06-06-S01-status-and-roadmap.md by render-report.mjs — edit the .md, not this. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Stable Marriage — Status &amp; Roadmap</title>
+  <link rel="stylesheet" href="../../../report.css">
+  <script defer src="../../../report.js"></script>
+  <script type="application/json" class="report-meta">
+{
+  "kind": "progress",
+  "session": "2026-06-06-S01",
+  "date": "2026-06-06",
+  "title": "Stable Marriage — Status & Roadmap",
+  "branch": "claude/stable-marriage-styling-ulMPt",
+  "slug": "stable-marriage-styling-ulMPt",
+  "status": "in-progress",
+  "build": "unknown",
+  "followup": "Implementation not yet started — planning/roadmap only.",
+  "pr": null
+}
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">progress</p>
+    <h1>Stable Marriage — Status &amp; Roadmap</h1>
+    <dl class="meta">
+      <div><dt>Session</dt><dd>2026-06-06-S01</dd></div>
+      <div><dt>Branch</dt><dd><code>claude/stable-marriage-styling-ulMPt</code></dd></div>
+      <div><dt>Status</dt><dd><span class="badge badge-warn">in-progress</span></dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-warn">build: unknown</span></dd></div>
+    </dl>
+  </header>
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+<h1>Stable Marriage — Status &amp; Roadmap</h1>
+<h2>Executive summary</h2>
+<p>The session opened as a <em>styling</em> task. A three-lens code review and a follow-up design discussion converged on a different headline: <strong>the CSS is already the strongest part of the app; the real work is correctness, the metric, and the structure that would make the code reusable.</strong> The app teaches a theorem (one-sided Gale–Shapley proposer-optimality) that its default model — a randomized two-sided market — does not actually demonstrate, reports a metric that can&#39;t measure the thing it names, and hides the very concept (a shared &quot;common preference&quot;) that the whole simulation is built on.</p>
+<div class="callout callout-decision"><span class="callout-label">Important</span>
+
+<p><strong>Decision taken this session</strong> The engine will support <strong>both</strong> models <em>as an explicit mode</em>: <strong>one-sided Gale–Shapley as the default</strong> (the theorem holds exactly), with the existing <strong>two-sided market</strong> kept as an honestly-labelled advanced variant. This single decision settles what the &quot;right metric&quot; must measure (see §4).</p>
+
+</div>
+
+<div class="callout callout-note"><span class="callout-label">Note</span>
+
+<p><strong>Status</strong> No source code has been changed. This report is the plan of record: current state, a prioritized roadmap, forward proposals, and the open decisions still needed.</p>
+
+</div>
+
+<h2>1 · What the app is</h2>
+<p>Two views of the stable-matching problem, sharing one engine:</p>
+<ul>
+<li><strong>Visualizer</strong> — step/play through proposals between two groups of <em>n</em> people; watch matches form; inspect summary stats, a rank distribution, and a stability check.</li>
+<li><strong>Lab</strong> — a Monte-Carlo sweep that heat-maps average outcomes across a 2-D grid of consensus levels for the two sides.</li>
+</ul>
+<p>The hidden engine of the whole thing is a <strong>latent &quot;common preference.&quot;</strong> <code>generatePreferences</code> (<code>StableMarriage.tsx:69–97</code>) gives every person a shared desirability score <code>quality∈[0,1]</code>, then builds each individual&#39;s ranked list as a blend:</p>
+<p>score(i → j) = consensus · quality[j] + (1 − consensus) · privateNoise So <strong>&quot;Consensus&quot; is literally the weight on the common preference.</strong> At 100% everyone ranks the other group identically (pure common preference); at 0% every list is private noise. <em>How much a population shares one common ranking, and how that shapes who has power in matching</em> — that is the real subject of the app.</p>
+<h2>2 · Current status — what works, what doesn&#39;t</h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>State</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Stability machinery</td>
+<td>Correct</td>
+<td><code>verifyStability</code> (<code>:99–132</code>) is sound; the two-sided process genuinely still lands on a stable matching. The reassuring result.</td>
+</tr>
+<tr>
+<td>CSS / visual design</td>
+<td>Strong</td>
+<td>Tokenised, responsive (900/600px), theme-aligned — more polished than the peer AgenticSorting. The &quot;styling gap&quot; is shallow (no glass/<code>backdrop-filter</code> floater, hard-coded hexes, CVD-hostile heatmap ramps).</td>
+</tr>
+<tr>
+<td>Model vs. claim</td>
+<td>Broken</td>
+<td>EXPLAINER teaches one-sided proposer-optimality; engine runs a <code>bias</code>-weighted two-sided market, default <code>bias=50</code> — the theorem does not hold at the default (§4).</td>
+</tr>
+<tr>
+<td>The metric</td>
+<td>Wrong question</td>
+<td>&quot;Asker/Asked avg rank&quot; labels a per-event role, has no baseline, and only means what the text says at <code>bias=100/0</code>. It cannot measure &quot;advantage&quot; (§4).</td>
+</tr>
+<tr>
+<td>Common preference</td>
+<td>Invisible</td>
+<td><code>quality</code> drives everything but surfaces only via the &quot;Sort by popularity&quot; toggle. The concept the app is about is never drawn or explained (§4).</td>
+</tr>
+<tr>
+<td>Lab statistics</td>
+<td>Dishonest</td>
+<td>Each heatmap cell is a <strong>single</strong> simulation run (<code>:828–844</code>); the surface is single-draw noise sold as a measurement.</td>
+</tr>
+<tr>
+<td>Algorithm structure</td>
+<td>Duplicated</td>
+<td>GS implemented twice (<code>stepSimulation :593</code> &amp; <code>runHeadlessSimulation :134</code>) with already-divergent termination logic.</td>
+</tr>
+<tr>
+<td>State management</td>
+<td>Tangled</td>
+<td>5 <code>useState</code> + 4 shadow <code>useRef</code> mirrors; a state machine smeared across 9 hooks. Timer lifecycle itself is leak-free.</td>
+</tr>
+<tr>
+<td>Input robustness</td>
+<td>Fragile</td>
+<td>Clearing the Population field → <code>NaN</code> → <code>Array(NaN)</code> <em>RangeError</em>. The <code>NumberInput</code> primitive that fixes this is unused.</td>
+</tr>
+<tr>
+<td>AppShell conformance</td>
+<td>Partial (permitted)</td>
+<td>Header/explainer hooks ✓; no <code>ShellSettings/Actions</code>, <code>ControlPanel</code>, or <code>usePersistentState</code>. Matches the DOM-app precedent set by AgenticSorting — a choice, not a regression.</td>
+</tr>
+<tr>
+<td>Pedagogical legibility</td>
+<td>Thin</td>
+<td>Preference lists hidden; rejections invisible (the &quot;why stability holds&quot; moment never shown); rank badges vanish for <em>n &gt; 30</em>.</td>
+</tr>
+</tbody></table>
+<h2>3 · The salient components (for manageability &amp; reuse)</h2>
+<p>The 1243-line file fuses five concerns. The reusable decomposition — and the answer to &quot;what makes this manageable and reusable for other apps&quot;:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>What it is</th>
+<th>Reuse potential</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Preference model</strong></td>
+<td>Common-preference generator (<code>quality</code> + consensus + noise → ranked lists)</td>
+<td>A general <em>correlated-preference generator</em> — matching, voting, ranking demos all want it</td>
+</tr>
+<tr>
+<td><strong>Matching engine</strong></td>
+<td>Deferred acceptance as a pure <code>(state, action) → state</code> stepper + analysis (stability, extremal matchings)</td>
+<td>The keystone; one engine, no duplication, fully testable</td>
+</tr>
+<tr>
+<td><strong>Playback controller</strong></td>
+<td>play / pause / step / finish / speed + the loop (<code>:680–728</code>)</td>
+<td>Generic <code>useStepPlayback(stepFn)</code> — <strong>AgenticSorting is the same shape</strong></td>
+</tr>
+<tr>
+<td><strong>Viz primitives</strong></td>
+<td><code>Heatmap</code> (<code>:342</code>), <code>DistributionChart</code> (<code>:454</code>), <code>PersonRow</code></td>
+<td>Parameter-sweep heatmap &amp; stacked histogram are reusable across labs</td>
+</tr>
+<tr>
+<td><strong>Parameter schema</strong></td>
+<td>The &quot;multi-leveled&quot; params: instance (population) · per-side (men/women consensus) · process (bias, variant) · playback (speed)</td>
+<td>Declared params → the Lab can sweep <em>any</em> pair, not just consensus² (<code>:834–835</code> is hard-coded today)</td>
+</tr>
+</tbody></table>
+<div class="callout callout-decision"><span class="callout-label">Important</span>
+
+<p><strong>First move</strong> Extract the <strong>pure engine</strong> — <code>model.ts</code> (the common-preference generator) + <code>galeShapley.ts</code> (one deferred-acceptance stepper used by both the animated visualizer and the headless Lab). This is the keystone: it kills the divergence hazard, makes the algorithm testable, <em>and</em> is the prerequisite for both the right metric and for surfacing the common preference. Build it <strong>app-local first</strong>; promote to <code>lib/</code> only once a second app (AgenticSorting) actually wants it — the way <code>lib/particles</code> was earned, not designed up front.</p>
+
+</div>
+
+<h2>4 · The two deep findings from discussion</h2>
+<h3>4.1 Why we don&#39;t have the right metric</h3>
+<p>The UI reports four averages (Men / Women / Asker / Asked avg rank, <code>:994–1011</code>) and the EXPLAINER sells proposer-optimality. Three compounding problems:</p>
+<ol>
+<li><strong>The theorem is one-sided; the engine proposes from both sides.</strong> Each step flips a <code>bias</code>-weighted coin for who proposes (<code>:624</code>). At the default <code>bias=50</code> there is no proposing side, so &quot;the proposer-optimal stable matching&quot; isn&#39;t what&#39;s computed.</li>
+<li><strong>&quot;Asker/Asked&quot; labels the wrong quantity</strong> — a person&#39;s role in their <em>final accepted</em> match (<code>:224–243</code>), an emergent per-pair artifact, not the structural proposing side. It only coincides with the theorem at <code>bias=100/0</code>.</li>
+<li><strong>Average rank has no baseline, so it can&#39;t measure &quot;advantage.&quot;</strong> Advantage means <em>relative to the other stable matchings you could have landed in.</em> A man with avg rank 2.0 might be at his best-possible stable partner (huge advantage) or get the same partner in <em>every</em> stable matching (zero advantage) — the number can&#39;t tell them apart.</li>
+</ol>
+<div class="callout callout-decision"><span class="callout-label">Important</span>
+
+<p><strong>The right metric</strong> The <strong>gap between the two extremal stable matchings</strong> (man-optimal vs woman-optimal). It <em>is</em> &quot;how much proposing matters&quot;; it&#39;s a deterministic property of the instance (independent of the random proposal order); and — the payoff — it is driven by consensus: under full common preference there is a <em>unique</em> stable matching (assortative, best-with-best), so the gap collapses to zero and proposer advantage <em>vanishes</em>. As preferences decorrelate, the lattice of stable matchings grows and the gap widens. One metric ties the common preference, the consensus knob, and the proposer-advantage theorem into a single story. Computing it just needs the pure engine to run one-sided GS from each side — which the engine will do natively (§3).</p>
+
+</div>
+
+<h3>4.2 Why &quot;common preference&quot; isn&#39;t infused</h3>
+<p>The thing the whole model is built on — <code>quality</code> — is almost invisible. It reaches the user only through the &quot;Sort by popularity&quot; toggle (<code>:808, :815</code>); it is never drawn, labelled, or explained. So &quot;Consensus = 80%&quot; is a mystery slider: consensus <em>toward what?</em> There&#39;s a shared desirability ranking sitting right there and the app hides it. <strong>Infusing it</strong> means making the common preference a first-class, visible object (e.g. a desirability spine each person sits on), so the learner can watch consensus interpolate from &quot;everyone chasing the same few stars&quot; toward &quot;idiosyncratic taste.&quot;</p>
+<h3>4.3 What &quot;Both, as a mode&quot; pins down</h3>
+<p>The engine gains one parameter — <em>who proposes</em> — with three settings:</p>
+<ul>
+<li><strong>One-sided (default):</strong> a side toggle, Men propose / Women propose. Pure deferred acceptance; theorem holds exactly; men-propose <em>is</em> the man-optimal matching by construction. The <code>bias</code> coin flip is gone from this mode.</li>
+<li><strong>Market (advanced):</strong> the existing <code>bias</code>-weighted coin flip, relabelled away from &quot;proposer-optimality&quot; — framed as an idealized two-sided market with the asker/asked split presented as an <em>emergent</em> observation.</li>
+</ul>
+<p>Consequence: the honest metric (§4.1) is <strong>mode-independent</strong>. In one-sided mode you can show &quot;this run landed exactly on the man-optimal extreme; here&#39;s the woman-optimal extreme for contrast.&quot; In market mode the same gap is the bound the emergent outcome floats inside. Only the framing differs.</p>
+<h2>5 · Roadmap — prioritized</h2>
+<p>A correctness-first sequence. Styling is not dropped — it is sequenced <em>after</em> the foundation so polish lands on honest, deduplicated code. Effort: S/M/L.</p>
+<h3>P0 — Foundation &amp; correctness</h3>
+<ol>
+<li>HIGH <strong>Extract the pure engine</strong> (<code>model.ts</code> + <code>galeShapley.ts</code>) with the contract <code>galeShapley(prefs, {proposingSide:&#39;men&#39;|&#39;women&#39;|&#39;market&#39;, bias?}) → {matching, log}</code> and <code>extremalMatchings(prefs) → {menOptimal, womenOptimal, gap}</code>. One engine, consumed by both views. M</li>
+<li>HIGH <strong>Reconcile model vs claim (&quot;Both, as a mode&quot;).</strong> Default to one-sided GS; keep market as an explicit advanced variant; rewrite the EXPLAINER so the ? popup matches what&#39;s on screen. M</li>
+<li>HIGH <strong>Add the right metric</strong> — the extremal-matching gap / core size — and demote the murky Asker-vs-Asked to the market mode (clearly framed as emergent). M</li>
+</ol>
+<h3>P1 — Honesty &amp; pedagogy</h3>
+<ol>
+<li>HIGH <strong>Replicate Lab cells</strong> over <em>T</em> trials (expose <em>T</em>; even 10–20 helps); soften README&#39;s &quot;quantify.&quot; Kills single-draw noise. S–M</li>
+<li>MED <strong>Show <em>why</em> stability holds</strong> — render rejections (red flash + &quot;already prefers current partner&quot;) and a live &quot;no rejected pair can block&quot; invariant. The missing &quot;aha.&quot; M</li>
+<li>MED <strong>Surface the preference list</strong> of at least the active proposer (hover for everyone). The defining input shouldn&#39;t be hidden. S–M</li>
+<li>MED <strong>Infuse the common preference</strong> — draw the desirability spine so &quot;Consensus&quot; is legible (§4.2). M</li>
+<li>MED <strong>Disclose incomplete matchings</strong> — report unmatched count; don&#39;t let &quot;Stable ✓&quot; imply &quot;everyone paired.&quot; S</li>
+</ol>
+<h3>P2 — Robustness</h3>
+<ol>
+<li>MED <strong><code>useReducer</code> over one <code>SimState</code></strong>; drop the four mirror refs; verify/fix the <code>runToCompletion</code> ref-timing (<code>:696–706</code>). M</li>
+<li>MED <strong>Harden inputs</strong> — <code>NumberInput</code> for Population (NaN crash); Lab cancel flag; precompute a rank matrix to drop stability/step from O(n³)→O(n²). S–M</li>
+<li>LOW <strong>Persist settings</strong> (<code>usePersistentState</code>); render the shipped-but-unused <code>README.md</code>. S</li>
+</ol>
+<h3>P3 — Styling parity (the original brief)</h3>
+<ol>
+<li>LOW–MED <strong>Decide ShellActions adoption vs DOM autonomy</strong> (open decision below); consolidate the three button systems; tokenise hard-coded hexes; CVD-safe heatmap ramps; optional glass/<code>backdrop-filter</code> floater chrome. M</li>
+</ol>
+<h3>P4 — Verify</h3>
+<ol>
+<li>LOW <strong><code>npm run build</code></strong> (the only CI gate) + runtime sanity checks (Finish at n=100; empty-Population field; variant stability across seeds). S</li>
+</ol>
+<h2>6 · Proposals — what else this structure could explore</h2>
+<p>Once the engine + param-schema + sweep-Lab skeleton exists, it becomes a platform. Each proposal notes what it <em>reuses</em> vs. <em>adds</em>.</p>
+<h3>6.1 Other matching markets on the same engine</h3>
+<ul>
+<li><strong>Hospitals / Residents (many-to-one).</strong> Each receiver has a quota &gt; 1. <em>Reuses</em> deferred acceptance; <em>adds</em> capacities + preference-over-sets. The real-world algorithm (the NRMP match) — high motivation.</li>
+<li><strong>School choice with priorities.</strong> Same many-to-one engine, but receivers have coarse priority <em>classes</em> with tie-breaking — a natural bridge to the ties/indifference proposal below.</li>
+<li><strong>Stable Roommates (non-bipartite).</strong> One pool, everyone ranks everyone. <em>The killer teaching contrast:</em> a stable matching can <em>fail to exist.</em> <em>Reuses</em> the preference model + stability checker; <em>adds</em> Irving&#39;s algorithm and a &quot;no stable matching&quot; outcome the bipartite case never shows.</li>
+</ul>
+<h3>6.2 Richer preference structure</h3>
+<ul>
+<li><strong>Ties / indifference.</strong> Weak vs strong stability; the problem gets genuinely harder. <em>Reuses</em> the generator (just relax strict sorting); <em>adds</em> a stability-notion toggle.</li>
+<li><strong>Incomplete / truncated lists.</strong> People would rather stay single than match below a cutoff — makes &quot;unmatched survivors&quot; (already latent, §1g of the pedagogy report) a first-class, intended phenomenon.</li>
+</ul>
+<h3>6.3 Strategy &amp; mechanism design</h3>
+<ul>
+<li><strong>Manipulability demo.</strong> Let one agent misreport preferences and watch the outcome. The deep result: the proposing side is truthful as a dominant strategy; receivers can sometimes game it. Directly dramatizes the proposer/receiver asymmetry the app is about. <em>Reuses</em> the engine; <em>adds</em> a &quot;report vs. true&quot; preference editor.</li>
+</ul>
+<h3>6.4 The lattice of stable matchings</h3>
+<ul>
+<li><strong>&quot;Watch the core collapse.&quot;</strong> Visualize the full lattice of stable matchings (via rotations) and slide consensus 0→100% to watch it shrink to a single point. This <em>is</em> the right metric (§4.1) made spatial and is the most beautiful payoff available. <em>Reuses</em> <code>extremalMatchings</code>; <em>adds</em> rotation enumeration + a small lattice viz.</li>
+<li><strong>Side-by-side comparison mode.</strong> Run man-optimal and woman-optimal in two panes simultaneously — the asymmetry becomes visceral. Cheap once the engine exists.</li>
+</ul>
+<h3>6.5 A declarative Lab that sweeps anything</h3>
+<ul>
+<li>With the parameter schema (§3), the Lab stops being hard-wired to consensus². It could sweep <em>any</em> param pair and plot the <strong>core-size / extremal-gap surface</strong> or a <strong>phase diagram of proposer advantage</strong>. <em>Reuses</em> the Heatmap; <em>adds</em> axis-selection. This machinery would then drop into other apps unchanged.</li>
+</ul>
+<h3>6.6 Framework-level reuse (beyond Stable Marriage)</h3>
+<ul>
+<li>The <strong>step-log + playback + state-machine</strong> pattern (§3) generalizes to any algorithm visualization. AgenticSorting is the same shape today. A shared <code>useStepPlayback</code> / lightweight <code>lib/algoviz</code> could eventually host both — but only after this app proves the pattern locally.</li>
+</ul>
+<h2>7 · Open decisions (need your call before implementation)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Decision</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>D1</td>
+<td>App identity: one-sided vs market vs both</td>
+<td>RESOLVED — <strong>both, as a mode</strong> (one-sided default)</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>Control surface: adopt <code>ShellActions</code>+<code>ControlPanel</code> (lights the ▶ button, inherits glass chrome) vs keep autonomous DOM panel (AgenticSorting precedent)</td>
+<td>OPEN</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>Scope of <em>this</em> next work-block: full P0–P1 correctness pass, or a thinner slice (e.g. P0 engine + metric only)</td>
+<td>OPEN</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>How far to chase the forward proposals (§6) now vs. log as future ideas</td>
+<td>OPEN</td>
+</tr>
+</tbody></table>
+<h2>8 · Recommended next step</h2>
+<p>Begin at <strong>P0.1 — extract the pure engine</strong>. It is unanimously the highest- leverage move: it kills the duplicated algorithm, makes the math testable under the only CI gate we have (<code>npm run build</code>), and is the prerequisite for both the right metric (P0.3) and the common-preference visualization (P1.7). With D1 resolved, the engine&#39;s contract is already specified (§4.3) — so this can start the moment D3 (scope) is set.</p>
+<div class="callout callout-note"><span class="callout-label">Note</span>
+
+<p><strong>Caveat</strong> All review findings are static analysis — no build was run and the app wasn&#39;t exercised at runtime. Two items (the <code>runToCompletion</code> ref-timing and the variant&#39;s empirical stability) are <em>hypotheses</em> a 30-minute runtime check would convert to facts. The pure-engine extraction resolves the first definitively and makes the second a one-line property test.</p>
+
+</div>
+
+<h2>Self-reflection</h2>
+<ol>
+<li><strong>Confidence.</strong> High on the convergent findings — three independent lenses plus the source read all agree on engine duplication, model-vs-claim, and CSS quality. The metric argument (§4.1) and the &quot;right metric = extremal gap&quot; claim are mathematically standard and I&#39;m confident in them.</li>
+<li><strong>What could be wrong.</strong> Line numbers are from a single source read and a couple are approximate in the upstream reports; the variant-stability and run-to-completion items remain unverified at runtime. If the <code>bias</code> semantics were collectively misread, the synthesis and this report would share that error.</li>
+<li><strong>Bias I&#39;m flagging.</strong> This report reframes the user&#39;s stated goal (styling) toward correctness. That&#39;s the honest reading of the evidence — but styling is preserved as P3, not discarded, and the user explicitly clarified the &quot;styling&quot; they meant was the parameter structure, which §3 addresses directly.</li>
+<li><strong>Not done.</strong> No code written, no build run, no runtime observation. This is a plan, not an implementation.</li>
+</ol>
+
+    </div>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!-- GENERATED from /home/user/animath/docs/sessions/converted/progress/headless-webgl-cloud/2026-06-07-S01-headless-webgl-tooling.md by render-report.mjs — edit the .md, not this. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Headless software-WebGL tooling for cloud sessions</title>
+  <link rel="stylesheet" href="../../../report.css">
+  <script defer src="../../../report.js"></script>
+  <script type="application/json" class="report-meta">
+{
+  "kind": "progress",
+  "session": "2026-06-07-S01",
+  "date": "2026-06-07",
+  "title": "Headless software-WebGL tooling for cloud sessions",
+  "branch": "claude/headless-webgl-cloud-PxPGu",
+  "slug": "headless-webgl-cloud",
+  "status": "in-progress",
+  "build": "passed",
+  "followup": "low",
+  "pr": "187"
+}
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">progress</p>
+    <h1>Headless software-WebGL tooling for cloud sessions</h1>
+    <dl class="meta">
+      <div><dt>Session</dt><dd>2026-06-07-S01</dd></div>
+      <div><dt>Branch</dt><dd><code>claude/headless-webgl-cloud-PxPGu</code></dd></div>
+      <div><dt>Status</dt><dd><span class="badge badge-warn">in-progress</span></dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-ok">build: passed</span></dd></div>
+    </dl>
+  </header>
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+<h1>Headless software-WebGL tooling for cloud sessions</h1>
+<h2>Session purpose</h2>
+<p>Give cloud / CI sessions a way to actually <em>render and screenshot</em> WebGL (Three.js) apps, which otherwise can&#39;t be visually verified there — the container has no GPU and no browser, so only <code>npm run build</code> (a type-check) runs. Add software-WebGL (ANGLE + SwiftShader) headless screenshot tooling so a real frame can be captured, closing the verification loop for WebGL changes such as the in-flight Klein-bottle fix.</p>
+<h2>Previous session</h2>
+<p>Latest handoff is an unrelated topic: <a href="../../handoff/particle-viewer-ideas-priority-UDZRe/2026-06-05-S01-ideas-triage-quick-wins.html">2026-06-05-S01 — Particle-viewer ideas triage + quick wins</a> (status <strong>completed</strong>, build passed, no PR). Nothing pending that bears on this session; this is the first tracked session on the <code>headless-webgl-cloud</code> branch.</p>
+<h2>Working notes</h2>
+<ol class="timeline">
+      <li class="tl" data-type="decision">
+        <p class="tl-time">15:34</p>
+        <span class="chip chip-decision">Decision</span>
+        <h3>Retroactive session log under a nice-name slug</h3>
+        <p class="why"><strong>Why:</strong> <code>/start-session</code> was not run before the work began; the user asked to run it now and clarified the library convention.</p>
+        <p>Created this progress report after the fact. Per the user, the <code>docs/sessions/</code> library should use <strong>nice names</strong> — no <code>claude/</code> prefix, no hex suffix — so the slug is <code>headless-webgl-cloud</code> (dropping the branch&#39;s <code>-PxPGu</code> hex). Hex codes stay fine for git worktrees; the goal is nice branch names.</p>
+      </li>
+</ol>
+
+    </div>
+  </div>
+</main>
+</body>
+</html>

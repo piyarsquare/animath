@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<!-- GENERATED from /home/user/animath/docs/sessions/converted/handoff/particle-viewer-ideas-priority-UDZRe/2026-06-05-S01-ideas-triage-quick-wins.md by render-report.mjs — edit the .md, not this. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Particle-viewer ideas triage + quick wins</title>
+  <link rel="stylesheet" href="../../../report.css">
+  <script defer src="../../../report.js"></script>
+  <script type="application/json" class="report-meta">
+{
+  "kind": "handoff",
+  "session": "2026-06-05-S01",
+  "date": "2026-06-05",
+  "title": "Particle-viewer ideas triage + quick wins",
+  "branch": "claude/particle-viewer-ideas-priority-UDZRe",
+  "slug": "particle-viewer-ideas-priority-UDZRe",
+  "status": "completed",
+  "build": "passed",
+  "followup": "low",
+  "pr": null
+}
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">handoff</p>
+    <h1>Particle-viewer ideas triage + quick wins</h1>
+    <dl class="meta">
+      <div><dt>Session</dt><dd>2026-06-05-S01</dd></div>
+      <div><dt>Branch</dt><dd><code>claude/particle-viewer-ideas-priority-UDZRe</code></dd></div>
+      <div><dt>Status</dt><dd><span class="badge badge-ok">completed</span></dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-ok">build: passed</span></dd></div>
+    </dl>
+  </header>
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+<h1>Particle-viewer ideas triage + quick wins</h1>
+<h2>What shipped</h2>
+<p>13 features (+ a removal), each its own commit with a green build:</p>
+<ul>
+<li><strong>Hopf study view</strong> — one-tap preset: forces Hopf, Motion→Fixed, stops spins, resets 4D orientation.</li>
+<li><strong>Flexible color</strong> — independent <strong>Hue</strong> and <strong>Brightness</strong> pickers (<code>ColourQuantity</code>: phase / magnitude / real / imag, + <strong>Uniform</strong> flat for brightness).</li>
+<li><strong>Functions</strong> — added <code>cot</code>, <code>arcsin</code>, <code>arccos</code> (branch-aware); grouped the picker into 5 categories via new <code>Select</code> optgroup support; added the parameterized <strong>quadratic</strong> <code>a·z²+b·z+c</code> (complex coeffs).</li>
+<li><strong>Domain</strong> — explicit min/max bounds with a <strong>± lock</strong> (two-thumb <code>RangeSlider</code> when unlocked); a <strong>Sampling</strong> pattern picker (grid / polar / rings / spokes / web / squares / random).</li>
+<li><strong>Charts</strong> — Input/Output <strong>polar / log-polar</strong> remap (<code>chartCoord</code>).</li>
+<li><strong>Torus polish</strong> — soft pole-clamp (<code>POLE_EPS</code>) + scaffold text labels; the <strong>Hopf fiber-trace overlay</strong> (the interlocking circles).</li>
+<li><strong>Shared primitives</strong> — commit-on-blur <code>NumberInput</code>; dual-thumb <code>RangeSlider</code>; <code>Select</code> groups.</li>
+<li><strong>UX</strong> — confirm guard on &quot;Reset settings&quot;; <strong>removed</strong> the Torus &quot;Radius scale: Log&quot; footgun.</li>
+</ul>
+<div class="callout callout-gotcha"><span class="callout-label">Caution</span>
+
+<p><strong>Gotcha</strong> The <strong>Torus projection is scale-invariant</strong> — it drops overall <code>|z|</code>, keeping only the angles + the <code>|f|/|z|</code> ratio. That&#39;s why <code>f = b·z</code> collapses to a <em>single</em> crisp circle (one Hopf fiber). The removed log-radius broke that (nonlinear, un-collapsed it into a fuzzy band off <code>b=1</code>). Also: <strong>Motion = Quaternion (default) auto-tumbles the 4D orientation even in Hopf/Torus</strong>, which deforms those nonlinear views — use Fixed / the Hopf study button.</p>
+
+</div>
+
+<h2>Key files</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/4f2b8f6/src/animations/ComplexParticles/shaders/index.ts"><code>ComplexParticles/shaders/index.ts</code></a></td>
+<td><code>calcColour</code> (hue/brightness quantity), <code>chartCoord</code> (polar charts), <code>applyComplex</code> (cot/arcsin/arccos/quadratic, indices 19–22), Torus <code>project</code> (log-radius removed)</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/4f2b8f6/src/lib/particles/createParticleGeometry.ts"><code>lib/particles/createParticleGeometry.ts</code></a></td>
+<td><code>fillPattern</code> — the 7 sampling layouts; explicit <code>(xMin,xMax,yMin,yMax)</code> bounds</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/4f2b8f6/src/lib/particles/createHopfFibers.ts"><code>lib/particles/createHopfFibers.ts</code></a></td>
+<td>Fiber-trace overlay (LineLoops; samples base points on S²)</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/4f2b8f6/src/lib/particles/useParticleState.ts"><code>lib/particles/useParticleState.ts</code></a></td>
+<td>All new persisted state (colourQuantity, brightnessQuantity, bounds + lock, samplePattern, inputCoord/outputCoord, showFibers/fiberDensity)</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/4f2b8f6/src/components/ControlPanel.tsx"><code>components/ControlPanel.tsx</code></a></td>
+<td><code>NumberInput</code>, <code>RangeSlider</code>, <code>Select</code> groups (optgroups)</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/4f2b8f6/src/components/ParticleViewerShell.tsx"><code>components/ParticleViewerShell.tsx</code></a></td>
+<td>Domain / Color / Camera UI; Hopf study button; <code>domainExtras</code> slot (branch range)</td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/4f2b8f6/src/lib/complexMath.ts"><code>lib/complexMath.ts</code></a></td>
+<td>CPU mirrors (adaptive sampling): new functions, <code>functionCategories</code>, <code>complexQuadratic</code>, <code>QUADRATIC_INDEX</code></td>
+</tr>
+<tr>
+<td><a href="https://github.com/piyarsquare/animath/blob/4f2b8f6/IDEAS.md"><code>IDEAS.md</code></a></td>
+<td>Backlog with accurate status markers (source of truth for what&#39;s left)</td>
+</tr>
+</tbody></table>
+<h2>Pending / not done</h2>
+<p><strong>Big (intentionally deferred):</strong></p>
+<ul>
+<li><strong>Unified channel-mapping matrix</strong> — the grand refactor (every axis + color a free source×coordinate assignment). Subsumes drop-axis / charts / color pickers; their plumbing is now all in place. Its own project.</li>
+<li><strong>Custom <code>f</code></strong> — typed expression → GLSL compiler (+ CPU evaluator for adaptive). The quadratic was the pragmatic stand-in.</li>
+</ul>
+<p><strong>Small polish follow-ups (inside shipped features):</strong></p>
+<ul>
+<li><strong>Hopf fibers</strong> — make the Collapse→Hopf slider also shrink the fiber circles to points (they currently just hide past 0.5); option to seed fibers from the function&#39;s own graph points.</li>
+<li><strong>Sampling patterns</strong> — annulus (<code>rMin&gt;0</code>) for radial patterns (useful for singular <code>1/z</code>, <code>ln</code>); sunflower option; per-pattern density (ring/spoke counts).</li>
+<li><strong>Polar charts</strong> — phase-unwrap for the <code>arg</code> seam at ±π.</li>
+<li><strong>Color as a 4th channel</strong> — judged redundant (Drop-axis + Hue/Brightness already does it); revisit only via the matrix.</li>
+</ul>
+<div class="callout callout-note"><span class="callout-label">Note</span>
+
+<p><strong>Note</strong> Old <code>localStorage</code> keys are now ignored (harmless): <code>branchCount</code>/ <code>branchIndices</code>/<code>branchStyle</code> (replaced by a sheet <em>range</em> <code>branchMin</code>/<code>branchMax</code>) and <code>logRadius</code> (removed).</p>
+
+</div>
+
+<h2>Context</h2>
+<ul>
+<li>First (and so far only) tracked session on this branch. No PR opened — branch is pushed and ready if one is wanted.</li>
+<li>The session&#39;s most instructive thread: a user-reported &quot;fuzzy circle&quot; for <code>f=b·z</code> in the Torus view. I wrongly blamed jitter, then sampling, then 4D motion; the user identified it as the <strong>log-radius</strong> option. Confirmed by rendering the exact Torus math headless (PNG via node <code>zlib</code>) — see <code>/tmp/render*.mjs</code> pattern; those scripts are throwaway, not committed.</li>
+<li>Append-only convention honoured: new functions added at the <em>end</em> of <code>functionNames</code> (persisted index), categories are presentation-only.</li>
+</ul>
+<h2>Self-reflection</h2>
+<ol>
+<li><strong>What would you do with another session?</strong> The annulus (<code>rMin&gt;0</code>) sampling control — cheap and genuinely useful for singular functions — then scope the unified channel-mapping matrix properly.</li>
+<li><strong>What would you change about what you produced?</strong> I diagnosed the &quot;fuzzy circle&quot; three times wrong before the user found it. I should have reached for the headless render (my eventual proof) <em>first</em>, instead of trusting analytic models that each silently assumed default settings.</li>
+<li><strong>What were you not asked that you think is important?</strong> Whether to keep the polar/sampling work given the actual bug was log-radius — I kept it (it solves a real, different problem) but didn&#39;t explicitly re-justify it until asked.</li>
+<li><strong>What did we both overlook?</strong> That a non-default toggle (log-radius) was active the whole time — every model I built assumed Linear, so none could reproduce the report.</li>
+<li><strong>What did you find difficult?</strong> Diagnosing a WebGL visual with no way to see the canvas. Resolved by rendering the projection math to PNG headlessly.</li>
+<li><strong>What would have made this task easier?</strong> A screenshot/headless-render harness in the sandbox so visual claims can be checked before asserting them.</li>
+<li><strong>Follow-up value:</strong> LOW — everything shipped builds and is verified; what remains is the two big deferred items + small polish, all clearly scoped in <code>IDEAS.md</code>.</li>
+</ol>
+
+    </div>
+  </div>
+</main>
+</body>
+</html>
