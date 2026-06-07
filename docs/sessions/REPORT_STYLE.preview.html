@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<!-- GENERATED from docs/sessions/REPORT_STYLE.md by render-report.mjs — edit the .md, not this. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Session Report Style Guide</title>
+  <link rel="stylesheet" href="./report.css">
+  <script defer src="./report.js"></script>
+  <script type="application/json" class="report-meta">
+{
+  "kind": "progress",
+  "session": "2026-06-07-S01",
+  "date": "2026-06-07",
+  "title": "Session Report Style Guide",
+  "branch": "claude/session-control-center",
+  "slug": "session-control-center",
+  "status": "in-progress",
+  "build": "unknown",
+  "followup": null,
+  "pr": null,
+  "app": null
+}
+  </script>
+</head>
+<body>
+<main class="report">
+  <header>
+    <p class="kicker">progress</p>
+    <h1>Session Report Style Guide</h1>
+    <dl class="meta">
+      <div><dt>Session</dt><dd>2026-06-07-S01</dd></div>
+      <div><dt>Branch</dt><dd><code>claude/session-control-center</code></dd></div>
+      <div><dt>Status</dt><dd><span class="badge badge-warn">in-progress</span></dd></div>
+      <div><dt>Build</dt><dd><span class="badge badge-warn">build: unknown</span></dd></div>
+    </dl>
+  </header>
+  <div class="body">
+    <nav class="toc" data-autobuild aria-label="Contents"></nav>
+    <div class="content">
+<h1>Session Report Style Guide</h1>
+<p>This file <strong>is</strong> the style spec: it is written in the proposed Markdown + YAML
+report style, so whatever it looks like rendered on GitHub is what every report
+will look like. One source, two render targets:</p>
+<ul>
+<li><strong>GitHub native</strong> (the blob view) — the floor: always readable, no build step.</li>
+<li><strong>Generated renderer</strong> (control center / <code>report.css</code>) — the ceiling: full
+HTML richness from the same Markdown source.</li>
+</ul>
+<div class="callout callout-note"><span class="callout-label">Note</span>
+
+<p>GitHub strips custom CSS, so the native view can&#39;t reproduce timeline dots,
+scroll-spy, or sortable tables. The style approximates those with GitHub-native
+features; the rich versions come from the generated renderer.</p>
+
+</div>
+
+<h2>1 · Frontmatter (the metadata schema)</h2>
+<p>Every report opens with a YAML frontmatter block. GitHub renders it as a table at
+the top of the file, and our generator parses it for the cross-branch index — so
+it is both human- and machine-readable. Keep values <strong>flat</strong> (the parser reads
+<code>key: value</code>).</p>
+<pre><code class="language-yaml">---
+kind: progress            # progress | handoff | three-hats
+session: 2026-06-07-S01   # YYYY-MM-DD-SNN
+date: 2026-06-07
+title: Short human title
+branch: claude/&lt;branch&gt;
+slug: &lt;branch-slug&gt;       # provenance — must match the folder name
+status: in-progress       # in-progress | completed | design-only | investigation-only
+build: unknown            # passed | failed | unknown
+followup: null            # null | low | medium | high
+pr: null                  # null | a PR URL
+app: StableMarriage       # optional — the src/animations/&lt;App&gt; this concerns
+---
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th align="center">Required</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>kind</code></td>
+<td align="center">✓</td>
+<td>drives the icon/section template</td>
+</tr>
+<tr>
+<td><code>session</code></td>
+<td align="center">✓</td>
+<td>the unit the control center groups by</td>
+</tr>
+<tr>
+<td><code>slug</code></td>
+<td align="center">✓</td>
+<td><strong>provenance</strong>; must equal the folder name</td>
+</tr>
+<tr>
+<td><code>status</code> / <code>build</code></td>
+<td align="center">✓</td>
+<td>drive the status badges</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td align="center">✓</td>
+<td>shown in the index and as the <code>#</code> H1</td>
+</tr>
+<tr>
+<td><code>followup</code> / <code>pr</code> / <code>app</code></td>
+<td align="center">–</td>
+<td>optional; <code>null</code> when absent</td>
+</tr>
+</tbody></table>
+<h2>2 · Section structure</h2>
+<p>Use <code>##</code> for sections (GitHub auto-anchors them and offers an outline TOC). Order:</p>
+<ul>
+<li><strong>progress</strong> — <code>Purpose</code> → <code>Previous session</code> → <code>Working notes</code> (timeline) → content sections.</li>
+<li><strong>handoff</strong> — <code>Summary</code> → <code>What changed</code> → <code>Verification</code> → <code>Open / next</code> → <code>Self-reflection</code>.</li>
+<li><strong>three-hats</strong> — <code>Executive summary</code> → numbered findings → <code>Verdict</code> → <code>Self-reflection</code>.</li>
+</ul>
+<p>Keep the H1 (<code># title</code>) for standalone readability even though <code>title</code> is in frontmatter.</p>
+<h2>3 · Elements</h2>
+<h3>3a · Status &amp; badges</h3>
+<p>Encode status with a leading emoji + word (redundant, CVD-safe):</p>
+<ul>
+<li>✅ <code>completed</code> · 🟡 <code>in-progress</code> · ⚪ <code>design-only</code></li>
+<li>Build: ✅ <code>passed</code> · ❌ <code>failed</code> · ⚠️ <code>not run</code></li>
+</ul>
+<h3>3b · Callouts → GitHub alerts</h3>
+<p>Map the four HTML callout types onto GitHub&#39;s five alert blockquotes:</p>
+<table>
+<thead>
+<tr>
+<th>Report callout</th>
+<th>GitHub alert</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>note</td>
+<td><code>&gt; [!NOTE]</code></td>
+</tr>
+<tr>
+<td>(tip)</td>
+<td><code>&gt; [!TIP]</code></td>
+</tr>
+<tr>
+<td>decision</td>
+<td><code>&gt; [!IMPORTANT]</code></td>
+</tr>
+<tr>
+<td>warn</td>
+<td><code>&gt; [!WARNING]</code></td>
+</tr>
+<tr>
+<td>gotcha</td>
+<td><code>&gt; [!CAUTION]</code></td>
+</tr>
+</tbody></table>
+<div class="callout callout-decision"><span class="callout-label">Important</span>
+
+<p><strong>Decision</strong> — this is how a decision callout renders. Lead with a bold label
+so the intent is clear even where alert styling is unavailable.</p>
+
+</div>
+
+<div class="callout callout-gotcha"><span class="callout-label">Caution</span>
+
+<p><strong>Gotcha</strong> — use this for the traps and fragile assumptions.</p>
+
+</div>
+
+<h3>3c · Timeline (working notes)</h3>
+<p>The HTML timeline becomes a list of dated entries, <strong>newest first</strong>. Each entry:
+an <code>###</code> heading with <code>emoji · type · HH:MM — what</code>, then a bold <strong>Why:</strong> line,
+then optional detail. The emoji stands in for the coloured dot:</p>
+<p>🟣 decision · 🟢 code · 🔵 finding · 🔴 blocker · 🟡 milestone</p>
+<h4>🟡 milestone · 20:35 — Final status &amp; roadmap delivered</h4>
+<p><strong>Why:</strong> user asked for a prioritized plan after the review landed.
+Folded the three-hats findings together with the design discussion; recorded the
+&quot;both, as a mode&quot; decision.</p>
+<h4>🔵 finding · 20:20 — Correctness, not styling, is the headline</h4>
+<p><strong>Why:</strong> the review converged on engine/model issues, not CSS.
+The CSS is the strongest part of the file; the real work is the duplicated engine
+and the model-vs-claim mismatch.</p>
+<h3>3d · Tables</h3>
+<p>Native Markdown tables render cleanly on GitHub and carry most of what the HTML
+<code>&lt;table&gt;</code> did:</p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>State</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Stability check</td>
+<td>✅ correct</td>
+<td><code>verifyStability</code> is sound</td>
+</tr>
+<tr>
+<td>The metric</td>
+<td>❌ wrong question</td>
+<td>no baseline for &quot;advantage&quot;</td>
+</tr>
+</tbody></table>
+<h3>3e · Collapsible detail</h3>
+<p>Long or secondary material uses <code>&lt;details&gt;</code> (GitHub supports it) to keep reports
+scannable — the &quot;layered&quot; reading the explorer also wants:</p>
+<details>
+<summary>Raw blocking-pair scan notes</summary>
+
+<p>For every unmatched (m, w), check whether both strictly prefer each other to their
+current partner; unmatched ⇒ rank +∞. O(n³) via nested <code>indexOf</code>; fine at n ≤ 100.</p>
+</details>
+
+<h3>3f · Code</h3>
+<p>Fenced blocks with a language for highlighting:</p>
+<pre><code class="language-ts">galeShapley(prefs, { proposingSide: &#39;men&#39; | &#39;women&#39; | &#39;market&#39;, bias? })
+  → { matching, log }
+</code></pre>
+<h2>4 · Element mapping (HTML → Markdown)</h2>
+<table>
+<thead>
+<tr>
+<th>Current HTML</th>
+<th>Markdown equivalent</th>
+<th>GitHub-native?</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>report-meta</code> JSON island</td>
+<td>YAML frontmatter</td>
+<td>✓ (renders as table)</td>
+</tr>
+<tr>
+<td><code>&lt;section&gt;&lt;h2&gt;</code> + auto-TOC</td>
+<td><code>##</code> headings + outline button</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>.timeline</code> <code>li.tl[data-type]</code></td>
+<td><code>###</code> entry + emoji + <strong>Why:</strong></td>
+<td>✓ (approximated)</td>
+</tr>
+<tr>
+<td><code>.callout-*</code></td>
+<td><code>&gt; [!NOTE/IMPORTANT/WARNING/CAUTION]</code></td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>.badge-ok/warn/bad</code></td>
+<td>✅ / 🟡 / ❌ emoji + word</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>&lt;table&gt;</code> (sortable)</td>
+<td>Markdown table</td>
+<td>✓ (not sortable)</td>
+</tr>
+<tr>
+<td>collapsible sections</td>
+<td><code>&lt;details&gt;</code> / <code>&lt;summary&gt;</code></td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>&lt;pre&gt;&lt;code&gt;</code></td>
+<td>fenced code block</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>scroll-spy / sticky TOC</td>
+<td>—</td>
+<td>✗ (generated view only)</td>
+</tr>
+</tbody></table>
+<h2>5 · Rendering targets</h2>
+<ul>
+<li><strong>GitHub blob</strong> — <code>https://github.com/&lt;owner&gt;/&lt;repo&gt;/blob/&lt;branch&gt;/&lt;path&gt;</code> renders
+this natively. This is the everyday read.</li>
+<li><strong>Generated control center</strong> — the cross-branch generator parses this same
+frontmatter/body and can emit the rich <code>report.css</code> view (timeline dots,
+scroll-spy) for parity with the old HTML.</li>
+</ul>
+<div class="callout callout-note"><span class="callout-label">Note</span>
+
+<p>Open this file on GitHub (not githack — githack serves raw <code>.md</code> unrendered) to
+judge the native rendering.</p>
+
+</div>
+
+    </div>
+  </div>
+</main>
+</body>
+</html>
