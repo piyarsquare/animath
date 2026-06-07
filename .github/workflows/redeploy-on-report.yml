@@ -1,0 +1,42 @@
+name: Redeploy session control center on new report
+
+# The cross-branch session control center (built by the "Deploy demo" workflow,
+# which reads every branch's docs/sessions reports read-only) only refreshes on a
+# push to main, the daily cron, or a manual run. So a report pushed to a *feature*
+# branch wouldn't show up on the live Pages site until then.
+#
+# This dispatcher closes that gap: when a session report (.md) is pushed on any
+# non-main branch, it re-triggers the main "Deploy demo" run, which re-fetches all
+# branch tips and rebuilds control-center.html. It dispatches on ref=main, so the
+# deployed *app* is always main's build — only the session index picks up the new
+# report.
+
+on:
+  push:
+    branches-ignore: [main]          # main already deploys directly on push
+    paths:
+      - 'docs/sessions/**/*.md'
+
+permissions:
+  actions: write                     # needed to dispatch another workflow
+
+# Coalesce bursts (several reports pushed together) into one redeploy request.
+concurrency:
+  group: redeploy-sessions-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trigger-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch the main "Deploy demo" workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy.yml',
+              ref: 'main',
+            });
+            core.info('Requested a Pages redeploy from main to refresh the control center.');
