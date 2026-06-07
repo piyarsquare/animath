@@ -1,21 +1,24 @@
-name: Redeploy session control center on new report
+name: Redeploy session control center on report change
 
 # The cross-branch session control center (built by the "Deploy demo" workflow,
 # which reads every branch's docs/sessions reports read-only) only refreshes on a
-# push to main, the daily cron, or a manual run. So a report pushed to a *feature*
-# branch wouldn't show up on the live Pages site until then.
+# push to main, the daily cron, or a manual run. So a report ADDED OR UPDATED on a
+# *feature* branch wouldn't show up on the live Pages site until then.
 #
-# This dispatcher closes that gap: when a session report (.md) is pushed on any
-# non-main branch, it re-triggers the main "Deploy demo" run, which re-fetches all
-# branch tips and rebuilds control-center.html. It dispatches on ref=main, so the
-# deployed *app* is always main's build — only the session index picks up the new
-# report.
+# This dispatcher closes that gap: whenever a session report (.md) is added,
+# edited, or removed on any non-main branch, it re-triggers the main "Deploy demo"
+# run, which re-fetches all branch tips and rebuilds control-center.html. It
+# dispatches on ref=main, so the deployed *app* is always main's build — only the
+# session index picks up the change.
+#
+# The `paths` filter fires on ANY change to a matching file (add / modify /
+# delete), so updates to an existing report trigger a redeploy just like new ones.
 
 on:
   push:
     branches-ignore: [main]          # main already deploys directly on push
     paths:
-      - 'docs/sessions/**/*.md'
+      - 'docs/sessions/**/*.md'      # added, modified, or deleted reports all match
 
 permissions:
   actions: write                     # needed to dispatch another workflow
