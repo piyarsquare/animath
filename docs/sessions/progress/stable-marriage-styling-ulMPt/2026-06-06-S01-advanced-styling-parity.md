@@ -23,6 +23,15 @@ This is the first tracked session on the `stable-marriage-styling-ulMPt` branch.
 
 ## Working notes
 
+### 🟣 decision · 19:50 — Rebuild as a new app (`Stable Matching`, `#/stable-matching`)
+**Why:** User chose to write a clean new version alongside the old app and switch on
+completion, rather than repair in place. Locked: framework-native controls
+(ShellSettings/ShellActions + ControlPanel), first pass = Engine + Visualizer + Lab.
+
+Starting from the pure engine (`model.ts` common-preference generator +
+`galeShapley.ts` one-sided/market + `extremalMatchings` for the right metric), per
+the roadmap's P0.1 keystone.
+
 ### 🟡 milestone · 20:35 — Final status & roadmap report delivered
 **Why:** User requested a final report on app status + prioritized next steps + forward proposals, after the last reviewer landed. Wrote [status-and-roadmap](2026-06-06-S01-status-and-roadmap.html), folding the three-hats findings together with the in-session design discussion.
 

@@ -52,4 +52,10 @@ export const apps: AppDescriptor[] = [
     icon: '⇅',
     blurb: 'Watch autonomous agents with rival strategies race to sort a population of values.',
   },
+  {
+    hash: '/stable-matching',
+    name: 'Stable Matching',
+    icon: '⇆',
+    blurb: 'A rebuilt Gale–Shapley lab: tune how much each group shares a common preference, then watch the proposer advantage appear — and vanish at full consensus.',
+  },
 ];
