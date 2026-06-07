@@ -6,7 +6,8 @@
     "build": "tsc && vite build",
     "dev": "vite",
     "preview": "vite preview",
-    "shoot": "node scripts/shoot.mjs"
+    "shoot": "node scripts/shoot.mjs",
+    "sessions": "node docs/sessions/build-sessions.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.410.0",

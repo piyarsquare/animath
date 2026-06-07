@@ -13,13 +13,14 @@ progress report, and present context. Do NOT start any implementation work.
 ## Path Convention (read first)
 
 Session logs are **committed to the repo** and partitioned **per branch** so
-parallel branches never collide. Each report is a **self-contained HTML document**
-(we use HTML, not Markdown, for the richer rendering — tables, badges, collapsible
-sections). Everything this session writes goes under a branch-slug folder:
+parallel branches never collide. Each report is **Markdown + YAML frontmatter**
+(see `docs/sessions/REPORT_STYLE.md`): it reads natively on GitHub, and the
+build (`npm run sessions`) renders it into the rich HTML view. Everything this
+session writes goes under a branch-slug folder:
 
 ```
-docs/sessions/progress/<branch-slug>/YYYY-MM-DD-SNN-description.html
-docs/sessions/handoff/<branch-slug>/YYYY-MM-DD-SNN-description.html
+docs/sessions/progress/<branch-slug>/YYYY-MM-DD-SNN-description.md
+docs/sessions/handoff/<branch-slug>/YYYY-MM-DD-SNN-description.md
 ```
 
 `<branch-slug>` = the current branch (`git branch --show-current`) with the
@@ -50,10 +51,12 @@ short and topical** so the folders stay tidy.
    `src/apps.ts`, `CLAUDE.md`, `README.md`) are **append-only** — never reorder
    existing entries.
 6. **Create the progress report** at
-   `docs/sessions/progress/<branch-slug>/YYYY-MM-DD-SNN-description.html` with the
-   initial HTML structure below.
+   `docs/sessions/progress/<branch-slug>/YYYY-MM-DD-SNN-description.md` by copying
+   `docs/sessions/_template-progress.md` and filling the `[bracketed]` frontmatter
+   and sections (see structure below).
 7. **Present a summary** of the last handoff: status, what was done, what's pending.
-   Then wait for the user to direct what to work on.
+   Include the **live-preview links** (see below). Then wait for the user to direct
+   what to work on.
 
 ## Continuity
 
@@ -69,33 +72,38 @@ presenting the summary:
   not picking up from the handoff" or "this is about something different"), respect
   that framing.
 
-## Progress Report Initial Structure
+## Progress Report Structure
 
-Copy the canonical skeleton `docs/sessions/_template-progress.html` to the report
-path and fill in the `[bracketed]` placeholders. It is a **self-contained HTML
-document** that links the shared stylesheet (`../../report.css`) and enhancer
-(`../../report.js`), and carries a machine-readable `report-meta` JSON island the
-dashboard generator reads — keep that island accurate (update `status`/`build`/`pr`
-as the session progresses).
+Copy `docs/sessions/_template-progress.md` and fill it in. The full spec is
+`docs/sessions/REPORT_STYLE.md`; the essentials:
 
-Author with the components the stylesheet/script already provide — don't hand-roll
-markup:
+- **Frontmatter** (YAML) carries the metadata the cross-branch control center
+  indexes — keep `status`/`build`/`pr` accurate as the session progresses. `slug`
+  must match the folder name (it is the report's provenance).
+- **Working notes = the timeline.** Each state transition is one `###` entry,
+  **newest first**, with the heading formatted exactly:
+  `### <emoji> <type> · HH:MM — <what>` where `type ∈ decision | code | finding |
+  blocker | milestone` and the emoji is 🟣 decision · 🟢 code · 🔵 finding ·
+  🔴 blocker · 🟡 milestone. Follow it with a `**Why:** …` line, then body.
+  The renderer turns this section into the rich timeline rail.
+- **Callouts** use GitHub alerts: `> [!NOTE]` / `[!TIP]` / `[!IMPORTANT]` (decision)
+  / `[!WARNING]` (warn) / `[!CAUTION]` (gotcha).
+- **Sections** are `##` headings; the TOC builds itself in the rendered view.
 
-- **Working notes = a timeline.** Each state transition is one
-  `<li class="tl" data-type="…">` inside `<ol class="timeline">`, **newest first**.
-  `data-type` ∈ `decision | code | finding | blocker | milestone` (sets the dot
-  colour + chip). Give each a `<p class="tl-time">HH:MM</p>`, a `<span class="chip
-  chip-…">`, an `<h3>` (WHAT), and `<p class="why"><strong>Why:</strong> …</p>`.
-- **Callouts** to flag things: `<p class="callout callout-{note|warn|decision|gotcha}">`.
-- **Table of contents** builds itself from `<nav class="toc" data-autobuild>` — no
-  manual upkeep; just write `<h2>` sections inside `<div class="content">`. Heading
-  ids, anchors, scroll-spy, expand/collapse-all and back-to-top come from
-  `report.js`. (It all degrades gracefully with JS off.)
-- **Badges** on the Build line: `badge-ok` (passed) / `badge-bad` (failed) /
-  `badge-warn` (not run).
+Write plain, readable Markdown — it renders on GitHub as-is, and `npm run sessions`
+generates the rich HTML (timeline rail, scroll-spy TOC, styled callouts).
 
-The richness lives in `report.css` / `report.js`; keep the report itself simple,
-semantic HTML.
+## Live preview (while on a branch)
+
+GitHub Pages only deploys from `main`, so a branch's reports aren't on the deployed
+site. Two ways to view this session's report:
+
+- **GitHub native** (quick read): `https://github.com/piyarsquare/animath/blob/<branch>/docs/sessions/progress/<branch-slug>/<file>.md`
+  (commit + push first). Use the full branch name.
+- **Rich render + cross-branch control center**: run `npm run sessions` (after
+  `git fetch --all`) to (re)generate `docs/sessions/converted/**` and
+  `docs/sessions/control-center.html`, then open the control center — it aggregates
+  every active branch's reports. Surface these in the step-7 summary.
 
 ## Progress Report Rule
 
