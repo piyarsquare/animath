@@ -28,6 +28,24 @@ docs/sessions/handoff/<branch-slug>/YYYY-MM-DD-SNN-description.html
 to merge), so two branches can never write the same path. **Keep branch names
 short and topical** so the folders stay tidy.
 
+## Live preview (while on a branch)
+
+GitHub Pages only deploys from `main`, so a branch's reports aren't on the Pages
+site yet. To see the **rendered** HTML live from the current branch, use githack
+(a Cloudflare-fronted renderer that serves any branch/path). Build the links with
+the **full branch name** (not the slug):
+
+- Dashboard: `https://raw.githack.com/piyarsquare/animath/<branch>/docs/sessions/index.html`
+- This session's report:
+  `https://raw.githack.com/piyarsquare/animath/<branch>/docs/sessions/progress/<branch-slug>/<file>.html`
+
+The dashboard's internal links are relative, so clicking from the rendered index
+navigates to the rendered reports. githack caches briefly — if a just-pushed change
+isn't showing, hard-refresh or append `?v=<short-sha>` to bust the cache. (Once the
+branch merges to `main`, the same reports are at
+`https://piyarsquare.github.io/animath/sessions/`.) Note the report must be
+**committed and pushed** before githack can render it.
+
 ## Steps
 
 1. **Resolve the branch slug** — run `git branch --show-current`, strip a leading
@@ -53,7 +71,10 @@ short and topical** so the folders stay tidy.
    `docs/sessions/progress/<branch-slug>/YYYY-MM-DD-SNN-description.html` with the
    initial HTML structure below.
 7. **Present a summary** of the last handoff: status, what was done, what's pending.
-   Then wait for the user to direct what to work on.
+   Include the **live preview links** (see "Live preview" above) — the githack
+   dashboard URL and this session's report URL — so the user has a one-click way to
+   the rendered view. (Commit + push the new progress report first, or note that the
+   links go live once pushed.) Then wait for the user to direct what to work on.
 
 ## Continuity
 

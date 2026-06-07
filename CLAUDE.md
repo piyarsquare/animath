@@ -359,7 +359,24 @@ and `docs/sessions/report.js` (progressive enhancement — TOC build, scroll-spy
 sortable tables; degrades gracefully). Skills copy the `docs/sessions/_template-*.html`
 skeletons. Each report embeds a `report-meta` JSON island; `node
 docs/sessions/build-index.mjs` regenerates the `docs/sessions/index.html` dashboard
-from them (the `/handoff` skill runs it). Note: GitHub shows `.html` as source —
-open these locally (or via Pages) for the full rendering. The shared self-reflection
-protocol lives at `.claude/prompts/self-reflection.md`.
+from them (the `/handoff` skill runs it). The shared self-reflection protocol lives
+at `.claude/prompts/self-reflection.md`.
+
+**Viewing rendered reports.** GitHub shows `.html` as *source*, not rendered. Three
+ways to get the styled view:
+
+- **On a branch (live):** use githack, a Cloudflare-fronted renderer that serves any
+  branch/path —
+  `https://raw.githack.com/piyarsquare/animath/<branch>/docs/sessions/index.html`
+  (use the full branch name, not the slug). The dashboard's links are relative, so
+  clicking from the rendered index navigates to the rendered reports. githack caches
+  briefly; if a just-pushed change isn't showing, hard-refresh or append
+  `?v=<short-sha>`. The `/start-session` skill prints these links at session start.
+- **On `main` (deployed):** the production build copies `docs/sessions/` into
+  `dist/sessions/` (`docs/sessions/copy-to-dist.mjs`, run as the last step of
+  `npm run build`), so the dashboard lives at
+  `https://piyarsquare.github.io/animath/sessions/`. Each deployed page gets a
+  `noindex` meta injected at copy time, and nothing in the app links to it — the
+  reports are reachable but deliberately kept off to the side.
+- **Locally:** just open the `.html` file in a browser.
 </content>
