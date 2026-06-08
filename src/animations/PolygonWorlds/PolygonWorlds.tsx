@@ -20,6 +20,8 @@ import explainerText from './EXPLAINER.md?raw';
 const LOOK_SENS = 0.0035;
 const MAX_PITCH = 1.3;
 const DEFAULT_RADIUS = 30;
+const CAM_MIN = 1.5, CAM_MAX = 12;       // camera-distance range (matches the slider)
+const clampCam = (d: number) => Math.max(CAM_MIN, Math.min(CAM_MAX, d));
 
 type MoveKey = 'fwd' | 'back' | 'left' | 'right';
 
@@ -137,18 +139,60 @@ export default function PolygonWorlds() {
     engineRef.current = null;
   }, []);
 
+  // Zoom the camera in/out by a multiplicative factor (wheel + pinch), keeping the
+  // "Camera distance" slider in sync. <1 = closer, >1 = farther.
+  const zoomBy = useCallback((factor: number) => {
+    setCamDistance((d) => clampCam(d * factor));
+  }, []);
+
+  // Pointer state: one-finger / mouse drag looks; two fingers pinch to zoom.
   const dragRef = useRef<{ x: number; y: number } | null>(null);
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchRef = useRef<number | null>(null);
+  const pinchDist = () => {
+    const pts = [...pointersRef.current.values()];
+    if (pts.length < 2) return 0;
+    return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+  };
   const onPointerDown = (e: React.PointerEvent) => {
-    dragRef.current = { x: e.clientX, y: e.clientY };
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    if (pointersRef.current.size >= 2) {
+      dragRef.current = null;             // second finger down → pinch, stop looking
+      pinchRef.current = pinchDist();
+    } else {
+      dragRef.current = { x: e.clientX, y: e.clientY };
+    }
   };
   const onPointerMove = (e: React.PointerEvent) => {
+    const p = pointersRef.current.get(e.pointerId);
+    if (p) { p.x = e.clientX; p.y = e.clientY; }
+    if (pointersRef.current.size >= 2) {  // pinch: spread = zoom in, pinch = zoom out
+      const d = pinchDist();
+      if (pinchRef.current && d > 0) zoomBy(pinchRef.current / d);
+      pinchRef.current = d;
+      return;
+    }
     const d = dragRef.current; if (!d) return;
     yawRef.current += (e.clientX - d.x) * LOOK_SENS;
     pitchRef.current = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, pitchRef.current - (e.clientY - d.y) * LOOK_SENS));
     d.x = e.clientX; d.y = e.clientY;
   };
-  const onPointerUp = () => { dragRef.current = null; };
+  const onPointerUp = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) pinchRef.current = null;
+    const rem = pointersRef.current.size === 1 ? [...pointersRef.current.values()][0] : null;
+    dragRef.current = rem ? { x: rem.x, y: rem.y } : null;
+  };
+
+  // Wheel zoom — native non-passive listener so we can preventDefault the page scroll.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = containerRef.current; if (!el) return;
+    const onWheel = (e: WheelEvent) => { e.preventDefault(); zoomBy(e.deltaY > 0 ? 1.1 : 1 / 1.1); };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [zoomBy]);
 
   const getMapState = useCallback(() => engineRef.current?.getMapState() ?? null, []);
   const worldOptions = WORLDS.map((w) => ({ value: w.id, label: w.label }));
@@ -156,6 +200,7 @@ export default function PolygonWorlds() {
   return (
     <>
       <div
+        ref={containerRef}
         style={{ position: 'absolute', inset: 0, cursor: 'grab', touchAction: 'none' }}
         onPointerDown={onPointerDown} onPointerMove={onPointerMove}
         onPointerUp={onPointerUp} onPointerCancel={onPointerUp}

@@ -59,6 +59,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
 
   let DISK_R = Math.max(34, c.squareSize * 1.4);  // world radius of the unit disk
   let glassOpacity = 1;
+  let underVisible = false;                        // glass reveals the other side
   let camDist = 3.4;
 
   camera.fov = 75; camera.near = 0.05; camera.far = DISK_R * 6; camera.updateProjectionMatrix();
@@ -202,6 +203,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     const g = glassState(glassOpacity, GLASS);
     floorMat.opacity = g.opacity; floorMat.visible = g.visible; floorMat.depthWrite = g.depthWrite;
     floorMat.transparent = glassOpacity < 0.999; floorMat.needsUpdate = true;
+    underVisible = g.showUnder;
   }
   applyGlass();
 
@@ -229,17 +231,22 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
       const tile = tiles[i];
       const cell = cells[used++];
       const flipped = detH * tile.det < 0;      // your side × the tile's side
-      cell.trees.visible = !flipped; cell.columns.visible = flipped;
-      const showT = cell.trees, showC = cell.columns;
+      // the side you stand on grows UP from the glass floor; the OTHER face is the
+      // same landmark mirrored DOWN below the floor, revealed when the glass clears
+      // — so looking down through the floor shows the opposite side of the domain.
+      const above = flipped ? cell.columns : cell.trees;
+      const below = flipped ? cell.trees : cell.columns;
+      above.visible = true;
+      below.visible = underVisible;
       decor.props.forEach((_, j) => {
         const hp = tile.props[j];
         projectM(Mtiles, hp, tmp);
         const r2 = Math.min(0.97, poincareR2(Mtiles, hp));
         const sc = decorBase * (1 - r2);
-        const tj = showT.children[j] as THREE.Object3D;
-        const cj = showC.children[j] as THREE.Object3D;
-        tj.position.copy(tmp); tj.scale.setScalar(sc);
-        cj.position.copy(tmp); cj.scale.setScalar(sc);
+        const aj = above.children[j] as THREE.Object3D;
+        const bj = below.children[j] as THREE.Object3D;
+        aj.position.copy(tmp); aj.scale.set(sc, sc, sc);
+        bj.position.copy(tmp); bj.scale.set(sc, -sc, sc);   // mirror below the floor
       });
     }
     for (let k = used; k < cells.length; k++) { cells[k].trees.visible = false; cells[k].columns.visible = false; }

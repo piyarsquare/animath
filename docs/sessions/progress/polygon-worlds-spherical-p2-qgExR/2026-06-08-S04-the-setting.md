@@ -42,6 +42,27 @@ remaining, unstarted work. Build green, verify 100/100.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 21:24 — Hyperbolic glass look-through + wheel/pinch zoom
+**Why:** User: the glass "look down at the opposite side of the domain" worked in
+flat + spherical but not in negative curvature; and wanted wheel/pinch to move the
+camera in/out.
+
+- **Hyperbolic glass (`hyperbolic.ts`).** Each tile only ever drew the side you
+  stand on, so lowering the glass revealed nothing. `placeDecor` now treats the two
+  per-tile groups as **above** (the side you walk, grows +y) and **below** (the other
+  face, the *same* landmark mirrored to −y via `scale.y = −sc`), with the below group
+  shown only when the glass clears (`underVisible = glassState(...).showUnder`, set in
+  `applyGlass`). Looking down through the cleared floor now shows the opposite side —
+  matching flat/spherical. Verified headless: crosscap3 shows the mirrored
+  trees/columns + magenta beacon hanging below the floor; flat torus unchanged.
+- **Wheel/pinch zoom (`PolygonWorlds.tsx`).** A `zoomBy(factor)` clamps + drives the
+  existing `camDistance` (so the slider stays in sync). Wheel = native non-passive
+  listener (preventDefault the page scroll); two-finger **pinch** tracked via a
+  pointer map (spread = closer, pinch = farther), suppressing look-drag while two
+  fingers are down. Verified headless: wheel out 3.2→5.2, wheel in →2.0 (clamped).
+
+Build green; verify still 100/100 (kernel untouched).
+
 ### 🟡 milestone · 20:58 — Setting v1 done: build + verify green, all six worlds shot
 **Why:** Decor redesign + lighting landed and verified end-to-end.
 
