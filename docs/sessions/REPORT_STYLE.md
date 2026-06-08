@@ -47,6 +47,7 @@ build: unknown            # passed | failed | unknown
 followup: null            # null | low | medium | high
 pr: null                  # null | a PR URL
 app: StableMarriage       # optional — the src/animations/<App> this concerns
+thumbnail: assets/foo.png # optional — lead screenshot for the control-center card
 ---
 ```
 
@@ -58,6 +59,7 @@ app: StableMarriage       # optional — the src/animations/<App> this concerns
 | `status` / `build` | ✓ | drive the status badges |
 | `title` | ✓ | shown in the index and as the `#` H1 |
 | `followup` / `pr` / `app` | – | optional; `null` when absent |
+| `thumbnail` | – | optional; a local image ref used as the session's control-center thumbnail (else the first image in the body) |
 
 ## 2 · Section structure
 
@@ -147,6 +149,32 @@ galeShapley(prefs, { proposingSide: 'men' | 'women' | 'market', bias? })
   → { matching, log }
 ```
 
+### 3g · Screenshots
+
+Include a screenshot **when the state is something you can only judge visually** —
+a render, a UI before/after, a chart, a diff that a sentence can't carry. Skip them
+for purely textual or numeric results.
+
+Store images next to the report in an `assets/` folder and reference them with a
+**relative** path and a caption:
+
+```text
+docs/sessions/<kind>/<slug>/assets/<session>-<name>.png
+![A short caption that says what to look at](assets/2026-06-08-S01-torus.png)
+```
+
+That same relative path renders inline on GitHub **and** as a captioned `<figure>`
+in the generated HTML (the build mirrors `assets/` into the rendered tree). Set
+`thumbnail:` in the frontmatter to choose the lead image shown on the control
+center; otherwise the first image is used.
+
+> [!TIP]
+> Capture headless shots with `scripts/shoot.mjs` (software-WebGL) and write them
+> straight into the report's `assets/`. Keep shots reasonably sized — the build
+> prints a total screenshot-bytes budget, and `prune-assets.mjs` trims old ones.
+
+![Example: a captured app view renders as a captioned figure](assets/topology-walk.png)
+
 ## 4 · Element mapping (HTML → Markdown)
 
 | Current HTML | Markdown equivalent | GitHub-native? |
@@ -159,6 +187,7 @@ galeShapley(prefs, { proposingSide: 'men' | 'women' | 'market', bias? })
 | `<table>` (sortable) | Markdown table | ✓ (not sortable) |
 | collapsible sections | `<details>` / `<summary>` | ✓ |
 | `<pre><code>` | fenced code block | ✓ |
+| `<figure>` + caption | `![caption](assets/…)` standalone line | ✓ |
 | scroll-spy / sticky TOC | — | ✗ (generated view only) |
 
 ## 5 · Rendering targets

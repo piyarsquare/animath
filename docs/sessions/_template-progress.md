@@ -36,3 +36,10 @@ app: [Name or null]
 **Why:** [reason for this transition]
 
 [what happened]
+
+<!-- Screenshots (optional, when the state is visual — a render, UI diff, chart):
+     store under this report's assets/ and reference it relatively. The first image
+     (or the `thumbnail:` frontmatter field) becomes the control-center thumbnail.
+       ![what to look at](assets/[session]-[name].png)
+     Capture headless: `node scripts/shoot.mjs '#/route' assets/<name>.png`. -->
+
