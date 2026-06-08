@@ -108,6 +108,9 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [netSpokes, setNetSpokes] = usePersistentState(pk('netSpokes'), 24);
   const [netCircles, setNetCircles] = usePersistentState(pk('netCircles'), true);
   const [netRays, setNetRays] = usePersistentState(pk('netRays'), false);
+  // Net thread width (px, screen-space ribbons) and per-curve sample count.
+  const [netWidth, setNetWidth] = usePersistentState(pk('netWidth'), 2.5);
+  const [netResolution, setNetResolution] = usePersistentState(pk('netResolution'), 128);
   const [objectMode, setObjectMode] = usePersistentState(pk('objectMode'), false);
   const [shapeIndex, setShapeIndex] = usePersistentState(pk('shapeIndex'), 1);
   const [textureIndex, setTextureIndex] = usePersistentState(pk('textureIndex'), 0);
@@ -253,6 +256,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     netSpokes, setNetSpokes,
     netCircles, setNetCircles,
     netRays, setNetRays,
+    netWidth, setNetWidth,
+    netResolution, setNetResolution,
     lighting, setLighting,
     lightStrength, setLightStrength,
     objectMode, setObjectMode,

@@ -511,6 +511,12 @@ export default function ParticleViewerShell({
                   min={2} max={96} step={1}
                   onChange={state.setNetSpokes} format={v => `${v}`} />
               )}
+              <Slider label="Width" value={state.netWidth}
+                min={0.5} max={16} step={0.5}
+                onChange={state.setNetWidth} format={v => `${v.toFixed(1)}px`} />
+              <Slider label="Resolution" value={state.netResolution}
+                min={16} max={400} step={1}
+                onChange={state.setNetResolution} format={v => `${v}`} />
             </>
           )}
         </Section>

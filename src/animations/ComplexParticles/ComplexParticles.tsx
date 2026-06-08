@@ -99,9 +99,10 @@ export default function ComplexParticles({
   // mesh per Riemann sheet).
   const tileGeomRef = useRef<THREE.BufferGeometry>();
   const tileMeshRef = useRef<THREE.Mesh[]>([]);
-  // Net render mode: a polar fibre net (circles + rays) drawn as LineSegments.
+  // Net render mode: a polar fibre net (circles + rays) drawn as screen-space
+  // ribbon meshes (so it can have a real pixel width).
   const netGeomRef = useRef<THREE.BufferGeometry>();
-  const netMeshRef = useRef<THREE.LineSegments[]>([]);
+  const netMeshRef = useRef<THREE.Mesh[]>([]);
   const scaffoldRef = useRef<HopfScaffold>();
   const fibersRef = useRef<HopfFibers>();
 
@@ -300,17 +301,25 @@ export default function ComplexParticles({
   };
 
   function createNetMaterial(b: number) {
+    const size = new THREE.Vector2(1, 1);
+    state.rendererRef.current?.getSize(size);
     const m = new THREE.ShaderMaterial({
-      uniforms: makeUniforms(b),
+      uniforms: {
+        ...makeUniforms(b),
+        uResolution: { value: size },
+        uLineWidth: { value: state.netWidth },
+      },
       vertexShader: netVertexShader,
       fragmentShader: netFragmentShader,
       transparent: true,
       depthWrite: false,
+      side: THREE.DoubleSide,
       blending: THREE.NormalBlending,
       vertexColors: true,
     });
     m.userData.branch = b;
     m.userData.sheet = true;   // keep NormalBlending through the object-mode toggle
+    m.userData.net = true;
     return m;
   }
 
@@ -382,7 +391,7 @@ export default function ComplexParticles({
       const fill = new THREE.Mesh(fillGeom, fm);
       const wire = new THREE.LineSegments(wireGeom, wm);
       const tiles = new THREE.Mesh(tileGeom, tm);
-      const net = new THREE.LineSegments(netGeom, nm);
+      const net = new THREE.Mesh(netGeom, nm);
       // In adaptive Sheet mode the cloud and sheet overlap; without a fixed order
       // these depth-write-off transparent objects sort by distance and the
       // additive points can land on top of an opaque fill. Pin points behind, then
@@ -453,13 +462,37 @@ export default function ComplexParticles({
   useEffect(() => {
     const netGeom = netGeomRef.current;
     if (!netGeom) return;
-    rebuildNetGeometry(netGeom, state.netRings, state.netSpokes, netRadius(), state.netCircles, state.netRays);
+    rebuildNetGeometry(netGeom, state.netRings, state.netSpokes, netRadius(), state.netCircles, state.netRays, state.netResolution);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    state.netRings, state.netSpokes, state.netCircles, state.netRays,
+    state.netRings, state.netSpokes, state.netCircles, state.netRays, state.netResolution,
     state.extentX, state.extentY, state.axisScale,
     state.boundsLock, state.xMin, state.xMax, state.yMin, state.yMax,
   ]);
+
+  // Push the net thread width to its materials.
+  useEffect(() => {
+    state.materialsRef.current.forEach(m => {
+      if (m.uniforms.uLineWidth) m.uniforms.uLineWidth.value = state.netWidth;
+    });
+  }, [state.netWidth]);
+
+  // Keep the net's screen-space width correct as the canvas resizes (the ribbon
+  // expansion is in pixels, so it needs the live drawing-buffer size).
+  useEffect(() => {
+    const sync = () => {
+      const r = state.rendererRef.current;
+      if (!r) return;
+      const s = new THREE.Vector2();
+      r.getSize(s);
+      state.materialsRef.current.forEach(m => {
+        if (m.uniforms.uResolution) (m.uniforms.uResolution.value as THREE.Vector2).copy(s);
+      });
+    };
+    sync();
+    window.addEventListener('resize', sync);
+    return () => window.removeEventListener('resize', sync);
+  });
 
   // Push the faceted-shading strength to the sheet materials (points lack uShade).
   useEffect(() => {
@@ -528,7 +561,7 @@ export default function ComplexParticles({
       sheetGeomRef.current = createSheetGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
       sheetWireGeomRef.current = createSheetWireGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
       tileGeomRef.current = createTileGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
-      netGeomRef.current = createNetGeometry(state.netRings, state.netSpokes, netRadius(), state.netCircles, state.netRays);
+      netGeomRef.current = createNetGeometry(state.netRings, state.netSpokes, netRadius(), state.netCircles, state.netRays, state.netResolution);
 
       rebuildBranchObjects(scene);
 

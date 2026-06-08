@@ -80,75 +80,88 @@ export function rebuildTileGeometry(
   fillTiles(geometry, res, xMin, xMax, yMin, yMax);
 }
 
-/** Build the **fiber net**: a polar lattice of line segments over the disk of
- *  radius `radius`, drawn as `LineSegments` and placed on the surface by the net
- *  vertex shader. `rings` concentric circles (constant |z|) and `spokes` rays
- *  (constant arg z) reveal how the function carries the polar fibres of the
- *  domain — circles map to one family of curves, rays to the orthogonal family.
- *  `circles`/`rays` toggle each family. Circles/rays are sampled finely so they
- *  stay smooth independent of how many of them there are. */
+/** Build the **fiber net**: a polar lattice over the disk of radius `radius`,
+ *  built as **screen-space ribbons** (each segment a camera-facing quad) so the
+ *  net vertex shader can give it a real, controllable pixel width. `rings`
+ *  concentric circles (constant |z|) and `spokes` rays (constant arg z) reveal
+ *  how the function carries the polar fibres of the domain. `circles`/`rays`
+ *  toggle each family; `resolution` is the sample count along each curve.
+ *  Each vertex stores its anchor point in `position`, the segment's other end in
+ *  `aOther`, and a `aSide` ±1; the shader offsets it perpendicular to the segment
+ *  in screen space. */
 export function createNetGeometry(
   rings: number, spokes: number, radius: number,
-  circles: boolean = true, rays: boolean = true,
+  circles: boolean = true, rays: boolean = true, resolution: number = 128,
 ): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
-  fillNet(geometry, rings, spokes, radius, circles, rays);
+  fillNet(geometry, rings, spokes, radius, circles, rays, resolution);
   return geometry;
 }
 
 export function rebuildNetGeometry(
   geometry: THREE.BufferGeometry,
   rings: number, spokes: number, radius: number,
-  circles: boolean = true, rays: boolean = true,
+  circles: boolean = true, rays: boolean = true, resolution: number = 128,
 ): void {
-  fillNet(geometry, rings, spokes, radius, circles, rays);
+  fillNet(geometry, rings, spokes, radius, circles, rays, resolution);
 }
 
 function fillNet(
   geometry: THREE.BufferGeometry,
-  rings: number, spokes: number, radius: number, circles: boolean, rays: boolean,
+  rings: number, spokes: number, radius: number,
+  circles: boolean, rays: boolean, resolution: number,
 ): void {
   const Rr = Math.max(1, Math.floor(rings));
   const Sp = Math.max(1, Math.floor(spokes));
   const TAU = Math.PI * 2;
-  const circleSamples = 160;   // points around each circle (smoothness)
-  const raySamples = 80;       // points along each ray (smoothness)
-  const wantCircles = circles;
-  const wantRays = rays;
+  const circleSamples = Math.max(8, Math.floor(resolution));
+  const raySamples = Math.max(4, Math.floor(resolution / 2));
 
   const pos: number[] = [];
+  const other: number[] = [];
+  const side: number[] = [];
   const index: number[] = [];
   let v = 0;
-  const addVert = (x: number, y: number) => { pos.push(x, 0, y); return v++; };
+  const addVert = (ax: number, ay: number, ox: number, oy: number, s: number) => {
+    pos.push(ax, 0, ay); other.push(ox, oy); side.push(s); return v++;
+  };
+  // One ribbon quad per segment a→b: two anchored at a, two at b, sides ±1.
+  const addSegment = (ax: number, ay: number, bx: number, by: number) => {
+    // At the b end the segment direction is reversed, so the side sign is flipped
+    // there to keep both edges of the ribbon on the same physical side (no twist).
+    const i0 = addVert(ax, ay, bx, by, -1); // a, physical −
+    const i1 = addVert(ax, ay, bx, by, 1);  // a, physical +
+    const i2 = addVert(bx, by, ax, ay, -1); // b, physical +
+    const i3 = addVert(bx, by, ax, ay, 1);  // b, physical −
+    index.push(i0, i1, i2, i0, i2, i3);
+  };
 
-  if (wantCircles) {
+  if (circles) {
     for (let i = 1; i <= Rr; i++) {
       const r = (i / Rr) * radius;
-      const first = v;
       for (let s = 0; s < circleSamples; s++) {
-        const th = (s / circleSamples) * TAU;
-        addVert(r * Math.cos(th), r * Math.sin(th));
-      }
-      for (let s = 0; s < circleSamples; s++) {
-        index.push(first + s, first + ((s + 1) % circleSamples)); // closed loop
+        const th0 = (s / circleSamples) * TAU;
+        const th1 = ((s + 1) / circleSamples) * TAU;
+        addSegment(r * Math.cos(th0), r * Math.sin(th0), r * Math.cos(th1), r * Math.sin(th1));
       }
     }
   }
-  if (wantRays) {
+  if (rays) {
     for (let j = 0; j < Sp; j++) {
       const th = (j / Sp) * TAU;
       const ct = Math.cos(th), st = Math.sin(th);
-      const first = v;
-      for (let t = 0; t <= raySamples; t++) {
-        const r = (t / raySamples) * radius;
-        addVert(r * ct, r * st);
+      for (let t = 0; t < raySamples; t++) {
+        const r0 = (t / raySamples) * radius;
+        const r1 = ((t + 1) / raySamples) * radius;
+        addSegment(r0 * ct, r0 * st, r1 * ct, r1 * st);
       }
-      for (let t = 0; t < raySamples; t++) index.push(first + t, first + t + 1);
     }
   }
 
   const n = v;
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+  geometry.setAttribute('aOther', new THREE.BufferAttribute(new Float32Array(other), 2));
+  geometry.setAttribute('aSide', new THREE.BufferAttribute(new Float32Array(side), 1));
   geometry.setAttribute('size', new THREE.BufferAttribute(new Float32Array(n).fill(1), 1));
   geometry.setAttribute('seed', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
   geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(index), 1));

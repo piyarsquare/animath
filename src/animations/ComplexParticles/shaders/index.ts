@@ -593,14 +593,27 @@ void main(){
 // shared surfacePos) and colours it by the domain colouring, so the concentric
 // circles and rays show how the function carries the polar fibres of the domain.
 export const netVertexShader = vsCommon + `
+attribute vec2 aOther;       // the segment's other endpoint (domain coords)
+attribute float aSide;       // ±1 ribbon side
+uniform vec2 uResolution;    // drawing-buffer size in px (for screen-space width)
+uniform float uLineWidth;    // ribbon width in px
 void main(){
   vec2 z = vec2(position.x, position.z);
+  vec4 clipA = projectionMatrix * modelViewMatrix * vec4(surfacePos(z), 1.0);
+  vec4 clipB = projectionMatrix * modelViewMatrix * vec4(surfacePos(aOther), 1.0);
+  // Screen-space direction of the segment, then offset perpendicular by half the
+  // width (in px → NDC) so the ribbon keeps a constant pixel thickness.
+  vec2 ndcA = clipA.xy / clipA.w;
+  vec2 ndcB = clipB.xy / clipB.w;
+  vec2 dirPx = (ndcB - ndcA) * uResolution;
+  vec2 dir = (length(dirPx) > 1e-6) ? normalize(dirPx) : vec2(1.0, 0.0);
+  vec2 nrm = vec2(-dir.y, dir.x);
+  vec2 offsetNdc = nrm * aSide * (uLineWidth * 0.5) / (0.5 * uResolution);
+  clipA.xy += offsetNdc * clipA.w;
+  gl_Position = clipA;
   vec2 zc = domainWarp(z);
   vec2 f = applyComplex(zc, functionType);
   if(length(f) > 1e3) f = normalize(f)*1e3;
-  vec3 pos3 = surfacePos(z);
-  vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
-  gl_Position = projectionMatrix * mv;
   vColor = calcColour(zc, f);
 }`;
 
