@@ -18,6 +18,9 @@ import {
   distance, geodesicPoint, ORIGIN,
   makeFrame, framePos, stepForward, turn, isometry, originTo, angleAt,
 } from './cayleyKlein';
+import { parseWord } from '../surfaceSchema';
+import { realize, Realization } from './realize';
+import { develop } from './develop';
 
 export interface Check { name: string; pass: boolean; detail: string }
 
@@ -235,6 +238,135 @@ function wrapperChecks(k: number): Check[] {
   ];
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Deck-group / realization checks: tie the kernel back to surfaceSchema's edge
+// pairings via realize(), the seam the whole engine develops from.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Corner-class id per corner (union–find on the polygon's corners). */
+function cornerClasses(word: { gen: number; inv: boolean }[]): number[] {
+  const m = word.length;
+  const parent = Array.from({ length: m }, (_, i) => i);
+  const find = (x: number): number => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+  const union = (a: number, b: number) => { parent[find(a)] = find(b); };
+  const tail = (e: number) => (word[e].inv ? (e + 1) % m : e);
+  const head = (e: number) => (word[e].inv ? e : (e + 1) % m);
+  const byGen = new Map<number, number[]>();
+  for (let e = 0; e < m; e++) { const a = byGen.get(word[e].gen) ?? []; a.push(e); byGen.set(word[e].gen, a); }
+  for (const [, [i, j]] of byGen) { union(tail(i), tail(j)); union(head(i), head(j)); }
+  return word.map((_, k) => find(k));
+}
+
+/** Is a deck generator fixed-point-free on the interior (no cone point)?
+ *  Orientation-preserving: free ⇔ translation/hyperbolic/parabolic ⇔ trace ≥ 3
+ *  (an elliptic rotation has trace < 3 and fixes an interior point). For both
+ *  κ=0 and κ<0 a translation has trace exactly 3. Orientation-reversing: a glide
+ *  is free, a pure reflection fixes its axis — distinguished by g² ≠ I. */
+function isFixedPointFree(M: Mat3, _kappa: number): boolean {
+  if (det3(M) > 0) return M[0] + M[4] + M[8] >= 3 - 1e-6;
+  const M2 = mul(M, M);
+  return !M2.every((x, i) => approx(x, IDENTITY3[i], 1e-6));
+}
+
+/** All the closure facts for one realized word. */
+function deckChecks(wordStr: string): Check[] {
+  const out: Check[] = [];
+  let real: Realization;
+  try {
+    real = realize(parseWord(wordStr));
+  } catch (e) {
+    return [ok(`realize "${wordStr}"`, false, String(e))];
+  }
+  const { word, vertices: V, deckGenerators: deck, kappa, analysis } = real;
+  const m = word.length;
+  const tag = `"${wordStr}" (${analysis.name}${real.chart ? ', chart' : ''}, κ=${kappa})`;
+
+  // 1 · Deck closure = smooth gluing: the polygon's corner angles sum to 2π on
+  //     EVERY vertex class (Poincaré's condition; a deviation is a cone point).
+  //     The chart cases (κ>0, unequal classes) deliberately do not — skip them.
+  if (!real.chart) {
+    const classOf = cornerClasses(word);
+    const angleOfCorner = (k: number) => angleAt(kappa, V[k], V[(k - 1 + m) % m], V[(k + 1) % m]);
+    const sums = new Map<number, number>();
+    for (let k = 0; k < m; k++) sums.set(classOf[k], (sums.get(classOf[k]) ?? 0) + angleOfCorner(k));
+    let worstAngle = 0;
+    for (const s of sums.values()) worstAngle = Math.max(worstAngle, Math.abs(s - 2 * Math.PI));
+    out.push(ok(`vertex angle-sum = 2π  ${tag}`, worstAngle < 1e-6, `worst |Σ−2π| ${worstAngle.toExponential(2)}`));
+  }
+
+  // 2 · Each generator carries its source (x⁻¹) edge onto its target (x) edge
+  //     (tail→tail), so adjacent tiles share that edge exactly.
+  const inv = (e: number) => word[e].inv;
+  const tailV = (e: number) => (inv(e) ? V[(e + 1) % m] : V[e]);
+  const headV = (e: number) => (inv(e) ? V[e] : V[(e + 1) % m]);
+  let worstEdge = 0;
+  for (const p of analysis.pairings) {
+    const [e0, e1] = p.edges;
+    const target = inv(e0) ? e1 : e0;
+    const source = inv(e0) ? e0 : e1;
+    const g = deck[p.gen];
+    const dt = sub(applyMat(g.m, tailV(source)), tailV(target));
+    const dh = sub(applyMat(g.m, headV(source)), headV(target));
+    worstEdge = Math.max(worstEdge, norm(dt), norm(dh));
+  }
+  out.push(ok(`deck gens glue edges  ${tag}`, worstEdge < 1e-6, `max err ${worstEdge.toExponential(2)}`));
+
+  // 3 · No cone points (κ≤0 isometric): every deck generator is fixed-point-free
+  //     on the interior — i.e. not an elliptic rotation. (Elliptic ⇔ a real
+  //     eigenvector that is an interior shell point with eigenvalue 1.)
+  if (!real.chart && kappa <= 0) {
+    const free = analysis.pairings.every((p) => isFixedPointFree(deck[p.gen].m, kappa));
+    out.push(ok(`deck gens fixed-point-free (no cone pts)  ${tag}`, free));
+  }
+
+  // 3 · Orientability ⇔ every side-pairing is orientation-preserving (det > 0).
+  const dets = analysis.pairings.map((p) => det3(deck[p.gen].m));
+  const allPreserving = dets.every((d) => d > 0);
+  out.push(ok(`orientability ⇔ det signs  ${tag}`, allPreserving === analysis.orientable,
+    `orientable=${analysis.orientable}, dets=[${dets.map((d) => d.toFixed(2)).join(', ')}]`));
+
+  // 4 · Side-pairings are genuine isometries (preserve Gκ).
+  const G: Mat3 = [kappa, 0, 0, 0, kappa, 0, 0, 0, 1];
+  let worstForm = 0;
+  for (const p of analysis.pairings) {
+    const M = deck[p.gen].m;
+    const lhs = mul(transpose3(M), mul(G, M));
+    worstForm = Math.max(worstForm, ...lhs.map((x, i) => Math.abs(x - G[i])));
+  }
+  out.push(ok(`deck gens preserve Gκ  ${tag}`, worstForm < 1e-6, `max err ${worstForm.toExponential(2)}`));
+
+  return out;
+}
+
+const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const norm = (a: Vec3) => Math.hypot(a[0], a[1], a[2]);
+
+/** Develop sanity: the home tile is present, tiles are distinct, horizon respected. */
+function developChecks(): Check[] {
+  const out: Check[] = [];
+  // Euclidean torus lattice
+  {
+    const r = realize(parseWord('a b a⁻¹ b⁻¹'));
+    const d = develop(r, { horizon: 12, maxTiles: 200 });
+    const home = d.centers.some((c) => Math.hypot(c[0], c[1]) < 1e-9);
+    const allInHorizon = d.centers.every((c) => distance(r.kappa, ORIGIN, c) <= 12 + 1e-9);
+    out.push(ok('develop torus: home tile present', home));
+    out.push(ok('develop torus: tiles within horizon', allInHorizon, `${d.elements.length} tiles`));
+  }
+  // Hyperbolic genus-2 grows but stays capped + horizon-culled
+  {
+    const r = realize(parseWord('a b a⁻¹ b⁻¹ c d c⁻¹ d⁻¹'));
+    const d = develop(r, { horizon: 6.0, maxTiles: 2000 });
+    const allInHorizon = d.centers.every((c) => distance(r.kappa, ORIGIN, c) <= 6.0 + 1e-6);
+    out.push(ok('develop genus-2: horizon respected', allInHorizon, `${d.elements.length} tiles, visited ${d.visited}`));
+    out.push(ok('develop genus-2: more than home tile', d.elements.length > 1));
+    // the cap really caps
+    const capped = develop(r, { horizon: 12, maxTiles: 300 });
+    out.push(ok('develop genus-2: maxTiles cap honoured', capped.elements.length <= 300 && capped.truncated));
+  }
+  return out;
+}
+
 /** Run the whole battery across the three curvature regimes. */
 export function runBattery(): Check[] {
   const out: Check[] = [];
@@ -250,5 +382,17 @@ export function runBattery(): Check[] {
     out.push(...wrapperChecks(k));
   }
   out.push(...gaussBonnetAnchors());
+
+  // Deck-group closure across the ladder (one word per surface family).
+  const ladder = [
+    'a a⁻¹ b b⁻¹',                 // sphere (chart)
+    'a b a b',                     // ℝP² (smooth spherical square)
+    'a b a⁻¹ b⁻¹',                 // torus
+    'a b a⁻¹ b',                   // Klein bottle
+    'a a b b c c',                 // 3 cross-caps
+    'a b a⁻¹ b⁻¹ c d c⁻¹ d⁻¹',     // genus-2
+  ];
+  for (const w of ladder) out.push(...deckChecks(w));
+  out.push(...developChecks());
   return out;
 }
