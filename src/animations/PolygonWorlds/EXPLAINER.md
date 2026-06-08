@@ -26,4 +26,22 @@ edges marked with the identification arrows. On a **non-orientable** world (Klei
 ℝP²), crossing a flipped edge swaps every landmark **trees ↔ columns** and your
 footprints come back **mirror-reversed** — the one-sidedness made visible.
 
-*(The curved worlds — sphere and ℝP² — are arriving next.)*
+### The curved worlds are genuinely round
+
+The flat worlds (torus, Klein) really are isometric: the square you see *is* the
+surface you walk. The curved worlds are subtler, and the difference is honest:
+
+- **Projective plane (ℝP²).** The square folds onto the **upper hemisphere** of a
+  genuinely round sphere — *isometrically*, with no hidden corners. Its lower
+  hemisphere is the same square seen through the **antipodal** identification
+  `x ∼ −x`, so the trees there wear columns and your trail returns mirror-reversed.
+  Walk over the bright **seam** (the equator) and the mini-map flags the *mirror side*.
+- **Sphere.** The square here is a **chart**, not an isometric copy: it is *stretched*
+  over the whole round sphere (the way a flat map distorts the globe), so distances
+  on the mini-map square are not the distances you walk. The world you actually move
+  through is the smooth round sphere — there are **no cone points**, no creases. Any
+  intrinsic measurement (how far, what angle) reads the true round-sphere metric,
+  never the flattened square.
+
+In both, **χ forces the curvature**: ∫K dA = 2πχ, so a positive χ *must* round up
+onto a sphere — a flat square simply cannot close those corners.
