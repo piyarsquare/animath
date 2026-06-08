@@ -10,8 +10,8 @@ import { usePersistentState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
 import { generateInstance, type Instance } from './model';
 import {
-  runRounds, applyLog, oneSided, stats,
-  type Schedule, type Side, type Matching, type ProposalEvent,
+  runRounds, applyLog, blockingPairs, stats,
+  type Schedule, type Matching,
 } from './galeShapley';
 
 const NS = 'stable-matching';
@@ -294,7 +294,8 @@ export default function StableMatching() {
   const [labN, setLabN] = usePersistentState(`${NS}:labN`, 30);
   const [labRes, setLabRes] = usePersistentState(`${NS}:labRes`, 12);
   const [labTrials, setLabTrials] = usePersistentState(`${NS}:labTrials`, 12);
-  const [labMetric, setLabMetric] = usePersistentState<'total' | 'aAvg' | 'bAvg'>(`${NS}:labMetric`, 'total');
+  const [labSchedule, setLabSchedule] = usePersistentState<Schedule>(`${NS}:labSchedule`, 'alt');
+  const [labMetric, setLabMetric] = usePersistentState<'unstable' | 'blocking' | 'total' | 'aAvg' | 'bAvg'>(`${NS}:labMetric`, 'unstable');
   const [labData, setLabData] = useState<Cell[] | null>(null);
   const [labMax, setLabMax] = useState(1);
   const [labRunning, setLabRunning] = useState(false);
@@ -308,8 +309,10 @@ export default function StableMatching() {
       let sum = 0;
       for (let t = 0; t < labTrials; t++) {
         const ins = generateInstance({ n: labN, consensusA: cA, consensusB: cB, seed: s + t * 7919 + 1 });
-        const st = stats(ins, oneSided(ins, 'A').matching);
-        sum += labMetric === 'aAvg' ? st.aAvg : labMetric === 'bAvg' ? st.bAvg : (st.aAvg + st.bAvg) / 2;
+        const { matching } = runRounds(ins, labSchedule, 50, s + t * 104729 + 3);
+        if (labMetric === 'unstable') sum += blockingPairs(ins, matching) > 0 ? 100 : 0;
+        else if (labMetric === 'blocking') sum += blockingPairs(ins, matching);
+        else { const st = stats(ins, matching); sum += labMetric === 'aAvg' ? st.aAvg : labMetric === 'bAvg' ? st.bAvg : (st.aAvg + st.bAvg) / 2; }
       }
       return sum / labTrials;
     };
@@ -317,13 +320,16 @@ export default function StableMatching() {
       if (labCancel.current) { setLabRunning(false); return; }
       const end = Math.min(cells, k + 20);
       for (; k < end; k++) { const xi = k % res, yi = Math.floor(k / res); const v = metricOf(xi / (res - 1), yi / (res - 1), 1000 + k); max = Math.max(max, v); out.push({ x: xi / (res - 1) * (1 - 1 / res), y: yi / (res - 1) * (1 - 1 / res), v }); }
-      setLabProgress(Math.round((k / cells) * 100)); setLabData([...out]); setLabMax(max);
+      setLabProgress(Math.round((k / cells) * 100)); setLabData([...out]); setLabMax(labMetric === 'unstable' ? 100 : max);
       if (k < cells) window.setTimeout(batch, 0); else setLabRunning(false);
     };
     batch();
-  }, [labN, labRes, labTrials, labMetric]);
+  }, [labN, labRes, labTrials, labMetric, labSchedule]);
   useEffect(() => () => { labCancel.current = true; }, []);
-  const labTitle = labMetric === 'total' ? 'Combined avg rank (welfare)' : labMetric === 'aAvg' ? 'A avg rank' : 'B avg rank';
+  const labTitle = labMetric === 'unstable' ? `Unstable runs % — ${labSchedule}` : labMetric === 'blocking' ? `Avg blocking pairs — ${labSchedule}`
+    : labMetric === 'total' ? `Combined avg rank (welfare) — ${labSchedule}` : labMetric === 'aAvg' ? `A avg rank — ${labSchedule}` : `B avg rank — ${labSchedule}`;
+  const labHue = labMetric === 'unstable' || labMetric === 'blocking' ? 280 : labMetric === 'total' ? 160 : labMetric === 'aAvg' ? 210 : 330;
+  const labCaption = labMetric === 'unstable' ? 'unstable %' : labMetric === 'blocking' ? 'pairs' : 'rank';
 
   const settings = (
     <ShellSettings>
@@ -360,7 +366,8 @@ export default function StableMatching() {
         </div>
       ) : (
         <div className="sm2-actions">
-          <Pills label="Surface" value={labMetric} onChange={setLabMetric} options={[{ value: 'total', label: 'Welfare' }, { value: 'aAvg', label: 'A rank' }, { value: 'bAvg', label: 'B rank' }]} />
+          <Pills label="Schedule" value={labSchedule} onChange={setLabSchedule} options={[{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'alt', label: 'Alt' }, { value: 'random', label: 'Rnd' }]} />
+          <Pills label="Surface" value={labMetric} onChange={setLabMetric} options={[{ value: 'unstable', label: 'Unstable %' }, { value: 'blocking', label: 'Blocking' }, { value: 'total', label: 'Welfare' }, { value: 'aAvg', label: 'A rank' }, { value: 'bAvg', label: 'B rank' }]} />
           <NumberInput label="Population" value={labN} onChange={setLabN} min={6} max={80} integer />
           <NumberInput label="Resolution" value={labRes} onChange={setLabRes} min={4} max={24} integer />
           <NumberInput label="Trials / cell" value={labTrials} onChange={setLabTrials} min={1} max={60} integer />
@@ -434,8 +441,10 @@ export default function StableMatching() {
         </div>
       ) : (
         <div className="sm2-lab">
-          <Heatmap data={labData} res={Math.max(2, Math.min(24, labRes))} maxV={labMax} hue={labMetric === 'total' ? 160 : labMetric === 'aAvg' ? 210 : 330} title={labTitle} caption="rank" />
-          <p className="sm2-lab-note">Each cell averages <strong>{labTrials}</strong> independent instances (A proposing) — signal, not single-draw noise. Total-rank welfare is lowest (best) when consensus is low (people want different partners); as both groups converge on one common preference, everyone chases the same few and average rank climbs.</p>
+          <Heatmap data={labData} res={Math.max(2, Math.min(24, labRes))} maxV={labMax} hue={labHue} title={labTitle} caption={labCaption} />
+          <p className="sm2-lab-note">Each cell sweeps consensus A × B and averages <strong>{labTrials}</strong> independent instances run with the <strong>{labSchedule}</strong> schedule — signal, not single-draw noise. {labMetric === 'unstable' || labMetric === 'blocking'
+            ? 'One-sided (A or B) is stable everywhere (a flat 0); the synchronous Alternate / Random schedules leave blocking pairs across most of the surface — synchronous two-sided deferred acceptance is not guaranteed stable.'
+            : 'Welfare (total rank) is lowest when consensus is low (people want different partners); as both groups converge on one shared ranking, everyone chases the same few and average rank climbs.'}</p>
         </div>
       )}
     </div>
