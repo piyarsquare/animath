@@ -152,7 +152,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   const cells: Cell[] = [];
   for (let i = 0; i < N_DECOR; i++) {
     const trees = new THREE.Group(), columns = new THREE.Group();
-    decor.props.forEach((_, j) => { trees.add(decor.makeTree(j)); columns.add(decor.makeColumn(j)); });
+    decor.props.forEach((_, j) => { trees.add(decor.makeTop(j)); columns.add(decor.makeBottom(j)); });
     trees.visible = false; columns.visible = false;
     root.add(trees, columns);
     cells.push({ trees, columns });

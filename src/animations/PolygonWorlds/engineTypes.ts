@@ -44,6 +44,8 @@ export interface PolygonEngine {
   setSquareSize(v: number): void;
   /** Live glass-floor slab thickness (world units). */
   setFloorThickness(t: number): void;
+  /** Third-person camera distance from the character (world units). */
+  setCameraDistance(d: number): void;
   getMapState(): SquareMapState | null;
   dispose(): void;
 }

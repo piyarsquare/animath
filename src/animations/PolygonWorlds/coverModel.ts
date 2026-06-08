@@ -62,5 +62,7 @@ export interface CoverModel {
   setSquareSize?(v: number): void;
   setFloorThickness?(t: number): void;
   setRadius?(r: number): void;
+  /** Third-person camera distance from the character. */
+  setCameraDistance?(d: number): void;
   dispose(): void;
 }

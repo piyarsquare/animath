@@ -27,7 +27,8 @@ export default function PolygonWorlds() {
   const [worldId, setWorldId] = useState('klein');
   const [moveSpeed, setMoveSpeed] = useState(6);
   const [thirdPerson, setThirdPerson] = useState(true);
-  const [floorOpacity, setFloorOpacity] = useState(0.35);
+  const [camDistance, setCamDistance] = useState(3.2);
+  const [floorOpacity, setFloorOpacity] = useState(0.85);
   const [squareSize, setSquareSize] = useState(DEFAULT_SQUARE_SIZE);
   const [floorThickness, setFloorThickness] = useState(DEFAULT_FLOOR_THICKNESS);
   const [planetRadius, setPlanetRadius] = useState(DEFAULT_RADIUS);
@@ -53,6 +54,7 @@ export default function PolygonWorlds() {
   const keysRef = useRef<Record<MoveKey, boolean>>({ fwd: false, back: false, left: false, right: false });
   const speedRef = useRef(moveSpeed);
   const thirdRef = useRef(thirdPerson);
+  const camDistRef = useRef(camDistance);
   const worldRef = useRef(spec);
   const sizeRef = useRef(squareSize);
   const thickRef = useRef(floorThickness);
@@ -72,6 +74,7 @@ export default function PolygonWorlds() {
     });
     engineRef.current.setFloorOpacity(opacityRef.current);
     engineRef.current.setRadius(radiusRef.current);
+    engineRef.current.setCameraDistance(camDistRef.current);
     clockRef.current.start();
     const animate = () => {
       const eng = engineRef.current;
@@ -105,6 +108,7 @@ export default function PolygonWorlds() {
     });
     engineRef.current.setFloorOpacity(opacityRef.current);
     engineRef.current.setRadius(radiusRef.current);
+    engineRef.current.setCameraDistance(camDistRef.current);
   }, [spec, props]);
 
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
@@ -113,6 +117,7 @@ export default function PolygonWorlds() {
   useEffect(() => { sizeRef.current = squareSize; engineRef.current?.setSquareSize(squareSize); }, [squareSize]);
   useEffect(() => { thickRef.current = floorThickness; engineRef.current?.setFloorThickness(floorThickness); }, [floorThickness]);
   useEffect(() => { radiusRef.current = planetRadius; engineRef.current?.setRadius(planetRadius); }, [planetRadius]);
+  useEffect(() => { camDistRef.current = camDistance; engineRef.current?.setCameraDistance(camDistance); }, [camDistance]);
 
   useEffect(() => {
     const map: Record<string, MoveKey> = {
@@ -173,6 +178,9 @@ export default function PolygonWorlds() {
         <Section title="World" icon="⬚" defaultOpen>
           <Select label="Gluing" options={worldOptions} value={worldId} onChange={setWorldId} />
           <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
+          {thirdPerson && (
+            <Slider label="Camera distance" value={camDistance} min={1.5} max={12} step={0.5} onChange={setCamDistance} format={(v) => `${v.toFixed(1)}`} />
+          )}
           <Slider label="Landmarks" value={landmarkCount} min={1} max={14} step={1} onChange={(v) => setLandmarkCount(Math.round(v))} format={(v) => `${Math.round(v)}`} />
           <Select label="Arrangement" options={ARRANGEMENTS.map((a) => ({ value: a.id, label: a.label }))} value={arrangement} onChange={(v) => setArrangement(v as ArrangementId)} />
           {!isSpherical && (

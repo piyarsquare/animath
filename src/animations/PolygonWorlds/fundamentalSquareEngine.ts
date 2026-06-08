@@ -79,6 +79,7 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
     setRadius: (r) => cover.setRadius?.(r),
     setSquareSize: (v) => cover.setSquareSize?.(v),
     setFloorThickness: (t) => cover.setFloorThickness?.(t),
+    setCameraDistance: (d) => cover.setCameraDistance?.(d),
     getMapState: () => mapState,
     dispose: () => {
       scene.remove(root);

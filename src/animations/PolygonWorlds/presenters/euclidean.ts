@@ -8,48 +8,41 @@ import { realize, Realization } from '../lib/realize';
 import { applyMat, det3, ORIGIN, Isometry } from '../lib/cayleyKlein';
 
 /**
- * The flat (Euclidean-plane) presenter for the χ=0 worlds, now driven by the
- * geometry kernel instead of an ad-hoc square grid. From the edge word, {@link
- * realize} gives the fundamental polygon's **side-pairing isometries** (the deck
- * group). Tiling the universal cover is then "apply the deck lattice": cell (I, J)
- * is the transform γ₀ᴵ · γ₁ᴶ, whose translation places the copy and whose **sign of
- * the determinant** decides whether that copy is mirror-reflected (trees ↔ columns).
- * For the torus both generators are translations (no flip); for the Klein bottle
- * one is a glide reflection (det < 0), so every other row/column flips — and that
- * falls out of the kernel, not a hard-coded `I & 1`.
+ * The flat (Euclidean-plane) presenter for the χ=0 worlds, driven by the geometry
+ * kernel. {@link realize} gives the fundamental polygon's side-pairing isometries
+ * (the deck group); tiling the universal cover is "apply the deck lattice": cell
+ * (I, J) is γ₀ᴵ · γ₁ᴶ, whose translation places the copy and whose **sign of the
+ * determinant** decides whether the copy is mirror-reflected.
  *
- * Everything else (glass floor, decor, footprints, camera, the square chart) is the
- * shared chrome, unchanged from the original cover so the render matches.
+ * Each cell is a **two-sided sheet** (a thin slab): the **top face is blue with the
+ * trees**, the **bottom face is brown with the columns**, each landmark's two forms
+ * at the identical (u, v) and growing *away* from the sheet (so they never
+ * penetrate it). A mirror-reflected cell (`det < 0`) is the whole sheet flipped
+ * (`scale.y = −1`): the brown/columns face becomes the top — the trees↔columns swap
+ * is a literal sheet flip. The footprint trail is laid on the side you are on, so
+ * walking a flipped cell drops your trail **below the floor**.
  */
 
 const K = 2;            // render (2K+1)² copies around the player
 const EYE = 1.7;
 const UP = new THREE.Vector3(0, 1, 0);
+const DOWN = new THREE.Vector3(0, -1, 0);
 const SKY = 0x070912;
 const TRAIL_MAX = 1500;
 const TRAIL_SPACING = 1.6;
-const GLASS: GlassSpec = { showUnderBelow: 0.95 };
-
-function floorTexture(side: number): THREE.CanvasTexture {
-  const s = 256;
-  const cvs = document.createElement('canvas'); cvs.width = cvs.height = s;
-  const ctx = cvs.getContext('2d')!;
-  ctx.fillStyle = '#1c2a44'; ctx.fillRect(0, 0, s, s);
-  ctx.strokeStyle = '#4a6796'; ctx.lineWidth = 3; ctx.strokeRect(0, 0, s, s);
-  const t = new THREE.CanvasTexture(cvs);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set((2 * K + 3) * side / 3, (2 * K + 3) * side / 3);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
+// Default opacity reads as a SOLID floor (blue top occludes the brown underside);
+// lowering it past showUnderBelow turns the sheet to glass and reveals the brown
+// bottom face + the columns + any footprints below the floor.
+const GLASS: GlassSpec = { showUnderBelow: 0.8, solidAt: 0.82 };
+const TOP_COLOR = 0x3f73c9;     // blue  — the top face
+const BOTTOM_COLOR = 0x7a4a28;  // brown — the bottom face
+const EDGE_COLOR = 0x2a3550;
 
 interface Cell {
-  group: THREE.Group;
-  trees: THREE.Group;
-  columns: THREE.Group;
-  under: THREE.Group;
-  underTrees: THREE.Group;
-  underColumns: THREE.Group;
+  group: THREE.Group;     // matrix = translate(cellOrigin) · scale(1, flip, 1)
+  slab: THREE.Mesh;
+  top: THREE.Group;       // trees (top face)
+  bottom: THREE.Group;    // columns (bottom face)
 }
 
 export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
@@ -59,24 +52,20 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   // ── kernel: realize the word → deck lattice ─────────────────────────────────
   const real: Realization = realize(parseWord(c.spec.word));
   const gens: Isometry[] = real.deckGenerators.filter(Boolean);
-  // Model-space lattice basis (xy) from the first two generators. For the square
-  // these are axis-aligned translations; the 2×2 [a b] basis also handles any flat
-  // word (e.g. the hexagonal torus) without change.
   const o = ORIGIN;
   const g0 = applyMat(gens[0].m, o), g1 = applyMat(gens[1].m, o);
-  const ax = g0[0] - o[0], ay = g0[1] - o[1];     // va (model)
-  const bx = g1[0] - o[0], by = g1[1] - o[1];     // vb (model)
+  const ax = g0[0] - o[0], ay = g0[1] - o[1];
+  const bx = g1[0] - o[0], by = g1[1] - o[1];
   const detA = det3(gens[0].m), detB = det3(gens[1].m);
   const flipParity = (I: number, J: number) =>
     ((detA < 0 && (I & 1)) ? 1 : 0) ^ ((detB < 0 && (J & 1)) ? 1 : 0);
 
   let side = c.squareSize;
   let thickness = c.floorThickness;
-  let floorOpacity = 0.35;
-  // World units per model unit, so the cell spacing equals `side`.
+  let floorOpacity = 0.85;
+  let camDist = 3.2;
   const baseLen = Math.hypot(ax, ay) || 1;
   let scale = side / baseLen;
-  // World lattice basis (x, z) and its inverse, for locating the player's cell.
   const lattice = () => ({ ax: ax * scale, az: ay * scale, bx: bx * scale, bz: by * scale });
   function cellOf(px: number, pz: number): [number, number] {
     const L = lattice();
@@ -95,54 +84,61 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   scene.background = new THREE.Color(SKY);
   scene.fog = new THREE.Fog(SKY, side * 0.7, side * 3);
 
-  // ── glass floor slab ────────────────────────────────────────────────────────
-  const floorTex = floorTexture(side);
-  const floorMat = new THREE.MeshStandardMaterial({
-    map: floorTex, color: 0x46658f, emissive: 0x0c1730, emissiveIntensity: 0.6,
-    roughness: 0.5, metalness: 0.08, transparent: true, opacity: floorOpacity, side: THREE.DoubleSide,
-  });
-  const floorW = () => (2 * K + 3) * side;
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(floorW(), thickness, floorW()), floorMat);
-  root.add(floor);
-  function rebuildFloorGeo() {
-    floor.geometry.dispose();
-    floor.geometry = new THREE.BoxGeometry(floorW(), thickness, floorW());
+  // ── two-tone glass slab material (top blue / bottom brown / edge) ────────────
+  function makeGlass(color: number): THREE.MeshStandardMaterial {
+    return new THREE.MeshStandardMaterial({
+      color, emissive: color, emissiveIntensity: 0.18, roughness: 0.5, metalness: 0.05,
+      transparent: true, opacity: floorOpacity, side: THREE.DoubleSide,
+    });
   }
+  const topMat = makeGlass(TOP_COLOR);
+  const bottomMat = makeGlass(BOTTOM_COLOR);
+  const edgeMat = makeGlass(EDGE_COLOR);
+  // BoxGeometry group order: +x,-x,+y(top),-y(bottom),+z,-z
+  const slabMats = [edgeMat, edgeMat, topMat, bottomMat, edgeMat, edgeMat];
   function applyFloorOpacity(opacity: number) {
     floorOpacity = opacity;
     const g = glassState(opacity, GLASS);
-    floorMat.opacity = g.opacity; floorMat.visible = g.visible; floorMat.depthWrite = g.depthWrite;
+    for (const mt of [topMat, bottomMat, edgeMat]) {
+      mt.opacity = g.opacity; mt.visible = g.visible; mt.depthWrite = g.depthWrite;
+    }
   }
-  applyFloorOpacity(floorOpacity);
 
-  // ── tiled copies of the decorated square ────────────────────────────────────
+  // ── tiled copies of the two-sided sheet ──────────────────────────────────────
+  // Authored with the slab mid-plane at the group origin: top face at +t/2 (trees,
+  // up), bottom face at −t/2 (columns, grown down). The group sits at world y=−t/2,
+  // so the top face — the walking surface — is at y=0. A flipped cell scales y=−1
+  // about the slab mid-plane, swapping the faces in place.
   const cells: Cell[] = [];
-  for (let i = 0; i < (2 * K + 1) * (2 * K + 1); i++) {
-    const group = new THREE.Group(); group.matrixAutoUpdate = false;
-    const trees = new THREE.Group(), columns = new THREE.Group();
-    const under = new THREE.Group(); under.scale.set(1, -1, -1); under.position.y = -thickness; under.visible = false;
-    const underTrees = new THREE.Group(), underColumns = new THREE.Group();
-    decor.props.forEach((_, j) => {
-      columns.add(decor.makeColumn(j)); trees.add(decor.makeTree(j));
-      underColumns.add(decor.makeColumn(j)); underTrees.add(decor.makeTree(j));
-    });
-    under.add(underTrees, underColumns);
-    group.add(trees, columns, under);
-    root.add(group);
-    cells.push({ group, trees, columns, under, underTrees, underColumns });
+  function buildCells() {
+    for (const cell of cells) root.remove(cell.group);
+    cells.length = 0;
+    for (let i = 0; i < (2 * K + 1) * (2 * K + 1); i++) {
+      const group = new THREE.Group(); group.matrixAutoUpdate = false;
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(side, thickness, side), slabMats);
+      const top = new THREE.Group(), bottom = new THREE.Group();
+      decor.props.forEach((_, j) => {
+        const t = decor.makeTop(j); top.add(t);          // grows +y from the top face
+        const b = decor.makeBottom(j); b.scale.y = -1; bottom.add(b); // grows −y from the bottom face
+      });
+      group.add(slab, top, bottom);
+      root.add(group);
+      cells.push({ group, slab, top, bottom });
+    }
+    placeDecor();
   }
   function placeDecor() {
+    const ht = thickness / 2;
     for (const cell of cells) {
       decor.props.forEach((p, j) => {
         const x = (p.u - 0.5) * side, z = (p.v - 0.5) * side;
-        cell.columns.children[j].position.set(x, 0, z);
-        cell.trees.children[j].position.set(x, 0, z);
-        cell.underColumns.children[j].position.set(x, 0, z);
-        cell.underTrees.children[j].position.set(x, 0, z);
+        cell.top.children[j].position.set(x, ht, z);
+        cell.bottom.children[j].position.set(x, -ht, z);
       });
     }
   }
-  placeDecor();
+  buildCells();
+  applyFloorOpacity(floorOpacity);
 
   const foot = makeFootprintTrail(TRAIL_MAX);
   const footMesh = new THREE.Mesh(foot.geometry, foot.material);
@@ -150,11 +146,24 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   root.add(footMesh);
   let trailLast: THREE.Vector3 | null = null;
 
-  // player state (walks the flat plane in world coords)
-  let px = 2, pz = 2;
+  // player state (walks the flat plane in world coords). Spawn at the home-cell
+  // point farthest from every landmark, so the player never starts inside a tree.
+  function clearSpawn(): [number, number] {
+    let best = [0.5, 0.5], bestD = -1;
+    for (let cu = 0.1; cu <= 0.9; cu += 0.1) {
+      for (let cv = 0.1; cv <= 0.9; cv += 0.1) {
+        let mind = Infinity;
+        for (const p of decor.props) mind = Math.min(mind, Math.hypot(cu - p.u, cv - p.v));
+        if (mind > bestD) { bestD = mind; best = [cu, cv]; }
+      }
+    }
+    return [(best[0] - 0.5) * side, (best[1] - 0.5) * side];
+  }
+  let [px, pz] = clearSpawn();
   const forward = new THREE.Vector3(0, 0, -1);
   const pos = new THREE.Vector3(px, 0, pz);
   const M = new THREE.Matrix4(), S = new THREE.Matrix4();
+  const footPos = new THREE.Vector3();
 
   function update(input: CoverFrameInput, cam: THREE.PerspectiveCamera) {
     const { fwd, strafe, yaw, pitch, dt, moveSpeed, thirdPerson } = input;
@@ -169,7 +178,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     cam.up.copy(UP);
     if (thirdPerson) {
       const aspect = cam.aspect || 1;
-      const D = 3.2 * Math.min(1.6, Math.max(1, 1 / Math.min(aspect, 1)));
+      const D = camDist * Math.min(1.6, Math.max(1, 1 / Math.min(aspect, 1)));
       cam.position.set(px, 0, pz).addScaledVector(forward, -D).addScaledVector(UP, 2.2 + pitch * 1.6);
       cam.lookAt(px + forward.x * 0.5, 1.3, pz + forward.z * 0.5);
     } else {
@@ -178,11 +187,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
       cam.lookAt(px + Math.sin(yaw) * cp, EYE + Math.sin(pitch), pz - Math.cos(yaw) * cp);
     }
 
-    floor.position.set(px, -thickness / 2, pz);
-    floorTex.offset.set(px / 3, -pz / 3);
-
-    // tile the decorated square around the player via the deck lattice
-    const showUnder = glassState(floorOpacity, GLASS).showUnder;
+    // tile the sheet around the player via the deck lattice
     const [I0, J0] = cellOf(px, pz);
     let idx = 0;
     for (let di = -K; di <= K; di++) {
@@ -190,20 +195,20 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
         const I = I0 + di, J = J0 + dj;
         const [cx, cz] = cellOrigin(I, J);
         const flipped = flipParity(I, J) === 1;
-        S.makeScale(1, 1, flipped ? -1 : 1);
+        S.makeScale(1, flipped ? -1 : 1, 1);
         const cell = cells[idx++];
-        cell.group.matrix.copy(M.makeTranslation(cx, 0, cz)).multiply(S);
-        cell.trees.visible = flipped;       // flipped class wears trees
-        cell.columns.visible = !flipped;
-        cell.under.visible = showUnder;
-        if (showUnder) { cell.underTrees.visible = !flipped; cell.underColumns.visible = flipped; }
+        cell.group.matrix.copy(M.makeTranslation(cx, -thickness / 2, cz)).multiply(S);
       }
     }
 
+    // footprints: laid on the side the player is on (below the floor when flipped)
+    const playerFlipped = flipParity(I0, J0) === 1;
     if (!trailLast || trailLast.distanceTo(pos) > TRAIL_SPACING) {
       const d = trailLast ? pos.clone().sub(trailLast) : forward.clone();
       if (d.lengthSq() < 1e-9) d.copy(forward);
-      foot.append(pos, d.normalize(), UP);
+      d.y = 0;
+      footPos.set(px, playerFlipped ? -thickness : 0, pz);
+      foot.append(footPos, d.normalize(), playerFlipped ? DOWN : UP);
       trailLast = pos.clone();
     }
   }
@@ -227,17 +232,17 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     update, pose, chart,
     clearTrail: () => { foot.clear(); trailLast = null; },
     setFloorOpacity: applyFloorOpacity,
+    setCameraDistance: (d: number) => { camDist = d; },
     setSquareSize: (v: number) => {
-      side = v; scale = side / baseLen; placeDecor(); rebuildFloorGeo();
-      floorTex.repeat.set((2 * K + 3) * side / 3, (2 * K + 3) * side / 3);
+      side = v; scale = side / baseLen;
+      buildCells();
       scene.fog = new THREE.Fog(SKY, side * 0.7, side * 3);
     },
-    setFloorThickness: (t: number) => {
-      thickness = t; rebuildFloorGeo();
-      for (const cell of cells) cell.under.position.y = -thickness;
-    },
+    setFloorThickness: (t: number) => { thickness = t; buildCells(); },
     dispose: () => {
-      foot.dispose(); floor.geometry.dispose(); floorTex.dispose(); floorMat.dispose();
+      foot.dispose();
+      for (const cell of cells) cell.slab.geometry.dispose();
+      topMat.dispose(); bottomMat.dispose(); edgeMat.dispose();
     },
   };
 }
