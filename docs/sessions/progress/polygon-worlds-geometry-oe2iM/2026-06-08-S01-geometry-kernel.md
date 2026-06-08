@@ -5,7 +5,7 @@ date: 2026-06-08
 title: Polygon Worlds — geometry kernel (M0 + Phase 0)
 branch: claude/polygon-worlds-geometry-oe2iM
 slug: polygon-worlds-geometry-oe2iM
-status: in-progress
+status: completed
 build: passed
 followup: high
 pr: https://github.com/piyarsquare/animath/pull/190
