@@ -57,7 +57,7 @@ export const COMPLEX_PARTICLES_DEFAULTS = {
     shimmer: { min: 0, max: 1, step: 0.01 },
     jitter: { min: 0, max: 0.5, step: 0.005 },
     hueShift: { min: 0, max: 1, step: 0.01 },
-    cameraZ: { min: 2, max: 50, step: 0.1 },
+    cameraZ: { min: 2, max: 200, step: 0.1 },
     axisWidth: { min: 0.5, max: 5, step: 0.1 },
     extent: { min: 1, max: 12, step: 0.5 },
     adaptiveAlpha: { min: 0, max: 3, step: 0.1 },
