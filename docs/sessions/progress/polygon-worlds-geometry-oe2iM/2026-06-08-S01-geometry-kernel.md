@@ -37,6 +37,22 @@ session runs on the new `polygon-worlds-geometry-oe2iM` branch.)
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 04:10 — P1 shipped: Euclidean presenter on the kernel; `euclideanCover` retired
+**Why:** first phase that changes rendering — port torus/Klein onto the frozen
+kernel and prove parity before deleting the ad-hoc cover (no big-bang).
+
+`presenters/euclidean.ts` renders the χ=0 worlds from the kernel: `realize(word)`
+gives the side-pairing deck generators, and tiling = "apply the deck lattice" —
+cell (I,J) = γ₀ᴵ·γ₁ᴶ, its translation placing the copy and **`sign(det)` deciding
+the trees↔columns flip**. The hard-coded `I*side` grid and `(I&1)` Klein flip are
+gone; the flip now falls out of `det(deck)<0`. All shared chrome (glass/decor/
+footprints/camera/chart) unchanged. **Headless screenshots: torus pixel-identical
+to the old cover; Klein matches** (aligned the Klein word to `a b a b⁻¹` so the
+glide sits on the `a`/left-right pair, consistent with the mini-map). `realize`
+gained a presentation `baseAngle` (default flat-bottomed → square axis-aligned).
+Battery still 100/100; build green. **`euclideanCover.ts` retired.** Committed
+`6752ec4`, pushed. Spherical worlds still on the old `sphericalCover` (P2).
+
 ### 🟡 milestone · 03:30 — Phase 0 complete: realize + develop + deck-closure (100/100)
 **Why:** finish the Phase-0 spike so the kernel interface is genuinely exercised
 end-to-end (word → geometry → tiles) and provably frozen.
@@ -158,11 +174,15 @@ code: bring the foundation onto this branch (`git merge origin/claude/polygon-wo
       wrong test; see the caution above). 100/100 green.
 - [x] **ℍ² budget** — measured; Fuchsian defaults set from it.
 
+- [x] **P1 — Euclidean presenter** — `presenters/euclidean.ts` on the kernel;
+      torus pixel-identical + Klein matching; `euclideanCover` retired (`6752ec4`).
+
 > [!NOTE]
-> **M0 + Phase 0 are done.** The kernel interface is frozen (battery green). The
-> next chunk is **P1 — Euclidean presenter on the kernel**: port torus/Klein to
-> render via `realize`/`develop` (screenshot-match #190), then retire
-> `euclideanCover`. No cover has been touched yet.
+> **M0 + Phase 0 + P1 are done.** Next is **P2 — Spherical presenter**: realize the
+> positive words (sphere chart + ℝP² smooth hemisphere) on the kernel, retire
+> `sphericalCover`, and ship the extrinsic embedding inset. The chart case (sphere,
+> V=3) is the subtle one. Then **P3 — Hyperbolic** (Poincaré disk + Fuchsian develop
+> within the measured budget).
 
 ## Decisions & rationale
 
