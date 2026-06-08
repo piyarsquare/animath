@@ -37,6 +37,40 @@ session runs on the new `polygon-worlds-geometry-oe2iM` branch.)
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 03:30 — Phase 0 complete: realize + develop + deck-closure (100/100)
+**Why:** finish the Phase-0 spike so the kernel interface is genuinely exercised
+end-to-end (word → geometry → tiles) and provably frozen.
+
+`lib/realize.ts` ties `analyzeSchema`'s edge pairings to the kernel: κ from sign
+of χ; a regular geodesic fundamental polygon via **`Cκ(R) = cot(π/m)·cot(α)`** (one
+formula all signs, Euclidean at κ=0); side-pairing isometries built tail→tail with
+a reflection for same-sign (glide) pairings → `det<0`. **Isometric** domain when
+every vertex class has equal corner counts (torus/Klein/cross-caps/genus-g and ℝP²
+as a smooth hemisphere square); **chart** onto the round sphere when classes are
+unequal (sphere `a a⁻¹ b b⁻¹`, V=3) — the realization decision *derived from the
+V-structure*, not hard-coded. `lib/develop.ts`: `DevelopPolicy`
+(finite/lattice/Fuchsian) — BFS over the side-pairing Cayley graph with horizon
+culling + `maxTiles` cap.
+
+Battery now **100/100 green** (`npm run verify`). Deck closure uses
+*convention-independent* invariants (after finding the naive boundary-word relator
+is the wrong test — see the finding below): **vertex angle-sum = 2π per class**
+(smooth gluing / no cone points), **fixed-point-free generators for κ≤0**, edges
+glue, det↔orientability, generators preserve Gκ — across sphere/ℝP²/torus/Klein/
+3-cross-cap/genus-2. **Measured ℍ² budget** (genus-2 octagon, nearest neighbour
+d≈3.06, exponential growth): h=6 ≈100 tiles (~3ms), h=7 ≈265 (~6ms), h=8 ≈800
+(~15ms) → Fuchsian defaults h=6.5 / maxTiles 800. Build green. Committed `f953eb6`,
+pushed. **Kernel interface frozen.** No app render wired; covers untouched.
+
+> [!CAUTION]
+> **The naive "boundary-word product = identity" is the wrong deck-closure test.**
+> A grid search showed the geometrically correct (fixed-point-free, correctly
+> tiling) side-pairings do *not* satisfy the naive relator word — they generate the
+> right group but satisfy a conjugated relation. The construction that *did* satisfy
+> the naive relator produced degenerate involutions (2 tiles for the torus). The
+> honest, convention-independent closure invariants are **angle-sum = 2π per vertex
+> class** and **fixed-point-free generators** — both green for every surface.
+
 ### 🟡 milestone · 02:20 — Phase 0 kernel + invariant battery green (68/68)
 **Why:** the kernel is the frozen-interface foundation; the plan says freeze only
 once the battery is green, so the battery had to come with the kernel.
@@ -114,21 +148,21 @@ code: bring the foundation onto this branch (`git merge origin/claude/polygon-wo
 - [x] **Phase 0 kernel core** — `lib/cayleyKlein.ts` (points (x,y,w), form
       diag(κ,κ,1), analytic κ→0) + `lib/invariants.ts` + `scripts/verify-geometry.ts`.
       68/68 green (`099b011`).
-- [ ] **`realize(word)`** — `lib/realize.ts`: tie `analyzeSchema`'s edge pairings to
-      the kernel (regular polygon vertices + side-pairing isometries; κ from χ — flat
-      regular, hyperbolic solved via `cosh(√−κ R)=cos(π/m)/sin(α)`, positive = chart).
-- [ ] **`DevelopPolicy`** — `lib/develop.ts`: finite / lattice / Fuchsian tile
-      enumeration with horizon culling.
-- [ ] **Deck-closure battery** — extend `verify-geometry` with edge-pairing/deck
-      relation closure (boundary-word product = identity) + holonomy-from-topology.
-- [ ] **ℍ² budget** — measure tile-growth + horizon-culling cost.
+- [x] **`realize(word)`** — `lib/realize.ts`: edge pairings → regular geodesic
+      polygon + side-pairing deck generators; κ from χ via `Cκ(R)=cot(π/m)·cot(α)`;
+      isometric vs chart derived from vertex-class corner counts.
+- [x] **`DevelopPolicy`** — `lib/develop.ts`: finite / lattice / Fuchsian BFS tile
+      enumeration with horizon culling + cap.
+- [x] **Deck-closure battery** — angle-sum = 2π per class + fixed-point-free +
+      edge-gluing + det↔orientability + Gκ-preservation (the naive relator was the
+      wrong test; see the caution above). 100/100 green.
+- [x] **ℍ² budget** — measured; Fuchsian defaults set from it.
 
 > [!NOTE]
-> **Checkpoint here.** M0 is shipped and the kernel + 68-check battery are green —
-> the hard, interface-defining core is proven. The remaining Phase-0 items
-> (`realize`/`develop`/deck-closure/perf) are the next chunk; the positive-curvature
-> **chart** relation-closure is the subtlest piece and is coupled to the P2
-> spherical presenter, so it wants care rather than a rush.
+> **M0 + Phase 0 are done.** The kernel interface is frozen (battery green). The
+> next chunk is **P1 — Euclidean presenter on the kernel**: port torus/Klein to
+> render via `realize`/`develop` (screenshot-match #190), then retire
+> `euclideanCover`. No cover has been touched yet.
 
 ## Decisions & rationale
 
