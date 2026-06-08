@@ -80,20 +80,26 @@ for (const rec of byKey.values()) {
   // (e.g. `![](…)`) isn't mistaken for a real screenshot reference.
   const scannable = md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, "");
   const imgRefs = [...scannable.matchAll(IMG_RE)].map((m) => m[1]).filter(isLocalImg);
-  for (const imgRef of [...new Set(imgRefs)]) {
+  // Also carry an explicit `thumbnail:` even when it isn't embedded in the body —
+  // otherwise a dedicated thumbnail/crop would leave a broken control-center card.
+  const toCarry = new Set(imgRefs);
+  if (isLocalImg(fm.thumbnail)) toCarry.add(fm.thumbnail);
+  const carried = new Set();
+  for (const imgRef of toCarry) {
     const repoImg = posixJoin(reportDir, imgRef);
     const blob = gitBuf(["show", `${ref}:${repoImg}`]);
     if (!blob) { console.warn(`  ! missing image ${repoImg} on ${ref}`); continue; }
     const outImg = join(dir, imgRef);
     mkdirSync(dirname(outImg), { recursive: true });
     writeFileSync(outImg, blob);
+    carried.add(imgRef);
     imgBytes += blob.length; imgCount++;
   }
 
   // Lead thumbnail for the control center: the `thumbnail:` frontmatter ref, else
-  // the first carried image. Stored relative to control-center.html.
+  // the first body image — but only if it actually carried, so cards never break.
   const thumbRef = isLocalImg(fm.thumbnail) ? fm.thumbnail : imgRefs[0];
-  const thumb = thumbRef ? `converted/${rec.kind}/${rec.slug}/${thumbRef}` : null;
+  const thumb = thumbRef && carried.has(thumbRef) ? `converted/${rec.kind}/${rec.slug}/${thumbRef}` : null;
 
   reports.push({ slug: rec.slug, short: shortName(rec.slug), base: rec.base, date,
     kind: fm.kind || "?", session: fm.session || "?", title: fm.title || rec.base, status: fm.status || "?",

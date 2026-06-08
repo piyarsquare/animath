@@ -10,7 +10,7 @@ build: passed
 followup: low
 pr: null
 app: null
-thumbnail: assets/topology-walk.png
+thumbnail: assets/card.png
 ---
 
 # Session reports — embedded screenshots + control-center thumbnails
@@ -44,5 +44,6 @@ build), rendered as a captioned figure in the HTML view and inline on GitHub:
 
 ![Topology Walk, captured headless via scripts/shoot.mjs](assets/topology-walk.png)
 
-The same file (named in `thumbnail:`) becomes this session's thumbnail on the
-control center.
+This session's control-center thumbnail is a **separate** image (`thumbnail:
+assets/card.png`) that is *not* embedded in the body — the build carries explicit
+thumbnail assets too, so a dedicated card crop never breaks the link.
