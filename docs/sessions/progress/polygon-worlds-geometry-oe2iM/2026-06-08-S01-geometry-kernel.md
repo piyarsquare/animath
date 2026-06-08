@@ -37,6 +37,30 @@ session runs on the new `polygon-worlds-geometry-oe2iM` branch.)
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 01:46 — M0 shipped: host reads topology from `analyzeSchema`
+**Why:** the plan's zero-risk first win — make the foundation word-driven before
+touching any cover, banking a real improvement immediately.
+
+Each `WorldSpec` now carries its canonical **edge word** (torus `a b a⁻¹ b⁻¹`,
+Klein `a b a⁻¹ b`, ℝP² `a b a b`, sphere `a a⁻¹ b b⁻¹`); `analyzeWorld(spec)` runs
+the verified base layer and the Settings readout shows **live χ / orientability /
+curvature / surface name** from it (not the stored cover invariants). Confirmed in
+three ways: `npm run build` green; `verify-schemas.ts` (extended with a
+world-word↔stored-invariants consistency check) all PASS; headless screenshot of
+the open Settings drawer shows *"Edge word a b a⁻¹ b · Klein bottle · non-orientable
+· χ = 0 · flat (κ = 0)"*. Rendering still via the ad-hoc covers — zero engine risk.
+Committed `fa5a776`, pushed.
+
+### 🟣 decision · 01:42 — Rebase this branch onto `claude/polygon-worlds`
+**Why:** the geometry work must build on the verified foundation; the user chose a
+linear-on-foundation history over a merge.
+
+`git rebase --onto` hit conflicts because the foundation branch was cut from an
+older `main`; since (a) `origin/claude/polygon-worlds` already contains all of
+current `main` and (b) this branch's only unique commit was the progress report, I
+reset hard onto the foundation and cherry-picked the report on top. Result: clean
+linear history, build green, force-pushed.
+
 ### 🔵 finding · 00:00 — Branch is based on `main`; foundation is on `claude/polygon-worlds`
 **Why:** the assigned dev branch (`claude/polygon-worlds-geometry-oe2iM`) was cut
 from `main`, so it has none of the PolygonWorlds app, the plan, or `surfaceSchema.ts`
