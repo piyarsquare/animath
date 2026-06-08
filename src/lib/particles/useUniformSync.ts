@@ -124,6 +124,10 @@ export function useUniformSync(state: ParticleState): void {
   }, [state.colourStyle]);
 
   useEffect(() => {
+    materialsRef.current.forEach(m => { m.uniforms.uColormap.value = state.colormap; });
+  }, [state.colormap]);
+
+  useEffect(() => {
     materialsRef.current.forEach(m => { m.uniforms.uColourBy.value = state.colourBy; });
   }, [state.colourBy]);
 

@@ -184,6 +184,7 @@ export default function ComplexParticles({
     tex: { value: state.texturesRef.current[state.textureIndex] ?? new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) },
     textureIndex: { value: state.textureIndex },
     uColourStyle: { value: state.colourStyle },
+    uColormap: { value: state.colormap },
     uColourBy: { value: state.colourBy },
     uColourQty: { value: state.colourQuantity },
     uBrightnessQty: { value: state.brightnessQuantity },

@@ -98,6 +98,10 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [textureIndex, setTextureIndex] = usePersistentState(pk('textureIndex'), 0);
   const [realView, setRealView] = useState(false);
   const [colourStyle, setColourStyle] = usePersistentState<ColorStyle>(pk('colourStyle'), ColorStyle.HSV);
+  // Palette: 0 = Phase wheel (HSV domain colouring, the default); 1..7 = sequential
+  // colormaps mapped to magnitude (Grayscale / Viridis / Magma / Inferno / Plasma /
+  // Fire / Ocean), for reading |z| / |f|.
+  const [colormap, setColormap] = usePersistentState(pk('colormap'), 0);
   const [colourBy, setColourBy] = usePersistentState<ColourBy>(pk('colourBy'), ColourBy.Domain);
   // Which scalar of the chosen source drives the colour wheel (hue). Phase keeps
   // the classic domain-colouring look; Modulus colours by |z| / |f|, etc.
@@ -231,6 +235,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     textureIndex, setTextureIndex,
     realView, setRealView,
     colourStyle, setColourStyle,
+    colormap, setColormap,
     colourBy, setColourBy,
     colourQuantity, setColourQuantity,
     brightnessQuantity, setBrightnessQuantity,

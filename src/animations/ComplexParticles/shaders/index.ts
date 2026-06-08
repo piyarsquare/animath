@@ -2,7 +2,9 @@
 // function, the projection modes, and the domain-colouring (calcColour /
 // chartCoord). Both the point-cloud and the sheet vertex shaders are built from
 // this common block + their own main(), so the two render modes stay in lockstep.
-const vsCommon = `
+import { PALETTE_GLSL } from '../../../lib/colormaps';
+
+const vsCommon = PALETTE_GLSL + `
 // DOMAIN–COLORING VERTEX SHADER
 struct quat { float w; vec3 v; };
 
@@ -41,6 +43,7 @@ uniform int   uProjMode;
 uniform int   uProjTarget;
 uniform float uProjAlpha;
 uniform int   uColourStyle;
+uniform int   uColormap;
 uniform int   uColourBy;
 uniform int   uColourQty;
 uniform int   uBrightnessQty;
@@ -247,6 +250,22 @@ vec3 calcColour(vec2 z, vec2 f){
     else if(uColourQty==3) param = 0.5 + 0.5*tanh(w.y);      // imag part
     else                   param = angle/TAU + 1.0;          // phase (default)
     float hue = fract(param + hueShift);
+    // Sequential colormaps (uColormap>0) override the HSV wheel: map MAGNITUDE
+    // (|z|/|f|, squashed to [0,1]) through a perceptual ramp — the natural choice
+    // for reading magnitude as a smooth gradient. Saturation still desaturates.
+    if(uColormap > 0){
+        float s = clamp(0.5*(1.0 + tanh(log(r + 1e-6))), 0.0, 1.0);
+        int scheme = (uColormap==1) ? 3      // Grayscale
+                   : (uColormap==2) ? 4      // Viridis
+                   : (uColormap==3) ? 5      // Magma
+                   : (uColormap==4) ? 6      // Inferno
+                   : (uColormap==5) ? 7      // Plasma
+                   : (uColormap==6) ? 1      // Fire
+                   :                  2;     // Ocean
+        vec3 cmap = paletteColor(s * 255.0, scheme);
+        cmap = mix(vec3(dot(cmap, vec3(0.3333))), cmap, saturation);
+        return cmap * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
+    }
     // Brightness (value) is driven independently of hue. Magnitude (the default)
     // gives the classic |.| -> brightness; the other quantities squash into [0,1].
     float val;

@@ -10,7 +10,7 @@ import { useResponsive } from '../styles/responsive';
 import { planes, Plane } from '../math/constants';
 import { clearPersistedState } from '../lib/usePersistentState';
 import {
-  ColorStyle, ColourBy, ColourQuantity, CoordMode, coordModeNames,
+  ColorStyle, ColourBy, ColourQuantity, CoordMode, coordModeNames, colormapNames,
   SamplePattern, samplePatternNames, JitterMode, AXIS_COLORS,
   shapeNames, textureNames, viewTypes, motionModes, renderModes,
   useGestureRotation,
@@ -385,14 +385,22 @@ export default function ParticleViewerShell({
             value={state.brightnessQuantity}
             onChange={state.setBrightnessQuantity}
           />
-          <Pills
-            label="Style"
-            options={Object.keys(ColorStyle)
-              .filter(k => isNaN(Number(k)))
-              .map(k => ({ value: ColorStyle[k as keyof typeof ColorStyle], label: k }))}
-            value={state.colourStyle}
-            onChange={state.setColourStyle}
+          <Select
+            label="Colormap"
+            options={colormapNames.map((name, i) => ({ value: i, label: name }))}
+            value={state.colormap}
+            onChange={state.setColormap}
           />
+          {state.colormap === 0 && (
+            <Pills
+              label="Style"
+              options={Object.keys(ColorStyle)
+                .filter(k => isNaN(Number(k)))
+                .map(k => ({ value: ColorStyle[k as keyof typeof ColorStyle], label: k }))}
+              value={state.colourStyle}
+              onChange={state.setColourStyle}
+            />
+          )}
           <Slider label="Hue shift" value={state.hueShift}
             min={R.hueShift.min} max={R.hueShift.max} step={R.hueShift.step}
             onChange={state.setHueShift} format={v => v.toFixed(2)} />
