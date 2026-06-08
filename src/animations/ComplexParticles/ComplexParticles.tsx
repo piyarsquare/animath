@@ -448,10 +448,10 @@ export default function ComplexParticles({
   useEffect(() => {
     const netGeom = netGeomRef.current;
     if (!netGeom) return;
-    rebuildNetGeometry(netGeom, state.netRings, state.netSpokes, netRadius(), state.netMode);
+    rebuildNetGeometry(netGeom, state.netRings, state.netSpokes, netRadius(), state.netCircles, state.netRays);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    state.netRings, state.netSpokes, state.netMode,
+    state.netRings, state.netSpokes, state.netCircles, state.netRays,
     state.extentX, state.extentY, state.axisScale,
     state.boundsLock, state.xMin, state.xMax, state.yMin, state.yMax,
   ]);
@@ -523,7 +523,7 @@ export default function ComplexParticles({
       sheetGeomRef.current = createSheetGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
       sheetWireGeomRef.current = createSheetWireGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
       tileGeomRef.current = createTileGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
-      netGeomRef.current = createNetGeometry(state.netRings, state.netSpokes, netRadius(), state.netMode);
+      netGeomRef.current = createNetGeometry(state.netRings, state.netSpokes, netRadius(), state.netCircles, state.netRays);
 
       rebuildBranchObjects(scene);
 

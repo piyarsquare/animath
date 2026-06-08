@@ -4,7 +4,6 @@ import { ProjectionMode } from '../viewpoint';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import { usePersistentState } from '../usePersistentState';
 import { ViewPoint, ColorStyle, ColourBy, ColourQuantity, CoordMode, SamplePattern, JitterMode, Axis, motionModes, dropModes, RenderMode } from './types';
-import type { NetMode } from './createSheetGeometry';
 
 export interface UseParticleStateOptions {
   count?: number;
@@ -100,10 +99,11 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // it they detach into a field of separated squares (the "points").
   const [tileSize, setTileSize] = usePersistentState(pk('tileSize'), 0.35);
   // Net mode: a polar fibre net — `netRings` concentric circles (constant |z|)
-  // and `netSpokes` rays (constant arg z); `netMode` selects which families show.
+  // and `netSpokes` rays (constant arg z); each family toggles independently.
   const [netRings, setNetRings] = usePersistentState(pk('netRings'), 14);
   const [netSpokes, setNetSpokes] = usePersistentState(pk('netSpokes'), 24);
-  const [netMode, setNetMode] = usePersistentState<NetMode>(pk('netMode'), 'Both');
+  const [netCircles, setNetCircles] = usePersistentState(pk('netCircles'), true);
+  const [netRays, setNetRays] = usePersistentState(pk('netRays'), false);
   const [objectMode, setObjectMode] = usePersistentState(pk('objectMode'), false);
   const [shapeIndex, setShapeIndex] = usePersistentState(pk('shapeIndex'), 1);
   const [textureIndex, setTextureIndex] = usePersistentState(pk('textureIndex'), 0);
@@ -243,7 +243,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     tileSize, setTileSize,
     netRings, setNetRings,
     netSpokes, setNetSpokes,
-    netMode, setNetMode,
+    netCircles, setNetCircles,
+    netRays, setNetRays,
     lighting, setLighting,
     lightStrength, setLightStrength,
     objectMode, setObjectMode,

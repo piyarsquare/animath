@@ -80,41 +80,41 @@ export function rebuildTileGeometry(
   fillTiles(geometry, res, xMin, xMax, yMin, yMax);
 }
 
-export type NetMode = 'Both' | 'Circles' | 'Rays';
-
 /** Build the **fiber net**: a polar lattice of line segments over the disk of
  *  radius `radius`, drawn as `LineSegments` and placed on the surface by the net
  *  vertex shader. `rings` concentric circles (constant |z|) and `spokes` rays
  *  (constant arg z) reveal how the function carries the polar fibres of the
  *  domain — circles map to one family of curves, rays to the orthogonal family.
- *  `mode` selects which families are drawn. Circles/rays are sampled finely so
- *  they stay smooth independent of how many of them there are. */
+ *  `circles`/`rays` toggle each family. Circles/rays are sampled finely so they
+ *  stay smooth independent of how many of them there are. */
 export function createNetGeometry(
-  rings: number, spokes: number, radius: number, mode: NetMode = 'Both',
+  rings: number, spokes: number, radius: number,
+  circles: boolean = true, rays: boolean = true,
 ): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
-  fillNet(geometry, rings, spokes, radius, mode);
+  fillNet(geometry, rings, spokes, radius, circles, rays);
   return geometry;
 }
 
 export function rebuildNetGeometry(
   geometry: THREE.BufferGeometry,
-  rings: number, spokes: number, radius: number, mode: NetMode = 'Both',
+  rings: number, spokes: number, radius: number,
+  circles: boolean = true, rays: boolean = true,
 ): void {
-  fillNet(geometry, rings, spokes, radius, mode);
+  fillNet(geometry, rings, spokes, radius, circles, rays);
 }
 
 function fillNet(
   geometry: THREE.BufferGeometry,
-  rings: number, spokes: number, radius: number, mode: NetMode,
+  rings: number, spokes: number, radius: number, circles: boolean, rays: boolean,
 ): void {
   const Rr = Math.max(1, Math.floor(rings));
   const Sp = Math.max(1, Math.floor(spokes));
   const TAU = Math.PI * 2;
   const circleSamples = 160;   // points around each circle (smoothness)
   const raySamples = 80;       // points along each ray (smoothness)
-  const wantCircles = mode !== 'Rays';
-  const wantRays = mode !== 'Circles';
+  const wantCircles = circles;
+  const wantRays = rays;
 
   const pos: number[] = [];
   const index: number[] = [];

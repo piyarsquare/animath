@@ -12,7 +12,7 @@ import { clearPersistedState } from '../lib/usePersistentState';
 import {
   ColorStyle, ColourBy, ColourQuantity, CoordMode, coordModeNames, colormapNames,
   SamplePattern, samplePatternNames, JitterMode, AXIS_COLORS,
-  shapeNames, textureNames, viewTypes, motionModes, renderModes, netModeNames,
+  shapeNames, textureNames, viewTypes, motionModes, renderModes,
   useGestureRotation,
 } from '../lib/particles';
 import type { ParticleState, ViewAxis } from '../lib/particles';
@@ -486,18 +486,16 @@ export default function ParticleViewerShell({
           )}
           {state.renderMode === 'Net' && (
             <>
-              <Pills
-                label="Fibers"
-                options={netModeNames.map(m => ({ value: m, label: m }))}
-                value={state.netMode}
-                onChange={state.setNetMode}
-              />
-              {state.netMode !== 'Rays' && (
+              <Checkbox label="Circles (constant |z|)"
+                checked={state.netCircles} onChange={state.setNetCircles} />
+              {state.netCircles && (
                 <Slider label="Circles" value={state.netRings}
-                  min={1} max={60} step={1}
+                  min={1} max={250} step={1}
                   onChange={state.setNetRings} format={v => `${v}`} />
               )}
-              {state.netMode !== 'Circles' && (
+              <Checkbox label="Rays (constant arg z)"
+                checked={state.netRays} onChange={state.setNetRays} />
+              {state.netRays && (
                 <Slider label="Rays" value={state.netSpokes}
                   min={2} max={96} step={1}
                   onChange={state.setNetSpokes} format={v => `${v}`} />

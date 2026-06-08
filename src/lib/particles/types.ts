@@ -104,9 +104,6 @@ export const dropModes = ['None', 'DropX', 'DropY', 'DropU', 'DropV'] as const;
 export const renderModes = ['Points', 'Sheet', 'Tiles', 'Net'] as const;
 export type RenderMode = (typeof renderModes)[number];
 
-/** Which families of the polar fibre net to draw in Net mode. */
-export const netModeNames = ['Both', 'Circles', 'Rays'] as const;
-
 export const AXIS_COLORS = {
   x: 0,
   y: 0.25,
