@@ -440,6 +440,13 @@ export default function ParticleViewerShell({
               <Slider label="Shading" value={state.sheetShade}
                 min={0} max={1} step={0.01}
                 onChange={state.setSheetShade} format={v => v.toFixed(2)} />
+              <Checkbox label="Adaptive (points where stretched)"
+                checked={state.sheetAdaptive} onChange={state.setSheetAdaptive} />
+              {state.sheetAdaptive && (
+                <Slider label="Density" value={state.sheetDensity}
+                  min={0.05} max={3} step={0.05}
+                  onChange={state.setSheetDensity} format={v => v.toFixed(2)} />
+              )}
             </>
           )}
         </Section>

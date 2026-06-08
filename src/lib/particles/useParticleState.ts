@@ -83,6 +83,12 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // Faceted shading strength on the filled sheet (0 = flat colour, 1 = full
   // facing-ratio shading) — gives the translucent surface depth cues.
   const [sheetShade, setSheetShade] = usePersistentState(pk('sheetShade'), 0.6);
+  // Adaptive density: where the function stretches the grid so a cell's deformed
+  // size in 3D exceeds `sheetDensity`, the fill/wire dissolves and the underlying
+  // point cloud shows through — so dense regions read as a solid sheet and sparse
+  // (stretched) regions fall back to points. Off → a uniform sheet everywhere.
+  const [sheetAdaptive, setSheetAdaptive] = usePersistentState(pk('sheetAdaptive'), true);
+  const [sheetDensity, setSheetDensity] = usePersistentState(pk('sheetDensity'), 0.6);
   const [objectMode, setObjectMode] = usePersistentState(pk('objectMode'), false);
   const [shapeIndex, setShapeIndex] = usePersistentState(pk('shapeIndex'), 1);
   const [textureIndex, setTextureIndex] = usePersistentState(pk('textureIndex'), 0);
@@ -213,6 +219,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     sheetWire, setSheetWire,
     sheetResolution, setSheetResolution,
     sheetShade, setSheetShade,
+    sheetAdaptive, setSheetAdaptive,
+    sheetDensity, setSheetDensity,
     objectMode, setObjectMode,
     shapeIndex, setShapeIndex,
     textureIndex, setTextureIndex,

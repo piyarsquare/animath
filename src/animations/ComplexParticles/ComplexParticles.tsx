@@ -192,9 +192,20 @@ export default function ComplexParticles({
     branchIndex: { value: branchMin + b },
   });
 
+  // Adaptive fade only applies while the sheet is on screen — in plain Points
+  // mode the cloud must show everywhere, so the point material's uAdaptive is
+  // gated on the render mode (the fill/wire are hidden outside Sheet mode anyway).
+  const adaptiveOn = () => state.renderMode === 'Sheet' && state.sheetAdaptive;
+
   function createBranchMaterial(b: number) {
+    const [csx, csy] = currentCellSize();
     const m = new THREE.ShaderMaterial({
-      uniforms: makeUniforms(b),
+      uniforms: {
+        ...makeUniforms(b),
+        uAdaptive: { value: adaptiveOn() ? 1 : 0 },
+        uDensity: { value: state.sheetDensity },
+        uCellSize: { value: new THREE.Vector2(csx, csy) },
+      },
       vertexShader,
       fragmentShader,
       transparent: true,
@@ -225,6 +236,8 @@ export default function ComplexParticles({
         ...makeUniforms(b),
         uShade: { value: state.sheetShade },
         uWire: { value: 0 },
+        uAdaptive: { value: adaptiveOn() ? 1 : 0 },
+        uDensity: { value: state.sheetDensity },
         uCellSize: { value: new THREE.Vector2(csx, csy) },
         uDomainBox: { value: new THREE.Vector4(bx0, bx1, by0, by1) },
       },
@@ -242,10 +255,14 @@ export default function ComplexParticles({
   }
 
   function createSheetWireMaterial(b: number) {
+    const [csx, csy] = currentCellSize();
     const [bx0, bx1, by0, by1] = effectiveBounds();
     const m = new THREE.ShaderMaterial({
       uniforms: {
         ...makeUniforms(b), uShade: { value: state.sheetShade }, uWire: { value: 1 },
+        uAdaptive: { value: adaptiveOn() ? 1 : 0 },
+        uDensity: { value: state.sheetDensity },
+        uCellSize: { value: new THREE.Vector2(csx, csy) },
         uDomainBox: { value: new THREE.Vector4(bx0, bx1, by0, by1) },
       },
       vertexShader: sheetWireVertexShader,
@@ -265,7 +282,9 @@ export default function ComplexParticles({
   // filled surface and/or the wireframe overlay.
   const applyRenderVisibility = () => {
     const isSheet = state.renderMode === 'Sheet';
-    pointsRef.current.forEach(o => { o.visible = !isSheet; });
+    // In adaptive Sheet mode the point cloud stays visible underneath so it can
+    // show through wherever the stretched fill/wire dissolves to points.
+    pointsRef.current.forEach(o => { o.visible = !isSheet || state.sheetAdaptive; });
     fillMeshRef.current.forEach(o => { o.visible = isSheet && state.sheetFill; });
     wireMeshRef.current.forEach(o => { o.visible = isSheet && state.sheetWire; });
   };
@@ -293,6 +312,14 @@ export default function ComplexParticles({
       const pts = new THREE.Points(pointsGeom, pm);
       const fill = new THREE.Mesh(fillGeom, fm);
       const wire = new THREE.LineSegments(wireGeom, wm);
+      // In adaptive Sheet mode the cloud and sheet overlap; without a fixed order
+      // these depth-write-off transparent objects sort by distance and the
+      // additive points can land on top of an opaque fill. Pin points behind, then
+      // fill, then wire, so a dense (opaque) fill cleanly covers the cloud and only
+      // the stretched, dissolved cells let the points show through.
+      pts.renderOrder = 0;
+      fill.renderOrder = 1;
+      wire.renderOrder = 2;
       state.materialsRef.current.push(pm, fm, wm);
       pointsRef.current.push(pts);
       fillMeshRef.current.push(fill);
@@ -312,7 +339,18 @@ export default function ComplexParticles({
   useEffect(() => {
     applyRenderVisibility();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.renderMode, state.sheetFill, state.sheetWire]);
+  }, [state.renderMode, state.sheetFill, state.sheetWire, state.sheetAdaptive]);
+
+  // Push the adaptive-density controls to every material (points + sheet fill +
+  // wire). The point cloud only fades in Sheet mode (adaptiveOn), so it stays a
+  // full cloud in plain Points mode.
+  useEffect(() => {
+    const on = adaptiveOn() ? 1 : 0;
+    state.materialsRef.current.forEach(m => {
+      if (m.uniforms.uAdaptive) m.uniforms.uAdaptive.value = on;
+      if (m.uniforms.uDensity) m.uniforms.uDensity.value = state.sheetDensity;
+    });
+  }, [state.renderMode, state.sheetAdaptive, state.sheetDensity]);
 
   // Rebuild the sheet fill + wire grids when the resolution or domain box
   // changes, and refresh the fill shader's cell size (for corner averaging).

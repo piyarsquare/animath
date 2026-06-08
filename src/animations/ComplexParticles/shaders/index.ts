@@ -281,18 +281,50 @@ vec2 chartCoord(vec2 c, int mode){
   float a = atan(c.y, c.x);
   return vec2(mode==2 ? log(r+1e-6) : r, a);
 }
+// Full surface placement of a domain point (no jitter): chart → 4-vector →
+// 4D rotation → projection → scale. The sheet shaders use this both to place
+// each vertex and to sample a cell's four corners so they can measure how far
+// the function has stretched that cell in 3D (the adaptive-density metric).
+vec3 surfacePos(vec2 zc){
+  vec2 fc = applyComplex(zc, functionType);
+  if(length(fc) > 1e3) fc = normalize(fc)*1e3;
+  vec2 zP = chartCoord(zc, uInCoord);
+  vec2 fP = chartCoord(fc, uOutCoord);
+  vec4 p4 = vec4(zP.x, zP.y, fP.x, fP.y);
+  p4 = quatRotate4D(p4, uRotL, uRotR);
+  vec3 Po = project(p4, uProjMode);
+  vec3 Pn = project(p4, uProjTarget);
+  return mix(Po, Pn, uProjAlpha) * 1.5;
+}
+// Largest deformed edge of the cell of size 'cell' whose lower-left corner is
+// 'base' — a scale-stable measure of local sparseness (big = stretched).
+float cellStretch(vec2 base, vec2 cell){
+  vec3 q00 = surfacePos(base);
+  vec3 q10 = surfacePos(base + vec2(cell.x, 0.0));
+  vec3 q01 = surfacePos(base + vec2(0.0, cell.y));
+  vec3 q11 = surfacePos(base + cell);
+  return max(max(length(q10-q00), length(q01-q00)),
+             max(length(q11-q01), length(q11-q10)));
+}
 `;
 
 // Point-cloud vertex shader: shared library + a main that places one gl_Point
 // per sampled vertex.
 export const vertexShader = vsCommon + `
+// Adaptive Sheet mode draws the point cloud and the sheet together; uCellSize +
+// uDensity let the points fade out exactly where the sheet's fill takes over, so
+// the two are complementary (points only show where the surface is stretched).
+uniform int   uAdaptive;
+uniform float uDensity;
+uniform vec2  uCellSize;
+varying float vPointKeep;
 // Jitter has two modes (uJitterMode). 0 = Scatter the sampling: perturb the
 // domain point z by the 4D seed's xy, then evaluate f there, so the particle
 // stays exactly on the graph surface of f. 1 = Fuzz the cloud: evaluate f at the
 // clean z, then add the full independent 4D offset to (x, y, Re f, Im f), pushing
 // the point off the surface on all four axes. Colour uses the effective z/f, so
 // it stays consistent in both modes.
-void main(){vec2 z = vec2(position.x, position.z);vec4 jit = (seed*2. - 1.) * jitterAmp;if(uJitterMode==0) z += jit.xy;vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec2 zPlot = chartCoord(z, uInCoord);vec2 fPlot = chartCoord(f, uOutCoord);vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);if(uJitterMode==1) p4 += jit;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f);}`;
+void main(){vec2 z = vec2(position.x, position.z);vec4 jit = (seed*2. - 1.) * jitterAmp;if(uJitterMode==0) z += jit.xy;vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec2 zPlot = chartCoord(z, uInCoord);vec2 fPlot = chartCoord(f, uOutCoord);vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);if(uJitterMode==1) p4 += jit;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f);vPointKeep = (uAdaptive==1) ? smoothstep(uDensity, uDensity*2.0, cellStretch(z - 0.5*uCellSize, uCellSize)) : 1.0;}`;
 
 export const fragmentShader = `
 uniform float opacity;
@@ -300,9 +332,10 @@ uniform int   shapeType;
 uniform sampler2D tex;
 uniform int textureIndex;
 varying vec3 vColor;
+varying float vPointKeep;
 void main(){
   vec2 d = gl_PointCoord - vec2(0.5);
-  float alpha = opacity;
+  float alpha = opacity * vPointKeep;
   vec3 col = vColor;
 
   if(shapeType==0){
@@ -336,8 +369,10 @@ void main(){
 // row/column edges only — no triangle diagonals. gl_PointSize is omitted.
 export const sheetWireVertexShader = vsCommon + `
 uniform vec4 uDomainBox;   // xMin, xMax, yMin, yMax
+uniform vec2 uCellSize;    // domain units per cell (for the adaptive metric)
 varying vec3 vViewPos;
 varying float vFade;
+varying float vStretch;
 void main(){
   vec2 z = vec2(position.x, position.z);
   {
@@ -347,16 +382,12 @@ void main(){
   }
   vec4 jit = (seed*2. - 1.) * jitterAmp;          // seed is 0 → uniform shift
   if(uJitterMode==0) z += jit.xy;
+  // Sample a cell centred on this grid node so the wire fades in step with the
+  // fill where the function stretches the grid.
+  vStretch = cellStretch(z - 0.5*uCellSize, uCellSize);
   vec2 f = applyComplex(z, functionType);
   if(length(f) > 1e3) f = normalize(f)*1e3;
-  vec2 zPlot = chartCoord(z, uInCoord);
-  vec2 fPlot = chartCoord(f, uOutCoord);
-  vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);
-  if(uJitterMode==1) p4 += jit;
-  p4 = quatRotate4D(p4, uRotL, uRotR);
-  vec3 Pold = project(p4, uProjMode);
-  vec3 Pnew = project(p4, uProjTarget);
-  vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;
+  vec3 pos3 = surfacePos(z);
   vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
   vViewPos = mv.xyz;
   gl_Position = projectionMatrix * mv;
@@ -374,6 +405,7 @@ uniform vec2 uCellSize;
 uniform vec4 uDomainBox;   // xMin, xMax, yMin, yMax
 varying vec3 vViewPos;
 varying float vFade;
+varying float vStretch;
 vec3 cornerColour(vec2 zc){
   vec2 fc = applyComplex(zc, functionType);
   if(length(fc) > 1e3) fc = normalize(fc)*1e3;
@@ -391,16 +423,10 @@ void main(){
   }
   vec4 jit = (seed*2. - 1.) * jitterAmp;          // seed is 0 → uniform shift
   if(uJitterMode==0) z += jit.xy;
-  vec2 f = applyComplex(z, functionType);
-  if(length(f) > 1e3) f = normalize(f)*1e3;
-  vec2 zPlot = chartCoord(z, uInCoord);
-  vec2 fPlot = chartCoord(f, uOutCoord);
-  vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);
-  if(uJitterMode==1) p4 += jit;
-  p4 = quatRotate4D(p4, uRotL, uRotR);
-  vec3 Pold = project(p4, uProjMode);
-  vec3 Pnew = project(p4, uProjTarget);
-  vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;
+  // How far the function has stretched this cell in 3D (per-cell, uniform across
+  // its six verts since they share cellBase) → drives the adaptive fade.
+  vStretch = cellStretch(cellBase, uCellSize);
+  vec3 pos3 = surfacePos(z);
   vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
   vViewPos = mv.xyz;
   gl_Position = projectionMatrix * mv;
@@ -420,9 +446,12 @@ export const sheetFragmentShader = `
 uniform float opacity;
 uniform float uShade;
 uniform int   uWire;
+uniform int   uAdaptive;
+uniform float uDensity;
 varying vec3 vColor;
 varying vec3 vViewPos;
 varying float vFade;
+varying float vStretch;
 void main(){
   vec3 col = vColor;
   float alpha = opacity;
@@ -435,6 +464,11 @@ void main(){
     col *= shade;
   }
   alpha *= vFade;                                  // dissolve at the domain edge → no boundary
+  if(uAdaptive==1){
+    // Keep the sheet where the cell is dense; dissolve it where the function has
+    // stretched the cell past the threshold so the point cloud shows through.
+    alpha *= 1.0 - smoothstep(uDensity, uDensity*2.0, vStretch);
+  }
   if(alpha < 0.003) discard;
   gl_FragColor = vec4(col, alpha);
 }`;
