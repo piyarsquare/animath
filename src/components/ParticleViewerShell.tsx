@@ -455,6 +455,13 @@ export default function ParticleViewerShell({
                   min={0.05} max={3} step={0.05}
                   onChange={state.setSheetDensity} format={v => v.toFixed(2)} />
               )}
+              <Checkbox label="External light (inside/outside)"
+                checked={state.lighting} onChange={state.setLighting} />
+              {state.lighting && (
+                <Slider label="Light" value={state.lightStrength}
+                  min={0} max={1} step={0.01}
+                  onChange={state.setLightStrength} format={v => v.toFixed(2)} />
+              )}
             </>
           )}
           {state.renderMode === 'Tiles' && (
@@ -468,6 +475,13 @@ export default function ParticleViewerShell({
               <Slider label="Shading" value={state.sheetShade}
                 min={0} max={1} step={0.01}
                 onChange={state.setSheetShade} format={v => v.toFixed(2)} />
+              <Checkbox label="External light (inside/outside)"
+                checked={state.lighting} onChange={state.setLighting} />
+              {state.lighting && (
+                <Slider label="Light" value={state.lightStrength}
+                  min={0} max={1} step={0.01}
+                  onChange={state.setLightStrength} format={v => v.toFixed(2)} />
+              )}
             </>
           )}
         </Section>

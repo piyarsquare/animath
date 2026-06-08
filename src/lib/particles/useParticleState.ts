@@ -83,6 +83,11 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // Faceted shading strength on the filled sheet (0 = flat colour, 1 = full
   // facing-ratio shading) — gives the translucent surface depth cues.
   const [sheetShade, setSheetShade] = usePersistentState(pk('sheetShade'), 0.6);
+  // External directional light for Sheet/Tiles: lights the side you're facing so
+  // the surface reads in 3D, and tints back faces cooler/dimmer so you can tell
+  // "inside" from "outside" of the surface. `lightStrength` blends flat→fully lit.
+  const [lighting, setLighting] = usePersistentState(pk('lighting'), false);
+  const [lightStrength, setLightStrength] = usePersistentState(pk('lightStrength'), 0.7);
   // Adaptive density: where the function stretches the grid so a cell's deformed
   // size in 3D exceeds `sheetDensity`, the fill/wire dissolves and the underlying
   // point cloud shows through — so dense regions read as a solid sheet and sparse
@@ -230,6 +235,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     sheetAdaptive, setSheetAdaptive,
     sheetDensity, setSheetDensity,
     tileSize, setTileSize,
+    lighting, setLighting,
+    lightStrength, setLightStrength,
     objectMode, setObjectMode,
     shapeIndex, setShapeIndex,
     textureIndex, setTextureIndex,

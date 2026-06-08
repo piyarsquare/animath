@@ -456,12 +456,31 @@ void main(){
   vColor = c * 0.25;
 }`;
 
+// Shared external-light snippet: a single directional light that shades whichever
+// side of the surface faces the camera (so it reads in 3D), plus a cool/dim tint
+// on back faces so "inside" is visibly distinct from "outside". Off when uLight==0.
+const fsLighting = `
+uniform int   uLight;
+uniform float uLightStrength;
+vec3 applyExternalLight(vec3 col, vec3 N, vec3 viewPos, bool front){
+  if(uLight == 0) return col;
+  vec3 L = normalize(vec3(-0.35, 0.55, 0.75));
+  vec3 V = normalize(-viewPos);
+  if(dot(N, V) < 0.0) N = -N;                       // light the side we actually see
+  float ndl = max(dot(N, L), 0.0);
+  float lit = mix(1.0, 0.18 + 0.9*ndl, clamp(uLightStrength, 0.0, 1.0));
+  col *= lit;
+  if(!front) col = mix(col, col*vec3(0.5, 0.62, 0.95), 0.6); // inside: cooler & dimmer
+  return col;
+}
+`;
+
 // Sheet fragment shader: a flat translucent fill (uWire==0), shaded by the
 // facing ratio of the face normal recovered from screen-space derivatives of the
 // view-space position — so the otherwise-flat translucent surface reads as a
 // solid sheet. When uWire==1 the same mesh is drawn as a brighter, more opaque
 // wireframe overlay (no shading), so the grid lines stay legible over the fill.
-export const sheetFragmentShader = `
+export const sheetFragmentShader = fsLighting + `
 uniform float opacity;
 uniform float uShade;
 uniform int   uWire;
@@ -481,6 +500,7 @@ void main(){
     float facing = abs(n.z);                       // 1 face-on, 0 edge-on
     float shade = mix(1.0, 0.45 + 0.55*facing, clamp(uShade, 0.0, 1.0));
     col *= shade;
+    col = applyExternalLight(col, n, vViewPos, gl_FrontFacing);
   }
   alpha *= vFade;                                  // dissolve at the domain edge → no boundary
   if(uAdaptive==1){
@@ -503,6 +523,8 @@ attribute vec2 corner;       // ±0.5 quad corner
 uniform vec2  uCellSize;     // domain units per cell (the sample spacing)
 uniform float uMaxTile;      // max world-space half-... edge length per tile
 varying float vFacing;       // |view-space normal . z| for depth shading
+varying vec3  vNormalView;   // signed view-space normal (for external lighting)
+varying vec3  vViewPos;      // view-space position (for external lighting)
 void main(){
   vec2 z = vec2(position.x, position.z);
   vec3 c0 = surfacePos(z);
@@ -515,8 +537,10 @@ void main(){
   vec3 dvC = dv * min(1.0, uMaxTile / lv);
   vec3 pos3 = c0 + corner.x * duC + corner.y * dvC;
   vec3 nrm = normalize(cross(du, dv));
-  vFacing = abs(normalize(normalMatrix * nrm).z);
+  vNormalView = normalize(normalMatrix * nrm);
+  vFacing = abs(vNormalView.z);
   vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
+  vViewPos = mv.xyz;
   gl_Position = projectionMatrix * mv;
   vec2 f = applyComplex(z, functionType);
   if(length(f) > 1e3) f = normalize(f)*1e3;
@@ -524,13 +548,17 @@ void main(){
 }`;
 
 // Tiles fragment: flat per-tile colour with a facing-ratio shade so the faceted
-// fabric reads in 3D. Opaque (tiles occlude via the depth buffer).
-export const tileFragmentShader = `
+// fabric reads in 3D, plus the optional external light (with inside/outside tint).
+// Opaque (tiles occlude via the depth buffer).
+export const tileFragmentShader = fsLighting + `
 uniform float opacity;
 uniform float uShade;
-varying vec3 vColor;
+varying vec3  vColor;
 varying float vFacing;
+varying vec3  vNormalView;
+varying vec3  vViewPos;
 void main(){
   float shade = mix(1.0, 0.45 + 0.55*vFacing, clamp(uShade, 0.0, 1.0));
-  gl_FragColor = vec4(vColor * shade, opacity);
+  vec3 col = applyExternalLight(vColor * shade, vNormalView, vViewPos, gl_FrontFacing);
+  gl_FragColor = vec4(col, opacity);
 }`;
