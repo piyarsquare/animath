@@ -14,12 +14,13 @@ import { applyMat, det3, ORIGIN, Isometry } from '../lib/cayleyKlein';
  * (I, J) is γ₀ᴵ · γ₁ᴶ, whose translation places the copy and whose **sign of the
  * determinant** decides whether the copy is mirror-reflected.
  *
- * Each cell is a **two-sided sheet** (a thin slab): the **top face is blue with the
- * trees**, the **bottom face is brown with the columns**, each landmark's two forms
- * at the identical (u, v) and growing *away* from the sheet (so they never
- * penetrate it). A mirror-reflected cell (`det < 0`) is the whole sheet flipped
- * (`scale.y = −1`): the brown/columns face becomes the top — the trees↔columns swap
- * is a literal sheet flip. The footprint trail is laid on the side you are on, so
+ * Each cell is a **two-sided sheet** (a thin slab) of one neutral colour: **trees on
+ * the top face**, **columns on the bottom face**, each landmark's two forms at the
+ * identical (u, v) and growing *away* from the sheet (so they never penetrate it).
+ * A mirror-reflected cell (`det < 0`) is the whole sheet flipped (`scale.y = −1`):
+ * the columns face becomes the top — the trees↔columns swap is the side cue (the two
+ * faces are not coloured differently; a warm light from above and a cool one from
+ * below tint them instead). The footprint trail is laid on the side you are on, so
  * walking a flipped cell drops your trail **below the floor**.
  */
 
@@ -34,9 +35,8 @@ const TRAIL_SPACING = 1.6;
 // lowering it past showUnderBelow turns the sheet to glass and reveals the brown
 // bottom face + the columns + any footprints below the floor.
 const GLASS: GlassSpec = { showUnderBelow: 0.8, solidAt: 0.82 };
-const TOP_COLOR = 0x3f73c9;     // blue  — the top face
-const BOTTOM_COLOR = 0x7a4a28;  // brown — the bottom face
-const EDGE_COLOR = 0x2a3550;
+const FLOOR_COLOR = 0x46658f;   // one neutral sheet colour (the two sides are told
+                                // apart by trees vs columns + the warm/cool light)
 
 interface Cell {
   group: THREE.Group;     // matrix = translate(cellOrigin) · scale(1, flip, 1)
@@ -84,26 +84,17 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   scene.background = new THREE.Color(SKY);
   scene.fog = new THREE.Fog(SKY, side * 0.7, side * 3);
 
-  // ── two-tone glass slab material (top blue / bottom brown / edge) ────────────
-  function makeGlass(color: number): THREE.MeshStandardMaterial {
-    return new THREE.MeshStandardMaterial({
-      color, emissive: color, emissiveIntensity: 0.18, roughness: 0.5, metalness: 0.05,
-      transparent: true, opacity: floorOpacity, side: THREE.DoubleSide,
-    });
-  }
-  const topMat = makeGlass(TOP_COLOR);
-  const bottomMat = makeGlass(BOTTOM_COLOR);
-  const edgeMat = makeGlass(EDGE_COLOR);
-  // BoxGeometry group order: +x,-x,+y(top),-y(bottom),+z,-z
-  const slabMats = [edgeMat, edgeMat, topMat, bottomMat, edgeMat, edgeMat];
+  // ── one neutral glass slab material (no per-side colour) ─────────────────────
+  const floorMat = new THREE.MeshStandardMaterial({
+    color: FLOOR_COLOR, emissive: FLOOR_COLOR, emissiveIntensity: 0.16, roughness: 0.5,
+    metalness: 0.05, transparent: true, opacity: floorOpacity, side: THREE.DoubleSide,
+  });
   function applyFloorOpacity(opacity: number) {
     floorOpacity = opacity;
     const g = glassState(opacity, GLASS);
-    for (const mt of [topMat, bottomMat, edgeMat]) {
-      mt.opacity = g.opacity; mt.visible = g.visible; mt.depthWrite = g.depthWrite;
-      mt.transparent = opacity < 0.999;   // fully opaque ⇒ the side you walk never shows through
-      mt.needsUpdate = true;
-    }
+    floorMat.opacity = g.opacity; floorMat.visible = g.visible; floorMat.depthWrite = g.depthWrite;
+    floorMat.transparent = opacity < 0.999;   // fully opaque ⇒ the side you walk never shows through
+    floorMat.needsUpdate = true;
   }
 
   // ── tiled copies of the two-sided sheet ──────────────────────────────────────
@@ -117,7 +108,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     cells.length = 0;
     for (let i = 0; i < (2 * K + 1) * (2 * K + 1); i++) {
       const group = new THREE.Group(); group.matrixAutoUpdate = false;
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(side, thickness, side), slabMats);
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(side, thickness, side), floorMat);
       const top = new THREE.Group(), bottom = new THREE.Group();
       decor.props.forEach((_, j) => {
         const t = decor.makeTop(j); top.add(t);          // grows +y from the top face
@@ -244,7 +235,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     dispose: () => {
       foot.dispose();
       for (const cell of cells) cell.slab.geometry.dispose();
-      topMat.dispose(); bottomMat.dispose(); edgeMat.dispose();
+      floorMat.dispose();
     },
   };
 }

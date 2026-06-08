@@ -18,8 +18,8 @@ import {
  * {@link framePos} lands on it (world = framePos·R) and walking/turning are
  * `stepForward`/`turn`.
  *
- * The planet is a **two-sided sheet wrapped into a ball**: the **outer face is blue
- * with the trees** (you walk it) and the **inner face is brown with the columns**
+ * The planet is a **two-sided sheet wrapped into a ball** (one neutral colour): the
+ * **outer face wears the trees** (you walk it) and the **inner face the columns**
  * (seen through the glass). Each landmark's tree (outer, grown outward) and column
  * (inner, grown inward) sit at the *same* direction and grow *away* from the shell,
  * so neither penetrates it — fixing the "columns inside trees" overlap. Boundary
@@ -39,9 +39,9 @@ const TRAIL_SPACING = 1.6;
 const SKY = 0x05070e;
 const GLASS: GlassSpec = { showUnderBelow: 0.8, solidAt: 0.82 };
 const LON = 24, LAT = 16;
-const OUT_COLOR = 0x3f73c9;   // blue  — outer face
-const IN_COLOR = 0x7a4a28;    // brown — inner face
-const SHELL_GAP = 0.985;      // inner shell radius fraction (the sheet thickness)
+const SHELL_COLOR = 0x46658f; // one neutral shell colour (sides told apart by
+                              // trees vs columns + the warm/cool light)
+const SHELL_GAP = 0.985;      // inner-marker radius fraction (the sheet thickness)
 
 const v3 = (p: Vec3): THREE.Vector3 => new THREE.Vector3(p[0], p[1], p[2]);
 const upY = new THREE.Vector3(0, 1, 0);
@@ -83,13 +83,11 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   scene.background = new THREE.Color(SKY);
   scene.fog = null;
 
-  // ── two-tone shell: blue outer (front), brown inner (back) ───────────────────
+  // ── one neutral two-sided shell ──────────────────────────────────────────────
   const grid = gridTexture();
-  const outMat = new THREE.MeshStandardMaterial({ map: grid, color: OUT_COLOR, emissive: OUT_COLOR, emissiveIntensity: 0.12, roughness: 0.6, transparent: true, opacity: 1, side: THREE.FrontSide });
-  const inMat = new THREE.MeshStandardMaterial({ map: grid, color: IN_COLOR, emissive: IN_COLOR, emissiveIntensity: 0.12, roughness: 0.7, transparent: true, opacity: 1, side: THREE.BackSide });
-  const outer = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 48), outMat);
-  const inner = new THREE.Mesh(new THREE.SphereGeometry(R * SHELL_GAP, 64, 48), inMat);
-  root.add(outer, inner);
+  const planetMat = new THREE.MeshStandardMaterial({ map: grid, color: SHELL_COLOR, emissive: SHELL_COLOR, emissiveIntensity: 0.12, roughness: 0.6, transparent: true, opacity: 1, side: THREE.DoubleSide });
+  const planet = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 48), planetMat);
+  root.add(planet);
 
   /** Spread a square (u,v) over the WHOLE sphere (lon×lat) — the sphere's one skin. */
   function fullDir(u: number, v: number): THREE.Vector3 {
@@ -101,9 +99,9 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     antipodal ? sq2hemi((u - 0.5) * 2, (v - 0.5) * 2) : fullDir(u, v);
 
   // ── markers ──────────────────────────────────────────────────────────────────
-  // OUTER (blue, walked): trees at +dir, grown outward. On ℝP² the antipodal half
-  // (−dir) wears the flipped skin (columns). INNER (brown, seen through glass): the
-  // opposite form at each direction, grown inward — back-to-back, no penetration.
+  // OUTER (walked): trees at +dir, grown outward. On ℝP² the antipodal half (−dir)
+  // wears the flipped skin (columns). INNER (seen through the glass): the opposite
+  // form at each direction, grown inward — back-to-back, no penetration.
   const outerG = new THREE.Group();
   const innerG = new THREE.Group();
   root.add(outerG, innerG);
@@ -149,8 +147,8 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
 
   function applyGlass() {
     const g = glassState(glassOpacity, GLASS);
-    outMat.opacity = g.opacity; outMat.depthWrite = g.depthWrite; outMat.transparent = glassOpacity < 0.999; outMat.needsUpdate = true;
-    inner.visible = g.showUnder; innerG.visible = g.showUnder;
+    planetMat.opacity = g.opacity; planetMat.depthWrite = g.depthWrite; planetMat.transparent = glassOpacity < 0.999; planetMat.needsUpdate = true;
+    innerG.visible = g.showUnder;
   }
   applyGlass();
 
@@ -230,8 +228,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   function setRadius(r: number) {
     if (r <= 0 || r === R) return;
     R = r;
-    outer.geometry.dispose(); outer.geometry = new THREE.SphereGeometry(R, 64, 48);
-    inner.geometry.dispose(); inner.geometry = new THREE.SphereGeometry(R * SHELL_GAP, 64, 48);
+    planet.geometry.dispose(); planet.geometry = new THREE.SphereGeometry(R, 64, 48);
     buildMarkers();
     if (seam) { seam.geometry.dispose(); seam.geometry = new THREE.TorusGeometry(R, 0.12, 8, 96); }
     camera.far = R * 5; camera.updateProjectionMatrix();
@@ -248,8 +245,8 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     setRadius,
     dispose: () => {
       foot.dispose();
-      outer.geometry.dispose(); inner.geometry.dispose();
-      grid.dispose(); outMat.dispose(); inMat.dispose();
+      planet.geometry.dispose();
+      grid.dispose(); planetMat.dispose();
       seam?.geometry.dispose(); seamMat.dispose();
     },
   };

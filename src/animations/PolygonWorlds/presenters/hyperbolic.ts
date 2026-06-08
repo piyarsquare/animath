@@ -9,7 +9,7 @@ import { develop } from '../lib/develop';
 import {
   Vec3, Mat3, makeFrame, Frame, framePos,
   stepForward as kStep, stepHeading as kStrafe, turn as kTurn, reorthonormalize,
-  applyMat, inv3, distance, geodesicPoint, originTo, ORIGIN,
+  applyMat, inv3, mul, distance, geodesicPoint, originTo, ORIGIN,
 } from '../lib/cayleyKlein';
 
 /**
@@ -57,6 +57,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
 
   let DISK_R = Math.max(34, c.squareSize * 1.4);  // world radius of the unit disk
   let glassOpacity = 0.35;
+  let camDist = 3.4;
 
   camera.fov = 75; camera.near = 0.05; camera.far = DISK_R * 6; camera.updateProjectionMatrix();
   camera.up.set(0, 1, 0);
@@ -232,6 +233,25 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     }
   }
 
+  // Keep the player reduced into the home fundamental domain (like the euclidean
+  // cover): when they cross into a neighbouring tile, pull them back through that
+  // tile's deck element (frame ← γ⁻¹·frame) and carry the trail with them. The
+  // tiling is deck-invariant, so the wrap is seamless — and the developed tiles
+  // always surround the player, so they can never "walk off the map".
+  function reduceToHome() {
+    const p = framePos(frame);
+    let bi = 0, bd = distance(kappa, p, tiles[0].center); // tiles[0] = identity (O)
+    for (let i = 1; i < tiles.length; i++) {
+      const d = distance(kappa, p, tiles[i].center);
+      if (d < bd - 1e-9) { bd = d; bi = i; }
+    }
+    if (bi === 0) return;
+    const m = inv3(elems[bi].m);
+    frame = { kappa, g: mul(m, frame.g) };
+    for (let i = 0; i < covTrail.length; i++) covTrail[i] = applyMat(m, covTrail[i]);
+    if (lastTrailPos) lastTrailPos = applyMat(m, lastTrailPos);
+  }
+
   function update(input: CoverFrameInput, cam: THREE.PerspectiveCamera) {
     const { fwd: f, strafe, yaw, pitch, dt, moveSpeed, thirdPerson } = input;
     const dyaw = yaw - lastYaw; lastYaw = yaw;
@@ -239,6 +259,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     if (f) frame = kStep(frame, (f * moveSpeed * dt) / DISK_R);
     if (strafe) frame = kStrafe(frame, -Math.PI / 2, (strafe * moveSpeed * dt) / DISK_R);
     if (dyaw || f || strafe) frame = reorthonormalize(frame);
+    reduceToHome();
     T = inv3(frame.g);
 
     // record the trail in cover coords as the player advances
@@ -255,8 +276,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
 
     cam.up.copy(UP);
     if (thirdPerson) {
-      const D = 3.4;
-      cam.position.set(-D, 2.4 + pitch * 1.6, 0);
+      cam.position.set(-camDist, 2.4 + pitch * 1.6, 0);
       cam.lookAt(0.6, 1.3, 0);
     } else {
       const cp = Math.cos(Math.max(-MAX_PITCH, Math.min(MAX_PITCH, pitch)));
@@ -303,6 +323,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     update, pose, chart,
     clearTrail: () => { covTrail.length = 0; lastTrailPos = null; foot.clear(); },
     setFloorOpacity: (o: number) => { glassOpacity = o; applyGlass(); },
+    setCameraDistance: (d: number) => { camDist = d; },
     setSquareSize: (v: number) => { DISK_R = Math.max(34, v * 1.4); rebuildFloor(); },
     dispose: () => {
       foot.dispose();
