@@ -352,33 +352,35 @@ export default function ParticleViewerShell({
             value={state.colormap}
             onChange={state.setColormap}
           />
-          {/* Phase wheel: the cyclic HSV controls. A sequential colormap ignores
-              these (it tracks magnitude), so we hide them and show its Repeat. */}
+          {/* Which quantity the colour represents — drives the colormap axis, or
+              the hue of the HSV Phase wheel. */}
+          <Select
+            label="Quantity"
+            options={[
+              { value: ColourQuantity.Phase, label: 'Phase (arg)' },
+              { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
+              { value: ColourQuantity.Real, label: 'Real part' },
+              { value: ColourQuantity.Imag, label: 'Imag part' },
+            ]}
+            value={state.colourQuantity}
+            onChange={state.setColourQuantity}
+          />
+          <Select
+            label="Brightness"
+            options={[
+              { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
+              { value: ColourQuantity.Uniform, label: 'Uniform (flat)' },
+              { value: ColourQuantity.Phase, label: 'Phase (arg)' },
+              { value: ColourQuantity.Real, label: 'Real part' },
+              { value: ColourQuantity.Imag, label: 'Imag part' },
+            ]}
+            value={state.brightnessQuantity}
+            onChange={state.setBrightnessQuantity}
+          />
+          {/* Style + Hue shift only affect the HSV Phase wheel; sequential
+              colormaps show their Repeat (log bands) control instead. */}
           {state.colormap === 0 ? (
             <>
-              <Select
-                label="Hue"
-                options={[
-                  { value: ColourQuantity.Phase, label: 'Phase (arg)' },
-                  { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
-                  { value: ColourQuantity.Real, label: 'Real part' },
-                  { value: ColourQuantity.Imag, label: 'Imag part' },
-                ]}
-                value={state.colourQuantity}
-                onChange={state.setColourQuantity}
-              />
-              <Select
-                label="Brightness"
-                options={[
-                  { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
-                  { value: ColourQuantity.Uniform, label: 'Uniform (flat)' },
-                  { value: ColourQuantity.Phase, label: 'Phase (arg)' },
-                  { value: ColourQuantity.Real, label: 'Real part' },
-                  { value: ColourQuantity.Imag, label: 'Imag part' },
-                ]}
-                value={state.brightnessQuantity}
-                onChange={state.setBrightnessQuantity}
-              />
               <Pills
                 label="Style"
                 options={Object.keys(ColorStyle)

@@ -253,17 +253,33 @@ vec3 calcColour(vec2 z, vec2 f){
     else if(uColourQty==3) param = 0.5 + 0.5*tanh(w.y);      // imag part
     else                   param = angle/TAU + 1.0;          // phase (default)
     float hue = fract(param + hueShift);
-    // Sequential colormaps (uColormap>0) override the HSV wheel: map MAGNITUDE
-    // through a perceptual ramp — the natural choice for reading magnitude. The
-    // scale is logarithmic in |·|. uColorRepeat==0 → one smooth saturating sweep
-    // (tanh of log) across the whole range; uColorRepeat>0 → tile the colormap in
-    // log-magnitude (that many cycles per e-fold) with a mirrored, seamless wave,
-    // giving repeating contour-like bands.
+    // Brightness (value), driven independently. Magnitude (default) gives the
+    // classic |·| → brightness; Uniform is flat (full strength); others squash.
+    float val;
+    if(uBrightnessQty==0)      val = fract(angle/TAU + 0.5);          // phase
+    else if(uBrightnessQty==2) val = 0.5 + 0.5*tanh(w.x);            // real part
+    else if(uBrightnessQty==3) val = 0.5 + 0.5*tanh(w.y);            // imag part
+    else if(uBrightnessQty==4) val = 1.0;                            // uniform (flat)
+    else                       val = 0.5*(1.0+tanh(log(r+1e-6)));    // magnitude
+    // Sequential colormaps (uColormap>0) replace the HSV wheel: the chosen
+    // Quantity drives the colormap axis (magnitude is log-scaled), and Brightness
+    // still modulates value (Uniform = flat, full-strength colour). uColorRepeat>0
+    // tiles the map along that axis with a mirrored, seamless wave (contour bands).
     if(uColormap > 0){
         float lg = log(r + 1e-6);
-        float s = (uColorRepeat > 0.0)
-            ? abs(fract(lg * uColorRepeat) * 2.0 - 1.0)        // repeating log bands (seamless)
-            : clamp(0.5*(1.0 + tanh(lg)), 0.0, 1.0);           // smooth, saturating
+        float s;
+        if(uColorRepeat > 0.0){
+            float raw = (uColourQty==2) ? w.x
+                      : (uColourQty==3) ? w.y
+                      : (uColourQty==0) ? angle/TAU
+                      :                   lg;                         // magnitude (log)
+            s = abs(fract(raw * uColorRepeat) * 2.0 - 1.0);          // seamless repeat
+        } else {
+            s = (uColourQty==2) ? 0.5 + 0.5*tanh(w.x)                // real
+              : (uColourQty==3) ? 0.5 + 0.5*tanh(w.y)                // imag
+              : (uColourQty==0) ? fract(angle/TAU + 0.5)             // phase
+              :                   clamp(0.5*(1.0 + tanh(lg)), 0.0, 1.0); // magnitude
+        }
         int scheme = (uColormap==1) ? 3      // Grayscale
                    : (uColormap==2) ? 4      // Viridis
                    : (uColormap==3) ? 5      // Magma
@@ -272,18 +288,10 @@ vec3 calcColour(vec2 z, vec2 f){
                    : (uColormap==6) ? 1      // Fire
                    : (uColormap==7) ? 2      // Ocean
                    :                  uColormap; // 8.. align with palette scheme ids
-        vec3 cmap = paletteColor(s * 255.0, scheme);
+        vec3 cmap = paletteColor(s * 255.0, scheme) * val;
         cmap = mix(vec3(dot(cmap, vec3(0.3333))), cmap, saturation);
         return cmap * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
     }
-    // Brightness (value) is driven independently of hue. Magnitude (the default)
-    // gives the classic |.| -> brightness; the other quantities squash into [0,1].
-    float val;
-    if(uBrightnessQty==0)      val = fract(angle/TAU + 0.5);          // phase
-    else if(uBrightnessQty==2) val = 0.5 + 0.5*tanh(w.x);            // real part
-    else if(uBrightnessQty==3) val = 0.5 + 0.5*tanh(w.y);            // imag part
-    else if(uBrightnessQty==4) val = 1.0;                            // uniform
-    else                       val = 0.5*(1.0+tanh(log(r+1e-6)));    // magnitude
     if(uColourStyle==0){
         if(uBrightnessQty!=4) val = mix(val, val*(0.75+0.25*sin(TAU*log(r))), 0.5);
         return hsv2rgb(vec3(hue, saturation, val)) * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
