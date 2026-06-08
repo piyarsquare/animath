@@ -49,6 +49,7 @@ export const coordModeNames = ['Cartesian', 'Polar', 'Log-polar'] as const;
  *  (Viridis…Plasma) and a few extras, suitable for reading |z| / |f| as height. */
 export const colormapNames = [
   'Phase wheel', 'Grayscale', 'Viridis', 'Magma', 'Inferno', 'Plasma', 'Fire', 'Ocean',
+  'Turbo', 'Cubehelix', 'Hot', 'Copper', 'Cool', 'Cool–warm',
 ] as const;
 
 /** How the domain points are laid out before f is applied. Radial patterns

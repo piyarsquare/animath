@@ -270,7 +270,8 @@ vec3 calcColour(vec2 z, vec2 f){
                    : (uColormap==4) ? 6      // Inferno
                    : (uColormap==5) ? 7      // Plasma
                    : (uColormap==6) ? 1      // Fire
-                   :                  2;     // Ocean
+                   : (uColormap==7) ? 2      // Ocean
+                   :                  uColormap; // 8.. align with palette scheme ids
         vec3 cmap = paletteColor(s * 255.0, scheme);
         cmap = mix(vec3(dot(cmap, vec3(0.3333))), cmap, saturation);
         return cmap * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
