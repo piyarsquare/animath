@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { makeCharacter } from './character';
 import { makeFundamentalSquareDecor, DecorProp, DEFAULT_PROPS } from './decor';
-import { makeEuclideanCover } from './euclideanCover';
+import { makeEuclideanPresenter } from './presenters/euclidean';
 import { makeSphericalCover } from './sphericalCover';
 import { CoverModel } from './coverModel';
 import {
@@ -43,7 +43,7 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
   const coverDeps = { deps, root, spec, decor, squareSize, floorThickness };
   const cover: CoverModel = geom.cover === 'spherical'
     ? makeSphericalCover(coverDeps)
-    : makeEuclideanCover(coverDeps);
+    : makeEuclideanPresenter(coverDeps);
 
   const character = makeCharacter();
   root.add(character.group);

@@ -106,8 +106,9 @@ export const WORLDS: WorldSpec[] = [
   {
     id: 'klein', label: 'Klein bottle', short: 'flat Klein bottle',
     mode: 'opposite', chi: 0, orientable: false,
-    // a = left/right with one side flipped (glide), b = top/bottom translate: a b a⁻¹ b
-    word: 'a b a⁻¹ b',
+    // a = left/right glued with a flip (glide), b = top/bottom translate: a b a b⁻¹
+    // (the glide is on `a` so the rendered flip + mini-map agree on the left/right pair)
+    word: 'a b a b⁻¹',
     edges: { left: tr('a'), right: fl('a'), top: tr('b'), bottom: tr('b') },
   },
   {

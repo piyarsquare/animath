@@ -83,13 +83,17 @@ function cornerClassSizes(word: EdgeWord): number[] {
   return [...sizes.values()];
 }
 
-/** Realize an edge word as a concrete geometric fundamental polygon + deck group. */
-export function realize(word: EdgeWord): Realization {
+/** Realize an edge word as a concrete geometric fundamental polygon + deck group.
+ *  `baseAngle` rotates the polygon for presentation only (the invariants are
+ *  rotation-equivariant); the default gives a flat-bottomed polygon, which makes
+ *  the square axis-aligned. */
+export function realize(word: EdgeWord, opts: { baseAngle?: number } = {}): Realization {
   const analysis = analyzeSchema(word);
   if (!analysis.valid) throw new Error(`realize: invalid edge word — ${analysis.reason}`);
 
   const m = analysis.edges;
   const V = analysis.V;
+  const baseAngle = opts.baseAngle ?? (-Math.PI / 2 + Math.PI / m);
   const sizes = cornerClassSizes(word);
   const equalCounts = sizes.every((s) => s === sizes[0]);
 
@@ -129,7 +133,7 @@ export function realize(word: EdgeWord): Realization {
   // Regular polygon vertices on the κ-shell.
   const vertices: Vec3[] = [];
   for (let k = 0; k < m; k++) {
-    vertices.push(geodesicPoint(kappa, (2 * Math.PI * k) / m, circumradius));
+    vertices.push(geodesicPoint(kappa, baseAngle + (2 * Math.PI * k) / m, circumradius));
   }
 
   // Side-pairing isometries from the edge pairings. The deck generator for letter
