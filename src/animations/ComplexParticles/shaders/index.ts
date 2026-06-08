@@ -45,6 +45,8 @@ uniform float uProjAlpha;
 uniform int   uColourStyle;
 uniform int   uColormap;
 uniform float uColorRepeat;
+uniform int   uReciprocal;     // 1 → log-radial (reciprocal-symmetric) sampling
+uniform float uWarpR;          // domain radius for the warp
 uniform int   uColourBy;
 uniform int   uColourQty;
 uniform int   uBrightnessQty;
@@ -307,11 +309,25 @@ vec2 chartCoord(vec2 c, int mode){
   float a = atan(c.y, c.x);
   return vec2(mode==2 ? log(r+1e-6) : r, a);
 }
-// Full surface placement of a domain point (no jitter): chart → 4-vector →
+// Reciprocal-symmetric (log-radial) sampling warp. A uniform lattice radius r in
+// [0,R] is remapped so the unit circle sits at the middle of the range and the
+// sampling is uniform in log|z|: r=R/2 → |z|=1, r→0 → 1/R, r=R → R. This samples
+// as deeply inside the unit disk as outside (z ↔ 1/z symmetric). Angle is kept.
+// Applied inside surfacePos + the colour path, so every mode inherits it.
+vec2 domainWarp(vec2 z){
+  if(uReciprocal == 0) return z;
+  float r = length(z);
+  if(r < 1e-7) return z;
+  float R = max(uWarpR, 1e-3);
+  float rNew = pow(R, 2.0 * (r / R) - 1.0);
+  return z * (rNew / r);
+}
+// Full surface placement of a domain point (no jitter): warp → chart → 4-vector →
 // 4D rotation → projection → scale. The sheet shaders use this both to place
 // each vertex and to sample a cell's four corners so they can measure how far
 // the function has stretched that cell in 3D (the adaptive-density metric).
 vec3 surfacePos(vec2 zc){
+  zc = domainWarp(zc);
   vec2 fc = applyComplex(zc, functionType);
   if(length(fc) > 1e3) fc = normalize(fc)*1e3;
   vec2 zP = chartCoord(zc, uInCoord);
@@ -350,7 +366,7 @@ varying float vPointKeep;
 // clean z, then add the full independent 4D offset to (x, y, Re f, Im f), pushing
 // the point off the surface on all four axes. Colour uses the effective z/f, so
 // it stays consistent in both modes.
-void main(){vec2 z = vec2(position.x, position.z);vec4 jit = (seed*2. - 1.) * jitterAmp;if(uJitterMode==0) z += jit.xy;vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec2 zPlot = chartCoord(z, uInCoord);vec2 fPlot = chartCoord(f, uOutCoord);vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);if(uJitterMode==1) p4 += jit;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f);vPointKeep = (uAdaptive==1) ? smoothstep(uDensity, uDensity*2.0, cellStretch(z - 0.5*uCellSize, uCellSize)) : 1.0;}`;
+void main(){vec2 z = vec2(position.x, position.z);vec4 jit = (seed*2. - 1.) * jitterAmp;if(uJitterMode==0) z += jit.xy;vPointKeep = (uAdaptive==1) ? smoothstep(uDensity, uDensity*2.0, cellStretch(z - 0.5*uCellSize, uCellSize)) : 1.0;vec2 zc = domainWarp(z);vec2 f = applyComplex(zc, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec2 zPlot = chartCoord(zc, uInCoord);vec2 fPlot = chartCoord(f, uOutCoord);vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);if(uJitterMode==1) p4 += jit;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(zc,f);}`;
 
 export const fragmentShader = `
 uniform float opacity;
@@ -411,13 +427,14 @@ void main(){
   // Sample a cell centred on this grid node so the wire fades in step with the
   // fill where the function stretches the grid.
   vStretch = cellStretch(z - 0.5*uCellSize, uCellSize);
-  vec2 f = applyComplex(z, functionType);
+  vec2 zc = domainWarp(z);
+  vec2 f = applyComplex(zc, functionType);
   if(length(f) > 1e3) f = normalize(f)*1e3;
   vec3 pos3 = surfacePos(z);
   vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
   vViewPos = mv.xyz;
   gl_Position = projectionMatrix * mv;
-  vColor = calcColour(z, f);
+  vColor = calcColour(zc, f);
 }`;
 
 // Sheet FILL vertex shader: same surface placement, but each rectangle gets a
@@ -433,6 +450,7 @@ varying vec3 vViewPos;
 varying float vFade;
 varying float vStretch;
 vec3 cornerColour(vec2 zc){
+  zc = domainWarp(zc);
   vec2 fc = applyComplex(zc, functionType);
   if(length(fc) > 1e3) fc = normalize(fc)*1e3;
   return calcColour(zc, fc);
@@ -549,9 +567,10 @@ void main(){
   vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
   vViewPos = mv.xyz;
   gl_Position = projectionMatrix * mv;
-  vec2 f = applyComplex(z, functionType);
+  vec2 zc = domainWarp(z);
+  vec2 f = applyComplex(zc, functionType);
   if(length(f) > 1e3) f = normalize(f)*1e3;
-  vColor = calcColour(z, f);                 // one flat colour per tile (shared node)
+  vColor = calcColour(zc, f);                // one flat colour per tile (shared node)
 }`;
 
 // Tiles fragment: flat per-tile colour with a facing-ratio shade so the faceted
@@ -576,12 +595,13 @@ void main(){
 export const netVertexShader = vsCommon + `
 void main(){
   vec2 z = vec2(position.x, position.z);
-  vec2 f = applyComplex(z, functionType);
+  vec2 zc = domainWarp(z);
+  vec2 f = applyComplex(zc, functionType);
   if(length(f) > 1e3) f = normalize(f)*1e3;
   vec3 pos3 = surfacePos(z);
   vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
   gl_Position = projectionMatrix * mv;
-  vColor = calcColour(z, f);
+  vColor = calcColour(zc, f);
 }`;
 
 // Fiber-net fragment: the line colour, a touch brighter/opaquer so the threads

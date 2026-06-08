@@ -190,6 +190,8 @@ export default function ComplexParticles({
     uColourStyle: { value: state.colourStyle },
     uColormap: { value: state.colormap },
     uColorRepeat: { value: state.colorRepeat },
+    uReciprocal: { value: state.reciprocal ? 1 : 0 },
+    uWarpR: { value: netRadius() },
     uLight: { value: state.lighting ? 1 : 0 },
     uLightStrength: { value: state.lightStrength },
     uColourBy: { value: state.colourBy },
@@ -435,9 +437,11 @@ export default function ComplexParticles({
     rebuildSheetWireGeometry(wireGeom, state.sheetResolution, bxMin, bxMax, byMin, byMax);
     rebuildTileGeometry(tileGeom, state.sheetResolution, bxMin, bxMax, byMin, byMax);
     const [csx, csy] = sheetCellSize(state.sheetResolution, bxMin, bxMax, byMin, byMax);
+    const warpR = netRadius();
     state.materialsRef.current.forEach(m => {
       if (m.uniforms.uCellSize) m.uniforms.uCellSize.value.set(csx, csy);
       if (m.uniforms.uDomainBox) m.uniforms.uDomainBox.value.set(bxMin, bxMax, byMin, byMax);
+      if (m.uniforms.uWarpR) m.uniforms.uWarpR.value = warpR;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [

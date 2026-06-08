@@ -66,6 +66,10 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // How the (non-adaptive) domain grid is laid out: Cartesian grid, polar,
   // rings, spokes, web, squares, or random scatter.
   const [samplePattern, setSamplePattern] = usePersistentState<SamplePattern>(pk('samplePattern'), SamplePattern.Grid);
+  // Reciprocal-symmetric sampling: warp the domain radius to be uniform in log|z|
+  // (the unit circle at the middle), so samples reach as deeply inside |z|<1 as
+  // outside. Applies to every render mode (points, sheet, tiles, net).
+  const [reciprocal, setReciprocal] = usePersistentState(pk('reciprocal'), false);
   /** When true, sample more densely where |f'(z)| is large. */
   const [adaptive, setAdaptive] = usePersistentState(pk('adaptive'), COMPLEX_PARTICLES_DEFAULTS.initial.adaptive);
   /** Exponent biasing strength for adaptive sampling. */
@@ -234,6 +238,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     axisScale, setAxisScale,
     axisScaleRef,
     samplePattern, setSamplePattern,
+    reciprocal, setReciprocal,
     adaptive, setAdaptive,
     adaptiveAlpha, setAdaptiveAlpha,
     renderMode, setRenderMode,

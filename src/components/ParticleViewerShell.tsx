@@ -219,6 +219,11 @@ export default function ParticleViewerShell({
             onChange={state.setSamplePattern}
           />
           <Checkbox
+            label="Reciprocal sampling (inside ↔ outside |z|=1)"
+            checked={state.reciprocal}
+            onChange={state.setReciprocal}
+          />
+          <Checkbox
             label="± symmetric bounds"
             checked={state.boundsLock}
             onChange={onBoundsLockChange}
