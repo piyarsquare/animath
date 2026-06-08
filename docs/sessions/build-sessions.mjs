@@ -76,7 +76,10 @@ for (const rec of byKey.values()) {
   // branch tip and mirror it under converted/<kind>/<slug>/<rel> so the relative
   // ![](assets/…) paths resolve identically on GitHub and in the rendered HTML.
   const reportDir = dirname(path);                       // docs/sessions/<kind>/<slug>
-  const imgRefs = [...md.matchAll(IMG_RE)].map((m) => m[1]).filter(isLocalImg);
+  // Strip fenced + inline code first, so image syntax discussed in prose
+  // (e.g. `![](…)`) isn't mistaken for a real screenshot reference.
+  const scannable = md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, "");
+  const imgRefs = [...scannable.matchAll(IMG_RE)].map((m) => m[1]).filter(isLocalImg);
   for (const imgRef of [...new Set(imgRefs)]) {
     const repoImg = posixJoin(reportDir, imgRef);
     const blob = gitBuf(["show", `${ref}:${repoImg}`]);
