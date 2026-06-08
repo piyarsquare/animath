@@ -5,7 +5,7 @@ import { Select, NumberInput } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
-import { vertexShader, fragmentShader, sheetFillVertexShader, sheetWireVertexShader, sheetFragmentShader, tileVertexShader, tileFragmentShader } from './shaders';
+import { vertexShader, fragmentShader, sheetFillVertexShader, sheetWireVertexShader, sheetFragmentShader, tileVertexShader, tileFragmentShader, netVertexShader, netFragmentShader } from './shaders';
 import { loadParticleTextures } from '../../lib/textures';
 import {
   useParticleState, useUniformSync, useViewControls,
@@ -13,6 +13,7 @@ import {
   createSheetGeometry, rebuildSheetGeometry,
   createSheetWireGeometry, rebuildSheetWireGeometry, sheetCellSize,
   createTileGeometry, rebuildTileGeometry,
+  createNetGeometry, rebuildNetGeometry,
   createAxes, createHopfScaffold, createHopfFibers, startAnimationLoop,
 } from '../../lib/particles';
 import { usePersistentState } from '../../lib/usePersistentState';
@@ -98,6 +99,9 @@ export default function ComplexParticles({
   // mesh per Riemann sheet).
   const tileGeomRef = useRef<THREE.BufferGeometry>();
   const tileMeshRef = useRef<THREE.Mesh[]>([]);
+  // Net render mode: a polar fibre net (circles + rays) drawn as LineSegments.
+  const netGeomRef = useRef<THREE.BufferGeometry>();
+  const netMeshRef = useRef<THREE.LineSegments[]>([]);
   const scaffoldRef = useRef<HopfScaffold>();
   const fibersRef = useRef<HopfFibers>();
 
@@ -286,6 +290,27 @@ export default function ComplexParticles({
     return m;
   }
 
+  // Radius of the polar fibre net: reach the farthest corner of the domain box.
+  const netRadius = (): number => {
+    const [bx0, bx1, by0, by1] = effectiveBounds();
+    return Math.max(Math.abs(bx0), Math.abs(bx1), Math.abs(by0), Math.abs(by1));
+  };
+
+  function createNetMaterial(b: number) {
+    const m = new THREE.ShaderMaterial({
+      uniforms: makeUniforms(b),
+      vertexShader: netVertexShader,
+      fragmentShader: netFragmentShader,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.NormalBlending,
+      vertexColors: true,
+    });
+    m.userData.branch = b;
+    m.userData.sheet = true;   // keep NormalBlending through the object-mode toggle
+    return m;
+  }
+
   function createTileMaterial(b: number) {
     const [csx, csy] = currentCellSize();
     const m = new THREE.ShaderMaterial({
@@ -319,6 +344,7 @@ export default function ComplexParticles({
     fillMeshRef.current.forEach(o => { o.visible = isSheet && state.sheetFill; });
     wireMeshRef.current.forEach(o => { o.visible = isSheet && state.sheetWire; });
     tileMeshRef.current.forEach(o => { o.visible = isTiles; });
+    netMeshRef.current.forEach(o => { o.visible = state.renderMode === 'Net'; });
   };
 
   // (Re)create the per-branch objects: a point cloud, a filled sheet, and a
@@ -329,26 +355,31 @@ export default function ComplexParticles({
     const fillGeom = sheetGeomRef.current;
     const wireGeom = sheetWireGeomRef.current;
     const tileGeom = tileGeomRef.current;
-    if (!pointsGeom || !fillGeom || !wireGeom || !tileGeom) return;
+    const netGeom = netGeomRef.current;
+    if (!pointsGeom || !fillGeom || !wireGeom || !tileGeom || !netGeom) return;
     pointsRef.current.forEach(o => scene.remove(o));
     fillMeshRef.current.forEach(o => scene.remove(o));
     wireMeshRef.current.forEach(o => scene.remove(o));
     tileMeshRef.current.forEach(o => scene.remove(o));
+    netMeshRef.current.forEach(o => scene.remove(o));
     state.materialsRef.current.forEach(m => m.dispose());
     state.materialsRef.current = [];
     pointsRef.current = [];
     fillMeshRef.current = [];
     wireMeshRef.current = [];
     tileMeshRef.current = [];
+    netMeshRef.current = [];
     for (let b = 0; b < branchCount; b++) {
       const pm = createBranchMaterial(b);
       const fm = createSheetFillMaterial(b);
       const wm = createSheetWireMaterial(b);
       const tm = createTileMaterial(b);
+      const nm = createNetMaterial(b);
       const pts = new THREE.Points(pointsGeom, pm);
       const fill = new THREE.Mesh(fillGeom, fm);
       const wire = new THREE.LineSegments(wireGeom, wm);
       const tiles = new THREE.Mesh(tileGeom, tm);
+      const net = new THREE.LineSegments(netGeom, nm);
       // In adaptive Sheet mode the cloud and sheet overlap; without a fixed order
       // these depth-write-off transparent objects sort by distance and the
       // additive points can land on top of an opaque fill. Pin points behind, then
@@ -357,12 +388,13 @@ export default function ComplexParticles({
       pts.renderOrder = 0;
       fill.renderOrder = 1;
       wire.renderOrder = 2;
-      state.materialsRef.current.push(pm, fm, wm, tm);
+      state.materialsRef.current.push(pm, fm, wm, tm, nm);
       pointsRef.current.push(pts);
       fillMeshRef.current.push(fill);
       wireMeshRef.current.push(wire);
       tileMeshRef.current.push(tiles);
-      scene.add(pts, fill, wire, tiles);
+      netMeshRef.current.push(net);
+      scene.add(pts, fill, wire, tiles, net);
     }
     applyRenderVisibility();
   };
@@ -409,6 +441,18 @@ export default function ComplexParticles({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     state.sheetResolution, state.extentX, state.extentY, state.axisScale,
+    state.boundsLock, state.xMin, state.xMax, state.yMin, state.yMax,
+  ]);
+
+  // Rebuild the fibre net when its counts/mode or the domain box change.
+  useEffect(() => {
+    const netGeom = netGeomRef.current;
+    if (!netGeom) return;
+    rebuildNetGeometry(netGeom, state.netRings, state.netSpokes, netRadius(), state.netMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    state.netRings, state.netSpokes, state.netMode,
+    state.extentX, state.extentY, state.axisScale,
     state.boundsLock, state.xMin, state.xMax, state.yMin, state.yMax,
   ]);
 
@@ -479,6 +523,7 @@ export default function ComplexParticles({
       sheetGeomRef.current = createSheetGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
       sheetWireGeomRef.current = createSheetWireGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
       tileGeomRef.current = createTileGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
+      netGeomRef.current = createNetGeometry(state.netRings, state.netSpokes, netRadius(), state.netMode);
 
       rebuildBranchObjects(scene);
 

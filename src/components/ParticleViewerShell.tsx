@@ -12,7 +12,7 @@ import { clearPersistedState } from '../lib/usePersistentState';
 import {
   ColorStyle, ColourBy, ColourQuantity, CoordMode, coordModeNames, colormapNames,
   SamplePattern, samplePatternNames, JitterMode, AXIS_COLORS,
-  shapeNames, textureNames, viewTypes, motionModes, renderModes,
+  shapeNames, textureNames, viewTypes, motionModes, renderModes, netModeNames,
   useGestureRotation,
 } from '../lib/particles';
 import type { ParticleState, ViewAxis } from '../lib/particles';
@@ -481,6 +481,26 @@ export default function ParticleViewerShell({
                 <Slider label="Light" value={state.lightStrength}
                   min={0} max={1} step={0.01}
                   onChange={state.setLightStrength} format={v => v.toFixed(2)} />
+              )}
+            </>
+          )}
+          {state.renderMode === 'Net' && (
+            <>
+              <Pills
+                label="Fibers"
+                options={netModeNames.map(m => ({ value: m, label: m }))}
+                value={state.netMode}
+                onChange={state.setNetMode}
+              />
+              {state.netMode !== 'Rays' && (
+                <Slider label="Circles" value={state.netRings}
+                  min={1} max={60} step={1}
+                  onChange={state.setNetRings} format={v => `${v}`} />
+              )}
+              {state.netMode !== 'Circles' && (
+                <Slider label="Rays" value={state.netSpokes}
+                  min={2} max={96} step={1}
+                  onChange={state.setNetSpokes} format={v => `${v}`} />
               )}
             </>
           )}

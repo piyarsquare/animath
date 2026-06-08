@@ -4,6 +4,7 @@ import { ProjectionMode } from '../viewpoint';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import { usePersistentState } from '../usePersistentState';
 import { ViewPoint, ColorStyle, ColourBy, ColourQuantity, CoordMode, SamplePattern, JitterMode, Axis, motionModes, dropModes, RenderMode } from './types';
+import type { NetMode } from './createSheetGeometry';
 
 export interface UseParticleStateOptions {
   count?: number;
@@ -98,6 +99,11 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // with the local cell. Below it tiles meet edge-to-edge (a solid fabric); past
   // it they detach into a field of separated squares (the "points").
   const [tileSize, setTileSize] = usePersistentState(pk('tileSize'), 0.35);
+  // Net mode: a polar fibre net — `netRings` concentric circles (constant |z|)
+  // and `netSpokes` rays (constant arg z); `netMode` selects which families show.
+  const [netRings, setNetRings] = usePersistentState(pk('netRings'), 14);
+  const [netSpokes, setNetSpokes] = usePersistentState(pk('netSpokes'), 24);
+  const [netMode, setNetMode] = usePersistentState<NetMode>(pk('netMode'), 'Both');
   const [objectMode, setObjectMode] = usePersistentState(pk('objectMode'), false);
   const [shapeIndex, setShapeIndex] = usePersistentState(pk('shapeIndex'), 1);
   const [textureIndex, setTextureIndex] = usePersistentState(pk('textureIndex'), 0);
@@ -235,6 +241,9 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     sheetAdaptive, setSheetAdaptive,
     sheetDensity, setSheetDensity,
     tileSize, setTileSize,
+    netRings, setNetRings,
+    netSpokes, setNetSpokes,
+    netMode, setNetMode,
     lighting, setLighting,
     lightStrength, setLightStrength,
     objectMode, setObjectMode,

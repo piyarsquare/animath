@@ -562,3 +562,26 @@ void main(){
   vec3 col = applyExternalLight(vColor * shade, vNormalView, vViewPos, gl_FrontFacing);
   gl_FragColor = vec4(col, opacity);
 }`;
+
+// Fiber-net vertex shader: places each polar-lattice node on the surface (the
+// shared surfacePos) and colours it by the domain colouring, so the concentric
+// circles and rays show how the function carries the polar fibres of the domain.
+export const netVertexShader = vsCommon + `
+void main(){
+  vec2 z = vec2(position.x, position.z);
+  vec2 f = applyComplex(z, functionType);
+  if(length(f) > 1e3) f = normalize(f)*1e3;
+  vec3 pos3 = surfacePos(z);
+  vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
+  gl_Position = projectionMatrix * mv;
+  vColor = calcColour(z, f);
+}`;
+
+// Fiber-net fragment: the line colour, a touch brighter/opaquer so the threads
+// stay legible over the dark background.
+export const netFragmentShader = `
+uniform float opacity;
+varying vec3 vColor;
+void main(){
+  gl_FragColor = vec4(vColor, clamp(opacity*1.3 + 0.2, 0.0, 1.0));
+}`;

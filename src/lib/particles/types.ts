@@ -101,8 +101,11 @@ export const dropModes = ['None', 'DropX', 'DropY', 'DropU', 'DropV'] as const;
  *  deformation and capped at a maximum size, so dense regions form a solid fabric
  *  and stretched regions tear apart into a field of separated tiles (points).
  *  Sheet/Tiles ignore the sampling pattern and use their own resolution. */
-export const renderModes = ['Points', 'Sheet', 'Tiles'] as const;
+export const renderModes = ['Points', 'Sheet', 'Tiles', 'Net'] as const;
 export type RenderMode = (typeof renderModes)[number];
+
+/** Which families of the polar fibre net to draw in Net mode. */
+export const netModeNames = ['Both', 'Circles', 'Rays'] as const;
 
 export const AXIS_COLORS = {
   x: 0,

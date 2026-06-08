@@ -10,7 +10,9 @@ export {
   createSheetGeometry, rebuildSheetGeometry,
   createSheetWireGeometry, rebuildSheetWireGeometry, sheetCellSize,
   createTileGeometry, rebuildTileGeometry,
+  createNetGeometry, rebuildNetGeometry,
 } from './createSheetGeometry';
+export type { NetMode } from './createSheetGeometry';
 export { createAxes, AXIS_LENGTH } from './createAxes';
 export { createHopfScaffold } from './createHopfScaffold';
 export type { HopfScaffold } from './createHopfScaffold';
@@ -21,7 +23,7 @@ export type { AnimationLoopDeps } from './createAnimationLoop';
 export type { ViewPoint, Axis } from './types';
 export {
   ColorStyle, ColourBy, ColourQuantity, CoordMode, coordModeNames, colormapNames,
-  SamplePattern, samplePatternNames, JitterMode, renderModes,
+  SamplePattern, samplePatternNames, JitterMode, renderModes, netModeNames,
   shapeNames, textureNames, viewTypes, motionModes, dropModes, AXIS_COLORS,
 } from './types';
 export type { RenderMode } from './types';

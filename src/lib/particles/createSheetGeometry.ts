@@ -80,6 +80,81 @@ export function rebuildTileGeometry(
   fillTiles(geometry, res, xMin, xMax, yMin, yMax);
 }
 
+export type NetMode = 'Both' | 'Circles' | 'Rays';
+
+/** Build the **fiber net**: a polar lattice of line segments over the disk of
+ *  radius `radius`, drawn as `LineSegments` and placed on the surface by the net
+ *  vertex shader. `rings` concentric circles (constant |z|) and `spokes` rays
+ *  (constant arg z) reveal how the function carries the polar fibres of the
+ *  domain — circles map to one family of curves, rays to the orthogonal family.
+ *  `mode` selects which families are drawn. Circles/rays are sampled finely so
+ *  they stay smooth independent of how many of them there are. */
+export function createNetGeometry(
+  rings: number, spokes: number, radius: number, mode: NetMode = 'Both',
+): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  fillNet(geometry, rings, spokes, radius, mode);
+  return geometry;
+}
+
+export function rebuildNetGeometry(
+  geometry: THREE.BufferGeometry,
+  rings: number, spokes: number, radius: number, mode: NetMode = 'Both',
+): void {
+  fillNet(geometry, rings, spokes, radius, mode);
+}
+
+function fillNet(
+  geometry: THREE.BufferGeometry,
+  rings: number, spokes: number, radius: number, mode: NetMode,
+): void {
+  const Rr = Math.max(1, Math.floor(rings));
+  const Sp = Math.max(1, Math.floor(spokes));
+  const TAU = Math.PI * 2;
+  const circleSamples = 160;   // points around each circle (smoothness)
+  const raySamples = 80;       // points along each ray (smoothness)
+  const wantCircles = mode !== 'Rays';
+  const wantRays = mode !== 'Circles';
+
+  const pos: number[] = [];
+  const index: number[] = [];
+  let v = 0;
+  const addVert = (x: number, y: number) => { pos.push(x, 0, y); return v++; };
+
+  if (wantCircles) {
+    for (let i = 1; i <= Rr; i++) {
+      const r = (i / Rr) * radius;
+      const first = v;
+      for (let s = 0; s < circleSamples; s++) {
+        const th = (s / circleSamples) * TAU;
+        addVert(r * Math.cos(th), r * Math.sin(th));
+      }
+      for (let s = 0; s < circleSamples; s++) {
+        index.push(first + s, first + ((s + 1) % circleSamples)); // closed loop
+      }
+    }
+  }
+  if (wantRays) {
+    for (let j = 0; j < Sp; j++) {
+      const th = (j / Sp) * TAU;
+      const ct = Math.cos(th), st = Math.sin(th);
+      const first = v;
+      for (let t = 0; t <= raySamples; t++) {
+        const r = (t / raySamples) * radius;
+        addVert(r * ct, r * st);
+      }
+      for (let t = 0; t < raySamples; t++) index.push(first + t, first + t + 1);
+    }
+  }
+
+  const n = v;
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+  geometry.setAttribute('size', new THREE.BufferAttribute(new Float32Array(n).fill(1), 1));
+  geometry.setAttribute('seed', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
+  geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(index), 1));
+  geometry.setDrawRange(0, index.length);
+}
+
 function fillTiles(
   geometry: THREE.BufferGeometry,
   res: number,
