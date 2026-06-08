@@ -42,36 +42,37 @@ export interface EdgePairing {
 export type GluingMode = 'opposite' | 'adjacent';
 
 /** The universal cover the world is realised on — derived from χ. */
-export type Cover = 'euclidean' | 'spherical';
+export type Cover = 'euclidean' | 'spherical' | 'hyperbolic';
 
 export interface WorldSpec {
-  id: 'torus' | 'klein' | 'rp2' | 'sphere';
+  id: 'torus' | 'klein' | 'rp2' | 'sphere' | 'genus2' | 'crosscap3';
   label: string;
   /** short descriptor for the app header */
   short: string;
-  mode: GluingMode;
-  /** The canonical edge word read around the square's boundary (top→right→bottom→
-   *  left), in {a, a⁻¹, b, b⁻¹}. This is the *topological* source of truth: feeding
-   *  it to {@link analyzeSchema} reproduces χ / orientability / curvature / name with
-   *  no per-surface special case (the eventual geometry engine develops from it). The
-   *  `edges`/`chi`/`orientable` fields below are the current cover's presentation of
-   *  the same gluing. */
+  mode?: GluingMode;
+  /** The canonical edge word read around the polygon's boundary, in
+   *  {a, a⁻¹, b, b⁻¹, …}. This is the *topological* source of truth: feeding it to
+   *  {@link analyzeSchema} reproduces χ / orientability / curvature / name with no
+   *  per-surface special case (the geometry engine develops from it via
+   *  `realize`). The `edges`/`chi`/`orientable` fields below are the square worlds'
+   *  presentation of the same gluing; n-gon worlds omit `edges` and the mini-map
+   *  derives its diagram from the word. */
   word: string;
-  /** The identification of each of the square's four edges. */
-  edges: Record<EdgeName, EdgePairing>;
+  /** The identification of each of the square's four edges — square worlds only. */
+  edges?: Record<EdgeName, EdgePairing>;
   /** Euler characteristic V−E+F after identification. A *topological invariant*;
-   *  for these four square gluings it is a known constant (it is what forces the
-   *  geometry below). Stored rather than recomputed because the four presets are
-   *  fixed — the edges still drive every visible gluing + the cover's behaviour. */
+   *  for these fixed presets it is a known constant (it is what forces the geometry
+   *  below). Stored rather than recomputed because the presets are fixed — the word
+   *  still drives every visible gluing + the cover's behaviour. */
   chi: number;
-  /** Whether a consistent global orientation survives the gluing (torus, sphere)
-   *  or not (Klein, ℝP²). Like χ, a fact about the chosen gluing. */
+  /** Whether a consistent global orientation survives the gluing. Like χ, a fact
+   *  about the chosen gluing. */
   orientable: boolean;
 }
 
 export interface DerivedGeometry {
   chi: number;
-  curvature: 'flat' | 'positive';
+  curvature: 'flat' | 'positive' | 'negative';
   /** total curvature ∫K dA = 2πχ (Gauss–Bonnet). */
   totalCurvature: number;
   orientable: boolean;
@@ -79,15 +80,14 @@ export interface DerivedGeometry {
 }
 
 /** Geometry is forced by topology: χ=0 ⇒ a flat Euclidean-plane cover; χ>0 ⇒ a
- *  positively-curved sphere cover. (Negative χ — the hyperbolic worlds — is a
- *  future cover, out of scope here.) */
+ *  positively-curved sphere cover; χ<0 ⇒ a hyperbolic-plane cover (Poincaré disk). */
 export function deriveGeometry(spec: WorldSpec): DerivedGeometry {
   return {
     chi: spec.chi,
-    curvature: spec.chi === 0 ? 'flat' : 'positive',
+    curvature: spec.chi === 0 ? 'flat' : spec.chi > 0 ? 'positive' : 'negative',
     totalCurvature: 2 * Math.PI * spec.chi,
     orientable: spec.orientable,
-    cover: spec.chi === 0 ? 'euclidean' : 'spherical',
+    cover: spec.chi === 0 ? 'euclidean' : spec.chi > 0 ? 'spherical' : 'hyperbolic',
   };
 }
 
@@ -124,6 +124,20 @@ export const WORLDS: WorldSpec[] = [
     // adjacent fold (pillowcase): top↔right are one seam (a), bottom↔left the other (b): a a⁻¹ b b⁻¹
     word: 'a a⁻¹ b b⁻¹',
     edges: { top: fl('a'), right: fl('a'), bottom: fl('b'), left: fl('b') },
+  },
+  {
+    // An octagon, not a square — no `edges`/`mode`; the word is the source of truth
+    // and the mini-map derives its n-gon diagram from it.
+    id: 'genus2', label: 'Double torus', short: 'genus-2 (hyperbolic)',
+    chi: -2, orientable: true,
+    word: 'a b a⁻¹ b⁻¹ c d c⁻¹ d⁻¹',
+  },
+  {
+    // A hexagon glued as three cross-caps (Dyck's surface). Non-orientable; the
+    // deck generators are glide reflections (det < 0 ⇒ trees↔columns per tile).
+    id: 'crosscap3', label: 'Three cross-caps', short: 'Dyck surface (hyperbolic)',
+    chi: -1, orientable: false,
+    word: 'a a b b c c',
   },
 ];
 

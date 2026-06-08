@@ -3,6 +3,7 @@ import { makeCharacter } from './character';
 import { makeFundamentalSquareDecor, DecorProp, DEFAULT_PROPS } from './decor';
 import { makeEuclideanPresenter } from './presenters/euclidean';
 import { makeSphericalPresenter } from './presenters/spherical';
+import { makeHyperbolicPresenter } from './presenters/hyperbolic';
 import { CoverModel } from './coverModel';
 import {
   EngineDeps, FrameInput, PolygonEngine, SquareMapState,
@@ -19,11 +20,12 @@ export interface EngineOptions {
 }
 
 /**
- * The thin facade engine. It owns only what is genuinely shared across the four
- * worlds — lights, the walker avatar, and the frame orchestration — and delegates
- * all world-rendering + movement to a {@link CoverModel} chosen by the topology
+ * The thin facade engine. It owns only what is genuinely shared across the worlds
+ * — lights, the walker avatar, and the frame orchestration — and delegates all
+ * world-rendering + movement to a {@link CoverModel} chosen by the topology
  * ({@link deriveGeometry}): a Euclidean-plane cover for χ=0 (torus, Klein), a
- * spherical cover for χ>0 (ℝP², sphere).
+ * spherical cover for χ>0 (ℝP², sphere), and a hyperbolic Poincaré-disk cover for
+ * χ<0 (genus-2, cross-caps).
  */
 export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, opts: EngineOptions = {}): PolygonEngine {
   const { scene, camera } = deps;
@@ -41,9 +43,10 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
   const decor = makeFundamentalSquareDecor(opts.props ?? DEFAULT_PROPS);
 
   const coverDeps = { deps, root, spec, decor, squareSize, floorThickness };
-  const cover: CoverModel = geom.cover === 'spherical'
-    ? makeSphericalPresenter(coverDeps)
-    : makeEuclideanPresenter(coverDeps);
+  const cover: CoverModel =
+    geom.cover === 'spherical' ? makeSphericalPresenter(coverDeps)
+      : geom.cover === 'hyperbolic' ? makeHyperbolicPresenter(coverDeps)
+        : makeEuclideanPresenter(coverDeps);
 
   const character = makeCharacter();
   root.add(character.group);

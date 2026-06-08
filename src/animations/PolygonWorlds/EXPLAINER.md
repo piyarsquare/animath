@@ -1,25 +1,27 @@
 ## What am I looking at?
 
-One **decorated square** — the *fundamental polygon* — with two faces: **trees**
+A **decorated polygon** — the *fundamental polygon* — with two faces: **trees**
 on one side, **columns** on the other. Every closed surface is a polygon with its
-edges glued in pairs, and the *single knob* here is **how the square's edges glue**.
+edges glued in pairs, and the *single knob* here is **how the edges glue**.
 
 That one choice does two things at once:
 
 - it **names the topology** (the gluing pattern), and
 - it **forces the curvature** — for the glued surface to be smooth, the corner
-  angles must add up, which a flat square can only manage when its Euler
+  angles must add up, which a flat polygon can only manage when its Euler
   characteristic χ = 0; otherwise Gauss–Bonnet (∫K dA = 2πχ) demands the world
-  curve onto a sphere.
+  curve — onto a **sphere** when χ > 0, into the **hyperbolic plane** when χ < 0.
 
-So four gluings of the **same square** give four worlds:
+So different gluings give different worlds:
 
 | Gluing | World | χ | Shape |
 |---|---|---|---|
-| opposite edges, both straight | **torus** | 0 | flat |
-| opposite edges, one flipped | **Klein bottle** | 0 | flat |
-| opposite edges, both flipped | **projective plane** | 1 | curved |
-| adjacent edges folded | **sphere** | 2 | curved |
+| square, opposite edges, both straight | **torus** | 0 | flat |
+| square, opposite edges, one flipped | **Klein bottle** | 0 | flat |
+| square, opposite edges, both flipped | **projective plane** | 1 | spherical |
+| square, adjacent edges folded | **sphere** | 2 | spherical |
+| octagon `aba⁻¹b⁻¹cdc⁻¹d⁻¹` | **double torus** (genus 2) | −2 | hyperbolic |
+| hexagon `aabbcc` | **three cross-caps** (Dyck) | −1 | hyperbolic |
 
 Walk it in first person. The **mini-map** is always the fundamental square, its
 edges marked with the identification arrows. On a **non-orientable** world (Klein,
@@ -49,3 +51,15 @@ surface you walk. The curved worlds are subtler, and the difference is honest:
 
 In both, **χ forces the curvature**: ∫K dA = 2πχ, so a positive χ *must* round up
 onto a sphere — a flat square simply cannot close those corners.
+
+### The hyperbolic worlds (χ < 0)
+
+A double torus or a multi-cross-cap surface has χ < 0, so by Gauss–Bonnet it must
+carry **negative** curvature: it lives on the **hyperbolic plane**, drawn here in
+the **Poincaré disk**. You stand at the centre and the whole tiling flows past as
+you walk — the glowing boundary circle is *infinitely far away*, so no matter how
+far you go you never reach it, and landmarks shrink as they recede (that shrinking
+*is* the negative curvature: there is exponentially more room out there than a flat
+plane has). Each tile is one more copy of the fundamental polygon; the mini-map
+shows that polygon with its edge identifications. On the non-orientable cross-cap
+worlds the glide tiles wear the **mirror** skin (numbers come back reversed).

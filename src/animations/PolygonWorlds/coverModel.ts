@@ -48,7 +48,7 @@ export interface CoverDeps {
 }
 
 export interface CoverModel {
-  readonly kind: 'euclidean' | 'spherical';
+  readonly kind: 'euclidean' | 'spherical' | 'hyperbolic';
 
   /** Integrate one frame of movement + look, place the camera, and update the
    *  cover's own world objects (tile placement / planet). */

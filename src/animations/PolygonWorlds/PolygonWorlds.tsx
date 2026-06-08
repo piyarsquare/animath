@@ -11,6 +11,9 @@ import {
   DEFAULT_SQUARE_SIZE, DEFAULT_FLOOR_THICKNESS,
 } from './engineTypes';
 import { drawSquareMap, SquareMapSpec, SquareEdgeSpec } from './squareMap';
+import { drawPolygonMap, PolygonMapSpec } from './polygonMap';
+import { parseWord } from './surfaceSchema';
+import { realize } from './lib/realize';
 import { EmbeddingInset } from './instruments/embeddingInset';
 import explainerText from './EXPLAINER.md?raw';
 
@@ -33,7 +36,9 @@ export default function PolygonWorlds() {
 
   const spec = worldById(worldId);
   const analysis = useMemo(() => analyzeWorld(spec), [spec]);
-  const isSpherical = deriveGeometry(spec).cover === 'spherical';
+  const cover = deriveGeometry(spec).cover;
+  const isSpherical = cover === 'spherical';
+  const isHyperbolic = cover === 'hyperbolic';
   const props = useMemo(() => generateProps(landmarkCount, arrangement), [landmarkCount, arrangement]);
   useAppHeader('Polygon Worlds', spec.short);
   useAppExplainer(explainerText);
@@ -161,7 +166,7 @@ export default function PolygonWorlds() {
         position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
         color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
       }}>
-        Drag to look · WASD / arrows or the pad to walk · the square's gluing decides the world
+        Drag to look · WASD / arrows or the pad to walk · the polygon's gluing decides the world
       </div>
 
       <ShellSettings>
@@ -171,9 +176,9 @@ export default function PolygonWorlds() {
           <Slider label="Landmarks" value={landmarkCount} min={1} max={14} step={1} onChange={(v) => setLandmarkCount(Math.round(v))} format={(v) => `${Math.round(v)}`} />
           <Select label="Arrangement" options={ARRANGEMENTS.map((a) => ({ value: a.id, label: a.label }))} value={arrangement} onChange={(v) => setArrangement(v as ArrangementId)} />
           {!isSpherical && (
-            <Slider label="Square size" value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
+            <Slider label={isHyperbolic ? 'Disk scale' : 'Square size'} value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
           )}
-          {!isSpherical && (
+          {!isSpherical && !isHyperbolic && (
             <Slider label="Floor thickness" value={floorThickness} min={0} max={6} step={0.2} onChange={setFloorThickness} format={(v) => `${v.toFixed(1)} m`} />
           )}
           {isSpherical && (
@@ -252,9 +257,10 @@ const MAP_RED = '#ff4060', MAP_BLUE = '#4080ff', MAP_TEAL = '#34d6c0', MAP_PURPL
  *  player chart. (Opposite-edge worlds for now; the sphere's adjacent fold lands
  *  with the spherical cover.) */
 function squareSpec(spec: WorldSpec, st: SquareMapState | null): SquareMapSpec {
-  // a = left/right pair, b = top/bottom pair
-  const aFlip = spec.edges.left.orient === -1 || spec.edges.right.orient === -1;
-  const bFlip = spec.edges.top.orient === -1 || spec.edges.bottom.orient === -1;
+  // a = left/right pair, b = top/bottom pair (square worlds only — guarded by caller)
+  const e = spec.edges!;
+  const aFlip = e.left.orient === -1 || e.right.orient === -1;
+  const bFlip = e.top.orient === -1 || e.bottom.orient === -1;
   const lr: SquareEdgeSpec = { color: aFlip ? (bFlip ? MAP_PURPLE : MAP_RED) : MAP_TEAL, glue: aFlip ? 'flip' : 'straight', double: true };
   const tb: SquareEdgeSpec = { color: bFlip ? MAP_RED : MAP_BLUE, glue: bFlip ? 'flip' : 'straight', double: false };
   const marker = st
@@ -262,6 +268,25 @@ function squareSpec(spec: WorldSpec, st: SquareMapState | null): SquareMapSpec {
     : null;
   const label = !st ? '' : st.flipped ? `${spec.label} · mirror side` : spec.label;
   return { tb, lr, marker, dots: [], border: false, label };
+}
+
+/** Build the n-gon edge-diagram spec (hyperbolic worlds, no square `edges`). */
+function polygonSpec(spec: WorldSpec, st: SquareMapState | null): PolygonMapSpec {
+  const word = parseWord(spec.word);
+  const m = word.length;
+  const real = realize(word);
+  const marker = st
+    ? { px: (st.u - 0.5) * 2, py: (st.v - 0.5) * 2, hx: st.hx, hy: st.hz, flipped: st.flipped }
+    : null;
+  const label = !st ? spec.label : st.flipped ? `${spec.label} · mirror tile` : spec.label;
+  return {
+    sides: m,
+    baseAngle: -Math.PI / 2 + Math.PI / m,
+    rhoV: Math.tanh(real.circumradius / 2),
+    letters: word.map((l) => ({ gen: l.gen, inv: l.inv })),
+    marker,
+    label,
+  };
 }
 
 function SquareMiniMap({ getState, spec }: { getState: () => SquareMapState | null; spec: WorldSpec }) {
@@ -276,7 +301,12 @@ function SquareMiniMap({ getState, spec }: { getState: () => SquareMapState | nu
     cvs.width = SIZE * dpr; cvs.height = SIZE * dpr;
     ctx.scale(dpr, dpr);
     let raf = 0;
-    const loop = () => { drawSquareMap(ctx, SIZE, squareSpec(specRef.current, getState())); raf = requestAnimationFrame(loop); };
+    const loop = () => {
+      const s = specRef.current;
+      if (s.edges) drawSquareMap(ctx, SIZE, squareSpec(s, getState()));
+      else drawPolygonMap(ctx, SIZE, polygonSpec(s, getState()));
+      raf = requestAnimationFrame(loop);
+    };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [getState]);
