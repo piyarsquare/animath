@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import { ShellActions, ShellSettings, useAppHeader, useAppExplainer } from '../../components/AppShell';
 import { Section, Slider, Select, Checkbox } from '../../components/ControlPanel';
-import { WORLDS, worldById, WorldSpec, deriveGeometry } from './worldSpec';
+import { WORLDS, worldById, WorldSpec, deriveGeometry, analyzeWorld } from './worldSpec';
 import { generateProps, ARRANGEMENTS, ArrangementId } from './decor';
 import { makeFundamentalSquareEngine } from './fundamentalSquareEngine';
 import {
@@ -31,6 +31,7 @@ export default function PolygonWorlds() {
   const [arrangement, setArrangement] = useState<ArrangementId>('scattered');
 
   const spec = worldById(worldId);
+  const analysis = useMemo(() => analyzeWorld(spec), [spec]);
   const isSpherical = deriveGeometry(spec).cover === 'spherical';
   const props = useMemo(() => generateProps(landmarkCount, arrangement), [landmarkCount, arrangement]);
   useAppHeader('Polygon Worlds', spec.short);
@@ -178,10 +179,22 @@ export default function PolygonWorlds() {
           )}
           <Slider label={isSpherical ? 'Planet glass opacity' : 'Glass floor opacity'} value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
           <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
-          <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>
-            One square, four gluings. {spec.orientable ? 'Orientable' : 'Non-orientable'} · χ = {spec.chi} ·
-            {isSpherical ? ' curved (sphere)' : ' flat'}.
-            {!spec.orientable && ' Crossing a flipped edge swaps trees ↔ columns.'}
+          <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5 }}>
+            <div style={{ marginBottom: 4 }}>
+              <span style={{ color: 'var(--cp-fg)' }}>Edge word</span>{' '}
+              <code style={{ fontSize: 11 }}>{spec.word}</code>
+            </div>
+            <div>
+              <strong style={{ color: 'var(--cp-fg)' }}>{analysis.name}</strong> ·{' '}
+              {analysis.orientable ? 'orientable' : 'non-orientable'} · χ = {analysis.chi} ·{' '}
+              {analysis.curvature === 'flat' ? 'flat (κ = 0)'
+                : analysis.curvature === 'positive' ? 'positively curved (κ > 0)'
+                  : 'negatively curved (κ < 0)'}
+            </div>
+            <div style={{ marginTop: 4, opacity: 0.85 }}>
+              χ picks the geometry; edge count is presentation.
+              {!analysis.orientable && ' Crossing a flipped edge swaps trees ↔ columns.'}
+            </div>
           </div>
         </Section>
       </ShellSettings>

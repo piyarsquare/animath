@@ -22,6 +22,8 @@
  *   sphere  — ADJACENT edges folded together (a "pillowcase")   (χ=2, positive)
  */
 
+import { analyze, SchemaAnalysis } from './surfaceSchema';
+
 export type EdgeName = 'top' | 'right' | 'bottom' | 'left';
 
 /** Which gluing class an edge belongs to — the two edges sharing a class glue. */
@@ -48,6 +50,13 @@ export interface WorldSpec {
   /** short descriptor for the app header */
   short: string;
   mode: GluingMode;
+  /** The canonical edge word read around the square's boundary (top→right→bottom→
+   *  left), in {a, a⁻¹, b, b⁻¹}. This is the *topological* source of truth: feeding
+   *  it to {@link analyzeSchema} reproduces χ / orientability / curvature / name with
+   *  no per-surface special case (the eventual geometry engine develops from it). The
+   *  `edges`/`chi`/`orientable` fields below are the current cover's presentation of
+   *  the same gluing. */
+  word: string;
   /** The identification of each of the square's four edges. */
   edges: Record<EdgeName, EdgePairing>;
   /** Euler characteristic V−E+F after identification. A *topological invariant*;
@@ -90,28 +99,40 @@ export const WORLDS: WorldSpec[] = [
   {
     id: 'torus', label: 'Torus', short: 'flat torus',
     mode: 'opposite', chi: 0, orientable: true,
-    // a = left/right (translate), b = top/bottom (translate): aba⁻¹b⁻¹
+    // a = left/right (translate), b = top/bottom (translate): a b a⁻¹ b⁻¹
+    word: 'a b a⁻¹ b⁻¹',
     edges: { left: tr('a'), right: tr('a'), top: tr('b'), bottom: tr('b') },
   },
   {
     id: 'klein', label: 'Klein bottle', short: 'flat Klein bottle',
     mode: 'opposite', chi: 0, orientable: false,
-    // a = left/right with one side flipped (glide), b = top/bottom translate: abab⁻¹
+    // a = left/right with one side flipped (glide), b = top/bottom translate: a b a⁻¹ b
+    word: 'a b a⁻¹ b',
     edges: { left: tr('a'), right: fl('a'), top: tr('b'), bottom: tr('b') },
   },
   {
     id: 'rp2', label: 'Projective plane', short: 'projective plane (ℝP²)',
     mode: 'opposite', chi: 1, orientable: false,
-    // both pairs flip (antipodal boundary identification): abab
+    // both pairs flip (antipodal boundary identification): a b a b
+    word: 'a b a b',
     edges: { left: fl('a'), right: fl('a'), top: fl('b'), bottom: fl('b') },
   },
   {
     id: 'sphere', label: 'Sphere', short: 'round sphere',
     mode: 'adjacent', chi: 2, orientable: true,
-    // adjacent fold (pillowcase): top↔right are one seam (a), bottom↔left the other (b)
+    // adjacent fold (pillowcase): top↔right are one seam (a), bottom↔left the other (b): a a⁻¹ b b⁻¹
+    word: 'a a⁻¹ b b⁻¹',
     edges: { top: fl('a'), right: fl('a'), bottom: fl('b'), left: fl('b') },
   },
 ];
 
 export const worldById = (id: string): WorldSpec =>
   WORLDS.find((w) => w.id === id) ?? WORLDS[0];
+
+/** Live invariants for a world, derived from its edge {@link WorldSpec.word} via the
+ *  verified base layer — *not* from the stored `chi`/`orientable`. This is the M0
+ *  seam: the host reads topology from `analyzeSchema`, so when free edge-word entry
+ *  arrives the same readout works with no extra wiring. */
+export function analyzeWorld(spec: WorldSpec): SchemaAnalysis {
+  return analyze(spec.word);
+}

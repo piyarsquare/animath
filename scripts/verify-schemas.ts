@@ -37,5 +37,20 @@ const parseOk = compact.chi === spaced.chi && compact.orientable === spaced.orie
 console.log(`\n${parseOk ? 'PASS' : 'FAIL'}  parser: "abAB" → ${wordToString(parseWord('abAB'))} (χ=${compact.chi})`);
 if (!parseOk) fail++;
 
+// M0 seam: each shipped world's edge word must reproduce the cover's stored
+// invariants via the base layer — proof the host now reads topology from the word.
+import { WORLDS } from '../src/animations/PolygonWorlds/worldSpec';
+console.log('\n— world edge words vs stored cover invariants —');
+for (const w of WORLDS) {
+  const a = analyze(w.word);
+  const ok = a.valid && a.chi === w.chi && a.orientable === w.orientable;
+  if (!ok) fail++;
+  console.log(
+    `${ok ? 'PASS' : 'FAIL'}  ${w.id.padEnd(7)} "${w.word}"  χ=${a.chi} ` +
+    `${a.orientable ? 'orientable' : 'non-orient'}  ${a.name}` +
+    (ok ? '' : `   << stored χ=${w.chi} ${w.orientable ? 'orientable' : 'non-orient'}`),
+  );
+}
+
 console.log(fail === 0 ? '\n✓ ALL SCHEMAS MATCH THE TABLES' : `\n✗ ${fail} MISMATCH(ES)`);
 process.exit(fail ? 1 : 0);
