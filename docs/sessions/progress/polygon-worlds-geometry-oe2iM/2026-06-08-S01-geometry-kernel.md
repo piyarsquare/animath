@@ -6,8 +6,8 @@ title: Polygon Worlds — geometry kernel (M0 + Phase 0)
 branch: claude/polygon-worlds-geometry-oe2iM
 slug: polygon-worlds-geometry-oe2iM
 status: in-progress
-build: unknown
-followup: null
+build: passed
+followup: high
 pr: https://github.com/piyarsquare/animath/pull/190
 app: PolygonWorlds
 ---
@@ -36,6 +36,38 @@ session runs on the new `polygon-worlds-geometry-oe2iM` branch.)
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 02:20 — Phase 0 kernel + invariant battery green (68/68)
+**Why:** the kernel is the frozen-interface foundation; the plan says freeze only
+once the battery is green, so the battery had to come with the kernel.
+
+Built `lib/cayleyKlein.ts` — the Three.js-free unified constant-curvature kernel.
+One representation for all κ via **curvature-trigonometry** `Cκ, Sκ` (entire in κ,
+analytic κ→0 series, method chosen on `|κt²|` only — no `κ===0` branch). Model:
+shell `⟨P,P⟩=1` with form `diag(κ,κ,1)`, basepoint `O=(0,0,1)`. **Isometries are
+3×3 matrices = matrix exponentials of the rotation/translation generators**, so
+`det=±1` reports orientation and composition is matrix multiply; at κ=0 the
+translation generator's exp collapses to a plain Euclidean shift with no special
+case. A `Frame` is a group element (parallel transport + holonomy for free). Plus
+`distance`, `geodesicPoint`, `originTo`, `angleAt`.
+
+Built `lib/invariants.ts` + `scripts/verify-geometry.ts` (mirrors
+`verify-schemas`): **68 checks across κ ∈ {+0.5, 0, −0.5}, all PASS** —
+curvature-trig identities + derivative relations, **form preservation by every
+generator** (`MᵀGκM=Gκ`), group axioms, geodesic distance=s on the shell (machine
+precision), isometry-preserves-distance, det/orientation signs, **Gauss–Bonnet
+`excess = κ·area`** (independent: area from side lengths, excess from angle
+measurement) and exact anchors (spherical octant excess = π/2; flat square closes
+with zero holonomy; hyperbolic triangle negative excess). `npm run build` green;
+added `npm run verify[:schemas|:geometry]`. Committed `099b011`, pushed. No app
+render wired; covers untouched.
+
+> [!IMPORTANT]
+> **Convention chosen (resolves an ambiguity in the plan's sketch):** the plan
+> wrote both "κ = curvature (κ>0 sphere)" and "form diag(1,1,−κ)" — opposite sign
+> conventions. The kernel takes **κ = Gaussian curvature** (matches the χ→curvature
+> table, the load-bearing decision) with form `diag(κ,κ,1)`. Documented in the
+> kernel header. This is the one place I departed from the literal plan text.
 
 ### 🟡 milestone · 01:46 — M0 shipped: host reads topology from `analyzeSchema`
 **Why:** the plan's zero-risk first win — make the foundation word-driven before
@@ -74,24 +106,29 @@ Cayley–Klein kernel with analytic κ→0; `DevelopPolicy` strategy; per-κ pre
 skin-swap/flip from `det(deck)<0`; no big-bang). Prerequisite before any engine
 code: bring the foundation onto this branch (`git merge origin/claude/polygon-worlds`).
 
-## Plan for this session
+## Plan for this session (M0 + Phase 0)
 
-(M0 + Phase 0, pending user confirmation of the merge-in approach.)
+- [x] **Foundation** — rebase this branch onto `origin/claude/polygon-worlds`.
+- [x] **M0** — host reads topology from `analyzeSchema`; live invariants readout.
+      Shipped (`fa5a776`).
+- [x] **Phase 0 kernel core** — `lib/cayleyKlein.ts` (points (x,y,w), form
+      diag(κ,κ,1), analytic κ→0) + `lib/invariants.ts` + `scripts/verify-geometry.ts`.
+      68/68 green (`099b011`).
+- [ ] **`realize(word)`** — `lib/realize.ts`: tie `analyzeSchema`'s edge pairings to
+      the kernel (regular polygon vertices + side-pairing isometries; κ from χ — flat
+      regular, hyperbolic solved via `cosh(√−κ R)=cos(π/m)/sin(α)`, positive = chart).
+- [ ] **`DevelopPolicy`** — `lib/develop.ts`: finite / lattice / Fuchsian tile
+      enumeration with horizon culling.
+- [ ] **Deck-closure battery** — extend `verify-geometry` with edge-pairing/deck
+      relation closure (boundary-word product = identity) + holonomy-from-topology.
+- [ ] **ℍ² budget** — measure tile-growth + horizon-culling cost.
 
-1. **Foundation merge** — `git merge origin/claude/polygon-worlds` so this branch
-   builds on the verified base layer + working covers (currently absent here).
-2. **M0** — wire `analyzeSchema` into the host: `WORLDS` → edge words; picker shows
-   live χ / orientability / curvature / surface name. Rendering still via old covers.
-   `npm run build` green; ship.
-3. **Phase 0 kernel** — `PolygonWorlds/lib/`: `cayleyKlein.ts` (points (x,y,w),
-   form diag(1,1,−κ), analytic κ→0), `geometry.ts` (Geometry interface + κ
-   instances), `develop.ts` (DevelopPolicy: finite/lattice/Fuchsian), `realize.ts`
-   (word → geometry/domain/deckGens, incl. κ>0 chart), `invariants.ts` (the battery).
-4. **`scripts/verify-geometry.ts`** — invariant battery mirroring `verify-schemas.ts`:
-   group axioms, edge-pairing/deck closure, geodesic-closes-with-holonomy,
-   angle-defect = κ·area. Freeze kernel interface only once green.
-5. **ℍ² budget** — measure tile-growth + horizon-culling cost.
-6. Commit + push to `claude/polygon-worlds-geometry-oe2iM` throughout.
+> [!NOTE]
+> **Checkpoint here.** M0 is shipped and the kernel + 68-check battery are green —
+> the hard, interface-defining core is proven. The remaining Phase-0 items
+> (`realize`/`develop`/deck-closure/perf) are the next chunk; the positive-curvature
+> **chart** relation-closure is the subtlest piece and is coupled to the P2
+> spherical presenter, so it wants care rather than a rush.
 
 ## Decisions & rationale
 
