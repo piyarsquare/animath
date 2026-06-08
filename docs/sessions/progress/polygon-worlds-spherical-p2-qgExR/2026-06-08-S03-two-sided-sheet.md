@@ -5,7 +5,7 @@ date: 2026-06-08
 title: Strict two-sided sheet for the flat + spherical worlds
 branch: claude/polygon-worlds-spherical-p2-qgExR
 slug: polygon-worlds-spherical-p2-qgExR
-status: in-progress
+status: completed
 build: passed
 followup: medium
 pr: null
@@ -13,6 +13,16 @@ app: PolygonWorlds
 ---
 
 # Strict two-sided sheet for the flat + spherical worlds
+
+> [!NOTE]
+> **Decisions evolved during the session** (see the newest working notes): the user
+> later **dropped the per-side tile colour** (trees vs columns + warm/cool light now
+> carry the side), **removed on-edge boundary markers** (they read as confused
+> half-tree/half-column at a gluing edge — kept off the edge instead), made the floor
+> **opaque by default** (no show-through while walking), and the hyperbolic worlds
+> were fixed to **keep the player in the fundamental domain** (no walk-off; glide
+> crossings flip you to the other side). The "seven constraints" list below records
+> the original asks; the working notes record where each landed.
 
 ## Session purpose
 
@@ -50,6 +60,53 @@ the arrangement of objects, and prove we can hold to them.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 19:30 — Hyperbolic: player kept in the fundamental domain, flips sides on glide crossings
+**Why:** the user reported the 3-cross-cap "moves the player incorrectly" — walking
+ran off the developed tiling, and crossing a glide edge never flipped you to the
+other side (columns never became trees), only teleporting you back on the same side.
+
+Reworked `presenters/hyperbolic.ts` to mirror the euclidean cover (commit `585ea61`).
+The player frame is only moved by `stepForward`/`turn`/`stepHeading`, so it stays
+**orientation-preserving — controls never invert**. A separate deck element **`h`**
+tracks the player's tile (greedy walk on the deck Cayley graph toward them); tiles
+render through **`Mtiles = frame⁻¹·h`**, so the developed tiles always surround the
+player (no walk-off). Crossing a glide makes **`det(h) < 0`**, which flips the skin
+of *every* tile (`det(h)·det(tile) < 0`) and mirror-reverses the decals — you
+genuinely flip to the other side — while your frame stays put. Trail renders through
+`frame⁻¹`; the mini-map representative is `h⁻¹·player` with the side from `det(h)`.
+Added clear spawn (no starting on the centre beacon), camera-distance control, and
+an opaque hyperbolic floor. Verified by walking far (stays surrounded) on genus-2 +
+3-cross-cap. Build green; verify 100/100.
+
+> [!CAUTION]
+> **Earlier `reduceToHome` attempt was wrong and was lost in a git reset.** Reducing
+> the *player frame* through a glide (det<0) element reflects the frame → inverts the
+> controls and snaps the view. The correct design reduces a *separate* tracker `h`,
+> never the player frame. (During this fix the local branch had drifted off the
+> pushed history; recovered by `git reset --hard origin/...` — which held all the
+> flat/spherical work — then re-applying only `hyperbolic.ts`. Branch is linear again.)
+
+### 🟣 decision · 19:00 — Drop the per-side tile colour
+**Why:** user: "get rid of the tile colour. We have trees and columns." The two-tone
+floor (and its show-through) caused more trouble than it solved.
+
+Both faces of the sheet are now **one neutral colour** in the flat and spherical
+worlds (`542a344`). The two sides are told apart by **trees vs columns** (and the
+warm-above / cool-below lighting), not floor colour. `euclidean` uses a single floor
+material; `spherical` a single neutral double-sided shell. Melding trees+columns into
+one cue is explicitly left for later.
+
+### 🟢 code · 18:30 — Opaque floor (no show-through), warm/cool lighting, markers off the edges
+**Why:** user — the floor colour "should not show through when walking on the other
+side"; and on-edge markers read as "confused" half-tree/half-column objects.
+
+(`99d1161`) The glass floor goes **fully opaque at the default opacity** (the side you
+walk never shows through; the Glass slider can still be lowered to peek at the
+underside). Added **two-tone lighting** — a **warm** directional light from above and
+a **cool** one from below — so the side you're on reads warm and the underside cool
+(the user's own suggestion). Landmarks are kept **off the domain edges** (removed the
+on-edge boundary markers; interior markers stay clear of the boundary).
+
 ### 🟢 code · 17:40 — Two-sided sheet shipped for flat + spherical; clear spawn fixes the "giant tree"
 **Why:** the user's seven constraints + the regression they implied.
 
@@ -83,16 +140,19 @@ landmark**, so it never starts inside a tree or on the beacon.
 
 ## Status & open items
 
-- **Flat worlds (torus, Klein): solid.** All seven constraints visibly met; the
-  Klein sheet-flip reads clearly (blue/trees ↔ brown/columns across the glide edge).
-- **Sphere/ℝP²: clean now**, but two things to revisit:
-  - The **equirectangular sphere chart is singular at the poles**, so boundary
-    markers (the v=0/1 rows) collapse onto the poles — a faithful chart artifact, but
-    it clumps trees there. Decide: accept-and-disclose, or distribute by area.
-  - The planet reads a little **dark**; consider brightening the outer shell.
-- **Footstep "below floor when flipped"** is implemented but only spot-checked
-  statically; worth a walked screenshot crossing a glide edge.
-- **Hyperbolic** only updated to the new decor API (compiles); its full rework
-  (per the user, "we are having some issues with the hyperbolic space") is the next
-  task once flat + spherical are signed off.
-</content>
+All three world classes now render and walk correctly with the revised "setting":
+one neutral floor, trees-vs-columns as the side cue, warm/cool lighting, opaque
+floor by default, markers off the edges, clear spawns, camera-distance control.
+
+- **Flat (torus, Klein): solid** — the Klein sheet-flip reads clearly (trees ↔
+  columns standing up across the glide edge) on one neutral floor.
+- **Spherical (sphere, ℝP²): clean** — neutral two-sided shell, back-to-back markers
+  (no penetration), clear spawn. *Still open:* the equirectangular **sphere chart is
+  singular at the poles**, so v=0/1 markers clump there (a faithful chart artifact —
+  decide accept-and-disclose vs distribute-by-area); the planet reads a little dark.
+- **Hyperbolic (genus-2, 3-cross-cap): fixed** — player kept in the fundamental
+  domain (no walk-off), glide crossings flip you to the other side, controls intact.
+- **Footstep "below floor when flipped"** (flat) is implemented but only spot-checked
+  statically.
+- **Next session: the "setting"** — trees/columns design, landmarks + labels, floor
+  opacity, and additional light sources. See the S03 handoff.
