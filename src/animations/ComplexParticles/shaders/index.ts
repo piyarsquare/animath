@@ -44,6 +44,7 @@ uniform int   uProjTarget;
 uniform float uProjAlpha;
 uniform int   uColourStyle;
 uniform int   uColormap;
+uniform float uColorRepeat;
 uniform int   uColourBy;
 uniform int   uColourQty;
 uniform int   uBrightnessQty;
@@ -251,10 +252,16 @@ vec3 calcColour(vec2 z, vec2 f){
     else                   param = angle/TAU + 1.0;          // phase (default)
     float hue = fract(param + hueShift);
     // Sequential colormaps (uColormap>0) override the HSV wheel: map MAGNITUDE
-    // (|z|/|f|, squashed to [0,1]) through a perceptual ramp — the natural choice
-    // for reading magnitude as a smooth gradient. Saturation still desaturates.
+    // through a perceptual ramp — the natural choice for reading magnitude. The
+    // scale is logarithmic in |·|. uColorRepeat==0 → one smooth saturating sweep
+    // (tanh of log) across the whole range; uColorRepeat>0 → tile the colormap in
+    // log-magnitude (that many cycles per e-fold) with a mirrored, seamless wave,
+    // giving repeating contour-like bands.
     if(uColormap > 0){
-        float s = clamp(0.5*(1.0 + tanh(log(r + 1e-6))), 0.0, 1.0);
+        float lg = log(r + 1e-6);
+        float s = (uColorRepeat > 0.0)
+            ? abs(fract(lg * uColorRepeat) * 2.0 - 1.0)        // repeating log bands (seamless)
+            : clamp(0.5*(1.0 + tanh(lg)), 0.0, 1.0);           // smooth, saturating
         int scheme = (uColormap==1) ? 3      // Grayscale
                    : (uColormap==2) ? 4      // Viridis
                    : (uColormap==3) ? 5      // Magma

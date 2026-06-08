@@ -113,6 +113,9 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // colormaps mapped to magnitude (Grayscale / Viridis / Magma / Inferno / Plasma /
   // Fire / Ocean), for reading |z| / |f|.
   const [colormap, setColormap] = usePersistentState(pk('colormap'), 0);
+  // Sequential-colormap scale: 0 = one smooth saturating sweep over log-magnitude;
+  // >0 = repeat the colormap that many cycles per e-fold of |·| (log-spaced bands).
+  const [colorRepeat, setColorRepeat] = usePersistentState(pk('colorRepeat'), 0);
   const [colourBy, setColourBy] = usePersistentState<ColourBy>(pk('colourBy'), ColourBy.Domain);
   // Which scalar of the chosen source drives the colour wheel (hue). Phase keeps
   // the classic domain-colouring look; Modulus colours by |z| / |f|, etc.
@@ -253,6 +256,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     realView, setRealView,
     colourStyle, setColourStyle,
     colormap, setColormap,
+    colorRepeat, setColorRepeat,
     colourBy, setColourBy,
     colourQuantity, setColourQuantity,
     brightnessQuantity, setBrightnessQuantity,

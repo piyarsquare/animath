@@ -129,6 +129,12 @@ export function useUniformSync(state: ParticleState): void {
 
   useEffect(() => {
     materialsRef.current.forEach(m => {
+      if (m.uniforms.uColorRepeat) m.uniforms.uColorRepeat.value = state.colorRepeat;
+    });
+  }, [state.colorRepeat]);
+
+  useEffect(() => {
+    materialsRef.current.forEach(m => {
       if (m.uniforms.uLight) m.uniforms.uLight.value = state.lighting ? 1 : 0;
       if (m.uniforms.uLightStrength) m.uniforms.uLightStrength.value = state.lightStrength;
     });

@@ -391,6 +391,12 @@ export default function ParticleViewerShell({
             value={state.colormap}
             onChange={state.setColormap}
           />
+          {state.colormap > 0 && (
+            <Slider label="Repeat (log bands)" value={state.colorRepeat}
+              min={0} max={4} step={0.05}
+              onChange={state.setColorRepeat}
+              format={v => v === 0 ? 'off' : v.toFixed(2)} />
+          )}
           {state.colormap === 0 && (
             <Pills
               label="Style"

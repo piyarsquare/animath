@@ -189,6 +189,7 @@ export default function ComplexParticles({
     textureIndex: { value: state.textureIndex },
     uColourStyle: { value: state.colourStyle },
     uColormap: { value: state.colormap },
+    uColorRepeat: { value: state.colorRepeat },
     uLight: { value: state.lighting ? 1 : 0 },
     uLightStrength: { value: state.lightStrength },
     uColourBy: { value: state.colourBy },
