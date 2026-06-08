@@ -5,11 +5,12 @@ import { Select, NumberInput } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
-import { vertexShader, fragmentShader } from './shaders';
+import { vertexShader, fragmentShader, sheetVertexShader, sheetFragmentShader } from './shaders';
 import { loadParticleTextures } from '../../lib/textures';
 import {
   useParticleState, useUniformSync, useViewControls,
   createParticleGeometry, rebuildGeometryBuffers, redistributeAdaptive,
+  createSheetGeometry, rebuildSheetGeometry,
   createAxes, createHopfScaffold, createHopfFibers, startAnimationLoop,
 } from '../../lib/particles';
 import { usePersistentState } from '../../lib/usePersistentState';
@@ -83,6 +84,11 @@ export default function ComplexParticles({
 
   const sceneRef = useRef<THREE.Scene>();
   const pointsRef = useRef<THREE.Points[]>([]);
+  // Sheet (surface) render mode: one shared regular-grid geometry, drawn per
+  // branch as a translucent filled mesh + a wireframe overlay.
+  const sheetGeomRef = useRef<THREE.BufferGeometry>();
+  const fillMeshRef = useRef<THREE.Mesh[]>([]);
+  const wireMeshRef = useRef<THREE.Mesh[]>([]);
   const scaffoldRef = useRef<HopfScaffold>();
   const fibersRef = useRef<HopfFibers>();
 
@@ -136,48 +142,55 @@ export default function ComplexParticles({
     });
   }, [quadA, quadB, quadC]);
 
-  // Each particle set renders the sheet at branchMin + i.
+  // Each material renders the Riemann sheet at branchMin + its branch. There are
+  // now several materials per branch (points + sheet fill + wire), so the branch
+  // is tagged on the material rather than read from its position in the list.
   useEffect(() => {
-    state.materialsRef.current.forEach((m, i) => {
-      m.uniforms.branchIndex.value = branchMin + i;
+    state.materialsRef.current.forEach(m => {
+      m.uniforms.branchIndex.value = branchMin + ((m.userData.branch as number) ?? 0);
     });
   }, [branchMin, branchMax]);
 
+  // The full uniform set shared by every material (points + sheet fill + wire),
+  // so useUniformSync / the animation loop / useViewControls drive them all
+  // uniformly. Each material gets its own fresh objects (no aliasing).
+  const makeUniforms = (b: number) => ({
+    time: { value: 0 },
+    opacity: { value: state.opacity },
+    functionType: { value: functionIndex },
+    exponentP: { value: expP },
+    exponentQ: { value: expQ === 0 ? 1 : expQ },
+    uQuadA: { value: new THREE.Vector2(quadA[0], quadA[1]) },
+    uQuadB: { value: new THREE.Vector2(quadB[0], quadB[1]) },
+    uQuadC: { value: new THREE.Vector2(quadC[0], quadC[1]) },
+    globalSize: { value: state.size },
+    intensity: { value: state.intensity },
+    shimmerAmp: { value: state.shimmer },
+    jitterAmp: { value: state.jitter },
+    uJitterMode: { value: state.jitterMode },
+    hueShift: { value: state.hueShift },
+    saturation: { value: state.saturation },
+    realView: { value: state.realViewRef.current ? 1 : 0 },
+    shapeType: { value: state.shapeIndex },
+    tex: { value: state.texturesRef.current[state.textureIndex] ?? new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) },
+    textureIndex: { value: state.textureIndex },
+    uColourStyle: { value: state.colourStyle },
+    uColourBy: { value: state.colourBy },
+    uColourQty: { value: state.colourQuantity },
+    uBrightnessQty: { value: state.brightnessQuantity },
+    uInCoord: { value: state.inputCoord },
+    uOutCoord: { value: state.outputCoord },
+    uRotL: { value: { w: 1, v: new THREE.Vector3() } },
+    uRotR: { value: { w: 1, v: new THREE.Vector3() } },
+    uProjMode: { value: state.projRef.current },
+    uProjTarget: { value: state.projRef.current },
+    uProjAlpha: { value: 0 },
+    branchIndex: { value: branchMin + b },
+  });
+
   function createBranchMaterial(b: number) {
-    return new THREE.ShaderMaterial({
-      uniforms: {
-        time: { value: 0 },
-        opacity: { value: state.opacity },
-        functionType: { value: functionIndex },
-        exponentP: { value: expP },
-        exponentQ: { value: expQ === 0 ? 1 : expQ },
-        uQuadA: { value: new THREE.Vector2(quadA[0], quadA[1]) },
-        uQuadB: { value: new THREE.Vector2(quadB[0], quadB[1]) },
-        uQuadC: { value: new THREE.Vector2(quadC[0], quadC[1]) },
-        globalSize: { value: state.size },
-        intensity: { value: state.intensity },
-        shimmerAmp: { value: state.shimmer },
-        jitterAmp: { value: state.jitter },
-        uJitterMode: { value: state.jitterMode },
-        hueShift: { value: state.hueShift },
-        saturation: { value: state.saturation },
-        realView: { value: state.realViewRef.current ? 1 : 0 },
-        shapeType: { value: state.shapeIndex },
-        tex: { value: state.texturesRef.current[state.textureIndex] ?? new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) },
-        textureIndex: { value: state.textureIndex },
-        uColourStyle: { value: state.colourStyle },
-        uColourBy: { value: state.colourBy },
-        uColourQty: { value: state.colourQuantity },
-        uBrightnessQty: { value: state.brightnessQuantity },
-        uInCoord: { value: state.inputCoord },
-        uOutCoord: { value: state.outputCoord },
-        uRotL: { value: { w: 1, v: new THREE.Vector3() } },
-        uRotR: { value: { w: 1, v: new THREE.Vector3() } },
-        uProjMode: { value: state.projRef.current },
-        uProjTarget: { value: state.projRef.current },
-        uProjAlpha: { value: 0 },
-        branchIndex: { value: branchMin + b },
-      },
+    const m = new THREE.ShaderMaterial({
+      uniforms: makeUniforms(b),
       vertexShader,
       fragmentShader,
       transparent: true,
@@ -185,22 +198,118 @@ export default function ComplexParticles({
       blending: THREE.AdditiveBlending,
       vertexColors: true,
     });
+    m.userData.branch = b;
+    return m;
   }
 
-  useEffect(() => {
-    if (!sceneRef.current || !state.geometryRef.current) return;
-    pointsRef.current.forEach(pts => sceneRef.current!.remove(pts));
+  // The sheet uses true alpha compositing (NormalBlending), not the points'
+  // additive glow — overlapping translucent triangles must read as a layered
+  // surface, not blow out to white. This is fixed regardless of background, so
+  // the objectMode effect leaves sheet materials' blending alone (userData.sheet).
+  function createSheetFillMaterial(b: number) {
+    const m = new THREE.ShaderMaterial({
+      uniforms: { ...makeUniforms(b), uShade: { value: state.sheetShade }, uWire: { value: 0 } },
+      vertexShader: sheetVertexShader,
+      fragmentShader: sheetFragmentShader,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.NormalBlending,
+      vertexColors: true,
+    });
+    m.userData.branch = b;
+    m.userData.sheet = true;
+    return m;
+  }
+
+  function createSheetWireMaterial(b: number) {
+    const m = new THREE.ShaderMaterial({
+      uniforms: { ...makeUniforms(b), uShade: { value: state.sheetShade }, uWire: { value: 1 } },
+      vertexShader: sheetVertexShader,
+      fragmentShader: sheetFragmentShader,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.NormalBlending,
+      vertexColors: true,
+      wireframe: true,
+    });
+    m.userData.branch = b;
+    m.userData.sheet = true;
+    m.userData.sheetWire = true;
+    return m;
+  }
+
+  // Visibility follows the render mode: Points shows the cloud; Sheet shows the
+  // filled surface and/or the wireframe overlay.
+  const applyRenderVisibility = () => {
+    const isSheet = state.renderMode === 'Sheet';
+    pointsRef.current.forEach(o => { o.visible = !isSheet; });
+    fillMeshRef.current.forEach(o => { o.visible = isSheet && state.sheetFill; });
+    wireMeshRef.current.forEach(o => { o.visible = isSheet && state.sheetWire; });
+  };
+
+  // (Re)create the per-branch objects: a point cloud, a filled sheet, and a
+  // wireframe sheet for each Riemann sheet. Used by both the initial mount and
+  // the branch-range effect.
+  const rebuildBranchObjects = (scene: THREE.Scene) => {
+    const pointsGeom = state.geometryRef.current;
+    const sheetGeom = sheetGeomRef.current;
+    if (!pointsGeom || !sheetGeom) return;
+    pointsRef.current.forEach(o => scene.remove(o));
+    fillMeshRef.current.forEach(o => scene.remove(o));
+    wireMeshRef.current.forEach(o => scene.remove(o));
     state.materialsRef.current.forEach(m => m.dispose());
     state.materialsRef.current = [];
     pointsRef.current = [];
+    fillMeshRef.current = [];
+    wireMeshRef.current = [];
     for (let b = 0; b < branchCount; b++) {
-      const material = createBranchMaterial(b);
-      state.materialsRef.current.push(material);
-      const pts = new THREE.Points(state.geometryRef.current, material);
-      sceneRef.current.add(pts);
+      const pm = createBranchMaterial(b);
+      const fm = createSheetFillMaterial(b);
+      const wm = createSheetWireMaterial(b);
+      const pts = new THREE.Points(pointsGeom, pm);
+      const fill = new THREE.Mesh(sheetGeom, fm);
+      const wire = new THREE.Mesh(sheetGeom, wm);
+      state.materialsRef.current.push(pm, fm, wm);
       pointsRef.current.push(pts);
+      fillMeshRef.current.push(fill);
+      wireMeshRef.current.push(wire);
+      scene.add(pts, fill, wire);
     }
+    applyRenderVisibility();
+  };
+
+  useEffect(() => {
+    if (!sceneRef.current || !state.geometryRef.current || !sheetGeomRef.current) return;
+    rebuildBranchObjects(sceneRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branchCount]);
+
+  // Toggle which render mode's objects are visible without rebuilding them.
+  useEffect(() => {
+    applyRenderVisibility();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.renderMode, state.sheetFill, state.sheetWire]);
+
+  // Rebuild the shared sheet grid when its resolution or the domain box changes.
+  useEffect(() => {
+    const geom = sheetGeomRef.current;
+    if (!geom) return;
+    const [bxMin, bxMax, byMin, byMax] = effectiveBounds();
+    rebuildSheetGeometry(geom, state.sheetResolution, bxMin, bxMax, byMin, byMax);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    state.sheetResolution, state.extentX, state.extentY, state.axisScale,
+    state.boundsLock, state.xMin, state.xMax, state.yMin, state.yMax,
+  ]);
+
+  // Push the faceted-shading strength to the sheet materials (points lack uShade).
+  useEffect(() => {
+    state.materialsRef.current.forEach(m => {
+      if (m.uniforms.uShade) m.uniforms.uShade.value = state.sheetShade;
+    });
+  }, [state.sheetShade]);
 
   // Show the sphere scaffold in the Hopf view (or once the Torus → Hopf collapse
   // is past halfway) and the donut scaffold in the Torus view; hide both in the
@@ -252,16 +361,9 @@ export default function ComplexParticles({
       const [bxMin, bxMax, byMin, byMax] = effectiveBounds();
       const geometry = createParticleGeometry(state.particleCount, bxMin, bxMax, byMin, byMax, state.samplePattern);
       state.geometryRef.current = geometry;
+      sheetGeomRef.current = createSheetGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
 
-      state.materialsRef.current = [];
-      pointsRef.current = [];
-      for (let b = 0; b < branchCount; b++) {
-        const material = createBranchMaterial(b);
-        state.materialsRef.current.push(material);
-        const pts = new THREE.Points(geometry, material);
-        scene.add(pts);
-        pointsRef.current.push(pts);
-      }
+      rebuildBranchObjects(scene);
 
       const axes = createAxes(scene, state.hueShift, state.axisWidth);
       state.xAxisRef.current = axes.x;

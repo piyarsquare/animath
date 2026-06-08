@@ -1,4 +1,8 @@
-export const vertexShader = `
+// Shared vertex-shader library: the 4D quaternion rotation, every complex
+// function, the projection modes, and the domain-colouring (calcColour /
+// chartCoord). Both the point-cloud and the sheet vertex shaders are built from
+// this common block + their own main(), so the two render modes stay in lockstep.
+const vsCommon = `
 // DOMAIN–COLORING VERTEX SHADER
 struct quat { float w; vec3 v; };
 
@@ -277,6 +281,11 @@ vec2 chartCoord(vec2 c, int mode){
   float a = atan(c.y, c.x);
   return vec2(mode==2 ? log(r+1e-6) : r, a);
 }
+`;
+
+// Point-cloud vertex shader: shared library + a main that places one gl_Point
+// per sampled vertex.
+export const vertexShader = vsCommon + `
 // Jitter has two modes (uJitterMode). 0 = Scatter the sampling: perturb the
 // domain point z by the 4D seed's xy, then evaluate f there, so the particle
 // stays exactly on the graph surface of f. 1 = Fuzz the cloud: evaluate f at the
@@ -318,6 +327,57 @@ void main(){
     vec4 samp = texture2D(tex, gl_PointCoord);
     col *= samp.rgb;
     alpha *= samp.a;
+  }
+  gl_FragColor = vec4(col, alpha);
+}`;
+
+// Sheet vertex shader: identical surface math to the point cloud (shared vsCommon
+// library) but stitches the regular grid into a continuous surface. It carries
+// the view-space position to the fragment shader so the fill can be shaded from
+// screen-space derivatives. gl_PointSize is omitted (meaningless for triangles).
+export const sheetVertexShader = vsCommon + `
+varying vec3 vViewPos;
+void main(){
+  vec2 z = vec2(position.x, position.z);
+  vec4 jit = (seed*2. - 1.) * jitterAmp;          // seed is 0 → uniform shift
+  if(uJitterMode==0) z += jit.xy;
+  vec2 f = applyComplex(z, functionType);
+  if(length(f) > 1e3) f = normalize(f)*1e3;
+  vec2 zPlot = chartCoord(z, uInCoord);
+  vec2 fPlot = chartCoord(f, uOutCoord);
+  vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);
+  if(uJitterMode==1) p4 += jit;
+  p4 = quatRotate4D(p4, uRotL, uRotR);
+  vec3 Pold = project(p4, uProjMode);
+  vec3 Pnew = project(p4, uProjTarget);
+  vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;
+  vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
+  vViewPos = mv.xyz;
+  gl_Position = projectionMatrix * mv;
+  vColor = calcColour(z, f);
+}`;
+
+// Sheet fragment shader: a flat translucent fill (uWire==0), shaded by the
+// facing ratio of the face normal recovered from screen-space derivatives of the
+// view-space position — so the otherwise-flat translucent surface reads as a
+// solid sheet. When uWire==1 the same mesh is drawn as a brighter, more opaque
+// wireframe overlay (no shading), so the grid lines stay legible over the fill.
+export const sheetFragmentShader = `
+uniform float opacity;
+uniform float uShade;
+uniform int   uWire;
+varying vec3 vColor;
+varying vec3 vViewPos;
+void main(){
+  vec3 col = vColor;
+  float alpha = opacity;
+  if(uWire==1){
+    alpha = clamp(opacity*1.4 + 0.25, 0.0, 1.0);
+  } else {
+    vec3 n = normalize(cross(dFdx(vViewPos), dFdy(vViewPos)));
+    float facing = abs(n.z);                       // 1 face-on, 0 edge-on
+    float shade = mix(1.0, 0.45 + 0.55*facing, clamp(uShade, 0.0, 1.0));
+    col *= shade;
   }
   gl_FragColor = vec4(col, alpha);
 }`;

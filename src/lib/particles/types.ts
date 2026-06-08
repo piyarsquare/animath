@@ -87,6 +87,12 @@ export const viewTypes = [
 export const motionModes = ['Quaternion', 'Fixed'] as const;
 export const dropModes = ['None', 'DropX', 'DropY', 'DropU', 'DropV'] as const;
 
+/** How the sampled surface is drawn: a cloud of point particles, or a single
+ *  continuous translucent sheet (a wireframe/filled triangle mesh over a regular
+ *  grid). Sheet mode ignores the sampling pattern and uses its own resolution. */
+export const renderModes = ['Points', 'Sheet'] as const;
+export type RenderMode = (typeof renderModes)[number];
+
 export const AXIS_COLORS = {
   x: 0,
   y: 0.25,

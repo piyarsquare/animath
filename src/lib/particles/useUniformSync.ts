@@ -98,6 +98,9 @@ export function useUniformSync(state: ParticleState): void {
       rendererRef.current.setClearColor(state.objectMode ? 0xffffff : 0x000000);
     }
     materialsRef.current.forEach(m => {
+      // Sheet materials keep their own NormalBlending + no depth-write (true
+      // translucency); only the point cloud follows the object/light-bg toggle.
+      if (m.userData.sheet) return;
       m.blending = state.objectMode ? THREE.NormalBlending : THREE.AdditiveBlending;
       m.depthWrite = state.objectMode;
     });

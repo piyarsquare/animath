@@ -12,7 +12,7 @@ import { clearPersistedState } from '../lib/usePersistentState';
 import {
   ColorStyle, ColourBy, ColourQuantity, CoordMode, coordModeNames,
   SamplePattern, samplePatternNames, JitterMode, AXIS_COLORS,
-  shapeNames, textureNames, viewTypes, motionModes,
+  shapeNames, textureNames, viewTypes, motionModes, renderModes,
   useGestureRotation,
 } from '../lib/particles';
 import type { ParticleState, ViewAxis } from '../lib/particles';
@@ -419,6 +419,29 @@ export default function ParticleViewerShell({
             value={state.textureIndex} onChange={state.setTextureIndex} />
           <Checkbox label="Light background"
             checked={state.objectMode} onChange={state.setObjectMode} />
+        </Section>
+
+        <Section title="Surface" icon="▥">
+          <Pills
+            label="Render"
+            options={renderModes.map(m => ({ value: m, label: m }))}
+            value={state.renderMode}
+            onChange={state.setRenderMode}
+          />
+          {state.renderMode === 'Sheet' && (
+            <>
+              <Checkbox label="Filled sheet"
+                checked={state.sheetFill} onChange={state.setSheetFill} />
+              <Checkbox label="Wireframe"
+                checked={state.sheetWire} onChange={state.setSheetWire} />
+              <Slider label="Resolution" value={state.sheetResolution}
+                min={8} max={200} step={1}
+                onChange={state.setSheetResolution} format={v => `${v}²`} />
+              <Slider label="Shading" value={state.sheetShade}
+                min={0} max={1} step={0.01}
+                onChange={state.setSheetShade} format={v => v.toFixed(2)} />
+            </>
+          )}
         </Section>
 
         <Section title="Motion" icon="〜">

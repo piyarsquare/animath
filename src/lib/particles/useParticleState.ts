@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { ProjectionMode } from '../viewpoint';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import { usePersistentState } from '../usePersistentState';
-import { ViewPoint, ColorStyle, ColourBy, ColourQuantity, CoordMode, SamplePattern, JitterMode, Axis, motionModes, dropModes } from './types';
+import { ViewPoint, ColorStyle, ColourBy, ColourQuantity, CoordMode, SamplePattern, JitterMode, Axis, motionModes, dropModes, RenderMode } from './types';
 
 export interface UseParticleStateOptions {
   count?: number;
@@ -70,6 +70,19 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [adaptive, setAdaptive] = usePersistentState(pk('adaptive'), COMPLEX_PARTICLES_DEFAULTS.initial.adaptive);
   /** Exponent biasing strength for adaptive sampling. */
   const [adaptiveAlpha, setAdaptiveAlpha] = usePersistentState(pk('adaptiveAlpha'), COMPLEX_PARTICLES_DEFAULTS.initial.adaptiveAlpha);
+  // ---- Surface (sheet) rendering ----
+  // Draw the sampled surface as a point cloud ('Points', default) or as a single
+  // continuous translucent sheet ('Sheet') built from a regular triangle grid.
+  const [renderMode, setRenderMode] = usePersistentState<RenderMode>(pk('renderMode'), 'Points');
+  // In Sheet mode: show the translucent filled surface and/or the wireframe grid.
+  const [sheetFill, setSheetFill] = usePersistentState(pk('sheetFill'), true);
+  const [sheetWire, setSheetWire] = usePersistentState(pk('sheetWire'), true);
+  // Grid resolution (cells per side) of the sheet mesh — independent of the
+  // particle count, since a sheet needs regular grid topology.
+  const [sheetResolution, setSheetResolution] = usePersistentState(pk('sheetResolution'), 80);
+  // Faceted shading strength on the filled sheet (0 = flat colour, 1 = full
+  // facing-ratio shading) — gives the translucent surface depth cues.
+  const [sheetShade, setSheetShade] = usePersistentState(pk('sheetShade'), 0.6);
   const [objectMode, setObjectMode] = usePersistentState(pk('objectMode'), false);
   const [shapeIndex, setShapeIndex] = usePersistentState(pk('shapeIndex'), 1);
   const [textureIndex, setTextureIndex] = usePersistentState(pk('textureIndex'), 0);
@@ -195,6 +208,11 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     samplePattern, setSamplePattern,
     adaptive, setAdaptive,
     adaptiveAlpha, setAdaptiveAlpha,
+    renderMode, setRenderMode,
+    sheetFill, setSheetFill,
+    sheetWire, setSheetWire,
+    sheetResolution, setSheetResolution,
+    sheetShade, setSheetShade,
     objectMode, setObjectMode,
     shapeIndex, setShapeIndex,
     textureIndex, setTextureIndex,
