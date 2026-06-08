@@ -21,6 +21,16 @@ const NS = 'stable-matching';
  *    (= current tentative holds) lights up; the active proposal rings; blocking
  *    pairs (if any, at the end) flag red. This is the algorithm, foregrounded. ── */
 const TRAIL = 6; // how many recent rounds of failed entries to keep in the fading trail
+
+// shared BuRd diverging scale (blue = best rank → white → red = worst)
+const BURD = [[33, 102, 172], [103, 169, 207], [247, 247, 247], [239, 138, 98], [178, 24, 43]];
+function burd(u: number): string {
+  const x = Math.max(0, Math.min(1, u));
+  const seg = x * (BURD.length - 1), i = Math.min(BURD.length - 2, Math.floor(seg)), f = seg - i;
+  const c = BURD[i].map((v, k) => Math.round(v + (BURD[i + 1][k] - v) * f));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+const rankBurd = (r: number, maxRank: number) => burd(maxRank > 1 ? (r - 1) / (maxRank - 1) : 0);
 type Marker = 'active' | 'reject' | 'stolen';
 function Matrix({ inst, matching, rows, cols, markers, blocking, size, labels, view, gap, trail }: {
   inst: Instance; matching: Matching; rows: number[]; cols: number[];
@@ -29,14 +39,7 @@ function Matrix({ inst, matching, rows, cols, markers, blocking, size, labels, v
 }) {
   const n = inst.n;
   const showNums = size >= 30;
-  const BURD = [[33, 102, 172], [103, 169, 207], [247, 247, 247], [239, 138, 98], [178, 24, 43]];
-  const burd = (u: number) => {
-    const x = Math.max(0, Math.min(1, u));
-    const seg = x * (BURD.length - 1), i = Math.min(BURD.length - 2, Math.floor(seg)), f = seg - i;
-    const c = BURD[i].map((v, k) => Math.round(v + (BURD[i + 1][k] - v) * f));
-    return `rgb(${c[0]},${c[1]},${c[2]})`;
-  };
-  const rankColor = (r: number) => burd(n > 1 ? (r - 1) / (n - 1) : 0);
+  const rankColor = (r: number) => rankBurd(r, n);
   const diffColor = (d: number) => burd(((n > 1 ? Math.max(-1, Math.min(1, d / (n - 1))) : 0) + 1) / 2);
   return (
     <div className={`sm2-matrix${gap === 0 ? ' tight' : ''}`} style={{ gap: `${gap}px`, gridTemplateColumns: `${labels ? '1.8em ' : ''}repeat(${cols.length}, ${size}px)` }}>
@@ -69,25 +72,31 @@ function Matrix({ inst, matching, rows, cols, markers, blocking, size, labels, v
   );
 }
 
-type Cell = { x: number; y: number; v: number };
-function Heatmap({ data, res, maxV, hue, title, caption }: {
+type Cell = { x: number; y: number; v: number; a?: number; b?: number };
+function Heatmap({ data, res, maxV, hue, title, caption, mode, maxRank }: {
   data: Cell[] | null; res: number; maxV: number; hue: number; title: string; caption: string;
+  mode: 'single' | 'lego'; maxRank: number;
 }) {
   const [hover, setHover] = useState<Cell | null>(null);
   if (!data || !data.length) return <div className="sm2-heatmap-empty"><FlaskConical size={28} /><p>Run the Lab to see the surface</p></div>;
   const cs = 100 / res;
-  const color = (v: number) => `hsl(${hue}, 70%, ${92 - Math.max(0, Math.min(1, v / (maxV || 1))) * 57}%)`;
+  const single = (v: number) => `hsl(${hue}, 70%, ${92 - Math.max(0, Math.min(1, v / (maxV || 1))) * 57}%)`;
   return (
     <div className="sm2-heatmap">
       <h4>{title}</h4>
       <div className="sm2-heatmap-grid" onMouseLeave={() => setHover(null)}>
         {data.map((c, i) => (
-          <div key={i} className="sm2-cell" style={{ left: `${c.x * 100}%`, bottom: `${c.y * 100}%`, width: `${cs}%`, height: `${cs}%`, background: color(c.v) }} onMouseEnter={() => setHover(c)} />
+          <div key={i} className="sm2-cell" style={{ left: `${c.x * 100}%`, bottom: `${c.y * 100}%`, width: `${cs}%`, height: `${cs}%`, background: mode === 'lego' ? rankBurd(c.a ?? 0, maxRank) : single(c.v) }} onMouseEnter={() => setHover(c)}>
+            {mode === 'lego' && <span className="sm2-disc" style={{ background: rankBurd(c.b ?? 0, maxRank) }} />}
+          </div>
         ))}
-        {hover && <div className="sm2-tip">consensus A {(hover.x * 100).toFixed(0)}% · B {(hover.y * 100).toFixed(0)}%<br />{caption}: <strong>{hover.v.toFixed(2)}</strong></div>}
+        {hover && <div className="sm2-tip">consensus A {(hover.x * 100).toFixed(0)}% · B {(hover.y * 100).toFixed(0)}%<br />
+          {mode === 'lego' ? `A avg #${(hover.a ?? 0).toFixed(2)} · B avg #${(hover.b ?? 0).toFixed(2)}` : <>{caption}: <strong>{hover.v.toFixed(2)}</strong></>}</div>}
       </div>
       <div className="sm2-heatmap-x">consensus A →</div>
-      <div className="sm2-heatmap-legend"><span>0</span><span className="bar" style={{ background: `linear-gradient(90deg, hsl(${hue},70%,92%), hsl(${hue},70%,35%))` }} /><span>{maxV.toFixed(1)}</span></div>
+      {mode === 'lego'
+        ? <p className="sm2-legend"><span className="k sq">square = A avg rank</span><span className="k disc">circle = B avg rank</span><span className="k scale">blue #1 → red #{maxRank}</span></p>
+        : <div className="sm2-heatmap-legend"><span>0</span><span className="bar" style={{ background: `linear-gradient(90deg, hsl(${hue},70%,92%), hsl(${hue},70%,35%))` }} /><span>{maxV.toFixed(1)}</span></div>}
     </div>
   );
 }
@@ -296,7 +305,7 @@ export default function StableMatching() {
   const [labRes, setLabRes] = usePersistentState(`${NS}:labRes`, 12);
   const [labTrials, setLabTrials] = usePersistentState(`${NS}:labTrials`, 12);
   const [labSchedule, setLabSchedule] = usePersistentState<Schedule>(`${NS}:labSchedule`, 'alt');
-  const [labMetric, setLabMetric] = usePersistentState<'unstable' | 'blocking' | 'total' | 'aAvg' | 'bAvg'>(`${NS}:labMetric`, 'unstable');
+  const [labMetric, setLabMetric] = usePersistentState<'lego' | 'unstable' | 'blocking'>(`${NS}:labMetric`, 'lego');
   const [labData, setLabData] = useState<Cell[] | null>(null);
   const [labMax, setLabMax] = useState(1);
   const [labRunning, setLabRunning] = useState(false);
@@ -306,31 +315,37 @@ export default function StableMatching() {
   const runLab = useCallback(() => {
     labCancel.current = false; setLabRunning(true); setLabProgress(0); setLabData([]);
     const res = Math.max(2, Math.min(24, labRes)); const cells = res * res; const out: Cell[] = []; let max = 0, k = 0;
-    const metricOf = (cA: number, cB: number, s: number) => {
+    const metricOf = (cA: number, cB: number, s: number): { v: number; a?: number; b?: number } => {
+      if (labMetric === 'lego') {
+        let sa = 0, sb = 0;
+        for (let t = 0; t < labTrials; t++) {
+          const ins = generateInstance({ n: labN, consensusA: cA, consensusB: cB, seed: s + t * 7919 + 1 });
+          const { matching } = runRounds(ins, labSchedule, 50, s + t * 104729 + 3);
+          const st = stats(ins, matching); sa += st.aAvg; sb += st.bAvg;
+        }
+        return { v: 0, a: sa / labTrials, b: sb / labTrials };
+      }
       let sum = 0;
       for (let t = 0; t < labTrials; t++) {
         const ins = generateInstance({ n: labN, consensusA: cA, consensusB: cB, seed: s + t * 7919 + 1 });
         const { matching } = runRounds(ins, labSchedule, 50, s + t * 104729 + 3);
-        if (labMetric === 'unstable') sum += blockingPairs(ins, matching) > 0 ? 100 : 0;
-        else if (labMetric === 'blocking') sum += blockingPairs(ins, matching);
-        else { const st = stats(ins, matching); sum += labMetric === 'aAvg' ? st.aAvg : labMetric === 'bAvg' ? st.bAvg : (st.aAvg + st.bAvg) / 2; }
+        sum += labMetric === 'unstable' ? (blockingPairs(ins, matching) > 0 ? 100 : 0) : blockingPairs(ins, matching);
       }
-      return sum / labTrials;
+      return { v: sum / labTrials };
     };
     const batch = () => {
       if (labCancel.current) { setLabRunning(false); return; }
       const end = Math.min(cells, k + 20);
-      for (; k < end; k++) { const xi = k % res, yi = Math.floor(k / res); const v = metricOf(xi / (res - 1), yi / (res - 1), 1000 + k); max = Math.max(max, v); out.push({ x: xi / (res - 1) * (1 - 1 / res), y: yi / (res - 1) * (1 - 1 / res), v }); }
+      for (; k < end; k++) { const xi = k % res, yi = Math.floor(k / res); const m = metricOf(xi / (res - 1), yi / (res - 1), 1000 + k); max = Math.max(max, m.v); out.push({ x: xi / (res - 1) * (1 - 1 / res), y: yi / (res - 1) * (1 - 1 / res), v: m.v, a: m.a, b: m.b }); }
       setLabProgress(Math.round((k / cells) * 100)); setLabData([...out]); setLabMax(labMetric === 'unstable' ? 100 : max);
       if (k < cells) window.setTimeout(batch, 0); else setLabRunning(false);
     };
     batch();
   }, [labN, labRes, labTrials, labMetric, labSchedule]);
   useEffect(() => () => { labCancel.current = true; }, []);
-  const labTitle = labMetric === 'unstable' ? `Unstable runs % — ${labSchedule}` : labMetric === 'blocking' ? `Avg blocking pairs — ${labSchedule}`
-    : labMetric === 'total' ? `Combined avg rank (welfare) — ${labSchedule}` : labMetric === 'aAvg' ? `A avg rank — ${labSchedule}` : `B avg rank — ${labSchedule}`;
-  const labHue = labMetric === 'unstable' || labMetric === 'blocking' ? 280 : labMetric === 'total' ? 160 : labMetric === 'aAvg' ? 210 : 330;
-  const labCaption = labMetric === 'unstable' ? 'unstable %' : labMetric === 'blocking' ? 'pairs' : 'rank';
+  const labTitle = labMetric === 'lego' ? `A & B avg rank — ${labSchedule}` : labMetric === 'unstable' ? `Unstable runs % — ${labSchedule}` : `Avg blocking pairs — ${labSchedule}`;
+  const labHue = 280;
+  const labCaption = labMetric === 'unstable' ? 'unstable %' : 'pairs';
 
   const settings = (
     <ShellSettings>
@@ -368,7 +383,7 @@ export default function StableMatching() {
       ) : (
         <div className="sm2-actions">
           <Pills label="Schedule" value={labSchedule} onChange={setLabSchedule} options={[{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'alt', label: 'Alt' }, { value: 'random', label: 'Rnd' }]} />
-          <Pills label="Surface" value={labMetric} onChange={setLabMetric} options={[{ value: 'unstable', label: 'Unstable %' }, { value: 'blocking', label: 'Blocking' }, { value: 'total', label: 'Welfare' }, { value: 'aAvg', label: 'A rank' }, { value: 'bAvg', label: 'B rank' }]} />
+          <Pills label="Surface" value={labMetric} onChange={setLabMetric} options={[{ value: 'lego', label: 'Ranks (A·B)' }, { value: 'unstable', label: 'Unstable %' }, { value: 'blocking', label: 'Blocking' }]} />
           <NumberInput label="Population" value={labN} onChange={setLabN} min={6} max={80} integer />
           <NumberInput label="Resolution" value={labRes} onChange={setLabRes} min={4} max={24} integer />
           <NumberInput label="Trials / cell" value={labTrials} onChange={setLabTrials} min={1} max={60} integer />
@@ -442,10 +457,12 @@ export default function StableMatching() {
         </div>
       ) : (
         <div className="sm2-lab">
-          <Heatmap data={labData} res={Math.max(2, Math.min(24, labRes))} maxV={labMax} hue={labHue} title={labTitle} caption={labCaption} />
-          <p className="sm2-lab-note">Each cell sweeps consensus A × B and averages <strong>{labTrials}</strong> independent instances run with the <strong>{labSchedule}</strong> schedule — signal, not single-draw noise. {labMetric === 'unstable' || labMetric === 'blocking'
-            ? 'One-sided (A or B) is stable everywhere (a flat 0); the synchronous Alternate / Random schedules leave blocking pairs across most of the surface — synchronous two-sided deferred acceptance is not guaranteed stable.'
-            : 'Welfare (total rank) is lowest when consensus is low (people want different partners); as both groups converge on one shared ranking, everyone chases the same few and average rank climbs.'}</p>
+          <Heatmap data={labData} res={Math.max(2, Math.min(24, labRes))} maxV={labMax} hue={labHue} title={labTitle} caption={labCaption} mode={labMetric === 'lego' ? 'lego' : 'single'} maxRank={labN} />
+          <p className="sm2-lab-note">Each cell sweeps consensus A × B and averages <strong>{labTrials}</strong> independent instances run with the <strong>{labSchedule}</strong> schedule — signal, not single-draw noise. {labMetric === 'lego'
+            ? 'Lego cells: the square is A’s average rank, the circle B’s, on the same blue→red scale (blue = #1). Low consensus is blue (people want different partners, so everyone does well); as both groups converge on one ranking the cells redden — most chase the same few.'
+            : labMetric === 'unstable'
+              ? 'One-sided (A or B) is stable everywhere (a flat 0); the synchronous Alternate / Random schedules leave blocking pairs across most of the surface — synchronous two-sided deferred acceptance is not guaranteed stable.'
+              : 'Average number of blocking pairs left at the end — zero for one-sided, positive across most of the plane for Alternate / Random.'}</p>
         </div>
       )}
     </div>
