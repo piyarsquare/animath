@@ -331,11 +331,10 @@ void main(){
   gl_FragColor = vec4(col, alpha);
 }`;
 
-// Sheet vertex shader: identical surface math to the point cloud (shared vsCommon
-// library) but stitches the regular grid into a continuous surface. It carries
-// the view-space position to the fragment shader so the fill can be shaded from
-// screen-space derivatives. gl_PointSize is omitted (meaningless for triangles).
-export const sheetVertexShader = vsCommon + `
+// Sheet WIREFRAME vertex shader: the shared surface math, one colour per grid
+// node (interpolated along the rectangle edges). Drawn as LineSegments of the
+// row/column edges only — no triangle diagonals. gl_PointSize is omitted.
+export const sheetWireVertexShader = vsCommon + `
 varying vec3 vViewPos;
 void main(){
   vec2 z = vec2(position.x, position.z);
@@ -355,6 +354,44 @@ void main(){
   vViewPos = mv.xyz;
   gl_Position = projectionMatrix * mv;
   vColor = calcColour(z, f);
+}`;
+
+// Sheet FILL vertex shader: same surface placement, but each rectangle gets a
+// single flat colour = the average of the domain-colouring at its four corners
+// (found from the cell's lower-left domain point `cellBase` plus `uCellSize`).
+// The geometry is non-indexed (6 verts per cell) so every vertex of a cell shares
+// that cell's `cellBase`, making the whole rectangle one colour.
+export const sheetFillVertexShader = vsCommon + `
+attribute vec2 cellBase;
+uniform vec2 uCellSize;
+varying vec3 vViewPos;
+vec3 cornerColour(vec2 zc){
+  vec2 fc = applyComplex(zc, functionType);
+  if(length(fc) > 1e3) fc = normalize(fc)*1e3;
+  return calcColour(zc, fc);
+}
+void main(){
+  vec2 z = vec2(position.x, position.z);
+  vec4 jit = (seed*2. - 1.) * jitterAmp;          // seed is 0 → uniform shift
+  if(uJitterMode==0) z += jit.xy;
+  vec2 f = applyComplex(z, functionType);
+  if(length(f) > 1e3) f = normalize(f)*1e3;
+  vec2 zPlot = chartCoord(z, uInCoord);
+  vec2 fPlot = chartCoord(f, uOutCoord);
+  vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);
+  if(uJitterMode==1) p4 += jit;
+  p4 = quatRotate4D(p4, uRotL, uRotR);
+  vec3 Pold = project(p4, uProjMode);
+  vec3 Pnew = project(p4, uProjTarget);
+  vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;
+  vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
+  vViewPos = mv.xyz;
+  gl_Position = projectionMatrix * mv;
+  vec3 c = cornerColour(cellBase)
+         + cornerColour(cellBase + vec2(uCellSize.x, 0.0))
+         + cornerColour(cellBase + vec2(0.0, uCellSize.y))
+         + cornerColour(cellBase + uCellSize);
+  vColor = c * 0.25;
 }`;
 
 // Sheet fragment shader: a flat translucent fill (uWire==0), shaded by the

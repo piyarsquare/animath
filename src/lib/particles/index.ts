@@ -6,7 +6,10 @@ export type { ViewAxis } from './useViewControls';
 export { useGestureRotation } from './useGestureRotation';
 export { createParticleGeometry, rebuildGeometryBuffers, redistributeAdaptive } from './createParticleGeometry';
 export type { AdaptiveOptions } from './createParticleGeometry';
-export { createSheetGeometry, rebuildSheetGeometry } from './createSheetGeometry';
+export {
+  createSheetGeometry, rebuildSheetGeometry,
+  createSheetWireGeometry, rebuildSheetWireGeometry, sheetCellSize,
+} from './createSheetGeometry';
 export { createAxes, AXIS_LENGTH } from './createAxes';
 export { createHopfScaffold } from './createHopfScaffold';
 export type { HopfScaffold } from './createHopfScaffold';

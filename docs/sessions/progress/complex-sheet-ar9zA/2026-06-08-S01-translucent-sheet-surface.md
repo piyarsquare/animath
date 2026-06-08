@@ -31,6 +31,35 @@ color/sampling/projection controls — the engine this new sheet view would buil
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟡 milestone · 16:45 — Quad sheet reworked + verified
+**Why:** implemented the user's model; build green and visually confirmed.
+
+Fill is now a **non-indexed per-quad** mesh whose new `sheetFillVertexShader`
+averages `calcColour` over each cell's four corners (`cellBase` attribute +
+`uCellSize` uniform) → one flat colour per rectangle. Wireframe is a
+**`THREE.LineSegments`** over a dedicated line geometry (`createSheetWireGeometry`,
+row/column edges only). Verified headless on `z²` in DropV: clean rectangular
+cells, wire exactly on the fill, flat tiles (the origin's muted tiles correctly
+flag the zero, where averaging the wrapping phase desaturates). Points unregressed.
+
+### 🟣 decision · 16:30 — Quad faces + rectangular wireframe + flat averaged color
+**Why:** user feedback. Two issues: (1) the wireframe shows triangle diagonals
+(I triangulated each cell), and (2) the sheet everts under Perspective.
+
+Diagnosed the eversion: the **4D Perspective** projection divides by `(3 + Im f)`;
+for `z²`/`eᶻ`, `Im f` crosses `−3`, so the surface shoots to infinity and folds
+back. The mesh is correct — in a linear **Drop-axis** projection the same sheet is
+clean and the wire sits exactly on the cells (verified headless). User chose to
+**keep the 4D graph** (same object as the particles) and live with the eversion
+(use Drop-axis/Stereo to avoid it), but wants:
+- **Rectangular faces** (no triangle diagonals) — switch the wireframe from a
+  triangulated `wireframe:true` mesh to a `LineSegments` of just the row/column
+  grid edges.
+- **Flat per-rectangle color = average of the 4 corner colors** — switch the fill
+  to a non-indexed per-quad mesh; each vertex carries its quad's `cellBase`, and
+  the fill vertex shader averages `calcColour` over the 4 corners (`cellBase` +
+  `uCellSize`) so each rectangle is one flat color.
+
 ### 🟡 milestone · 15:55 — Sheet render mode shipped, build green
 **Why:** feature complete and verified headlessly.
 

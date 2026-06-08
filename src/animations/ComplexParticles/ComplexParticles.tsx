@@ -5,12 +5,13 @@ import { Select, NumberInput } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
-import { vertexShader, fragmentShader, sheetVertexShader, sheetFragmentShader } from './shaders';
+import { vertexShader, fragmentShader, sheetFillVertexShader, sheetWireVertexShader, sheetFragmentShader } from './shaders';
 import { loadParticleTextures } from '../../lib/textures';
 import {
   useParticleState, useUniformSync, useViewControls,
   createParticleGeometry, rebuildGeometryBuffers, redistributeAdaptive,
   createSheetGeometry, rebuildSheetGeometry,
+  createSheetWireGeometry, rebuildSheetWireGeometry, sheetCellSize,
   createAxes, createHopfScaffold, createHopfFibers, startAnimationLoop,
 } from '../../lib/particles';
 import { usePersistentState } from '../../lib/usePersistentState';
@@ -84,11 +85,14 @@ export default function ComplexParticles({
 
   const sceneRef = useRef<THREE.Scene>();
   const pointsRef = useRef<THREE.Points[]>([]);
-  // Sheet (surface) render mode: one shared regular-grid geometry, drawn per
-  // branch as a translucent filled mesh + a wireframe overlay.
+  // Sheet (surface) render mode: a non-indexed per-quad fill geometry (flat
+  // averaged colour per rectangle) + a separate line geometry for the
+  // rectangular wireframe (row/column edges, no diagonals). Both are drawn per
+  // Riemann sheet.
   const sheetGeomRef = useRef<THREE.BufferGeometry>();
+  const sheetWireGeomRef = useRef<THREE.BufferGeometry>();
   const fillMeshRef = useRef<THREE.Mesh[]>([]);
-  const wireMeshRef = useRef<THREE.Mesh[]>([]);
+  const wireMeshRef = useRef<THREE.LineSegments[]>([]);
   const scaffoldRef = useRef<HopfScaffold>();
   const fibersRef = useRef<HopfFibers>();
 
@@ -206,10 +210,23 @@ export default function ComplexParticles({
   // additive glow — overlapping translucent triangles must read as a layered
   // surface, not blow out to white. This is fixed regardless of background, so
   // the objectMode effect leaves sheet materials' blending alone (userData.sheet).
+  // Current cell spacing (domain units per cell) for the fill shader's corner
+  // averaging — must track the domain box and sheet resolution.
+  const currentCellSize = (): [number, number] => {
+    const [bx0, bx1, by0, by1] = effectiveBounds();
+    return sheetCellSize(state.sheetResolution, bx0, bx1, by0, by1);
+  };
+
   function createSheetFillMaterial(b: number) {
+    const [csx, csy] = currentCellSize();
     const m = new THREE.ShaderMaterial({
-      uniforms: { ...makeUniforms(b), uShade: { value: state.sheetShade }, uWire: { value: 0 } },
-      vertexShader: sheetVertexShader,
+      uniforms: {
+        ...makeUniforms(b),
+        uShade: { value: state.sheetShade },
+        uWire: { value: 0 },
+        uCellSize: { value: new THREE.Vector2(csx, csy) },
+      },
+      vertexShader: sheetFillVertexShader,
       fragmentShader: sheetFragmentShader,
       transparent: true,
       depthWrite: false,
@@ -225,14 +242,12 @@ export default function ComplexParticles({
   function createSheetWireMaterial(b: number) {
     const m = new THREE.ShaderMaterial({
       uniforms: { ...makeUniforms(b), uShade: { value: state.sheetShade }, uWire: { value: 1 } },
-      vertexShader: sheetVertexShader,
+      vertexShader: sheetWireVertexShader,
       fragmentShader: sheetFragmentShader,
       transparent: true,
       depthWrite: false,
-      side: THREE.DoubleSide,
       blending: THREE.NormalBlending,
       vertexColors: true,
-      wireframe: true,
     });
     m.userData.branch = b;
     m.userData.sheet = true;
@@ -254,8 +269,9 @@ export default function ComplexParticles({
   // the branch-range effect.
   const rebuildBranchObjects = (scene: THREE.Scene) => {
     const pointsGeom = state.geometryRef.current;
-    const sheetGeom = sheetGeomRef.current;
-    if (!pointsGeom || !sheetGeom) return;
+    const fillGeom = sheetGeomRef.current;
+    const wireGeom = sheetWireGeomRef.current;
+    if (!pointsGeom || !fillGeom || !wireGeom) return;
     pointsRef.current.forEach(o => scene.remove(o));
     fillMeshRef.current.forEach(o => scene.remove(o));
     wireMeshRef.current.forEach(o => scene.remove(o));
@@ -269,8 +285,8 @@ export default function ComplexParticles({
       const fm = createSheetFillMaterial(b);
       const wm = createSheetWireMaterial(b);
       const pts = new THREE.Points(pointsGeom, pm);
-      const fill = new THREE.Mesh(sheetGeom, fm);
-      const wire = new THREE.Mesh(sheetGeom, wm);
+      const fill = new THREE.Mesh(fillGeom, fm);
+      const wire = new THREE.LineSegments(wireGeom, wm);
       state.materialsRef.current.push(pm, fm, wm);
       pointsRef.current.push(pts);
       fillMeshRef.current.push(fill);
@@ -292,12 +308,19 @@ export default function ComplexParticles({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.renderMode, state.sheetFill, state.sheetWire]);
 
-  // Rebuild the shared sheet grid when its resolution or the domain box changes.
+  // Rebuild the sheet fill + wire grids when the resolution or domain box
+  // changes, and refresh the fill shader's cell size (for corner averaging).
   useEffect(() => {
-    const geom = sheetGeomRef.current;
-    if (!geom) return;
+    const fillGeom = sheetGeomRef.current;
+    const wireGeom = sheetWireGeomRef.current;
+    if (!fillGeom || !wireGeom) return;
     const [bxMin, bxMax, byMin, byMax] = effectiveBounds();
-    rebuildSheetGeometry(geom, state.sheetResolution, bxMin, bxMax, byMin, byMax);
+    rebuildSheetGeometry(fillGeom, state.sheetResolution, bxMin, bxMax, byMin, byMax);
+    rebuildSheetWireGeometry(wireGeom, state.sheetResolution, bxMin, bxMax, byMin, byMax);
+    const [csx, csy] = sheetCellSize(state.sheetResolution, bxMin, bxMax, byMin, byMax);
+    state.materialsRef.current.forEach(m => {
+      if (m.uniforms.uCellSize) m.uniforms.uCellSize.value.set(csx, csy);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     state.sheetResolution, state.extentX, state.extentY, state.axisScale,
@@ -362,6 +385,7 @@ export default function ComplexParticles({
       const geometry = createParticleGeometry(state.particleCount, bxMin, bxMax, byMin, byMax, state.samplePattern);
       state.geometryRef.current = geometry;
       sheetGeomRef.current = createSheetGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
+      sheetWireGeomRef.current = createSheetWireGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
 
       rebuildBranchObjects(scene);
 
