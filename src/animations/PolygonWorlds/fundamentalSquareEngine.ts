@@ -13,6 +13,18 @@ import { WorldSpec, deriveGeometry } from './worldSpec';
 
 const UP = new THREE.Vector3(0, 1, 0);
 
+/** Per-geometry light intensities. The flat plane is well-lit by the directional
+ *  key; the spherical shell is large and far from a single distant light so it
+ *  reads dark — give χ>0 a stronger fill + headlamp. The hyperbolic disk is dark
+ *  toward its horizon, so it gets a touch more headlamp too. */
+function lightingProfile(cover: 'euclidean' | 'spherical' | 'hyperbolic'): { fill: number; key: number; lamp: number } {
+  switch (cover) {
+    case 'spherical': return { fill: 1.5, key: 1.1, lamp: 90 };
+    case 'hyperbolic': return { fill: 1.15, key: 1.0, lamp: 70 };
+    default: return { fill: 1.0, key: 1.0, lamp: 45 };
+  }
+}
+
 export interface EngineOptions {
   squareSize?: number;
   floorThickness?: number;
@@ -38,14 +50,25 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
   // Two-tone lighting so the two faces of the sheet read differently: a WARM light
   // from above (the side you walk) and a COOL light from below (the underside), so
   // the top face is warm-lit and the bottom face cool-lit even where the glass lets
-  // them meet.
-  root.add(new THREE.AmbientLight(0xffffff, 0.4));
-  const warm = new THREE.DirectionalLight(0xffd2a1, 0.9);
+  // them meet. On top of that two-tone key we add a soft hemisphere fill (warm sky /
+  // cool ground — same axis, so it reinforces the cue without flattening it) and a
+  // gentle camera-follow "headlamp" that keeps nearby decor readable in every world.
+  // Each world scales these by a per-geometry profile (the big sphere shell reads
+  // dark under a single distant key, so χ>0 gets brighter fills).
+  const L = lightingProfile(geom.cover);
+  root.add(new THREE.AmbientLight(0xffffff, 0.42 * L.fill));
+  const hemi = new THREE.HemisphereLight(0xffe6c2, 0x5b73a6, 0.4 * L.fill);
+  root.add(hemi);
+  const warm = new THREE.DirectionalLight(0xffd2a1, 0.95 * L.key);
   warm.position.set(0.4, 1, 0.3);
   root.add(warm);
-  const cool = new THREE.DirectionalLight(0x9bc2ff, 0.6);
+  const cool = new THREE.DirectionalLight(0x9bc2ff, 0.62 * L.key);
   cool.position.set(-0.35, -1, -0.2);
   root.add(cool);
+  // headlamp: a warm point light pinned to the camera each frame (set in frame()),
+  // with decay so it only lifts the immediate surroundings.
+  const headlamp = new THREE.PointLight(0xfff0d8, L.lamp, 0, 1.4);
+  root.add(headlamp);
 
   const decor = makeFundamentalSquareDecor(opts.props ?? DEFAULT_PROPS);
 
@@ -65,6 +88,7 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
 
   function frame(input: FrameInput) {
     cover.update(input, camera);
+    headlamp.position.copy(camera.position);
     const p = cover.pose();
 
     right.crossVectors(p.up, p.forward).normalize();
