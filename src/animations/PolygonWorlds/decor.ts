@@ -11,9 +11,11 @@ import * as THREE from 'three';
  * column; the chiral number+arrow decal then reads reversed through the flip — the
  * orientation cue the app is built around.
  *
- * Landmarks come in three kinds:
+ * Landmarks come in two kinds:
  *   • **interior** — scattered/grid/ring inside the domain (user count + layout),
- *   • **boundary** — the corners + edge midpoints, so you can watch them glue,
+ *     kept *off the edges* (a landmark sitting on a gluing edge would be split half
+ *     tree / half column across the identification, which reads as a confused
+ *     object — so we keep them clear of the boundary),
  *   • **center**  — one distinctive beacon at (0.5, 0.5), drawn differently on the
  *     two faces (gold spire up vs magenta spire down) so top and bottom are
  *     immediately distinguishable.
@@ -22,7 +24,7 @@ import * as THREE from 'three';
  * cover (plane cell, sphere chart, hyperbolic tile).
  */
 
-export type PropKind = 'interior' | 'boundary' | 'center';
+export type PropKind = 'interior' | 'center';
 
 export interface DecorProp { u: number; v: number; color: number; label: string; kind: PropKind }
 
@@ -43,27 +45,15 @@ function halton(i: number, base: number): number {
 
 const hue = (i: number) => new THREE.Color().setHSL((i * 0.61803398875) % 1, 0.62, 0.58).getHex();
 
-/** The fixed boundary markers: 4 corners + 4 edge midpoints. Authored exactly on
- *  the domain edges so the gluing is visible where copies meet. */
-const BOUNDARY: [number, number][] = [
-  [0, 0], [1, 0], [1, 1], [0, 1],          // corners
-  [0.5, 0], [1, 0.5], [0.5, 1], [0, 0.5],  // edge midpoints
-];
-
-/** Generate the landmark set: one centre beacon, the 8 boundary markers, then
- *  `count` interior markers laid out by `arrangement`. Deterministic + stable. */
+/** Generate the landmark set: one centre beacon, then `count` interior markers laid
+ *  out by `arrangement`, all kept off the domain edges. Deterministic + stable. */
 export function generateProps(count: number, arrangement: ArrangementId): DecorProp[] {
   const props: DecorProp[] = [];
   // centre beacon (special; its colour is set per-face by the builder)
   props.push({ u: 0.5, v: 0.5, color: 0xffd24a, label: '★', kind: 'center' });
 
-  // boundary markers
-  BOUNDARY.forEach(([u, v], i) => {
-    props.push({ u, v, color: hue(i + 1), label: `B${i + 1}`, kind: 'boundary' });
-  });
-
-  // interior markers
-  const m = 0.14, span = 1 - 2 * m;
+  // interior markers — spread through the domain but held clear of the edges
+  const m = 0.12, span = 1 - 2 * m;
   const cols = Math.max(1, Math.ceil(Math.sqrt(count)));
   const rows = Math.max(1, Math.ceil(count / cols));
   for (let i = 0; i < count; i++) {
@@ -79,12 +69,12 @@ export function generateProps(count: number, arrangement: ArrangementId): DecorP
       u = m + span * halton(i + 1, 2);
       v = m + span * halton(i + 1, 3);
     }
-    props.push({ u, v, color: hue(i + 9), label: String(i + 1), kind: 'interior' });
+    props.push({ u, v, color: hue(i + 1), label: String(i + 1), kind: 'interior' });
   }
   return props;
 }
 
-/** A reasonable default set (7 interior + boundary + centre). */
+/** A reasonable default set (7 interior + centre). */
 export const DEFAULT_PROPS = generateProps(7, 'scattered');
 
 /** Number + arrow on a transparent tile; both reverse under a mirror. */

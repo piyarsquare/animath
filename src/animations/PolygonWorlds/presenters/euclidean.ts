@@ -101,6 +101,8 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     const g = glassState(opacity, GLASS);
     for (const mt of [topMat, bottomMat, edgeMat]) {
       mt.opacity = g.opacity; mt.visible = g.visible; mt.depthWrite = g.depthWrite;
+      mt.transparent = opacity < 0.999;   // fully opaque ⇒ the side you walk never shows through
+      mt.needsUpdate = true;
     }
   }
 

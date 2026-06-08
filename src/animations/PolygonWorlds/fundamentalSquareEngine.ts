@@ -35,10 +35,17 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
 
   const root = new THREE.Group();
   scene.add(root);
-  root.add(new THREE.AmbientLight(0xffffff, 0.6));
-  const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-  dir.position.set(0.5, 1, 0.35);
-  root.add(dir);
+  // Two-tone lighting so the two faces of the sheet read differently: a WARM light
+  // from above (the side you walk) and a COOL light from below (the underside), so
+  // the top face is warm-lit and the bottom face cool-lit even where the glass lets
+  // them meet.
+  root.add(new THREE.AmbientLight(0xffffff, 0.4));
+  const warm = new THREE.DirectionalLight(0xffd2a1, 0.9);
+  warm.position.set(0.4, 1, 0.3);
+  root.add(warm);
+  const cool = new THREE.DirectionalLight(0x9bc2ff, 0.6);
+  cool.position.set(-0.35, -1, -0.2);
+  root.add(cool);
 
   const decor = makeFundamentalSquareDecor(opts.props ?? DEFAULT_PROPS);
 

@@ -28,7 +28,7 @@ export default function PolygonWorlds() {
   const [moveSpeed, setMoveSpeed] = useState(6);
   const [thirdPerson, setThirdPerson] = useState(true);
   const [camDistance, setCamDistance] = useState(3.2);
-  const [floorOpacity, setFloorOpacity] = useState(0.85);
+  const [floorOpacity, setFloorOpacity] = useState(1);
   const [squareSize, setSquareSize] = useState(DEFAULT_SQUARE_SIZE);
   const [floorThickness, setFloorThickness] = useState(DEFAULT_FLOOR_THICKNESS);
   const [planetRadius, setPlanetRadius] = useState(DEFAULT_RADIUS);
