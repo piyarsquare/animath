@@ -3,7 +3,7 @@ import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverMode
 import { SquareMapState } from '../engineTypes';
 import { glassState, GlassSpec } from '../glassSurface';
 import { makeFootprintTrail } from '../footprints';
-import { rp2Square } from '../squareMap';
+import { rp2Square, sq2hemi } from '../squareMap';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
 import { develop } from '../lib/develop';
@@ -65,19 +65,6 @@ function planetTexture(): THREE.CanvasTexture {
   const t = new THREE.CanvasTexture(cvs);
   t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
   return t;
-}
-
-/** Square (sx,sy ∈ −1..1) → a unit direction on the z≥0 hemisphere — the inverse
- *  of {@link rp2Square}'s disk→square stretch, and exactly the chart whose corners
- *  are the realize() polygon's equator vertices. The seam great circle z=0 is the
- *  square boundary; the two faces are the two hemispheres. */
-function sq2hemi(sx: number, sy: number): THREE.Vector3 {
-  const h = Math.hypot(sx, sy);
-  if (h < 1e-6) return new THREE.Vector3(0, 0, 1);
-  const m = Math.max(Math.abs(sx), Math.abs(sy));
-  const x = sx * m / h, y = sy * m / h;
-  const z = Math.sqrt(Math.max(0, 1 - x * x - y * y));
-  return new THREE.Vector3(x, y, z);
 }
 
 const v3 = (p: Vec3): THREE.Vector3 => new THREE.Vector3(p[0], p[1], p[2]);

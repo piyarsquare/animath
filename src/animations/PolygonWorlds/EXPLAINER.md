@@ -36,6 +36,10 @@ surface you walk. The curved worlds are subtler, and the difference is honest:
   hemisphere is the same square seen through the **antipodal** identification
   `x ∼ −x`, so the trees there wear columns and your trail returns mirror-reversed.
   Walk over the bright **seam** (the equator) and the mini-map flags the *mirror side*.
+  The bottom-left inset shows ℝP² **immersed in 3-space** (the Steiner *Roman
+  surface*) — the same surface you walk, wildly reshaped; your marker rides it, and
+  because the immersion identifies antipodes, near-side and mirror-side land on the
+  *same* point.
 - **Sphere.** The square here is a **chart**, not an isometric copy: it is *stretched*
   over the whole round sphere (the way a flat map distorts the globe), so distances
   on the mini-map square are not the distances you walk. The world you actually move

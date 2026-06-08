@@ -69,6 +69,20 @@ export function rp2Square(x: number, y: number, z: number, flip: boolean): [numb
   return [X * s, Y * s];
 }
 
+/** Inverse of {@link rp2Square}: a square point (sx, sy ∈ −1..1) → a unit
+ *  direction on the z≥0 hemisphere. The square boundary maps to the z=0 seam great
+ *  circle, and the corners to the equator diagonals — exactly the realize() ℝP²
+ *  polygon's vertices. Shared by the spherical presenter (decor placement) and the
+ *  embedding inset (player marker). */
+export function sq2hemi(sx: number, sy: number): THREE.Vector3 {
+  const h = Math.hypot(sx, sy);
+  if (h < 1e-6) return new THREE.Vector3(0, 0, 1);
+  const m = Math.max(Math.abs(sx), Math.abs(sy));
+  const x = sx * m / h, y = sy * m / h;
+  const z = Math.sqrt(Math.max(0, 1 - x * x - y * y));
+  return new THREE.Vector3(x, y, z);
+}
+
 /**
  * Draw the square mini-map. `spec === null` renders just the empty backdrop +
  * square (the first-frame, no-state case).

@@ -11,6 +11,7 @@ import {
   DEFAULT_SQUARE_SIZE, DEFAULT_FLOOR_THICKNESS,
 } from './engineTypes';
 import { drawSquareMap, SquareMapSpec, SquareEdgeSpec } from './squareMap';
+import { EmbeddingInset } from './instruments/embeddingInset';
 import explainerText from './EXPLAINER.md?raw';
 
 const LOOK_SENS = 0.0035;
@@ -154,6 +155,7 @@ export default function PolygonWorlds() {
 
       <MovePad onSet={setKey} />
       <SquareMiniMap getState={getMapState} spec={spec} />
+      {spec.id === 'rp2' && <EmbeddingInset key="rp2-embed" getState={getMapState} />}
 
       <div style={{
         position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
