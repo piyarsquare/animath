@@ -20,6 +20,19 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 const OUT = join(ROOT, "converted");
 const REPO = "piyarsquare/animath";
 const git = (a) => { try { return execFileSync("git", a, { encoding: "utf8", maxBuffer: 64 << 20 }); } catch { return ""; } };
+const gitBuf = (a) => { try { return execFileSync("git", a, { maxBuffer: 256 << 20 }); } catch { return null; } };
+
+// Markdown image refs in a report body, and a POSIX path join for resolving them
+// relative to the report's location in the repo.
+const IMG_RE = /!\[[^\]]*\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)/g;
+const posixJoin = (dir, rel) => {
+  const parts = (dir + "/" + rel).split("/");
+  const out = [];
+  for (const p of parts) { if (p === "" || p === ".") continue; if (p === "..") out.pop(); else out.push(p); }
+  return out.join("/");
+};
+const isLocalImg = (s) => s && !/^(https?:)?\/\//.test(s) && !s.startsWith("data:");
+let imgBytes = 0, imgCount = 0;   // screenshot space budget across all carried reports
 
 const isReport = (p) =>
   /^docs\/sessions\/(progress|handoff)\//.test(p) && /\.(html|md)$/.test(p) &&
@@ -58,8 +71,39 @@ for (const rec of byKey.values()) {
   const fm = {};
   const fmBlock = md.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (fmBlock) for (const ln of fmBlock[1].split(/\r?\n/)) { const k = ln.match(/^(\w+):\s*(.*)$/); if (k) fm[k[1]] = k[2] === "null" ? null : k[2].replace(/^["']|["']$/g, ""); }
+
+  // Carry referenced screenshots: fetch each local image binary from the same
+  // branch tip and mirror it under converted/<kind>/<slug>/<rel> so the relative
+  // ![](assets/…) paths resolve identically on GitHub and in the rendered HTML.
+  const reportDir = dirname(path);                       // docs/sessions/<kind>/<slug>
+  // Strip fenced + inline code first, so image syntax discussed in prose
+  // (e.g. `![](…)`) isn't mistaken for a real screenshot reference.
+  const scannable = md.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, "");
+  const imgRefs = [...scannable.matchAll(IMG_RE)].map((m) => m[1]).filter(isLocalImg);
+  // Also carry an explicit `thumbnail:` even when it isn't embedded in the body —
+  // otherwise a dedicated thumbnail/crop would leave a broken control-center card.
+  const toCarry = new Set(imgRefs);
+  if (isLocalImg(fm.thumbnail)) toCarry.add(fm.thumbnail);
+  const carried = new Set();
+  for (const imgRef of toCarry) {
+    const repoImg = posixJoin(reportDir, imgRef);
+    const blob = gitBuf(["show", `${ref}:${repoImg}`]);
+    if (!blob) { console.warn(`  ! missing image ${repoImg} on ${ref}`); continue; }
+    const outImg = join(dir, imgRef);
+    mkdirSync(dirname(outImg), { recursive: true });
+    writeFileSync(outImg, blob);
+    carried.add(imgRef);
+    imgBytes += blob.length; imgCount++;
+  }
+
+  // Lead thumbnail for the control center: the `thumbnail:` frontmatter ref, else
+  // the first body image — but only if it actually carried, so cards never break.
+  const thumbRef = isLocalImg(fm.thumbnail) ? fm.thumbnail : imgRefs[0];
+  const thumb = thumbRef && carried.has(thumbRef) ? `converted/${rec.kind}/${rec.slug}/${thumbRef}` : null;
+
   reports.push({ slug: rec.slug, short: shortName(rec.slug), base: rec.base, date,
     kind: fm.kind || "?", session: fm.session || "?", title: fm.title || rec.base, status: fm.status || "?",
+    thumb,
     href: `converted/${rec.kind}/${rec.slug}/${rec.base}.preview.html` });
 }
 
@@ -77,6 +121,7 @@ for (const s of sessions.values()) {
   s.date = s.reports.map(r => r.date).sort().slice(-1)[0] || "";
   const p = s.reports.find(r => r.kind === "handoff") || s.reports[0];
   s.title = p.title; s.status = p.status;
+  s.thumb = (s.reports.find(r => r.thumb) || {}).thumb || null;
 }
 const groups = new Map();
 for (const s of sessions.values()) { if (!groups.has(s.short)) groups.set(s.short, []); groups.get(s.short).push(s); }
@@ -93,8 +138,9 @@ for (const [short, ss] of groupOrder) {
     const hay = [short, s.slug, s.session, s.status, ...s.reports.map(r => r.title)].join(" ").toLowerCase();
     let rows = "";
     for (const r of s.reports) rows += `        <a class="cc-row" href="${esc(r.href)}"><span class="chip chip-${esc(r.kind)}">${esc(r.kind)}</span><span class="cc-rtitle">${esc(r.title)}</span></a>\n`;
-    inner += `      <article class="cc-session" data-hay="${esc(hay)}">
-        <div class="cc-shead"><span class="cc-sid">${esc(s.session)}</span> ${statusBadge(s.status)} <span class="cc-date">${esc(s.date.slice(0, 10))}</span> <span class="cc-stitle">${esc(s.title)}</span></div>
+    const thumb = s.thumb ? `        <img class="cc-thumb" src="${esc(s.thumb)}" alt="" loading="lazy">\n` : "";
+    inner += `      <article class="cc-session${s.thumb ? " has-thumb" : ""}" data-hay="${esc(hay)}">
+${thumb}        <div class="cc-shead"><span class="cc-sid">${esc(s.session)}</span> ${statusBadge(s.status)} <span class="cc-date">${esc(s.date.slice(0, 10))}</span> <span class="cc-stitle">${esc(s.title)}</span></div>
         <div class="cc-reports">\n${rows}        </div>
       </article>\n`;
   }
@@ -116,6 +162,8 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
   .cc-reports{margin-top:.4rem;display:flex;flex-direction:column;gap:.15rem}
   .cc-row{display:flex;align-items:center;gap:.55rem;padding:.3rem .45rem;border-radius:6px;text-decoration:none;color:var(--fg)}
   .cc-row:hover{background:var(--accent-soft)}.cc-session[hidden],.cc-group[hidden]{display:none}
+  .cc-thumb{float:right;width:140px;height:88px;object-fit:cover;border-radius:6px;border:1px solid var(--border);margin:0 0 .4rem .7rem;background:var(--bg)}
+  @media (max-width:520px){.cc-thumb{width:96px;height:60px}}
 </style></head>
 <body><main class="report"><header><p class="kicker">animath · cross-branch</p>
 <h1>Session control center</h1>
@@ -133,4 +181,6 @@ ${groupsHtml}</div></div></main>
 </script></body></html>
 `);
 
+const mb = (imgBytes / (1024 * 1024)).toFixed(2);
 console.log(`built: ${reports.length} reports · ${sessions.size} sessions · ${groups.size} branches → docs/sessions/converted/ + control-center.html`);
+console.log(`screenshots: ${imgCount} carried · ${mb} MB (budget readout — see prune-assets.mjs to trim)`);

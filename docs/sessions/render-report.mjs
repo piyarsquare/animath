@@ -23,6 +23,8 @@ import { marked } from "marked";
 
 marked.setOptions({ gfm: true });
 
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
 const src = process.argv[2];
 if (!src) { console.error("usage: render-report.mjs <file.md>"); process.exit(1); }
 
@@ -112,10 +114,24 @@ function transformAlerts(md) {
   return out.join("\n");
 }
 
-const contentHtml = marked.parse(transformAlerts(transformTimeline(body)));
+// 3b · standalone image lines → <figure> with a caption (report.css styles these).
+// A line that is *only* an image becomes a figure; the alt text is the caption.
+// Inline images (inside a paragraph or a timeline entry) are left as plain <img>.
+const FIG_RE = /^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)\s*$/;
+function transformFigures(md) {
+  return md.split(/\r?\n/).map((ln) => {
+    const m = ln.match(FIG_RE);
+    if (!m) return ln;
+    const [, alt, src, title] = m;
+    const cap = (title || alt || "").trim();
+    const capHtml = cap ? `<figcaption>${marked.parseInline(cap)}</figcaption>` : "";
+    return `<figure><img src="${esc(src)}" alt="${esc(alt)}" loading="lazy">${capHtml}</figure>`;
+  }).join("\n");
+}
+
+const contentHtml = marked.parse(transformFigures(transformAlerts(transformTimeline(body))));
 
 // 4 · header from frontmatter
-const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const statusBadge = (s) => s ? `<span class="badge ${({ completed: "badge-ok", "in-progress": "badge-warn" })[s] || "badge"}">${esc(s)}</span>` : "";
 const buildBadge = (b) => b ? `<span class="badge ${b === "passed" ? "badge-ok" : b === "failed" ? "badge-bad" : "badge-warn"}">build: ${esc(b)}</span>` : "";
 const metaRows = [

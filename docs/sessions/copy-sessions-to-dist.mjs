@@ -30,7 +30,7 @@ function walk(srcDir, outDir) {
   for (const e of readdirSync(srcDir, { withFileTypes: true })) {
     const s = join(srcDir, e.name), o = join(outDir, e.name);
     if (e.isDirectory()) walk(s, o);
-    else if (e.isFile() && [".html", ".css", ".js"].includes(extname(e.name).toLowerCase())) copy(s, o);
+    else if (e.isFile() && [".html", ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif"].includes(extname(e.name).toLowerCase())) copy(s, o);
   }
 }
 
