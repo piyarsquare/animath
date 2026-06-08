@@ -435,7 +435,7 @@ export default function ParticleViewerShell({
               <Checkbox label="Wireframe"
                 checked={state.sheetWire} onChange={state.setSheetWire} />
               <Slider label="Resolution" value={state.sheetResolution}
-                min={8} max={200} step={1}
+                min={8} max={500} step={1}
                 onChange={state.setSheetResolution} format={v => `${v}²`} />
               <Slider label="Shading" value={state.sheetShade}
                 min={0} max={1} step={0.01}
