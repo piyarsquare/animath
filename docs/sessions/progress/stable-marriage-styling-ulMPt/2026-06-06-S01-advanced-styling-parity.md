@@ -6,9 +6,9 @@ title: Stable Marriage advanced styling parity
 branch: claude/stable-marriage-styling-ulMPt
 slug: stable-marriage-styling-ulMPt
 status: in-progress
-build: unknown
-followup: null
-pr: null
+build: passed
+followup: medium
+pr: https://github.com/piyarsquare/animath/pull/189
 ---
 
 # Stable Marriage advanced styling parity
@@ -22,6 +22,27 @@ The Stable Marriage application lacks many of the more advanced styling effects 
 This is the first tracked session on the `stable-marriage-styling-ulMPt` branch. No prior handoff exists for this topic. The most recent handoffs across other branches are unrelated (all completed, build passed): *rich HTML reports* (better-reports), *session skills setup* (menu-bar), and *particle viewer ideas triage* (particle-viewer-ideas-priority). Nothing pending carries over.
 
 ## Working notes
+
+### 🟢 code · (06-08) — Synchronous round engine, Lego heatmaps, instability Lab, blackout fix
+**Why:** Iterated the Stable Matching app heavily with the user toward "what we can learn
+about the solution space."
+
+- **Cells → Lego heatmaps on one BuRd scale**: square = A's rank of B, circle = B's rank of A;
+  numbers drop out when many; **fit-to-screen** sizing; population cap raised 16→60.
+- **Orderings**: by average attractiveness (default), settle round, and **match-diagonal**
+  (partners on the diagonal); **live re-sort** (both axes migrate as pairs settle); a
+  **parameter-driven story line** + per-round narration; **tight grid** toggle.
+- **Cell views**: Both (Lego) / A→B / B→A / **Difference** (single-valued).
+- **Engine rebuilt to synchronous rounds** (`runRounds`): a whole side proposes at once;
+  Schedule = A / B / **Alternate** / **Random**. Finding (3000-sim sweep): synchronous
+  two-sided (alt/random) is **unstable 70–92%** of the time with 2–3.5 blocking pairs —
+  NOT a last-round fluke; one-sided is always stable. Glassy/assignment-problem kinship.
+- **Lab surfaces**: **Unstable %** and **Avg blocking pairs** by schedule (purple), and
+  **Ranks (A·B)** as **Lego** cells (square=A avg, circle=B avg) on RdBu.
+- **Markers** recoloured off red → purple (invisible on RdBu); realtime reject + "stole away"
+  flashes; short-lived fading **failure trail**; market RNG decorrelated from generation.
+- **Bug fixed**: blackout when changing the run while stepped to the end — clamp every read
+  to `safeStep = min(step, total)` (the reset effect runs after render).
 
 ### 🟢 code · 21:10 — Redesign: matrix-centred, total-rank welfare, foreground the algorithm
 **Why:** First build was "too obscure" — algorithm/preferences hidden, proposer-advantage
