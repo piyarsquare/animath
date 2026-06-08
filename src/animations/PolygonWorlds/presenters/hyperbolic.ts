@@ -9,28 +9,30 @@ import { develop } from '../lib/develop';
 import {
   Vec3, Mat3, makeFrame, Frame, framePos,
   stepForward as kStep, stepHeading as kStrafe, turn as kTurn, reorthonormalize,
-  applyMat, inv3, mul, distance, geodesicPoint, originTo, ORIGIN,
+  applyMat, inv3, mul, det3, distance, geodesicPoint, originTo, ORIGIN, IDENTITY3,
 } from '../lib/cayleyKlein';
 
 /**
  * The hyperbolic presenter for the χ<0 worlds (genus-2 octagon, 3-cross-cap …),
  * driven by the kernel at κ=−1 and rendered in the **Poincaré disk**.
  *
- * The player is a kernel {@link Frame} on the κ=−1 shell (the hyperboloid). The
- * scene is **re-centred on the player** every frame — the view isometry
- * `T = frame⁻¹` carries the player to the basepoint O — and every cover point is
- * mapped hyperboloid → Poincaré disk `(x,y)/(1+w)` → a flat **glass disk floor**
- * (radius `DISK_R`). Walking right-multiplies the frame (`stepForward`/`turn`), so
- * the whole hyperbolic tiling flows past a player who stays at the disk centre
- * facing +X — the standard hyperbolic first-person view.
+ * The player is a kernel {@link Frame} on the κ=−1 shell (the hyperboloid). It is
+ * **only ever moved by `stepForward`/`turn`/`stepHeading`, so its frame stays
+ * orientation-preserving (det > 0)** — the controls never invert. The scene is
+ * re-centred on the player (the view `Tview = frame⁻¹` carries them to the basepoint
+ * O); cover points map hyperboloid → Poincaré disk `(x,y)/(1+w)` → a flat **glass
+ * disk floor** (radius `DISK_R`).
  *
- * The tiles are the Fuchsian deck cosets from {@link develop}; their geodesic
- * edges draw the `{2n, 2n}` tiling out to the horizon (the disk boundary = the
- * circle at infinity). A small pool of decorated copies is re-assigned to the tiles
- * **nearest the player** each frame and scaled by the conformal factor `1−r²`, so
- * landmarks shrink toward the boundary exactly as hyperbolic distance demands. The
- * per-tile **trees↔columns skin follows `det(γ) < 0`** (the glide tiles of the
- * non-orientable worlds), straight from the kernel.
+ * Like the euclidean cover, the player is **kept in the fundamental domain** without
+ * reflecting their frame: a separate deck element `h` tracks which tile they are in
+ * (a greedy walk on the deck group's Cayley graph toward the player), and the tiling
+ * is drawn through `Mtiles = frame⁻¹ · h`, so the developed tiles always surround the
+ * player. Crossing a **glide** edge of a non-orientable world makes `det(h) < 0`,
+ * which flips the skin of *every* tile (`det(h)·det(γ) < 0`) — you genuinely flip to
+ * the other side (trees ↔ columns, decals mirror-reversed) — while your frame, and
+ * therefore your controls, stay put. The geodesic tile edges draw the `{2n, 2n}`
+ * tiling out to the horizon; decor copies are kept on the tiles nearest the player
+ * and scaled by the conformal factor `1−r²`.
  */
 
 const EYE = 1.7;
@@ -56,7 +58,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   const m = real.edges;                           // polygon side count (2n)
 
   let DISK_R = Math.max(34, c.squareSize * 1.4);  // world radius of the unit disk
-  let glassOpacity = 0.35;
+  let glassOpacity = 1;
   let camDist = 3.4;
 
   camera.fov = 75; camera.near = 0.05; camera.far = DISK_R * 6; camera.updateProjectionMatrix();
@@ -64,22 +66,25 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   scene.background = new THREE.Color(SKY);
   scene.fog = new THREE.Fog(SKY, DISK_R * 1.1, DISK_R * 3.2);
 
-  // ── geometry helpers (hyperboloid → re-centred Poincaré disk → floor) ────────
-  let T: Mat3 = inv3(makeFrame(kappa).g);          // view isometry = frame⁻¹
+  // ── geometry helpers (hyperboloid → Poincaré disk → floor) ───────────────────
+  // Tview re-centres the player (det > 0, never mirrored); Mtiles = Tview·h draws
+  // the tiling re-centred on the player's current tile. Both refreshed in update().
+  let Tview: Mat3 = IDENTITY3;
+  let Mtiles: Mat3 = IDENTITY3;
 
-  /** Project a cover point (after the view isometry T) to a floor world position. */
-  function project(Q: Vec3, out: THREE.Vector3): THREE.Vector3 {
-    const x = T[0] * Q[0] + T[1] * Q[1] + T[2] * Q[2];
-    const y = T[3] * Q[0] + T[4] * Q[1] + T[5] * Q[2];
-    const w = T[6] * Q[0] + T[7] * Q[1] + T[8] * Q[2];
+  /** Project a cover point through matrix M to a floor world position. */
+  function projectM(M: Mat3, Q: Vec3, out: THREE.Vector3): THREE.Vector3 {
+    const x = M[0] * Q[0] + M[1] * Q[1] + M[2] * Q[2];
+    const y = M[3] * Q[0] + M[4] * Q[1] + M[5] * Q[2];
+    const w = M[6] * Q[0] + M[7] * Q[1] + M[8] * Q[2];
     const k = 1 / (1 + w);
     return out.set(x * k * DISK_R, 0, y * k * DISK_R);
   }
-  /** Poincaré radius² of a cover point after T (0 at centre → 1 at the horizon). */
-  function poincareR2(Q: Vec3): number {
-    const x = T[0] * Q[0] + T[1] * Q[1] + T[2] * Q[2];
-    const y = T[3] * Q[0] + T[4] * Q[1] + T[5] * Q[2];
-    const w = T[6] * Q[0] + T[7] * Q[1] + T[8] * Q[2];
+  /** Poincaré radius² of a cover point through M (0 at centre → 1 at the horizon). */
+  function poincareR2(M: Mat3, Q: Vec3): number {
+    const x = M[0] * Q[0] + M[1] * Q[1] + M[2] * Q[2];
+    const y = M[3] * Q[0] + M[4] * Q[1] + M[5] * Q[2];
+    const w = M[6] * Q[0] + M[7] * Q[1] + M[8] * Q[2];
     const k = 1 / (1 + w);
     return (x * x + y * y) * k * k;
   }
@@ -124,6 +129,9 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
       props: homeProps.map((hp) => applyMat(el.m, hp)),
     };
   });
+  // Deck generators + inverses — the moves the player's tile tracker `h` walks.
+  const genMats: Mat3[] = [];
+  for (const g of real.deckGenerators) { if (g) { genMats.push(g.m, inv3(g.m)); } }
 
   // ── glass disk floor + horizon ring ──────────────────────────────────────────
   const floorMat = new THREE.MeshStandardMaterial({
@@ -170,7 +178,22 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   let lastTrailPos: Vec3 | null = null;
 
   // ── player frame on the κ=−1 shell ───────────────────────────────────────────
-  let frame: Frame = makeFrame(kappa);             // identity ⇒ centre, facing +x
+  // Spawn at the in-domain point farthest from every landmark (so the player never
+  // starts inside a tree or on the centre beacon).
+  function clearSpawn(): Frame {
+    let bu = 0.5, bv = 0.5, bd = -1;
+    for (let cu = 0.15; cu <= 0.85; cu += 0.1) {
+      for (let cv = 0.15; cv <= 0.85; cv += 0.1) {
+        let mind = Infinity;
+        for (const p of decor.props) mind = Math.min(mind, Math.hypot(cu - p.u, cv - p.v));
+        if (mind > bd) { bd = mind; bu = cu; bv = cv; }
+      }
+    }
+    return makeFrame(kappa, originTo(kappa, propHyper(bu, bv)));
+  }
+  let frame: Frame = clearSpawn();                 // det>0 always (controls never flip)
+  let h: Mat3 = IDENTITY3;                          // deck element of the player's tile
+  let detH = 1;
   let lastYaw = 0;
   const fwdW = new THREE.Vector3(1, 0, 0);         // re-centred ⇒ player always faces +X
   const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
@@ -178,6 +201,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   function applyGlass() {
     const g = glassState(glassOpacity, GLASS);
     floorMat.opacity = g.opacity; floorMat.visible = g.visible; floorMat.depthWrite = g.depthWrite;
+    floorMat.transparent = glassOpacity < 0.999; floorMat.needsUpdate = true;
   }
   applyGlass();
 
@@ -185,7 +209,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     let o = 0;
     for (const tile of tiles) {
       for (const pt of tile.edgePts) {
-        project(pt, tmp);
+        projectM(Mtiles, pt, tmp);
         edgePos[o++] = tmp.x; edgePos[o++] = tmp.y + 0.02; edgePos[o++] = tmp.z;
       }
     }
@@ -194,23 +218,23 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   }
 
   function placeDecor() {
-    // nearest deck cosets to the player (player = framePos; cosets fixed in cover)
-    const pPos = framePos(frame);
+    // tiles nearest the player on screen (their rendered centre nearest the disk
+    // origin); the whole skin flips with det(h) so crossing a glide flips you.
     const order = tiles
-      .map((t, i) => ({ i, d: distance(kappa, pPos, t.center) }))
+      .map((t, i) => ({ i, d: poincareR2(Mtiles, t.center) }))
       .sort((a, b) => a.d - b.d)
       .slice(0, N_DECOR);
     let used = 0;
     for (const { i } of order) {
       const tile = tiles[i];
       const cell = cells[used++];
-      const flipped = tile.det < 0;             // glide tile ⇒ swapped skin
-      cell.trees.visible = flipped; cell.columns.visible = !flipped;
+      const flipped = detH * tile.det < 0;      // your side × the tile's side
+      cell.trees.visible = !flipped; cell.columns.visible = flipped;
       const showT = cell.trees, showC = cell.columns;
       decor.props.forEach((_, j) => {
         const hp = tile.props[j];
-        project(hp, tmp);
-        const r2 = Math.min(0.97, poincareR2(hp));
+        projectM(Mtiles, hp, tmp);
+        const r2 = Math.min(0.97, poincareR2(Mtiles, hp));
         const sc = decorBase * (1 - r2);
         const tj = showT.children[j] as THREE.Object3D;
         const cj = showC.children[j] as THREE.Object3D;
@@ -224,32 +248,13 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   function rebuildTrail() {
     foot.clear();
     for (let i = 0; i < covTrail.length; i++) {
-      project(covTrail[i], tmp);
-      if (i + 1 < covTrail.length) project(covTrail[i + 1], tmp2);
+      projectM(Tview, covTrail[i], tmp);
+      if (i + 1 < covTrail.length) projectM(Tview, covTrail[i + 1], tmp2);
       else tmp2.set(0, 0, 0);                     // last → toward the player (centre)
       tmp2.sub(tmp);
       if (tmp2.lengthSq() < 1e-6) tmp2.copy(fwdW);
       foot.append(tmp, tmp2.normalize(), UP);
     }
-  }
-
-  // Keep the player reduced into the home fundamental domain (like the euclidean
-  // cover): when they cross into a neighbouring tile, pull them back through that
-  // tile's deck element (frame ← γ⁻¹·frame) and carry the trail with them. The
-  // tiling is deck-invariant, so the wrap is seamless — and the developed tiles
-  // always surround the player, so they can never "walk off the map".
-  function reduceToHome() {
-    const p = framePos(frame);
-    let bi = 0, bd = distance(kappa, p, tiles[0].center); // tiles[0] = identity (O)
-    for (let i = 1; i < tiles.length; i++) {
-      const d = distance(kappa, p, tiles[i].center);
-      if (d < bd - 1e-9) { bd = d; bi = i; }
-    }
-    if (bi === 0) return;
-    const m = inv3(elems[bi].m);
-    frame = { kappa, g: mul(m, frame.g) };
-    for (let i = 0; i < covTrail.length; i++) covTrail[i] = applyMat(m, covTrail[i]);
-    if (lastTrailPos) lastTrailPos = applyMat(m, lastTrailPos);
   }
 
   function update(input: CoverFrameInput, cam: THREE.PerspectiveCamera) {
@@ -259,11 +264,27 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     if (f) frame = kStep(frame, (f * moveSpeed * dt) / DISK_R);
     if (strafe) frame = kStrafe(frame, -Math.PI / 2, (strafe * moveSpeed * dt) / DISK_R);
     if (dyaw || f || strafe) frame = reorthonormalize(frame);
-    reduceToHome();
-    T = inv3(frame.g);
+
+    // Walk the tile tracker `h` toward the player along the deck Cayley graph, so
+    // the developed tiles stay around them (no walk-off). The player frame is left
+    // alone (det > 0), so only the *world* flips through a glide, not the controls.
+    const pPos = framePos(frame);
+    for (let iter = 0; iter < 16; iter++) {
+      let bestD = distance(kappa, pPos, applyMat(h, ORIGIN));
+      let bestM: Mat3 | null = null;
+      for (const gm of genMats) {
+        const cand = mul(h, gm);
+        const d = distance(kappa, pPos, applyMat(cand, ORIGIN));
+        if (d < bestD - 1e-9) { bestD = d; bestM = cand; }
+      }
+      if (!bestM) break;
+      h = bestM;
+    }
+    detH = det3(h);
+    Tview = inv3(frame.g);
+    Mtiles = mul(Tview, h);
 
     // record the trail in cover coords as the player advances
-    const pPos = framePos(frame);
     if (!lastTrailPos || distance(kappa, lastTrailPos, pPos) > 0.12) {
       covTrail.push(pPos);
       if (covTrail.length > TRAIL_MAX) covTrail.shift();
@@ -290,25 +311,17 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   }
 
   function chart(): SquareMapState {
-    // representative of the player inside the home polygon: the coset element d
-    // nearest the player, pulled back to centre.
-    const pPos = framePos(frame);
-    let best = 0, bestD = Infinity;
-    for (let i = 0; i < tiles.length; i++) {
-      const d = distance(kappa, pPos, tiles[i].center);
-      if (d < bestD) { bestD = d; best = i; }
-    }
-    const di = inv3(elems[best].m);
-    const rep = applyMat(di, pPos);                          // in home domain
+    // the player's representative inside the home polygon = h⁻¹ · player, with the
+    // side given by det(h) (flipped after crossing an odd number of glide edges).
+    const di = inv3(h);
+    const rep = applyMat(di, framePos(frame));               // in home domain
     const w = rep[2], k = 1 / (1 + w);
     const px = rep[0] * k, py = rep[1] * k;                  // Poincaré coords
-    // heading: advance the player's forward a touch, pull back the same way
-    const fAhead = framePos(kStep(frame, 0.08));
-    const repA = applyMat(di, fAhead);
+    const repA = applyMat(di, framePos(kStep(frame, 0.08))); // a touch ahead
     const ka = 1 / (1 + repA[2]);
     let hx = repA[0] * ka - px, hz = repA[1] * ka - py;
     const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
-    return { u: (px + 1) / 2, v: (py + 1) / 2, hx, hz, flipped: elems[best].det() < 0 };
+    return { u: (px + 1) / 2, v: (py + 1) / 2, hx, hz, flipped: detH < 0 };
   }
 
   function rebuildFloor() {
