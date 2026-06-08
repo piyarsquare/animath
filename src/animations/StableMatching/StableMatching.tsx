@@ -120,20 +120,21 @@ export default function StableMatching() {
   const result = useMemo(() => runRounds(inst, schedule, bias, seed), [inst, schedule, bias, seed]);
   const rounds = result.rounds;
   const total = rounds.length;                                  // a "step" is now a whole round
+  const safeStep = Math.min(step, total);                       // guard the render before the reset effect fires
   useEffect(() => { setStep(0); setPlaying(false); }, [result]);
 
   // flatten round events (in order) + per-round cumulative counts, to rebuild the matching
   const flat = useMemo(() => rounds.flatMap(r => r.events), [rounds]);
   const roundEnd = useMemo(() => { const a: number[] = []; let c = 0; for (const r of rounds) { c += r.events.length; a.push(c); } return a; }, [rounds]);
-  const matching = useMemo(() => applyLog(n, flat, step === 0 ? 0 : roundEnd[step - 1]), [n, flat, roundEnd, step]);
-  const done = step >= total;
+  const matching = useMemo(() => applyLog(n, flat, safeStep === 0 ? 0 : roundEnd[safeStep - 1]), [n, flat, roundEnd, safeStep]);
+  const done = safeStep >= total;
   const finalMatching = result.matching;
 
   // markers for the round just applied: every proposal this round (active/reject), plus bumped pairs (stolen)
   const markers = useMemo(() => {
     const mk = new Map<string, Marker>();
-    if (step <= 0) return mk;
-    for (const e of rounds[step - 1].events) {
+    if (safeStep <= 0) return mk;
+    for (const e of rounds[safeStep - 1].events) {
       const pc = e.proposer.side === 'A' ? [e.proposer.id, e.receiver.id] : [e.receiver.id, e.proposer.id];
       if (e.outcome === 'reject') mk.set(`${pc[0]}-${pc[1]}`, 'reject');
       else {
@@ -145,15 +146,15 @@ export default function StableMatching() {
       }
     }
     return mk;
-  }, [rounds, step]);
+  }, [rounds, safeStep]);
 
   // short-lived trail of recently failed entries (rejected proposals + bumped pairs),
   // keyed by matrix cell → age (0 = most recent), so they fade out over the next steps.
   const trail = useMemo(() => {
     const m = new Map<string, number>();
-    for (let k = step - 2; k >= Math.max(0, step - 1 - TRAIL); k--) { // current round (step-1) is shown via markers
+    for (let k = safeStep - 2; k >= Math.max(0, safeStep - 1 - TRAIL); k--) { // current round (safeStep-1) is shown via markers
       const r = rounds[k]; if (!r) continue;
-      const age = (step - 1) - k;
+      const age = (safeStep - 1) - k;
       for (const e of r.events) {
         let cell: [number, number] | null = null;
         if (e.outcome === 'reject') cell = e.proposer.side === 'A' ? [e.proposer.id, e.receiver.id] : [e.receiver.id, e.proposer.id];
@@ -162,7 +163,7 @@ export default function StableMatching() {
       }
     }
     return m;
-  }, [rounds, step]);
+  }, [rounds, safeStep]);
 
   // total-rank accounting (welfare): lower = better
   const acct = useMemo(() => {
@@ -218,7 +219,7 @@ export default function StableMatching() {
   const orderBasis = useMemo(() => {
     if (!liveSort) return { match: finalMatching, settle };
     const lastA = new Array(n).fill(-1), lastB = new Array(n).fill(-1);
-    for (let k = 0; k < step && k < rounds.length; k++) {
+    for (let k = 0; k < safeStep && k < rounds.length; k++) {
       for (const e of rounds[k].events) {
         if (e.outcome === 'reject') continue;
         (e.proposer.side === 'A' ? lastA : lastB)[e.proposer.id] = k;
@@ -230,7 +231,7 @@ export default function StableMatching() {
     for (let i = 0; i < n; i++) A[i] = matching.a[i] === -1 ? Infinity : (lastA[i] >= 0 ? lastA[i] : Infinity);
     for (let j = 0; j < n; j++) B[j] = matching.b[j] === -1 ? Infinity : (lastB[j] >= 0 ? lastB[j] : Infinity);
     return { match: matching, settle: { A, B } };
-  }, [liveSort, finalMatching, settle, step, matching, rounds, n]);
+  }, [liveSort, finalMatching, settle, safeStep, matching, rounds, n]);
 
   const rows = useMemo(() => {
     const ids = Array.from({ length: n }, (_, i) => i);
@@ -281,13 +282,13 @@ export default function StableMatching() {
   const shuffle = useCallback(() => setSeed(s => (s * 1103515245 + 12345) & 0x7fffffff), [setSeed]);
 
   const narrate = (): string => {
-    if (step <= 0) return total ? 'Press Play or Step to run the rounds.' : 'No proposals needed.';
-    const r = rounds[step - 1];
+    if (safeStep <= 0) return total ? 'Press Play or Step to run the rounds.' : 'No proposals needed.';
+    const r = rounds[safeStep - 1];
     const held = r.events.filter(e => e.outcome !== 'reject').length;
     const bumps = r.events.filter(e => e.outcome === 'bump').length;
     const rejects = r.events.filter(e => e.outcome === 'reject').length;
     const proposals = held + rejects;
-    return `Round ${step}: all free ${r.side}'s proposed at once — ${proposals} proposal${proposals === 1 ? '' : 's'} → ${held} held${bumps ? ` (${bumps} by bumping)` : ''}, ${rejects} rejected.`;
+    return `Round ${safeStep}: all free ${r.side}'s proposed at once — ${proposals} proposal${proposals === 1 ? '' : 's'} → ${held} held${bumps ? ` (${bumps} by bumping)` : ''}, ${rejects} rejected.`;
   };
 
   /* ── Lab (welfare surfaces, replicated) ── */
@@ -386,7 +387,7 @@ export default function StableMatching() {
     const sched = schedule === 'A' ? 'A proposes every round' : schedule === 'B' ? 'B proposes every round'
       : schedule === 'alt' ? 'the sides strictly alternate (A, B, A, …)' : `a coin (${bias}% toward A) picks the proposing side each round`;
     const tail = done ? `Settled in ${total} rounds — total rank ${acct.combined} (avg #${acct.avg.toFixed(2)}).`
-      : total ? `${step} of ${total} rounds so far.` : 'Already stable.';
+      : total ? `${safeStep} of ${total} rounds so far.` : 'Already stable.';
     return `${n} A's and ${n} B's; ${cons}. Each round the whole proposing side asks at once and every receiver keeps its single best offer (bumping if better), rejecting the rest; ${sched}. ${tail}`;
   })();
 
@@ -410,7 +411,7 @@ export default function StableMatching() {
           <button className={view === 'visualizer' ? 'active' : ''} onClick={() => setView('visualizer')}><Layers size={15} />Visualizer</button>
           <button className={view === 'lab' ? 'active' : ''} onClick={() => setView('lab')}><FlaskConical size={15} />Lab</button>
         </div>
-        {view === 'visualizer' && <div className="sm2-progress">Round {step} / {total}{done ? ' · complete' : ''}</div>}
+        {view === 'visualizer' && <div className="sm2-progress">Round {safeStep} / {total}{done ? ' · complete' : ''}</div>}
       </header>
 
       {view === 'visualizer' ? (
