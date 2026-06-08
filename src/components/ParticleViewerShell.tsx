@@ -334,27 +334,6 @@ export default function ParticleViewerShell({
             onChange={state.setCameraZ}
             format={v => v.toFixed(1)}
           />
-          {!compact && (
-            <table className="cp-orient-matrix">
-              <thead>
-                <tr>
-                  {(['x', 'y', 'v', 'u'] as const).map(k => (
-                    <th
-                      key={k}
-                      style={{ color: `hsl(${((AXIS_COLORS[k] + state.hueShift) % 1) * 360},100%,55%)` }}
-                    >{k}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {state.orientationMatrix.map((row, i) => (
-                  <tr key={i}>
-                    {row.map((v, j) => <td key={j}>{fmtMatrixCell(v)}</td>)}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
         </Section>
 
         <Section title="Color" icon="◑">
@@ -368,74 +347,83 @@ export default function ParticleViewerShell({
             onChange={state.setColourBy}
           />
           <Select
-            label="Hue"
-            options={[
-              { value: ColourQuantity.Phase, label: 'Phase (arg)' },
-              { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
-              { value: ColourQuantity.Real, label: 'Real part' },
-              { value: ColourQuantity.Imag, label: 'Imag part' },
-            ]}
-            value={state.colourQuantity}
-            onChange={state.setColourQuantity}
-          />
-          <Select
-            label="Brightness"
-            options={[
-              { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
-              { value: ColourQuantity.Uniform, label: 'Uniform (flat)' },
-              { value: ColourQuantity.Phase, label: 'Phase (arg)' },
-              { value: ColourQuantity.Real, label: 'Real part' },
-              { value: ColourQuantity.Imag, label: 'Imag part' },
-            ]}
-            value={state.brightnessQuantity}
-            onChange={state.setBrightnessQuantity}
-          />
-          <Select
             label="Colormap"
             options={colormapNames.map((name, i) => ({ value: i, label: name }))}
             value={state.colormap}
             onChange={state.setColormap}
           />
-          {state.colormap > 0 && (
+          {/* Phase wheel: the cyclic HSV controls. A sequential colormap ignores
+              these (it tracks magnitude), so we hide them and show its Repeat. */}
+          {state.colormap === 0 ? (
+            <>
+              <Select
+                label="Hue"
+                options={[
+                  { value: ColourQuantity.Phase, label: 'Phase (arg)' },
+                  { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
+                  { value: ColourQuantity.Real, label: 'Real part' },
+                  { value: ColourQuantity.Imag, label: 'Imag part' },
+                ]}
+                value={state.colourQuantity}
+                onChange={state.setColourQuantity}
+              />
+              <Select
+                label="Brightness"
+                options={[
+                  { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
+                  { value: ColourQuantity.Uniform, label: 'Uniform (flat)' },
+                  { value: ColourQuantity.Phase, label: 'Phase (arg)' },
+                  { value: ColourQuantity.Real, label: 'Real part' },
+                  { value: ColourQuantity.Imag, label: 'Imag part' },
+                ]}
+                value={state.brightnessQuantity}
+                onChange={state.setBrightnessQuantity}
+              />
+              <Pills
+                label="Style"
+                options={Object.keys(ColorStyle)
+                  .filter(k => isNaN(Number(k)))
+                  .map(k => ({ value: ColorStyle[k as keyof typeof ColorStyle], label: k }))}
+                value={state.colourStyle}
+                onChange={state.setColourStyle}
+              />
+              <Slider label="Hue shift" value={state.hueShift}
+                min={R.hueShift.min} max={R.hueShift.max} step={R.hueShift.step}
+                onChange={state.setHueShift} format={v => v.toFixed(2)} />
+            </>
+          ) : (
             <Slider label="Repeat (log bands)" value={state.colorRepeat}
               min={0} max={4} step={0.05}
               onChange={state.setColorRepeat}
               format={v => v === 0 ? 'off' : v.toFixed(2)} />
           )}
-          {state.colormap === 0 && (
-            <Pills
-              label="Style"
-              options={Object.keys(ColorStyle)
-                .filter(k => isNaN(Number(k)))
-                .map(k => ({ value: ColorStyle[k as keyof typeof ColorStyle], label: k }))}
-              value={state.colourStyle}
-              onChange={state.setColourStyle}
-            />
-          )}
-          <Slider label="Hue shift" value={state.hueShift}
-            min={R.hueShift.min} max={R.hueShift.max} step={R.hueShift.step}
-            onChange={state.setHueShift} format={v => v.toFixed(2)} />
           <Slider label="Saturation" value={state.saturation}
             min={R.saturation.min} max={R.saturation.max} step={R.saturation.step}
             onChange={state.setSaturation} format={v => v.toFixed(2)} />
         </Section>
 
         <Section title="Particles" icon="✦">
-          <Slider label="Size" value={state.size}
-            min={R.size.min} max={R.size.max} step={R.size.step}
-            onChange={state.setSize} format={v => v.toFixed(1)} />
+          {state.renderMode === 'Points' && (
+            <Slider label="Size" value={state.size}
+              min={R.size.min} max={R.size.max} step={R.size.step}
+              onChange={state.setSize} format={v => v.toFixed(1)} />
+          )}
           <Slider label="Opacity" value={state.opacity}
             min={R.opacity.min} max={R.opacity.max} step={R.opacity.step}
             onChange={state.setOpacity} format={v => v.toFixed(2)} />
           <Slider label="Intensity" value={state.intensity}
             min={R.intensity.min} max={R.intensity.max} step={R.intensity.step}
             onChange={state.setIntensity} format={v => v.toFixed(2)} />
-          <Select label="Shape"
-            options={shapeNames.map((s, i) => ({ value: i, label: s }))}
-            value={state.shapeIndex} onChange={state.setShapeIndex} />
-          <Select label="Texture"
-            options={textureNames.map((t, i) => ({ value: i, label: t }))}
-            value={state.textureIndex} onChange={state.setTextureIndex} />
+          {state.renderMode === 'Points' && (
+            <>
+              <Select label="Shape"
+                options={shapeNames.map((s, i) => ({ value: i, label: s }))}
+                value={state.shapeIndex} onChange={state.setShapeIndex} />
+              <Select label="Texture"
+                options={textureNames.map((t, i) => ({ value: i, label: t }))}
+                value={state.textureIndex} onChange={state.setTextureIndex} />
+            </>
+          )}
           <Checkbox label="Light background"
             checked={state.objectMode} onChange={state.setObjectMode} />
         </Section>
@@ -553,6 +541,27 @@ export default function ParticleViewerShell({
           <Slider label="Axis width" value={state.axisWidth}
             min={R.axisWidth.min} max={R.axisWidth.max} step={R.axisWidth.step}
             onChange={state.setAxisWidth} format={v => v.toFixed(1)} />
+          {!compact && (
+            <table className="cp-orient-matrix">
+              <thead>
+                <tr>
+                  {(['x', 'y', 'v', 'u'] as const).map(k => (
+                    <th
+                      key={k}
+                      style={{ color: `hsl(${((AXIS_COLORS[k] + state.hueShift) % 1) * 360},100%,55%)` }}
+                    >{k}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {state.orientationMatrix.map((row, i) => (
+                  <tr key={i}>
+                    {row.map((v, j) => <td key={j}>{fmtMatrixCell(v)}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </Section>
 
         <Section title="About" icon="ⓘ">
