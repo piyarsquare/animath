@@ -449,6 +449,19 @@ export default function ParticleViewerShell({
               )}
             </>
           )}
+          {state.renderMode === 'Tiles' && (
+            <>
+              <Slider label="Resolution" value={state.sheetResolution}
+                min={8} max={500} step={1}
+                onChange={state.setSheetResolution} format={v => `${v}²`} />
+              <Slider label="Tile size" value={state.tileSize}
+                min={0.02} max={2} step={0.01}
+                onChange={state.setTileSize} format={v => v.toFixed(2)} />
+              <Slider label="Shading" value={state.sheetShade}
+                min={0} max={1} step={0.01}
+                onChange={state.setSheetShade} format={v => v.toFixed(2)} />
+            </>
+          )}
         </Section>
 
         <Section title="Motion" icon="〜">

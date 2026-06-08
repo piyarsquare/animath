@@ -472,3 +472,46 @@ void main(){
   if(alpha < 0.003) discard;
   gl_FragColor = vec4(col, alpha);
 }`;
+
+// Sheet TILES vertex shader: one oriented quad per grid sample. The node is
+// placed on the surface, then the quad is expanded along the two local deformed
+// grid directions (central differences of surfacePos over one cell) so the tile
+// is a square stretched + sheared to fit the grid. Each edge vector is clamped to
+// uMaxTile world units: below it neighbouring tiles meet edge-to-edge (a solid
+// fabric), past it they detach into a field of separated squares (the points).
+export const tileVertexShader = vsCommon + `
+attribute vec2 corner;       // ±0.5 quad corner
+uniform vec2  uCellSize;     // domain units per cell (the sample spacing)
+uniform float uMaxTile;      // max world-space half-... edge length per tile
+varying float vFacing;       // |view-space normal . z| for depth shading
+void main(){
+  vec2 z = vec2(position.x, position.z);
+  vec3 c0 = surfacePos(z);
+  // Local deformed grid directions (one cell wide), via central differences.
+  vec3 du = 0.5 * (surfacePos(z + vec2(uCellSize.x, 0.0)) - surfacePos(z - vec2(uCellSize.x, 0.0)));
+  vec3 dv = 0.5 * (surfacePos(z + vec2(0.0, uCellSize.y)) - surfacePos(z - vec2(0.0, uCellSize.y)));
+  float lu = max(length(du), 1e-6);
+  float lv = max(length(dv), 1e-6);
+  vec3 duC = du * min(1.0, uMaxTile / lu);   // clamp edge length → tiles cap, then detach
+  vec3 dvC = dv * min(1.0, uMaxTile / lv);
+  vec3 pos3 = c0 + corner.x * duC + corner.y * dvC;
+  vec3 nrm = normalize(cross(du, dv));
+  vFacing = abs(normalize(normalMatrix * nrm).z);
+  vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
+  gl_Position = projectionMatrix * mv;
+  vec2 f = applyComplex(z, functionType);
+  if(length(f) > 1e3) f = normalize(f)*1e3;
+  vColor = calcColour(z, f);                 // one flat colour per tile (shared node)
+}`;
+
+// Tiles fragment: flat per-tile colour with a facing-ratio shade so the faceted
+// fabric reads in 3D. Opaque (tiles occlude via the depth buffer).
+export const tileFragmentShader = `
+uniform float opacity;
+uniform float uShade;
+varying vec3 vColor;
+varying float vFacing;
+void main(){
+  float shade = mix(1.0, 0.45 + 0.55*vFacing, clamp(uShade, 0.0, 1.0));
+  gl_FragColor = vec4(vColor * shade, opacity);
+}`;

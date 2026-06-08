@@ -9,6 +9,7 @@ export type { AdaptiveOptions } from './createParticleGeometry';
 export {
   createSheetGeometry, rebuildSheetGeometry,
   createSheetWireGeometry, rebuildSheetWireGeometry, sheetCellSize,
+  createTileGeometry, rebuildTileGeometry,
 } from './createSheetGeometry';
 export { createAxes, AXIS_LENGTH } from './createAxes';
 export { createHopfScaffold } from './createHopfScaffold';

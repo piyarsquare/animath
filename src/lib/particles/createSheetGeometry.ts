@@ -57,6 +57,70 @@ export function rebuildSheetWireGeometry(
   fillSheetWire(geometry, res, xMin, xMax, yMin, yMax);
 }
 
+/** Build the **tiles** geometry: one quad per grid node (a regular `(res+1)²`
+ *  lattice of sample points), each quad carrying its node's domain point in
+ *  `position` and a `corner` sign in {−0.5,+0.5}². The tile shader places the
+ *  node on the surface and expands the quad along the two local deformed grid
+ *  directions, so every tile is a square stretched + oriented to fit the grid.
+ *  Non-indexed (6 verts per tile). `seed`/`size` are zero/one as in the sheet. */
+export function createTileGeometry(
+  res: number,
+  xMin: number = -4, xMax: number = 4, yMin: number = -4, yMax: number = 4,
+): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  fillTiles(geometry, res, xMin, xMax, yMin, yMax);
+  return geometry;
+}
+
+export function rebuildTileGeometry(
+  geometry: THREE.BufferGeometry,
+  res: number,
+  xMin: number = -4, xMax: number = 4, yMin: number = -4, yMax: number = 4,
+): void {
+  fillTiles(geometry, res, xMin, xMax, yMin, yMax);
+}
+
+function fillTiles(
+  geometry: THREE.BufferGeometry,
+  res: number,
+  xMin: number, xMax: number, yMin: number, yMax: number,
+): void {
+  const cells = Math.max(1, Math.floor(res));
+  const n = cells + 1;                 // sample nodes per side
+  const dx = (xMax - xMin) / cells, dy = (yMax - yMin) / cells;
+  const tileCount = n * n;
+  const vertCount = tileCount * 6;     // two triangles per tile, non-indexed
+
+  const pos = new Float32Array(vertCount * 3);
+  const corner = new Float32Array(vertCount * 2);
+  const seeds = new Float32Array(vertCount * 4); // zero → jitter is a uniform shift
+  const sizes = new Float32Array(vertCount).fill(1);
+
+  // The four corner signs, as two triangles.
+  const cx = [-0.5, 0.5, 0.5, -0.5, 0.5, -0.5];
+  const cy = [-0.5, -0.5, 0.5, -0.5, 0.5, 0.5];
+
+  let v = 0;
+  for (let j = 0; j < n; j++) {
+    const y = yMin + j * dy;
+    for (let i = 0; i < n; i++) {
+      const x = xMin + i * dx;
+      for (let k = 0; k < 6; k++) {
+        pos[3 * v] = x; pos[3 * v + 1] = 0; pos[3 * v + 2] = y;
+        corner[2 * v] = cx[k]; corner[2 * v + 1] = cy[k];
+        v++;
+      }
+    }
+  }
+
+  geometry.setIndex(null);
+  geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geometry.setAttribute('corner', new THREE.BufferAttribute(corner, 2));
+  geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+  geometry.setAttribute('seed', new THREE.BufferAttribute(seeds, 4));
+  geometry.setDrawRange(0, vertCount);
+}
+
 function fillSheet(
   geometry: THREE.BufferGeometry,
   res: number,

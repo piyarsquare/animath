@@ -5,13 +5,14 @@ import { Select, NumberInput } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
-import { vertexShader, fragmentShader, sheetFillVertexShader, sheetWireVertexShader, sheetFragmentShader } from './shaders';
+import { vertexShader, fragmentShader, sheetFillVertexShader, sheetWireVertexShader, sheetFragmentShader, tileVertexShader, tileFragmentShader } from './shaders';
 import { loadParticleTextures } from '../../lib/textures';
 import {
   useParticleState, useUniformSync, useViewControls,
   createParticleGeometry, rebuildGeometryBuffers, redistributeAdaptive,
   createSheetGeometry, rebuildSheetGeometry,
   createSheetWireGeometry, rebuildSheetWireGeometry, sheetCellSize,
+  createTileGeometry, rebuildTileGeometry,
   createAxes, createHopfScaffold, createHopfFibers, startAnimationLoop,
 } from '../../lib/particles';
 import { usePersistentState } from '../../lib/usePersistentState';
@@ -93,6 +94,10 @@ export default function ComplexParticles({
   const sheetWireGeomRef = useRef<THREE.BufferGeometry>();
   const fillMeshRef = useRef<THREE.Mesh[]>([]);
   const wireMeshRef = useRef<THREE.LineSegments[]>([]);
+  // Tiles render mode: one oriented quad per grid sample (its own geometry +
+  // mesh per Riemann sheet).
+  const tileGeomRef = useRef<THREE.BufferGeometry>();
+  const tileMeshRef = useRef<THREE.Mesh[]>([]);
   const scaffoldRef = useRef<HopfScaffold>();
   const fibersRef = useRef<HopfFibers>();
 
@@ -278,15 +283,39 @@ export default function ComplexParticles({
     return m;
   }
 
+  function createTileMaterial(b: number) {
+    const [csx, csy] = currentCellSize();
+    const m = new THREE.ShaderMaterial({
+      uniforms: {
+        ...makeUniforms(b),
+        uShade: { value: state.sheetShade },
+        uCellSize: { value: new THREE.Vector2(csx, csy) },
+        uMaxTile: { value: state.tileSize },
+      },
+      vertexShader: tileVertexShader,
+      fragmentShader: tileFragmentShader,
+      transparent: true,
+      depthWrite: true,
+      side: THREE.DoubleSide,
+      blending: THREE.NormalBlending,
+      vertexColors: true,
+    });
+    m.userData.branch = b;
+    m.userData.sheet = true;
+    return m;
+  }
+
   // Visibility follows the render mode: Points shows the cloud; Sheet shows the
   // filled surface and/or the wireframe overlay.
   const applyRenderVisibility = () => {
     const isSheet = state.renderMode === 'Sheet';
-    // In adaptive Sheet mode the point cloud stays visible underneath so it can
-    // show through wherever the stretched fill/wire dissolves to points.
-    pointsRef.current.forEach(o => { o.visible = !isSheet || state.sheetAdaptive; });
+    const isTiles = state.renderMode === 'Tiles';
+    // The point cloud shows in Points mode and, in adaptive Sheet mode, stays
+    // visible underneath so it shows through wherever the fill/wire dissolves.
+    pointsRef.current.forEach(o => { o.visible = state.renderMode === 'Points' || (isSheet && state.sheetAdaptive); });
     fillMeshRef.current.forEach(o => { o.visible = isSheet && state.sheetFill; });
     wireMeshRef.current.forEach(o => { o.visible = isSheet && state.sheetWire; });
+    tileMeshRef.current.forEach(o => { o.visible = isTiles; });
   };
 
   // (Re)create the per-branch objects: a point cloud, a filled sheet, and a
@@ -296,22 +325,27 @@ export default function ComplexParticles({
     const pointsGeom = state.geometryRef.current;
     const fillGeom = sheetGeomRef.current;
     const wireGeom = sheetWireGeomRef.current;
-    if (!pointsGeom || !fillGeom || !wireGeom) return;
+    const tileGeom = tileGeomRef.current;
+    if (!pointsGeom || !fillGeom || !wireGeom || !tileGeom) return;
     pointsRef.current.forEach(o => scene.remove(o));
     fillMeshRef.current.forEach(o => scene.remove(o));
     wireMeshRef.current.forEach(o => scene.remove(o));
+    tileMeshRef.current.forEach(o => scene.remove(o));
     state.materialsRef.current.forEach(m => m.dispose());
     state.materialsRef.current = [];
     pointsRef.current = [];
     fillMeshRef.current = [];
     wireMeshRef.current = [];
+    tileMeshRef.current = [];
     for (let b = 0; b < branchCount; b++) {
       const pm = createBranchMaterial(b);
       const fm = createSheetFillMaterial(b);
       const wm = createSheetWireMaterial(b);
+      const tm = createTileMaterial(b);
       const pts = new THREE.Points(pointsGeom, pm);
       const fill = new THREE.Mesh(fillGeom, fm);
       const wire = new THREE.LineSegments(wireGeom, wm);
+      const tiles = new THREE.Mesh(tileGeom, tm);
       // In adaptive Sheet mode the cloud and sheet overlap; without a fixed order
       // these depth-write-off transparent objects sort by distance and the
       // additive points can land on top of an opaque fill. Pin points behind, then
@@ -320,11 +354,12 @@ export default function ComplexParticles({
       pts.renderOrder = 0;
       fill.renderOrder = 1;
       wire.renderOrder = 2;
-      state.materialsRef.current.push(pm, fm, wm);
+      state.materialsRef.current.push(pm, fm, wm, tm);
       pointsRef.current.push(pts);
       fillMeshRef.current.push(fill);
       wireMeshRef.current.push(wire);
-      scene.add(pts, fill, wire);
+      tileMeshRef.current.push(tiles);
+      scene.add(pts, fill, wire, tiles);
     }
     applyRenderVisibility();
   };
@@ -357,10 +392,12 @@ export default function ComplexParticles({
   useEffect(() => {
     const fillGeom = sheetGeomRef.current;
     const wireGeom = sheetWireGeomRef.current;
-    if (!fillGeom || !wireGeom) return;
+    const tileGeom = tileGeomRef.current;
+    if (!fillGeom || !wireGeom || !tileGeom) return;
     const [bxMin, bxMax, byMin, byMax] = effectiveBounds();
     rebuildSheetGeometry(fillGeom, state.sheetResolution, bxMin, bxMax, byMin, byMax);
     rebuildSheetWireGeometry(wireGeom, state.sheetResolution, bxMin, bxMax, byMin, byMax);
+    rebuildTileGeometry(tileGeom, state.sheetResolution, bxMin, bxMax, byMin, byMax);
     const [csx, csy] = sheetCellSize(state.sheetResolution, bxMin, bxMax, byMin, byMax);
     state.materialsRef.current.forEach(m => {
       if (m.uniforms.uCellSize) m.uniforms.uCellSize.value.set(csx, csy);
@@ -378,6 +415,13 @@ export default function ComplexParticles({
       if (m.uniforms.uShade) m.uniforms.uShade.value = state.sheetShade;
     });
   }, [state.sheetShade]);
+
+  // Push the max tile size to the tile materials.
+  useEffect(() => {
+    state.materialsRef.current.forEach(m => {
+      if (m.uniforms.uMaxTile) m.uniforms.uMaxTile.value = state.tileSize;
+    });
+  }, [state.tileSize]);
 
   // Show the sphere scaffold in the Hopf view (or once the Torus → Hopf collapse
   // is past halfway) and the donut scaffold in the Torus view; hide both in the
@@ -431,6 +475,7 @@ export default function ComplexParticles({
       state.geometryRef.current = geometry;
       sheetGeomRef.current = createSheetGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
       sheetWireGeomRef.current = createSheetWireGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
+      tileGeomRef.current = createTileGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
 
       rebuildBranchObjects(scene);
 

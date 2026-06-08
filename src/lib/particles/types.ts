@@ -87,10 +87,13 @@ export const viewTypes = [
 export const motionModes = ['Quaternion', 'Fixed'] as const;
 export const dropModes = ['None', 'DropX', 'DropY', 'DropU', 'DropV'] as const;
 
-/** How the sampled surface is drawn: a cloud of point particles, or a single
+/** How the sampled surface is drawn: a cloud of point particles, a single
  *  continuous translucent sheet (a wireframe/filled triangle mesh over a regular
- *  grid). Sheet mode ignores the sampling pattern and uses its own resolution. */
-export const renderModes = ['Points', 'Sheet'] as const;
+ *  grid), or Tiles — one oriented quad per grid sample, stretched along the local
+ *  deformation and capped at a maximum size, so dense regions form a solid fabric
+ *  and stretched regions tear apart into a field of separated tiles (points).
+ *  Sheet/Tiles ignore the sampling pattern and use their own resolution. */
+export const renderModes = ['Points', 'Sheet', 'Tiles'] as const;
 export type RenderMode = (typeof renderModes)[number];
 
 export const AXIS_COLORS = {

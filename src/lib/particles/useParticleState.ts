@@ -89,6 +89,10 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // (stretched) regions fall back to points. Off → a uniform sheet everywhere.
   const [sheetAdaptive, setSheetAdaptive] = usePersistentState(pk('sheetAdaptive'), true);
   const [sheetDensity, setSheetDensity] = usePersistentState(pk('sheetDensity'), 0.6);
+  // Tiles mode: maximum world-space edge length of a tile before it stops growing
+  // with the local cell. Below it tiles meet edge-to-edge (a solid fabric); past
+  // it they detach into a field of separated squares (the "points").
+  const [tileSize, setTileSize] = usePersistentState(pk('tileSize'), 0.35);
   const [objectMode, setObjectMode] = usePersistentState(pk('objectMode'), false);
   const [shapeIndex, setShapeIndex] = usePersistentState(pk('shapeIndex'), 1);
   const [textureIndex, setTextureIndex] = usePersistentState(pk('textureIndex'), 0);
@@ -221,6 +225,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     sheetShade, setSheetShade,
     sheetAdaptive, setSheetAdaptive,
     sheetDensity, setSheetDensity,
+    tileSize, setTileSize,
     objectMode, setObjectMode,
     shapeIndex, setShapeIndex,
     textureIndex, setTextureIndex,
