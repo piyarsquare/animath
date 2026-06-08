@@ -43,6 +43,7 @@ const GLASS: GlassSpec = { showUnderBelow: 0.95 };
 const EDGE_SEGS = 7;        // polyline segments per geodesic polygon edge
 const N_DECOR = 16;         // decorated tile copies kept near the player
 const UP = new THREE.Vector3(0, 1, 0);
+const DOWN = new THREE.Vector3(0, -1, 0);
 
 const v3 = (p: Vec3): THREE.Vector3 => new THREE.Vector3(p[0], p[1], p[2]);
 
@@ -175,7 +176,12 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   const foot = makeFootprintTrail(TRAIL_MAX);
   const footMesh = new THREE.Mesh(foot.geometry, foot.material); footMesh.frustumCulled = false;
   root.add(footMesh);
-  const covTrail: Vec3[] = [];
+  // Each trail point remembers the side it was laid on (det(h) < 0 ⇒ the flipped
+  // side), so a step taken on the other side of the sheet is drawn BELOW the glass
+  // floor (DOWN normal ⇒ below + chirality reversed) — exactly like the euclidean
+  // trail dropping under a mirrored cell. Stored in cover coords, re-projected each
+  // frame as the player re-centres.
+  const covTrail: { p: Vec3; flipped: boolean }[] = [];
   let lastTrailPos: Vec3 | null = null;
 
   // ── player frame on the κ=−1 shell ───────────────────────────────────────────
@@ -255,12 +261,13 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   function rebuildTrail() {
     foot.clear();
     for (let i = 0; i < covTrail.length; i++) {
-      projectM(Tview, covTrail[i], tmp);
-      if (i + 1 < covTrail.length) projectM(Tview, covTrail[i + 1], tmp2);
+      projectM(Tview, covTrail[i].p, tmp);
+      if (i + 1 < covTrail.length) projectM(Tview, covTrail[i + 1].p, tmp2);
       else tmp2.set(0, 0, 0);                     // last → toward the player (centre)
       tmp2.sub(tmp);
       if (tmp2.lengthSq() < 1e-6) tmp2.copy(fwdW);
-      foot.append(tmp, tmp2.normalize(), UP);
+      // steps taken on the flipped side go to the underside of the glass floor
+      foot.append(tmp, tmp2.normalize(), covTrail[i].flipped ? DOWN : UP);
     }
   }
 
@@ -291,9 +298,10 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     Tview = inv3(frame.g);
     Mtiles = mul(Tview, h);
 
-    // record the trail in cover coords as the player advances
+    // record the trail in cover coords as the player advances, tagging the side
+    // (det(h) < 0 ⇒ flipped) so the step renders on the correct face of the glass
     if (!lastTrailPos || distance(kappa, lastTrailPos, pPos) > 0.12) {
-      covTrail.push(pPos);
+      covTrail.push({ p: pPos, flipped: detH < 0 });
       if (covTrail.length > TRAIL_MAX) covTrail.shift();
       lastTrailPos = pPos;
     }

@@ -42,6 +42,21 @@ remaining, unstarted work. Build green, verify 100/100.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 21:48 — Hyperbolic trail writes to the other side of the glass
+**Why:** User: the footprint trail wasn't dropping to the far side of the glass on
+the flipped side in hyperbolic (it did in flat/spherical).
+
+`hyperbolic.ts` `rebuildTrail` always appended with the `UP` normal, so steps stayed
+on top of the disk regardless of side. Now each trail point stores the side it was
+laid on (`flipped = det(h) < 0`) when recorded, and `rebuildTrail` appends with
+`DOWN` for flipped points — the footprint `append` puts the quad at `LIFT·normal`
+(so `DOWN` ⇒ below the floor) and flips the chiral **F** (the `left` basis flips with
+the normal). This mirrors the euclidean trail dropping under a mirrored cell.
+Verified headless in crosscap3: after walking across a glide the footprint at the
+player's feet renders with the reversed **F** below the glass (and the mirrored
+look-through decor is visible beneath the floor). Orientable hyperbolic (genus-2)
+keeps the trail on top (det(h) stays > 0). Build green; verify 100/100.
+
 ### 🟢 code · 21:24 — Hyperbolic glass look-through + wheel/pinch zoom
 **Why:** User: the glass "look down at the opposite side of the domain" worked in
 flat + spherical but not in negative curvature; and wanted wheel/pinch to move the
