@@ -153,6 +153,13 @@ export interface FundamentalSquareDecor {
   /** Bottom-face form of landmark i (a column, or the magenta centre spire). Also
    *  grows +y from its base; the caller mirrors it onto the underside. */
   makeBottom(i: number): THREE.Group;
+  /** Top-face **vertex tower** — a tall, gold-finialed tree-tower marking a polygon
+   *  vertex (placed just inside every vertex by the presenter). Index-free: every
+   *  vertex tower looks the same. Grows +y from its base. */
+  makeTowerTop(): THREE.Group;
+  /** Bottom-face vertex tower — the column/obelisk counterpart, same vertex, other
+   *  face (keeps the tree↔column split through the flip). Grows +y from its base. */
+  makeTowerBottom(): THREE.Group;
   dispose(): void;
 }
 
@@ -179,6 +186,16 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
   const orbGeo = new THREE.SphereGeometry(0.6, 18, 14);
   const cubeGeo = new THREE.BoxGeometry(0.92, 0.92, 0.92);
 
+  // ── VERTEX TOWERS (special, tall; a gold finial flags them as vertex markers) ─
+  // top = a tall evergreen tree-tower, bottom = a tall stone obelisk-tower, so the
+  // tree↔column split (and its mirror under the flip) still reads, but taller.
+  const towerTrunkGeo = new THREE.CylinderGeometry(0.3, 0.55, 5.2, 12);
+  const towerCrownGeo = new THREE.ConeGeometry(1.0, 3.4, 14);
+  const towerBaseGeo = new THREE.CylinderGeometry(0.78, 0.95, 0.6, 12);
+  const towerShaftGeo = new THREE.CylinderGeometry(0.42, 0.66, 5.4, 16);
+  const towerPyramidGeo = new THREE.ConeGeometry(0.6, 1.5, 4);
+  const finialGeo = new THREE.OctahedronGeometry(0.42);
+
   // ── number-badge plane (shared geometry; per-prop material/texture) ───────────
   const decalGeo = new THREE.PlaneGeometry(1.7, 1.7);
   const DECAL_DIRS = 3;        // outward-facing copies (every 120°) for all-round read
@@ -192,6 +209,7 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
   const stoneMat = new THREE.MeshStandardMaterial({ color: 0xdedacb, roughness: 0.78, metalness: 0.02, side: THREE.DoubleSide });
   const goldMat = new THREE.MeshStandardMaterial({ color: 0xffcf4a, emissive: 0x7a5a00, emissiveIntensity: 0.7, roughness: 0.35, metalness: 0.45, side: THREE.DoubleSide });
   const magentaMat = new THREE.MeshStandardMaterial({ color: 0xff5ad0, emissive: 0x66004a, emissiveIntensity: 0.7, roughness: 0.35, metalness: 0.45, side: THREE.DoubleSide });
+  const towerCrownMat = new THREE.MeshStandardMaterial({ color: 0x2b6e44, emissive: 0x123c22, emissiveIntensity: 0.22, roughness: 0.8, side: THREE.DoubleSide });
 
   for (const p of props) {
     // column shaft: a limestone tint carrying the landmark hue
@@ -250,6 +268,25 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
     return g;
   };
 
+  const makeTowerTop = (): THREE.Group => {
+    const g = new THREE.Group();
+    const trunk = new THREE.Mesh(towerTrunkGeo, trunkMat); trunk.position.y = 2.6;
+    const crown = new THREE.Mesh(towerCrownGeo, towerCrownMat); crown.position.y = 6.3;
+    const finial = new THREE.Mesh(finialGeo, goldMat); finial.position.y = 8.2;
+    g.add(trunk, crown, finial);
+    return g;
+  };
+
+  const makeTowerBottom = (): THREE.Group => {
+    const g = new THREE.Group();
+    const base = new THREE.Mesh(towerBaseGeo, stoneMat); base.position.y = 0.3;
+    const shaft = new THREE.Mesh(towerShaftGeo, stoneMat); shaft.position.y = 3.3;
+    const point = new THREE.Mesh(towerPyramidGeo, stoneMat); point.position.y = 6.75;
+    const finial = new THREE.Mesh(finialGeo, goldMat); finial.position.y = 7.9;
+    g.add(base, shaft, point, finial);
+    return g;
+  };
+
   /** The centre beacon — gold spire + orb (top) vs magenta spire + cube (bottom). */
   const makeCenter = (mat: THREE.MeshStandardMaterial, finial: 'orb' | 'cube'): THREE.Group => {
     const g = new THREE.Group();
@@ -270,11 +307,15 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
     props,
     makeTop,
     makeBottom,
+    makeTowerTop,
+    makeTowerBottom,
     dispose: () => {
       trunkGeo.dispose(); canopyGeo.forEach((g) => g.dispose()); decalGeo.dispose();
       plinthGeo.dispose(); shaftGeo.dispose(); capitalGeo.dispose(); abacusGeo.dispose();
       pedestalGeo.dispose(); pedestalGeo2.dispose(); spireGeo.dispose(); orbGeo.dispose(); cubeGeo.dispose();
-      trunkMat.dispose(); stoneMat.dispose(); goldMat.dispose(); magentaMat.dispose();
+      towerTrunkGeo.dispose(); towerCrownGeo.dispose(); towerBaseGeo.dispose();
+      towerShaftGeo.dispose(); towerPyramidGeo.dispose(); finialGeo.dispose();
+      trunkMat.dispose(); stoneMat.dispose(); goldMat.dispose(); magentaMat.dispose(); towerCrownMat.dispose();
       shaftMats.forEach((m) => m.dispose());
       canopyMats.forEach((m) => m.dispose());
       decalMats.forEach((m) => m.dispose());

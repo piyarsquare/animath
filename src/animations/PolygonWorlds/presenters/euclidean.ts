@@ -37,12 +37,20 @@ const TRAIL_SPACING = 1.6;
 const GLASS: GlassSpec = { showUnderBelow: 0.8, solidAt: 0.82 };
 const FLOOR_COLOR = 0x46658f;   // one neutral sheet colour (the two sides are told
                                 // apart by trees vs columns + the warm/cool light)
+// Vertex towers sit just inside every corner of the square cell — the 4-gon's
+// "slightly smaller polygon". Authored in (u,v); 0.82 keeps them clear of the seams.
+const VERTEX_INSET = 0.82;
+const CELL_CORNERS: [number, number][] = [[0, 0], [1, 0], [1, 1], [0, 1]];
+const insetCorner = ([cu, cv]: [number, number]): [number, number] =>
+  [0.5 + (cu - 0.5) * VERTEX_INSET, 0.5 + (cv - 0.5) * VERTEX_INSET];
 
 interface Cell {
   group: THREE.Group;     // matrix = translate(cellOrigin) · scale(1, flip, 1)
   slab: THREE.Mesh;
   top: THREE.Group;       // trees (top face)
   bottom: THREE.Group;    // columns (bottom face)
+  towersTop: THREE.Group;    // tree-towers just inside each vertex (top face)
+  towersBottom: THREE.Group; // column-towers just inside each vertex (bottom face)
 }
 
 export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
@@ -114,9 +122,14 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
         const t = decor.makeTop(j); top.add(t);          // grows +y from the top face
         const b = decor.makeBottom(j); b.scale.y = -1; bottom.add(b); // grows −y from the bottom face
       });
-      group.add(slab, top, bottom);
+      const towersTop = new THREE.Group(), towersBottom = new THREE.Group();
+      CELL_CORNERS.forEach(() => {
+        towersTop.add(decor.makeTowerTop());                     // tree-tower, grows +y
+        const tb = decor.makeTowerBottom(); tb.scale.y = -1; towersBottom.add(tb); // column-tower, −y
+      });
+      group.add(slab, top, bottom, towersTop, towersBottom);
       root.add(group);
-      cells.push({ group, slab, top, bottom });
+      cells.push({ group, slab, top, bottom, towersTop, towersBottom });
     }
     placeDecor();
   }
@@ -127,6 +140,12 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
         const x = (p.u - 0.5) * side, z = (p.v - 0.5) * side;
         cell.top.children[j].position.set(x, ht, z);
         cell.bottom.children[j].position.set(x, -ht, z);
+      });
+      CELL_CORNERS.forEach((corner, v) => {
+        const [iu, iv] = insetCorner(corner);
+        const x = (iu - 0.5) * side, z = (iv - 0.5) * side;
+        cell.towersTop.children[v].position.set(x, ht, z);
+        cell.towersBottom.children[v].position.set(x, -ht, z);
       });
     }
   }
@@ -142,11 +161,15 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   // player state (walks the flat plane in world coords). Spawn at the home-cell
   // point farthest from every landmark, so the player never starts inside a tree.
   function clearSpawn(): [number, number] {
+    const avoid: [number, number][] = [
+      ...decor.props.map((p) => [p.u, p.v] as [number, number]),
+      ...CELL_CORNERS.map(insetCorner),
+    ];
     let best = [0.5, 0.5], bestD = -1;
     for (let cu = 0.1; cu <= 0.9; cu += 0.1) {
       for (let cv = 0.1; cv <= 0.9; cv += 0.1) {
         let mind = Infinity;
-        for (const p of decor.props) mind = Math.min(mind, Math.hypot(cu - p.u, cv - p.v));
+        for (const [au, av] of avoid) mind = Math.min(mind, Math.hypot(cu - au, cv - av));
         if (mind > bestD) { bestD = mind; best = [cu, cv]; }
       }
     }

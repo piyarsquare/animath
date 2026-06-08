@@ -111,9 +111,16 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     return geodesicPoint(kappa, th, rho);
   }
 
-  // Precompute, per tile, the home-polygon edge sample points + prop positions
-  // pushed by the deck element (fixed in cover coords; only T changes per frame).
-  type TileGeo = { center: Vec3; det: number; edgePts: Vec3[]; props: Vec3[] };
+  // Vertex towers sit just inside every polygon vertex — the "slightly smaller
+  // n-gon" inscribed by pulling each vertex a fraction of the way back to centre.
+  const TOWER_INSET = 0.85;
+  const nVerts = verts.length;
+  const homeTowers = verts.map((V) => geodInterp(ORIGIN, V, TOWER_INSET));
+
+  // Precompute, per tile, the home-polygon edge sample points + prop positions +
+  // inset-vertex tower positions, pushed by the deck element (fixed in cover
+  // coords; only T changes per frame).
+  type TileGeo = { center: Vec3; det: number; edgePts: Vec3[]; props: Vec3[]; towers: Vec3[] };
   const homeProps = decor.props.map((p) => propHyper(p.u, p.v));
   const tiles: TileGeo[] = elems.map((el) => {
     const edgePts: Vec3[] = [];
@@ -129,6 +136,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
       det: el.det(),
       edgePts,
       props: homeProps.map((hp) => applyMat(el.m, hp)),
+      towers: homeTowers.map((hv) => applyMat(el.m, hv)),
     };
   });
   // Deck generators + inverses — the moves the player's tile tracker `h` walks.
@@ -158,15 +166,18 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   lines.frustumCulled = false;
   root.add(lines);
 
-  // ── decor pool (each cell carries a tree + column variant per prop) ──────────
-  interface Cell { trees: THREE.Group; columns: THREE.Group; }
+  // ── decor pool (each cell carries a tree + column variant per prop, plus a
+  //    tree-tower + column-tower per polygon vertex) ────────────────────────────
+  interface Cell { trees: THREE.Group; columns: THREE.Group; towerTrees: THREE.Group; towerColumns: THREE.Group; }
   const cells: Cell[] = [];
   for (let i = 0; i < N_DECOR; i++) {
     const trees = new THREE.Group(), columns = new THREE.Group();
     decor.props.forEach((_, j) => { trees.add(decor.makeTop(j)); columns.add(decor.makeBottom(j)); });
-    trees.visible = false; columns.visible = false;
-    root.add(trees, columns);
-    cells.push({ trees, columns });
+    const towerTrees = new THREE.Group(), towerColumns = new THREE.Group();
+    for (let v = 0; v < nVerts; v++) { towerTrees.add(decor.makeTowerTop()); towerColumns.add(decor.makeTowerBottom()); }
+    trees.visible = false; columns.visible = false; towerTrees.visible = false; towerColumns.visible = false;
+    root.add(trees, columns, towerTrees, towerColumns);
+    cells.push({ trees, columns, towerTrees, towerColumns });
   }
   // Decor is full-size near the player and shrinks by the conformal factor (1−r²)
   // with Poincaré radius — the correct way to keep a fixed *hyperbolic* size.
@@ -254,8 +265,25 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
         aj.position.copy(tmp); aj.scale.set(sc, sc, sc);
         bj.position.copy(tmp); bj.scale.set(sc, -sc, sc);   // mirror below the floor
       });
+      // vertex towers — same above/below split, placed at the inset-vertex points
+      const aboveT = flipped ? cell.towerColumns : cell.towerTrees;
+      const belowT = flipped ? cell.towerTrees : cell.towerColumns;
+      aboveT.visible = true;
+      belowT.visible = underVisible;
+      tile.towers.forEach((tw, v) => {
+        projectM(Mtiles, tw, tmp);
+        const r2 = Math.min(0.97, poincareR2(Mtiles, tw));
+        const sc = decorBase * (1 - r2);
+        const aj = aboveT.children[v] as THREE.Object3D;
+        const bj = belowT.children[v] as THREE.Object3D;
+        aj.position.copy(tmp); aj.scale.set(sc, sc, sc);
+        bj.position.copy(tmp); bj.scale.set(sc, -sc, sc);
+      });
     }
-    for (let k = used; k < cells.length; k++) { cells[k].trees.visible = false; cells[k].columns.visible = false; }
+    for (let k = used; k < cells.length; k++) {
+      cells[k].trees.visible = false; cells[k].columns.visible = false;
+      cells[k].towerTrees.visible = false; cells[k].towerColumns.visible = false;
+    }
   }
 
   function rebuildTrail() {

@@ -42,6 +42,27 @@ remaining, unstarted work. Build green, verify 100/100.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 22:20 — Vertex towers (inset n-gon) on both faces, every world
+**Why:** User wants a tall "tower" just inside every polygon vertex, on both faces,
+with the same tree/column split — i.e. inscribe a slightly smaller n-gon and put a
+special marker at each of its vertices.
+
+- **decor.ts**: new `makeTowerTop()` (a tall evergreen tree-tower) / `makeTowerBottom()`
+  (a tall stone obelisk-tower), both gold-finialed to read as "special". Index-free
+  (every vertex tower is identical); keeps the tree↔column split through the flip.
+- Placement is per-cover in each presenter's native coordinate (the `(u,v)` chart
+  can't reach the hyperbolic 2n-gon vertices, so there's no single shared layout):
+  - **euclidean** (square 4-gon): towers at the 4 cell corners inset by 0.82; ride
+    the per-cell `scale.y=−1` flip; added to the spawn-avoidance set.
+  - **spherical** (square chart): towers at the 4 inset chart corners via `dirFor`,
+    outer/inner like the markers, with the antipodal twin for ℝP².
+  - **hyperbolic** (2n-gon): towers at `real.vertices` pulled 0.85 toward centre
+    (`geodInterp(ORIGIN, V, …)`), one per tile, with the same above/below + glass +
+    `det(h)` flip logic and conformal `(1−r²)` scale as the markers.
+- Verified headless: genus-2 shows tall tree-towers with gold finials at the octagon
+  vertices; rp2 a tree-tower at the seam + its mirrored column-tower; flat torus the
+  four corner towers among the regular trees. Build green; verify 100/100.
+
 ### 🟢 code · 21:48 — Hyperbolic trail writes to the other side of the glass
 **Why:** User: the footprint trail wasn't dropping to the far side of the glass on
 the flipped side in hyperbolic (it did in flat/spherical).

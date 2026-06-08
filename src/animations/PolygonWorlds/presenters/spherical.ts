@@ -42,6 +42,8 @@ const LON = 24, LAT = 16;
 const SHELL_COLOR = 0x46658f; // one neutral shell colour (sides told apart by
                               // trees vs columns + the warm/cool light)
 const SHELL_GAP = 0.985;      // inner-marker radius fraction (the sheet thickness)
+const VERTEX_INSET = 0.82;    // vertex towers sit just inside the square's corners
+const CHART_CORNERS: [number, number][] = [[0, 0], [1, 0], [1, 1], [0, 1]];
 
 const v3 = (p: Vec3): THREE.Vector3 => new THREE.Vector3(p[0], p[1], p[2]);
 const upY = new THREE.Vector3(0, 1, 0);
@@ -124,6 +126,19 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
         const ad = deckDir(d);
         const cOut = decor.makeBottom(i); place(cOut, ad, R, true); outerG.add(cOut);
         const tIn = decor.makeTop(i); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
+      }
+    });
+    // vertex towers just inside each chart corner (the square's "smaller polygon")
+    CHART_CORNERS.forEach(([cu, cv]) => {
+      const iu = 0.5 + (cu - 0.5) * VERTEX_INSET, iv = 0.5 + (cv - 0.5) * VERTEX_INSET;
+      const d = dirFor(iu, iv);
+      treeDirs.push(d);
+      const tOut = decor.makeTowerTop(); place(tOut, d, R, true); outerG.add(tOut);
+      const cIn = decor.makeTowerBottom(); place(cIn, d, R * SHELL_GAP, false); innerG.add(cIn);
+      if (antipodal) {
+        const ad = deckDir(d);
+        const cOut = decor.makeTowerBottom(); place(cOut, ad, R, true); outerG.add(cOut);
+        const tIn = decor.makeTowerTop(); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
       }
     });
   }
