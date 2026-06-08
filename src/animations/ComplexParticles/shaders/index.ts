@@ -335,9 +335,16 @@ void main(){
 // node (interpolated along the rectangle edges). Drawn as LineSegments of the
 // row/column edges only — no triangle diagonals. gl_PointSize is omitted.
 export const sheetWireVertexShader = vsCommon + `
+uniform vec4 uDomainBox;   // xMin, xMax, yMin, yMax
 varying vec3 vViewPos;
+varying float vFade;
 void main(){
   vec2 z = vec2(position.x, position.z);
+  {
+    float ex = min(position.x - uDomainBox.x, uDomainBox.y - position.x) / max(uDomainBox.y - uDomainBox.x, 1e-4);
+    float ey = min(position.z - uDomainBox.z, uDomainBox.w - position.z) / max(uDomainBox.w - uDomainBox.z, 1e-4);
+    vFade = smoothstep(0.0, 0.16, min(ex, ey));   // 0 at the perimeter → no boundary
+  }
   vec4 jit = (seed*2. - 1.) * jitterAmp;          // seed is 0 → uniform shift
   if(uJitterMode==0) z += jit.xy;
   vec2 f = applyComplex(z, functionType);
@@ -364,7 +371,9 @@ void main(){
 export const sheetFillVertexShader = vsCommon + `
 attribute vec2 cellBase;
 uniform vec2 uCellSize;
+uniform vec4 uDomainBox;   // xMin, xMax, yMin, yMax
 varying vec3 vViewPos;
+varying float vFade;
 vec3 cornerColour(vec2 zc){
   vec2 fc = applyComplex(zc, functionType);
   if(length(fc) > 1e3) fc = normalize(fc)*1e3;
@@ -372,6 +381,14 @@ vec3 cornerColour(vec2 zc){
 }
 void main(){
   vec2 z = vec2(position.x, position.z);
+  {
+    // Fade by the cell centre's distance to the domain edge so the whole
+    // rectangle dissolves together (uniform per cell → no torn perimeter).
+    vec2 c = cellBase + 0.5 * uCellSize;
+    float ex = min(c.x - uDomainBox.x, uDomainBox.y - c.x) / max(uDomainBox.y - uDomainBox.x, 1e-4);
+    float ey = min(c.y - uDomainBox.z, uDomainBox.w - c.y) / max(uDomainBox.w - uDomainBox.z, 1e-4);
+    vFade = smoothstep(0.0, 0.16, min(ex, ey));   // 0 at the perimeter → no boundary
+  }
   vec4 jit = (seed*2. - 1.) * jitterAmp;          // seed is 0 → uniform shift
   if(uJitterMode==0) z += jit.xy;
   vec2 f = applyComplex(z, functionType);
@@ -405,6 +422,7 @@ uniform float uShade;
 uniform int   uWire;
 varying vec3 vColor;
 varying vec3 vViewPos;
+varying float vFade;
 void main(){
   vec3 col = vColor;
   float alpha = opacity;
@@ -416,5 +434,7 @@ void main(){
     float shade = mix(1.0, 0.45 + 0.55*facing, clamp(uShade, 0.0, 1.0));
     col *= shade;
   }
+  alpha *= vFade;                                  // dissolve at the domain edge → no boundary
+  if(alpha < 0.003) discard;
   gl_FragColor = vec4(col, alpha);
 }`;

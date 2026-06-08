@@ -219,12 +219,14 @@ export default function ComplexParticles({
 
   function createSheetFillMaterial(b: number) {
     const [csx, csy] = currentCellSize();
+    const [bx0, bx1, by0, by1] = effectiveBounds();
     const m = new THREE.ShaderMaterial({
       uniforms: {
         ...makeUniforms(b),
         uShade: { value: state.sheetShade },
         uWire: { value: 0 },
         uCellSize: { value: new THREE.Vector2(csx, csy) },
+        uDomainBox: { value: new THREE.Vector4(bx0, bx1, by0, by1) },
       },
       vertexShader: sheetFillVertexShader,
       fragmentShader: sheetFragmentShader,
@@ -240,8 +242,12 @@ export default function ComplexParticles({
   }
 
   function createSheetWireMaterial(b: number) {
+    const [bx0, bx1, by0, by1] = effectiveBounds();
     const m = new THREE.ShaderMaterial({
-      uniforms: { ...makeUniforms(b), uShade: { value: state.sheetShade }, uWire: { value: 1 } },
+      uniforms: {
+        ...makeUniforms(b), uShade: { value: state.sheetShade }, uWire: { value: 1 },
+        uDomainBox: { value: new THREE.Vector4(bx0, bx1, by0, by1) },
+      },
       vertexShader: sheetWireVertexShader,
       fragmentShader: sheetFragmentShader,
       transparent: true,
@@ -320,6 +326,7 @@ export default function ComplexParticles({
     const [csx, csy] = sheetCellSize(state.sheetResolution, bxMin, bxMax, byMin, byMax);
     state.materialsRef.current.forEach(m => {
       if (m.uniforms.uCellSize) m.uniforms.uCellSize.value.set(csx, csy);
+      if (m.uniforms.uDomainBox) m.uniforms.uDomainBox.value.set(bxMin, bxMax, byMin, byMax);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
