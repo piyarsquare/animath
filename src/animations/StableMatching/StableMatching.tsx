@@ -24,7 +24,7 @@ const NAMED_NOTE: Record<NamedKey, string> = {
   aOptimal: 'A proposes — best for A, worst for B (top of the lattice)',
   bOptimal: 'B proposes — best for B, worst for A (bottom of the lattice)',
   egalitarian: 'minimizes the total of everyone’s ranks (welfare-best)',
-  median: 'each person gets their median stable partner (the lattice’s center)',
+  median: 'each person gets their median stable partner (the lattice’s centre)',
   minRegret: 'makes the single worst-off person as happy as possible',
   sexEqual: 'balances A’s and B’s total happiness (|ΣA − ΣB| smallest)',
   balanced: 'minimizes the larger of the two sides’ total rank',
@@ -614,8 +614,8 @@ export default function StableMatching() {
   const legend = (
     <p className="sm2-legend">
       {cellView === 'both' && <><span className="k sq">square = A→B rank</span><span className="k disc">circle = B→A rank</span></>}
-      {cellView === 'a' && <span className="k sq">color = A's rank of B</span>}
-      {cellView === 'b' && <span className="k sq">color = B's rank of A</span>}
+      {cellView === 'a' && <span className="k sq">colour = A's rank of B</span>}
+      {cellView === 'b' && <span className="k sq">colour = B's rank of A</span>}
       {cellView === 'diff'
         ? <span className="k scale diverge">blue = A keener · red = B keener</span>
         : <span className="k scale">blue #1 → red last</span>}

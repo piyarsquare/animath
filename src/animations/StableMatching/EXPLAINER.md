@@ -6,7 +6,7 @@ fair solutions and repairs that live inside it.
 ## Reading the matrix
 
 Rows are group **A**, columns group **B**. Each cell is the potential pair
-(A_i, B_j), encoded as **two nested heatmaps** sharing one diverging color scale
+(A_i, B_j), encoded as **two nested heatmaps** sharing one diverging colour scale
 (**BuRd**: **blue = #1 choice → white → red = last**): the **square** is how A_i
 ranks B_j, the **circle inside** is how B_j ranks A_i. Shape — square vs circle —
 tells the two sides apart, not colour. So a row is A_i's preferences as a colour

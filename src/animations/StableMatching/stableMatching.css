@@ -36,7 +36,7 @@
 .sw { display: inline-block; width: 10px; height: 10px; vertical-align: -1px; margin-right: 4px; border-radius: 3px; background: #9a9aa8; }
 .sw.disc { border-radius: 50%; }
 
-/* one panel per side: marker + average + the sorted outcome colorbar on a row.
+/* one panel per side: marker + average + the sorted outcome colourbar on a row.
  * the average is the mean partner rank; the strip is every person sorted
  * best→worst on the BuRd scale (an ECDF read as colour). */
 .sm2-rows { display: flex; flex-direction: column; gap: 9px; margin: 6px 0 4px; }
