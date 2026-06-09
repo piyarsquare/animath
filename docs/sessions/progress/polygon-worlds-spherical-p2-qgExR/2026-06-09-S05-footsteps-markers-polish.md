@@ -31,6 +31,44 @@ pole-clumping; tower labelling; badge legibility). See
 
 ## Working notes
 
+### 🟢 code · 05:40 — Fix: the orientation flip must be *relative* to the viewer's side
+**Why:** the S05 chirality test (below) proved klein + crosscap3 lay the **fresh** print
+mirror-reversed in place while the avatar stays un-mirrored, so the F a character just
+stamped read **backwards to itself** on the flipped face. ℝP² was right because it lays
+the print un-mirrored and shows the reversal via a real `det<0` twin mesh.
+
+Root cause: the `mirror` flag was **absolute** (`detH<0` / `flipAcc` at lay time) when it
+must be **relative** — `mirror = (print's side) XOR (viewer's current side)`. Then a fresh
+print (same side) is never mirrored (reads correct in frame), and a print from the other
+face reads reversed once you cross to it (the cue is preserved; it's symmetric).
+
+- **hyperbolic** (Dyck/genus-2): `covTrail` now stores `side` (not a baked `mirror`);
+  `rebuildTrail` (already runs every frame) appends with `side !== (detH<0)`. One-liner.
+- **euclidean** (Klein): prints are *baked*, so re-mirroring on a side change needs a
+  rebuild. Added a `trail[]` list (`pos`, `fwd`, `side=flipAcc`); fresh prints are laid
+  **un-mirrored**; a glide-edge fold (`parity===1`) now calls `rebuildTrail()` to re-mirror
+  every print against the new side; a translation-only fold still just `foot.shift`s.
+- **spherical** unchanged — already correct (un-mirrored primary + `det<0` twin).
+- Re-ran the test: **all four green** (torus control; klein/crosscap3/rp2 PASS). Eyeballed
+  klein + crosscap3 on the mirror face: the fresh F is now forward/upright with cyan-left;
+  the existing trail flips to reversed the instant you cross (the cue still lands).
+
+### 🔵 finding · 05:10 — A test for trail orientation (fresh F must read correct in-frame)
+**Why:** "is the footprint chirality right?" needed an executable check, not eyeballing.
+
+- Added a `?polydebug`-guarded `window.__poly` test bridge (`map`/`probe`/`setYaw`; no
+  effect on the shipped app) and `footprints.lastChirality()` + `CoverModel.debugProbe()`:
+  the **exact** signed side of the freshest print's cyan half in the character's own
+  `up×forward` frame (geometry, not pixels — a first pixel attempt was spoofed by the
+  cyan corner discs and flipped the orientable torus between runs).
+- `scripts/trail-chirality.mjs` walks the character onto **both** faces of each world and
+  reports PASS/FAIL (sign must match across faces), saving third-person shots to
+  `/tmp/trail`. A subtlety: the trail only records a print every ~0.12–1.6 units, so the
+  harness must **dwell** on the flip face until a genuinely flip-side print is laid before
+  probing (an immediate read returns the stale pre-crossing print — that briefly masked
+  crosscap3 as a false PASS until the dwell was added).
+- Verdict (pre-fix): **rp2 PASS; klein + crosscap3 FAIL** — confirming the reported symptom.
+
 ### 🔵 finding · 04:50 — What the footprint trail is *for* (the design contract)
 **Why:** the trail keeps causing trouble; writing down its intended job + the
 invariant every presenter must honor, so we stop re-breaking it.

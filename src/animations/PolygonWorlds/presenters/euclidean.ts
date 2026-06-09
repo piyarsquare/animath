@@ -161,6 +161,16 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   footMesh.frustumCulled = false;
   root.add(footMesh);
   let trailLast: THREE.Vector3 | null = null;
+  // Each print remembers the sheet side it was laid on (`side` = the flipAcc parity at
+  // lay time). It is drawn mirror-reversed only when the side you are viewing from now
+  // differs — a *relative* flip — so a fresh print always reads correct in the
+  // character's frame while a print from the other face reads reversed once you cross to
+  // it. Because the prints are baked, re-mirroring on a side change means a rebuild.
+  const trail: { pos: THREE.Vector3; fwd: THREE.Vector3; side: number }[] = [];
+  function rebuildTrail() {
+    foot.clear();
+    for (const t of trail) foot.append(t.pos, t.fwd, UP, (t.side ^ flipAcc) === 1);
+  }
 
   // player state (walks the flat plane in world coords). Spawn at the home-cell
   // point farthest from every landmark, so the player never starts inside a tree.
@@ -210,9 +220,13 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     if (fi !== 0 || fj !== 0) {
       const [ox, oz] = cellOrigin(fi, fj);
       px -= ox; pz -= oz;
-      foot.shift(-ox, 0, -oz);
+      for (const t of trail) t.pos.set(t.pos.x - ox, t.pos.y, t.pos.z - oz);
       if (trailLast) trailLast.set(trailLast.x - ox, trailLast.y, trailLast.z - oz);
-      flipAcc ^= flipParity(fi, fj);
+      const parity = flipParity(fi, fj);
+      flipAcc ^= parity;
+      // A glide crossing flips the side you view from ⇒ every print's relative mirror
+      // changes; rebuild. A plain translation only slides the baked prints.
+      if (parity) rebuildTrail(); else foot.shift(-ox, 0, -oz);
     }
 
     pos.set(px, 0, pz);
@@ -245,15 +259,17 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     }
 
     // footprints: always laid on top of the sheet — the same side the character is
-    // rendered on — so your fresh trail stays with you. On a mirrored cell the print
-    // is set down mirror-reversed in place (you are on the sheet's other face).
-    const playerFlipped = (flipParity(I0, J0) ^ flipAcc) === 1;
+    // rendered on — so your fresh trail stays with you. A fresh print is laid un-mirrored
+    // (it reads correct in the character's frame); it only turns mirror-reversed later, if
+    // you cross to the other face and look back at it (the relative flip, in rebuildTrail).
     if (!trailLast || trailLast.distanceTo(pos) > TRAIL_SPACING) {
       const d = trailLast ? pos.clone().sub(trailLast) : forward.clone();
       if (d.lengthSq() < 1e-9) d.copy(forward);
-      d.y = 0;
+      d.y = 0; d.normalize();
       footPos.set(px, 0, pz);
-      foot.append(footPos, d.normalize(), UP, playerFlipped);
+      trail.push({ pos: footPos.clone(), fwd: d.clone(), side: flipAcc });
+      if (trail.length > TRAIL_MAX) trail.shift();
+      foot.append(footPos, d, UP, false);     // same side as the viewer ⇒ never mirrored
       trailLast = pos.clone();
     }
   }
@@ -276,7 +292,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     kind: 'euclidean',
     update, pose, chart,
     debugProbe: () => foot.lastChirality(forward, UP),
-    clearTrail: () => { foot.clear(); trailLast = null; },
+    clearTrail: () => { trail.length = 0; foot.clear(); trailLast = null; },
     setFloorOpacity: applyFloorOpacity,
     setCameraDistance: (d: number) => { camDist = d; },
     setSquareSize: (v: number) => {

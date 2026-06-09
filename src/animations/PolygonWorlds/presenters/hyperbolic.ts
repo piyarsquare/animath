@@ -206,9 +206,12 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   // Trail points, stored in cover coords (+ the side of the sheet they were laid on)
   // and re-projected each frame as the player re-centres. Every print is drawn on
   // TOP of the glass — the same side the character is rendered on — so it always
-  // stays with you; a print set down while on the mirror face (det(h) < 0) is drawn
-  // mirror-reversed in place, marking that face without leaving the character.
-  const covTrail: { p: Vec3; mirror: boolean }[] = [];
+  // stays with you. Each print records the sheet it was laid on (`side` = det(h) < 0);
+  // it is rendered mirror-reversed only when the CURRENT viewing sheet differs from the
+  // one it was laid on (a *relative* flip). So a fresh print always reads correct in the
+  // character's frame, while a print laid on the other sheet reads reversed once you walk
+  // across to it — the orientation cue without breaking the F you just stamped.
+  const covTrail: { p: Vec3; side: boolean }[] = [];
   let lastTrailPos: Vec3 | null = null;
 
   // ── player frame on the κ=−1 shell ───────────────────────────────────────────
@@ -310,8 +313,9 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
       else tmp2.set(0, 0, 0);                     // last → toward the player (centre)
       tmp2.sub(tmp);
       if (tmp2.lengthSq() < 1e-6) tmp2.copy(fwdW);
-      // always on the character's side (UP); mirror in place if laid on the flip face
-      foot.append(tmp, tmp2.normalize(), UP, covTrail[i].mirror);
+      // always on the character's side (UP); mirror in place only when the print's sheet
+      // differs from the one we're viewing from now (relative flip — see covTrail above)
+      foot.append(tmp, tmp2.normalize(), UP, covTrail[i].side !== (detH < 0));
     }
   }
 
@@ -383,7 +387,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
 
     // record the trail in cover coords (+ the sheet side the character is on now)
     if (!lastTrailPos || distance(kappa, lastTrailPos, pPos) > 0.12) {
-      covTrail.push({ p: pPos, mirror: detH < 0 });
+      covTrail.push({ p: pPos, side: detH < 0 });
       if (covTrail.length > TRAIL_MAX) covTrail.shift();
       lastTrailPos = pPos;
     }
