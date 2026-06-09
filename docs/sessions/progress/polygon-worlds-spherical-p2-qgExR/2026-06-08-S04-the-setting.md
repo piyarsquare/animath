@@ -42,6 +42,25 @@ remaining, unstarted work. Build green, verify 100/100.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 09:05 — Trail always stays on the character's side
+**Why:** User: new trail points should always appear on the same side as the
+character. My earlier change dropped flipped-side footprints BELOW the glass, away
+from the character (who is always rendered on top), so they vanished under the solid
+floor while you walked.
+
+- **hyperbolic.ts**: reverted the per-point side tag; the trail is always appended
+  with the `UP` normal (the player frame never flips, so the character is always on
+  top — the trail rides with it). Verified in crosscap3: after crossing a glide the
+  footprint at your feet is an upright F on top of the disk, while the glass
+  look-through still shows the mirrored decor/towers below.
+- **euclidean.ts**: same fix — footprints were laid at `y=−thickness` (below) on a
+  mirrored cell, where the default *solid* floor hid them entirely; now always laid
+  on top (`y=0`, `UP`) with the character. Removed the now-unused `DOWN`/`playerFlipped`.
+- **spherical.ts** already lays the trail on the walked shell (the character's side);
+  its ℝP² antipodal twin is a reflected identification copy, left as-is.
+
+Build green; verify 100/100 (kernel untouched).
+
 ### 🟢 code · 22:20 — Vertex towers (inset n-gon) on both faces, every world
 **Why:** User wants a tall "tower" just inside every polygon vertex, on both faces,
 with the same tree/column split — i.e. inscribe a slightly smaller n-gon and put a

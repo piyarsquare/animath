@@ -20,14 +20,14 @@ import { applyMat, det3, ORIGIN, Isometry } from '../lib/cayleyKlein';
  * A mirror-reflected cell (`det < 0`) is the whole sheet flipped (`scale.y = −1`):
  * the columns face becomes the top — the trees↔columns swap is the side cue (the two
  * faces are not coloured differently; a warm light from above and a cool one from
- * below tint them instead). The footprint trail is laid on the side you are on, so
- * walking a flipped cell drops your trail **below the floor**.
+ * below tint them instead). The footprint trail is always laid on top of the sheet,
+ * the same side the character is rendered on, so your fresh trail stays with you
+ * even while walking a mirrored cell.
  */
 
 const K = 2;            // render (2K+1)² copies around the player
 const EYE = 1.7;
 const UP = new THREE.Vector3(0, 1, 0);
-const DOWN = new THREE.Vector3(0, -1, 0);
 const SKY = 0x070912;
 const TRAIL_MAX = 1500;
 const TRAIL_SPACING = 1.6;
@@ -217,14 +217,14 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
       }
     }
 
-    // footprints: laid on the side the player is on (below the floor when flipped)
-    const playerFlipped = flipParity(I0, J0) === 1;
+    // footprints: always laid on top of the sheet — the same side the character is
+    // rendered on — so your fresh trail stays with you even on a mirrored cell.
     if (!trailLast || trailLast.distanceTo(pos) > TRAIL_SPACING) {
       const d = trailLast ? pos.clone().sub(trailLast) : forward.clone();
       if (d.lengthSq() < 1e-9) d.copy(forward);
       d.y = 0;
-      footPos.set(px, playerFlipped ? -thickness : 0, pz);
-      foot.append(footPos, d.normalize(), playerFlipped ? DOWN : UP);
+      footPos.set(px, 0, pz);
+      foot.append(footPos, d.normalize(), UP);
       trailLast = pos.clone();
     }
   }
