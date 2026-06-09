@@ -52,6 +52,9 @@ const MIGRATED = new Set<string>([
   '/complex-particles',
   '/correspondence',
   '/fractals',
+  '/topology-walk',
+  '/mobius',
+  '/wrap-world',
 ]);
 
 function Router(): JSX.Element {
