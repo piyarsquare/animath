@@ -6,12 +6,16 @@
 generative art, built with TypeScript, React 18, Three.js, and Vite. It is
 deployed as a static site to GitHub Pages at `https://piyarsquare.github.io/animath/`.
 
-Every animation ("app") is a self-contained module that plugs into a shared
-**AppShell** — a persistent top bar + slide-out drawer that supplies navigation,
-settings, actions, a function picker, and a help/explainer popup. Apps declare
-themselves in a single registry (`src/apps.ts`) and register their UI through a
-small set of React hooks and portal components, so the chrome stays uniform
-across every view.
+Every animation ("app") is a self-contained module that plugs into the shared
+**workspace chrome** (`src/chrome/`, specified by `docs/redesign/DESIGN-SPEC.md`):
+a landing **gallery** opens into a per-app **workspace** where the plot(s) and
+the control panels are draggable windows on a dotted stage, opened from a left
+icon rail whose icons come from a closed 11-archetype vocabulary. Five **skins**
+restyle everything via one `data-theme` attribute; below 740px the workspace
+re-chromes into a phone UI (stacked view cards, bottom dock, bottom sheets).
+Apps declare themselves in a single registry (`src/apps.ts`) and pass their
+panels/views to one `<Workspace>` component, so the chrome stays uniform across
+every view.
 
 ## Quick Reference
 
@@ -53,9 +57,31 @@ animath/
 ├── .github/workflows/deploy.yml  # GitHub Pages deploy (push to main + manual)
 ├── public/textures/            # HDR environment map + placeholder
 └── src/
-    ├── index.tsx               # entry: hash router + <AppShell>, lazy route map
+    ├── index.tsx               # entry: bare hash router (gallery at #/), lazy route map
     ├── App.tsx                 # default Complex Particles route (lazy wrapper)
-    ├── apps.ts                 # THE app registry (drives router + landing menu)
+    ├── apps.ts                 # THE app registry (AppDescriptor; feeds the gallery)
+    │
+    ├── chrome/                 # the global chrome (see docs/redesign/)
+    │   ├── theme.css           # design tokens: 5 skins on [data-theme] + am-* styles
+    │   ├── icons.tsx           # closed stroke icon set (Icon + ICONS)
+    │   ├── skins.tsx           # SKINS registry + useSkin/applyPersistedSkin + SkinPicker
+    │   ├── TopBar.tsx          # brand-mark Home · title/formula · mode pills · ? · skins
+    │   ├── ExplainerModal.tsx  # the "?" modal (wraps Readme)
+    │   ├── Gallery.tsx         # landing gallery (hero, filter chips, preview cards)
+    │   ├── catalog.ts          # gallery card metadata (category/kind) from apps.ts
+    │   ├── previews.tsx        # cheap animated canvas previews for the cards
+    │   ├── readouts.tsx        # Breakdown/MiniHisto/Sparkline/StatGrid/Kicker
+    │   ├── usePhone.ts         # ≤740px matchMedia hook (phone re-chrome)
+    │   └── workspace/          # the workspace engine
+    │       ├── types.ts        # SectionDef / ViewDef / LayoutDef / WorkspaceProps
+    │       ├── archetypes.ts   # 11 archetypes · 5 tiers (closed vocabulary)
+    │       ├── geometry.ts     # snap/dock/pack/collapse-chain math (pure)
+    │       ├── layouts.ts      # builtin Compact/Everything + persistence helpers
+    │       ├── drag.ts         # pointer-capture drag helper
+    │       ├── Workspace.tsx   # responsive entry (desktop ↔ phone)
+    │       ├── DesktopWorkspace.tsx # stage, guides, rail, windows, layouts, persistence
+    │       ├── PhoneWorkspace.tsx   # stacked view cards + bottom dock + sheets
+    │       ├── Panel.tsx / ViewWindow.tsx / Rail.tsx / LayoutsMenu.tsx
     │
     ├── animations/             # one folder per app, each self-contained
     │   ├── ComplexParticles/   # 4D complex-function particle viewer
@@ -69,28 +95,22 @@ animath/
     │   ├── TrinaryStars/        # three-body planet sandbox (Observatory) + ensemble Lab
     │   │                        #   (Trinary.tsx hosts both as tabs; engine in lib/nbody)
     │   ├── StableMarriage/      # Gale–Shapley visualizer + heatmap lab (CSS/DOM)
-    │   └── AgenticSorting/      # concurrent agent-based sorting (CSS/DOM)
+    │   ├── AgenticSorting/      # concurrent agent-based sorting (CSS/DOM)
+    │   ├── StableMatching/      # rebuilt Gale–Shapley lab: matrix · welfare · lattice (CSS/DOM)
+    │   └── PolygonWorlds/       # walk every closed surface from one glued polygon
     │
-    ├── components/             # shared shell + UI
-    │   ├── AppShell.tsx        # global chrome: top bar, drawer, tabs, hooks, portals
-    │   ├── AppShell.css
-    │   ├── ActionFloater.tsx   # draggable on-canvas mirror of an app's Actions
-    │   ├── ActionFloater.css
-    │   ├── useFloaterDrag.ts   # drag behavior for floating panels
-    │   ├── Menu.tsx            # landing gallery shown at the `/` route
-    │   ├── Menu.css
-    │   ├── ParticleViewerShell.tsx  # turnkey shell for particle (4D) viewers
-    │   ├── ControlPanel.tsx    # form primitives: Section / Slider / Pills / Select / Checkbox
-    │   ├── ControlPanel.css
+    ├── components/             # shared app-side UI
+    │   ├── ParticleViewerShell.tsx  # turnkey workspace assembly for particle (4D) viewers
+    │   ├── ControlPanel.tsx    # form primitives: Slider / Pills / Select / Checkbox / …
+    │   ├── ControlPanel.css    #   (token-styled; --cp-* vars alias the theme tokens)
     │   ├── Canvas3D.tsx        # Three.js scene + camera + renderer + resize wrapper
     │   ├── Readme.tsx          # in-app markdown renderer (marked)
     │   └── ToggleMenu.tsx      # legacy collapsible menu (used by the legacy Fractals2D)
     │
     ├── controls/
     │   ├── QuarterTurnControls.tsx # 4D eighth-turn + spin + drop-axis controls
-    │   │                            #   (rendered in the standard Actions panel)
-    │   ├── QuarterTurnControls.css
-    │   └── QuarterTurnBar.tsx      # older inline 4D rotation bar
+    │   │                            #   (the drive-tier "4D Rotation" panel)
+    │   └── QuarterTurnControls.css
     │
     ├── lib/
     │   ├── nbody/              # shared gravitational engine: integrator + scenarios + analysis
@@ -126,64 +146,77 @@ animath/
 ## Routing
 
 The app uses a **hand-rolled hash router** in `src/index.tsx`. Every route is
-`React.lazy`-imported (code-split) and rendered inside a single persistent
-`<AppShell>`. The route table is keyed by hash; the visible app catalog comes
-from `src/apps.ts`.
+`React.lazy`-imported (code-split) and rendered **bare** — each app owns its
+chrome by rendering `<Workspace>`. The route table is keyed by hash; the
+visible app catalog comes from `src/apps.ts` (+ `src/chrome/catalog.ts`).
 
 | Hash Route            | Component        | Description                                |
 |----------------------|------------------|--------------------------------------------|
-| `#/` (default)       | `Menu`           | Landing gallery of all apps                 |
+| `#/` (default)       | `Gallery`        | Landing gallery of all apps                 |
 | `#/complex-particles`| `App → ComplexParticles` | 4D complex-function particle viewer |
-| `#/plane-transform`  | `PlaneTransform` | f as a transformation of the plane          |
+| `#/plane-transform`  | `PlaneTransform` | f as a transformation of the plane (two view windows) |
 | `#/fractals`         | `FractalsGPU`    | GPU Mandelbrot / Julia / Burning Ship / Tricorn |
-| `#/fractals-cpu`     | `Fractals2D`     | Legacy CPU 2D fractals                      |
-| `#/correspondence`   | `Correspondence` | Mandelbrot ↔ Julia split view               |
+| `#/fractals-cpu`     | `Fractals2D`     | Legacy CPU 2D fractals (unlisted)           |
+| `#/correspondence`   | `Correspondence` | Mandelbrot ↔ Julia, two linked view windows |
 | `#/topology-walk`    | `TopologyWalk`   | First-person walk on a closed surface (twisting corridor / flat torus / Klein); `#/mobius` and `#/wrap-world` redirect here |
-| `#/trinary`          | `Trinary`        | Three-star system: Observatory sandbox + Lab as tabs (`#/trinary-lab` opens the Lab) |
+| `#/trinary`          | `Trinary`        | Three-star system: Observatory + Lab as top-bar modes (`#/trinary-lab` opens the Lab) |
 | `#/stable-marriage`  | `StableMarriage` | Gale–Shapley algorithm + heatmap lab        |
 | `#/agentic-sorting`  | `AgenticSorting` | Concurrent agent-based sorting              |
+| `#/stable-matching`  | `StableMatching` | Rebuilt Gale–Shapley lab (matrix · welfare surface · lattice via layouts) |
+| `#/polygon-worlds`   | `PolygonWorlds`  | Walk every closed surface from one glued polygon |
 
-Unknown hashes fall back to `Menu`. **`src/apps.ts` is the single source of
-truth** for the user-visible catalog (order, name, icon, blurb) — it drives both
-the drawer's Apps tab and the landing-page cards. When you add an app you update
-*both* the `routes` map in `index.tsx` and the `apps` array in `apps.ts`.
+Unknown hashes fall back to the `Gallery`. **`src/apps.ts` is the single source
+of truth** for the user-visible catalog (order, name, icon, blurb); the gallery
+adds per-card metadata (category, preview kind) in `src/chrome/catalog.ts`.
+When you add an app you update the `routes` map in `index.tsx`, the `apps`
+array in `apps.ts`, **and** the `META` map in `chrome/catalog.ts`.
 
-## The AppShell framework
+## The workspace framework
 
-`src/components/AppShell.tsx` renders the global chrome and exposes everything an
-app needs to integrate. The top bar shows (left to right):
+`src/chrome/` renders the global chrome (full spec: `docs/redesign/DESIGN-SPEC.md`;
+control inventory mapping: `docs/redesign/PARAM-MAP.md`). An app integrates by
+rendering **one component**:
 
-- **⌂ Home** — back to the landing menu (hidden on `/`).
-- **☰ Apps** — opens the drawer's Apps tab.
-- **ƒ Function** — opens the Function tab (dimmed if the app registered no functions).
-- **Title / formula** — app name plus an optional monospace subtitle (e.g. a formula);
-  clicking it opens Settings.
-- **⚙ Settings** — opens the Settings tab (dimmed if empty).
-- **▶ Actions** — opens the Actions tab (dimmed if empty).
-- **? Explainer** — opens the "What am I looking at?" popup (dimmed if none).
+```tsx
+<Workspace
+  appId="my-app"            // persistence namespace (localStorage ws:<appId>)
+  title={name} subtitle={formula}
+  sections={sections}       // SectionDef[] — the control panels
+  views={views}             // ViewDef[] — the plot window(s)
+  layouts={layouts}         // optional built-in layouts (+ auto Compact/Everything)
+  defaultLayoutId="essentials"
+  explainer={markdown}      // the "?" modal (EXPLAINER.md [+ '---' + README.md])
+  modes={…} activeMode={…} onModeChange={…}  // optional top-bar mode pills
+/>
+```
 
-The drawer has four tabs: **Apps**, **Function**, **Settings**, **Actions**. The
-Settings and Actions tab bodies are **portal targets**: apps render their controls
-into them via `<ShellSettings>` / `<ShellActions>`. When the active app changes
-(`currentHash`), the shell resets all of this registered state.
-
-### Integration API (import from `components/AppShell`)
-
-| Export | Purpose |
-|--------|---------|
-| `useAppHeader(title, subtitle?)` | Set the bar title + optional formula subtitle. |
-| `useAppFunctions(reg \| null)` | Register a function list `{ names, current, onChange }` so the ƒ button + Function tab can switch functions without opening Settings. |
-| `useAppExplainer(markdown \| null)` | Register markdown for the **?** help popup (typically `import x from './EXPLAINER.md?raw'`). |
-| `<ShellSettings>{…}</ShellSettings>` | Portal children into the Settings tab. |
-| `<ShellActions>{…}</ShellActions>` | Portal children into **both** the Actions tab and the floating `ActionFloater` (kept in sync). |
-| `useActionFloaterOff()` | Suppress the generic `ActionFloater` (for apps shipping their own floater, e.g. Correspondence's playback scrubber). |
-| `AppDescriptor` | Type of an `apps.ts` entry (`hash`, `name`, `icon?`, `blurb?`). |
+- `SectionDef = { id, title, arch, node, estHeight? }` — `arch` is one of the
+  **closed 11-archetype vocabulary** (`chrome/workspace/archetypes.ts`):
+  Define `subject`/`domain` · Render `view`/`color`/`marks`/`motion` · Drive
+  `drive`/`playback` · Analyze `lab`/`readout` · System `quality`. The rail
+  sorts by tier; never invent new icons — propose vocabulary changes in
+  `docs/redesign/IN-PROGRESS.md`.
+- `ViewDef = { id, title, node, defaultRect }` — the node fills a draggable,
+  resizable, collapsible window body (`position:absolute; inset:0`); collapsed
+  views are hidden, **never unmounted**, so WebGL state survives (`Canvas3D`
+  ignores zero-size resizes).
+- `LayoutDef.views[id].open: false` hides a view in that layout (how
+  Stable Matching's matrix/welfare/lattice and Trinary's Lab instruments
+  present as layouts).
+- The top bar carries the brand-mark **Home** (gallery is the only hub), the
+  `Layout:` menu, optional mode pills, the **?** explainer and the SkinPicker.
+- Analyze-tier panels should use the shared readout primitives from
+  `chrome/readouts.tsx` (Breakdown / MiniHisto / Sparkline / StatGrid / Kicker).
+- Apps with window-level key handlers (first-person walkers) must early-return
+  when `document.activeElement` is a form control, so typing in panels doesn't
+  drive the scene.
 
 ### Control primitives (import from `components/ControlPanel`)
 
-`Section` (collapsible group with icon), `Slider`, `Pills` (segmented buttons),
-`Select` (dropdown), `Checkbox`. These are the standard building blocks for the
-Settings/Actions panels and are styled by `ControlPanel.css`. Use them instead of
+`Slider`, `Pills` (segmented buttons), `Select` (dropdown), `Checkbox`,
+`RangeSlider`, `NumberInput` (+ a legacy `Section`). These are the standard
+building blocks for panel bodies, styled by `ControlPanel.css` on the theme
+tokens (`--cp-*` vars alias `--fg`/`--accent`/…). Use them instead of
 hand-rolling inputs so every app looks consistent.
 
 ## Architecture Patterns
@@ -204,18 +237,19 @@ Each app lives in `src/animations/<Name>/` and typically contains:
 - Optional `shaders/` directory (GLSL kept as inline template strings).
 - Optional `.css` for CSS/DOM apps.
 
-Inside the component, an app: (1) holds its own state with `useState`/`useRef`;
-(2) calls `useAppHeader` (and `useAppExplainer`, optionally `useAppFunctions`);
-(3) renders its scene (Three.js via `Canvas3D`, or DOM/CSS); (4) renders controls
-inside `<ShellSettings>` / `<ShellActions>` using the `ControlPanel` primitives.
+Inside the component, an app: (1) holds its own state with `useState`/`useRef`
+(+ `usePersistentState` for settings); (2) defines its `SectionDef[]` panels
+(bodies built from the `ControlPanel` primitives) and `ViewDef[]` view
+window(s); (3) renders `<Workspace appId title subtitle sections views layouts
+explainer>`. The scene (Three.js via `Canvas3D`, or DOM/CSS) is the view node.
 
 ### Three.js / particle (4D) viewers
 
 The complex viewers are powered by the **`src/lib/particles` engine** plus the
 turnkey `ParticleViewerShell` component, which together provide the standard
-**Function / Domain / Camera / Color / Particles / Motion / Detail / About** sections, the
-`QuarterTurnControls` (in the Actions panel), gesture handling, and the rAF loop
-out of the box. The flow
+**Function / Domain / Camera / Color / Particles / Surface / Motion /
+4D Rotation / Detail** panels (the `QuarterTurnControls` live in the drive-tier
+4D Rotation panel), gesture handling, and the rAF loop out of the box. The flow
 is: `useParticleState` (state) → `useViewControls` (orientation/projection
 controls) → build geometry/axes in `Canvas3D`'s `onMount` → `useUniformSync`
 pushes React state into shader uniforms → `startAnimationLoop` runs the rAF loop.
@@ -224,15 +258,17 @@ new particle viewer.
 
 ### 2D / fractal viewers
 
-FractalsGPU and Correspondence render a full-screen shader quad through an
-orthographic camera and navigate with `useViewportGestures` (drag-pan,
-pinch/wheel-zoom, tap). Palettes come from `lib/colormaps.ts`.
+FractalsGPU and Correspondence render shader quads through orthographic cameras
+inside their view windows and navigate with `useViewportGestures` (drag-pan,
+pinch/wheel-zoom, tap). Palettes come from `lib/colormaps.ts`. Correspondence's
+two linked windows are the two-view reference.
 
 ### CSS/DOM apps
 
-StableMarriage and AgenticSorting render plain DOM with `lucide-react` icons and
-their own CSS. They still integrate via `useAppHeader` / `useAppExplainer` and may
-use `<ShellSettings>` / `<ShellActions>`.
+StableMarriage, StableMatching and AgenticSorting render plain DOM with
+`lucide-react` icons and their own CSS inside view windows; their controls live
+in workspace panels like everyone else's. StableMatching shows how in-app tabs
+become **layouts** (`views[id].open`).
 
 ## Interaction conventions
 
@@ -241,8 +277,8 @@ Particle viewers split **looking** (gestures) from **navigating** (buttons):
 - **1-finger / mouse drag** orbits the camera (never the 4D rotation).
 - **2-finger drag** (or `Shift`+drag) pans the look-at target.
 - **2-finger pinch / wheel** zooms.
-- **QuarterTurnControls** (in the **Actions** panel — the draggable ActionFloater
-  and the drawer's Actions tab): tap a ↻/↺ button for a single **eighth turn**
+- **QuarterTurnControls** (the drive-tier **4D Rotation** panel, draggable
+  beside the plot): tap a ↻/↺ button for a single **eighth turn**
   (45°); the small toggle under each button starts/stops a **continuous spin** in
   that plane and direction (multiple compose, e.g. xy + uv = an isoclinic double
   rotation). One **Spin speed** slider sets the rate. Includes reset + drop-axis.
@@ -251,8 +287,13 @@ Particle viewers split **looking** (gestures) from **navigating** (buttons):
   **Yaw / Pitch / Roll** controls that orbit the 3D camera rigidly instead of
   rotating the 4D pre-image; the six 4D planes return in the linear projections.
 
-Fractal viewers: drag to pan, pinch/wheel to zoom, and **Trace mode** (Actions
-drawer) spawns an iteration orbit from a tapped point.
+Fractal viewers: drag to pan, pinch/wheel to zoom, and **Trace mode** (the
+drive-tier Trace panel) spawns an iteration orbit from a tapped point.
+
+Workspace windows: drag by the **header** (canvas gestures stay inside the
+window body); resize view windows from the bottom-right handle; any
+pointer-down raises a window; collapse from the header chevron. Arrangements
+are saved via the top-bar **Layout** menu and persist per app.
 
 ### Projection modes (Complex Particles)
 
@@ -266,8 +307,9 @@ A 4D point `(x, y, u, v)` maps to 3D via: **Perspective** (divide by `3 + v`),
 - **Path alias** `@/` → `src/` (in both `tsconfig.json` and `vite.config.ts`).
   Note: many files still use relative `../../` imports — both work; match the file
   you're editing.
-- **State** is local `useState`/`useRef` only (no global store/context except the
-  AppShell context, which you consume via the provided hooks).
+- **State** is local `useState`/`useRef` only (no global store/context; the
+  workspace owns only window/layout state, persisted per app under `ws:<appId>`,
+  and the skin under `chrome:skin`).
 - **Persisted settings**: `usePersistentState(key, initial)` (`lib/usePersistentState.ts`)
   is a drop-in `useState` that mirrors to `localStorage` (namespaced
   `animath:<version>:<app>:<field>`), so a user's controls survive a reload. Pass
@@ -319,11 +361,12 @@ Follow **docs/BUILDING_AN_APP.md**. In short:
 
 1. Create `src/animations/MyApp/MyApp.tsx` (+ `README.md`, `EXPLAINER.md`).
 2. Register the route in `src/index.tsx` (`React.lazy` import + `routes` entry).
-3. Register the catalog entry in `src/apps.ts` (`hash`, `name`, `icon`, `blurb`).
-4. Call `useAppHeader(...)` (and `useAppExplainer`, optionally `useAppFunctions`);
-   render controls in `<ShellSettings>` / `<ShellActions>` with `ControlPanel`
-   primitives. For 4D particle viewers, build on `ParticleViewerShell` +
-   `lib/particles` (copy ComplexParticles).
+3. Register the catalog entry in `src/apps.ts` (`hash`, `name`, `icon`, `blurb`)
+   **and** its gallery metadata (category + preview kind) in `src/chrome/catalog.ts`.
+4. Define `SectionDef[]` panels (archetypes from the closed vocabulary) and
+   `ViewDef[]` view window(s), then render `<Workspace appId … />` with panel
+   bodies built from the `ControlPanel` primitives. For 4D particle viewers,
+   build on `ParticleViewerShell` + `lib/particles` (copy ComplexParticles).
 5. Document *your* app: add its row to the **Routing** table above and a line to
    the repository-layout tree (and to `README.md`). Append — don't reorder.
 6. `npm run build` must pass.

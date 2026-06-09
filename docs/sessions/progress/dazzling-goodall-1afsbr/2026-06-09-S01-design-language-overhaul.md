@@ -6,7 +6,7 @@ title: Design language overhaul — tokens, gallery, workspace
 branch: claude/dazzling-goodall-1afsbr
 slug: dazzling-goodall-1afsbr
 status: in-progress
-build: unknown
+build: passing
 followup: null
 pr: null
 app: null
@@ -36,6 +36,27 @@ merged as PR #194); this session starts a new topic from the uploaded design
 bundle.
 
 ## Working notes
+
+### 🟡 milestone · 23:55 — All 11 apps migrated; legacy chrome deleted; sweep verified
+**Why:** the per-app agents landed one by one; each migration was reviewed,
+type-checked, committed and pushed as its own unit, then the shared shell had
+no consumers left.
+
+Migration commits: Correspondence `19d79ef` (two linked windows, floater →
+playback panel), FractalsGPU `9f765f4`, TopologyWalk `a6a8454` (WASD guarded
+against focused inputs), PlaneTransform `26260c8` (two windows, curve floater →
+drive panel), PolygonWorlds `4cb9532` (inventoried + PARAM-MAP §11), Agentic
+Sorting `88278d7` (zero `as-*` collisions, audited), StableMarriage `c09ce7d`,
+StableMatching `6425d4d` (rework's new lattice tab → third view + layout;
+`window.innerHeight` → container measurement), Trinary `f8506ba` (mode pills,
+two workspaces, Lab's two-view split achieved, URL-query config preserved).
+Then `cf84d28` deleted AppShell/ActionFloater/useFloaterDrag/QuarterTurnBar and
+made the router bare; `282d6c5` captured the verification sweep — every route
+desktop-dark, phone chrome at 390×844, neon + phosphor skins — and fixed the
+one layout flaw found (Agentic Sorting Setup overlap). All shots eyeballed:
+rail/panels/windows/layouts render per spec on every app.
+
+![the pilot workspace](../../../redesign/shots/p4-complex-particles.png)
 
 ### 🟢 code · 23:55 — P0–P3 shipped; all nine app migrations dispatched in parallel
 **Why:** foundations and the engine are committed and visually verified; the

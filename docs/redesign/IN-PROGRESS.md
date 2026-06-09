@@ -18,8 +18,19 @@ questions. The implementing agent should update this file as phases land.
   freeSlot; collapse-chain reflow; raise-on-touch; view windows hide-don't-unmount; per-app
   layout persistence `ws:<appId>`; built-in + saved layouts; PhoneWorkspace dock/sheet).
   Complex Particles pilots it (Essentials/Appearance/Rotate layouts).
-- 🔄 **Phase 4 — migrate all apps** (in flight).
-- ⬜ Phase 5 phone verification at 390px · Phase 6 a11y/polish sweep · docs updates.
+- ✅ **Phase 4 — all 11 apps migrated** (Complex Particles, Fractals, Mandelbrot ↔ Julia,
+  Plane Transform, Topology Walk, Trinary Observatory + Lab, Stable Marriage,
+  Stable Matching, Agentic Sorting, Polygon Worlds; legacy `#/fractals-cpu` kept
+  unlisted with a minimal Home affordance). Old chrome deleted: AppShell,
+  ActionFloater, useFloaterDrag, Menu, PlaybackFloater, PlaneCurveFloater,
+  QuarterTurnBar. PARAM-MAP fully checked off; the only new view surface found
+  during migration (Stable Matching's lattice) got its own view window + layout.
+- ✅ **Phase 5 — phone mode** verified at 390×844 (gallery single-column; stacked
+  view cards + bottom dock + sheets on the apps).
+- ✅ **Phase 6 — polish baseline**: focus-visible rings, prefers-reduced-motion,
+  Escape-to-close on menus/modals/sheets, aria-labels on all icon-only chrome
+  buttons, hit targets (40px rail / 44px dock), screenshot sweep across skins in
+  `shots/`. Docs updated (CLAUDE.md, README.md, BUILDING_AN_APP.md).
 
 ## Decisions added during implementation
 
@@ -53,6 +64,19 @@ Complex Particles, Fractals, and Trinary System were designed against the real r
 The other five (Plane Transform, Mandelbrot ↔ Julia, Topology Walk, Stable Marriage, Agentic
 Sorting) have **plausible control sets designed from the app concepts** — validate each against the
 actual code's capabilities and adjust panel contents (not the archetypes) accordingly.
+
+## Still open after implementation (carried forward)
+
+- **Keyboard window management** (move/dock/cycle windows without a pointer) —
+  panels/rail/menus are keyboard-operable; window placement is not.
+- **Linked-view extras** for Mandelbrot↔Julia (viewport zoom-lock toggle);
+  seed propagation works as before.
+- **Skin-aware canvas palettes**: engines keep their own colors; only the
+  chrome + `--viz-bg` follow the skin (gallery previews branch light/dark).
+- **Saved-layout management**: naming still via `window.prompt`; no rename/
+  reorder/export.
+- **Gallery search** (no UI yet).
+- **Real-renderer gallery previews** (cards use cheap canvas mocks by decision).
 
 ## Not yet designed (open branches)
 - **Linked-view semantics** for the two-view apps: exact hover/seed propagation, viewport lock
