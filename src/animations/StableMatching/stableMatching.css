@@ -27,6 +27,31 @@
 .sm2-dist { display: flex; gap: 2px; align-items: flex-end; height: 40px; }
 .sm2-dist .b { flex: 1; min-height: 2px; background: linear-gradient(#8b8bd6, #3f3f5a); border-radius: 2px 2px 0 0; }
 
+/* side identity: A = blue square, B = amber circle (echoes the matrix's square/circle) */
+.sm2-app { --a-side: #6ea8ff; --b-side: #f0a868; }
+.sw { display: inline-block; width: 10px; height: 10px; vertical-align: -1px; margin-right: 5px; border-radius: 3px; }
+.sw.disc { border-radius: 50%; }
+.sw.a { background: var(--a-side); } .sw.b { background: var(--b-side); }
+/* the average card carries the swatch colour on the swatch itself */
+.sm2-avg .sw.sq { background: var(--a-side); } .sm2-avg .sw.disc { background: var(--b-side); }
+
+/* per-side average: two rows, A above B, number coloured by side */
+.sm2-avgrows { display: flex; flex-direction: column; gap: 2px; margin: 2px 0; }
+.sm2-avg { display: inline-flex; align-items: baseline; gap: 4px; font-size: 13px; color: #aab; }
+.sm2-avg strong { font-size: 22px; font-variant-numeric: tabular-nums; }
+.sm2-metric.big .sm2-avg.a strong { color: var(--a-side); }
+.sm2-metric.big .sm2-avg.b strong { color: var(--b-side); }
+
+/* mirror histogram: A grows up, B grows down from a centre line */
+.sm2-dist2 { display: flex; flex-direction: column; }
+.sm2-dist2 .up, .sm2-dist2 .down { display: flex; gap: 2px; height: 22px; }
+.sm2-dist2 .up { align-items: flex-end; }
+.sm2-dist2 .down { align-items: flex-start; }
+.sm2-dist2 .mid { height: 1px; background: #33333f; margin: 1px 0; }
+.sm2-dist2 .b { flex: 1; min-height: 1px; }
+.sm2-dist2 .up .b { background: var(--a-side); border-radius: 2px 2px 0 0; }
+.sm2-dist2 .down .b { background: var(--b-side); border-radius: 0 0 2px 2px; }
+
 /* preference matrix */
 .sm2-matrix-wrap { overflow-x: auto; }
 .sm2-matrix { display: grid; gap: 3px; align-items: stretch; width: max-content; }

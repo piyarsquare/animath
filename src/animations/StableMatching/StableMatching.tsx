@@ -174,14 +174,20 @@ export default function StableMatching() {
     return m;
   }, [rounds, safeStep]);
 
-  // total-rank accounting (welfare): lower = better
+  // total-rank accounting (welfare): lower = better. Per side, so the headline
+  // average and the outcome distribution can be read for A and B separately.
   const acct = useMemo(() => {
     let aTot = 0, bTot = 0, aM = 0, bM = 0;
-    const hist: number[] = new Array(n).fill(0);
-    for (let i = 0; i < n; i++) if (matching.a[i] !== -1) { const r = inst.rankA[i][matching.a[i]] + 1; aTot += r; aM++; hist[r - 1]++; }
-    for (let j = 0; j < n; j++) if (matching.b[j] !== -1) { const r = inst.rankB[j][matching.b[j]] + 1; bTot += r; bM++; hist[r - 1]++; }
+    const aHist: number[] = new Array(n).fill(0), bHist: number[] = new Array(n).fill(0);
+    for (let i = 0; i < n; i++) if (matching.a[i] !== -1) { const r = inst.rankA[i][matching.a[i]] + 1; aTot += r; aM++; aHist[r - 1]++; }
+    for (let j = 0; j < n; j++) if (matching.b[j] !== -1) { const r = inst.rankB[j][matching.b[j]] + 1; bTot += r; bM++; bHist[r - 1]++; }
     const matchedPeople = aM + bM;
-    return { aTot, bTot, combined: aTot + bTot, aM, bM, avg: matchedPeople ? (aTot + bTot) / matchedPeople : 0, free: n - aM, hist };
+    return {
+      aTot, bTot, combined: aTot + bTot, aM, bM,
+      aAvg: aM ? aTot / aM : 0, bAvg: bM ? bTot / bM : 0,
+      avg: matchedPeople ? (aTot + bTot) / matchedPeople : 0,
+      aFree: n - aM, bFree: n - bM, free: n - aM, aHist, bHist,
+    };
   }, [inst, matching, n]);
 
   const blocking = useMemo(() => {
@@ -393,7 +399,7 @@ export default function StableMatching() {
     </ShellActions>
   );
 
-  const maxHist = Math.max(1, ...acct.hist);
+  const maxHist = Math.max(1, ...acct.aHist, ...acct.bHist);
 
   const story = (() => {
     const cons = (consensusA === 0 && consensusB === 0) ? 'preferences are independent — everyone wants different partners'
@@ -435,14 +441,21 @@ export default function StableMatching() {
           <div className="sm2-narrate">{narrate()}</div>
           <div className="sm2-metrics">
             <div className="sm2-metric big">
-              <span className="sm2-metric-label"><Activity size={14} /> Total rank (lower = happier)</span>
-              <strong>{acct.combined}</strong>
-              <span className="sm2-metric-sub">A {acct.aTot} + B {acct.bTot} · avg #{acct.avg.toFixed(2)} · {acct.free ? `${acct.free} still free` : 'all matched'}</span>
+              <span className="sm2-metric-label"><Activity size={14} /> Average partner rank (lower = happier)</span>
+              <div className="sm2-avgrows">
+                <span className="sm2-avg a"><i className="sw sq" />A <strong>#{acct.aAvg.toFixed(2)}</strong></span>
+                <span className="sm2-avg b"><i className="sw disc" />B <strong>#{acct.bAvg.toFixed(2)}</strong></span>
+              </div>
+              <span className="sm2-metric-sub">total rank {acct.combined} (A {acct.aTot} + B {acct.bTot}) · {acct.free ? `${acct.free} still free` : 'all matched'}</span>
             </div>
             <div className="sm2-metric">
               <span className="sm2-metric-label">rank distribution</span>
-              <div className="sm2-dist">{acct.hist.map((c, i) => <span key={i} className="b" style={{ height: `${(c / maxHist) * 100}%` }} title={`#${i + 1}: ${c}`} />)}</div>
-              <span className="sm2-metric-sub">how many got their #1, #2, … choice</span>
+              <div className="sm2-dist2">
+                <div className="up">{acct.aHist.map((c, i) => <span key={i} className="b" style={{ height: `${(c / maxHist) * 100}%` }} title={`A #${i + 1}: ${c}`} />)}</div>
+                <div className="mid" />
+                <div className="down">{acct.bHist.map((c, i) => <span key={i} className="b" style={{ height: `${(c / maxHist) * 100}%` }} title={`B #${i + 1}: ${c}`} />)}</div>
+              </div>
+              <span className="sm2-metric-sub"><i className="sw sq a" /> A above · <i className="sw disc b" /> B below — how many got their #1, #2, …</span>
             </div>
             <div className={`sm2-metric stability ${!done ? '' : blocking.size === 0 ? 'ok' : 'bad'}`}>
               <span className="sm2-metric-label">{blocking.size === 0 ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />} Stability</span>
