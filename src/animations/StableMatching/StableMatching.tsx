@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  Activity, AlertTriangle, FastForward, FlaskConical, Layers, Pause, Play,
+  Activity, AlertTriangle, Check, Copy, Download, FastForward, FlaskConical, Layers, Network, Pause, Play,
   RotateCcw, Shuffle, SkipForward, ShieldCheck,
 } from 'lucide-react';
 import './stableMatching.css';
 import { ShellSettings, ShellActions, useAppHeader, useAppExplainer } from '../../components/AppShell';
-import { Section, Slider, Pills, NumberInput, Checkbox } from '../../components/ControlPanel';
+import { Section, Slider, Pills, Select, NumberInput, Checkbox } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
 import { generateInstance, type Instance } from './model';
@@ -13,6 +13,22 @@ import {
   runRounds, applyLog, blockingPairs, stats,
   type Schedule, type Matching,
 } from './galeShapley';
+import { allStableMatchings, stablePairs, namedSolutions, score, layoutLattice, NAMED_LABELS, type NamedKey } from './rotations';
+import { rothVandeVate, replaySteps, type ResolveResult } from './resolver';
+
+const FOOT_CAP = 1000; // cap the (worst-case exponential) stable-matching enumeration
+type Jump = 'live' | NamedKey;
+const JUMP_LABELS: Record<Jump, string> = { live: 'Live run', ...NAMED_LABELS };
+// short "what is this" for each named solution
+const NAMED_NOTE: Record<NamedKey, string> = {
+  aOptimal: 'A proposes — best for A, worst for B (top of the lattice)',
+  bOptimal: 'B proposes — best for B, worst for A (bottom of the lattice)',
+  egalitarian: 'minimizes the total of everyone’s ranks (welfare-best)',
+  median: 'each person gets their median stable partner (the lattice’s center)',
+  minRegret: 'makes the single worst-off person as happy as possible',
+  sexEqual: 'balances A’s and B’s total happiness (|ΣA − ΣB| smallest)',
+  balanced: 'minimizes the larger of the two sides’ total rank',
+};
 
 const NS = 'stable-matching';
 
@@ -21,6 +37,11 @@ const NS = 'stable-matching';
  *    (= current tentative holds) lights up; the active proposal rings; blocking
  *    pairs (if any, at the end) flag red. This is the algorithm, foregrounded. ── */
 const TRAIL = 6; // how many recent rounds of failed entries to keep in the fading trail
+const MAX_CELL = 72; // matrix cell px ceiling (so a tiny grid doesn't blow up); the floor is just "visible"
+const LAB_RES_MAX = 30;  // Lab grid resolution ceiling (cells per axis)
+const ENUM_CAP = 300;    // stable-matching enumeration cap for the "# stable" surface
+const EMPTY_MARKERS = new Map<string, 'active' | 'reject' | 'stolen'>();
+const EMPTY_TRAIL = new Map<string, number>();
 
 // shared BuRd diverging scale (blue = best rank → white → red = worst)
 const BURD = [[33, 102, 172], [103, 169, 207], [247, 247, 247], [239, 138, 98], [178, 24, 43]];
@@ -32,9 +53,11 @@ function burd(u: number): string {
 }
 const rankBurd = (r: number, maxRank: number) => burd(maxRank > 1 ? (r - 1) / (maxRank - 1) : 0);
 type Marker = 'active' | 'reject' | 'stolen';
-function Matrix({ inst, matching, rows, cols, markers, blocking, size, labels, view, gap, trail }: {
+function Matrix({ inst, matching, rows, cols, markers, blocking, footprint, inspect, onHover, onClick, size, labels, view, gap, trail }: {
   inst: Instance; matching: Matching; rows: number[]; cols: number[];
-  markers: Map<string, Marker>; blocking: Set<string>; size: number; labels: boolean;
+  markers: Map<string, Marker>; blocking: Set<string>; footprint: Set<string> | null;
+  inspect: [number, number] | null; onHover: (c: [number, number] | null) => void; onClick: (c: [number, number]) => void;
+  size: number; labels: boolean;
   view: 'both' | 'a' | 'b' | 'diff'; gap: number; trail: Map<string, number>;
 }) {
   const n = inst.n;
@@ -42,21 +65,25 @@ function Matrix({ inst, matching, rows, cols, markers, blocking, size, labels, v
   const rankColor = (r: number) => rankBurd(r, n);
   const diffColor = (d: number) => burd(((n > 1 ? Math.max(-1, Math.min(1, d / (n - 1))) : 0) + 1) / 2);
   return (
-    <div className={`sm2-matrix${gap === 0 ? ' tight' : ''}`} style={{ gap: `${gap}px`, gridTemplateColumns: `${labels ? '1.8em ' : ''}repeat(${cols.length}, ${size}px)` }}>
+    <div className={`sm2-matrix${gap === 0 ? ' tight' : ''}`} style={{ gap: `${gap}px`, gridTemplateColumns: `${labels ? '1.8em ' : ''}repeat(${cols.length}, ${size}px)` }} onMouseLeave={() => onHover(null)}>
       {labels && <div className="sm2-corner" />}
-      {labels && cols.map(j => <div key={`h${j}`} className="sm2-chead">{j}</div>)}
+      {labels && cols.map(j => <div key={`h${j}`} className={`sm2-chead${inspect && inspect[1] === j ? ' hi' : ''}`}>{j}</div>)}
       {rows.map(i => (
         <React.Fragment key={`r${i}`}>
-          {labels && <div className="sm2-rhead">{i}</div>}
+          {labels && <div className={`sm2-rhead${inspect && inspect[0] === i ? ' hi' : ''}`}>{i}</div>}
           {cols.map(j => {
             const aR = inst.rankA[i][j] + 1, bR = inst.rankB[j][i] + 1, d = aR - bR;
             const matched = matching.a[i] === j;
             const mk = markers.get(`${i}-${j}`);   // this round: active (proposing) / reject / stolen
-            const cls = `sm2-mcell${matched ? ' matched' : ''}${mk ? ' ' + mk : ''}${blocking.has(`${i}-${j}`) ? ' blocking' : ''}`;
+            const inFoot = footprint?.has(`${i}-${j}`) && !matched;   // matched in SOME stable matching, not this one
+            const hi = inspect && (inspect[0] === i || inspect[1] === j);
+            const sel = inspect && inspect[0] === i && inspect[1] === j;
+            const cls = `sm2-mcell${matched ? ' matched' : ''}${mk ? ' ' + mk : ''}${blocking.has(`${i}-${j}`) ? ' blocking' : ''}${inFoot ? ' footprint' : ''}${hi ? ' hi' : ''}${sel ? ' sel' : ''}`;
             const bg = view === 'b' ? rankColor(bR) : view === 'diff' ? diffColor(d) : rankColor(aR);
             const age = trail.get(`${i}-${j}`);
             return (
               <div key={j} className={cls} style={{ height: size, background: bg }}
+                onMouseEnter={() => onHover([i, j])} onClick={() => onClick([i, j])}
                 title={`A${i}→B${j} #${aR} · B${j}→A${i} #${bR}`}>
                 {view === 'both' && <span className="sm2-disc" style={{ background: rankColor(bR) }} />}
                 {age !== undefined && !mk && <span className="sm2-trail" style={{ opacity: Math.max(0.12, 1 - age / TRAIL) }} />}
@@ -72,31 +99,154 @@ function Matrix({ inst, matching, rows, cols, markers, blocking, size, labels, v
   );
 }
 
-type Cell = { x: number; y: number; v: number; a?: number; b?: number };
-function Heatmap({ data, res, maxV, hue, title, caption, mode, maxRank }: {
+// A person's full ranked list, read left→right best→worst, as color chips.
+function PrefList({ inst, side, id, partner, mark }: {
+  inst: Instance; side: 'A' | 'B'; id: number; partner: number; mark: number;
+}) {
+  const n = inst.n;
+  const prefs = side === 'A' ? inst.prefsA[id] : inst.prefsB[id];
+  const other = side === 'A' ? 'B' : 'A';
+  return (
+    <div className="sm2-pref">
+      <span className="sm2-pref-who"><i className={`sw ${side === 'A' ? 'sq' : 'disc'}`} />{side}{id} ranks {other}:</span>
+      <div className="sm2-pref-chips">
+        {prefs.map((idx, p) => (
+          <span key={idx} className={`sm2-chip${idx === partner ? ' partner' : ''}${idx === mark ? ' mark' : ''}`} style={{ background: rankBurd(p + 1, n) }} title={`#${p + 1}: ${other}${idx}`}>{idx}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// one swept cell: true consensus (ca,cb), draw position (x,y), the mean(s) and
+// sample standard deviation(s) over `n` independent trials.
+type Cell = { x: number; y: number; ca: number; cb: number; v: number; sd: number; n: number; a?: number; b?: number; aSd?: number; bSd?: number };
+// mean + sample standard deviation from a running sum / sum-of-squares
+function meanSd(sum: number, sumSq: number, n: number): { mean: number; sd: number } {
+  const mean = sum / n;
+  const varr = n > 1 ? Math.max(0, (sumSq - (sum * sum) / n) / (n - 1)) : 0;
+  return { mean, sd: Math.sqrt(varr) };
+}
+// 95% confidence half-width for a cell mean (normal approx): 1.96·SD/√n
+const ci95 = (sd: number, n: number) => (n > 1 ? 1.96 * sd / Math.sqrt(n) : 0);
+function Heatmap({ data, res, maxV, hue, title, caption, mode, maxRank, stat }: {
   data: Cell[] | null; res: number; maxV: number; hue: number; title: string; caption: string;
-  mode: 'single' | 'lego'; maxRank: number;
+  mode: 'single' | 'lego'; maxRank: number; stat: 'mean' | 'sd';
 }) {
   const [hover, setHover] = useState<Cell | null>(null);
   if (!data || !data.length) return <div className="sm2-heatmap-empty"><FlaskConical size={28} /><p>Run the Lab to see the surface</p></div>;
   const cs = 100 / res;
   const single = (v: number) => `hsl(${hue}, 70%, ${92 - Math.max(0, Math.min(1, v / (maxV || 1))) * 57}%)`;
+  const shownVal = (c: Cell) => stat === 'sd' ? c.sd : c.v;   // single-metric surface: mean or std-dev
   return (
     <div className="sm2-heatmap">
-      <h4>{title}</h4>
+      <h4>{title}{stat === 'sd' && mode === 'single' ? ' — std dev' : ''}</h4>
       <div className="sm2-heatmap-grid" onMouseLeave={() => setHover(null)}>
         {data.map((c, i) => (
-          <div key={i} className="sm2-cell" style={{ left: `${c.x * 100}%`, bottom: `${c.y * 100}%`, width: `${cs}%`, height: `${cs}%`, background: mode === 'lego' ? rankBurd(c.a ?? 0, maxRank) : single(c.v) }} onMouseEnter={() => setHover(c)}>
+          <div key={i} className="sm2-cell" style={{ left: `${c.x * 100}%`, bottom: `${c.y * 100}%`, width: `${cs}%`, height: `${cs}%`, background: mode === 'lego' ? rankBurd(c.a ?? 0, maxRank) : single(shownVal(c)) }} onMouseEnter={() => setHover(c)}>
             {mode === 'lego' && <span className="sm2-disc" style={{ background: rankBurd(c.b ?? 0, maxRank) }} />}
           </div>
         ))}
-        {hover && <div className="sm2-tip">consensus A {(hover.x * 100).toFixed(0)}% · B {(hover.y * 100).toFixed(0)}%<br />
-          {mode === 'lego' ? `A avg #${(hover.a ?? 0).toFixed(2)} · B avg #${(hover.b ?? 0).toFixed(2)}` : <>{caption}: <strong>{hover.v.toFixed(2)}</strong></>}</div>}
+        {hover && <div className="sm2-tip">consensus A {(hover.ca * 100).toFixed(0)}% · B {(hover.cb * 100).toFixed(0)}% · n={hover.n}<br />
+          {mode === 'lego'
+            ? <>A #{(hover.a ?? 0).toFixed(2)} <span className="dim">± {(hover.aSd ?? 0).toFixed(2)}</span> · B #{(hover.b ?? 0).toFixed(2)} <span className="dim">± {(hover.bSd ?? 0).toFixed(2)}</span></>
+            : <>{caption}: <strong>{hover.v.toFixed(2)}</strong> <span className="dim">± {hover.sd.toFixed(2)} SD · 95% CI ±{ci95(hover.sd, hover.n).toFixed(2)}</span></>}</div>}
       </div>
       <div className="sm2-heatmap-x">consensus A →</div>
       {mode === 'lego'
         ? <p className="sm2-legend"><span className="k sq">square = A avg rank</span><span className="k disc">circle = B avg rank</span><span className="k scale">blue #1 → red #{maxRank}</span></p>
-        : <div className="sm2-heatmap-legend"><span>0</span><span className="bar" style={{ background: `linear-gradient(90deg, hsl(${hue},70%,92%), hsl(${hue},70%,35%))` }} /><span>{maxV.toFixed(1)}</span></div>}
+        : <div className="sm2-heatmap-legend"><span>0</span><span className="bar" style={{ background: `linear-gradient(90deg, hsl(${hue},70%,92%), hsl(${hue},70%,35%))` }} /><span>{maxV.toFixed(1)}</span><span className="cap">{stat === 'sd' ? 'std dev' : caption}</span></div>}
+    </div>
+  );
+}
+
+// communicable summary of a completed Lab surface: descriptive stats + CSV export
+type LabStat5 = { mean: number; median: number; min: number; max: number };
+type LabRunMeta = { res: number; trials: number; n: number; seed: number; schedule: Schedule; metric: string };
+type LabSummaryData =
+  | { kind: 'single'; cells: number; run: LabRunMeta; five: LabStat5; noise: number; ci: number; loAt: string; hiAt: string }
+  | { kind: 'lego'; cells: number; run: LabRunMeta; A: LabStat5; B: LabStat5; aNoise: number; bNoise: number };
+function LabSummary({ s, onCopy, onDownload, copied }: { s: LabSummaryData; onCopy: () => void; onDownload: () => void; copied: boolean }) {
+  const { run, cells } = s;
+  const unit = run.metric === 'unstable' ? 'unstable %' : run.metric === 'cost' ? 'repair steps' : run.metric === 'stableCount' ? '# stable' : 'blocking pairs';
+  const total = (cells * run.trials).toLocaleString();
+  return (
+    <div className="sm2-lab-stats">
+      <div className="sm2-stat-head">
+        <h4>Surface summary</h4>
+        <div className="sm2-stat-export">
+          <button className="sm2-btn sm" onClick={onCopy} title="Copy the full grid as CSV">{copied ? <Check size={14} /> : <Copy size={14} />}{copied ? 'Copied' : 'Copy CSV'}</button>
+          <button className="sm2-btn sm" onClick={onDownload} title="Download the full grid as a .csv file"><Download size={14} />Download</button>
+        </div>
+      </div>
+      <p className="sm2-stat-meta">{run.res}×{run.res} = {cells} cells · {run.trials} trial{run.trials === 1 ? '' : 's'}/cell = <strong>{total}</strong> instances · n={run.n} · {run.schedule} schedule · seed {run.seed}</p>
+      {s.kind === 'single'
+        ? <table className="sm2-stat-table"><tbody>
+            <tr><th>{unit}</th><td>mean <strong>{s.five.mean.toFixed(2)}</strong></td><td>median {s.five.median.toFixed(2)}</td><td>range {s.five.min.toFixed(2)} – {s.five.max.toFixed(2)}</td></tr>
+            <tr><th>extremes</th><td colSpan={3}>min at consensus {s.loAt} · max at {s.hiAt}</td></tr>
+            <tr><th>noise</th><td colSpan={3}>typical within-cell SD ±{s.noise.toFixed(2)} → each cell mean is ±{s.ci.toFixed(2)} (95% CI)</td></tr>
+          </tbody></table>
+        : <table className="sm2-stat-table"><tbody>
+            <tr><th>A avg rank</th><td>mean <strong>#{s.A.mean.toFixed(2)}</strong></td><td>median #{s.A.median.toFixed(2)}</td><td>range #{s.A.min.toFixed(2)} – #{s.A.max.toFixed(2)}</td><td>SD ±{s.aNoise.toFixed(2)}</td></tr>
+            <tr><th>B avg rank</th><td>mean <strong>#{s.B.mean.toFixed(2)}</strong></td><td>median #{s.B.median.toFixed(2)}</td><td>range #{s.B.min.toFixed(2)} – #{s.B.max.toFixed(2)}</td><td>SD ±{s.bNoise.toFixed(2)}</td></tr>
+          </tbody></table>}
+    </div>
+  );
+}
+
+const LATTICE_CAP = 80; // don't draw a lattice bigger than this many nodes
+/* The lattice of stable matchings: A-optimal at the top, B-optimal at the bottom,
+ * each downward edge a single rotation. Named solutions are flagged in place. */
+function LatticeView({ inst, set, capped, named, picked, onPick }: {
+  inst: Instance; set: Matching[]; capped: boolean;
+  named: Record<NamedKey, Matching>; picked: number | null; onPick: (i: number) => void;
+}) {
+  const N = set.length;
+  const sigOf = (M: Matching) => M.a.join(',');
+  const layout = useMemo(() => (N >= 2 && N <= LATTICE_CAP && !capped ? layoutLattice(inst, set) : null), [inst, set, N, capped]);
+  // map each named solution to its node index
+  const namedAt = useMemo(() => {
+    const idx = new Map<string, number>(); set.forEach((M, i) => idx.set(sigOf(M), i));
+    const out: Partial<Record<NamedKey, number>> = {};
+    (Object.keys(named) as NamedKey[]).forEach(k => { const i = idx.get(sigOf(named[k])); if (i !== undefined) out[k] = i; });
+    return out;
+  }, [set, named]);
+  const aTotOf = (M: Matching) => score(inst, M).aTot;
+  const aTots = set.map(aTotOf), aMin = Math.min(...aTots, 0), aMax = Math.max(...aTots, 1);
+
+  if (N === 1) return <div className="sm2-lattice-empty"><Layers size={28} /><p>A unique stable matching — the lattice is a single point. Lower the consensus to grow it.</p></div>;
+  if (!layout) return <div className="sm2-lattice-empty"><Layers size={28} /><p>{capped ? 'Too many stable matchings to enumerate' : `Lattice too large to draw (${N} matchings)`}. Lower the population or raise the consensus.</p></div>;
+
+  const W = 760, H = 480, padX = 40, padY = 36;
+  const X = (x: number) => padX + x * (W - 2 * padX);
+  const Y = (y: number) => padY + y * (H - 2 * padY);
+  const NAMED_RING: Partial<Record<NamedKey, string>> = { egalitarian: '#5eead4', median: '#a78bfa', minRegret: '#fbbf24', sexEqual: '#f472b6', balanced: '#60a5fa' };
+  const labelFor = (i: number): { text: string; color: string } | null => {
+    for (const k of ['aOptimal', 'bOptimal', 'egalitarian', 'median', 'minRegret', 'sexEqual', 'balanced'] as NamedKey[])
+      if (namedAt[k] === i) return { text: NAMED_LABELS[k], color: k === 'aOptimal' ? '#7dd3fc' : k === 'bOptimal' ? '#fca5a5' : (NAMED_RING[k] ?? '#fff') };
+    return null;
+  };
+
+  return (
+    <div className="sm2-lattice">
+      <svg viewBox={`0 0 ${W} ${H}`} className="sm2-lattice-svg" preserveAspectRatio="xMidYMid meet">
+        {layout.edges.map(([lo, hi], k) => (
+          <line key={k} x1={X(layout.pos[hi].x)} y1={Y(layout.pos[hi].y)} x2={X(layout.pos[lo].x)} y2={Y(layout.pos[lo].y)} stroke="#3a3a48" strokeWidth={1} />
+        ))}
+        {set.map((M, i) => {
+          const p = layout.pos[i], lab = labelFor(i), s = score(inst, M);
+          const fill = rankBurd(1 + ((aTots[i] - aMin) / Math.max(1, aMax - aMin)) * (inst.n - 1), inst.n);
+          const sel = picked === i;
+          return (
+            <g key={i} className="sm2-lnode" onClick={() => onPick(i)} style={{ cursor: 'pointer' }}>
+              <circle cx={X(p.x)} cy={Y(p.y)} r={sel ? 9 : 6} fill={fill} stroke={sel ? '#fff' : lab ? lab.color : '#14141b'} strokeWidth={sel ? 2.5 : lab ? 2 : 1} />
+              {lab && <text x={X(p.x)} y={Y(p.y) - 11} textAnchor="middle" fontSize={11} fill={lab.color}>{lab.text}</text>}
+              <title>{`${lab ? lab.text + ' · ' : ''}Σrank ${s.total} (A ${s.aTot} + B ${s.bTot})`}</title>
+            </g>
+          );
+        })}
+      </svg>
+      <p className="sm2-lattice-cap">{capped ? '≥' : ''}{N} stable matchings · <span style={{ color: '#7dd3fc' }}>A-optimal</span> top → <span style={{ color: '#fca5a5' }}>B-optimal</span> bottom · each edge is one rotation · click a node to view it. Node color = how good for A (blue) → for B (red).</p>
     </div>
   );
 }
@@ -105,7 +255,7 @@ export default function StableMatching() {
   useAppHeader('Stable Matching');
   useAppExplainer(explainerText);
 
-  const [view, setView] = usePersistentState<'visualizer' | 'lab'>(`${NS}:view`, 'visualizer');
+  const [view, setView] = usePersistentState<'visualizer' | 'lab' | 'lattice'>(`${NS}:view`, 'visualizer');
   const [n, setN] = usePersistentState(`${NS}:n`, 8);
   const [seed, setSeed] = usePersistentState(`${NS}:seed`, 1);
   const [consensusA, setConsensusA] = usePersistentState(`${NS}:cA`, 0);
@@ -118,6 +268,7 @@ export default function StableMatching() {
   const [cellView, setCellView] = usePersistentState<'both' | 'a' | 'b' | 'diff'>(`${NS}:cellView`, 'both');
   const [tight, setTight] = usePersistentState(`${NS}:tight`, true);
   const [liveSort, setLiveSort] = usePersistentState(`${NS}:liveSort`, false);
+  const [showFootprint, setShowFootprint] = usePersistentState(`${NS}:footprint`, true);
 
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -130,7 +281,8 @@ export default function StableMatching() {
   const rounds = result.rounds;
   const total = rounds.length;                                  // a "step" is now a whole round
   const safeStep = Math.min(step, total);                       // guard the render before the reset effect fires
-  useEffect(() => { setStep(0); setPlaying(false); }, [result]);
+  useEffect(() => { setStep(0); setPlaying(false); setJump('live'); setResolve(null); setRStep(0); setRPlaying(false); setPickedNode(null); }, [result]);
+  useEffect(() => { setPickedNode(null); setInspect(null); setPinned(false); }, [inst]);   // a new instance invalidates node indices
 
   // flatten round events (in order) + per-round cumulative counts, to rebuild the matching
   const flat = useMemo(() => rounds.flatMap(r => r.events), [rounds]);
@@ -138,6 +290,33 @@ export default function StableMatching() {
   const matching = useMemo(() => applyLog(n, flat, safeStep === 0 ? 0 : roundEnd[safeStep - 1]), [n, flat, roundEnd, safeStep]);
   const done = safeStep >= total;
   const finalMatching = result.matching;
+
+  // the solution space (pure property of the instance): the full stable set, the
+  // footprint (cells matched in SOME stable matching), and the named solutions.
+  const stableSet = useMemo(() => allStableMatchings(inst, FOOT_CAP), [inst]);
+  const solution = useMemo(() => {
+    const pairs = new Set<string>();
+    for (const M of stableSet.matchings) for (let m = 0; m < n; m++) if (M.a[m] !== -1) pairs.add(`${m}-${M.a[m]}`);
+    return { pairs, count: stableSet.matchings.length, capped: stableSet.capped };
+  }, [stableSet, n]);
+  const named = useMemo(() => namedSolutions(inst, stableSet.matchings), [inst, stableSet]);
+
+  // "Jump to" a named stable matching: overrides the displayed matching statically.
+  const [jump, setJump] = useState<Jump>('live');
+  const [pickedNode, setPickedNode] = useState<number | null>(null); // a node clicked in the lattice
+  const [inspect, setInspect] = useState<[number, number] | null>(null); // hovered/pinned cell → read its prefs
+  const [pinned, setPinned] = useState(false);
+
+  // Roth–Vande Vate resolver: repair the (possibly unstable) run to stability.
+  const [resolve, setResolve] = useState<ResolveResult | null>(null);
+  const [rStep, setRStep] = useState(0);
+  const [rPlaying, setRPlaying] = useState(false);
+  const resolveMatching = useMemo(() => resolve ? replaySteps(resolve.start, resolve.steps, rStep) : null, [resolve, rStep]);
+  const finalUnstable = useMemo(() => blockingPairs(inst, finalMatching) > 0, [inst, finalMatching]);
+
+  const pickedMatching = pickedNode != null && pickedNode < stableSet.matchings.length ? stableSet.matchings[pickedNode] : null;
+  const shown = resolveMatching ?? pickedMatching ?? (jump === 'live' ? matching : named[jump]);
+  const shownDone = resolve != null || pickedMatching != null || jump !== 'live' || done;   // a named / picked / resolved matching is complete
 
   // markers for the round just applied: every proposal this round (active/reject), plus bumped pairs (stolen)
   const markers = useMemo(() => {
@@ -174,28 +353,37 @@ export default function StableMatching() {
     return m;
   }, [rounds, safeStep]);
 
-  // total-rank accounting (welfare): lower = better
+  // total-rank accounting (welfare): lower = better. Per side, so the headline
+  // average and the outcome distribution can be read for A and B separately.
   const acct = useMemo(() => {
     let aTot = 0, bTot = 0, aM = 0, bM = 0;
-    const hist: number[] = new Array(n).fill(0);
-    for (let i = 0; i < n; i++) if (matching.a[i] !== -1) { const r = inst.rankA[i][matching.a[i]] + 1; aTot += r; aM++; hist[r - 1]++; }
-    for (let j = 0; j < n; j++) if (matching.b[j] !== -1) { const r = inst.rankB[j][matching.b[j]] + 1; bTot += r; bM++; hist[r - 1]++; }
+    // each side's outcomes as a sorted (best→worst) list of partner ranks; −1 = unmatched.
+    const aSorted: number[] = [], bSorted: number[] = [];
+    for (let i = 0; i < n; i++) { if (shown.a[i] !== -1) { const r = inst.rankA[i][shown.a[i]] + 1; aTot += r; aM++; aSorted.push(r); } else aSorted.push(-1); }
+    for (let j = 0; j < n; j++) { if (shown.b[j] !== -1) { const r = inst.rankB[j][shown.b[j]] + 1; bTot += r; bM++; bSorted.push(r); } else bSorted.push(-1); }
+    const byRank = (x: number, y: number) => (x < 0 ? n + 1 : x) - (y < 0 ? n + 1 : y); // matched first (best→worst), unmatched last
+    aSorted.sort(byRank); bSorted.sort(byRank);
     const matchedPeople = aM + bM;
-    return { aTot, bTot, combined: aTot + bTot, aM, bM, avg: matchedPeople ? (aTot + bTot) / matchedPeople : 0, free: n - aM, hist };
-  }, [inst, matching, n]);
+    return {
+      aTot, bTot, combined: aTot + bTot, aM, bM,
+      aAvg: aM ? aTot / aM : 0, bAvg: bM ? bTot / bM : 0,
+      avg: matchedPeople ? (aTot + bTot) / matchedPeople : 0,
+      aFree: n - aM, bFree: n - bM, free: n - aM, aSorted, bSorted,
+    };
+  }, [inst, shown, n]);
 
   const blocking = useMemo(() => {
     const s = new Set<string>();
-    if (!done) return s;
+    if (jump === 'live' && !done) return s;   // a jumped named matching is complete + always stable
     for (let i = 0; i < n; i++) {
-      const pr = matching.a[i] === -1 ? Infinity : inst.rankA[i][matching.a[i]];
+      const pr = shown.a[i] === -1 ? Infinity : inst.rankA[i][shown.a[i]];
       for (let j = 0; j < n; j++) {
-        if (matching.a[i] === j) continue;
-        if (inst.rankA[i][j] < pr) { const pj = matching.b[j] === -1 ? Infinity : inst.rankB[j][matching.b[j]]; if (inst.rankB[j][i] < pj) s.add(`${i}-${j}`); }
+        if (shown.a[i] === j) continue;
+        if (inst.rankA[i][j] < pr) { const pj = shown.b[j] === -1 ? Infinity : inst.rankB[j][shown.b[j]]; if (inst.rankB[j][i] < pj) s.add(`${i}-${j}`); }
       }
     }
     return s;
-  }, [done, matching, inst, n]);
+  }, [done, jump, shown, inst, n]);
 
   // average attractiveness = mean rank a member receives in the OTHER side's lists
   // (lower = more wanted). A principled ordering derived from the preferences
@@ -254,11 +442,13 @@ export default function StableMatching() {
     if (order === 'attract') return ids.sort((x, y) => attract.b[x] - attract.b[y]);
     if (order === 'settle') return ids.sort((x, y) => (orderBasis.settle.B[x] - orderBasis.settle.B[y]) || (attract.b[x] - attract.b[y]));
     // matchdiag: place each row's partner at the same ordinal → matches on the diagonal
+    // (follow the jumped matching when one is shown, so its pairs sit on the diagonal)
+    const diag = jump === 'live' ? orderBasis.match : shown;
     const out: number[] = []; const used = new Set<number>();
-    for (const i of rows) { const p = orderBasis.match.a[i]; if (p !== -1 && !used.has(p)) { out.push(p); used.add(p); } }
+    for (const i of rows) { const p = diag.a[i]; if (p !== -1 && !used.has(p)) { out.push(p); used.add(p); } }
     for (let j = 0; j < n; j++) if (!used.has(j)) out.push(j);
     return out;
-  }, [n, order, attract, orderBasis, rows]);
+  }, [n, order, attract, orderBasis, rows, jump, shown]);
 
   useEffect(() => {
     if (!playing) { if (timer.current) { clearInterval(timer.current); timer.current = null; } return; }
@@ -275,10 +465,13 @@ export default function StableMatching() {
     const measure = () => {
       const w = el.clientWidth;
       const top = el.getBoundingClientRect().top;
-      const availH = window.innerHeight - top - 64;   // room for legend + bottom padding
-      const byW = (w - (showLabels ? 34 : 6)) / n - 3; // minus row header + per-cell gap
+      const availH = window.innerHeight - top - 52;   // just the legend + a little bottom breathing (inspect panel floats, see CSS)
+      const byW = (w - (showLabels ? 34 : 6)) / n - 3 - 8 / n; // minus row header + per-cell gap + a right inset
       const byH = (availH - (showLabels ? 22 : 6)) / n - 3; // minus column header
-      setCellSize(Math.max(12, Math.min(80, Math.floor(Math.min(byW, byH)))));
+      // the largest square that keeps the WHOLE grid on screen (no scroll), capped so a
+      // small grid doesn't blow up; floored only so cells stay visible at very large n.
+      const fit = Math.floor(Math.min(byW, byH));
+      setCellSize(Math.max(6, Math.min(MAX_CELL, fit)));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -287,7 +480,35 @@ export default function StableMatching() {
     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
   }, [n, view, showLabels]);
 
-  const reset = useCallback(() => { setPlaying(false); setStep(0); }, []);
+  // markers for the resolution step just applied: the satisfied pair + the two
+  // partners it displaced (the blocking cell healing).
+  const resolveMarkers = useMemo(() => {
+    if (!resolve || rStep <= 0) return EMPTY_MARKERS;
+    const mk = new Map<string, Marker>();
+    const s = resolve.steps[rStep - 1];
+    mk.set(`${s.a}-${s.b}`, 'active');
+    if (s.freedB !== -1) mk.set(`${s.a}-${s.freedB}`, 'stolen');
+    if (s.freedA !== -1) mk.set(`${s.freedA}-${s.b}`, 'stolen');
+    return mk;
+  }, [resolve, rStep]);
+
+  // resolution playback (reuses the Speed slider rate)
+  useEffect(() => {
+    if (!rPlaying || !resolve) return;
+    const ms = Math.max(120, 620 - speed * 4.5);
+    const t = window.setInterval(() => setRStep(s => { if (s >= resolve.steps.length) { setRPlaying(false); return s; } return s + 1; }), ms);
+    return () => clearInterval(t);
+  }, [rPlaying, resolve, speed]);
+
+  const stabilize = useCallback(() => {
+    setJump('live');
+    const r = rothVandeVate(inst, finalMatching, seed);
+    setResolve(r); setRStep(0); setRPlaying(r.steps.length > 0);
+  }, [inst, finalMatching, seed]);
+  const endResolve = useCallback(() => { setResolve(null); setRStep(0); setRPlaying(false); }, []);
+
+  const goLive = useCallback(() => { setJump('live'); setPickedNode(null); }, []);
+  const reset = useCallback(() => { setPlaying(false); setStep(0); goLive(); setResolve(null); setRStep(0); setRPlaying(false); }, [goLive]);
   const shuffle = useCallback(() => setSeed(s => (s * 1103515245 + 12345) & 0x7fffffff), [setSeed]);
 
   const narrate = (): string => {
@@ -304,53 +525,133 @@ export default function StableMatching() {
   const [labN, setLabN] = usePersistentState(`${NS}:labN`, 30);
   const [labRes, setLabRes] = usePersistentState(`${NS}:labRes`, 12);
   const [labTrials, setLabTrials] = usePersistentState(`${NS}:labTrials`, 12);
+  const [labSeed, setLabSeed] = usePersistentState(`${NS}:labSeed`, 1);   // re-rollable: changes the whole ensemble draw
   const [labSchedule, setLabSchedule] = usePersistentState<Schedule>(`${NS}:labSchedule`, 'alt');
-  const [labMetric, setLabMetric] = usePersistentState<'lego' | 'unstable' | 'blocking'>(`${NS}:labMetric`, 'lego');
+  const [labMetric, setLabMetric] = usePersistentState<'lego' | 'unstable' | 'blocking' | 'stableCount' | 'cost'>(`${NS}:labMetric`, 'lego');
+  const [labStat, setLabStat] = usePersistentState<'mean' | 'sd'>(`${NS}:labStat`, 'mean');  // surface shows the mean or the dispersion
   const [labData, setLabData] = useState<Cell[] | null>(null);
-  const [labMax, setLabMax] = useState(1);
   const [labRunning, setLabRunning] = useState(false);
   const [labProgress, setLabProgress] = useState(0);
+  // the parameters the *current* labData was actually computed with (so the
+  // summary/export describe the displayed surface, not the live sliders).
+  const [labRun, setLabRun] = useState<{ res: number; trials: number; n: number; seed: number; schedule: Schedule; metric: string } | null>(null);
   const labCancel = useRef(false);
 
   const runLab = useCallback(() => {
     labCancel.current = false; setLabRunning(true); setLabProgress(0); setLabData([]);
-    const res = Math.max(2, Math.min(24, labRes)); const cells = res * res; const out: Cell[] = []; let max = 0, k = 0;
-    const metricOf = (cA: number, cB: number, s: number): { v: number; a?: number; b?: number } => {
+    const res = Math.max(2, Math.min(LAB_RES_MAX, labRes)); const cells = res * res; const out: Cell[] = []; let k = 0;
+    const T = Math.max(1, labTrials);
+    const seedBase = ((labSeed >>> 0) * 1000003) >>> 0;   // distinct, reproducible ensemble per Lab seed
+    setLabRun({ res, trials: T, n: labN, seed: labSeed, schedule: labSchedule, metric: labMetric });
+    // mean(s) + sample SD over T trials at one consensus point
+    const metricOf = (cA: number, cB: number, s: number): Omit<Cell, 'x' | 'y' | 'ca' | 'cb' | 'n'> => {
       if (labMetric === 'lego') {
-        let sa = 0, sb = 0;
-        for (let t = 0; t < labTrials; t++) {
+        let sa = 0, saa = 0, sb = 0, sbb = 0;
+        for (let t = 0; t < T; t++) {
           const ins = generateInstance({ n: labN, consensusA: cA, consensusB: cB, seed: s + t * 7919 + 1 });
           const { matching } = runRounds(ins, labSchedule, 50, s + t * 104729 + 3);
-          const st = stats(ins, matching); sa += st.aAvg; sb += st.bAvg;
+          const st = stats(ins, matching); sa += st.aAvg; saa += st.aAvg * st.aAvg; sb += st.bAvg; sbb += st.bAvg * st.bAvg;
         }
-        return { v: 0, a: sa / labTrials, b: sb / labTrials };
+        const A = meanSd(sa, saa, T), B = meanSd(sb, sbb, T);
+        return { v: 0, sd: 0, a: A.mean, aSd: A.sd, b: B.mean, bSd: B.sd };
       }
-      let sum = 0;
-      for (let t = 0; t < labTrials; t++) {
+      // single-value metrics: accumulate sum + sum-of-squares of the per-trial value
+      let sum = 0, sumSq = 0;
+      for (let t = 0; t < T; t++) {
+        const seedT = s + t * 104729 + 3;
         const ins = generateInstance({ n: labN, consensusA: cA, consensusB: cB, seed: s + t * 7919 + 1 });
-        const { matching } = runRounds(ins, labSchedule, 50, s + t * 104729 + 3);
-        sum += labMetric === 'unstable' ? (blockingPairs(ins, matching) > 0 ? 100 : 0) : blockingPairs(ins, matching);
+        let v: number;
+        if (labMetric === 'stableCount') v = stablePairs(ins, ENUM_CAP).count;   // schedule-independent: the lattice size
+        else if (labMetric === 'cost') { const { matching } = runRounds(ins, labSchedule, 50, seedT); v = rothVandeVate(ins, matching, seedT).steps.length; }
+        else { const { matching } = runRounds(ins, labSchedule, 50, seedT); const bp = blockingPairs(ins, matching); v = labMetric === 'unstable' ? (bp > 0 ? 100 : 0) : bp; }
+        sum += v; sumSq += v * v;
       }
-      return { v: sum / labTrials };
+      const { mean, sd } = meanSd(sum, sumSq, T);
+      return { v: mean, sd };
     };
     const batch = () => {
       if (labCancel.current) { setLabRunning(false); return; }
       const end = Math.min(cells, k + 20);
-      for (; k < end; k++) { const xi = k % res, yi = Math.floor(k / res); const m = metricOf(xi / (res - 1), yi / (res - 1), 1000 + k); max = Math.max(max, m.v); out.push({ x: xi / (res - 1) * (1 - 1 / res), y: yi / (res - 1) * (1 - 1 / res), v: m.v, a: m.a, b: m.b }); }
-      setLabProgress(Math.round((k / cells) * 100)); setLabData([...out]); setLabMax(labMetric === 'unstable' ? 100 : max);
+      for (; k < end; k++) {
+        const xi = k % res, yi = Math.floor(k / res);
+        const cA = xi / (res - 1), cB = yi / (res - 1);
+        const m = metricOf(cA, cB, seedBase + k);
+        out.push({ x: cA * (1 - 1 / res), y: cB * (1 - 1 / res), ca: cA, cb: cB, n: T, ...m });
+      }
+      setLabProgress(Math.round((k / cells) * 100)); setLabData([...out]);
       if (k < cells) window.setTimeout(batch, 0); else setLabRunning(false);
     };
     batch();
-  }, [labN, labRes, labTrials, labMetric, labSchedule]);
+  }, [labN, labRes, labTrials, labSeed, labMetric, labSchedule]);
   useEffect(() => () => { labCancel.current = true; }, []);
-  const labTitle = labMetric === 'lego' ? `A & B avg rank — ${labSchedule}` : labMetric === 'unstable' ? `Unstable runs % — ${labSchedule}` : `Avg blocking pairs — ${labSchedule}`;
-  const labHue = 280;
-  const labCaption = labMetric === 'unstable' ? 'unstable %' : 'pairs';
+
+  // display max for the colour scale — depends on whether we're showing mean or SD
+  const labMax = useMemo(() => {
+    if (!labData || !labData.length) return 1;
+    if (labMetric === 'unstable' && labStat === 'mean') return 100;
+    let m = 0; for (const c of labData) m = Math.max(m, labStat === 'sd' ? c.sd : c.v);
+    return m || 1;
+  }, [labData, labMetric, labStat]);
+
+  // communicable summary of the *completed* surface (means, dispersion, extremes, where)
+  const labSummary = useMemo<LabSummaryData | null>(() => {
+    if (!labData || !labData.length || labRunning || !labRun) return null;
+    const cells = labData.length;
+    const pct = (v: number) => `${Math.round(v * 100)}%`;
+    const stat5 = (vals: number[]) => {
+      const s = [...vals].sort((p, q) => p - q); const m = s.length;
+      const mean = vals.reduce((a, b) => a + b, 0) / m;
+      const median = m % 2 ? s[(m - 1) / 2] : (s[m / 2 - 1] + s[m / 2]) / 2;
+      return { mean, median, min: s[0], max: s[m - 1] };
+    };
+    if (labRun.metric === 'lego') {
+      const A = stat5(labData.map(c => c.a ?? 0)), B = stat5(labData.map(c => c.b ?? 0));
+      const aNoise = labData.reduce((s, c) => s + (c.aSd ?? 0), 0) / cells;
+      const bNoise = labData.reduce((s, c) => s + (c.bSd ?? 0), 0) / cells;
+      return { kind: 'lego' as const, cells, run: labRun, A, B, aNoise, bNoise };
+    }
+    const vals = labData.map(c => c.v);
+    const five = stat5(vals);
+    const lo = labData.reduce((p, c) => c.v < p.v ? c : p);
+    const hi = labData.reduce((p, c) => c.v > p.v ? c : p);
+    const noise = labData.reduce((s, c) => s + c.sd, 0) / cells;
+    const ci = labData.reduce((s, c) => s + ci95(c.sd, c.n), 0) / cells;
+    return { kind: 'single' as const, cells, run: labRun, five, noise, ci, loAt: `A ${pct(lo.ca)}·B ${pct(lo.cb)}`, hiAt: `A ${pct(hi.ca)}·B ${pct(hi.cb)}` };
+  }, [labData, labRunning, labRun]);
+
+  // the displayed surface as CSV — the communicable, shareable form of the experiment
+  const labCsv = useCallback((): string => {
+    if (!labData || !labRun) return '';
+    const head = labRun.metric === 'lego'
+      ? 'consensusA,consensusB,A_mean,A_sd,B_mean,B_sd,n'
+      : 'consensusA,consensusB,mean,sd,sem,ci95_halfwidth,n';
+    const rows = labData.map(c => labRun.metric === 'lego'
+      ? [c.ca, c.cb, c.a, c.aSd, c.b, c.bSd, c.n].map((x, i) => i === 6 ? `${x}` : (x as number).toFixed(4)).join(',')
+      : [c.ca, c.cb, c.v, c.sd, c.n > 1 ? c.sd / Math.sqrt(c.n) : 0, ci95(c.sd, c.n), c.n].map((x, i) => i === 6 ? `${x}` : (x as number).toFixed(4)).join(','));
+    const meta = `# Stable Matching Lab · metric=${labRun.metric} schedule=${labRun.schedule} n=${labRun.n} grid=${labRun.res}x${labRun.res} trials=${labRun.trials} seed=${labRun.seed}`;
+    return `${meta}\n${head}\n${rows.join('\n')}\n`;
+  }, [labData, labRun]);
+  const [labCopied, setLabCopied] = useState(false);
+  const copyCsv = useCallback(() => {
+    const csv = labCsv(); if (!csv) return;
+    navigator.clipboard?.writeText(csv).then(() => { setLabCopied(true); window.setTimeout(() => setLabCopied(false), 1600); }).catch(() => {});
+  }, [labCsv]);
+  const downloadCsv = useCallback(() => {
+    const csv = labCsv(); if (!csv || !labRun) return;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `stable-matching-${labRun.metric}-${labRun.schedule}-n${labRun.n}-seed${labRun.seed}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  }, [labCsv, labRun]);
+  const labTitle = labMetric === 'lego' ? `A & B avg rank — ${labSchedule}` : labMetric === 'unstable' ? `Unstable runs % — ${labSchedule}` : labMetric === 'stableCount' ? '# stable matchings (lattice size)' : labMetric === 'cost' ? `Cost to stabilize (RVV steps) — ${labSchedule}` : `Avg blocking pairs — ${labSchedule}`;
+  const labHue = labMetric === 'stableCount' ? 168 : labMetric === 'cost' ? 312 : 280;
+  const labCaption = labMetric === 'unstable' ? 'unstable %' : labMetric === 'stableCount' ? '# stable' : labMetric === 'cost' ? 'steps' : 'pairs';
 
   const settings = (
     <ShellSettings>
       <Section title="Domain" icon="◷" defaultOpen>
-        <NumberInput label="Population (per side)" value={n} onChange={setN} min={3} max={60} integer />
+        <NumberInput label="Population (per side)" value={n} onChange={setN} min={3} max={200} integer />
         <Slider label="Consensus A" value={consensusA} min={0} max={100} step={1} onChange={setConsensusA} format={v => `${v}%`} />
         <Slider label="Consensus B" value={consensusB} min={0} max={100} step={1} onChange={setConsensusB} format={v => `${v}%`} />
         <NumberInput label="Seed" value={seed} onChange={setSeed} min={1} integer />
@@ -364,6 +665,7 @@ export default function StableMatching() {
         <Pills label="Order" value={order} onChange={setOrder} options={[{ value: 'matchdiag', label: 'Match diagonal' }, { value: 'settle', label: 'Settle round' }, { value: 'attract', label: 'Attractiveness' }, { value: 'index', label: 'Original' }]} />
         <Checkbox label="Show index labels" checked={showLabels} onChange={setShowLabels} />
         <Checkbox label="Tight grid (no gaps)" checked={tight} onChange={setTight} />
+        <Checkbox label="Stable-pair footprint (cells matched in some stable matching)" checked={showFootprint} onChange={setShowFootprint} />
       </Section>
     </ShellSettings>
   );
@@ -371,29 +673,48 @@ export default function StableMatching() {
   const actions = (
     <ShellActions>
       {view === 'visualizer' ? (
-        <div className="sm2-actions">
-          <button className="sm2-btn primary" onClick={() => setPlaying(p => !p)} disabled={done && !playing}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? 'Pause' : 'Play'}</button>
-          <button className="sm2-btn" onClick={() => setStep(s => Math.min(total, s + 1))} disabled={playing || done}><SkipForward size={16} />Step</button>
-          <button className="sm2-btn" onClick={() => setStep(total)} disabled={done}><FastForward size={16} />Finish</button>
-          <button className="sm2-btn" onClick={reset}><RotateCcw size={16} />Reset</button>
-          <button className="sm2-btn" onClick={shuffle}><Shuffle size={16} />Shuffle</button>
-          <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
-          <Checkbox label="Live re-sort (build the diagonal as it runs)" checked={liveSort} onChange={setLiveSort} />
-        </div>
-      ) : (
+        resolve ? (
+          <div className="sm2-actions">
+            <button className="sm2-btn primary" onClick={() => setRPlaying(p => !p)} disabled={rStep >= resolve.steps.length && !rPlaying}>{rPlaying ? <Pause size={16} /> : <Play size={16} />}{rPlaying ? 'Pause' : 'Play'}</button>
+            <button className="sm2-btn" onClick={() => setRStep(s => Math.min(resolve.steps.length, s + 1))} disabled={rPlaying || rStep >= resolve.steps.length}><SkipForward size={16} />Step</button>
+            <button className="sm2-btn" onClick={() => setRStep(resolve.steps.length)} disabled={rStep >= resolve.steps.length}><FastForward size={16} />Finish</button>
+            <button className="sm2-btn" onClick={endResolve}><RotateCcw size={16} />Back to run</button>
+            <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
+          </div>
+        ) : (
+          <div className="sm2-actions">
+            <button className="sm2-btn primary" onClick={() => { goLive(); setPlaying(p => !p); }} disabled={jump === 'live' && !pickedMatching && done && !playing}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? 'Pause' : 'Play'}</button>
+            <button className="sm2-btn" onClick={() => { goLive(); setStep(s => Math.min(total, s + 1)); }} disabled={playing || (jump === 'live' && !pickedMatching && done)}><SkipForward size={16} />Step</button>
+            <button className="sm2-btn" onClick={() => { goLive(); setStep(total); }} disabled={jump === 'live' && !pickedMatching && done}><FastForward size={16} />Finish</button>
+            <button className="sm2-btn" onClick={reset}><RotateCcw size={16} />Reset</button>
+            <button className="sm2-btn" onClick={shuffle}><Shuffle size={16} />Shuffle</button>
+            <button className="sm2-btn stabilize" onClick={stabilize} disabled={!finalUnstable} title={finalUnstable ? 'Repair the unstable result to a stable matching' : 'Already stable — nothing to repair'}><ShieldCheck size={16} />Stabilize</button>
+            <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
+            <Checkbox label="Live re-sort (build the diagonal as it runs)" checked={liveSort} onChange={setLiveSort} />
+            <Select label="Jump to a stable solution" value={pickedMatching ? 'live' : jump} onChange={(v) => { setPickedNode(null); setJump(v); }}
+              options={(['live', 'aOptimal', 'bOptimal', 'egalitarian', 'median', 'minRegret', 'sexEqual', 'balanced'] as Jump[])
+                .map(k => ({ value: k, label: JUMP_LABELS[k] }))} />
+          </div>
+        )
+      ) : view === 'lab' ? (
         <div className="sm2-actions">
           <Pills label="Schedule" value={labSchedule} onChange={setLabSchedule} options={[{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'alt', label: 'Alt' }, { value: 'random', label: 'Rnd' }]} />
-          <Pills label="Surface" value={labMetric} onChange={setLabMetric} options={[{ value: 'lego', label: 'Ranks (A·B)' }, { value: 'unstable', label: 'Unstable %' }, { value: 'blocking', label: 'Blocking' }]} />
-          <NumberInput label="Population" value={labN} onChange={setLabN} min={6} max={80} integer />
-          <NumberInput label="Resolution" value={labRes} onChange={setLabRes} min={4} max={24} integer />
-          <NumberInput label="Trials / cell" value={labTrials} onChange={setLabTrials} min={1} max={60} integer />
-          <button className="sm2-btn primary" onClick={runLab} disabled={labRunning}><FlaskConical size={16} />{labRunning ? `Running ${labProgress}%` : 'Run Lab'}</button>
+          <Pills label="Surface (what each cell measures)" value={labMetric} onChange={setLabMetric} options={[{ value: 'lego', label: 'Ranks (A·B)' }, { value: 'unstable', label: 'Unstable %' }, { value: 'blocking', label: 'Blocking' }, { value: 'stableCount', label: '# stable' }, { value: 'cost', label: 'Repair cost' }]} />
+          {labMetric !== 'lego' && <Pills label="Show statistic" value={labStat} onChange={setLabStat} options={[{ value: 'mean', label: 'Mean' }, { value: 'sd', label: 'Std dev' }]} />}
+          <NumberInput label="Population (per side)" value={labN} onChange={setLabN} min={6} max={80} integer />
+          <NumberInput label="Cells per axis (resolution)" value={labRes} onChange={setLabRes} min={2} max={LAB_RES_MAX} integer />
+          <NumberInput label="Repeats per cell (trials)" value={labTrials} onChange={setLabTrials} min={1} max={120} integer />
+          <div className="sm2-seedrow">
+            <NumberInput label="Seed" value={labSeed} onChange={setLabSeed} min={1} integer />
+            <button className="sm2-btn" onClick={() => setLabSeed(s => s + 1)} disabled={labRunning} title="Draw a fresh ensemble (new random instances)"><Shuffle size={16} />Re-roll</button>
+          </div>
+          {labRunning
+            ? <button className="sm2-btn" onClick={() => { labCancel.current = true; }}><Pause size={16} />Stop ({labProgress}%)</button>
+            : <button className="sm2-btn primary" onClick={runLab}><FlaskConical size={16} />Run Lab</button>}
         </div>
-      )}
+      ) : null}
     </ShellActions>
   );
-
-  const maxHist = Math.max(1, ...acct.hist);
 
   const story = (() => {
     const cons = (consensusA === 0 && consensusB === 0) ? 'preferences are independent — everyone wants different partners'
@@ -415,6 +736,7 @@ export default function StableMatching() {
         ? <span className="k scale diverge">blue = A keener · red = B keener</span>
         : <span className="k scale">blue #1 → red last</span>}
       <span className="k matched">held / matched</span><span className="k active">proposing</span><span className="k blocking">blocking</span>
+      {showFootprint && <span className="k footprint">stable elsewhere</span>}
     </p>
   );
 
@@ -424,6 +746,7 @@ export default function StableMatching() {
       <header className="sm2-header">
         <div className="sm2-tabs">
           <button className={view === 'visualizer' ? 'active' : ''} onClick={() => setView('visualizer')}><Layers size={15} />Visualizer</button>
+          <button className={view === 'lattice' ? 'active' : ''} onClick={() => setView('lattice')}><Network size={15} />Lattice</button>
           <button className={view === 'lab' ? 'active' : ''} onClick={() => setView('lab')}><FlaskConical size={15} />Lab</button>
         </div>
         {view === 'visualizer' && <div className="sm2-progress">Round {safeStep} / {total}{done ? ' · complete' : ''}</div>}
@@ -432,37 +755,72 @@ export default function StableMatching() {
       {view === 'visualizer' ? (
         <div className="sm2-visualizer">
           <p className="sm2-story">{story}</p>
-          <div className="sm2-narrate">{narrate()}</div>
+          {resolve
+            ? <div className="sm2-narrate resolve"><strong>Stabilizing — Roth–Vande Vate</strong>: satisfy a blocking pair, repeat. Step {rStep} / {resolve.steps.length} · {blocking.size === 0 ? <>resolved — <strong>stable</strong> in {resolve.steps.length} steps</> : rStep >= resolve.steps.length && !resolve.converged ? <>stopped at {resolve.steps.length} steps (large instance) — {blocking.size} blocking pair{blocking.size === 1 ? '' : 's'} remain</> : `${blocking.size} blocking pair${blocking.size === 1 ? '' : 's'} left`}. Reset to return to the live run.</div>
+            : jump === 'live'
+              ? <div className="sm2-narrate">{narrate()}</div>
+              : <div className="sm2-narrate jump"><strong>{JUMP_LABELS[jump]} stable matching</strong> — {NAMED_NOTE[jump as NamedKey]}. Σrank {acct.combined} (A {acct.aTot} + B {acct.bTot}){solution.capped ? ' · approximate (enumeration capped)' : ''}. Press Step or Reset to return to the live run.</div>}
           <div className="sm2-metrics">
-            <div className="sm2-metric big">
-              <span className="sm2-metric-label"><Activity size={14} /> Total rank (lower = happier)</span>
-              <strong>{acct.combined}</strong>
-              <span className="sm2-metric-sub">A {acct.aTot} + B {acct.bTot} · avg #{acct.avg.toFixed(2)} · {acct.free ? `${acct.free} still free` : 'all matched'}</span>
+            <div className="sm2-metric big sm2-outcome">
+              <span className="sm2-metric-label"><Activity size={14} /> Partner rank by side — average &amp; distribution (lower = happier)</span>
+              <div className="sm2-rows">
+                <div className="sm2-row">
+                  <span className="sm2-bar-label"><i className="sw sq" />A</span>
+                  <strong style={{ color: rankBurd(acct.aAvg || 1, n) }}>#{acct.aAvg.toFixed(2)}</strong>
+                  <div className="sm2-strip">{acct.aSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
+                </div>
+                <div className="sm2-row">
+                  <span className="sm2-bar-label"><i className="sw disc" />B</span>
+                  <strong style={{ color: rankBurd(acct.bAvg || 1, n) }}>#{acct.bAvg.toFixed(2)}</strong>
+                  <div className="sm2-strip">{acct.bSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
+                </div>
+              </div>
+              <span className="sm2-metric-sub">each tick = one person, sorted best → worst · blue #1 → red #{n} · total rank {acct.combined}{acct.free ? ` · ${acct.free} still free` : ''}</span>
             </div>
             <div className="sm2-metric">
-              <span className="sm2-metric-label">rank distribution</span>
-              <div className="sm2-dist">{acct.hist.map((c, i) => <span key={i} className="b" style={{ height: `${(c / maxHist) * 100}%` }} title={`#${i + 1}: ${c}`} />)}</div>
-              <span className="sm2-metric-sub">how many got their #1, #2, … choice</span>
+              <span className="sm2-metric-label"><Layers size={14} /> Solution space</span>
+              <strong>{solution.capped ? `≥${FOOT_CAP}` : solution.count}</strong>
+              <span className="sm2-metric-sub">{solution.count === 1 ? 'a unique stable matching' : `${solution.capped ? 'at least ' : ''}${solution.count} stable matchings`} · footprint {solution.pairs.size} of {n * n} cells</span>
             </div>
-            <div className={`sm2-metric stability ${!done ? '' : blocking.size === 0 ? 'ok' : 'bad'}`}>
+            <div className={`sm2-metric stability ${!shownDone ? '' : blocking.size === 0 ? 'ok' : 'bad'}`}>
               <span className="sm2-metric-label">{blocking.size === 0 ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />} Stability</span>
-              <strong>{!done ? '—' : blocking.size === 0 ? 'Stable' : `${blocking.size} blocking`}</strong>
-              <span className="sm2-metric-sub">{!done ? 'finish the run to check' : blocking.size === 0 ? 'no pair would defect' : 'purple-ringed cells would defect'}</span>
+              <strong>{!shownDone ? '—' : blocking.size === 0 ? 'Stable' : `${blocking.size} blocking`}</strong>
+              <span className="sm2-metric-sub">{!shownDone ? 'finish the run to check' : blocking.size === 0 ? 'no pair would defect' : 'purple-ringed cells would defect'}</span>
             </div>
           </div>
           <div className="sm2-matrix-wrap" ref={matrixWrap}>
-            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} markers={markers} blocking={blocking} size={cellSize} labels={showLabels} view={cellView} gap={tight ? 0 : 3} trail={trail} />
+            <Matrix inst={inst} matching={shown} rows={rows} cols={cols} markers={resolve ? resolveMarkers : jump === 'live' ? markers : EMPTY_MARKERS} blocking={blocking} footprint={showFootprint ? solution.pairs : null}
+              inspect={inspect} onHover={(c) => { if (!pinned) setInspect(c); }} onClick={(c) => { if (pinned && inspect && inspect[0] === c[0] && inspect[1] === c[1]) { setPinned(false); setInspect(null); } else { setInspect(c); setPinned(true); } }}
+              size={cellSize} labels={showLabels && cellSize >= 16} view={cellView} gap={tight ? 0 : 3} trail={resolve || jump !== 'live' ? EMPTY_TRAIL : trail} />
             {legend}
+            {inspect && (
+              <div className={`sm2-inspect${pinned ? ' pinned' : ''}`}>
+                <PrefList inst={inst} side="A" id={inspect[0]} partner={shown.a[inspect[0]]} mark={inspect[1]} />
+                <PrefList inst={inst} side="B" id={inspect[1]} partner={shown.b[inspect[1]]} mark={inspect[0]} />
+                <span className="sm2-inspect-hint">◆ outline = partner this matching · ▢ = the cell you're on · {pinned ? 'click the cell again to unpin' : 'click a cell to pin'}</span>
+              </div>
+            )}
           </div>
         </div>
-      ) : (
+      ) : view === 'lab' ? (
         <div className="sm2-lab">
-          <Heatmap data={labData} res={Math.max(2, Math.min(24, labRes))} maxV={labMax} hue={labHue} title={labTitle} caption={labCaption} mode={labMetric === 'lego' ? 'lego' : 'single'} maxRank={labN} />
-          <p className="sm2-lab-note">Each cell sweeps consensus A × B and averages <strong>{labTrials}</strong> independent instances run with the <strong>{labSchedule}</strong> schedule — signal, not single-draw noise. {labMetric === 'lego'
-            ? 'Lego cells: the square is A’s average rank, the circle B’s, on the same blue→red scale (blue = #1). Low consensus is blue (people want different partners, so everyone does well); as both groups converge on one ranking the cells redden — most chase the same few.'
-            : labMetric === 'unstable'
-              ? 'One-sided (A or B) is stable everywhere (a flat 0); the synchronous Alternate / Random schedules leave blocking pairs across most of the surface — synchronous two-sided deferred acceptance is not guaranteed stable.'
-              : 'Average number of blocking pairs left at the end — zero for one-sided, positive across most of the plane for Alternate / Random.'}</p>
+          <Heatmap data={labData} res={labRun ? labRun.res : Math.max(2, Math.min(LAB_RES_MAX, labRes))} maxV={labMax} hue={labHue} title={labTitle} caption={labCaption} mode={labMetric === 'lego' ? 'lego' : 'single'} maxRank={labN} stat={labStat} />
+          {labSummary && <LabSummary s={labSummary} onCopy={copyCsv} onDownload={downloadCsv} copied={labCopied} />}
+          <p className="sm2-lab-note">{labMetric === 'cost'
+            ? <>Each cell averages the <strong>number of Roth–Vande Vate repair steps</strong> needed to fix the <strong>{labSchedule}</strong> schedule's (often unstable) result into a stable matching, over <strong>{labTrials}</strong> instances. One-sided (A/B) is already stable → 0; the synchronous Alternate / Random schedules cost more to repair where preferences are disordered. The "cost to stabilize" of the frustrated regime.</>
+            : labMetric === 'stableCount'
+            ? <>Each cell counts the <strong>number of stable matchings</strong> (the lattice size), averaged over <strong>{labTrials}</strong> instances — this is a property of the preferences, not of any schedule. It is huge in the disordered (low-consensus) corner and <strong>collapses to exactly 1</strong> as both sides converge on one ranking: a unique, assortative stable matching. The order/disorder phase curve of the whole problem. (Enumeration is capped at 300; keep Population small.)</>
+            : <>Each cell sweeps consensus A × B and averages <strong>{labTrials}</strong> independent instances run with the <strong>{labSchedule}</strong> schedule — signal, not single-draw noise. {labMetric === 'lego'
+              ? 'Lego cells: the square is A’s average rank, the circle B’s, on the same blue→red scale (blue = #1). Low consensus is blue (people want different partners, so everyone does well); as both groups converge on one ranking the cells redden — most chase the same few.'
+              : labMetric === 'unstable'
+                ? 'One-sided (A or B) is stable everywhere (a flat 0); the synchronous Alternate / Random schedules leave blocking pairs across most of the surface — synchronous two-sided deferred acceptance is not guaranteed stable.'
+                : 'Average number of blocking pairs left at the end — zero for one-sided, positive across most of the plane for Alternate / Random.'}</>}</p>
+        </div>
+      ) : (
+        <div className="sm2-lattice-view">
+          <p className="sm2-story">The <strong>lattice of stable matchings</strong> for this instance — every stable matching, ordered by who-prefers-what. A-optimal sits at the top (best for A), B-optimal at the bottom; each edge is a single <em>rotation</em>. Named solutions are flagged. Click any node to load it into the Visualizer.</p>
+          <LatticeView inst={inst} set={stableSet.matchings} capped={stableSet.capped} named={named} picked={pickedNode}
+            onPick={(i) => { setPickedNode(i); setJump('live'); setResolve(null); setView('visualizer'); }} />
         </div>
       )}
     </div>
