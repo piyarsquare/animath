@@ -8,6 +8,6 @@ export interface ProjectionUniforms {
   uProjMode: number;
   uProjTarget: number;
   uProjAlpha: number;
-  uColourStyle: { value: number };
-  uColourBy: { value: number };
+  uColorStyle: { value: number };
+  uColorBy: { value: number };
 }

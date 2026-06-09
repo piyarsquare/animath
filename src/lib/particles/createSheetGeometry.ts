@@ -13,8 +13,8 @@ export function sheetCellSize(
 /** Build the **filled** sheet: a regular grid of rectangular cells over the
  *  domain box, each cell two triangles. The geometry is **non-indexed** (6
  *  vertices per cell) so every vertex of a cell can carry that cell's lower-left
- *  domain point in `cellBase` — the fill shader colours each rectangle by the
- *  average of its four corner colours (one flat colour per cell). Vertex
+ *  domain point in `cellBase` — the fill shader colors each rectangle by the
+ *  average of its four corner colors (one flat color per cell). Vertex
  *  positions still match the points layout (pos.x = x, pos.y = 0, pos.z = y), so
  *  the shared surface math maps them onto the function graph exactly as the
  *  point cloud. `seed` is zero so any Jitter shifts the sheet uniformly rather
@@ -84,7 +84,7 @@ export function rebuildTileGeometry(
  *  built as **screen-space ribbons** (each segment a camera-facing quad) so the
  *  net vertex shader can give it a real, controllable pixel width. `rings`
  *  concentric circles (constant |z|) and `spokes` rays (constant arg z) reveal
- *  how the function carries the polar fibres of the domain. `circles`/`rays`
+ *  how the function carries the polar fibers of the domain. `circles`/`rays`
  *  toggle each family; `resolution` is the sample count along each curve.
  *  Each vertex stores its anchor point in `position`, the segment's other end in
  *  `aOther`, and a `aSide` ±1; the shader offsets it perpendicular to the segment

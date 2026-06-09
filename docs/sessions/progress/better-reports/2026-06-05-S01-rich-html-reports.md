@@ -32,7 +32,7 @@ The first HTML reports “looked like Markdown.” Make the format earn its keep
 ### 🟢 code · 17:10 — Rebuilt `report.css` as a component kit
 **Why:** let reports be simple while looking rich.
 
-CSS timeline (colour-coded by entry type), sticky TOC rail with scroll-spy states, callouts, chips, figures, diffstat bar, sortable-table affordance, print styles, dashboard cards.
+CSS timeline (color-coded by entry type), sticky TOC rail with scroll-spy states, callouts, chips, figures, diffstat bar, sortable-table affordance, print styles, dashboard cards.
 
 ### 🟢 code · 17:25 — Added `report.js` (progressive enhancement)
 **Why:** auto-TOC + scroll-spy without per-report upkeep; works from `file://`.

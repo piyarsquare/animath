@@ -32,7 +32,7 @@ function tempLabel(ratio: number): string {
 
 /** First-person sky from the planet's surface: the suns wheel overhead as the
  *  planet spins (day/night), their noon height drifts with axial tilt over the
- *  orbit (irregular seasons), and the sky's colour tracks the climate. */
+ *  orbit (irregular seasons), and the sky's color tracks the climate. */
 export default function SkyView({ dataRef, dayLen, tilt }: {
   dataRef: React.MutableRefObject<SkyData | null>;
   dayLen: number; tilt: number;

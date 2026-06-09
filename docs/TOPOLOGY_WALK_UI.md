@@ -22,7 +22,7 @@ world: a **Corridor** — a twisting (Möbius, double/triple twist) or knotted
 (trefoil) enclosed tube you walk *through*, where "up" is glued to the floor's
 surface normal so a Möbius lap rolls the whole world over — or an **Open space**
 — an intrinsically flat **torus** or **Klein bottle** you walk *across*, where
-nothing flips locally and you discover the gluing only by travelling past
+nothing flips locally and you discover the gluing only by traveling past
 repeated landmarks. You are not on rails: you steer with WASD/arrows or an
 on-screen pad, drag to look, and watch oriented **F**-arrow footprints come back
 mirror-reversed wherever the surface reverses orientation.
@@ -59,7 +59,7 @@ pad, a top instruction strip, and (corridor only) a mini-map frame.
   owns the look-drag pointer handlers.
 - **MovePad** — a 150×150 cluster of glassy buttons bottom-right (`bottom:20,
   right:20`, `zIndex:20`), always present.
-- **Top instruction strip** — centred, dim white text, top of the viewport,
+- **Top instruction strip** — centered, dim white text, top of the viewport,
   `pointerEvents:none`; its wording switches by world family.
 - **Mini-map frame** — a 150×150 bordered box top-right (`top:12, right:12`),
   shown **only** in the corridor family when Mini-map is on (the 3D inset is
@@ -114,7 +114,7 @@ frame and hands them to the active world engine's `frame(...)`.
 
 **Movement model.** Forward/back and strafe intents (each −1..1) are taken from
 keys + the MovePad. Travel speed is `moveSpeed · dt`; in the corridor this
-advances arc length `s` along the centreline and a clamped lateral offset `w`;
+advances arc length `s` along the centerline and a clamped lateral offset `w`;
 in flat worlds it advances `(px, pz)` on the plane. A stride phase accumulates
 while moving to animate the avatar's legs/arms.
 
@@ -210,14 +210,14 @@ div (not `ControlPanel` primitives).
   `▶` right, `▼` back, glassy translucent buttons (`blur(6px)`); in the corridor
   family a teal-tinted `✎` write button sits bottom-left of the pad. Pointer
   hold = key hold.
-- **Top instruction strip** (always) — centred dim text; corridor copy: "Drag to
+- **Top instruction strip** (always) — centered dim text; corridor copy: "Drag to
   look · WASD / arrows move · Space (or ✎) writes your text on the wall"; flat
   copy: "Drag to look · WASD / arrows or the pad to walk · landmarks repeat —
   mirrored on the Klein bottle".
 - **Mini-map** (corridor only, when enabled) — a DOM frame (bordered, rounded,
   shadowed) with a small uppercase "MAP" label top-right; the renderer draws a
   scissored inset 3D orbiting view of the loop into that corner, showing the
-  centreline ribbon (magenta one edge, cyan the other — they **swap** around a
+  centerline ribbon (magenta one edge, cyan the other — they **swap** around a
   Möbius loop) plus a yellow cone marker for the player.
 - **Footprints / writing** — drawn in-scene, not as DOM overlays (see §8).
 - **Third-person avatar** — a small stylised orange-bodied / slate-limbed walker
@@ -239,8 +239,8 @@ div (not `ControlPanel` primitives).
 - **Corridor worlds.** You walk the floor; "up" is always the floor's surface
   normal. Loop = plain ring; Möbius = one half-twist (non-orientable; one lap
   rolls the world 180° so you end up where the ceiling was, a second lap
-  restores it); Double/Triple = more half-twists; Trefoil = knotted centreline.
-  A mini-map's edge colours swap around a Möbius loop. Themes change scenery and
+  restores it); Double/Triple = more half-twists; Trefoil = knotted centerline.
+  A mini-map's edge colors swap around a Möbius loop. Themes change scenery and
   lighting; **Space (or ✎)** writes glowing text on walls — found again flipped
   from the other side.
 - **Flat worlds.** Intrinsically flat — walking feels normal, nothing flips
@@ -251,7 +251,7 @@ div (not `ControlPanel` primitives).
   other column is mirror-reversed (non-orientable).
 - **Reading footprints.** Oriented arrows with the letter **F** and a
   cyan-left / magenta-right split; identical on orientable worlds, but
-  **mirror-reversed** (F → Ⅎ, colours swapped) across any orientation flip —
+  **mirror-reversed** (F → Ⅎ, colors swapped) across any orientation flip —
   overhead after a Möbius lap, or across the Klein bottle's red gluing. A plain
   arrow would hide a reflection; the F can't.
 - **Walking it.** Drag to look, WASD/arrows or the pad to move, toggle
@@ -276,11 +276,11 @@ div (not `ControlPanel` primitives).
 **The half-twist / identification.**
 
 - *Corridor* (`corridorGeometry.ts`): a closed rectangular-section tube swept
-  along a centreline. For loops the centreline is a circle of `radius 20`; the
+  along a centerline. For loops the centerline is a circle of `radius 20`; the
   cross-section frame rotates about the tangent by `τ = π · tiltTurns · t` over a
   lap, so `tiltTurns = 1` is a single half-twist (Möbius), `2`/`3` are
   double/triple. `loop` = `tiltTurns 0`. `trefoil` uses a `space:'knot'`
-  centreline (torus knot, `knotP 2`, `knotQ 3`). The camera-phase period wraps
+  centerline (torus knot, `knotP 2`, `knotQ 3`). The camera-phase period wraps
   after 2 laps when `tiltTurns` is odd (Möbius/triple), 1 lap otherwise. Default
   corridor: `width 1.5`, `height 2.5`, `segments 800`.
 - *Flat* (`flatEngine.ts`): an intrinsically flat plane. The fundamental domain
@@ -288,7 +288,7 @@ div (not `ControlPanel` primitives).
   the player (the universal cover). For the **Klein bottle**, every odd column of
   cells is mirrored (`scale z = −1` where `(I & 1)`), realizing the flip-gluing;
   the **torus** tiles all copies straight. Boundary edges are drawn red
-  (left/right, the flip pair) and blue (top/bottom, straight pair); seven coloured
+  (left/right, the flip pair) and blue (top/bottom, straight pair); seven colored
   numbered pillars (`1`–`7`) act as recurring landmarks.
 
 **Footprints as topology evidence** (`footprints.ts`): each step lays a flat
@@ -296,7 +296,7 @@ arrow textured with the letter **F** and a cyan-left / magenta-right split — b
 chiral. The trail mesh is rendered through whatever (possibly
 orientation-reversing) parent transform the world uses — the Möbius surface
 normal, a mirrored Klein cell — so on any orientation flip the F returns
-reversed and the colours swap. Trails: corridor `FOOT_MAX 1400`, spacing 1.4;
+reversed and the colors swap. Trails: corridor `FOOT_MAX 1400`, spacing 1.4;
 flat `TRAIL_MAX 1500`, spacing 1.6.
 
 **Wall writing** (corridor only): `Space`/`✎` raycasts the gaze (reach

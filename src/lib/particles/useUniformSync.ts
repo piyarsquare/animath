@@ -120,8 +120,8 @@ export function useUniformSync(state: ParticleState): void {
   }, [state.textureIndex]);
 
   useEffect(() => {
-    materialsRef.current.forEach(m => { m.uniforms.uColourStyle.value = state.colourStyle; });
-  }, [state.colourStyle]);
+    materialsRef.current.forEach(m => { m.uniforms.uColorStyle.value = state.colorStyle; });
+  }, [state.colorStyle]);
 
   useEffect(() => {
     materialsRef.current.forEach(m => { m.uniforms.uColormap.value = state.colormap; });
@@ -147,12 +147,12 @@ export function useUniformSync(state: ParticleState): void {
   }, [state.lighting, state.lightStrength]);
 
   useEffect(() => {
-    materialsRef.current.forEach(m => { m.uniforms.uColourBy.value = state.colourBy; });
-  }, [state.colourBy]);
+    materialsRef.current.forEach(m => { m.uniforms.uColorBy.value = state.colorBy; });
+  }, [state.colorBy]);
 
   useEffect(() => {
-    materialsRef.current.forEach(m => { m.uniforms.uColourQty.value = state.colourQuantity; });
-  }, [state.colourQuantity]);
+    materialsRef.current.forEach(m => { m.uniforms.uColorQty.value = state.colorQuantity; });
+  }, [state.colorQuantity]);
 
   useEffect(() => {
     materialsRef.current.forEach(m => { m.uniforms.uBrightnessQty.value = state.brightnessQuantity; });

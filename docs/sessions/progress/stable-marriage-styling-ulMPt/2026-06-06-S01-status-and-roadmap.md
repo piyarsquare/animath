@@ -18,7 +18,7 @@ pr: null
 The session opened as a *styling* task. A three-lens code review and a follow-up design discussion converged on a different headline: **the CSS is already the strongest part of the app; the real work is correctness, the metric, and the structure that would make the code reusable.** The app teaches a theorem (one-sided Gale–Shapley proposer-optimality) that its default model — a randomized two-sided market — does not actually demonstrate, reports a metric that can't measure the thing it names, and hides the very concept (a shared "common preference") that the whole simulation is built on.
 
 > [!IMPORTANT]
-> **Decision taken this session** The engine will support **both** models *as an explicit mode*: **one-sided Gale–Shapley as the default** (the theorem holds exactly), with the existing **two-sided market** kept as an honestly-labelled advanced variant. This single decision settles what the "right metric" must measure (see §4).
+> **Decision taken this session** The engine will support **both** models *as an explicit mode*: **one-sided Gale–Shapley as the default** (the theorem holds exactly), with the existing **two-sided market** kept as an honestly-labeled advanced variant. This single decision settles what the "right metric" must measure (see §4).
 
 > [!NOTE]
 > **Status** No source code has been changed. This report is the plan of record: current state, a prioritized roadmap, forward proposals, and the open decisions still needed.
@@ -80,14 +80,14 @@ The UI reports four averages (Men / Women / Asker / Asked avg rank, `:994–1011
 
 ### 4.2 Why "common preference" isn't infused
 
-The thing the whole model is built on — `quality` — is almost invisible. It reaches the user only through the "Sort by popularity" toggle (`:808, :815`); it is never drawn, labelled, or explained. So "Consensus = 80%" is a mystery slider: consensus *toward what?* There's a shared desirability ranking sitting right there and the app hides it. **Infusing it** means making the common preference a first-class, visible object (e.g. a desirability spine each person sits on), so the learner can watch consensus interpolate from "everyone chasing the same few stars" toward "idiosyncratic taste."
+The thing the whole model is built on — `quality` — is almost invisible. It reaches the user only through the "Sort by popularity" toggle (`:808, :815`); it is never drawn, labeled, or explained. So "Consensus = 80%" is a mystery slider: consensus *toward what?* There's a shared desirability ranking sitting right there and the app hides it. **Infusing it** means making the common preference a first-class, visible object (e.g. a desirability spine each person sits on), so the learner can watch consensus interpolate from "everyone chasing the same few stars" toward "idiosyncratic taste."
 
 ### 4.3 What "Both, as a mode" pins down
 
 The engine gains one parameter — *who proposes* — with three settings:
 
 - **One-sided (default):** a side toggle, Men propose / Women propose. Pure deferred acceptance; theorem holds exactly; men-propose *is* the man-optimal matching by construction. The `bias` coin flip is gone from this mode.
-- **Market (advanced):** the existing `bias`-weighted coin flip, relabelled away from "proposer-optimality" — framed as an idealized two-sided market with the asker/asked split presented as an *emergent* observation.
+- **Market (advanced):** the existing `bias`-weighted coin flip, relabeled away from "proposer-optimality" — framed as an idealized two-sided market with the asker/asked split presented as an *emergent* observation.
 
 Consequence: the honest metric (§4.1) is **mode-independent**. In one-sided mode you can show "this run landed exactly on the man-optimal extreme; here's the woman-optimal extreme for contrast." In market mode the same gap is the bound the emergent outcome floats inside. Only the framing differs.
 

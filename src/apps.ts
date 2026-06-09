@@ -8,7 +8,7 @@ export const apps: AppDescriptor[] = [
     hash: '/complex-particles',
     name: 'Complex Particles',
     icon: '✦',
-    blurb: 'Visualise z → f(z) as a cloud of particles living in 4D, projected down to 3D.',
+    blurb: 'Visualize z → f(z) as a cloud of particles living in 4D, projected down to 3D.',
   },
   {
     hash: '/plane-transform',

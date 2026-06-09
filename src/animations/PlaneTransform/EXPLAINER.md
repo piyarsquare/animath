@@ -57,5 +57,5 @@ To get a single-valued function we pick a **branch** — a consistent choice of
 The **branch cut** is the line (here, the negative real axis) where the
 chosen angle jumps by `2π`; you'll see a color discontinuity along it.
 Stepping the branch index walks you onto the next *sheet* of the function's
-Riemann surface — the multi-storey surface on which the function finally
+Riemann surface — the multi-story surface on which the function finally
 becomes single-valued.

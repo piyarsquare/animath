@@ -10,7 +10,7 @@ import { useResponsive } from '../styles/responsive';
 import { planes, Plane } from '../math/constants';
 import { clearPersistedState } from '../lib/usePersistentState';
 import {
-  ColorStyle, ColourBy, ColourQuantity, CoordMode, coordModeNames, colormapNames,
+  ColorStyle, ColorBy, ColorQuantity, CoordMode, coordModeNames, colormapNames,
   SamplePattern, samplePatternNames, JitterMode, AXIS_COLORS,
   shapeNames, textureNames, viewTypes, motionModes, renderModes,
   useGestureRotation,
@@ -147,7 +147,7 @@ export default function ParticleViewerShell({
 
   // Toggling the ± lock seeds the other representation so the view doesn't jump:
   // unlocking copies the symmetric extents into min/max; re-locking collapses the
-  // (possibly off-centre) window back to a symmetric half-width.
+  // (possibly off-center) window back to a symmetric half-width.
   const onBoundsLockChange = (locked: boolean) => {
     if (locked) {
       state.setExtentX((state.xMax - state.xMin) / 2);
@@ -340,11 +340,11 @@ export default function ParticleViewerShell({
           <Pills
             label="Color by"
             options={[
-              { value: ColourBy.Domain, label: 'Domain' },
-              { value: ColourBy.Range, label: 'Range' },
+              { value: ColorBy.Domain, label: 'Domain' },
+              { value: ColorBy.Range, label: 'Range' },
             ]}
-            value={state.colourBy}
-            onChange={state.setColourBy}
+            value={state.colorBy}
+            onChange={state.setColorBy}
           />
           <Select
             label="Colormap"
@@ -352,27 +352,27 @@ export default function ParticleViewerShell({
             value={state.colormap}
             onChange={state.setColormap}
           />
-          {/* Which quantity the colour represents — drives the colormap axis, or
+          {/* Which quantity the color represents — drives the colormap axis, or
               the hue of the HSV Phase wheel. */}
           <Select
             label="Quantity"
             options={[
-              { value: ColourQuantity.Phase, label: 'Phase (arg)' },
-              { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
-              { value: ColourQuantity.Real, label: 'Real part' },
-              { value: ColourQuantity.Imag, label: 'Imag part' },
+              { value: ColorQuantity.Phase, label: 'Phase (arg)' },
+              { value: ColorQuantity.Modulus, label: 'Magnitude (|·|)' },
+              { value: ColorQuantity.Real, label: 'Real part' },
+              { value: ColorQuantity.Imag, label: 'Imag part' },
             ]}
-            value={state.colourQuantity}
-            onChange={state.setColourQuantity}
+            value={state.colorQuantity}
+            onChange={state.setColorQuantity}
           />
           <Select
             label="Brightness"
             options={[
-              { value: ColourQuantity.Modulus, label: 'Magnitude (|·|)' },
-              { value: ColourQuantity.Uniform, label: 'Uniform (flat)' },
-              { value: ColourQuantity.Phase, label: 'Phase (arg)' },
-              { value: ColourQuantity.Real, label: 'Real part' },
-              { value: ColourQuantity.Imag, label: 'Imag part' },
+              { value: ColorQuantity.Modulus, label: 'Magnitude (|·|)' },
+              { value: ColorQuantity.Uniform, label: 'Uniform (flat)' },
+              { value: ColorQuantity.Phase, label: 'Phase (arg)' },
+              { value: ColorQuantity.Real, label: 'Real part' },
+              { value: ColorQuantity.Imag, label: 'Imag part' },
             ]}
             value={state.brightnessQuantity}
             onChange={state.setBrightnessQuantity}
@@ -386,8 +386,8 @@ export default function ParticleViewerShell({
                 options={Object.keys(ColorStyle)
                   .filter(k => isNaN(Number(k)))
                   .map(k => ({ value: ColorStyle[k as keyof typeof ColorStyle], label: k }))}
-                value={state.colourStyle}
-                onChange={state.setColourStyle}
+                value={state.colorStyle}
+                onChange={state.setColorStyle}
               />
               <Slider label="Hue shift" value={state.hueShift}
                 min={R.hueShift.min} max={R.hueShift.max} step={R.hueShift.step}

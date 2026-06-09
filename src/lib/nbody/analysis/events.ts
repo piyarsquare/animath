@@ -5,7 +5,7 @@
 import type { Planet, Star } from '../integrator';
 import { planetEnergy } from './classify';
 
-/** Mass-weighted centre of position and velocity of a set of stars. */
+/** Mass-weighted center of position and velocity of a set of stars. */
 function com(stars: Star[], idx: number[]) {
   let M = 0, x = 0, y = 0, vx = 0, vy = 0;
   for (const i of idx) {

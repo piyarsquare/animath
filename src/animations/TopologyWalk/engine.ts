@@ -5,10 +5,10 @@ import { OtherSide } from './otherSide';
  * Topology Walk hosts two interchangeable world *engines* behind one common
  * interface. They share the whole "player" layer — drag-look, WASD / move pad,
  * the avatar + third-person chase cam, the footprint trail and mobile defaults —
- * and differ only in how a closed surface is realised:
+ * and differ only in how a closed surface is realized:
  *
  *  - the **corridor** engine sweeps a rectangular tube along a (possibly
- *    knotted, possibly twisting) centreline and glues "up" to the floor's
+ *    knotted, possibly twisting) centerline and glues "up" to the floor's
  *    surface normal, so a Möbius lap rolls the whole world over;
  *  - the **flat** engine walks an intrinsically flat plane and renders the
  *    edge-gluing by tiling the fundamental domain (the universal cover) around
@@ -78,7 +78,7 @@ export interface EngineOptions {
    *  the columns/trees on the other side of the world. */
   floorOpacity: number;
   /** Flat worlds: tint each tiled copy of the fundamental domain a different
-   *  colour, so the universal-cover tiling is visible as you walk between cells. */
+   *  color, so the universal-cover tiling is visible as you walk between cells. */
   colorCells: boolean;
   /** Spherical worlds: planet radius in world units. A bigger planet dilutes the
    *  (fixed-by-Gauss–Bonnet) curvature, so it feels locally flatter. */
@@ -105,7 +105,7 @@ export interface FlatMapState {
 }
 
 /** A landmark's position on the unit sphere, in (latitude, longitude) radians,
- *  plus its identifying colour — consumed by the spherical mini-map. */
+ *  plus its identifying color — consumed by the spherical mini-map. */
 export interface SphereLandmark {
   lat: number;
   lon: number;
@@ -169,7 +169,7 @@ export interface WorldEngine {
   // the glass (see lib `otherSide.ts` / `glassSurface.ts`). These optionals are
   // the uniform seam the roadmap normal-flip rides: the host will call
   // `flipSide()` once at the player layer and each engine routes it to its own
-  // realisation. Declared now, unimplemented this session — corridor omits them.
+  // realization. Declared now, unimplemented this session — corridor omits them.
   /** Roadmap: somersault the player to the glued opposite face / inner shell. */
   flipSide?(): void;
   /** True when the player currently stands on the under / inner face. */

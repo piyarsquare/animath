@@ -40,7 +40,7 @@ turning while held.
 Shipped as **Input chart** / **Output chart** pickers in the Domain section
 (`CoordMode`: Cartesian / Polar / Log-polar). Each replots its plane as
 `(|·|, arg)` or `(log|·|, arg)` before the 4-vector is assembled (via
-`chartCoord` in the shader, uniforms `uInCoord` / `uOutCoord`); colour keeps the
+`chartCoord` in the shader, uniforms `uInCoord` / `uOutCoord`); color keeps the
 raw Cartesian value. Log-polar output makes `exp` the identity; log-polar on both
 flattens `zⁿ`/roots into linear shears. A genuine `(r, α)` input grid now exists
 as the **Polar** option of the new domain **Sampling** picker (see below). Not yet
@@ -64,7 +64,7 @@ independently, each with an optional **log-radius** sub-toggle.
 
 Deliberately left as a dedicated future effort. Its cheaper slices have all
 landed and proven out the plumbing: the **Hue**/**Brightness** quantity pickers
-(colour from source × {phase, modulus, real, imag}), the **Input/Output charts**
+(color from source × {phase, modulus, real, imag}), the **Input/Output charts**
 (Cartesian / polar / log-polar per plane), the **Drop-axis** projections, and the
 parameterized functions. The full matrix would re-architect the 4-vector assembly
 to be assignment-driven and subsume those as special cases — a big change best
@@ -72,7 +72,7 @@ done on its own, not bolted on at the end of the granular work. Original sketch:
 
 Generalize the hardwired plotting into one control surface. Today the 4-vector is
 fixed as `(Re z, Im z, Re f, Im f)` and color is `arg`→hue + `|·|`→value, chosen
-from input (`Domain`) or output (`Range`) via `ColourBy`. Instead, expose an
+from input (`Domain`) or output (`Range`) via `ColorBy`. Instead, expose an
 explicit **assignment matrix**: for each *visual channel* — the 3 spatial axes,
 **color**, and optionally **point size / texture / opacity** — pick:
 
@@ -82,7 +82,7 @@ explicit **assignment matrix**: for each *visual channel* — the 3 spatial axes
      (modulus / argument), with an optional **log** modifier.
 
 This subsumes the current drop-axis modes (a "drop" is just leaving a coordinate
-unassigned), the polar toggles above, and the `ColourBy` switch — all as special
+unassigned), the polar toggles above, and the `ColorBy` switch — all as special
 cases of one matrix. Provide sensible presets (the current default, "domain
 coloring", "modulus surface", etc.) so the matrix isn't overwhelming. Guard
 against degenerate/duplicate assignments (e.g. two axes bound to the same
@@ -158,39 +158,39 @@ Follow-ups:
 
 ### Flexible "color by" — choose source *and* quantity — ✅ implemented
 
-Shipped **Hue** and **Brightness** pickers in the Color section (`ColourQuantity`):
+Shipped **Hue** and **Brightness** pickers in the Color section (`ColorQuantity`):
 the source stays the Domain/Range switch, and the two controls independently
 choose which scalar drives hue and value — **Phase** (classic `arg → hue`),
-**Magnitude** (colour/shade by `|z|` / `|f|`), **Real**, or **Imag**. Defaults
+**Magnitude** (color/shade by `|z|` / `|f|`), **Real**, or **Imag**. Defaults
 reproduce classic domain coloring (hue = phase, brightness = magnitude), and the
-two can now be driven by *different* quantities. Implemented behind `uColourQty`
-and `uBrightnessQty` in `calcColour` (`ComplexParticles/shaders/index.ts`) and
+two can now be driven by *different* quantities. Implemented behind `uColorQty`
+and `uBrightnessQty` in `calcColor` (`ComplexParticles/shaders/index.ts`) and
 persisted via `useParticleState`. (Brightness applies to the HSV / Dual-hue
 styles; the Modulus-bands and Phase-only styles fix their own value by design.)
 Original sketch:
 
-Today **Color → Color by** is a binary `ColourBy` (Domain = `z` vs Range = `f`),
+Today **Color → Color by** is a binary `ColorBy` (Domain = `z` vs Range = `f`),
 and the colormap is hardwired as `arg → hue`, `|·| → value`. Open it up so the
-user can pick **which quantity** drives the colour, independently of the source:
+user can pick **which quantity** drives the color, independently of the source:
 
 - **Source:** input `z` or output `f(z)` (already the Domain/Range switch).
 - **Quantity:** magnitude `|·|`, argument/phase `arg`, real part, or imaginary
-  part — e.g. colour by **|z|** or **|f(z)|** (the specific ask) instead of the
+  part — e.g. color by **|z|** or **|f(z)|** (the specific ask) instead of the
   current phase-driven hue.
 - Possibly let hue and brightness be driven by *different* quantities (e.g. hue
   from `arg f`, value from `|z|`).
 
-This is the colour slice of the broader **Unified channel-mapping control** idea
-above; if that lands, this is just its colour row. Short of the full matrix, ship a
+This is the color slice of the broader **Unified channel-mapping control** idea
+above; if that lands, this is just its color row. Short of the full matrix, ship a
 small `Pills`/`Select` pair (source × quantity) in the Color section. Implement in
-the shader's `calcColour` (`ComplexParticles/shaders/index.ts`) behind a couple of
+the shader's `calcColor` (`ComplexParticles/shaders/index.ts`) behind a couple of
 uniforms; persist the selection via `useParticleState`.
 
 ### Explicit domain bounds (lower/upper) with a ± lock — ✅ implemented
 
 Shipped a **± symmetric bounds** lock in the Domain section: locked keeps the
 classic symmetric `±extent` sliders; unlocked exposes independent X/Y min/max
-(as two-thumb **RangeSlider**s) for off-centre windows like `x ∈ [0, 6]`. The
+(as two-thumb **RangeSlider**s) for off-center windows like `x ∈ [0, 6]`. The
 geometry builders now take explicit `(xMin,xMax,yMin,yMax)`, `axisScale` still
 applies, and toggling the lock seeds the other representation so the view doesn't
 jump. Original sketch:
@@ -198,13 +198,13 @@ jump. Original sketch:
 The sampled domain is currently symmetric half-widths (`extentX`, `extentY`, so the
 box is always `[-ext, +ext]`). Let the user set **independent lower and upper
 bounds** per axis (`xMin/xMax`, `yMin/yMax`), with a **lock toggle** that ties them
-to a symmetric `±a` (today's behaviour) and, when unlocked, allows an off-centre
+to a symmetric `±a` (today's behavior) and, when unlocked, allows an off-center
 window (e.g. `x ∈ [0, 6]`).
 
 - Replace/augment the two extent sliders with min/max number inputs per axis plus a
   "± lock" checkbox; locked keeps `min = −max` and shows a single magnitude.
 - Thread through `createParticleGeometry` / `rebuildGeometryBuffers` /
-  `redistributeAdaptive` (which currently centre the grid at 0 via `*spanX`/2) so
+  `redistributeAdaptive` (which currently center the grid at 0 via `*spanX`/2) so
   they sample `[xMin, xMax] × [yMin, yMax]`.
 - Keep the `axisScale` (×1 / ×π) multiplier working with the new bounds.
 - Pairs with the number-input commit-on-blur idea below.
@@ -272,7 +272,7 @@ Shipped a **Hopf fibers** toggle + **Fiber density** slider (Camera section, Tor
 view), backed by `createHopfFibers.ts`: it samples base points on S² directly (a
 grid over latitude η and longitude ψ) and draws each one's full circle
 `θ ↦ stereo(normalize(e^{iθ}·(z₁,z₂)))` as a `LineLoop`, in the same normalized
-stereographic chart + SCALE as the particles/scaffold, coloured by base point.
+stereographic chart + SCALE as the particles/scaffold, colored by base point.
 Open follow-ups: have the **Collapse → Hopf** slider also shrink the fiber circles
 to their base points (currently the fibers just hide past the half-way collapse),
 and an option to seed fibers from the *function's own* graph points rather than a
@@ -320,11 +320,11 @@ Effectively achievable today by combining a **Drop axis** projection with the
 hue (or brightness) to the matching source + quantity — e.g. Drop V in space and
 set Hue = Imag of the Range, which paints the discarded `v = Im f` onto color for
 a no-projection-loss 4-D view. A dedicated auto-binding "Drop → color" variant
-was judged redundant given those controls already exist; revisit it as the colour
+was judged redundant given those controls already exist; revisit it as the color
 row of the unified channel-mapping matrix below. Original sketch:
 
 **Motivation.** Today color is **domain coloring** (`arg`→hue, `|·|`→value of `z` or
-`f`; `calcColour` in `ComplexParticles/shaders/index.ts:201`) — but that information
+`f`; `calcColor` in `ComplexParticles/shaders/index.ts:201`) — but that information
 is *already* in the geometry, so color is a legibility aid, **not an independent
 axis**. An alternative is to let color carry one of the four coordinates the
 projection would otherwise **discard**, giving a no-distortion 4-D view: 3 axes in
@@ -350,12 +350,12 @@ Shipped a **Sampling** picker in the Domain section (`SamplePattern`) that lays 
 domain points out as a Cartesian **Grid** (default), **Polar** lattice, concentric
 **Rings**, radial **Spokes**, a **Web** (rings + spokes), concentric **Squares**, or
 **Random** scatter. Built in `createParticleGeometry.ts` (`fillPattern`); radial
-patterns sample a disk of radius max(halfX, halfY) centred on the box, the others
+patterns sample a disk of radius max(halfX, halfY) centered on the box, the others
 use the box; each fills exactly `count` points. Beyond the visual variety, **Polar**
 spreads points evenly in `arg z`, which keeps near-linear maps (`f ≈ b·z`) crisp in
 the Hopf/Torus view (a Cartesian grid under-samples one side of the fiber circle —
 verified the faint fraction drops 23% → 0% at `b = 2`). Bypassed while adaptive
-density is on. Open: let radial patterns honour an annulus (`rMin > 0`); a phyllotaxis
+density is on. Open: let radial patterns honor an annulus (`rMin > 0`); a phyllotaxis
 / sunflower option; and per-pattern density controls (ring/spoke counts).
 
 ### Hopf study preset refinements (clear drop axis; preset polish) — ⏳ deferred

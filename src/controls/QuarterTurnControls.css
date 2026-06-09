@@ -1,7 +1,7 @@
 /* Quarter-turn / spin controls, rendered inside the standard Actions panel
    (the drawer's Actions tab + the draggable ActionFloater) rather than a
    bespoke floater. Each plane is one compact row of four equal buttons —
-   [spin ↻] [↻ turn] [↺ turn] [spin ↺] — with axis-coloured plane labels, a
+   [spin ↻] [↻ turn] [↺ turn] [spin ↺] — with axis-colored plane labels, a
    drop-axis row, and reset. */
 
 .qtc {
@@ -35,7 +35,7 @@
   text-align: center;
 }
 
-/* Plane labels (e.g. "XY") render each letter in its axis colour. */
+/* Plane labels (e.g. "XY") render each letter in its axis color. */
 .qtc-plane {
   display: inline-flex;
   gap: 1px;

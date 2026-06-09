@@ -70,7 +70,7 @@ export default function AgenticSorting() {
   const [itemCount, setItemCount] = useState(60);
   const [simulationSpeed, setSimulationSpeed] = useState(20);
   const [isRunning, setIsRunning] = useState(false);
-  /** Visualisation mode: bars (full-length rectangles from the midline) or
+  /** Visualization mode: bars (full-length rectangles from the midline) or
    *  dots (a small circle at each agent's value). Dots stay readable at
    *  high agent counts where adjacent bars start to merge. */
   const [display, setDisplay] = useState<'bars' | 'dots'>('bars');

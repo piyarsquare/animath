@@ -39,14 +39,14 @@ about the solution space."
   NOT a last-round fluke; one-sided is always stable. Glassy/assignment-problem kinship.
 - **Lab surfaces**: **Unstable %** and **Avg blocking pairs** by schedule (purple), and
   **Ranks (A·B)** as **Lego** cells (square=A avg, circle=B avg) on RdBu.
-- **Markers** recoloured off red → purple (invisible on RdBu); realtime reject + "stole away"
+- **Markers** recolored off red → purple (invisible on RdBu); realtime reject + "stole away"
   flashes; short-lived fading **failure trail**; market RNG decorrelated from generation.
 - **Bug fixed**: blackout when changing the run while stepped to the end — clamp every read
   to `safeStep = min(step, total)` (the reset effect runs after render).
 
-### 🟢 code · 21:10 — Redesign: matrix-centred, total-rank welfare, foreground the algorithm
+### 🟢 code · 21:10 — Redesign: matrix-centered, total-rank welfare, foreground the algorithm
 **Why:** First build was "too obscure" — algorithm/preferences hidden, proposer-advantage
-the wrong headline. User chose a **preference-matrix** centre, **total rank** as the
+the wrong headline. User chose a **preference-matrix** center, **total rank** as the
 metric, A/B labels for now, one-to-one (engine stays capacity-extensible).
 
 Rebuilt the visualizer around an A×B matrix: each cell shows both ranks; matches/holds

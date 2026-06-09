@@ -2,7 +2,7 @@ import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, use
 import { Slider, Pills } from '../../../components/ControlPanel';
 import { starPaths } from './runner';
 
-/** Star-trajectory overlay colours (gold / orange / blue), matching the stars. */
+/** Star-trajectory overlay colors (gold / orange / blue), matching the stars. */
 const STAR_RGB = ['255,210,127', '255,112,67', '158,199,255'];
 import {
   computeBasinRange, basinPlanetAt, chaosRamp, CHAOS_LAMBDA_MAX, OUTCOME_RGB, OUTCOME_CODE,
@@ -14,7 +14,7 @@ import { BasinPool } from './basinPool';
 import { GpuRunner, gpuAvailable, type PlanetIC } from './gpu';
 import { mulberry32, type EnsembleConfig, type RunParams } from './rng';
 
-/** The map's GPU lane covers every plane coloured by fate (exact) or by the
+/** The map's GPU lane covers every plane colored by fate (exact) or by the
  *  statistical lens — the position plane uploads raw ICs, the radius×speed and
  *  angle×speed planes use radius/speed/angle launches. Only the chaos/λ metric
  *  (a Lyapunov shadow the shader doesn't compute) stays on Workers/CPU. */
@@ -88,7 +88,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   const [hover, setHover] = useState('');
   const [dim, setDim] = useState<DimResult | null>(null);
   const [showStars, setShowStars] = useState(true);
-  // Continuous maps (chaos λ, statistical fractions) can stretch their colour
+  // Continuous maps (chaos λ, statistical fractions) can stretch their color
   // ramp to the data on screen, re-fit on every render/zoom, to expose structure.
   const [autoFit, setAutoFit] = useState(true);
   const [colorRange, setColorRange] = useState<[number, number] | null>(null);
@@ -104,15 +104,15 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   const outGridRef = useRef<Uint8Array>(new Uint8Array(0));
   const tGridRef = useRef<Float32Array>(new Float32Array(0));
   // Per-pixel [happy, hab, destroyed, survived] fractions for the statistical
-  // lens, kept so "Show" can recolour the map without recomputing.
+  // lens, kept so "Show" can recolor the map without recomputing.
   const statGridRef = useRef<Float32Array>(new Float32Array(0));
   const statReadyRef = useRef(false);
   // Resolution currently on the canvas — varies during a progressive render, so
-  // hover/click/recolour index the grids by this, not the target `res` state.
+  // hover/click/recolor index the grids by this, not the target `res` state.
   const paintedResRef = useRef(128);
   const autoFitRef = useRef(autoFit); autoFitRef.current = autoFit;
   const statMetricRef = useRef(statMetric); statMetricRef.current = statMetric;
-  // Identifies what the value grids currently hold, so an idle recolour only
+  // Identifies what the value grids currently hold, so an idle recolor only
   // runs when it matches the view: `${res}|${stat | metric}`.
   const gridKeyRef = useRef('');
   const currentGridKey = () => `${paintedResRef.current}|${stateRef.current.lens === 'stat' ? 'stat' : stateRef.current.metric}`;
@@ -318,8 +318,8 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       const ctx = cv.getContext('2d')!;
       const img = ctx.createImageData(N, N);
       // Seed this (finer) pass with the previous coarse result, upscaled nearest-
-      // neighbour, so the map sharpens in place instead of rebuilding from blank —
-      // each not-yet-computed pixel keeps showing its coarse colour until the
+      // neighbor, so the map sharpens in place instead of rebuilding from blank —
+      // each not-yet-computed pixel keeps showing its coarse color until the
       // finer value lands on top.
       if (prev) {
         const src = prev.data, M = prev.res, d = img.data;
@@ -401,11 +401,11 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     renderStage(0, null);
   };
 
-  /** Recolour an already-computed continuous map (chaos λ or a statistical
+  /** Recolor an already-computed continuous map (chaos λ or a statistical
    *  fraction) from the stored per-pixel values — no resimulation. With auto-fit
    *  the ramp is stretched to the data's 2nd–98th percentile; otherwise it uses
    *  the absolute range (λ∈[0,λmax], fraction∈[0,1]). Fate maps are categorical,
-   *  so they keep their inline colouring. */
+   *  so they keep their inline coloring. */
   const applyColor = () => {
     const N = paintedResRef.current;
     const cv = canvasRef.current; const ctx = cv?.getContext('2d');
@@ -476,7 +476,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       ctx.fillStyle = `rgb(${rgb})`;
       ctx.beginPath(); ctx.arc(X(ox(0)), Y(oy(0)), 3.5, 0, 7); ctx.fill();
     });
-    if (o) { // crosshair at the co-moving frame centre
+    if (o) { // crosshair at the co-moving frame center
       ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1;
       const cx = X(0), cy = Y(0);
       ctx.beginPath(); ctx.moveTo(cx - 6, cy); ctx.lineTo(cx + 6, cy); ctx.moveTo(cx, cy - 6); ctx.lineTo(cx, cy + 6); ctx.stroke();
@@ -566,7 +566,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             { value: 'exact', label: 'Exact (1 world/px)' }, { value: 'stat', label: 'Statistical' },
           ]} onChange={(v) => { stop(); setLens(v as BasinLens); setRes(r => Math.min(r, v === 'stat' ? 96 : 256)); }} />
           {lens === 'exact' ? (
-            <Pills label="Colour by" value={metric} options={[
+            <Pills label="Color by" value={metric} options={[
               { value: 'fate', label: 'Fate' }, { value: 'chaos', label: 'Chaos (λ)' },
             ]} onChange={(v) => setMetric(v as BasinMetric)} />
           ) : (
@@ -579,7 +579,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             </>
           )}
           {(lens === 'stat' || metric === 'chaos') && (
-            <Pills label="Colour range" value={autoFit ? 1 : 0}
+            <Pills label="Color range" value={autoFit ? 1 : 0}
               options={[{ value: 1, label: 'Auto-fit' }, { value: 0, label: 'Absolute' }]}
               onChange={(v) => { autoFitRef.current = v === 1; setAutoFit(v === 1); if (!busy && gridKeyRef.current === currentGridKey()) applyColor(); }} />
           )}
@@ -595,7 +595,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
           {mode === 'pos' && (
             <Pills label="Reference frame" value={frame}
               options={[
-                { value: 'bary', label: 'Barycentre' },
+                { value: 'bary', label: 'Barycenter' },
                 { value: 's0', label: 'Star A' }, { value: 's1', label: 'Star B' }, { value: 's2', label: 'Star C' },
               ]}
               onChange={(v) => setFrame(v as FrameId)} />
@@ -689,10 +689,10 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
           )}
           <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 8 }}>
             {lens === 'stat'
-              ? `Each pixel is a mini-census: ${statRuns} worlds that share these axes but randomise the other launch dimensions, coloured by ${STAT_LABEL[statMetric]}. The Exact lens shows one world per pixel — switch to it to see the fractal final-state boundaries underneath these smooth statistics.`
+              ? `Each pixel is a mini-census: ${statRuns} worlds that share these axes but randomise the other launch dimensions, colored by ${STAT_LABEL[statMetric]}. The Exact lens shows one world per pixel — switch to it to see the fractal final-state boundaries underneath these smooth statistics.`
               : metric === 'fate'
                 ? 'One pixel = one exact starting condition. Hue = outcome, brightness = how long it lasted. Drag a box to zoom — the boundaries stay intricate at every scale: the three-body problem’s fractal final-state sensitivity. D is the box-counting dimension of the boundary (1 = smooth, →2 = space-filling); α = 2−D is the uncertainty exponent.'
-                : 'One pixel = one exact starting condition. Colour = the planet’s Lyapunov exponent λ — how fast its future becomes unpredictable (blue = regular orbits, red = strongly chaotic). Drag a box to zoom. D is the box-counting dimension of the regular/chaotic frontier.'}
+                : 'One pixel = one exact starting condition. Color = the planet’s Lyapunov exponent λ — how fast its future becomes unpredictable (blue = regular orbits, red = strongly chaotic). Drag a box to zoom. D is the box-counting dimension of the regular/chaotic frontier.'}
           </div>
           {mode === 'pos' && frame !== 'bary' && (
             <div style={{ font: '11px/1.5 system-ui', color: '#8aa0c8', marginTop: 6 }}>

@@ -49,7 +49,7 @@
         (torus / Klein) and spherical (sphere / ℝP²) engines into one shared
         surface-presentation layer: a shared glass-opacity helper, a first-class
         "the other side" abstraction (the seam the future normal-flip rides), one
-        parameterised square-domain mini-map, and consolidated UI gating. Designed
+        parameterized square-domain mini-map, and consolidated UI gating. Designed
         with roadmap §4.1 (normal-flip) in mind but <em>without</em> building the flip
         this session.</p>
       </section>
@@ -92,7 +92,7 @@
             now folded into one shared presentation layer; <code>npm run build</code>
             passed after every step. Net ~161 lines removed from TopologyWalk.tsx.</p>
             <p>Three new modules + a seam + UI consolidation, all
-            behaviour-preserving pure extraction (verified by hand against the
+            behavior-preserving pure extraction (verified by hand against the
             originals; the glass arithmetic and spherical <code>applyInnerShell</code>
             map 1:1, the mini-map marker/chevron/label geometry coincides).</p>
           </li>
@@ -111,7 +111,7 @@
           <li class="tl" data-type="code">
             <p class="tl-time">—</p>
             <span class="chip chip-code">Code</span>
-            <h3>Step 3 — one parameterised square mini-map (<code>squareMap.ts</code>)</h3>
+            <h3>Step 3 — one parameterized square mini-map (<code>squareMap.ts</code>)</h3>
             <p class="why"><strong>Why:</strong> <code>drawFlatMap</code> and
             <code>drawRP2Square</code> were ~70-line near-duplicates.</p>
             <p><code>drawSquareMap(ctx, size, spec)</code> takes an edge-glue spec
