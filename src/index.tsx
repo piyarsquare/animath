@@ -58,6 +58,7 @@ const MIGRATED = new Set<string>([
   '/plane-transform',
   '/polygon-worlds',
   '/agentic-sorting',
+  '/stable-marriage',
 ]);
 
 function Router(): JSX.Element {
