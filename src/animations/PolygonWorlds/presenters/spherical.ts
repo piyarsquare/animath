@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverModel';
 import { SquareMapState } from '../engineTypes';
 import { glassState, POLYGON_GLASS } from '../glassSurface';
-import { makeFootprintTrail } from '../footprints';
+import { makeInkTrail } from '../inkTrail';
 import { cornerColor } from '../decor';
 import { rp2Square, sq2hemi } from '../squareMap';
 import { parseWord } from '../surfaceSchema';
@@ -37,6 +37,7 @@ const EYE = 1.7;
 const MAX_PITCH = 1.3;
 const TRAIL_MAX = 900;
 const TRAIL_SPACING = 1.6;
+const HEAD_SCALE = 1.25;   // the live head stamp reads slightly larger
 const SKY = 0x05070e;
 const GLASS = POLYGON_GLASS;   // shared spec — slider feels the same in every world
 const LON = 24, LAT = 16;
@@ -151,16 +152,29 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   let seam = antipodal ? new THREE.Mesh(new THREE.TorusGeometry(R, 0.12, 8, 96), seamMat) : null;
   if (seam) root.add(seam);
 
-  // footprint trail (true world coords on the fixed planet) + ℝP² mirror twin
-  const foot = makeFootprintTrail(TRAIL_MAX);
-  const footMesh = new THREE.Mesh(foot.geometry, foot.material); footMesh.frustumCulled = false;
-  root.add(footMesh);
+  // ── the ink trail: one buffer in true world coords on the fixed planet ──────
+  // The sphere IS the cover, so the stamps are simply where you walked. On ℝP²
+  // the one genuine det<0 deck element (the antipodal map) draws the trail's
+  // mirror twin — no flags, the reflection does the mirroring. The newest stamp
+  // is LIVE: it tracks the player every frame (the direction arrow) and freezes
+  // into history each TRAIL_SPACING of walked path.
+  const ink = makeInkTrail(TRAIL_MAX + 1);          // history + the live head stamp
+  const inkMesh = new THREE.Mesh(ink.geometry, ink.material); inkMesh.frustumCulled = false;
+  root.add(inkMesh);
   if (twinM4) {
-    const footAnti = new THREE.Mesh(foot.geometry, foot.material); footAnti.frustumCulled = false;
-    footAnti.matrixAutoUpdate = false; footAnti.matrix.copy(twinM4);
-    root.add(footAnti);
+    const inkTwin = new THREE.Mesh(ink.geometry, ink.material); inkTwin.frustumCulled = false;
+    inkTwin.matrixAutoUpdate = false; inkTwin.matrix.copy(twinM4);
+    root.add(inkTwin);
   }
-  let trailLast: THREE.Vector3 | null = null;
+  let hist = 0;                                     // frozen-history stamp count
+  let lastFrozen: THREE.Vector3 | null = null;      // spacing reference
+  const leftV = new THREE.Vector3(), fwdV = new THREE.Vector3(), normV = new THREE.Vector3();
+  function writeStamp(slot: number, sc = 1) {
+    fwdV.copy(fwdU).multiplyScalar(sc);
+    leftV.crossVectors(posU, fwdU).multiplyScalar(sc);  // up×fwd — the player's left
+    normV.copy(posU).multiplyScalar(sc);
+    ink.setQuad(slot, posW, fwdV, leftV, normV);
+  }
 
   function applyGlass() {
     const g = glassState(glassOpacity, GLASS);
@@ -221,10 +235,14 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
       cam.lookAt(eye.x + look.x, eye.y + look.y, eye.z + look.z);
     }
 
-    if (!trailLast || trailLast.distanceTo(posW) > TRAIL_SPACING) {
-      foot.append(posW, fwdU, posU);
-      trailLast = posW.clone();
+    // ── ink the shell ─────────────────────────────────────────────────────────
+    if (!lastFrozen || lastFrozen.distanceTo(posW) > TRAIL_SPACING) {
+      if (hist >= TRAIL_MAX) { ink.dropOldest(); hist--; }
+      writeStamp(hist); hist++;
+      lastFrozen = posW.clone();
     }
+    writeStamp(hist, HEAD_SCALE);                   // the live head stamp
+    ink.setCount(hist + 1);
   }
 
   function pose(): PlayerPose {
@@ -249,20 +267,22 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     buildMarkers();
     if (seam) { seam.geometry.dispose(); seam.geometry = new THREE.TorusGeometry(R, 0.12, 8, 96); }
     camera.far = R * 5; camera.updateProjectionMatrix();
-    foot.clear(); trailLast = null;
+    hist = 0; lastFrozen = null; ink.setCount(0);
     syncPose();
   }
 
   return {
     kind: 'spherical',
     update, pose, chart,
-    debugProbe: () => foot.lastChirality(fwdU, posU),
-    clearTrail: () => { foot.clear(); trailLast = null; },
+    // the live head stamp as rendered (the main mesh carries no transform),
+    // read in the character's frame (>0 ⇒ reads right-handed under the player)
+    debugProbe: () => ink.chirality(hist, null, fwdU, posU),
+    clearTrail: () => { hist = 0; lastFrozen = null; ink.setCount(0); },
     setFloorOpacity: (o: number) => { glassOpacity = o; applyGlass(); },
     setCameraDistance: (d: number) => { camDist = d; },
     setRadius,
     dispose: () => {
-      foot.dispose();
+      ink.dispose();
       planet.geometry.dispose();
       grid.dispose(); planetMat.dispose();
       seam?.geometry.dispose(); seamMat.dispose();

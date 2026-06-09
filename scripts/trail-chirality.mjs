@@ -1,18 +1,23 @@
-// Trail orientation test: does the freshly-laid footprint read correctly in the
+// Trail orientation test: does the LIVE head stamp read correctly in the
 // CHARACTER'S frame on BOTH sides of the sheet?
 //
-// This is the regression guard for the footprint orientation cue. It drives each world
-// (via the ?polydebug test bridge) in third person, walks the character onto both the
+// This is the regression guard for the "ink on the sheet" trail (inkTrail.ts): the
+// trail is stored once, with no mirror flags, and every mirrored appearance comes from
+// a genuine det<0 render transform. The invariant: the head stamp's rendered image
+// under the player must read right-handed in the player's own frame on BOTH faces —
+// the pipeline must never mirror a print in place. The script drives each world (via
+// the ?polydebug test bridge) in third person, walks the character onto both the
 // un-flipped and the flipped face, and on each face reads the EXACT geometry probe
-// (CoverModel.debugProbe → footprints.lastChirality): the signed side of the freshest
-// print's cyan half in the character's own (up × forward) frame.
+// (CoverModel.debugProbe → inkTrail.chirality): the signed side of the head print's
+// cyan half in the character's own (up × forward) frame, AS RENDERED.
 //
-//   PASS  ⇒ the sign is the SAME on both faces — the fresh F reads correct in the
-//           character's frame everywhere (it is only OLD prints, seen later from the
-//           opposite orientation class, that should read reversed). This is how ℝP²
-//           does it (lay un-mirrored; show the reversal via a real det<0 twin mesh).
-//   FAIL  ⇒ the sign flips on the flipped face — the print was laid mirror-reversed in
-//           place, so the F the character just stamped reads backwards to itself.
+//   PASS  ⇒ the sign is POSITIVE (cyan on the character's left) on both faces — the
+//           print under the player reads correct everywhere; only OLD ink, seen later
+//           through an orientation-reversing transform (the other side of the sheet),
+//           reads reversed. Mere sign-consistency is NOT enough: a both-negative read
+//           means the whole pipeline mirrors the print under the player (e.g. an
+//           unaccounted orientation-reversing projection).
+//   FAIL  ⇒ any face reads negative — something mirrors the print under the player.
 //
 // Orientable worlds (torus) never reach the flipped face; they are an A-only control.
 // Run:  npm run preview &  then  node scripts/trail-chirality.mjs    (screenshots → /tmp/trail)
@@ -120,10 +125,12 @@ async function run() {
     const aSign = r.pA == null ? 0 : Math.sign(r.pA);
     const bSign = r.pB == null ? 0 : Math.sign(r.pB);
     let verdict;
-    if (r.orientable) verdict = r.pA != null ? `control (single side, A=${side(r.pA)})` : 'control (no print)';
-    else if (r.pB == null) verdict = '⚠ never reached the flipped side';
-    else if (aSign === bSign) verdict = '✅ PASS — fresh F reads correct in its frame on BOTH sides';
-    else verdict = '❌ FAIL — fresh F reverses in the character frame on the flipped side';
+    if (r.orientable) {
+      verdict = aSign > 0 ? '✅ control PASS — head print reads correct'
+        : r.pA == null ? '⚠ control (no print)' : '❌ control FAIL — head print mirrored';
+    } else if (r.pB == null) verdict = '⚠ never reached the flipped side';
+    else if (aSign > 0 && bSign > 0) verdict = '✅ PASS — head print reads correct on BOTH sides';
+    else verdict = '❌ FAIL — head print mirrored under the player (A and/or B negative)';
     console.log(`${r.world.padEnd(10)} A=${side(r.pA).padEnd(11)} B=${side(r.pB).padEnd(11)} ${verdict}`);
   }
 

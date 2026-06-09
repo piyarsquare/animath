@@ -24,9 +24,13 @@ So different gluings give different worlds:
 | hexagon `aabbcc` | **three cross-caps** (Dyck) | −1 | hyperbolic |
 
 Walk it in first person. The **mini-map** is always the fundamental square, its
-edges marked with the identification arrows. On a **non-orientable** world (Klein,
-ℝP²), crossing a flipped edge swaps every landmark **trees ↔ columns** and your
-footprints come back **mirror-reversed** — the one-sidedness made visible.
+edges marked with the identification arrows. Your footprints are **ink on the
+sheet**: the arrow under you always points where you are heading, and the trail
+behind you tiles seamlessly across the gluing. On a **non-orientable** world
+(Klein, ℝP²), crossing a flipped edge carries you to the **other side of the
+sheet**: every landmark swaps **trees ↔ columns**, and your old footprints now
+show **through the glass floor, mirror-reversed** — you never become mirrored;
+you are simply looking at the back of your own ink.
 
 ### The curved worlds are genuinely round
 
@@ -36,7 +40,8 @@ surface you walk. The curved worlds are subtler, and the difference is honest:
 - **Projective plane (ℝP²).** The square folds onto the **upper hemisphere** of a
   genuinely round sphere — *isometrically*, with no hidden corners. Its lower
   hemisphere is the same square seen through the **antipodal** identification
-  `x ∼ −x`, so the trees there wear columns and your trail returns mirror-reversed.
+  `x ∼ −x`, so the trees there wear columns and the trail's antipodal image is
+  its mirror twin.
   Walk over the bright **seam** (the equator) and the mini-map flags the *mirror side*.
   The bottom-left inset shows ℝP² **immersed in 3-space** (the Steiner *Roman
   surface*) — the same surface you walk, wildly reshaped; your marker rides it, and

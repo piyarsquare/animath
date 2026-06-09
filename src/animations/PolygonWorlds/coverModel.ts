@@ -13,9 +13,11 @@ import { FundamentalSquareDecor } from './decor';
  * its own scene objects (floor/cells, or planet/skins), its movement integration,
  * its camera placement, and the chart back to the fundamental square.
  *
- * The facade engine owns only what is genuinely shared — the avatar, the footprint
- * trail, lights, and the frame orchestration — and asks the cover to move, place
- * the camera, and report the player pose + square chart.
+ * The facade engine owns only what is genuinely shared — the avatar, lights, and
+ * the frame orchestration — and asks the cover to move, place the camera, and
+ * report the player pose + square chart. Each cover renders its own ink trail
+ * (one canonical buffer drawn through its genuine deck/sheet transforms — see
+ * inkTrail.ts).
  *
  * Keeping this boundary explicit is also what keeps the planned gluing+curvature
  * morph expressible ("interpolate between two covers").
@@ -58,9 +60,10 @@ export interface CoverModel {
   chart(): SquareMapState;
   clearTrail(): void;
 
-  /** Test/diagnostic only: signed handedness of the freshest footprint in the
-   *  character's own frame (sign is consistent across both faces of an orientable
-   *  walk; it flips on the mirror side iff the print reads reversed). */
+  /** Test/diagnostic only: signed handedness of the LIVE head stamp's rendered
+   *  image in the character's own frame (>0 ⇒ the print under the player reads
+   *  right-handed). Must keep the same sign on both faces of the sheet — the
+   *  ink pipeline never mirrors a print in place. */
   debugProbe?(): number;
 
   setFloorOpacity?(o: number): void;

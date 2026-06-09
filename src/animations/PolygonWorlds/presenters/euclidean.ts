@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverModel';
 import { SquareMapState } from '../engineTypes';
 import { glassState, POLYGON_GLASS } from '../glassSurface';
-import { makeFootprintTrail } from '../footprints';
+import { makeInkTrail } from '../inkTrail';
 import { cornerColor } from '../decor';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
@@ -21,10 +21,16 @@ import { applyMat, det3, ORIGIN, Isometry } from '../lib/cayleyKlein';
  * A mirror-reflected cell (`det < 0`) is the whole sheet flipped (`scale.y = −1`):
  * the columns face becomes the top — the trees↔columns swap is the side cue (the two
  * faces are not coloured differently; a warm light from above and a cool one from
- * below tint them instead). The footprint trail is always laid on top of the sheet,
- * the same side the character is rendered on, so your fresh trail stays with you;
- * on a mirrored cell each print is set down mirror-reversed in place (you are on the
- * sheet's other face), so the chiral F still flags the flip.
+ * below tint them instead).
+ *
+ * The footprint trail is **ink on the sheet**: each stamp is pulled back through the
+ * home cell's current transform into sheet coordinates (in-plane position + heading +
+ * which FACE the ink is on) and written once into one shared buffer; every cell then
+ * carries a mesh instance of that buffer, so the trail tiles seamlessly with the
+ * ground and a det<0 cell genuinely turns the inked face downward — your old prints
+ * hang under the glass, mirror-reversed, when the identification carries them to the
+ * other side of the sheet. The newest stamp is LIVE: it tracks the player every frame
+ * (the direction arrow) and freezes into history each TRAIL_SPACING of walked path.
  */
 
 const K = 2;            // render (2K+1)² copies around the player
@@ -33,6 +39,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 const SKY = 0x070912;
 const TRAIL_MAX = 1500;
 const TRAIL_SPACING = 1.6;
+const HEAD_SCALE = 1.25;   // the live head stamp reads slightly larger
 // The default opacity reads as clear-but-present glass (you see the brown
 // underside + columns + footprints through it); raising it toward 1 turns the
 // sheet solid. The threshold spec is shared across all three worlds so the
@@ -55,6 +62,10 @@ interface Cell {
   cornersTop: THREE.Group;    // numbered corner markers just inside each vertex (top face)
   cornersBottom: THREE.Group; // their Roman-numeral counterparts (bottom face)
 }
+
+/** A footprint in sheet coordinates: in-plane position + heading + the face
+ *  the ink is on (0 = the slab's authored top face, 1 = its bottom face). */
+interface Stamp { x: number; z: number; fx: number; fz: number; face: number }
 
 export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   const { deps, root, decor } = c;
@@ -108,6 +119,27 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     floorMat.needsUpdate = true;
   }
 
+  // ── the ink trail: one canonical buffer in sheet coordinates ──────────────────
+  // Stamps are authored on the slab's faces (face 0 at +t/2 lifting up, face 1 at
+  // −t/2 lifting down, mirror-handed — the pull-back of a correct world print
+  // through the flipped home transform). Rendering never touches the buffer: each
+  // cell draws an instance through its own matrix, so the trail tiles seamlessly
+  // and a flipped cell genuinely carries the ink to the sheet's other side.
+  const ink = makeInkTrail(TRAIL_MAX + 1);          // history + the live head stamp
+  const stamps: Stamp[] = [];
+  let lastFrozen: THREE.Vector3 | null = null;      // spacing ref (world, fold-translated)
+  const posV = new THREE.Vector3(), fwdV = new THREE.Vector3();
+  const leftV = new THREE.Vector3(), normV = new THREE.Vector3();
+  function writeStamp(slot: number, s: Stamp, sc = 1) {
+    const sy = s.face ? -1 : 1;
+    posV.set(s.x, sy * (thickness / 2), s.z);
+    fwdV.set(s.fx, 0, s.fz).multiplyScalar(sc);
+    leftV.set(s.fz, 0, -s.fx).multiplyScalar(sc);   // = up×fwd at lay time (in-plane, fold-invariant)
+    normV.set(0, sy * sc, 0);
+    ink.setQuad(slot, posV, fwdV, leftV, normV);
+  }
+  const rewriteStamps = () => { stamps.forEach((s, i) => writeStamp(i, s)); };
+
   // ── tiled copies of the two-sided sheet ──────────────────────────────────────
   // Authored with the slab mid-plane at the group origin: top face at +t/2 (trees,
   // up), bottom face at −t/2 (columns, grown down). The group sits at world y=−t/2,
@@ -131,7 +163,11 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
         cornersTop.add(decor.makeCornerTop(v + 1, col));                     // Arabic disc, top face
         const cb = decor.makeCornerBottom(v + 1, col); cb.scale.y = -1; cornersBottom.add(cb); // Roman, bottom
       });
-      group.add(slab, top, bottom, cornersTop, cornersBottom);
+      // every cell carries an instance of the one shared ink buffer — the trail
+      // tiles with the ground, and a det<0 cell mirrors it for real
+      const trailInk = new THREE.Mesh(ink.geometry, ink.material);
+      trailInk.frustumCulled = false;
+      group.add(slab, top, bottom, cornersTop, cornersBottom, trailInk);
       root.add(group);
       cells.push({ group, slab, top, bottom, cornersTop, cornersBottom });
     }
@@ -155,22 +191,6 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   }
   buildCells();
   applyFloorOpacity(floorOpacity);
-
-  const foot = makeFootprintTrail(TRAIL_MAX);
-  const footMesh = new THREE.Mesh(foot.geometry, foot.material);
-  footMesh.frustumCulled = false;
-  root.add(footMesh);
-  let trailLast: THREE.Vector3 | null = null;
-  // Each print remembers the sheet side it was laid on (`side` = the flipAcc parity at
-  // lay time). It is drawn mirror-reversed only when the side you are viewing from now
-  // differs — a *relative* flip — so a fresh print always reads correct in the
-  // character's frame while a print from the other face reads reversed once you cross to
-  // it. Because the prints are baked, re-mirroring on a side change means a rebuild.
-  const trail: { pos: THREE.Vector3; fwd: THREE.Vector3; side: number }[] = [];
-  function rebuildTrail() {
-    foot.clear();
-    for (const t of trail) foot.append(t.pos, t.fwd, UP, (t.side ^ flipAcc) === 1);
-  }
 
   // player state (walks the flat plane in world coords). Spawn at the home-cell
   // point farthest from every landmark, so the player never starts inside a tree.
@@ -198,7 +218,6 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   const forward = new THREE.Vector3(0, 0, -1);
   const pos = new THREE.Vector3(px, 0, pz);
   const M = new THREE.Matrix4(), S = new THREE.Matrix4();
-  const footPos = new THREE.Vector3();
 
   function update(input: CoverFrameInput, cam: THREE.PerspectiveCamera) {
     const { fwd, strafe, yaw, pitch, dt, moveSpeed, thirdPerson } = input;
@@ -220,18 +239,13 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     if (fi !== 0 || fj !== 0) {
       const [ox, oz] = cellOrigin(fi, fj);
       px -= ox; pz -= oz;
-      // The trail does NOT move with the teleport. The ground patch is static in scene
-      // space and every print was laid at the (already-folded) player position — i.e.
-      // inside the home cell — so each print stays where it was stamped and the trail
-      // wraps *within* the fundamental polygon, exactly like the now-confined player.
-      // (Dragging the whole baked trail by the fold delta on each crossing is what made
-      // it spill across the cover into "infinite space".) Only `trailLast` — a pure
-      // spacing reference, not a print — tracks the player's periodic image so the gap
-      // between prints stays even across a wrap.
-      if (trailLast) trailLast.set(trailLast.x - ox, trailLast.y, trailLast.z - oz);
-      // A glide crossing flips the side you view from ⇒ every existing print's relative
-      // mirror changes; rebuild to re-mirror them. A plain translation needs nothing.
-      if (flipParity(fi, fj)) { flipAcc ^= 1; rebuildTrail(); }
+      // The ink does NOT move with the teleport: stamps live in sheet coordinates
+      // and every cell already draws them; the fold only changes which transform
+      // the home cell renders through. `lastFrozen` — a pure spacing reference,
+      // not a print — tracks the player's periodic image so the gap between
+      // prints stays even across a wrap.
+      if (lastFrozen) lastFrozen.set(lastFrozen.x - ox, lastFrozen.y, lastFrozen.z - oz);
+      if (flipParity(fi, fj)) flipAcc ^= 1;   // glide ⇒ you are now on the other face
     }
 
     pos.set(px, 0, pz);
@@ -263,20 +277,20 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
       }
     }
 
-    // footprints: always laid on top of the sheet — the same side the character is
-    // rendered on — so your fresh trail stays with you. A fresh print is laid un-mirrored
-    // (it reads correct in the character's frame); it only turns mirror-reversed later, if
-    // you cross to the other face and look back at it (the relative flip, in rebuildTrail).
-    if (!trailLast || trailLast.distanceTo(pos) > TRAIL_SPACING) {
-      const d = trailLast ? pos.clone().sub(trailLast) : forward.clone();
-      if (d.lengthSq() < 1e-9) d.copy(forward);
-      d.y = 0; d.normalize();
-      footPos.set(px, 0, pz);
-      trail.push({ pos: footPos.clone(), fwd: d.clone(), side: flipAcc });
-      if (trail.length > TRAIL_MAX) trail.shift();
-      foot.append(footPos, d, UP, false);     // same side as the viewer ⇒ never mirrored
-      trailLast = pos.clone();
+    // ── ink the sheet ─────────────────────────────────────────────────────────
+    // The stamp is the player's world frame pulled back into sheet coordinates
+    // (face = flipAcc; in-plane numbers are fold-invariant). The newest stamp is
+    // LIVE — rewritten under the player every frame, the direction arrow — and
+    // freezes into history once a full spacing has been walked.
+    const here: Stamp = { x: px, z: pz, fx: forward.x, fz: forward.z, face: flipAcc };
+    if (!lastFrozen || lastFrozen.distanceTo(pos) > TRAIL_SPACING) {
+      if (stamps.length >= TRAIL_MAX) { stamps.shift(); ink.dropOldest(); }
+      stamps.push(here);
+      writeStamp(stamps.length - 1, here);
+      lastFrozen = pos.clone();
     }
+    writeStamp(stamps.length, here, HEAD_SCALE);
+    ink.setCount(stamps.length + 1);
   }
 
   function pose(): PlayerPose {
@@ -296,18 +310,27 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   return {
     kind: 'euclidean',
     update, pose, chart,
-    debugProbe: () => foot.lastChirality(forward, UP),
-    clearTrail: () => { trail.length = 0; foot.clear(); trailLast = null; },
+    // the live head stamp AS RENDERED through the home cell's current transform,
+    // read in the character's frame (>0 ⇒ reads right-handed under the player)
+    debugProbe: () => {
+      M.makeTranslation(0, -thickness / 2, 0);
+      if (flipAcc) M.multiply(S.makeScale(1, -1, 1));
+      return ink.chirality(stamps.length, M, forward, UP);
+    },
+    clearTrail: () => { stamps.length = 0; lastFrozen = null; ink.setCount(0); },
     setFloorOpacity: applyFloorOpacity,
     setCameraDistance: (d: number) => { camDist = d; },
     setSquareSize: (v: number) => {
       side = v; scale = side / baseLen;
+      // the lattice rescaled under the ink — old stamp coordinates no longer
+      // lie on this sheet, so the trail restarts
+      stamps.length = 0; lastFrozen = null; ink.setCount(0);
       buildCells();
       scene.fog = new THREE.Fog(SKY, side * 0.7, side * 3);
     },
-    setFloorThickness: (t: number) => { thickness = t; buildCells(); },
+    setFloorThickness: (t: number) => { thickness = t; buildCells(); rewriteStamps(); },
     dispose: () => {
-      foot.dispose();
+      ink.dispose();
       for (const cell of cells) cell.slab.geometry.dispose();
       floorMat.dispose();
     },

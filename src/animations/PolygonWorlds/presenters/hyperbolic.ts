@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverModel';
 import { SquareMapState } from '../engineTypes';
 import { glassState, POLYGON_GLASS } from '../glassSurface';
-import { makeFootprintTrail } from '../footprints';
+import { makeInkTrail } from '../inkTrail';
 import { cornerColor } from '../decor';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
@@ -43,7 +43,8 @@ import {
 
 const EYE = 1.7;
 const MAX_PITCH = 1.3;
-const TRAIL_MAX = 500;
+const TRAIL_MAX = 360;     // stamps; each is re-projected into N_DECOR tiles per frame
+const HEAD_SCALE = 1.25;   // the live head stamp reads slightly larger
 const SKY = 0x070912;
 const GLASS = POLYGON_GLASS;   // shared spec — slider feels the same in every world
 const EDGE_SEGS = 7;        // polyline segments per geodesic polygon edge
@@ -132,7 +133,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   // Precompute, per tile, the home-polygon edge sample points + prop positions +
   // inset-vertex tower positions, pushed by the deck element (fixed in cover
   // coords; only T changes per frame).
-  type TileGeo = { center: Vec3; det: number; edgePts: Vec3[]; props: Vec3[]; towers: Vec3[] };
+  type TileGeo = { m: Mat3; center: Vec3; det: number; edgePts: Vec3[]; props: Vec3[]; towers: Vec3[] };
   const homeProps = decor.props.map((p) => propHyper(p.u, p.v));
   const tiles: TileGeo[] = elems.map((el) => {
     const edgePts: Vec3[] = [];
@@ -144,6 +145,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
       }
     }
     return {
+      m: el.m,
       center: applyMat(el.m, ORIGIN),
       det: el.det(),
       edgePts,
@@ -199,20 +201,26 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   // with Poincaré radius — the correct way to keep a fixed *hyperbolic* size.
   const decorBase = 1;
 
-  // footprint trail — stored in COVER coords and re-projected each frame
-  const foot = makeFootprintTrail(TRAIL_MAX);
-  const footMesh = new THREE.Mesh(foot.geometry, foot.material); footMesh.frustumCulled = false;
-  root.add(footMesh);
-  // Trail points, stored in cover coords (+ the side of the sheet they were laid on)
-  // and re-projected each frame as the player re-centres. Every print is drawn on
-  // TOP of the glass — the same side the character is rendered on — so it always
-  // stays with you. Each print records the sheet it was laid on (`side` = det(h) < 0);
-  // it is rendered mirror-reversed only when the CURRENT viewing sheet differs from the
-  // one it was laid on (a *relative* flip). So a fresh print always reads correct in the
-  // character's frame, while a print laid on the other sheet reads reversed once you walk
-  // across to it — the orientation cue without breaking the F you just stamped.
-  const covTrail: { p: Vec3; side: boolean }[] = [];
-  let lastTrailPos: Vec3 | null = null;
+  // ── the ink trail: stamps in COVER coords, drawn through the deck ─────────────
+  // A stamp is the player's tangent frame recorded as three cover points — the
+  // position plus a point a small geodesic step AHEAD and one to the LEFT. Per
+  // frame each stamp is projected to the disk through the same nearest-tile
+  // transforms that place the decor (Mtiles·γ for the tiles around the player),
+  // so the one real trail appears in every visible tile; where the composed
+  // transform is orientation-reversing the projected left lands on the right
+  // and the decal's derived normal points DOWN — the print renders under the
+  // glass, mirror-reversed, with no flags and no per-print side data. The
+  // newest stamp is LIVE (the player's current frame — the direction arrow)
+  // and freezes into history every ~1.6 world units (3.2/DISK_R cover units).
+  type Stamp = { p: Vec3; pf: Vec3; pl: Vec3 };
+  const ink = makeInkTrail((TRAIL_MAX + 1) * N_DECOR);
+  const inkMesh = new THREE.Mesh(ink.geometry, ink.material); inkMesh.frustumCulled = false;
+  root.add(inkMesh);
+  const stamps: Stamp[] = [];
+  let lastFrozen: Vec3 | null = null;     // spacing reference (cover coords, folded with the player)
+  let headSlot = -1;                      // buffer slot of the head image under the player (probe)
+  const pP = new THREE.Vector3(), pF = new THREE.Vector3(), pL = new THREE.Vector3();
+  const fV = new THREE.Vector3(), lV = new THREE.Vector3(), nV = new THREE.Vector3();
 
   // ── player frame on the κ=−1 shell ───────────────────────────────────────────
   // Spawn at the in-domain point farthest from every landmark (so the player never
@@ -233,7 +241,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   let detH = 1;
   let lastYaw = 0;
   const fwdW = new THREE.Vector3(1, 0, 0);         // re-centred ⇒ player always faces +X
-  const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
+  const tmp = new THREE.Vector3();
 
   function applyGlass() {
     const g = glassState(glassOpacity, GLASS);
@@ -255,13 +263,9 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     edgeGeo.computeBoundingSphere();
   }
 
-  function placeDecor() {
+  function placeDecor(order: { i: number }[]) {
     // tiles nearest the player on screen (their rendered centre nearest the disk
     // origin); the whole skin flips with det(h) so crossing a glide flips you.
-    const order = tiles
-      .map((t, i) => ({ i, d: poincareR2(Mtiles, t.center) }))
-      .sort((a, b) => a.d - b.d)
-      .slice(0, N_DECOR);
     let used = 0;
     for (const { i } of order) {
       const tile = tiles[i];
@@ -305,18 +309,34 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     }
   }
 
-  function rebuildTrail() {
-    foot.clear();
-    for (let i = 0; i < covTrail.length; i++) {
-      projectM(Tview, covTrail[i].p, tmp);
-      if (i + 1 < covTrail.length) projectM(Tview, covTrail[i + 1].p, tmp2);
-      else tmp2.set(0, 0, 0);                     // last → toward the player (centre)
-      tmp2.sub(tmp);
-      if (tmp2.lengthSq() < 1e-6) tmp2.copy(fwdW);
-      // always on the character's side (UP); mirror in place only when the print's sheet
-      // differs from the one we're viewing from now (relative flip — see covTrail above)
-      foot.append(tmp, tmp2.normalize(), UP, covTrail[i].side !== (detH < 0));
+  /** Draw every stamp's image in each of the given tiles. The projected frame
+   *  carries the chirality: through a det<0 composed transform the left vector
+   *  lands on the right and the derived normal (f×l) points down — mirror ink
+   *  under the glass, by geometry alone. */
+  function rebuildInk(order: { i: number }[], head: Stamp) {
+    let slot = 0;
+    headSlot = -1;
+    let headBest = Infinity;
+    for (const { i } of order) {
+      const M = mul(Mtiles, tiles[i].m);
+      for (let s = 0; s <= stamps.length; s++) {
+        const isHead = s === stamps.length;
+        const st = isHead ? head : stamps[s];
+        if (poincareR2(M, st.p) > 0.992) continue;   // at the horizon — invisible
+        projectM(M, st.p, pP); projectM(M, st.pf, pF); projectM(M, st.pl, pL);
+        fV.subVectors(pF, pP); lV.subVectors(pL, pP);
+        const sc = fV.length();
+        if (sc < 1e-6) continue;
+        nV.crossVectors(fV, lV).setLength(sc);       // ±up, conformally scaled
+        if (isHead) {
+          fV.multiplyScalar(HEAD_SCALE); lV.multiplyScalar(HEAD_SCALE); nV.multiplyScalar(HEAD_SCALE);
+          const d = pP.lengthSq();
+          if (d < headBest) { headBest = d; headSlot = slot; }
+        }
+        ink.setQuad(slot++, pP, fV, lV, nV);
+      }
     }
+    ink.setCount(slot);
   }
 
   function update(input: CoverFrameInput, cam: THREE.PerspectiveCamera) {
@@ -375,9 +395,9 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
       const Dinv = inv3(D);
       frame = reorthonormalize({ kappa: frame.kappa, g: mul(Dinv, frame.g) });
       h = mul(Dinv, h);
-      // carry the cover-coordinate trail with the fold so it stays put on screen
-      for (const t of covTrail) t.p = applyMat(Dinv, t.p);
-      if (lastTrailPos) lastTrailPos = applyMat(Dinv, lastTrailPos);
+      // carry the cover-coordinate ink with the fold so it stays put on screen
+      for (const t of stamps) { t.p = applyMat(Dinv, t.p); t.pf = applyMat(Dinv, t.pf); t.pl = applyMat(Dinv, t.pl); }
+      if (lastFrozen) lastFrozen = applyMat(Dinv, lastFrozen);
       pPos = framePos(frame);
     }
 
@@ -385,16 +405,35 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     Tview = inv3(frame.g);
     Mtiles = mul(Tview, h);
 
-    // record the trail in cover coords (+ the sheet side the character is on now)
-    if (!lastTrailPos || distance(kappa, lastTrailPos, pPos) > 0.12) {
-      covTrail.push({ p: pPos, side: detH < 0 });
-      if (covTrail.length > TRAIL_MAX) covTrail.shift();
-      lastTrailPos = pPos;
+    // The player's frame as a cover stamp: position + a geodesic step ahead +
+    // one whose PROJECTION lands on the avatar's left. Stamping is a world-space
+    // act, so the world print is pulled back through the whole render transform —
+    // and the cover→floor projection (x,y) ↦ (X,Z) is itself orientation-REVERSING
+    // under the fixed camera (forward +X, up +Y ⇒ camera-right = +Z = cover-left),
+    // so the pull-back of the avatar's left is the kernel-RIGHT direction (−π/2).
+    // δ sets the decal's intrinsic size — chosen so the print is ~1 world unit at
+    // the disk centre (it shrinks conformally outward).
+    const delta = 2 / DISK_R;
+    const head: Stamp = {
+      p: pPos,
+      pf: framePos(kStep(frame, delta)),
+      pl: framePos(kStrafe(frame, -Math.PI / 2, delta)),
+    };
+    if (!lastFrozen || distance(kappa, lastFrozen, pPos) > 3.2 / DISK_R) {
+      if (stamps.length >= TRAIL_MAX) stamps.shift();
+      stamps.push(head);                    // freeze a copy at the current pose
+      lastFrozen = pPos;
     }
 
+    // tiles nearest the player on screen — decor and ink share the same set
+    const order = tiles
+      .map((t, i) => ({ i, d: poincareR2(Mtiles, t.center) }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, N_DECOR);
+
     rebuildEdges();
-    placeDecor();
-    rebuildTrail();
+    placeDecor(order);
+    rebuildInk(order, head);
 
     cam.up.copy(UP);
     if (thirdPerson) {
@@ -435,13 +474,17 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   return {
     kind: 'hyperbolic',
     update, pose, chart,
-    debugProbe: () => foot.lastChirality(fwdW, UP),
-    clearTrail: () => { covTrail.length = 0; lastTrailPos = null; foot.clear(); },
+    // the head stamp's image nearest the player (their own tile's copy), read
+    // in the character's frame (>0 ⇒ reads right-handed under the player)
+    debugProbe: () => ink.chirality(headSlot, null, fwdW, UP),
+    clearTrail: () => { stamps.length = 0; lastFrozen = null; headSlot = -1; ink.setCount(0); },
     setFloorOpacity: (o: number) => { glassOpacity = o; applyGlass(); },
     setCameraDistance: (d: number) => { camDist = d; },
+    // stamps live in cover coordinates, which are scale-free — the ink survives
+    // a disk rescale and simply re-projects at the new radius
     setSquareSize: (v: number) => { DISK_R = diskRadiusFor(v); rebuildFloor(); },
     dispose: () => {
-      foot.dispose();
+      ink.dispose();
       floor.geometry.dispose(); floorMat.dispose();
       ring.geometry.dispose(); ringMat.dispose();
       edgeGeo.dispose(); edgeMatHome.dispose();
