@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import './stableMatching.css';
 import { ShellSettings, ShellActions, useAppHeader, useAppExplainer } from '../../components/AppShell';
-import { Section, Slider, Pills, NumberInput, Checkbox } from '../../components/ControlPanel';
+import { Section, Slider, Pills, Select, NumberInput, Checkbox } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
 import { generateInstance, type Instance } from './model';
@@ -13,9 +13,21 @@ import {
   runRounds, applyLog, blockingPairs, stats,
   type Schedule, type Matching,
 } from './galeShapley';
-import { stablePairs } from './rotations';
+import { allStableMatchings, stablePairs, namedSolutions, score, NAMED_LABELS, type NamedKey } from './rotations';
 
 const FOOT_CAP = 1000; // cap the (worst-case exponential) stable-matching enumeration
+type Jump = 'live' | NamedKey;
+const JUMP_LABELS: Record<Jump, string> = { live: 'Live run', ...NAMED_LABELS };
+// short "what is this" for each named solution
+const NAMED_NOTE: Record<NamedKey, string> = {
+  aOptimal: 'A proposes — best for A, worst for B (top of the lattice)',
+  bOptimal: 'B proposes — best for B, worst for A (bottom of the lattice)',
+  egalitarian: 'minimizes the total of everyone’s ranks (welfare-best)',
+  median: 'each person gets their median stable partner (the lattice’s center)',
+  minRegret: 'makes the single worst-off person as happy as possible',
+  sexEqual: 'balances A’s and B’s total happiness (|ΣA − ΣB| smallest)',
+  balanced: 'minimizes the larger of the two sides’ total rank',
+};
 
 const NS = 'stable-matching';
 
@@ -24,6 +36,8 @@ const NS = 'stable-matching';
  *    (= current tentative holds) lights up; the active proposal rings; blocking
  *    pairs (if any, at the end) flag red. This is the algorithm, foregrounded. ── */
 const TRAIL = 6; // how many recent rounds of failed entries to keep in the fading trail
+const EMPTY_MARKERS = new Map<string, 'active' | 'reject' | 'stolen'>();
+const EMPTY_TRAIL = new Map<string, number>();
 
 // shared BuRd diverging scale (blue = best rank → white → red = worst)
 const BURD = [[33, 102, 172], [103, 169, 207], [247, 247, 247], [239, 138, 98], [178, 24, 43]];
@@ -135,7 +149,7 @@ export default function StableMatching() {
   const rounds = result.rounds;
   const total = rounds.length;                                  // a "step" is now a whole round
   const safeStep = Math.min(step, total);                       // guard the render before the reset effect fires
-  useEffect(() => { setStep(0); setPlaying(false); }, [result]);
+  useEffect(() => { setStep(0); setPlaying(false); setJump('live'); }, [result]);
 
   // flatten round events (in order) + per-round cumulative counts, to rebuild the matching
   const flat = useMemo(() => rounds.flatMap(r => r.events), [rounds]);
@@ -144,9 +158,20 @@ export default function StableMatching() {
   const done = safeStep >= total;
   const finalMatching = result.matching;
 
-  // the solution space: every cell matched in SOME stable matching + the lattice size.
-  // a pure property of the instance (independent of the schedule / current run).
-  const solution = useMemo(() => stablePairs(inst, FOOT_CAP), [inst]);
+  // the solution space (pure property of the instance): the full stable set, the
+  // footprint (cells matched in SOME stable matching), and the named solutions.
+  const stableSet = useMemo(() => allStableMatchings(inst, FOOT_CAP), [inst]);
+  const solution = useMemo(() => {
+    const pairs = new Set<string>();
+    for (const M of stableSet.matchings) for (let m = 0; m < n; m++) if (M.a[m] !== -1) pairs.add(`${m}-${M.a[m]}`);
+    return { pairs, count: stableSet.matchings.length, capped: stableSet.capped };
+  }, [stableSet, n]);
+  const named = useMemo(() => namedSolutions(inst, stableSet.matchings), [inst, stableSet]);
+
+  // "Jump to" a named stable matching: overrides the displayed matching statically.
+  const [jump, setJump] = useState<Jump>('live');
+  const shown = jump === 'live' ? matching : named[jump];
+  const shownDone = jump !== 'live' || done;   // a named matching is complete by construction
 
   // markers for the round just applied: every proposal this round (active/reject), plus bumped pairs (stolen)
   const markers = useMemo(() => {
@@ -189,8 +214,8 @@ export default function StableMatching() {
     let aTot = 0, bTot = 0, aM = 0, bM = 0;
     // each side's outcomes as a sorted (best→worst) list of partner ranks; −1 = unmatched.
     const aSorted: number[] = [], bSorted: number[] = [];
-    for (let i = 0; i < n; i++) { if (matching.a[i] !== -1) { const r = inst.rankA[i][matching.a[i]] + 1; aTot += r; aM++; aSorted.push(r); } else aSorted.push(-1); }
-    for (let j = 0; j < n; j++) { if (matching.b[j] !== -1) { const r = inst.rankB[j][matching.b[j]] + 1; bTot += r; bM++; bSorted.push(r); } else bSorted.push(-1); }
+    for (let i = 0; i < n; i++) { if (shown.a[i] !== -1) { const r = inst.rankA[i][shown.a[i]] + 1; aTot += r; aM++; aSorted.push(r); } else aSorted.push(-1); }
+    for (let j = 0; j < n; j++) { if (shown.b[j] !== -1) { const r = inst.rankB[j][shown.b[j]] + 1; bTot += r; bM++; bSorted.push(r); } else bSorted.push(-1); }
     const byRank = (x: number, y: number) => (x < 0 ? n + 1 : x) - (y < 0 ? n + 1 : y); // matched first (best→worst), unmatched last
     aSorted.sort(byRank); bSorted.sort(byRank);
     const matchedPeople = aM + bM;
@@ -200,20 +225,20 @@ export default function StableMatching() {
       avg: matchedPeople ? (aTot + bTot) / matchedPeople : 0,
       aFree: n - aM, bFree: n - bM, free: n - aM, aSorted, bSorted,
     };
-  }, [inst, matching, n]);
+  }, [inst, shown, n]);
 
   const blocking = useMemo(() => {
     const s = new Set<string>();
-    if (!done) return s;
+    if (jump === 'live' && !done) return s;   // a jumped named matching is complete + always stable
     for (let i = 0; i < n; i++) {
-      const pr = matching.a[i] === -1 ? Infinity : inst.rankA[i][matching.a[i]];
+      const pr = shown.a[i] === -1 ? Infinity : inst.rankA[i][shown.a[i]];
       for (let j = 0; j < n; j++) {
-        if (matching.a[i] === j) continue;
-        if (inst.rankA[i][j] < pr) { const pj = matching.b[j] === -1 ? Infinity : inst.rankB[j][matching.b[j]]; if (inst.rankB[j][i] < pj) s.add(`${i}-${j}`); }
+        if (shown.a[i] === j) continue;
+        if (inst.rankA[i][j] < pr) { const pj = shown.b[j] === -1 ? Infinity : inst.rankB[j][shown.b[j]]; if (inst.rankB[j][i] < pj) s.add(`${i}-${j}`); }
       }
     }
     return s;
-  }, [done, matching, inst, n]);
+  }, [done, jump, shown, inst, n]);
 
   // average attractiveness = mean rank a member receives in the OTHER side's lists
   // (lower = more wanted). A principled ordering derived from the preferences
@@ -272,11 +297,13 @@ export default function StableMatching() {
     if (order === 'attract') return ids.sort((x, y) => attract.b[x] - attract.b[y]);
     if (order === 'settle') return ids.sort((x, y) => (orderBasis.settle.B[x] - orderBasis.settle.B[y]) || (attract.b[x] - attract.b[y]));
     // matchdiag: place each row's partner at the same ordinal → matches on the diagonal
+    // (follow the jumped matching when one is shown, so its pairs sit on the diagonal)
+    const diag = jump === 'live' ? orderBasis.match : shown;
     const out: number[] = []; const used = new Set<number>();
-    for (const i of rows) { const p = orderBasis.match.a[i]; if (p !== -1 && !used.has(p)) { out.push(p); used.add(p); } }
+    for (const i of rows) { const p = diag.a[i]; if (p !== -1 && !used.has(p)) { out.push(p); used.add(p); } }
     for (let j = 0; j < n; j++) if (!used.has(j)) out.push(j);
     return out;
-  }, [n, order, attract, orderBasis, rows]);
+  }, [n, order, attract, orderBasis, rows, jump, shown]);
 
   useEffect(() => {
     if (!playing) { if (timer.current) { clearInterval(timer.current); timer.current = null; } return; }
@@ -306,7 +333,7 @@ export default function StableMatching() {
     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
   }, [n, view, showLabels]);
 
-  const reset = useCallback(() => { setPlaying(false); setStep(0); }, []);
+  const reset = useCallback(() => { setPlaying(false); setStep(0); setJump('live'); }, []);
   const shuffle = useCallback(() => setSeed(s => (s * 1103515245 + 12345) & 0x7fffffff), [setSeed]);
 
   const narrate = (): string => {
@@ -401,13 +428,16 @@ export default function StableMatching() {
     <ShellActions>
       {view === 'visualizer' ? (
         <div className="sm2-actions">
-          <button className="sm2-btn primary" onClick={() => setPlaying(p => !p)} disabled={done && !playing}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? 'Pause' : 'Play'}</button>
-          <button className="sm2-btn" onClick={() => setStep(s => Math.min(total, s + 1))} disabled={playing || done}><SkipForward size={16} />Step</button>
-          <button className="sm2-btn" onClick={() => setStep(total)} disabled={done}><FastForward size={16} />Finish</button>
+          <button className="sm2-btn primary" onClick={() => { setJump('live'); setPlaying(p => !p); }} disabled={jump === 'live' && done && !playing}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? 'Pause' : 'Play'}</button>
+          <button className="sm2-btn" onClick={() => { setJump('live'); setStep(s => Math.min(total, s + 1)); }} disabled={playing || (jump === 'live' && done)}><SkipForward size={16} />Step</button>
+          <button className="sm2-btn" onClick={() => { setJump('live'); setStep(total); }} disabled={jump === 'live' && done}><FastForward size={16} />Finish</button>
           <button className="sm2-btn" onClick={reset}><RotateCcw size={16} />Reset</button>
           <button className="sm2-btn" onClick={shuffle}><Shuffle size={16} />Shuffle</button>
           <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
           <Checkbox label="Live re-sort (build the diagonal as it runs)" checked={liveSort} onChange={setLiveSort} />
+          <Select label="Jump to a stable solution" value={jump} onChange={setJump}
+            options={(['live', 'aOptimal', 'bOptimal', 'egalitarian', 'median', 'minRegret', 'sexEqual', 'balanced'] as Jump[])
+              .map(k => ({ value: k, label: JUMP_LABELS[k] }))} />
         </div>
       ) : (
         <div className="sm2-actions">
@@ -460,7 +490,9 @@ export default function StableMatching() {
       {view === 'visualizer' ? (
         <div className="sm2-visualizer">
           <p className="sm2-story">{story}</p>
-          <div className="sm2-narrate">{narrate()}</div>
+          {jump === 'live'
+            ? <div className="sm2-narrate">{narrate()}</div>
+            : <div className="sm2-narrate jump"><strong>{JUMP_LABELS[jump]} stable matching</strong> — {NAMED_NOTE[jump as NamedKey]}. Σrank {acct.combined} (A {acct.aTot} + B {acct.bTot}){solution.capped ? ' · approximate (enumeration capped)' : ''}. Press Step or Reset to return to the live run.</div>}
           <div className="sm2-metrics">
             <div className="sm2-metric big sm2-outcome">
               <span className="sm2-metric-label"><Activity size={14} /> Partner rank by side — average &amp; distribution (lower = happier)</span>
@@ -483,14 +515,14 @@ export default function StableMatching() {
               <strong>{solution.capped ? `≥${FOOT_CAP}` : solution.count}</strong>
               <span className="sm2-metric-sub">{solution.count === 1 ? 'a unique stable matching' : `${solution.capped ? 'at least ' : ''}${solution.count} stable matchings`} · footprint {solution.pairs.size} of {n * n} cells</span>
             </div>
-            <div className={`sm2-metric stability ${!done ? '' : blocking.size === 0 ? 'ok' : 'bad'}`}>
+            <div className={`sm2-metric stability ${!shownDone ? '' : blocking.size === 0 ? 'ok' : 'bad'}`}>
               <span className="sm2-metric-label">{blocking.size === 0 ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />} Stability</span>
-              <strong>{!done ? '—' : blocking.size === 0 ? 'Stable' : `${blocking.size} blocking`}</strong>
-              <span className="sm2-metric-sub">{!done ? 'finish the run to check' : blocking.size === 0 ? 'no pair would defect' : 'purple-ringed cells would defect'}</span>
+              <strong>{!shownDone ? '—' : blocking.size === 0 ? 'Stable' : `${blocking.size} blocking`}</strong>
+              <span className="sm2-metric-sub">{!shownDone ? 'finish the run to check' : blocking.size === 0 ? 'no pair would defect' : 'purple-ringed cells would defect'}</span>
             </div>
           </div>
           <div className="sm2-matrix-wrap" ref={matrixWrap}>
-            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} markers={markers} blocking={blocking} footprint={showFootprint ? solution.pairs : null} size={cellSize} labels={showLabels && cellSize >= 16} view={cellView} gap={tight ? 0 : 3} trail={trail} />
+            <Matrix inst={inst} matching={shown} rows={rows} cols={cols} markers={jump === 'live' ? markers : EMPTY_MARKERS} blocking={blocking} footprint={showFootprint ? solution.pairs : null} size={cellSize} labels={showLabels && cellSize >= 16} view={cellView} gap={tight ? 0 : 3} trail={jump === 'live' ? trail : EMPTY_TRAIL} />
             {legend}
           </div>
         </div>

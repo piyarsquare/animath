@@ -14,6 +14,8 @@
 
 /* narration */
 .sm2-narrate { font-size: 13.5px; color: #d6d6e2; background: #14141b; border: 1px solid #26262f; border-left: 3px solid #2563eb; border-radius: 8px; padding: 9px 13px; margin-bottom: 14px; line-height: 1.45; }
+.sm2-narrate.jump { border-left-color: #2dd4bf; }   /* teal: showing a named stable solution */
+.sm2-narrate.jump strong { color: #5eead4; }
 
 /* metrics */
 .sm2-metrics { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 18px; }

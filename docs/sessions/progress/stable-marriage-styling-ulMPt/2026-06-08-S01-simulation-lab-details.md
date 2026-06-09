@@ -56,6 +56,22 @@ Grouped from the task brief; not yet sequenced.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 13:00 — Tier 2: named solutions + "jump to"
+**Why:** Locate the canonical/fair stable matchings and let the user teleport to
+them (wishlist Tier 2).
+
+- **"Jump to a stable solution"** Select in Actions: A-optimal / B-optimal /
+  Egalitarian / Median / Min-regret / Sex-equal / Balanced. Selecting one
+  statically overrides the displayed matching (matrix, per-side averages,
+  stability, diagonal); Step/Play/Reset return to the live run.
+- Teal **banner** names the solution + what it optimizes + its Σrank.
+- Refactored so footprint + named solutions share one enumeration (`stableSet`).
+
+The fairness story, concrete: seed 53 A-optimal = **A #1.40 / B #6.50, Σ79**;
+jump to **Egalitarian = A #2.70 / B #2.80, Σ55** — the averages collapse together.
+
+![egalitarian jump: averages converge](assets/2026-06-08-S01-egalitarian.png)
+
 ### 🟢 code · 12:30 — Tier 1: stable-pair footprint + count surface
 **Why:** Turn the rotation engine into visible payoff (wishlist Tier 1).
 
