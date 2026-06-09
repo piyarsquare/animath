@@ -169,9 +169,11 @@ function labelTexture(label: string, color: number): THREE.CanvasTexture {
  * single numeral (Arabic on the tree/top face, Roman on the column/bottom face) in
  * the corner's unique hue, over a dark steel disc with a hued rim. Drawn at 256px;
  * mapped onto a flat disc that lies on the floor, so it reads when you stand on it
- * and (mirrored) through the glass from the other side.
+ * and (mirrored) through the glass from the other side. Roman numerals are set in
+ * a SERIF face — the serifs separate the strokes, so I/II/III read at a glance
+ * (sans-serif Roman numerals blur into a picket fence).
  */
-function numeralTexture(text: string, color: number): THREE.CanvasTexture {
+function numeralTexture(text: string, color: number, serif: boolean): THREE.CanvasTexture {
   const s = 256;
   const cvs = document.createElement('canvas');
   cvs.width = cvs.height = s;
@@ -196,7 +198,9 @@ function numeralTexture(text: string, color: number): THREE.CanvasTexture {
 
   // numeral
   const size = text.length >= 4 ? 0.34 : text.length === 3 ? 0.42 : 0.56;
-  ctx.font = `900 ${Math.round(s * size)}px "Segoe UI", system-ui, sans-serif`;
+  ctx.font = serif
+    ? `bold ${Math.round(s * size)}px Georgia, "Times New Roman", serif`
+    : `900 ${Math.round(s * size)}px "Segoe UI", system-ui, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.lineWidth = s * 0.05; ctx.strokeStyle = 'rgba(0,0,0,0.85)';
   ctx.strokeText(text, c, c * 1.03);
@@ -353,7 +357,7 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
     const key = `${roman ? 'r' : 'a'}:${index}:${color}`;
     let plateMat = cornerPlateMats.get(key);
     if (!plateMat) {
-      const tex = numeralTexture(roman ? romanize(index) : String(index), color);
+      const tex = numeralTexture(roman ? romanize(index) : String(index), color, roman);
       cornerTexs.push(tex);
       plateMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false });
       cornerPlateMats.set(key, plateMat);

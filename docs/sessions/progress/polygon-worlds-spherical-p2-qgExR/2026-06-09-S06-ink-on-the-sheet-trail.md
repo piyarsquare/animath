@@ -170,3 +170,25 @@ Build passes; chirality test passes strictly on all four worlds; EXPLAINER
 updated to the new framing. The old `footprints.ts` is gone. Unchanged: geometry
 kernel, camera, tiling, decor, fold-back. Pre-existing and untouched: the
 third-person camera backing into decor / headlamp blow-out (S05's separate bug).
+
+### 🟢 code · 23:20 — hyperbolic trail made canonical; serif Roman numerals
+**Why:** user report: paths disappear/reappear incorrectly in the χ<0 worlds;
+plus a request for serifed Roman numerals.
+
+Root cause of the vanishing trail: hyperbolic stamps were stored in
+player-relative cover coordinates and Dinv-carried through every fold, so old
+stamps' representatives receded unboundedly (coordinates grow like
+cosh(distance)) — and since images are only drawn through the ~16 near-identity
+tile transforms, a receded stamp's quotient images became unreachable: the
+trail silently vanished even where the quotient path re-entered the player's
+neighbourhood (borderline tiles swapping in/out of the nearest-16 produced the
+re-appearing). Fix: stamps are now pulled back into the FUNDAMENTAL DOMAIN
+through h⁻¹ at lay time (mirror-handed when det(h)<0) — the exact recipe the
+flat presenter uses for sheet coordinates. Canonical representatives never
+leave the domain, every visible tile draws the whole quotient trail, folds no
+longer touch the ink, and the coordinates stay bounded. Verified: long
+crosscap3 walk keeps the full trail visible across tiles; chirality suite
+still passes all four worlds.
+
+Roman corner numerals now set in Georgia/Times (serif) — the serifs separate
+the strokes so I/II/III read at a glance.

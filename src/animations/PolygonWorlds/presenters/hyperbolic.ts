@@ -200,16 +200,23 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   // with Poincaré radius — the correct way to keep a fixed *hyperbolic* size.
   const decorBase = 1;
 
-  // ── the ink trail: stamps in COVER coords, drawn through the deck ─────────────
+  // ── the ink trail: stamps canonical in the HOME DOMAIN, drawn through the deck ─
   // A stamp is the player's tangent frame recorded as three cover points — the
-  // position plus a point a small geodesic step AHEAD and one to the LEFT. Per
-  // frame each stamp is projected to the disk through the same nearest-tile
-  // transforms that place the decor (Mtiles·γ for the tiles around the player),
-  // so the one real trail appears in every visible tile; where the composed
-  // transform is orientation-reversing the projected left lands on the right
-  // and the decal's derived normal points DOWN — the print renders under the
-  // glass, mirror-reversed, with no flags and no per-print side data. A
-  // footprint freezes every ~1.6 world units (3.2/DISK_R cover units).
+  // position plus a point a small geodesic step AHEAD and one to the LEFT —
+  // pulled back into the fundamental domain through h⁻¹ at lay time (the same
+  // recipe as the flat presenter's sheet coordinates: when laid from the mirror
+  // side, det(h)<0, the pull-back is genuinely mirror-handed). Per frame each
+  // stamp is projected through the same nearest-tile transforms that place the
+  // decor (Mtiles·γ), so EVERY visible tile shows the one canonical trail —
+  // and because the canonical representatives never leave the domain, the trail
+  // can neither outrun the rendered window nor blow up numerically (a stamp
+  // stored in player-relative cover coords recedes like cosh(distance) and its
+  // quotient images are unreachable through near-identity tiles — the old
+  // disappearing-trail failure). Where the composed transform is orientation-
+  // reversing the projected left lands on the right and the decal's derived
+  // normal points DOWN — the print renders under the glass, mirror-reversed,
+  // with no flags and no per-print side data. A footprint freezes every ~1.6
+  // world units (3.2/DISK_R cover units).
   type Stamp = { p: Vec3; pf: Vec3; pl: Vec3 };
   const ink = makeInkTrail(TRAIL_MAX * N_DECOR);
   const inkMesh = new THREE.Mesh(ink.geometry, ink.material); inkMesh.frustumCulled = false;
@@ -391,8 +398,10 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
       const Dinv = inv3(D);
       frame = reorthonormalize({ kappa: frame.kappa, g: mul(Dinv, frame.g) });
       h = mul(Dinv, h);
-      // carry the cover-coordinate ink with the fold so it stays put on screen
-      for (const t of stamps) { t.p = applyMat(Dinv, t.p); t.pf = applyMat(Dinv, t.pf); t.pl = applyMat(Dinv, t.pl); }
+      // The ink needs no carrying: stamps are canonical in the home domain, so a
+      // fold (which changes only the frame/h bookkeeping, not the quotient) leaves
+      // them untouched. Only the spacing reference, a player-relative cover point,
+      // rides along.
       if (lastFrozen) lastFrozen = applyMat(Dinv, lastFrozen);
       pPos = framePos(frame);
     }
@@ -401,22 +410,25 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     Tview = inv3(frame.g);
     Mtiles = mul(Tview, h);
 
-    // Freeze a footprint every ~1.6 world units: the player's frame as a cover
-    // stamp — position + a geodesic step ahead + one whose PROJECTION lands on
-    // the avatar's left. Stamping is a world-space act, so the world print is
-    // pulled back through the whole render transform — and the cover→floor
-    // projection (x,y) ↦ (X,Z) is itself orientation-REVERSING under the fixed
+    // Freeze a footprint every ~1.6 world units: the player's frame as a stamp —
+    // position + a geodesic step ahead + one whose PROJECTION lands on the
+    // avatar's left — pulled back into the home domain through h⁻¹. Stamping is
+    // a world-space act, so the world print is pulled back through the whole
+    // render transform: h⁻¹ (mirror-handed ink when det(h)<0, exactly like the
+    // flat presenter's flipped-face pull-back), and the cover→floor projection
+    // (x,y) ↦ (X,Z), which is itself orientation-REVERSING under the fixed
     // camera (forward +X, up +Y ⇒ camera-right = +Z = cover-left), so the
     // pull-back of the avatar's left is the kernel-RIGHT direction (−π/2).
     // δ sets the decal's intrinsic size — chosen so the print is ~1 world unit
     // at the disk centre (it shrinks conformally outward).
     if (!lastFrozen || distance(kappa, lastFrozen, pPos) > 3.2 / DISK_R) {
       const delta = 2 / DISK_R;
+      const di = inv3(h);
       if (stamps.length >= TRAIL_MAX) stamps.shift();
       stamps.push({
-        p: pPos,
-        pf: framePos(kStep(frame, delta)),
-        pl: framePos(kStrafe(frame, -Math.PI / 2, delta)),
+        p: applyMat(di, pPos),
+        pf: applyMat(di, framePos(kStep(frame, delta))),
+        pl: applyMat(di, framePos(kStrafe(frame, -Math.PI / 2, delta))),
       });
       lastFrozen = pPos;
     }
