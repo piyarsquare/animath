@@ -58,6 +58,11 @@ export interface CoverModel {
   chart(): SquareMapState;
   clearTrail(): void;
 
+  /** Test/diagnostic only: signed handedness of the freshest footprint in the
+   *  character's own frame (sign is consistent across both faces of an orientable
+   *  walk; it flips on the mirror side iff the print reads reversed). */
+  debugProbe?(): number;
+
   setFloorOpacity?(o: number): void;
   setSquareSize?(v: number): void;
   setFloorThickness?(t: number): void;

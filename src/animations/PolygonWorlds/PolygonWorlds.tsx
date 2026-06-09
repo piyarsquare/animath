@@ -80,6 +80,16 @@ export default function PolygonWorlds() {
     engineRef.current.setFloorOpacity(opacityRef.current);
     engineRef.current.setRadius(radiusRef.current);
     engineRef.current.setCameraDistance(camDistRef.current);
+    // Test seam (opt-in via ?polydebug): exposes the live minimap chart so a headless
+    // harness can tell which side of the sheet the character is on. No effect on the
+    // shipped app — the bridge is only attached when the query flag is present.
+    if (typeof location !== 'undefined' && location.search.includes('polydebug')) {
+      (window as unknown as { __poly?: unknown }).__poly = {
+        map: () => engineRef.current?.getMapState(),
+        probe: () => engineRef.current?.debugProbe(),
+        setYaw: (v: number) => { yawRef.current = v; },
+      };
+    }
     clockRef.current.start();
     const animate = () => {
       const eng = engineRef.current;

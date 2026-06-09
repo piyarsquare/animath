@@ -256,6 +256,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   return {
     kind: 'spherical',
     update, pose, chart,
+    debugProbe: () => foot.lastChirality(fwdU, posU),
     clearTrail: () => { foot.clear(); trailLast = null; },
     setFloorOpacity: (o: number) => { glassOpacity = o; applyGlass(); },
     setCameraDistance: (d: number) => { camDist = d; },

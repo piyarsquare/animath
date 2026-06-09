@@ -23,6 +23,10 @@ export interface FootprintTrail {
   /** Translate every laid print by (dx, dy, dz). Used when the player is folded back
    *  into the fundamental domain (a "teleport"), so the baked trail stays attached. */
   shift: (dx: number, dy: number, dz: number) => void;
+  /** Test/diagnostic probe: signed side of the most recent print's cyan half relative to
+   *  `up × forward`, in the buffer's own space. 0 if no prints. Sign flips iff the print
+   *  was laid mirror-reversed — used to verify the F reads correctly in the character's frame. */
+  lastChirality: (forward: THREE.Vector3, up: THREE.Vector3) => number;
   clear: () => void;
   dispose: () => void;
 }
@@ -123,6 +127,25 @@ export function makeFootprintTrail(max: number): FootprintTrail {
       if (!count) return;
       for (let i = 0; i < count * VPER; i++) { pos[i * 3] += dx; pos[i * 3 + 1] += dy; pos[i * 3 + 2] += dz; }
       (geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+    },
+    lastChirality: (forward, up) => {
+      if (!count) return 0;
+      // Average the cyan (uv.u<0.5) and magenta (uv.u>0.5) vertices of the most recent
+      // print, in the buffer's own space, and report on which side of the character's
+      // (up×forward) axis the cyan half sits. The sign is all that matters: a correctly
+      // emitted print keeps cyan on the SAME side on both faces of the sheet; an in-place
+      // mirror flips the sign. (As-stored = as-rendered: the footMesh carries no flip.)
+      const base = (count - 1) * VPER;
+      const cy = new THREE.Vector3(), mg = new THREE.Vector3(); let nc = 0, nm = 0;
+      for (let k = 0; k < VPER; k++) {
+        const o = (base + k) * 3, u = uv[(base + k) * 2];
+        if (u < 0.5) { cy.x += pos[o]; cy.y += pos[o + 1]; cy.z += pos[o + 2]; nc++; }
+        else { mg.x += pos[o]; mg.y += pos[o + 1]; mg.z += pos[o + 2]; nm++; }
+      }
+      if (!nc || !nm) return 0;
+      cy.multiplyScalar(1 / nc); mg.multiplyScalar(1 / nm);
+      const axis = new THREE.Vector3().crossVectors(up, forward).normalize();
+      return cy.sub(mg).dot(axis); // >0: cyan on +axis side, <0: on −axis side
     },
     clear: () => { count = 0; geo.setDrawRange(0, 0); },
     dispose: () => { geo.dispose(); tex.dispose(); material.dispose(); },

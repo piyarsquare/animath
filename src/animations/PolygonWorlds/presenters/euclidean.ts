@@ -275,6 +275,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   return {
     kind: 'euclidean',
     update, pose, chart,
+    debugProbe: () => foot.lastChirality(forward, UP),
     clearTrail: () => { foot.clear(); trailLast = null; },
     setFloorOpacity: applyFloorOpacity,
     setCameraDistance: (d: number) => { camDist = d; },

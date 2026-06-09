@@ -431,6 +431,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   return {
     kind: 'hyperbolic',
     update, pose, chart,
+    debugProbe: () => foot.lastChirality(fwdW, UP),
     clearTrail: () => { covTrail.length = 0; lastTrailPos = null; foot.clear(); },
     setFloorOpacity: (o: number) => { glassOpacity = o; applyGlass(); },
     setCameraDistance: (d: number) => { camDist = d; },
