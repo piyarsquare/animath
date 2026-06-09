@@ -37,6 +37,28 @@ bundle.
 
 ## Working notes
 
+### 🟢 code · 23:55 — P0–P3 shipped; all nine app migrations dispatched in parallel
+**Why:** foundations and the engine are committed and visually verified; the
+per-app migrations touch disjoint folders, so they parallelize across agents.
+
+Committed (each `npm run build`-green, pushed): **P0/P1** tokens + 5 skins +
+chrome foundations + PARAM-MAP (`f6164a1`); **P2** gallery/TopBar/explainer +
+router cutover, Menu deleted (`dc97544`); **merge of origin/main** at the
+user's request — brings Polygon Worlds (added to catalog, `7224ad7`+) and a
+reworked StableMatching; **P3a** workspace engine (`63ae008`); **P3b** Complex
+Particles pilot via rewritten ParticleViewerShell (`42a4e23`). Screenshots
+verified: gallery dark + Paper skin, pilot workspace (rail, Essentials layout,
+plot in a view window over the dotted void). Nine sub-agents are now migrating
+FractalsGPU, Correspondence, PlaneTransform, TopologyWalk, StableMatching,
+AgenticSorting, StableMarriage, Trinary (mode pills), PolygonWorlds — each
+constrained to its own folder; I integrate, build, screenshot and commit each.
+
+> [!IMPORTANT]
+> Trinary keeps its hash tabs but presents them as TopBar mode pills, two
+> Workspaces (`trinary-obs`, `trinary-lab`); StableMatching's tabs become
+> layouts toggling matrix/heatmap view windows; floaters (Playback, PlaneCurve)
+> become playback/drive panels per the design's deliberate removals.
+
 ### 🟡 milestone · 23:05 — Plan mode lifted; bundle vendored; execution begins
 **Why:** the user switched from Plan mode to Auto mode and asked to finish the
 plan and execute it.

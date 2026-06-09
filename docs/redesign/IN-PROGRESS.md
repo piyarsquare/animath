@@ -3,6 +3,42 @@
 The live ledger of design areas that are **intentionally unfinished** in the prototype, plus open
 questions. The implementing agent should update this file as phases land.
 
+## Implementation status (repo, branch claude/dazzling-goodall-1afsbr)
+
+- ✅ **PARAM-MAP gate** — `docs/redesign/PARAM-MAP.md` (all 10 apps; Polygon Worlds, merged from
+  main mid-overhaul, mapped during its migration).
+- ✅ **Phase 0/1 — tokens & skins**: `src/chrome/theme.css` (5 `[data-theme]` blocks + am-*
+  component styles), fonts via `<link>`, `useSkin`/`SkinPicker`, persisted `chrome:skin`,
+  ControlPanel restyled to tokens (`--cp-*` aliased), `scripts/shoot.mjs` takes `SKIN` env.
+- ✅ **Phase 2 — gallery + routing**: Gallery at `#/` (hero, chips, 10 preview cards from
+  `chrome/catalog.ts`), TopBar (brand-mark Home, mode pills, "?" explainer modal, SkinPicker),
+  old Menu deleted; `MIGRATED` route set governs the two-chrome interregnum.
+- ✅ **Phase 3 — workspace engine + pilot**: `src/chrome/workspace/` (geometry math ported
+  verbatim; pointer-capture drag; soft-magnetic snap + guides; tight dock; never-overlap
+  freeSlot; collapse-chain reflow; raise-on-touch; view windows hide-don't-unmount; per-app
+  layout persistence `ws:<appId>`; built-in + saved layouts; PhoneWorkspace dock/sheet).
+  Complex Particles pilots it (Essentials/Appearance/Rotate layouts).
+- 🔄 **Phase 4 — migrate all apps** (in flight).
+- ⬜ Phase 5 phone verification at 390px · Phase 6 a11y/polish sweep · docs updates.
+
+## Decisions added during implementation
+
+- **Explainer surface**: top-bar "?" → modal (ExplainerModal wrapping the existing Readme
+  renderer). The modal carries `EXPLAINER.md` + the old About `README.md` joined with a rule, so
+  the drawer's About section content survives.
+- **Gallery previews**: the cheap 2D-canvas mocks (ported from viz.jsx), not the real renderers —
+  ~10 simultaneous WebGL contexts on the landing page is fragile; revisit later (user decision).
+- **Catalog**: 10 cards — the 8 designed apps + Stable Matching + Polygon Worlds (new app merged
+  from main). Legacy `#/fractals-cpu` stays an unlisted route (user decision).
+- **Trinary tabs → TopBar mode pills** (Observatory | Lab), hash routes and Lab URL-query config
+  preserved; each mode is its own Workspace (`trinary-obs` / `trinary-lab`).
+- **StableMatching visualizer/lab tabs → built-in layouts** toggling two view windows.
+- **Saved layouts capture view geometry** too (spec over prototype, DESIGN-SPEC §2).
+- **View windows collapse by hiding, not unmounting** (WebGL state survives); `Canvas3D` ignores
+  zero-size resizes.
+- **Pointer events** (capture-based) for window drag/resize — desktop touch works, closing one
+  IN-PROGRESS gap below.
+
 ## Designed but mocked (needs real wiring)
 - **All panel controls are local-state mocks.** Sliders/pills/toggles render and remember their own
   value but drive nothing. Real implementation binds them to app parameters (see PARAM-MAP you will
