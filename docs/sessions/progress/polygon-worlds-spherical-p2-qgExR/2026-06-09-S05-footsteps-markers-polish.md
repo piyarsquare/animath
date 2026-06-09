@@ -31,6 +31,66 @@ pole-clumping; tower labelling; badge legibility). See
 
 ## Working notes
 
+### 🔵 finding · 04:50 — What the footprint trail is *for* (the design contract)
+**Why:** the trail keeps causing trouble; writing down its intended job + the
+invariant every presenter must honor, so we stop re-breaking it.
+
+**Two jobs.**
+1. **Orientation cue (the headline).** Each print is a deliberately *chiral* glyph:
+   a forward arrow with a letter **F** and a **cyan-left / magenta-right** split,
+   all mirror-asymmetric (`footprints.ts`). Whenever the ground is drawn through an
+   orientation-reversing transform — a mirrored Klein cell, the hyperbolic flipped
+   sheet (`detH < 0`), the antipodal/Möbius flip — the F reads **backwards** and the
+   colours **swap**. So walking a non-orientable loop and returning to your own prints
+   *reversed* is visible proof you came back on the other side. Every print therefore
+   records the side it was laid on (`mirror`) and is laid on the player's **current**
+   side (along `UP`), with its chirality mirrored *in place* when on the flip face.
+2. **Breadcrumb / wayfinding.** The worlds are closed, so your trail wraps back into
+   view — it answers "have I been here?" and shows the space closing up on itself.
+
+**The invariant (what every presenter must do).**
+- **Record** a print once you've moved a threshold from the last one (hyperbolic
+  `0.12` in hyperbolic distance; euclidean `TRAIL_SPACING = 1.6` world units),
+  storing **position + side**.
+- **Live in a surface-fixed frame, not screen space** — the trail must stay glued to
+  the ground as the camera/player move. Hyperbolic stores cover coords (`covTrail`)
+  and **re-projects every frame** through `Tview` (`rebuildTrail`); euclidean **bakes**
+  absolute world coords once into the buffer (`foot.append`).
+- **Carry it through every teleport/fold by the *same* deck element**, or the prints
+  detach and swim at a crossing. Hyperbolic: `applyMat(Dinv, t.p)` on each point +
+  `lastTrailPos`. Euclidean: `foot.shift(-ox,0,-oz)` on the baked buffer + `trailLast`.
+- **Cap** at `TRAIL_MAX` (hyperbolic 500, euclidean 1500); oldest fall off.
+
+**Sharp edges (why it keeps biting).** ① The carry-on-fold must *exactly* match the
+render fold — this is the most regression-prone part; any new code path that moves the
+player must also move the trail. ② Hyperbolic re-projects every frame (always correct,
+cheap); euclidean bakes + shifts (cheaper, but a forgotten `shift` leaves the trail
+behind). ③ `rebuildTrail` aims the freshest print "toward the player/centre", so its
+facing is approximate. ④ Spacing thresholds are in *different units* per world
+(hyperbolic distance vs world units), so trail density differs across topologies unless
+retuned.
+
+### 🟢 code · 04:30 — Confine the player to the fundamental domain (teleport on crossing)
+**Why:** straying from the start point destabilised the **hyperbolic** view — the
+player frame was a free `Frame` walking across the universal cover, and on ℍ² its
+matrix entries grow like `cosh(distance)`, so within a few dozen tiles `inv3(frame.g)`
+goes singular and the render blows up.
+
+- **Hyperbolic:** after the greedy tile tracker finds the tile `h`, re-base both
+  `frame` and `h` by the nearest **orientation-preserving** deck element on the left.
+  This leaves `Mtiles = frame⁻¹·h` exactly invariant (seamless teleport), keeps
+  `det(frame) > 0` (controls never invert) and the sign of `det(h)` (which sheet side),
+  and bounds `frame.g` forever (`|frame.g|` ~5 vs the old ~2.5e8 → crash). Trail carried
+  with each fold.
+- **Euclidean:** fold the player **and the baked footprint trail** back into the home
+  cell on crossing, accumulating the crossing's flip parity into `flipAcc` so a glide
+  edge still swaps the face you stand on; pure-translation lattice ⇒ the patch redraws
+  seamlessly.
+- `footprints.ts`: added `shift()` so the baked euclidean trail follows a fold.
+- Verified: build green; genus-2, Dyck surface, torus and Klein all survive a long fast
+  walk (old hyperbolic crashed ~7 s in) with coherent rendering and no console errors.
+
+
 ### 🟢 code · 03:10 — Consistent sense of space (walk speed + world size parity)
 **Why:** switching topology felt like a radical change of scale/speed. Two concrete
 causes, both in the hyperbolic cover.
