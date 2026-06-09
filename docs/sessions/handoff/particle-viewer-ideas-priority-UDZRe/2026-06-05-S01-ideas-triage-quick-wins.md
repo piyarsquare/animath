@@ -18,7 +18,7 @@ pr: null
 13 features (+ a removal), each its own commit with a green build:
 
 - **Hopf study view** — one-tap preset: forces Hopf, Motion→Fixed, stops spins, resets 4D orientation.
-- **Flexible color** — independent **Hue** and **Brightness** pickers (`ColourQuantity`: phase / magnitude / real / imag, + **Uniform** flat for brightness).
+- **Flexible color** — independent **Hue** and **Brightness** pickers (`ColorQuantity`: phase / magnitude / real / imag, + **Uniform** flat for brightness).
 - **Functions** — added `cot`, `arcsin`, `arccos` (branch-aware); grouped the picker into 5 categories via new `Select` optgroup support; added the parameterized **quadratic** `a·z²+b·z+c` (complex coeffs).
 - **Domain** — explicit min/max bounds with a **± lock** (two-thumb `RangeSlider` when unlocked); a **Sampling** pattern picker (grid / polar / rings / spokes / web / squares / random).
 - **Charts** — Input/Output **polar / log-polar** remap (`chartCoord`).
@@ -33,10 +33,10 @@ pr: null
 
 | File | Role |
 | --- | --- |
-| [`ComplexParticles/shaders/index.ts`](https://github.com/piyarsquare/animath/blob/4f2b8f6/src/animations/ComplexParticles/shaders/index.ts) | `calcColour` (hue/brightness quantity), `chartCoord` (polar charts), `applyComplex` (cot/arcsin/arccos/quadratic, indices 19–22), Torus `project` (log-radius removed) |
+| [`ComplexParticles/shaders/index.ts`](https://github.com/piyarsquare/animath/blob/4f2b8f6/src/animations/ComplexParticles/shaders/index.ts) | `calcColor` (hue/brightness quantity), `chartCoord` (polar charts), `applyComplex` (cot/arcsin/arccos/quadratic, indices 19–22), Torus `project` (log-radius removed) |
 | [`lib/particles/createParticleGeometry.ts`](https://github.com/piyarsquare/animath/blob/4f2b8f6/src/lib/particles/createParticleGeometry.ts) | `fillPattern` — the 7 sampling layouts; explicit `(xMin,xMax,yMin,yMax)` bounds |
 | [`lib/particles/createHopfFibers.ts`](https://github.com/piyarsquare/animath/blob/4f2b8f6/src/lib/particles/createHopfFibers.ts) | Fiber-trace overlay (LineLoops; samples base points on S²) |
-| [`lib/particles/useParticleState.ts`](https://github.com/piyarsquare/animath/blob/4f2b8f6/src/lib/particles/useParticleState.ts) | All new persisted state (colourQuantity, brightnessQuantity, bounds + lock, samplePattern, inputCoord/outputCoord, showFibers/fiberDensity) |
+| [`lib/particles/useParticleState.ts`](https://github.com/piyarsquare/animath/blob/4f2b8f6/src/lib/particles/useParticleState.ts) | All new persisted state (colorQuantity, brightnessQuantity, bounds + lock, samplePattern, inputCoord/outputCoord, showFibers/fiberDensity) |
 | [`components/ControlPanel.tsx`](https://github.com/piyarsquare/animath/blob/4f2b8f6/src/components/ControlPanel.tsx) | `NumberInput`, `RangeSlider`, `Select` groups (optgroups) |
 | [`components/ParticleViewerShell.tsx`](https://github.com/piyarsquare/animath/blob/4f2b8f6/src/components/ParticleViewerShell.tsx) | Domain / Color / Camera UI; Hopf study button; `domainExtras` slot (branch range) |
 | [`lib/complexMath.ts`](https://github.com/piyarsquare/animath/blob/4f2b8f6/src/lib/complexMath.ts) | CPU mirrors (adaptive sampling): new functions, `functionCategories`, `complexQuadratic`, `QUADRATIC_INDEX` |
@@ -63,7 +63,7 @@ pr: null
 
 - First (and so far only) tracked session on this branch. No PR opened — branch is pushed and ready if one is wanted.
 - The session's most instructive thread: a user-reported "fuzzy circle" for `f=b·z` in the Torus view. I wrongly blamed jitter, then sampling, then 4D motion; the user identified it as the **log-radius** option. Confirmed by rendering the exact Torus math headless (PNG via node `zlib`) — see `/tmp/render*.mjs` pattern; those scripts are throwaway, not committed.
-- Append-only convention honoured: new functions added at the *end* of `functionNames` (persisted index), categories are presentation-only.
+- Append-only convention honored: new functions added at the *end* of `functionNames` (persisted index), categories are presentation-only.
 
 ## Self-reflection
 

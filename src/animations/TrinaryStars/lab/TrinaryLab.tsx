@@ -78,10 +78,10 @@ function Histogram({ data, max, color, domain }: { data: number[]; max: number; 
   );
 }
 
-/** Visualises the region of (launch radius × speed-fraction) space that the
+/** Visualizes the region of (launch radius × speed-fraction) space that the
  *  current sliders sample from, within the full possible domain — with the
  *  circular and escape-velocity reference lines and a scatter of sample points
- *  coloured by launch direction. */
+ *  colored by launch direction. */
 function LaunchSpace({ rMin, rMax, fMin, fMax, allowRetro }: {
   rMin: number; rMax: number; fMin: number; fMax: number; allowRetro: boolean;
 }) {
@@ -134,7 +134,7 @@ function LaunchSpace({ rMin, rMax, fMin, fMax, allowRetro }: {
 export default function TrinaryLab() {
   const [instrument, setInstrument] = useState<Instrument>(() => (labParams().get('inst') === 'census' ? 'census' : 'map'));
 
-  // Initialise from a shareable URL config, if present.
+  // Initialize from a shareable URL config, if present.
   const urlRef = useRef<URLSearchParams | null>(null);
   if (!urlRef.current) urlRef.current = labParams();
   const U = urlRef.current;
@@ -389,7 +389,7 @@ export default function TrinaryLab() {
     <>
       {/* Shared system setup lives in the app's native Settings drawer (the ⚙
           panel every app gets), so both instruments draw from one place and the
-          page body holds only instrument-specific controls + visualisations. */}
+          page body holds only instrument-specific controls + visualizations. */}
       <ShellSettings>
         <Section title="System" icon="✸" defaultOpen>
           <Pills options={SCENARIOS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
@@ -450,7 +450,7 @@ export default function TrinaryLab() {
       {instrument === 'map' && (
         <>
           <div style={{ ...panel, marginBottom: 12, font: '12px/1.6 system-ui', color: '#9aa7bd' }}>
-            Pick a slice of launch space (<b style={{ color: '#cfe8ff' }}>Plane</b>) and a way to colour it. With the
+            Pick a slice of launch space (<b style={{ color: '#cfe8ff' }}>Plane</b>) and a way to color it. With the
             <b style={{ color: '#cfe8ff' }}> Exact</b> lens each pixel is one precise world — its boundaries stay fractal at
             every zoom. With the <b style={{ color: '#cfe8ff' }}>Statistical</b> lens each pixel is a mini-census of many
             worlds, painting the odds of a happy ending. <b style={{ color: '#cfe8ff' }}>Drag a box</b> to zoom; <b style={{ color: '#cfe8ff' }}>click</b> a

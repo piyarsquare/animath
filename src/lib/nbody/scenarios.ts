@@ -21,7 +21,7 @@ export type TargetId = 'bary' | 's0' | 's1' | 's2' | 'binary';
 
 /** The pure dynamical configuration of a star system — no planet, no UI. */
 export interface SystemSpec {
-  /** Build a fresh set of stars (already centred with zero net momentum). */
+  /** Build a fresh set of stars (already centered with zero net momentum). */
   makeStars: () => Star[];
   /** Recommended integrator step for this configuration. */
   dt: number;
@@ -62,7 +62,7 @@ function choreography(p1: number, p2: number): Star[] {
   ]);
 }
 
-/** Shift to the centre-of-mass frame: zero net position and net momentum so
+/** Shift to the center-of-mass frame: zero net position and net momentum so
  *  the system stays framed instead of drifting off screen. */
 export function recenter(stars: Star[]): Star[] {
   let M = 0, cx = 0, cy = 0, px = 0, py = 0;
@@ -147,7 +147,7 @@ export function getScenario(id: string): Scenario {
   return SCENARIOS.find(s => s.id === id) ?? SCENARIOS[0];
 }
 
-/** Build a scenario's stars with per-star mass multipliers applied, re-centred
+/** Build a scenario's stars with per-star mass multipliers applied, re-centered
  *  so net momentum stays zero. A uniform multiplier just rescales time; uneven
  *  ones detune the configuration (e.g. break the figure-eight) — useful for
  *  exploring how sensitive the dynamics are. */

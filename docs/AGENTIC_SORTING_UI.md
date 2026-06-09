@@ -205,7 +205,7 @@ The **?** top-bar button opens the shell help modal rendering `EXPLAINER.md`. It
   simple local rule, with order emerging from their interaction (emergence).
 - Each array slot holds an agent; each cycle a random subset wakes and applies its rule; the array
   marches toward sorted order despite no agent having a global view.
-- A table of the five strategies and their classic-sort analogues (see §8).
+- A table of the five strategies and their classic-sort analogs (see §8).
 - "Why mixes win": Blind Date converges fastest alone (long-distance jumps remove large-scale
   disorder); Perfectionist is expensive per wake-up (full scan) but places exactly; mixed
   populations often beat any single type via a division of labor between long-range movers and local

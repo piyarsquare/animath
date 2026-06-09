@@ -105,7 +105,7 @@ export function runOne(cfg: EnsembleConfig, params: RunParams): RunResult {
 
 /** Run a single explicit planet IC against a given star configuration — used by
  *  the basin map's position-plane mode, where launches don't fit the
- *  radius/speed/angle parameterisation. */
+ *  radius/speed/angle parameterization. */
 export function runPlanet(cfg: EnsembleConfig, stars: Star[], planet: Planet): RunResult {
   const { s, blowup } = simulate(cfg, stars, planet);
   return resultOf(s, blowup, { radius: 0, speed: 0, angleDeg: 0, retro: false, seed: 0 });
@@ -174,7 +174,7 @@ export function runBatchFate(cfg: EnsembleConfig, stars: Star[], planets: Planet
 }
 
 /** Batched finite-time Lyapunov runner (chaos lens): the same idea with a
- *  Benettin shadow per planet. Each (planet, shadow) pair renormalises against
+ *  Benettin shadow per planet. Each (planet, shadow) pair renormalizes against
  *  itself, so pairs stay independent and bit-identical to `runPlanetLyap`; the
  *  shared star integration is paid once. */
 export function runBatchLyap(cfg: EnsembleConfig, stars: Star[], planets: Planet[]): { lambda: number; outcome: Outcome }[] {

@@ -1,6 +1,6 @@
 // Plane-transform shader pair. The vertex shader runs the selected complex
 // function on each input point, optionally; the fragment shader paints the
-// point with the chosen annular colouring scheme.
+// point with the chosen annular coloring scheme.
 
 export const vertexShader = `
 attribute vec2 inputPos;
@@ -105,7 +105,7 @@ void main(){
     ndc = vec2(atan(pos.y, pos.x) / VS_PI, log(max(r, 1e-4)) / logSpan);
   } else {
     // Cartesian plot. Clip giants so one stray point at infinity doesn't
-    // wash out the colour, then scale by viewExtent (= half visible side).
+    // wash out the color, then scale by viewExtent (= half visible side).
     if(length(pos) > 1e3) pos = normalize(pos)*1e3;
     ndc = pos / viewExtent;
   }
@@ -131,7 +131,7 @@ vec3 hsv2rgb(vec3 c){
   return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
-vec3 colourFor(vec2 z, int mode){
+vec3 colorFor(vec2 z, int mode){
   float r = length(z);
   float a = atan(z.y, z.x);
   float hue = fract(a / TAU + 1.0);
@@ -165,7 +165,7 @@ vec3 colourFor(vec2 z, int mode){
 void main(){
   vec2 d = gl_PointCoord - vec2(0.5);
   if(dot(d,d) > 0.25) discard;        // round sprite
-  vec3 col = colourFor(vSourcePos, colorMode) * intensity;
+  vec3 col = colorFor(vSourcePos, colorMode) * intensity;
   gl_FragColor = vec4(col, 1.0);
 }
 `;

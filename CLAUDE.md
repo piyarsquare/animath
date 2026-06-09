@@ -68,7 +68,7 @@ animath/
     │   ├── TopologyWalk/        # first-person walk on a closed surface: twisting corridor + flat torus / Klein bottle
     │   ├── TrinaryStars/        # three-body planet sandbox (Observatory) + ensemble Lab
     │   │                        #   (Trinary.tsx hosts both as tabs; engine in lib/nbody)
-    │   ├── StableMarriage/      # Gale–Shapley visualiser + heatmap lab (CSS/DOM)
+    │   ├── StableMarriage/      # Gale–Shapley visualizer + heatmap lab (CSS/DOM)
     │   └── AgenticSorting/      # concurrent agent-based sorting (CSS/DOM)
     │
     ├── components/             # shared shell + UI
@@ -76,7 +76,7 @@ animath/
     │   ├── AppShell.css
     │   ├── ActionFloater.tsx   # draggable on-canvas mirror of an app's Actions
     │   ├── ActionFloater.css
-    │   ├── useFloaterDrag.ts   # drag behaviour for floating panels
+    │   ├── useFloaterDrag.ts   # drag behavior for floating panels
     │   ├── Menu.tsx            # landing gallery shown at the `/` route
     │   ├── Menu.css
     │   ├── ParticleViewerShell.tsx  # turnkey shell for particle (4D) viewers
@@ -96,7 +96,7 @@ animath/
     │   ├── nbody/              # shared gravitational engine: integrator + scenarios + analysis
     │   ├── particles/          # shared particle-viewer engine (see below)
     │   │   ├── index.ts                # public re-exports
-    │   │   ├── types.ts                # ColorStyle, ColourBy, shapeNames, viewTypes, …
+    │   │   ├── types.ts                # ColorStyle, ColorBy, shapeNames, viewTypes, …
     │   │   ├── useParticleState.ts     # all viewer state + setters
     │   │   ├── useViewControls.ts      # orientation/turn/projection/drop-axis controls
     │   │   ├── useUniformSync.ts       # React state → shader uniforms

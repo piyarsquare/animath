@@ -2,10 +2,10 @@
 
 > Status: living roadmap. The goal is to let a player **walk every closed
 > surface in first person** and *feel* how its shape and geometry differ, all
-> inside the one Topology Walk app. This note records the maths that organises the
+> inside the one Topology Walk app. This note records the math that organizes the
 > tour, the engine architecture it implies, what exists today, and the staged plan.
 
-## 1. The one idea that organises everything
+## 1. The one idea that organizes everything
 
 Every closed surface is a **polygon with its edges glued in pairs**. Two facts
 then determine *which* surface you get and *what geometry* it must carry:
@@ -112,7 +112,7 @@ there.
   dive about his forward axis, camera rolling 180° as the floor sweeps past the near
   plane and the world re-renders from below. The glass floor ramps transparent
   through the dive and re-solidifies underfoot; the footprint trail stays continuous
-  across the flip. (Smooth-and-interesting is the requirement, so favour an
+  across the flip. (Smooth-and-interesting is the requirement, so favor an
   ease-in-out roll over a hard cut.)
 - **Flat torus (orientable):** the two faces are *extrinsically* distinct — the top
   sheet vs the mirrored `under` world. Euler stays flipped until he flips back; both
@@ -120,7 +120,7 @@ there.
 - **Klein bottle / ℝP² (non-orientable):** the punchline. Euler reaches the other
   side **two ways** — flip through the floor *deliberately*, or just **walk across a
   gluing edge**, which flips him *automatically* (the orientation reversal already
-  modelled by mirror-reversed footprints). Flip through, walk an orientation-
+  modeled by mirror-reversed footprints). Flip through, walk an orientation-
   reversing loop, and he returns on the **starting** side: there was only ever one
   side. That is the visceral proof of one-sidedness — and it is why the flip is
   *instrument zero*, the control that makes the orientation experiments tangible.

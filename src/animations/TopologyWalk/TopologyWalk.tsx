@@ -268,7 +268,7 @@ export default function TopologyWalk() {
             />
           )}
           {isFlat && (
-            <Checkbox label="Colour each cover cell" checked={colorCells} onChange={setColorCells} />
+            <Checkbox label="Color each cover cell" checked={colorCells} onChange={setColorCells} />
           )}
           {isSpherical && (
             <Slider label="Planet radius" value={planetRadius} min={12} max={90} step={2} onChange={setPlanetRadius} format={(v) => `${Math.round(v)} m`} />
@@ -432,7 +432,7 @@ function flatSquareSpec(st: FlatMapState | null): SquareMapSpec {
 
 /**
  * An equirectangular (latitude × longitude) map of the spherical world: a grid,
- * the emphasised equator + hemisphere-seam meridian, the colour-coded landmarks
+ * the emphasized equator + hemisphere-seam meridian, the color-coded landmarks
  * (plus their antipodal twins on ℝP²), and a chevron at the player's position
  * pointing along the compass bearing. When the cover hemispheres are tinted in 3D,
  * the map tints its two halves to match — the seam is the gluing circle of ℝP².
@@ -502,8 +502,8 @@ function drawSphereMap(ctx: CanvasRenderingContext2D, size: number, st: SphereMa
   for (let j = 1; j < 4; j++) {
     const gy = y0 + (j / 4) * w; ctx.beginPath(); ctx.moveTo(x0, gy); ctx.lineTo(x0 + w, gy); ctx.stroke();
   }
-  // emphasised equator + hemisphere seam meridian (lon = ±π/2 in this −π..π frame
-  // are the seam edges; the centre line lon = 0 is the prime meridian)
+  // emphasized equator + hemisphere seam meridian (lon = ±π/2 in this −π..π frame
+  // are the seam edges; the center line lon = 0 is the prime meridian)
   ctx.strokeStyle = 'rgba(230,242,251,0.65)'; ctx.lineWidth = 1.6;
   const yeq = y0 + w / 2; ctx.beginPath(); ctx.moveTo(x0, yeq); ctx.lineTo(x0 + w, yeq); ctx.stroke();
   ctx.strokeStyle = 'rgba(230,242,251,0.45)';

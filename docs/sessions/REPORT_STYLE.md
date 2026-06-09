@@ -103,7 +103,7 @@ Map the four HTML callout types onto GitHub's five alert blockquotes:
 
 The HTML timeline becomes a list of dated entries, **newest first**. Each entry:
 an `###` heading with `emoji · type · HH:MM — what`, then a bold **Why:** line,
-then optional detail. The emoji stands in for the coloured dot:
+then optional detail. The emoji stands in for the colored dot:
 
 🟣 decision · 🟢 code · 🔵 finding · 🔴 blocker · 🟡 milestone
 

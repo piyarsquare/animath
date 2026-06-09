@@ -224,7 +224,7 @@
      popup. */
   color-scheme: dark;
 }
-/* Some browsers (Firefox, older Chromium) honour the option's own colors
+/* Some browsers (Firefox, older Chromium) honor the option's own colors
    in the popup; specifying them keeps the list readable even if
    color-scheme is ignored. */
 .cp-row select option {

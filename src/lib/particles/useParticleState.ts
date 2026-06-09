@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { ProjectionMode } from '../viewpoint';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import { usePersistentState } from '../usePersistentState';
-import { ViewPoint, ColorStyle, ColourBy, ColourQuantity, CoordMode, SamplePattern, JitterMode, Axis, motionModes, dropModes, RenderMode } from './types';
+import { ViewPoint, ColorStyle, ColorBy, ColorQuantity, CoordMode, SamplePattern, JitterMode, Axis, motionModes, dropModes, RenderMode } from './types';
 
 export interface UseParticleStateOptions {
   count?: number;
@@ -56,7 +56,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [extentY, setExtentY] = usePersistentState(pk('extentY'), COMPLEX_PARTICLES_DEFAULTS.initial.extentY);
   // Domain bounds. When `boundsLock` is true (default) the box is the symmetric
   // [-extentX, +extentX] × [-extentY, +extentY] driven by the extent sliders
-  // above; when unlocked, these independent min/max define an off-centre window.
+  // above; when unlocked, these independent min/max define an off-center window.
   const [boundsLock, setBoundsLock] = usePersistentState(pk('boundsLock'), true);
   const [xMin, setXMin] = usePersistentState(pk('xMin'), -COMPLEX_PARTICLES_DEFAULTS.initial.extentX);
   const [xMax, setXMax] = usePersistentState(pk('xMax'), COMPLEX_PARTICLES_DEFAULTS.initial.extentX);
@@ -84,7 +84,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // Grid resolution (cells per side) of the sheet mesh — independent of the
   // particle count, since a sheet needs regular grid topology.
   const [sheetResolution, setSheetResolution] = usePersistentState(pk('sheetResolution'), 80);
-  // Faceted shading strength on the filled sheet (0 = flat colour, 1 = full
+  // Faceted shading strength on the filled sheet (0 = flat color, 1 = full
   // facing-ratio shading) — gives the translucent surface depth cues.
   const [sheetShade, setSheetShade] = usePersistentState(pk('sheetShade'), 0.6);
   // External directional light for Sheet/Tiles: lights the side you're facing so
@@ -102,7 +102,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // with the local cell. Below it tiles meet edge-to-edge (a solid fabric); past
   // it they detach into a field of separated squares (the "points").
   const [tileSize, setTileSize] = usePersistentState(pk('tileSize'), 0.35);
-  // Net mode: a polar fibre net — `netRings` concentric circles (constant |z|)
+  // Net mode: a polar fiber net — `netRings` concentric circles (constant |z|)
   // and `netSpokes` rays (constant arg z); each family toggles independently.
   const [netRings, setNetRings] = usePersistentState(pk('netRings'), 14);
   const [netSpokes, setNetSpokes] = usePersistentState(pk('netSpokes'), 24);
@@ -115,23 +115,23 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [shapeIndex, setShapeIndex] = usePersistentState(pk('shapeIndex'), 1);
   const [textureIndex, setTextureIndex] = usePersistentState(pk('textureIndex'), 0);
   const [realView, setRealView] = useState(false);
-  const [colourStyle, setColourStyle] = usePersistentState<ColorStyle>(pk('colourStyle'), ColorStyle.HSV);
-  // Palette: 0 = Phase wheel (HSV domain colouring, the default); 1..7 = sequential
+  const [colorStyle, setColorStyle] = usePersistentState<ColorStyle>(pk('colorStyle'), ColorStyle.HSV);
+  // Palette: 0 = Phase wheel (HSV domain coloring, the default); 1..7 = sequential
   // colormaps mapped to magnitude (Grayscale / Viridis / Magma / Inferno / Plasma /
   // Fire / Ocean), for reading |z| / |f|.
   const [colormap, setColormap] = usePersistentState(pk('colormap'), 0);
   // Sequential-colormap scale: 0 = one smooth saturating sweep over log-magnitude;
   // >0 = repeat the colormap that many cycles per e-fold of |·| (log-spaced bands).
   const [colorRepeat, setColorRepeat] = usePersistentState(pk('colorRepeat'), 0);
-  const [colourBy, setColourBy] = usePersistentState<ColourBy>(pk('colourBy'), ColourBy.Domain);
-  // Which scalar of the chosen source drives the colour wheel (hue). Phase keeps
-  // the classic domain-colouring look; Modulus colours by |z| / |f|, etc.
-  const [colourQuantity, setColourQuantity] = usePersistentState<ColourQuantity>(pk('colourQuantity'), ColourQuantity.Phase);
+  const [colorBy, setColorBy] = usePersistentState<ColorBy>(pk('colorBy'), ColorBy.Domain);
+  // Which scalar of the chosen source drives the color wheel (hue). Phase keeps
+  // the classic domain-coloring look; Modulus colors by |z| / |f|, etc.
+  const [colorQuantity, setColorQuantity] = usePersistentState<ColorQuantity>(pk('colorQuantity'), ColorQuantity.Phase);
   // Which scalar drives the brightness (value) channel, independently of hue.
   // Defaults to Modulus = magnitude (the classic |·| → brightness).
-  const [brightnessQuantity, setBrightnessQuantity] = usePersistentState<ColourQuantity>(pk('brightnessQuantity'), ColourQuantity.Modulus);
+  const [brightnessQuantity, setBrightnessQuantity] = usePersistentState<ColorQuantity>(pk('brightnessQuantity'), ColorQuantity.Modulus);
   // Coordinate chart for the input z and output f planes before they form the
-  // 4-vector (Cartesian / Polar / Log-polar). Colour stays Cartesian.
+  // 4-vector (Cartesian / Polar / Log-polar). Color stays Cartesian.
   const [inputCoord, setInputCoord] = usePersistentState<CoordMode>(pk('inputCoord'), CoordMode.Cartesian);
   const [outputCoord, setOutputCoord] = usePersistentState<CoordMode>(pk('outputCoord'), CoordMode.Cartesian);
 
@@ -264,11 +264,11 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     shapeIndex, setShapeIndex,
     textureIndex, setTextureIndex,
     realView, setRealView,
-    colourStyle, setColourStyle,
+    colorStyle, setColorStyle,
     colormap, setColormap,
     colorRepeat, setColorRepeat,
-    colourBy, setColourBy,
-    colourQuantity, setColourQuantity,
+    colorBy, setColorBy,
+    colorQuantity, setColorQuantity,
     brightnessQuantity, setBrightnessQuantity,
     inputCoord, setInputCoord,
     outputCoord, setOutputCoord,

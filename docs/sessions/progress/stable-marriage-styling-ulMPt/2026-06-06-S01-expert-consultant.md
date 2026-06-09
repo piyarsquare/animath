@@ -69,7 +69,7 @@ Two copies of a non-trivial algorithm guarantee that any correctness fix (or any
 - **Tie-handling in `generatePreferences`** (`:69–97`) is fine: scores are continuous floats so exact ties are measure-zero. At consensus = 1 (`corrM = 1`) everyone shares one ranking and the noise term vanishes — intended, and the comparison is strict so it is stable.
 - **Self-matching impossible by construction** (men only appear in women's lists and vice-versa), so no guard is needed there — good.
 
-## 2 · State-machine modelling — the core architectural critique
+## 2 · State-machine modeling — the core architectural critique
 
 A stepping simulation *is* a state machine. The clean shape is: an immutable `SimState`, a pure `reducer(state, 'step') => state`, and a thin React layer that owns only the timer and the rendering. What we have instead is a state machine smeared across **five `useState` hooks + four shadow `useRef`s**:
 
@@ -146,11 +146,11 @@ Other conformance gaps:
 
 ## 6 · Verification & contracts
 
-With only `npm run build` as CI, the failure modes that *type-checking will not catch* are exactly the ones this design maximises:
+With only `npm run build` as CI, the failure modes that *type-checking will not catch* are exactly the ones this design maximizes:
 
 - The string-key parse invariant (§1.3) is invisible to `tsc` — keys are just `string`.
 - The two algorithm copies (§1.4) can diverge without any type error.
-- The `runToCompletion` ref-timing (§2.2) is a pure runtime behaviour.
+- The `runToCompletion` ref-timing (§2.2) is a pure runtime behavior.
 - The `NaN`-population crash (§1.5) compiles cleanly.
 
 > [!IMPORTANT]
@@ -158,15 +158,15 @@ With only `npm run build` as CI, the failure modes that *type-checking will not 
 
 ## 7 · The styling gap (the nominal brief)
 
-Counter to the branch name, the CSS is the **best-engineered part of the app**. `stableMarriage.css` is tokenised (`--sm-*` at `:6–22`), dark-theme-aligned with the AppShell, semantically colour-coded (men/women/matched/ proposer/receiver), and has a genuinely thorough responsive pass at 900px and 600px (`:680–749`) including touch-sized range thumbs. It is more polished than AgenticSorting's CSS.
+Counter to the branch name, the CSS is the **best-engineered part of the app**. `stableMarriage.css` is tokenised (`--sm-*` at `:6–22`), dark-theme-aligned with the AppShell, semantically color-coded (men/women/matched/ proposer/receiver), and has a genuinely thorough responsive pass at 900px and 600px (`:680–749`) including touch-sized range thumbs. It is more polished than AgenticSorting's CSS.
 
 The "styling gap vs other labs" I can identify is not within this file — it is the *inconsistency* it introduces:
 
 - Three parallel button systems now exist (`sm-button`, `as-button`, `cp-*` primitives). Same for sliders, cards, tabs. The app looks good in isolation but increases the surface a maintainer must hold in their head.
-- The colours are hard-coded hex (`#2563eb` at `:111`, `#60a5fa` passed as a prop at `:1018`) rather than referencing any shared AppShell palette token, so a future theme change touches N files.
+- The colors are hard-coded hex (`#2563eb` at `:111`, `#60a5fa` passed as a prop at `:1018`) rather than referencing any shared AppShell palette token, so a future theme change touches N files.
 - Magic numbers leak between TS and CSS: `ROW_HEIGHT = 64` (`:27`) is set inline as a style (`:316`) while the CSS sizes the person circle at 42px — two sources of layout truth.
 
-If the session's deliverable is "styling," the defensible scope is: *(a)* retire the local `Button`/`Card` in favour of shared chrome where it exists, and *(b)* reference shared palette tokens instead of literal hexes. I would resist a pure repaint that leaves the structural debt untouched — it would make the file longer-lived without making it more maintainable.
+If the session's deliverable is "styling," the defensible scope is: *(a)* retire the local `Button`/`Card` in favor of shared chrome where it exists, and *(b)* reference shared palette tokens instead of literal hexes. I would resist a pure repaint that leaves the structural debt untouched — it would make the file longer-lived without making it more maintainable.
 
 ## 8 · Documentation
 
@@ -174,14 +174,14 @@ EXPLAINER.md is excellent — concise, mathematically honest about deferred acce
 
 ## Verdict
 
-**Concerns — would-change (prioritised).** The app works and looks good, but it carries real structural debt that the codebase's own conventions are designed to prevent. Ranked by impact:
+**Concerns — would-change (prioritized).** The app works and looks good, but it carries real structural debt that the codebase's own conventions are designed to prevent. Ranked by impact:
 
 1. HIGH **Extract `galeShapley.ts`** (pure types + `generatePreferences` / `step` / `runToCompletion` / `verifyStability` / `computeStats` / `runHeadless`). Eliminates the duplicate algorithm (§1.4), makes everything testable (§6), and is the prerequisite for the rest. Matches the `physics.ts`/`lib/nbody` norm.
 2. HIGH **Verify / fix `runToCompletion`'s ref-timing** (§2.2). Either it is silently broken at scale or it works by fragile batching; the pure-module rewrite resolves it definitively.
 3. MEDIUM **Replace the 9-hook tangle with `useReducer`** over a single `SimState` (§2); drop the four mirror refs/effects.
 4. MEDIUM **Harden inputs**: route Population/Resolution through the existing `NumberInput` primitive to kill the `NaN`→`Array(NaN)` crash (§1.5); add a cancel flag to the Lab runner (§5).
 5. MEDIUM **Correct the stability claim** in EXPLAINER/Stability tab (§1.1) — present mixed-proposer stability as empirical.
-6. LOW **Retire the string-key model** in favour of a tagged id or twin arrays (§1.3); precompute a rank matrix to drop `verifyStability`/step from O(n³) (§1.2).
+6. LOW **Retire the string-key model** in favor of a tagged id or twin arrays (§1.3); precompute a rank matrix to drop `verifyStability`/step from O(n³) (§1.2).
 7. LOW **Styling consolidation**: prefer shared chrome over local `Button`/`Card`; tokenise hexes; de-duplicate `ROW_HEIGHT` (§7). The CSS itself is already strong.
 8. LOW (optional) **AppShell migration**: move controls into `ShellSettings`/`ShellActions` and add `usePersistentState` — explicitly permitted-but-not-required for DOM apps; would unify chrome with the 3D apps (§4).
 
@@ -195,4 +195,4 @@ Net: I would **not** ship a styling-only PR here. The cheapest high-value move i
 4. **What did we both overlook?** Whether the "mixed-proposer" model is mathematically novel/intended or an accidental drift from one-sided GS. The pedagogy hat (sibling review) is better placed to judge, but it materially affects whether §1.1 is a doc fix or an algorithm fix.
 5. **What did you find difficult?** Judging the `runToCompletion` + React-batching interaction by reading alone — synchronous-loop-over-setState semantics are genuinely ambiguous without running it.
 6. **What would have made this task easier?** An existing test harness, or a running dev server to poke at n=100 and an empty Population field directly.
-7. **Follow-up value:** MEDIUM — Findings are sound and actionable, but §2.2 (run-to-completion timing) and §1.1 (stability of the variant) are hypotheses that a 30-minute runtime check would convert to facts and could reprioritise the verdict.
+7. **Follow-up value:** MEDIUM — Findings are sound and actionable, but §2.2 (run-to-completion timing) and §1.1 (stability of the variant) are hypotheses that a 30-minute runtime check would convert to facts and could reprioritize the verdict.

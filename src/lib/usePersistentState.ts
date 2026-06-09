@@ -54,7 +54,7 @@ export function usePersistentState<T>(key: string | null, initial: T) {
 /**
  * Remove every persisted key under a namespace (e.g. 'complex-particles'), so a
  * "Reset to defaults" can wipe one app's saved settings. Callers typically clear
- * then reload so the components re-initialise from their defaults.
+ * then reload so the components re-initialize from their defaults.
  */
 export function clearPersistedState(namespace: string): void {
   if (typeof window === 'undefined') return;

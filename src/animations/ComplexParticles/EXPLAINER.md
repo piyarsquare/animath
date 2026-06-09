@@ -26,7 +26,7 @@ directly, so the view *projects* it down into the 3-D scene on screen.
   just as a 3-D camera makes distant things look smaller.
 - **Stereographic** — first place every point on the unit 3-sphere (scale it
   to length 1), then project from the pole: `(x, y, u) / (1 − v)`. It's the
-  4-D analogue of flattening a globe into a map, and it's *conformal* —
+  4-D analog of flattening a globe into a map, and it's *conformal* —
   small shapes keep their form.
 - **Hopf** — the **Hopf fibration** S³ → S², which places each particle on a
   sphere according to the **ratio `z / f(z)`**. Read the sphere as:
@@ -51,7 +51,7 @@ directly, so the view *projects* it down into the 3-D scene on screen.
   **Reference scaffold** toggle draws the faint donuts / sphere they live on. The
   **Hopf fibers** toggle overlays the iconic interlocking circles themselves —
   the common-phase orbits `θ ↦ e^{iθ}·(z, f)` — sampled directly on the base
-  sphere (not the function graph), each linking every other, coloured by base
+  sphere (not the function graph), each linking every other, colored by base
   point. **Fiber density** sets how many per donut.
 - **Drop axis** — the bluntest projection: just forget one of the four
   coordinates and keep the other three (an orthographic slice).
@@ -82,7 +82,7 @@ The same 4-D graph can be drawn two ways. **Points** (the default) scatters one
 particle per sample. **Sheet** instead stitches a regular grid of samples into a
 single continuous **surface** — the actual 2-D graph of `f`. The grid's
 **rectangular cells** are drawn as a **translucent filled sheet** (each rectangle
-a single flat colour — the average of its four corners' domain colours) and/or a
+a single flat color — the average of its four corners' domain colors) and/or a
 **wireframe** of the row/column edges. Filled and wireframe can each be toggled,
 **Resolution** sets how fine the grid is, and **Shading** adds depth cues by
 darkening faces that turn edge-on to the camera. Because a surface needs grid

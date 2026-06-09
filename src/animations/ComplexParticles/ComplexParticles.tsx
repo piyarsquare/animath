@@ -88,7 +88,7 @@ export default function ComplexParticles({
   const sceneRef = useRef<THREE.Scene>();
   const pointsRef = useRef<THREE.Points[]>([]);
   // Sheet (surface) render mode: a non-indexed per-quad fill geometry (flat
-  // averaged colour per rectangle) + a separate line geometry for the
+  // averaged color per rectangle) + a separate line geometry for the
   // rectangular wireframe (row/column edges, no diagonals). Both are drawn per
   // Riemann sheet.
   const sheetGeomRef = useRef<THREE.BufferGeometry>();
@@ -99,7 +99,7 @@ export default function ComplexParticles({
   // mesh per Riemann sheet).
   const tileGeomRef = useRef<THREE.BufferGeometry>();
   const tileMeshRef = useRef<THREE.Mesh[]>([]);
-  // Net render mode: a polar fibre net (circles + rays) drawn as screen-space
+  // Net render mode: a polar fiber net (circles + rays) drawn as screen-space
   // ribbon meshes (so it can have a real pixel width).
   const netGeomRef = useRef<THREE.BufferGeometry>();
   const netMeshRef = useRef<THREE.Mesh[]>([]);
@@ -188,15 +188,15 @@ export default function ComplexParticles({
     shapeType: { value: state.shapeIndex },
     tex: { value: state.texturesRef.current[state.textureIndex] ?? new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) },
     textureIndex: { value: state.textureIndex },
-    uColourStyle: { value: state.colourStyle },
+    uColorStyle: { value: state.colorStyle },
     uColormap: { value: state.colormap },
     uColorRepeat: { value: state.colorRepeat },
     uReciprocal: { value: state.reciprocal ? 1 : 0 },
     uWarpR: { value: netRadius() },
     uLight: { value: state.lighting ? 1 : 0 },
     uLightStrength: { value: state.lightStrength },
-    uColourBy: { value: state.colourBy },
-    uColourQty: { value: state.colourQuantity },
+    uColorBy: { value: state.colorBy },
+    uColorQty: { value: state.colorQuantity },
     uBrightnessQty: { value: state.brightnessQuantity },
     uInCoord: { value: state.inputCoord },
     uOutCoord: { value: state.outputCoord },
@@ -294,7 +294,7 @@ export default function ComplexParticles({
     return m;
   }
 
-  // Radius of the polar fibre net: reach the farthest corner of the domain box.
+  // Radius of the polar fiber net: reach the farthest corner of the domain box.
   const netRadius = (): number => {
     const [bx0, bx1, by0, by1] = effectiveBounds();
     return Math.max(Math.abs(bx0), Math.abs(bx1), Math.abs(by0), Math.abs(by1));
@@ -458,7 +458,7 @@ export default function ComplexParticles({
     state.boundsLock, state.xMin, state.xMax, state.yMin, state.yMax,
   ]);
 
-  // Rebuild the fibre net when its counts/mode or the domain box change.
+  // Rebuild the fiber net when its counts/mode or the domain box change.
   useEffect(() => {
     const netGeom = netGeomRef.current;
     if (!netGeom) return;

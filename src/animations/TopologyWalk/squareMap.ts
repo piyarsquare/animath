@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 
 /**
- * ONE square-fundamental-domain mini-map, parameterised by the edge-identification
+ * ONE square-fundamental-domain mini-map, parameterized by the edge-identification
  * rule, replacing the two near-identical canvas renderers the flat (torus / Klein)
  * and spherical (ℝP²) worlds carried separately. All three square presentations —
  * torus (both pairs glue straight), Klein bottle (one pair flips), ℝP² (both pairs
- * flip) — are the same picture with different edge colours, chevron directions and
+ * flip) — are the same picture with different edge colors, chevron directions and
  * an optional landmark set. The equirectangular sphere chart (`drawSphereMap`,
  * for the plain round sphere) is a genuinely different projection and stays in
  * the host.
@@ -23,7 +23,7 @@ export interface SquareEdgeSpec {
   double: boolean;
 }
 
-/** Player marker in square-normalised coords: sx,sy ∈ −1..1 with +y up; `angle`
+/** Player marker in square-normalized coords: sx,sy ∈ −1..1 with +y up; `angle`
  *  is the heading in canvas radians; `flipped` paints it amber (mirror sheet). */
 export interface SquareMarker {
   sx: number;
@@ -32,7 +32,7 @@ export interface SquareMarker {
   flipped: boolean;
 }
 
-/** A landmark dot in square-normalised coords. */
+/** A landmark dot in square-normalized coords. */
 export interface SquareDot {
   sx: number;
   sy: number;
@@ -84,7 +84,7 @@ export function drawSquareMap(
 
   const m = 24, w = size - 2 * m, x0 = m, y0 = m, x1 = x0 + w, y1 = y0 + w;
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-  // square-normalised (sx,sy ∈ −1..1, +y up) → canvas
+  // square-normalized (sx,sy ∈ −1..1, +y up) → canvas
   const toX = (sx: number) => cx + sx * (w / 2);
   const toY = (sy: number) => cy - sy * (w / 2);
 

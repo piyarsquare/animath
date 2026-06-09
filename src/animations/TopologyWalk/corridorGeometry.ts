@@ -2,8 +2,8 @@ import * as THREE from 'three';
 
 /** Parameters that make the hall "feel" endless without revealing the twist. */
 export interface CorridorParams {
-  space: 'loop' | 'knot';  // centreline: a circle, or a torus knot
-  radius: number;       // radius of centreline circle (loop)
+  space: 'loop' | 'knot';  // centerline: a circle, or a torus knot
+  radius: number;       // radius of centerline circle (loop)
   width: number;        // corridor half-width
   height: number;       // corridor half-height
   segments: number;     // longitudinal segments (>= 500 looks smooth)
@@ -28,7 +28,7 @@ export const DEFAULT_PARAMS: CorridorParams = {
 };
 
 /**
- * A closed, rectangular-section tube that follows the twisting centreline — an
+ * A closed, rectangular-section tube that follows the twisting centerline — an
  * enclosed corridor (ceiling, both walls, floor) rather than two loose panels.
  * After one lap the cross-section has rotated by π·tiltTurns, so the floor and
  * ceiling have swapped: a Möbius corridor.
@@ -91,9 +91,9 @@ export function makeCorridorGeometry(
   return g;
 }
 
-/** Frenet-style frame on the (twisting) corridor centreline at parameter t. */
+/** Frenet-style frame on the (twisting) corridor centerline at parameter t. */
 export interface CorridorFrame {
-  center: THREE.Vector3;   // point on the centreline
+  center: THREE.Vector3;   // point on the centerline
   tangent: THREE.Vector3;  // direction of travel (increasing t)
   n: THREE.Vector3;        // cross-section "horizontal" axis (twists)
   b: THREE.Vector3;        // cross-section "up" axis (twists)
@@ -149,7 +149,7 @@ export function spacePeriod(p: CorridorParams = DEFAULT_PARAMS): number {
   return Math.abs(p.tiltTurns) % 2 === 1 ? 2 : 1;
 }
 
-/** Approximate arc length of the centreline (drives walk speed across spaces). */
+/** Approximate arc length of the centerline (drives walk speed across spaces). */
 export function centerlineLength(p: CorridorParams = DEFAULT_PARAMS): number {
   if (p.space !== 'knot') return 2 * Math.PI * p.radius;
   const N = 600;
@@ -187,7 +187,7 @@ export function paramToFrame(
 }
 
 /**
- * A flat ribbon running the length of the corridor, centred on the floor and
+ * A flat ribbon running the length of the corridor, centered on the floor and
  * sitting just above it — the carrier for the floor-marker decal. Its UV runs
  * 0..(laps) along the length so a repeating marker texture tiles down it; the
  * width maps v 0..1 across the strip.

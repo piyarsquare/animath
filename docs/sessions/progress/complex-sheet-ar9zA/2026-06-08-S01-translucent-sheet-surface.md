@@ -56,7 +56,7 @@ magnitude). Renamed the selector label **Hue → Quantity**. Verified headless
 (Viridis by phase vs magnitude differ as expected).
 
 > [!CAUTION]
-> **Gotcha** Default `colourQuantity` is **Phase** (the classic HSV default), so a
+> **Gotcha** Default `colorQuantity` is **Phase** (the classic HSV default), so a
 > freshly-picked colormap maps *phase*, not magnitude. For the radial |f| ramp set
 > Quantity → Magnitude (+ Brightness → Uniform for a pure map). A context-aware
 > default (phase for HSV, magnitude for colormaps) is an open option.
@@ -90,7 +90,7 @@ drawing-buffer size on resize). Net is now a `THREE.Mesh`. Added **Width** and
 ### 🟡 milestone · S01 — Reciprocal (log-radial) sampling, all modes (a8d588f)
 **Why:** "sample as deeply inside the unit circle as outside; apply to every mode."
 
-A `domainWarp()` inside the shared `surfacePos` + colour path remaps the domain
+A `domainWarp()` inside the shared `surfacePos` + color path remaps the domain
 radius uniform in log|z| (unit circle at the middle: r→0 ↦ 1/R, r=R ↦ R), so it's
 inherited by points, sheet, tiles, and net. Adaptive/stretch metrics warp
 consistently. Toggle in the **Domain** section; depth is tied to the domain extent
@@ -104,24 +104,24 @@ tiles the colormap that many cycles per e-fold using a mirrored (seamless) wave 
 contour-like magnitude bands.
 
 ### 🟡 milestone · S01 — Net: independent circles/rays toggles + more circles (f132697)
-**Why:** user wanted to turn rays off; rays cluttered the Torus centre.
+**Why:** user wanted to turn rays off; rays cluttered the Torus center.
 
 Replaced the 3-way Fibers pills with independent **Circles** / **Rays** checkboxes
 (rays default **off**); raised Circles max to 250.
 
 > [!NOTE]
-> **Why rays converge at the Torus centre** Every ray includes z=0 as its inner
+> **Why rays converge at the Torus center** Every ray includes z=0 as its inner
 > endpoint, so all rays share one point; the Torus map sends |z|/|f|→latitude, so
 > that shared point lands on the torus core and the rays bundle into it. Turning
 > rays off (or starting them off-origin) removes the bundle. The circles are the
-> Hopf-fibre-related family the user cares about (for f=z they *are* Hopf fibres;
+> Hopf-fiber-related family the user cares about (for f=z they *are* Hopf fibers;
 > for zⁿ they're (1,n) torus knots).
 
-### 🟡 milestone · S01 — Net render mode (polar fibre net) (902fabb)
-**Why:** "make a net between the points; structured to see fibre structures."
+### 🟡 milestone · S01 — Net render mode (polar fiber net) (902fabb)
+**Why:** "make a net between the points; structured to see fiber structures."
 
 New **Net** render mode: concentric circles (constant |z|) and rays (constant
-arg z) placed on the surface and domain-coloured, exposing the function's fibre
+arg z) placed on the surface and domain-colored, exposing the function's fiber
 structure. Verified headless on z² (the two orthogonal curve families) and 1/z in
 Hopf.
 
@@ -161,8 +161,8 @@ resolution 200 → 500.
 **Why:** implemented the user's model; build green and visually confirmed.
 
 Fill is now a **non-indexed per-quad** mesh whose new `sheetFillVertexShader`
-averages `calcColour` over each cell's four corners (`cellBase` attribute +
-`uCellSize` uniform) → one flat colour per rectangle. Wireframe is a
+averages `calcColor` over each cell's four corners (`cellBase` attribute +
+`uCellSize` uniform) → one flat color per rectangle. Wireframe is a
 **`THREE.LineSegments`** over a dedicated line geometry (`createSheetWireGeometry`,
 row/column edges only). Verified headless on `z²` in DropV: clean rectangular
 cells, wire exactly on the fill, flat tiles (the origin's muted tiles correctly
@@ -183,7 +183,7 @@ clean and the wire sits exactly on the cells (verified headless). User chose to
   grid edges.
 - **Flat per-rectangle color = average of the 4 corner colors** — switch the fill
   to a non-indexed per-quad mesh; each vertex carries its quad's `cellBase`, and
-  the fill vertex shader averages `calcColour` over the 4 corners (`cellBase` +
+  the fill vertex shader averages `calcColor` over the 4 corners (`cellBase` +
   `uCellSize`) so each rectangle is one flat color.
 
 ### 🟡 milestone · 15:55 — Sheet render mode shipped, build green
@@ -271,7 +271,7 @@ direction before writing code.
 | `lib/particles/useParticleState.ts` | Persisted state for every feature: `renderMode`, sheet (`sheetFill/Wire/Resolution/Shade/Adaptive/Density`), `tileSize`, net (`netCircles/Rays/Rings/Spokes/Width/Resolution`), `colormap`, `colorRepeat`, `lighting`/`lightStrength`, `reciprocal`. |
 | `lib/particles/useUniformSync.ts` | Syncs the new uniforms (`uColormap`, `uColorRepeat`, `uReciprocal`, `uLight`/`uLightStrength`, …); `objectMode` skips `userData.sheet`. |
 | `lib/colormaps.ts` | Shared GLSL palette library — added Turbo/Cubehelix/Hot/Copper/Cool/Cool–warm; `PALETTE_OPTIONS` kept in sync (fractals benefit too). |
-| `ComplexParticles/shaders/index.ts` | `vsCommon` shared GLSL: `domainWarp` (reciprocal sampling), `surfacePos`, colormap branch (honours Quantity + Brightness + Repeat). Point/sheet-fill/sheet-wire/**tile**/**net** vertex shaders + `applyExternalLight` in sheet/tile fragments. |
+| `ComplexParticles/shaders/index.ts` | `vsCommon` shared GLSL: `domainWarp` (reciprocal sampling), `surfacePos`, colormap branch (honors Quantity + Brightness + Repeat). Point/sheet-fill/sheet-wire/**tile**/**net** vertex shaders + `applyExternalLight` in sheet/tile fragments. |
 | `ComplexParticles/ComplexParticles.tsx` | Per-branch materials/meshes for points + sheet fill + wire + **tiles** + **net**; geometry build/rebuild + visibility + uniform-sync effects (incl. net `uResolution` resize handler). |
 | `components/ParticleViewerShell.tsx` | **Color** (mode-aware) + **Surface** (per-mode Sheet/Tiles/Net controls) + **Domain** (Reciprocal sampling); decluttered visibility. |
 | `ComplexParticles/{README,EXPLAINER}.md` | Documented the Surface / Sheet mode (Tiles/Net/colormaps not yet written up). |

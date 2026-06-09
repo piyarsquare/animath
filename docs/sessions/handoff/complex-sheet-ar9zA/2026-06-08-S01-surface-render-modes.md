@@ -26,8 +26,8 @@ surface viewer, all inside the existing `lib/particles` engine +
 `ParticleViewerShell` (no new route / `apps.ts` entry). There are now four render
 modes — **Points**, **Sheet** (translucent fill + rectangular wireframe, with
 adaptive dissolve-to-points), **Tiles** (oriented surfels that tear apart where
-the map stretches), and **Net** (a polar fibre net of circles/rays as fat
-ribbons). Colour gained a 14-entry **colormap** system (perceptual + cyclic +
+the map stretches), and **Net** (a polar fiber net of circles/rays as fat
+ribbons). Color gained a 14-entry **colormap** system (perceptual + cyclic +
 diverging, log-scaled, repeatable, driven by a chosen Quantity/Brightness),
 **external directional lighting** (inside-vs-outside), and **reciprocal
 (log-radial) sampling** that applies to every mode. The settings panel was then
@@ -44,14 +44,14 @@ container kept reverting the local checkout — see Context):
 | `70d7d6d` | **Tiles** render mode (oriented surfels, `Tile size` cap) |
 | `77d3afc` | **Sequential colormaps** for magnitude (reuse `lib/colormaps.ts`) |
 | `92d9df3` | **External light** (directional + cool/dim back-face = inside/outside) on Sheet/Tiles |
-| `902fabb` | **Net** render mode (polar fibre net: circles + rays) |
+| `902fabb` | **Net** render mode (polar fiber net: circles + rays) |
 | `f132697` | Net **independent Circles/Rays toggles** (rays default off), Circles max 250 |
 | `3031f4c` | Colormaps **log-scaled** + **Repeat (log bands)** |
 | `a8d588f` | **Reciprocal (log-radial) sampling** for all modes (`domainWarp`) |
 | `6027c29` | Net **Width + Resolution** (screen-space ribbons; was 1px LineSegments) |
 | `1ee72b3` | **+6 colormaps**: Turbo, Cubehelix, Hot, Copper, Cool, Cool–warm |
 | `939525c` | **Declutter** settings panel (mode/colormap-aware control visibility) |
-| `81af245` | Colormaps **honour Quantity + Brightness** selectors (fix declutter over-hide) |
+| `81af245` | Colormaps **honor Quantity + Brightness** selectors (fix declutter over-hide) |
 
 ## Key files
 
@@ -93,9 +93,9 @@ container kept reverting the local checkout — see Context):
 - **Verification.** Done headlessly via SwiftShader screenshots, seeding the
   viewer's `localStorage` (`animath:v1:complex-particles:<field>`) to set modes —
   there is no test runner; `npm run build` is the only CI check.
-- **Net math note.** Circles (constant |z|) relate to Hopf fibres — for f=z a
-  domain circle *is* a Hopf fibre; for zⁿ it's a (1,n) torus knot. Rays converge at
-  the Torus centre because they all share z=0.
+- **Net math note.** Circles (constant |z|) relate to Hopf fibers — for f=z a
+  domain circle *is* a Hopf fiber; for zⁿ it's a (1,n) torus knot. Rays converge at
+  the Torus center because they all share z=0.
 
 ## Self-reflection
 
@@ -103,7 +103,7 @@ container kept reverting the local checkout — see Context):
    sheet opacity, independent reciprocal depth, and writing up the new modes in
    README/EXPLAINER. Then a merge-to-main PR.
 2. **Change about what I produced?** The declutter over-hid the Quantity/Brightness
-   colour selectors and needed a follow-up fix; a clearer "which control belongs to
+   color selectors and needed a follow-up fix; a clearer "which control belongs to
    which mode" model up front would have avoided the round-trip.
 3. **Not asked that's important?** Whether to merge/deploy — none of this is live
    yet, so users (and the Pages site) don't see it until a PR lands.
