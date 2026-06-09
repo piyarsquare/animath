@@ -48,7 +48,7 @@ function getHash(): string {
  *  bare (each owns its TopBar via <Workspace>); the rest stay wrapped in the
  *  legacy AppShell until their migration commit. Emptied of AppShell once all
  *  apps are over (see docs/redesign/IMPLEMENTATION.md). */
-const MIGRATED = new Set<string>([]);
+const MIGRATED = new Set<string>(['/complex-particles']);
 
 function Router(): JSX.Element {
   const [hash, setHash] = React.useState(getHash());

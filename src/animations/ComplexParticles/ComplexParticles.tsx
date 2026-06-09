@@ -689,6 +689,7 @@ export default function ComplexParticles({
 
   return (
     <ParticleViewerShell
+      appId="complex-particles"
       state={state}
       controls={controls}
       onMount={onMount}

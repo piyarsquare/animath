@@ -4,7 +4,7 @@ const ComplexParticles = React.lazy(() => import('./animations/ComplexParticles/
 
 export default function App() {
   return (
-    <React.Suspense fallback={<div style={{ background: '#000', width: '100vw', height: '100vh' }} />}>
+    <React.Suspense fallback={<div style={{ background: 'var(--bg, #000)', width: '100%', height: '100%' }} />}>
       <ComplexParticles />
     </React.Suspense>
   );
