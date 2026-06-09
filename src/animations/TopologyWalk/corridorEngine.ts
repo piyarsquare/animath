@@ -25,7 +25,7 @@ const INK = '#ffef6b';
 const MINI_UP = new THREE.Vector3(0, 1, 0);
 const MINI_BG = new THREE.Color(0x0a0c16);
 
-/** Friendly surface id → centreline + twist parameters. */
+/** Friendly surface id → centerline + twist parameters. */
 const SPACE_PARAMS: Record<string, Partial<CorridorParams>> = {
   loop:    { space: 'loop', tiltTurns: 0 },
   mobius:  { space: 'loop', tiltTurns: 1 },
@@ -36,8 +36,8 @@ const SPACE_PARAMS: Record<string, Partial<CorridorParams>> = {
 const spaceParams = (id: string): Partial<CorridorParams> => SPACE_PARAMS[id] ?? SPACE_PARAMS.mobius;
 
 /**
- * Mini-map band geometry: a ribbon following the centreline, coloured magenta on
- * one long edge and cyan on the other. On a plain ring the two colours stay on
+ * Mini-map band geometry: a ribbon following the centerline, colored magenta on
+ * one long edge and cyan on the other. On a plain ring the two colors stay on
  * the same sides; with the half-twist they swap as you go round — so the map
  * itself shows whether the corridor is a Möbius strip.
  */
@@ -90,7 +90,7 @@ function textTexture(text: string): { tex: THREE.CanvasTexture; aspect: number }
 
 /**
  * The swept-tube "hallway" engine. Walks a rectangular corridor along a twisting
- * or knotted centreline; "up" follows the cross-section frame, so a Möbius lap
+ * or knotted centerline; "up" follows the cross-section frame, so a Möbius lap
  * rolls the world over and the floor becomes the ceiling.
  */
 export function makeCorridorEngine(deps: EngineDeps, opts: EngineOptions): WorldEngine {
@@ -104,7 +104,7 @@ export function makeCorridorEngine(deps: EngineDeps, opts: EngineOptions): World
   let miniOn = opts.miniMap;
 
   // player state
-  let s = 0;            // arc length along the centreline
+  let s = 0;            // arc length along the centerline
   let w = 0;            // lateral offset on the floor
   let stridePhase = 0;
   let footLast: THREE.Vector3 | null = null;
@@ -293,7 +293,7 @@ export function makeCorridorEngine(deps: EngineDeps, opts: EngineOptions): World
     character.stride(stridePhase);
 
     if (input.thirdPerson) {
-      // Keep the avatar centred and pull the camera back + up on narrow/portrait
+      // Keep the avatar centered and pull the camera back + up on narrow/portrait
       // aspects, where the small horizontal FOV otherwise magnifies it.
       const aspect = camera.aspect || 1;
       const distScale = Math.min(1.6, Math.max(1, 1 / Math.min(aspect, 1)));

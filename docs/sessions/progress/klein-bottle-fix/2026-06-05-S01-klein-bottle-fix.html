@@ -101,7 +101,7 @@
             Two things to eyeball in-app: (1) whether 35% reads as <em>too</em>
             glassy for the flat floor — if so, split into separate defaults (flat
             floor vs planet glass) instead of one shared value; (2) the flat
-            "Colour each cover cell" tint still exists but defaults <em>off</em> —
+            "Color each cover cell" tint still exists but defaults <em>off</em> —
             flip it on by default if the user prefers.</p>
           </li>
           <li class="tl" data-type="milestone">
@@ -119,7 +119,7 @@
               mirror</strong> matching the construction of the Klein floor so the two
               worlds use the same conceptual move.</li>
               <li>The ℝP² underside wears the <strong>opposite skin</strong> (column
-              under tree), the spherical analogue of the flat trees⇄columns flip.</li>
+              under tree), the spherical analog of the flat trees⇄columns flip.</li>
               <li>ℝP² mini-map drawn as a square fundamental domain with the
               antipodal edge identifications, alongside the trees⇄columns cover
               skins. <code>npm run build</code>:
@@ -129,12 +129,12 @@
           <li class="tl" data-type="milestone">
             <p class="tl-time">05:40</p>
             <span class="chip chip-milestone">Milestone</span>
-            <h3>Spherical world polish: mini-map, planet-radius slider, markers, cover colouring</h3>
+            <h3>Spherical world polish: mini-map, planet-radius slider, markers, cover coloring</h3>
             <p class="why"><strong>Why:</strong> Bring the new spherical engine up to
             the legibility level of the flat worlds before unifying them.</p>
             <ul>
               <li>Added a spherical mini-map, a planet-radius slider, more landmark
-              markers, and per-cover-cell colouring.</li>
+              markers, and per-cover-cell coloring.</li>
               <li>Brightened the spherical planet and moved the spawn marker off the
               camera so first-person spawn isn't staring at its own beacon.</li>
               <li><code>npm run build</code>:
@@ -148,7 +148,7 @@
             <p class="why"><strong>Why:</strong> User chose "write up the roadmap doc
             first" to align on the arc before more engines.</p>
             <ul>
-              <li>Design note covering: the organising idea (polygon + edge gluing;
+              <li>Design note covering: the organizing idea (polygon + edge gluing;
               corner-angle budget forces the geometry; Gauss–Bonnet
               <code>∫K dA = 2πχ</code>), the three-geometries table, the polygon
               ladder (square → hexagon → octagon → 4g-gon) with the
@@ -241,8 +241,8 @@
               cell groups — its own set of meshes sharing the one trail buffer.</li>
               <li>Each frame the trail is tiled <strong>relative to the player's own
               cell</strong>: the home copy is the identity (your own prints always
-              upright, on top), even-Δcolumn neighbours are translations (stay on
-              top), and odd-Δcolumn neighbours — which differ from you by one twist,
+              upright, on top), even-Δcolumn neighbors are translations (stay on
+              top), and odd-Δcolumn neighbors — which differ from you by one twist,
               an orientation flip — get <code>scale(1,−1,−1)</code>: reflected under
               the glass <em>and</em> z-mirrored, so the prints read reversed with the
               same forward heading (the twist mirrors the transverse axis, not your
@@ -389,7 +389,7 @@
               <code>trees</code> and a <code>columns</code> group toggled per frame
               by red-crossing parity (<code>flipped = klein &amp;&amp; (I&amp;1)</code>).
               Torus shows columns everywhere (orientable → no swap). Each landmark
-              keeps its identifying colour across both forms; the numbered/arrow
+              keeps its identifying color across both forms; the numbered/arrow
               decal is retained on both (still reverses under the mirror).</li>
               <li>Floor is now glassy (translucent, double-sided, low roughness) so
               the mirrored trail reads as the underside seen through the glass.</li>
@@ -444,7 +444,7 @@
             morph band (trees ⇄ columns across the seam) is the <em>later</em>
             enhancement. Topologically sound: an orientation-reversing crossing =
             passing to the other face of a 2-sided rendering of a 1-sided surface;
-            the glass/underside is a faithful metaphor. Key subtlety to honour: the
+            the glass/underside is a faithful metaphor. Key subtlety to honor: the
             surface is <strong>one-sided</strong>, so "trees vs columns" can't be a
             global top/bottom label — it must be tied to local red-crossing parity
             (flips on red, preserved on blue), which is exactly the existing
@@ -472,7 +472,7 @@
               <li>The flat engine is <strong>intrinsically flat</strong>: camera
               <code>up</code> is hard-pinned to <code>(0,1,0)</code> and eye height
               to <code>+EYE</code> every frame (<code>flatEngine.ts:205,211</code>).
-              The "flip" is realised <em>only</em> by z-mirroring odd columns of the
+              The "flip" is realized <em>only</em> by z-mirroring odd columns of the
               tiled universal cover (<code>sz = klein &amp;&amp; (I&amp;1) ? -1 :
               1</code>, line 223). The player <strong>never rolls or flips</strong>;
               you only see landmarks/footprints come back mirror-reversed.</li>
@@ -520,17 +520,17 @@
           Klein bottle, square with edge identifications, glass floor + underside
           world.</li>
           <li><strong>Spherical family</strong> (<code>sphericalEngine.ts</code>) —
-          sphere and ℝP², with the ℝP² inner shell as the spherical analogue of the
+          sphere and ℝP², with the ℝP² inner shell as the spherical analog of the
           flat glass floor.</li>
         </ul>
         <p>They were built incrementally and now do <em>conceptually the same
         thing</em> through largely parallel-but-separate code: glass-opacity gating,
         cover-cell skins (trees ⇄ columns), the underside / inner-shell mirror, the
-        mini-map of the square domain, and per-cell colouring. The next session's
+        mini-map of the square domain, and per-cell coloring. The next session's
         job is to <strong>unify that framework</strong> so the two rectangular worlds
         share one mental model and, where sensible, one implementation:</p>
         <ul>
-          <li>Reconcile the shared options (floor/glass opacity, cover colouring,
+          <li>Reconcile the shared options (floor/glass opacity, cover coloring,
           cover skins, mini-map) into a common surface-presentation layer instead of
           two near-duplicate code paths and two sets of UI gating in
           <code>TopologyWalk.tsx</code>.</li>
@@ -539,7 +539,7 @@
           mirrors, so name/factor them the same way.</li>
           <li>Decide the opacity-default question raised above: one shared 35% value
           vs separate flat-floor / planet-glass defaults.</li>
-          <li>Mini-map: one square-fundamental-domain renderer parameterised by the
+          <li>Mini-map: one square-fundamental-domain renderer parameterized by the
           edge-identification rule (torus / Klein / ℝP²) rather than per-family
           drawing code.</li>
         </ul>

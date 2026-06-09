@@ -42,7 +42,7 @@ export function dashedLine(color: number | string = 0xffffff): THREE.LineDashedM
   return new THREE.LineDashedMaterial({ color, dashSize: 0.1, gapSize: 0.1 });
 }
 
-/** Depth-encoded material useful for visualising depth */
+/** Depth-encoded material useful for visualizing depth */
 export function depthMaterial(): THREE.MeshDepthMaterial {
   return new THREE.MeshDepthMaterial();
 }

@@ -65,7 +65,7 @@ function floorTexture(): THREE.CanvasTexture {
 }
 
 // A distinct, stable hue for each copy of the fundamental domain in the universal
-// cover. Golden-ratio steps in each axis keep neighbours well-separated and avoid
+// cover. Golden-ratio steps in each axis keep neighbors well-separated and avoid
 // repeats over the few cells on screen; the result reads as a patchwork that makes
 // the tiling (and your motion between copies) obvious.
 const _cellCol = new THREE.Color();
@@ -78,7 +78,7 @@ function cellColor(I: number, J: number): THREE.Color {
  * Geometry + materials for the landmarks, built once and shared across every
  * rendered cell (meshes are still per-cell, but the heavy buffers/textures are
  * not). Each landmark has two forms keyed by orientation class: a **column** and
- * a **tree** of the same identifying colour. The flat Klein bottle shows columns
+ * a **tree** of the same identifying color. The flat Klein bottle shows columns
  * on one class of cell and trees on the mirror class, so crossing the red (flip)
  * edge swaps every landmark from one form to the other — the orientation flip
  * made impossible to miss. Both forms carry the same numbered/arrow decal, which
@@ -89,7 +89,7 @@ interface SharedDecor {
   trunkGeo: THREE.CylinderGeometry;
   foliageGeo: THREE.ConeGeometry;
   decalGeo: THREE.PlaneGeometry;
-  /** L×L floor tile, one tinted copy per cell when "colour the covers" is on. */
+  /** L×L floor tile, one tinted copy per cell when "color the covers" is on. */
   tileGeo: THREE.PlaneGeometry;
   columnMats: THREE.MeshStandardMaterial[];
   foliageMats: THREE.MeshStandardMaterial[];
@@ -117,7 +117,7 @@ function makeSharedDecor(): SharedDecor {
     columnMats.push(new THREE.MeshStandardMaterial({
       color: p.color, emissive: p.color, emissiveIntensity: 0.3, roughness: 0.5, side: THREE.DoubleSide,
     }));
-    // Foliage keeps the landmark's identifying colour (so "the red one" stays the
+    // Foliage keeps the landmark's identifying color (so "the red one" stays the
     // red one whether it's a tree or a column), tinted toward leafy green.
     const leaf = new THREE.Color(p.color).lerp(new THREE.Color(0x3a8a3a), 0.55);
     foliageMats.push(new THREE.MeshStandardMaterial({
@@ -160,7 +160,7 @@ interface Built {
   dispose: () => void;
 }
 
-/** A single landmark in column form: a coloured pillar + its numbered decal. */
+/** A single landmark in column form: a colored pillar + its numbered decal. */
 function makeColumnProp(d: SharedDecor, i: number): THREE.Group {
   const g = new THREE.Group();
   const body = new THREE.Mesh(d.columnGeo, d.columnMats[i]);
@@ -173,7 +173,7 @@ function makeColumnProp(d: SharedDecor, i: number): THREE.Group {
   return g;
 }
 
-/** The same landmark in tree form: trunk + coloured foliage + its decal. */
+/** The same landmark in tree form: trunk + colored foliage + its decal. */
 function makeTreeProp(d: SharedDecor, i: number): THREE.Group {
   const g = new THREE.Group();
   const trunk = new THREE.Mesh(d.trunkGeo, d.trunkMat);
@@ -190,7 +190,7 @@ function makeTreeProp(d: SharedDecor, i: number): THREE.Group {
 }
 
 /** One copy of the fundamental domain: the landmarks (in both forms, one shown
- *  at a time) and a coloured boundary square. The footprint trail is *not* a
+ *  at a time) and a colored boundary square. The footprint trail is *not* a
  *  child of the cell — it is tiled separately, relative to the player's own
  *  cell, so it can sit on the correct side of the glass (see the frame loop). */
 function buildCell(d: SharedDecor): Built {
@@ -223,8 +223,8 @@ function buildCell(d: SharedDecor): Built {
   group.add(under);
 
   // A translucent tile filling the cell, tinted per (I,J) each frame so each copy
-  // of the fundamental domain in the universal cover reads as a distinct colour.
-  // Hidden unless "colour the covers" is on. depthWrite off so it doesn't occlude
+  // of the fundamental domain in the universal cover reads as a distinct color.
+  // Hidden unless "color the covers" is on. depthWrite off so it doesn't occlude
   // the glass reveal of the underside.
   const tileMat = new THREE.MeshBasicMaterial({
     color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide,
@@ -264,13 +264,13 @@ function buildCell(d: SharedDecor): Built {
  * The flat "open space" engine. Walks an intrinsically flat torus or Klein
  * bottle; the edge-gluing is shown by tiling the fundamental domain (the
  * universal cover) around the player, so movement is ordinary flat walking —
- * nothing flips locally, you only discover the topology by travelling.
+ * nothing flips locally, you only discover the topology by traveling.
  *
  * On the Klein bottle, every other column of cells is mirror-reflected (the red
  * edges glue with a flip). To make that flip legible rather than invisible, the
  * two orientation classes wear different skins — **columns** on one, **trees** on
  * the mirror — over a glassy floor. You drop one footprint per step on the side
- * you walk; the trail is tiled *relative to your own cell*, so a neighbour that
+ * you walk; the trail is tiled *relative to your own cell*, so a neighbor that
  * differs by a twist re-expresses your prints on the underside of the glass,
  * mirror-reversed. Walk the twist back to the start and your earlier prints slide
  * under the glass (you're now on the other side); cross the blue (roll) edges and
@@ -498,7 +498,7 @@ export function makeFlatEngine(deps: EngineDeps, opts: EngineOptions): WorldEngi
 
         // Tile the (cover-coordinate) trail into this cell *relative to the
         // player's own cell*, so the home copy is the identity — you always see
-        // your own footprints upright, on top, on the side you walk. A neighbour
+        // your own footprints upright, on top, on the side you walk. A neighbor
         // an odd number of columns away differs from you by a twist (an
         // orientation flip), so its copy of the trail drops to the underside of
         // the glass and reads mirror-reversed: same forward direction (the twist

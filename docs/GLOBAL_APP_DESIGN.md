@@ -278,7 +278,7 @@ for the design conversation:
       Settings layout vs. single-source controls vs. the primitive set).
 - [x] **Menu-bar simplified** (maintainer-directed, §7): dropped the in-drawer
       Apps list *and* the Function picker, collapsed the ⚙ gear into the ☰ menu
-      button, relabelled to **⌂ Home · ☰ Menu · Title · ▶ Actions · ? About**;
+      button, relabeled to **⌂ Home · ☰ Menu · Title · ▶ Actions · ? About**;
       drawer is now **Settings · Actions**. Shared `AppShell` change — build green.
 - [x] **`CLAUDE.md` doc-drift fixed** (§J): `ToggleMenu` re-attributed to the
       legacy Fractals2D, and the repo-layout tree + routing table updated for the
@@ -323,7 +323,7 @@ After:   ⌂ Home   ☰ Menu   [Title→Settings]   ▶ Actions   ? About
 - **Collapsed ⚙ into ☰.** The hamburger ☰ is now the sole Settings opener (so is a
   click on the Title); the standalone gear is gone. The drawer defaults to Settings
   and resets there on app change.
-- **Relabelled / tidied:** ⌂ → "Home" (was "Menu"); ☰ → "Menu"; the `?` button →
+- **Relabeled / tidied:** ⌂ → "Home" (was "Menu"); ☰ → "Menu"; the `?` button →
   "About" (still the explainer popup). Empty **▶**/**?** are now `disabled` as well
   as dimmed, so a dimmed button is never a dead-end.
 

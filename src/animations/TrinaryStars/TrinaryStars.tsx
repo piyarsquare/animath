@@ -94,7 +94,7 @@ function navNum(u: URLSearchParams, k: string, d: number) { const v = u.get(k); 
 const PK = (field: string) => `trinary:${field}`;
 
 /** Anchor point (in sim coords) for a reference-frame selector: a star, a pair's
- *  centre of mass, or the system barycenter. */
+ *  center of mass, or the system barycenter. */
 function frameAnchor(stars: Star[], key: string): { x: number; y: number } {
   const com = (idx: number[]) => {
     let M = 0, x = 0, y = 0;
@@ -186,7 +186,7 @@ export default function TrinaryStars() {
   // timeline agrees with what you see consumed on screen.
   const classify: ClassifyParams = { ...DEFAULT_CLASSIFY, lumExp, habLo, habHi, calmThresh, rKill: Math.max(collisionRadius, 1e-4) };
 
-  // Base (untuned) star masses for this preset, for labelling the mass sliders.
+  // Base (untuned) star masses for this preset, for labeling the mass sliders.
   const baseMasses = useMemo(() => getScenario(presetId).system.makeStars().map(s => s.mass), [presetId]);
 
   // Live params the animation loop / pointer handlers read without re-mounting.
@@ -841,7 +841,7 @@ export default function TrinaryStars() {
           <Slider label="Axial tilt (seasons)" value={tilt} min={0} max={0.6} step={0.05}
             onChange={setTilt} format={v => v.toFixed(2)} />
           <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
-            Stand on the planet and watch the suns wheel overhead. Spin sets the day; tilt makes their noon height drift over the (chaotic, irregular) year. The sky’s colour tracks the climate — frozen dark to searing white.
+            Stand on the planet and watch the suns wheel overhead. Spin sets the day; tilt makes their noon height drift over the (chaotic, irregular) year. The sky’s color tracks the climate — frozen dark to searing white.
           </div>
         </Section>
 

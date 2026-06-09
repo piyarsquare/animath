@@ -46,15 +46,15 @@ Moving the transport/controls into `ShellActions` + `ControlPanel` would (a) lig
 
 ### 2.3 How far to chase model-vs-claim?
 
-All three agree it's wrong, but the fix differs: Pedagogy suggests defaulting `bias = 100` (true one-sided GS, theorem holds) *or* relabelling the whole thing as a "matching market"; the Consultant treats the variant's stability as a hypothesis worth a runtime check. The scope of the relabel (UI strings, EXPLAINER, the "Asker avg rank" metric, the Stability tab) is non-trivial and is a product decision, not purely technical.
+All three agree it's wrong, but the fix differs: Pedagogy suggests defaulting `bias = 100` (true one-sided GS, theorem holds) *or* relabeling the whole thing as a "matching market"; the Consultant treats the variant's stability as a hypothesis worth a runtime check. The scope of the relabel (UI strings, EXPLAINER, the "Asker avg rank" metric, the Stability tab) is non-trivial and is a product decision, not purely technical.
 
 ## 3 · Blind spots (none of the three covered)
 
 - **No build was run.** Every report is static analysis; the only CI gate (`npm run build` = `tsc && vite build`) has not been exercised on the current tree.
 - **Runtime verification of two hypotheses.** The Consultant's `runToCompletion` ref-timing concern and the variant-stability claim both need a quick runtime check to confirm/deny.
 - **Performance at `MAX_POPULATION = 100`** was flagged as a re-render concern but never measured (frame cost, layout thrash from DOM animation, heatmap lab compute time).
-- **Accessibility beyond colour:** keyboard navigation, ARIA roles, and `prefers-reduced-motion` handling for the animated transitions went unexamined.
-- **Mobile / responsive behaviour** of the visualiser and the heatmap Lab specifically (the CSS is "responsive" in general, but the dense two-column matching view at small widths wasn't assessed).
+- **Accessibility beyond color:** keyboard navigation, ARIA roles, and `prefers-reduced-motion` handling for the animated transitions went unexamined.
+- **Mobile / responsive behavior** of the visualizer and the heatmap Lab specifically (the CSS is "responsive" in general, but the dense two-column matching view at small widths wasn't assessed).
 
 ## 4 · Recommended action
 
@@ -64,7 +64,7 @@ Synthesis of the three lenses into a correctness-first sequence. Styling is not 
 | --- | --- | --- | --- |
 | 1 | **Extract `galeShapley.ts`** — one pure engine; `stepSimulation` and the headless runner both call it. | Kills the divergence hazard; makes the algorithm testable; de-risks every later change. Unanimous unlock. | M |
 | 2 | **Reconcile model vs claim** — pick: default `bias=100` (true one-sided GS) *or* relabel as a two-sided market and move the honest "mixed-proposer" note into the EXPLAINER; fix the "Asker avg rank" framing. | The app currently teaches a theorem it doesn't demonstrate. Product decision — confirm with user. | Decision + M |
-| 3 | **Pedagogy fixes** — visualise rejections and the preference lists; replicate Lab heatmap cells (currently single-run noise sold as a surface); swap CVD-hostile ramps. | Makes the *why* of stability visible and the Lab statistically honest. | M–L |
+| 3 | **Pedagogy fixes** — visualize rejections and the preference lists; replicate Lab heatmap cells (currently single-run noise sold as a surface); swap CVD-hostile ramps. | Makes the *why* of stability visible and the Lab statistically honest. | M–L |
 | 4 | **Styling parity** — either adopt `ShellActions`+`ControlPanel` (inherits glass floater chrome, lights the ▶ button) or layer `backdrop-filter`/palette polish into the existing CSS; consolidate the three parallel button systems and hard-coded hexes onto shell tokens. | The session's stated goal — now on solid footing. | M |
 | 5 | **Hardening** — use `NumberInput` for Population (NaN crash); adopt `usePersistentState`; render the shipped-but-unused `README.md`. | Closes small, agreed-upon gaps. | S |
 | 6 | **Verify** — `npm run build`; quick runtime check of the run-to-completion timing and variant stability. | Only CI gate; settles the two open hypotheses. | S |

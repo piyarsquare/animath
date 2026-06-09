@@ -1,4 +1,10 @@
-export const vertexShader = `
+// Shared vertex-shader library: the 4D quaternion rotation, every complex
+// function, the projection modes, and the domain-coloring (calcColor /
+// chartCoord). Both the point-cloud and the sheet vertex shaders are built from
+// this common block + their own main(), so the two render modes stay in lockstep.
+import { PALETTE_GLSL } from '../../../lib/colormaps';
+
+const vsCommon = PALETTE_GLSL + `
 // DOMAIN–COLORING VERTEX SHADER
 struct quat { float w; vec3 v; };
 
@@ -36,9 +42,13 @@ uniform quat  uRotR;
 uniform int   uProjMode;
 uniform int   uProjTarget;
 uniform float uProjAlpha;
-uniform int   uColourStyle;
-uniform int   uColourBy;
-uniform int   uColourQty;
+uniform int   uColorStyle;
+uniform int   uColormap;
+uniform float uColorRepeat;
+uniform int   uReciprocal;     // 1 → log-radial (reciprocal-symmetric) sampling
+uniform float uWarpR;          // domain radius for the warp
+uniform int   uColorBy;
+uniform int   uColorQty;
 uniform int   uBrightnessQty;
 uniform int   uInCoord;
 uniform int   uOutCoord;
@@ -229,37 +239,68 @@ vec3 project(vec4 p, int mode){
 }
 vec3 hsv2rgb(vec3 c){vec4 K = vec4(1., 2./3., 1./3., 3.);vec3 p = abs(fract(c.xxx + K.xyz)*6. - K.www);return c.z * mix(K.xxx, clamp(p-K.xxx, 0., 1.), c.y);}
 const float LAMBDA = 0.7;
-vec3 calcColour(vec2 z, vec2 f){
+vec3 calcColor(vec2 z, vec2 f){
     const float TAU = 6.28318530718;
-    vec2 w = (uColourBy==0) ? z : f;
+    vec2 w = (uColorBy==0) ? z : f;
     float r = length(w);
     float angle = atan(w.y, w.x);
-    // param is the [0,1) position on the colour wheel. The quantity selector
-    // chooses which scalar of w it tracks: phase (classic), log-modulus (colour
+    // param is the [0,1) position on the color wheel. The quantity selector
+    // chooses which scalar of w it tracks: phase (classic), log-modulus (color
     // by |z|/|f|), or the real/imag part squashed into [0,1] via tanh.
     float param;
-    if(uColourQty==1)      param = fract(0.5*log(r+1e-6));   // modulus (log, cyclic)
-    else if(uColourQty==2) param = 0.5 + 0.5*tanh(w.x);      // real part
-    else if(uColourQty==3) param = 0.5 + 0.5*tanh(w.y);      // imag part
+    if(uColorQty==1)      param = fract(0.5*log(r+1e-6));   // modulus (log, cyclic)
+    else if(uColorQty==2) param = 0.5 + 0.5*tanh(w.x);      // real part
+    else if(uColorQty==3) param = 0.5 + 0.5*tanh(w.y);      // imag part
     else                   param = angle/TAU + 1.0;          // phase (default)
     float hue = fract(param + hueShift);
-    // Brightness (value) is driven independently of hue. Magnitude (the default)
-    // gives the classic |.| -> brightness; the other quantities squash into [0,1].
+    // Brightness (value), driven independently. Magnitude (default) gives the
+    // classic |·| → brightness; Uniform is flat (full strength); others squash.
     float val;
     if(uBrightnessQty==0)      val = fract(angle/TAU + 0.5);          // phase
     else if(uBrightnessQty==2) val = 0.5 + 0.5*tanh(w.x);            // real part
     else if(uBrightnessQty==3) val = 0.5 + 0.5*tanh(w.y);            // imag part
-    else if(uBrightnessQty==4) val = 1.0;                            // uniform
+    else if(uBrightnessQty==4) val = 1.0;                            // uniform (flat)
     else                       val = 0.5*(1.0+tanh(log(r+1e-6)));    // magnitude
-    if(uColourStyle==0){
+    // Sequential colormaps (uColormap>0) replace the HSV wheel: the chosen
+    // Quantity drives the colormap axis (magnitude is log-scaled), and Brightness
+    // still modulates value (Uniform = flat, full-strength color). uColorRepeat>0
+    // tiles the map along that axis with a mirrored, seamless wave (contour bands).
+    if(uColormap > 0){
+        float lg = log(r + 1e-6);
+        float s;
+        if(uColorRepeat > 0.0){
+            float raw = (uColorQty==2) ? w.x
+                      : (uColorQty==3) ? w.y
+                      : (uColorQty==0) ? angle/TAU
+                      :                   lg;                         // magnitude (log)
+            s = abs(fract(raw * uColorRepeat) * 2.0 - 1.0);          // seamless repeat
+        } else {
+            s = (uColorQty==2) ? 0.5 + 0.5*tanh(w.x)                // real
+              : (uColorQty==3) ? 0.5 + 0.5*tanh(w.y)                // imag
+              : (uColorQty==0) ? fract(angle/TAU + 0.5)             // phase
+              :                   clamp(0.5*(1.0 + tanh(lg)), 0.0, 1.0); // magnitude
+        }
+        int scheme = (uColormap==1) ? 3      // Grayscale
+                   : (uColormap==2) ? 4      // Viridis
+                   : (uColormap==3) ? 5      // Magma
+                   : (uColormap==4) ? 6      // Inferno
+                   : (uColormap==5) ? 7      // Plasma
+                   : (uColormap==6) ? 1      // Fire
+                   : (uColormap==7) ? 2      // Ocean
+                   :                  uColormap; // 8.. align with palette scheme ids
+        vec3 cmap = paletteColor(s * 255.0, scheme) * val;
+        cmap = mix(vec3(dot(cmap, vec3(0.3333))), cmap, saturation);
+        return cmap * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
+    }
+    if(uColorStyle==0){
         if(uBrightnessQty!=4) val = mix(val, val*(0.75+0.25*sin(TAU*log(r))), 0.5);
         return hsv2rgb(vec3(hue, saturation, val)) * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
     }
-    if(uColourStyle==1){
+    if(uColorStyle==1){
         float v = fract( log(r+1e-6) / LAMBDA );
         return hsv2rgb(vec3(hue, saturation, v)) * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
     }
-    if(uColourStyle==2){
+    if(uColorStyle==2){
         return hsv2rgb(vec3(hue, saturation, 1.0)) * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
     }
     float t   = fract(param);
@@ -270,20 +311,71 @@ vec3 calcColour(vec2 z, vec2 f){
     return col * intensity * (1.0 + shimmerAmp*sin(time + seed.x*TAU));
 }
 // Chart a complex value before it enters the 4-vector: Cartesian (0), Polar (1)
-// = (|c|, arg c), or Log-polar (2) = (log|c|, arg c). Colour keeps the raw value.
+// = (|c|, arg c), or Log-polar (2) = (log|c|, arg c). Color keeps the raw value.
 vec2 chartCoord(vec2 c, int mode){
   if(mode==0) return c;
   float r = length(c);
   float a = atan(c.y, c.x);
   return vec2(mode==2 ? log(r+1e-6) : r, a);
 }
+// Reciprocal-symmetric (log-radial) sampling warp. A uniform lattice radius r in
+// [0,R] is remapped so the unit circle sits at the middle of the range and the
+// sampling is uniform in log|z|: r=R/2 → |z|=1, r→0 → 1/R, r=R → R. This samples
+// as deeply inside the unit disk as outside (z ↔ 1/z symmetric). Angle is kept.
+// Applied inside surfacePos + the color path, so every mode inherits it.
+vec2 domainWarp(vec2 z){
+  if(uReciprocal == 0) return z;
+  float r = length(z);
+  if(r < 1e-7) return z;
+  float R = max(uWarpR, 1e-3);
+  float rNew = pow(R, 2.0 * (r / R) - 1.0);
+  return z * (rNew / r);
+}
+// Full surface placement of a domain point (no jitter): warp → chart → 4-vector →
+// 4D rotation → projection → scale. The sheet shaders use this both to place
+// each vertex and to sample a cell's four corners so they can measure how far
+// the function has stretched that cell in 3D (the adaptive-density metric).
+vec3 surfacePos(vec2 zc){
+  zc = domainWarp(zc);
+  vec2 fc = applyComplex(zc, functionType);
+  if(length(fc) > 1e3) fc = normalize(fc)*1e3;
+  vec2 zP = chartCoord(zc, uInCoord);
+  vec2 fP = chartCoord(fc, uOutCoord);
+  vec4 p4 = vec4(zP.x, zP.y, fP.x, fP.y);
+  p4 = quatRotate4D(p4, uRotL, uRotR);
+  vec3 Po = project(p4, uProjMode);
+  vec3 Pn = project(p4, uProjTarget);
+  return mix(Po, Pn, uProjAlpha) * 1.5;
+}
+// Largest deformed edge of the cell of size 'cell' whose lower-left corner is
+// 'base' — a scale-stable measure of local sparseness (big = stretched).
+float cellStretch(vec2 base, vec2 cell){
+  vec3 q00 = surfacePos(base);
+  vec3 q10 = surfacePos(base + vec2(cell.x, 0.0));
+  vec3 q01 = surfacePos(base + vec2(0.0, cell.y));
+  vec3 q11 = surfacePos(base + cell);
+  return max(max(length(q10-q00), length(q01-q00)),
+             max(length(q11-q01), length(q11-q10)));
+}
+`;
+
+// Point-cloud vertex shader: shared library + a main that places one gl_Point
+// per sampled vertex.
+export const vertexShader = vsCommon + `
+// Adaptive Sheet mode draws the point cloud and the sheet together; uCellSize +
+// uDensity let the points fade out exactly where the sheet's fill takes over, so
+// the two are complementary (points only show where the surface is stretched).
+uniform int   uAdaptive;
+uniform float uDensity;
+uniform vec2  uCellSize;
+varying float vPointKeep;
 // Jitter has two modes (uJitterMode). 0 = Scatter the sampling: perturb the
 // domain point z by the 4D seed's xy, then evaluate f there, so the particle
 // stays exactly on the graph surface of f. 1 = Fuzz the cloud: evaluate f at the
 // clean z, then add the full independent 4D offset to (x, y, Re f, Im f), pushing
-// the point off the surface on all four axes. Colour uses the effective z/f, so
+// the point off the surface on all four axes. Color uses the effective z/f, so
 // it stays consistent in both modes.
-void main(){vec2 z = vec2(position.x, position.z);vec4 jit = (seed*2. - 1.) * jitterAmp;if(uJitterMode==0) z += jit.xy;vec2 f = applyComplex(z, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec2 zPlot = chartCoord(z, uInCoord);vec2 fPlot = chartCoord(f, uOutCoord);vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);if(uJitterMode==1) p4 += jit;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColour(z,f);}`;
+void main(){vec2 z = vec2(position.x, position.z);vec4 jit = (seed*2. - 1.) * jitterAmp;if(uJitterMode==0) z += jit.xy;vPointKeep = (uAdaptive==1) ? smoothstep(uDensity, uDensity*2.0, cellStretch(z - 0.5*uCellSize, uCellSize)) : 1.0;vec2 zc = domainWarp(z);vec2 f = applyComplex(zc, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec2 zPlot = chartCoord(zc, uInCoord);vec2 fPlot = chartCoord(f, uOutCoord);vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);if(uJitterMode==1) p4 += jit;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColor(zc,f);}`;
 
 export const fragmentShader = `
 uniform float opacity;
@@ -291,9 +383,10 @@ uniform int   shapeType;
 uniform sampler2D tex;
 uniform int textureIndex;
 varying vec3 vColor;
+varying float vPointKeep;
 void main(){
   vec2 d = gl_PointCoord - vec2(0.5);
-  float alpha = opacity;
+  float alpha = opacity * vPointKeep;
   vec3 col = vColor;
 
   if(shapeType==0){
@@ -320,4 +413,224 @@ void main(){
     alpha *= samp.a;
   }
   gl_FragColor = vec4(col, alpha);
+}`;
+
+// Sheet WIREFRAME vertex shader: the shared surface math, one color per grid
+// node (interpolated along the rectangle edges). Drawn as LineSegments of the
+// row/column edges only — no triangle diagonals. gl_PointSize is omitted.
+export const sheetWireVertexShader = vsCommon + `
+uniform vec4 uDomainBox;   // xMin, xMax, yMin, yMax
+uniform vec2 uCellSize;    // domain units per cell (for the adaptive metric)
+varying vec3 vViewPos;
+varying float vFade;
+varying float vStretch;
+void main(){
+  vec2 z = vec2(position.x, position.z);
+  {
+    float ex = min(position.x - uDomainBox.x, uDomainBox.y - position.x) / max(uDomainBox.y - uDomainBox.x, 1e-4);
+    float ey = min(position.z - uDomainBox.z, uDomainBox.w - position.z) / max(uDomainBox.w - uDomainBox.z, 1e-4);
+    vFade = smoothstep(0.0, 0.16, min(ex, ey));   // 0 at the perimeter → no boundary
+  }
+  vec4 jit = (seed*2. - 1.) * jitterAmp;          // seed is 0 → uniform shift
+  if(uJitterMode==0) z += jit.xy;
+  // Sample a cell centered on this grid node so the wire fades in step with the
+  // fill where the function stretches the grid.
+  vStretch = cellStretch(z - 0.5*uCellSize, uCellSize);
+  vec2 zc = domainWarp(z);
+  vec2 f = applyComplex(zc, functionType);
+  if(length(f) > 1e3) f = normalize(f)*1e3;
+  vec3 pos3 = surfacePos(z);
+  vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
+  vViewPos = mv.xyz;
+  gl_Position = projectionMatrix * mv;
+  vColor = calcColor(zc, f);
+}`;
+
+// Sheet FILL vertex shader: same surface placement, but each rectangle gets a
+// single flat color = the average of the domain-coloring at its four corners
+// (found from the cell's lower-left domain point `cellBase` plus `uCellSize`).
+// The geometry is non-indexed (6 verts per cell) so every vertex of a cell shares
+// that cell's `cellBase`, making the whole rectangle one color.
+export const sheetFillVertexShader = vsCommon + `
+attribute vec2 cellBase;
+uniform vec2 uCellSize;
+uniform vec4 uDomainBox;   // xMin, xMax, yMin, yMax
+varying vec3 vViewPos;
+varying float vFade;
+varying float vStretch;
+vec3 cornerColor(vec2 zc){
+  zc = domainWarp(zc);
+  vec2 fc = applyComplex(zc, functionType);
+  if(length(fc) > 1e3) fc = normalize(fc)*1e3;
+  return calcColor(zc, fc);
+}
+void main(){
+  vec2 z = vec2(position.x, position.z);
+  {
+    // Fade by the cell center's distance to the domain edge so the whole
+    // rectangle dissolves together (uniform per cell → no torn perimeter).
+    vec2 c = cellBase + 0.5 * uCellSize;
+    float ex = min(c.x - uDomainBox.x, uDomainBox.y - c.x) / max(uDomainBox.y - uDomainBox.x, 1e-4);
+    float ey = min(c.y - uDomainBox.z, uDomainBox.w - c.y) / max(uDomainBox.w - uDomainBox.z, 1e-4);
+    vFade = smoothstep(0.0, 0.16, min(ex, ey));   // 0 at the perimeter → no boundary
+  }
+  vec4 jit = (seed*2. - 1.) * jitterAmp;          // seed is 0 → uniform shift
+  if(uJitterMode==0) z += jit.xy;
+  // How far the function has stretched this cell in 3D (per-cell, uniform across
+  // its six verts since they share cellBase) → drives the adaptive fade.
+  vStretch = cellStretch(cellBase, uCellSize);
+  vec3 pos3 = surfacePos(z);
+  vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
+  vViewPos = mv.xyz;
+  gl_Position = projectionMatrix * mv;
+  vec3 c = cornerColor(cellBase)
+         + cornerColor(cellBase + vec2(uCellSize.x, 0.0))
+         + cornerColor(cellBase + vec2(0.0, uCellSize.y))
+         + cornerColor(cellBase + uCellSize);
+  vColor = c * 0.25;
+}`;
+
+// Shared external-light snippet: a single directional light that shades whichever
+// side of the surface faces the camera (so it reads in 3D), plus a cool/dim tint
+// on back faces so "inside" is visibly distinct from "outside". Off when uLight==0.
+const fsLighting = `
+uniform int   uLight;
+uniform float uLightStrength;
+vec3 applyExternalLight(vec3 col, vec3 N, vec3 viewPos, bool front){
+  if(uLight == 0) return col;
+  vec3 L = normalize(vec3(-0.35, 0.55, 0.75));
+  vec3 V = normalize(-viewPos);
+  if(dot(N, V) < 0.0) N = -N;                       // light the side we actually see
+  float ndl = max(dot(N, L), 0.0);
+  float lit = mix(1.0, 0.18 + 0.9*ndl, clamp(uLightStrength, 0.0, 1.0));
+  col *= lit;
+  if(!front) col = mix(col, col*vec3(0.5, 0.62, 0.95), 0.6); // inside: cooler & dimmer
+  return col;
+}
+`;
+
+// Sheet fragment shader: a flat translucent fill (uWire==0), shaded by the
+// facing ratio of the face normal recovered from screen-space derivatives of the
+// view-space position — so the otherwise-flat translucent surface reads as a
+// solid sheet. When uWire==1 the same mesh is drawn as a brighter, more opaque
+// wireframe overlay (no shading), so the grid lines stay legible over the fill.
+export const sheetFragmentShader = fsLighting + `
+uniform float opacity;
+uniform float uShade;
+uniform int   uWire;
+uniform int   uAdaptive;
+uniform float uDensity;
+varying vec3 vColor;
+varying vec3 vViewPos;
+varying float vFade;
+varying float vStretch;
+void main(){
+  vec3 col = vColor;
+  float alpha = opacity;
+  if(uWire==1){
+    alpha = clamp(opacity*1.4 + 0.25, 0.0, 1.0);
+  } else {
+    vec3 n = normalize(cross(dFdx(vViewPos), dFdy(vViewPos)));
+    float facing = abs(n.z);                       // 1 face-on, 0 edge-on
+    float shade = mix(1.0, 0.45 + 0.55*facing, clamp(uShade, 0.0, 1.0));
+    col *= shade;
+    col = applyExternalLight(col, n, vViewPos, gl_FrontFacing);
+  }
+  alpha *= vFade;                                  // dissolve at the domain edge → no boundary
+  if(uAdaptive==1){
+    // Keep the sheet where the cell is dense; dissolve it where the function has
+    // stretched the cell past the threshold so the point cloud shows through.
+    alpha *= 1.0 - smoothstep(uDensity, uDensity*2.0, vStretch);
+  }
+  if(alpha < 0.003) discard;
+  gl_FragColor = vec4(col, alpha);
+}`;
+
+// Sheet TILES vertex shader: one oriented quad per grid sample. The node is
+// placed on the surface, then the quad is expanded along the two local deformed
+// grid directions (central differences of surfacePos over one cell) so the tile
+// is a square stretched + sheared to fit the grid. Each edge vector is clamped to
+// uMaxTile world units: below it neighboring tiles meet edge-to-edge (a solid
+// fabric), past it they detach into a field of separated squares (the points).
+export const tileVertexShader = vsCommon + `
+attribute vec2 corner;       // ±0.5 quad corner
+uniform vec2  uCellSize;     // domain units per cell (the sample spacing)
+uniform float uMaxTile;      // max world-space half-... edge length per tile
+varying float vFacing;       // |view-space normal . z| for depth shading
+varying vec3  vNormalView;   // signed view-space normal (for external lighting)
+varying vec3  vViewPos;      // view-space position (for external lighting)
+void main(){
+  vec2 z = vec2(position.x, position.z);
+  vec3 c0 = surfacePos(z);
+  // Local deformed grid directions (one cell wide), via central differences.
+  vec3 du = 0.5 * (surfacePos(z + vec2(uCellSize.x, 0.0)) - surfacePos(z - vec2(uCellSize.x, 0.0)));
+  vec3 dv = 0.5 * (surfacePos(z + vec2(0.0, uCellSize.y)) - surfacePos(z - vec2(0.0, uCellSize.y)));
+  float lu = max(length(du), 1e-6);
+  float lv = max(length(dv), 1e-6);
+  vec3 duC = du * min(1.0, uMaxTile / lu);   // clamp edge length → tiles cap, then detach
+  vec3 dvC = dv * min(1.0, uMaxTile / lv);
+  vec3 pos3 = c0 + corner.x * duC + corner.y * dvC;
+  vec3 nrm = normalize(cross(du, dv));
+  vNormalView = normalize(normalMatrix * nrm);
+  vFacing = abs(vNormalView.z);
+  vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
+  vViewPos = mv.xyz;
+  gl_Position = projectionMatrix * mv;
+  vec2 zc = domainWarp(z);
+  vec2 f = applyComplex(zc, functionType);
+  if(length(f) > 1e3) f = normalize(f)*1e3;
+  vColor = calcColor(zc, f);                // one flat color per tile (shared node)
+}`;
+
+// Tiles fragment: flat per-tile color with a facing-ratio shade so the faceted
+// fabric reads in 3D, plus the optional external light (with inside/outside tint).
+// Opaque (tiles occlude via the depth buffer).
+export const tileFragmentShader = fsLighting + `
+uniform float opacity;
+uniform float uShade;
+varying vec3  vColor;
+varying float vFacing;
+varying vec3  vNormalView;
+varying vec3  vViewPos;
+void main(){
+  float shade = mix(1.0, 0.45 + 0.55*vFacing, clamp(uShade, 0.0, 1.0));
+  vec3 col = applyExternalLight(vColor * shade, vNormalView, vViewPos, gl_FrontFacing);
+  gl_FragColor = vec4(col, opacity);
+}`;
+
+// Fiber-net vertex shader: places each polar-lattice node on the surface (the
+// shared surfacePos) and colors it by the domain coloring, so the concentric
+// circles and rays show how the function carries the polar fibers of the domain.
+export const netVertexShader = vsCommon + `
+attribute vec2 aOther;       // the segment's other endpoint (domain coords)
+attribute float aSide;       // ±1 ribbon side
+uniform vec2 uResolution;    // drawing-buffer size in px (for screen-space width)
+uniform float uLineWidth;    // ribbon width in px
+void main(){
+  vec2 z = vec2(position.x, position.z);
+  vec4 clipA = projectionMatrix * modelViewMatrix * vec4(surfacePos(z), 1.0);
+  vec4 clipB = projectionMatrix * modelViewMatrix * vec4(surfacePos(aOther), 1.0);
+  // Screen-space direction of the segment, then offset perpendicular by half the
+  // width (in px → NDC) so the ribbon keeps a constant pixel thickness.
+  vec2 ndcA = clipA.xy / clipA.w;
+  vec2 ndcB = clipB.xy / clipB.w;
+  vec2 dirPx = (ndcB - ndcA) * uResolution;
+  vec2 dir = (length(dirPx) > 1e-6) ? normalize(dirPx) : vec2(1.0, 0.0);
+  vec2 nrm = vec2(-dir.y, dir.x);
+  vec2 offsetNdc = nrm * aSide * (uLineWidth * 0.5) / (0.5 * uResolution);
+  clipA.xy += offsetNdc * clipA.w;
+  gl_Position = clipA;
+  vec2 zc = domainWarp(z);
+  vec2 f = applyComplex(zc, functionType);
+  if(length(f) > 1e3) f = normalize(f)*1e3;
+  vColor = calcColor(zc, f);
+}`;
+
+// Fiber-net fragment: the line color, a touch brighter/opaquer so the threads
+// stay legible over the dark background.
+export const netFragmentShader = `
+uniform float opacity;
+varying vec3 vColor;
+void main(){
+  gl_FragColor = vec4(vColor, clamp(opacity*1.3 + 0.2, 0.0, 1.0));
 }`;

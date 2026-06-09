@@ -109,7 +109,7 @@ Deploy wired in `deploy.yml` (publishes to `/animath/sessions/`, noindex).
 
 ## Self-reflection
 
-- **Confidence**: high on what's built (build passes; behaviours screenshot-verified). The
+- **Confidence**: high on what's built (build passes; behaviors screenshot-verified). The
   instability finding is from a faithful port of the engine into a throwaway sim (`/tmp`),
   3,000 instances — solid, though not committed.
 - **What I'd change**: the engine kept `market`/`extremal` that the UI no longer uses —

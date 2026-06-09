@@ -614,8 +614,8 @@ export default function StableMatching() {
   const legend = (
     <p className="sm2-legend">
       {cellView === 'both' && <><span className="k sq">square = A→B rank</span><span className="k disc">circle = B→A rank</span></>}
-      {cellView === 'a' && <span className="k sq">colour = A's rank of B</span>}
-      {cellView === 'b' && <span className="k sq">colour = B's rank of A</span>}
+      {cellView === 'a' && <span className="k sq">color = A's rank of B</span>}
+      {cellView === 'b' && <span className="k sq">color = B's rank of A</span>}
       {cellView === 'diff'
         ? <span className="k scale diverge">blue = A keener · red = B keener</span>
         : <span className="k scale">blue #1 → red last</span>}

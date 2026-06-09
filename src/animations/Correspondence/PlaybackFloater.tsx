@@ -11,7 +11,7 @@ export interface PlaybackFloaterProps {
   progress: number;
   /** Called as the user drags the side scrubber (normalized 0..1). */
   onScrub: (t01: number) => void;
-  /** Greys out the scrubber when there's nothing to scrub. */
+  /** Grays out the scrubber when there's nothing to scrub. */
   scrubDisabled?: boolean;
   children: React.ReactNode;
 }

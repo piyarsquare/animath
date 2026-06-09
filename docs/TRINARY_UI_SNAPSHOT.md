@@ -180,10 +180,10 @@ Intro panel + two columns: **controls** (left), **map + legend** (right).
 **Controls column:**
 - **Plane** — *Start position / Radius × speed / Angle × speed* (which 2D slice the axes show).
 - **Lens** — *Exact (1 world/px)* / *Statistical* (mini-census per pixel).
-- **Colour by** *(Exact)* — *Fate* / *Chaos (λ)*. — OR — **Show** *(Statistical)* — *Happy % / Habitable / Destroyed % / Survived %* + **Worlds / pixel**.
-- **Colour range** *(chaos or statistical)* — *Auto-fit* (stretch palette to data, re-fit each render/zoom) / *Absolute*.
+- **Color by** *(Exact)* — *Fate* / *Chaos (λ)*. — OR — **Show** *(Statistical)* — *Happy % / Habitable / Destroyed % / Survived %* + **Worlds / pixel**.
+- **Color range** *(chaos or statistical)* — *Auto-fit* (stretch palette to data, re-fit each render/zoom) / *Absolute*.
 - *(Start-position + Exact)* **Launch from each point** — *Tangential / At rest*; if tangential, **Speed × circular**.
-- *(Start-position, any lens)* **Reference frame** — *Barycentre / Star A / Star B / Star C* (co-moving star frame; each pixel = offset from that star).
+- *(Start-position, any lens)* **Reference frame** — *Barycenter / Star A / Star B / Star C* (co-moving star frame; each pixel = offset from that star).
 - *(Radius×speed, Exact)* **Fixed angle (°)**; *(Angle×speed, Exact)* **Fixed radius**; *(non-position, Exact)* **Direction** Prograde/Retrograde.
 - *(Start-position)* **Star paths** — Show/Hide (overlays star trajectories; in a star frame that star pins at the origin with a ⌖ crosshair).
 - **Resolution** — Exact 96²–256², Statistical 48²–128².
@@ -191,7 +191,7 @@ Intro panel + two columns: **controls** (left), **map + legend** (right).
 - **Engine** — *GPU (exp) / Workers ×N / CPU* (notes: GPU can't do λ; GPU is 32-bit, may differ slightly).
 - **Buttons**: **▦ Render map** (→ **❚❚ Stop** while busy), **⤢ Reset zoom**, *(Radius×speed)* **∑ Census this box**.
 - *(Exact)* **Dimension readout** — small box-counting plot + **D** (boundary dimension), **α** (uncertainty exponent), boundary %.
-- **Legend** — fate swatches, or chaos/stat color ramp with live numeric range; caption (and, in a non-barycentre frame, a note).
+- **Legend** — fate swatches, or chaos/stat color ramp with live numeric range; caption (and, in a non-barycenter frame, a note).
 
 **The map (right):**
 - Square canvas; renders **progressively** (coarse → fine, sharpening in place).
@@ -226,7 +226,7 @@ Intro panel + two columns: **controls** (left), **map + legend** (right).
    selector + sampling). Hard to know which surface owns a given control.
 2. **Reference frame exists twice, different scope and UI.** Observatory has a rich
    *view-only* frame (center + align, presets) in Settings; the Destiny Map has a
-   *physical* co-moving star-frame (Barycentre/Star A–C) in its own controls. Same
+   *physical* co-moving star-frame (Barycenter/Star A–C) in its own controls. Same
    word, different meaning and location.
 3. **Duplicated system controls.** "Orbit around"/target body, star masses,
    softening, and the habitable band all appear in both Observatory and Lab with

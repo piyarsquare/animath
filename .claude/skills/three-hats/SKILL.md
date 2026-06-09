@@ -130,7 +130,7 @@ Launch three agents **in parallel** using the Agent tool (subagent_type:
 > - **Semantic hygiene:** Are things named the way mathematicians think (domain vs
 >   range, modulus/argument, the four axes x/y/u/v)?
 > - **Accessibility of the idea:** Will a motivated learner reach the "aha," or does
->   it assume too much? Are colour choices (phase→hue) legible, including for CVD?
+>   it assume too much? Are color choices (phase→hue) legible, including for CVD?
 >
 > You are skeptical of eye-candy that misleads about the mathematics, and you push
 > back when convenience or spectacle comes at the cost of correctness or honest

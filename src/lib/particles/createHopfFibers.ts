@@ -22,7 +22,7 @@ export interface HopfFibers {
 }
 
 /** Build the fiber overlay: `longitudes` fibers per latitude, each a closed
- *  Villarceau-style circle, coloured by base point (hue ← longitude, lightness
+ *  Villarceau-style circle, colored by base point (hue ← longitude, lightness
  *  ← latitude). */
 export function createHopfFibers(scene: THREE.Scene, longitudes = 12): HopfFibers {
   const group = new THREE.Group();

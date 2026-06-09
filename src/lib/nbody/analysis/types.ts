@@ -1,6 +1,6 @@
 /**
  * Types for the Trinary "lab" analysis layer. The classifier turns a planet's
- * trajectory through the three-star field into a stream of labelled states, on
+ * trajectory through the three-star field into a stream of labeled states, on
  * two independent axes:
  *
  *   A — Climate:  is the planet's total starlight in a liquid-water band?

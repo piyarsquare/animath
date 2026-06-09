@@ -6,11 +6,12 @@ fair solutions and repairs that live inside it.
 ## Reading the matrix
 
 Rows are group **A**, columns group **B**. Each cell is the potential pair
-(A_i, B_j), encoded as **two nested heatmaps** sharing one diverging colour scale
+(A_i, B_j), encoded as **two nested heatmaps** sharing one diverging color scale
 (**BuRd**: **blue = #1 choice → white → red = last**): the **square** is how A_i
 ranks B_j, the **circle inside** is how B_j ranks A_i. Shape — square vs circle —
-tells the two sides apart, not colour. (Exact ranks show as numbers at small
-populations and on hover; with many people the heat carries it.)
+tells the two sides apart, not colour. So a row is A_i's preferences as a colour
+gradient, a column is B_j's. (Exact ranks show as numbers at small populations and on
+hover; with many people the heat carries it.)
 
 As the algorithm runs, **green cells are the current tentative matches**; the
 **gold ring** is a proposal; a **purple flash** is a rejection or a partner being

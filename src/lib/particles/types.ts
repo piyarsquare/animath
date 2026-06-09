@@ -13,16 +13,16 @@ export enum ColorStyle {
   DualHueCVD = 3
 }
 
-export enum ColourBy {
+export enum ColorBy {
   Domain = 0,
   Range = 1
 }
 
-/** Which scalar quantity of the chosen source (z or f) drives the colour wheel.
- *  Phase is the classic domain-colouring choice (hue = arg); the others "spend"
- *  hue on a different quantity (e.g. Modulus → colour by |z| / |f|). Brightness
+/** Which scalar quantity of the chosen source (z or f) drives the color wheel.
+ *  Phase is the classic domain-coloring choice (hue = arg); the others "spend"
+ *  hue on a different quantity (e.g. Modulus → color by |z| / |f|). Brightness
  *  always tracks magnitude for legibility. */
-export enum ColourQuantity {
+export enum ColorQuantity {
   Phase = 0,
   Modulus = 1,
   Real = 2,
@@ -34,7 +34,7 @@ export enum ColourQuantity {
 /** How the input (z) and output (f) planes are charted before being assembled
  *  into the 4-vector: Cartesian (Re, Im), Polar (|·|, arg), or Log-polar
  *  (log|·|, arg). In log-polar output, exp becomes the identity; in log-polar on
- *  both, zⁿ / roots flatten into linear shears. Colour still uses Cartesian z/f. */
+ *  both, zⁿ / roots flatten into linear shears. Color still uses Cartesian z/f. */
 export enum CoordMode {
   Cartesian = 0,
   Polar = 1,
@@ -43,8 +43,17 @@ export enum CoordMode {
 
 export const coordModeNames = ['Cartesian', 'Polar', 'Log-polar'] as const;
 
+/** Color palette applied to the chosen quantity. 'Phase wheel' (index 0) keeps
+ *  the cyclic HSV domain-coloring (driven by the Hue/Style controls); the rest
+ *  are sequential ramps mapped to **magnitude** — the perceptual matplotlib maps
+ *  (Viridis…Plasma) and a few extras, suitable for reading |z| / |f| as height. */
+export const colormapNames = [
+  'Phase wheel', 'Grayscale', 'Viridis', 'Magma', 'Inferno', 'Plasma', 'Fire', 'Ocean',
+  'Turbo', 'Cubehelix', 'Hot', 'Copper', 'Cool', 'Cool–warm',
+] as const;
+
 /** How the domain points are laid out before f is applied. Radial patterns
- *  sample a disk (radius = max half-extent, centred on the domain box); Grid /
+ *  sample a disk (radius = max half-extent, centered on the domain box); Grid /
  *  Squares / Random use the rectangular box. Polar spreads points evenly in
  *  arg z, which keeps near-linear maps (f ≈ b·z) crisp in the Hopf/Torus view. */
 export enum SamplePattern {
@@ -86,6 +95,15 @@ export const viewTypes = [
 
 export const motionModes = ['Quaternion', 'Fixed'] as const;
 export const dropModes = ['None', 'DropX', 'DropY', 'DropU', 'DropV'] as const;
+
+/** How the sampled surface is drawn: a cloud of point particles, a single
+ *  continuous translucent sheet (a wireframe/filled triangle mesh over a regular
+ *  grid), or Tiles — one oriented quad per grid sample, stretched along the local
+ *  deformation and capped at a maximum size, so dense regions form a solid fabric
+ *  and stretched regions tear apart into a field of separated tiles (points).
+ *  Sheet/Tiles ignore the sampling pattern and use their own resolution. */
+export const renderModes = ['Points', 'Sheet', 'Tiles', 'Net'] as const;
+export type RenderMode = (typeof renderModes)[number];
 
 export const AXIS_COLORS = {
   x: 0,

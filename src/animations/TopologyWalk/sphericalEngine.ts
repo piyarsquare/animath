@@ -40,11 +40,11 @@ interface Beacon { dir: THREE.Vector3; color: number; label: string }
 
 // Landmarks scattered (deliberately *not* antipodally symmetric on their own, so
 // the plain sphere looks different front-to-back; ℝP² adds the antipodal twins).
-// Each carries a distinct colour and a numbered label so individual landmarks are
-// easy to name and re-recognise after a lap — and so the mini-map can colour-code
+// Each carries a distinct color and a numbered label so individual landmarks are
+// easy to name and re-recognize after a lap — and so the mini-map can color-code
 // them to match.
 const BEACONS: Beacon[] = [
-  // Offset from the north pole so it sits a few metres to the *side* of the
+  // Offset from the north pole so it sits a few meters to the *side* of the
   // spawn point (player starts at up = +Y) instead of swallowing the camera.
   { dir: new THREE.Vector3(0.22, 1, -0.18).normalize(), color: 0xff5a5a, label: '1' },
   { dir: new THREE.Vector3(1, 0.2, 0.1).normalize(), color: 0x5ad1ff, label: '2' },
@@ -105,7 +105,7 @@ function makeBeacon(b: Beacon, geos: THREE.BufferGeometry[], mats: THREE.Materia
  * Lat/long grid over a checkered land, bright enough to read clearly against the
  * near-black sky and dense enough that motion + rotation are legible. The checker
  * gives surface texture (so you can tell you're moving even between grid lines);
- * the emphasised equator + prime meridian give an absolute frame of reference.
+ * the emphasized equator + prime meridian give an absolute frame of reference.
  */
 const LON = 24;  // longitude cells (meridians)
 const LAT = 16;  // latitude cells (parallels)
@@ -141,7 +141,7 @@ function planetTexture(): THREE.CanvasTexture {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(s, y); ctx.stroke();
   }
 
-  // emphasised equator (mid latitude row) + prime meridian (left edge)
+  // emphasized equator (mid latitude row) + prime meridian (left edge)
   ctx.strokeStyle = '#e6f2fb'; ctx.lineWidth = 5;
   ctx.beginPath(); ctx.moveTo(0, s / 2); ctx.lineTo(s, s / 2); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(2, s); ctx.stroke();
@@ -259,7 +259,7 @@ export function makeSphericalEngine(deps: EngineDeps, opts: EngineOptions): Worl
   footMain.frustumCulled = false;
   root.add(footMain);
 
-  // ℝP² identification: an antipodal copy (point reflection through the centre,
+  // ℝP² identification: an antipodal copy (point reflection through the center,
   // which on S² is orientation-reversing → the twin trail reads mirrored) holding
   // the landmark twins and the trail's far-side image. Shown only for ℝP².
   const antipode = new THREE.Group();

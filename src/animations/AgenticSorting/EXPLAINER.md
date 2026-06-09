@@ -10,7 +10,7 @@ Each slot in the array holds an **agent**. On every cycle a random subset
 view, yet the array still marches toward sorted order. That's *emergence*: a
 global property (sortedness) arising from purely local actions.
 
-## The strategies — and their classic analogues
+## The strategies — and their classic analogs
 
 | Agent | Local rule | Classic sort it echoes |
 |---|---|---|

@@ -54,7 +54,7 @@ The side that *proposes* does systematically better. Gale–Shapley produces the
 > [!CAUTION]
 > **Gotcha** To actually *demonstrate* the theorem, a learner must set `bias = 100` (or `0`), at which point the process collapses to one-sided GS and "Asker = the proposing side." Nothing in the UI or text tells them this. The default (50) actively hides the phenomenon the app exists to teach.
 
-### 1e. The Lab is statistically dishonest as labelled
+### 1e. The Lab is statistically dishonest as labeled
 
 Each heatmap cell is the result of **exactly one** simulation run. In `runLabSimulation` (`:828–844`) each (corrM, corrW) cell calls `runHeadlessSimulation(labN, labBias, corrM, corrW)` a single time and stores `menAvg`, `womenAvg`, etc.
 
@@ -63,7 +63,7 @@ const metrics = runHeadlessSimulation(labN, labBias, corrM, corrW); results.push
 > [!WARNING]
 > **Honesty gap** A heatmap with no replication presents single-draw noise as if it were a measured surface. For a "Lab," this is the most serious math-honesty issue after the optimality mislabel. Minimum fix: average each cell over *T* trials (expose *T* as a control) and ideally show the spread. Even *T* = 10–20 would turn the heatmaps from impressionistic to honest.
 
-### 1f. The "Consensus" generative model — reasonable, slightly mislabelled
+### 1f. The "Consensus" generative model — reasonable, slightly mislabeled
 
 `generatePreferences` (`:69–97`) gives each candidate a hidden `quality ∈ [0,1)` and scores them as `corr · quality + (1 − corr) · noise`, then sorts. At `corr = 0` preferences are i.i.d. uniform-random; at `corr = 1` everyone shares the same ranking (the quality order). This is a clean, standard "common-value vs private-value" interpolation and I endorse it. Two caveats:
 
@@ -94,7 +94,7 @@ As noted in §1d, `bias = 50` is the default. The most illuminating *first* expe
 
 ### 2d. Lab labels invite a causal misread
 
-The four heatmaps (`:1135–1178`) are titled "Men Avg Rank," "Women Avg Rank," "Men Avg − Women Avg," "Asker Avg − Asked Avg." With a fixed `labBias` default of **100** (`:545`) the Lab *does* run one-sided GS (good, and inconsistent with the visualizer default of 50 — they should agree on what story they tell). But because each cell is one trial (§1e), a learner sweeping consensus will see a noisy field and may "discover" structure that is sampling artifact. The diverging blue↔pink scale (`:374–384`) is a genuinely nice idea for showing which side wins, but it amplifies noise near zero into visible colour.
+The four heatmaps (`:1135–1178`) are titled "Men Avg Rank," "Women Avg Rank," "Men Avg − Women Avg," "Asker Avg − Asked Avg." With a fixed `labBias` default of **100** (`:545`) the Lab *does* run one-sided GS (good, and inconsistent with the visualizer default of 50 — they should agree on what story they tell). But because each cell is one trial (§1e), a learner sweeping consensus will see a noisy field and may "discover" structure that is sampling artifact. The diverging blue↔pink scale (`:374–384`) is a genuinely nice idea for showing which side wins, but it amplifies noise near zero into visible color.
 
 ## 3. Honest framing of EXPLAINER / README
 
@@ -119,9 +119,9 @@ Against the house standard, the EXPLAINER's *prose* is good — it's the right l
 
 ## 5. Accessibility of the idea & visual legibility
 
-- **Colour-vision deficiency.** The semantic palette is blue (men) / pink (women) / green (matched) / amber (active) / purple (target) (`stableMarriage.css:14–20`). Blue vs pink is fine for most CVD types; **green-vs-amber** (matched vs active) is risky for deuteranopia/protanopia, and the rank badges lean on green/blue/amber (`:331–347`) carrying ordinal meaning by hue alone. The "Rank: #k" text label mitigates this (redundant encoding) — good. But the heatmap legend `hsl(120 → 0)` green-to-red (`:673`) is the classic CVD-hostile ramp; and the diverging blue↔pink with a near-white centre (`:677`) makes "no difference" hard to distinguish from light cells. Consider a perceptually-uniform / CVD-safe ramp (viridis-like for sequential; blue–white–orange for diverging).
+- **Color-vision deficiency.** The semantic palette is blue (men) / pink (women) / green (matched) / amber (active) / purple (target) (`stableMarriage.css:14–20`). Blue vs pink is fine for most CVD types; **green-vs-amber** (matched vs active) is risky for deuteranopia/protanopia, and the rank badges lean on green/blue/amber (`:331–347`) carrying ordinal meaning by hue alone. The "Rank: #k" text label mitigates this (redundant encoding) — good. But the heatmap legend `hsl(120 → 0)` green-to-red (`:673`) is the classic CVD-hostile ramp; and the diverging blue↔pink with a near-white center (`:677`) makes "no difference" hard to distinguish from light cells. Consider a perceptually-uniform / CVD-safe ramp (viridis-like for sequential; blue–white–orange for diverging).
 - **Motion.** The scale/glow transitions (`:271`, `:289–296`) are tasteful and aid attention (they mark *which* pair is acting). No `prefers-reduced-motion` handling, but the motion is functional, not decorative, so this is low priority.
-- **Rank badge hidden for n > 30** (`:318`, `:335`) — a reasonable density decision, but it means at the default-ish larger populations the only per-person quantitative feedback vanishes, leaving just colour. Combined with §2b (no visible preference lists), large-n runs are essentially "watch dots turn green."
+- **Rank badge hidden for n > 30** (`:318`, `:335`) — a reasonable density decision, but it means at the default-ish larger populations the only per-person quantitative feedback vanishes, leaving just color. Combined with §2b (no visible preference lists), large-n runs are essentially "watch dots turn green."
 - **The "aha" reachability.** A motivated learner *can* reach stability understanding via the Stability tab (correct, honest). They are *unlikely* to reach the proposer-optimality "aha" without already knowing to set bias to 100 and to read "Asker" as "the men" — i.e., they need the insight before the tool gives it to them. That inverts the pedagogical goal.
 
 ## 6. Styling gaps vs other labs (pedagogical impact only)
@@ -153,5 +153,5 @@ None of these require abandoning the (genuinely interesting) two-sided market �
 3. **What were you not asked that you think is important?** Whether the *two-sided market* framing is itself a legitimate teaching goal (it is — it's close to models of decentralized matching). The app might be more honest re-pitched as "a matching market with a proposer-bias knob" rather than as a Gale–Shapley demonstrator.
 4. **What did we both overlook?** Performance/UX of `verifyStability` at n=100 (O(n³)) and the fact that stability is only ever checked at the very end — there's a missed chance to teach stability as a live invariant, not a post-hoc audit.
 5. **What did you find difficult?** Separating "the code has a bug" from "the code faithfully implements a *different* model than the text claims." The latter is the real issue and is easy to mistake for the former.
-6. **What would have made this task easier?** Being able to run the dev server to watch the default behaviour at bias=50 and confirm the Asker/Asked gap a learner would actually see; I reviewed statically.
+6. **What would have made this task easier?** Being able to run the dev server to watch the default behavior at bias=50 and confirm the Asker/Asked gap a learner would actually see; I reviewed statically.
 7. **Follow-up value:** MEDIUM — conclusions are sound on static reading, but an empirical confirmation of the stable-but-not-optimal claim and a measured look at Lab cell variance would harden the two HIGH-priority recommendations.

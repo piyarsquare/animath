@@ -101,7 +101,7 @@ Lab's `EXPERIMENTS` array is a *second*, parallel scenario concept layered on to
   block from a presentation block. Keep `buildStars`, `orbitFrame`, `launchPlanet`
   as the composition helpers (already pure).
 - Keep the existing four presets (Figure-Eight, Moth, Pythagorean, Binary+Star)
-  as data; the refactor is structural and **behaviour-preserving** — identical
+  as data; the refactor is structural and **behavior-preserving** — identical
   initial conditions and dt values, just reorganized fields.
 - Have the Lab's `EXPERIMENTS` reference scenarios by id rather than re-encoding
   defaults, so Observatory and Lab draw from one scenario registry.
@@ -180,7 +180,7 @@ component and `Observatory.tsx` to honor `viewMode`, and `EXPLAINER.md`.
 - `npm run build` — the only CI gate (`tsc && vite build`); must pass after every
   phase since there are no tests/linter.
 - `npm run dev` → `http://localhost:5173/animath/#/trinary`:
-  - **Phase 1/2:** all four scenarios launch with identical behaviour; ghost
+  - **Phase 1/2:** all four scenarios launch with identical behavior; ghost
     cloud diverges; Lab basin map + census still run (workers + GPU paths).
   - **Phase 3:** single catalog entry; Observatory⇄Lab tab switch works; legacy
     `#/trinary-lab` and shared deep-links (hash-query world / basin click-through)
