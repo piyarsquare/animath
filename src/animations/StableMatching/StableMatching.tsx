@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  Activity, AlertTriangle, FastForward, FlaskConical, Layers, Network, Pause, Play,
+  Activity, AlertTriangle, Check, Copy, Download, FastForward, FlaskConical, Layers, Network, Pause, Play,
   RotateCcw, Shuffle, SkipForward, ShieldCheck,
 } from 'lucide-react';
 import './stableMatching.css';
@@ -38,6 +38,8 @@ const NS = 'stable-matching';
  *    pairs (if any, at the end) flag red. This is the algorithm, foregrounded. ── */
 const TRAIL = 6; // how many recent rounds of failed entries to keep in the fading trail
 const MAX_CELL = 72; // matrix cell px ceiling (so a tiny grid doesn't blow up); the floor is just "visible"
+const LAB_RES_MAX = 30;  // Lab grid resolution ceiling (cells per axis)
+const ENUM_CAP = 300;    // stable-matching enumeration cap for the "# stable" surface
 const EMPTY_MARKERS = new Map<string, 'active' | 'reject' | 'stolen'>();
 const EMPTY_TRAIL = new Map<string, number>();
 
@@ -116,31 +118,78 @@ function PrefList({ inst, side, id, partner, mark }: {
   );
 }
 
-type Cell = { x: number; y: number; v: number; a?: number; b?: number };
-function Heatmap({ data, res, maxV, hue, title, caption, mode, maxRank }: {
+// one swept cell: true consensus (ca,cb), draw position (x,y), the mean(s) and
+// sample standard deviation(s) over `n` independent trials.
+type Cell = { x: number; y: number; ca: number; cb: number; v: number; sd: number; n: number; a?: number; b?: number; aSd?: number; bSd?: number };
+// mean + sample standard deviation from a running sum / sum-of-squares
+function meanSd(sum: number, sumSq: number, n: number): { mean: number; sd: number } {
+  const mean = sum / n;
+  const varr = n > 1 ? Math.max(0, (sumSq - (sum * sum) / n) / (n - 1)) : 0;
+  return { mean, sd: Math.sqrt(varr) };
+}
+// 95% confidence half-width for a cell mean (normal approx): 1.96·SD/√n
+const ci95 = (sd: number, n: number) => (n > 1 ? 1.96 * sd / Math.sqrt(n) : 0);
+function Heatmap({ data, res, maxV, hue, title, caption, mode, maxRank, stat }: {
   data: Cell[] | null; res: number; maxV: number; hue: number; title: string; caption: string;
-  mode: 'single' | 'lego'; maxRank: number;
+  mode: 'single' | 'lego'; maxRank: number; stat: 'mean' | 'sd';
 }) {
   const [hover, setHover] = useState<Cell | null>(null);
   if (!data || !data.length) return <div className="sm2-heatmap-empty"><FlaskConical size={28} /><p>Run the Lab to see the surface</p></div>;
   const cs = 100 / res;
   const single = (v: number) => `hsl(${hue}, 70%, ${92 - Math.max(0, Math.min(1, v / (maxV || 1))) * 57}%)`;
+  const shownVal = (c: Cell) => stat === 'sd' ? c.sd : c.v;   // single-metric surface: mean or std-dev
   return (
     <div className="sm2-heatmap">
-      <h4>{title}</h4>
+      <h4>{title}{stat === 'sd' && mode === 'single' ? ' — std dev' : ''}</h4>
       <div className="sm2-heatmap-grid" onMouseLeave={() => setHover(null)}>
         {data.map((c, i) => (
-          <div key={i} className="sm2-cell" style={{ left: `${c.x * 100}%`, bottom: `${c.y * 100}%`, width: `${cs}%`, height: `${cs}%`, background: mode === 'lego' ? rankBurd(c.a ?? 0, maxRank) : single(c.v) }} onMouseEnter={() => setHover(c)}>
+          <div key={i} className="sm2-cell" style={{ left: `${c.x * 100}%`, bottom: `${c.y * 100}%`, width: `${cs}%`, height: `${cs}%`, background: mode === 'lego' ? rankBurd(c.a ?? 0, maxRank) : single(shownVal(c)) }} onMouseEnter={() => setHover(c)}>
             {mode === 'lego' && <span className="sm2-disc" style={{ background: rankBurd(c.b ?? 0, maxRank) }} />}
           </div>
         ))}
-        {hover && <div className="sm2-tip">consensus A {(hover.x * 100).toFixed(0)}% · B {(hover.y * 100).toFixed(0)}%<br />
-          {mode === 'lego' ? `A avg #${(hover.a ?? 0).toFixed(2)} · B avg #${(hover.b ?? 0).toFixed(2)}` : <>{caption}: <strong>{hover.v.toFixed(2)}</strong></>}</div>}
+        {hover && <div className="sm2-tip">consensus A {(hover.ca * 100).toFixed(0)}% · B {(hover.cb * 100).toFixed(0)}% · n={hover.n}<br />
+          {mode === 'lego'
+            ? <>A #{(hover.a ?? 0).toFixed(2)} <span className="dim">± {(hover.aSd ?? 0).toFixed(2)}</span> · B #{(hover.b ?? 0).toFixed(2)} <span className="dim">± {(hover.bSd ?? 0).toFixed(2)}</span></>
+            : <>{caption}: <strong>{hover.v.toFixed(2)}</strong> <span className="dim">± {hover.sd.toFixed(2)} SD · 95% CI ±{ci95(hover.sd, hover.n).toFixed(2)}</span></>}</div>}
       </div>
       <div className="sm2-heatmap-x">consensus A →</div>
       {mode === 'lego'
         ? <p className="sm2-legend"><span className="k sq">square = A avg rank</span><span className="k disc">circle = B avg rank</span><span className="k scale">blue #1 → red #{maxRank}</span></p>
-        : <div className="sm2-heatmap-legend"><span>0</span><span className="bar" style={{ background: `linear-gradient(90deg, hsl(${hue},70%,92%), hsl(${hue},70%,35%))` }} /><span>{maxV.toFixed(1)}</span></div>}
+        : <div className="sm2-heatmap-legend"><span>0</span><span className="bar" style={{ background: `linear-gradient(90deg, hsl(${hue},70%,92%), hsl(${hue},70%,35%))` }} /><span>{maxV.toFixed(1)}</span><span className="cap">{stat === 'sd' ? 'std dev' : caption}</span></div>}
+    </div>
+  );
+}
+
+// communicable summary of a completed Lab surface: descriptive stats + CSV export
+type LabStat5 = { mean: number; median: number; min: number; max: number };
+type LabRunMeta = { res: number; trials: number; n: number; seed: number; schedule: Schedule; metric: string };
+type LabSummaryData =
+  | { kind: 'single'; cells: number; run: LabRunMeta; five: LabStat5; noise: number; ci: number; loAt: string; hiAt: string }
+  | { kind: 'lego'; cells: number; run: LabRunMeta; A: LabStat5; B: LabStat5; aNoise: number; bNoise: number };
+function LabSummary({ s, onCopy, onDownload, copied }: { s: LabSummaryData; onCopy: () => void; onDownload: () => void; copied: boolean }) {
+  const { run, cells } = s;
+  const unit = run.metric === 'unstable' ? 'unstable %' : run.metric === 'cost' ? 'repair steps' : run.metric === 'stableCount' ? '# stable' : 'blocking pairs';
+  const total = (cells * run.trials).toLocaleString();
+  return (
+    <div className="sm2-lab-stats">
+      <div className="sm2-stat-head">
+        <h4>Surface summary</h4>
+        <div className="sm2-stat-export">
+          <button className="sm2-btn sm" onClick={onCopy} title="Copy the full grid as CSV">{copied ? <Check size={14} /> : <Copy size={14} />}{copied ? 'Copied' : 'Copy CSV'}</button>
+          <button className="sm2-btn sm" onClick={onDownload} title="Download the full grid as a .csv file"><Download size={14} />Download</button>
+        </div>
+      </div>
+      <p className="sm2-stat-meta">{run.res}×{run.res} = {cells} cells · {run.trials} trial{run.trials === 1 ? '' : 's'}/cell = <strong>{total}</strong> instances · n={run.n} · {run.schedule} schedule · seed {run.seed}</p>
+      {s.kind === 'single'
+        ? <table className="sm2-stat-table"><tbody>
+            <tr><th>{unit}</th><td>mean <strong>{s.five.mean.toFixed(2)}</strong></td><td>median {s.five.median.toFixed(2)}</td><td>range {s.five.min.toFixed(2)} – {s.five.max.toFixed(2)}</td></tr>
+            <tr><th>extremes</th><td colSpan={3}>min at consensus {s.loAt} · max at {s.hiAt}</td></tr>
+            <tr><th>noise</th><td colSpan={3}>typical within-cell SD ±{s.noise.toFixed(2)} → each cell mean is ±{s.ci.toFixed(2)} (95% CI)</td></tr>
+          </tbody></table>
+        : <table className="sm2-stat-table"><tbody>
+            <tr><th>A avg rank</th><td>mean <strong>#{s.A.mean.toFixed(2)}</strong></td><td>median #{s.A.median.toFixed(2)}</td><td>range #{s.A.min.toFixed(2)} – #{s.A.max.toFixed(2)}</td><td>SD ±{s.aNoise.toFixed(2)}</td></tr>
+            <tr><th>B avg rank</th><td>mean <strong>#{s.B.mean.toFixed(2)}</strong></td><td>median #{s.B.median.toFixed(2)}</td><td>range #{s.B.min.toFixed(2)} – #{s.B.max.toFixed(2)}</td><td>SD ±{s.bNoise.toFixed(2)}</td></tr>
+          </tbody></table>}
     </div>
   );
 }
@@ -476,65 +525,125 @@ export default function StableMatching() {
   const [labN, setLabN] = usePersistentState(`${NS}:labN`, 30);
   const [labRes, setLabRes] = usePersistentState(`${NS}:labRes`, 12);
   const [labTrials, setLabTrials] = usePersistentState(`${NS}:labTrials`, 12);
+  const [labSeed, setLabSeed] = usePersistentState(`${NS}:labSeed`, 1);   // re-rollable: changes the whole ensemble draw
   const [labSchedule, setLabSchedule] = usePersistentState<Schedule>(`${NS}:labSchedule`, 'alt');
   const [labMetric, setLabMetric] = usePersistentState<'lego' | 'unstable' | 'blocking' | 'stableCount' | 'cost'>(`${NS}:labMetric`, 'lego');
+  const [labStat, setLabStat] = usePersistentState<'mean' | 'sd'>(`${NS}:labStat`, 'mean');  // surface shows the mean or the dispersion
   const [labData, setLabData] = useState<Cell[] | null>(null);
-  const [labMax, setLabMax] = useState(1);
   const [labRunning, setLabRunning] = useState(false);
   const [labProgress, setLabProgress] = useState(0);
+  // the parameters the *current* labData was actually computed with (so the
+  // summary/export describe the displayed surface, not the live sliders).
+  const [labRun, setLabRun] = useState<{ res: number; trials: number; n: number; seed: number; schedule: Schedule; metric: string } | null>(null);
   const labCancel = useRef(false);
 
   const runLab = useCallback(() => {
     labCancel.current = false; setLabRunning(true); setLabProgress(0); setLabData([]);
-    const res = Math.max(2, Math.min(24, labRes)); const cells = res * res; const out: Cell[] = []; let max = 0, k = 0;
-    const metricOf = (cA: number, cB: number, s: number): { v: number; a?: number; b?: number } => {
+    const res = Math.max(2, Math.min(LAB_RES_MAX, labRes)); const cells = res * res; const out: Cell[] = []; let k = 0;
+    const T = Math.max(1, labTrials);
+    const seedBase = ((labSeed >>> 0) * 1000003) >>> 0;   // distinct, reproducible ensemble per Lab seed
+    setLabRun({ res, trials: T, n: labN, seed: labSeed, schedule: labSchedule, metric: labMetric });
+    // mean(s) + sample SD over T trials at one consensus point
+    const metricOf = (cA: number, cB: number, s: number): Omit<Cell, 'x' | 'y' | 'ca' | 'cb' | 'n'> => {
       if (labMetric === 'lego') {
-        let sa = 0, sb = 0;
-        for (let t = 0; t < labTrials; t++) {
+        let sa = 0, saa = 0, sb = 0, sbb = 0;
+        for (let t = 0; t < T; t++) {
           const ins = generateInstance({ n: labN, consensusA: cA, consensusB: cB, seed: s + t * 7919 + 1 });
           const { matching } = runRounds(ins, labSchedule, 50, s + t * 104729 + 3);
-          const st = stats(ins, matching); sa += st.aAvg; sb += st.bAvg;
+          const st = stats(ins, matching); sa += st.aAvg; saa += st.aAvg * st.aAvg; sb += st.bAvg; sbb += st.bAvg * st.bAvg;
         }
-        return { v: 0, a: sa / labTrials, b: sb / labTrials };
+        const A = meanSd(sa, saa, T), B = meanSd(sb, sbb, T);
+        return { v: 0, sd: 0, a: A.mean, aSd: A.sd, b: B.mean, bSd: B.sd };
       }
-      if (labMetric === 'stableCount') {
-        // count is a property of the instance (schedule-independent): the lattice size
-        let sum = 0;
-        for (let t = 0; t < labTrials; t++) {
-          const ins = generateInstance({ n: labN, consensusA: cA, consensusB: cB, seed: s + t * 7919 + 1 });
-          sum += stablePairs(ins, 300).count;
-        }
-        return { v: sum / labTrials };
-      }
-      if (labMetric === 'cost') {
-        // RVV repair steps from the (often unstable) synchronous result — "cost to stabilize"
-        let sum = 0;
-        for (let t = 0; t < labTrials; t++) {
-          const seedT = s + t * 104729 + 3;
-          const ins = generateInstance({ n: labN, consensusA: cA, consensusB: cB, seed: s + t * 7919 + 1 });
-          const { matching } = runRounds(ins, labSchedule, 50, seedT);
-          sum += rothVandeVate(ins, matching, seedT).steps.length;
-        }
-        return { v: sum / labTrials };
-      }
-      let sum = 0;
-      for (let t = 0; t < labTrials; t++) {
+      // single-value metrics: accumulate sum + sum-of-squares of the per-trial value
+      let sum = 0, sumSq = 0;
+      for (let t = 0; t < T; t++) {
+        const seedT = s + t * 104729 + 3;
         const ins = generateInstance({ n: labN, consensusA: cA, consensusB: cB, seed: s + t * 7919 + 1 });
-        const { matching } = runRounds(ins, labSchedule, 50, s + t * 104729 + 3);
-        sum += labMetric === 'unstable' ? (blockingPairs(ins, matching) > 0 ? 100 : 0) : blockingPairs(ins, matching);
+        let v: number;
+        if (labMetric === 'stableCount') v = stablePairs(ins, ENUM_CAP).count;   // schedule-independent: the lattice size
+        else if (labMetric === 'cost') { const { matching } = runRounds(ins, labSchedule, 50, seedT); v = rothVandeVate(ins, matching, seedT).steps.length; }
+        else { const { matching } = runRounds(ins, labSchedule, 50, seedT); const bp = blockingPairs(ins, matching); v = labMetric === 'unstable' ? (bp > 0 ? 100 : 0) : bp; }
+        sum += v; sumSq += v * v;
       }
-      return { v: sum / labTrials };
+      const { mean, sd } = meanSd(sum, sumSq, T);
+      return { v: mean, sd };
     };
     const batch = () => {
       if (labCancel.current) { setLabRunning(false); return; }
       const end = Math.min(cells, k + 20);
-      for (; k < end; k++) { const xi = k % res, yi = Math.floor(k / res); const m = metricOf(xi / (res - 1), yi / (res - 1), 1000 + k); max = Math.max(max, m.v); out.push({ x: xi / (res - 1) * (1 - 1 / res), y: yi / (res - 1) * (1 - 1 / res), v: m.v, a: m.a, b: m.b }); }
-      setLabProgress(Math.round((k / cells) * 100)); setLabData([...out]); setLabMax(labMetric === 'unstable' ? 100 : max);
+      for (; k < end; k++) {
+        const xi = k % res, yi = Math.floor(k / res);
+        const cA = xi / (res - 1), cB = yi / (res - 1);
+        const m = metricOf(cA, cB, seedBase + k);
+        out.push({ x: cA * (1 - 1 / res), y: cB * (1 - 1 / res), ca: cA, cb: cB, n: T, ...m });
+      }
+      setLabProgress(Math.round((k / cells) * 100)); setLabData([...out]);
       if (k < cells) window.setTimeout(batch, 0); else setLabRunning(false);
     };
     batch();
-  }, [labN, labRes, labTrials, labMetric, labSchedule]);
+  }, [labN, labRes, labTrials, labSeed, labMetric, labSchedule]);
   useEffect(() => () => { labCancel.current = true; }, []);
+
+  // display max for the colour scale — depends on whether we're showing mean or SD
+  const labMax = useMemo(() => {
+    if (!labData || !labData.length) return 1;
+    if (labMetric === 'unstable' && labStat === 'mean') return 100;
+    let m = 0; for (const c of labData) m = Math.max(m, labStat === 'sd' ? c.sd : c.v);
+    return m || 1;
+  }, [labData, labMetric, labStat]);
+
+  // communicable summary of the *completed* surface (means, dispersion, extremes, where)
+  const labSummary = useMemo<LabSummaryData | null>(() => {
+    if (!labData || !labData.length || labRunning || !labRun) return null;
+    const cells = labData.length;
+    const pct = (v: number) => `${Math.round(v * 100)}%`;
+    const stat5 = (vals: number[]) => {
+      const s = [...vals].sort((p, q) => p - q); const m = s.length;
+      const mean = vals.reduce((a, b) => a + b, 0) / m;
+      const median = m % 2 ? s[(m - 1) / 2] : (s[m / 2 - 1] + s[m / 2]) / 2;
+      return { mean, median, min: s[0], max: s[m - 1] };
+    };
+    if (labRun.metric === 'lego') {
+      const A = stat5(labData.map(c => c.a ?? 0)), B = stat5(labData.map(c => c.b ?? 0));
+      const aNoise = labData.reduce((s, c) => s + (c.aSd ?? 0), 0) / cells;
+      const bNoise = labData.reduce((s, c) => s + (c.bSd ?? 0), 0) / cells;
+      return { kind: 'lego' as const, cells, run: labRun, A, B, aNoise, bNoise };
+    }
+    const vals = labData.map(c => c.v);
+    const five = stat5(vals);
+    const lo = labData.reduce((p, c) => c.v < p.v ? c : p);
+    const hi = labData.reduce((p, c) => c.v > p.v ? c : p);
+    const noise = labData.reduce((s, c) => s + c.sd, 0) / cells;
+    const ci = labData.reduce((s, c) => s + ci95(c.sd, c.n), 0) / cells;
+    return { kind: 'single' as const, cells, run: labRun, five, noise, ci, loAt: `A ${pct(lo.ca)}·B ${pct(lo.cb)}`, hiAt: `A ${pct(hi.ca)}·B ${pct(hi.cb)}` };
+  }, [labData, labRunning, labRun]);
+
+  // the displayed surface as CSV — the communicable, shareable form of the experiment
+  const labCsv = useCallback((): string => {
+    if (!labData || !labRun) return '';
+    const head = labRun.metric === 'lego'
+      ? 'consensusA,consensusB,A_mean,A_sd,B_mean,B_sd,n'
+      : 'consensusA,consensusB,mean,sd,sem,ci95_halfwidth,n';
+    const rows = labData.map(c => labRun.metric === 'lego'
+      ? [c.ca, c.cb, c.a, c.aSd, c.b, c.bSd, c.n].map((x, i) => i === 6 ? `${x}` : (x as number).toFixed(4)).join(',')
+      : [c.ca, c.cb, c.v, c.sd, c.n > 1 ? c.sd / Math.sqrt(c.n) : 0, ci95(c.sd, c.n), c.n].map((x, i) => i === 6 ? `${x}` : (x as number).toFixed(4)).join(','));
+    const meta = `# Stable Matching Lab · metric=${labRun.metric} schedule=${labRun.schedule} n=${labRun.n} grid=${labRun.res}x${labRun.res} trials=${labRun.trials} seed=${labRun.seed}`;
+    return `${meta}\n${head}\n${rows.join('\n')}\n`;
+  }, [labData, labRun]);
+  const [labCopied, setLabCopied] = useState(false);
+  const copyCsv = useCallback(() => {
+    const csv = labCsv(); if (!csv) return;
+    navigator.clipboard?.writeText(csv).then(() => { setLabCopied(true); window.setTimeout(() => setLabCopied(false), 1600); }).catch(() => {});
+  }, [labCsv]);
+  const downloadCsv = useCallback(() => {
+    const csv = labCsv(); if (!csv || !labRun) return;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `stable-matching-${labRun.metric}-${labRun.schedule}-n${labRun.n}-seed${labRun.seed}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  }, [labCsv, labRun]);
   const labTitle = labMetric === 'lego' ? `A & B avg rank — ${labSchedule}` : labMetric === 'unstable' ? `Unstable runs % — ${labSchedule}` : labMetric === 'stableCount' ? '# stable matchings (lattice size)' : labMetric === 'cost' ? `Cost to stabilize (RVV steps) — ${labSchedule}` : `Avg blocking pairs — ${labSchedule}`;
   const labHue = labMetric === 'stableCount' ? 168 : labMetric === 'cost' ? 312 : 280;
   const labCaption = labMetric === 'unstable' ? 'unstable %' : labMetric === 'stableCount' ? '# stable' : labMetric === 'cost' ? 'steps' : 'pairs';
@@ -590,11 +699,18 @@ export default function StableMatching() {
       ) : view === 'lab' ? (
         <div className="sm2-actions">
           <Pills label="Schedule" value={labSchedule} onChange={setLabSchedule} options={[{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'alt', label: 'Alt' }, { value: 'random', label: 'Rnd' }]} />
-          <Pills label="Surface" value={labMetric} onChange={setLabMetric} options={[{ value: 'lego', label: 'Ranks (A·B)' }, { value: 'unstable', label: 'Unstable %' }, { value: 'blocking', label: 'Blocking' }, { value: 'stableCount', label: '# stable' }, { value: 'cost', label: 'Repair cost' }]} />
-          <NumberInput label="Population" value={labN} onChange={setLabN} min={6} max={80} integer />
-          <NumberInput label="Resolution" value={labRes} onChange={setLabRes} min={4} max={24} integer />
-          <NumberInput label="Trials / cell" value={labTrials} onChange={setLabTrials} min={1} max={60} integer />
-          <button className="sm2-btn primary" onClick={runLab} disabled={labRunning}><FlaskConical size={16} />{labRunning ? `Running ${labProgress}%` : 'Run Lab'}</button>
+          <Pills label="Surface (what each cell measures)" value={labMetric} onChange={setLabMetric} options={[{ value: 'lego', label: 'Ranks (A·B)' }, { value: 'unstable', label: 'Unstable %' }, { value: 'blocking', label: 'Blocking' }, { value: 'stableCount', label: '# stable' }, { value: 'cost', label: 'Repair cost' }]} />
+          {labMetric !== 'lego' && <Pills label="Show statistic" value={labStat} onChange={setLabStat} options={[{ value: 'mean', label: 'Mean' }, { value: 'sd', label: 'Std dev' }]} />}
+          <NumberInput label="Population (per side)" value={labN} onChange={setLabN} min={6} max={80} integer />
+          <NumberInput label="Cells per axis (resolution)" value={labRes} onChange={setLabRes} min={2} max={LAB_RES_MAX} integer />
+          <NumberInput label="Repeats per cell (trials)" value={labTrials} onChange={setLabTrials} min={1} max={120} integer />
+          <div className="sm2-seedrow">
+            <NumberInput label="Seed" value={labSeed} onChange={setLabSeed} min={1} integer />
+            <button className="sm2-btn" onClick={() => setLabSeed(s => s + 1)} disabled={labRunning} title="Draw a fresh ensemble (new random instances)"><Shuffle size={16} />Re-roll</button>
+          </div>
+          {labRunning
+            ? <button className="sm2-btn" onClick={() => { labCancel.current = true; }}><Pause size={16} />Stop ({labProgress}%)</button>
+            : <button className="sm2-btn primary" onClick={runLab}><FlaskConical size={16} />Run Lab</button>}
         </div>
       ) : null}
     </ShellActions>
@@ -688,7 +804,8 @@ export default function StableMatching() {
         </div>
       ) : view === 'lab' ? (
         <div className="sm2-lab">
-          <Heatmap data={labData} res={Math.max(2, Math.min(24, labRes))} maxV={labMax} hue={labHue} title={labTitle} caption={labCaption} mode={labMetric === 'lego' ? 'lego' : 'single'} maxRank={labN} />
+          <Heatmap data={labData} res={labRun ? labRun.res : Math.max(2, Math.min(LAB_RES_MAX, labRes))} maxV={labMax} hue={labHue} title={labTitle} caption={labCaption} mode={labMetric === 'lego' ? 'lego' : 'single'} maxRank={labN} stat={labStat} />
+          {labSummary && <LabSummary s={labSummary} onCopy={copyCsv} onDownload={downloadCsv} copied={labCopied} />}
           <p className="sm2-lab-note">{labMetric === 'cost'
             ? <>Each cell averages the <strong>number of Roth–Vande Vate repair steps</strong> needed to fix the <strong>{labSchedule}</strong> schedule's (often unstable) result into a stable matching, over <strong>{labTrials}</strong> instances. One-sided (A/B) is already stable → 0; the synchronous Alternate / Random schedules cost more to repair where preferences are disordered. The "cost to stabilize" of the frustrated regime.</>
             : labMetric === 'stableCount'

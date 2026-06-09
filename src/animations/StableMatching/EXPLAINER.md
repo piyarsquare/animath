@@ -70,7 +70,18 @@ steps — the **cost to stabilize** — is mapped across consensus in the Lab.
 
 ## The Lab
 
-Sweeps both consensus dials and maps a chosen surface, averaging many trials per
-cell: **Ranks (A·B)**, **Unstable %** and **Blocking** (the instability of the
+Sweeps both consensus dials and maps a chosen **surface**, averaging many trials
+per cell: **Ranks (A·B)**, **Unstable %** and **Blocking** (the instability of the
 synchronous schedules), **# stable** (the lattice size — huge when disordered,
 collapsing to 1 at full consensus), and **Repair cost** (RVV steps).
+
+You control the experiment: the **resolution** (cells per axis), the **repeats**
+(trials per cell — more repeats, tighter estimates), the **population**, and a
+**seed** with a **Re-roll** button to redraw a fresh ensemble (or reproduce an old
+one exactly). Each cell reports not just the **mean** but its **standard
+deviation** and a **95% confidence interval** (hover any cell); single-value
+surfaces can be flipped to show the **std-dev surface** itself, so you can see
+*where* the outcome is noisy, not only its average. A **Surface summary** gives
+the mean, median, range and the location of the extremes, plus the typical
+within-cell noise — and **Copy CSV / Download** export the whole grid
+(consensus, mean, SD, SEM, 95% CI, n) for analysis elsewhere.
