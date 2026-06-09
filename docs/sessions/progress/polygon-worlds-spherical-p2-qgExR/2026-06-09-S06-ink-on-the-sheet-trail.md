@@ -81,6 +81,34 @@ already declares):
 
 ## Working notes
 
+### 🔴 blocker → 🟢 code · 22:30 — glide crossing was not smooth; fold over-reflected
+**Why:** user report: "transport across the Klein boundary is not smooth", and
+"the numbers come back reversed is part of the problem".
+
+Two errors from the previous round, both fixed:
+
+1. **The fold double-applied the reflection.** Toggling `flipAcc` re-renders
+   every cell with its flip toggled, and for the alternating glide pattern
+   (…,A,B,A,B,…) that global toggle IS the scene shifted by one glide step — so
+   the matching player fold is the PURE translation (the original code).
+   Reflecting the player's position/heading on top of that applied the glide's
+   mirror twice ⇒ a visible teleport to the mirrored z at each crossing. The
+   fold is reverted to pure translation + parity toggle; the glide's reflection
+   lives only in the flipped cells' transform and the pull-backs through it —
+   the chart (where the classic 1−v re-entry shows; the old `sz0` "hack" was
+   actually correct chart math, now restored generalized) and the ink stamps.
+   Verified by pixel-diffing consecutive frames across a crossing: the crossing
+   pair (22.5 mean diff) sits inside the ordinary walking-pair range (6.9–28.5).
+
+2. **Bottom-face decor was authored with a baked `scale.y = −1` mirror** (a
+   cheap "grow down"). Under the old sheet flip the two mirrors cancelled; under
+   the rigid transparency-flip the baked mirror SHOWED — mirror-written plaques
+   on the face you walk. Bottom decor is now turned over rigidly (π about the
+   glide axis); rigid + rigid composes to a translation, so on a flipped cell
+   the columns and Roman plates come up reading exactly upright. The rule is
+   now uniform for decor and ink alike: backwards text only ever appears
+   THROUGH the glass.
+
 ### 🟢 code · 21:45 — feedback round: true glide deck; pinned head arrow removed
 **Why:** user feedback on the Klein walk: (1) "there is always an arrow on my
 feet" — the live head stamp; (2) the under-floor arrows were NOT reversed.

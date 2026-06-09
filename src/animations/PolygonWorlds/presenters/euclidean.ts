@@ -177,15 +177,25 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
       const group = new THREE.Group(); group.matrixAutoUpdate = false;
       const slab = new THREE.Mesh(new THREE.BoxGeometry(side, thickness, side), floorMat);
       const top = new THREE.Group(), bottom = new THREE.Group();
+      // Bottom-face decor is turned over RIGIDLY (π about the glide axis), never
+      // mirrored with scale.y=−1: a baked reflection would cancel against the
+      // flipped cells' transparency-flip and surface as mirror-written glyphs on
+      // the face you walk. Rigid + rigid composes to a translation, so on a
+      // flipped cell the columns and Roman plates come up reading exactly
+      // upright — backwards text only ever appears THROUGH the glass.
       decor.props.forEach((_, j) => {
         const t = decor.makeTop(j); top.add(t);          // grows +y from the top face
-        const b = decor.makeBottom(j); b.scale.y = -1; bottom.add(b); // grows −y from the bottom face
+        const b = decor.makeBottom(j);                   // turned over: grows −y from the bottom face
+        b.setRotationFromAxisAngle(glideDir, Math.PI);
+        bottom.add(b);
       });
       const cornersTop = new THREE.Group(), cornersBottom = new THREE.Group();
       CELL_CORNERS.forEach((_, v) => {
         const col = cornerColor(v, CELL_CORNERS.length);
-        cornersTop.add(decor.makeCornerTop(v + 1, col));                     // Arabic disc, top face
-        const cb = decor.makeCornerBottom(v + 1, col); cb.scale.y = -1; cornersBottom.add(cb); // Roman, bottom
+        cornersTop.add(decor.makeCornerTop(v + 1, col)); // Arabic disc, top face
+        const cb = decor.makeCornerBottom(v + 1, col);   // Roman disc, turned onto the bottom face
+        cb.setRotationFromAxisAngle(glideDir, Math.PI);
+        cornersBottom.add(cb);
       });
       // every cell carries an instance of the one shared ink buffer — the trail
       // tiles with the ground, and a det<0 cell mirrors it for real
@@ -245,33 +255,25 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
 
   function update(input: CoverFrameInput, cam: THREE.PerspectiveCamera) {
     const { fwd, strafe, yaw, pitch, dt, moveSpeed, thirdPerson } = input;
-    // The player's world heading: the yaw-derived frame, reflected across the
-    // glide axis while on the other face (flipAcc). The camera below derives
-    // from the same reflected frame, so the on-screen controls feel identical on
-    // both faces — only the world-fixed turn sense flips, which is exactly the
-    // honest non-orientable experience (you cannot feel world coordinates).
-    forward.set(Math.sin(yaw), 0, -Math.cos(yaw));
-    let strafeX = Math.cos(yaw), strafeZ = Math.sin(yaw);
-    if (flipAcc) {
-      [forward.x, forward.z] = reflectInPlane(forward.x, forward.z);
-      [strafeX, strafeZ] = reflectInPlane(strafeX, strafeZ);
-    }
     if (fwd || strafe) {
-      const v = moveSpeed * dt;
-      px += (fwd * forward.x + strafe * strafeX) * v;
-      pz += (fwd * forward.z + strafe * strafeZ) * v;
+      const v = moveSpeed * dt, sy = Math.sin(yaw), cy = Math.cos(yaw);
+      px += (fwd * sy + strafe * cy) * v;
+      pz += (fwd * -cy + strafe * sy) * v;
     }
 
     // ── Fold the player back into the home cell — "crossing teleports you". The cover
     // is drawn as a (2K+1)² patch of cells around the player; left to roam free the
     // camera would wander arbitrarily far from the origin. Instead, the moment the
-    // player steps out of the home cell, apply that cell's INVERSE deck element so
-    // they re-enter from the identified edge: translate back by the lattice origin,
-    // and across a glide edge also reflect across the glide axis (the genuine glide
-    // map — this is what makes the classic square-diagram re-entry, exit at v come
-    // back at 1−v, actually happen). The patch is redrawn centred on home, so the
-    // view is unchanged (a seamless teleport); the crossing's flip parity folds into
-    // `flipAcc`, which both swaps the rendered face and keeps the heading reflected.
+    // player steps out of the home cell, translate them back by that cell's lattice
+    // origin so they re-enter from the identified edge, and fold the crossing's flip
+    // parity into `flipAcc`. The fold is a PURE translation even across a glide edge:
+    // toggling `flipAcc` re-renders every cell with its flip toggled, and for the
+    // alternating glide pattern (…,A,B,A,B,…) that global toggle IS the scene shifted
+    // by one glide step — so the matching player move is exactly the translation, and
+    // the view is unchanged (a seamless teleport). The glide's reflection is never
+    // applied to the player's world numbers; it lives in the flipped cells' transform
+    // and in the pull-backs through it (the chart and the ink stamps), which is where
+    // the classic square-diagram re-entry — exit at v, come back at 1−v — shows up.
     const [fi, fj] = cellOf(px, pz);
     if (fi !== 0 || fj !== 0) {
       const [ox, oz] = cellOrigin(fi, fj);
@@ -281,18 +283,11 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
       // itself never moves: stamps live in sheet coordinates and every cell
       // already draws them.
       if (lastFrozen) lastFrozen.set(lastFrozen.x - ox, lastFrozen.y, lastFrozen.z - oz);
-      if (flipParity(fi, fj)) {
-        [px, pz] = reflectInPlane(px, pz);
-        if (lastFrozen) {
-          const [rx, rz] = reflectInPlane(lastFrozen.x, lastFrozen.z);
-          lastFrozen.set(rx, lastFrozen.y, rz);
-        }
-        [forward.x, forward.z] = reflectInPlane(forward.x, forward.z);
-        flipAcc ^= 1;                      // you are now on the other face
-      }
+      if (flipParity(fi, fj)) flipAcc ^= 1;   // you are now on the other face
     }
 
     pos.set(px, 0, pz);
+    forward.set(Math.sin(yaw), 0, -Math.cos(yaw));
 
     cam.up.copy(UP);
     if (thirdPerson) {
@@ -345,17 +340,20 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   }
 
   function chart(): SquareMapState {
-    // The fold now applies the genuine glide map (translation + reflection), so
-    // the player's home-cell coordinates already show the classic square-diagram
-    // re-entry (exit at v, come back at 1−v) — plot them raw.
+    // The map charts the FUNDAMENTAL DOMAIN: pull the player's world position and
+    // heading back through the home cell's current transform (the in-plane part of
+    // the transparency flip when on the other face). This is where the classic
+    // square-diagram re-entry — exit at v, come back at 1−v — shows up.
     const [I0, J0] = cellOf(px, pz);
     const [cx, cz] = cellOrigin(I0, J0);
     const flipped = (flipParity(I0, J0) ^ flipAcc) === 1;
-    const mhl = Math.hypot(forward.x, forward.z) || 1;
-    return {
-      u: (px - cx) / side + 0.5, v: (pz - cz) / side + 0.5,
-      hx: forward.x / mhl, hz: forward.z / mhl, flipped,
-    };
+    let bx2 = px - cx, bz2 = pz - cz, mhx = forward.x, mhz = forward.z;
+    if (flipped) {
+      [bx2, bz2] = reflectInPlane(bx2, bz2);
+      [mhx, mhz] = reflectInPlane(mhx, mhz);
+    }
+    const mhl = Math.hypot(mhx, mhz) || 1;
+    return { u: bx2 / side + 0.5, v: bz2 / side + 0.5, hx: mhx / mhl, hz: mhz / mhl, flipped };
   }
 
   return {

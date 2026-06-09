@@ -7,9 +7,11 @@ import * as THREE from 'three';
  * is on — a **tree** on the top (blue) face and a **column** on the bottom (brown)
  * face, at the *same* (u, v). They grow *away* from the sheet (tree up, column
  * down), so they sit exactly back-to-back and neither penetrates the surface. A
- * non-orientable gluing flips the whole sheet, which swaps every landmark tree ↔
- * column; the chiral number+arrow decal then reads reversed through the flip — the
- * orientation cue the app is built around.
+ * non-orientable gluing turns the whole sheet over (a rigid transparency-flip),
+ * which swaps every landmark tree ↔ column. Everything on the face you stand on
+ * always reads upright; the chiral number+arrow decals read reversed only when
+ * seen THROUGH the sheet from its other side — the orientation cue the app is
+ * built around.
  *
  * Landmarks come in two kinds:
  *   • **interior** — scattered/grid/ring inside the domain (user count + layout),
@@ -109,9 +111,9 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
  * The chiral landmark badge: a high-contrast rounded plaque with the landmark
  * **number** (left) and a **→ arrow** (right), both in the landmark's hue over a
  * dark backing with a bright hued rim. Number + arrow are an asymmetric, chiral
- * device: a mirror (the non-orientable flip scales the whole sheet by y=−1) reads
- * the glyph reversed — this is the canonical orientation cue the app is built on,
- * so the badge is geometry-fixed (never billboarded) and just rides the flip.
+ * device: seen from the sheet's other side (through the glass) the glyph reads
+ * reversed — this is the canonical orientation cue the app is built on, so the
+ * badge is geometry-fixed (never billboarded) and just rides the sheet.
  * Drawn at 256px on a transparent canvas; the dark backing keeps it legible at
  * distance against either the warm-lit top face or the cool-lit underside.
  */
@@ -212,7 +214,7 @@ export interface FundamentalSquareDecor {
    *  its base at the origin, so the caller plants the base on the face. */
   makeTop(i: number): THREE.Group;
   /** Bottom-face form of landmark i (a column, or the magenta centre spire). Also
-   *  grows +y from its base; the caller mirrors it onto the underside. */
+   *  grows +y from its base; the caller turns it (rigidly) onto the underside. */
   makeBottom(i: number): THREE.Group;
   /** Top-face **corner marker** — a ground-level manhole-cover disc marking a
    *  polygon corner, carrying the corner's Arabic numeral in its unique `color`.
