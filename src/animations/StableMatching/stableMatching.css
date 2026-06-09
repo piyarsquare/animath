@@ -16,6 +16,8 @@
 .sm2-narrate { font-size: 13.5px; color: #d6d6e2; background: #14141b; border: 1px solid #26262f; border-left: 3px solid #2563eb; border-radius: 8px; padding: 9px 13px; margin-bottom: 14px; line-height: 1.45; }
 .sm2-narrate.jump { border-left-color: #2dd4bf; }   /* teal: showing a named stable solution */
 .sm2-narrate.jump strong { color: #5eead4; }
+.sm2-narrate.resolve { border-left-color: #c084fc; }  /* purple: stabilizing (RVV) */
+.sm2-narrate.resolve strong { color: #d8b4fe; }
 
 /* metrics */
 .sm2-metrics { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 18px; }
@@ -87,6 +89,7 @@
 .sm2-actions { display: flex; flex-direction: column; gap: 8px; }
 .sm2-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 8px; border: 1px solid #2e2e38; background: #1b1b22; color: #ddd; font: inherit; font-size: 14px; cursor: pointer; }
 .sm2-btn:hover { background: #24242d; } .sm2-btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; } .sm2-btn:disabled { opacity: .4; cursor: default; }
+.sm2-btn.stabilize:not(:disabled) { border-color: #7c3aed; color: #d8b4fe; }
 
 /* lab */
 .sm2-lab { max-width: 680px; }

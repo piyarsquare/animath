@@ -56,6 +56,26 @@ Grouped from the task brief; not yet sequenced.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 13:40 — Tier 4: Roth–Vande Vate resolver
+**Why:** "Use an alternative mode + a resolver" — repair an unstable run to
+stability, animated (wishlist Tier 4).
+
+- `resolver.ts`: `rothVandeVate(inst, start, seed)` repeatedly satisfies a random
+  blocking pair until stable, recording each step (the satisfied pair + the two
+  partners it displaces + blocking-pairs-remaining). `replaySteps` rebuilds any
+  intermediate for stepping. Verified (test now 1440 cases): always converges, the
+  landing matching is in the stable set, replay reproduces it.
+- **Visualizer**: a **Stabilize** button (enabled when the live result is
+  unstable) runs RVV from the final matching and animates the purple blocking
+  cells healing — own Step/Play/Finish/Back controls, purple banner with live
+  step count + blocking-remaining. Seed 27 (Alt, consensus 30): 4 blocking → stable
+  in 9 steps.
+- Note: RVV is a *random walk*, so the blocking count is non-monotonic and the
+  path length varies widely (9 to 100+ steps) — that variance is exactly the
+  "cost to stabilize" (a future Lab surface).
+
+![RVV resolved to stable in 9 steps](assets/2026-06-08-S01-resolver.png)
+
 ### 🟢 code · 13:00 — Tier 2: named solutions + "jump to"
 **Why:** Locate the canonical/fair stable matchings and let the user teleport to
 them (wishlist Tier 2).

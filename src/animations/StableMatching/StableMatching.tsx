@@ -14,6 +14,7 @@ import {
   type Schedule, type Matching,
 } from './galeShapley';
 import { allStableMatchings, stablePairs, namedSolutions, score, NAMED_LABELS, type NamedKey } from './rotations';
+import { rothVandeVate, replaySteps, type ResolveResult } from './resolver';
 
 const FOOT_CAP = 1000; // cap the (worst-case exponential) stable-matching enumeration
 type Jump = 'live' | NamedKey;
@@ -149,7 +150,7 @@ export default function StableMatching() {
   const rounds = result.rounds;
   const total = rounds.length;                                  // a "step" is now a whole round
   const safeStep = Math.min(step, total);                       // guard the render before the reset effect fires
-  useEffect(() => { setStep(0); setPlaying(false); setJump('live'); }, [result]);
+  useEffect(() => { setStep(0); setPlaying(false); setJump('live'); setResolve(null); setRStep(0); setRPlaying(false); }, [result]);
 
   // flatten round events (in order) + per-round cumulative counts, to rebuild the matching
   const flat = useMemo(() => rounds.flatMap(r => r.events), [rounds]);
@@ -170,8 +171,16 @@ export default function StableMatching() {
 
   // "Jump to" a named stable matching: overrides the displayed matching statically.
   const [jump, setJump] = useState<Jump>('live');
-  const shown = jump === 'live' ? matching : named[jump];
-  const shownDone = jump !== 'live' || done;   // a named matching is complete by construction
+
+  // Roth–Vande Vate resolver: repair the (possibly unstable) run to stability.
+  const [resolve, setResolve] = useState<ResolveResult | null>(null);
+  const [rStep, setRStep] = useState(0);
+  const [rPlaying, setRPlaying] = useState(false);
+  const resolveMatching = useMemo(() => resolve ? replaySteps(resolve.start, resolve.steps, rStep) : null, [resolve, rStep]);
+  const finalUnstable = useMemo(() => blockingPairs(inst, finalMatching) > 0, [inst, finalMatching]);
+
+  const shown = resolveMatching ?? (jump === 'live' ? matching : named[jump]);
+  const shownDone = resolve != null || jump !== 'live' || done;   // a named / resolved matching is complete
 
   // markers for the round just applied: every proposal this round (active/reject), plus bumped pairs (stolen)
   const markers = useMemo(() => {
@@ -333,7 +342,34 @@ export default function StableMatching() {
     return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
   }, [n, view, showLabels]);
 
-  const reset = useCallback(() => { setPlaying(false); setStep(0); setJump('live'); }, []);
+  // markers for the resolution step just applied: the satisfied pair + the two
+  // partners it displaced (the blocking cell healing).
+  const resolveMarkers = useMemo(() => {
+    if (!resolve || rStep <= 0) return EMPTY_MARKERS;
+    const mk = new Map<string, Marker>();
+    const s = resolve.steps[rStep - 1];
+    mk.set(`${s.a}-${s.b}`, 'active');
+    if (s.freedB !== -1) mk.set(`${s.a}-${s.freedB}`, 'stolen');
+    if (s.freedA !== -1) mk.set(`${s.freedA}-${s.b}`, 'stolen');
+    return mk;
+  }, [resolve, rStep]);
+
+  // resolution playback (reuses the Speed slider rate)
+  useEffect(() => {
+    if (!rPlaying || !resolve) return;
+    const ms = Math.max(120, 620 - speed * 4.5);
+    const t = window.setInterval(() => setRStep(s => { if (s >= resolve.steps.length) { setRPlaying(false); return s; } return s + 1; }), ms);
+    return () => clearInterval(t);
+  }, [rPlaying, resolve, speed]);
+
+  const stabilize = useCallback(() => {
+    setJump('live');
+    const r = rothVandeVate(inst, finalMatching, seed);
+    setResolve(r); setRStep(0); setRPlaying(r.steps.length > 0);
+  }, [inst, finalMatching, seed]);
+  const endResolve = useCallback(() => { setResolve(null); setRStep(0); setRPlaying(false); }, []);
+
+  const reset = useCallback(() => { setPlaying(false); setStep(0); setJump('live'); setResolve(null); setRStep(0); setRPlaying(false); }, []);
   const shuffle = useCallback(() => setSeed(s => (s * 1103515245 + 12345) & 0x7fffffff), [setSeed]);
 
   const narrate = (): string => {
@@ -427,18 +463,29 @@ export default function StableMatching() {
   const actions = (
     <ShellActions>
       {view === 'visualizer' ? (
-        <div className="sm2-actions">
-          <button className="sm2-btn primary" onClick={() => { setJump('live'); setPlaying(p => !p); }} disabled={jump === 'live' && done && !playing}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? 'Pause' : 'Play'}</button>
-          <button className="sm2-btn" onClick={() => { setJump('live'); setStep(s => Math.min(total, s + 1)); }} disabled={playing || (jump === 'live' && done)}><SkipForward size={16} />Step</button>
-          <button className="sm2-btn" onClick={() => { setJump('live'); setStep(total); }} disabled={jump === 'live' && done}><FastForward size={16} />Finish</button>
-          <button className="sm2-btn" onClick={reset}><RotateCcw size={16} />Reset</button>
-          <button className="sm2-btn" onClick={shuffle}><Shuffle size={16} />Shuffle</button>
-          <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
-          <Checkbox label="Live re-sort (build the diagonal as it runs)" checked={liveSort} onChange={setLiveSort} />
-          <Select label="Jump to a stable solution" value={jump} onChange={setJump}
-            options={(['live', 'aOptimal', 'bOptimal', 'egalitarian', 'median', 'minRegret', 'sexEqual', 'balanced'] as Jump[])
-              .map(k => ({ value: k, label: JUMP_LABELS[k] }))} />
-        </div>
+        resolve ? (
+          <div className="sm2-actions">
+            <button className="sm2-btn primary" onClick={() => setRPlaying(p => !p)} disabled={rStep >= resolve.steps.length && !rPlaying}>{rPlaying ? <Pause size={16} /> : <Play size={16} />}{rPlaying ? 'Pause' : 'Play'}</button>
+            <button className="sm2-btn" onClick={() => setRStep(s => Math.min(resolve.steps.length, s + 1))} disabled={rPlaying || rStep >= resolve.steps.length}><SkipForward size={16} />Step</button>
+            <button className="sm2-btn" onClick={() => setRStep(resolve.steps.length)} disabled={rStep >= resolve.steps.length}><FastForward size={16} />Finish</button>
+            <button className="sm2-btn" onClick={endResolve}><RotateCcw size={16} />Back to run</button>
+            <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
+          </div>
+        ) : (
+          <div className="sm2-actions">
+            <button className="sm2-btn primary" onClick={() => { setJump('live'); setPlaying(p => !p); }} disabled={jump === 'live' && done && !playing}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? 'Pause' : 'Play'}</button>
+            <button className="sm2-btn" onClick={() => { setJump('live'); setStep(s => Math.min(total, s + 1)); }} disabled={playing || (jump === 'live' && done)}><SkipForward size={16} />Step</button>
+            <button className="sm2-btn" onClick={() => { setJump('live'); setStep(total); }} disabled={jump === 'live' && done}><FastForward size={16} />Finish</button>
+            <button className="sm2-btn" onClick={reset}><RotateCcw size={16} />Reset</button>
+            <button className="sm2-btn" onClick={shuffle}><Shuffle size={16} />Shuffle</button>
+            <button className="sm2-btn stabilize" onClick={stabilize} disabled={!finalUnstable} title={finalUnstable ? 'Repair the unstable result to a stable matching' : 'Already stable — nothing to repair'}><ShieldCheck size={16} />Stabilize</button>
+            <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
+            <Checkbox label="Live re-sort (build the diagonal as it runs)" checked={liveSort} onChange={setLiveSort} />
+            <Select label="Jump to a stable solution" value={jump} onChange={setJump}
+              options={(['live', 'aOptimal', 'bOptimal', 'egalitarian', 'median', 'minRegret', 'sexEqual', 'balanced'] as Jump[])
+                .map(k => ({ value: k, label: JUMP_LABELS[k] }))} />
+          </div>
+        )
       ) : (
         <div className="sm2-actions">
           <Pills label="Schedule" value={labSchedule} onChange={setLabSchedule} options={[{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'alt', label: 'Alt' }, { value: 'random', label: 'Rnd' }]} />
@@ -490,9 +537,11 @@ export default function StableMatching() {
       {view === 'visualizer' ? (
         <div className="sm2-visualizer">
           <p className="sm2-story">{story}</p>
-          {jump === 'live'
-            ? <div className="sm2-narrate">{narrate()}</div>
-            : <div className="sm2-narrate jump"><strong>{JUMP_LABELS[jump]} stable matching</strong> — {NAMED_NOTE[jump as NamedKey]}. Σrank {acct.combined} (A {acct.aTot} + B {acct.bTot}){solution.capped ? ' · approximate (enumeration capped)' : ''}. Press Step or Reset to return to the live run.</div>}
+          {resolve
+            ? <div className="sm2-narrate resolve"><strong>Stabilizing — Roth–Vande Vate</strong>: satisfy a blocking pair, repeat. Step {rStep} / {resolve.steps.length} · {blocking.size === 0 ? <>resolved — <strong>stable</strong> in {resolve.steps.length} steps</> : `${blocking.size} blocking pair${blocking.size === 1 ? '' : 's'} left`}. Reset to return to the live run.</div>
+            : jump === 'live'
+              ? <div className="sm2-narrate">{narrate()}</div>
+              : <div className="sm2-narrate jump"><strong>{JUMP_LABELS[jump]} stable matching</strong> — {NAMED_NOTE[jump as NamedKey]}. Σrank {acct.combined} (A {acct.aTot} + B {acct.bTot}){solution.capped ? ' · approximate (enumeration capped)' : ''}. Press Step or Reset to return to the live run.</div>}
           <div className="sm2-metrics">
             <div className="sm2-metric big sm2-outcome">
               <span className="sm2-metric-label"><Activity size={14} /> Partner rank by side — average &amp; distribution (lower = happier)</span>
@@ -522,7 +571,7 @@ export default function StableMatching() {
             </div>
           </div>
           <div className="sm2-matrix-wrap" ref={matrixWrap}>
-            <Matrix inst={inst} matching={shown} rows={rows} cols={cols} markers={jump === 'live' ? markers : EMPTY_MARKERS} blocking={blocking} footprint={showFootprint ? solution.pairs : null} size={cellSize} labels={showLabels && cellSize >= 16} view={cellView} gap={tight ? 0 : 3} trail={jump === 'live' ? trail : EMPTY_TRAIL} />
+            <Matrix inst={inst} matching={shown} rows={rows} cols={cols} markers={resolve ? resolveMarkers : jump === 'live' ? markers : EMPTY_MARKERS} blocking={blocking} footprint={showFootprint ? solution.pairs : null} size={cellSize} labels={showLabels && cellSize >= 16} view={cellView} gap={tight ? 0 : 3} trail={resolve || jump !== 'live' ? EMPTY_TRAIL : trail} />
             {legend}
           </div>
         </div>
