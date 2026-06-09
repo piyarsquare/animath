@@ -2,8 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import Gallery from './chrome/Gallery';
-import { AppShell } from './components/AppShell';
-import { apps } from './apps';
 import './chrome/theme.css';
 import { applyPersistedSkin } from './chrome/skins';
 
@@ -44,26 +42,6 @@ function getHash(): string {
   return window.location.hash.replace(/^#/, '') || '/';
 }
 
-/** Routes already migrated onto the redesigned workspace chrome. They render
- *  bare (each owns its TopBar via <Workspace>); the rest stay wrapped in the
- *  legacy AppShell until their migration commit. Emptied of AppShell once all
- *  apps are over (see docs/redesign/IMPLEMENTATION.md). */
-const MIGRATED = new Set<string>([
-  '/complex-particles',
-  '/correspondence',
-  '/fractals',
-  '/topology-walk',
-  '/mobius',
-  '/wrap-world',
-  '/plane-transform',
-  '/polygon-worlds',
-  '/agentic-sorting',
-  '/stable-marriage',
-  '/stable-matching',
-  '/trinary',
-  '/trinary-lab',
-]);
-
 function Router(): JSX.Element {
   const [hash, setHash] = React.useState(getHash());
 
@@ -75,35 +53,17 @@ function Router(): JSX.Element {
 
   // Routes may carry a `?query` (e.g. the lab's shareable config); match on path.
   const path = hash.split('?')[0];
-  const navigate = (h: string) => { window.location.hash = '#' + h; };
 
   // The gallery is the landing page and the only cross-app hub; unknown
-  // hashes fall back to it.
+  // hashes fall back to it. Every app owns its chrome (Workspace + TopBar)
+  // and renders bare.
   const Component = routes[path];
   if (path === '/' || !Component) return <Gallery />;
 
-  const fallback = <div style={{ background: 'var(--bg, #000)', width: '100%', height: '100%' }} />;
-
-  // Migrated apps own their chrome (Workspace + TopBar) and render bare.
-  if (MIGRATED.has(path)) {
-    return (
-      <React.Suspense fallback={fallback}>
-        <Component />
-      </React.Suspense>
-    );
-  }
-
-  // The Lab is a tab within the Trinary app, not a separate app: present it as
-  // `/trinary` to the shell so the Apps list stays highlighted and switching
-  // tabs doesn't trigger a full shell reset.
-  const shellHash = path === '/trinary-lab' ? '/trinary' : path;
-
   return (
-    <AppShell apps={apps} currentHash={shellHash} onNavigate={navigate}>
-      <React.Suspense fallback={fallback}>
-        <Component />
-      </React.Suspense>
-    </AppShell>
+    <React.Suspense fallback={<div style={{ background: 'var(--bg, #000)', width: '100%', height: '100%' }} />}>
+      <Component />
+    </React.Suspense>
   );
 }
 

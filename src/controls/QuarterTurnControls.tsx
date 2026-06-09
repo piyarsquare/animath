@@ -40,9 +40,9 @@ export interface QuarterTurnControlsProps {
 }
 
 /**
- * The rotation controls for particle viewers, rendered inside the standard
- * Actions panel (so the draggable ActionFloater and the drawer's Actions tab
- * both carry them). Each row is four equal buttons: `[spin ↻] [↻] [↺] [spin ↺]`.
+ * The rotation controls for particle viewers, rendered inside the drive-tier
+ * "4D Rotation" workspace panel (draggable beside the plot like any panel).
+ * Each row is four equal buttons: `[spin ↻] [↻] [↺] [spin ↺]`.
  * A tap on a center ↻/↺ button is a single eighth turn; the flanking spin
  * toggles start/stop a *continuous* rotation. The rows are either the six 4D
  * planes (linear projections) or the three ambient view axes — Yaw/Pitch/Roll —
