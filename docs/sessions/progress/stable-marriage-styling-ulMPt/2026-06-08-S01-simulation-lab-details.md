@@ -56,6 +56,23 @@ Grouped from the task brief; not yet sequenced.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 14:20 — Tier 3: the lattice of stable matchings
+**Why:** The centerpiece — make the solution space literally spatial (wishlist
+Tier 3).
+
+- `layoutLattice` in `rotations.ts`: layered Hasse layout — y by longest-path
+  depth from the A-optimal top, x by parent-barycenter to reduce crossings.
+  (Caught + fixed a sign-convention bug: covers are [upper, lower].)
+- New **Lattice tab** + `LatticeView` (SVG): A-optimal top → B-optimal bottom,
+  each edge a single rotation; named solutions (Egalitarian/Median/Min-regret/
+  Sex-equal/Balanced) flagged in place; node colour shades blue→red
+  (good-for-A → good-for-B). **Click any node → loads it into the Visualizer**
+  (`pickedNode` override, same as jump-to). Gated to ≤ 80 nodes; "unique point"
+  message at consensus where the lattice collapses.
+- Seed 53 (n=10, consensus 0): a clean 13-node distributive lattice.
+
+![the lattice of 13 stable matchings](assets/2026-06-08-S01-lattice.png)
+
 ### 🟢 code · 13:40 — Tier 4: Roth–Vande Vate resolver
 **Why:** "Use an alternative mode + a resolver" — repair an unstable run to
 stability, animated (wishlist Tier 4).

@@ -184,6 +184,40 @@ export function buildLattice(inst: Instance, set: Matching[]): Lattice {
   return { nodes, covers, rank: rank.map(r => r - minR) };
 }
 
+export interface LatticeLayout {
+  pos: { x: number; y: number }[];   // normalized [0,1] node positions (y: 0 = A-optimal top)
+  edges: [number, number][];          // covering edges [lower, upper]
+  layers: number;                     // number of distinct levels
+}
+
+/** Layered (Hasse) layout: y by longest-path depth from the A-optimal top, x by
+ *  parent barycenter to reduce crossings. */
+export function layoutLattice(inst: Instance, set: Matching[]): LatticeLayout {
+  const { covers } = buildLattice(inst, set);   // each cover is [upper, lower] (upper = better for A)
+  const N = set.length;
+  const aTot = set.map(M => score(inst, M).aTot);
+  const order = Array.from({ length: N }, (_, i) => i).sort((p, q) => aTot[p] - aTot[q]); // top (best for A) first
+  const parents: number[][] = Array.from({ length: N }, () => []); // nodes directly above
+  for (const [up, lo] of covers) parents[lo].push(up);
+  const layer = new Array(N).fill(0);
+  for (const node of order) for (const [up, lo] of covers) if (up === node) layer[lo] = Math.max(layer[lo], layer[node] + 1);
+  const maxLayer = Math.max(1, ...layer);
+  // group by layer, order each layer by mean parent x (computed top-down)
+  const byLayer: number[][] = Array.from({ length: maxLayer + 1 }, () => []);
+  for (let i = 0; i < N; i++) byLayer[layer[i]].push(i);
+  const x = new Array(N).fill(0.5);
+  for (let L = 0; L <= maxLayer; L++) {
+    const row = byLayer[L];
+    if (L > 0) row.sort((p, q) => {
+      const bx = (k: number) => parents[k].length ? parents[k].reduce((s, h) => s + x[h], 0) / parents[k].length : 0.5;
+      return bx(p) - bx(q);
+    });
+    row.forEach((i, k) => { x[i] = row.length === 1 ? 0.5 : k / (row.length - 1); });
+  }
+  const pos = Array.from({ length: N }, (_, i) => ({ x: x[i], y: maxLayer ? layer[i] / maxLayer : 0 }));
+  return { pos, edges: covers, layers: maxLayer + 1 };
+}
+
 /* ── Brute-force reference (tests only) ─────────────────────────────────────── */
 export function allStableBrute(inst: Instance): Matching[] {
   const n = inst.n, res: Matching[] = [];

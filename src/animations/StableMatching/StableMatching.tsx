@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  Activity, AlertTriangle, FastForward, FlaskConical, Layers, Pause, Play,
+  Activity, AlertTriangle, FastForward, FlaskConical, Layers, Network, Pause, Play,
   RotateCcw, Shuffle, SkipForward, ShieldCheck,
 } from 'lucide-react';
 import './stableMatching.css';
@@ -13,7 +13,7 @@ import {
   runRounds, applyLog, blockingPairs, stats,
   type Schedule, type Matching,
 } from './galeShapley';
-import { allStableMatchings, stablePairs, namedSolutions, score, NAMED_LABELS, type NamedKey } from './rotations';
+import { allStableMatchings, stablePairs, namedSolutions, score, layoutLattice, NAMED_LABELS, type NamedKey } from './rotations';
 import { rothVandeVate, replaySteps, type ResolveResult } from './resolver';
 
 const FOOT_CAP = 1000; // cap the (worst-case exponential) stable-matching enumeration
@@ -120,11 +120,68 @@ function Heatmap({ data, res, maxV, hue, title, caption, mode, maxRank }: {
   );
 }
 
+const LATTICE_CAP = 80; // don't draw a lattice bigger than this many nodes
+/* The lattice of stable matchings: A-optimal at the top, B-optimal at the bottom,
+ * each downward edge a single rotation. Named solutions are flagged in place. */
+function LatticeView({ inst, set, capped, named, picked, onPick }: {
+  inst: Instance; set: Matching[]; capped: boolean;
+  named: Record<NamedKey, Matching>; picked: number | null; onPick: (i: number) => void;
+}) {
+  const N = set.length;
+  const sigOf = (M: Matching) => M.a.join(',');
+  const layout = useMemo(() => (N >= 2 && N <= LATTICE_CAP && !capped ? layoutLattice(inst, set) : null), [inst, set, N, capped]);
+  // map each named solution to its node index
+  const namedAt = useMemo(() => {
+    const idx = new Map<string, number>(); set.forEach((M, i) => idx.set(sigOf(M), i));
+    const out: Partial<Record<NamedKey, number>> = {};
+    (Object.keys(named) as NamedKey[]).forEach(k => { const i = idx.get(sigOf(named[k])); if (i !== undefined) out[k] = i; });
+    return out;
+  }, [set, named]);
+  const aTotOf = (M: Matching) => score(inst, M).aTot;
+  const aTots = set.map(aTotOf), aMin = Math.min(...aTots, 0), aMax = Math.max(...aTots, 1);
+
+  if (N === 1) return <div className="sm2-lattice-empty"><Layers size={28} /><p>A unique stable matching — the lattice is a single point. Lower the consensus to grow it.</p></div>;
+  if (!layout) return <div className="sm2-lattice-empty"><Layers size={28} /><p>{capped ? 'Too many stable matchings to enumerate' : `Lattice too large to draw (${N} matchings)`}. Lower the population or raise the consensus.</p></div>;
+
+  const W = 760, H = 480, padX = 40, padY = 36;
+  const X = (x: number) => padX + x * (W - 2 * padX);
+  const Y = (y: number) => padY + y * (H - 2 * padY);
+  const NAMED_RING: Partial<Record<NamedKey, string>> = { egalitarian: '#5eead4', median: '#a78bfa', minRegret: '#fbbf24', sexEqual: '#f472b6', balanced: '#60a5fa' };
+  const labelFor = (i: number): { text: string; color: string } | null => {
+    for (const k of ['aOptimal', 'bOptimal', 'egalitarian', 'median', 'minRegret', 'sexEqual', 'balanced'] as NamedKey[])
+      if (namedAt[k] === i) return { text: NAMED_LABELS[k], color: k === 'aOptimal' ? '#7dd3fc' : k === 'bOptimal' ? '#fca5a5' : (NAMED_RING[k] ?? '#fff') };
+    return null;
+  };
+
+  return (
+    <div className="sm2-lattice">
+      <svg viewBox={`0 0 ${W} ${H}`} className="sm2-lattice-svg" preserveAspectRatio="xMidYMid meet">
+        {layout.edges.map(([lo, hi], k) => (
+          <line key={k} x1={X(layout.pos[hi].x)} y1={Y(layout.pos[hi].y)} x2={X(layout.pos[lo].x)} y2={Y(layout.pos[lo].y)} stroke="#3a3a48" strokeWidth={1} />
+        ))}
+        {set.map((M, i) => {
+          const p = layout.pos[i], lab = labelFor(i), s = score(inst, M);
+          const fill = rankBurd(1 + ((aTots[i] - aMin) / Math.max(1, aMax - aMin)) * (inst.n - 1), inst.n);
+          const sel = picked === i;
+          return (
+            <g key={i} className="sm2-lnode" onClick={() => onPick(i)} style={{ cursor: 'pointer' }}>
+              <circle cx={X(p.x)} cy={Y(p.y)} r={sel ? 9 : 6} fill={fill} stroke={sel ? '#fff' : lab ? lab.color : '#14141b'} strokeWidth={sel ? 2.5 : lab ? 2 : 1} />
+              {lab && <text x={X(p.x)} y={Y(p.y) - 11} textAnchor="middle" fontSize={11} fill={lab.color}>{lab.text}</text>}
+              <title>{`${lab ? lab.text + ' · ' : ''}Σrank ${s.total} (A ${s.aTot} + B ${s.bTot})`}</title>
+            </g>
+          );
+        })}
+      </svg>
+      <p className="sm2-lattice-cap">{capped ? '≥' : ''}{N} stable matchings · <span style={{ color: '#7dd3fc' }}>A-optimal</span> top → <span style={{ color: '#fca5a5' }}>B-optimal</span> bottom · each edge is one rotation · click a node to view it. Node colour = how good for A (blue) → for B (red).</p>
+    </div>
+  );
+}
+
 export default function StableMatching() {
   useAppHeader('Stable Matching');
   useAppExplainer(explainerText);
 
-  const [view, setView] = usePersistentState<'visualizer' | 'lab'>(`${NS}:view`, 'visualizer');
+  const [view, setView] = usePersistentState<'visualizer' | 'lab' | 'lattice'>(`${NS}:view`, 'visualizer');
   const [n, setN] = usePersistentState(`${NS}:n`, 8);
   const [seed, setSeed] = usePersistentState(`${NS}:seed`, 1);
   const [consensusA, setConsensusA] = usePersistentState(`${NS}:cA`, 0);
@@ -150,7 +207,8 @@ export default function StableMatching() {
   const rounds = result.rounds;
   const total = rounds.length;                                  // a "step" is now a whole round
   const safeStep = Math.min(step, total);                       // guard the render before the reset effect fires
-  useEffect(() => { setStep(0); setPlaying(false); setJump('live'); setResolve(null); setRStep(0); setRPlaying(false); }, [result]);
+  useEffect(() => { setStep(0); setPlaying(false); setJump('live'); setResolve(null); setRStep(0); setRPlaying(false); setPickedNode(null); }, [result]);
+  useEffect(() => { setPickedNode(null); }, [inst]);   // a new instance invalidates node indices
 
   // flatten round events (in order) + per-round cumulative counts, to rebuild the matching
   const flat = useMemo(() => rounds.flatMap(r => r.events), [rounds]);
@@ -171,6 +229,7 @@ export default function StableMatching() {
 
   // "Jump to" a named stable matching: overrides the displayed matching statically.
   const [jump, setJump] = useState<Jump>('live');
+  const [pickedNode, setPickedNode] = useState<number | null>(null); // a node clicked in the lattice
 
   // Roth–Vande Vate resolver: repair the (possibly unstable) run to stability.
   const [resolve, setResolve] = useState<ResolveResult | null>(null);
@@ -179,8 +238,9 @@ export default function StableMatching() {
   const resolveMatching = useMemo(() => resolve ? replaySteps(resolve.start, resolve.steps, rStep) : null, [resolve, rStep]);
   const finalUnstable = useMemo(() => blockingPairs(inst, finalMatching) > 0, [inst, finalMatching]);
 
-  const shown = resolveMatching ?? (jump === 'live' ? matching : named[jump]);
-  const shownDone = resolve != null || jump !== 'live' || done;   // a named / resolved matching is complete
+  const pickedMatching = pickedNode != null && pickedNode < stableSet.matchings.length ? stableSet.matchings[pickedNode] : null;
+  const shown = resolveMatching ?? pickedMatching ?? (jump === 'live' ? matching : named[jump]);
+  const shownDone = resolve != null || pickedMatching != null || jump !== 'live' || done;   // a named / picked / resolved matching is complete
 
   // markers for the round just applied: every proposal this round (active/reject), plus bumped pairs (stolen)
   const markers = useMemo(() => {
@@ -369,7 +429,8 @@ export default function StableMatching() {
   }, [inst, finalMatching, seed]);
   const endResolve = useCallback(() => { setResolve(null); setRStep(0); setRPlaying(false); }, []);
 
-  const reset = useCallback(() => { setPlaying(false); setStep(0); setJump('live'); setResolve(null); setRStep(0); setRPlaying(false); }, []);
+  const goLive = useCallback(() => { setJump('live'); setPickedNode(null); }, []);
+  const reset = useCallback(() => { setPlaying(false); setStep(0); goLive(); setResolve(null); setRStep(0); setRPlaying(false); }, [goLive]);
   const shuffle = useCallback(() => setSeed(s => (s * 1103515245 + 12345) & 0x7fffffff), [setSeed]);
 
   const narrate = (): string => {
@@ -473,20 +534,20 @@ export default function StableMatching() {
           </div>
         ) : (
           <div className="sm2-actions">
-            <button className="sm2-btn primary" onClick={() => { setJump('live'); setPlaying(p => !p); }} disabled={jump === 'live' && done && !playing}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? 'Pause' : 'Play'}</button>
-            <button className="sm2-btn" onClick={() => { setJump('live'); setStep(s => Math.min(total, s + 1)); }} disabled={playing || (jump === 'live' && done)}><SkipForward size={16} />Step</button>
-            <button className="sm2-btn" onClick={() => { setJump('live'); setStep(total); }} disabled={jump === 'live' && done}><FastForward size={16} />Finish</button>
+            <button className="sm2-btn primary" onClick={() => { goLive(); setPlaying(p => !p); }} disabled={jump === 'live' && !pickedMatching && done && !playing}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? 'Pause' : 'Play'}</button>
+            <button className="sm2-btn" onClick={() => { goLive(); setStep(s => Math.min(total, s + 1)); }} disabled={playing || (jump === 'live' && !pickedMatching && done)}><SkipForward size={16} />Step</button>
+            <button className="sm2-btn" onClick={() => { goLive(); setStep(total); }} disabled={jump === 'live' && !pickedMatching && done}><FastForward size={16} />Finish</button>
             <button className="sm2-btn" onClick={reset}><RotateCcw size={16} />Reset</button>
             <button className="sm2-btn" onClick={shuffle}><Shuffle size={16} />Shuffle</button>
             <button className="sm2-btn stabilize" onClick={stabilize} disabled={!finalUnstable} title={finalUnstable ? 'Repair the unstable result to a stable matching' : 'Already stable — nothing to repair'}><ShieldCheck size={16} />Stabilize</button>
             <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
             <Checkbox label="Live re-sort (build the diagonal as it runs)" checked={liveSort} onChange={setLiveSort} />
-            <Select label="Jump to a stable solution" value={jump} onChange={setJump}
+            <Select label="Jump to a stable solution" value={pickedMatching ? 'live' : jump} onChange={(v) => { setPickedNode(null); setJump(v); }}
               options={(['live', 'aOptimal', 'bOptimal', 'egalitarian', 'median', 'minRegret', 'sexEqual', 'balanced'] as Jump[])
                 .map(k => ({ value: k, label: JUMP_LABELS[k] }))} />
           </div>
         )
-      ) : (
+      ) : view === 'lab' ? (
         <div className="sm2-actions">
           <Pills label="Schedule" value={labSchedule} onChange={setLabSchedule} options={[{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'alt', label: 'Alt' }, { value: 'random', label: 'Rnd' }]} />
           <Pills label="Surface" value={labMetric} onChange={setLabMetric} options={[{ value: 'lego', label: 'Ranks (A·B)' }, { value: 'unstable', label: 'Unstable %' }, { value: 'blocking', label: 'Blocking' }, { value: 'stableCount', label: '# stable' }]} />
@@ -495,7 +556,7 @@ export default function StableMatching() {
           <NumberInput label="Trials / cell" value={labTrials} onChange={setLabTrials} min={1} max={60} integer />
           <button className="sm2-btn primary" onClick={runLab} disabled={labRunning}><FlaskConical size={16} />{labRunning ? `Running ${labProgress}%` : 'Run Lab'}</button>
         </div>
-      )}
+      ) : null}
     </ShellActions>
   );
 
@@ -529,6 +590,7 @@ export default function StableMatching() {
       <header className="sm2-header">
         <div className="sm2-tabs">
           <button className={view === 'visualizer' ? 'active' : ''} onClick={() => setView('visualizer')}><Layers size={15} />Visualizer</button>
+          <button className={view === 'lattice' ? 'active' : ''} onClick={() => setView('lattice')}><Network size={15} />Lattice</button>
           <button className={view === 'lab' ? 'active' : ''} onClick={() => setView('lab')}><FlaskConical size={15} />Lab</button>
         </div>
         {view === 'visualizer' && <div className="sm2-progress">Round {safeStep} / {total}{done ? ' · complete' : ''}</div>}
@@ -575,7 +637,7 @@ export default function StableMatching() {
             {legend}
           </div>
         </div>
-      ) : (
+      ) : view === 'lab' ? (
         <div className="sm2-lab">
           <Heatmap data={labData} res={Math.max(2, Math.min(24, labRes))} maxV={labMax} hue={labHue} title={labTitle} caption={labCaption} mode={labMetric === 'lego' ? 'lego' : 'single'} maxRank={labN} />
           <p className="sm2-lab-note">{labMetric === 'stableCount'
@@ -585,6 +647,12 @@ export default function StableMatching() {
               : labMetric === 'unstable'
                 ? 'One-sided (A or B) is stable everywhere (a flat 0); the synchronous Alternate / Random schedules leave blocking pairs across most of the surface — synchronous two-sided deferred acceptance is not guaranteed stable.'
                 : 'Average number of blocking pairs left at the end — zero for one-sided, positive across most of the plane for Alternate / Random.'}</>}</p>
+        </div>
+      ) : (
+        <div className="sm2-lattice-view">
+          <p className="sm2-story">The <strong>lattice of stable matchings</strong> for this instance — every stable matching, ordered by who-prefers-what. A-optimal sits at the top (best for A), B-optimal at the bottom; each edge is a single <em>rotation</em>. Named solutions are flagged. Click any node to load it into the Visualizer.</p>
+          <LatticeView inst={inst} set={stableSet.matchings} capped={stableSet.capped} named={named} picked={pickedNode}
+            onPick={(i) => { setPickedNode(i); setJump('live'); setResolve(null); setView('visualizer'); }} />
         </div>
       )}
     </div>
