@@ -56,6 +56,34 @@ Grouped from the task brief; not yet sequenced.
 
 <!-- Newest entry first. -->
 
+### 🔵 finding · 11:10 — Solution-space design map (rotations, fairness, resolver)
+**Why:** User asked what enumerating all stable matchings involves, how to explore
+the space, algorithm alternatives, the "resolver" idea, and canonical *fair*
+algorithms. Capturing the plan before building.
+
+**Keystone = the rotation poset.** The set of stable matchings is a distributive
+lattice (Conway); man-optimal = top, woman-optimal = bottom (both already in
+`galeShapley.ts:extremal`). Rotations are the edges; the **rotation poset**
+(≤ n(n−1)/2 rotations, O(n²) to build) compactly encodes the whole lattice —
+stable matchings ↔ closed down-sets of the poset. One structure yields: the
+**stable-pair footprint** (union of matched cells), the **count** (= #antichains;
+#P-complete in general → cap & enumerate only for small/correlated n), the
+**egalitarian** matching (min Σrank, poly-time via min-cut on the poset), the
+**median** matching (each agent's median stable partner; Teo–Sethuraman), and
+**minimum-regret** (poly). **Sex-equal / balanced** (the most "fair between
+sides") are NP-hard (Kato/Feder) — approx only.
+
+**Resolver = Roth–Vande Vate** random path to stability: from *any* matching
+(incl. our often-unstable synchronous runs), repeatedly satisfy a blocking pair
+→ converges to *a* stable matching; animate purple cells resolving; #steps =
+"cost to stabilize" Lab surface.
+
+**Build order (proposed):** (1) `rotations.ts` engine → footprint overlay on the
+matrix [high value, low effort]; (2) count-vs-consensus curve (the
+glassiness-collapse-to-1); (3) lattice Hasse diagram + rotation slider (small n);
+(4) RVV resolver + egalitarian/median "fair" reference points (ties to the
+per-side averages — fair points pull A and B averages together).
+
 ### 🟢 code · 10:45 — Colour the average by its mean; scale to many people
 **Why:** User: "the numbers are a summary — colour the number to match the mean
 value. Also have some minimal pixel size, but allow much larger number of people."
