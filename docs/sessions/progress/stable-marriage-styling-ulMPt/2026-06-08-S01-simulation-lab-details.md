@@ -6,8 +6,8 @@ title: Stable Matching — iron out simulation & Lab details
 branch: claude/great-thompson-ko30di
 slug: stable-marriage-styling-ulMPt
 status: in-progress
-build: unknown
-followup: null
+build: passed
+followup: Tiers 0–4 of the solution-space plan shipped; Tier 5 (preference falsification) pending a product decision.
 pr: https://github.com/piyarsquare/animath/pull/189
 app: StableMatching
 ---
@@ -55,6 +55,23 @@ Grouped from the task brief; not yet sequenced.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 14:45 — Solution-space plan Tiers 0–4 shipped + docs
+**Why:** "Continue as far as you can — finish the plan, regular commits, self-test."
+
+Built and pushed, each verified (build + 1440-case rotation cross-check +
+screenshots): **T0** rotation engine · **T1** footprint + count surface · **T2**
+named solutions + jump-to · **T3** the lattice tab · **T4** RVV resolver +
+cost-to-stabilize surface. Rewrote EXPLAINER.md / README.md to match. Build passes,
+tree clean. **Tier 5 (preference falsification) not built** — it's a candidate
+standalone app needing the app-vs-mode decision (E4) *and* an engine extension
+(incomplete/truncated lists for truncation manipulation); flagged for the user.
+
+### 🟢 code · 14:30 — Tier 4 completion: cost-to-stabilize surface
+**Why:** Round out the resolver with its Lab surface.
+
+Lab **Repair cost** surface: average RVV repair steps to stabilize the synchronous
+schedule's result across consensus A×B — deeper in the disordered corner.
 
 ### 🟢 code · 14:20 — Tier 3: the lattice of stable matchings
 **Why:** The centerpiece — make the solution space literally spatial (wishlist
