@@ -153,6 +153,11 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
 <meta name="robots" content="noindex, nofollow"><title>animath · session control center</title>
 <link rel="stylesheet" href="./report.css"><script defer src="./report.js"></script>
 <style>
+  /* This dashboard has no TOC, so cancel report.css's 2-column body grid
+     (13.5rem TOC + content): with a single child, .content would otherwise be
+     squeezed into the narrow TOC track. Let the cards use the full width. */
+  .report>.body{display:block}
+  .content{max-width:none}
   .cc-tools{position:sticky;top:0;background:var(--bg);padding:.6rem 0;z-index:2;border-bottom:1px solid var(--border)}
   .cc-tools input{width:100%;max-width:34rem;padding:.5rem .7rem;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--fg);font:inherit}
   .cc-group{margin:1.4rem 0}.cc-count{opacity:.55;font-size:.78rem;font-weight:400}
