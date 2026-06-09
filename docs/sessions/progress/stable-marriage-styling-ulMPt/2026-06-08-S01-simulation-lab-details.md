@@ -56,6 +56,20 @@ Grouped from the task brief; not yet sequenced.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 10:45 — Colour the average by its mean; scale to many people
+**Why:** User: "the numbers are a summary — colour the number to match the mean
+value. Also have some minimal pixel size, but allow much larger number of people."
+
+- The per-side **average number** is now coloured by its mean rank on the BuRd
+  scale (A pale, B bluer at low consensus); the marker reverts to a neutral shape
+  (square A / circle B) so identity and value are separate cues.
+- Strip ticks get a **3px minimum** (fill-to-width when there's room, floor when
+  not — horizontal scroll only past a few hundred people).
+- **Population cap 60 → 200**; matrix cell floor 12px → 5px so large n renders as
+  a dense lego heatmap that fits; index labels auto-hide below 16px cells.
+
+![n=120 dense heatmap + fine strips](assets/2026-06-08-S01-large-n.png)
+
 ### 🟢 code · 10:20 — Merge average + distribution into one panel
 **Why:** User: "partner rank and distribution should be a single panel not two."
 

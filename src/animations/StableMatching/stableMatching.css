@@ -39,8 +39,11 @@
 .sm2-row { display: flex; align-items: center; gap: 10px; }
 .sm2-bar-label { display: inline-flex; align-items: center; width: 1.9em; font-size: 13px; color: #aab; }
 .sm2-outcome .sm2-row strong { width: 3.1em; font-size: 19px; font-variant-numeric: tabular-nums; color: #e7e7ea; }
-.sm2-strip { flex: 1; display: flex; height: 16px; border-radius: 3px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
-.sm2-strip i { flex: 1; min-width: 1px; }
+/* ticks fill the strip's width when there's room, but never shrink below a
+ * visible minimum — so the same panel scales from a few people to hundreds
+ * (overflowing into a horizontal scroll only when even 3px/tick won't fit). */
+.sm2-strip { flex: 1; display: flex; height: 16px; border-radius: 3px; overflow-x: auto; overflow-y: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); scrollbar-width: thin; }
+.sm2-strip i { flex: 1 0 3px; min-width: 3px; }
 
 /* preference matrix */
 .sm2-matrix-wrap { overflow-x: auto; }

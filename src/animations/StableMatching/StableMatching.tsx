@@ -287,7 +287,8 @@ export default function StableMatching() {
       const availH = window.innerHeight - top - 64;   // room for legend + bottom padding
       const byW = (w - (showLabels ? 34 : 6)) / n - 3; // minus row header + per-cell gap
       const byH = (availH - (showLabels ? 22 : 6)) / n - 3; // minus column header
-      setCellSize(Math.max(12, Math.min(80, Math.floor(Math.min(byW, byH)))));
+      // floor keeps cells visible (a dense lego heatmap) at large n; the wrap scrolls if needed
+      setCellSize(Math.max(5, Math.min(80, Math.floor(Math.min(byW, byH)))));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -359,7 +360,7 @@ export default function StableMatching() {
   const settings = (
     <ShellSettings>
       <Section title="Domain" icon="◷" defaultOpen>
-        <NumberInput label="Population (per side)" value={n} onChange={setN} min={3} max={60} integer />
+        <NumberInput label="Population (per side)" value={n} onChange={setN} min={3} max={200} integer />
         <Slider label="Consensus A" value={consensusA} min={0} max={100} step={1} onChange={setConsensusA} format={v => `${v}%`} />
         <Slider label="Consensus B" value={consensusB} min={0} max={100} step={1} onChange={setConsensusB} format={v => `${v}%`} />
         <NumberInput label="Seed" value={seed} onChange={setSeed} min={1} integer />
@@ -445,13 +446,13 @@ export default function StableMatching() {
               <span className="sm2-metric-label"><Activity size={14} /> Partner rank by side — average &amp; distribution (lower = happier)</span>
               <div className="sm2-rows">
                 <div className="sm2-row">
-                  <span className="sm2-bar-label"><i className="sw sq" style={{ background: rankBurd(acct.aAvg || 1, n) }} />A</span>
-                  <strong>#{acct.aAvg.toFixed(2)}</strong>
+                  <span className="sm2-bar-label"><i className="sw sq" />A</span>
+                  <strong style={{ color: rankBurd(acct.aAvg || 1, n) }}>#{acct.aAvg.toFixed(2)}</strong>
                   <div className="sm2-strip">{acct.aSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
                 </div>
                 <div className="sm2-row">
-                  <span className="sm2-bar-label"><i className="sw disc" style={{ background: rankBurd(acct.bAvg || 1, n) }} />B</span>
-                  <strong>#{acct.bAvg.toFixed(2)}</strong>
+                  <span className="sm2-bar-label"><i className="sw disc" />B</span>
+                  <strong style={{ color: rankBurd(acct.bAvg || 1, n) }}>#{acct.bAvg.toFixed(2)}</strong>
                   <div className="sm2-strip">{acct.bSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
                 </div>
               </div>
@@ -464,7 +465,7 @@ export default function StableMatching() {
             </div>
           </div>
           <div className="sm2-matrix-wrap" ref={matrixWrap}>
-            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} markers={markers} blocking={blocking} size={cellSize} labels={showLabels} view={cellView} gap={tight ? 0 : 3} trail={trail} />
+            <Matrix inst={inst} matching={matching} rows={rows} cols={cols} markers={markers} blocking={blocking} size={cellSize} labels={showLabels && cellSize >= 16} view={cellView} gap={tight ? 0 : 3} trail={trail} />
             {legend}
           </div>
         </div>
