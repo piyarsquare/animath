@@ -4,6 +4,11 @@ import App from './App';
 import Menu from './components/Menu';
 import { AppShell } from './components/AppShell';
 import { apps } from './apps';
+import './chrome/theme.css';
+import { applyPersistedSkin } from './chrome/skins';
+
+// Set <html data-theme> before first paint so every route renders skinned.
+applyPersistedSkin();
 
 const FractalsGPU = React.lazy(() => import('./animations/FractalsGPU/FractalsGPU'));
 const Fractals2D = React.lazy(() => import('./animations/Fractals/Fractals2D'));

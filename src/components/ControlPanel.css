@@ -1,155 +1,21 @@
-/* ControlPanel — desktop right-drawer + mobile bottom-sheet shell.
-   Sectioned, collapsible, with a "hide UI" affordance.
-   No animation-specific knowledge lives here. */
+/* ControlPanel — form primitives (Section / Slider / Pills / Select /
+   RangeSlider / NumberInput / Checkbox) used inside workspace panels.
+   Restyled to the redesign's design tokens (src/chrome/theme.css): the
+   `--cp-*` variables are kept as aliases because many apps reference them
+   from inline styles. No animation-specific knowledge lives here. */
 
 :root {
-  --cp-bg: rgba(12, 12, 16, 0.88);
-  --cp-bg-solid: rgb(12, 12, 16);
-  --cp-fg: #f0f0f3;
-  --cp-fg-dim: #9b9ba3;
-  --cp-accent: #ffd400;
-  --cp-border: rgba(255, 255, 255, 0.08);
-  --cp-hover: rgba(255, 255, 255, 0.06);
+  --cp-bg: var(--panel, rgba(12, 12, 16, 0.88));
+  --cp-bg-solid: var(--panel-solid, rgb(12, 12, 16));
+  --cp-fg: var(--fg, #f0f0f3);
+  --cp-fg-dim: var(--dim, #9b9ba3);
+  --cp-accent: var(--accent, #ffd400);
+  --cp-border: var(--border, rgba(255, 255, 255, 0.08));
+  --cp-hover: var(--hover, rgba(255, 255, 255, 0.06));
   --cp-radius: 8px;
-  --cp-drawer-width: 320px;
-  --cp-tab-width: 28px;
-  --cp-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
-  --cp-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --cp-shadow: var(--shadow, 0 6px 24px rgba(0, 0, 0, 0.45));
+  --cp-font: var(--font-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
 }
-
-/* ---------- Root containers ---------- */
-.cp-root,
-.cp-root * {
-  box-sizing: border-box;
-  font-family: var(--cp-font);
-  color: var(--cp-fg);
-}
-
-.cp-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  width: var(--cp-drawer-width);
-  background: var(--cp-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-left: 1px solid var(--cp-border);
-  box-shadow: var(--cp-shadow);
-  transform: translateX(0);
-  transition: transform 220ms ease;
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-}
-.cp-drawer.cp-closed {
-  transform: translateX(var(--cp-drawer-width));
-}
-
-.cp-tab {
-  position: fixed;
-  top: 50%;
-  right: var(--cp-drawer-width);
-  transform: translateY(-50%);
-  width: var(--cp-tab-width);
-  height: 64px;
-  background: var(--cp-bg);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--cp-border);
-  border-right: none;
-  border-radius: var(--cp-radius) 0 0 var(--cp-radius);
-  color: var(--cp-fg);
-  cursor: pointer;
-  z-index: 101;
-  transition: right 220ms ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-}
-.cp-tab.cp-closed {
-  right: 0;
-}
-.cp-tab:hover { background: var(--cp-hover); }
-
-/* ---------- Mobile bottom sheet ---------- */
-.cp-sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--cp-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-top: 1px solid var(--cp-border);
-  border-radius: 16px 16px 0 0;
-  box-shadow: var(--cp-shadow);
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  transition: height 220ms ease;
-}
-.cp-sheet.cp-peek { height: 96px; }
-.cp-sheet.cp-half { height: 52vh; }
-.cp-sheet.cp-full { height: 92vh; }
-
-.cp-sheet-handle {
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.cp-sheet-handle::before {
-  content: '';
-  width: 40px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--cp-fg-dim);
-}
-.cp-sheet-peek-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 14px 8px;
-  flex-shrink: 0;
-}
-.cp-sheet-peek-row > * { min-width: 0; }
-
-/* ---------- Body (scrollable section list) ---------- */
-.cp-body {
-  flex: 1;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 4px 0 16px;
-}
-
-/* ---------- Hide-UI button (persistent floating) ---------- */
-.cp-hide-btn,
-.cp-show-btn {
-  position: fixed;
-  bottom: 12px;
-  right: 12px;
-  z-index: 102;
-  width: 36px;
-  height: 36px;
-  border-radius: 18px;
-  border: 1px solid var(--cp-border);
-  background: var(--cp-bg);
-  backdrop-filter: blur(8px);
-  color: var(--cp-fg);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  box-shadow: var(--cp-shadow);
-}
-.cp-hide-btn:hover,
-.cp-show-btn:hover { background: var(--cp-hover); }
-/* When drawer is open on desktop, hide-btn moves left so it isn't covered */
-.cp-drawer:not(.cp-closed) ~ .cp-hide-btn { right: calc(var(--cp-drawer-width) + 12px); }
 
 /* ---------- Section ---------- */
 .cp-section { border-bottom: 1px solid var(--cp-border); }
@@ -164,8 +30,9 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
+  font-family: var(--font-display, var(--cp-font));
+  font-size: 13px;
+  font-weight: 700;
   color: var(--cp-fg);
   text-align: left;
 }
@@ -178,7 +45,7 @@
   transition: transform 150ms ease;
 }
 .cp-section-chevron.cp-open { transform: rotate(90deg); }
-.cp-section-icon { font-size: 14px; opacity: 0.9; }
+.cp-section-icon { font-size: 14px; opacity: 0.9; color: var(--cp-accent); }
 .cp-section-body {
   padding: 4px 14px 14px;
   display: flex;
@@ -186,11 +53,12 @@
   gap: 10px;
 }
 
-/* ---------- Form controls (inside sections) ---------- */
+/* ---------- Form controls (inside sections / panels) ---------- */
 .cp-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
+  font-family: var(--cp-font);
   font-size: 12px;
   color: var(--cp-fg-dim);
 }
@@ -198,40 +66,67 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--cp-fg);
 }
-.cp-row-value { color: var(--cp-fg); font-variant-numeric: tabular-nums; }
+.cp-row-value {
+  color: var(--cp-accent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
 
 .cp-row input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
-  accent-color: var(--cp-accent);
-  margin: 2px 0;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--track, rgba(255, 255, 255, 0.16));
+  outline: none;
+  margin: 6px 0;
+}
+.cp-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--cp-accent);
+  cursor: pointer;
+  border: 2px solid var(--cp-bg-solid);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+}
+.cp-row input[type="range"]::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--cp-accent);
+  cursor: pointer;
+  border: 2px solid var(--cp-bg-solid);
 }
 .cp-row select,
-.cp-row input[type="number"] {
-  background: rgba(255,255,255,0.06);
+.cp-row input[type="number"],
+.cp-row input[type="text"] {
+  background: var(--panel-2, rgba(255, 255, 255, 0.06));
   color: var(--cp-fg);
   border: 1px solid var(--cp-border);
-  border-radius: 4px;
-  padding: 6px 8px;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font: inherit;
   font-size: 13px;
+  font-weight: 600;
   width: 100%;
-  /* Tell the browser to render this widget's OS-native bits (the closed
-     control on some platforms, the dropdown popup with the options) in dark
-     mode. Without this, dark-mode OS users see light-on-light text in the
-     popup. */
-  color-scheme: dark;
 }
-/* Some browsers (Firefox, older Chromium) honor the option's own colors
-   in the popup; specifying them keeps the list readable even if
-   color-scheme is ignored. */
+/* Keep the OS-native dropdown popup readable on dark skins. */
+.cp-row select { color-scheme: dark; }
+[data-theme="light"] .cp-row select { color-scheme: light; }
 .cp-row select option {
-  background: #0c0c10;
-  color: #f0f0f3;
+  background: var(--panel-solid, #0c0c10);
+  color: var(--cp-fg);
 }
-.cp-row input[type="number"] { padding: 4px 6px; }
+.cp-row input[type="number"] { padding: 6px 8px; }
 .cp-row input[type="checkbox"] {
   width: 16px;
   height: 16px;
@@ -252,12 +147,12 @@
   top: 50%;
   transform: translateY(-50%);
   height: 4px;
-  border-radius: 2px;
+  border-radius: 999px;
 }
 .cp-dualrange-rail {
   left: 0;
   right: 0;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--track, rgba(255, 255, 255, 0.15));
 }
 .cp-dualrange-fill { background: var(--cp-accent); }
 .cp-dualrange input[type="range"] {
@@ -275,8 +170,8 @@
   pointer-events: auto;
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   background: var(--cp-accent);
   border: 2px solid var(--cp-bg-solid);
@@ -284,8 +179,8 @@
 }
 .cp-dualrange input[type="range"]::-moz-range-thumb {
   pointer-events: auto;
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   border: 2px solid var(--cp-bg-solid);
   border-radius: 50%;
   background: var(--cp-accent);
@@ -298,62 +193,54 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  background: var(--panel-2, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--cp-border);
+  border-radius: 8px;
+  padding: 3px;
 }
 .cp-pills button {
   flex: 1 1 auto;
   min-width: 0;
-  background: rgba(255,255,255,0.06);
-  color: var(--cp-fg);
-  border: 1px solid var(--cp-border);
-  border-radius: 4px;
+  background: transparent;
+  color: var(--cp-fg-dim);
+  border: none;
+  border-radius: 6px;
   padding: 6px 8px;
-  font-size: 11px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  transition: all .14s;
 }
-.cp-pills button:hover { background: var(--cp-hover); }
+.cp-pills button:hover { color: var(--cp-fg); }
 .cp-pills button.cp-active {
   background: var(--cp-accent);
-  color: #000;
-  border-color: var(--cp-accent);
+  color: var(--accent-fg, #000);
 }
 
 /* Function title block at top of Function section */
 .cp-function-title {
+  font-family: var(--font-display, var(--cp-font));
   font-size: 18px;
   font-weight: 600;
   color: var(--cp-fg);
   line-height: 1.2;
 }
 .cp-function-formula {
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-family: var(--font-mono, ui-monospace, 'SF Mono', Menlo, monospace);
   font-size: 13px;
   color: var(--cp-accent);
   margin-top: 2px;
 }
 
-/* Compact peek (mobile) — just function name and shortcut chips */
-.cp-peek-name {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--cp-fg);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-}
-.cp-peek-formula {
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: 11px;
-  color: var(--cp-accent);
-}
-
-/* Orientation matrix (desktop only, inside Camera section) */
+/* Orientation matrix (desktop only, inside Detail section) */
 .cp-orient-matrix {
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-family: var(--font-mono, ui-monospace, 'SF Mono', Menlo, monospace);
   font-size: 11px;
   border-collapse: collapse;
   margin-top: 4px;
+  color: var(--cp-fg-dim);
 }
 .cp-orient-matrix th { font-weight: normal; padding: 0 6px; }
 .cp-orient-matrix td { padding: 0 6px; text-align: right; color: var(--cp-fg); }
@@ -373,20 +260,20 @@
   letter-spacing: 0.04em;
 }
 .cp-quarter button {
-  background: rgba(255,255,255,0.06);
+  background: var(--panel-2, rgba(255, 255, 255, 0.06));
   color: var(--cp-fg);
   border: 1px solid var(--cp-border);
-  border-radius: 4px;
+  border-radius: 7px;
   padding: 6px 4px;
   font-size: 12px;
   cursor: pointer;
 }
 .cp-quarter button:hover { background: var(--cp-hover); }
 
-/* Readme inside About section */
-.cp-section-body .markdown-body { color: var(--cp-fg-dim); font-size: 13px; line-height: 1.5; }
-.cp-section-body .markdown-body a { color: var(--cp-accent); }
-.cp-section-body .markdown-body h1,
-.cp-section-body .markdown-body h2,
-.cp-section-body .markdown-body h3 { color: var(--cp-fg); margin-top: 12px; }
-.cp-section-body .markdown-body code { background: rgba(255,255,255,0.08); padding: 1px 4px; border-radius: 3px; }
+/* Readme inside panels / the explainer modal */
+.markdown-body { color: var(--cp-fg-dim); font-size: 13px; line-height: 1.55; font-family: var(--cp-font); }
+.markdown-body a { color: var(--cp-accent); }
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 { color: var(--cp-fg); margin-top: 12px; font-family: var(--font-display, var(--cp-font)); }
+.markdown-body code { background: var(--panel-2, rgba(255, 255, 255, 0.08)); padding: 1px 4px; border-radius: 3px; font-family: var(--font-mono, monospace); }
