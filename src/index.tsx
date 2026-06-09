@@ -51,6 +51,7 @@ function getHash(): string {
 const MIGRATED = new Set<string>([
   '/complex-particles',
   '/correspondence',
+  '/fractals',
 ]);
 
 function Router(): JSX.Element {

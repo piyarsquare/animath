@@ -1,18 +1,117 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
-import Readme from '../../components/Readme';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { PALETTE_GLSL, PALETTE_OPTIONS } from '../../lib/colormaps';
-import { useResponsive } from '../../styles/responsive';
 import { useViewportGestures } from '../../lib/useViewportGestures';
-import { ShellSettings, ShellActions, useAppHeader, useAppExplainer } from '../../components/AppShell';
-import { Section, Slider, Pills, Select } from '../../components/ControlPanel';
+import Workspace from '../../chrome/workspace/Workspace';
+import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import { Slider, Pills, Select, Checkbox, NumberInput } from '../../components/ControlPanel';
+
+type FractalType = 'mandelbrot' | 'julia' | 'burning' | 'tricorn';
+
+const INITIAL_VIEW = { xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 };
+
+const FORMULAS: Record<FractalType, string> = {
+  mandelbrot: 'z_{n+1} = z_n^k + c',
+  julia: 'z_{n+1} = z_n^k + c',
+  burning: 'z_{n+1} = (|Re(z_n)| + i|Im(z_n)|)^k + c',
+  tricorn: 'z_{n+1} = (conj(z_n))^k + c'
+};
+
+const TYPE_NAMES: Record<FractalType, string> = {
+  mandelbrot: 'Mandelbrot',
+  julia: 'Julia',
+  burning: 'Burning Ship',
+  tricorn: 'Tricorn'
+};
+
+const vertexShader = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position, 1.0);
+  }
+`;
+
+const fragmentShader = `
+  precision highp float;
+  varying vec2 vUv;
+  uniform vec4 view;
+  uniform int iter;
+  uniform int startIter;
+  uniform int type;
+  uniform vec2 juliaC;
+  uniform int palette;
+  uniform int paletteIn;
+  uniform int power;
+  uniform int colorMode;
+  uniform float offset;
+
+  const int MAX_ITER = 1000;
+  const int MAX_POWER = 100;
+
+  ${PALETTE_GLSL}
+
+  void main(){
+    // type: 0=Mandelbrot, 1=Julia, 2=Burning Ship, 3=Tricorn
+    vec2 c = vec2(mix(view.x, view.y, vUv.x), mix(view.z, view.w, vUv.y));
+    vec2 z = (type==0 || type==2 || type==3) ? vec2(0.0) : c;
+    vec2 k = (type==0 || type==2 || type==3) ? c : juliaC;
+    int i;
+    float maxMag = 0.0;
+    for(i=0;i<MAX_ITER;i++){
+      if(i>=iter) break;
+      if(dot(z,z)>4.0) break;
+      vec2 zcur = z;
+      if(type==2){
+        zcur = vec2(abs(zcur.x), abs(zcur.y));
+      }else if(type==3){
+        zcur = vec2(zcur.x, -zcur.y);
+      }
+      vec2 zpow = zcur;
+      for(int p=1;p<MAX_POWER;p++){
+        if(p>=power) break;
+        zpow = vec2(zpow.x*zcur.x - zpow.y*zcur.y, zpow.x*zcur.y + zpow.y*zcur.x);
+      }
+      z = zpow + k;
+      if(i >= startIter){
+        maxMag = max(maxMag, length(z));
+      }
+    }
+    float v = float(i);
+    float escVal = 0.0;
+    if(i < iter){
+      float log_zn = log(dot(z,z))/2.0;
+      escVal = float(i) + 1.0 - log(log_zn)/log(2.0);
+    }
+    float idx = (escVal==0.0) ? 0.0 : mod(floor(escVal*10.0), 255.0);
+    float t = mod(idx + offset, 256.0);
+    vec3 outCol = paletteColor(t, palette);
+    // Map the final |z| value to the palette for interior coloring
+    vec3 inCol = paletteColor(clamp(maxMag * 128.0, 0.0, 255.0), paletteIn);
+    if(i < iter){
+      if(colorMode==0) gl_FragColor = vec4(outCol,1.0);
+      else if(colorMode==2) gl_FragColor = vec4(outCol,1.0);
+      else gl_FragColor = vec4(0.0,0.0,0.0,1.0);
+    }else{
+      if(colorMode==1) gl_FragColor = vec4(inCol,1.0);
+      else if(colorMode==2) gl_FragColor = vec4(inCol,1.0);
+      else gl_FragColor = vec4(0.0,0.0,0.0,1.0);
+    }
+  }
+`;
 
 /** GPU accelerated Mandelbrot/Julia viewer using a fragment shader. */
 export default function FractalsGPU() {
-  const { isMobile, isTablet, screenSize } = useResponsive();
-  const mountRef = useRef<HTMLDivElement>(null);
+  const mountRef = useRef<HTMLDivElement | null>(null);
+  // The mount element doubles as state so the Three.js setup effect re-runs if
+  // the workspace remounts the view-window body (e.g. desktop ↔ phone chrome).
+  const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null);
+  const setMount = useCallback((el: HTMLDivElement | null) => {
+    mountRef.current = el;
+    setMountEl(el);
+  }, []);
   const rendererRef = useRef<THREE.WebGLRenderer>();
   const materialRef = useRef<THREE.ShaderMaterial>();
   const sceneRef = useRef<THREE.Scene>();
@@ -24,21 +123,13 @@ export default function FractalsGPU() {
   const overlayCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const pathRef = useRef<{ x: number; y: number }[] | null>(null);
 
-  const [view, setView] = useState({
-    xMin: -2.5,
-    xMax: 1.5,
-    yMin: -1.5,
-    yMax: 1.5
-  });
-  type FractalType = 'mandelbrot' | 'julia' | 'burning' | 'tricorn';
+  const [view, setView] = useState(INITIAL_VIEW);
   const [type, setType] = useState<FractalType>('mandelbrot');
   const [juliaC, setJuliaC] = useState({ real: -0.7, imag: 0.27015 });
   const [iter, setIter] = useState(100);
-  const [iterInput, setIterInput] = useState('100');
   const [startIter, setStartIter] = useState(0);
   const [palette, setPalette] = useState(0);
   const [power, setPower] = useState(2);
-  const [powerInput, setPowerInput] = useState('2');
   const [colorMode, setColorMode] = useState<"escape" | "limit" | "layered">(
     "escape"
   );
@@ -49,99 +140,6 @@ export default function FractalsGPU() {
    *  that point. When false, taps do nothing (so panning doesn't spawn
    *  unwanted trajectories). Default off. */
   const [tracing, setTracing] = useState(false);
-
-  useEffect(() => setIterInput(String(iter)), [iter]);
-  useEffect(() => setPowerInput(String(power)), [power]);
-
-  const FORMULAS: Record<FractalType, string> = {
-    mandelbrot: 'z_{n+1} = z_n^k + c',
-    julia: 'z_{n+1} = z_n^k + c',
-    burning: 'z_{n+1} = (|Re(z_n)| + i|Im(z_n)|)^k + c',
-    tricorn: 'z_{n+1} = (conj(z_n))^k + c'
-  };
-
-  const TYPE_NAMES: Record<FractalType, string> = {
-    mandelbrot: 'Mandelbrot',
-    julia: 'Julia',
-    burning: 'Burning Ship',
-    tricorn: 'Tricorn'
-  };
-
-  const vertexShader = `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = vec4(position, 1.0);
-    }
-  `;
-
-  const fragmentShader = `
-    precision highp float;
-    varying vec2 vUv;
-    uniform vec4 view;
-    uniform int iter;
-    uniform int startIter;
-    uniform int type;
-    uniform vec2 juliaC;
-    uniform int palette;
-    uniform int paletteIn;
-    uniform int power;
-    uniform int colorMode;
-    uniform float offset;
-
-    const int MAX_ITER = 1000;
-    const int MAX_POWER = 100;
-
-    ${PALETTE_GLSL}
-
-    void main(){
-      // type: 0=Mandelbrot, 1=Julia, 2=Burning Ship, 3=Tricorn
-      vec2 c = vec2(mix(view.x, view.y, vUv.x), mix(view.z, view.w, vUv.y));
-      vec2 z = (type==0 || type==2 || type==3) ? vec2(0.0) : c;
-      vec2 k = (type==0 || type==2 || type==3) ? c : juliaC;
-      int i;
-      float maxMag = 0.0;
-      for(i=0;i<MAX_ITER;i++){
-        if(i>=iter) break;
-        if(dot(z,z)>4.0) break;
-        vec2 zcur = z;
-        if(type==2){
-          zcur = vec2(abs(zcur.x), abs(zcur.y));
-        }else if(type==3){
-          zcur = vec2(zcur.x, -zcur.y);
-        }
-        vec2 zpow = zcur;
-        for(int p=1;p<MAX_POWER;p++){
-          if(p>=power) break;
-          zpow = vec2(zpow.x*zcur.x - zpow.y*zcur.y, zpow.x*zcur.y + zpow.y*zcur.x);
-        }
-        z = zpow + k;
-        if(i >= startIter){
-          maxMag = max(maxMag, length(z));
-        }
-      }
-      float v = float(i);
-      float escVal = 0.0;
-      if(i < iter){
-        float log_zn = log(dot(z,z))/2.0;
-        escVal = float(i) + 1.0 - log(log_zn)/log(2.0);
-      }
-      float idx = (escVal==0.0) ? 0.0 : mod(floor(escVal*10.0), 255.0);
-      float t = mod(idx + offset, 256.0);
-      vec3 outCol = paletteColor(t, palette);
-      // Map the final |z| value to the palette for interior coloring
-      vec3 inCol = paletteColor(clamp(maxMag * 128.0, 0.0, 255.0), paletteIn);
-      if(i < iter){
-        if(colorMode==0) gl_FragColor = vec4(outCol,1.0);
-        else if(colorMode==2) gl_FragColor = vec4(outCol,1.0);
-        else gl_FragColor = vec4(0.0,0.0,0.0,1.0);
-      }else{
-        if(colorMode==1) gl_FragColor = vec4(inCol,1.0);
-        else if(colorMode==2) gl_FragColor = vec4(inCol,1.0);
-        else gl_FragColor = vec4(0.0,0.0,0.0,1.0);
-      }
-    }
-  `;
 
   const normalizeView = useCallback((v: typeof view, canvas: HTMLCanvasElement) => {
     const aspect = canvas.width / canvas.height;
@@ -166,6 +164,9 @@ export default function FractalsGPU() {
     const overlay = overlayRef.current;
     if (!mount || !renderer || !overlay) return;
     const rect = mount.getBoundingClientRect();
+    // A collapsed/hidden view window reports zero size; keep the last good
+    // viewport instead of poisoning the view with a 0/0 aspect.
+    if (!rect.width || !rect.height) return;
     const dpr = window.devicePixelRatio || 1;
     renderer.setSize(rect.width, rect.height, false);
     renderer.domElement.style.width = `${rect.width}px`;
@@ -197,7 +198,7 @@ export default function FractalsGPU() {
     if (sceneRef.current && cameraRef.current) {
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     }
-  }, [view, iter, type, juliaC, palette, insidePalette, power, colorMode, offset]);
+  }, [view, iter, startIter, type, juliaC, palette, insidePalette, power, colorMode, offset]);
 
   // Keep renderRef pointing at the latest render implementation
   useEffect(() => {
@@ -297,8 +298,8 @@ export default function FractalsGPU() {
       const canvas = rendererRef.current?.domElement;
       return canvas ? normalizeView(v, canvas) : v;
     },
-    // Tracing is opt-in via the action toggle. Without this gate, every tap
-    // before a pan would spawn a stray orbit.
+    // Tracing is opt-in via the Trace panel toggle. Without this gate, every
+    // tap before a pan would spawn a stray orbit.
     onTap: tracing ? tracePath : undefined,
   });
 
@@ -311,9 +312,8 @@ export default function FractalsGPU() {
 
   const reset = useCallback(() => {
     const canvas = rendererRef.current?.domElement;
-    const base = { xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 };
     if (!canvas) return;
-    setView(normalizeView(base, canvas));
+    setView(normalizeView(INITIAL_VIEW, canvas));
     setIter(100);
   }, [normalizeView]);
 
@@ -329,7 +329,7 @@ export default function FractalsGPU() {
   }, [animating, animate]);
 
   useEffect(() => {
-    const mount = mountRef.current;
+    const mount = mountEl;
     if (!mount) return;
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     rendererRef.current = renderer;
@@ -369,14 +369,19 @@ export default function FractalsGPU() {
     };
     frameId = requestAnimationFrame(renderLoop);
     handleResize();
+    // The view window resizes independently of the browser window (drag
+    // handle, layout switches), so observe the mount itself as well.
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(mount);
     window.addEventListener('resize', handleResize);
     return () => {
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       cancelAnimationFrame(frameId);
       mount.removeChild(canvas);
       renderer.dispose();
     };
-  }, []);
+  }, [mountEl]);
 
   useEffect(() => {
     render();
@@ -386,150 +391,150 @@ export default function FractalsGPU() {
     drawPath();
   }, [view]);
 
-  useAppHeader(TYPE_NAMES[type], FORMULAS[type]);
-  useAppExplainer(explainerText);
+  /* ---- archetype panels (PARAM-MAP §3) ---- */
+
+  const setNode = (
+    <>
+      <Select
+        label="Fractal type"
+        options={[
+          { value: 'mandelbrot', label: 'Mandelbrot' },
+          { value: 'julia', label: 'Julia' },
+          { value: 'burning', label: 'Burning Ship' },
+          { value: 'tricorn', label: 'Tricorn' },
+        ]}
+        value={type}
+        onChange={(v) => setType(v)}
+      />
+      <Slider label="Power k" value={power}
+        min={1} max={10} step={1}
+        onChange={(v) => setPower(Math.max(1, Math.round(v)))}
+        format={v => String(v)} />
+      {type === 'julia' && (
+        <>
+          <NumberInput label="c real" value={juliaC.real} step={0.01}
+            onChange={v => setJuliaC(c => ({ ...c, real: v }))} />
+          <NumberInput label="c imag" value={juliaC.imag} step={0.01}
+            onChange={v => setJuliaC(c => ({ ...c, imag: v }))} />
+        </>
+      )}
+    </>
+  );
+
+  const viewportNode = (
+    <>
+      <button className="am-mini" style={{ width: '100%' }} onClick={reset}>
+        Reset view
+      </button>
+      <div className="am-hint">
+        Navigate on the canvas itself: drag to pan, pinch or mouse-wheel to zoom.
+      </div>
+    </>
+  );
+
+  const paletteNode = (
+    <>
+      <Select label="Palette"
+        options={PALETTE_OPTIONS}
+        value={palette} onChange={setPalette} />
+      <Slider label="Offset" value={offset}
+        min={0} max={255} step={1}
+        onChange={(v) => setOffset(Math.round(v))}
+        format={v => String(Math.round(v))} />
+      <Pills label="Color mode"
+        options={[
+          { value: 'escape', label: 'Escape' },
+          { value: 'limit', label: 'Limit' },
+          { value: 'layered', label: 'Layered' },
+        ]}
+        value={colorMode}
+        onChange={setColorMode} />
+      {colorMode !== 'escape' && (
+        <Select label="Inside palette"
+          options={PALETTE_OPTIONS}
+          value={insidePalette} onChange={setInsidePalette} />
+      )}
+      <Checkbox label="Animate colors"
+        checked={animating} onChange={setAnimating} />
+    </>
+  );
+
+  const traceNode = (
+    <>
+      <Checkbox label="Trace orbits on tap"
+        checked={tracing} onChange={setTracing} />
+      <button className="am-mini" style={{ width: '100%' }} onClick={clearPath}>
+        Clear orbit paths
+      </button>
+    </>
+  );
+
+  const iterationNode = (
+    <>
+      <Slider label="Max iterations" value={iter}
+        min={10} max={1000} step={10}
+        onChange={(v) => setIter(Math.max(1, Math.round(v)))}
+        format={v => String(v)} />
+      <Slider label="Start iteration" value={startIter}
+        min={0} max={500} step={1}
+        onChange={(v) => setStartIter(Math.max(0, Math.round(v)))}
+        format={v => String(v)} />
+    </>
+  );
+
+  const sections: SectionDef[] = [
+    { id: 'set', title: 'Set', arch: 'subject', node: setNode, estHeight: 220 },
+    { id: 'viewport', title: 'Viewport', arch: 'domain', node: viewportNode, estHeight: 130 },
+    { id: 'palette', title: 'Palette', arch: 'color', node: paletteNode, estHeight: 280 },
+    { id: 'trace', title: 'Trace', arch: 'drive', node: traceNode, estHeight: 130 },
+    { id: 'iteration', title: 'Iteration', arch: 'quality', node: iterationNode, estHeight: 150 },
+  ];
+
+  const views: ViewDef[] = [
+    {
+      id: 'plot',
+      title: TYPE_NAMES[type],
+      defaultRect: { x: 372, y: 16, w: 712, h: 628 },
+      node: (
+        <div
+          ref={setMount}
+          style={{ position: 'absolute', inset: 0, overflow: 'hidden', touchAction: 'none' }}
+          {...gestures}
+        >
+          <canvas
+            ref={overlayRef}
+            style={{
+              position: 'absolute', left: 0, top: 0,
+              width: '100%', height: '100%',
+              zIndex: 1, pointerEvents: 'none', touchAction: 'none',
+            }}
+          />
+        </div>
+      ),
+    },
+  ];
+
+  const layouts: LayoutDef[] = [
+    {
+      id: 'essentials', name: 'Essentials', sub: 'Set · Palette', icon: 'tune',
+      open: { set: { x: 84, y: 18 }, palette: { x: 84, y: 260 } },
+    },
+  ];
+
+  // The "?" modal carries both the short explainer and the full About readme,
+  // so nothing from the old drawer's About section is lost.
+  const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
 
   return (
-    <>
-      <div
-        ref={mountRef}
-        style={{ position: 'absolute', inset: 0, overflow: 'hidden', touchAction: 'none' }}
-        {...gestures}
-      >
-        <canvas
-          ref={overlayRef}
-          style={{
-            position: 'absolute', left: 0, top: 0,
-            width: '100%', height: '100%',
-            zIndex: 1, pointerEvents: 'none', touchAction: 'none',
-          }}
-        />
-      </div>
-
-      <ShellSettings>
-        <Section title="Function" icon="ƒ" defaultOpen>
-          <Select
-            label="Fractal type"
-            options={[
-              { value: 'mandelbrot', label: 'Mandelbrot' },
-              { value: 'julia', label: 'Julia' },
-              { value: 'burning', label: 'Burning Ship' },
-              { value: 'tricorn', label: 'Tricorn' },
-            ]}
-            value={type}
-            onChange={(v) => setType(v)}
-          />
-          <Slider label="Power k" value={power}
-            min={1} max={10} step={1}
-            onChange={(v) => setPower(Math.max(1, Math.round(v)))}
-            format={v => String(v)} />
-          {type === 'julia' && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <label className="cp-row" style={{ flex: 1 }}>
-                <div className="cp-row-label"><span>c real</span></div>
-                <input type="number" step="any" value={juliaC.real}
-                  onChange={e => setJuliaC({ ...juliaC, real: parseFloat(e.target.value) || 0 })} />
-              </label>
-              <label className="cp-row" style={{ flex: 1 }}>
-                <div className="cp-row-label"><span>c imag</span></div>
-                <input type="number" step="any" value={juliaC.imag}
-                  onChange={e => setJuliaC({ ...juliaC, imag: parseFloat(e.target.value) || 0 })} />
-              </label>
-            </div>
-          )}
-        </Section>
-
-        <Section title="Iteration" icon="↻" defaultOpen>
-          <Slider label="Max iterations" value={iter}
-            min={10} max={1000} step={10}
-            onChange={(v) => setIter(Math.max(1, Math.round(v)))}
-            format={v => String(v)} />
-          <Slider label="Start iteration" value={startIter}
-            min={0} max={500} step={1}
-            onChange={(v) => setStartIter(Math.max(0, Math.round(v)))}
-            format={v => String(v)} />
-        </Section>
-
-        <Section title="Color" icon="◐">
-          <Select label="Palette"
-            options={PALETTE_OPTIONS}
-            value={palette} onChange={setPalette} />
-          <Pills label="Coloring"
-            options={[
-              { value: 'escape', label: 'Escape' },
-              { value: 'limit', label: 'Limit' },
-              { value: 'layered', label: 'Layered' },
-            ]}
-            value={colorMode}
-            onChange={setColorMode} />
-          {colorMode !== 'escape' && (
-            <Select label="Inside palette"
-              options={PALETTE_OPTIONS}
-              value={insidePalette} onChange={setInsidePalette} />
-          )}
-        </Section>
-
-        <Section title="About" icon="ⓘ">
-          <Readme markdown={readmeText} />
-          <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', marginTop: 8 }}>
-            Drag to pan · pinch or wheel to zoom. Open Actions and toggle
-            "Trace mode" to spawn iteration paths by tap/click.
-          </div>
-        </Section>
-      </ShellSettings>
-
-      <ShellActions>
-        <div className="cp-section-body">
-          <button
-            style={{
-              padding: '12px 16px', borderRadius: 6,
-              border: tracing ? '1px solid var(--cp-accent)' : '1px solid var(--cp-border)',
-              background: tracing ? 'rgba(255, 212, 0, 0.18)' : 'rgba(255,255,255,0.06)',
-              color: 'var(--cp-fg)', cursor: 'pointer', fontSize: 14, fontWeight: 600,
-              textAlign: 'left',
-            }}
-            onClick={() => setTracing(t => !t)}
-          >
-            {tracing ? 'Trace mode: tap to spawn orbit' : 'Trace mode (off)'}
-          </button>
-          <button
-            style={{
-              padding: '12px 16px', borderRadius: 6,
-              border: '1px solid var(--cp-border)',
-              background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
-              cursor: pathRef.current ? 'pointer' : 'not-allowed',
-              fontSize: 14, opacity: pathRef.current ? 1 : 0.5,
-              textAlign: 'left',
-            }}
-            onClick={clearPath}
-          >
-            Clear orbit
-          </button>
-          <button
-            className="cp-pills"
-            style={{
-              padding: '12px 16px', borderRadius: 6, border: 'none',
-              background: animating ? '#ef4444' : '#10b981',
-              color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 14,
-            }}
-            onClick={() => setAnimating(a => !a)}
-          >
-            {animating ? 'Stop color cycle' : 'Start color cycle'}
-          </button>
-          <button
-            className="cp-pills"
-            style={{
-              padding: '12px 16px', borderRadius: 6,
-              border: '1px solid var(--cp-border)',
-              background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
-              cursor: 'pointer', fontSize: 14,
-            }}
-            onClick={reset}
-          >
-            Reset view
-          </button>
-        </div>
-      </ShellActions>
-    </>
+    <Workspace
+      appId="fractals"
+      title={TYPE_NAMES[type]}
+      subtitle={FORMULAS[type]}
+      sections={sections}
+      views={views}
+      layouts={layouts}
+      defaultLayoutId="essentials"
+      explainer={help}
+    />
   );
 }
