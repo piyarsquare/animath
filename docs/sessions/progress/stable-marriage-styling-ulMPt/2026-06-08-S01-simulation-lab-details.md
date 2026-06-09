@@ -56,6 +56,20 @@ Grouped from the task brief; not yet sequenced.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 10:05 — Distribution → sorted outcome colorbars (ECDF read)
+**Why:** User: "use an ecdf or approximate PDF… a sorted colorbar from A and from
+B of outcomes — that might make it obvious."
+
+Replaced the mirror histogram with **two sorted colorbars** (one per side): each
+tick is one person, sorted best→worst, colored on the shared **BuRd** rank scale
+(blue #1 → red worst). The blue/red balance reads like an ECDF — A's strip
+reddens fast, B's stays blue, so the asymmetry is obvious at a glance. Dropped
+the blue/amber side hues entirely: identity is now **shape** (square A / circle B,
+like the matrix) and **all** color is the one rank scale. The average markers are
+tinted by each side's average rank color, tying them to the strips.
+
+![sorted outcome colorbars](assets/2026-06-08-S01-per-side-dist.png)
+
 ### 🟢 code · 09:40 — Per-side average + outcome distribution (Visualizer)
 **Why:** User picked the thread "show outcome distribution and average by A and B."
 

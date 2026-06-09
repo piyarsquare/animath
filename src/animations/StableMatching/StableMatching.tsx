@@ -178,15 +178,18 @@ export default function StableMatching() {
   // average and the outcome distribution can be read for A and B separately.
   const acct = useMemo(() => {
     let aTot = 0, bTot = 0, aM = 0, bM = 0;
-    const aHist: number[] = new Array(n).fill(0), bHist: number[] = new Array(n).fill(0);
-    for (let i = 0; i < n; i++) if (matching.a[i] !== -1) { const r = inst.rankA[i][matching.a[i]] + 1; aTot += r; aM++; aHist[r - 1]++; }
-    for (let j = 0; j < n; j++) if (matching.b[j] !== -1) { const r = inst.rankB[j][matching.b[j]] + 1; bTot += r; bM++; bHist[r - 1]++; }
+    // each side's outcomes as a sorted (best→worst) list of partner ranks; −1 = unmatched.
+    const aSorted: number[] = [], bSorted: number[] = [];
+    for (let i = 0; i < n; i++) { if (matching.a[i] !== -1) { const r = inst.rankA[i][matching.a[i]] + 1; aTot += r; aM++; aSorted.push(r); } else aSorted.push(-1); }
+    for (let j = 0; j < n; j++) { if (matching.b[j] !== -1) { const r = inst.rankB[j][matching.b[j]] + 1; bTot += r; bM++; bSorted.push(r); } else bSorted.push(-1); }
+    const byRank = (x: number, y: number) => (x < 0 ? n + 1 : x) - (y < 0 ? n + 1 : y); // matched first (best→worst), unmatched last
+    aSorted.sort(byRank); bSorted.sort(byRank);
     const matchedPeople = aM + bM;
     return {
       aTot, bTot, combined: aTot + bTot, aM, bM,
       aAvg: aM ? aTot / aM : 0, bAvg: bM ? bTot / bM : 0,
       avg: matchedPeople ? (aTot + bTot) / matchedPeople : 0,
-      aFree: n - aM, bFree: n - bM, free: n - aM, aHist, bHist,
+      aFree: n - aM, bFree: n - bM, free: n - aM, aSorted, bSorted,
     };
   }, [inst, matching, n]);
 
@@ -399,8 +402,6 @@ export default function StableMatching() {
     </ShellActions>
   );
 
-  const maxHist = Math.max(1, ...acct.aHist, ...acct.bHist);
-
   const story = (() => {
     const cons = (consensusA === 0 && consensusB === 0) ? 'preferences are independent — everyone wants different partners'
       : (consensusA >= 80 && consensusB >= 80) ? 'both sides nearly share one ranking — everyone chases the same few'
@@ -443,19 +444,20 @@ export default function StableMatching() {
             <div className="sm2-metric big">
               <span className="sm2-metric-label"><Activity size={14} /> Average partner rank (lower = happier)</span>
               <div className="sm2-avgrows">
-                <span className="sm2-avg a"><i className="sw sq" />A <strong>#{acct.aAvg.toFixed(2)}</strong></span>
-                <span className="sm2-avg b"><i className="sw disc" />B <strong>#{acct.bAvg.toFixed(2)}</strong></span>
+                <span className="sm2-avg a"><i className="sw sq" style={{ background: rankBurd(acct.aAvg || 1, n) }} />A <strong>#{acct.aAvg.toFixed(2)}</strong></span>
+                <span className="sm2-avg b"><i className="sw disc" style={{ background: rankBurd(acct.bAvg || 1, n) }} />B <strong>#{acct.bAvg.toFixed(2)}</strong></span>
               </div>
               <span className="sm2-metric-sub">total rank {acct.combined} (A {acct.aTot} + B {acct.bTot}) · {acct.free ? `${acct.free} still free` : 'all matched'}</span>
             </div>
             <div className="sm2-metric">
-              <span className="sm2-metric-label">rank distribution</span>
-              <div className="sm2-dist2">
-                <div className="up">{acct.aHist.map((c, i) => <span key={i} className="b" style={{ height: `${(c / maxHist) * 100}%` }} title={`A #${i + 1}: ${c}`} />)}</div>
-                <div className="mid" />
-                <div className="down">{acct.bHist.map((c, i) => <span key={i} className="b" style={{ height: `${(c / maxHist) * 100}%` }} title={`B #${i + 1}: ${c}`} />)}</div>
+              <span className="sm2-metric-label">outcome distribution (sorted best → worst)</span>
+              <div className="sm2-bars">
+                <div className="sm2-bar"><span className="sm2-bar-label"><i className="sw sq" />A</span>
+                  <div className="sm2-strip">{acct.aSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div></div>
+                <div className="sm2-bar"><span className="sm2-bar-label"><i className="sw disc" />B</span>
+                  <div className="sm2-strip">{acct.bSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div></div>
               </div>
-              <span className="sm2-metric-sub"><i className="sw sq a" /> A above · <i className="sw disc b" /> B below — how many got their #1, #2, …</span>
+              <span className="sm2-metric-sub">each tick = one person, sorted by their partner's rank · blue #1 → red #{n}</span>
             </div>
             <div className={`sm2-metric stability ${!done ? '' : blocking.size === 0 ? 'ok' : 'bad'}`}>
               <span className="sm2-metric-label">{blocking.size === 0 ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />} Stability</span>
