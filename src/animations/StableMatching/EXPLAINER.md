@@ -1,7 +1,7 @@
 # Stable Matching
 
-The **Gale–Shapley** algorithm, **stable matchings**, and how well a matching
-satisfies everyone's preferences.
+The **Gale–Shapley** algorithm, the whole **space** of stable matchings, and the
+fair solutions and repairs that live inside it.
 
 ## Reading the matrix
 
@@ -9,51 +9,67 @@ Rows are group **A**, columns group **B**. Each cell is the potential pair
 (A_i, B_j), encoded as **two nested heatmaps** sharing one diverging colour scale
 (**BuRd**: **blue = #1 choice → white → red = last**): the **square** is how A_i
 ranks B_j, the **circle inside** is how B_j ranks A_i. Shape — square vs circle —
-tells the two sides apart, not colour. So a row is A_i's preferences as a colour
-gradient, a column is B_j's. (Exact ranks show as numbers at small populations and on
-hover; with many people the heat carries it.)
+tells the two sides apart, not colour. (Exact ranks show as numbers at small
+populations and on hover; with many people the heat carries it.)
 
 As the algorithm runs, **green cells are the current tentative matches**; the
-**gold ring** is the proposal happening now; a **red flash** is a rejection. A
-matched pair stays green only while it survives — receivers keep trading **up**, so
-a held partner's rank only ever improves. That monotone "trade-up" is exactly *why*
-the result is stable.
+**gold ring** is a proposal; a **purple flash** is a rejection or a partner being
+bumped. A held partner's rank only ever improves — that monotone "trade-up" is
+exactly *why* one-sided deferred acceptance is stable.
 
-## Deferred acceptance
+## Deferred acceptance, in rounds
 
-1. A free proposer proposes to its most-preferred partner not yet asked.
-2. The receiver **holds** whichever suitor it ranks best so far and rejects the rest.
-3. Rejected proposers move down their list and try again.
+Each **round**, the whole proposing side asks at once; every receiver keeps its
+single best offer and rejects the rest; rejected proposers try their next choice.
+The **Schedule** sets who proposes:
 
-It always terminates at a **stable matching** — no **blocking pair**, i.e. no two
-people who both prefer each other to their current partners. If any survive (they
-can't, for a completed run) they light up red.
+- **A / B** — always that side. Classical one-sided Gale–Shapley: the result is the
+  proposer-optimal stable matching, and it is **always stable**.
+- **Alternate / Random** — the sides take turns (or a coin decides). Synchronous
+  two-sided deferred acceptance is **usually *not* stable** — it leaves **blocking
+  pairs** (purple-ringed: two people who both prefer each other to their partners).
 
-## The common preference — and the diagonal
+## The common preference
 
-Every member has a hidden **desirability**; each person's list blends that shared
-signal with private taste, weighted by **Consensus**:
+Every member has a hidden **desirability**; each list blends that shared signal
+with private taste, weighted by **Consensus** (0% = pure private taste, everyone
+wants someone different; 100% = everyone in a group agrees on one ranking). At full
+consensus there is a *unique* stable matching — best-with-best on the diagonal.
 
-- **0%** — pure private taste; everyone wants someone different.
-- **100%** — everyone in a group agrees on one ranking of the other group.
+## Outcome, per side
 
-Turn **Order by global preference** on (default) and the rows/columns sort by
-desirability. At high consensus the matched green cells snap to the **diagonal** —
-best-with-best — because everyone shares one order. (At low consensus the matches
-scatter; people simply want different things.)
+The **Partner rank by side** panel shows each side's **average partner rank**
+(coloured by that average) and its **sorted outcome colourbar** — every person as a
+tick, sorted best→worst, on the BuRd scale. The blue/red balance reads like an ECDF:
+when A proposes, A's bar is mostly blue and B's reddens — proposer advantage made
+visible.
 
-## The metric: total rank
+## The space of stable matchings
 
-The honest measure of a matching is **how good a partner everyone gets** — the
-**total rank** (sum of every matched person's partner-rank; **lower = happier**),
-shown per side and combined, with a distribution of who got their #1, #2, …
-Counter-intuitively, **low** consensus gives the **best** total rank: when people
-want different partners there's enough to go around; when everyone chases the same
-few "stars," most settle for worse. The **Lab** sweeps both consensus dials and maps
-this welfare surface, averaging many trials per cell so it's signal, not noise.
+The stable matchings form a **distributive lattice**. The app exposes it three ways:
 
-## Who proposes
+- **Footprint** — every cell matched in *some* stable matching is outlined
+  (teal dashes). It's just the diagonal at full consensus and fattens into a band as
+  consensus drops: the "wiggle room."
+- **Jump to a stable solution** — teleport to a named matching: **A/B-optimal** (the
+  two extremes), **Egalitarian** (minimum total rank — welfare-best), **Median**
+  (everyone's median stable partner — the centre), **Min-regret**, **Sex-equal**
+  (balances A's and B's happiness), **Balanced**. Watch the per-side averages pull
+  together as you pick a fairer one.
+- **Lattice tab** — the Hasse diagram of *all* stable matchings: A-optimal at the
+  top, B-optimal at the bottom, each edge a single **rotation**, the named solutions
+  flagged. Click a node to load it. It collapses to a single point as consensus → 100%.
 
-- **A proposes / B proposes** — classical one-sided Gale–Shapley.
-- **Market** — a bias-weighted coin picks the proposer each step; still stable, but
-  no longer a canonical matching.
+## Stabilize (Roth–Vande Vate)
+
+When a run lands unstable, **Stabilize** runs a *random path to stability*: pick a
+blocking pair, satisfy it (their old partners go single), repeat. It provably
+reaches a stable matching; the purple cells heal one at a time. The number of repair
+steps — the **cost to stabilize** — is mapped across consensus in the Lab.
+
+## The Lab
+
+Sweeps both consensus dials and maps a chosen surface, averaging many trials per
+cell: **Ranks (A·B)**, **Unstable %** and **Blocking** (the instability of the
+synchronous schedules), **# stable** (the lattice size — huge when disordered,
+collapsing to 1 at full consensus), and **Repair cost** (RVV steps).

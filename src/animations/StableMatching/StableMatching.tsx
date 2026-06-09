@@ -448,7 +448,7 @@ export default function StableMatching() {
   const [labRes, setLabRes] = usePersistentState(`${NS}:labRes`, 12);
   const [labTrials, setLabTrials] = usePersistentState(`${NS}:labTrials`, 12);
   const [labSchedule, setLabSchedule] = usePersistentState<Schedule>(`${NS}:labSchedule`, 'alt');
-  const [labMetric, setLabMetric] = usePersistentState<'lego' | 'unstable' | 'blocking' | 'stableCount'>(`${NS}:labMetric`, 'lego');
+  const [labMetric, setLabMetric] = usePersistentState<'lego' | 'unstable' | 'blocking' | 'stableCount' | 'cost'>(`${NS}:labMetric`, 'lego');
   const [labData, setLabData] = useState<Cell[] | null>(null);
   const [labMax, setLabMax] = useState(1);
   const [labRunning, setLabRunning] = useState(false);
@@ -477,6 +477,17 @@ export default function StableMatching() {
         }
         return { v: sum / labTrials };
       }
+      if (labMetric === 'cost') {
+        // RVV repair steps from the (often unstable) synchronous result — "cost to stabilize"
+        let sum = 0;
+        for (let t = 0; t < labTrials; t++) {
+          const seedT = s + t * 104729 + 3;
+          const ins = generateInstance({ n: labN, consensusA: cA, consensusB: cB, seed: s + t * 7919 + 1 });
+          const { matching } = runRounds(ins, labSchedule, 50, seedT);
+          sum += rothVandeVate(ins, matching, seedT).steps.length;
+        }
+        return { v: sum / labTrials };
+      }
       let sum = 0;
       for (let t = 0; t < labTrials; t++) {
         const ins = generateInstance({ n: labN, consensusA: cA, consensusB: cB, seed: s + t * 7919 + 1 });
@@ -495,9 +506,9 @@ export default function StableMatching() {
     batch();
   }, [labN, labRes, labTrials, labMetric, labSchedule]);
   useEffect(() => () => { labCancel.current = true; }, []);
-  const labTitle = labMetric === 'lego' ? `A & B avg rank — ${labSchedule}` : labMetric === 'unstable' ? `Unstable runs % — ${labSchedule}` : labMetric === 'stableCount' ? '# stable matchings (lattice size)' : `Avg blocking pairs — ${labSchedule}`;
-  const labHue = labMetric === 'stableCount' ? 168 : 280;
-  const labCaption = labMetric === 'unstable' ? 'unstable %' : labMetric === 'stableCount' ? '# stable' : 'pairs';
+  const labTitle = labMetric === 'lego' ? `A & B avg rank — ${labSchedule}` : labMetric === 'unstable' ? `Unstable runs % — ${labSchedule}` : labMetric === 'stableCount' ? '# stable matchings (lattice size)' : labMetric === 'cost' ? `Cost to stabilize (RVV steps) — ${labSchedule}` : `Avg blocking pairs — ${labSchedule}`;
+  const labHue = labMetric === 'stableCount' ? 168 : labMetric === 'cost' ? 312 : 280;
+  const labCaption = labMetric === 'unstable' ? 'unstable %' : labMetric === 'stableCount' ? '# stable' : labMetric === 'cost' ? 'steps' : 'pairs';
 
   const settings = (
     <ShellSettings>
@@ -550,7 +561,7 @@ export default function StableMatching() {
       ) : view === 'lab' ? (
         <div className="sm2-actions">
           <Pills label="Schedule" value={labSchedule} onChange={setLabSchedule} options={[{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'alt', label: 'Alt' }, { value: 'random', label: 'Rnd' }]} />
-          <Pills label="Surface" value={labMetric} onChange={setLabMetric} options={[{ value: 'lego', label: 'Ranks (A·B)' }, { value: 'unstable', label: 'Unstable %' }, { value: 'blocking', label: 'Blocking' }, { value: 'stableCount', label: '# stable' }]} />
+          <Pills label="Surface" value={labMetric} onChange={setLabMetric} options={[{ value: 'lego', label: 'Ranks (A·B)' }, { value: 'unstable', label: 'Unstable %' }, { value: 'blocking', label: 'Blocking' }, { value: 'stableCount', label: '# stable' }, { value: 'cost', label: 'Repair cost' }]} />
           <NumberInput label="Population" value={labN} onChange={setLabN} min={6} max={80} integer />
           <NumberInput label="Resolution" value={labRes} onChange={setLabRes} min={4} max={24} integer />
           <NumberInput label="Trials / cell" value={labTrials} onChange={setLabTrials} min={1} max={60} integer />
@@ -640,7 +651,9 @@ export default function StableMatching() {
       ) : view === 'lab' ? (
         <div className="sm2-lab">
           <Heatmap data={labData} res={Math.max(2, Math.min(24, labRes))} maxV={labMax} hue={labHue} title={labTitle} caption={labCaption} mode={labMetric === 'lego' ? 'lego' : 'single'} maxRank={labN} />
-          <p className="sm2-lab-note">{labMetric === 'stableCount'
+          <p className="sm2-lab-note">{labMetric === 'cost'
+            ? <>Each cell averages the <strong>number of Roth–Vande Vate repair steps</strong> needed to fix the <strong>{labSchedule}</strong> schedule's (often unstable) result into a stable matching, over <strong>{labTrials}</strong> instances. One-sided (A/B) is already stable → 0; the synchronous Alternate / Random schedules cost more to repair where preferences are disordered. The "cost to stabilize" of the frustrated regime.</>
+            : labMetric === 'stableCount'
             ? <>Each cell counts the <strong>number of stable matchings</strong> (the lattice size), averaged over <strong>{labTrials}</strong> instances — this is a property of the preferences, not of any schedule. It is huge in the disordered (low-consensus) corner and <strong>collapses to exactly 1</strong> as both sides converge on one ranking: a unique, assortative stable matching. The order/disorder phase curve of the whole problem. (Enumeration is capped at 300; keep Population small.)</>
             : <>Each cell sweeps consensus A × B and averages <strong>{labTrials}</strong> independent instances run with the <strong>{labSchedule}</strong> schedule — signal, not single-draw noise. {labMetric === 'lego'
               ? 'Lego cells: the square is A’s average rank, the circle B’s, on the same blue→red scale (blue = #1). Low consensus is blue (people want different partners, so everyone does well); as both groups converge on one ranking the cells redden — most chase the same few.'
