@@ -45,6 +45,23 @@ function halton(i: number, base: number): number {
 
 const hue = (i: number) => new THREE.Color().setHSL((i * 0.61803398875) % 1, 0.62, 0.58).getHex();
 
+/** A unique, evenly-spaced hue for corner marker `i` of `count` — distinct as a
+ *  set so every corner reads as its own colour. Shared by the 3D markers and the
+ *  mini-map so the numbers + colours correspond. */
+export const cornerColor = (i: number, count: number): number =>
+  new THREE.Color().setHSL((i / Math.max(1, count)) % 1, 0.72, 0.56).getHex();
+
+/** Roman numeral for a small positive integer (corner markers go up to 8). */
+export function romanize(n: number): string {
+  const table: [number, string][] = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'],
+    [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+  ];
+  let r = '';
+  for (const [v, sym] of table) while (n >= v) { r += sym; n -= v; }
+  return r;
+}
+
 /** Generate the landmark set: one centre beacon, then `count` interior markers laid
  *  out by `arrangement`, all kept off the domain edges. Deterministic + stable. */
 export function generateProps(count: number, arrangement: ArrangementId): DecorProp[] {
@@ -145,6 +162,50 @@ function labelTexture(label: string, color: number): THREE.CanvasTexture {
   return t;
 }
 
+/**
+ * The face of a ground **corner marker** — a round, manhole-cover plate carrying a
+ * single numeral (Arabic on the tree/top face, Roman on the column/bottom face) in
+ * the corner's unique hue, over a dark steel disc with a hued rim. Drawn at 256px;
+ * mapped onto a flat disc that lies on the floor, so it reads when you stand on it
+ * and (mirrored) through the glass from the other side.
+ */
+function numeralTexture(text: string, color: number): THREE.CanvasTexture {
+  const s = 256;
+  const cvs = document.createElement('canvas');
+  cvs.width = cvs.height = s;
+  const ctx = cvs.getContext('2d')!;
+  ctx.clearRect(0, 0, s, s);
+  const c = s / 2, r = s * 0.46;
+  const hex = '#' + new THREE.Color(color).getHexString();
+  const glyph = '#' + new THREE.Color(color).clone().lerp(new THREE.Color(0xffffff), 0.5).getHexString();
+
+  // brushed-steel disc
+  const grad = ctx.createRadialGradient(c, c * 0.8, r * 0.1, c, c, r);
+  grad.addColorStop(0, '#5b626e');
+  grad.addColorStop(1, '#262a32');
+  ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad; ctx.fill();
+  // hued rim ring
+  ctx.lineWidth = s * 0.05; ctx.strokeStyle = hex;
+  ctx.beginPath(); ctx.arc(c, c, r - s * 0.03, 0, Math.PI * 2); ctx.stroke();
+  // dark inner ring for contrast
+  ctx.lineWidth = s * 0.012; ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath(); ctx.arc(c, c, r - s * 0.075, 0, Math.PI * 2); ctx.stroke();
+
+  // numeral
+  const size = text.length >= 4 ? 0.34 : text.length === 3 ? 0.42 : 0.56;
+  ctx.font = `900 ${Math.round(s * size)}px "Segoe UI", system-ui, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = s * 0.05; ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+  ctx.strokeText(text, c, c * 1.03);
+  ctx.fillStyle = glyph;
+  ctx.fillText(text, c, c * 1.03);
+
+  const t = new THREE.CanvasTexture(cvs);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
 export interface FundamentalSquareDecor {
   readonly props: readonly DecorProp[];
   /** Top-face form of landmark i (a tree, or the gold centre spire). Grows +y from
@@ -153,13 +214,15 @@ export interface FundamentalSquareDecor {
   /** Bottom-face form of landmark i (a column, or the magenta centre spire). Also
    *  grows +y from its base; the caller mirrors it onto the underside. */
   makeBottom(i: number): THREE.Group;
-  /** Top-face **vertex tower** — a tall, gold-finialed tree-tower marking a polygon
-   *  vertex (placed just inside every vertex by the presenter). Index-free: every
-   *  vertex tower looks the same. Grows +y from its base. */
-  makeTowerTop(): THREE.Group;
-  /** Bottom-face vertex tower — the column/obelisk counterpart, same vertex, other
-   *  face (keeps the tree↔column split through the flip). Grows +y from its base. */
-  makeTowerBottom(): THREE.Group;
+  /** Top-face **corner marker** — a ground-level manhole-cover disc marking a
+   *  polygon corner, carrying the corner's Arabic numeral in its unique `color`.
+   *  Lies flat (grows a little +y from the floor); the presenter places one just
+   *  inside every vertex. `index` is the 1-based corner number. */
+  makeCornerTop(index: number, color: number): THREE.Group;
+  /** Bottom-face corner marker — the same disc on the column/underside face,
+   *  carrying the **Roman** numeral (the tree↔column / Arabic↔Roman split rides the
+   *  flip). Same corner, other face. */
+  makeCornerBottom(index: number, color: number): THREE.Group;
   dispose(): void;
 }
 
@@ -186,15 +249,18 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
   const orbGeo = new THREE.SphereGeometry(0.6, 18, 14);
   const cubeGeo = new THREE.BoxGeometry(0.92, 0.92, 0.92);
 
-  // ── VERTEX TOWERS (special, tall; a gold finial flags them as vertex markers) ─
-  // top = a tall evergreen tree-tower, bottom = a tall stone obelisk-tower, so the
-  // tree↔column split (and its mirror under the flip) still reads, but taller.
-  const towerTrunkGeo = new THREE.CylinderGeometry(0.3, 0.55, 5.2, 12);
-  const towerCrownGeo = new THREE.ConeGeometry(1.0, 3.4, 14);
-  const towerBaseGeo = new THREE.CylinderGeometry(0.78, 0.95, 0.6, 12);
-  const towerShaftGeo = new THREE.CylinderGeometry(0.42, 0.66, 5.4, 16);
-  const towerPyramidGeo = new THREE.ConeGeometry(0.6, 1.5, 4);
-  const finialGeo = new THREE.OctahedronGeometry(0.42);
+  // ── CORNER MARKERS (ground-level manhole-cover discs marking polygon corners) ─
+  // A squat metal disc with a raised rim and a numbered plate on top: Arabic on the
+  // tree face, Roman on the column face, each corner its own hue. Replaces the old
+  // tall vertex towers — corners read as flush ground markers, not skyline.
+  const discBodyGeo = new THREE.CylinderGeometry(1.15, 1.24, 0.32, 36);
+  const discRimGeo = new THREE.TorusGeometry(1.12, 0.1, 10, 40);
+  const discPlateGeo = new THREE.CircleGeometry(1.02, 44);
+  const discRimMat = new THREE.MeshStandardMaterial({ color: 0x9aa0ab, roughness: 0.4, metalness: 0.7, side: THREE.DoubleSide });
+  // per-corner caches (one decor instance per world; disposed below)
+  const cornerBodyMats = new Map<number, THREE.MeshStandardMaterial>();
+  const cornerPlateMats = new Map<string, THREE.MeshBasicMaterial>();
+  const cornerTexs: THREE.CanvasTexture[] = [];
 
   // ── number-badge plane (shared geometry; per-prop material/texture) ───────────
   const decalGeo = new THREE.PlaneGeometry(1.7, 1.7);
@@ -209,7 +275,6 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
   const stoneMat = new THREE.MeshStandardMaterial({ color: 0xdedacb, roughness: 0.78, metalness: 0.02, side: THREE.DoubleSide });
   const goldMat = new THREE.MeshStandardMaterial({ color: 0xffcf4a, emissive: 0x7a5a00, emissiveIntensity: 0.7, roughness: 0.35, metalness: 0.45, side: THREE.DoubleSide });
   const magentaMat = new THREE.MeshStandardMaterial({ color: 0xff5ad0, emissive: 0x66004a, emissiveIntensity: 0.7, roughness: 0.35, metalness: 0.45, side: THREE.DoubleSide });
-  const towerCrownMat = new THREE.MeshStandardMaterial({ color: 0x2b6e44, emissive: 0x123c22, emissiveIntensity: 0.22, roughness: 0.8, side: THREE.DoubleSide });
 
   for (const p of props) {
     // column shaft: a limestone tint carrying the landmark hue
@@ -268,24 +333,36 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
     return g;
   };
 
-  const makeTowerTop = (): THREE.Group => {
+  /** Shared corner-marker builder: a metal disc + rim + a numbered plate that
+   *  faces +y (up out of the floor). `roman` picks the numeral style for the face. */
+  const makeCorner = (index: number, color: number, roman: boolean): THREE.Group => {
     const g = new THREE.Group();
-    const trunk = new THREE.Mesh(towerTrunkGeo, trunkMat); trunk.position.y = 2.6;
-    const crown = new THREE.Mesh(towerCrownGeo, towerCrownMat); crown.position.y = 6.3;
-    const finial = new THREE.Mesh(finialGeo, goldMat); finial.position.y = 8.2;
-    g.add(trunk, crown, finial);
-    return g;
-  };
+    let body = cornerBodyMats.get(color);
+    if (!body) {
+      const tint = new THREE.Color(color).lerp(new THREE.Color(0x4a5260), 0.35);
+      body = new THREE.MeshStandardMaterial({
+        color: tint, emissive: color, emissiveIntensity: 0.12, roughness: 0.5, metalness: 0.55, side: THREE.DoubleSide,
+      });
+      cornerBodyMats.set(color, body);
+    }
+    const disc = new THREE.Mesh(discBodyGeo, body); disc.position.y = 0.16;
+    const rim = new THREE.Mesh(discRimGeo, discRimMat); rim.position.y = 0.32; rim.rotation.x = Math.PI / 2;
 
-  const makeTowerBottom = (): THREE.Group => {
-    const g = new THREE.Group();
-    const base = new THREE.Mesh(towerBaseGeo, stoneMat); base.position.y = 0.3;
-    const shaft = new THREE.Mesh(towerShaftGeo, stoneMat); shaft.position.y = 3.3;
-    const point = new THREE.Mesh(towerPyramidGeo, stoneMat); point.position.y = 6.75;
-    const finial = new THREE.Mesh(finialGeo, goldMat); finial.position.y = 7.9;
-    g.add(base, shaft, point, finial);
+    const key = `${roman ? 'r' : 'a'}:${index}:${color}`;
+    let plateMat = cornerPlateMats.get(key);
+    if (!plateMat) {
+      const tex = numeralTexture(roman ? romanize(index) : String(index), color);
+      cornerTexs.push(tex);
+      plateMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+      cornerPlateMats.set(key, plateMat);
+    }
+    const plate = new THREE.Mesh(discPlateGeo, plateMat);
+    plate.rotation.x = -Math.PI / 2; plate.position.y = 0.335;
+    g.add(disc, rim, plate);
     return g;
   };
+  const makeCornerTop = (index: number, color: number): THREE.Group => makeCorner(index, color, false);
+  const makeCornerBottom = (index: number, color: number): THREE.Group => makeCorner(index, color, true);
 
   /** The centre beacon — gold spire + orb (top) vs magenta spire + cube (bottom). */
   const makeCenter = (mat: THREE.MeshStandardMaterial, finial: 'orb' | 'cube'): THREE.Group => {
@@ -307,19 +384,21 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
     props,
     makeTop,
     makeBottom,
-    makeTowerTop,
-    makeTowerBottom,
+    makeCornerTop,
+    makeCornerBottom,
     dispose: () => {
       trunkGeo.dispose(); canopyGeo.forEach((g) => g.dispose()); decalGeo.dispose();
       plinthGeo.dispose(); shaftGeo.dispose(); capitalGeo.dispose(); abacusGeo.dispose();
       pedestalGeo.dispose(); pedestalGeo2.dispose(); spireGeo.dispose(); orbGeo.dispose(); cubeGeo.dispose();
-      towerTrunkGeo.dispose(); towerCrownGeo.dispose(); towerBaseGeo.dispose();
-      towerShaftGeo.dispose(); towerPyramidGeo.dispose(); finialGeo.dispose();
-      trunkMat.dispose(); stoneMat.dispose(); goldMat.dispose(); magentaMat.dispose(); towerCrownMat.dispose();
+      discBodyGeo.dispose(); discRimGeo.dispose(); discPlateGeo.dispose(); discRimMat.dispose();
+      trunkMat.dispose(); stoneMat.dispose(); goldMat.dispose(); magentaMat.dispose();
       shaftMats.forEach((m) => m.dispose());
       canopyMats.forEach((m) => m.dispose());
       decalMats.forEach((m) => m.dispose());
       decalTexs.forEach((t) => t.dispose());
+      cornerBodyMats.forEach((m) => m.dispose());
+      cornerPlateMats.forEach((m) => m.dispose());
+      cornerTexs.forEach((t) => t.dispose());
     },
   };
 }

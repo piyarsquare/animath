@@ -11,6 +11,9 @@
  * the build plan called for (so the octagon is legible).
  */
 
+import * as THREE from 'three';
+import { cornerColor } from './decor';
+
 export interface PolygonLetter { gen: number; inv: boolean }
 
 export interface PolygonMarker {
@@ -81,6 +84,18 @@ export function drawPolygonMap(ctx: CanvasRenderingContext2D, size: number, spec
     ctx.strokeStyle = col; ctx.lineWidth = 2.4; ctx.lineJoin = 'round';
     ctx.beginPath(); ctx.moveTo(-3, -4.5); ctx.lineTo(3, 0); ctx.lineTo(-3, 4.5); ctx.stroke();
     ctx.restore();
+  }
+
+  // numbered corner chips — the same 1..m indices + hues as the ground corner
+  // markers (vertex k ↔ real.vertices[k]), pulled slightly inside the boundary.
+  for (let k = 0; k < m; k++) {
+    const px = toX(vx[k] * 0.84), py = toY(vy[k] * 0.84);
+    ctx.beginPath(); ctx.arc(px, py, 7.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#' + new THREE.Color(cornerColor(k, m)).getHexString(); ctx.fill();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.stroke();
+    ctx.fillStyle = '#0a0c14'; ctx.font = '700 10px system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(k + 1), px, py + 0.5);
   }
 
   // player marker

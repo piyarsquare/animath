@@ -3,6 +3,7 @@ import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverMode
 import { SquareMapState } from '../engineTypes';
 import { glassState, POLYGON_GLASS } from '../glassSurface';
 import { makeFootprintTrail } from '../footprints';
+import { cornerColor } from '../decor';
 import { rp2Square, sq2hemi } from '../squareMap';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
@@ -128,17 +129,18 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
         const tIn = decor.makeTop(i); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
       }
     });
-    // vertex towers just inside each chart corner (the square's "smaller polygon")
-    CHART_CORNERS.forEach(([cu, cv]) => {
+    // numbered corner markers just inside each chart corner (the square's corners)
+    CHART_CORNERS.forEach(([cu, cv], v) => {
+      const col = cornerColor(v, CHART_CORNERS.length);
       const iu = 0.5 + (cu - 0.5) * VERTEX_INSET, iv = 0.5 + (cv - 0.5) * VERTEX_INSET;
       const d = dirFor(iu, iv);
       treeDirs.push(d);
-      const tOut = decor.makeTowerTop(); place(tOut, d, R, true); outerG.add(tOut);
-      const cIn = decor.makeTowerBottom(); place(cIn, d, R * SHELL_GAP, false); innerG.add(cIn);
+      const tOut = decor.makeCornerTop(v + 1, col); place(tOut, d, R, true); outerG.add(tOut);
+      const cIn = decor.makeCornerBottom(v + 1, col); place(cIn, d, R * SHELL_GAP, false); innerG.add(cIn);
       if (antipodal) {
         const ad = deckDir(d);
-        const cOut = decor.makeTowerBottom(); place(cOut, ad, R, true); outerG.add(cOut);
-        const tIn = decor.makeTowerTop(); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
+        const cOut = decor.makeCornerBottom(v + 1, col); place(cOut, ad, R, true); outerG.add(cOut);
+        const tIn = decor.makeCornerTop(v + 1, col); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
       }
     });
   }

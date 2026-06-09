@@ -31,6 +31,30 @@ pole-clumping; tower labelling; badge legibility). See
 
 ## Working notes
 
+### 🟢 code · 02:40 — Ground corner markers (numbered manhole discs) replace the towers
+**Why:** user wants polygon corners marked at ground level (manhole-cover / rivet
+discs), numbered per corner — Arabic on the tree face, Roman on the column face,
+unique colour each — matching the minimap. The old tall vertex towers are dropped.
+
+Decisions taken from the user: **replace** the towers; number by **corner index**
+(1..2n around the boundary, each corner distinct); **try** the matching numbers on
+the minimap (drop if crowded — kept, it reads fine).
+
+- `decor.ts`: removed the tower geometry + `makeTowerTop/Bottom`; added `makeCornerTop
+  (i,color)` / `makeCornerBottom(i,color)` — a squat metal disc + raised rim + a
+  numbered plate (`numeralTexture`) facing up. Added `cornerColor(i,count)` (even hue
+  spacing, shared with the minimap) and `romanize(n)`. Top face = Arabic, bottom face =
+  Roman (rides the flip like the tree↔column / number+arrow cue).
+- All three presenters: replaced the tower placement with corner-marker placement,
+  passing `i+1` and `cornerColor(v, count)` (euclidean 4 cell corners; spherical 4
+  chart corners + antipodal twin for ℝP²; hyperbolic `nVerts` tile vertices). Renamed
+  the cell fields `tower*` → `corners*`.
+- `squareMap.ts` + `polygonMap.ts`: draw matching numbered, hued corner chips so the
+  minimap number/colour corresponds to the ground marker (verified: corner 3 = teal in
+  both the 3D disc and the map). Octagon/hexagon/square all read without crowding.
+- Verified headless: a clear Arabic "3" disc with a teal rim (manhole look) in torus;
+  `romanize` outputs I..VIII; build green; verify 100/100.
+
 ### 🟢 code · 01:55 — Unified glass spec + clear-but-present default opacity
 **Why:** the opacity slider felt different per world (euclidean/spherical used
 `{showUnderBelow:0.8, solidAt:0.82}`, hyperbolic `{showUnderBelow:0.95}`) and every

@@ -3,6 +3,7 @@ import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverMode
 import { SquareMapState } from '../engineTypes';
 import { glassState, POLYGON_GLASS } from '../glassSurface';
 import { makeFootprintTrail } from '../footprints';
+import { cornerColor } from '../decor';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
 import { applyMat, det3, ORIGIN, Isometry } from '../lib/cayleyKlein';
@@ -51,8 +52,8 @@ interface Cell {
   slab: THREE.Mesh;
   top: THREE.Group;       // trees (top face)
   bottom: THREE.Group;    // columns (bottom face)
-  towersTop: THREE.Group;    // tree-towers just inside each vertex (top face)
-  towersBottom: THREE.Group; // column-towers just inside each vertex (bottom face)
+  cornersTop: THREE.Group;    // numbered corner markers just inside each vertex (top face)
+  cornersBottom: THREE.Group; // their Roman-numeral counterparts (bottom face)
 }
 
 export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
@@ -124,14 +125,15 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
         const t = decor.makeTop(j); top.add(t);          // grows +y from the top face
         const b = decor.makeBottom(j); b.scale.y = -1; bottom.add(b); // grows −y from the bottom face
       });
-      const towersTop = new THREE.Group(), towersBottom = new THREE.Group();
-      CELL_CORNERS.forEach(() => {
-        towersTop.add(decor.makeTowerTop());                     // tree-tower, grows +y
-        const tb = decor.makeTowerBottom(); tb.scale.y = -1; towersBottom.add(tb); // column-tower, −y
+      const cornersTop = new THREE.Group(), cornersBottom = new THREE.Group();
+      CELL_CORNERS.forEach((_, v) => {
+        const col = cornerColor(v, CELL_CORNERS.length);
+        cornersTop.add(decor.makeCornerTop(v + 1, col));                     // Arabic disc, top face
+        const cb = decor.makeCornerBottom(v + 1, col); cb.scale.y = -1; cornersBottom.add(cb); // Roman, bottom
       });
-      group.add(slab, top, bottom, towersTop, towersBottom);
+      group.add(slab, top, bottom, cornersTop, cornersBottom);
       root.add(group);
-      cells.push({ group, slab, top, bottom, towersTop, towersBottom });
+      cells.push({ group, slab, top, bottom, cornersTop, cornersBottom });
     }
     placeDecor();
   }
@@ -146,8 +148,8 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
       CELL_CORNERS.forEach((corner, v) => {
         const [iu, iv] = insetCorner(corner);
         const x = (iu - 0.5) * side, z = (iv - 0.5) * side;
-        cell.towersTop.children[v].position.set(x, ht, z);
-        cell.towersBottom.children[v].position.set(x, -ht, z);
+        cell.cornersTop.children[v].position.set(x, ht, z);
+        cell.cornersBottom.children[v].position.set(x, -ht, z);
       });
     }
   }

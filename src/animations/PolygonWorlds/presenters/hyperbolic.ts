@@ -3,6 +3,7 @@ import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverMode
 import { SquareMapState } from '../engineTypes';
 import { glassState, POLYGON_GLASS } from '../glassSurface';
 import { makeFootprintTrail } from '../footprints';
+import { cornerColor } from '../decor';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
 import { develop } from '../lib/develop';
@@ -166,17 +167,21 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   root.add(lines);
 
   // ── decor pool (each cell carries a tree + column variant per prop, plus a
-  //    tree-tower + column-tower per polygon vertex) ────────────────────────────
-  interface Cell { trees: THREE.Group; columns: THREE.Group; towerTrees: THREE.Group; towerColumns: THREE.Group; }
+  //    numbered corner marker per polygon vertex) ────────────────────────────────
+  interface Cell { trees: THREE.Group; columns: THREE.Group; cornersTop: THREE.Group; cornersBottom: THREE.Group; }
   const cells: Cell[] = [];
   for (let i = 0; i < N_DECOR; i++) {
     const trees = new THREE.Group(), columns = new THREE.Group();
     decor.props.forEach((_, j) => { trees.add(decor.makeTop(j)); columns.add(decor.makeBottom(j)); });
-    const towerTrees = new THREE.Group(), towerColumns = new THREE.Group();
-    for (let v = 0; v < nVerts; v++) { towerTrees.add(decor.makeTowerTop()); towerColumns.add(decor.makeTowerBottom()); }
-    trees.visible = false; columns.visible = false; towerTrees.visible = false; towerColumns.visible = false;
-    root.add(trees, columns, towerTrees, towerColumns);
-    cells.push({ trees, columns, towerTrees, towerColumns });
+    const cornersTop = new THREE.Group(), cornersBottom = new THREE.Group();
+    for (let v = 0; v < nVerts; v++) {
+      const col = cornerColor(v, nVerts);
+      cornersTop.add(decor.makeCornerTop(v + 1, col));
+      cornersBottom.add(decor.makeCornerBottom(v + 1, col));
+    }
+    trees.visible = false; columns.visible = false; cornersTop.visible = false; cornersBottom.visible = false;
+    root.add(trees, columns, cornersTop, cornersBottom);
+    cells.push({ trees, columns, cornersTop, cornersBottom });
   }
   // Decor is full-size near the player and shrinks by the conformal factor (1−r²)
   // with Poincaré radius — the correct way to keep a fixed *hyperbolic* size.
@@ -264,9 +269,9 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
         aj.position.copy(tmp); aj.scale.set(sc, sc, sc);
         bj.position.copy(tmp); bj.scale.set(sc, -sc, sc);   // mirror below the floor
       });
-      // vertex towers — same above/below split, placed at the inset-vertex points
-      const aboveT = flipped ? cell.towerColumns : cell.towerTrees;
-      const belowT = flipped ? cell.towerTrees : cell.towerColumns;
+      // corner markers — same above/below split, placed at the inset-vertex points
+      const aboveT = flipped ? cell.cornersBottom : cell.cornersTop;
+      const belowT = flipped ? cell.cornersTop : cell.cornersBottom;
       aboveT.visible = true;
       belowT.visible = underVisible;
       tile.towers.forEach((tw, v) => {
@@ -281,7 +286,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     }
     for (let k = used; k < cells.length; k++) {
       cells[k].trees.visible = false; cells[k].columns.visible = false;
-      cells[k].towerTrees.visible = false; cells[k].towerColumns.visible = false;
+      cells[k].cornersTop.visible = false; cells[k].cornersBottom.visible = false;
     }
   }
 

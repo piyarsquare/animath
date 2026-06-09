@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { cornerColor } from './decor';
 
 /**
  * ONE square-fundamental-domain mini-map, parameterised by the edge-identification
@@ -138,6 +139,22 @@ export function drawSquareMap(
   if (spec.border) {
     ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1; ctx.strokeRect(x0, y0, w, w);
   }
+
+  // numbered corner chips — the same 1..4 indices + hues as the ground corner
+  // markers (CELL order [[0,0],[1,0],[1,1],[0,1]] → BL, BR, TR, TL), inset so they
+  // sit just inside the square.
+  const inset = 11;
+  const cornerXY: [number, number][] = [
+    [x0 + inset, y1 - inset], [x1 - inset, y1 - inset], [x1 - inset, y0 + inset], [x0 + inset, y0 + inset],
+  ];
+  cornerXY.forEach(([px, py], v) => {
+    ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2);
+    ctx.fillStyle = '#' + new THREE.Color(cornerColor(v, 4)).getHexString(); ctx.fill();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.stroke();
+    ctx.fillStyle = '#0a0c14'; ctx.font = '700 11px system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(v + 1), px, py + 0.5);
+  });
 
   // landmark dots
   for (const d of spec.dots) {
