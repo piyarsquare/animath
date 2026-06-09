@@ -31,6 +31,24 @@ pole-clumping; tower labelling; badge legibility). See
 
 ## Working notes
 
+### 🟢 code · 03:10 — Consistent sense of space (walk speed + world size parity)
+**Why:** switching topology felt like a radical change of scale/speed. Two concrete
+causes, both in the hyperbolic cover.
+
+- **Walk speed.** Euclidean and spherical both move the ground at `moveSpeed`
+  units/sec, but hyperbolic moved it at only `moveSpeed/2`: re-centred at the origin,
+  the Poincaré map compresses by `tanh(d/2)≈d/2`, halving the world-space rate.
+  Doubled the hyperbolic `kStep`/`kStrafe` so all three covers walk at the same rate.
+- **World size.** Hyperbolic `DISK_R` was `max(34, squareSize·1.4)` ⇒ at the default
+  the home octagon was ~1.5× the flat cell (genus2 world-circumradius ≈35 vs cell ≈21),
+  so the same 7 landmarks read sparser. Replaced with `diskRadiusFor(sq) =
+  sq·√2/2 / tanh(circumradius/2)`, which sets the home polygon's circumradius to the
+  flat cell's half-diagonal — genus2/crosscap3 now match the torus's density.
+- Eyeballed torus vs genus2 vs crosscap3 at default: comparable tree size, landmark
+  density and centre-spire scale. Sphere left as-is (own radius slider, default 30 ≈
+  cell; its "vast" read is the carried dark-shell lighting, not scale). Build + verify
+  green.
+
 ### 🟢 code · 02:40 — Ground corner markers (numbered manhole discs) replace the towers
 **Why:** user wants polygon corners marked at ground level (manhole-cover / rivet
 discs), numbered per corner — Arabic on the tree face, Roman on the column face,

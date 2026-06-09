@@ -58,7 +58,14 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   const elems = dev.elements;                     // deck cosets (incl. identity)
   const m = real.edges;                           // polygon side count (2n)
 
-  let DISK_R = Math.max(34, c.squareSize * 1.4);  // world radius of the unit disk
+  // Normalise the disk scale so the home polygon's world size tracks the same
+  // `squareSize` slider as the flat cell — its circumradius (centre→vertex) is set
+  // to the flat cell's half-diagonal (squareSize·√2/2). Without this the hyperbolic
+  // worlds rendered ~1.5× larger than the torus at the same setting, so switching
+  // topology felt like a radical change of scale.
+  const rhoV = Math.tanh(real.circumradius / 2);  // home-vertex Poincaré radius
+  const diskRadiusFor = (sq: number) => Math.max(12, (sq * Math.SQRT1_2) / rhoV);
+  let DISK_R = diskRadiusFor(c.squareSize);        // world radius of the unit disk
   let glassOpacity = 0.45;   // clear-but-present default (host re-pushes on mount)
   let underVisible = false;                        // glass reveals the other side
   let camDist = 3.4;
@@ -307,8 +314,12 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     const { fwd: f, strafe, yaw, pitch, dt, moveSpeed, thirdPerson } = input;
     const dyaw = yaw - lastYaw; lastYaw = yaw;
     if (dyaw) frame = kTurn(frame, -dyaw);
-    if (f) frame = kStep(frame, (f * moveSpeed * dt) / DISK_R);
-    if (strafe) frame = kStrafe(frame, -Math.PI / 2, (strafe * moveSpeed * dt) / DISK_R);
+    // ×2: near the (always re-centred) origin the Poincaré map compresses by the
+    // factor tanh(d/2)≈d/2, so a raw step of moveSpeed·dt/DISK_R slides the ground
+    // at only moveSpeed/2 world-units/sec — half the flat/spherical rate. Doubling
+    // the step restores parity, so walking feels the same speed in every world.
+    if (f) frame = kStep(frame, (2 * f * moveSpeed * dt) / DISK_R);
+    if (strafe) frame = kStrafe(frame, -Math.PI / 2, (2 * strafe * moveSpeed * dt) / DISK_R);
     if (dyaw || f || strafe) frame = reorthonormalize(frame);
 
     // Walk the tile tracker `h` toward the player along the deck Cayley graph, so
@@ -383,7 +394,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     clearTrail: () => { covTrail.length = 0; lastTrailPos = null; foot.clear(); },
     setFloorOpacity: (o: number) => { glassOpacity = o; applyGlass(); },
     setCameraDistance: (d: number) => { camDist = d; },
-    setSquareSize: (v: number) => { DISK_R = Math.max(34, v * 1.4); rebuildFloor(); },
+    setSquareSize: (v: number) => { DISK_R = diskRadiusFor(v); rebuildFloor(); },
     dispose: () => {
       foot.dispose();
       floor.geometry.dispose(); floorMat.dispose();
