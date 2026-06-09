@@ -57,6 +57,7 @@ const MIGRATED = new Set<string>([
   '/wrap-world',
   '/plane-transform',
   '/polygon-worlds',
+  '/agentic-sorting',
 ]);
 
 function Router(): JSX.Element {
