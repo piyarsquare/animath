@@ -31,6 +31,20 @@ pole-clumping; tower labelling; badge legibility). See
 
 ## Working notes
 
+### 🔴 blocker · 07:10 — User verdict: the path demonstration is not correct → reset next session
+**Why:** after the adherence fix the user reviewed the trail / direction-arrow behaviour
+and judged that **"the path is not correct"** and **"the way it is getting demonstrated is
+not correct."**
+
+Decision: **stop iterating on the current footprint/trail implementation.** The next
+session restarts the direction-arrow / path demonstration **from first principles**, not
+reusing the existing code. Wrote a handoff
+([2026-06-09-S05-trail-and-path-reset](../../handoff/polygon-worlds-spherical-p2-qgExR/2026-06-09-S05-trail-and-path-reset.md))
+with a first-principles **starting prompt + a desired-outcomes questionnaire** so the
+direction is pinned before any code is written. The geometry kernel and the rest of the
+presenters (camera / tiling / decor / lighting) are unaffected and stay as-is — only the
+footprint/trail "path" layer is up for a clean redesign.
+
 ### 🟢 code · 06:30 — Fix: euclidean footprints must wrap *within* the fundamental cell
 **Why:** in the Klein bottle the trail "lived in infinite space" instead of adhering to
 the fundamental polygon.
