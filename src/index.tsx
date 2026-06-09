@@ -55,6 +55,7 @@ const MIGRATED = new Set<string>([
   '/topology-walk',
   '/mobius',
   '/wrap-world',
+  '/plane-transform',
 ]);
 
 function Router(): JSX.Element {

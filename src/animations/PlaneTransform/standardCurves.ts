@@ -1,4 +1,26 @@
-import type { StandardCurveName } from './PlaneCurveFloater';
+export type StandardCurveName =
+  | 'circle'
+  | 'square'
+  | 'horizontal'
+  | 'vertical'
+  | 'diagonal'
+  | 'spiral'
+  | 'lemniscate'
+  | 'cross'
+  | 'cardioid';
+
+/** Picker order + labels for the Curves panel's standard-curve buttons. */
+export const STANDARD_CURVES: { id: StandardCurveName; label: string }[] = [
+  { id: 'circle',     label: 'Circle' },
+  { id: 'square',     label: 'Square' },
+  { id: 'horizontal', label: 'X-axis' },
+  { id: 'vertical',   label: 'Y-axis' },
+  { id: 'diagonal',   label: 'Diag' },
+  { id: 'cross',      label: 'Cross' },
+  { id: 'spiral',     label: 'Spiral' },
+  { id: 'lemniscate', label: '∞' },
+  { id: 'cardioid',   label: 'Heart' },
+];
 
 export type CurvePoint = [number, number];
 

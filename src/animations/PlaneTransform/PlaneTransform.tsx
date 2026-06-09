@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { ShellSettings, useAppHeader, useAppExplainer } from '../../components/AppShell';
-import { Section, Slider, Pills, Select } from '../../components/ControlPanel';
-import Readme from '../../components/Readme';
+import Workspace from '../../chrome/workspace/Workspace';
+import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import { usePhone } from '../../chrome/usePhone';
+import { Slider, Pills, Select, NumberInput } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import {
@@ -11,8 +12,10 @@ import {
 } from '../../lib/complexMath';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
 import { vertexShader, fragmentShader } from './shaders';
-import PlaneCurveFloater, { type StandardCurveName } from './PlaneCurveFloater';
-import { buildStandardCurve, type CurvePoint } from './standardCurves';
+import {
+  buildStandardCurve, STANDARD_CURVES,
+  type StandardCurveName, type CurvePoint,
+} from './standardCurves';
 import {
   sampleInputPositions, clipFromMath, mathFromClip,
   type GridMode, type PlaneMode,
@@ -38,12 +41,12 @@ interface PaneRefs {
 
 /**
  * Plane-transform viewer: shows how a complex function sends the (x, y) input
- * plane to the (u, v) output plane. Two square panes, side-by-side on a wide
- * canvas, stacked top-bottom on a tall one. Same point cloud renders into
- * both panes — the second pane's vertex shader runs the selected function so
- * each colored point ends up at its f(z) location.
+ * plane to the (u, v) output plane. Two view windows on the workspace stage —
+ * the z-plane (input) and the f(z)-plane — share one point cloud; the output
+ * window's vertex shader runs the selected function so each colored point ends
+ * up at its f(z) location.
  *
- * The View section offers a polar sampling grid (rings + rays) and a log-polar
+ * The Grid panel offers a polar sampling grid (rings + rays) and a log-polar
  * plane layout (plot at (arg, log|·|)) — see polarViews.ts.
  */
 export default function PlaneTransform() {
@@ -69,31 +72,13 @@ export default function PlaneTransform() {
   const fnFormula = functionIndex === POW_PQ_INDEX
     ? `z^(${expP}/${expQ})`
     : functionFormulas[fnName];
-  useAppHeader(fnName, fnFormula);
-  useAppExplainer(explainerText);
 
-  // Containers + refs for the two panes.
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  // Mount targets + refs for the two panes (one per view window).
   const inputMountRef  = useRef<HTMLDivElement>(null);
   const outputMountRef = useRef<HTMLDivElement>(null);
   const inputPane  = useRef<PaneRefs>({});
   const outputPane = useRef<PaneRefs>({});
   const geometryRef = useRef<THREE.BufferGeometry>();
-
-  // Detect landscape vs portrait container shape so the panes stack correctly.
-  const [horizontal, setHorizontal] = useState(true);
-  useEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    const update = () => {
-      const r = el.getBoundingClientRect();
-      setHorizontal(r.width >= r.height);
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   // Build the point cloud whenever the density or visible extent changes.
   // Points are sampled in math coords so the vertex shader can just divide by
@@ -120,7 +105,12 @@ export default function PlaneTransform() {
     return () => geom.dispose();
   }, [density, viewExtent, gridMode]);
 
-  // Mount and tear down both renderers.
+  // Mount and tear down both renderers. The desktop and phone workspaces are
+  // different subtrees, so crossing the 740px breakpoint remounts the view
+  // bodies — keying this effect on `phone` rebuilds the renderers into the
+  // fresh mount divs (within one chrome the windows are hidden when collapsed,
+  // never unmounted).
+  const phone = usePhone();
   useEffect(() => {
     function mount(target: HTMLDivElement, transform: 0 | 1, store: React.MutableRefObject<PaneRefs>) {
       const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -192,7 +182,7 @@ export default function PlaneTransform() {
       outputPane.current = {};
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [phone]);
 
   // Sync uniforms when state changes.
   useEffect(() => {
@@ -209,7 +199,7 @@ export default function PlaneTransform() {
       m.uniforms.saturation.value   = saturation;
       m.uniforms.intensity.value    = intensity;
     }
-  }, [viewExtent, planeMode, functionIndex, expP, expQ, branchIndex, pointSize, colorMode, saturation, intensity]);
+  }, [viewExtent, planeMode, functionIndex, expP, expQ, branchIndex, pointSize, colorMode, saturation, intensity, phone]);
 
   // Map a curve through the active complex function to get the output polyline.
   const outputCurve = useMemo<CurvePoint[]>(() => {
@@ -228,16 +218,6 @@ export default function PlaneTransform() {
     setCurve(buildStandardCurve(id, viewExtent));
   };
 
-  const PaneLabel = ({ children }: { children: React.ReactNode }) => (
-    <div style={{
-      position: 'absolute', top: 8, left: 12,
-      color: '#9b9ba3', fontSize: 12, letterSpacing: 0.06,
-      fontFamily: 'ui-monospace, SF Mono, Menlo, monospace',
-      textTransform: 'uppercase', pointerEvents: 'none', userSelect: 'none',
-      zIndex: 2,
-    }}>{children}</div>
-  );
-
   const isPow = functionIndex === POW_PQ_INDEX;
   const isMulti = functionIndex === 1 /* sqrt */
                || functionIndex === 3 /* ln */
@@ -248,19 +228,164 @@ export default function PlaneTransform() {
     [0, 1, 2] as ColorMode[]
   ).map(m => ({ value: m, label: COLOR_MODE_LABELS[m] })), []);
 
-  return (
+  /* ---- archetype panels (PARAM-MAP §2; rows unchanged from the old drawer) ---- */
+
+  const functionNode = (
     <>
-      <div
-        ref={wrapperRef}
+      <Select
+        label="Function"
+        options={functionNames.map((n, i) => ({ value: i, label: n }))}
+        value={functionIndex}
+        onChange={setFunctionIndex}
+      />
+      {isPow && (
+        <>
+          <NumberInput label="p" value={expP} integer onChange={setExpP} />
+          {/* q = 0 is undefined (z^(p/0)); coerce to 1 so the header/saved value
+              matches what actually renders. Negative q stays allowed. */}
+          <NumberInput label="q" value={expQ} integer onChange={v => setExpQ(v === 0 ? 1 : v)} />
+        </>
+      )}
+      {isMulti && (
+        <Select
+          label="Branch index"
+          options={[-2, -1, 0, 1, 2].map(b => ({ value: b, label: String(b) }))}
+          value={branchIndex}
+          onChange={setBranchIndex}
+        />
+      )}
+    </>
+  );
+
+  const gridNode = (
+    <>
+      <Pills<GridMode>
+        label="Grid"
+        options={[
+          { value: 'cartesian', label: 'Cartesian' },
+          { value: 'polar', label: 'Polar' },
+        ]}
+        value={gridMode}
+        onChange={setGridMode}
+      />
+      <Pills<PlaneMode>
+        label="Plane"
+        options={[
+          { value: 'cartesian', label: 'Cartesian' },
+          { value: 'logpolar', label: 'Log-polar' },
+        ]}
+        value={planeMode}
+        onChange={setPlaneMode}
+      />
+      <Slider label="Extent (±)" value={viewExtent}
+        min={0.5} max={10} step={0.5}
+        onChange={setViewExtent} format={v => v.toFixed(1)} />
+    </>
+  );
+
+  const colorNode = (
+    <>
+      <Pills
+        label="Mode"
+        options={colorPills}
+        value={colorMode}
+        onChange={setColorMode}
+      />
+      <Slider label="Saturation" value={saturation}
+        min={0} max={1} step={0.01}
+        onChange={setSaturation} format={v => v.toFixed(2)} />
+      <Slider label="Intensity" value={intensity}
+        min={0.3} max={1.5} step={0.05}
+        onChange={setIntensity} format={v => v.toFixed(2)} />
+    </>
+  );
+
+  const marksNode = (
+    <Slider label="Point size" value={pointSize}
+      min={1} max={6} step={0.5}
+      onChange={setPointSize} format={v => v.toFixed(1)} />
+  );
+
+  // The old PlaneCurveFloater's content, as plain panel rows: draw toggle,
+  // standard-curve picker, Clear.
+  const curvesNode = (
+    <>
+      <button
         style={{
-          position: 'absolute', inset: 0,
-          display: 'flex',
-          flexDirection: horizontal ? 'row' : 'column',
-          alignItems: 'stretch',
-          gap: 1,
-          background: '#1a1a22',
+          ...curveButtonStyle,
+          ...(drawMode ? {
+            background: 'rgba(120,180,255,0.18)',
+            borderColor: 'rgba(120,180,255,0.55)',
+          } : {}),
         }}
+        onClick={() => setDrawMode(d => !d)}
+        aria-pressed={drawMode}
       >
+        {drawMode ? '● Drawing — tap to stop' : '✎ Draw on input'}
+      </button>
+      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', margin: '6px 0 2px' }}>
+        Standard curves
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+        {STANDARD_CURVES.map(c => (
+          <button
+            key={c.id}
+            style={curveButtonStyle}
+            onClick={() => handleStandardCurve(c.id)}
+            title={c.id}
+          >{c.label}</button>
+        ))}
+      </div>
+      <button
+        style={{
+          ...curveButtonStyle,
+          marginTop: 8,
+          ...(curve.length === 0 ? { opacity: 0.45, cursor: 'default' } : {}),
+        }}
+        onClick={() => { setCurve([]); setDrawMode(false); }}
+        disabled={curve.length === 0}
+      >Clear</button>
+      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 8 }}>
+        Curves drawn on the z-plane window map through f onto the f(z)-plane.
+      </div>
+    </>
+  );
+
+  const detailNode = (
+    <>
+      <Slider label="Density (per side)" value={density}
+        min={40} max={900} step={20}
+        onChange={setDensity} format={v => `${v}×${v} (${((v * v) / 1e6).toFixed(2)}M)`} />
+      <button
+        style={{ ...curveButtonStyle, marginTop: 8, fontWeight: 600 }}
+        onClick={() => {
+          clearPersistedState(STORAGE_KEY);
+          window.location.reload();
+        }}
+        title="Forget saved settings and restore the defaults"
+      >
+        Reset settings to defaults
+      </button>
+    </>
+  );
+
+  const sections: SectionDef[] = [
+    { id: 'function', title: 'Function', arch: 'subject', node: functionNode, estHeight: 200 },
+    { id: 'grid', title: 'Grid', arch: 'domain', node: gridNode, estHeight: 220 },
+    { id: 'color', title: 'Color', arch: 'color', node: colorNode, estHeight: 210 },
+    { id: 'marks', title: 'Grid style', arch: 'marks', node: marksNode, estHeight: 110 },
+    { id: 'curves', title: 'Curves', arch: 'drive', node: curvesNode, estHeight: 300 },
+    { id: 'detail', title: 'Detail', arch: 'quality', node: detailNode, estHeight: 160 },
+  ];
+
+  // The two panes are separable subtrees, so each gets its own view window;
+  // the window titles replace the old in-canvas pane labels.
+  const views: ViewDef[] = [
+    {
+      id: 'input',
+      title: 'z-plane (input)',
+      defaultRect: { x: 360, y: 16, w: 356, h: 356 },
+      node: (
         <InputPane
           mountRef={inputMountRef}
           viewExtent={viewExtent}
@@ -271,128 +396,67 @@ export default function PlaneTransform() {
             setCurve(prev => fresh ? [pt] : [...prev, pt]);
           }}
           onWheelZoom={(factor) => setViewExtent(v => Math.min(20, Math.max(0.2, v * factor)))}
-        >
-          <PaneLabel>Input · z = x + iy</PaneLabel>
-        </InputPane>
+        />
+      ),
+    },
+    {
+      id: 'output',
+      title: 'f(z)-plane',
+      defaultRect: { x: 728, y: 16, w: 356, h: 356 },
+      node: (
         <OutputPane
           mountRef={outputMountRef}
           viewExtent={viewExtent}
           planeMode={planeMode}
           curve={outputCurve}
           onWheelZoom={(factor) => setViewExtent(v => Math.min(20, Math.max(0.2, v * factor)))}
-        >
-          <PaneLabel>Output · w = f(z)</PaneLabel>
-        </OutputPane>
-      </div>
+        />
+      ),
+    },
+  ];
 
-      <PlaneCurveFloater
-        drawMode={drawMode}
-        onToggleDraw={() => setDrawMode(d => !d)}
-        onStandardCurve={handleStandardCurve}
-        onClear={() => { setCurve([]); setDrawMode(false); }}
-        hasCurve={curve.length > 0}
-      />
+  const layouts: LayoutDef[] = [
+    {
+      id: 'essentials', name: 'Essentials', sub: 'Function · Color', icon: 'tune',
+      open: { function: { x: 84, y: 18 }, color: { x: 84, y: 240 } },
+    },
+    {
+      id: 'draw', name: 'Draw', sub: 'Curves beside the planes', icon: 'move',
+      open: { curves: { x: 84, y: 18 } },
+    },
+  ];
 
-      <ShellSettings>
-        <Section title="Function" icon="ƒ" defaultOpen>
-          <Select
-            label="Function"
-            options={functionNames.map((n, i) => ({ value: i, label: n }))}
-            value={functionIndex}
-            onChange={setFunctionIndex}
-          />
-          {isPow && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <label className="cp-row" style={{ flex: 1 }}>
-                <div className="cp-row-label"><span>p</span></div>
-                <input type="number" value={expP} step={1}
-                  onChange={e => setExpP(parseInt(e.target.value, 10) || 0)} />
-              </label>
-              <label className="cp-row" style={{ flex: 1 }}>
-                <div className="cp-row-label"><span>q</span></div>
-                <input type="number" value={expQ} step={1}
-                  onChange={e => setExpQ(parseInt(e.target.value, 10) || 1)} />
-              </label>
-            </div>
-          )}
-          {isMulti && (
-            <Select
-              label="Branch index"
-              options={[-2, -1, 0, 1, 2].map(b => ({ value: b, label: String(b) }))}
-              value={branchIndex}
-              onChange={setBranchIndex}
-            />
-          )}
-        </Section>
+  // The "?" modal carries both the short explainer and the full About readme,
+  // so nothing from the old drawer's About section is lost.
+  const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
 
-        <Section title="Color" icon="◐" defaultOpen>
-          <Pills
-            label="Mode"
-            options={colorPills}
-            value={colorMode}
-            onChange={setColorMode}
-          />
-          <Slider label="Saturation" value={saturation}
-            min={0} max={1} step={0.01}
-            onChange={setSaturation} format={v => v.toFixed(2)} />
-          <Slider label="Intensity" value={intensity}
-            min={0.3} max={1.5} step={0.05}
-            onChange={setIntensity} format={v => v.toFixed(2)} />
-        </Section>
-
-        <Section title="View" icon="◑">
-          <Pills<GridMode>
-            label="Grid"
-            options={[
-              { value: 'cartesian', label: 'Cartesian' },
-              { value: 'polar', label: 'Polar' },
-            ]}
-            value={gridMode}
-            onChange={setGridMode}
-          />
-          <Pills<PlaneMode>
-            label="Plane"
-            options={[
-              { value: 'cartesian', label: 'Cartesian' },
-              { value: 'logpolar', label: 'Log-polar' },
-            ]}
-            value={planeMode}
-            onChange={setPlaneMode}
-          />
-          <Slider label="Extent (±)" value={viewExtent}
-            min={0.5} max={10} step={0.5}
-            onChange={setViewExtent} format={v => v.toFixed(1)} />
-          <Slider label="Point size" value={pointSize}
-            min={1} max={6} step={0.5}
-            onChange={setPointSize} format={v => v.toFixed(1)} />
-          <Slider label="Density (per side)" value={density}
-            min={40} max={900} step={20}
-            onChange={setDensity} format={v => `${v}×${v} (${((v * v) / 1e6).toFixed(2)}M)`} />
-        </Section>
-
-        <Section title="About" icon="ⓘ">
-          <Readme markdown={readmeText} />
-        </Section>
-
-        <button
-          style={{
-            margin: '4px 0', padding: '12px 16px', borderRadius: 6,
-            border: '1px solid var(--cp-border)',
-            background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
-            cursor: 'pointer', fontSize: 14, fontWeight: 600,
-          }}
-          onClick={() => {
-            clearPersistedState(STORAGE_KEY);
-            window.location.reload();
-          }}
-          title="Forget saved settings and restore the defaults"
-        >
-          Reset settings to defaults
-        </button>
-      </ShellSettings>
-    </>
+  return (
+    <Workspace
+      appId="plane-transform"
+      title={fnName}
+      subtitle={fnFormula}
+      sections={sections}
+      views={views}
+      layouts={layouts}
+      defaultLayoutId="essentials"
+      explainer={help || null}
+    />
   );
 }
+
+/** Shared inline style for the Curves/Detail panel buttons (the panels load
+ *  ControlPanel.css, whose --cp-* variables theme these). */
+const curveButtonStyle: React.CSSProperties = {
+  display: 'block',
+  width: '100%',
+  padding: '8px 10px',
+  borderRadius: 6,
+  border: '1px solid var(--cp-border, #3a3a44)',
+  background: 'rgba(255,255,255,0.06)',
+  color: 'var(--cp-fg, #e8e8ee)',
+  cursor: 'pointer',
+  fontSize: 13,
+};
 
 /* ------------------------------------------------------------------ *
  *  Pane sub-components.                                              *
@@ -612,9 +676,11 @@ function OutputPane({
   );
 }
 
+/** Each pane fills its view-window body (the chrome positions the body's
+ *  children at absolute inset 0) and centers the inscribed square canvas. */
 const paneStyle: React.CSSProperties = {
-  flex: 1,
-  position: 'relative',
+  position: 'absolute',
+  inset: 0,
   background: '#0c0c10',
   overflow: 'hidden',
   display: 'flex',
