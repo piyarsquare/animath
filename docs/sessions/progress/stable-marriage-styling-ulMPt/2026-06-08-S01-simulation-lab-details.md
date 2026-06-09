@@ -56,6 +56,31 @@ Grouped from the task brief; not yet sequenced.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 12:30 — Tier 1: stable-pair footprint + count surface
+**Why:** Turn the rotation engine into visible payoff (wishlist Tier 1).
+
+- **Solution-space metric card**: lattice size ("13 stable matchings") + footprint
+  cell count, computed per instance via `stablePairs` (cap 1000).
+- **Footprint overlay** on the matrix: teal-dashed inset on every cell matched in
+  *some* stable matching but not the current one ("stable elsewhere"). Display
+  toggle + legend key. Seed 53 (n=10, consensus 0): 13 matchings, footprint 22/100.
+- **Lab "# stable" surface**: counts the lattice size across consensus A×B — huge
+  in the low-consensus corner, collapsing toward 1 (the glassiness phase curve).
+  Enumeration capped at 300; teal palette.
+
+![footprint overlay, 13 stable matchings](assets/2026-06-08-S01-footprint.png)
+![count-vs-consensus collapse](assets/2026-06-08-S01-count-surface.png)
+
+### 🟢 code · 12:00 — Tier 0: rotation engine (verified vs brute force)
+**Why:** The keystone for the whole solution-space track (wishlist Tier 0).
+
+`rotations.ts`: enumerate every stable matching by BFS rotation-elimination from
+A-optimal; stable-pair footprint; named solutions (A/B-optimal, egalitarian,
+median, min-regret, sex-equal, balanced); lattice scores + Hasse covering
+relation. `scripts/test-rotations.ts` cross-checks the fast path against a
+brute-force n! enumeration over **1440 cases — all pass** (also verifies named
+solutions are stable & in-set, egalitarian/sex-equal minimal, lattice counts).
+
 ### 🟣 decision · 11:30 — Wrote the solution-space wishlist + tiered plan
 **Why:** User: "make a very complete record of [the solution-space discussion] —
 it's a wish list for the app… and build a tiered stepwise plan." Added the kicker:

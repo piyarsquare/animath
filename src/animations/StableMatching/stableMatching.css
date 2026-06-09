@@ -16,7 +16,7 @@
 .sm2-narrate { font-size: 13.5px; color: #d6d6e2; background: #14141b; border: 1px solid #26262f; border-left: 3px solid #2563eb; border-radius: 8px; padding: 9px 13px; margin-bottom: 14px; line-height: 1.45; }
 
 /* metrics */
-.sm2-metrics { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 18px; }
+.sm2-metrics { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 18px; }
 .sm2-metric { background: #14141b; border: 1px solid #26262f; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 5px; }
 .sm2-metric-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #8b8b99; text-transform: uppercase; letter-spacing: .04em; }
 .sm2-metric strong { font-size: 24px; font-variant-numeric: tabular-nums; }
@@ -66,6 +66,8 @@
 .sm2-mcell.stolen { animation: sm2-flash .5s; z-index: 3; }       /* purple flash: just bumped (stolen away) */
 .sm2-trail { position: absolute; inset: 0; border: 2px solid #c084fc; border-radius: inherit; pointer-events: none; }  /* fading trail of recent failures */
 .sm2-mcell.blocking { outline: 2px solid #c084fc; outline-offset: -2px; box-shadow: 0 0 7px rgba(192,132,252,.7); }  /* purple: blocking */
+/* teal dashed inset: matched in some OTHER stable matching (the solution-space footprint) */
+.sm2-mcell.footprint::after { content: ''; position: absolute; inset: 1px; border: 1.5px dashed rgba(45,212,191,.85); border-radius: inherit; pointer-events: none; }
 @keyframes sm2-flash { 0% { box-shadow: 0 0 0 3px #c084fc; } 100% { box-shadow: 0 0 0 0 transparent; } }   /* purple: rejected/stolen */
 
 .sm2-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 12px; color: #8b8b99; }
@@ -77,6 +79,7 @@
 .sm2-legend .k.matched::before { background: transparent; outline: 2px solid #4ade80; outline-offset: -2px; }
 .sm2-legend .k.active::before { background: transparent; box-shadow: 0 0 0 2px #f0c040; }
 .sm2-legend .k.blocking::before { background: transparent; outline: 2px solid #c084fc; outline-offset: -2px; }
+.sm2-legend .k.footprint::before { background: transparent; border: 1.5px dashed rgba(45,212,191,.85); }
 
 /* actions (rendered into ShellActions) */
 .sm2-actions { display: flex; flex-direction: column; gap: 8px; }
