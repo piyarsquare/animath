@@ -50,9 +50,11 @@ function burd(u: number): string {
 }
 const rankBurd = (r: number, maxRank: number) => burd(maxRank > 1 ? (r - 1) / (maxRank - 1) : 0);
 type Marker = 'active' | 'reject' | 'stolen';
-function Matrix({ inst, matching, rows, cols, markers, blocking, footprint, size, labels, view, gap, trail }: {
+function Matrix({ inst, matching, rows, cols, markers, blocking, footprint, inspect, onHover, onClick, size, labels, view, gap, trail }: {
   inst: Instance; matching: Matching; rows: number[]; cols: number[];
-  markers: Map<string, Marker>; blocking: Set<string>; footprint: Set<string> | null; size: number; labels: boolean;
+  markers: Map<string, Marker>; blocking: Set<string>; footprint: Set<string> | null;
+  inspect: [number, number] | null; onHover: (c: [number, number] | null) => void; onClick: (c: [number, number]) => void;
+  size: number; labels: boolean;
   view: 'both' | 'a' | 'b' | 'diff'; gap: number; trail: Map<string, number>;
 }) {
   const n = inst.n;
@@ -60,22 +62,25 @@ function Matrix({ inst, matching, rows, cols, markers, blocking, footprint, size
   const rankColor = (r: number) => rankBurd(r, n);
   const diffColor = (d: number) => burd(((n > 1 ? Math.max(-1, Math.min(1, d / (n - 1))) : 0) + 1) / 2);
   return (
-    <div className={`sm2-matrix${gap === 0 ? ' tight' : ''}`} style={{ gap: `${gap}px`, gridTemplateColumns: `${labels ? '1.8em ' : ''}repeat(${cols.length}, ${size}px)` }}>
+    <div className={`sm2-matrix${gap === 0 ? ' tight' : ''}`} style={{ gap: `${gap}px`, gridTemplateColumns: `${labels ? '1.8em ' : ''}repeat(${cols.length}, ${size}px)` }} onMouseLeave={() => onHover(null)}>
       {labels && <div className="sm2-corner" />}
-      {labels && cols.map(j => <div key={`h${j}`} className="sm2-chead">{j}</div>)}
+      {labels && cols.map(j => <div key={`h${j}`} className={`sm2-chead${inspect && inspect[1] === j ? ' hi' : ''}`}>{j}</div>)}
       {rows.map(i => (
         <React.Fragment key={`r${i}`}>
-          {labels && <div className="sm2-rhead">{i}</div>}
+          {labels && <div className={`sm2-rhead${inspect && inspect[0] === i ? ' hi' : ''}`}>{i}</div>}
           {cols.map(j => {
             const aR = inst.rankA[i][j] + 1, bR = inst.rankB[j][i] + 1, d = aR - bR;
             const matched = matching.a[i] === j;
             const mk = markers.get(`${i}-${j}`);   // this round: active (proposing) / reject / stolen
             const inFoot = footprint?.has(`${i}-${j}`) && !matched;   // matched in SOME stable matching, not this one
-            const cls = `sm2-mcell${matched ? ' matched' : ''}${mk ? ' ' + mk : ''}${blocking.has(`${i}-${j}`) ? ' blocking' : ''}${inFoot ? ' footprint' : ''}`;
+            const hi = inspect && (inspect[0] === i || inspect[1] === j);
+            const sel = inspect && inspect[0] === i && inspect[1] === j;
+            const cls = `sm2-mcell${matched ? ' matched' : ''}${mk ? ' ' + mk : ''}${blocking.has(`${i}-${j}`) ? ' blocking' : ''}${inFoot ? ' footprint' : ''}${hi ? ' hi' : ''}${sel ? ' sel' : ''}`;
             const bg = view === 'b' ? rankColor(bR) : view === 'diff' ? diffColor(d) : rankColor(aR);
             const age = trail.get(`${i}-${j}`);
             return (
               <div key={j} className={cls} style={{ height: size, background: bg }}
+                onMouseEnter={() => onHover([i, j])} onClick={() => onClick([i, j])}
                 title={`A${i}→B${j} #${aR} · B${j}→A${i} #${bR}`}>
                 {view === 'both' && <span className="sm2-disc" style={{ background: rankColor(bR) }} />}
                 {age !== undefined && !mk && <span className="sm2-trail" style={{ opacity: Math.max(0.12, 1 - age / TRAIL) }} />}
@@ -87,6 +92,25 @@ function Matrix({ inst, matching, rows, cols, markers, blocking, footprint, size
           })}
         </React.Fragment>
       ))}
+    </div>
+  );
+}
+
+// A person's full ranked list, read left→right best→worst, as colour chips.
+function PrefList({ inst, side, id, partner, mark }: {
+  inst: Instance; side: 'A' | 'B'; id: number; partner: number; mark: number;
+}) {
+  const n = inst.n;
+  const prefs = side === 'A' ? inst.prefsA[id] : inst.prefsB[id];
+  const other = side === 'A' ? 'B' : 'A';
+  return (
+    <div className="sm2-pref">
+      <span className="sm2-pref-who"><i className={`sw ${side === 'A' ? 'sq' : 'disc'}`} />{side}{id} ranks {other}:</span>
+      <div className="sm2-pref-chips">
+        {prefs.map((idx, p) => (
+          <span key={idx} className={`sm2-chip${idx === partner ? ' partner' : ''}${idx === mark ? ' mark' : ''}`} style={{ background: rankBurd(p + 1, n) }} title={`#${p + 1}: ${other}${idx}`}>{idx}</span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -208,7 +232,7 @@ export default function StableMatching() {
   const total = rounds.length;                                  // a "step" is now a whole round
   const safeStep = Math.min(step, total);                       // guard the render before the reset effect fires
   useEffect(() => { setStep(0); setPlaying(false); setJump('live'); setResolve(null); setRStep(0); setRPlaying(false); setPickedNode(null); }, [result]);
-  useEffect(() => { setPickedNode(null); }, [inst]);   // a new instance invalidates node indices
+  useEffect(() => { setPickedNode(null); setInspect(null); setPinned(false); }, [inst]);   // a new instance invalidates node indices
 
   // flatten round events (in order) + per-round cumulative counts, to rebuild the matching
   const flat = useMemo(() => rounds.flatMap(r => r.events), [rounds]);
@@ -230,6 +254,8 @@ export default function StableMatching() {
   // "Jump to" a named stable matching: overrides the displayed matching statically.
   const [jump, setJump] = useState<Jump>('live');
   const [pickedNode, setPickedNode] = useState<number | null>(null); // a node clicked in the lattice
+  const [inspect, setInspect] = useState<[number, number] | null>(null); // hovered/pinned cell → read its prefs
+  const [pinned, setPinned] = useState(false);
 
   // Roth–Vande Vate resolver: repair the (possibly unstable) run to stability.
   const [resolve, setResolve] = useState<ResolveResult | null>(null);
@@ -389,11 +415,11 @@ export default function StableMatching() {
     const measure = () => {
       const w = el.clientWidth;
       const top = el.getBoundingClientRect().top;
-      const availH = window.innerHeight - top - 64;   // room for legend + bottom padding
-      const byW = (w - (showLabels ? 34 : 6)) / n - 3; // minus row header + per-cell gap
+      const availH = window.innerHeight - top - 116;   // room for legend + the inspect panel + comfortable bottom padding
+      const byW = (w - (showLabels ? 34 : 6)) / n - 3 - 8 / n; // minus row header + per-cell gap + a right inset
       const byH = (availH - (showLabels ? 22 : 6)) / n - 3; // minus column header
       // floor keeps cells visible (a dense lego heatmap) at large n; the wrap scrolls if needed
-      setCellSize(Math.max(5, Math.min(80, Math.floor(Math.min(byW, byH)))));
+      setCellSize(Math.max(5, Math.min(72, Math.floor(Math.min(byW, byH)))));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -611,7 +637,7 @@ export default function StableMatching() {
         <div className="sm2-visualizer">
           <p className="sm2-story">{story}</p>
           {resolve
-            ? <div className="sm2-narrate resolve"><strong>Stabilizing — Roth–Vande Vate</strong>: satisfy a blocking pair, repeat. Step {rStep} / {resolve.steps.length} · {blocking.size === 0 ? <>resolved — <strong>stable</strong> in {resolve.steps.length} steps</> : `${blocking.size} blocking pair${blocking.size === 1 ? '' : 's'} left`}. Reset to return to the live run.</div>
+            ? <div className="sm2-narrate resolve"><strong>Stabilizing — Roth–Vande Vate</strong>: satisfy a blocking pair, repeat. Step {rStep} / {resolve.steps.length} · {blocking.size === 0 ? <>resolved — <strong>stable</strong> in {resolve.steps.length} steps</> : rStep >= resolve.steps.length && !resolve.converged ? <>stopped at {resolve.steps.length} steps (large instance) — {blocking.size} blocking pair{blocking.size === 1 ? '' : 's'} remain</> : `${blocking.size} blocking pair${blocking.size === 1 ? '' : 's'} left`}. Reset to return to the live run.</div>
             : jump === 'live'
               ? <div className="sm2-narrate">{narrate()}</div>
               : <div className="sm2-narrate jump"><strong>{JUMP_LABELS[jump]} stable matching</strong> — {NAMED_NOTE[jump as NamedKey]}. Σrank {acct.combined} (A {acct.aTot} + B {acct.bTot}){solution.capped ? ' · approximate (enumeration capped)' : ''}. Press Step or Reset to return to the live run.</div>}
@@ -644,8 +670,17 @@ export default function StableMatching() {
             </div>
           </div>
           <div className="sm2-matrix-wrap" ref={matrixWrap}>
-            <Matrix inst={inst} matching={shown} rows={rows} cols={cols} markers={resolve ? resolveMarkers : jump === 'live' ? markers : EMPTY_MARKERS} blocking={blocking} footprint={showFootprint ? solution.pairs : null} size={cellSize} labels={showLabels && cellSize >= 16} view={cellView} gap={tight ? 0 : 3} trail={resolve || jump !== 'live' ? EMPTY_TRAIL : trail} />
+            <Matrix inst={inst} matching={shown} rows={rows} cols={cols} markers={resolve ? resolveMarkers : jump === 'live' ? markers : EMPTY_MARKERS} blocking={blocking} footprint={showFootprint ? solution.pairs : null}
+              inspect={inspect} onHover={(c) => { if (!pinned) setInspect(c); }} onClick={(c) => { if (pinned && inspect && inspect[0] === c[0] && inspect[1] === c[1]) { setPinned(false); setInspect(null); } else { setInspect(c); setPinned(true); } }}
+              size={cellSize} labels={showLabels && cellSize >= 16} view={cellView} gap={tight ? 0 : 3} trail={resolve || jump !== 'live' ? EMPTY_TRAIL : trail} />
             {legend}
+            {inspect && (
+              <div className={`sm2-inspect${pinned ? ' pinned' : ''}`}>
+                <PrefList inst={inst} side="A" id={inspect[0]} partner={shown.a[inspect[0]]} mark={inspect[1]} />
+                <PrefList inst={inst} side="B" id={inspect[1]} partner={shown.b[inspect[1]]} mark={inspect[0]} />
+                <span className="sm2-inspect-hint">◆ outline = partner this matching · ▢ = the cell you're on · {pinned ? 'click the cell again to unpin' : 'click a cell to pin'}</span>
+              </div>
+            )}
           </div>
         </div>
       ) : view === 'lab' ? (

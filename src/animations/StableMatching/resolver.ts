@@ -2,11 +2,17 @@
  *
  * From ANY matching — including the often-unstable synchronous-schedule result —
  * repeatedly pick a blocking pair and satisfy it (match them; their former
- * partners become single). This provably converges to *a* stable matching in
- * finitely many steps (Roth & Vande Vate, 1990). The number of repair steps is a
- * natural "cost to stabilize" — harder (more steps) when preferences are
- * disordered. We record each step so the visualizer can animate the purple
- * blocking cells healing one at a time.
+ * partners become single). This provably converges to *a* stable matching
+ * (Roth & Vande Vate, 1990): satisfying a uniformly-random blocking pair reaches
+ * stability with probability 1. Pure random selection, however, can wander for
+ * thousands of steps (and a naive deterministic order can cycle forever), so we
+ * use the proven escape hatch sparingly: greedily satisfy the *most mutually
+ * wanted* blocking pair (the one minimising rankA+rankB) — which collapses the
+ * common case to a few dozen watchable steps — and fall back to a random
+ * blocking pair only when greedy progress stalls, which breaks any cycle almost
+ * surely. The number of repair steps is a natural "cost to stabilize" — larger
+ * when preferences are disordered. We record each step so the visualizer can
+ * animate the purple blocking cells healing one at a time.
  */
 import type { Instance } from './model';
 import { mulberry32 } from './model';
@@ -48,20 +54,32 @@ export function replaySteps(start: Matching, steps: ResolveStep[], k: number): M
   return m;
 }
 
+const STALL = 3;   // greedy steps without a new low in the blocking count → random kick (cycle break)
+
 export function rothVandeVate(inst: Instance, start: Matching, seed = 1): ResolveResult {
   const m = clone(start);
   const rng = mulberry32((seed ^ 0x85ebca6b) >>> 0);
   const steps: ResolveStep[] = [];
-  const maxSteps = inst.n * inst.n * 8 + 16;
+  // greedy converges in a few dozen steps for watchable n; the hard ceiling just
+  // bounds the rare large-n random-walk tail so a call can't stall the UI.
+  const maxSteps = Math.min(inst.n * inst.n * 12 + 400, 12000);
+  let best = Infinity, since = 0;
   for (let it = 0; it < maxSteps; it++) {
     const bp = blockingPairList(inst, m);
+    if (steps.length) steps[steps.length - 1].remaining = bp.length;   // backfill the previous step's tail count
     if (!bp.length) return { start, steps, matching: m, converged: true };
-    const [a, b] = bp[Math.floor(rng() * bp.length)];
+    if (bp.length < best) { best = bp.length; since = 0; } else since++;
+    // greedy: the most mutually-wanted blocking pair; one random kick once greedy
+    // stalls (no new low for STALL steps), then resume greedy from a fresh baseline —
+    // mostly-greedy keeps paths short, the occasional kick breaks any cycle a.s.
+    let a: number, b: number;
+    if (since >= STALL) { [a, b] = bp[Math.floor(rng() * bp.length)]; since = 0; best = Infinity; }
+    else { let bi = 0, bs = Infinity; for (let k = 0; k < bp.length; k++) { const s = inst.rankA[bp[k][0]][bp[k][1]] + inst.rankB[bp[k][1]][bp[k][0]]; if (s < bs) { bs = s; bi = k; } } [a, b] = bp[bi]; }
     const freedB = m.a[a], freedA = m.b[b];    // partners about to be displaced
     if (freedB !== -1) m.b[freedB] = -1;
     if (freedA !== -1) m.a[freedA] = -1;
     m.a[a] = b; m.b[b] = a;
-    steps.push({ a, b, freedA, freedB, remaining: blockingPairList(inst, m).length });
+    steps.push({ a, b, freedA, freedB, remaining: -1 });
   }
   return { start, steps, matching: m, converged: blockingPairList(inst, m).length === 0 };
 }
