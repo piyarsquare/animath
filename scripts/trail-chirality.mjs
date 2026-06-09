@@ -1,14 +1,14 @@
-// Trail orientation test: does the LIVE head stamp read correctly in the
+// Trail orientation test: does the freshest print read correctly in the
 // CHARACTER'S frame on BOTH sides of the sheet?
 //
 // This is the regression guard for the "ink on the sheet" trail (inkTrail.ts): the
 // trail is stored once, with no mirror flags, and every mirrored appearance comes from
-// a genuine det<0 render transform. The invariant: the head stamp's rendered image
-// under the player must read right-handed in the player's own frame on BOTH faces —
+// a genuine det<0 render transform. The invariant: a print laid on the player's
+// current face must read right-handed in the player's own frame on BOTH faces —
 // the pipeline must never mirror a print in place. The script drives each world (via
 // the ?polydebug test bridge) in third person, walks the character onto both the
 // un-flipped and the flipped face, and on each face reads the EXACT geometry probe
-// (CoverModel.debugProbe → inkTrail.chirality): the signed side of the head print's
+// (CoverModel.debugProbe → inkTrail.chirality): the signed side of the fresh print's
 // cyan half in the character's own (up × forward) frame, AS RENDERED.
 //
 //   PASS  ⇒ the sign is POSITIVE (cyan on the character's left) on both faces — the

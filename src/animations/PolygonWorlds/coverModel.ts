@@ -60,10 +60,11 @@ export interface CoverModel {
   chart(): SquareMapState;
   clearTrail(): void;
 
-  /** Test/diagnostic only: signed handedness of the LIVE head stamp's rendered
-   *  image in the character's own frame (>0 ⇒ the print under the player reads
-   *  right-handed). Must keep the same sign on both faces of the sheet — the
-   *  ink pipeline never mirrors a print in place. */
+  /** Test/diagnostic only: signed handedness of the freshest print's rendered
+   *  image in the character's own frame (>0 ⇒ a print laid on the player's
+   *  current face reads right-handed under them). Must settle to the same
+   *  positive sign on both faces of the sheet — the ink pipeline never mirrors
+   *  a print in place. */
   debugProbe?(): number;
 
   setFloorOpacity?(o: number): void;

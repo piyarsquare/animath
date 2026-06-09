@@ -44,7 +44,6 @@ import {
 const EYE = 1.7;
 const MAX_PITCH = 1.3;
 const TRAIL_MAX = 360;     // stamps; each is re-projected into N_DECOR tiles per frame
-const HEAD_SCALE = 1.25;   // the live head stamp reads slightly larger
 const SKY = 0x070912;
 const GLASS = POLYGON_GLASS;   // shared spec — slider feels the same in every world
 const EDGE_SEGS = 7;        // polyline segments per geodesic polygon edge
@@ -209,16 +208,15 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   // so the one real trail appears in every visible tile; where the composed
   // transform is orientation-reversing the projected left lands on the right
   // and the decal's derived normal points DOWN — the print renders under the
-  // glass, mirror-reversed, with no flags and no per-print side data. The
-  // newest stamp is LIVE (the player's current frame — the direction arrow)
-  // and freezes into history every ~1.6 world units (3.2/DISK_R cover units).
+  // glass, mirror-reversed, with no flags and no per-print side data. A
+  // footprint freezes every ~1.6 world units (3.2/DISK_R cover units).
   type Stamp = { p: Vec3; pf: Vec3; pl: Vec3 };
-  const ink = makeInkTrail((TRAIL_MAX + 1) * N_DECOR);
+  const ink = makeInkTrail(TRAIL_MAX * N_DECOR);
   const inkMesh = new THREE.Mesh(ink.geometry, ink.material); inkMesh.frustumCulled = false;
   root.add(inkMesh);
   const stamps: Stamp[] = [];
   let lastFrozen: Vec3 | null = null;     // spacing reference (cover coords, folded with the player)
-  let headSlot = -1;                      // buffer slot of the head image under the player (probe)
+  let freshSlot = -1;                     // buffer slot of the freshest print's image nearest the player (probe)
   const pP = new THREE.Vector3(), pF = new THREE.Vector3(), pL = new THREE.Vector3();
   const fV = new THREE.Vector3(), lV = new THREE.Vector3(), nV = new THREE.Vector3();
 
@@ -313,25 +311,23 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
    *  carries the chirality: through a det<0 composed transform the left vector
    *  lands on the right and the derived normal (f×l) points down — mirror ink
    *  under the glass, by geometry alone. */
-  function rebuildInk(order: { i: number }[], head: Stamp) {
+  function rebuildInk(order: { i: number }[]) {
     let slot = 0;
-    headSlot = -1;
-    let headBest = Infinity;
+    freshSlot = -1;
+    let freshBest = Infinity;
     for (const { i } of order) {
       const M = mul(Mtiles, tiles[i].m);
-      for (let s = 0; s <= stamps.length; s++) {
-        const isHead = s === stamps.length;
-        const st = isHead ? head : stamps[s];
+      for (let s = 0; s < stamps.length; s++) {
+        const st = stamps[s];
         if (poincareR2(M, st.p) > 0.992) continue;   // at the horizon — invisible
         projectM(M, st.p, pP); projectM(M, st.pf, pF); projectM(M, st.pl, pL);
         fV.subVectors(pF, pP); lV.subVectors(pL, pP);
         const sc = fV.length();
         if (sc < 1e-6) continue;
         nV.crossVectors(fV, lV).setLength(sc);       // ±up, conformally scaled
-        if (isHead) {
-          fV.multiplyScalar(HEAD_SCALE); lV.multiplyScalar(HEAD_SCALE); nV.multiplyScalar(HEAD_SCALE);
-          const d = pP.lengthSq();
-          if (d < headBest) { headBest = d; headSlot = slot; }
+        if (s === stamps.length - 1) {               // freshest print: its image
+          const d = pP.lengthSq();                   // nearest the player feeds
+          if (d < freshBest) { freshBest = d; freshSlot = slot; } // the probe
         }
         ink.setQuad(slot++, pP, fV, lV, nV);
       }
@@ -405,23 +401,23 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     Tview = inv3(frame.g);
     Mtiles = mul(Tview, h);
 
-    // The player's frame as a cover stamp: position + a geodesic step ahead +
-    // one whose PROJECTION lands on the avatar's left. Stamping is a world-space
-    // act, so the world print is pulled back through the whole render transform —
-    // and the cover→floor projection (x,y) ↦ (X,Z) is itself orientation-REVERSING
-    // under the fixed camera (forward +X, up +Y ⇒ camera-right = +Z = cover-left),
-    // so the pull-back of the avatar's left is the kernel-RIGHT direction (−π/2).
-    // δ sets the decal's intrinsic size — chosen so the print is ~1 world unit at
-    // the disk centre (it shrinks conformally outward).
-    const delta = 2 / DISK_R;
-    const head: Stamp = {
-      p: pPos,
-      pf: framePos(kStep(frame, delta)),
-      pl: framePos(kStrafe(frame, -Math.PI / 2, delta)),
-    };
+    // Freeze a footprint every ~1.6 world units: the player's frame as a cover
+    // stamp — position + a geodesic step ahead + one whose PROJECTION lands on
+    // the avatar's left. Stamping is a world-space act, so the world print is
+    // pulled back through the whole render transform — and the cover→floor
+    // projection (x,y) ↦ (X,Z) is itself orientation-REVERSING under the fixed
+    // camera (forward +X, up +Y ⇒ camera-right = +Z = cover-left), so the
+    // pull-back of the avatar's left is the kernel-RIGHT direction (−π/2).
+    // δ sets the decal's intrinsic size — chosen so the print is ~1 world unit
+    // at the disk centre (it shrinks conformally outward).
     if (!lastFrozen || distance(kappa, lastFrozen, pPos) > 3.2 / DISK_R) {
+      const delta = 2 / DISK_R;
       if (stamps.length >= TRAIL_MAX) stamps.shift();
-      stamps.push(head);                    // freeze a copy at the current pose
+      stamps.push({
+        p: pPos,
+        pf: framePos(kStep(frame, delta)),
+        pl: framePos(kStrafe(frame, -Math.PI / 2, delta)),
+      });
       lastFrozen = pPos;
     }
 
@@ -433,7 +429,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
 
     rebuildEdges();
     placeDecor(order);
-    rebuildInk(order, head);
+    rebuildInk(order);
 
     cam.up.copy(UP);
     if (thirdPerson) {
@@ -474,10 +470,10 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   return {
     kind: 'hyperbolic',
     update, pose, chart,
-    // the head stamp's image nearest the player (their own tile's copy), read
-    // in the character's frame (>0 ⇒ reads right-handed under the player)
-    debugProbe: () => ink.chirality(headSlot, null, fwdW, UP),
-    clearTrail: () => { stamps.length = 0; lastFrozen = null; headSlot = -1; ink.setCount(0); },
+    // the freshest print's image nearest the player (their own tile's copy),
+    // read in the character's frame (>0 ⇒ reads right-handed under the player)
+    debugProbe: () => ink.chirality(freshSlot, null, fwdW, UP),
+    clearTrail: () => { stamps.length = 0; lastFrozen = null; freshSlot = -1; ink.setCount(0); },
     setFloorOpacity: (o: number) => { glassOpacity = o; applyGlass(); },
     setCameraDistance: (d: number) => { camDist = d; },
     // stamps live in cover coordinates, which are scale-free — the ink survives

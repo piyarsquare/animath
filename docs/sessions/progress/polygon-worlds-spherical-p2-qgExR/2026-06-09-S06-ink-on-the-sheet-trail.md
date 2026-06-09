@@ -81,6 +81,29 @@ already declares):
 
 ## Working notes
 
+### 🟢 code · 21:45 — feedback round: true glide deck; pinned head arrow removed
+**Why:** user feedback on the Klein walk: (1) "there is always an arrow on my
+feet" — the live head stamp; (2) the under-floor arrows were NOT reversed.
+
+(1) The live head stamp is gone in all three presenters — prints now only
+freeze every ~1.6 walked units (the freshest print is the heading cue).
+(2) was the real find: the euclidean glide cell rendered as `scaleY(−1)`,
+which swaps the sheet's faces but **silently drops the glide's in-plane
+reflection** (the kernel's det<0 generator has it; the presenter discarded
+it) — so under-floor images kept their in-plane orientation and the fold
+contradicted the minimap's own gluing arrows (`chart()` even faked the mirror
+map-side). The flipped cell transform is now the **π-rotation about the glide
+axis** — flipping the transparency over: face swap + genuine in-plane mirror
+in one *proper* rotation. The fold applies the genuine inverse glide
+(translate + reflect: the classic square-diagram re-entry, exit at v return
+at 1−v, now actually happens; the chart() hack is removed), the heading and
+camera reflect with `flipAcc` so controls feel identical on both faces, and
+stamps pull back through the full transform (bottom-face ink is mirror-handed
+in sheet coords). Side effect, intended: corner plaques on flipped cells now
+genuinely mirror — matching the hyperbolic mirror tiles. Verified: strict
+chirality test passes all four worlds; the Klein walk screenshot shows the
+under-glass reversed F.
+
 ### 🟡 milestone · 21:10 — verified end to end; old footprint code deleted
 **Why:** the build, the strict chirality probe, and the visual Klein walk all pass.
 

@@ -25,12 +25,12 @@ So different gluings give different worlds:
 
 Walk it in first person. The **mini-map** is always the fundamental square, its
 edges marked with the identification arrows. Your footprints are **ink on the
-sheet**: the arrow under you always points where you are heading, and the trail
-behind you tiles seamlessly across the gluing. On a **non-orientable** world
-(Klein, ℝP²), crossing a flipped edge carries you to the **other side of the
-sheet**: every landmark swaps **trees ↔ columns**, and your old footprints now
-show **through the glass floor, mirror-reversed** — you never become mirrored;
-you are simply looking at the back of your own ink.
+sheet**: each print points along your walk, and the trail tiles seamlessly
+across the gluing. On a **non-orientable** world (Klein, ℝP²), crossing a
+flipped edge carries you to the **other side of the sheet**: every landmark
+swaps **trees ↔ columns**, and your old footprints now show **through the glass
+floor, mirror-reversed** — you never become mirrored; you are simply looking at
+the back of your own ink.
 
 ### The curved worlds are genuinely round
 

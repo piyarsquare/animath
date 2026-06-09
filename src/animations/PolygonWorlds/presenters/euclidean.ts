@@ -18,10 +18,14 @@ import { applyMat, det3, ORIGIN, Isometry } from '../lib/cayleyKlein';
  * Each cell is a **two-sided sheet** (a thin slab) of one neutral colour: **trees on
  * the top face**, **columns on the bottom face**, each landmark's two forms at the
  * identical (u, v) and growing *away* from the sheet (so they never penetrate it).
- * A mirror-reflected cell (`det < 0`) is the whole sheet flipped (`scale.y = −1`):
- * the columns face becomes the top — the trees↔columns swap is the side cue (the two
- * faces are not coloured differently; a warm light from above and a cool one from
- * below tint them instead).
+ * A mirror-reflected cell (`det < 0`) is the sheet **flipped over like a
+ * transparency** — rotated π about the glide axis. That one proper rotation does
+ * both things the glide demands: the columns face becomes the top (the side cue),
+ * and the cell's content is genuinely mirrored in-plane across the glide axis, so
+ * anything written on the sheet reads REVERSED through the glass from the other
+ * side. (`scale.y = −1` alone — the earlier sheet flip — swaps the faces but
+ * silently drops the in-plane reflection, which made old ink read un-reversed and
+ * the walk contradict the mini-map's own gluing arrows.)
  *
  * The footprint trail is **ink on the sheet**: each stamp is pulled back through the
  * home cell's current transform into sheet coordinates (in-plane position + heading +
@@ -29,8 +33,7 @@ import { applyMat, det3, ORIGIN, Isometry } from '../lib/cayleyKlein';
  * carries a mesh instance of that buffer, so the trail tiles seamlessly with the
  * ground and a det<0 cell genuinely turns the inked face downward — your old prints
  * hang under the glass, mirror-reversed, when the identification carries them to the
- * other side of the sheet. The newest stamp is LIVE: it tracks the player every frame
- * (the direction arrow) and freezes into history each TRAIL_SPACING of walked path.
+ * other side of the sheet.
  */
 
 const K = 2;            // render (2K+1)² copies around the player
@@ -39,7 +42,6 @@ const UP = new THREE.Vector3(0, 1, 0);
 const SKY = 0x070912;
 const TRAIL_MAX = 1500;
 const TRAIL_SPACING = 1.6;
-const HEAD_SCALE = 1.25;   // the live head stamp reads slightly larger
 // The default opacity reads as clear-but-present glass (you see the brown
 // underside + columns + footprints through it); raising it toward 1 turns the
 // sheet solid. The threshold spec is shared across all three worlds so the
@@ -63,8 +65,10 @@ interface Cell {
   cornersBottom: THREE.Group; // their Roman-numeral counterparts (bottom face)
 }
 
-/** A footprint in sheet coordinates: in-plane position + heading + the face
- *  the ink is on (0 = the slab's authored top face, 1 = its bottom face). */
+/** A footprint in sheet coordinates: in-plane position + heading + the face the
+ *  ink is on (0 = the slab's authored top face, 1 = its bottom face). For face 1
+ *  the in-plane numbers are already pulled back through the flip (mirrored
+ *  across the glide axis) — they are SHEET coordinates, not world ones. */
 interface Stamp { x: number; z: number; fx: number; fz: number; face: number }
 
 export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
@@ -81,6 +85,22 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   const detA = det3(gens[0].m), detB = det3(gens[1].m);
   const flipParity = (I: number, J: number) =>
     ((detA < 0 && (I & 1)) ? 1 : 0) ^ ((detB < 0 && (J & 1)) ? 1 : 0);
+  // The glide axis: a glide reflection's mirror line is parallel to its own
+  // translation. The flipped cell transform is the π-rotation about this axis
+  // (through the cell centre at slab mid-height) — the "flip the transparency
+  // over" move: face swap + genuine in-plane mirror in one proper rotation.
+  const glideDir = new THREE.Vector3();
+  if (detA < 0) glideDir.set(ax, 0, ay).normalize();
+  else if (detB < 0) glideDir.set(bx, 0, by).normalize();
+  else glideDir.set(1, 0, 0);            // unused (orientable: no flipped cells)
+  /** Reflect an in-plane (x,z) pair across the glide axis direction. */
+  const reflectInPlane = (x: number, z: number): [number, number] => {
+    const dx = glideDir.x, dz = glideDir.z;
+    return [
+      (dx * dx - dz * dz) * x + 2 * dx * dz * z,
+      2 * dx * dz * x + (dz * dz - dx * dx) * z,
+    ];
+  };
 
   let side = c.squareSize;
   let thickness = c.floorThickness;
@@ -120,22 +140,25 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   }
 
   // ── the ink trail: one canonical buffer in sheet coordinates ──────────────────
-  // Stamps are authored on the slab's faces (face 0 at +t/2 lifting up, face 1 at
-  // −t/2 lifting down, mirror-handed — the pull-back of a correct world print
-  // through the flipped home transform). Rendering never touches the buffer: each
-  // cell draws an instance through its own matrix, so the trail tiles seamlessly
-  // and a flipped cell genuinely carries the ink to the sheet's other side.
-  const ink = makeInkTrail(TRAIL_MAX + 1);          // history + the live head stamp
+  // Stamps are the player's world print pulled back through the home cell's
+  // CURRENT transform into sheet coordinates: on the flipped face that pull-back
+  // (the inverse π-rotation) mirrors the in-plane numbers and lands the ink on
+  // the bottom face — mirror-handed ink, exactly what a real stamp through a real
+  // flip leaves. Rendering never touches the buffer: each cell draws an instance
+  // through its own matrix, so the trail tiles seamlessly and a flipped cell
+  // genuinely carries the ink to the sheet's other side, reading reversed.
+  const ink = makeInkTrail(TRAIL_MAX);
   const stamps: Stamp[] = [];
-  let lastFrozen: THREE.Vector3 | null = null;      // spacing ref (world, fold-translated)
+  let lastFrozen: THREE.Vector3 | null = null;      // spacing ref (world, fold-carried)
   const posV = new THREE.Vector3(), fwdV = new THREE.Vector3();
   const leftV = new THREE.Vector3(), normV = new THREE.Vector3();
-  function writeStamp(slot: number, s: Stamp, sc = 1) {
+  function writeStamp(slot: number, s: Stamp) {
     const sy = s.face ? -1 : 1;
     posV.set(s.x, sy * (thickness / 2), s.z);
-    fwdV.set(s.fx, 0, s.fz).multiplyScalar(sc);
-    leftV.set(s.fz, 0, -s.fx).multiplyScalar(sc);   // = up×fwd at lay time (in-plane, fold-invariant)
-    normV.set(0, sy * sc, 0);
+    fwdV.set(s.fx, 0, s.fz);
+    // bottom-face ink is mirror-handed in sheet coords: left = −(up × fwd)
+    leftV.set(s.fz, 0, -s.fx).multiplyScalar(sy);
+    normV.set(0, sy, 0);
     ink.setQuad(slot, posV, fwdV, leftV, normV);
   }
   const rewriteStamps = () => { stamps.forEach((s, i) => writeStamp(i, s)); };
@@ -143,8 +166,9 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   // ── tiled copies of the two-sided sheet ──────────────────────────────────────
   // Authored with the slab mid-plane at the group origin: top face at +t/2 (trees,
   // up), bottom face at −t/2 (columns, grown down). The group sits at world y=−t/2,
-  // so the top face — the walking surface — is at y=0. A flipped cell scales y=−1
-  // about the slab mid-plane, swapping the faces in place.
+  // so the top face — the walking surface — is at y=0. A flipped cell is rotated π
+  // about the glide axis through its centre at slab mid-height: faces swap AND the
+  // content mirrors in-plane — the transparency flipped over.
   const cells: Cell[] = [];
   function buildCells() {
     for (const cell of cells) root.remove(cell.group);
@@ -221,35 +245,54 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
 
   function update(input: CoverFrameInput, cam: THREE.PerspectiveCamera) {
     const { fwd, strafe, yaw, pitch, dt, moveSpeed, thirdPerson } = input;
+    // The player's world heading: the yaw-derived frame, reflected across the
+    // glide axis while on the other face (flipAcc). The camera below derives
+    // from the same reflected frame, so the on-screen controls feel identical on
+    // both faces — only the world-fixed turn sense flips, which is exactly the
+    // honest non-orientable experience (you cannot feel world coordinates).
+    forward.set(Math.sin(yaw), 0, -Math.cos(yaw));
+    let strafeX = Math.cos(yaw), strafeZ = Math.sin(yaw);
+    if (flipAcc) {
+      [forward.x, forward.z] = reflectInPlane(forward.x, forward.z);
+      [strafeX, strafeZ] = reflectInPlane(strafeX, strafeZ);
+    }
     if (fwd || strafe) {
-      const v = moveSpeed * dt, sy = Math.sin(yaw), cy = Math.cos(yaw);
-      px += (fwd * sy + strafe * cy) * v;
-      pz += (fwd * -cy + strafe * sy) * v;
+      const v = moveSpeed * dt;
+      px += (fwd * forward.x + strafe * strafeX) * v;
+      pz += (fwd * forward.z + strafe * strafeZ) * v;
     }
 
     // ── Fold the player back into the home cell — "crossing teleports you". The cover
     // is drawn as a (2K+1)² patch of cells around the player; left to roam free the
     // camera would wander arbitrarily far from the origin. Instead, the moment the
-    // player steps out of the home cell, translate them (and the baked trail) back by
-    // that cell's lattice origin so they re-enter from the identified edge. The patch
-    // is redrawn centred on home, so the relative geometry — hence the view — is
-    // unchanged (a seamless teleport); the flip parity of the crossing is folded into
-    // `flipAcc` so a glide edge still swaps the face you are standing on.
+    // player steps out of the home cell, apply that cell's INVERSE deck element so
+    // they re-enter from the identified edge: translate back by the lattice origin,
+    // and across a glide edge also reflect across the glide axis (the genuine glide
+    // map — this is what makes the classic square-diagram re-entry, exit at v come
+    // back at 1−v, actually happen). The patch is redrawn centred on home, so the
+    // view is unchanged (a seamless teleport); the crossing's flip parity folds into
+    // `flipAcc`, which both swaps the rendered face and keeps the heading reflected.
     const [fi, fj] = cellOf(px, pz);
     if (fi !== 0 || fj !== 0) {
       const [ox, oz] = cellOrigin(fi, fj);
       px -= ox; pz -= oz;
-      // The ink does NOT move with the teleport: stamps live in sheet coordinates
-      // and every cell already draws them; the fold only changes which transform
-      // the home cell renders through. `lastFrozen` — a pure spacing reference,
-      // not a print — tracks the player's periodic image so the gap between
-      // prints stays even across a wrap.
+      // `lastFrozen` — a pure spacing reference, not a print — rides along through
+      // the fold so the gap between prints stays even across a wrap. The ink
+      // itself never moves: stamps live in sheet coordinates and every cell
+      // already draws them.
       if (lastFrozen) lastFrozen.set(lastFrozen.x - ox, lastFrozen.y, lastFrozen.z - oz);
-      if (flipParity(fi, fj)) flipAcc ^= 1;   // glide ⇒ you are now on the other face
+      if (flipParity(fi, fj)) {
+        [px, pz] = reflectInPlane(px, pz);
+        if (lastFrozen) {
+          const [rx, rz] = reflectInPlane(lastFrozen.x, lastFrozen.z);
+          lastFrozen.set(rx, lastFrozen.y, rz);
+        }
+        [forward.x, forward.z] = reflectInPlane(forward.x, forward.z);
+        flipAcc ^= 1;                      // you are now on the other face
+      }
     }
 
     pos.set(px, 0, pz);
-    forward.set(Math.sin(yaw), 0, -Math.cos(yaw));
 
     cam.up.copy(UP);
     if (thirdPerson) {
@@ -260,7 +303,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     } else {
       const cp = Math.cos(pitch);
       cam.position.set(px, EYE, pz);
-      cam.lookAt(px + Math.sin(yaw) * cp, EYE + Math.sin(pitch), pz - Math.cos(yaw) * cp);
+      cam.lookAt(px + forward.x * cp, EYE + Math.sin(pitch), pz + forward.z * cp);
     }
 
     // tile the sheet around the player via the deck lattice
@@ -271,26 +314,30 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
         const I = I0 + di, J = J0 + dj;
         const [cx, cz] = cellOrigin(I, J);
         const flipped = (flipParity(I, J) ^ flipAcc) === 1;
-        S.makeScale(1, flipped ? -1 : 1, 1);
+        if (flipped) S.makeRotationAxis(glideDir, Math.PI);  // the transparency flip
+        else S.identity();
         const cell = cells[idx++];
         cell.group.matrix.copy(M.makeTranslation(cx, -thickness / 2, cz)).multiply(S);
       }
     }
 
     // ── ink the sheet ─────────────────────────────────────────────────────────
-    // The stamp is the player's world frame pulled back into sheet coordinates
-    // (face = flipAcc; in-plane numbers are fold-invariant). The newest stamp is
-    // LIVE — rewritten under the player every frame, the direction arrow — and
-    // freezes into history once a full spacing has been walked.
-    const here: Stamp = { x: px, z: pz, fx: forward.x, fz: forward.z, face: flipAcc };
+    // Freeze a footprint every TRAIL_SPACING of walked path: the player's world
+    // print pulled back into sheet coordinates (on the flipped face that inverse
+    // flip mirrors the in-plane numbers — sheet coords, not world ones).
     if (!lastFrozen || lastFrozen.distanceTo(pos) > TRAIL_SPACING) {
+      let sx = px, sz = pz, sfx = forward.x, sfz = forward.z;
+      if (flipAcc) {
+        [sx, sz] = reflectInPlane(sx, sz);
+        [sfx, sfz] = reflectInPlane(sfx, sfz);
+      }
+      const here: Stamp = { x: sx, z: sz, fx: sfx, fz: sfz, face: flipAcc };
       if (stamps.length >= TRAIL_MAX) { stamps.shift(); ink.dropOldest(); }
       stamps.push(here);
       writeStamp(stamps.length - 1, here);
+      ink.setCount(stamps.length);
       lastFrozen = pos.clone();
     }
-    writeStamp(stamps.length, here, HEAD_SCALE);
-    ink.setCount(stamps.length + 1);
   }
 
   function pose(): PlayerPose {
@@ -298,24 +345,28 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   }
 
   function chart(): SquareMapState {
+    // The fold now applies the genuine glide map (translation + reflection), so
+    // the player's home-cell coordinates already show the classic square-diagram
+    // re-entry (exit at v, come back at 1−v) — plot them raw.
     const [I0, J0] = cellOf(px, pz);
     const [cx, cz] = cellOrigin(I0, J0);
     const flipped = (flipParity(I0, J0) ^ flipAcc) === 1;
-    const sz0 = flipped ? -1 : 1;
-    const bx2 = px - cx, bz2 = sz0 * (pz - cz);
-    const mhx = forward.x, mhz = sz0 * forward.z, mhl = Math.hypot(mhx, mhz) || 1;
-    return { u: bx2 / side + 0.5, v: bz2 / side + 0.5, hx: mhx / mhl, hz: mhz / mhl, flipped };
+    const mhl = Math.hypot(forward.x, forward.z) || 1;
+    return {
+      u: (px - cx) / side + 0.5, v: (pz - cz) / side + 0.5,
+      hx: forward.x / mhl, hz: forward.z / mhl, flipped,
+    };
   }
 
   return {
     kind: 'euclidean',
     update, pose, chart,
-    // the live head stamp AS RENDERED through the home cell's current transform,
+    // the freshest print AS RENDERED through the home cell's current transform,
     // read in the character's frame (>0 ⇒ reads right-handed under the player)
     debugProbe: () => {
       M.makeTranslation(0, -thickness / 2, 0);
-      if (flipAcc) M.multiply(S.makeScale(1, -1, 1));
-      return ink.chirality(stamps.length, M, forward, UP);
+      if (flipAcc) M.multiply(S.makeRotationAxis(glideDir, Math.PI));
+      return ink.chirality(stamps.length - 1, M, forward, UP);
     },
     clearTrail: () => { stamps.length = 0; lastFrozen = null; ink.setCount(0); },
     setFloorOpacity: applyFloorOpacity,

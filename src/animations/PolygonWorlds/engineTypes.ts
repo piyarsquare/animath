@@ -47,7 +47,7 @@ export interface PolygonEngine {
   /** Third-person camera distance from the character (world units). */
   setCameraDistance(d: number): void;
   getMapState(): SquareMapState | null;
-  /** Test/diagnostic only: signed handedness of the live head stamp's rendered
+  /** Test/diagnostic only: signed handedness of the freshest print's rendered
    *  image in the character's frame (see CoverModel.debugProbe). undefined if
    *  unsupported. */
   debugProbe(): number | undefined;

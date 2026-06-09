@@ -37,7 +37,6 @@ const EYE = 1.7;
 const MAX_PITCH = 1.3;
 const TRAIL_MAX = 900;
 const TRAIL_SPACING = 1.6;
-const HEAD_SCALE = 1.25;   // the live head stamp reads slightly larger
 const SKY = 0x05070e;
 const GLASS = POLYGON_GLASS;   // shared spec — slider feels the same in every world
 const LON = 24, LAT = 16;
@@ -155,10 +154,8 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   // ── the ink trail: one buffer in true world coords on the fixed planet ──────
   // The sphere IS the cover, so the stamps are simply where you walked. On ℝP²
   // the one genuine det<0 deck element (the antipodal map) draws the trail's
-  // mirror twin — no flags, the reflection does the mirroring. The newest stamp
-  // is LIVE: it tracks the player every frame (the direction arrow) and freezes
-  // into history each TRAIL_SPACING of walked path.
-  const ink = makeInkTrail(TRAIL_MAX + 1);          // history + the live head stamp
+  // mirror twin — no flags, the reflection does the mirroring.
+  const ink = makeInkTrail(TRAIL_MAX);
   const inkMesh = new THREE.Mesh(ink.geometry, ink.material); inkMesh.frustumCulled = false;
   root.add(inkMesh);
   if (twinM4) {
@@ -166,14 +163,13 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     inkTwin.matrixAutoUpdate = false; inkTwin.matrix.copy(twinM4);
     root.add(inkTwin);
   }
-  let hist = 0;                                     // frozen-history stamp count
+  let hist = 0;                                     // frozen stamp count
   let lastFrozen: THREE.Vector3 | null = null;      // spacing reference
-  const leftV = new THREE.Vector3(), fwdV = new THREE.Vector3(), normV = new THREE.Vector3();
-  function writeStamp(slot: number, sc = 1) {
-    fwdV.copy(fwdU).multiplyScalar(sc);
-    leftV.crossVectors(posU, fwdU).multiplyScalar(sc);  // up×fwd — the player's left
-    normV.copy(posU).multiplyScalar(sc);
-    ink.setQuad(slot, posW, fwdV, leftV, normV);
+  const leftV = new THREE.Vector3(), normV = new THREE.Vector3();
+  function writeStamp(slot: number) {
+    leftV.crossVectors(posU, fwdU);                 // up×fwd — the player's left
+    normV.copy(posU);
+    ink.setQuad(slot, posW, fwdU, leftV, normV);
   }
 
   function applyGlass() {
@@ -235,14 +231,13 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
       cam.lookAt(eye.x + look.x, eye.y + look.y, eye.z + look.z);
     }
 
-    // ── ink the shell ─────────────────────────────────────────────────────────
+    // ── ink the shell: freeze a footprint every TRAIL_SPACING of walked path ──
     if (!lastFrozen || lastFrozen.distanceTo(posW) > TRAIL_SPACING) {
       if (hist >= TRAIL_MAX) { ink.dropOldest(); hist--; }
       writeStamp(hist); hist++;
+      ink.setCount(hist);
       lastFrozen = posW.clone();
     }
-    writeStamp(hist, HEAD_SCALE);                   // the live head stamp
-    ink.setCount(hist + 1);
   }
 
   function pose(): PlayerPose {
@@ -274,9 +269,9 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   return {
     kind: 'spherical',
     update, pose, chart,
-    // the live head stamp as rendered (the main mesh carries no transform),
+    // the freshest print as rendered (the main mesh carries no transform),
     // read in the character's frame (>0 ⇒ reads right-handed under the player)
-    debugProbe: () => ink.chirality(hist, null, fwdU, posU),
+    debugProbe: () => ink.chirality(hist - 1, null, fwdU, posU),
     clearTrail: () => { hist = 0; lastFrozen = null; ink.setCount(0); },
     setFloorOpacity: (o: number) => { glassOpacity = o; applyGlass(); },
     setCameraDistance: (d: number) => { camDist = d; },
