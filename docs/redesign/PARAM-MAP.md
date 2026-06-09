@@ -190,6 +190,20 @@ Minimal migration so `ToggleMenu` and the old chrome can be deleted:
 
 View window: **Fractal (CPU)**. Its hardcoded `100vw/100vh` root becomes `100%`.
 
+## 11. Polygon Worlds — `#/polygon-worlds` (merged from main mid-overhaul; mapped at migration)
+
+| Panel | Contents |
+|---|---|
+| `subject` · World | Gluing select (6 worlds) · edge-word + invariants readout (orientability, χ, curvature) |
+| `domain` · Terrain | Square size / Disk scale · Floor thickness (flat) · Planet radius (spherical) |
+| `view` · Camera | Third-person toggle · Camera distance (third-person) |
+| `marks` · Landmarks & trail | Landmarks count · Arrangement · Glass opacity · Clear trail |
+| `drive` · Walk | Walk speed · key/gesture hint |
+
+View window: **First-person view** (MovePad, mini-map, ℝP² embedding inset stay
+in-canvas as informational overlays). Window-level WASD guarded against focused
+form controls (keyup still clears movement flags so no key latches).
+
 ---
 
 ## Deliberate relocations (old chrome → new home)
