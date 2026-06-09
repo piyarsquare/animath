@@ -59,6 +59,7 @@ const MIGRATED = new Set<string>([
   '/polygon-worlds',
   '/agentic-sorting',
   '/stable-marriage',
+  '/stable-matching',
 ]);
 
 function Router(): JSX.Element {
