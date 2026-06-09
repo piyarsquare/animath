@@ -24,11 +24,16 @@ import {
  * O); cover points map hyperboloid → Poincaré disk `(x,y)/(1+w)` → a flat **glass
  * disk floor** (radius `DISK_R`).
  *
- * Like the euclidean cover, the player is **kept in the fundamental domain** without
- * reflecting their frame: a separate deck element `h` tracks which tile they are in
- * (a greedy walk on the deck group's Cayley graph toward the player), and the tiling
- * is drawn through `Mtiles = frame⁻¹ · h`, so the developed tiles always surround the
- * player. Crossing a **glide** edge of a non-orientable world makes `det(h) < 0`,
+ * The player is **kept in the fundamental domain by re-basing every frame**: a deck
+ * element `h` tracks which tile they walked into (a greedy walk on the deck group's
+ * Cayley graph toward the player), and then the frame is *folded back* by the nearest
+ * orientation-preserving deck element so it can never drift far from the basepoint —
+ * crossing an edge **teleports** the camera across the identified edge with no visible
+ * pop (the fold leaves `Mtiles = frame⁻¹ · h` exactly invariant). This is what keeps
+ * ℍ² stable: without it the frame's entries grow like `cosh(distance)` and `frame⁻¹`
+ * goes singular within a few dozen tiles. The tiling is drawn through `Mtiles`, so the
+ * developed tiles always surround the player. Crossing a **glide** edge of a
+ * non-orientable world makes `det(h) < 0`,
  * which flips the skin of *every* tile (`det(h)·det(γ) < 0`) — you genuinely flip to
  * the other side (trees ↔ columns, decals mirror-reversed) — while your frame, and
  * therefore your controls, stay put. The geodesic tile edges draw the `{2n, 2n}`
@@ -325,7 +330,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     // Walk the tile tracker `h` toward the player along the deck Cayley graph, so
     // the developed tiles stay around them (no walk-off). The player frame is left
     // alone (det > 0), so only the *world* flips through a glide, not the controls.
-    const pPos = framePos(frame);
+    let pPos = framePos(frame);
     for (let iter = 0; iter < 16; iter++) {
       let bestD = distance(kappa, pPos, applyMat(h, ORIGIN));
       let bestM: Mat3 | null = null;
@@ -337,6 +342,41 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
       if (!bestM) break;
       h = bestM;
     }
+
+    // ── Fold the player back into the home tile — the "crossing teleports you" rule.
+    // Without this the frame walks off across the cover: on ℍ² its matrix entries grow
+    // like cosh(distance), so after a few dozen tiles inv3(frame.g) goes singular and
+    // the view blows up (the "loses stability if you stray from the start" failure).
+    // `h` is the deck element of the tile the player now sits in; re-base both `frame`
+    // and `h` by the nearest ORIENTATION-PRESERVING deck element D⁻¹ on the left. This
+    // leaves the render transform Mtiles = inv3(frame.g)·h *exactly* invariant — the
+    // camera teleports across the identified edge with no visible pop — while keeping
+    // det(frame) > 0 (controls never invert) and the sign of det(h) (the sheet side you
+    // are on) unchanged. The player is thus always inside the home polygon or its one
+    // mirror neighbour ("one side or the other"), so the frame can never drift far.
+    let D: Mat3 = h;
+    if (det3(h) < 0) {
+      // On a flipped tile: fold to the nearest orientation-preserving neighbour so D
+      // stays det > 0 (keeps the frame right-handed) and the flipped skin still shows.
+      let bestD = Infinity, bestM: Mat3 | null = null;
+      for (const gm of genMats) {
+        const cand = mul(h, gm);
+        if (det3(cand) < 0) continue;
+        const cd = distance(kappa, pPos, applyMat(cand, ORIGIN));
+        if (cd < bestD) { bestD = cd; bestM = cand; }
+      }
+      D = bestM ?? h;
+    }
+    if (distance(kappa, ORIGIN, applyMat(D, ORIGIN)) > 1e-6) {
+      const Dinv = inv3(D);
+      frame = reorthonormalize({ kappa: frame.kappa, g: mul(Dinv, frame.g) });
+      h = mul(Dinv, h);
+      // carry the cover-coordinate trail with the fold so it stays put on screen
+      for (const t of covTrail) t.p = applyMat(Dinv, t.p);
+      if (lastTrailPos) lastTrailPos = applyMat(Dinv, lastTrailPos);
+      pPos = framePos(frame);
+    }
+
     detH = det3(h);
     Tview = inv3(frame.g);
     Mtiles = mul(Tview, h);

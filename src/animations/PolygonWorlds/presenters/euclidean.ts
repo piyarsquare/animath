@@ -180,6 +180,11 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     return [(best[0] - 0.5) * side, (best[1] - 0.5) * side];
   }
   let [px, pz] = clearSpawn();
+  // Accumulated flip parity carried through folds: each time the player is folded
+  // back across a glide edge we XOR in that crossing's parity, so the world keeps
+  // showing the correct (flipped / un-flipped) face even though the player's cell
+  // index is reset to home. 0 for the orientable torus (no flip edges) always.
+  let flipAcc = 0;
   const forward = new THREE.Vector3(0, 0, -1);
   const pos = new THREE.Vector3(px, 0, pz);
   const M = new THREE.Matrix4(), S = new THREE.Matrix4();
@@ -192,6 +197,24 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
       px += (fwd * sy + strafe * cy) * v;
       pz += (fwd * -cy + strafe * sy) * v;
     }
+
+    // ── Fold the player back into the home cell — "crossing teleports you". The cover
+    // is drawn as a (2K+1)² patch of cells around the player; left to roam free the
+    // camera would wander arbitrarily far from the origin. Instead, the moment the
+    // player steps out of the home cell, translate them (and the baked trail) back by
+    // that cell's lattice origin so they re-enter from the identified edge. The patch
+    // is redrawn centred on home, so the relative geometry — hence the view — is
+    // unchanged (a seamless teleport); the flip parity of the crossing is folded into
+    // `flipAcc` so a glide edge still swaps the face you are standing on.
+    const [fi, fj] = cellOf(px, pz);
+    if (fi !== 0 || fj !== 0) {
+      const [ox, oz] = cellOrigin(fi, fj);
+      px -= ox; pz -= oz;
+      foot.shift(-ox, 0, -oz);
+      if (trailLast) trailLast.set(trailLast.x - ox, trailLast.y, trailLast.z - oz);
+      flipAcc ^= flipParity(fi, fj);
+    }
+
     pos.set(px, 0, pz);
     forward.set(Math.sin(yaw), 0, -Math.cos(yaw));
 
@@ -214,7 +237,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
       for (let dj = -K; dj <= K; dj++) {
         const I = I0 + di, J = J0 + dj;
         const [cx, cz] = cellOrigin(I, J);
-        const flipped = flipParity(I, J) === 1;
+        const flipped = (flipParity(I, J) ^ flipAcc) === 1;
         S.makeScale(1, flipped ? -1 : 1, 1);
         const cell = cells[idx++];
         cell.group.matrix.copy(M.makeTranslation(cx, -thickness / 2, cz)).multiply(S);
@@ -224,7 +247,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     // footprints: always laid on top of the sheet — the same side the character is
     // rendered on — so your fresh trail stays with you. On a mirrored cell the print
     // is set down mirror-reversed in place (you are on the sheet's other face).
-    const playerFlipped = flipParity(I0, J0) === 1;
+    const playerFlipped = (flipParity(I0, J0) ^ flipAcc) === 1;
     if (!trailLast || trailLast.distanceTo(pos) > TRAIL_SPACING) {
       const d = trailLast ? pos.clone().sub(trailLast) : forward.clone();
       if (d.lengthSq() < 1e-9) d.copy(forward);
@@ -242,7 +265,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   function chart(): SquareMapState {
     const [I0, J0] = cellOf(px, pz);
     const [cx, cz] = cellOrigin(I0, J0);
-    const flipped = flipParity(I0, J0) === 1;
+    const flipped = (flipParity(I0, J0) ^ flipAcc) === 1;
     const sz0 = flipped ? -1 : 1;
     const bx2 = px - cx, bz2 = sz0 * (pz - cz);
     const mhx = forward.x, mhz = sz0 * forward.z, mhl = Math.hypot(mhx, mhz) || 1;
