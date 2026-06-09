@@ -56,6 +56,21 @@ Grouped from the task brief; not yet sequenced.
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 11:30 — Wrote the solution-space wishlist + tiered plan
+**Why:** User: "make a very complete record of [the solution-space discussion] —
+it's a wish list for the app… and build a tiered stepwise plan." Added the kicker:
+**preference falsification** (every agent games their official rank), possibly its
+own app.
+
+Captured as a dedicated reference doc:
+[2026-06-08-S01-solution-space-wishlist.md](2026-06-08-S01-solution-space-wishlist.md)
+— the lattice/rotation structure, where the named solutions live, traversal
+methods, fair algorithms (egalitarian/median/min-regret poly; sex-equal/balanced
+NP-hard), the RVV resolver, and a **5-tier build plan** (T0 rotation engine →
+T1 footprint+count → T2 named solutions → T3 lattice diagram → T4 resolver;
+T5 preference-falsification as a candidate standalone app). Recommended first
+build: **T0 → T1**.
+
 ### 🔵 finding · 11:10 — Solution-space design map (rotations, fairness, resolver)
 **Why:** User asked what enumerating all stable matchings involves, how to explore
 the space, algorithm alternatives, the "resolver" idea, and canonical *fair*
