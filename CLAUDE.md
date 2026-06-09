@@ -279,6 +279,14 @@ A 4D point `(x, y, u, v)` maps to 3D via: **Perspective** (divide by `3 + v`),
 - **Markdown**: `README.md` (About) and `EXPLAINER.md` (?) imported via `?raw`.
 - **Base-aware asset paths**: load public assets with `import.meta.env.BASE_URL`
   (the Vite `base` is `/animath/`) — see `lib/textures.ts`.
+- **Spelling — American English throughout**: all user-facing text and comments
+  (UI strings, `README.md`/`EXPLAINER.md`, code comments) use American spellings —
+  **color** (not colour), **center** (not centre), **behavior**, **gray**,
+  **favor**, **neighbor**, **analyze**, and **-ize/-ization** verb endings
+  (organize, minimize, normalize, stabilize, visualize). This matches the language
+  defaults already used in code (CSS `color:`, `justify-content: center`; JS
+  `normalize()`), so code and prose stay uniform. When merging a branch that
+  introduced British prose, normalize it back to American.
 
 ## Known Issues and Technical Debt
 

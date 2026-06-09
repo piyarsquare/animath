@@ -58,4 +58,10 @@ export const apps: AppDescriptor[] = [
     icon: '⇆',
     blurb: 'A rebuilt Gale–Shapley lab: tune how much each group shares a common preference, then watch the proposer advantage appear — and vanish at full consensus.',
   },
+  {
+    hash: '/polygon-worlds',
+    name: 'Polygon Worlds',
+    icon: '⬚',
+    blurb: 'One decorated square, four worlds: glue its edges and let curvature follow — walk a torus, Klein bottle, projective plane or sphere in first person.',
+  },
 ];
