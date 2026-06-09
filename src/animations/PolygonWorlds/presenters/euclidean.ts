@@ -220,13 +220,18 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     if (fi !== 0 || fj !== 0) {
       const [ox, oz] = cellOrigin(fi, fj);
       px -= ox; pz -= oz;
-      for (const t of trail) t.pos.set(t.pos.x - ox, t.pos.y, t.pos.z - oz);
+      // The trail does NOT move with the teleport. The ground patch is static in scene
+      // space and every print was laid at the (already-folded) player position — i.e.
+      // inside the home cell — so each print stays where it was stamped and the trail
+      // wraps *within* the fundamental polygon, exactly like the now-confined player.
+      // (Dragging the whole baked trail by the fold delta on each crossing is what made
+      // it spill across the cover into "infinite space".) Only `trailLast` — a pure
+      // spacing reference, not a print — tracks the player's periodic image so the gap
+      // between prints stays even across a wrap.
       if (trailLast) trailLast.set(trailLast.x - ox, trailLast.y, trailLast.z - oz);
-      const parity = flipParity(fi, fj);
-      flipAcc ^= parity;
-      // A glide crossing flips the side you view from ⇒ every print's relative mirror
-      // changes; rebuild. A plain translation only slides the baked prints.
-      if (parity) rebuildTrail(); else foot.shift(-ox, 0, -oz);
+      // A glide crossing flips the side you view from ⇒ every existing print's relative
+      // mirror changes; rebuild to re-mirror them. A plain translation needs nothing.
+      if (flipParity(fi, fj)) { flipAcc ^= 1; rebuildTrail(); }
     }
 
     pos.set(px, 0, pz);

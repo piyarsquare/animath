@@ -31,6 +31,30 @@ pole-clumping; tower labelling; badge legibility). See
 
 ## Working notes
 
+### 🟢 code · 06:30 — Fix: euclidean footprints must wrap *within* the fundamental cell
+**Why:** in the Klein bottle the trail "lived in infinite space" instead of adhering to
+the fundamental polygon.
+
+Root cause was in the fold-back: on every edge crossing the code rigidly shifted *every*
+baked print by the player's fold delta (`for (const t of trail) t.pos -= cellOrigin`). But
+the ground patch is static in scene space and each fresh print is laid at the already-folded
+(home-cell) position, so dragging the whole set one cell over on each crossing pushed the
+accumulated trail across the cover — it stretched backwards to infinity as you walked.
+
+Fix: **don't move the trail on a fold.** Each print stays where it was stamped (inside the
+home cell), so the trail now wraps *within* the fundamental polygon exactly like the confined
+player. Only `trailLast` (a spacing reference, not a print) still tracks the player's periodic
+image so prints stay evenly spaced across a wrap. A glide crossing still rebuilds the trail to
+re-mirror prints against the new side (the S05 relative-mirror cue). Removed the now-unused
+`footprints.shift()`. Verified: torus + klein trails stay bounded over a 40 s walk; the
+chirality test stays green (all four PASS).
+
+**Aside (separate, pre-existing):** while verifying I caught a transient white blow-out — a
+raycast identified it as a **tree cone 0.65 u from the camera**, i.e. the third-person camera
+backing into decor and the camera-mounted headlamp over-lighting it point-blank. It is a
+camera/decor clipping issue, not a footprint bug; logged for a later pass (fade/cull decor
+near the camera, or clamp the headlamp range).
+
 ### 🟢 code · 05:40 — Fix: the orientation flip must be *relative* to the viewer's side
 **Why:** the S05 chirality test (below) proved klein + crosscap3 lay the **fresh** print
 mirror-reversed in place while the avatar stays un-mirrored, so the F a character just

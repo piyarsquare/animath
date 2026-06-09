@@ -20,9 +20,6 @@ export interface FootprintTrail {
    *  chirality in place (the F + cyan/magenta swap) WITHOUT moving it off the `up`
    *  side — for a print set down while standing on the mirror face of the sheet. */
   append: (pos: THREE.Vector3, forward: THREE.Vector3, up: THREE.Vector3, mirror?: boolean) => void;
-  /** Translate every laid print by (dx, dy, dz). Used when the player is folded back
-   *  into the fundamental domain (a "teleport"), so the baked trail stays attached. */
-  shift: (dx: number, dy: number, dz: number) => void;
   /** Test/diagnostic probe: signed side of the most recent print's cyan half relative to
    *  `up × forward`, in the buffer's own space. 0 if no prints. Sign flips iff the print
    *  was laid mirror-reversed — used to verify the F reads correctly in the character's frame. */
@@ -123,11 +120,6 @@ export function makeFootprintTrail(max: number): FootprintTrail {
     material,
     count: () => count,
     append,
-    shift: (dx, dy, dz) => {
-      if (!count) return;
-      for (let i = 0; i < count * VPER; i++) { pos[i * 3] += dx; pos[i * 3 + 1] += dy; pos[i * 3 + 2] += dz; }
-      (geo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
-    },
     lastChirality: (forward, up) => {
       if (!count) return 0;
       // Average the cyan (uv.u<0.5) and magenta (uv.u>0.5) vertices of the most recent
