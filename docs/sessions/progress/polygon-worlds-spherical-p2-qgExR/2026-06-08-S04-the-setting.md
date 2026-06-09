@@ -42,6 +42,27 @@ remaining, unstarted work. Build green, verify 100/100.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 09:35 — Footprints: on the character's side, mirrored in place on the flip face
+**Why:** Correction to the previous entry — "same side as the character" meant the
+same **side of the surface** (which face), not just the rendered top. A print laid
+while on the mirror face must read mirror-reversed (like that face's decals), but
+still stay with the character (not drop below the glass, not stay upright).
+
+- **footprints.ts**: `append(pos, forward, up, mirror?)` — the new `mirror` flag
+  negates the left/handedness in place (reverses the chiral F + cyan/magenta swap)
+  WITHOUT moving the print off the `up` side. (Previously the only way to reverse a
+  print was to flip its `up` normal, which also pushed it below the floor.)
+- **hyperbolic.ts**: store each trail point's lay-time side (`det(h) < 0`); the trail
+  is always appended on top (`UP`) with `mirror = that side`. Verified in crosscap3:
+  the fresh print at the feet is on top with the character but the F is reversed and
+  the colours swapped (you are on the mirror face).
+- **euclidean.ts**: print on top (`y=0`, `UP`) with `mirror = playerFlipped` on a
+  mirrored cell. Confirmed upright on a normal cell; same `append` mechanism as the
+  verified hyperbolic path on a flipped one.
+- spherical unchanged (the ℝP² antipodal twin already mirrors via its matrix).
+
+Build green; verify 100/100 (kernel untouched).
+
 ### 🟢 code · 09:05 — Trail always stays on the character's side
 **Why:** User: new trail points should always appear on the same side as the
 character. My earlier change dropped flipped-side footprints BELOW the glass, away

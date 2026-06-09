@@ -186,11 +186,12 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   const foot = makeFootprintTrail(TRAIL_MAX);
   const footMesh = new THREE.Mesh(foot.geometry, foot.material); footMesh.frustumCulled = false;
   root.add(footMesh);
-  // Trail points, stored in cover coords and re-projected each frame as the player
-  // re-centres. They are always drawn on TOP of the glass — the same side the
-  // character is rendered on (the player frame never flips), so your fresh
-  // footprints always stay with you, even after crossing to the mirror side.
-  const covTrail: Vec3[] = [];
+  // Trail points, stored in cover coords (+ the side of the sheet they were laid on)
+  // and re-projected each frame as the player re-centres. Every print is drawn on
+  // TOP of the glass — the same side the character is rendered on — so it always
+  // stays with you; a print set down while on the mirror face (det(h) < 0) is drawn
+  // mirror-reversed in place, marking that face without leaving the character.
+  const covTrail: { p: Vec3; mirror: boolean }[] = [];
   let lastTrailPos: Vec3 | null = null;
 
   // ── player frame on the κ=−1 shell ───────────────────────────────────────────
@@ -287,12 +288,13 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   function rebuildTrail() {
     foot.clear();
     for (let i = 0; i < covTrail.length; i++) {
-      projectM(Tview, covTrail[i], tmp);
-      if (i + 1 < covTrail.length) projectM(Tview, covTrail[i + 1], tmp2);
+      projectM(Tview, covTrail[i].p, tmp);
+      if (i + 1 < covTrail.length) projectM(Tview, covTrail[i + 1].p, tmp2);
       else tmp2.set(0, 0, 0);                     // last → toward the player (centre)
       tmp2.sub(tmp);
       if (tmp2.lengthSq() < 1e-6) tmp2.copy(fwdW);
-      foot.append(tmp, tmp2.normalize(), UP);     // always on the character's side
+      // always on the character's side (UP); mirror in place if laid on the flip face
+      foot.append(tmp, tmp2.normalize(), UP, covTrail[i].mirror);
     }
   }
 
@@ -323,9 +325,9 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     Tview = inv3(frame.g);
     Mtiles = mul(Tview, h);
 
-    // record the trail in cover coords as the player advances
+    // record the trail in cover coords (+ the sheet side the character is on now)
     if (!lastTrailPos || distance(kappa, lastTrailPos, pPos) > 0.12) {
-      covTrail.push(pPos);
+      covTrail.push({ p: pPos, mirror: detH < 0 });
       if (covTrail.length > TRAIL_MAX) covTrail.shift();
       lastTrailPos = pPos;
     }

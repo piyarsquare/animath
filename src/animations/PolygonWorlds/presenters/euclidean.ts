@@ -21,8 +21,9 @@ import { applyMat, det3, ORIGIN, Isometry } from '../lib/cayleyKlein';
  * the columns face becomes the top — the trees↔columns swap is the side cue (the two
  * faces are not coloured differently; a warm light from above and a cool one from
  * below tint them instead). The footprint trail is always laid on top of the sheet,
- * the same side the character is rendered on, so your fresh trail stays with you
- * even while walking a mirrored cell.
+ * the same side the character is rendered on, so your fresh trail stays with you;
+ * on a mirrored cell each print is set down mirror-reversed in place (you are on the
+ * sheet's other face), so the chiral F still flags the flip.
  */
 
 const K = 2;            // render (2K+1)² copies around the player
@@ -218,13 +219,15 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     }
 
     // footprints: always laid on top of the sheet — the same side the character is
-    // rendered on — so your fresh trail stays with you even on a mirrored cell.
+    // rendered on — so your fresh trail stays with you. On a mirrored cell the print
+    // is set down mirror-reversed in place (you are on the sheet's other face).
+    const playerFlipped = flipParity(I0, J0) === 1;
     if (!trailLast || trailLast.distanceTo(pos) > TRAIL_SPACING) {
       const d = trailLast ? pos.clone().sub(trailLast) : forward.clone();
       if (d.lengthSq() < 1e-9) d.copy(forward);
       d.y = 0;
       footPos.set(px, 0, pz);
-      foot.append(footPos, d.normalize(), UP);
+      foot.append(footPos, d.normalize(), UP, playerFlipped);
       trailLast = pos.clone();
     }
   }

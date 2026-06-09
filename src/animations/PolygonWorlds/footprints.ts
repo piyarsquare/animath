@@ -16,7 +16,10 @@ export interface FootprintTrail {
   geometry: THREE.BufferGeometry;
   material: THREE.Material;
   count: () => number;
-  append: (pos: THREE.Vector3, forward: THREE.Vector3, up: THREE.Vector3) => void;
+  /** Lay a print at `pos` facing `forward`, lifted along `up`. `mirror` reverses the
+   *  chirality in place (the F + cyan/magenta swap) WITHOUT moving it off the `up`
+   *  side — for a print set down while standing on the mirror face of the sheet. */
+  append: (pos: THREE.Vector3, forward: THREE.Vector3, up: THREE.Vector3, mirror?: boolean) => void;
   clear: () => void;
   dispose: () => void;
 }
@@ -88,11 +91,12 @@ export function makeFootprintTrail(max: number): FootprintTrail {
     [A_BACK, HW, 0, 0],
   ];
 
-  const append = (p0: THREE.Vector3, forward: THREE.Vector3, up: THREE.Vector3) => {
+  const append = (p0: THREE.Vector3, forward: THREE.Vector3, up: THREE.Vector3, mirror = false) => {
     if (count >= max) { pos.copyWithin(0, VPER * 3); uv.copyWithin(0, VPER * 2); count--; }
     const f = forward.clone().normalize();
     const n = up.clone().normalize();
     const l = new THREE.Vector3().crossVectors(n, f).normalize(); // left
+    if (mirror) l.negate(); // mirror chirality in place (without flipping to the other side)
     let op = count * VPER * 3, ou = count * VPER * 2;
     for (const [along, left, u, v] of CORNERS) {
       pos[op] = p0.x + along * f.x + left * l.x + LIFT * n.x;
