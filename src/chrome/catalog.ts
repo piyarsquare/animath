@@ -35,6 +35,7 @@ const META: Record<string, { cat: Category; kind: PreviewKind; hue?: number }> =
   '/stable-marriage': { cat: 'Algorithm', kind: 'trinary' },
   '/agentic-sorting': { cat: 'Algorithm', kind: 'particles', hue: 0.7 },
   '/stable-matching': { cat: 'Algorithm', kind: 'trinary' },
+  '/polygon-worlds': { cat: 'Dynamics', kind: 'trinary' },
 };
 
 export const CARDS: AppCard[] = apps
