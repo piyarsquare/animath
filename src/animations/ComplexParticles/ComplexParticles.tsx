@@ -5,11 +5,15 @@ import { Select, NumberInput } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
-import { vertexShader, fragmentShader } from './shaders';
+import { vertexShader, fragmentShader, sheetFillVertexShader, sheetWireVertexShader, sheetFragmentShader, tileVertexShader, tileFragmentShader, netVertexShader, netFragmentShader } from './shaders';
 import { loadParticleTextures } from '../../lib/textures';
 import {
   useParticleState, useUniformSync, useViewControls,
   createParticleGeometry, rebuildGeometryBuffers, redistributeAdaptive,
+  createSheetGeometry, rebuildSheetGeometry,
+  createSheetWireGeometry, rebuildSheetWireGeometry, sheetCellSize,
+  createTileGeometry, rebuildTileGeometry,
+  createNetGeometry, rebuildNetGeometry,
   createAxes, createHopfScaffold, createHopfFibers, startAnimationLoop,
 } from '../../lib/particles';
 import { usePersistentState } from '../../lib/usePersistentState';
@@ -83,6 +87,22 @@ export default function ComplexParticles({
 
   const sceneRef = useRef<THREE.Scene>();
   const pointsRef = useRef<THREE.Points[]>([]);
+  // Sheet (surface) render mode: a non-indexed per-quad fill geometry (flat
+  // averaged colour per rectangle) + a separate line geometry for the
+  // rectangular wireframe (row/column edges, no diagonals). Both are drawn per
+  // Riemann sheet.
+  const sheetGeomRef = useRef<THREE.BufferGeometry>();
+  const sheetWireGeomRef = useRef<THREE.BufferGeometry>();
+  const fillMeshRef = useRef<THREE.Mesh[]>([]);
+  const wireMeshRef = useRef<THREE.LineSegments[]>([]);
+  // Tiles render mode: one oriented quad per grid sample (its own geometry +
+  // mesh per Riemann sheet).
+  const tileGeomRef = useRef<THREE.BufferGeometry>();
+  const tileMeshRef = useRef<THREE.Mesh[]>([]);
+  // Net render mode: a polar fibre net (circles + rays) drawn as screen-space
+  // ribbon meshes (so it can have a real pixel width).
+  const netGeomRef = useRef<THREE.BufferGeometry>();
+  const netMeshRef = useRef<THREE.Mesh[]>([]);
   const scaffoldRef = useRef<HopfScaffold>();
   const fibersRef = useRef<HopfFibers>();
 
@@ -136,47 +156,71 @@ export default function ComplexParticles({
     });
   }, [quadA, quadB, quadC]);
 
-  // Each particle set renders the sheet at branchMin + i.
+  // Each material renders the Riemann sheet at branchMin + its branch. There are
+  // now several materials per branch (points + sheet fill + wire), so the branch
+  // is tagged on the material rather than read from its position in the list.
   useEffect(() => {
-    state.materialsRef.current.forEach((m, i) => {
-      m.uniforms.branchIndex.value = branchMin + i;
+    state.materialsRef.current.forEach(m => {
+      m.uniforms.branchIndex.value = branchMin + ((m.userData.branch as number) ?? 0);
     });
   }, [branchMin, branchMax]);
 
+  // The full uniform set shared by every material (points + sheet fill + wire),
+  // so useUniformSync / the animation loop / useViewControls drive them all
+  // uniformly. Each material gets its own fresh objects (no aliasing).
+  const makeUniforms = (b: number) => ({
+    time: { value: 0 },
+    opacity: { value: state.opacity },
+    functionType: { value: functionIndex },
+    exponentP: { value: expP },
+    exponentQ: { value: expQ === 0 ? 1 : expQ },
+    uQuadA: { value: new THREE.Vector2(quadA[0], quadA[1]) },
+    uQuadB: { value: new THREE.Vector2(quadB[0], quadB[1]) },
+    uQuadC: { value: new THREE.Vector2(quadC[0], quadC[1]) },
+    globalSize: { value: state.size },
+    intensity: { value: state.intensity },
+    shimmerAmp: { value: state.shimmer },
+    jitterAmp: { value: state.jitter },
+    uJitterMode: { value: state.jitterMode },
+    hueShift: { value: state.hueShift },
+    saturation: { value: state.saturation },
+    realView: { value: state.realViewRef.current ? 1 : 0 },
+    shapeType: { value: state.shapeIndex },
+    tex: { value: state.texturesRef.current[state.textureIndex] ?? new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) },
+    textureIndex: { value: state.textureIndex },
+    uColourStyle: { value: state.colourStyle },
+    uColormap: { value: state.colormap },
+    uColorRepeat: { value: state.colorRepeat },
+    uReciprocal: { value: state.reciprocal ? 1 : 0 },
+    uWarpR: { value: netRadius() },
+    uLight: { value: state.lighting ? 1 : 0 },
+    uLightStrength: { value: state.lightStrength },
+    uColourBy: { value: state.colourBy },
+    uColourQty: { value: state.colourQuantity },
+    uBrightnessQty: { value: state.brightnessQuantity },
+    uInCoord: { value: state.inputCoord },
+    uOutCoord: { value: state.outputCoord },
+    uRotL: { value: { w: 1, v: new THREE.Vector3() } },
+    uRotR: { value: { w: 1, v: new THREE.Vector3() } },
+    uProjMode: { value: state.projRef.current },
+    uProjTarget: { value: state.projRef.current },
+    uProjAlpha: { value: 0 },
+    branchIndex: { value: branchMin + b },
+  });
+
+  // Adaptive fade only applies while the sheet is on screen — in plain Points
+  // mode the cloud must show everywhere, so the point material's uAdaptive is
+  // gated on the render mode (the fill/wire are hidden outside Sheet mode anyway).
+  const adaptiveOn = () => state.renderMode === 'Sheet' && state.sheetAdaptive;
+
   function createBranchMaterial(b: number) {
-    return new THREE.ShaderMaterial({
+    const [csx, csy] = currentCellSize();
+    const m = new THREE.ShaderMaterial({
       uniforms: {
-        time: { value: 0 },
-        opacity: { value: state.opacity },
-        functionType: { value: functionIndex },
-        exponentP: { value: expP },
-        exponentQ: { value: expQ === 0 ? 1 : expQ },
-        uQuadA: { value: new THREE.Vector2(quadA[0], quadA[1]) },
-        uQuadB: { value: new THREE.Vector2(quadB[0], quadB[1]) },
-        uQuadC: { value: new THREE.Vector2(quadC[0], quadC[1]) },
-        globalSize: { value: state.size },
-        intensity: { value: state.intensity },
-        shimmerAmp: { value: state.shimmer },
-        jitterAmp: { value: state.jitter },
-        uJitterMode: { value: state.jitterMode },
-        hueShift: { value: state.hueShift },
-        saturation: { value: state.saturation },
-        realView: { value: state.realViewRef.current ? 1 : 0 },
-        shapeType: { value: state.shapeIndex },
-        tex: { value: state.texturesRef.current[state.textureIndex] ?? new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) },
-        textureIndex: { value: state.textureIndex },
-        uColourStyle: { value: state.colourStyle },
-        uColourBy: { value: state.colourBy },
-        uColourQty: { value: state.colourQuantity },
-        uBrightnessQty: { value: state.brightnessQuantity },
-        uInCoord: { value: state.inputCoord },
-        uOutCoord: { value: state.outputCoord },
-        uRotL: { value: { w: 1, v: new THREE.Vector3() } },
-        uRotR: { value: { w: 1, v: new THREE.Vector3() } },
-        uProjMode: { value: state.projRef.current },
-        uProjTarget: { value: state.projRef.current },
-        uProjAlpha: { value: 0 },
-        branchIndex: { value: branchMin + b },
+        ...makeUniforms(b),
+        uAdaptive: { value: adaptiveOn() ? 1 : 0 },
+        uDensity: { value: state.sheetDensity },
+        uCellSize: { value: new THREE.Vector2(csx, csy) },
       },
       vertexShader,
       fragmentShader,
@@ -185,22 +229,284 @@ export default function ComplexParticles({
       blending: THREE.AdditiveBlending,
       vertexColors: true,
     });
+    m.userData.branch = b;
+    return m;
   }
 
-  useEffect(() => {
-    if (!sceneRef.current || !state.geometryRef.current) return;
-    pointsRef.current.forEach(pts => sceneRef.current!.remove(pts));
+  // The sheet uses true alpha compositing (NormalBlending), not the points'
+  // additive glow — overlapping translucent triangles must read as a layered
+  // surface, not blow out to white. This is fixed regardless of background, so
+  // the objectMode effect leaves sheet materials' blending alone (userData.sheet).
+  // Current cell spacing (domain units per cell) for the fill shader's corner
+  // averaging — must track the domain box and sheet resolution.
+  const currentCellSize = (): [number, number] => {
+    const [bx0, bx1, by0, by1] = effectiveBounds();
+    return sheetCellSize(state.sheetResolution, bx0, bx1, by0, by1);
+  };
+
+  function createSheetFillMaterial(b: number) {
+    const [csx, csy] = currentCellSize();
+    const [bx0, bx1, by0, by1] = effectiveBounds();
+    const m = new THREE.ShaderMaterial({
+      uniforms: {
+        ...makeUniforms(b),
+        uShade: { value: state.sheetShade },
+        uWire: { value: 0 },
+        uAdaptive: { value: adaptiveOn() ? 1 : 0 },
+        uDensity: { value: state.sheetDensity },
+        uCellSize: { value: new THREE.Vector2(csx, csy) },
+        uDomainBox: { value: new THREE.Vector4(bx0, bx1, by0, by1) },
+      },
+      vertexShader: sheetFillVertexShader,
+      fragmentShader: sheetFragmentShader,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.NormalBlending,
+      vertexColors: true,
+    });
+    m.userData.branch = b;
+    m.userData.sheet = true;
+    return m;
+  }
+
+  function createSheetWireMaterial(b: number) {
+    const [csx, csy] = currentCellSize();
+    const [bx0, bx1, by0, by1] = effectiveBounds();
+    const m = new THREE.ShaderMaterial({
+      uniforms: {
+        ...makeUniforms(b), uShade: { value: state.sheetShade }, uWire: { value: 1 },
+        uAdaptive: { value: adaptiveOn() ? 1 : 0 },
+        uDensity: { value: state.sheetDensity },
+        uCellSize: { value: new THREE.Vector2(csx, csy) },
+        uDomainBox: { value: new THREE.Vector4(bx0, bx1, by0, by1) },
+      },
+      vertexShader: sheetWireVertexShader,
+      fragmentShader: sheetFragmentShader,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.NormalBlending,
+      vertexColors: true,
+    });
+    m.userData.branch = b;
+    m.userData.sheet = true;
+    m.userData.sheetWire = true;
+    return m;
+  }
+
+  // Radius of the polar fibre net: reach the farthest corner of the domain box.
+  const netRadius = (): number => {
+    const [bx0, bx1, by0, by1] = effectiveBounds();
+    return Math.max(Math.abs(bx0), Math.abs(bx1), Math.abs(by0), Math.abs(by1));
+  };
+
+  function createNetMaterial(b: number) {
+    const size = new THREE.Vector2(1, 1);
+    state.rendererRef.current?.getSize(size);
+    const m = new THREE.ShaderMaterial({
+      uniforms: {
+        ...makeUniforms(b),
+        uResolution: { value: size },
+        uLineWidth: { value: state.netWidth },
+      },
+      vertexShader: netVertexShader,
+      fragmentShader: netFragmentShader,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.NormalBlending,
+      vertexColors: true,
+    });
+    m.userData.branch = b;
+    m.userData.sheet = true;   // keep NormalBlending through the object-mode toggle
+    m.userData.net = true;
+    return m;
+  }
+
+  function createTileMaterial(b: number) {
+    const [csx, csy] = currentCellSize();
+    const m = new THREE.ShaderMaterial({
+      uniforms: {
+        ...makeUniforms(b),
+        uShade: { value: state.sheetShade },
+        uCellSize: { value: new THREE.Vector2(csx, csy) },
+        uMaxTile: { value: state.tileSize },
+      },
+      vertexShader: tileVertexShader,
+      fragmentShader: tileFragmentShader,
+      transparent: true,
+      depthWrite: true,
+      side: THREE.DoubleSide,
+      blending: THREE.NormalBlending,
+      vertexColors: true,
+    });
+    m.userData.branch = b;
+    m.userData.sheet = true;
+    return m;
+  }
+
+  // Visibility follows the render mode: Points shows the cloud; Sheet shows the
+  // filled surface and/or the wireframe overlay.
+  const applyRenderVisibility = () => {
+    const isSheet = state.renderMode === 'Sheet';
+    const isTiles = state.renderMode === 'Tiles';
+    // The point cloud shows in Points mode and, in adaptive Sheet mode, stays
+    // visible underneath so it shows through wherever the fill/wire dissolves.
+    pointsRef.current.forEach(o => { o.visible = state.renderMode === 'Points' || (isSheet && state.sheetAdaptive); });
+    fillMeshRef.current.forEach(o => { o.visible = isSheet && state.sheetFill; });
+    wireMeshRef.current.forEach(o => { o.visible = isSheet && state.sheetWire; });
+    tileMeshRef.current.forEach(o => { o.visible = isTiles; });
+    netMeshRef.current.forEach(o => { o.visible = state.renderMode === 'Net'; });
+  };
+
+  // (Re)create the per-branch objects: a point cloud, a filled sheet, and a
+  // wireframe sheet for each Riemann sheet. Used by both the initial mount and
+  // the branch-range effect.
+  const rebuildBranchObjects = (scene: THREE.Scene) => {
+    const pointsGeom = state.geometryRef.current;
+    const fillGeom = sheetGeomRef.current;
+    const wireGeom = sheetWireGeomRef.current;
+    const tileGeom = tileGeomRef.current;
+    const netGeom = netGeomRef.current;
+    if (!pointsGeom || !fillGeom || !wireGeom || !tileGeom || !netGeom) return;
+    pointsRef.current.forEach(o => scene.remove(o));
+    fillMeshRef.current.forEach(o => scene.remove(o));
+    wireMeshRef.current.forEach(o => scene.remove(o));
+    tileMeshRef.current.forEach(o => scene.remove(o));
+    netMeshRef.current.forEach(o => scene.remove(o));
     state.materialsRef.current.forEach(m => m.dispose());
     state.materialsRef.current = [];
     pointsRef.current = [];
+    fillMeshRef.current = [];
+    wireMeshRef.current = [];
+    tileMeshRef.current = [];
+    netMeshRef.current = [];
     for (let b = 0; b < branchCount; b++) {
-      const material = createBranchMaterial(b);
-      state.materialsRef.current.push(material);
-      const pts = new THREE.Points(state.geometryRef.current, material);
-      sceneRef.current.add(pts);
+      const pm = createBranchMaterial(b);
+      const fm = createSheetFillMaterial(b);
+      const wm = createSheetWireMaterial(b);
+      const tm = createTileMaterial(b);
+      const nm = createNetMaterial(b);
+      const pts = new THREE.Points(pointsGeom, pm);
+      const fill = new THREE.Mesh(fillGeom, fm);
+      const wire = new THREE.LineSegments(wireGeom, wm);
+      const tiles = new THREE.Mesh(tileGeom, tm);
+      const net = new THREE.Mesh(netGeom, nm);
+      // In adaptive Sheet mode the cloud and sheet overlap; without a fixed order
+      // these depth-write-off transparent objects sort by distance and the
+      // additive points can land on top of an opaque fill. Pin points behind, then
+      // fill, then wire, so a dense (opaque) fill cleanly covers the cloud and only
+      // the stretched, dissolved cells let the points show through.
+      pts.renderOrder = 0;
+      fill.renderOrder = 1;
+      wire.renderOrder = 2;
+      state.materialsRef.current.push(pm, fm, wm, tm, nm);
       pointsRef.current.push(pts);
+      fillMeshRef.current.push(fill);
+      wireMeshRef.current.push(wire);
+      tileMeshRef.current.push(tiles);
+      netMeshRef.current.push(net);
+      scene.add(pts, fill, wire, tiles, net);
     }
+    applyRenderVisibility();
+  };
+
+  useEffect(() => {
+    if (!sceneRef.current || !state.geometryRef.current || !sheetGeomRef.current) return;
+    rebuildBranchObjects(sceneRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branchCount]);
+
+  // Toggle which render mode's objects are visible without rebuilding them.
+  useEffect(() => {
+    applyRenderVisibility();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.renderMode, state.sheetFill, state.sheetWire, state.sheetAdaptive]);
+
+  // Push the adaptive-density controls to every material (points + sheet fill +
+  // wire). The point cloud only fades in Sheet mode (adaptiveOn), so it stays a
+  // full cloud in plain Points mode.
+  useEffect(() => {
+    const on = adaptiveOn() ? 1 : 0;
+    state.materialsRef.current.forEach(m => {
+      if (m.uniforms.uAdaptive) m.uniforms.uAdaptive.value = on;
+      if (m.uniforms.uDensity) m.uniforms.uDensity.value = state.sheetDensity;
+    });
+  }, [state.renderMode, state.sheetAdaptive, state.sheetDensity]);
+
+  // Rebuild the sheet fill + wire grids when the resolution or domain box
+  // changes, and refresh the fill shader's cell size (for corner averaging).
+  useEffect(() => {
+    const fillGeom = sheetGeomRef.current;
+    const wireGeom = sheetWireGeomRef.current;
+    const tileGeom = tileGeomRef.current;
+    if (!fillGeom || !wireGeom || !tileGeom) return;
+    const [bxMin, bxMax, byMin, byMax] = effectiveBounds();
+    rebuildSheetGeometry(fillGeom, state.sheetResolution, bxMin, bxMax, byMin, byMax);
+    rebuildSheetWireGeometry(wireGeom, state.sheetResolution, bxMin, bxMax, byMin, byMax);
+    rebuildTileGeometry(tileGeom, state.sheetResolution, bxMin, bxMax, byMin, byMax);
+    const [csx, csy] = sheetCellSize(state.sheetResolution, bxMin, bxMax, byMin, byMax);
+    const warpR = netRadius();
+    state.materialsRef.current.forEach(m => {
+      if (m.uniforms.uCellSize) m.uniforms.uCellSize.value.set(csx, csy);
+      if (m.uniforms.uDomainBox) m.uniforms.uDomainBox.value.set(bxMin, bxMax, byMin, byMax);
+      if (m.uniforms.uWarpR) m.uniforms.uWarpR.value = warpR;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    state.sheetResolution, state.extentX, state.extentY, state.axisScale,
+    state.boundsLock, state.xMin, state.xMax, state.yMin, state.yMax,
+  ]);
+
+  // Rebuild the fibre net when its counts/mode or the domain box change.
+  useEffect(() => {
+    const netGeom = netGeomRef.current;
+    if (!netGeom) return;
+    rebuildNetGeometry(netGeom, state.netRings, state.netSpokes, netRadius(), state.netCircles, state.netRays, state.netResolution);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    state.netRings, state.netSpokes, state.netCircles, state.netRays, state.netResolution,
+    state.extentX, state.extentY, state.axisScale,
+    state.boundsLock, state.xMin, state.xMax, state.yMin, state.yMax,
+  ]);
+
+  // Push the net thread width to its materials.
+  useEffect(() => {
+    state.materialsRef.current.forEach(m => {
+      if (m.uniforms.uLineWidth) m.uniforms.uLineWidth.value = state.netWidth;
+    });
+  }, [state.netWidth]);
+
+  // Keep the net's screen-space width correct as the canvas resizes (the ribbon
+  // expansion is in pixels, so it needs the live drawing-buffer size).
+  useEffect(() => {
+    const sync = () => {
+      const r = state.rendererRef.current;
+      if (!r) return;
+      const s = new THREE.Vector2();
+      r.getSize(s);
+      state.materialsRef.current.forEach(m => {
+        if (m.uniforms.uResolution) (m.uniforms.uResolution.value as THREE.Vector2).copy(s);
+      });
+    };
+    sync();
+    window.addEventListener('resize', sync);
+    return () => window.removeEventListener('resize', sync);
+  });
+
+  // Push the faceted-shading strength to the sheet materials (points lack uShade).
+  useEffect(() => {
+    state.materialsRef.current.forEach(m => {
+      if (m.uniforms.uShade) m.uniforms.uShade.value = state.sheetShade;
+    });
+  }, [state.sheetShade]);
+
+  // Push the max tile size to the tile materials.
+  useEffect(() => {
+    state.materialsRef.current.forEach(m => {
+      if (m.uniforms.uMaxTile) m.uniforms.uMaxTile.value = state.tileSize;
+    });
+  }, [state.tileSize]);
 
   // Show the sphere scaffold in the Hopf view (or once the Torus → Hopf collapse
   // is past halfway) and the donut scaffold in the Torus view; hide both in the
@@ -252,16 +558,12 @@ export default function ComplexParticles({
       const [bxMin, bxMax, byMin, byMax] = effectiveBounds();
       const geometry = createParticleGeometry(state.particleCount, bxMin, bxMax, byMin, byMax, state.samplePattern);
       state.geometryRef.current = geometry;
+      sheetGeomRef.current = createSheetGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
+      sheetWireGeomRef.current = createSheetWireGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
+      tileGeomRef.current = createTileGeometry(state.sheetResolution, bxMin, bxMax, byMin, byMax);
+      netGeomRef.current = createNetGeometry(state.netRings, state.netSpokes, netRadius(), state.netCircles, state.netRays, state.netResolution);
 
-      state.materialsRef.current = [];
-      pointsRef.current = [];
-      for (let b = 0; b < branchCount; b++) {
-        const material = createBranchMaterial(b);
-        state.materialsRef.current.push(material);
-        const pts = new THREE.Points(geometry, material);
-        scene.add(pts);
-        pointsRef.current.push(pts);
-      }
+      rebuildBranchObjects(scene);
 
       const axes = createAxes(scene, state.hueShift, state.axisWidth);
       state.xAxisRef.current = axes.x;

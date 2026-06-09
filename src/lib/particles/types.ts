@@ -43,6 +43,15 @@ export enum CoordMode {
 
 export const coordModeNames = ['Cartesian', 'Polar', 'Log-polar'] as const;
 
+/** Colour palette applied to the chosen quantity. 'Phase wheel' (index 0) keeps
+ *  the cyclic HSV domain-colouring (driven by the Hue/Style controls); the rest
+ *  are sequential ramps mapped to **magnitude** — the perceptual matplotlib maps
+ *  (Viridis…Plasma) and a few extras, suitable for reading |z| / |f| as height. */
+export const colormapNames = [
+  'Phase wheel', 'Grayscale', 'Viridis', 'Magma', 'Inferno', 'Plasma', 'Fire', 'Ocean',
+  'Turbo', 'Cubehelix', 'Hot', 'Copper', 'Cool', 'Cool–warm',
+] as const;
+
 /** How the domain points are laid out before f is applied. Radial patterns
  *  sample a disk (radius = max half-extent, centred on the domain box); Grid /
  *  Squares / Random use the rectangular box. Polar spreads points evenly in
@@ -86,6 +95,15 @@ export const viewTypes = [
 
 export const motionModes = ['Quaternion', 'Fixed'] as const;
 export const dropModes = ['None', 'DropX', 'DropY', 'DropU', 'DropV'] as const;
+
+/** How the sampled surface is drawn: a cloud of point particles, a single
+ *  continuous translucent sheet (a wireframe/filled triangle mesh over a regular
+ *  grid), or Tiles — one oriented quad per grid sample, stretched along the local
+ *  deformation and capped at a maximum size, so dense regions form a solid fabric
+ *  and stretched regions tear apart into a field of separated tiles (points).
+ *  Sheet/Tiles ignore the sampling pattern and use their own resolution. */
+export const renderModes = ['Points', 'Sheet', 'Tiles', 'Net'] as const;
+export type RenderMode = (typeof renderModes)[number];
 
 export const AXIS_COLORS = {
   x: 0,

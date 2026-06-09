@@ -76,6 +76,25 @@ keeps near-linear maps (`f ≈ b·z`) crisp in the Hopf/Torus view — where a u
 Cartesian grid would leave one side of the fiber circle under-sampled. (Sampling
 is bypassed while **Adaptive density** is on.)
 
+## Render mode — points or sheet (Surface panel)
+
+The same 4-D graph can be drawn two ways. **Points** (the default) scatters one
+particle per sample. **Sheet** instead stitches a regular grid of samples into a
+single continuous **surface** — the actual 2-D graph of `f`. The grid's
+**rectangular cells** are drawn as a **translucent filled sheet** (each rectangle
+a single flat colour — the average of its four corners' domain colours) and/or a
+**wireframe** of the row/column edges. Filled and wireframe can each be toggled,
+**Resolution** sets how fine the grid is, and **Shading** adds depth cues by
+darkening faces that turn edge-on to the camera. Because a surface needs grid
+topology, Sheet mode always samples a Cartesian grid (it ignores the Sampling
+pattern and the particle count, using its own Resolution).
+
+The vertices are the same 4-D points as the cloud, so the **Perspective**
+projection can still evert the sheet where it stretches past the camera divide
+(`3 + Im f` crossing zero) — the linear **Drop-axis** and **Stereographic**
+projections show it as a single, non-folding surface. It's the clearest way to
+see folds, branch sheets, and how the surface drapes through each projection.
+
 ## 4-D rotations (the quarter-turn controls)
 
 In 3-D you rotate *around an axis*; in 4-D you rotate *in a plane*. There are
