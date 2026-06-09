@@ -407,7 +407,9 @@ export default function AgenticSorting() {
   const layouts: LayoutDef[] = [
     {
       id: 'setup', name: 'Setup', sub: 'Array · Agents · Run', icon: 'tune',
-      open: { array: { x: 84, y: 18 }, agents: { x: 84, y: 240 }, run: { x: 84, y: 500 } },
+      // The Agents panel is tall (five annotated weight rows), so Run docks
+      // right below Array and Agents takes the rest of the column.
+      open: { array: { x: 84, y: 18 }, run: { x: 84, y: 160 }, agents: { x: 84, y: 356 } },
     },
     {
       id: 'analysis', name: 'Analysis', sub: 'Metrics beside the race', icon: 'chart',
