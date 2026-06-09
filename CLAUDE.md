@@ -279,17 +279,14 @@ A 4D point `(x, y, u, v)` maps to 3D via: **Perspective** (divide by `3 + v`),
 - **Markdown**: `README.md` (About) and `EXPLAINER.md` (?) imported via `?raw`.
 - **Base-aware asset paths**: load public assets with `import.meta.env.BASE_URL`
   (the Vite `base` is `/animath/`) — see `lib/textures.ts`.
-- **Spelling — Oxford British English in prose**: all user-facing text and
-  comments (UI strings, `README.md`/`EXPLAINER.md`, code comments) use British
-  spellings for the distinctive words — **colour** (not color), **centre** (not
-  center), **behaviour**, **grey**, **favour**, **neighbour**, **analyse** — while
-  keeping **-ize/-ization** verb endings (organize, minimize, normalize,
-  stabilize, visualize), i.e. Oxford spelling. **Code is exempt**: CSS keywords
-  and properties (`color:`, `justify-content: center`, `gray`), JS/DOM APIs
-  (`normalize()`, element `color`), and identifiers/class names/state values
-  (`sm2-visualizer`, the `'visualizer'` route/persisted value, a `color` field)
-  stay as the language defines them — don't "Britishise" code. When merging
-  `main`, normalise any American prose it introduces back to this convention.
+- **Spelling — American English throughout**: all user-facing text and comments
+  (UI strings, `README.md`/`EXPLAINER.md`, code comments) use American spellings —
+  **color** (not colour), **center** (not centre), **behavior**, **gray**,
+  **favor**, **neighbor**, **analyze**, and **-ize/-ization** verb endings
+  (organize, minimize, normalize, stabilize, visualize). This matches the language
+  defaults already used in code (CSS `color:`, `justify-content: center`; JS
+  `normalize()`), so code and prose stay uniform. When merging a branch that
+  introduced British prose, normalize it back to American.
 
 ## Known Issues and Technical Debt
 

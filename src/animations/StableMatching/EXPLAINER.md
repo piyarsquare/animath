@@ -6,10 +6,10 @@ fair solutions and repairs that live inside it.
 ## Reading the matrix
 
 Rows are group **A**, columns group **B**. Each cell is the potential pair
-(A_i, B_j), encoded as **two nested heatmaps** sharing one diverging colour scale
+(A_i, B_j), encoded as **two nested heatmaps** sharing one diverging color scale
 (**BuRd**: **blue = #1 choice → white → red = last**): the **square** is how A_i
 ranks B_j, the **circle inside** is how B_j ranks A_i. Shape — square vs circle —
-tells the two sides apart, not colour. So a row is A_i's preferences as a colour
+tells the two sides apart, not color. So a row is A_i's preferences as a color
 gradient, a column is B_j's. (Exact ranks show as numbers at small populations and on
 hover; with many people the heat carries it.)
 
@@ -40,7 +40,7 @@ consensus there is a *unique* stable matching — best-with-best on the diagonal
 ## Outcome, per side
 
 The **Partner rank by side** panel shows each side's **average partner rank**
-(coloured by that average) and its **sorted outcome colourbar** — every person as a
+(colored by that average) and its **sorted outcome colorbar** — every person as a
 tick, sorted best→worst, on the BuRd scale. The blue/red balance reads like an ECDF:
 when A proposes, A's bar is mostly blue and B's reddens — proposer advantage made
 visible.
@@ -54,7 +54,7 @@ The stable matchings form a **distributive lattice**. The app exposes it three w
   consensus drops: the "wiggle room."
 - **Jump to a stable solution** — teleport to a named matching: **A/B-optimal** (the
   two extremes), **Egalitarian** (minimum total rank — welfare-best), **Median**
-  (everyone's median stable partner — the centre), **Min-regret**, **Sex-equal**
+  (everyone's median stable partner — the center), **Min-regret**, **Sex-equal**
   (balances A's and B's happiness), **Balanced**. Watch the per-side averages pull
   together as you pick a fairer one.
 - **Lattice tab** — the Hasse diagram of *all* stable matchings: A-optimal at the

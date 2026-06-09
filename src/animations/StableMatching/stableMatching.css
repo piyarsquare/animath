@@ -31,14 +31,14 @@
 .sm2-dist { display: flex; gap: 2px; align-items: flex-end; height: 40px; }
 .sm2-dist .b { flex: 1; min-height: 2px; background: linear-gradient(#8b8bd6, #3f3f5a); border-radius: 2px 2px 0 0; }
 
-/* side identity is SHAPE (square = A, circle = B, like the matrix); colour is the
+/* side identity is SHAPE (square = A, circle = B, like the matrix); color is the
  * shared BuRd rank scale everywhere, so blue always means "good rank". */
 .sw { display: inline-block; width: 10px; height: 10px; vertical-align: -1px; margin-right: 4px; border-radius: 3px; background: #9a9aa8; }
 .sw.disc { border-radius: 50%; }
 
-/* one panel per side: marker + average + the sorted outcome colourbar on a row.
+/* one panel per side: marker + average + the sorted outcome colorbar on a row.
  * the average is the mean partner rank; the strip is every person sorted
- * best→worst on the BuRd scale (an ECDF read as colour). */
+ * best→worst on the BuRd scale (an ECDF read as color). */
 .sm2-rows { display: flex; flex-direction: column; gap: 9px; margin: 6px 0 4px; }
 .sm2-row { display: flex; align-items: center; gap: 10px; }
 .sm2-bar-label { display: inline-flex; align-items: center; width: 1.9em; font-size: 13px; color: #aab; }

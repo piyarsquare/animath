@@ -25,7 +25,7 @@ taste).
 ## Views
 
 - **Visualizer** — step/play the rounds on the Lego matrix; per-side average + sorted
-  outcome colourbars; the **stable-pair footprint**; **jump to** any named stable
+  outcome colorbars; the **stable-pair footprint**; **jump to** any named stable
   solution; **Stabilize** an unstable run (animated RVV repair).
 - **Lattice** — the Hasse diagram of all stable matchings (A-optimal top → B-optimal
   bottom, edges = rotations, named solutions flagged); click a node to load it.
