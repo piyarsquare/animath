@@ -119,6 +119,11 @@ strongest candidate to generalise). Don't reuse `footprints.ts` as-is.
 
 > **Polygon Worlds — redesign the path / direction-arrow from first principles.**
 >
+> **Branch:** work on `claude/polygon-worlds-spherical-p2-qgExR` — check it out from
+> `origin` (do **not** start from `main`; it has none of this work). If it isn't checked
+> out locally: `git fetch origin claude/polygon-worlds-spherical-p2-qgExR && git checkout
+> claude/polygon-worlds-spherical-p2-qgExR`.
+>
 > Do **not** reuse or extend the existing footprint/trail implementation
 > (`footprints.ts` and the `trail`/`covTrail` code in the three presenters). Read the
 > handoff `docs/sessions/handoff/polygon-worlds-spherical-p2-qgExR/2026-06-09-S05-trail-and-path-reset.md`
