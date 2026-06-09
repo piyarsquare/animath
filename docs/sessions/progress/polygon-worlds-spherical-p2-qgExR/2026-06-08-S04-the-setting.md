@@ -42,6 +42,20 @@ remaining, unstarted work. Build green, verify 100/100.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 09:45 — Session wrap (handoff written)
+**Why:** Good stopping point. The geometries/setting are much improved; a few
+two-sided-sheet issues remain for next session (user will enumerate).
+
+Shipped this session: nicer trees/columns + legible chiral badge + fill lighting;
+hyperbolic glass look-through; wheel/pinch zoom; vertex towers (inset n-gon, both
+faces, every world); footprints that stay on the character's side and mirror in
+place on the flip face. Build green, verify 100/100 throughout.
+
+**Still open (next session — "two sides" polish):** outstanding problems with the
+**footsteps** and the **markers** (to be enumerated by the user); plus the carried
+sphere pole-clumping and the sphere mini-map chart mismatch. See the handoff for the
+full camera/tiling/styling reference and the open list.
+
 ### 🟢 code · 09:35 — Footprints: on the character's side, mirrored in place on the flip face
 **Why:** Correction to the previous entry — "same side as the character" meant the
 same **side of the surface** (which face), not just the rendered top. A print laid
