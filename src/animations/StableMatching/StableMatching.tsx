@@ -37,6 +37,7 @@ const NS = 'stable-matching';
  *    (= current tentative holds) lights up; the active proposal rings; blocking
  *    pairs (if any, at the end) flag red. This is the algorithm, foregrounded. ── */
 const TRAIL = 6; // how many recent rounds of failed entries to keep in the fading trail
+const MIN_CELL = 22, MAX_CELL = 72; // matrix cell px: fill the space, clamped to a readable range (scroll past it)
 const EMPTY_MARKERS = new Map<string, 'active' | 'reject' | 'stolen'>();
 const EMPTY_TRAIL = new Map<string, number>();
 
@@ -418,8 +419,11 @@ export default function StableMatching() {
       const availH = window.innerHeight - top - 116;   // room for legend + the inspect panel + comfortable bottom padding
       const byW = (w - (showLabels ? 34 : 6)) / n - 3 - 8 / n; // minus row header + per-cell gap + a right inset
       const byH = (availH - (showLabels ? 22 : 6)) / n - 3; // minus column header
-      // floor keeps cells visible (a dense lego heatmap) at large n; the wrap scrolls if needed
-      setCellSize(Math.max(5, Math.min(72, Math.floor(Math.min(byW, byH)))));
+      // grow to fill the available space, but never below a readable minimum: for a
+      // large grid on a short/wide viewport the cells stay usable and the page scrolls
+      // vertically, rather than being crushed to fit the height (e.g. 50×50 on a wide monitor).
+      const fit = Math.floor(Math.min(byW, byH));
+      setCellSize(Math.max(MIN_CELL, Math.min(MAX_CELL, fit)));
     };
     measure();
     const ro = new ResizeObserver(measure);
