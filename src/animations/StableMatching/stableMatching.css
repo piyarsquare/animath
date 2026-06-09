@@ -79,8 +79,9 @@
 .sm2-mcell.hi { filter: brightness(1.18) saturate(1.1); }
 .sm2-mcell.sel { outline: 2px solid #fff; outline-offset: -2px; z-index: 4; }
 
-.sm2-inspect { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; background: #14141b; border: 1px solid #26262f; border-radius: 10px; padding: 11px 13px; }
-.sm2-inspect.pinned { border-color: #3a6ea5; }
+/* floats as a bar at the screen bottom so it never pushes the grid off-screen */
+.sm2-inspect { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; flex-direction: column; gap: 6px; background: rgba(20, 20, 27, 0.96); border-top: 1px solid #2a2a36; padding: 10px clamp(12px, 4vw, 40px); box-shadow: 0 -6px 22px rgba(0, 0, 0, 0.45); backdrop-filter: blur(4px); }
+.sm2-inspect.pinned { border-top-color: #3a6ea5; }
 .sm2-pref { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .sm2-pref-who { font-size: 12.5px; color: #aab; white-space: nowrap; min-width: 7.5em; }
 .sm2-pref-chips { display: flex; flex-wrap: wrap; gap: 3px; }
