@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverModel';
 import { SquareMapState } from '../engineTypes';
-import { glassState, GlassSpec } from '../glassSurface';
+import { glassState, POLYGON_GLASS } from '../glassSurface';
 import { makeFootprintTrail } from '../footprints';
 import { rp2Square, sq2hemi } from '../squareMap';
 import { parseWord } from '../surfaceSchema';
@@ -37,7 +37,7 @@ const MAX_PITCH = 1.3;
 const TRAIL_MAX = 900;
 const TRAIL_SPACING = 1.6;
 const SKY = 0x05070e;
-const GLASS: GlassSpec = { showUnderBelow: 0.8, solidAt: 0.82 };
+const GLASS = POLYGON_GLASS;   // shared spec — slider feels the same in every world
 const LON = 24, LAT = 16;
 const SHELL_COLOR = 0x46658f; // one neutral shell colour (sides told apart by
                               // trees vs columns + the warm/cool light)
@@ -77,7 +77,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     twinM4 ? d.clone().applyMatrix4(twinM4) : d.clone().negate();
 
   let R = Math.max(12, c.squareSize);
-  let glassOpacity = 0.85;
+  let glassOpacity = 0.45;   // clear-but-present default (host re-pushes on mount)
   let camDist = 4.5;
 
   camera.fov = 75; camera.near = 0.05; camera.far = R * 5; camera.updateProjectionMatrix();

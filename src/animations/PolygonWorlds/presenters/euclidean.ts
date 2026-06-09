@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverModel';
 import { SquareMapState } from '../engineTypes';
-import { glassState, GlassSpec } from '../glassSurface';
+import { glassState, POLYGON_GLASS } from '../glassSurface';
 import { makeFootprintTrail } from '../footprints';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
@@ -32,10 +32,11 @@ const UP = new THREE.Vector3(0, 1, 0);
 const SKY = 0x070912;
 const TRAIL_MAX = 1500;
 const TRAIL_SPACING = 1.6;
-// Default opacity reads as a SOLID floor (blue top occludes the brown underside);
-// lowering it past showUnderBelow turns the sheet to glass and reveals the brown
-// bottom face + the columns + any footprints below the floor.
-const GLASS: GlassSpec = { showUnderBelow: 0.8, solidAt: 0.82 };
+// The default opacity reads as clear-but-present glass (you see the brown
+// underside + columns + footprints through it); raising it toward 1 turns the
+// sheet solid. The threshold spec is shared across all three worlds so the
+// slider feels identical everywhere (see POLYGON_GLASS).
+const GLASS = POLYGON_GLASS;
 const FLOOR_COLOR = 0x46658f;   // one neutral sheet colour (the two sides are told
                                 // apart by trees vs columns + the warm/cool light)
 // Vertex towers sit just inside every corner of the square cell — the 4-gon's
@@ -71,7 +72,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
 
   let side = c.squareSize;
   let thickness = c.floorThickness;
-  let floorOpacity = 0.85;
+  let floorOpacity = 0.45;   // clear-but-present default (host re-pushes on mount)
   let camDist = 3.2;
   const baseLen = Math.hypot(ax, ay) || 1;
   let scale = side / baseLen;

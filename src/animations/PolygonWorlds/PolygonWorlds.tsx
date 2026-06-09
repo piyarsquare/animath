@@ -30,7 +30,10 @@ export default function PolygonWorlds() {
   const [moveSpeed, setMoveSpeed] = useState(6);
   const [thirdPerson, setThirdPerson] = useState(true);
   const [camDistance, setCamDistance] = useState(3.2);
-  const [floorOpacity, setFloorOpacity] = useState(1);
+  // Start as clear-but-present glass: see-through enough to read the underside
+  // (other face + columns + footprints), but tinted enough to know the floor is
+  // there. The same value reads the same in every world (shared POLYGON_GLASS).
+  const [floorOpacity, setFloorOpacity] = useState(0.45);
   const [squareSize, setSquareSize] = useState(DEFAULT_SQUARE_SIZE);
   const [floorThickness, setFloorThickness] = useState(DEFAULT_FLOOR_THICKNESS);
   const [planetRadius, setPlanetRadius] = useState(DEFAULT_RADIUS);

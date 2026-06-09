@@ -31,6 +31,22 @@ pole-clumping; tower labelling; badge legibility). See
 
 ## Working notes
 
+### 🟢 code · 01:55 — Unified glass spec + clear-but-present default opacity
+**Why:** the opacity slider felt different per world (euclidean/spherical used
+`{showUnderBelow:0.8, solidAt:0.82}`, hyperbolic `{showUnderBelow:0.95}`) and every
+world started fully solid (`useState(1)`), so you couldn't see the floor was glass.
+
+- Added a single shared `POLYGON_GLASS = { showUnderBelow: 0.9, solidAt: 0.95 }` in
+  `glassSurface.ts`; all three presenters now import it instead of carrying their own
+  `const GLASS`. The slider now behaves identically in every world.
+- Lowered the host default `floorOpacity` from `1` → `0.45` (clear-but-present), and
+  aligned each presenter's internal initial to `0.45` (was 0.85 / 0.85 / 1) to avoid a
+  one-frame opaque flash before the host re-pushes on mount.
+- Eyeballed torus / sphere / genus2: torus shows the underside columns through the
+  floor; genus2's glass disk shows the look-through; sphere reads via its bright grid
+  (the dark fill is the see-through — its faintness is the carried big-shell lighting
+  issue, not opacity). Build green, verify 100/100.
+
 ### 🟣 decision · 01:40 — Switched onto the polygon-worlds branch; oriented
 **Why:** the fresh clone was checked out on the harness-default branch
 `claude/nice-allen-mafdfy`, which has no Polygon Worlds work. The task explicitly

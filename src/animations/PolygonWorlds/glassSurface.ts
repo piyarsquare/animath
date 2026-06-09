@@ -25,13 +25,22 @@ export interface GlassState {
 }
 
 export interface GlassSpec {
-  /** Below this opacity the underside is revealed. flat: 0.95, spherical: 0.97. */
+  /** Below this opacity the underside is revealed. */
   showUnderBelow: number;
-  /** At/above this opacity depth is written (both worlds: 0.98). */
+  /** At/above this opacity depth is written (the surface reads fully solid). */
   solidAt?: number;
-  /** Below this opacity the surface is hidden entirely (flat floor: 0.01). */
+  /** Below this opacity the surface is hidden entirely. */
   hideBelow?: number;
 }
+
+/**
+ * The single shared glass spec for all three worlds, so the opacity slider
+ * *feels the same* everywhere (the presenters used to carry slightly different
+ * thresholds, which made the same slider value read differently per world).
+ * Drop below {@link GlassSpec.showUnderBelow} and the underside fades in; only
+ * the very top of the slider writes depth and reads as a solid sheet.
+ */
+export const POLYGON_GLASS: GlassSpec = { showUnderBelow: 0.9, solidAt: 0.95 };
 
 /** Resolve an opacity to its render facts under a per-engine spec. Pure. */
 export function glassState(opacity: number, spec: GlassSpec): GlassState {

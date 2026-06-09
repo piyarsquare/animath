@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverModel';
 import { SquareMapState } from '../engineTypes';
-import { glassState, GlassSpec } from '../glassSurface';
+import { glassState, POLYGON_GLASS } from '../glassSurface';
 import { makeFootprintTrail } from '../footprints';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
@@ -39,7 +39,7 @@ const EYE = 1.7;
 const MAX_PITCH = 1.3;
 const TRAIL_MAX = 500;
 const SKY = 0x070912;
-const GLASS: GlassSpec = { showUnderBelow: 0.95 };
+const GLASS = POLYGON_GLASS;   // shared spec — slider feels the same in every world
 const EDGE_SEGS = 7;        // polyline segments per geodesic polygon edge
 const N_DECOR = 16;         // decorated tile copies kept near the player
 const UP = new THREE.Vector3(0, 1, 0);
@@ -58,7 +58,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   const m = real.edges;                           // polygon side count (2n)
 
   let DISK_R = Math.max(34, c.squareSize * 1.4);  // world radius of the unit disk
-  let glassOpacity = 1;
+  let glassOpacity = 0.45;   // clear-but-present default (host re-pushes on mount)
   let underVisible = false;                        // glass reveals the other side
   let camDist = 3.4;
 
