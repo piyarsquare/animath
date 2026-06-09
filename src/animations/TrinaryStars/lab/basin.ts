@@ -14,13 +14,13 @@ export type BasinMetric = 'fate' | 'chaos';
 export type BasinLens = 'exact' | 'stat';
 /** Which outcome fraction the statistical lens paints. */
 export type StatMetric = 'happy' | 'hab' | 'destroyed' | 'survived';
-/** Reference frame for the position plane: the barycentre (inertial), or one of
- *  the three stars (a co-moving frame centred on that star at t = 0). */
+/** Reference frame for the position plane: the barycenter (inertial), or one of
+ *  the three stars (a co-moving frame centered on that star at t = 0). */
 export type FrameId = 'bary' | 's0' | 's1' | 's2';
 export interface Domain { a0: number; a1: number; b0: number; b1: number; }
 export interface BasinConfig {
   mode: BasinMode;
-  metric: BasinMetric;      // colour by outcome, or by Lyapunov exponent
+  metric: BasinMetric;      // color by outcome, or by Lyapunov exponent
   lens: BasinLens;          // exact world per pixel, or per-pixel mini-ensemble
   statRuns: number;         // worlds averaged per pixel when lens === 'stat'
   statMetric: StatMetric;   // outcome fraction painted when lens === 'stat'
@@ -41,7 +41,7 @@ export const OUTCOME_RGB: Record<Outcome, [number, number, number]> = {
 };
 export const OUTCOME_CODE: Outcome[] = ['happy', 'survived', 'planet-ejected', 'planet-destroyed', 'blowup'];
 
-/** Lyapunov λ → colour: regular (deep blue) through green/amber to chaotic
+/** Lyapunov λ → color: regular (deep blue) through green/amber to chaotic
  *  (red). Saturates around λ ≈ 0.4. */
 export const CHAOS_LAMBDA_MAX = 0.4;
 /** Generic stop-interpolated ramp on x ∈ [0,1]. */
@@ -59,8 +59,8 @@ function ramp(stops: [number, [number, number, number]][], x: number): [number, 
 const CHAOS_STOPS: [number, [number, number, number]][] = [
   [0, [18, 30, 90]], [0.5, [90, 200, 130]], [0.78, [240, 210, 90]], [1, [240, 70, 50]],
 ];
-/** Lyapunov colour ramp on a normalised x ∈ [0,1] — used directly when the map
- *  auto-fits its colour range to the data. */
+/** Lyapunov color ramp on a normalized x ∈ [0,1] — used directly when the map
+ *  auto-fits its color range to the data. */
 export function chaosRamp(x: number): [number, number, number] { return ramp(CHAOS_STOPS, x); }
 export function chaosColor(lambda: number): [number, number, number] { return chaosRamp(lambda / CHAOS_LAMBDA_MAX); }
 
@@ -76,9 +76,9 @@ export const STAT_LABEL: Record<StatMetric, string> = {
 const MAGMA: [number, [number, number, number]][] = [
   [0.0, [24, 16, 58]], [0.25, [92, 30, 116]], [0.5, [186, 54, 98]], [0.75, [242, 124, 62]], [1.0, [252, 236, 162]],
 ];
-/** Magma ramp on a normalised x ∈ [0,1] — used directly when the map auto-fits. */
+/** Magma ramp on a normalized x ∈ [0,1] — used directly when the map auto-fits. */
 export function statRamp(x: number): [number, number, number] { return ramp(MAGMA, x); }
-/** Absolute stat colour: a mild gamma lifts small fractions into the visible part
+/** Absolute stat color: a mild gamma lifts small fractions into the visible part
  *  of the ramp (the metric only sets the legend, not the hue). */
 export function statColor(_metric: StatMetric, v: number): [number, number, number] {
   return statRamp(Math.pow(Math.min(1, Math.max(0, v)), 0.6));
@@ -88,7 +88,7 @@ interface Ctx {
   cfg: EnsembleConfig; bc: BasinConfig;
   preset: ReturnType<typeof getScenario>;
   targetMass: number; Mtot: number;
-  /** Position-plane frame origin's t = 0 world state (zero for the barycentre). */
+  /** Position-plane frame origin's t = 0 world state (zero for the barycenter). */
   origin: FrameOrigin;
 }
 
@@ -97,7 +97,7 @@ const ZERO_ORIGIN: FrameOrigin = { x: 0, y: 0, vx: 0, vy: 0 };
 let _frameCache: { key: string; o: FrameOrigin } | null = null;
 
 /** The t = 0 world state of a position-plane reference frame's origin. The
- *  barycentre is exactly zero (stars are recentred), so the 'bary' frame leaves
+ *  barycenter is exactly zero (stars are recentered), so the 'bary' frame leaves
  *  every initial condition untouched; a star frame returns that star's launch
  *  position and velocity, so placing a planet there co-moves it with the star. */
 export function frameOrigin(cfg: EnsembleConfig, frame: FrameId = 'bary'): FrameOrigin {
@@ -111,7 +111,7 @@ export function frameOrigin(cfg: EnsembleConfig, frame: FrameId = 'bary'): Frame
 }
 
 /** Carry a frame-relative IC into world coordinates by adding the frame origin's
- *  position and velocity (a no-op for the barycentre frame). */
+ *  position and velocity (a no-op for the barycenter frame). */
 function withOrigin(p: Planet, o: FrameOrigin): Planet {
   return { x: p.x + o.x, y: p.y + o.y, vx: p.vx + o.vx, vy: p.vy + o.vy, ax: 0, ay: 0 };
 }
@@ -134,7 +134,7 @@ export function basinContext(cfg: EnsembleConfig, bc: BasinConfig): Ctx {
   return { cfg, bc, preset, targetMass, Mtot, origin: frameOrigin(cfg, bc.frame) };
 }
 
-/** The (ax, by) plane coordinate at the centre of pixel (i, j). */
+/** The (ax, by) plane coordinate at the center of pixel (i, j). */
 export function basinAxByCenter(bc: BasinConfig, i: number, j: number): [number, number] {
   const { a0, a1, b0, b1 } = bc.domain, N = bc.res;
   return [a0 + (a1 - a0) * ((i + 0.5) / N), b1 - (b1 - b0) * ((j + 0.5) / N)];
@@ -224,7 +224,7 @@ function makePlanet(ctx: Ctx, stars: Star[], ax: number, by: number): Planet {
 /** A statistical-lens world: the axes pin two launch dimensions, and `rng`
  *  samples the remaining (complementary) ones — angle/direction in the
  *  radius×speed plane, speed/direction in the position plane, radius/direction
- *  in the angle×speed plane — so a pixel summarises a neighbourhood of worlds. */
+ *  in the angle×speed plane — so a pixel summarizes a neighborhood of worlds. */
 function makeStatPlanet(ctx: Ctx, stars: Star[], ax: number, by: number, rng: () => number): Planet {
   const { bc, cfg, targetMass, Mtot } = ctx;
   const retro = cfg.allowRetro ? rng() < 0.5 : false;
@@ -241,9 +241,9 @@ function makeStatPlanet(ctx: Ctx, stars: Star[], ax: number, by: number, rng: ()
   return launchPlanet(stars, cfg.target, radius, v, ax * DEG, retro);
 }
 
-/** A computed pixel: display colour, the centre world's outcome code + time
+/** A computed pixel: display color, the center world's outcome code + time
  *  (hover/box-counting), and — for the statistical lens — all four outcome
- *  fractions, kept so the map can recolour between them without recomputing. */
+ *  fractions, kept so the map can recolor between them without recomputing. */
 export interface BasinPixel {
   r: number; g: number; b: number; out: number; t: number;
   stat: [number, number, number, number]; // happy, hab, destroyed, survived
@@ -253,7 +253,7 @@ export const STAT_ORDER: StatMetric[] = ['happy', 'hab', 'destroyed', 'survived'
 
 /** Compute one statistical pixel: average `statRuns` worlds (complementary
  *  launch dims randomised from a per-pixel seeded stream) into the four outcome
- *  fractions; colour by the chosen one (the other three ride along for recolour). */
+ *  fractions; color by the chosen one (the other three ride along for recolor). */
 function computeStatPixel(ctx: Ctx, p: number): BasinPixel {
   const { cfg, bc, preset } = ctx;
   const N = bc.res;
@@ -280,7 +280,7 @@ function computeStatPixel(ctx: Ctx, p: number): BasinPixel {
 
 const NO_STAT: [number, number, number, number] = [0, 0, 0, 0];
 
-/** Compute one pixel: averaged RGB over S² subsamples, plus the centre
+/** Compute one pixel: averaged RGB over S² subsamples, plus the center
  *  subsample's outcome code and resolution time (for hover + box-counting). */
 export function computeBasinPixel(ctx: Ctx, p: number): BasinPixel {
   const { cfg, bc, preset } = ctx;

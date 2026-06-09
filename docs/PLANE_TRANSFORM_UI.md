@@ -302,7 +302,7 @@ clamped to ±`1e4` so a point at infinity can't blow out the path's bounding box
 Uses `usePersistentState` under the `plane-transform` localStorage namespace.
 
 **Persisted** (survive reload): `functionIndex`, `expP`, `expQ`, `branchIndex`, `density`,
-`pointSize`, `viewExtent`, `gridMode`, `planeMode`, `colourMode`, `saturation`, `intensity`.
+`pointSize`, `viewExtent`, `gridMode`, `planeMode`, `colorMode`, `saturation`, `intensity`.
 
 **Transient** (plain `useState`, reset each session): the drawn `curve` and `drawMode`,
 plus derived/layout state (`horizontal` orientation, inscribed-square box, pointer maps).

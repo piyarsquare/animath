@@ -7,7 +7,7 @@ const HALF_EXTENT = 8;
 
 /** A small, fast, decorative sim that cycles through randomly-sampled worlds —
  *  the live screens while the ensemble tallies headless. Flashes an outcome
- *  colour as each world resolves, then launches the next. */
+ *  color as each world resolves, then launches the next. */
 export default function MiniSim({ cfg, running, size = 200, steps = 140 }: {
   cfg: EnsembleConfig; running: boolean; size?: number; steps?: number;
 }) {

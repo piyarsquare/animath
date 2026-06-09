@@ -6,7 +6,7 @@ import * as THREE from 'three';
  * ("dive through the floor", surface-tour §4.1) will ride.
  *
  * Both rectangular engines already build the glued opposite face, gated behind
- * the glass (see {@link ./glassSurface}). They realise it with *different*
+ * the glass (see {@link ./glassSurface}). They realize it with *different*
  * geometry, which cannot be merged:
  *
  *  - **flat** (torus / Klein): a per-cell `under` group reflected by
@@ -19,7 +19,7 @@ import * as THREE from 'three';
  * What they DO share — and what this module names once — is the *contract*: a
  * handle to the other-face decor, an on/off, and the player's current {@link Side}.
  * The normal-flip is then one player-layer move: the host calls
- * `WorldEngine.flipSide?.()` and each engine routes it to its own realisation
+ * `WorldEngine.flipSide?.()` and each engine routes it to its own realization
  * (flat inverts the camera up-vector and swaps top/under skins; spherical dives
  * outer→inner). Today no engine implements the flip; the seam is declared so it
  * can land as a small, uniform addition rather than a per-engine hack.

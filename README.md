@@ -10,7 +10,7 @@ The landing page (`#/`) is a gallery of every app; the cards below are also
 reachable directly by hash route.
 
 1. **[Complex Particles](https://piyarsquare.github.io/animath/#/complex-particles)** – 3D representation of four-dimensional complex functions. Includes the former *Complex Roots* (`z^(p/q)`) and *Complex Multibranch* (multi-sheeted maps for `sqrt`, `ln`, etc.) as built-in modes.
-2. **[Plane Transform](https://piyarsquare.github.io/animath/#/plane-transform)** – watch a complex function `f : ℂ → ℂ` warp a coloured grid of the plane, input pane beside output pane.
+2. **[Plane Transform](https://piyarsquare.github.io/animath/#/plane-transform)** – watch a complex function `f : ℂ → ℂ` warp a colored grid of the plane, input pane beside output pane.
 3. **[Fractals](https://piyarsquare.github.io/animath/#/fractals)** – GPU-accelerated Mandelbrot / Julia / Burning Ship / Tricorn viewer with optional orbit-tracing mode.
 4. **[Correspondence](https://piyarsquare.github.io/animath/#/correspondence)** – side-by-side Mandelbrot–Julia explorer; pick or draw paths through `c`.
 5. **[Topology Walk](https://piyarsquare.github.io/animath/#/topology-walk)** – first-person walk on a closed surface: a twisting / knotted corridor or a flat torus / Klein bottle, with shared footprints, avatar and third-person view.
@@ -23,7 +23,7 @@ reachable directly by hash route.
 ## 1 What is animath?
 
 `animath` is a TypeScript + React + Three.js codebase for **rapid prototyping
-of mathematical visuals**. It started as a domain-colouring playground for
+of mathematical visuals**. It started as a domain-coloring playground for
 complex analysis and is growing into a general toolkit: fractals,
 differential-equation flows, algebraic surfaces, sorting and matching
 algorithms, and more.
@@ -33,7 +33,7 @@ Goals:
 * **Self-contained** — runs in any modern browser; no server component.
 * **Composable** — each app is an isolated React module with its own shaders
   and UI.
-* **Pedagogical** — clear code and per-app README pages explaining the maths.
+* **Pedagogical** — clear code and per-app README pages explaining the math.
 * **Mobile-friendly** — every app works on a phone with touch gestures.
 
 ---
@@ -105,12 +105,12 @@ src/
 │
 ├── animations/             # one folder per app, each with README + EXPLAINER
 │   ├── ComplexParticles/   # 4D complex-function viewer (Particles + Roots + Multibranch)
-│   ├── PlaneTransform/     # f as a transformation of the coloured plane
+│   ├── PlaneTransform/     # f as a transformation of the colored plane
 │   ├── FractalsGPU/        # GPU Mandelbrot / Julia / Burning Ship / Tricorn
 │   ├── Correspondence/     # Mandelbrot ↔ Julia split view
 │   ├── Fractals/           # legacy CPU fractal renderer (routed at #/fractals-cpu)
 │   ├── TopologyWalk/       # first-person walk: corridor + flat torus / Klein bottle
-│   ├── StableMarriage/     # Gale–Shapley visualiser + heatmap lab
+│   ├── StableMarriage/     # Gale–Shapley visualizer + heatmap lab
 │   └── AgenticSorting/     # concurrent agent-based sorting
 │
 ├── components/             # shared shell + UI
@@ -135,7 +135,7 @@ src/
 │   │   ├── useUniformSync.ts
 │   │   ├── useViewControls.ts
 │   │   ├── useGestureRotation.ts   # camera-orbit + pan + zoom gestures
-│   │   └── types.ts                # ColorStyle, ColourBy, shapeNames, viewTypes, …
+│   │   └── types.ts                # ColorStyle, ColorBy, shapeNames, viewTypes, …
 │   ├── useViewportGestures.ts      # pan + pinch-zoom + tap for 2D viewers
 │   ├── viewpoint.ts                # 4D → 3D projection helpers + ProjectionMode
 │   ├── complexMath.ts              # complex arithmetic + function names/formulas
@@ -175,7 +175,7 @@ The full, copy-pasteable walkthrough lives in
      '/my-animation': MyAnimation,
    };
    ```
-3. Register the catalogue entry in `src/apps.ts` (this drives both the drawer's
+3. Register the catalog entry in `src/apps.ts` (this drives both the drawer's
    Apps tab and the landing menu):
    ```ts
    export const apps: AppDescriptor[] = [
@@ -189,7 +189,7 @@ The full, copy-pasteable walkthrough lives in
 
 Three.js animations can wrap `Canvas3D`. For particle-style 4D viewers,
 `ParticleViewerShell` plus the `src/lib/particles` hooks gives you the
-default Function / Camera / Colour / Particles / Motion / Detail / About
+default Function / Camera / Color / Particles / Motion / Detail / About
 sections out of the box — see ComplexParticles for the simplest example.
 
 GLSL is kept inline as template strings in `shaders/index.ts` per app for
@@ -232,7 +232,7 @@ Switching modes interpolates on the GPU for a smooth transition.
 
 ---
 
-## 8 Acknowledgements
+## 8 Acknowledgments
 
 * Three.js — rendering engine
 * React + Vite — UI and build tooling

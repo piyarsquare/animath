@@ -8,9 +8,13 @@
     "preview": "vite preview",
     "shoot": "node scripts/shoot.mjs",
     "sessions": "node docs/sessions/build-sessions.mjs",
+<<<<<<< HEAD
     "verify:schemas": "npx --yes tsx scripts/verify-schemas.ts",
     "verify:geometry": "npx --yes tsx scripts/verify-geometry.ts",
     "verify": "npm run verify:schemas && npm run verify:geometry"
+=======
+    "sessions:prune": "node docs/sessions/prune-assets.mjs"
+>>>>>>> origin/main
   },
   "dependencies": {
     "lucide-react": "^0.410.0",

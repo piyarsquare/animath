@@ -22,7 +22,7 @@ extend.** When in doubt, copy the closest existing app.
 | **Particle / 4D viewer** | you map ℂ→ℂ (or any 4D field) to a projected point cloud | `ComplexParticles` | `ParticleViewerShell` + `src/lib/particles` |
 | **2D shader viewer** | you render a full-screen fragment shader you pan/zoom around | `FractalsGPU`, `Correspondence` | `Canvas3D`/raw renderer + `useViewportGestures` |
 | **Custom 3D scene** | a bespoke Three.js scene (camera path, geometry) | `MobiusWalk` | `Canvas3D` |
-| **CSS / DOM app** | an algorithm visualiser, no WebGL | `StableMarriage`, `AgenticSorting` | plain React + CSS + `lucide-react` |
+| **CSS / DOM app** | an algorithm visualizer, no WebGL | `StableMarriage`, `AgenticSorting` | plain React + CSS + `lucide-react` |
 
 All four integrate with the shell the same way (Section 4). Only the *rendering*
 differs.
@@ -178,7 +178,7 @@ export default function MyApp() {
   useAppExplainer(explainerText);
   return (
     <div className="as-content-scroll myapp">
-      {/* …your visualiser… */}
+      {/* …your visualizer… */}
       <ShellSettings>
         <Section title="Controls" icon="⚙" defaultOpen>
           <Slider label="Speed" value={speed} min={0} max={5} step={0.1}
@@ -277,7 +277,7 @@ export default function MyParticles() {
 
 The function tables and complex arithmetic live in `src/lib/complexMath.ts`;
 texture options in `src/lib/textures.ts`; projection math + `ProjectionMode` in
-`src/lib/viewpoint.ts`; shared enums (`ColorStyle`, `ColourBy`, `shapeNames`,
+`src/lib/viewpoint.ts`; shared enums (`ColorStyle`, `ColorBy`, `shapeNames`,
 `viewTypes`, …) in `src/lib/particles/types.ts`. Reuse them rather than
 re-implementing.
 

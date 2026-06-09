@@ -26,7 +26,7 @@ directly, so the view *projects* it down into the 3-D scene on screen.
   just as a 3-D camera makes distant things look smaller.
 - **Stereographic** — first place every point on the unit 3-sphere (scale it
   to length 1), then project from the pole: `(x, y, u) / (1 − v)`. It's the
-  4-D analogue of flattening a globe into a map, and it's *conformal* —
+  4-D analog of flattening a globe into a map, and it's *conformal* —
   small shapes keep their form.
 - **Hopf** — the **Hopf fibration** S³ → S², which places each particle on a
   sphere according to the **ratio `z / f(z)`**. Read the sphere as:
@@ -51,7 +51,7 @@ directly, so the view *projects* it down into the 3-D scene on screen.
   **Reference scaffold** toggle draws the faint donuts / sphere they live on. The
   **Hopf fibers** toggle overlays the iconic interlocking circles themselves —
   the common-phase orbits `θ ↦ e^{iθ}·(z, f)` — sampled directly on the base
-  sphere (not the function graph), each linking every other, coloured by base
+  sphere (not the function graph), each linking every other, colored by base
   point. **Fiber density** sets how many per donut.
 - **Drop axis** — the bluntest projection: just forget one of the four
   coordinates and keep the other three (an orthographic slice).
@@ -75,6 +75,25 @@ structure is sampled evenly: **Polar** spreads points uniformly in `arg z`, whic
 keeps near-linear maps (`f ≈ b·z`) crisp in the Hopf/Torus view — where a uniform
 Cartesian grid would leave one side of the fiber circle under-sampled. (Sampling
 is bypassed while **Adaptive density** is on.)
+
+## Render mode — points or sheet (Surface panel)
+
+The same 4-D graph can be drawn two ways. **Points** (the default) scatters one
+particle per sample. **Sheet** instead stitches a regular grid of samples into a
+single continuous **surface** — the actual 2-D graph of `f`. The grid's
+**rectangular cells** are drawn as a **translucent filled sheet** (each rectangle
+a single flat color — the average of its four corners' domain colors) and/or a
+**wireframe** of the row/column edges. Filled and wireframe can each be toggled,
+**Resolution** sets how fine the grid is, and **Shading** adds depth cues by
+darkening faces that turn edge-on to the camera. Because a surface needs grid
+topology, Sheet mode always samples a Cartesian grid (it ignores the Sampling
+pattern and the particle count, using its own Resolution).
+
+The vertices are the same 4-D points as the cloud, so the **Perspective**
+projection can still evert the sheet where it stretches past the camera divide
+(`3 + Im f` crossing zero) — the linear **Drop-axis** and **Stereographic**
+projections show it as a single, non-folding surface. It's the clearest way to
+see folds, branch sheets, and how the surface drapes through each projection.
 
 ## 4-D rotations (the quarter-turn controls)
 

@@ -8,7 +8,7 @@ export const apps: AppDescriptor[] = [
     hash: '/complex-particles',
     name: 'Complex Particles',
     icon: '✦',
-    blurb: 'Visualise z → f(z) as a cloud of particles living in 4D, projected down to 3D.',
+    blurb: 'Visualize z → f(z) as a cloud of particles living in 4D, projected down to 3D.',
   },
   {
     hash: '/plane-transform',
@@ -51,6 +51,12 @@ export const apps: AppDescriptor[] = [
     name: 'Agentic Sorting',
     icon: '⇅',
     blurb: 'Watch autonomous agents with rival strategies race to sort a population of values.',
+  },
+  {
+    hash: '/stable-matching',
+    name: 'Stable Matching',
+    icon: '⇆',
+    blurb: 'A rebuilt Gale–Shapley lab: tune how much each group shares a common preference, then watch the proposer advantage appear — and vanish at full consensus.',
   },
   {
     hash: '/polygon-worlds',

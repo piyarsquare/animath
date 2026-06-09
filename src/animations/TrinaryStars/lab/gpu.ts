@@ -101,7 +101,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
       if (habitable) { hab = hab + sampleDt; cur = cur + sampleDt; lng = max(lng, cur); } else { cur = 0.0; }
       // planet energy (stars treated static this instant)
       let Ep = 0.5 * dot(p.zw, p.zw) - (m0 / sqrt(d0 * d0 + is2) + m1 / sqrt(d1 * d1 + is2) + m2 / sqrt(d2 * d2 + is2));
-      // star ejection (distance from system centre ~ origin)
+      // star ejection (distance from system center ~ origin)
       if (ej < 0.0) {
         if (length(s0.xy) > rEsc) { ej = 0.0; tEj = t; }
         else if (length(s1.xy) > rEsc) { ej = 1.0; tEj = t; }
@@ -143,7 +143,7 @@ export class GpuRunner {
     return new GpuRunner(device, pipeline);
   }
 
-  /** Run one batch of worlds, parameterised as radius/speed/angle launches, and
+  /** Run one batch of worlds, parameterized as radius/speed/angle launches, and
    *  return their RunResults. */
   async runBatch(cfg: EnsembleConfig, params: RunParams[]): Promise<RunResult[]> {
     const stars = buildStars(getScenario(cfg.presetId), cfg.massMul);

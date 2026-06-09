@@ -22,9 +22,9 @@ floor's surface normal** — gravity is glued to whatever you're standing on.
   up where the *ceiling* used to be, upside-down. A second lap brings you back.
   The hallway looks ordinary until you notice the world has flipped.
 - **Double / triple twist:** more half-twists per lap.
-- **Trefoil knot:** the centreline is knotted; watch it tie itself in the map.
+- **Trefoil knot:** the centerline is knotted; watch it tie itself in the map.
 
-A **mini-map** redraws to match — its edge colours swap around a Möbius loop but
+A **mini-map** redraws to match — its edge colors swap around a Möbius loop but
 stay put on a plain one. You can switch **themes** for different scenery and
 lighting (flickering torches, ship lights, cool moonbeams), and **press Space
 (or ✎) to write on the walls** in glowing ink — then find your message again,
@@ -45,7 +45,7 @@ show a seam, the view tiles that tile seamlessly in every direction (the
 - **Klein bottle:** one pair of edges (the **red** ones) glues with a **flip**,
   so every other column of the world is **mirror-reversed**. To make that flip
   impossible to miss, the two mirror-classes wear different skins — **columns**
-  on one side, **trees** on the other (each landmark keeps its colour, so "the
+  on one side, **trees** on the other (each landmark keeps its color, so "the
   red one" stays the red one whichever form it takes). Cross a **red** edge and
   you watch the columns ahead become trees. You drop **one footprint per step, on
   the side you're walking** — and here's the tell: walk the **twist** direction
@@ -78,7 +78,7 @@ onto a **curved** world — a small planet — which is the third **Setting**:
   horizon bends up at your toes; grow it and the ground flattens out, though the
   *total* curvature never budges.
 - **Projective plane (ℝP²):** the *same* sphere with **antipodal points glued**
-  (every point is identified with the one straight through the centre, χ = 1). The
+  (every point is identified with the one straight through the center, χ = 1). The
   planet is decorated symmetrically, so the near and far sides look identical — but
   your **footprints betray it**: laid on one side, they reappear on the far side
   **mirror-reversed**, because the antipodal map flips orientation. A one-way trip
@@ -91,7 +91,7 @@ onto a **curved** world — a small planet — which is the third **Setting**:
 Two readouts help you keep your bearings on the planet:
 
 - **Mini-map:** on the plain **sphere**, a flattened latitude × longitude map with
-  the numbered, colour-coded landmarks and a compass arrow for you. On **ℝP²** it
+  the numbered, color-coded landmarks and a compass arrow for you. On **ℝP²** it
   switches to a *fundamental-domain square* in the same style as the torus/Klein
   maps — but with **both** pairs of opposite edges glued with a flip (that's the
   antipodal identification, and it's the unique square gluing with χ = 1). Your
@@ -102,7 +102,7 @@ Two readouts help you keep your bearings on the planet:
   **forest**, the other a **colonnade**, placed in antipodal pairs: so on ℝP² every
   glued point is a *tree on one sheet and a column on the other* — the Klein
   bottle's flip wrapped onto a sphere. (Shown by default, as in the flat worlds.)
-  The flat worlds also have a **Colour each cover cell** knob, which tints every
+  The flat worlds also have a **Color each cover cell** knob, which tints every
   tiled copy of the fundamental domain so you can watch yourself cross from one
   cover cell to the next.
 - **Glass floor — the glued underside (ℝP²):** turns the planet to glass so you can

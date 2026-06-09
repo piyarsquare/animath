@@ -12,6 +12,7 @@ const PlaneTransform = React.lazy(() => import('./animations/PlaneTransform/Plan
 const TopologyWalk = React.lazy(() => import('./animations/TopologyWalk/TopologyWalk'));
 const Trinary = React.lazy(() => import('./animations/TrinaryStars/Trinary'));
 const StableMarriage = React.lazy(() => import('./animations/StableMarriage/StableMarriage'));
+const StableMatching = React.lazy(() => import('./animations/StableMatching/StableMatching'));
 const AgenticSorting = React.lazy(() => import('./animations/AgenticSorting/AgenticSorting'));
 const PolygonWorlds = React.lazy(() => import('./animations/PolygonWorlds/PolygonWorlds'));
 
@@ -30,6 +31,7 @@ const routes: Record<string, React.ComponentType> = {
   '/trinary': Trinary,
   '/trinary-lab': Trinary,
   '/stable-marriage': StableMarriage,
+  '/stable-matching': StableMatching,   // rebuild of Stable Marriage; will replace it on switch
   '/agentic-sorting': AgenticSorting,
   '/polygon-worlds': PolygonWorlds,
 };

@@ -9,7 +9,7 @@ export type DropAxis = 'None' | 'DropX' | 'DropY' | 'DropU' | 'DropV';
  *  ambient view axis (Hopf/Torus). `id` keys the turn/spin callbacks. */
 export interface TurnItem {
   id: string;
-  /** Cell label (e.g. axis-coloured "XY", or "Yaw"). */
+  /** Cell label (e.g. axis-colored "XY", or "Yaw"). */
   label: ReactNode;
   /** Accessible descriptions of the ↻ and ↺ directions. */
   cwLabel: string;
@@ -31,7 +31,7 @@ export interface QuarterTurnControlsProps {
   spinSpeed: number;
   onSpinSpeedChange: (v: number) => void;
   onReset?: () => void;
-  /** Optional per-axis colour for the drop-axis buttons. */
+  /** Optional per-axis color for the drop-axis buttons. */
   getAxisColor?: (axis: AxisLetter) => string;
   /** Currently-selected drop axis (or 'None'). When provided, a drop-axis
    *  button row appears under the grid. */
@@ -43,7 +43,7 @@ export interface QuarterTurnControlsProps {
  * The rotation controls for particle viewers, rendered inside the standard
  * Actions panel (so the draggable ActionFloater and the drawer's Actions tab
  * both carry them). Each row is four equal buttons: `[spin ↻] [↻] [↺] [spin ↺]`.
- * A tap on a centre ↻/↺ button is a single eighth turn; the flanking spin
+ * A tap on a center ↻/↺ button is a single eighth turn; the flanking spin
  * toggles start/stop a *continuous* rotation. The rows are either the six 4D
  * planes (linear projections) or the three ambient view axes — Yaw/Pitch/Roll —
  * when a Hopf/Torus projection is active, where 4D turns would deform the image.

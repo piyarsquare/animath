@@ -68,7 +68,7 @@ animath/
     │   ├── TopologyWalk/        # first-person walk on a closed surface: twisting corridor + flat torus / Klein bottle
     │   ├── TrinaryStars/        # three-body planet sandbox (Observatory) + ensemble Lab
     │   │                        #   (Trinary.tsx hosts both as tabs; engine in lib/nbody)
-    │   ├── StableMarriage/      # Gale–Shapley visualiser + heatmap lab (CSS/DOM)
+    │   ├── StableMarriage/      # Gale–Shapley visualizer + heatmap lab (CSS/DOM)
     │   └── AgenticSorting/      # concurrent agent-based sorting (CSS/DOM)
     │
     ├── components/             # shared shell + UI
@@ -76,7 +76,7 @@ animath/
     │   ├── AppShell.css
     │   ├── ActionFloater.tsx   # draggable on-canvas mirror of an app's Actions
     │   ├── ActionFloater.css
-    │   ├── useFloaterDrag.ts   # drag behaviour for floating panels
+    │   ├── useFloaterDrag.ts   # drag behavior for floating panels
     │   ├── Menu.tsx            # landing gallery shown at the `/` route
     │   ├── Menu.css
     │   ├── ParticleViewerShell.tsx  # turnkey shell for particle (4D) viewers
@@ -96,7 +96,7 @@ animath/
     │   ├── nbody/              # shared gravitational engine: integrator + scenarios + analysis
     │   ├── particles/          # shared particle-viewer engine (see below)
     │   │   ├── index.ts                # public re-exports
-    │   │   ├── types.ts                # ColorStyle, ColourBy, shapeNames, viewTypes, …
+    │   │   ├── types.ts                # ColorStyle, ColorBy, shapeNames, viewTypes, …
     │   │   ├── useParticleState.ts     # all viewer state + setters
     │   │   ├── useViewControls.ts      # orientation/turn/projection/drop-axis controls
     │   │   ├── useUniformSync.ts       # React state → shader uniforms
@@ -330,6 +330,25 @@ Follow **docs/BUILDING_AN_APP.md**. In short:
 > *keeping every app's entries*, and re-run `npm run build`. Merge order doesn't
 > matter — the re-sync is cheap because the edits are additive. See
 > **docs/BUILDING_AN_APP.md §8** for the full workflow.
+
+### Branch sync (don't pull `main` at session start)
+
+The repo is **cloned fresh each session** and your working branch is already
+checked out, so there is nothing to "catch up" before you begin. **Do not
+`git pull` / `git merge origin/main` at the start of a session** — it pulls
+unrelated work into your diff and triggers premature conflicts in the append-only
+shared files (`index.tsx`, `apps.ts`, `CLAUDE.md`, `README.md`).
+
+Sync with `main` **only when finalizing a PR** — the single prescribed point
+(`git fetch && git merge origin/main`, keep every app's entries, re-run
+`npm run build`; see the parallel-branches note above and **BUILDING_AN_APP.md §8**)
+— and only if your branch actually targets `main`.
+
+> [!IMPORTANT]
+> **If your branch is stacked on another feature branch** (created from
+> `claude/<other>` rather than `main`), sync against **that base**, never `main` —
+> merging `main` would drag in work your branch was never meant to carry. Check your
+> base with `git merge-base` / the branch you forked from if unsure.
 
 ### Deployment
 

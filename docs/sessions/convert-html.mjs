@@ -1,7 +1,7 @@
 /* Convert a hand-authored HTML session report (our own template structure) into
  * Markdown + YAML frontmatter following REPORT_STYLE.md. Targets the known
  * classes (report-meta island, <section><h2>, .timeline/li.tl, .callout, .badge,
- * tables, pre) and falls back to inline HTML for anything unrecognised — so the
+ * tables, pre) and falls back to inline HTML for anything unrecognized — so the
  * output is always valid Markdown that renders on GitHub and through our renderer.
  */
 

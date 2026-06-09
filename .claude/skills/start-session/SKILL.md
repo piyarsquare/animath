@@ -49,7 +49,10 @@ short and topical** so the folders stay tidy.
    names, if any. Skim `CLAUDE.md` / `AGENTS.md` for any conventions relevant to the
    focus. Remember the parallel-branch rule: shared files (`src/index.tsx`,
    `src/apps.ts`, `CLAUDE.md`, `README.md`) are **append-only** — never reorder
-   existing entries.
+   existing entries. **Do not `git pull` / `merge origin/main` to start** — the
+   fresh clone is already current, and this branch may be stacked on another
+   feature branch (see CLAUDE.md → *Branch sync*). Main-sync happens only at PR
+   finalization.
 6. **Create the progress report** at
    `docs/sessions/progress/<branch-slug>/YYYY-MM-DD-SNN-description.md` by copying
    `docs/sessions/_template-progress.md` and filling the `[bracketed]` frontmatter
@@ -121,6 +124,10 @@ it wasn't written, it didn't happen.
   will rely on it to understand what happened, what was decided, and why. Without
   the Why, the record is incomplete and decisions become unauditable.
 - Do NOT begin any implementation, investigation, or code changes.
+- Do NOT `git pull` or merge `origin/main` during startup — begin from the branch
+  as checked out. Syncing `main` happens only when finalizing a PR, and only for
+  branches that target `main` (stacked branches sync their own base). See
+  CLAUDE.md → *Branch sync*.
 - Do NOT run scripts or explore the codebase beyond resolving the branch slug,
   reading the handoff, and the orientation skim in step 5.
 - After presenting the summary, STOP and wait for the user to direct next steps.

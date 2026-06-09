@@ -21,8 +21,8 @@ import {
 /** localStorage namespace for this viewer's saved settings. */
 const STORAGE_KEY = 'plane-transform';
 
-type ColourMode = 0 | 1 | 2;
-const COLOUR_MODE_LABELS: Record<ColourMode, string> = {
+type ColorMode = 0 | 1 | 2;
+const COLOR_MODE_LABELS: Record<ColorMode, string> = {
   0: 'Smooth',
   1: 'Tiles',
   2: 'Grid only',
@@ -58,7 +58,7 @@ export default function PlaneTransform() {
   const [viewExtent, setViewExtent] = usePersistentState(`${STORAGE_KEY}:viewExtent`, 3);   // half-side of visible square
   const [gridMode, setGridMode] = usePersistentState<GridMode>(`${STORAGE_KEY}:gridMode`, 'cartesian');
   const [planeMode, setPlaneMode] = usePersistentState<PlaneMode>(`${STORAGE_KEY}:planeMode`, 'cartesian');
-  const [colourMode, setColourMode] = usePersistentState<ColourMode>(`${STORAGE_KEY}:colourMode`, 0);
+  const [colorMode, setColorMode] = usePersistentState<ColorMode>(`${STORAGE_KEY}:colorMode`, 0);
   const [saturation, setSaturation] = usePersistentState(`${STORAGE_KEY}:saturation`, 0.85);
   const [intensity, setIntensity] = usePersistentState(`${STORAGE_KEY}:intensity`, 1.0);
   // Drawn curve + draw toggle are transient per-session state, not persisted.
@@ -143,7 +143,7 @@ export default function PlaneTransform() {
           exponentQ:     { value: expQ === 0 ? 1 : expQ },
           branchIndex:   { value: branchIndex },
           pointSize:     { value: pointSize },
-          colorMode:     { value: colourMode },
+          colorMode:     { value: colorMode },
           saturation:    { value: saturation },
           intensity:     { value: intensity },
         },
@@ -205,11 +205,11 @@ export default function PlaneTransform() {
       m.uniforms.exponentQ.value    = expQ === 0 ? 1 : expQ;
       m.uniforms.branchIndex.value  = branchIndex;
       m.uniforms.pointSize.value    = pointSize;
-      m.uniforms.colorMode.value    = colourMode;
+      m.uniforms.colorMode.value    = colorMode;
       m.uniforms.saturation.value   = saturation;
       m.uniforms.intensity.value    = intensity;
     }
-  }, [viewExtent, planeMode, functionIndex, expP, expQ, branchIndex, pointSize, colourMode, saturation, intensity]);
+  }, [viewExtent, planeMode, functionIndex, expP, expQ, branchIndex, pointSize, colorMode, saturation, intensity]);
 
   // Map a curve through the active complex function to get the output polyline.
   const outputCurve = useMemo<CurvePoint[]>(() => {
@@ -244,9 +244,9 @@ export default function PlaneTransform() {
                || functionIndex === 14 /* branchSqrtPoly */
                || isPow;
 
-  const colourPills = useMemo(() => (
-    [0, 1, 2] as ColourMode[]
-  ).map(m => ({ value: m, label: COLOUR_MODE_LABELS[m] })), []);
+  const colorPills = useMemo(() => (
+    [0, 1, 2] as ColorMode[]
+  ).map(m => ({ value: m, label: COLOR_MODE_LABELS[m] })), []);
 
   return (
     <>
@@ -328,9 +328,9 @@ export default function PlaneTransform() {
         <Section title="Color" icon="◐" defaultOpen>
           <Pills
             label="Mode"
-            options={colourPills}
-            value={colourMode}
-            onChange={setColourMode}
+            options={colorPills}
+            value={colorMode}
+            onChange={setColorMode}
           />
           <Slider label="Saturation" value={saturation}
             min={0} max={1} step={0.01}

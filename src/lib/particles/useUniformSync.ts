@@ -98,6 +98,9 @@ export function useUniformSync(state: ParticleState): void {
       rendererRef.current.setClearColor(state.objectMode ? 0xffffff : 0x000000);
     }
     materialsRef.current.forEach(m => {
+      // Sheet materials keep their own NormalBlending + no depth-write (true
+      // translucency); only the point cloud follows the object/light-bg toggle.
+      if (m.userData.sheet) return;
       m.blending = state.objectMode ? THREE.NormalBlending : THREE.AdditiveBlending;
       m.depthWrite = state.objectMode;
     });
@@ -117,16 +120,39 @@ export function useUniformSync(state: ParticleState): void {
   }, [state.textureIndex]);
 
   useEffect(() => {
-    materialsRef.current.forEach(m => { m.uniforms.uColourStyle.value = state.colourStyle; });
-  }, [state.colourStyle]);
+    materialsRef.current.forEach(m => { m.uniforms.uColorStyle.value = state.colorStyle; });
+  }, [state.colorStyle]);
 
   useEffect(() => {
-    materialsRef.current.forEach(m => { m.uniforms.uColourBy.value = state.colourBy; });
-  }, [state.colourBy]);
+    materialsRef.current.forEach(m => { m.uniforms.uColormap.value = state.colormap; });
+  }, [state.colormap]);
 
   useEffect(() => {
-    materialsRef.current.forEach(m => { m.uniforms.uColourQty.value = state.colourQuantity; });
-  }, [state.colourQuantity]);
+    materialsRef.current.forEach(m => {
+      if (m.uniforms.uColorRepeat) m.uniforms.uColorRepeat.value = state.colorRepeat;
+    });
+  }, [state.colorRepeat]);
+
+  useEffect(() => {
+    materialsRef.current.forEach(m => {
+      if (m.uniforms.uReciprocal) m.uniforms.uReciprocal.value = state.reciprocal ? 1 : 0;
+    });
+  }, [state.reciprocal]);
+
+  useEffect(() => {
+    materialsRef.current.forEach(m => {
+      if (m.uniforms.uLight) m.uniforms.uLight.value = state.lighting ? 1 : 0;
+      if (m.uniforms.uLightStrength) m.uniforms.uLightStrength.value = state.lightStrength;
+    });
+  }, [state.lighting, state.lightStrength]);
+
+  useEffect(() => {
+    materialsRef.current.forEach(m => { m.uniforms.uColorBy.value = state.colorBy; });
+  }, [state.colorBy]);
+
+  useEffect(() => {
+    materialsRef.current.forEach(m => { m.uniforms.uColorQty.value = state.colorQuantity; });
+  }, [state.colorQuantity]);
 
   useEffect(() => {
     materialsRef.current.forEach(m => { m.uniforms.uBrightnessQty.value = state.brightnessQuantity; });

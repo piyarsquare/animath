@@ -4,7 +4,7 @@
 
 ## 0. What the app is
 
-Stable Marriage is a two-part visualiser of the Gale–Shapley stable-matching process under a *mixed-proposer* model. The **Visualizer** generates ranked preference lists for two equal groups ("men" and "women"), then lets the user step or auto-play through proposals, watch tentative matches form, and read average-rank / distribution / stability statistics. The **Lab** runs many fast headless simulations across a grid of consensus levels and renders four heatmaps of the average-rank outcomes. The two parts are mutually exclusive views inside one component, switched by an in-page toggle.
+Stable Marriage is a two-part visualizer of the Gale–Shapley stable-matching process under a *mixed-proposer* model. The **Visualizer** generates ranked preference lists for two equal groups ("men" and "women"), then lets the user step or auto-play through proposals, watch tentative matches form, and read average-rank / distribution / stability statistics. The **Lab** runs many fast headless simulations across a grid of consensus levels and renders four heatmaps of the average-rank outcomes. The two parts are mutually exclusive views inside one component, switched by an in-page toggle.
 
 ## 1. Top-level structure
 
@@ -157,8 +157,8 @@ The four panels:
 4. **Asker Avg − Asked Avg** — `dataKey=askerDiff`, diverging palette, legend "Askers Better" ↔ "Asked Better".
 
 **Color scales:**
-- *Standard*: HSL hue ramp from green (`hsl(120,…)` = avg rank 1, best) through to red (`hsl(0,…)` = worst rank `maxRank`); legend gradient green→yellow→red, labelled "Avg Rank 1 (Best)" … "Avg Rank {maxRank} (Worst)".
-- *Diverging*: blue `#3b82f6` (negative) → light grey `#e5e7eb` (zero) → pink `#f472b6` (positive), normalized against `±maxRank/2`.
+- *Standard*: HSL hue ramp from green (`hsl(120,…)` = avg rank 1, best) through to red (`hsl(0,…)` = worst rank `maxRank`); legend gradient green→yellow→red, labeled "Avg Rank 1 (Best)" … "Avg Rank {maxRank} (Worst)".
+- *Diverging*: blue `#3b82f6` (negative) → light gray `#e5e7eb` (zero) → pink `#f472b6` (positive), normalized against `±maxRank/2`.
 
 **Heatmap interactions:** hovering a cell shows a centered tooltip (`.sm-heatmap-tooltip`) with `M-Consensus`, `W-Consensus`, and the four averages (Men / Women / Asker / Asked, 1 decimal). Clicking a cell **pins** it (cell gets `.pinned` brighten); clicking the pinned cell again, or clicking empty grid background, unpins.
 
@@ -211,4 +211,4 @@ The biggest finding is that **this app almost entirely bypasses the shared shell
 
 ---
 
-Summary: Stable Marriage is a CSS/DOM Gale–Shapley visualiser with a step-through animation (Visualizer) and a headless consensus-sweep heatmap explorer (Lab), switched by an in-page toggle. The top three seams for the AppShell redesign: (1) it bypasses `ShellSettings`/`ShellActions`/`ActionFloater` entirely, rendering all controls and action buttons in custom in-page cards so the drawer's Settings/Actions tabs are empty; (2) it reimplements buttons, sliders, tabs, and a full color-token theme instead of reusing `ControlPanel` primitives; and (3) its Visualizer/Lab mode toggle is an app-private second navigation level the shell has no shared concept of.
+Summary: Stable Marriage is a CSS/DOM Gale–Shapley visualizer with a step-through animation (Visualizer) and a headless consensus-sweep heatmap explorer (Lab), switched by an in-page toggle. The top three seams for the AppShell redesign: (1) it bypasses `ShellSettings`/`ShellActions`/`ActionFloater` entirely, rendering all controls and action buttons in custom in-page cards so the drawer's Settings/Actions tabs are empty; (2) it reimplements buttons, sliders, tabs, and a full color-token theme instead of reusing `ControlPanel` primitives; and (3) its Visualizer/Lab mode toggle is an app-private second navigation level the shell has no shared concept of.

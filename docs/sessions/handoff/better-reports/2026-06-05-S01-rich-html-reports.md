@@ -15,7 +15,7 @@ pr: https://github.com/piyarsquare/animath/pull/183
 
 ## What changed
 
-The richness now lives in shared assets; each report is simple, semantic HTML that opts into components. New capabilities: a colour-coded CSS **timeline** (entry types: decision/code/finding/blocker/ milestone), a **sticky scroll-spy TOC**, **callouts**, sortable tables, SHA-pinned **code deep-links**, and a generated **cross-session dashboard**.
+The richness now lives in shared assets; each report is simple, semantic HTML that opts into components. New capabilities: a color-coded CSS **timeline** (entry types: decision/code/finding/blocker/ milestone), a **sticky scroll-spy TOC**, **callouts**, sortable tables, SHA-pinned **code deep-links**, and a generated **cross-session dashboard**.
 
 > [!NOTE]
 > **Design** Push richness into `report.css` / `report.js`; keep each report simple. Canonical `_template-*.html` skeletons mean markup never drifts. `report.js` is progressive — everything degrades gracefully with JS off, so reports also work from `file://`.

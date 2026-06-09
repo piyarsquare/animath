@@ -3,7 +3,7 @@ import { SamplePattern } from './types';
 
 /** Build `particleCount` points over the domain box x ∈ [xMin,xMax],
  *  z ∈ [yMin,yMax], laid out according to `pattern`. The window need not be
- *  centred on the origin, so off-centre domains like x ∈ [0, 6] are supported. */
+ *  centered on the origin, so off-center domains like x ∈ [0, 6] are supported. */
 export function createParticleGeometry(
   particleCount: number,
   xMin: number = -4,
@@ -42,7 +42,7 @@ function squarePerimeter(u: number): [number, number] {
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));
 
 /** Lay out `count` domain points per the chosen pattern. Radial patterns sample
- *  a disk of radius max(halfX,halfY) centred on the box; Grid/Squares/Random use
+ *  a disk of radius max(halfX,halfY) centered on the box; Grid/Squares/Random use
  *  the box. Every layout fills exactly `count` points (one per index). */
 function fillPattern(
   geometry: THREE.BufferGeometry,
@@ -91,7 +91,7 @@ function fillPattern(
       break;
     }
     case SamplePattern.Spokes: {
-      // Radial rays from the centre.
+      // Radial rays from the center.
       const nS = Math.max(6, Math.round(Math.sqrt(count) / 2));
       const per = Math.ceil(count / nS);
       for (let i = 0; i < count; i++) {
