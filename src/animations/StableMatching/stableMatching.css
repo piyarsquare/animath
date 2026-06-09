@@ -16,7 +16,7 @@
 .sm2-narrate { font-size: 13.5px; color: #d6d6e2; background: #14141b; border: 1px solid #26262f; border-left: 3px solid #2563eb; border-radius: 8px; padding: 9px 13px; margin-bottom: 14px; line-height: 1.45; }
 
 /* metrics */
-.sm2-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+.sm2-metrics { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 18px; }
 .sm2-metric { background: #14141b; border: 1px solid #26262f; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 5px; }
 .sm2-metric-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #8b8b99; text-transform: uppercase; letter-spacing: .04em; }
 .sm2-metric strong { font-size: 24px; font-variant-numeric: tabular-nums; }
@@ -32,16 +32,14 @@
 .sw { display: inline-block; width: 10px; height: 10px; vertical-align: -1px; margin-right: 4px; border-radius: 3px; background: #9a9aa8; }
 .sw.disc { border-radius: 50%; }
 
-/* per-side average: two rows, A above B; the marker carries the average's rank colour */
-.sm2-avgrows { display: flex; flex-direction: column; gap: 2px; margin: 2px 0; }
-.sm2-avg { display: inline-flex; align-items: baseline; gap: 4px; font-size: 13px; color: #aab; }
-.sm2-avg strong { font-size: 22px; font-variant-numeric: tabular-nums; color: #e7e7ea; }
-
-/* sorted outcome colorbars: one tick per person, sorted best→worst (an ECDF read as colour) */
-.sm2-bars { display: flex; flex-direction: column; gap: 7px; margin: 5px 0 2px; }
-.sm2-bar { display: flex; align-items: center; gap: 8px; }
+/* one panel per side: marker + average + the sorted outcome colorbar on a row.
+ * the average is the mean partner rank; the strip is every person sorted
+ * best→worst on the BuRd scale (an ECDF read as colour). */
+.sm2-rows { display: flex; flex-direction: column; gap: 9px; margin: 6px 0 4px; }
+.sm2-row { display: flex; align-items: center; gap: 10px; }
 .sm2-bar-label { display: inline-flex; align-items: center; width: 1.9em; font-size: 13px; color: #aab; }
-.sm2-strip { flex: 1; display: flex; height: 15px; border-radius: 3px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
+.sm2-outcome .sm2-row strong { width: 3.1em; font-size: 19px; font-variant-numeric: tabular-nums; color: #e7e7ea; }
+.sm2-strip { flex: 1; display: flex; height: 16px; border-radius: 3px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
 .sm2-strip i { flex: 1; min-width: 1px; }
 
 /* preference matrix */

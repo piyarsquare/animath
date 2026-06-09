@@ -441,23 +441,21 @@ export default function StableMatching() {
           <p className="sm2-story">{story}</p>
           <div className="sm2-narrate">{narrate()}</div>
           <div className="sm2-metrics">
-            <div className="sm2-metric big">
-              <span className="sm2-metric-label"><Activity size={14} /> Average partner rank (lower = happier)</span>
-              <div className="sm2-avgrows">
-                <span className="sm2-avg a"><i className="sw sq" style={{ background: rankBurd(acct.aAvg || 1, n) }} />A <strong>#{acct.aAvg.toFixed(2)}</strong></span>
-                <span className="sm2-avg b"><i className="sw disc" style={{ background: rankBurd(acct.bAvg || 1, n) }} />B <strong>#{acct.bAvg.toFixed(2)}</strong></span>
+            <div className="sm2-metric big sm2-outcome">
+              <span className="sm2-metric-label"><Activity size={14} /> Partner rank by side — average &amp; distribution (lower = happier)</span>
+              <div className="sm2-rows">
+                <div className="sm2-row">
+                  <span className="sm2-bar-label"><i className="sw sq" style={{ background: rankBurd(acct.aAvg || 1, n) }} />A</span>
+                  <strong>#{acct.aAvg.toFixed(2)}</strong>
+                  <div className="sm2-strip">{acct.aSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
+                </div>
+                <div className="sm2-row">
+                  <span className="sm2-bar-label"><i className="sw disc" style={{ background: rankBurd(acct.bAvg || 1, n) }} />B</span>
+                  <strong>#{acct.bAvg.toFixed(2)}</strong>
+                  <div className="sm2-strip">{acct.bSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
+                </div>
               </div>
-              <span className="sm2-metric-sub">total rank {acct.combined} (A {acct.aTot} + B {acct.bTot}) · {acct.free ? `${acct.free} still free` : 'all matched'}</span>
-            </div>
-            <div className="sm2-metric">
-              <span className="sm2-metric-label">outcome distribution (sorted best → worst)</span>
-              <div className="sm2-bars">
-                <div className="sm2-bar"><span className="sm2-bar-label"><i className="sw sq" />A</span>
-                  <div className="sm2-strip">{acct.aSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div></div>
-                <div className="sm2-bar"><span className="sm2-bar-label"><i className="sw disc" />B</span>
-                  <div className="sm2-strip">{acct.bSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div></div>
-              </div>
-              <span className="sm2-metric-sub">each tick = one person, sorted by their partner's rank · blue #1 → red #{n}</span>
+              <span className="sm2-metric-sub">each tick = one person, sorted best → worst · blue #1 → red #{n} · total rank {acct.combined}{acct.free ? ` · ${acct.free} still free` : ''}</span>
             </div>
             <div className={`sm2-metric stability ${!done ? '' : blocking.size === 0 ? 'ok' : 'bad'}`}>
               <span className="sm2-metric-label">{blocking.size === 0 ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />} Stability</span>
