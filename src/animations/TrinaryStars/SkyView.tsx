@@ -164,7 +164,8 @@ export default function SkyView({ dataRef, dayLen, tilt }: {
   }, [dataRef]);
 
   return (
-    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '36vh', pointerEvents: 'none' }}>
+    // Sized relative to the hosting Orbit view window (was 36vh full-screen).
+    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '36%', pointerEvents: 'none' }}>
       <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
       <div style={{
         position: 'absolute', bottom: 6, right: 10, font: '11px system-ui', color: 'rgba(207,224,245,0.7)',

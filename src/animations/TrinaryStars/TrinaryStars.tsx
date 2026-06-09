@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
-import { ShellActions, ShellSettings, useAppExplainer, useAppHeader } from '../../components/AppShell';
-import { Section, Slider, Pills, Select } from '../../components/ControlPanel';
+import Workspace from '../../chrome/workspace/Workspace';
+import type { LayoutDef, SectionDef, ViewDef, WorkspaceMode } from '../../chrome/workspace/types';
+import { Slider, Pills, Select, NumberInput } from '../../components/ControlPanel';
 import {
   step, cloudSpread, lyapunovRenorm, SCENARIOS, getScenario, buildStars, orbitFrame, launchPlanet, Analyzer, DEFAULT_CLASSIFY,
   type SimState, type Planet, type Star, type TargetId, type ClassifyParams, type Snapshot,
@@ -137,7 +138,18 @@ const FRAME_PRESETS: { label: string; c: string; a: string }[] = [
   { label: '⟨2,3⟩ on x', c: 'bary', a: 'c12' },
 ];
 
-export default function TrinaryStars() {
+/** Top-bar mode pills: the Observatory ↔ Lab switch (replaces the old tab bar).
+ *  Switching sets the hash, which Trinary.tsx observes. */
+const MODES: WorkspaceMode[] = [
+  { id: 'observatory', label: 'Observatory' },
+  { id: 'lab', label: 'Lab' },
+];
+
+/** An exact planet launch state — set by the Custom launch mode's spinboxes,
+ *  by click+drag hand placement, or handed in via the URL (basin-map click). */
+type CustomIC = { x: number; y: number; vx: number; vy: number };
+
+export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
   const qRef = useRef<URLSearchParams | null>(null);
   if (!qRef.current) qRef.current = navQuery();
   const Q = qRef.current;
@@ -163,7 +175,6 @@ export default function TrinaryStars() {
   const [showTrails, setShowTrails] = usePersistentState(PK('showTrails'), true);
   const [frameCenter, setFrameCenter] = usePersistentState(PK('frameCenter'), 'bary'); // reference-frame origin
   const [frameAlign, setFrameAlign] = usePersistentState(PK('frameAlign'), 'none');     // reference-frame +x direction
-  const [obsMode, setObsMode] = usePersistentState<'simple' | 'advanced'>(PK('obsMode'), 'simple'); // Settings detail level
   const [paused, setPaused] = useState(false);       // transient — not persisted
   const [placeMode, setPlaceMode] = useState(false); // transient — not persisted
   // Climate-classification knobs (habitable band as multiples of launch insolation).
@@ -179,8 +190,6 @@ export default function TrinaryStars() {
   const skyRef = useRef<SkyData | null>(null);
 
   const preset = getScenario(presetId);
-  useAppHeader('Trinary System', preset.name);
-  useAppExplainer(explainerText);
 
   // The collision radius also bounds the analyzer's "destroyed" test so the era
   // timeline agrees with what you see consumed on screen.
@@ -197,9 +206,18 @@ export default function TrinaryStars() {
   });
   refs.current = { speed, trailLen, showTrails, paused, ghostCount, epsExp, planetRadius, planetSpeed, presetId, target, placeMode, massMul, starSoft, classify, collisionRadius, frameCenter, frameAlign };
 
-  // A hand-placed launch (position + velocity). When set it overrides the
+  // A pinned exact launch (position + velocity). When set it overrides the
   // parametric target/radius/speed seeding until a launch control changes.
-  const customRef = useRef<{ x: number; y: number; vx: number; vy: number } | null>(initialCustom);
+  // The sim loop and seeder read the ref (no re-mount); the React state mirror
+  // drives the Launch-mode pills and the x/y/vx/vy spinboxes. The two are
+  // always set together via setCustom (the pointer handler inside onMount sets
+  // the ref then calls the stable setCustomState directly).
+  const customRef = useRef<CustomIC | null>(initialCustom);
+  const [custom, setCustomState] = useState<CustomIC | null>(initialCustom);
+  const setCustom = (c: CustomIC | null) => {
+    customRef.current = c;
+    setCustomState(c);
+  };
 
   // Imperative handles populated by onMount and called by control effects/buttons.
   const api = useRef<{ reset: () => void; scatter: () => void } | null>(null);
@@ -485,6 +503,7 @@ export default function TrinaryStars() {
         placing = false;
         arrow.visible = false;
         customRef.current = { x: placeStart.x, y: placeStart.y, vx: draftVel.vx, vy: draftVel.vy };
+        setCustomState(customRef.current); // mirror for the System spinboxes
         reset();
         try { el.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
         return;
@@ -665,16 +684,37 @@ export default function TrinaryStars() {
     api.current?.reset();
   }, [presetId, target, ghostCount, epsExp, planetRadius, planetSpeed, massMul, starSoft, lumExp, habLo, habHi, calmThresh]);
 
-  // Wrapped setters: any change that redefines the launch drops a hand-placed one.
-  const setPlanetRadius = (v: number) => { customRef.current = null; setPlanetRadiusState(v); };
-  const setPlanetSpeed = (v: number) => { customRef.current = null; setPlanetSpeedState(v); };
-  const setTarget = (t: TargetId) => { customRef.current = null; setTargetState(t); };
+  // Wrapped setters: any change that redefines the launch drops a pinned one.
+  const setPlanetRadius = (v: number) => { setCustom(null); setPlanetRadiusState(v); };
+  const setPlanetSpeed = (v: number) => { setCustom(null); setPlanetSpeedState(v); };
+  const setTarget = (t: TargetId) => { setCustom(null); setTargetState(t); };
   const setStarMass = (i: number, v: number) =>
     setMassMul(prev => { const next = [...prev]; next[i] = v; return next; });
 
+  // The parametric launch the seeder would use in Auto mode — shown in the
+  // custom spinboxes so editing starts from exactly what you see.
+  const autoIC = useMemo(() => {
+    const p = launchPlanet(buildStars(getScenario(presetId), massMul), target, planetRadius, planetSpeed);
+    return { x: p.x, y: p.y, vx: p.vx, vy: p.vy };
+  }, [presetId, massMul, target, planetRadius, planetSpeed]);
+
+  const launchMode: 'auto' | 'custom' = custom ? 'custom' : 'auto';
+  const setLaunchMode = (m: 'auto' | 'custom') => {
+    if (m === launchMode) return;
+    setCustom(m === 'custom' ? { ...autoIC } : null);
+    api.current?.reset();
+  };
+  /** Editing any spinbox pins the launch (flipping the mode to Custom). */
+  const editCustom = (k: keyof CustomIC) => (v: number) => {
+    const next = { ...(custom ?? autoIC) };
+    next[k] = v;
+    setCustom(next);
+    api.current?.reset();
+  };
+
   const onPickPreset = (id: string) => {
     const p = getScenario(id);
-    customRef.current = null;
+    setCustom(null);
     setPresetId(id);
     setTargetState(p.launch.target);
     setPlanetRadiusState(p.launch.radius);
@@ -715,192 +755,275 @@ export default function TrinaryStars() {
     borderColor: placeMode ? 'rgba(255,212,0,0.5)' : 'var(--cp-border, #2a3550)',
   };
 
-  return (
+  const note: React.CSSProperties = {
+    font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px',
+  };
+
+  /* ---- archetype panels (PARAM-MAP §6; rows ported from the old drawer) ---- */
+
+  // Spinboxes show the active launch state: the pinned one if present, else the
+  // auto (parametric) launch the seeder would use. Rounded for display only.
+  const ic = custom ?? autoIC;
+  const show = (v: number) => Number(v.toFixed(4));
+
+  const systemNode = (
     <>
-      <div style={{ position: 'absolute', inset: 0 }}>
-        <Canvas3D onMount={onMount} />
+      <Pills
+        options={SCENARIOS.map(p => ({ value: p.id, label: p.name }))}
+        value={presetId}
+        onChange={onPickPreset}
+      />
+      <div style={{ font: '12px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '4px 2px' }}>
+        {preset.blurb}
       </div>
-
-      {/* Live divergence readout. */}
       <div style={{
-        position: 'absolute', top: 64, left: 12, padding: '8px 12px',
-        background: 'rgba(8,12,20,0.62)', border: '1px solid rgba(120,150,200,0.25)',
-        borderRadius: 8, color: '#cfe0f5', font: '12px/1.5 ui-monospace, monospace',
-        pointerEvents: 'none', backdropFilter: 'blur(4px)',
+        font: '600 10px/1.4 ui-monospace, monospace', letterSpacing: 0.6, textTransform: 'uppercase',
+        color: 'var(--cp-fg-dim, #93a2bd)', margin: '8px 0 0',
       }}>
-        <div>cloud spread&nbsp; <span ref={spreadElRef} style={{ color: GHOST_COLOR_HEX }}>0.00e+0</span></div>
-        <div>Lyapunov λ&nbsp;&nbsp; <span ref={lyapElRef} style={{ color: '#9ec7ff' }}>…</span></div>
-        <div>sim time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span ref={timeElRef} style={{ color: '#9ec7ff' }}>0.0</span></div>
-        {placeMode && <div style={{ color: '#ffd27f' }}>click + drag to launch</div>}
+        Custom planet — {custom ? 'pinned launch state' : 'auto launch (edit to pin)'}
       </div>
-
-      {skyOn && <SkyView dataRef={skyRef} dayLen={dayLen} tilt={tilt} />}
-
-      <Observatory snapshot={labSnap} />
-
-      <ShellActions>
-        <div className="cp-section-body" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button style={btnStyle} onClick={() => setPaused(p => !p)}>{paused ? '▶ Play' : '❚❚ Pause'}</button>
-            <button style={btnStyle} onClick={() => api.current?.reset()}>↺ Reset</button>
-          </div>
-          <button style={placeBtnStyle} onClick={onTogglePlace}>
-            {placeMode ? '✛ Placing — click + drag on the scene' : '✛ Place planet by hand'}
-          </button>
-          <button style={btnStyle} onClick={() => api.current?.scatter()}>✦ Scatter ghosts here</button>
-          <button style={{ ...placeBtnStyle, background: skyOn ? 'rgba(255, 212, 0, 0.18)' : 'rgba(255,255,255,0.06)' }} onClick={() => setSkyOn(s => !s)}>
-            {skyOn ? '🌅 Exit planet sky' : '🌅 View from the planet'}
-          </button>
-          <button style={btnStyle} onClick={() => { window.location.hash = '#/trinary-lab'; }}>📊 Open statistics lab</button>
-          <Slider label="Speed" value={speed} min={0.1} max={4} step={0.1}
-            onChange={setSpeed} format={v => `${v.toFixed(1)}×`} />
-        </div>
-      </ShellActions>
-
-      <ShellSettings>
-        <div style={{ display: 'flex', gap: 4, padding: '2px 2px 10px' }}>
-          {(['simple', 'advanced'] as const).map(m => (
-            <button key={m} onClick={() => setObsMode(m)}
-              style={{
-                ...btnStyle, flex: 1, textTransform: 'capitalize',
-                background: obsMode === m ? 'rgba(102,240,255,0.18)' : 'rgba(255,255,255,0.06)',
-                color: obsMode === m ? '#bfefff' : undefined,
-              }}>{m}</button>
-          ))}
-        </div>
-
-        <Section title="System" icon="✸" defaultOpen>
-          <Pills
-            options={SCENARIOS.map(p => ({ value: p.id, label: p.name }))}
-            value={presetId}
-            onChange={onPickPreset}
-          />
-          <div style={{ font: '12px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '4px 2px' }}>
-            {preset.blurb}
-          </div>
-        </Section>
-
-        <Section title="Chaos demo" icon="∿" defaultOpen>
-          <Slider label="Ghost planets" value={ghostCount} min={1} max={120} step={1}
-            onChange={setGhostCount} format={v => `${v}`} />
-          <Slider label="Perturbation ε" value={epsExp} min={-5} max={-1} step={0.5}
-            onChange={setEpsExp} format={v => `10^${v.toFixed(1)}`} />
-        </Section>
-
-        {obsMode === 'advanced' && (
-        <Section title="Stars" icon="☉">
-          <Slider label="Star 1 mass · gold" value={massMul[0]} min={0.1} max={4} step={0.05}
-            onChange={v => setStarMass(0, v)} format={v => (baseMasses[0] * v).toFixed(2)} />
-          <Slider label="Star 2 mass · orange" value={massMul[1]} min={0.1} max={4} step={0.05}
-            onChange={v => setStarMass(1, v)} format={v => (baseMasses[1] * v).toFixed(2)} />
-          <Slider label="Star 3 mass · blue" value={massMul[2]} min={0.1} max={4} step={0.05}
-            onChange={v => setStarMass(2, v)} format={v => (baseMasses[2] * v).toFixed(2)} />
-          <Slider label="Softening" value={starSoft} min={0.005} max={0.3} step={0.005}
-            onChange={setStarSoft} format={v => v.toFixed(3)} />
-          <Slider label="Star size (collision)" value={collisionRadius} min={0} max={0.5} step={0.01}
-            onChange={setCollisionRadius} format={v => (v === 0 ? 'off' : v.toFixed(2))} />
-          <button style={{ ...btnStyle, width: '100%', flex: 'none' }}
-            onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); }}>
-            ⟲ Reset star masses
-          </button>
-          <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
-            Equal masses keep a preset’s character (just faster); uneven ones detune it — e.g. nudge a mass to watch the figure-eight fall into chaos. Softening sets how gently close passes are smoothed. Star size sets how close a planet must come to be consumed (0 = passes through).
-          </div>
-        </Section>
-        )}
-
-        <Section title="Planet launch" icon="◐" defaultOpen>
-          <Pills
-            label="Orbit around"
-            options={targetOptions}
-            value={target}
-            onChange={setTarget}
-          />
-          <Slider label="Start radius" value={planetRadius} min={0.1} max={8} step={0.05}
-            onChange={setPlanetRadius} format={v => v.toFixed(2)} />
-          <Slider label="Start speed" value={planetSpeed} min={0} max={3} step={0.05}
-            onChange={setPlanetSpeed} format={v => v.toFixed(2)} />
-          <button style={{ ...btnStyle, width: '100%', flex: 'none' }} onClick={onAutoCircular}>
-            ◯ Circular orbit speed
-          </button>
-          <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
-            Radius &amp; speed are measured from the body you orbit. Pick a star for a tight inner (S-type) orbit; the barycenter or inner binary for a wide one.
-          </div>
-        </Section>
-
-        {obsMode === 'advanced' && (<>
-        <Section title="Planet sky" icon="🌅">
-          <Pills
-            label="View from the planet"
-            options={[{ value: 1, label: 'On' }, { value: 0, label: 'Off' }]}
-            value={skyOn ? 1 : 0}
-            onChange={v => setSkyOn(v === 1)}
-          />
-          <Slider label="Day length (spin)" value={dayLen} min={0.1} max={3} step={0.1}
-            onChange={setDayLen} format={v => v.toFixed(1)} />
-          <Slider label="Axial tilt (seasons)" value={tilt} min={0} max={0.6} step={0.05}
-            onChange={setTilt} format={v => v.toFixed(2)} />
-          <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
-            Stand on the planet and watch the suns wheel overhead. Spin sets the day; tilt makes their noon height drift over the (chaotic, irregular) year. The sky’s color tracks the climate — frozen dark to searing white.
-          </div>
-        </Section>
-
-        <Section title="Climate model" icon="🌡">
-          <Slider label="Habitable floor (×ref)" value={habLo} min={0.1} max={1} step={0.05}
-            onChange={setHabLo} format={v => v.toFixed(2)} />
-          <Slider label="Habitable ceiling (×ref)" value={habHi} min={1} max={6} step={0.25}
-            onChange={setHabHi} format={v => v.toFixed(2)} />
-          <Slider label="Luminosity exponent β" value={lumExp} min={0.5} max={4} step={0.5}
-            onChange={setLumExp} format={v => v.toFixed(1)} />
-          <Slider label="Calm threshold" value={calmThresh} min={0.01} max={0.2} step={0.01}
-            onChange={setCalmThresh} format={v => v.toFixed(2)} />
-          <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
-            The habitable band is set relative to the planet’s starlight at launch (L = mᵝ). The timeline below classifies every moment as Paradise / Warm·precarious / Calm·barren / Chaotic.
-          </div>
-        </Section>
-        </>)}
-
-        <Section title="View" icon="◑">
-          <Slider label="Trail length" value={trailLen} min={0} max={TRAIL_MAX} step={50}
-            onChange={setTrailLen} format={v => (v === 0 ? 'off' : `${v}`)} />
-          <Pills
-            label="Trails"
-            options={[{ value: 1, label: 'On' }, { value: 0, label: 'Off' }]}
-            value={showTrails ? 1 : 0}
-            onChange={v => setShowTrails(v === 1)}
-          />
-        </Section>
-
-        {obsMode === 'advanced' && (
-        <Section title="Reference frame" icon="✛">
-          <Select label="Center on" value={frameCenter} onChange={setFrameCenter} options={FRAME_ANCHORS} />
-          <Select label="Align +x to" value={frameAlign} onChange={setFrameAlign}
-            options={[{ value: 'none', label: 'None (inertial)' }, ...FRAME_ANCHORS]} />
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
-            {FRAME_PRESETS.map(p => (
-              <button key={p.label} style={{ ...btnStyle, flex: 'none', padding: '6px 10px', fontSize: 12 }}
-                onClick={() => { setFrameCenter(p.c); setFrameAlign(p.a); }}>{p.label}</button>
-            ))}
-            <button style={{ ...btnStyle, flex: 'none', padding: '6px 10px', fontSize: 12 }}
-              disabled={frameCenter === 'bary' && frameAlign === 'none'}
-              onClick={() => { setFrameCenter('bary'); setFrameAlign('none'); }}>⟲ Reset frame</button>
-          </div>
-          <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
-            A pure viewpoint — the physics is unchanged. In a rotating frame the planet appears to swerve (the Coriolis / centrifugal look), which is exactly how co-orbital, Trojan and horseshoe paths become visible. Trails reset when you change the frame.
-          </div>
-        </Section>
-        )}
-
-        <Section title="Settings" icon="⚙">
-          <button style={{ ...btnStyle, width: '100%', flex: 'none' }}
-            onClick={() => { clearPersistedState('trinary'); window.location.hash = '#/trinary'; window.location.reload(); }}>
-            ↺ Reset settings to defaults
-          </button>
-          <div style={{ font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px' }}>
-            Your settings (system, masses, climate band, sky, trails…) are saved on this device and restored on reload. This clears them.
-          </div>
-        </Section>
-      </ShellSettings>
+      <NumberInput label="x" value={show(ic.x)} onChange={editCustom('x')} step={0.05} />
+      <NumberInput label="y" value={show(ic.y)} onChange={editCustom('y')} step={0.05} />
+      <NumberInput label="vx" value={show(ic.vx)} onChange={editCustom('vx')} step={0.05} />
+      <NumberInput label="vy" value={show(ic.vy)} onChange={editCustom('vy')} step={0.05} />
+      <div style={note}>
+        The planet’s exact start position &amp; velocity. Editing a value pins the launch (mode flips to Custom in the Planet launch panel); hand-placing or a Destiny-map link pins it too.
+      </div>
     </>
+  );
+
+  const starsNode = (
+    <>
+      <Slider label="Star 1 mass · gold" value={massMul[0]} min={0.1} max={4} step={0.05}
+        onChange={v => setStarMass(0, v)} format={v => (baseMasses[0] * v).toFixed(2)} />
+      <Slider label="Star 2 mass · orange" value={massMul[1]} min={0.1} max={4} step={0.05}
+        onChange={v => setStarMass(1, v)} format={v => (baseMasses[1] * v).toFixed(2)} />
+      <Slider label="Star 3 mass · blue" value={massMul[2]} min={0.1} max={4} step={0.05}
+        onChange={v => setStarMass(2, v)} format={v => (baseMasses[2] * v).toFixed(2)} />
+      <Slider label="Softening" value={starSoft} min={0.005} max={0.3} step={0.005}
+        onChange={setStarSoft} format={v => v.toFixed(3)} />
+      <Slider label="Star size (collision)" value={collisionRadius} min={0} max={0.5} step={0.01}
+        onChange={setCollisionRadius} format={v => (v === 0 ? 'off' : v.toFixed(2))} />
+      <button style={{ ...btnStyle, width: '100%', flex: 'none' }}
+        onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); }}>
+        ⟲ Reset star masses
+      </button>
+      <div style={note}>
+        Equal masses keep a preset’s character (just faster); uneven ones detune it — e.g. nudge a mass to watch the figure-eight fall into chaos. Softening sets how gently close passes are smoothed. Star size sets how close a planet must come to be consumed (0 = passes through).
+      </div>
+    </>
+  );
+
+  const launchNode = (
+    <>
+      <Pills
+        label="Launch mode"
+        options={[{ value: 'auto', label: 'Auto' }, { value: 'custom', label: 'Custom' }]}
+        value={launchMode}
+        onChange={v => setLaunchMode(v as 'auto' | 'custom')}
+      />
+      <Pills
+        label="Orbit around"
+        options={targetOptions}
+        value={target}
+        onChange={setTarget}
+      />
+      <Slider label="Start radius" value={planetRadius} min={0.1} max={8} step={0.05}
+        onChange={setPlanetRadius} format={v => v.toFixed(2)} />
+      <Slider label="Start speed" value={planetSpeed} min={0} max={3} step={0.05}
+        onChange={setPlanetSpeed} format={v => v.toFixed(2)} />
+      <button style={{ ...btnStyle, width: '100%', flex: 'none' }} onClick={onAutoCircular}>
+        ◯ Circular orbit speed
+      </button>
+      <button style={{ ...placeBtnStyle, width: '100%', flex: 'none', marginTop: 6 }} onClick={onTogglePlace}>
+        {placeMode ? '✛ Placing — click + drag on the scene' : '✛ Place planet by hand'}
+      </button>
+      <div style={note}>
+        Radius &amp; speed are measured from the body you orbit. Pick a star for a tight inner (S-type) orbit; the barycenter or inner binary for a wide one. Custom mode pins the exact x/y/vx/vy shown in the System panel.
+      </div>
+    </>
+  );
+
+  const climateNode = (
+    <>
+      <Slider label="Habitable floor (×ref)" value={habLo} min={0.1} max={1} step={0.05}
+        onChange={setHabLo} format={v => v.toFixed(2)} />
+      <Slider label="Habitable ceiling (×ref)" value={habHi} min={1} max={6} step={0.25}
+        onChange={setHabHi} format={v => v.toFixed(2)} />
+      <Slider label="Luminosity exponent β" value={lumExp} min={0.5} max={4} step={0.5}
+        onChange={setLumExp} format={v => v.toFixed(1)} />
+      <Slider label="Calm threshold" value={calmThresh} min={0.01} max={0.2} step={0.01}
+        onChange={setCalmThresh} format={v => v.toFixed(2)} />
+      <div style={note}>
+        The habitable band is set relative to the planet’s starlight at launch (L = mᵝ). The timeline under the Orbit view classifies every moment as Paradise / Warm·precarious / Calm·barren / Chaotic.
+      </div>
+    </>
+  );
+
+  const skyNode = (
+    <>
+      <Pills
+        label="View from the planet"
+        options={[{ value: 1, label: 'On' }, { value: 0, label: 'Off' }]}
+        value={skyOn ? 1 : 0}
+        onChange={v => setSkyOn(v === 1)}
+      />
+      <Slider label="Day length (spin)" value={dayLen} min={0.1} max={3} step={0.1}
+        onChange={setDayLen} format={v => v.toFixed(1)} />
+      <Slider label="Axial tilt (seasons)" value={tilt} min={0} max={0.6} step={0.05}
+        onChange={setTilt} format={v => v.toFixed(2)} />
+      <div style={note}>
+        Stand on the planet and watch the suns wheel overhead. Spin sets the day; tilt makes their noon height drift over the (chaotic, irregular) year. The sky’s color tracks the climate — frozen dark to searing white.
+      </div>
+    </>
+  );
+
+  const frameNode = (
+    <>
+      <Select label="Center on" value={frameCenter} onChange={setFrameCenter} options={FRAME_ANCHORS} />
+      <Select label="Align +x to" value={frameAlign} onChange={setFrameAlign}
+        options={[{ value: 'none', label: 'None (inertial)' }, ...FRAME_ANCHORS]} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
+        {FRAME_PRESETS.map(p => (
+          <button key={p.label} style={{ ...btnStyle, flex: 'none', padding: '6px 10px', fontSize: 12 }}
+            onClick={() => { setFrameCenter(p.c); setFrameAlign(p.a); }}>{p.label}</button>
+        ))}
+        <button style={{ ...btnStyle, flex: 'none', padding: '6px 10px', fontSize: 12 }}
+          disabled={frameCenter === 'bary' && frameAlign === 'none'}
+          onClick={() => { setFrameCenter('bary'); setFrameAlign('none'); }}>⟲ Reset frame</button>
+      </div>
+      <div style={note}>
+        A pure viewpoint — the physics is unchanged. In a rotating frame the planet appears to swerve (the Coriolis / centrifugal look), which is exactly how co-orbital, Trojan and horseshoe paths become visible. Trails reset when you change the frame.
+      </div>
+    </>
+  );
+
+  const trailsNode = (
+    <>
+      <Slider label="Trail length" value={trailLen} min={0} max={TRAIL_MAX} step={50}
+        onChange={setTrailLen} format={v => (v === 0 ? 'off' : `${v}`)} />
+      <Pills
+        label="Trails"
+        options={[{ value: 1, label: 'On' }, { value: 0, label: 'Off' }]}
+        value={showTrails ? 1 : 0}
+        onChange={v => setShowTrails(v === 1)}
+      />
+    </>
+  );
+
+  const chaosNode = (
+    <>
+      <Slider label="Ghost planets" value={ghostCount} min={1} max={120} step={1}
+        onChange={setGhostCount} format={v => `${v}`} />
+      <Slider label="Perturbation ε" value={epsExp} min={-5} max={-1} step={0.5}
+        onChange={setEpsExp} format={v => `10^${v.toFixed(1)}`} />
+      <button style={{ ...btnStyle, width: '100%', flex: 'none', marginTop: 4 }}
+        onClick={() => api.current?.scatter()}>✦ Scatter ghosts here</button>
+    </>
+  );
+
+  const simNode = (
+    <>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <button style={btnStyle} onClick={() => setPaused(p => !p)}>{paused ? '▶ Play' : '❚❚ Pause'}</button>
+        <button style={btnStyle} onClick={() => api.current?.reset()}>↺ Reset</button>
+      </div>
+      <Slider label="Speed" value={speed} min={0.1} max={4} step={0.1}
+        onChange={setSpeed} format={v => `${v.toFixed(1)}×`} />
+      {onTour && (
+        <button style={{ ...btnStyle, width: '100%', flex: 'none' }} onClick={onTour}>
+          ✦ Take the tour
+        </button>
+      )}
+    </>
+  );
+
+  const settingsNode = (
+    <>
+      <button style={{ ...btnStyle, width: '100%', flex: 'none', marginTop: 8 }}
+        onClick={() => { clearPersistedState('trinary'); window.location.hash = '#/trinary'; window.location.reload(); }}>
+        ↺ Reset settings to defaults
+      </button>
+      <div style={note}>
+        Your settings (system, masses, climate band, sky, trails…) are saved on this device and restored on reload. This clears them.
+      </div>
+    </>
+  );
+
+  const sections: SectionDef[] = [
+    { id: 'system', title: 'System', arch: 'subject', node: systemNode, estHeight: 430 },
+    { id: 'stars', title: 'Stars', arch: 'subject', node: starsNode, estHeight: 440 },
+    { id: 'launch', title: 'Planet launch', arch: 'domain', node: launchNode, estHeight: 480 },
+    { id: 'climate', title: 'Climate', arch: 'domain', node: climateNode, estHeight: 330 },
+    { id: 'sky', title: 'Sky', arch: 'view', node: skyNode, estHeight: 300 },
+    { id: 'frame', title: 'Reference frame', arch: 'view', node: frameNode, estHeight: 340 },
+    { id: 'trails', title: 'Trails', arch: 'marks', node: trailsNode, estHeight: 170 },
+    { id: 'chaos', title: 'Chaos demo', arch: 'lab', node: chaosNode, estHeight: 230 },
+    { id: 'sim', title: 'Sim', arch: 'playback', node: simNode, estHeight: 210 },
+    { id: 'settings', title: 'Settings', arch: 'quality', node: settingsNode, estHeight: 170 },
+  ];
+
+  const views: ViewDef[] = [
+    {
+      id: 'orbit',
+      title: 'Orbit',
+      defaultRect: { x: 372, y: 16, w: 712, h: 600 },
+      node: (
+        <div style={{ position: 'absolute', inset: 0, background: '#05060a' }}>
+          <Canvas3D onMount={onMount} />
+
+          {/* Live divergence readout. */}
+          <div style={{
+            position: 'absolute', top: 10, left: 10, padding: '8px 12px',
+            background: 'rgba(8,12,20,0.62)', border: '1px solid rgba(120,150,200,0.25)',
+            borderRadius: 8, color: '#cfe0f5', font: '12px/1.5 ui-monospace, monospace',
+            pointerEvents: 'none', backdropFilter: 'blur(4px)',
+          }}>
+            <div>cloud spread&nbsp; <span ref={spreadElRef} style={{ color: GHOST_COLOR_HEX }}>0.00e+0</span></div>
+            <div>Lyapunov λ&nbsp;&nbsp; <span ref={lyapElRef} style={{ color: '#9ec7ff' }}>…</span></div>
+            <div>sim time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span ref={timeElRef} style={{ color: '#9ec7ff' }}>0.0</span></div>
+            {placeMode && <div style={{ color: '#ffd27f' }}>click + drag to launch</div>}
+          </div>
+
+          {skyOn && <SkyView dataRef={skyRef} dayLen={dayLen} tilt={tilt} />}
+
+          <Observatory snapshot={labSnap} />
+        </div>
+      ),
+    },
+  ];
+
+  // Built-in layouts replace the old Settings "simple / advanced" toggle:
+  // Sandbox ≈ the old simple set; Advanced opens every knob.
+  const layouts: LayoutDef[] = [
+    {
+      id: 'sandbox', name: 'Sandbox', sub: 'System · Planet launch · Sim', icon: 'tune',
+      open: { system: { x: 84, y: 18 }, launch: { x: 84, y: 466 }, sim: { x: 366, y: 18 } },
+    },
+    {
+      id: 'advanced', name: 'Advanced', sub: 'Every knob', icon: 'grid',
+      open: {
+        system: { x: 84, y: 18 }, launch: { x: 84, y: 466 },
+        stars: { x: 366, y: 18 }, climate: { x: 366, y: 476 },
+        sky: { x: 648, y: 18 }, frame: { x: 648, y: 336 },
+        sim: { x: 930, y: 18 },
+      },
+    },
+  ];
+
+  return (
+    <Workspace
+      appId="trinary-obs"
+      title="Trinary System"
+      subtitle={preset.name}
+      sections={sections}
+      views={views}
+      layouts={layouts}
+      defaultLayoutId="sandbox"
+      explainer={explainerText}
+      modes={MODES}
+      activeMode="observatory"
+      onModeChange={id => { if (id === 'lab') window.location.hash = '#/trinary-lab'; }}
+    />
   );
 }

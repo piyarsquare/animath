@@ -60,6 +60,8 @@ const MIGRATED = new Set<string>([
   '/agentic-sorting',
   '/stable-marriage',
   '/stable-matching',
+  '/trinary',
+  '/trinary-lab',
 ]);
 
 function Router(): JSX.Element {
