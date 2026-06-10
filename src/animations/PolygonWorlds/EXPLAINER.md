@@ -32,6 +32,21 @@ swaps **trees ↔ columns**, and your old footprints now show **through the glas
 floor, mirror-reversed** — you never become mirrored; you are simply looking at
 the back of your own ink.
 
+### Through the glass: backwards, or just upside-down?
+
+Any flat sign read from its back is **mirror-reversed** — try it on the torus:
+the Roman numerals under the glass read backwards, and nothing topological has
+happened. *Which* axis looks flipped depends on how you got underneath (pitch
+over: left–right; walk around: top–bottom — the two readings differ by a
+half-turn), but the reversal itself is unavoidable. Turning a plaque over is a
+**rotation** of space whose shadow on the sheet is a **reflection** — that one
+fact is the whole Klein-bottle gluing. And glass never mirrors *things*: a
+column behind the floor is just a column; only ink read from behind reverses.
+The topology enters exactly here: on the torus your own footprints can never
+end up behind the glass — on the Klein bottle, ℝP², and the cross-cap worlds,
+they must. Meeting your own backwards footprints under the floor is the
+certificate that your world is non-orientable.
+
 ### The curved worlds are genuinely round
 
 The flat worlds (torus, Klein) really are isometric: the square you see *is* the
@@ -41,11 +56,11 @@ surface you walk. The curved worlds are subtler, and the difference is honest:
   genuinely round sphere — *isometrically*, with no hidden corners. Its lower
   hemisphere is the same square seen through the **antipodal** identification
   `x ∼ −x`, so the trees there wear columns and the trail's antipodal image is
-  its mirror twin.
-  Walk over the bright **seam** (the equator) and the mini-map flags the *mirror side*.
+  its mirror twin — on the **other face**, hanging under the glass.
+  Walk over the bright **seam** (the equator) and the mini-map flags the *other face*.
   The bottom-left inset shows ℝP² **immersed in 3-space** (the Steiner *Roman
   surface*) — the same surface you walk, wildly reshaped; your marker rides it, and
-  because the immersion identifies antipodes, near-side and mirror-side land on the
+  because the immersion identifies antipodes, both faces land on the
   *same* point.
 - **Sphere.** The square here is a **chart**, not an isometric copy: it is *stretched*
   over the whole round sphere (the way a flat map distorts the globe), so distances
@@ -61,10 +76,11 @@ onto a sphere — a flat square simply cannot close those corners.
 
 A double torus or a multi-cross-cap surface has χ < 0, so by Gauss–Bonnet it must
 carry **negative** curvature: it lives on the **hyperbolic plane**, drawn here in
-the **Poincaré disk**. You stand at the centre and the whole tiling flows past as
+the **Poincaré disk**. You stand at the center and the whole tiling flows past as
 you walk — the glowing boundary circle is *infinitely far away*, so no matter how
 far you go you never reach it, and landmarks shrink as they recede (that shrinking
 *is* the negative curvature: there is exponentially more room out there than a flat
 plane has). Each tile is one more copy of the fundamental polygon; the mini-map
 shows that polygon with its edge identifications. On the non-orientable cross-cap
-worlds the glide tiles wear the **mirror** skin (numbers come back reversed).
+worlds the glide tiles wear the **other face's** skin — columns and Roman plates,
+upright; the reversed numbers are underneath, through the glass.

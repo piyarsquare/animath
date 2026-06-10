@@ -25,7 +25,8 @@ export interface SquareEdgeSpec {
 }
 
 /** Player marker in square-normalised coords: sx,sy ∈ −1..1 with +y up; `angle`
- *  is the heading in canvas radians; `flipped` paints it amber (mirror sheet). */
+ *  is the heading in canvas radians; `flipped` paints it amber (the player is on
+ *  the other face of the sheet). */
 export interface SquareMarker {
   sx: number;
   sy: number;

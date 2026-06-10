@@ -57,7 +57,7 @@ const insetCorner = ([cu, cv]: [number, number]): [number, number] =>
   [0.5 + (cu - 0.5) * VERTEX_INSET, 0.5 + (cv - 0.5) * VERTEX_INSET];
 
 interface Cell {
-  group: THREE.Group;     // matrix = translate(cellOrigin) · scale(1, flip, 1)
+  group: THREE.Group;     // matrix = translate(cellOrigin) · (flipped ? rotateπ(glideDir) : I) — the rigid transparency flip
   slab: THREE.Mesh;
   top: THREE.Group;       // trees (top face)
   bottom: THREE.Group;    // columns (bottom face)

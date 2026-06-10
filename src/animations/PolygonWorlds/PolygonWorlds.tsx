@@ -434,7 +434,7 @@ function squareSpec(spec: WorldSpec, st: SquareMapState | null): SquareMapSpec {
   const marker = st
     ? { sx: (st.u - 0.5) * 2, sy: (st.v - 0.5) * 2, angle: Math.atan2(-st.hz, st.hx), flipped: st.flipped }
     : null;
-  const label = !st ? '' : st.flipped ? `${spec.label} · mirror side` : spec.label;
+  const label = !st ? '' : st.flipped ? `${spec.label} · other face` : spec.label;
   return { tb, lr, marker, dots: [], border: false, label };
 }
 
@@ -446,7 +446,7 @@ function polygonSpec(spec: WorldSpec, st: SquareMapState | null): PolygonMapSpec
   const marker = st
     ? { px: (st.u - 0.5) * 2, py: (st.v - 0.5) * 2, hx: st.hx, hy: st.hz, flipped: st.flipped }
     : null;
-  const label = !st ? spec.label : st.flipped ? `${spec.label} · mirror tile` : spec.label;
+  const label = !st ? spec.label : st.flipped ? `${spec.label} · other face` : spec.label;
   return {
     sides: m,
     baseAngle: -Math.PI / 2 + Math.PI / m,

@@ -5,9 +5,9 @@ date: 2026-06-10
 title: Polygon Worlds — sign-through-the-floor orientation question + three-hats review
 branch: claude/polygon-sign-orientation-50exno
 slug: polygon-sign-orientation-50exno
-status: in-progress
-build: unknown
-followup: null
+status: completed
+build: passed
+followup: low
 pr: null
 app: polygon-worlds
 ---
@@ -33,6 +33,26 @@ demonstration choice (holonomy square recommended, undecided) and a parked
 camera/headlamp bug.
 
 ## Working notes
+
+### 🟡 milestone · 00:20 — Prose pass landed; final build green; session deliverables complete
+**Why:** Last step of the adjudicated plan (§4.4); closes the session's
+implementation scope.
+
+A sub-agent applied the language corrections while the green run executed:
+EXPLAINER gained the **"Through the glass: backwards, or just upside-down?"**
+section (the user's headline question, answered in the app's own vocabulary,
+with the torus under-glass Roman numerals as the control experiment); the two
+false "mirror-reversed on glide tiles" claims were corrected to the
+other-face-upright / reversed-only-through-glass truth; "mirror side/tile"
+labels became **"other face"**; the one-line law of the app now lives in
+`inkTrail.ts`'s header; stale comments fixed (`euclidean.ts` Cell matrix,
+`engineTypes.ts`, `squareMap.ts`); **`otherSide.ts` deleted** (zero
+importers); American spellings normalized in `decor.ts`/EXPLAINER.
+
+`npm run build` ✅ over everything. Not done (deliberately, per the
+adjudication): hyperbolic decor azimuth equivariance (polish; candidate
+future curvature demo via the vertex-plate holonomy ring); British spellings
+outside the mandated files; the parked S05 camera/headlamp bug.
 
 ### 🟡 milestone · 23:55 — GREEN: all six worlds pass every check
 **Why:** The fixes are verified by the same extended guard that failed before

@@ -6,7 +6,7 @@ import * as THREE from 'three';
  * One trail exists per world: a sequence of oriented footprint decals
  * ("stamps") stored ONCE, in the world's canonical coordinates, with no mirror
  * flags and no per-side rebuilds. Every visible appearance of the trail — the
- * periodic copies in the neighbouring cells, the ℝP² antipodal twin, the
+ * periodic copies in the neighboring cells, the ℝP² antipodal twin, the
  * reversed read through the glass floor — is produced by rendering this one
  * buffer through the same genuine transforms that already place the decor
  * (deck elements, the sheet flip). An orientation-reversing (det < 0)
@@ -25,6 +25,12 @@ import * as THREE from 'three';
  *
  * The glyph is the classic orientation-test pair: an arrow with an **F**,
  * cyan on the print's left and magenta on its right.
+ *
+ * The one-line law of the app: every deck transform of the thickened sheet is
+ * a PROPER motion of 3-space (det +1) — orientation reversal exists only as
+ * its restriction to the 2D sheet (the transparency flip) — and mirror-reading
+ * only ever appears through the glass (flat ink viewed from its anti-normal
+ * side).
  */
 export interface InkTrail {
   geometry: THREE.BufferGeometry;

@@ -35,7 +35,8 @@ import {
  * developed tiles always surround the player. Crossing a **glide** edge of a
  * non-orientable world makes `det(h) < 0`,
  * which flips the skin of *every* tile (`det(h)·det(γ) < 0`) — you genuinely flip to
- * the other side (trees ↔ columns, decals mirror-reversed) — while your frame, and
+ * the other side (trees ↔ columns; the decals on the face you walk still read upright
+ * and un-mirrored — backwards text appears only through the glass) — while your frame, and
  * therefore your controls, stay put. The geodesic tile edges draw the `{2n, 2n}`
  * tiling out to the horizon; decor copies are kept on the tiles nearest the player
  * and scaled by the conformal factor `1−r²`.
