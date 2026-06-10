@@ -121,3 +121,5 @@ Deploy wired in `deploy.yml` (publishes to `/animath/sessions/`, noindex).
 - **For the next agent**: drive `#/stable-matching`, push the consensus sliders and try
   Schedule = Alternate (watch it go unstable), and the Lab's Unstable % vs Ranks(A·B)
   Lego surfaces. Then either build the Stabilize repair or move on the switch.
+- **Follow-up value:** MEDIUM — what's built is screenshot-verified, but the engine prune and the old-app switch/cleanup remain open product decisions.
+

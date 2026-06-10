@@ -118,3 +118,5 @@ n renders as a dense lego heatmap; strip ticks min 3px.
 4. **Not done.** Tier 5 and the polish backlog above; the route switch. Stopped at
    Tier 5 deliberately — it's a separate app needing a product decision, not a safe
    autonomous build.
+5. **Follow-up value:** MEDIUM — the shipped tiers are cross-checked against brute force, but Tier 5 and the route switch were deliberately deferred pending a product decision.
+

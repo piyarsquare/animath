@@ -113,6 +113,6 @@ container kept reverting the local checkout — see Context):
    per-turn `reset --hard origin` and frequent pushes.
 6. **Easier?** A harness helper to drive in-app controls (beyond seeding
    `localStorage`) would speed visual iteration.
-7. **Follow-up value:** <span class="badge badge-ok">LOW</span> — all features
+7. **Follow-up value:** LOW — all features
    build, are pushed, and were verified; what remains is optional polish, docs, and
    the merge decision.

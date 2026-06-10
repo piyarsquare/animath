@@ -439,9 +439,19 @@ skeletons. Markdown reads natively on GitHub, and **`npm run sessions`**
 HTML view (`report.css` + `report.js`: timeline rail, sticky scroll-spy TOC,
 callouts, sortable tables) and builds a **cross-branch control center**
 (`docs/sessions/control-center.html`) that aggregates every active branch's reports
-into one searchable index. The build reads branch tips read-only (never modifies
-other branches), deduping each report to its most-recently-updated copy with
-provenance taken from the slug folder. The converter `docs/sessions/convert-html.mjs`
-turns the older hand-authored HTML reports into Markdown. The shared self-reflection
-protocol lives at `.claude/prompts/self-reflection.md`.
+into one searchable index. The control center has three views — **Cards** ·
+**Timeline** · **Reflections** — plus a **category filter** bar whose active
+selection lives in the URL as `#cat=<key>` (shareable; app chips everywhere link to
+it). The **Reflections** view is an *exit-interview digest*: it scrapes each report's
+`## Self-reflection` section and its `**Follow-up value:** <LEVEL>` line, sorting
+entries by follow-up severity — so authoring that section in the exact format from
+`.claude/prompts/self-reflection.md` is what feeds it (`categories.mjs` holds the
+category taxonomy). The build reads branch tips read-only (never modifies other
+branches), deduping each report to its most-recently-updated copy with provenance
+taken from the slug folder. The converter `docs/sessions/convert-html.mjs` turns the
+older hand-authored HTML reports into Markdown. On deploy (`deploy.yml` runs
+`npm run sessions` then `copy-sessions-to-dist.mjs`) the hub ships to
+`/animath/sessions/control-center.html` (`noindex`, off to the side) and links out to
+the embed demo (`/animath/embed-demo.html`). The shared self-reflection protocol lives
+at `.claude/prompts/self-reflection.md`.
 </content>

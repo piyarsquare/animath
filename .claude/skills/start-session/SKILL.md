@@ -106,7 +106,10 @@ site. Two ways to view this session's report:
 - **Rich render + cross-branch control center**: run `npm run sessions` (after
   `git fetch --all`) to (re)generate `docs/sessions/converted/**` and
   `docs/sessions/control-center.html`, then open the control center — it aggregates
-  every active branch's reports. Surface these in the step-7 summary.
+  every active branch's reports (Cards · Timeline · **Reflections** views, a `#cat=`
+  category filter, and a link out to the embed demo). The **Reflections** view is an
+  exit-interview digest built from each report's `## Self-reflection` section — a fast
+  way to scan prior sessions' follow-up flags. Surface these in the step-7 summary.
 
 ## Progress Report Rule
 

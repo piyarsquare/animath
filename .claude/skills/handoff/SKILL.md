@@ -49,8 +49,10 @@ found" / "The problem"); **Key files**; **Open / not done**; **Context**;
 - Sections are `##` headings; the rendered view builds the TOC, anchors, and
   scroll-spy automatically.
 
-Append the **Self-Reflection Protocol** (`.claude/prompts/self-reflection.md`) as a
-`## Self-reflection` section at the end (convert its HTML to the equivalent Markdown).
+Append the **Self-Reflection Protocol** (`.claude/prompts/self-reflection.md`) verbatim
+as the final `## Self-reflection` section (it's already Markdown). Keep the heading and
+the closing `**Follow-up value:** <LEVEL> — …` line exact — the control center's
+**Reflections** view scrapes them for its exit-interview digest.
 
 ## Rules
 
