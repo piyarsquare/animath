@@ -224,9 +224,11 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
   ol.cc-timeline li.tl h3 a{color:var(--fg)}
   ol.cc-timeline .tl-head{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem}
   .cc-empty{color:var(--muted);padding:2rem 0}
+  .cc-home{color:var(--accent);text-decoration:none;font-weight:600}
+  .cc-home:hover{text-decoration:underline}
   @media (max-width:520px){.cc-thumb{width:96px;height:60px}}
 </style></head>
-<body><main class="report"><header><p class="kicker">animath · cross-branch</p>
+<body><main class="report"><header><p class="kicker"><a class="cc-home" href="../">↗ animath demo</a> · cross-branch session hub</p>
 <h1>Session control center</h1>
 <dl class="meta"><div><dt>Scope</dt><dd>${sessions.size} sessions · ${reports.length} reports · ${branchSet.size} branches · ${catSet.size} categories</dd></div>
 <div><dt>Generated</dt><dd>${new Date().toISOString().slice(0, 16).replace("T", " ")} · <code>build-sessions.mjs</code></dd></div></dl>
