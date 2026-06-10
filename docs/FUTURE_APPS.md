@@ -28,9 +28,9 @@ the same template:
 | 2 | **Firefly Synchronization** | coupled oscillators / emergence | Three.js points or 2D canvas | new |
 | 3 | **Murmurations (Flocking)** | self-propelled agents / emergence | Three.js instanced + spatial hash | new |
 | 4 | **Ant Colonies** | stigmergy / emergence | GPU field + agent layer | new |
-| 5 | **Glassy Networks** | disordered systems / optimization | DOM/graph or Three.js + MC | new |
+| 5 | **Glassy Networks** | disordered systems / rugged optimization (Ising · QUBO · QKP) | DOM/graph or Three.js + MC | new |
 | 6 | **Quantum Tree** | phylogenetics / quantum-combinatorics viz | SVG + a little canvas 2D (vanilla JS today) | **port** — source in hand |
-| 7 | **GAS — "gene advocate system"** | (TBD) | TBD | **port/confirm** — term + repo pending |
+| 7 | **GAS** (Gene Advocate System) | evolutionary dynamics / landscape exploration | DOM + time-series (port from Python) | **port** — source in hand |
 
 > [!NOTE]
 > **Two shared engine investments** show up repeatedly below and are worth
@@ -366,12 +366,38 @@ the Monte Carlo.
 - **Engine reuse**: StableMatching's DOM-graph approach; `chrome/readouts.tsx`
   (MiniHisto/Sparkline/StatGrid) is tailor-made for the analysis tier.
 
+### Optimization face: QUBO / Quadratic Knapsack — and GAS as an explorer
+The spin glass *is* an optimization problem. With `sᵢ = 2xᵢ − 1`, `xᵢ ∈ {0,1}`,
+`H = −Σ J_ij sᵢ sⱼ` becomes a **QUBO** (`min xᵀQx`), and the **Quadratic Knapsack
+Problem** (QKP) is the same quadratic 0/1 objective under a budget:
+
+  `max Σᵢ pᵢ xᵢ + Σ_{i<j} q_ij xᵢ xⱼ   s.t.  Σᵢ wᵢ xᵢ ≤ C`.
+
+All three (Ising, QUBO, QKP) share one **rugged/glassy landscape** of `2ⁿ` corners
+riddled with local optima. That makes "Glassy Networks" the natural home for a
+**landscape-exploration playground**: pit different explorers against the *same*
+instance and watch how each escapes (or gets trapped in) local minima —
+- **Simulated annealing** (temperature schedule, the classic),
+- **Population / replicator dynamics**, including **GAS** (§7) — the user's open
+  question is precisely *does the advocate/selector modifier ease exploration of a
+  glassy landscape?* — i.e. is GAS a competitive population-based metaheuristic vs
+  annealing on QKP/QUBO instances,
+- (later) **quantum-flavored** views (transverse-field / QAOA), which also link
+  back to the Quantum Tree's one-hot + cost-phase/mixer framing (§6).
+
+This is the **"rugged-landscape exploration" theme** that unifies §5 and §7: §5
+supplies the landscape (Ising/QUBO/QKP) and the readouts (energy, ground-state
+gap), §7 supplies one candidate explorer (GAS). A shared **landscape view** — a
+low-dimensional embedding or a 1-flip neighborhood graph colored by energy — and a
+shared **"best energy vs steps"** race chart would serve both.
+
 ### Open questions
-- Confirm "glassy networks" means **spin glasses / disordered networks** (the
-  assumption here) vs glassy dynamics in another sense (structural glass, jamming,
-  glassy *neural* nets). Scope hinges on this.
+- **Confirmed**: "glassy networks" = **spin glasses / disordered networks** in the
+  optimization sense (Ising · QUBO · QKP), not structural-glass/jamming.
 - How far into replica/`P(q)` territory to go before it stops teaching? Lean: lead
   with frustration + annealing; keep `P(q)` as an optional Analyze window.
+- Build order vs GAS: the shared landscape-exploration UI argues for designing §5
+  and §7 together, even if shipped separately.
 
 ---
 
@@ -487,22 +513,111 @@ Two routes, recommend the second:
 
 ---
 
-## 7. GAS — "gene advocate system" (PORT / CONFIRM)
+## 7. GAS — Gene Advocate System (PORT)
 
-> [!IMPORTANT]
-> **Term + source to confirm.** "Gene advocate system / GAS" needs disambiguation
-> before baseline work. Candidate readings to confirm with the user:
-> - a **gene-regulatory-network** simulator (genes activating/repressing each
->   other; Boolean or ODE networks),
-> - a **genetic-algorithm sandbox** (evolution/selection over a population),
-> - or a specific **named existing project** (like the quantum tree) in another
->   repo.
+> [!NOTE]
+> **Source in hand** — a set of Python/NumPy scripts (shared as uploads):
+> `01_GAS_model.py` (single run + plots), `02_GAS_model_compute.py` (parameter
+> sweep → `GA_table.tsv`), `03_GAS_model_study_results.py` (sweep analysis/plots),
+> `04_GAS_model_selector_1.py` (adds an evolvable **selector** axis), and an early
+> `hello_model_05.py`. Baseline below is from the code.
 
-### What I need
-The exact name/meaning, whether it's a port (repo + access) or a new build, and a
-one-line description of what it shows. Once confirmed, it gets a full section like
-the others — and if it's a gene-regulatory-network it pairs naturally with the
-emergence family above.
+### Concept
+An **evolutionary-dynamics sandbox** for a population of alleles indexed by two (or
+three) traits — a **gene** value `g` that the environment selects on, and an
+**advocate** value `a` that is an *evolvable modifier of how selection acts*. In a
+**fluctuating environment**, the question is whether the advocate trait (and, in
+`04`, a higher-level **selector** that decides whether advocacy is on) raises mean
+fitness — an *evolution-of-evolvability / dominance-modifier / bet-hedging* story.
+It connects outward to **rugged-landscape exploration** (§5): the population is a
+search process on a fitness landscape.
+
+### Canonical model / math (from the code)
+- **State** `f[g,a]` (`04`: `f[g,a,s]`), allele frequencies, `Σ f = 1`, over
+  `g ∈ {0..G−1}`, `a ∈ {0..A−1}` (`s ∈ {0..S−1}`).
+- **Environment** — `E = G!` environments, each a **permutation** of a selection
+  vector `select_vector = [1, r, r, …]` (`r = select_rate < 1`), so each environment
+  makes a different gene value "best." The environment **switches every `period`
+  steps**, cycling — a periodic non-stationary selection pressure.
+- **Selection (the advocate rule).** For a mated pair `(g₁,a₁),(g₂,a₂)` in
+  environment `e`, fitness is a *blend* of the two gene-selection values:
+
+  `S = α·sel[e,g₁] + (1−α)·sel[e,g₂]`,  `α = ½(1 + ES·sign(a₁−a₂))`.
+
+  `ES = 0` → α = ½ (plain codominant average). `ES = 1` → the **higher-advocate
+  allele's gene value fully determines fitness** (advocacy = winner-take-all
+  dominance). `04` makes the effect size itself a trait: `ES = ½(eff[s₁]+eff[s₂])`
+  with `eff = linspace(0,1,S)`, so a **selector** gene evolves advocacy on/off.
+  (Variants in the code: `weighted_advocate_selection`, `best_allele`,
+  `worst_allele`.)
+- **Replicator step** (one generation): `P = f ⊗ f` (random mating) → `P *= S[e]`
+  (select) → `fitness = ΣP` → `P /= fitness` → marginalize to alleles → `f ← f·M`
+  (mutation). `M` = uniform gene mutation (`mrate_G`) × **ladder** advocate
+  mutation (`mrate_A^{|Δa|}`, normalized) — see `simple_mutation`.
+- **Measure** — mean fitness over a window of the run; the **advocate benefit**
+  `Δ = fitness(ES=1) − fitness(ES=0)` (and a scaled `Δ/(1−fitness₀)`); swept over
+  `{G,A,mrate_G,mrate_A,select_rate,ES,period}`.
+
+### Key phenomena
+- In a **static** environment the best gene fixes and the advocate is ~neutral; the
+  interesting regime is **fluctuating** environments.
+- The advocate changes how fast the population **tracks** environment switches and
+  how much **diversity** it hedges — a non-monotone **`Δ` vs (period, mutation,
+  select_rate)** surface (the `03`/`04` sweeps), with a sweet spot where advocacy
+  pays.
+- In `04`, whether the **selector** for advocacy is itself **selected for** — a
+  clean evolution-of-evolvability readout.
+
+### Prior art / framing
+Replicator dynamics & evolutionary game theory; modifier-gene / dominance-evolution
+theory; bet-hedging and evolution of evolvability in fluctuating environments
+(Levins, and the modifier-theory literature). The advocate ≈ an evolvable dominance
+modifier; the QKP/glassy connection (§5) frames the population as a metaheuristic.
+
+### animath mapping
+- **Rendering**: a **CSS/DOM + time-series** app — closest precedents are the
+  **Trinary Lab** (ensemble runs + plots) and **StableMatching** (DOM + Analyze
+  tier). The replicator math is tiny NumPy (`einsum` over small `G,A,S`) → trivially
+  portable to TS typed arrays; **no WebGL needed**.
+- **Archetypes**:
+  - `subject` — dimensions `G,A` (and `S`); selection rule
+    (max-advocate / weighted / best / worst).
+  - `domain` — initial allele distribution; environment set + **schedule**
+    (`period`, switching).
+  - `drive` — **effect size `ES`**, mutation rates (`mrate_G`, `mrate_A`,
+    `mrate_S`), `select_rate`.
+  - `playback` — run/step/speed/reset (and "run to window").
+  - `color` — allele color (gene = hue, advocate = intensity); environment bands on
+    the time axis.
+  - `lab`/`readout` — **mean fitness over time**, **advocate benefit `Δ`**
+    (ES=1 vs 0, side by side), allele trajectories, and the **parameter-sweep
+    heatmap** (`Δ` vs `select_rate × period`) — the Analyze-tier centerpiece, built
+    on `chrome/readouts.tsx` (Sparkline / MiniHisto / StatGrid).
+  - `quality` — iterations.
+- **View windows**: (1) allele-frequency trajectories (the `G×A` lines), (2) fitness
+  / `Δfitness` over time with environment-switch markers, (3) the sweep heatmap,
+  (4) optional **landscape/exploration** view shared with §5.
+- **Interaction**: drag `ES` / mutation / `period` and watch trajectories + benefit
+  respond live; run advocate-on vs advocate-off side by side.
+
+### Port strategy
+A clean rewrite, not a wrap: the model is ~5 small NumPy functions
+(`max_advocate_selection`, `simple_mutation`, `run_simulation`) → port to
+`src/animations/GAS/lib/model.ts` (replace `einsum`/`ogrid` with explicit small
+loops; `G,A,S` are tiny), then build the views in React with `ControlPanel` +
+readouts. The expensive **parameter sweep** (`02`) becomes either a precomputed
+table shipped as JSON (like `03` reads `GA_table.tsv`) or an in-browser background
+sweep with a progress readout. Self-contained `src/animations/GAS/` folder.
+
+### Open questions
+- **MVP scope**: the live single-run sandbox (advocate on/off in a fluctuating
+  environment) first, then the sweep heatmap, then the `04` selector/evolvability
+  layer?
+- **The glassy bridge** (§5): build the shared landscape-exploration view now, or
+  ship GAS as pure evolutionary dynamics first and add the QKP/annealing race
+  later? Lean: ship the dynamics sandbox first; design the landscape view with §5.
+- **Naming/explainer**: "advocate" is non-standard terminology — the explainer
+  should connect it to dominance/modifier-gene language so the math is legible.
 
 ---
 
@@ -517,6 +632,12 @@ A dependency-aware order, *if* we build the new ones:
 3. **Murmurations** — reuses the agent/readout pattern in 3D.
 4. **Ant Colonies** — reuses CA's field engine **and** the agent layer, so it's
    cheapest once 1 & 3 exist.
-5. **Glassy Networks** — independent track; leans on the Analyze tier and the
-   existing DOM-graph approach.
-6–7. **Quantum Tree** and **GAS** — port effort gated on seeing the source repos.
+5. **Glassy Networks** + **GAS** — design **together** (the shared
+   rugged-landscape-exploration view and "best-energy-vs-steps" race); both lean on
+   the Analyze tier and the existing DOM-graph approach. GAS is a clean port of
+   small NumPy; Glassy supplies the Ising/QUBO/QKP landscape.
+6. **Quantum Tree** — port the math to TS + rebuild SVG views (source in hand);
+   biggest single port, but an unusually good fit for the multi-window UX.
+
+Both ports (Quantum Tree, GAS) now have **source in hand**; the gating items are
+licensing/attribution for the private repos and choosing each MVP's first slice.

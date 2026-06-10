@@ -40,6 +40,31 @@ fix; new branch `claude/future-apps-scoping` forked from `main`.
 
 <!-- Newest entry first. -->
 
+### 🔵 finding · 23:05 — GAS decoded; it unifies with Glassy Networks
+**Why:** User uploaded the GAS Python source and framed the link explicitly:
+"this lead to glassy networks and quadratic [k]napsack — does GAS ease
+exploration of glassy landscapes."
+
+GAS = **Gene Advocate System**: replicator dynamics over alleles indexed by a
+**gene** value (selected on) and an **advocate** value (an evolvable modifier of
+*how* selection acts — winner-take-all dominance when `ES=1`), in a **periodically
+switching environment**; `04` adds an evolvable **selector** for advocacy. The
+studies sweep params and measure the **advocate benefit Δ = fitness(ES=1) −
+fitness(ES=0)**. It's evolution-of-evolvability / dominance-modifier / bet-hedging.
+
+Key synthesis: the population is a **search on a fitness landscape**, so GAS +
+Glassy Networks become one **"rugged-landscape exploration"** theme — Glassy
+supplies the landscape (Ising → QUBO → **Quadratic Knapsack**) and the readouts;
+GAS is a candidate explorer to race against simulated annealing. Updated
+`FUTURE_APPS.md`: rewrote §7 (GAS) from the code (model, advocate rule, replicator
+step, animath mapping as a DOM/time-series app, clean-rewrite port strategy);
+extended §5 (Glassy) with the QUBO/QKP optimization face + the GAS-as-explorer
+bridge; updated the table and sequencing (design §5 and §7 together).
+
+> [!NOTE]
+> GAS source is small NumPy (uploads, this session only — not committed). Port =
+> rewrite to `src/animations/GAS/lib/model.ts` + React views; no WebGL.
+
 ### 🟢 code · 22:40 — Filled the Quantum Tree baseline from the uploaded source
 **Why:** User couldn't grant repo access (private; `*.github.io` not on the
 network allowlist; no `add_repo` tool this session) but uploaded a **zip** of
