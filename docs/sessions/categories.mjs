@@ -44,6 +44,9 @@ Object.assign(ALIAS, {
   "gale-shapley": "stable-marriage", marriage: "stable-marriage",
   matching: "stable-matching", topology: "topology-walk",
   mobius: "topology-walk", klein: "topology-walk",
+  // legacy src/animations/<App> names whose kebab form ≠ the route slug
+  "trinary-stars": "trinary",
+  "fractals-gpu": "fractals", "fractals2-d": "fractals", "fractals-cpu": "fractals",
 });
 
 // Strip a trailing 5-char mixed-case branch suffix (e.g. "-ar9zA") to the short name.
@@ -83,7 +86,7 @@ export function normalizeApps(appField, slug) {
   if (raw && !/^(null|none|tbd|\?|name or null)$/i.test(raw)) {
     const keys = [];
     for (const tok of raw.split(/[,/]+|\s{2,}/).map((s) => s.trim()).filter(Boolean)) {
-      const norm = tok.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const norm = kebab(tok);
       const key = ALIAS[tok.toLowerCase()] || ALIAS[norm] || (CATEGORIES[norm] ? norm : null);
       if (key && !keys.includes(key)) keys.push(key);
     }
@@ -94,6 +97,18 @@ export function normalizeApps(appField, slug) {
 
 export const catLabel = (key) => (CATEGORIES[key] || {}).label || key;
 export const catHue = (key) => (CATEGORIES[key] || {}).hue ?? 215;
+
+// Slugify a token to kebab-case. Splits camelCase / PascalCase / acronym
+// boundaries first, so legacy src/animations/<App> values (StableMatching,
+// ComplexParticles, FractalsGPU) become stable-matching / complex-particles /
+// fractals-gpu rather than collapsing to one lowercase word.
+const kebab = (s) =>
+  String(s)
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")     // camelCase boundary: …sM… → …s-M…
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1-$2")  // acronym boundary: GPUViewer → GPU-Viewer
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
