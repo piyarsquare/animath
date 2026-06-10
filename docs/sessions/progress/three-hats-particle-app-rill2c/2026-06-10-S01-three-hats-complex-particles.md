@@ -33,6 +33,26 @@ which directly shaped the Complex Particles viewer under review here).
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟢 code · 21:40 — Defaults round two, interaction polish, PR #205 watched
+**Why:** User feedback batches: landing-view defaults, chart removal, a
+nonlinear-view rotation guard, and modifier-based panning.
+
+Landed (commits `bf73fab`, `4bdf187`; build green; new-default screenshots in
+assets): Brightness defaults to **Uniform** (flat hue — Magnitude one pick
+away); **axis width 2**; **Motion starts Fixed**; default function **z²**;
+particle **size 0.3**; units **×π** with **±2π extents**; **reciprocal
+sampling on**. The input/output **chart pickers are removed** from the Domain
+panel (engine plumbing kept, state pinned Cartesian, explainer section
+dropped). The **4D auto-tumble now pauses in Torus/Sphere** — a 4D rotation
+before the nonlinear map warps the image rather than turning it (same
+mechanism as drop-axis; ambient Yaw/Pitch/Roll still orbits rigidly).
+Desktop panning is modifier-based — **right-drag, held Space, or Shift**
+(Space ignored while a form control has focus; canvas context menu
+suppressed); the Drag Orbit|Pan pill is phone-only now, replaced by a hint
+line on desktop. PR **#205** opened by the user from the UI; session
+subscribed to its activity (Cloudflare Pages preview is the only check; no
+review threads yet).
+
 ### 🟡 milestone · 21:10 — Fix-it session complete: all review items + UI restructure landed
 **Why:** User directed a fix-it session for synthesis items 1–5 plus the blind
 spots and pedagogical errors, and added a UI request mid-session.
