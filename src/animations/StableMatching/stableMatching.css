@@ -1,15 +1,16 @@
-.sm2-app {
+/* a view-window surface: fills the window body (the chrome makes it
+ * absolute inset 0) and scrolls its own content — never the page */
+.sm2-stage {
   position: absolute; inset: 0; overflow: auto;
   background: #0c0c10; color: #e7e7ea;
   font-family: system-ui, -apple-system, sans-serif;
-  padding: 16px clamp(12px, 4vw, 40px) 64px;
+  padding: 12px 14px 18px;
 }
+/* the matrix surface is a column whose grid wrap flex-fills, so the cell-size
+ * measurement can read the wrap's own box (no window.innerHeight anywhere) */
+.sm2-stage-matrix { display: flex; flex-direction: column; padding-bottom: 0; }
 
-/* header + tabs */
-.sm2-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-.sm2-tabs { display: inline-flex; gap: 4px; background: #16161d; border: 1px solid #26262f; border-radius: 10px; padding: 4px; }
-.sm2-tabs button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border: 0; border-radius: 7px; background: transparent; color: #aab; font: inherit; font-size: 14px; cursor: pointer; }
-.sm2-tabs button.active { background: #2563eb; color: #fff; }
+/* round-progress readout (Playback panel) */
 .sm2-progress { font-size: 13px; color: #8b8b99; font-variant-numeric: tabular-nums; }
 
 /* narration */
@@ -49,8 +50,8 @@
 .sm2-strip { flex: 1; display: flex; height: 16px; border-radius: 3px; overflow-x: auto; overflow-y: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); scrollbar-width: thin; }
 .sm2-strip i { flex: 1 0 3px; min-width: 3px; }
 
-/* preference matrix */
-.sm2-matrix-wrap { overflow-x: auto; }
+/* preference matrix — flex-fills the window column; its own box drives sizing */
+.sm2-matrix-wrap { overflow-x: auto; flex: 1 1 auto; min-height: 140px; }
 .sm2-matrix { display: grid; gap: 3px; align-items: stretch; width: max-content; }
 .sm2-corner { }
 .sm2-chead, .sm2-rhead { display: flex; align-items: center; justify-content: center; font-size: 12px; color: #9a9aa8; font-variant-numeric: tabular-nums; }
@@ -79,8 +80,10 @@
 .sm2-mcell.hi { filter: brightness(1.18) saturate(1.1); }
 .sm2-mcell.sel { outline: 2px solid #fff; outline-offset: -2px; z-index: 4; }
 
-/* floats as a bar at the screen bottom so it never pushes the grid off-screen */
-.sm2-inspect { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; flex-direction: column; gap: 6px; background: rgba(20, 20, 27, 0.96); border-top: 1px solid #2a2a36; padding: 10px clamp(12px, 4vw, 40px); box-shadow: 0 -6px 22px rgba(0, 0, 0, 0.45); backdrop-filter: blur(4px); }
+/* sticks to the bottom of the matrix WINDOW (not the viewport) so it never
+ * pushes the grid out of view; full-bleed via negative margins into the
+ * stage padding */
+.sm2-inspect { position: sticky; bottom: 0; z-index: 20; margin: 10px -14px 0; display: flex; flex-direction: column; gap: 6px; background: rgba(20, 20, 27, 0.96); border-top: 1px solid #2a2a36; padding: 10px 14px; box-shadow: 0 -6px 22px rgba(0, 0, 0, 0.45); backdrop-filter: blur(4px); }
 .sm2-inspect.pinned { border-top-color: #3a6ea5; }
 .sm2-pref { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .sm2-pref-who { font-size: 12.5px; color: #aab; white-space: nowrap; min-width: 7.5em; }
@@ -101,7 +104,7 @@
 .sm2-legend .k.blocking::before { background: transparent; outline: 2px solid #c084fc; outline-offset: -2px; }
 .sm2-legend .k.footprint::before { background: transparent; border: 1.5px dashed rgba(45,212,191,.85); }
 
-/* actions (rendered into ShellActions) */
+/* action stacks (Playback / Lab workspace panels) */
 .sm2-actions { display: flex; flex-direction: column; gap: 8px; }
 .sm2-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 8px; border: 1px solid #2e2e38; background: #1b1b22; color: #ddd; font: inherit; font-size: 14px; cursor: pointer; }
 .sm2-btn:hover { background: #24242d; } .sm2-btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; } .sm2-btn:disabled { opacity: .4; cursor: default; }

@@ -1,6 +1,5 @@
-/* Quarter-turn / spin controls, rendered inside the standard Actions panel
-   (the drawer's Actions tab + the draggable ActionFloater) rather than a
-   bespoke floater. Each plane is one compact row of four equal buttons —
+/* Quarter-turn / spin controls, rendered inside the drive-tier "4D Rotation"
+   workspace panel. Each plane is one compact row of four equal buttons —
    [spin ↻] [↻ turn] [↺ turn] [spin ↺] — with axis-colored plane labels, a
    drop-axis row, and reset. */
 

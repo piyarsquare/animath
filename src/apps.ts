@@ -1,8 +1,16 @@
-import type { AppDescriptor } from './components/AppShell';
+export interface AppDescriptor {
+  /** Hash route (no leading `#`, e.g. `/` or `/fractals`). */
+  hash: string;
+  /** Human-readable name shown in the gallery. */
+  name: string;
+  /** Optional emoji or single character used as the card glyph. */
+  icon?: string;
+  /** One-line description shown on the gallery cards. */
+  blurb?: string;
+}
 
-/** Catalog of animations, shared by the hash router (src/index.tsx) and the
- *  menu screen (src/components/Menu.tsx). The order here is the order shown
- *  both in the drawer's Apps tab and on the landing gallery. */
+/** Catalog of animations — the canonical app registry (append-only). The
+ *  gallery (src/chrome/catalog.ts) derives its cards from this order. */
 export const apps: AppDescriptor[] = [
   {
     hash: '/complex-particles',

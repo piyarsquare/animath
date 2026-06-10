@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 
 /**
  * A small, self-contained guided tour: a sequence of dismissable cards shown
- * over the Trinary app on a user's first visit (and re-launchable from the "?"
- * button next to the view tabs). Pure presentation — it owns only its step
- * index; the parent decides when it is open and persists the "seen" flag.
+ * over the Trinary app on a user's first visit (and re-launchable from the
+ * "Take the tour" button in the Observatory's Sim panel). Pure presentation —
+ * it owns only its step index; the parent decides when it is open and persists
+ * the "seen" flag.
  */
 export interface TourStep { title: string; body: string }
 
@@ -43,7 +44,8 @@ export default function Tour({ steps, onClose }: { steps: TourStep[]; onClose: (
 }
 
 const scrim: React.CSSProperties = {
-  position: 'fixed', inset: 0, zIndex: 120,
+  // Above all workspace chrome (panels, view windows, layout menu).
+  position: 'fixed', inset: 0, zIndex: 320,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'rgba(2,4,8,0.55)', backdropFilter: 'blur(3px)', padding: 16,
 };

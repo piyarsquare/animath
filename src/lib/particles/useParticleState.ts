@@ -33,9 +33,11 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // Camera orbit + pan are transient "looking" state, not settings — they reset
   // each session (and the Reset orientation button clears them), so they are
   // intentionally NOT persisted.
-  const [azimuth, setAzimuth] = useState(0);
-  const [elevation, setElevation] = useState(0);
-  const [roll, setRoll] = useState(0);
+  // Free orbit: the camera's orientation quaternion (camera-local → world).
+  // Identity = the straight-back default, at (0, 0, cameraZ) facing the target.
+  const [camQuat, setCamQuat] = useState(() => new THREE.Quaternion());
+  /** What a one-finger drag does: orbit the camera or pan the target. */
+  const [dragMode, setDragMode] = useState<'orbit' | 'pan'>('orbit');
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
   const [panZ, setPanZ] = useState(0);
@@ -137,6 +139,15 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
 
   // ---- View / projection state ----
   const [viewType, setViewType] = usePersistentState<ProjectionMode>(pk('viewType'), ProjectionMode.Perspective);
+  // The projection slider: 0 = Perspective, 1 = Torus, 2 = Hopf, fractional
+  // positions are live GPU morphs between the neighbors. Seeded from the
+  // restored viewType (Stereo maps to Torus — same stereographic projection,
+  // the Torus path just soft-floors the pole).
+  const [projMix, setProjMix] = usePersistentState(
+    pk('projMix'),
+    viewType === ProjectionMode.Hopf ? 2
+      : viewType === ProjectionMode.Torus || viewType === ProjectionMode.Stereo ? 1 : 0,
+  );
   const [viewMotion, setViewMotion] = usePersistentState<(typeof motionModes)[number]>(pk('viewMotion'), 'Quaternion');
   const [dropAxis, setDropAxis] = usePersistentState<(typeof dropModes)[number]>(pk('dropAxis'), 'None');
   // `proj` is the projection actually applied to the shader (vs. `viewType`, the
@@ -156,8 +167,6 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // Whether to draw the faint sphere/donut reference scaffolding.
   const [showScaffold, setShowScaffold] = usePersistentState(pk('showScaffold'), true);
   // Hopf fiber-trace overlay (Torus view): toggle + how many fibers per latitude.
-  const [showFibers, setShowFibers] = usePersistentState(pk('showFibers'), false);
-  const [fiberDensity, setFiberDensity] = usePersistentState(pk('fiberDensity'), 12);
   const [orientationMatrix, setOrientationMatrix] = useState<number[][]>([
     [0, 0, 0, 0],
     [0, 0, 0, 0],
@@ -217,9 +226,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     saturation, setSaturation,
     particleCount, setParticleCount,
     cameraZ, setCameraZ,
-    azimuth, setAzimuth,
-    elevation, setElevation,
-    roll, setRoll,
+    camQuat, setCamQuat,
+    dragMode, setDragMode,
     panX, setPanX,
     panY, setPanY,
     panZ, setPanZ,
@@ -275,13 +283,12 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
 
     // View state + setters
     viewType, setViewType,
+    projMix, setProjMix,
     viewMotion, setViewMotion,
     dropAxis, setDropAxis,
     proj, setProj,
     fiberCollapse, setFiberCollapse,
     showScaffold, setShowScaffold,
-    showFibers, setShowFibers,
-    fiberDensity, setFiberDensity,
     orientationMatrix, setOrientationMatrix,
 
     // Three.js object refs

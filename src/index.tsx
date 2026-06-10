@@ -1,9 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import Menu from './components/Menu';
-import { AppShell } from './components/AppShell';
-import { apps } from './apps';
+import Gallery from './chrome/Gallery';
+import './chrome/theme.css';
+import { applyPersistedSkin } from './chrome/skins';
+
+// Set <html data-theme> before first paint so every route renders skinned.
+applyPersistedSkin();
 
 const FractalsGPU = React.lazy(() => import('./animations/FractalsGPU/FractalsGPU'));
 const Fractals2D = React.lazy(() => import('./animations/Fractals/Fractals2D'));
@@ -15,9 +18,10 @@ const StableMarriage = React.lazy(() => import('./animations/StableMarriage/Stab
 const StableMatching = React.lazy(() => import('./animations/StableMatching/StableMatching'));
 const AgenticSorting = React.lazy(() => import('./animations/AgenticSorting/AgenticSorting'));
 const PolygonWorlds = React.lazy(() => import('./animations/PolygonWorlds/PolygonWorlds'));
+const EmbedComplexParticles = React.lazy(() => import('./embed/EmbedComplexParticles'));
+const EmbedPlaneTransform = React.lazy(() => import('./embed/EmbedPlaneTransform'));
 
 const routes: Record<string, React.ComponentType> = {
-  '/': Menu,
   '/complex-particles': App,
   '/plane-transform': PlaneTransform,
   '/fractals': FractalsGPU,
@@ -34,6 +38,9 @@ const routes: Record<string, React.ComponentType> = {
   '/stable-matching': StableMatching,   // rebuild of Stable Marriage; will replace it on switch
   '/agentic-sorting': AgenticSorting,
   '/polygon-worlds': PolygonWorlds,
+  // Chrome-less applet routes for embedding in web pages (docs/EMBEDS.md).
+  '/embed/complex-particles': EmbedComplexParticles,
+  '/embed/plane-transform': EmbedPlaneTransform,
 };
 
 function getHash(): string {
@@ -51,20 +58,17 @@ function Router(): JSX.Element {
 
   // Routes may carry a `?query` (e.g. the lab's shareable config); match on path.
   const path = hash.split('?')[0];
-  const Component = routes[path] ?? Menu;
-  const navigate = (h: string) => { window.location.hash = '#' + h; };
 
-  // The Lab is a tab within the Trinary app, not a separate app: present it as
-  // `/trinary` to the shell so the Apps list stays highlighted and switching
-  // tabs doesn't trigger a full shell reset.
-  const shellHash = path === '/trinary-lab' ? '/trinary' : path;
+  // The gallery is the landing page and the only cross-app hub; unknown
+  // hashes fall back to it. Every app owns its chrome (Workspace + TopBar)
+  // and renders bare.
+  const Component = routes[path];
+  if (path === '/' || !Component) return <Gallery />;
 
   return (
-    <AppShell apps={apps} currentHash={shellHash} onNavigate={navigate}>
-      <React.Suspense fallback={<div style={{ background: '#000', width: '100%', height: '100%' }} />}>
-        <Component />
-      </React.Suspense>
-    </AppShell>
+    <React.Suspense fallback={<div style={{ background: 'var(--bg, #000)', width: '100%', height: '100%' }} />}>
+      <Component />
+    </React.Suspense>
   );
 }
 

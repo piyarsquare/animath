@@ -46,6 +46,7 @@ export function startAnimationLoop(deps: AnimationLoopDeps): void {
   let transStart = 0;
   let transDuration = 0;
   let transStartVal = 0;
+  let lastMatrixPush = 0;   // throttles the React orientation-matrix readout
 
   const animate = () => {
     const elapsed = clock.getElapsedTime();
@@ -156,9 +157,15 @@ export function startAnimationLoop(deps: AnimationLoopDeps): void {
       [ex.y, ey.y, ev.y, eu.y],
       [ex.z, ey.z, ev.z, eu.z]
     ];
+    // The matrix readout is React state: pushing it every frame re-renders
+    // the whole workspace chrome at animation rate (the default Quaternion
+    // tumble changes orientation continuously — visible jank on phones). The
+    // Detail panel is a diagnostic, so refresh it a few times a second.
     const joined = matrix.map(r => r.map(v => v.toFixed(2)).join(' ')).join('|');
-    if (joined !== orientationRef.current) {
+    const nowMs = performance.now();
+    if (joined !== orientationRef.current && nowMs - lastMatrixPush > 250) {
       orientationRef.current = joined;
+      lastMatrixPush = nowMs;
       setOrientationMatrix(matrix);
     }
 

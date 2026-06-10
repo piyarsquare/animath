@@ -5,16 +5,20 @@ import type { ParticleState } from './useParticleState';
 
 const ORBIT_SENSITIVITY = 0.006;     // radians of camera orbit per pixel
 const WHEEL_ZOOM_SENSITIVITY = 0.01; // cameraZ delta per wheel deltaY
-const ELEV_LIMIT = Math.PI / 2 - 0.01;
 
 interface Pt { x: number; y: number; }
+
+const X_AXIS = new THREE.Vector3(1, 0, 0);
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
 
 /**
  * Pointer-driven CAMERA controls for a particle viewer. Gestures never touch
  * the 4D quaternion rotation — plane rotations live on the on-screen
  * quarter-turn buttons.
  *
- *   1-pointer drag             → orbit (azimuth + elevation around look-at).
+ *   1-pointer drag             → free orbit (trackball tumble around the
+ *                                look-at target, no pole limits) — or pan,
+ *                                when the Camera panel's Drag mode is Pan.
  *   1-pointer drag + Shift     → pan (translates the look-at target in the
  *                                screen plane, scene follows the finger).
  *   2-pointer pinch            → cameraZ (zoom).
@@ -73,14 +77,16 @@ export function useGestureRotation(state: ParticleState) {
     if (count === 1) {
       const dx = next.x - prev.x;
       const dy = next.y - prev.y;
-      if (e.shiftKey) {
+      if (e.shiftKey || state.dragMode === 'pan') {
         applyPan(dx, dy, el);
       } else {
-        // Drag-right turns the camera right (azimuth grows); drag-up pitches down.
-        state.setAzimuth(a => a + dx * ORBIT_SENSITIVITY);
-        state.setElevation(prevEl =>
-          Math.max(-ELEV_LIMIT, Math.min(ELEV_LIMIT, prevEl - dy * ORBIT_SENSITIVITY)),
-        );
+        // Free trackball orbit: incremental rotations about the camera's own
+        // right/up axes, so the tumble never hits a pole stop. Drag-right
+        // turns the camera right; drag-up pitches over the top and keeps going.
+        state.setCamQuat(q => q.clone()
+          .multiply(new THREE.Quaternion().setFromAxisAngle(Y_AXIS, dx * ORBIT_SENSITIVITY))
+          .multiply(new THREE.Quaternion().setFromAxisAngle(X_AXIS, dy * ORBIT_SENSITIVITY))
+          .normalize());
       }
     } else if (count >= 2) {
       const others = [...pointers.current.entries()].filter(([id]) => id !== e.pointerId);

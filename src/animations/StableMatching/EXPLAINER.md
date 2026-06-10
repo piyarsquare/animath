@@ -57,7 +57,7 @@ The stable matchings form a **distributive lattice**. The app exposes it three w
   (everyone's median stable partner — the center), **Min-regret**, **Sex-equal**
   (balances A's and B's happiness), **Balanced**. Watch the per-side averages pull
   together as you pick a fairer one.
-- **Lattice tab** — the Hasse diagram of *all* stable matchings: A-optimal at the
+- **Lattice layout** — the Hasse diagram of *all* stable matchings: A-optimal at the
   top, B-optimal at the bottom, each edge a single **rotation**, the named solutions
   flagged. Click a node to load it. It collapses to a single point as consensus → 100%.
 

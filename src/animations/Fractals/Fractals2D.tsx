@@ -317,7 +317,7 @@ export default function Fractals2D() {
   }, [animating, animate]);
 
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <canvas
         ref={canvasRef}
         width={1}
@@ -325,7 +325,19 @@ export default function Fractals2D() {
         onClick={handleSelect}
         style={{ width: '100%', height: '100%', display: 'block', background: 'black' }}
       />
-      <div style={{ position: 'absolute', top: 10, left: 10, color: 'white' }}>
+      {/* Unlisted legacy route: a minimal way back to the gallery. */}
+      <button
+        aria-label="Home — all animations"
+        title="Home — all animations"
+        onClick={() => { window.location.hash = '#/'; }}
+        style={{
+          position: 'absolute', top: 10, left: 10,
+          width: 28, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer',
+          background: 'var(--accent, #ffd400)', color: 'var(--accent-fg, #1c1503)',
+          fontWeight: 900, fontSize: 15, lineHeight: '28px',
+        }}
+      >a</button>
+      <div style={{ position: 'absolute', top: 10, left: 48, color: 'white' }}>
         <label>
           Function:
           <select value={type} onChange={e => setType(e.target.value as any)}>

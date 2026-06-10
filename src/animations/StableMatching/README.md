@@ -36,5 +36,7 @@ A key finding lives here: synchronous two-sided deferred acceptance is usually *
 stable, and the lattice of stable matchings is largest in the disordered
 (low-consensus) regime, **collapsing to a single point** at full consensus.
 
-Built framework-native (AppShell `ShellSettings`/`ShellActions` + `ControlPanel`
-primitives, `usePersistentState`).
+Built framework-native on the Workspace chrome (archetype panels — Algorithm ·
+Instance · Display · Playback · Lab — plus the Matching matrix / Welfare surface /
+Stable-matching lattice view windows, switched by the Run / Lab / Lattice layouts),
+with `ControlPanel` primitives and `usePersistentState`.

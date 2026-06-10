@@ -17,6 +17,8 @@ reachable directly by hash route.
 6. **[Trinary System](https://piyarsquare.github.io/animath/#/trinary)** – drop a planet into a chaotic three-star system and watch its future diverge; an in-app **Lab** tab runs thousands of worlds and maps their fates into fractal "destiny" portraits and statistics.
 7. **[Stable Marriage](https://piyarsquare.github.io/animath/#/stable-marriage)** – step through the Gale–Shapley algorithm with bias and consensus controls.
 8. **[Agentic Sorting](https://piyarsquare.github.io/animath/#/agentic-sorting)** – concurrent sorting simulation where autonomous agents with distinct strategies produce emergent order.
+9. **[Stable Matching](https://piyarsquare.github.io/animath/#/stable-matching)** – a rebuilt Gale–Shapley lab: tune each side's consensus, watch the proposer advantage, sweep the whole consensus plane, and browse the lattice of stable matchings.
+10. **[Polygon Worlds](https://piyarsquare.github.io/animath/#/polygon-worlds)** – one decorated square, four worlds: glue its edges and walk a torus, Klein bottle, projective plane or sphere in first person.
 
 ---
 
@@ -38,31 +40,42 @@ Goals:
 
 ---
 
-## 2 The app shell
+## 2 The workspace chrome
 
-The default route (`#/`) is a **landing menu** — a gallery of cards, one per
-app. Every other route is wrapped in a persistent `AppShell` that provides a top
-bar with these buttons (left to right):
+The landing page (`#/`) is a **gallery** — hero, category filter chips, and one
+live-preview card per app. Clicking a card opens that app's **workspace**: a
+full-viewport dotted "void" stage where *everything is a window* — the plot(s)
+("view windows") and the control panels alike. The brand mark (top-left) is
+**Home**; the gallery is the only hub between apps.
 
-* **⌂ Home** — back to the landing menu (hidden on the menu itself).
-* **☰ Apps** — opens the drawer's Apps tab to switch animations.
-* **ƒ Function** — switch the active function/variant where an app offers one
-  (dimmed otherwise).
-* **Title** — the current app's name plus an optional monospace formula;
-  clicking it jumps to the Settings tab.
-* **⚙ Settings** — the app's parameter controls.
-* **▶ Actions** — one-shot actions (reset, modes, …); these are mirrored into a
-  draggable on-canvas floater.
-* **? Explainer** — a "what am I looking at?" popup with a short write-up.
+* **Left icon rail** — one button per panel, drawn from a closed vocabulary of
+  **11 archetypes in 5 tiers** (Define → Render → Drive → Analyze → System):
+  `subject` ƒ · `domain` · `view` · `color` · `marks` · `motion` · `drive` ·
+  `playback` · `lab` · `readout` · `quality`. One icon = one meaning, in every
+  app.
+* **Windows** drag by their headers with soft-magnetic snapping (accent guide
+  lines), dock tightly together, never overlap when opened, reflow as a chain
+  when one collapses, and raise to the top when touched. View windows also
+  resize from the bottom-right handle and expand to **full screen** from the
+  header button (Esc restores).
+* **Layouts** — the top-bar `Layout:` menu offers built-in arrangements per app
+  plus "Save current layout…"; any manual change marks it `Custom *`.
+  Arrangements persist per app.
+* **? Explainer** — "what am I looking at?", per app, in a modal.
+* **Skins** — the picker (top-right) switches the whole product between five
+  token sets on one `data-theme` attribute: **Observatory** (ink blue · gold,
+  default), **Paper**, **Spectrum**, **Blueprint**, **Phosphor** (CRT green,
+  all-mono type). The choice persists.
 
-Buttons for tabs an app doesn't populate are dimmed. The shell also adds iOS
-safe-area padding so the bottom of the screen stays visible behind Safari's URL
-bar and the home indicator.
+Below **740px** the workspace re-chromes for phones: view windows stack as
+full-width cards (drag the bottom grip to change a card's height, or use the
+header button to take it full screen), the rail becomes a bottom dock, and
+panels open one at a time as bottom sheets.
 
-The Complex Particles viewer puts its **4D rotation controls** in the standard
-Actions panel (the draggable floating panel + the drawer's Actions tab): tap a
-plane button for an eighth turn (45°), or flip the toggle under it to spin that
-plane continuously.
+The Complex Particles viewer puts its **4D rotation controls** in the
+drive-tier "4D Rotation" panel — open it from the rail and drag it beside the
+plot: tap a plane button for an eighth turn (45°), or flip the toggle under it
+to spin that plane continuously.
 
 ---
 
@@ -99,9 +112,29 @@ merging to `main`), see [docs/PREVIEW_DEPLOYS.md](./docs/PREVIEW_DEPLOYS.md).
 
 ```
 src/
-├── index.tsx               # entry: hash-based router + AppShell, lazy route map
+├── index.tsx               # entry: bare hash router (gallery at #/), lazy route map
 ├── App.tsx                 # default Complex Particles route (lazy wrapper)
-├── apps.ts                 # app registry: drives the router AND the landing menu
+├── apps.ts                 # app registry (AppDescriptor) — feeds the gallery catalog
+│
+├── chrome/                 # the redesigned global chrome (docs/redesign/)
+│   ├── theme.css           # design tokens: 5 skins on [data-theme] + am-* styles
+│   ├── icons.tsx           # closed stroke icon set (archetypes + chrome)
+│   ├── skins.tsx           # skin registry + useSkin + SkinPicker
+│   ├── TopBar.tsx          # brand-mark Home · title/formula · mode pills · ? · skins
+│   ├── ExplainerModal.tsx  # the "?" modal (wraps Readme)
+│   ├── Gallery.tsx         # landing gallery (hero, chips, preview cards)
+│   ├── catalog.ts          # gallery card metadata derived from apps.ts
+│   ├── previews.tsx        # cheap animated canvas previews for the cards
+│   ├── readouts.tsx        # Breakdown / MiniHisto / Sparkline / StatGrid / Kicker
+│   ├── usePhone.ts         # ≤740px matchMedia hook
+│   └── workspace/          # the workspace engine
+│       ├── types.ts        # SectionDef / ViewDef / LayoutDef / WorkspaceProps
+│       ├── archetypes.ts   # the 11-archetype · 5-tier panel vocabulary
+│       ├── geometry.ts     # snap / dock / pack / collapse-chain math
+│       ├── Workspace.tsx   # responsive entry (desktop ↔ phone)
+│       ├── DesktopWorkspace.tsx  # stage, rail, windows, layouts, persistence
+│       ├── PhoneWorkspace.tsx    # stacked cards + bottom dock + sheets
+│       └── …               # Panel, ViewWindow, Rail, LayoutsMenu, drag, layouts
 │
 ├── animations/             # one folder per app, each with README + EXPLAINER
 │   ├── ComplexParticles/   # 4D complex-function viewer (Particles + Roots + Multibranch)
@@ -111,20 +144,20 @@ src/
 │   ├── Fractals/           # legacy CPU fractal renderer (routed at #/fractals-cpu)
 │   ├── TopologyWalk/       # first-person walk: corridor + flat torus / Klein bottle
 │   ├── StableMarriage/     # Gale–Shapley visualizer + heatmap lab
-│   └── AgenticSorting/     # concurrent agent-based sorting
+│   ├── AgenticSorting/     # concurrent agent-based sorting
+│   ├── StableMatching/     # rebuilt Gale–Shapley lab (matrix · welfare · lattice)
+│   ├── TrinaryStars/       # three-body sandbox (Observatory) + ensemble Lab
+│   └── PolygonWorlds/      # walk every closed surface from one glued polygon
 │
-├── components/             # shared shell + UI
-│   ├── AppShell.tsx        # global chrome: top bar + drawer + tabs + integration hooks
-│   ├── ActionFloater.tsx   # draggable on-canvas mirror of the Actions tab
-│   ├── Menu.tsx            # landing gallery rendered at the `/` route
-│   ├── ParticleViewerShell # wraps Canvas3D + standard 7 sections for the particle viewers
-│   ├── ControlPanel.tsx    # form primitives (Section / Slider / Pills / Select / Checkbox)
+├── components/             # shared app-side UI
+│   ├── ParticleViewerShell # turnkey workspace assembly for the particle viewers
+│   ├── ControlPanel.tsx    # form primitives (Slider / Pills / Select / Checkbox …)
 │   ├── Canvas3D.tsx        # Three.js scene + camera + resize wrapper
 │   ├── Readme.tsx          # in-app markdown renderer
-│   └── ToggleMenu.tsx      # collapsible menu (legacy, used by FractalsGPU)
+│   └── ToggleMenu.tsx      # collapsible menu (legacy, used by #/fractals-cpu)
 │
 ├── controls/
-│   └── QuarterTurnControls # 4D eighth-turn + spin controls (Actions panel)
+│   └── QuarterTurnControls # 4D eighth-turn + spin controls (drive panel)
 │
 ├── lib/
 │   ├── particles/          # shared particle-viewer engine
@@ -175,22 +208,24 @@ The full, copy-pasteable walkthrough lives in
      '/my-animation': MyAnimation,
    };
    ```
-3. Register the catalog entry in `src/apps.ts` (this drives both the drawer's
-   Apps tab and the landing menu):
+3. Register the catalog entry in `src/apps.ts` (append-only) and add its
+   gallery metadata (category + preview kind) in `src/chrome/catalog.ts`:
    ```ts
    export const apps: AppDescriptor[] = [
      // …existing entries…
      { hash: '/my-animation', name: 'My Animation', icon: '◆', blurb: 'One-line teaser.' },
    ];
    ```
-4. Inside the component, call `useAppHeader('My Animation', 'optional formula')`
-   and `useAppExplainer(explainerText)`, then render `<ShellSettings>` /
-   `<ShellActions>` for controls (built from the `ControlPanel` primitives).
+4. Inside the component, define your panels (`SectionDef[]`, each one of the 11
+   archetypes) and view window(s) (`ViewDef[]`), then render
+   `<Workspace appId="my-animation" title=… sections=… views=… explainer=… />`.
+   Panel bodies use the `ControlPanel` primitives.
 
-Three.js animations can wrap `Canvas3D`. For particle-style 4D viewers,
-`ParticleViewerShell` plus the `src/lib/particles` hooks gives you the
-default Function / Camera / Color / Particles / Motion / Detail / About
-sections out of the box — see ComplexParticles for the simplest example.
+Three.js animations can wrap `Canvas3D` inside their view node. For
+particle-style 4D viewers, `ParticleViewerShell` plus the `src/lib/particles`
+hooks assembles the standard Function / Domain / Camera / Color / Particles /
+Surface / Motion / 4D Rotation / Detail panels out of the box — see
+ComplexParticles for the simplest example.
 
 GLSL is kept inline as template strings in `shaders/index.ts` per app for
 zero-fetch builds.
@@ -206,29 +241,34 @@ The particle viewers use a clean split between **looking** (gestures) and
   Never touches the 4D rotation.
 * **2-finger drag** (or `Shift` + drag) pans the look-at target.
 * **2-finger pinch** / **mouse wheel** zooms.
-* **4D rotation controls** (in the Actions panel) — tap a plane button for an
-  eighth turn (45°); the toggle under each button starts/stops a continuous
-  spin in that plane and direction (multiple compose into double rotations), with
-  one speed slider. Includes drop-axis and a "Reset orientation" row.
+* **4D rotation controls** (the drive-tier "4D Rotation" panel) — tap a plane
+  button for an eighth turn (45°); the toggle under each button starts/stops a
+  continuous spin in that plane and direction (multiple compose into double
+  rotations), with one speed slider. Includes drop-axis and a "Reset
+  orientation" row.
 
 The fractal viewers use:
 
 * **Drag** to pan, **pinch** or **wheel** to zoom.
-* **Trace mode** (toggle in the Actions drawer) — when on, taps spawn an
+* **Trace mode** (the drive-tier "Trace" panel) — when on, taps spawn an
   iteration orbit from the tap point.
 
 ---
 
 ## 7 Projection modes (Complex Particles)
 
-The renderer maps a 4D point `(x, y, u, v)` to 3D using one of:
+The renderer maps a 4D point `(x, y, u, v)` to 3D along one **projection
+slider** with three sticky, labeled stops and live GPU morphs between them:
 
 1. **Perspective** — divide by `3 + v`.
-2. **Stereo** — stereographic projection from the +v pole.
-3. **Hopf** — Hopf fibration assuming a unit hypersphere.
-4. **Drop X / Y / U / V** — discard the named axis.
+2. **Torus** — stereographic projection from the +v pole (pole-softened;
+   shows the Clifford-torus structure with its scaffold).
+3. **Sphere** — the Hopf view; the Torus → Sphere leg of the slider is the
+   fiber collapse.
 
-Switching modes interpolates on the GPU for a smooth transition.
+The 4D axis cross fades out as the slider leaves Perspective, handing the
+reference role to the scaffold. **Drop X / Y / U / V** (discard the named
+axis) lives on the 4D Rotation panel.
 
 ---
 

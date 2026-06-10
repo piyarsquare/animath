@@ -8,20 +8,19 @@ import {
   FlaskConical,
   Grid,
   Heart,
-  Info,
-  Layers,
   Pause,
   PieChart,
   Play,
   RotateCcw,
   ShieldCheck,
   SkipForward,
-  User,
-  Zap
+  User
 } from 'lucide-react';
 import './stableMarriage.css';
-import { useAppHeader, useAppExplainer } from '../../components/AppShell';
+import Workspace from '../../chrome/workspace/Workspace';
+import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import explainerText from './EXPLAINER.md?raw';
+import readmeText from './README.md?raw';
 
 const MAX_POPULATION = 100;
 const ROW_HEIGHT = 64;
@@ -515,11 +514,11 @@ const DistributionChart = ({
   );
 };
 
-export default function StableMarriage() {
-  useAppHeader('Stable Marriage');
-  useAppExplainer(explainerText);
-  const [appMode, setAppMode] = useState<'visualizer' | 'lab'>('visualizer');
+/* The "?" modal carries both the short explainer and the full About readme,
+   so nothing from the old drawer's About section is lost. */
+const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
 
+export default function StableMarriage() {
   const [n, setN] = useState(20);
   const [data, setData] = useState<PreferenceData | null>(null);
   const [corrMen, setCorrMen] = useState(0);
@@ -856,94 +855,104 @@ export default function StableMarriage() {
     runBatch();
   }, [labBias, labN, labResolution]);
 
-  const visualControls = (
-    <div className="sm-controls">
-      <div className="sm-control-group">
-        <label>
-          Population
-          <input
-            type="number"
-            min={4}
-            max={MAX_POPULATION}
-            value={n}
-            onChange={e => setN(Math.min(MAX_POPULATION, Math.max(4, Number.parseInt(e.target.value, 10))))}
-          />
-        </label>
-        <label>
-          Men Consensus
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={corrMen}
-            onChange={e => setCorrMen(Number.parseInt(e.target.value, 10))}
-          />
-          <span>{corrMen}%</span>
-        </label>
-        <label>
-          Women Consensus
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={corrWomen}
-            onChange={e => setCorrWomen(Number.parseInt(e.target.value, 10))}
-          />
-          <span>{corrWomen}%</span>
-        </label>
-      </div>
-      <div className="sm-control-group">
-        <label>
-          Proposer Bias
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={bias}
-            onChange={e => setBias(Number.parseInt(e.target.value, 10))}
-          />
-          <span>{bias}% men</span>
-        </label>
-        <label>
-          Speed
-          <input
-            type="range"
-            min={10}
-            max={100}
-            value={speed}
-            onChange={e => setSpeed(Number.parseInt(e.target.value, 10))}
-          />
-        </label>
-        <label className="sm-toggle">
-          <input
-            type="checkbox"
-            checked={sortByPopularity}
-            onChange={e => setSortByPopularity(e.target.checked)}
-          />
-          Sort by popularity
-        </label>
-      </div>
+  /* ---- archetype panels (controls keep the app's own sm-* markup) ---- */
+
+  const prefsPanel = (
+    <div className="sm-panel sm-controls">
+      <label>
+        Population
+        <input
+          type="number"
+          min={4}
+          max={MAX_POPULATION}
+          value={n}
+          onChange={e => setN(Math.min(MAX_POPULATION, Math.max(4, Number.parseInt(e.target.value, 10))))}
+        />
+      </label>
+      <label>
+        Men Consensus
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={corrMen}
+          onChange={e => setCorrMen(Number.parseInt(e.target.value, 10))}
+        />
+        <span>{corrMen}%</span>
+      </label>
+      <label>
+        Women Consensus
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={corrWomen}
+          onChange={e => setCorrWomen(Number.parseInt(e.target.value, 10))}
+        />
+        <span>{corrWomen}%</span>
+      </label>
     </div>
   );
 
-  const visualActions = (
-    <div className="sm-actions">
-      <Button variant="primary" onClick={status === 'running' ? pauseAutoRun : startAutoRun}>
-        {status === 'running' ? <Pause size={16} /> : <Play size={16} />}
-        {status === 'running' ? 'Pause' : 'Play'}
-      </Button>
-      <Button variant="secondary" onClick={stepSimulation} disabled={status === 'running'}>
-        <SkipForward size={16} />
-        Step
-      </Button>
-      <Button variant="secondary" onClick={runToCompletion}>
-        <FastForward size={16} />
-        Finish
-      </Button>
-      <Button variant="outline" onClick={resetSimulation}>
-        <RotateCcw size={16} />
-        Reset
-      </Button>
+  const proposingPanel = (
+    <div className="sm-panel sm-controls">
+      <label>
+        Proposer Bias
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={bias}
+          onChange={e => setBias(Number.parseInt(e.target.value, 10))}
+        />
+        <span>{bias}% men</span>
+      </label>
+    </div>
+  );
+
+  const displayPanel = (
+    <div className="sm-panel sm-controls">
+      <label className="sm-toggle">
+        <input
+          type="checkbox"
+          checked={sortByPopularity}
+          onChange={e => setSortByPopularity(e.target.checked)}
+        />
+        Sort by popularity
+      </label>
+    </div>
+  );
+
+  const playbackPanel = (
+    <div className="sm-panel sm-controls">
+      <div className="sm-actions">
+        <Button variant="primary" onClick={status === 'running' ? pauseAutoRun : startAutoRun}>
+          {status === 'running' ? <Pause size={16} /> : <Play size={16} />}
+          {status === 'running' ? 'Pause' : 'Play'}
+        </Button>
+        <Button variant="secondary" onClick={stepSimulation} disabled={status === 'running'}>
+          <SkipForward size={16} />
+          Step
+        </Button>
+        <Button variant="secondary" onClick={runToCompletion}>
+          <FastForward size={16} />
+          Finish
+        </Button>
+        <Button variant="outline" onClick={resetSimulation}>
+          <RotateCcw size={16} />
+          Reset
+        </Button>
+      </div>
+      <label>
+        Speed
+        <input
+          type="range"
+          min={10}
+          max={100}
+          value={speed}
+          onChange={e => setSpeed(Number.parseInt(e.target.value, 10))}
+        />
+      </label>
       <div className="sm-meta">
         <span>Proposals: {proposalsMade}</span>
         <span>Status: {status}</span>
@@ -951,8 +960,8 @@ export default function StableMarriage() {
     </div>
   );
 
-  const visualResult = (
-    <Card className="sm-result-card">
+  const resultsPanel = (
+    <div className="sm-panel">
       <div className="sm-result-header">
         <div className="sm-tabs">
           <button
@@ -1036,208 +1045,189 @@ export default function StableMarriage() {
           </p>
         </div>
       ) : null}
-    </Card>
+    </div>
   );
 
-  const visualPeople = (
-    <div className="sm-people">
-      <div className="sm-column">
-        <h4>
-          <User size={16} /> Men
-        </h4>
-        <div className="sm-column-list">
-          {data
-            ? orderedMen.map(id => (
-              <PersonRow
-                key={`m-${id}`}
-                id={id}
-                type="man"
-                prefs={data.menPrefs[id]}
-                match={matches[`m${id}`]}
-                activeProposal={activeProposal}
-                n={n}
-              />
-            ))
-            : null}
-        </div>
+  const labPanel = (
+    <div className="sm-panel sm-controls">
+      <label>
+        Population
+        <input
+          type="number"
+          min={10}
+          max={MAX_POPULATION}
+          value={labN}
+          onChange={e => setLabN(Math.min(MAX_POPULATION, Math.max(10, Number.parseInt(e.target.value, 10))))}
+        />
+      </label>
+      <label>
+        Proposer Bias
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={labBias}
+          onChange={e => setLabBias(Number.parseInt(e.target.value, 10))}
+        />
+        <span>{labBias}% men</span>
+      </label>
+      <label>
+        Resolution
+        <input
+          type="number"
+          min={5}
+          max={30}
+          value={labResolution}
+          onChange={e => setLabResolution(Math.min(30, Math.max(5, Number.parseInt(e.target.value, 10))))}
+        />
+      </label>
+      <Button variant="primary" onClick={runLabSimulation} disabled={labRunning}>
+        <FlaskConical size={16} />
+        {labRunning ? `Running ${labProgress}%` : 'Run Lab'}
+      </Button>
+      <div className="sm-meta">
+        <span>Cells: {labResolution * labResolution}</span>
+        <span>Status: {labRunning ? 'Running' : 'Idle'}</span>
       </div>
-      <div className="sm-column">
-        <h4>
-          <Heart size={16} /> Women
-        </h4>
-        <div className="sm-column-list">
-          {data
-            ? orderedWomen.map(id => (
-              <PersonRow
-                key={`w-${id}`}
-                id={id}
-                type="woman"
-                prefs={data.womenPrefs[id]}
-                match={matches[`w${id}`]}
-                activeProposal={activeProposal}
-                n={n}
-              />
-            ))
-            : null}
+    </div>
+  );
+
+  /* ---- view windows ---- */
+
+  const matchingView = (
+    <div className="sm-view">
+      <p className="sm-view-hint">Active proposals highlight in yellow, receivers in purple.</p>
+      <div className="sm-people">
+        <div className="sm-column">
+          <h4>
+            <User size={16} /> Men
+          </h4>
+          <div className="sm-column-list">
+            {data
+              ? orderedMen.map(id => (
+                <PersonRow
+                  key={`m-${id}`}
+                  id={id}
+                  type="man"
+                  prefs={data.menPrefs[id]}
+                  match={matches[`m${id}`]}
+                  activeProposal={activeProposal}
+                  n={n}
+                />
+              ))
+              : null}
+          </div>
+        </div>
+        <div className="sm-column">
+          <h4>
+            <Heart size={16} /> Women
+          </h4>
+          <div className="sm-column-list">
+            {data
+              ? orderedWomen.map(id => (
+                <PersonRow
+                  key={`w-${id}`}
+                  id={id}
+                  type="woman"
+                  prefs={data.womenPrefs[id]}
+                  match={matches[`w${id}`]}
+                  activeProposal={activeProposal}
+                  n={n}
+                />
+              ))
+              : null}
+          </div>
         </div>
       </div>
     </div>
   );
 
-  const labControls = (
-    <div className="sm-controls">
-      <div className="sm-control-group">
-        <label>
-          Population
-          <input
-            type="number"
-            min={10}
-            max={MAX_POPULATION}
-            value={labN}
-            onChange={e => setLabN(Math.min(MAX_POPULATION, Math.max(10, Number.parseInt(e.target.value, 10))))}
+  const surfaceView = (
+    <div className="sm-view">
+      <div className="sm-lab-grid">
+        <Card>
+          <Heatmap
+            data={labData}
+            dataKey="menAvg"
+            title="Men Avg Rank"
+            maxRank={labN}
+            resolution={labResolution}
           />
-        </label>
-        <label>
-          Proposer Bias
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={labBias}
-            onChange={e => setLabBias(Number.parseInt(e.target.value, 10))}
+        </Card>
+        <Card>
+          <Heatmap
+            data={labData}
+            dataKey="womenAvg"
+            title="Women Avg Rank"
+            maxRank={labN}
+            resolution={labResolution}
           />
-          <span>{labBias}% men</span>
-        </label>
-        <label>
-          Resolution
-          <input
-            type="number"
-            min={5}
-            max={30}
-            value={labResolution}
-            onChange={e => setLabResolution(Math.min(30, Math.max(5, Number.parseInt(e.target.value, 10))))}
+        </Card>
+        <Card>
+          <Heatmap
+            data={labData}
+            dataKey="diff"
+            title="Men Avg − Women Avg"
+            maxRank={labN}
+            resolution={labResolution}
+            type="diverging"
+            labels={{ left: 'Men Better', right: 'Women Better' }}
           />
-        </label>
-      </div>
-      <div className="sm-control-group">
-        <Button variant="primary" onClick={runLabSimulation} disabled={labRunning}>
-          <FlaskConical size={16} />
-          {labRunning ? `Running ${labProgress}%` : 'Run Lab'}
-        </Button>
-        <div className="sm-meta">
-          <span>Cells: {labResolution * labResolution}</span>
-          <span>Status: {labRunning ? 'Running' : 'Idle'}</span>
-        </div>
+        </Card>
+        <Card>
+          <Heatmap
+            data={labData}
+            dataKey="askerDiff"
+            title="Asker Avg − Asked Avg"
+            maxRank={labN}
+            resolution={labResolution}
+            type="diverging"
+            labels={{ left: 'Askers Better', right: 'Asked Better' }}
+          />
+        </Card>
       </div>
     </div>
   );
 
-  const labView = (
-    <div className="sm-lab-grid">
-      <Card>
-        <Heatmap
-          data={labData}
-          dataKey="menAvg"
-          title="Men Avg Rank"
-          maxRank={labN}
-          resolution={labResolution}
-        />
-      </Card>
-      <Card>
-        <Heatmap
-          data={labData}
-          dataKey="womenAvg"
-          title="Women Avg Rank"
-          maxRank={labN}
-          resolution={labResolution}
-        />
-      </Card>
-      <Card>
-        <Heatmap
-          data={labData}
-          dataKey="diff"
-          title="Men Avg − Women Avg"
-          maxRank={labN}
-          resolution={labResolution}
-          type="diverging"
-          labels={{ left: 'Men Better', right: 'Women Better' }}
-        />
-      </Card>
-      <Card>
-        <Heatmap
-          data={labData}
-          dataKey="askerDiff"
-          title="Asker Avg − Asked Avg"
-          maxRank={labN}
-          resolution={labResolution}
-          type="diverging"
-          labels={{ left: 'Askers Better', right: 'Asked Better' }}
-        />
-      </Card>
-    </div>
-  );
+  const sections: SectionDef[] = [
+    { id: 'prefs', title: 'Preferences', arch: 'subject', node: prefsPanel, estHeight: 250 },
+    { id: 'proposing', title: 'Proposing', arch: 'domain', node: proposingPanel, estHeight: 130 },
+    { id: 'display', title: 'Display', arch: 'marks', node: displayPanel, estHeight: 100 },
+    { id: 'playback', title: 'Playback', arch: 'playback', node: playbackPanel, estHeight: 290 },
+    { id: 'results', title: 'Results', arch: 'readout', node: resultsPanel, estHeight: 420 },
+    { id: 'lab', title: 'Welfare lab', arch: 'lab', node: labPanel, estHeight: 330 },
+  ];
+
+  const views: ViewDef[] = [
+    { id: 'matching', title: 'Matching', defaultRect: { x: 372, y: 16, w: 700, h: 600 }, node: matchingView },
+    { id: 'surface', title: 'Welfare surface', defaultRect: { x: 372, y: 16, w: 560, h: 560 }, node: surfaceView },
+  ];
+
+  /* The old Visualizer | Lab mode toggle becomes two layouts: Setup shows the
+     Matching view, Analysis swaps in the Welfare surface (views[id].open). */
+  const layouts: LayoutDef[] = [
+    {
+      id: 'setup', name: 'Setup', sub: 'Preferences · Playback', icon: 'tune',
+      open: { prefs: { x: 84, y: 18 }, playback: { x: 84, y: 330 } },
+      views: { matching: { open: true }, surface: { open: false } },
+    },
+    {
+      id: 'analysis', name: 'Analysis', sub: 'Results · Welfare', icon: 'chart',
+      open: { results: { x: 84, y: 18 }, lab: { x: 84, y: 420 } },
+      views: { matching: { open: false }, surface: { open: true } },
+    },
+  ];
 
   return (
-    <div className="sm-app">
-      <header className="sm-header">
-        {/* The app's name lives in the AppShell bar above. Keep just a short
-            subtitle for context, alongside the Visualizer / Lab toggle. */}
-        <div>
-          <p>Explore how proposal bias and preference consensus shape stable matches.</p>
-        </div>
-        <div className="sm-mode-toggle">
-          <Button variant={appMode === 'visualizer' ? 'primary' : 'outline'} onClick={() => setAppMode('visualizer')}>
-            <Layers size={16} />
-            Visualizer
-          </Button>
-          <Button variant={appMode === 'lab' ? 'primary' : 'outline'} onClick={() => setAppMode('lab')}>
-            <Zap size={16} />
-            Lab
-          </Button>
-        </div>
-      </header>
-
-      {appMode === 'visualizer' ? (
-        <div className="sm-visualizer">
-          <Card>
-            <div className="sm-card-header">
-              <div>
-                <h2>
-                  <Info size={16} /> Visualizer Controls
-                </h2>
-                <p>Generate preferences, play through proposals, and inspect resulting matches.</p>
-              </div>
-            </div>
-            {visualControls}
-            {visualActions}
-          </Card>
-          {visualResult}
-          <Card className="sm-people-card">
-            <div className="sm-card-header">
-              <h2>
-                <User size={16} /> Participants
-              </h2>
-              <p>Active proposals highlight in yellow, receivers in purple.</p>
-            </div>
-            {visualPeople}
-          </Card>
-        </div>
-      ) : (
-        <div className="sm-lab">
-          <Card>
-            <div className="sm-card-header">
-              <div>
-                <h2>
-                  <FlaskConical size={16} /> Consensus Lab
-                </h2>
-                <p>Scan consensus levels and track average ranking outcomes.</p>
-              </div>
-            </div>
-            {labControls}
-          </Card>
-          {labView}
-        </div>
-      )}
-    </div>
+    <Workspace
+      appId="stable-marriage"
+      title="Stable Marriage"
+      subtitle="Gale–Shapley"
+      sections={sections}
+      views={views}
+      layouts={layouts}
+      defaultLayoutId="setup"
+      explainer={help}
+    />
   );
 }

@@ -1,108 +1,21 @@
-/* ── App shell ── */
-.as-app {
-  height: 100%;
-  width: 100%;
-  background: #020617;
-  color: #e2e8f0;
-  padding: 16px;
-  font-family: 'Inter', system-ui, sans-serif;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
+/* Agentic Sorting — app-owned styles.
+   Controls render inside Workspace panel bodies (.am-ws-pbody / the phone
+   sheet); the arena fills the "Array" view window body, so all sizing is
+   container-relative — no viewport units.
 
-/* ── Header ── */
-.as-header {
-  margin-bottom: 16px;
-  text-align: center;
-}
+   Class-prefix audit (2026-06): no selector below (and no class the JSX
+   renders) matches any `.as-*` selector in the legacy
+   src/components/AppShell.css, and the only custom property defined here
+   (--as-dot-size) is not among AppShell's --as-* variables — so deleting
+   AppShell.css cannot change this app. */
 
-.as-header h1 {
-  font-size: 28px;
-  font-weight: 900;
-  letter-spacing: -0.5px;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: center;
-  margin: 0;
-}
-
-.as-header h1 svg {
-  color: #10b981;
-}
-
-.as-header p {
-  color: #64748b;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 3px;
-  font-weight: 700;
-  margin: 4px 0 0;
-}
-
-/* ── Layout ── */
-.as-layout {
-  width: 100%;
-  max-width: 1200px;
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 24px;
-  align-items: start;
-}
-
-@media (max-width: 900px) {
-  .as-layout {
-    grid-template-columns: 1fr;
-  }
-  /* Show the arena first on narrow screens; controls scroll down below it. */
-  .as-main { order: -1; }
-}
-
-@media (max-width: 600px) {
-  .as-app { padding: 8px; }
-  .as-header { margin-bottom: 8px; }
-  .as-header h1 { font-size: 22px; }
-  .as-layout { gap: 12px; }
-  .as-card { padding: 14px; border-radius: 12px; }
-  .as-main { gap: 12px; }
-  .as-sidebar { gap: 12px; }
-  .as-controls-row { margin-bottom: 14px; }
-  .as-button-primary, .as-button-reset { padding: 12px 16px; font-size: 13px; }
-  .as-slider-group { margin-bottom: 14px; }
-  .as-slider { height: 8px; }
-  .as-slider::-webkit-slider-thumb { width: 22px; height: 22px; }
-  .as-slider::-moz-range-thumb { width: 22px; height: 22px; }
-  .as-stat-value { font-size: 16px; }
-}
-
-/* ── Sidebar ── */
-.as-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* ── Card ── */
-.as-card {
-  background: #0f172a;
-  border: 1px solid #1e293b;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-}
-
-/* ── Controls row ── */
+/* ── Buttons ── */
 .as-controls-row {
   display: flex;
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
-/* ── Buttons ── */
 .as-button {
   display: inline-flex;
   align-items: center;
@@ -122,7 +35,7 @@
 
 .as-button-primary {
   flex: 1;
-  padding: 16px;
+  padding: 14px;
   background: #10b981;
   color: #020617;
 }
@@ -140,7 +53,7 @@
 }
 
 .as-button-reset {
-  padding: 16px 20px;
+  padding: 14px 18px;
   background: #1e293b;
   color: #fff;
   border: 1px solid #334155;
@@ -152,7 +65,7 @@
 
 /* ── Sliders ── */
 .as-slider-group {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .as-slider-group:last-child {
@@ -229,27 +142,12 @@
   background: #fff;
 }
 
-/* ── Population Mix ── */
-.as-card-title {
-  font-size: 10px;
-  font-weight: 900;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 3px;
-  margin: 0 0 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.as-card-title svg {
-  color: #06b6d4;
-}
-
+/* ── Population mix (Agents panel) ── */
 .as-weight-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  padding-top: 4px;
 }
 
 .as-weight-item {
@@ -260,6 +158,7 @@
 .as-weight-label {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 12px;
   margin-bottom: 4px;
 }
@@ -269,7 +168,6 @@
   align-items: center;
   gap: 8px;
   font-weight: 700;
-  color: #cbd5e1;
 }
 
 .as-weight-value {
@@ -284,74 +182,33 @@
   border-radius: 50%;
 }
 
-/* ── Stats row ── */
-.as-stats-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* Strategy reference (the old legend cards, folded into each weight row). */
+.as-legend-icon {
+  font-size: 15px;
 }
 
-.as-stat {
-  flex: 1;
-  text-align: center;
-}
-
-.as-stat-label {
-  font-size: 9px;
-  color: #64748b;
-  font-weight: 700;
+.as-legend-name {
+  font-size: 10px;
+  font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
-.as-stat-value {
-  font-size: 20px;
-  font-weight: 900;
-  color: #fff;
+.as-weight-desc {
+  font-size: 9px;
+  color: #64748b;
+  line-height: 1.4;
+  margin: 4px 0 0;
 }
 
-.as-stat-divider {
-  width: 1px;
-  height: 32px;
-  background: #1e293b;
-}
-
-/* ── Main area ── */
-.as-main {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* ── Arena ── */
+/* ── Arena (the "Array" view window) ── */
 .as-arena {
+  /* Fill the view window body; the window supplies border/radius/shadow. */
+  position: absolute;
+  inset: 0;
   background: #020617;
-  border: 2px solid #0f172a;
-  border-radius: 24px;
   padding: 24px;
-  /* Scale with the visible viewport: at least 280 px so bars stay readable,
-     at most 640 px so the arena doesn't dominate large monitors. dvh tracks
-     iOS Safari's URL bar; vh is the fallback for older browsers. */
-  height: 60vh;
-  height: 60dvh;
-  min-height: 280px;
-  max-height: 640px;
-  position: relative;
   overflow: hidden;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-}
-
-@media (max-width: 600px) {
-  .as-arena {
-    /* Reserve more relative space on phones, where every pixel matters and
-       the user wants the visualization front-and-center. */
-    height: 55vh;
-    height: 55dvh;
-    min-height: 220px;
-    max-height: 500px;
-    padding: 12px;
-    border-radius: 16px;
-  }
 }
 
 .as-arena-midline {
@@ -371,12 +228,6 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-}
-
-@media (max-width: 600px) {
-  .as-arena-bars {
-    padding: 0 12px;
-  }
 }
 
 .as-arena-bar-column {
@@ -406,9 +257,6 @@
   transform: translateX(-50%);
   top: auto;
 }
-@media (max-width: 600px) {
-  :root { --as-dot-size: 8px; }
-}
 
 .as-arena-bar-swapping {
   background: #fff;
@@ -422,11 +270,29 @@
   z-index: 10;
 }
 
-/* Display-mode toggle (Bars / Dots) sitting in the controls card */
+.as-arena-label {
+  position: absolute;
+  right: 24px;
+  font-size: 10px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+}
+
+.as-arena-label-top {
+  top: 16px;
+}
+
+.as-arena-label-bottom {
+  bottom: 16px;
+}
+
+/* ── Display-mode toggle (Bars / Dots) ── */
 .as-display-toggle {
   display: flex;
   gap: 4px;
-  margin-top: 8px;
+  margin-top: 4px;
   padding: 4px;
   background: #1e293b;
   border-radius: 8px;
@@ -451,77 +317,6 @@
   color: #fff;
 }
 
-.as-arena-label {
-  position: absolute;
-  right: 24px;
-  font-size: 10px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  color: #334155;
-  text-transform: uppercase;
-  letter-spacing: 3px;
-}
-
-.as-arena-label-top {
-  top: 16px;
-}
-
-.as-arena-label-bottom {
-  bottom: 16px;
-}
-
-/* ── Legend ── */
-.as-legend {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-}
-
-@media (max-width: 900px) {
-  .as-legend {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 500px) {
-  .as-legend {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.as-legend-card {
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid #1e293b;
-  padding: 12px;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.as-legend-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.as-legend-icon {
-  font-size: 18px;
-}
-
-.as-legend-name {
-  font-size: 10px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.as-legend-desc {
-  font-size: 9px;
-  color: #64748b;
-  line-height: 1.4;
-  margin: 0;
-}
-
 /* ── Agent type colors ── */
 .as-color-standard { background: #06b6d4; }
 .as-color-blind-date { background: #818cf8; }
@@ -534,3 +329,16 @@
 .as-color-nomadic-text { color: #fb923c; }
 .as-color-patrolling-text { color: #a78bfa; }
 .as-color-perfectionist-text { color: #f472b6; }
+
+/* ── Phone tweaks (the phone workspace stacks the view + bottom sheet) ── */
+@media (max-width: 600px) {
+  :root { --as-dot-size: 8px; }
+  .as-arena { padding: 12px; }
+  .as-arena-bars { padding: 0 12px; }
+  .as-controls-row { margin-bottom: 14px; }
+  .as-button-primary, .as-button-reset { padding: 12px 16px; font-size: 13px; }
+  .as-slider-group { margin-bottom: 14px; }
+  .as-slider { height: 8px; }
+  .as-slider::-webkit-slider-thumb { width: 22px; height: 22px; }
+  .as-slider::-moz-range-thumb { width: 22px; height: 22px; }
+}

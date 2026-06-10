@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useAppHeader, ShellSettings } from '../../../components/AppShell';
-import { Slider, Pills, Section } from '../../../components/ControlPanel';
+import Workspace from '../../../chrome/workspace/Workspace';
+import type { LayoutDef, SectionDef, ViewDef, WorkspaceMode } from '../../../chrome/workspace/types';
+import { Slider, Pills } from '../../../components/ControlPanel';
 import { SCENARIOS, getScenario, DEFAULT_CLASSIFY, type TargetId, type Outcome, type RunResult } from '@/lib/nbody';
 import { Aggregator, OUTCOMES, type AggSnapshot } from './ensemble';
 import { runOne, targetMassOf } from './runner';
@@ -9,17 +10,25 @@ import { WorkerPool } from './pool';
 import { GpuRunner, gpuAvailable } from './gpu';
 import BasinMap, { type BasinHandle } from './BasinMap';
 import MiniSim from './MiniSim';
+import explainerText from '../EXPLAINER.md?raw';
 
 const HAS_WORKERS = typeof Worker !== 'undefined';
 const HAS_GPU = gpuAvailable();
 type Engine = 'cpu' | 'workers' | 'gpu';
 
-/** The Lab has two instruments you switch between:
- *   - Destiny Map: the deterministic (and now statistical) heatmap, one chosen
+/** Top-bar mode pills: the Observatory ↔ Lab switch (replaces the old tab bar).
+ *  Switching sets the hash, which Trinary.tsx observes. */
+const MODES: WorkspaceMode[] = [
+  { id: 'observatory', label: 'Observatory' },
+  { id: 'lab', label: 'Lab' },
+];
+
+/** The Lab has two instruments, now two workspace view windows toggled by the
+ *  built-in Destiny map / Census layouts:
+ *   - Destiny Map: the deterministic (and statistical) heatmap, one chosen
  *     2D slice of launch space, drag-to-zoom into its fractal boundaries.
  *   - Census: thousands of random worlds tallied into outcomes, distributions
- *     and records, with live mini-sims. */
-type Instrument = 'map' | 'census';
+ *     and records (readout panels), with live mini-sims in the view. */
 const TILE_COUNT = 8;
 
 /** Read the lab config carried in the URL hash query (for shareable links). */
@@ -132,16 +141,16 @@ function LaunchSpace({ rMin, rMax, fMin, fMax, allowRetro }: {
 }
 
 export default function TrinaryLab() {
-  const [instrument, setInstrument] = useState<Instrument>(() => (labParams().get('inst') === 'census' ? 'census' : 'map'));
-
   // Initialize from a shareable URL config, if present.
   const urlRef = useRef<URLSearchParams | null>(null);
   if (!urlRef.current) urlRef.current = labParams();
   const U = urlRef.current;
+  // Legacy `inst=census` deep links land on the Census layout on a first visit
+  // (a persisted workspace arrangement wins on return visits).
+  const initialLayoutId = U.get('inst') === 'census' ? 'census' : 'map';
 
   const [presetId, setPresetId] = useState(() => U.get('p') ?? SCENARIOS[0].id);
   const preset = getScenario(presetId);
-  useAppHeader('Trinary Lab', `${preset.name} · ${instrument === 'map' ? 'destiny map' : 'census'}`);
   const [target, setTarget] = useState<TargetId>(() => (U.get('tg') as TargetId) ?? preset.launch.target);
   const [tMax, setTMax] = useState(() => pNum(U, 'tm', 180));
   const [rMin, setRMin] = useState(() => pNum(U, 'r0', 0.6));
@@ -182,11 +191,11 @@ export default function TrinaryLab() {
       r0: String(rMin), r1: String(rMax), f0: String(fMin), f1: String(fMax),
       rt: allowRetro ? '1' : '0', hl: String(habLo), hh: String(habHi),
       m0: String(massMul[0]), m1: String(massMul[1]), m2: String(massMul[2]), ss: String(starSoft),
-      sd: String(baseSeed), e: engine, inst: instrument,
+      sd: String(baseSeed), e: engine,
     });
     const base = (window.location.hash.split('?')[0] || '#/trinary-lab').replace(/^#/, '');
     window.history.replaceState(null, '', `#${base}?${q.toString()}`);
-  }, [presetId, target, targetN, tMax, rMin, rMax, fMin, fMax, allowRetro, habLo, habHi, massMul, starSoft, baseSeed, engine, instrument]);
+  }, [presetId, target, targetN, tMax, rMin, rMax, fMin, fMax, allowRetro, habLo, habHi, massMul, starSoft, baseSeed, engine]);
 
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
   const targetNRef = useRef(targetN); targetNRef.current = targetN;
@@ -336,9 +345,10 @@ export default function TrinaryLab() {
   };
   const setStarMass = (i: number, v: number) => setMassMul(prev => { const nx = [...prev]; nx[i] = v; return nx; });
 
-  /** Census-this-box (from the Destiny Map's radius×speed plane): jump to the
-   *  Census instrument and run the ensemble over the shared sampling box. */
-  const runCensus = () => { setInstrument('census'); if (!runningRef.current) start(); };
+  /** "Census this box" (from the Destiny Map's radius×speed plane): run the
+   *  ensemble over the shared sampling box. The Outcomes / Distributions /
+   *  Records readouts tally live; pick the Census layout for the live screens. */
+  const runCensus = () => { if (!runningRef.current) start(); };
 
   const copyLink = () => {
     navigator.clipboard?.writeText(window.location.href).then(() => {
@@ -371,6 +381,7 @@ export default function TrinaryLab() {
     padding: '8px 16px', borderRadius: 6, border: '1px solid var(--cp-border, #2a3550)',
     background: 'rgba(255,255,255,0.06)', color: '#e8edf6', cursor: 'pointer', fontSize: 14,
   };
+  const note: React.CSSProperties = { font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 4 };
 
   const targetOptions: { value: TargetId; label: string }[] = [
     { value: 'bary', label: 'Barycenter' }, { value: 's0', label: 'Star 1' },
@@ -378,77 +389,170 @@ export default function TrinaryLab() {
     ...(preset.system.hasBinary ? [{ value: 'binary' as TargetId, label: 'Inner binary' }] : []),
   ];
 
-  const instTab = (i: Instrument): React.CSSProperties => ({
-    appearance: 'none', border: 'none', cursor: 'pointer', padding: '8px 18px',
-    font: '600 13px/1 system-ui, sans-serif', letterSpacing: 0.2,
-    color: instrument === i ? '#06121f' : '#cfe0f5',
-    background: instrument === i ? '#66f0ff' : 'transparent',
-  });
+  /* ---- archetype panels (PARAM-MAP §6; rows ported from the old layout) ---- */
 
-  return (
+  const systemNode = (
     <>
-      {/* Shared system setup lives in the app's native Settings drawer (the ⚙
-          panel every app gets), so both instruments draw from one place and the
-          page body holds only instrument-specific controls + visualizations. */}
-      <ShellSettings>
-        <Section title="System" icon="✸" defaultOpen>
-          <Pills options={SCENARIOS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
-          <div style={{ font: '12px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '4px 2px' }}>{preset.blurb}</div>
-          <Pills label="Orbit around" options={targetOptions} value={target} onChange={setTarget} />
-        </Section>
-        <Section title="Star masses & physics" icon="✷">
-          <Slider label="Star 1 mass · gold" value={massMul[0]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(0, v)} format={(v) => (baseMasses[0] * v).toFixed(2)} />
-          <Slider label="Star 2 mass · orange" value={massMul[1]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(1, v)} format={(v) => (baseMasses[1] * v).toFixed(2)} />
-          <Slider label="Star 3 mass · blue" value={massMul[2]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(2, v)} format={(v) => (baseMasses[2] * v).toFixed(2)} />
-          <Slider label="Softening" value={starSoft} min={0.005} max={0.3} step={0.005} onChange={setStarSoft} format={(v) => v.toFixed(3)} />
-          <button style={{ ...btn, padding: '5px 12px', fontSize: 12, marginTop: 4 }}
-            onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); }}>⟲ Reset stars</button>
-        </Section>
-        <Section title="Simulation & climate" icon="⏱" defaultOpen>
-          <Slider label="Time budget / world" value={tMax} min={60} max={400} step={20} onChange={setTMax} format={v => v.toFixed(0)} />
-          <Slider label="Habitable floor (×ref)" value={habLo} min={0.1} max={1} step={0.05} onChange={setHabLo} format={v => v.toFixed(2)} />
-          <Slider label="Habitable ceiling (×ref)" value={habHi} min={1} max={6} step={0.25} onChange={setHabHi} format={v => v.toFixed(2)} />
-          <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 2 }}>
-            How long each world is integrated, and the insolation band counted as habitable — used by <b style={{ color: '#9aa7bd' }}>both</b> instruments.
-          </div>
-        </Section>
-      </ShellSettings>
+      <Pills options={SCENARIOS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
+      <div style={{ font: '12px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '4px 2px' }}>{preset.blurb}</div>
+      <Pills label="Orbit around" options={targetOptions} value={target} onChange={setTarget} />
+      <Slider label="Star 1 mass · gold" value={massMul[0]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(0, v)} format={(v) => (baseMasses[0] * v).toFixed(2)} />
+      <Slider label="Star 2 mass · orange" value={massMul[1]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(1, v)} format={(v) => (baseMasses[1] * v).toFixed(2)} />
+      <Slider label="Star 3 mass · blue" value={massMul[2]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(2, v)} format={(v) => (baseMasses[2] * v).toFixed(2)} />
+      <Slider label="Softening" value={starSoft} min={0.005} max={0.3} step={0.005} onChange={setStarSoft} format={(v) => v.toFixed(3)} />
+      <button style={{ ...btn, padding: '5px 12px', fontSize: 12, marginTop: 4 }}
+        onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); }}>⟲ Reset stars</button>
+    </>
+  );
 
-      <div style={{
-        position: 'absolute', inset: 0, overflow: 'auto', background: '#05060a',
-        color: '#cfe0f5', font: '13px/1.5 system-ui, sans-serif', padding: '12px 14px 40px',
-      }}>
-      {/* Top bar: instrument selector + per-instrument actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-        <div style={{ display: 'inline-flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--cp-border, #2a3550)' }}>
-          <button style={instTab('map')} onClick={() => setInstrument('map')}>▦ Destiny Map</button>
-          <button style={instTab('census')} onClick={() => setInstrument('census')}>∑ Census</button>
+  const simNode = (
+    <>
+      <Slider label="Time budget / world" value={tMax} min={60} max={400} step={20} onChange={setTMax} format={v => v.toFixed(0)} />
+      <Slider label="Habitable floor (×ref)" value={habLo} min={0.1} max={1} step={0.05} onChange={setHabLo} format={v => v.toFixed(2)} />
+      <Slider label="Habitable ceiling (×ref)" value={habHi} min={1} max={6} step={0.25} onChange={setHabHi} format={v => v.toFixed(2)} />
+      <Pills label="Engine" value={engine}
+        options={[
+          { value: 'cpu', label: 'CPU' },
+          ...(HAS_WORKERS ? [{ value: 'workers', label: `Workers ×${Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1))}` }] : []),
+          ...(HAS_GPU ? [{ value: 'gpu', label: 'GPU (exp)' }] : []),
+        ]}
+        onChange={(v) => setEngine(v as Engine)} />
+      {engine === 'gpu' && (
+        <div style={{ font: '11px/1.5 system-ui', color: '#ffd27f', marginTop: 4 }}>
+          ⚠ Experimental WebGPU engine: simplified classifier (no “calm” axis, so Paradise% reads 0). Verify against CPU; falls back automatically on error.
         </div>
-        <button style={btn} onClick={() => { window.location.hash = '#/trinary'; }}>← Single run</button>
-        {instrument === 'census' && (
-          <>
-            <button style={{ ...btn, background: running ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }}
-              onClick={running ? pause : start}>{running ? '❚❚ Pause' : (n > 0 && n < targetN ? '▶ Resume' : '▶ Run census')}</button>
-            <button style={btn} onClick={reset}>↺ Reset</button>
-            <button style={btn} title="New random ensemble seed" onClick={() => setBaseSeed((Math.random() * 4294967296) >>> 0)}>🎲 Reseed</button>
-          </>
-        )}
-        <div style={{ flex: 1 }} />
-        <span style={{ font: '12px ui-monospace, monospace', color: '#6f7f99' }}>
-          {rate > 0 ? `${rate.toFixed(0)} worlds/s` : ''}
-        </span>
-        <button style={btn} onClick={copyLink}>{copied ? '✓ Copied' : '🔗 Copy link'}</button>
-        {instrument === 'census' && (
-          <>
-            <button style={btn} onClick={exportJSON} disabled={!agg}>⬇ JSON</button>
-            <button style={btn} onClick={exportCSV} disabled={!agg}>⬇ CSV</button>
-          </>
-        )}
+      )}
+      <div style={note}>
+        How long each world is integrated, and the insolation band counted as habitable — used by <b style={{ color: '#9aa7bd' }}>both</b> the Destiny Map and the Census. Changing any setting clears the tally.
       </div>
+    </>
+  );
 
-      {/* ── Destiny Map instrument ─────────────────────────────────────── */}
-      {instrument === 'map' && (
-        <>
+  const samplingNode = (
+    <>
+      <Slider label="Runs (target N)" value={targetN} min={500} max={20000} step={500} onChange={setTargetN} format={v => v.toLocaleString()} />
+      <Slider label="Launch radius min" value={rMin} min={0.2} max={6} step={0.1} onChange={v => setRMin(Math.min(v, rMax))} format={v => v.toFixed(1)} />
+      <Slider label="Launch radius max" value={rMax} min={0.2} max={8} step={0.1} onChange={v => setRMax(Math.max(v, rMin))} format={v => v.toFixed(1)} />
+      <Slider label="Speed × circular min" value={fMin} min={0.2} max={1.5} step={0.05} onChange={v => setFMin(Math.min(v, fMax))} format={v => v.toFixed(2)} />
+      <Slider label="Speed × circular max" value={fMax} min={0.2} max={1.8} step={0.05} onChange={v => setFMax(Math.max(v, fMin))} format={v => v.toFixed(2)} />
+      <Pills label="Launch direction" options={[{ value: 1, label: 'Pro + retro' }, { value: 0, label: 'Prograde only' }]}
+        value={allowRetro ? 1 : 0} onChange={v => setAllowRetro(v === 1)} />
+      <div style={{ marginTop: 8 }}>
+        <LaunchSpace rMin={rMin} rMax={rMax} fMin={fMin} fMax={fMax} allowRetro={allowRetro} />
+      </div>
+      <div style={note}>
+        Each dot is a candidate world: a launch radius and a speed (as a multiple of the local circular speed). The cyan box is what you’re sampling now — move the sliders to reshape it, or drag a box on the Destiny Map’s radius×speed plane. Below the amber line orbits tend to be bound; above the red √2 line they tend to escape.
+        <span style={{ color: '#9aa7bd' }}> Changing any setting clears the tally.</span>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+        <button style={{ ...btn, background: running ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }}
+          onClick={running ? pause : start}>{running ? '❚❚ Pause' : (n > 0 && n < targetN ? '▶ Resume' : '▶ Run census')}</button>
+        <button style={btn} onClick={reset}>↺ Reset</button>
+        <button style={btn} title="New random ensemble seed" onClick={() => setBaseSeed((Math.random() * 4294967296) >>> 0)}>🎲 Reseed</button>
+        <button style={btn} onClick={copyLink}>{copied ? '✓ Copied' : '🔗 Copy link'}</button>
+        <button style={btn} onClick={exportJSON} disabled={!agg}>⬇ JSON</button>
+        <button style={btn} onClick={exportCSV} disabled={!agg}>⬇ CSV</button>
+      </div>
+      {rate > 0 && (
+        <div style={{ font: '12px ui-monospace, monospace', color: '#6f7f99', marginTop: 6 }}>
+          {rate.toFixed(0)} worlds/s
+        </div>
+      )}
+    </>
+  );
+
+  const outcomesNode = (
+    <>
+      <div style={{ font: '12px ui-monospace, monospace', color: '#9aa7bd', margin: '4px 0 8px' }}>
+        <b style={{ color: '#fff' }}>{n.toLocaleString()}</b> / {targetN.toLocaleString()} worlds ·{' '}
+        <b style={{ color: '#46d98a' }}>{pct(happyPct)}</b> happy endings
+      </div>
+      {OUTCOMES.map(o => {
+        const c = agg?.counts[o] ?? 0;
+        const frac = n ? c / n : 0;
+        return (
+          <div key={o} style={{ marginBottom: 7 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', font: '11px ui-monospace, monospace' }}>
+              <span style={{ color: OUTCOME_META[o].color }}>{OUTCOME_META[o].label}</span>
+              <span style={{ color: '#9aa7bd' }}>{pct(frac)}</span>
+            </div>
+            <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)', marginTop: 2 }}>
+              <div style={{ height: '100%', width: `${frac * 100}%`, background: OUTCOME_META[o].color, borderRadius: 3 }} />
+            </div>
+          </div>
+        );
+      })}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 10, font: '12px ui-monospace, monospace' }}>
+        <span>mean habitable&nbsp;<b style={{ color: '#46d98a' }}>{agg ? pct(agg.habMean) : '—'}</b>
+          {agg && agg.n > 1 ? <span style={{ color: '#6f7f99' }}> ±{(agg.habStderr * 100).toFixed(2)}</span> : null}</span>
+        <span>mean stable era&nbsp;<b style={{ color: '#9ec7ff' }}>{agg ? agg.longMean.toFixed(1) : '—'}</b></span>
+        <span>longest ever&nbsp;<b style={{ color: '#ffd27f' }}>{agg ? agg.longMax.toFixed(1) : '—'}</b></span>
+      </div>
+    </>
+  );
+
+  const distNode = (
+    <>
+      <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', margin: '2px 0' }}>habitable fraction of lifetime</div>
+      <Histogram data={agg?.histHab ?? []} max={agg?.histMax.hab ?? 1} color="#46d98a" domain={['0%', '100%']} />
+      <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', margin: '8px 0 2px' }}>longest stable era</div>
+      <Histogram data={agg?.histLong ?? []} max={agg?.histMax.long ?? 1} color="#9ec7ff" domain={['0', tMax.toFixed(0)]} />
+      <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', margin: '8px 0 2px' }}>time to star ejection (happy runs)</div>
+      <Histogram data={agg?.histEject ?? []} max={agg?.histMax.eject ?? 1} color="#ffd27f" domain={['0', tMax.toFixed(0)]} />
+      <div style={note}>Distributions sharpen as N grows.</div>
+    </>
+  );
+
+  const recordsNode = (
+    <>
+      <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', margin: '2px 0 6px' }}>longest stable eras</div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', font: '11px ui-monospace, monospace' }}>
+        <thead>
+          <tr style={{ color: '#6f7f99', textAlign: 'right' }}>
+            <th style={{ textAlign: 'left' }}>#</th><th>stable</th><th>hab%</th><th>r</th><th>v</th><th>dir</th><th>outcome</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(agg?.records ?? []).map((r, i) => (
+            <tr key={i} style={{ textAlign: 'right', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <td style={{ textAlign: 'left', color: '#6f7f99' }}>{i + 1}</td>
+              <td style={{ color: '#ffd27f' }}>{r.longestHabitable.toFixed(1)}</td>
+              <td>{(r.habitableFraction * 100).toFixed(0)}</td>
+              <td>{r.radius.toFixed(2)}</td>
+              <td>{r.speed.toFixed(2)}</td>
+              <td>{r.retro ? 'retro' : 'pro'}</td>
+              <td style={{ color: OUTCOME_META[r.outcome].color }}>{r.outcome}</td>
+            </tr>
+          ))}
+          {!agg?.records.length && <tr><td colSpan={7} style={{ color: '#6f7f99', padding: '8px 0' }}>Run the census to populate…</td></tr>}
+        </tbody>
+      </table>
+    </>
+  );
+
+  const sections: SectionDef[] = [
+    { id: 'system', title: 'System', arch: 'subject', node: systemNode, estHeight: 540 },
+    { id: 'sim', title: 'Simulation', arch: 'lab', node: simNode, estHeight: 380 },
+    { id: 'sampling', title: 'Sampling', arch: 'lab', node: samplingNode, estHeight: 620 },
+    { id: 'outcomes', title: 'Outcomes', arch: 'readout', node: outcomesNode, estHeight: 380 },
+    { id: 'dist', title: 'Distributions', arch: 'readout', node: distNode, estHeight: 420 },
+    { id: 'records', title: 'Records', arch: 'readout', node: recordsNode, estHeight: 340 },
+  ];
+
+  /* ---- view windows: the two instruments ---- */
+
+  const viewWrap: React.CSSProperties = {
+    position: 'absolute', inset: 0, overflow: 'auto', background: '#05060a',
+    color: '#cfe0f5', font: '13px/1.5 system-ui, sans-serif', padding: 12,
+  };
+
+  const views: ViewDef[] = [
+    {
+      id: 'map',
+      title: 'Destiny map',
+      defaultRect: { x: 372, y: 16, w: 712, h: 640 },
+      node: (
+        <div style={viewWrap}>
           <div style={{ ...panel, marginBottom: 12, font: '12px/1.6 system-ui', color: '#9aa7bd' }}>
             Pick a slice of launch space (<b style={{ color: '#cfe8ff' }}>Plane</b>) and a way to color it. With the
             <b style={{ color: '#cfe8ff' }}> Exact</b> lens each pixel is one precise world — its boundaries stay fractal at
@@ -461,17 +565,21 @@ export default function TrinaryLab() {
             onBox: (b) => { setRMin(b.rMin); setRMax(b.rMax); setFMin(b.fMin); setFMax(b.fMax); },
             onRunCensus: runCensus,
           }} />
-        </>
-      )}
-
-      {/* ── Census instrument ──────────────────────────────────────────── */}
-      {instrument === 'census' && (
-        <>
+        </div>
+      ),
+    },
+    {
+      id: 'census',
+      title: 'Census',
+      defaultRect: { x: 372, y: 16, w: 560, h: 480 },
+      node: (
+        <div style={viewWrap}>
           <div style={{ ...panel, marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
               <span style={{ font: '700 26px/1 ui-monospace, monospace', color: '#fff' }}>{n.toLocaleString()}</span>
               <span style={{ color: '#6f7f99' }}>/ {targetN.toLocaleString()} worlds explored</span>
               <span style={{ flex: 1 }} />
+              {rate > 0 && <span style={{ font: '12px ui-monospace, monospace', color: '#6f7f99' }}>{rate.toFixed(0)} worlds/s</span>}
               <span style={{ font: '700 20px ui-monospace, monospace', color: '#46d98a' }}>{pct(happyPct)}</span>
               <span style={{ color: '#6f7f99' }}>happy endings</span>
             </div>
@@ -479,122 +587,47 @@ export default function TrinaryLab() {
               <div style={{ height: '100%', width: `${Math.min(100, (n / targetN) * 100)}%`, background: '#46d98a', transition: 'width 0.1s' }} />
             </div>
           </div>
-
-          <div style={{ ...panel, marginBottom: 12 }}>
-            <h3 style={h3}>SAMPLING — the space of launches</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1.5fr) minmax(260px, 1fr)', gap: 18, alignItems: 'start' }}>
-              <div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0 18px' }}>
-                  <Pills label="Engine" value={engine}
-                    options={[
-                      { value: 'cpu', label: 'CPU' },
-                      ...(HAS_WORKERS ? [{ value: 'workers', label: `Workers ×${Math.min(8, Math.max(2, (navigator.hardwareConcurrency || 4) - 1))}` }] : []),
-                      ...(HAS_GPU ? [{ value: 'gpu', label: 'GPU (exp)' }] : []),
-                    ]}
-                    onChange={(v) => setEngine(v as Engine)} />
-                  {engine === 'gpu' && (
-                    <div style={{ gridColumn: '1 / -1', font: '11px/1.5 system-ui', color: '#ffd27f' }}>
-                      ⚠ Experimental WebGPU engine: simplified classifier (no “calm” axis, so Paradise% reads 0). Verify against CPU; falls back automatically on error.
-                    </div>
-                  )}
-                  <Slider label="Runs (target N)" value={targetN} min={500} max={20000} step={500} onChange={setTargetN} format={v => v.toLocaleString()} />
-                  <Slider label="Launch radius min" value={rMin} min={0.2} max={6} step={0.1} onChange={v => setRMin(Math.min(v, rMax))} format={v => v.toFixed(1)} />
-                  <Slider label="Launch radius max" value={rMax} min={0.2} max={8} step={0.1} onChange={v => setRMax(Math.max(v, rMin))} format={v => v.toFixed(1)} />
-                  <Slider label="Speed × circular min" value={fMin} min={0.2} max={1.5} step={0.05} onChange={v => setFMin(Math.min(v, fMax))} format={v => v.toFixed(2)} />
-                  <Slider label="Speed × circular max" value={fMax} min={0.2} max={1.8} step={0.05} onChange={v => setFMax(Math.max(v, fMin))} format={v => v.toFixed(2)} />
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <Pills label="Launch direction" options={[{ value: 1, label: 'Pro + retro' }, { value: 0, label: 'Prograde only' }]}
-                      value={allowRetro ? 1 : 0} onChange={v => setAllowRetro(v === 1)} />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <LaunchSpace rMin={rMin} rMax={rMax} fMin={fMin} fMax={fMax} allowRetro={allowRetro} />
-                <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 6 }}>
-                  Each dot is a candidate world: a launch radius and a speed (as a multiple of the local circular speed). The cyan box is what you’re sampling now — move the sliders to reshape it, or drag a box on the Destiny Map’s radius×speed plane. Below the amber line orbits tend to be bound; above the red √2 line they tend to escape.
-                  <span style={{ color: '#9aa7bd' }}> Changing any setting clears the tally.</span>
-                </div>
-              </div>
+          <div style={panel}>
+            <h3 style={h3}>LIVE SAMPLES — worlds resolving while the ensemble tallies</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {Array.from({ length: TILE_COUNT }, (_, i) => (
+                <MiniSim key={i} cfg={cfg} running={running} size={118} steps={80} />
+              ))}
             </div>
           </div>
+        </div>
+      ),
+    },
+  ];
 
-          {/* Two-column body */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
-            {/* Live sample + outcomes */}
-            <div style={panel}>
-              <h3 style={h3}>LIVE SAMPLES</h3>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
-                  {Array.from({ length: TILE_COUNT }, (_, i) => (
-                    <MiniSim key={i} cfg={cfg} running={running} size={94} steps={80} />
-                  ))}
-                </div>
-                <div style={{ flex: 1, minWidth: 160 }}>
-                  {OUTCOMES.map(o => {
-                    const c = agg?.counts[o] ?? 0;
-                    const frac = n ? c / n : 0;
-                    return (
-                      <div key={o} style={{ marginBottom: 7 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', font: '11px ui-monospace, monospace' }}>
-                          <span style={{ color: OUTCOME_META[o].color }}>{OUTCOME_META[o].label}</span>
-                          <span style={{ color: '#9aa7bd' }}>{pct(frac)}</span>
-                        </div>
-                        <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)', marginTop: 2 }}>
-                          <div style={{ height: '100%', width: `${frac * 100}%`, background: OUTCOME_META[o].color, borderRadius: 3 }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 18, marginTop: 10, flexWrap: 'wrap', font: '12px ui-monospace, monospace' }}>
-                <span>mean habitable&nbsp;<b style={{ color: '#46d98a' }}>{agg ? pct(agg.habMean) : '—'}</b>
-                  {agg && agg.n > 1 ? <span style={{ color: '#6f7f99' }}> ±{(agg.habStderr * 100).toFixed(2)}</span> : null}</span>
-                <span>mean stable era&nbsp;<b style={{ color: '#9ec7ff' }}>{agg ? agg.longMean.toFixed(1) : '—'}</b></span>
-                <span>longest ever&nbsp;<b style={{ color: '#ffd27f' }}>{agg ? agg.longMax.toFixed(1) : '—'}</b></span>
-              </div>
-            </div>
+  // The instruments are toggled by built-in layouts (replacing the old
+  // internal Destiny Map / Census tab strip).
+  const layouts: LayoutDef[] = [
+    {
+      id: 'map', name: 'Destiny map', sub: 'Fractal fates — drag to zoom', icon: 'grid',
+      open: { system: { x: 84, y: 18 }, sim: { x: 84, y: 560 } },
+      views: { map: { open: true }, census: { open: false } },
+    },
+    {
+      id: 'census', name: 'Census', sub: 'Thousands of worlds, tallied', icon: 'flask',
+      open: { sampling: { x: 84, y: 18 }, outcomes: { x: 366, y: 18 }, dist: { x: 366, y: 440 } },
+      views: { map: { open: false }, census: { x: 648, y: 16, w: 470, h: 470, open: true } },
+    },
+  ];
 
-            {/* Distributions */}
-            <div style={panel}>
-              <h3 style={h3}>DISTRIBUTIONS (sharpen as N grows)</h3>
-              <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', margin: '2px 0' }}>habitable fraction of lifetime</div>
-              <Histogram data={agg?.histHab ?? []} max={agg?.histMax.hab ?? 1} color="#46d98a" domain={['0%', '100%']} />
-              <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', margin: '8px 0 2px' }}>longest stable era</div>
-              <Histogram data={agg?.histLong ?? []} max={agg?.histMax.long ?? 1} color="#9ec7ff" domain={['0', tMax.toFixed(0)]} />
-              <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', margin: '8px 0 2px' }}>time to star ejection (happy runs)</div>
-              <Histogram data={agg?.histEject ?? []} max={agg?.histMax.eject ?? 1} color="#ffd27f" domain={['0', tMax.toFixed(0)]} />
-            </div>
-
-            {/* Records */}
-            <div style={panel}>
-              <h3 style={h3}>LONGEST STABLE ERAS</h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', font: '11px ui-monospace, monospace' }}>
-                <thead>
-                  <tr style={{ color: '#6f7f99', textAlign: 'right' }}>
-                    <th style={{ textAlign: 'left' }}>#</th><th>stable</th><th>hab%</th><th>r</th><th>v</th><th>dir</th><th>outcome</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(agg?.records ?? []).map((r, i) => (
-                    <tr key={i} style={{ textAlign: 'right', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ textAlign: 'left', color: '#6f7f99' }}>{i + 1}</td>
-                      <td style={{ color: '#ffd27f' }}>{r.longestHabitable.toFixed(1)}</td>
-                      <td>{(r.habitableFraction * 100).toFixed(0)}</td>
-                      <td>{r.radius.toFixed(2)}</td>
-                      <td>{r.speed.toFixed(2)}</td>
-                      <td>{r.retro ? 'retro' : 'pro'}</td>
-                      <td style={{ color: OUTCOME_META[r.outcome].color }}>{r.outcome}</td>
-                    </tr>
-                  ))}
-                  {!agg?.records.length && <tr><td colSpan={7} style={{ color: '#6f7f99', padding: '8px 0' }}>Run the census to populate…</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
-      </div>
-    </>
+  return (
+    <Workspace
+      appId="trinary-lab"
+      title="Trinary System · Lab"
+      subtitle={preset.name}
+      sections={sections}
+      views={views}
+      layouts={layouts}
+      defaultLayoutId={initialLayoutId}
+      explainer={explainerText}
+      modes={MODES}
+      activeMode="lab"
+      onModeChange={id => { if (id === 'observatory') window.location.hash = '#/trinary'; }}
+    />
   );
 }

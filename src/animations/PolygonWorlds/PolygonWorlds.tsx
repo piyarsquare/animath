@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
-import { ShellActions, ShellSettings, useAppHeader, useAppExplainer } from '../../components/AppShell';
-import { Section, Slider, Select, Checkbox } from '../../components/ControlPanel';
+import Workspace from '../../chrome/workspace/Workspace';
+import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import { Slider, Select, Checkbox } from '../../components/ControlPanel';
 import { WORLDS, worldById, WorldSpec, deriveGeometry, analyzeWorld } from './worldSpec';
 import { generateProps, ARRANGEMENTS, ArrangementId } from './decor';
 import { makeFundamentalSquareEngine } from './fundamentalSquareEngine';
@@ -46,8 +47,6 @@ export default function PolygonWorlds() {
   const isSpherical = cover === 'spherical';
   const isHyperbolic = cover === 'hyperbolic';
   const props = useMemo(() => generateProps(landmarkCount, arrangement), [landmarkCount, arrangement]);
-  useAppHeader('Polygon Worlds', spec.short);
-  useAppExplainer(explainerText);
 
   const engineRef = useRef<PolygonEngine | null>(null);
   const depsRef = useRef<EngineDeps | null>(null);
@@ -139,8 +138,24 @@ export default function PolygonWorlds() {
       KeyW: 'fwd', ArrowUp: 'fwd', KeyS: 'back', ArrowDown: 'back',
       KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right',
     };
-    const down = (e: KeyboardEvent) => { const m = map[e.code]; if (m) { keysRef.current[m] = true; e.preventDefault(); } };
-    const up = (e: KeyboardEvent) => { const m = map[e.code]; if (m) { keysRef.current[m] = false; e.preventDefault(); } };
+    // Workspace panels hold focusable form fields; typing/arrowing in them must
+    // not move the walker, so window-level key handling defers to the field.
+    const inFormField = () => {
+      const t = document.activeElement?.tagName;
+      return t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT';
+    };
+    const down = (e: KeyboardEvent) => {
+      if (inFormField()) return;
+      const m = map[e.code]; if (m) { keysRef.current[m] = true; e.preventDefault(); }
+    };
+    const up = (e: KeyboardEvent) => {
+      const m = map[e.code];
+      if (!m) return;
+      // Always release the movement flag (a key let go while a field has focus
+      // must not leave the walker stuck), but let the field keep its native keyup.
+      keysRef.current[m] = false;
+      if (!inFormField()) e.preventDefault();
+    };
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
@@ -210,76 +225,140 @@ export default function PolygonWorlds() {
   const getMapState = useCallback(() => engineRef.current?.getMapState() ?? null, []);
   const worldOptions = WORLDS.map((w) => ({ value: w.id, label: w.label }));
 
-  return (
+  /* ---- archetype panels (one row per legacy control; nothing dropped) ---- */
+
+  // subject — which gluing, plus the live topological invariants it forces.
+  const worldNode = (
     <>
-      <div
-        ref={containerRef}
-        style={{ position: 'absolute', inset: 0, cursor: 'grab', touchAction: 'none' }}
-        onPointerDown={onPointerDown} onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
-      >
-        <Canvas3D onMount={onMount} />
-      </div>
-
-      <MovePad onSet={setKey} />
-      <SquareMiniMap getState={getMapState} spec={spec} />
-      {spec.id === 'rp2' && <EmbeddingInset key="rp2-embed" getState={getMapState} />}
-
-      <div style={{
-        position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
-        color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
-      }}>
-        Drag to look · WASD / arrows or the pad to walk · the polygon's gluing decides the world
-      </div>
-
-      <ShellSettings>
-        <Section title="World" icon="⬚" defaultOpen>
-          <Select label="Gluing" options={worldOptions} value={worldId} onChange={setWorldId} />
-          <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
-          {thirdPerson && (
-            <Slider label="Camera distance" value={camDistance} min={1.5} max={12} step={0.5} onChange={setCamDistance} format={(v) => `${v.toFixed(1)}`} />
-          )}
-          <Slider label="Landmarks" value={landmarkCount} min={1} max={14} step={1} onChange={(v) => setLandmarkCount(Math.round(v))} format={(v) => `${Math.round(v)}`} />
-          <Select label="Arrangement" options={ARRANGEMENTS.map((a) => ({ value: a.id, label: a.label }))} value={arrangement} onChange={(v) => setArrangement(v as ArrangementId)} />
-          {!isSpherical && (
-            <Slider label={isHyperbolic ? 'Disk scale' : 'Square size'} value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
-          )}
-          {!isSpherical && !isHyperbolic && (
-            <Slider label="Floor thickness" value={floorThickness} min={0} max={6} step={0.2} onChange={setFloorThickness} format={(v) => `${v.toFixed(1)} m`} />
-          )}
-          {isSpherical && (
-            <Slider label="Planet radius" value={planetRadius} min={12} max={90} step={2} onChange={setPlanetRadius} format={(v) => `${Math.round(v)} m`} />
-          )}
-          <Slider label={isSpherical ? 'Planet glass opacity' : 'Glass floor opacity'} value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
-          <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
-          <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5 }}>
-            <div style={{ marginBottom: 4 }}>
-              <span style={{ color: 'var(--cp-fg)' }}>Edge word</span>{' '}
-              <code style={{ fontSize: 11 }}>{spec.word}</code>
-            </div>
-            <div>
-              <strong style={{ color: 'var(--cp-fg)' }}>{analysis.name}</strong> ·{' '}
-              {analysis.orientable ? 'orientable' : 'non-orientable'} · χ = {analysis.chi} ·{' '}
-              {analysis.curvature === 'flat' ? 'flat (κ = 0)'
-                : analysis.curvature === 'positive' ? 'positively curved (κ > 0)'
-                  : 'negatively curved (κ < 0)'}
-            </div>
-            <div style={{ marginTop: 4, opacity: 0.85 }}>
-              χ picks the geometry; edge count is presentation.
-              {!analysis.orientable && ' Crossing a flipped edge swaps trees ↔ columns.'}
-            </div>
-          </div>
-        </Section>
-      </ShellSettings>
-
-      <ShellActions>
-        <div className="cp-section-body">
-          <button style={actionBtn} onClick={() => engineRef.current?.clearTrail()}>Clear trail</button>
+      <Select label="Gluing" options={worldOptions} value={worldId} onChange={setWorldId} />
+      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5 }}>
+        <div style={{ marginBottom: 4 }}>
+          <span style={{ color: 'var(--cp-fg)' }}>Edge word</span>{' '}
+          <code style={{ fontSize: 11 }}>{spec.word}</code>
         </div>
-      </ShellActions>
+        <div>
+          <strong style={{ color: 'var(--cp-fg)' }}>{analysis.name}</strong> ·{' '}
+          {analysis.orientable ? 'orientable' : 'non-orientable'} · χ = {analysis.chi} ·{' '}
+          {analysis.curvature === 'flat' ? 'flat (κ = 0)'
+            : analysis.curvature === 'positive' ? 'positively curved (κ > 0)'
+              : 'negatively curved (κ < 0)'}
+        </div>
+        <div style={{ marginTop: 4, opacity: 0.85 }}>
+          χ picks the geometry; edge count is presentation.
+          {!analysis.orientable && ' Crossing a flipped edge swaps trees ↔ columns.'}
+        </div>
+      </div>
     </>
   );
+
+  // domain — the size/shape of the fundamental domain the walk lives in.
+  const terrainNode = (
+    <>
+      {!isSpherical && (
+        <Slider label={isHyperbolic ? 'Disk scale' : 'Square size'} value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
+      )}
+      {!isSpherical && !isHyperbolic && (
+        <Slider label="Floor thickness" value={floorThickness} min={0} max={6} step={0.2} onChange={setFloorThickness} format={(v) => `${v.toFixed(1)} m`} />
+      )}
+      {isSpherical && (
+        <Slider label="Planet radius" value={planetRadius} min={12} max={90} step={2} onChange={setPlanetRadius} format={(v) => `${Math.round(v)} m`} />
+      )}
+    </>
+  );
+
+  // view — camera rig.
+  const cameraNode = (
+    <>
+      <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
+      {thirdPerson && (
+        <Slider label="Camera distance" value={camDistance} min={1.5} max={12} step={0.5} onChange={setCamDistance} format={(v) => `${v.toFixed(1)}`} />
+      )}
+    </>
+  );
+
+  // marks — decor, glass and the ink trail.
+  const decorNode = (
+    <>
+      <Slider label="Landmarks" value={landmarkCount} min={1} max={14} step={1} onChange={(v) => setLandmarkCount(Math.round(v))} format={(v) => `${Math.round(v)}`} />
+      <Select label="Arrangement" options={ARRANGEMENTS.map((a) => ({ value: a.id, label: a.label }))} value={arrangement} onChange={(v) => setArrangement(v as ArrangementId)} />
+      <Slider label={isSpherical ? 'Planet glass opacity' : 'Glass floor opacity'} value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
+      <button style={actionBtn} onClick={() => engineRef.current?.clearTrail()}>Clear trail</button>
+    </>
+  );
+
+  // drive — locomotion.
+  const walkNode = (
+    <>
+      <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
+      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5 }}>
+        WASD / arrow keys or the on-screen pad walk; drag the view to look; pinch or scroll to zoom.
+      </div>
+    </>
+  );
+
+  const sections: SectionDef[] = [
+    { id: 'world', title: 'World', arch: 'subject', node: worldNode, estHeight: 250 },
+    { id: 'terrain', title: 'Terrain', arch: 'domain', node: terrainNode, estHeight: 160 },
+    { id: 'camera', title: 'Camera', arch: 'view', node: cameraNode, estHeight: 160 },
+    { id: 'decor', title: 'Landmarks & trail', arch: 'marks', node: decorNode, estHeight: 260 },
+    { id: 'drive', title: 'Walk', arch: 'drive', node: walkNode, estHeight: 160 },
+  ];
+
+  const views: ViewDef[] = [
+    {
+      id: 'walk',
+      title: 'First-person view',
+      defaultRect: { x: 372, y: 16, w: 712, h: 628 },
+      node: (
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+          {/* gesture surface — the overlays below are siblings so taps on the
+              pad / map never start a look-drag (same structure as pre-migration) */}
+          <div
+            ref={containerRef}
+            style={{ position: 'absolute', inset: 0, cursor: 'grab', touchAction: 'none' }}
+            onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
+          >
+            <Canvas3D onMount={onMount} />
+          </div>
+
+          <MovePad onSet={setKey} />
+          <SquareMiniMap getState={getMapState} spec={spec} />
+          {spec.id === 'rp2' && <EmbeddingInset key="rp2-embed" getState={getMapState} />}
+
+          <div style={{
+            position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
+            color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
+          }}>
+            Drag to look · WASD / arrows or the pad to walk · the polygon's gluing decides the world
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <Workspace
+      appId="polygon-worlds"
+      title="Polygon Worlds"
+      subtitle={spec.short}
+      sections={sections}
+      views={views}
+      layouts={LAYOUTS}
+      defaultLayoutId="walk"
+      explainer={explainerText}
+    />
+  );
 }
+
+/** One built-in arrangement: the world picker, camera and locomotion in a left
+ *  column beside the walk window (Compact + Everything are auto-appended). */
+const LAYOUTS: LayoutDef[] = [
+  {
+    id: 'walk', name: 'Walk', sub: 'World · Camera · Walk', icon: 'move',
+    open: { world: { x: 84, y: 18 }, camera: { x: 84, y: 258 }, drive: { x: 84, y: 458 } },
+  },
+];
 
 const actionBtn: React.CSSProperties = {
   padding: '12px 16px', borderRadius: 6, border: '1px solid var(--cp-border)',

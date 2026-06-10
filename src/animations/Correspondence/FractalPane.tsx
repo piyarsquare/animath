@@ -130,7 +130,7 @@ export default function FractalPane({
     const handleResize = () => {
       if (!mountRef.current) return;
       const rect = mountRef.current.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2); // cap DPR — phones report 3
       const size = Math.min(rect.width, rect.height);
       renderer.setSize(size, size, false);
       renderer.domElement.style.width = `${size}px`;

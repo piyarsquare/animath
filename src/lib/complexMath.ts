@@ -196,6 +196,79 @@ export function complexArccos(z: THREE.Vector2, branch = 0): THREE.Vector2 {
   return new THREE.Vector2(lnw.y, -lnw.x); // −i · ln w
 }
 
+/** sec = 1/cos and csc = 1/sin (the pole guard lives in complexInv). */
+export function complexSec(z: THREE.Vector2): THREE.Vector2 {
+  return complexInv(complexCos(z));
+}
+export function complexCsc(z: THREE.Vector2): THREE.Vector2 {
+  return complexInv(complexSin(z));
+}
+
+/** Multivalued arctan: (1/(2i))·ln((1+iz)/(1−iz)). The ln carries the branch,
+ *  which shifts the result by branch·π (arctan's sheets are π apart). */
+export function complexArctan(z: THREE.Vector2, branch = 0): THREE.Vector2 {
+  const num = new THREE.Vector2(1 - z.y, z.x);   // 1 + iz
+  const den = new THREE.Vector2(1 + z.y, -z.x);  // 1 − iz
+  const di = complexInv(den);
+  const w = new THREE.Vector2(num.x * di.x - num.y * di.y, num.x * di.y + num.y * di.x);
+  const lnw = complexLnBranch(w, branch);
+  return new THREE.Vector2(lnw.y * 0.5, -lnw.x * 0.5); // (1/(2i)) · ln w
+}
+
+/** arccot(z) = arctan(1/z); arcsec(z) = arccos(1/z); arccsc(z) = arcsin(1/z). */
+export function complexArccot(z: THREE.Vector2, branch = 0): THREE.Vector2 {
+  return complexArctan(complexInv(z), branch);
+}
+export function complexArcsec(z: THREE.Vector2, branch = 0): THREE.Vector2 {
+  return complexArccos(complexInv(z), branch);
+}
+export function complexArccsc(z: THREE.Vector2, branch = 0): THREE.Vector2 {
+  return complexArcsin(complexInv(z), branch);
+}
+
+/** 1/z² — the inverse square. */
+export function complexInverseSquare(z: THREE.Vector2): THREE.Vector2 {
+  return complexInv(complexSquare(z));
+}
+
+export function complexSinh(z: THREE.Vector2): THREE.Vector2 {
+  const e1 = complexExp(z);
+  const e2 = complexExp(new THREE.Vector2(-z.x, -z.y));
+  return new THREE.Vector2((e1.x - e2.x) * 0.5, (e1.y - e2.y) * 0.5);
+}
+export function complexCosh(z: THREE.Vector2): THREE.Vector2 {
+  const e1 = complexExp(z);
+  const e2 = complexExp(new THREE.Vector2(-z.x, -z.y));
+  return new THREE.Vector2((e1.x + e2.x) * 0.5, (e1.y + e2.y) * 0.5);
+}
+export function complexTanh(z: THREE.Vector2): THREE.Vector2 {
+  const s = complexSinh(z);
+  const ci = complexInv(complexCosh(z));
+  return new THREE.Vector2(s.x * ci.x - s.y * ci.y, s.x * ci.y + s.y * ci.x);
+}
+
+/** Multivalued inverse hyperbolics — the ln carries the branch (±2π·k sheets). */
+export function complexArcsinh(z: THREE.Vector2, branch = 0): THREE.Vector2 {
+  // ln(z + √(z²+1))
+  const z2p1 = new THREE.Vector2(z.x * z.x - z.y * z.y + 1, 2 * z.x * z.y);
+  const s = complexSqrt(z2p1);
+  return complexLnBranch(new THREE.Vector2(z.x + s.x, z.y + s.y), branch);
+}
+export function complexArccosh(z: THREE.Vector2, branch = 0): THREE.Vector2 {
+  // ln(z + √(z²−1))
+  const z2m1 = new THREE.Vector2(z.x * z.x - z.y * z.y - 1, 2 * z.x * z.y);
+  const s = complexSqrt(z2m1);
+  return complexLnBranch(new THREE.Vector2(z.x + s.x, z.y + s.y), branch);
+}
+export function complexArctanh(z: THREE.Vector2, branch = 0): THREE.Vector2 {
+  // ½·ln((1+z)/(1−z))
+  const num = new THREE.Vector2(1 + z.x, z.y);
+  const di = complexInv(new THREE.Vector2(1 - z.x, -z.y));
+  const w = new THREE.Vector2(num.x * di.x - num.y * di.y, num.x * di.y + num.y * di.x);
+  const lnw = complexLnBranch(w, branch);
+  return new THREE.Vector2(lnw.x * 0.5, lnw.y * 0.5);
+}
+
 /** Generic quadratic a·z² + b·z + c with complex coefficients. */
 export function complexQuadratic(
   z: THREE.Vector2, a: THREE.Vector2, b: THREE.Vector2, c: THREE.Vector2,
@@ -233,6 +306,19 @@ export function applyComplex(z: THREE.Vector2, t: number): THREE.Vector2 {
     case 19: return complexCot(z);
     case 20: return complexArcsin(z);
     case 21: return complexArccos(z);
+    case 23: return complexSec(z);
+    case 24: return complexCsc(z);
+    case 25: return complexArctan(z);
+    case 26: return complexArccot(z);
+    case 27: return complexArcsec(z);
+    case 28: return complexArccsc(z);
+    case 29: return complexInverseSquare(z);
+    case 30: return complexSinh(z);
+    case 31: return complexCosh(z);
+    case 32: return complexTanh(z);
+    case 33: return complexArcsinh(z);
+    case 34: return complexArccosh(z);
+    case 35: return complexArctanh(z);
     default: return z.clone();
   }
 }
@@ -261,6 +347,19 @@ export function applyComplexBranch(z: THREE.Vector2, t: number, branch: number):
     case 19: return complexCot(z);
     case 20: return complexArcsin(z, branch);
     case 21: return complexArccos(z, branch);
+    case 23: return complexSec(z);
+    case 24: return complexCsc(z);
+    case 25: return complexArctan(z, branch);
+    case 26: return complexArccot(z, branch);
+    case 27: return complexArcsec(z, branch);
+    case 28: return complexArccsc(z, branch);
+    case 29: return complexInverseSquare(z);
+    case 30: return complexSinh(z);
+    case 31: return complexCosh(z);
+    case 32: return complexTanh(z);
+    case 33: return complexArcsinh(z, branch);
+    case 34: return complexArccosh(z, branch);
+    case 35: return complexArctanh(z, branch);
     default: return z.clone();
   }
 }
@@ -271,8 +370,16 @@ export const functionNames = [
   'linear', 'sqrt', 'square', 'ln', 'exp', 'sin', 'cos', 'tan', 'inverse',
   'cube', 'reciprocalCube', 'joukowski', 'rational22', 'essentialExpInv',
   'branchSqrtPoly', 'gamma', 'cubeRoot', 'zMinus1OverZPlus1', 'powPQ',
-  'cot', 'arcsin', 'arccos', 'quadratic'
+  'cot', 'arcsin', 'arccos', 'quadratic',
+  'sec', 'csc', 'arctan', 'arccot', 'arcsec', 'arccsc', 'inverseSquare',
+  'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh'
 ];
+
+/** Indices of the multivalued functions (their branch index selects a sheet).
+ *  Shared by every viewer so the branch controls appear consistently. */
+export const MULTIVALUED_INDICES: ReadonlySet<number> = new Set([
+  1, 3, 14, 18, 20, 21, 25, 26, 27, 28, 33, 34, 35,
+]);
 
 /** Index of the z^(p/q) rational-power function in {@link functionNames}. */
 export const POW_PQ_INDEX = 18;
@@ -303,7 +410,20 @@ export const functionFormulas: Record<string, string> = {
   cot: 'cos(z)/sin(z)',
   arcsin: 'arcsin(z)',
   arccos: 'arccos(z)',
-  quadratic: 'a·z² + b·z + c'
+  quadratic: 'a·z² + b·z + c',
+  sec: '1/cos(z)',
+  csc: '1/sin(z)',
+  arctan: 'arctan(z)',
+  arccot: 'arccot(z)',
+  arcsec: 'arcsec(z)',
+  arccsc: 'arccsc(z)',
+  inverseSquare: '1/z²',
+  sinh: 'sinh(z)',
+  cosh: 'cosh(z)',
+  tanh: 'tanh(z)',
+  arcsinh: 'arcsinh(z)',
+  arccosh: 'arccosh(z)',
+  arctanh: 'arctanh(z)'
 };
 
 /** Function picker grouping: each category lists member indices into
@@ -311,9 +431,11 @@ export const functionFormulas: Record<string, string> = {
  *  so reordering categories never affects persisted selections. Covers every
  *  index exactly once; append new functions to the appropriate category. */
 export const functionCategories: { label: string; members: number[] }[] = [
-  { label: 'Polynomial & rational', members: [0, 2, 9, 22, 8, 10, 12] },
+  { label: 'Polynomial & rational', members: [0, 2, 9, 22, 8, 29, 10, 12] },
   { label: 'Roots & log (multivalued)', members: [1, 16, 18, 3, 14] },
-  { label: 'Trig & inverse-trig', members: [5, 6, 7, 19, 20, 21] },
+  { label: 'Trig', members: [5, 6, 7, 19, 23, 24] },
+  { label: 'Inverse trig', members: [20, 21, 25, 26, 27, 28] },
+  { label: 'Hyperbolic', members: [30, 31, 32, 33, 34, 35] },
   { label: 'Exp & essential', members: [4, 13] },
   { label: 'Special', members: [15, 11, 17] }
 ];
