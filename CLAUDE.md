@@ -251,14 +251,18 @@ explainer>`. The scene (Three.js via `Canvas3D`, or DOM/CSS) is the view node.
 
 The complex viewers are powered by the **`src/lib/particles` engine** plus the
 turnkey `ParticleViewerShell` component, which together provide the standard
-**Function / Domain / Camera / Color / Particles / Surface / Motion /
-4D Rotation / Detail** panels (the `QuarterTurnControls` live in the drive-tier
-4D Rotation panel), gesture handling, and the rAF loop out of the box. The flow
-is: `useParticleState` (state) → `useViewControls` (orientation/projection
-controls) → build geometry/axes in `Canvas3D`'s `onMount` → `useUniformSync`
-pushes React state into shader uniforms → `startAnimationLoop` runs the rAF loop.
-**ComplexParticles is the canonical, simplest consumer** — copy it when building a
-new particle viewer.
+**Function / Domain / Camera / Color / Render / Motion / 4D Rotation / System**
+panels (the `QuarterTurnControls` live in the drive-tier 4D Rotation panel),
+gesture handling, and the rAF loop out of the box. The flow is:
+`useParticleState` (state) → `useViewControls` (orientation/projection
+controls) → build geometry/axes in `Canvas3D`'s `onMount` (which **must return
+the cleanup** that stops the loop and disposes the scene — `startAnimationLoop`
+returns the stop function) → `useUniformSync` pushes React state into shader
+uniforms → `startAnimationLoop` runs the rAF loop.
+**ComplexParticles is the canonical consumer** — though no longer a *simple*
+one (it orchestrates per-branch materials across four render modes); copy its
+shell wiring when building a new particle viewer and skip the multi-sheet
+material plumbing unless you need it.
 
 ### 2D / fractal viewers
 

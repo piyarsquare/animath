@@ -29,7 +29,10 @@ export interface AnimationLoopDeps {
   setOrientationMatrix: (m: number[][]) => void;
 }
 
-export function startAnimationLoop(deps: AnimationLoopDeps): void {
+/** Starts the per-frame render loop. Returns a stop function — the caller's
+ *  unmount cleanup MUST invoke it, or the loop (and its renderer) outlives the
+ *  component and keeps rendering forever. */
+export function startAnimationLoop(deps: AnimationLoopDeps): () => void {
   const {
     renderer, scene, camera,
     materialsRef, axisRefs,
@@ -47,8 +50,11 @@ export function startAnimationLoop(deps: AnimationLoopDeps): void {
   let transDuration = 0;
   let transStartVal = 0;
   let lastMatrixPush = 0;   // throttles the React orientation-matrix readout
+  let rafId = 0;
+  let stopped = false;
 
   const animate = () => {
+    if (stopped) return;
     const elapsed = clock.getElapsedTime();
     const dropMode = dropAxisRef.current !== 'None';
     const fixedMode = viewMotionRef.current === 'Fixed';
@@ -170,8 +176,13 @@ export function startAnimationLoop(deps: AnimationLoopDeps): void {
     }
 
     renderer.render(scene, camera);
-    requestAnimationFrame(animate);
+    rafId = requestAnimationFrame(animate);
   };
 
   animate();
+
+  return () => {
+    stopped = true;
+    cancelAnimationFrame(rafId);
+  };
 }

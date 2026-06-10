@@ -132,3 +132,14 @@ site.
   visible embeds.
 - The hash router means embed URLs are `…/animath/#/embed/…` — fine for
   iframes; no server-side routing needed.
+
+## URL compatibility contract
+
+Published embed URLs freeze app semantics into external documents: `fn=`
+names index into `functionNames`, `proj=` aliases map to `ProjectionMode`
+values, and render/motion names map to their registries. Those registries are
+therefore **append-only with stable meanings** — never reorder or repurpose
+an existing function index, projection alias, or mode name, or every embed
+already published in an article silently changes its picture. Retiring a
+value means keeping its alias parsing as a redirect to the successor (as
+`proj=stereo` now maps to the Torus projection).

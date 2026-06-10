@@ -11,7 +11,7 @@ export interface WorkspaceMode { id: string; label: string; }
  * optional mode pills (e.g. Trinary's Observatory | Lab), a Layouts-menu
  * slot (children), the ? explainer and the skin picker.
  */
-export function TopBar({ title, subtitle, modes, activeMode, onModeChange, explainer, note, home = true, compact, onTitleClick, children }: {
+export function TopBar({ title, subtitle, modes, activeMode, onModeChange, explainer, note, home = true, compact, onTitleClick, extra, children }: {
   title: string;
   subtitle?: string;
   modes?: WorkspaceMode[];
@@ -26,6 +26,8 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
   compact?: boolean;
   /** Makes the title/formula a button (e.g. opens the Function panel). */
   onTitleClick?: () => void;
+  /** Always-available inline control right after the title (WorkspaceProps.topExtra). */
+  extra?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   const [skin, setSkin] = useSkin();
@@ -57,6 +59,12 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
           <span className="am-title">{title}</span>
           {subtitle && <span className="am-sub">{subtitle}</span>}
         </div>
+      )}
+      {extra && (
+        <>
+          <div className="am-bar-sep" />
+          <div className="am-bar-extra">{extra}</div>
+        </>
       )}
       {modes && modes.length > 0 && (
         <>

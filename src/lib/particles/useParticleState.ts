@@ -166,7 +166,6 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [fiberCollapse, setFiberCollapse] = useState(0);
   // Whether to draw the faint sphere/donut reference scaffolding.
   const [showScaffold, setShowScaffold] = usePersistentState(pk('showScaffold'), true);
-  // Hopf fiber-trace overlay (Torus view): toggle + how many fibers per latitude.
   const [orientationMatrix, setOrientationMatrix] = useState<number[][]>([
     [0, 0, 0, 0],
     [0, 0, 0, 0],

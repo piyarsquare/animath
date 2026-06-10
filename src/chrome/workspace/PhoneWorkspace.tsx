@@ -19,7 +19,7 @@ const maxCardH = () => Math.round(window.innerHeight * 0.8);
  * Layouts menu is hidden on phone.
  */
 export default function PhoneWorkspace(props: WorkspaceProps) {
-  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, modes, activeMode, onModeChange } = props;
+  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, modes, activeMode, onModeChange } = props;
   const sections = useMemo(() => sortByTier(props.sections), [props.sections]);
   const [sheet, setSheet] = useState<string | null>(null);
   /* per-view card heights are layout state (like desktop view rects) — persisted */
@@ -79,6 +79,7 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
         activeMode={activeMode}
         onModeChange={onModeChange}
         explainer={explainer}
+        extra={topExtra}
         compact
         onTitleClick={
           titlePanel && sections.some(s => s.id === titlePanel)
