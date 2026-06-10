@@ -20,8 +20,26 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, join, basename } from "node:path";
 import { fileURLToPath } from "node:url";
+import { marked } from "marked";
 import { htmlToMarkdown } from "./convert-html.mjs";
 import { CATEGORIES, normalizeApps, shortName, appChips, catHue } from "./categories.mjs";
+
+marked.setOptions({ gfm: true });
+
+// Pull the "Self-reflection" (exit-interview) section out of a report body: the
+// markdown from the `## Self-reflection` heading to the next h2 (or EOF), plus the
+// parsed Follow-up value level when present. Returns null when there's no section.
+const REFL_LEVELS = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE"];
+function extractReflection(md) {
+  const m = /^##\s+Self[-\s]?reflection\s*$/im.exec(md);
+  if (!m) return null;
+  const rest = md.slice(m.index + m[0].length);
+  const next = rest.search(/^##\s+/m);
+  const body = (next === -1 ? rest : rest.slice(0, next)).trim();
+  if (!body) return null;
+  const lv = body.match(/follow[-\s]?up\s+value:?\s*\**\s*(CRITICAL|HIGH|MEDIUM|LOW|NONE)/i);
+  return { md: body, html: marked.parse(body), level: lv ? lv[1].toUpperCase() : null };
+}
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const OUT = join(ROOT, "converted");
@@ -123,7 +141,7 @@ for (const rec of byKey.values()) {
 
   reports.push({ slug: rec.slug, short: shortName(rec.slug), base: rec.base, date,
     kind: fm.kind || "?", session: fm.session || "?", title: fm.title || rec.base, status: fm.status || "?",
-    apps, thumb,
+    apps, thumb, reflection: extractReflection(md),
     href: `converted/${rec.kind}/${rec.slug}/${rec.base}.preview.html` });
 }
 
@@ -141,6 +159,10 @@ for (const s of sessions.values()) {
   s.date = s.reports.map(r => r.date).sort().slice(-1)[0] || "";
   const p = s.reports.find(r => r.kind === "handoff") || s.reports[0];
   s.title = p.title; s.status = p.status; s.href = p.href;
+  // Exit-interview rollup: the handoff's reflection wins; else the first report
+  // that has one. Link the badge/anchor to the report the reflection came from.
+  const rr = (p.reflection ? p : s.reports.find(r => r.reflection)) || null;
+  s.reflection = rr ? { ...rr.reflection, href: rr.href } : null;
   s.thumb = (s.reports.find(r => r.thumb) || {}).thumb || null;
   // Union of every report's categories; primary = the first one seen.
   const seen = [];
@@ -163,13 +185,18 @@ for (const s of sessionList) {
   let rows = "";
   for (const r of s.reports) rows += `      <a class="cc-row" href="${esc(r.href)}"><span class="chip chip-${esc(r.kind)}">${esc(r.kind)}</span><span class="cc-rtitle">${esc(r.title)}</span></a>\n`;
   const thumb = s.thumb ? `      <img class="cc-thumb" src="${esc(s.thumb)}" alt="" loading="lazy">\n` : "";
-  cardsHtml += `    <article class="cc-session${s.thumb ? " has-thumb" : ""}" data-short="${esc(s.short)}" data-apps="${esc(s.apps.join(" "))}" data-cat="${esc(s.primary)}" data-hue="${catHue(s.primary)}" data-date="${esc(s.date.slice(0, 10))}" data-status="${esc(s.status)}" data-session="${esc(s.session)}" data-title="${esc(s.title)}" data-href="${esc(s.href)}" data-hay="${esc(hay)}">
+  const refl = s.reflection;
+  // Inert <template>: the rendered reflection HTML, carried with each card so the
+  // Reflections view can clone it after the same search/category filtering runs.
+  const reflTpl = refl ? `      <template class="cc-refl-data" data-rhref="${esc(refl.href)}">${refl.html}</template>\n` : "";
+  cardsHtml += `    <article class="cc-session${s.thumb ? " has-thumb" : ""}" data-short="${esc(s.short)}" data-apps="${esc(s.apps.join(" "))}" data-cat="${esc(s.primary)}" data-hue="${catHue(s.primary)}" data-date="${esc(s.date.slice(0, 10))}" data-status="${esc(s.status)}" data-session="${esc(s.session)}" data-title="${esc(s.title)}" data-href="${esc(s.href)}" data-refl="${refl ? 1 : 0}" data-level="${esc(refl?.level || "")}" data-hay="${esc(hay)}">
 ${thumb}      <div class="cc-shead"><span class="cc-sid">${esc(s.session)}</span> ${statusBadge(s.status)} <span class="cc-date">${esc(s.date.slice(0, 10))}</span> <span class="cc-branch"><code>${esc(s.short)}</code></span></div>
       <div class="cc-stitle">${esc(s.title)}</div>
       <div class="cc-cats">${appChips(s.apps, (k) => "#cat=" + k)}</div>
       <div class="cc-reports">\n${rows}      </div>
-    </article>\n`;
+${reflTpl}    </article>\n`;
 }
+const reflCount = sessionList.filter(s => s.reflection).length;
 
 const CAT_LABELS = Object.fromEntries(Object.entries(CATEGORIES).map(([k, v]) => [k, v.label]));
 
@@ -224,11 +251,19 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
   ol.cc-timeline li.tl h3 a{color:var(--fg)}
   ol.cc-timeline .tl-head{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem}
   .cc-empty{color:var(--muted);padding:2rem 0}
+  section.cc-refl{border:1px solid var(--border);border-left:3px solid hsl(var(--dot,215) 60% 50%);border-radius:8px;padding:.6rem .8rem;margin:.7rem 0;background:var(--panel)}
+  section.cc-refl .cc-rhead{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;font-size:.82rem}
+  section.cc-refl h3{font-size:1rem;margin:.3rem 0 .2rem}
+  section.cc-refl h3 a{color:var(--fg)}
+  .cc-rbody{font-size:.92rem}
+  .cc-rbody ol,.cc-rbody ul{margin:.3rem 0 .2rem;padding-left:1.2rem}
+  .cc-rbody li{margin:.18rem 0}
+  .cc-rbody p{margin:.3rem 0}
   .cc-home{color:var(--accent);text-decoration:none;font-weight:600}
   .cc-home:hover{text-decoration:underline}
   @media (max-width:520px){.cc-thumb{width:96px;height:60px}}
 </style></head>
-<body><main class="report"><header><p class="kicker"><a class="cc-home" href="../">↗ animath demo</a> · cross-branch session hub</p>
+<body><main class="report"><header><p class="kicker"><a class="cc-home" href="../embed-demo.html" title="Seeing e^z — live embedded applets in a host article">↗ embed demo</a> · cross-branch session hub</p>
 <h1>Session control center</h1>
 <dl class="meta"><div><dt>Scope</dt><dd>${sessions.size} sessions · ${reports.length} reports · ${branchSet.size} branches · ${catSet.size} categories</dd></div>
 <div><dt>Generated</dt><dd>${new Date().toISOString().slice(0, 16).replace("T", " ")} · <code>build-sessions.mjs</code></dd></div></dl>
@@ -244,7 +279,7 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
     <option value="date-desc">newest</option><option value="date-asc">oldest</option>
     <option value="app">app</option><option value="title">title</option>
   </select></label>
-  <span class="cc-seg"><button id="view-cards" class="active" type="button">Cards</button><button id="view-timeline" type="button">Timeline</button></span>
+  <span class="cc-seg"><button id="view-cards" class="active" type="button">Cards</button><button id="view-timeline" type="button">Timeline</button><button id="view-refl" type="button" title="Aggregated end-of-session self-reflections (exit interviews)">Reflections${reflCount ? ` (${reflCount})` : ""}</button></span>
 </div>
 <div class="cc-fbar" id="cc-fbar">${catBar}</div>
 <div id="cc-list">
@@ -255,9 +290,13 @@ ${cardsHtml}</div>
   var listEl = document.getElementById("cc-list");
   var ALL = Array.prototype.slice.call(listEl.querySelectorAll(".cc-session"));
   var q = document.getElementById("q"), gb = document.getElementById("groupby"), sb = document.getElementById("sortby");
-  var bCards = document.getElementById("view-cards"), bTl = document.getElementById("view-timeline");
+  var bCards = document.getElementById("view-cards"), bTl = document.getElementById("view-timeline"), bRefl = document.getElementById("view-refl");
   var fbtns = Array.prototype.slice.call(document.querySelectorAll("#cc-fbar .cc-fbtn"));
   var view = "cards";
+  var REFL_RANK = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, NONE: 4, "": 5 };
+  function reflBadge(lv){ if (!lv) return "";
+    var cls = lv==="CRITICAL"||lv==="HIGH" ? "badge-bad" : lv==="MEDIUM" ? "badge-warn" : "badge-ok";
+    return '<span class="badge '+cls+'">follow-up: '+esc(lv)+'</span>'; }
   function activeCat(){ var m = (location.hash || "").match(/cat=([^&]+)/); return m ? decodeURIComponent(m[1]) : ""; }
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
   function catChip(key, hue){ return '<a class="cat" style="--c:'+hue+'" href="#cat='+encodeURIComponent(key)+'">'+esc(CAT[key]||key)+'</a>'; }
@@ -283,6 +322,7 @@ ${cardsHtml}</div>
     listEl.innerHTML = "";
     if (!cards.length){ listEl.innerHTML = '<p class="cc-empty">No sessions match.</p>'; return; }
     if (view === "timeline"){ renderTimeline(cards); return; }
+    if (view === "refl"){ renderReflections(cards); return; }
     cards.sort(cmp);
     var g = gb.value;
     if (g === "none"){ cards.forEach(function(c){ listEl.appendChild(c); }); return; }
@@ -313,9 +353,32 @@ ${cardsHtml}</div>
     });
     listEl.appendChild(ol);
   }
-  function setView(v){ view = v; bCards.classList.toggle("active", v==="cards"); bTl.classList.toggle("active", v==="timeline"); gb.disabled = v==="timeline"; render(); }
+  function renderReflections(cards){
+    // Exit-interview digest: only sessions that shipped a self-reflection, sorted
+    // by follow-up severity (CRITICAL→NONE) then newest. Reflection HTML is cloned
+    // from each card's inert <template>.
+    var items = cards.filter(function(c){ return c.dataset.refl === "1"; });
+    items.sort(function(a, b){
+      return (REFL_RANK[a.dataset.level||""] - REFL_RANK[b.dataset.level||""]) || b.dataset.date.localeCompare(a.dataset.date);
+    });
+    if (!items.length){ listEl.innerHTML = '<p class="cc-empty">No self-reflections in this selection.</p>'; return; }
+    items.forEach(function(c){
+      var d = c.dataset, tpl = c.querySelector(".cc-refl-data");
+      var sec = document.createElement("section"); sec.className = "cc-refl"; sec.style.setProperty("--dot", d.hue);
+      sec.innerHTML = '<div class="cc-rhead">'+catChip(d.cat, d.hue)+' '+statusBadge(d.status)+' '+reflBadge(d.level)
+        + ' <span class="cc-date">'+esc(d.date)+'</span> <code>'+esc(d.short)+'</code></div>'
+        + '<h3><a href="'+esc(d.href)+'">'+esc(d.title)+'</a></h3>';
+      var body = document.createElement("div"); body.className = "cc-rbody";
+      if (tpl) body.appendChild(tpl.content.cloneNode(true));
+      sec.appendChild(body); listEl.appendChild(sec);
+    });
+  }
+  function setView(v){ view = v;
+    bCards.classList.toggle("active", v==="cards"); bTl.classList.toggle("active", v==="timeline"); bRefl.classList.toggle("active", v==="refl");
+    gb.disabled = v!=="cards"; render(); }
   q.addEventListener("input", render); gb.addEventListener("change", render); sb.addEventListener("change", render);
   bCards.addEventListener("click", function(){ setView("cards"); }); bTl.addEventListener("click", function(){ setView("timeline"); });
+  bRefl.addEventListener("click", function(){ setView("refl"); });
   window.addEventListener("hashchange", render);   // filter buttons + chips set #cat=…
   render();
 </script></body></html>
