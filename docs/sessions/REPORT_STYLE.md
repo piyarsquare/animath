@@ -92,6 +92,13 @@ Use `##` for sections (GitHub auto-anchors them and offers an outline TOC). Orde
 
 Keep the H1 (`# title`) for standalone readability even though `title` is in frontmatter.
 
+The closing **`## Self-reflection`** section (verbatim from
+`.claude/prompts/self-reflection.md`) is not just prose: the control center's
+**Reflections** view scrapes that heading and the final
+`**Follow-up value:** <LEVEL> — …` line (LEVEL ∈ CRITICAL/HIGH/MEDIUM/LOW/NONE) to
+build its exit-interview digest, severity-sorted with a color-coded badge. Keep the
+heading and that line exact so the digest picks the report up.
+
 ## 3 · Elements
 
 ### 3a · Status & badges
