@@ -40,15 +40,23 @@ function useCanvas(draw: DrawFn, deps: React.DependencyList) {
     // Paint one frame synchronously so cards are never blank on first render
     // (and screenshots capture content even with rAF throttled off-screen).
     try { draw(ctx, cv.width, cv.height, 0); } catch { /* ignore */ }
+    let visible = true;
     const loop = (t: number) => {
-      if (!running) return;
+      if (!running || !visible) { raf = 0; return; }
       // rAF timestamps can precede the t0 captured above (they are vsync
       // times) — clamp so draw never sees a negative t (JS % keeps sign).
       draw(ctx, cv.width, cv.height, Math.max(0, (t - t0) / 1000));
       raf = requestAnimationFrame(loop);
     };
+    // Pause scrolled-away cards — ten always-running canvases jank the
+    // gallery scroll on phones; the loop resumes when the card returns.
+    const io = new IntersectionObserver(([entry]) => {
+      visible = !!entry?.isIntersecting;
+      if (visible && running && raf === 0) raf = requestAnimationFrame(loop);
+    });
+    io.observe(parent);
     raf = requestAnimationFrame(loop);
-    return () => { running = false; cancelAnimationFrame(raf); ro.disconnect(); };
+    return () => { running = false; cancelAnimationFrame(raf); ro.disconnect(); io.disconnect(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   return ref;

@@ -486,6 +486,12 @@ body {
   .am-gal-grid { grid-template-columns: 1fr; padding: 14px 20px 30px; gap: 14px; }
   .am-gal-foot { padding: 0 20px 28px; }
   .am-titlewrap .am-sub { display: none; }
+  /* backdrop blur over a live canvas re-blurs every composited frame —
+     too costly on phone GPUs, so the floating bars go solid here */
+  .am-bar, .am-phone-dock, .am-ws-rail {
+    backdrop-filter: none; -webkit-backdrop-filter: none;
+    background: var(--panel-solid);
+  }
 }
 
 /* ============ Polish ============ */

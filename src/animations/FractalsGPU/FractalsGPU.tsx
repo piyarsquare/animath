@@ -167,7 +167,7 @@ export default function FractalsGPU() {
     // A collapsed/hidden view window reports zero size; keep the last good
     // viewport instead of poisoning the view with a 0/0 aspect.
     if (!rect.width || !rect.height) return;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2); // cap DPR — phones report 3
     renderer.setSize(rect.width, rect.height, false);
     renderer.domElement.style.width = `${rect.width}px`;
     renderer.domElement.style.height = `${rect.height}px`;

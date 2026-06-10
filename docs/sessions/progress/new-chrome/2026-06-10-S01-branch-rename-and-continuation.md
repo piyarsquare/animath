@@ -30,6 +30,28 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 03:36 — Mobile performance pass (user: "less smooth since the reskin")
+**Why:** the user reported reduced smoothness on mobile and asked whether the
+new chrome components are a computational burden.
+
+The chrome DOM itself is idle — the real costs were per-frame work
+interacting badly with the bigger tree:
+
+1. **The big one**: the particle loop pushed the orientation-matrix readout
+   into React state *every frame* while Motion = Quaternion (the default
+   tumble) — under the old chrome that re-rendered a small drawer; under the
+   workspace it re-rendered the whole chrome (bar, rail/dock, every panel) at
+   60fps. Now throttled to 4 Hz (it's a Detail-panel diagnostic).
+2. **Uncapped devicePixelRatio** (3× on phones = 2.25× the pixels of the 2×
+   cap) in PlaneTransform, FractalsGPU and Correspondence — all capped at 2,
+   matching Canvas3D.
+3. **PlaneTransform read layout (`getBoundingClientRect`) twice per frame** —
+   sizes now come from a ResizeObserver cache.
+4. **Backdrop blurs** (bar/dock/rail) re-blur every composited frame over a
+   live canvas — disabled below 740px (solid `--panel-solid` instead).
+5. **Gallery previews kept rAF-ing when scrolled away** — now paused via
+   IntersectionObserver until the card returns.
+
 ### 🟢 code · 02:16 — Scroll hints on the rail and the phone dock
 **Why:** the user missed that the bar scrolls — the phone dock hides its
 scrollbar and clips the remaining panel buttons with zero affordance (the

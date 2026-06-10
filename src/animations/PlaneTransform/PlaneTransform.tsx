@@ -38,6 +38,9 @@ interface PaneRefs {
   camera?: THREE.OrthographicCamera;
   material?: THREE.ShaderMaterial;
   points?: THREE.Points;
+  /** Mount size cached by a ResizeObserver — read per frame without layout. */
+  size?: { w: number; h: number };
+  ro?: ResizeObserver;
 }
 
 /**
@@ -129,7 +132,7 @@ export default function PlaneTransform() {
   useEffect(() => {
     function mount(target: HTMLDivElement, transform: 0 | 1, store: React.MutableRefObject<PaneRefs>) {
       const renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // cap DPR — phones report 3
       renderer.setClearColor(0x0c0c10);
       target.appendChild(renderer.domElement);
       renderer.domElement.style.display = 'block';
@@ -160,7 +163,15 @@ export default function PlaneTransform() {
       });
       const points = new THREE.Points(geometryRef.current!, material);
       scene.add(points);
-      store.current = { renderer, scene, camera, material, points };
+      const ro = new ResizeObserver(entries => {
+        const r = entries[0]?.contentRect;
+        if (r) store.current.size = { w: r.width, h: r.height };
+      });
+      ro.observe(target);
+      store.current = {
+        renderer, scene, camera, material, points, ro,
+        size: { w: target.clientWidth, h: target.clientHeight },
+      };
     }
 
     if (inputMountRef.current)  mount(inputMountRef.current,  0, inputPane);
@@ -170,12 +181,15 @@ export default function PlaneTransform() {
     const tick = () => {
       const renderPane = (pane: PaneRefs, mountEl: HTMLDivElement | null) => {
         if (!pane.renderer || !pane.scene || !pane.camera || !mountEl) return;
-        const r = mountEl.getBoundingClientRect();
         // Render the canvas as a square that fits the smaller of the
         // container's two dimensions, so the (x, y) view stays isotropic.
-        const size = Math.min(r.width, r.height);
-        if (size > 0 && (pane.renderer.domElement.width !== size * window.devicePixelRatio
-                      || pane.renderer.domElement.height !== size * window.devicePixelRatio)) {
+        // Sizes come from the ResizeObserver cache — reading layout here
+        // would force a reflow on every animation frame.
+        const sz = pane.size;
+        const size = sz ? Math.min(sz.w, sz.h) : 0;
+        const buf = Math.floor(size * pane.renderer.getPixelRatio());
+        if (size > 0 && (pane.renderer.domElement.width !== buf
+                      || pane.renderer.domElement.height !== buf)) {
           pane.renderer.setSize(size, size, false);
           pane.renderer.domElement.style.width  = `${size}px`;
           pane.renderer.domElement.style.height = `${size}px`;
@@ -191,6 +205,7 @@ export default function PlaneTransform() {
     return () => {
       cancelAnimationFrame(raf);
       for (const pane of [inputPane.current, outputPane.current]) {
+        pane.ro?.disconnect();
         pane.renderer?.dispose();
         if (pane.renderer?.domElement.parentNode) {
           pane.renderer.domElement.parentNode.removeChild(pane.renderer.domElement);
