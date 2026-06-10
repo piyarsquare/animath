@@ -30,6 +30,32 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 01:09 — App-specific gallery preview animations (one flavor per app)
+**Why:** the user asked for thumbnail animations that are app-specific and
+relevant — the gallery had 3 shared flavors across 10 cards (Topology Walk,
+Polygon Worlds, and both matching apps all showed the three-star preview).
+
+Kept the recorded "cheap 2D canvas, not real renderers" decision and authored
+7 new flavors in `chrome/previews.tsx`: a warping plane grid morphing under
+f(z)=z² (Plane Transform), a Mandelbrot↔Julia split pane where c orbits the
+cardioid and its Julia set morphs live (Correspondence), a twisting
+first-person wireframe corridor (Topology Walk), an animated Gale–Shapley
+proposal round driven by a real module-scope simulation (Stable Marriage),
+three concurrent bubble-sort agents racing over a bar array (Agentic
+Sorting), a preference heatmap whose matching walks the lattice (Stable
+Matching), and a geodesic walker wrapping a glued-square torus with
+edge-identification arrows (Polygon Worlds). The Mandelbrot card now
+palette-cycles (iteration field computed once, recolored per frame via LUT).
+Verified all 10 cards + Paper skin via headless shots.
+
+> [!CAUTION]
+> Found while debugging two black cards: **rAF timestamps can precede a
+> `performance.now()` captured earlier in the same effect**, so the first
+> frame's `t` was slightly negative and JS `%` keeps sign — `events[-1]`
+> crashed the draw loop. `useCanvas` now clamps `t ≥ 0` for every flavor.
+
+![per-app previews: corridor, trinary, marriage, sorting, matrix, polygon](assets/2026-06-10-S01-previews-per-app.png)
+
 ### 🟢 code · 00:54 — View windows: fullscreen mode + phone resize grip
 **Why:** the user asked for resizable viewports and a full-screen mode,
 particularly on mobile — phone view cards were locked at `56vw`/340px with no

@@ -37,8 +37,11 @@ questions. The implementing agent should update this file as phases land.
 - **Explainer surface**: top-bar "?" → modal (ExplainerModal wrapping the existing Readme
   renderer). The modal carries `EXPLAINER.md` + the old About `README.md` joined with a rule, so
   the drawer's About section content survives.
-- **Gallery previews**: the cheap 2D-canvas mocks (ported from viz.jsx), not the real renderers —
+- **Gallery previews**: cheap 2D-canvas sketches, not the real renderers —
   ~10 simultaneous WebGL contexts on the landing page is fragile; revisit later (user decision).
+  Now **one flavor per app** (was 3 shared flavors): warping plane grid, palette-cycling
+  Mandelbrot, Mandelbrot↔Julia split with a moving c, twisting corridor, Gale–Shapley proposal
+  round, concurrent sorting agents, preference-matrix lattice walk, glued-square torus walk.
 - **Catalog**: 10 cards — the 8 designed apps + Stable Matching + Polygon Worlds (new app merged
   from main). Legacy `#/fractals-cpu` stays an unlisted route (user decision).
 - **Trinary tabs → TopBar mode pills** (Observatory | Lab), hash routes and Lab URL-query config

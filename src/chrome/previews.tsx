@@ -1,15 +1,19 @@
 import React, { useEffect, useRef } from 'react';
 
 /**
- * Lightweight, authentic preview animations for the gallery cards, ported from
- * the design prototype (docs/redesign/prototype/viz.jsx). Three flavours
- * mirroring the real apps: a 4D-ish projected point cloud, an escape-time
- * Mandelbrot, and three stars with a chaotic orbiting world. Each draws into a
- * cheap 2D <canvas> sized to its parent — deliberately NOT the real renderers,
- * so a full gallery costs almost nothing (decision recorded in
- * docs/redesign/IN-PROGRESS.md).
+ * Lightweight, authentic preview animations for the gallery cards. One flavor
+ * per app, each a sketch of what that app actually shows: a 4D-ish projected
+ * point cloud, a warping colored plane, a palette-cycling Mandelbrot, the
+ * Mandelbrot↔Julia correspondence, a twisting first-person corridor, three
+ * stars with a doomed world, a Gale–Shapley proposal round, concurrent
+ * sorting agents, a preference-matrix lattice walk, and a glued-polygon
+ * torus walk. Each draws into a cheap 2D <canvas> sized to its parent —
+ * deliberately NOT the real renderers, so a full gallery costs almost
+ * nothing (decision recorded in docs/redesign/IN-PROGRESS.md).
  */
-export type PreviewKind = 'particles' | 'fractal' | 'trinary';
+export type PreviewKind =
+  | 'particles' | 'plane' | 'fractal' | 'julia' | 'corridor'
+  | 'trinary' | 'marriage' | 'sorting' | 'matrix' | 'polygon';
 
 type DrawFn = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
 
@@ -38,7 +42,9 @@ function useCanvas(draw: DrawFn, deps: React.DependencyList) {
     try { draw(ctx, cv.width, cv.height, 0); } catch { /* ignore */ }
     const loop = (t: number) => {
       if (!running) return;
-      draw(ctx, cv.width, cv.height, (t - t0) / 1000);
+      // rAF timestamps can precede the t0 captured above (they are vsync
+      // times) — clamp so draw never sees a negative t (JS % keeps sign).
+      draw(ctx, cv.width, cv.height, Math.max(0, (t - t0) / 1000));
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -49,6 +55,17 @@ function useCanvas(draw: DrawFn, deps: React.DependencyList) {
 }
 
 const canvasStyle: React.CSSProperties = { display: 'block', width: '100%', height: '100%' };
+
+/** Deterministic PRNG so module-scope "simulations" are stable across loads. */
+function mulberry32(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let x = Math.imul(a ^ (a >>> 15), 1 | a);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 /* ---- Particles: rotating complex-function point cloud --------------------- */
 function ParticlePreview({ light, hue = 0 }: { light: boolean; hue?: number }) {
@@ -94,17 +111,57 @@ function ParticlePreview({ light, hue = 0 }: { light: boolean; hue?: number }) {
   return <canvas ref={ref} style={canvasStyle} />;
 }
 
-/* ---- Fractal: escape-time Mandelbrot ------------------------------------- */
+/* ---- Plane transform: a colored grid warping under f(z) = z² -------------- */
+function PlanePreview({ light }: { light: boolean }) {
+  const bg = light ? '#f4f3ef' : '#000';
+  const ref = useCanvas((ctx, W, H, t) => {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2;
+    const scale = Math.min(W, H) * 0.34;
+    // morph identity ↔ z² and back
+    const s = 0.5 - 0.5 * Math.cos(t * 0.55);
+    const LINES = 13, SAMPLES = 36, R = 1.5;
+    ctx.globalCompositeOperation = light ? 'multiply' : 'lighter';
+    ctx.lineWidth = Math.max(1, W * 0.0022);
+    const mapPt = (x: number, y: number): [number, number] => {
+      // w = (1-s)·z + s·z², damped so the image stays in frame
+      const zx = x * x - y * y, zy = 2 * x * y;
+      const k = 1 / (1 + 0.55 * s);
+      const wx = ((1 - s) * x + s * zx) * k;
+      const wy = ((1 - s) * y + s * zy) * k;
+      return [cx + wx * scale, cy + wy * scale];
+    };
+    const drawLine = (pt: (k: number) => [number, number], hh: number) => {
+      ctx.strokeStyle = `hsla(${hh * 360},${light ? 65 : 90}%,${light ? 45 : 62}%,${light ? 0.6 : 0.8})`;
+      ctx.beginPath();
+      for (let k = 0; k <= SAMPLES; k++) {
+        const [x, y] = pt(k / SAMPLES);
+        const [px, py] = mapPt(x, y);
+        k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+      }
+      ctx.stroke();
+    };
+    for (let i = 0; i < LINES; i++) {
+      const c = (i / (LINES - 1)) * 2 * R - R;
+      drawLine(k => [c, k * 2 * R - R], 0.55 + (c / R) * 0.12);   // vertical line x = c
+      drawLine(k => [k * 2 * R - R, c], 0.05 + (c / R) * 0.12);   // horizontal line y = c
+    }
+  }, [light]);
+  return <canvas ref={ref} style={canvasStyle} />;
+}
+
+/* ---- Fractal: escape-time Mandelbrot with a slowly cycling palette -------- */
 function FractalPreview({ light }: { light: boolean }) {
+  const field = useRef<{ its: Int16Array; rw: number; rh: number } | null>(null);
   const off = useRef<HTMLCanvasElement | null>(null);
-  const ref = useCanvas((ctx, W, H) => {
+  const ref = useCanvas((ctx, W, H, t) => {
     const rw = 260, rh = Math.max(1, Math.round(260 * H / Math.max(1, W)));
-    if (!off.current || off.current.width !== rw || off.current.height !== rh) {
-      const o = document.createElement('canvas');
-      o.width = rw; o.height = rh;
-      const octx = o.getContext('2d')!;
-      const img = octx.createImageData(rw, rh);
-      const maxIt = 90;
+    const maxIt = 90;
+    if (!field.current || field.current.rw !== rw || field.current.rh !== rh) {
+      // iteration counts computed once; only the coloring animates
+      const its = new Int16Array(rw * rh);
       const cx0 = -0.6, cy0 = 0, span = 3.0 / 1.1;
       for (let py = 0; py < rh; py++) {
         for (let px = 0; px < rw; px++) {
@@ -115,29 +172,188 @@ function FractalPreview({ light }: { light: boolean }) {
             const xt = x * x - y * y + x0;
             y = 2 * x * y + yy0; x = xt; it++;
           }
-          const k = (px + py * rw) * 4;
-          if (it >= maxIt) {
-            img.data[k] = img.data[k + 1] = img.data[k + 2] = light ? 245 : 8;
-            img.data[k + 3] = 255;
-          } else {
-            const m = it / maxIt;
-            img.data[k] = 20 + m * 235;
-            img.data[k + 1] = 10 + m * 150 * m;
-            img.data[k + 2] = 60 + m * 90;
-            img.data[k + 3] = 255;
-          }
+          its[px + py * rw] = it;
         }
       }
-      octx.putImageData(img, 0, 0);
+      field.current = { its, rw, rh };
+      off.current = null;
+    }
+    if (!off.current) {
+      const o = document.createElement('canvas');
+      o.width = rw; o.height = rh;
       off.current = o;
     }
+    const octx = off.current.getContext('2d')!;
+    const img = octx.createImageData(rw, rh);
+    // small palette LUT per frame, phase-shifted by time
+    const phase = t * 0.045;
+    const lut = new Uint8Array(256 * 3);
+    for (let i = 0; i < 256; i++) {
+      const m = ((i / 255) * 1.0 + phase) % 1;
+      let r = 20 + m * 235, g = 10 + 150 * m * m, b = 60 + m * 90;
+      if (light) { r = 245 - (245 - r) * 0.85; g = 245 - (245 - g) * 0.85; b = 245 - (245 - b) * 0.85; }
+      lut[i * 3] = r; lut[i * 3 + 1] = g; lut[i * 3 + 2] = b;
+    }
+    const { its } = field.current;
+    const inside = light ? 245 : 8;
+    for (let i = 0; i < its.length; i++) {
+      const k = i * 4, it = its[i];
+      if (it >= maxIt) {
+        img.data[k] = img.data[k + 1] = img.data[k + 2] = inside;
+      } else {
+        const j = Math.min(255, Math.round((it / maxIt) * 255)) * 3;
+        img.data[k] = lut[j]; img.data[k + 1] = lut[j + 1]; img.data[k + 2] = lut[j + 2];
+      }
+      img.data[k + 3] = 255;
+    }
+    octx.putImageData(img, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(off.current, 0, 0, W, H);
   }, [light]);
   return <canvas ref={ref} style={canvasStyle} />;
 }
 
-/* ---- Trinary: three stars + a doomed orbiting world ---------------------- */
+/* ---- Correspondence: Mandelbrot map + the Julia set of a moving c --------- */
+function JuliaPreview({ light }: { light: boolean }) {
+  const mandel = useRef<HTMLCanvasElement | null>(null);
+  const jul = useRef<HTMLCanvasElement | null>(null);
+  const MX = -0.6, MSPAN = 3.0; // mandel pane: re ∈ [-2.1, 0.9]
+  const ref = useCanvas((ctx, W, H, t) => {
+    const split = Math.round(W * 0.42);
+    const maxIt = 60;
+    if (!mandel.current) {
+      const rw = 110, rh = Math.max(1, Math.round(110 * H / Math.max(1, split)));
+      const o = document.createElement('canvas');
+      o.width = rw; o.height = rh;
+      const octx = o.getContext('2d')!;
+      const img = octx.createImageData(rw, rh);
+      for (let py = 0; py < rh; py++) {
+        for (let px = 0; px < rw; px++) {
+          const x0 = MX + (px / rw - 0.5) * MSPAN;
+          const y0 = (py / rh - 0.5) * MSPAN * (rh / rw);
+          let x = 0, y = 0, it = 0;
+          while (x * x + y * y <= 4 && it < maxIt) {
+            const xt = x * x - y * y + x0;
+            y = 2 * x * y + y0; x = xt; it++;
+          }
+          const k = (px + py * rw) * 4;
+          if (it >= maxIt) {
+            img.data[k] = img.data[k + 1] = img.data[k + 2] = light ? 230 : 14;
+          } else {
+            const m = it / maxIt;
+            const v = light ? 235 - m * 160 : 25 + m * 120;
+            img.data[k] = v; img.data[k + 1] = v + (light ? -10 : 18); img.data[k + 2] = light ? v : v + 50;
+          }
+          img.data[k + 3] = 255;
+        }
+      }
+      octx.putImageData(img, 0, 0);
+      mandel.current = o;
+    }
+    // c walks a circle that skims the cardioid — classic morphing Julia sets
+    const th = t * 0.22;
+    const cr = 0.7885 * Math.cos(th), ci = 0.7885 * Math.sin(th);
+    {
+      const rw = 132, rh = Math.max(1, Math.round(132 * H / Math.max(1, W - split)));
+      if (!jul.current || jul.current.width !== rw || jul.current.height !== rh) {
+        const o = document.createElement('canvas');
+        o.width = rw; o.height = rh;
+        jul.current = o;
+      }
+      const octx = jul.current.getContext('2d')!;
+      const img = octx.createImageData(rw, rh);
+      const span = 3.4, jIt = 34;
+      for (let py = 0; py < rh; py++) {
+        for (let px = 0; px < rw; px++) {
+          let x = (px / rw - 0.5) * span;
+          let y = (py / rh - 0.5) * span * (rh / rw);
+          let it = 0;
+          while (x * x + y * y <= 4 && it < jIt) {
+            const xt = x * x - y * y + cr;
+            y = 2 * x * y + ci; x = xt; it++;
+          }
+          const k = (px + py * rw) * 4;
+          if (it >= jIt) {
+            img.data[k] = light ? 180 : 255; img.data[k + 1] = light ? 120 : 200; img.data[k + 2] = light ? 30 : 80;
+          } else {
+            const m = it / jIt;
+            const v = light ? 244 - m * 130 : m * 110;
+            img.data[k] = v * (light ? 1 : 0.4); img.data[k + 1] = v * (light ? 0.98 : 0.7); img.data[k + 2] = light ? v * 0.92 : v + 40;
+          }
+          img.data[k + 3] = 255;
+        }
+      }
+      octx.putImageData(img, 0, 0);
+    }
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(mandel.current, 0, 0, split, H);
+    ctx.drawImage(jul.current, split, 0, W - split, H);
+    // divider + the marker for c on the Mandelbrot pane
+    ctx.fillStyle = light ? 'rgba(60,60,60,0.5)' : 'rgba(255,255,255,0.25)';
+    ctx.fillRect(split - 1, 0, 2, H);
+    const mpx = ((cr - MX) / MSPAN + 0.5) * split;
+    const mpy = ((ci / (MSPAN * (H / Math.max(1, split)))) + 0.5) * H;
+    ctx.strokeStyle = light ? '#b67d10' : '#ffd400';
+    ctx.lineWidth = Math.max(1, W * 0.004);
+    ctx.beginPath(); ctx.arc(mpx, mpy, Math.max(3, W * 0.012), 0, 7); ctx.stroke();
+    ctx.fillStyle = light ? '#b67d10' : '#ffd400';
+    ctx.beginPath(); ctx.arc(mpx, mpy, Math.max(1.5, W * 0.004), 0, 7); ctx.fill();
+  }, [light]);
+  return <canvas ref={ref} style={canvasStyle} />;
+}
+
+/* ---- Topology walk: first-person flight down a twisting corridor ---------- */
+function CorridorPreview({ light }: { light: boolean }) {
+  const bg = light ? '#f4f3ef' : '#04060c';
+  const ref = useCanvas((ctx, W, H, t) => {
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const s = t * 1.3;
+    const f = s - Math.floor(s);
+    const cx = W / 2 + Math.sin(s * 0.45) * W * 0.02;
+    const cy = H / 2 + Math.cos(s * 0.33) * H * 0.02;
+    const S = Math.min(W, H) * 1.05;
+    const RINGS = 15;
+    let prev: [number, number][] | null = null;
+    ctx.lineCap = 'round';
+    for (let i = RINGS; i >= 0; i--) {
+      const Z = i + 1 - f;                       // ring depth in front of the camera
+      const id = Math.floor(s) + i + 1;          // world-fixed ring identity
+      const twist = id * 0.22;                   // corridor twist accumulates with distance
+      const proj = S / (Z * 0.85 + 0.35);
+      const corners: [number, number][] = [];
+      for (let j = 0; j < 4; j++) {
+        const a = twist + j * (Math.PI / 2) + Math.PI / 4;
+        corners.push([cx + Math.cos(a) * proj, cy + Math.sin(a) * proj]);
+      }
+      const fade = Math.min(1, 1.8 / Z);
+      ctx.lineWidth = Math.max(1, (W * 0.0035) * fade);
+      ctx.strokeStyle = light
+        ? `rgba(40,44,66,${0.65 * fade})`
+        : `rgba(120,225,255,${0.75 * fade})`;
+      ctx.beginPath();
+      for (let j = 0; j <= 4; j++) {
+        const [x, y] = corners[j % 4];
+        j ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      ctx.stroke();
+      if (prev) {
+        ctx.strokeStyle = light
+          ? `rgba(40,44,66,${0.3 * fade})`
+          : `rgba(120,225,255,${0.35 * fade})`;
+        ctx.beginPath();
+        for (let j = 0; j < 4; j++) {
+          ctx.moveTo(corners[j][0], corners[j][1]);
+          ctx.lineTo(prev[j][0], prev[j][1]);
+        }
+        ctx.stroke();
+      }
+      prev = corners;
+    }
+  }, [light]);
+  return <canvas ref={ref} style={canvasStyle} />;
+}
+
+/* ---- Trinary: three stars + a doomed orbiting world ----------------------- */
 function TrinaryPreview({ light }: { light: boolean }) {
   const trail = useRef<[number, number][]>([]);
   const bg = light ? '#f4f3ef' : '#04040a';
@@ -171,9 +387,262 @@ function TrinaryPreview({ light }: { light: boolean }) {
   return <canvas ref={ref} style={canvasStyle} />;
 }
 
+/* ---- Stable marriage: an animated Gale–Shapley proposal round ------------- */
+const GS = (() => {
+  const n = 5, rnd = mulberry32(20260610);
+  const shuffle = () => {
+    const a = [0, 1, 2, 3, 4];
+    for (let i = n - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  };
+  const prefP = Array.from({ length: n }, shuffle);
+  const rankR = Array.from({ length: n }, () => {
+    const order = shuffle(), rank = new Array(n).fill(0);
+    order.forEach((p, i) => { rank[p] = i; });
+    return rank;
+  });
+  const match = new Array<number>(n).fill(-1); // reviewer → proposer
+  const next = new Array(n).fill(0);
+  const free = [0, 1, 2, 3, 4];
+  const events: { p: number; r: number; kind: 'accept' | 'bump' | 'reject'; m: number[] }[] = [];
+  while (free.length) {
+    const p = free.shift()!;
+    const r = prefP[p][next[p]++];
+    if (match[r] === -1) {
+      match[r] = p;
+      events.push({ p, r, kind: 'accept', m: match.slice() });
+    } else if (rankR[r][p] < rankR[r][match[r]]) {
+      free.push(match[r]);
+      match[r] = p;
+      events.push({ p, r, kind: 'bump', m: match.slice() });
+    } else {
+      free.unshift(p);
+      events.push({ p, r, kind: 'reject', m: match.slice() });
+    }
+  }
+  return { n, events };
+})();
+
+function MarriagePreview({ light }: { light: boolean }) {
+  const bg = light ? '#f4f3ef' : '#05060d';
+  const ref = useCanvas((ctx, W, H, t) => {
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const { n, events } = GS;
+    const STEP = 0.85, HOLD = 2.2;
+    const total = events.length * STEP + HOLD;
+    const tt = t % total;
+    const idx = Math.min(Math.floor(tt / STEP), events.length - 1);
+    const inHold = tt >= events.length * STEP;
+    const lx = W * 0.16, rx = W * 0.84;
+    const yAt = (i: number) => H * (0.16 + (i / (n - 1)) * 0.68);
+    const gold = light ? '#b67d10' : '#ffd400';
+    const cyan = light ? '#1d8a78' : '#5ad1ff';
+    // committed matching = state after the previous event (final during hold)
+    const m = inHold ? events[events.length - 1].m : (idx > 0 ? events[idx - 1].m : new Array(n).fill(-1));
+    ctx.lineWidth = Math.max(1.2, W * 0.004);
+    for (let r = 0; r < n; r++) {
+      if (m[r] === -1) continue;
+      ctx.strokeStyle = light ? 'rgba(182,125,16,0.75)' : 'rgba(255,212,0,0.7)';
+      ctx.beginPath(); ctx.moveTo(lx, yAt(m[r])); ctx.lineTo(rx, yAt(r)); ctx.stroke();
+    }
+    // the live proposal: line grows, then flashes its verdict
+    if (!inHold) {
+      const e = events[idx];
+      const prog = (tt - idx * STEP) / STEP;
+      const grow = Math.min(1, prog / 0.4);
+      const x2 = lx + (rx - lx) * grow, y2 = yAt(e.p) + (yAt(e.r) - yAt(e.p)) * grow;
+      const verdict = prog > 0.55;
+      ctx.strokeStyle = !verdict
+        ? (light ? 'rgba(60,60,70,0.8)' : 'rgba(255,255,255,0.8)')
+        : e.kind === 'reject'
+          ? `rgba(235,80,80,${1 - (prog - 0.55) / 0.45})`
+          : (light ? 'rgba(29,138,120,0.95)' : 'rgba(90,209,255,0.95)');
+      ctx.beginPath(); ctx.moveTo(lx, yAt(e.p)); ctx.lineTo(x2, y2); ctx.stroke();
+    }
+    for (let i = 0; i < n; i++) {
+      ctx.fillStyle = gold;
+      ctx.beginPath(); ctx.arc(lx, yAt(i), Math.max(3, W * 0.013), 0, 7); ctx.fill();
+      ctx.fillStyle = cyan;
+      ctx.beginPath(); ctx.arc(rx, yAt(i), Math.max(3, W * 0.013), 0, 7); ctx.fill();
+    }
+  }, [light]);
+  return <canvas ref={ref} style={canvasStyle} />;
+}
+
+/* ---- Agentic sorting: concurrent agents bubble a bar array into order ----- */
+function SortingPreview({ light }: { light: boolean }) {
+  const N = 26;
+  const sim = useRef<{ arr: number[]; agents: number[]; last: number; doneAt: number } | null>(null);
+  const rnd = useRef(mulberry32(77));
+  const shuffled = () => {
+    const a = Array.from({ length: N }, (_, i) => i);
+    for (let i = N - 1; i > 0; i--) { const j = Math.floor(rnd.current() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  };
+  if (!sim.current) sim.current = { arr: shuffled(), agents: [0, 9, 18], last: 0, doneAt: -1 };
+  const bg = light ? '#f4f3ef' : '#05060d';
+  const ref = useCanvas((ctx, W, H, t) => {
+    const s = sim.current!;
+    const sorted = s.arr.every((v, i) => i === 0 || s.arr[i - 1] <= v);
+    if (sorted && s.doneAt < 0) s.doneAt = t;
+    if (sorted && s.doneAt >= 0 && t - s.doneAt > 1.4) {
+      s.arr = shuffled(); s.agents = [0, 9, 18]; s.doneAt = -1;
+    }
+    // three concurrent agents, each bubbling at its own cursor
+    if (!sorted && t - s.last > 0.07) {
+      s.last = t;
+      s.agents = s.agents.map(i => {
+        if (s.arr[i] > s.arr[i + 1]) [s.arr[i], s.arr[i + 1]] = [s.arr[i + 1], s.arr[i]];
+        const ni = i + 1;
+        return ni >= N - 1 ? 0 : ni;
+      });
+    }
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const m = W * 0.06, bw = (W - 2 * m) / N;
+    const agentCols = light ? ['#b67d10', '#1d8a78', '#b3457a'] : ['#ffd400', '#5ad1ff', '#ff5aa6'];
+    for (let i = 0; i < N; i++) {
+      const v = (s.arr[i] + 1) / N;
+      const bh = v * H * 0.66;
+      const hh = light ? 28 + v * 24 : 190 + v * 130;
+      ctx.fillStyle = light
+        ? `hsla(${hh},60%,42%,0.85)`
+        : `hsla(${hh % 360},85%,62%,0.9)`;
+      ctx.fillRect(m + i * bw + bw * 0.12, H * 0.82 - bh, bw * 0.76, bh);
+    }
+    s.agents.forEach((i, k) => {
+      ctx.strokeStyle = agentCols[k];
+      ctx.lineWidth = Math.max(1.4, W * 0.005);
+      const x = m + i * bw + bw * 0.06, ww = bw * 1.88;
+      ctx.strokeRect(x, H * 0.12, ww, H * 0.72);
+    });
+  }, [light]);
+  return <canvas ref={ref} style={canvasStyle} />;
+}
+
+/* ---- Stable matching lab: preference heatmap + a matching walking the lattice */
+const LATTICE = (() => {
+  const n = 7, rnd = mulberry32(424242);
+  const heat = Array.from({ length: n }, () => Array.from({ length: n }, () => rnd()));
+  const perms: number[][] = [];
+  let p = Array.from({ length: n }, (_, i) => i);
+  for (let k = 0; k < 5; k++) {
+    p = p.slice();
+    // rotate a few entries — adjacent matchings in the lattice differ locally
+    const i = Math.floor(rnd() * n), j = (i + 1 + Math.floor(rnd() * (n - 1))) % n;
+    [p[i], p[j]] = [p[j], p[i]];
+    perms.push(p);
+  }
+  return { n, heat, perms };
+})();
+
+function MatrixPreview({ light }: { light: boolean }) {
+  const bg = light ? '#f4f3ef' : '#05060d';
+  const ref = useCanvas((ctx, W, H, t) => {
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const { n, heat, perms } = LATTICE;
+    const cell = Math.min(W * 0.8 / n, H * 0.8 / n);
+    const ox = (W - cell * n) / 2, oy = (H - cell * n) / 2;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        const v = heat[i][j];
+        const shimmer = 0.06 * Math.sin(t * 1.2 + i * 0.9 + j * 1.3);
+        const a = Math.max(0, Math.min(1, v + shimmer));
+        ctx.fillStyle = light
+          ? `hsla(${35 + a * 10},${50 + a * 30}%,${88 - a * 45}%,1)`
+          : `hsla(${230 - a * 200},75%,${14 + a * 42}%,1)`;
+        ctx.fillRect(ox + j * cell + 1, oy + i * cell + 1, cell - 2, cell - 2);
+      }
+    }
+    // the current matching = one cell per row; it steps through lattice neighbors
+    const PERIOD = 1.7;
+    const k = Math.floor(t / PERIOD) % perms.length;
+    const k2 = (k + 1) % perms.length;
+    const f = (t % PERIOD) / PERIOD;
+    const ease = f < 0.3 ? f / 0.3 : 1; // slide early, rest late
+    ctx.strokeStyle = light ? '#b67d10' : '#ffd400';
+    ctx.lineWidth = Math.max(1.4, W * 0.005);
+    for (let i = 0; i < n; i++) {
+      const j = perms[k][i] + (perms[k2][i] - perms[k][i]) * ease;
+      const x = ox + j * cell, y = oy + i * cell;
+      ctx.strokeRect(x + cell * 0.18, y + cell * 0.18, cell * 0.64, cell * 0.64);
+    }
+  }, [light]);
+  return <canvas ref={ref} style={canvasStyle} />;
+}
+
+/* ---- Polygon worlds: a walker on the square-with-glued-edges torus -------- */
+function PolygonPreview({ light }: { light: boolean }) {
+  const walker = useRef({ u: -0.4, v: 0.2, pt: 0 });
+  const trail = useRef<{ u: number; v: number; brk: boolean }[]>([]);
+  const bg = light ? '#f4f3ef' : '#04060c';
+  const ref = useCanvas((ctx, W, H, t) => {
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2, L = Math.min(W, H) * 0.36;
+    const gold = light ? '#b67d10' : '#ffd400';
+    const cyan = light ? '#1d8a78' : '#5ad1ff';
+    // advance the geodesic; wrapping an edge re-enters the identified edge
+    const w = walker.current;
+    const dt = Math.min(0.05, Math.max(0, t - w.pt));
+    w.pt = t;
+    let brk = false;
+    w.u += 0.42 * dt; w.v += 0.297 * dt;
+    if (w.u > 1) { w.u -= 2; brk = true; }
+    if (w.v > 1) { w.v -= 2; brk = true; }
+    trail.current.push({ u: w.u, v: w.v, brk });
+    if (trail.current.length > 160) trail.current.shift();
+    const px = (u: number) => cx + u * L, py = (v: number) => cy + v * L;
+    // trail (skip wrap jumps), fading with age
+    const tr = trail.current;
+    ctx.lineWidth = Math.max(1.2, W * 0.004);
+    for (let i = 1; i < tr.length; i++) {
+      if (tr[i].brk) continue;
+      const a = (i / tr.length) * 0.85;
+      ctx.strokeStyle = light ? `rgba(60,60,80,${a})` : `rgba(255,255,255,${a})`;
+      ctx.beginPath();
+      ctx.moveTo(px(tr[i - 1].u), py(tr[i - 1].v));
+      ctx.lineTo(px(tr[i].u), py(tr[i].v));
+      ctx.stroke();
+    }
+    // fundamental square with paired-edge identification arrows
+    ctx.lineWidth = Math.max(1.5, W * 0.005);
+    ctx.strokeStyle = gold;
+    ctx.beginPath(); ctx.moveTo(px(-1), py(-1)); ctx.lineTo(px(-1), py(1)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px(1), py(-1)); ctx.lineTo(px(1), py(1)); ctx.stroke();
+    ctx.strokeStyle = cyan;
+    ctx.beginPath(); ctx.moveTo(px(-1), py(-1)); ctx.lineTo(px(1), py(-1)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px(-1), py(1)); ctx.lineTo(px(1), py(1)); ctx.stroke();
+    const arrow = (x: number, y: number, ang: number, c: string) => {
+      const s = Math.max(4, W * 0.014);
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(ang) * s, y + Math.sin(ang) * s);
+      ctx.lineTo(x + Math.cos(ang + 2.5) * s, y + Math.sin(ang + 2.5) * s);
+      ctx.lineTo(x + Math.cos(ang - 2.5) * s, y + Math.sin(ang - 2.5) * s);
+      ctx.closePath(); ctx.fill();
+    };
+    arrow(px(-1), py(0), -Math.PI / 2, gold);  // left edge ↑
+    arrow(px(1), py(0), -Math.PI / 2, gold);   // right edge ↑ (same direction = torus)
+    arrow(px(0), py(-1), 0, cyan);             // top edge →
+    arrow(px(0), py(1), 0, cyan);              // bottom edge →
+    // the walker
+    ctx.fillStyle = light ? '#222' : '#fff';
+    ctx.beginPath(); ctx.arc(px(w.u), py(w.v), Math.max(2.5, W * 0.008), 0, 7); ctx.fill();
+  }, [light]);
+  return <canvas ref={ref} style={canvasStyle} />;
+}
+
 export function Preview({ kind, skin, hue }: { kind: PreviewKind; skin: string; hue?: number }) {
   const light = skin === 'light';
-  if (kind === 'fractal') return <FractalPreview light={light} />;
-  if (kind === 'trinary') return <TrinaryPreview light={light} />;
-  return <ParticlePreview light={light} hue={hue} />;
+  switch (kind) {
+    case 'plane': return <PlanePreview light={light} />;
+    case 'fractal': return <FractalPreview light={light} />;
+    case 'julia': return <JuliaPreview light={light} />;
+    case 'corridor': return <CorridorPreview light={light} />;
+    case 'trinary': return <TrinaryPreview light={light} />;
+    case 'marriage': return <MarriagePreview light={light} />;
+    case 'sorting': return <SortingPreview light={light} />;
+    case 'matrix': return <MatrixPreview light={light} />;
+    case 'polygon': return <PolygonPreview light={light} />;
+    default: return <ParticlePreview light={light} hue={hue} />;
+  }
 }

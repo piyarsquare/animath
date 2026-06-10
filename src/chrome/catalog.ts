@@ -27,15 +27,15 @@ export interface AppCard {
 
 const META: Record<string, { cat: Category; kind: PreviewKind; hue?: number }> = {
   '/complex-particles': { cat: 'Complex', kind: 'particles' },
-  '/plane-transform': { cat: 'Complex', kind: 'particles', hue: 0.45 },
+  '/plane-transform': { cat: 'Complex', kind: 'plane' },
   '/fractals': { cat: 'Fractal', kind: 'fractal' },
-  '/correspondence': { cat: 'Fractal', kind: 'fractal' },
-  '/topology-walk': { cat: 'Dynamics', kind: 'trinary' },
+  '/correspondence': { cat: 'Fractal', kind: 'julia' },
+  '/topology-walk': { cat: 'Dynamics', kind: 'corridor' },
   '/trinary': { cat: 'Dynamics', kind: 'trinary' },
-  '/stable-marriage': { cat: 'Algorithm', kind: 'trinary' },
-  '/agentic-sorting': { cat: 'Algorithm', kind: 'particles', hue: 0.7 },
-  '/stable-matching': { cat: 'Algorithm', kind: 'trinary' },
-  '/polygon-worlds': { cat: 'Dynamics', kind: 'trinary' },
+  '/stable-marriage': { cat: 'Algorithm', kind: 'marriage' },
+  '/agentic-sorting': { cat: 'Algorithm', kind: 'sorting' },
+  '/stable-matching': { cat: 'Algorithm', kind: 'matrix' },
+  '/polygon-worlds': { cat: 'Dynamics', kind: 'polygon' },
 };
 
 export const CARDS: AppCard[] = apps
