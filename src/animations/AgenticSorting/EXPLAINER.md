@@ -1,38 +1,61 @@
 # Agentic Sorting
 
-What if sorting weren't one top-down algorithm, but **many little agents**
-each following a simple local rule? Order emerges from their interaction.
+What if a sort weren't one top-down procedure operating *on* a passive array, but
+**many little agents** — one per slot — each following a simple local rule and
+pursuing its own position? Order, when it appears, is *emergent*: a global
+property (sortedness) arising from purely local actions.
 
-## Emergent sorting
+This "cell-view" framing follows Zhang, Goldstein & Levin, *Classical Sorting
+Algorithms as a Model of Morphogenesis* (Adaptive Behavior, 2025;
+[arXiv:2401.05375](https://arxiv.org/abs/2401.05375)), which found that even
+these minimal systems show **measurable competencies that no rule explicitly
+encodes**. The aim here is to *measure* those competencies, not just watch pretty
+bars move — so the picture stays honest about what is and isn't happening.
 
-Each slot in the array holds an **agent**. On every cycle a random subset
-"wakes up" and applies its own rule — a swap or a move. No agent has a global
-view, yet the array still marches toward sorted order. That's *emergence*: a
-global property (sortedness) arising from purely local actions.
+## The agents (algotypes)
 
-## The strategies — and their classic analogs
+Each agent runs one rule — its **algotype**. The five here echo classic sorts to
+varying degrees (only the honest analogies are claimed):
 
-| Agent | Local rule | Classic sort it echoes |
+| Agent | Local rule | Classic analog |
 |---|---|---|
-| **Standard** | compare a random *adjacent* neighbor, swap if out of order | Bubble sort |
-| **Blind Date** | compare a random agent *anywhere*, swap if misordered | randomized compare-swap |
-| **Nomadic** | drift left while smaller than the left neighbor | Insertion sort |
-| **Patrolling** | keep a heading, swap on contact, reverse when settled | Cocktail-shaker sort |
-| **Perfectionist** | scan the whole right tail, pull the minimum into place | Selection sort |
+| **Standard** | compare a random *adjacent* neighbor, swap if out of order | bubble sort |
+| **Blind Date** | compare a partner *anywhere*, swap if misordered | randomized compare-swap |
+| **Nomadic** | only inspect the neighbor *behind* it; drift toward its goal end | insertion-style drift |
+| **Patrolling** | keep a heading; swap on contact, reverse when settled | cocktail-shaker sort |
+| **Perfectionist** | scan the whole right tail, pull the extreme value into place | selection sort |
 
-## Why mixes win
+> Fidelity note: *Standard*, *Nomadic* and *Patrolling* are *loose* echoes — e.g.
+> Nomadic is really a one-sided bubble, not true insertion. *Perfectionist*
+> (≈ selection) and *Blind Date* are the faithful ones.
 
-- **Blind Date** converges fastest on its own: by comparing across long
-  distances it removes large-scale disorder in single jumps.
-- **Perfectionist** is expensive per wake-up (a full scan) but places an
-  element exactly, once it fires.
-- **Mixed populations** often beat any single type. Long-range movers
-  (Blind Date, Perfectionist) do the coarse work while local refiners
-  (Standard, Patrolling, Nomadic) clean up behind them — a division of
-  labor.
+## What to measure
+
+- **Clustering (the Levin result).** With a mixed population — a *chimeric* array —
+  color **By algotype** and watch like-with-like agents drift together. The
+  **Clustering** readout reports *excess homophily over chance*: 0 means the mix
+  is no more clumped than a random shuffle, **+%** means real clustering — a
+  meta-pattern implemented in none of the rules.
+- **Robustness to defects.** Turn up **Frozen / defective** to pin some cells in
+  place as immovable obstacles. The array still sorts the movable cells around
+  them; the **Best reachable** ceiling shows the most order possible with the
+  defects pinned, and the agents get close to it.
+
+## Divergent objectives (an animath-original)
+
+In the paper every cell sorts toward the **same** order. Switching **Objective**
+to **Phase separation** is *our* extension, not Levin's: agents disagree about
+which way order should run (some ascending, some descending). The array generally
+**never fully sorts** — sortedness stalls near ½. With *local* agents (Standard,
+Nomadic, Patrolling) it coarsens into monotone **domains**, like phase separation,
+and the **Monotone runs** readout falls; **Blind Date's** long-range swaps
+frustrate that, keeping the array churned. Watch **Monotone runs**, not sortedness
+— global sortedness no longer tells the story.
 
 ## The knobs
 
-- **Global density** — how many agents fill the array.
-- **Processing delay** — milliseconds between simulation cycles.
-- **Population mix** — the relative proportion of each strategy.
+- **Array size / Wake rate** — how many agents, and what fraction act per cycle.
+- **Population mix** — the proportion of each algotype.
+- **Objective** — one shared goal (selfish ascending) vs mixed (phase separation).
+- **Frozen / defective** — share of immovable obstacle cells.
+- **Step interval** — milliseconds between cycles.

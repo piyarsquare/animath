@@ -1,37 +1,69 @@
 # Agentic Sorting Lab
 
-A concurrent sorting simulation where autonomous agents with distinct behavioral
-strategies work simultaneously to sort a population of values.
+A concurrent, **cell-view** sorting simulation: every element of the array is an
+autonomous **agent** that runs its own local rule and pursues its own position.
+There is no top-down sorter — sortedness, when it appears, is emergent.
 
-## Concept
+## Where the idea comes from
 
-Instead of a single sorting algorithm operating top-down, the array is populated
-with **agents** that each follow their own local strategy. Every simulation cycle,
-a random subset of agents "wakes up" and applies its rule, producing emergent
-sorting behavior from the interaction of many independent actors.
+The framing follows Taining Zhang, Adam Goldstein & Michael Levin, *Classical
+Sorting Algorithms as a Model of Morphogenesis: self-sorting arrays reveal
+unexpected competencies in a minimal model of basal intelligence* (Adaptive
+Behavior, 2025; [arXiv:2401.05375](https://arxiv.org/abs/2401.05375); discussed
+by Levin on Lex Fridman Podcast #486). Treating array elements as agents, they
+measured competencies that **none of the rules explicitly encode** — most
+strikingly, *clustering by algotype* and *robustness to defective cells*.
 
-## Agent Types
+This app is built to make those competencies **measurable**, with readouts rather
+than just a moving picture.
 
-| Agent | Strategy | Sorting Analog |
+## The agents (algotypes)
+
+| Agent | Strategy | Classic analog |
 |---|---|---|
-| **Standard** | Compares with a random adjacent neighbor and swaps if out of order | Bubble sort |
-| **Blind Date** | Picks a random agent *anywhere* in the array and swaps if misordered | Randomized comparison sort |
-| **Nomadic** | Always drifts left when smaller than its left neighbor | Insertion-style left drift |
-| **Patrolling** | Maintains a direction; swaps on contact, reverses when "happy" | Cocktail shaker sort |
-| **Perfectionist** | Scans the entire right tail to find the minimum and swaps into place | Selection sort |
+| **Standard** | compares a random adjacent neighbor, swaps if out of order | bubble sort |
+| **Blind Date** | compares a partner anywhere in the array | randomized compare-swap |
+| **Nomadic** | only inspects the neighbor behind it, drifting toward its goal | insertion-style drift |
+| **Patrolling** | keeps a heading; swaps on contact, reverses when settled | cocktail-shaker sort |
+| **Perfectionist** | scans the right tail for the extreme value and pulls it in | selection sort |
+
+An agent's **algotype** (its rule) is independent of its **value** and its
+**position** — exactly the distinction the paper draws.
+
+## What you can measure
+
+- **Sortedness** — fraction of adjacent pairs already ascending (1 = sorted).
+- **Inversions** — out-of-order pairs; 0 ⇒ ascending-sorted.
+- **Monotone runs** — number of monotone domains; the metric for the phase-
+  separation mode (a single sort → 1; two opposed domains → ~2).
+- **Clustering** — *excess homophily over chance* in algotype adjacency. The
+  chance baseline is subtracted, so a positive value is real clustering, not just
+  a restatement of the population mix.
+- **Best reachable** — with frozen cells pinned, the highest sortedness still
+  attainable; the gap to 1.0 is the damage the defects impose.
+
+## Two objective modes
+
+- **Selfish (ascending)** — faithful to the paper: every agent pursues the same
+  ascending order, each by its own local rule. Converges. Use this to see
+  clustering and defect-robustness.
+- **Phase separation** — an **animath-original** extension *not* in Levin's work:
+  agents disagree on direction (some ascending, some descending). The array
+  generally does not fully sort; it forms monotone domains instead. Watch
+  **Monotone runs**, not sortedness.
 
 ## Parameters
 
-- **Global Density** -- number of agents in the array (10--150).
-- **Processing Delay** -- milliseconds between simulation cycles.
-- **Population Mix** -- relative proportion of each agent type (weights 0--100).
+- **Array size** (16–400) and **Wake rate** (fraction of agents acting per cycle).
+- **Population mix** — relative proportion of each algotype.
+- **Objective** — uniform (selfish) vs split (phase separation), with a descending
+  share.
+- **Frozen / defective** — share of immovable obstacle cells.
+- **Step interval** — milliseconds between cycles.
 
-## Observations
+## Notes on honesty
 
-- A pure **Blind Date** population converges fastest because it breaks locality,
-  reducing global entropy in large jumps.
-- **Perfectionist** agents are expensive per wakeup (linear scan) but place
-  elements exactly once they fire.
-- Mixed populations often outperform homogeneous ones because different
-  strategies complement each other: local refiners (Standard, Patrolling) clean
-  up after long-range movers (Blind Date, Perfectionist).
+- *Standard*, *Nomadic*, and *Patrolling* are *loose* echoes of their named sorts;
+  *Perfectionist* (≈ selection) and *Blind Date* are faithful.
+- "Competencies" here means *measured behavior* (clustering, robustness), not a
+  claim that the cells are intelligent.

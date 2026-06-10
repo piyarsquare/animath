@@ -47,6 +47,56 @@ the same function" intermediate the user remembered.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 22:10 — Phase 0–2 implemented, build green, engine validated
+**Why:** Deliver the full payload the user chose (engine + competencies + both
+objective modes + canvas), verified.
+
+New self-contained modules in `src/animations/AgenticSorting/`:
+- **`engine.ts`** — pure `step(state, rand)` reducer + strategy table + local
+  `mulberry32`. Per-agent `objective` (±1), `frozen` flag; **deterministic
+  same-tick collision resolution** (one claim per cell, `from`-order). Frozen
+  cells never wake and can't be moved (obstacles).
+- **`metrics.ts`** — `sortedness`, `inversions`, `monotoneRuns`,
+  `algotypeClustering` (**excess homophily over chance**), `frozenCeiling`.
+- **`arena.ts`** — canvas renderer, Okabe–Ito CVD-safe palette, bars/dots,
+  color-by type/objective.
+- Rewrote `AgenticSorting.tsx`: rAF + accumulator loop, DPR canvas via
+  ResizeObserver, panels rebuilt on `ControlPanel` primitives +
+  `usePersistentState`; Metrics panel uses `StatGrid`/`Sparkline`/`Kicker`.
+- Rewrote `EXPLAINER.md` + `README.md`: cite arXiv:2401.05375, label
+  Levin-vs-animath-original, fidelity notes on the loose sort analogs, no
+  "intelligent cells" copy.
+
+`npm run build` passes; `tsc --noEmit` clean. Headless engine validation
+(`tsx`): selfish converges (sortedness 0.53→0.95, runs 87→13); pure Blind Date
+sorts perfectly & fastest (→1.00, 545 swaps); frozen 15% → 0.87 vs 0.92 ceiling
+(robustness); phase-sep stalls ~0.5; **local-only** phase-sep coarsens domains
+(runs 83→27) while Blind-Date-heavy churns (83→79) — honest framing added to the
+explainer. Screenshot of the default view confirms the canvas + panels render.
+
+> [!NOTE]
+> Phase 3 (delayed-gratification click-to-track plot) is the remaining optional
+> item — not built this session.
+
+### 🟣 decision · 21:58 — User chose full payload; paper facts locked
+**Why:** Need to fix scope and verify the doc-reframe gate before coding.
+
+User decisions: **both** objective modes (selfish-uniform default + asc/desc
+phase-separation), **pull the canvas arena forward**, and **push through Phase 2**
+(engine + competencies + objectives) this session.
+
+Paper facts confirmed (arXiv/blog 403'd; pulled from search of Levin's writeups):
+the model is **cell-view** (each element runs its own algorithm = its *algotype*,
+pursuing its own position) vs top-down. **Algotype** = the algorithm a cell uses
+(distinct from value=genotype, position=phenotype). **Chimeric array** = different
+cells use different policies. **Clustering** = cells spontaneously cluster by
+algotype, "a meta-property implemented nowhere in the algorithms themselves."
+**Frozen cells** = malfunctioning/immovable elements that impede progress;
+cell-view sorts are robust to them (Bubble best). **Delayed gratification** =
+Bubble/Insertion backtrack *more* when faced with defects. Crucially **all
+elements sort toward the same order in the paper** — so **asc-vs-desc is an
+animath-original**, to be labeled as phase separation (confirms the pedagogy hat).
+
 ### 🟡 milestone · 21:53 — Three-hats complete + synthesis written
 **Why:** All three experts returned; need a single convergence read + decisions.
 
