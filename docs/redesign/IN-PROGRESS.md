@@ -3,7 +3,7 @@
 The live ledger of design areas that are **intentionally unfinished** in the prototype, plus open
 questions. The implementing agent should update this file as phases land.
 
-## Implementation status (repo, branch claude/dazzling-goodall-1afsbr)
+## Implementation status (repo, branch claude/new-chrome)
 
 - ✅ **PARAM-MAP gate** — `docs/redesign/PARAM-MAP.md` (all 10 apps; Polygon Worlds, merged from
   main mid-overhaul, mapped during its migration).

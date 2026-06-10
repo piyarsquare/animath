@@ -3,8 +3,8 @@ kind: progress
 session: 2026-06-09-S01
 date: 2026-06-09
 title: Design language overhaul — tokens, gallery, workspace
-branch: claude/dazzling-goodall-1afsbr
-slug: dazzling-goodall-1afsbr
+branch: claude/new-chrome
+slug: new-chrome
 status: in-progress
 build: passing
 followup: null
