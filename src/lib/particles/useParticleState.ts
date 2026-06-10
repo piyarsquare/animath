@@ -130,8 +130,9 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // the classic domain-coloring look; Modulus colors by |z| / |f|, etc.
   const [colorQuantity, setColorQuantity] = usePersistentState<ColorQuantity>(pk('colorQuantity'), ColorQuantity.Phase);
   // Which scalar drives the brightness (value) channel, independently of hue.
-  // Defaults to Modulus = magnitude (the classic |·| → brightness).
-  const [brightnessQuantity, setBrightnessQuantity] = usePersistentState<ColorQuantity>(pk('brightnessQuantity'), ColorQuantity.Modulus);
+  // Defaults to Uniform — flat, full-strength color; pick Modulus for the
+  // classic |·| → brightness domain-coloring shading.
+  const [brightnessQuantity, setBrightnessQuantity] = usePersistentState<ColorQuantity>(pk('brightnessQuantity'), ColorQuantity.Uniform);
   // Coordinate chart for the input z and output f planes before they form the
   // 4-vector (Cartesian / Polar / Log-polar). Color stays Cartesian.
   const [inputCoord, setInputCoord] = usePersistentState<CoordMode>(pk('inputCoord'), CoordMode.Cartesian);
@@ -148,7 +149,9 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     viewType === ProjectionMode.Hopf ? 2
       : viewType === ProjectionMode.Torus || viewType === ProjectionMode.Stereo ? 1 : 0,
   );
-  const [viewMotion, setViewMotion] = usePersistentState<(typeof motionModes)[number]>(pk('viewMotion'), 'Quaternion');
+  // Base motion: start still (Fixed) so the first view reads cleanly against
+  // the axes; Quaternion turns on the ambient 4D tumble.
+  const [viewMotion, setViewMotion] = usePersistentState<(typeof motionModes)[number]>(pk('viewMotion'), 'Fixed');
   const [dropAxis, setDropAxis] = usePersistentState<(typeof dropModes)[number]>(pk('dropAxis'), 'None');
   // `proj` is the projection actually applied to the shader (vs. `viewType`, the
   // user's pick). Seed it from the restored viewType + dropAxis so a reloaded

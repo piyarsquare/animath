@@ -151,17 +151,17 @@ rigid orbits of the 3-D camera; the six 4-D planes return in the linear views.
 
 ## Color (domain coloring)
 
-By default, color encodes a complex number's **argument** (its angle) as hue and
-its **magnitude** as brightness. Switch **Color by** between *Domain* (color by
-the input `z`) and *Range* (color by the output `f(z)`) to see how the
-function rearranges the plane.
+By default, color encodes a complex number's **argument** (its angle) as hue,
+at flat full brightness. Switch **Color by** between *Domain* (color by the
+input `z`) and *Range* (color by the output `f(z)`) to see how the function
+rearranges the plane.
 
 The **Quantity** and **Brightness** pickers choose *which* scalar of that number
 drives each channel, independently: **Phase** (the classic angle→hue),
 **Magnitude** (so you can literally color — or shade — by `|z|` / `|f|`), or the
-**Real** / **Imag** part. Brightness also offers **Uniform (flat)** — every
-particle at full value, so color reads as pure hue with no magnitude shading. The
-defaults reproduce classic domain coloring (hue = phase, brightness = magnitude).
+**Real** / **Imag** part. Brightness defaults to **Uniform (flat)** — every
+particle at full value, so color reads as pure hue; set it to *Magnitude* for
+classic domain coloring, where `|·|` shades the value.
 Sequential colormaps (Viridis, Magma, …) replace the wheel with a perceptual
 ramp — better for reading magnitude as height, and safer for color-vision
 deficiency than the hue wheel. The **Dual-hue CVD** style is a CVD-friendly

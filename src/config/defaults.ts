@@ -34,7 +34,7 @@ export const COMPLEX_PARTICLES_DEFAULTS = {
     shimmer: 0,
     hueShift: 0,
     jitter: 0.1,
-    axisWidth: 5,
+    axisWidth: 2,
     /** Half-width of the sampled domain on the x (real) axis; default ±4. */
     extentX: 4,
     /** Half-width of the sampled domain on the y (imaginary) axis; default ±4. */
