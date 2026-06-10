@@ -30,6 +30,19 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 02:16 — Scroll hints on the rail and the phone dock
+**Why:** the user missed that the bar scrolls — the phone dock hides its
+scrollbar and clips the remaining panel buttons with zero affordance (the
+desktop rail has the same failure on short windows).
+
+New `useScrollHints` hook (chrome-level) tracks whether a scroller has more
+content past each edge; the rail (vertical) and dock (horizontal) now show a
+fade + accent chevron at whichever edge has more, disappearing at rest ends.
+Verified by DOM probe: right-only at scroll 0, left-only at the end, both
+mid-scroll.
+
+![the phone dock mid-scroll showing chevron hints at both edges](assets/2026-06-10-S01-dock-scroll-hints.png)
+
 ### 🟢 code · 01:40 — 4D Rotation panel opens by default (user couldn't find it)
 **Why:** the user reported the drop-axis and rotation controls (the old
 Actions floater) missing from the particle viewer.

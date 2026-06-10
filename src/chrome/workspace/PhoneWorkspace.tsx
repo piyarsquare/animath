@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { Icon } from '../icons';
 import { TopBar } from '../TopBar';
+import { useScrollHints } from '../useScrollHints';
 import { sortByTier, ARCHETYPES } from './archetypes';
 import { beginPointerDrag } from './drag';
 import type { WorkspaceProps } from './types';
@@ -26,6 +27,8 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
   /* fullscreen is transient view state — deliberately not persisted */
   const [full, setFull] = useState<string | null>(null);
   const active = sections.find(s => s.id === sheet);
+  const dockRef = useRef<HTMLElement>(null);
+  const dockHint = useScrollHints(dockRef, 'x');
 
   useEffect(() => {
     if (!sheet && !full) return;
@@ -99,25 +102,37 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
           );
         })}
       </div>
-      <nav className="am-phone-dock" aria-label="Panels">
-        {sections.map((s, i) => {
-          const arch = ARCHETYPES[s.arch];
-          const prev = i > 0 ? ARCHETYPES[sections[i - 1].arch] : null;
-          return (
-            <React.Fragment key={s.id}>
-              {prev && prev.tier !== arch.tier && <div className="am-phone-dock-sep" />}
-              <button
-                className={`am-phone-dock-btn ${sheet === s.id ? 'am-on' : ''}`}
-                aria-label={`${s.title} (${arch.tier})`}
-                onClick={() => setSheet(sheet === s.id ? null : s.id)}
-              >
-                <Icon name={arch.icon} size={19} />
-                <span>{s.title}</span>
-              </button>
-            </React.Fragment>
-          );
-        })}
-      </nav>
+      <div className="am-phone-dockwrap">
+        <nav ref={dockRef} className="am-phone-dock" aria-label="Panels">
+          {sections.map((s, i) => {
+            const arch = ARCHETYPES[s.arch];
+            const prev = i > 0 ? ARCHETYPES[sections[i - 1].arch] : null;
+            return (
+              <React.Fragment key={s.id}>
+                {prev && prev.tier !== arch.tier && <div className="am-phone-dock-sep" />}
+                <button
+                  className={`am-phone-dock-btn ${sheet === s.id ? 'am-on' : ''}`}
+                  aria-label={`${s.title} (${arch.tier})`}
+                  onClick={() => setSheet(sheet === s.id ? null : s.id)}
+                >
+                  <Icon name={arch.icon} size={19} />
+                  <span>{s.title}</span>
+                </button>
+              </React.Fragment>
+            );
+          })}
+        </nav>
+        {dockHint.start && (
+          <div className="am-dock-more am-dock-more-left" aria-hidden="true">
+            <Icon name="chevron" size={13} style={{ transform: 'rotate(180deg)' }} />
+          </div>
+        )}
+        {dockHint.end && (
+          <div className="am-dock-more am-dock-more-right" aria-hidden="true">
+            <Icon name="chevron" size={13} />
+          </div>
+        )}
+      </div>
       {active && (
         <>
           <div className="am-phone-scrim" onClick={() => setSheet(null)} role="presentation" />
