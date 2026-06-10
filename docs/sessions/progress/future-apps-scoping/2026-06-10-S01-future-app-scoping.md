@@ -5,10 +5,10 @@ date: 2026-06-10
 title: Future-app scoping — emergence, CA, ports
 branch: claude/future-apps-scoping
 slug: future-apps-scoping
-status: in-progress
-build: not-run
-followup: null
-pr: null
+status: completed
+build: passing
+followup: LOW
+pr: 210
 app: general
 ---
 
