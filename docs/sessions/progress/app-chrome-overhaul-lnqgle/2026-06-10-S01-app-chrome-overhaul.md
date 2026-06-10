@@ -40,6 +40,30 @@ rename/export, gallery search, phone landscape) and embeds phase 2 (the
      emoji: 🟣 decision · 🟢 code · 🔵 finding · 🔴 blocker · 🟡 milestone
      Follow each with a "**Why:** …" line, then optional body paragraphs. -->
 
+### 🟡 milestone · 20:15 — Three-hats review complete; synthesis + errata applied
+**Why:** All three expert agents returned; the user asked for the review and a
+PR to track it (draft PR #208).
+
+All three **endorse the plan**. Unanimous: F9 was overstated ("geometrically
+wrong" → *incommensurable scales* — each pane is internally consistent);
+P4a first; staged Esc must only peel transient layers; P5 with a
+discriminated `node | panes` union, fresh window id, fixed 50/50 split;
+Correspondence stays two windows. Maintainer + consultant independently found
+the same missed bug: the persisted raise counter is unbounded, so panels can
+already cross the fullscreen layer today — fix by compacting z in
+`sanitize()`; a CSS-only fix can't work against Panel's inline zIndex (thread
+`zBase`). Pedagogy found two audit errors: Correspondence pick-`c` is
+arm-gated (so the planned hint copy was a false affordance — recommend
+ungating tap-to-pick) and Plane Transform ships no morph. Tension resolved by
+decomposition: build the shared view-overlay layer and ship P2 hints on it;
+defer the full P3 `hud` API. Wrote `…-expert-synthesis.md`, applied the
+errata + a "Three-hats review outcome" section to CHROME-REVIEW.md (revised
+plan: PRs A–D, P3/P4b deferred). Three decisions left to the user: ungate
+tap-to-pick, adopt vitest for chrome pure functions, embeds × action strip.
+
+### 🟣 decision · 19:20 — Draft PR #208 opened to track the review
+**Why:** User asked for a pull request so the reports are trackable.
+
 ### 🟡 milestone · 19:05 — Design review delivered (CHROME-REVIEW.md)
 **Why:** User asked for a chrome design review across all apps, naming three
 gaps: always-on-screen buttons (Stable Matching has no visible play button to

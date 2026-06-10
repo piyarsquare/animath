@@ -27,9 +27,9 @@ views that must never separate.
 | App | Primary action | Lives in | Desktop default | Phone default | In-view affordance |
 |---|---|---|---|---|---|
 | Complex Particles | none needed (animates at once); 4D turns | Rotate panel (drive) | panel open | sheet closed | — (self-evident) |
-| Plane Transform | morph; draw curves | Draw panel (drive) | **hidden** (not in default layout) | sheet closed | gestures only, no hint |
+| Plane Transform | draw curves (no morph ships) | Draw panel (drive) | **hidden** (not in default layout) | sheet closed | gestures only, no hint |
 | Fractals (GPU) | pan/zoom; orbit trace | Trace panel (drive) | **hidden** | sheet closed | gestures only, no hint |
-| Mandelbrot ↔ Julia | pick `c` in the view; morph path | Seed panel (drive) | open | sheet closed | click works, **no hint** |
+| Mandelbrot ↔ Julia | pick `c` in the view; morph path | Seed panel (drive) | open | sheet closed | pick is **arm-gated** (Seed panel button, `Correspondence.tsx:38-42`), no hint |
 | Topology Walk | walk (WASD / buttons) | Move panel + **in-view MovePad HUD** | HUD always on | HUD always on | ✅ MovePad + key legend |
 | Trinary (Observatory) | launch planets | Launch panel (drive) | open | sheet closed | readout overlay only |
 | Stable Marriage | play / step rounds | Playback panel | open | sheet closed | none |
@@ -60,9 +60,10 @@ Sources: each app's `sections`/`layouts` arrays; `PhoneWorkspace.tsx:24`
   the user is asking for — but they're per-app inventions with no vocabulary,
   no shared styling, and no fullscreen/phone guarantees.
 - **F4 — Three apps hide their drive panel even on desktop** (Plane Transform's
-  Draw, Fractals' Trace, and Correspondence relies on an unhinted view click).
-  Defensible for the gesture-driven viewers, but there is zero on-screen
-  invitation to those modes.
+  Draw, Fractals' Trace; Correspondence gates pick-`c` behind the Seed panel's
+  arm button, so a bare view click does nothing). Defensible for the
+  gesture-driven viewers, but there is zero on-screen invitation to those
+  modes — and for Correspondence the obvious gesture is disabled by default.
 
 ### Proposal P1 — a chrome-level **action strip** (the headline fix)
 
@@ -135,6 +136,10 @@ manipulation* (move pads, in-canvas legends).
   render *below* it, clicking a rail icon during fullscreen toggles a panel the
   user cannot see. The rail appears dead. Either the rail should hide in
   fullscreen or — far better — the panel it opens should be visible.
+  *(Three-hats addendum: the raise counter `z = topZ + 1` is unbounded and
+  persisted in `ws:<appId>`, so after enough raises a panel exceeds z 100 and
+  floats above fullscreen **today** — F5 is nondeterministic. Any fix must
+  compact z in `sanitize()`.)*
 - **F6 — Esc is the only exit** (plus the header shrink button); on phone, Esc
   clears sheet *and* fullscreen in one stroke (`PhoneWorkspace.tsx:52-56`)
   rather than peeling one layer at a time.
@@ -147,13 +152,18 @@ manipulation* (move pads, in-canvas legends).
 ### Proposal P4 — fullscreen keeps the rail as its control surface
 
 - While a view is fullscreen (`.am-stage.am-has-full`), open panels render
-  above it: `.am-has-full .am-ws-panel { z-index: 110 + z }`. The rail already
-  works; this makes what it opens visible. Panels stay draggable/closable over
-  the fullscreen canvas — same windows, same snap math.
+  above it. Mechanism (per three-hats review): a CSS rule can't beat Panel's
+  inline `zIndex`, so thread a `zBase` prop (normal 30 / fullscreen 110) and
+  tokenize the layer scale; compact persisted `z` in `sanitize()` first (see
+  the F5 addendum). The rail already works; this makes what it opens visible.
+  Panels stay draggable/closable over the fullscreen canvas — same windows,
+  same snap math.
 - The **action strip (P1) persists in fullscreen** — so play/step/reset never
   vanish even before any panel is opened.
-- **Esc becomes staged:** close topmost panel/menu first, exit fullscreen
-  second (desktop and phone).
+- **Esc becomes staged over transient layers only:** close the topmost
+  menu/sheet first, exit fullscreen second — **never** close panels (✕-only
+  semantics) — with one layer-stack owner instead of today's three keydown
+  listeners. The **? explainer** must also stay reachable in fullscreen.
 - **Phone:** raise sheet + scrim above the fullscreen card (z 110/105) and
   keep the dock reachable — either keep the dock visible in fullscreen
   (fullscreen = viewport minus dock + action row), or auto-hide it behind a
@@ -174,10 +184,14 @@ manipulation* (move pads, in-canvas legends).
   `BufferGeometry`, identical uniforms, one shared `viewExtent` (zoom is
   force-locked — wheel in either pane zooms both, `PlaneTransform.tsx:458,472`).
   The chrome can still break the picture: resize one window and the inscribed
-  squares diverge — and the SVG curve overlay maps through the inscribed-square
-  size (`polarViews.ts:72-85`), so mismatched panes make drawn curves
-  **geometrically wrong**, not just ugly. Collapse, fullscreen, or a layout can
-  hide half the correspondence outright.
+  squares diverge. Each pane stays *internally* consistent (the SVG curve
+  overlay and the GPU points share the same inscribed-square transform,
+  `polarViews.ts:72-85`) — but the two panes become **incommensurable**: the
+  same mathematical length renders at different pixels-per-unit, silently
+  inviting false readings of |f′|, and that cross-pane comparison is the
+  picture's whole point. Collapse, fullscreen, or a layout can also hide half
+  the correspondence outright. *(Wording corrected per three-hats review —
+  originally claimed "geometrically wrong," which overstated it.)*
 - **F10 — The embed route already demonstrates the right model.**
   `#/embed/plane-transform` renders **one container with two flex panes**
   (`.am-embed-row > .am-embed-pane + .am-embed-pane`, equal widths, shared
@@ -219,6 +233,9 @@ one window — defer until someone misses it.
 
 ## Recommended order of work
 
+*(Superseded in detail by the three-hats outcome below — the shape survives,
+P3 is deferred, and P4a grew the z-compaction work.)*
+
 | # | Item | Size | Fixes |
 |---|---|---|---|
 | 1 | **P4a** — panels above fullscreen + staged Esc (bug fix) | S | F5, F6 |
@@ -240,3 +257,45 @@ mismatch; 4–6 round out the vocabulary so apps stop improvising.
   panel types.
 - A new §2 note on fullscreen: the rail remains live; panels float above;
   the action strip persists; Esc peels layers.
+
+---
+
+## Three-hats review outcome (2026-06-10)
+
+Three independent expert reviews (Framework Maintainer · Architecture
+Consultant · Math-Viz & Pedagogy) examined this document; all three
+**endorse the plan** and verified the findings against the code. Full reports
+and the convergence analysis:
+`docs/sessions/progress/app-chrome-overhaul-lnqgle/2026-06-10-S01-expert-{maintainer,consultant,pedagogy,synthesis}.md`.
+
+**Errata applied above** (marked inline): F9 reworded from "geometrically
+wrong" to *incommensurable scales*; the audit table corrected (Correspondence
+pick-`c` is arm-gated; Plane Transform ships no morph); the unbounded
+persisted-z bug folded into F5; P4a's mechanism corrected (`zBase` prop +
+z-compaction, not a CSS override); staged Esc scoped to transient layers.
+
+**Revised plan of record:**
+
+- **PR A — P4a+** (standalone bug fix): z-compaction in `sanitize()`, layer
+  tokens, `zBase` threading, staged Esc via one layer owner, explainer
+  reachable in fullscreen.
+- **PR B — P1**: hardened `ActionDef` — buttons-only by type, `sectionId`
+  projection link, ≤5 enforced in code, contextual action sets, Step
+  first-class beside Play, labeled on phone, `role="toolbar"` — desktop strip
+  + phone row, persists in fullscreen. Skin sweep + explicit embeds decision;
+  DESIGN-SPEC, IN-PROGRESS removals-ledger ruling, and BUILDING_AN_APP
+  updates ride the same PR.
+- **PR C — P5**: discriminated `node | panes` union, **fresh** merged-window
+  id (`plane`, not `input`), split-body component shared with the embed
+  route, window title `z ↦ f(z)`, pane labels `z — domain` /
+  `w = f(z) — image`; 50/50 split non-negotiable (no draggable divider).
+- **PR D — P2** on a minimal shared view-overlay layer: per-session hints,
+  math-anchored copy; ungate Correspondence tap-to-pick (decision below).
+- **Deferred:** P3 full `ViewDef.hud` (design against TopologyWalk's actual
+  overlay inventory — MovePad + mini-map + captions — before generalizing);
+  P4b phone fullscreen dock access.
+
+**Open decisions for the user:** (a) ungate Correspondence tap-to-pick;
+(b) adopt vitest for the chrome's pure functions (`sanitize`, `applyLayout`,
+geometry) as the repo's first tests; (c) whether embeds ever show the action
+strip.
