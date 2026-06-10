@@ -53,7 +53,12 @@ export interface InkTrail {
 // Decal extent in (along, left) frame coords; UV maps along→v (back→tip) and
 // left→u so the texture's "up" is the travel direction. LIFT pushes the ink
 // off the face along the frame's normal (so a flipped image hangs under it).
-const A_BACK = -0.4, A_TIP = 0.62, HW = 0.46, LIFT = 0.12;
+const A_BACK = -0.4, A_TIP = 0.62, HW = 0.46;
+/** How far ink decals float off the face along the frame's normal — exported so
+ *  presenters can compose genuine face-swapping deck transforms (the spherical
+ *  twin must carry ink from radius R+LIFT to R−LIFT, under the glass). */
+export const INK_LIFT = 0.12;
+const LIFT = INK_LIFT;
 
 function glyphTexture(): THREE.CanvasTexture {
   const s = 128;

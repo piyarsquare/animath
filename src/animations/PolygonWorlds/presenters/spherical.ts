@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverModel';
 import { SquareMapState } from '../engineTypes';
 import { glassState, POLYGON_GLASS } from '../glassSurface';
-import { makeInkTrail } from '../inkTrail';
+import { makeInkTrail, INK_LIFT } from '../inkTrail';
 import { cornerColor } from '../decor';
 import { rp2Square, sq2hemi } from '../squareMap';
 import { parseWord } from '../surfaceSchema';
@@ -160,10 +160,24 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   inkMesh.userData.ink = true;   // ink may legitimately render through det<0 — exempt from the decor audit
   root.add(inkMesh);
   let inkTwin: THREE.Mesh | null = null;
+  // The twin draws the trail through the genuine deck of the TWO-SIDED shell —
+  // which swaps faces (the twisted I-bundle over ℝP²): ink floating at radius
+  // R+LIFT on the walked outer face lands at R−LIFT at the antipode, UNDER the
+  // glass, where it reads mirror-reversed through it. The bare antipodal map
+  // −Id preserves radius — it is the deck of the *untwisted* bundle and would
+  // float mirror prints in open air on the walking face ("crossing the seam
+  // mirrored my ink in place" — exactly the misconception this app dispels).
+  // The uniform shrink equals the radial face swap to first order in LIFT/R
+  // for a zero-thickness decal, and must be recomputed when R changes.
+  const placeTwin = () => {
+    if (!inkTwin || !twinM4) return;
+    const s = (R - INK_LIFT) / (R + INK_LIFT);
+    inkTwin.matrix.copy(twinM4).multiply(new THREE.Matrix4().makeScale(s, s, s));
+  };
   if (twinM4) {
     inkTwin = new THREE.Mesh(ink.geometry, ink.material); inkTwin.frustumCulled = false;
     inkTwin.matrixAutoUpdate = false; inkTwin.userData.ink = true;
-    inkTwin.matrix.copy(twinM4);
+    placeTwin();
     root.add(inkTwin);
   }
   let hist = 0;                                     // frozen stamp count
@@ -266,6 +280,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     if (seam) { seam.geometry.dispose(); seam.geometry = new THREE.TorusGeometry(R, 0.12, 8, 96); }
     camera.far = R * 5; camera.updateProjectionMatrix();
     hist = 0; lastFrozen = null; ink.setCount(0);
+    placeTwin();   // the face-swap shrink depends on R
     syncPose();
   }
 

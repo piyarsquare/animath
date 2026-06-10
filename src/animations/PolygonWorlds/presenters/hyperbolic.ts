@@ -291,8 +291,13 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
         const sc = decorBase * (1 - r2);
         const aj = above.children[j] as THREE.Object3D;
         const bj = below.children[j] as THREE.Object3D;
-        aj.position.copy(tmp); aj.scale.set(sc, sc, sc);
-        bj.position.copy(tmp); bj.scale.set(sc, -sc, sc);   // mirror below the floor
+        aj.position.copy(tmp); aj.rotation.set(0, 0, 0); aj.scale.set(sc, sc, sc);
+        // Turned over RIGIDLY (π about an in-plane axis), never scale.y = −1:
+        // the under-floor copy is the other face's content, and a baked mirror
+        // makes its in-plane glyphs read FORWARD through the glass — the bug
+        // class S06 removed from the euclidean presenter. Rotation is set on
+        // BOTH branches because pooled groups swap roles between frames.
+        bj.position.copy(tmp); bj.rotation.set(Math.PI, 0, 0); bj.scale.set(sc, sc, sc);
       });
       // corner markers — same above/below split, placed at the inset-vertex points
       const aboveT = flipped ? cell.cornersBottom : cell.cornersTop;
@@ -305,8 +310,8 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
         const sc = decorBase * (1 - r2);
         const aj = aboveT.children[v] as THREE.Object3D;
         const bj = belowT.children[v] as THREE.Object3D;
-        aj.position.copy(tmp); aj.scale.set(sc, sc, sc);
-        bj.position.copy(tmp); bj.scale.set(sc, -sc, sc);
+        aj.position.copy(tmp); aj.rotation.set(0, 0, 0); aj.scale.set(sc, sc, sc);
+        bj.position.copy(tmp); bj.rotation.set(Math.PI, 0, 0); bj.scale.set(sc, sc, sc);  // rigid turn-over (see above)
       });
     }
     for (let k = used; k < cells.length; k++) {

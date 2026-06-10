@@ -34,6 +34,33 @@ camera/headlamp bug.
 
 ## Working notes
 
+### 🟢 code · 23:35 — RED confirmed exactly as predicted; both geometry fixes applied; green run + prose pass in flight
+**Why:** The guard must fail for the right reasons before the fixes count.
+
+**Red run** (all six worlds, headless): crosscap3 decor **1136/2281 improper** ❌,
+genus2 decor **1232/2473 improper** ❌ (the baked `scale(sc,−sc,sc)` under-floor
+mirrors), rp2 twin **mirrorR=30.120 vs shellR=30.000** ❌ (−Id floats mirror ink
+in open air at the walking radius, R+LIFT with LIFT=0.12). Every trail A/B
+probe and the torus/klein/sphere controls green — no collateral findings.
+
+**Fixes applied:**
+
+1. **Spherical twin** (`presenters/spherical.ts`): the twin now renders through
+   the genuine face-swapping deck — `twinM4 · scale(s)` with
+   `s = (R−INK_LIFT)/(R+INK_LIFT)` (`INK_LIFT` newly exported from
+   `inkTrail.ts`), recomputed on `setRadius`. Mirror ink lands at R−LIFT,
+   under the glass, above the inner decor shell (R·0.985).
+2. **Hyperbolic under-floor decor** (`presenters/hyperbolic.ts` `placeDecor`):
+   `scale(sc,−sc,sc)` → rigid turn-over (`rotation.set(π,0,0)` + uniform
+   scale), for landmark decor and corner markers; rotation reset explicitly on
+   the above branch because pooled groups swap roles between frames.
+
+Green verification run is walking the six worlds now. Meanwhile a sub-agent is
+doing the adjudicated prose pass (EXPLAINER "Through the glass" section, the
+two false "mirror-reversed on glide tiles" claims, "mirror side" → "other
+face" labels, stale comments, `otherSide.ts` deletion, American spellings) —
+prose only, barred from building while the verification run uses `dist/`.
+
 ### 🟢 code · 23:05 — Guard infrastructure landed; red run in flight
 **Why:** User approved implementation in the synthesis order; step 1 is
 "guards first, red first" — the new assertions must fail on today's code
