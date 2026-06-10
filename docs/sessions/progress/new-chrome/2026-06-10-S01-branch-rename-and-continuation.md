@@ -30,6 +30,24 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 13:38 — Projection slider: Perspective ⇠ Torus ⇢ Hopf (Stereo retired)
+**Why:** the user spotted that "Torus" and "Stereo" are the same projection
+— confirmed in the shader: both are stereographic from the +v pole after
+normalizing to S³; Torus just soft-floors the pole. They asked to drop
+Stereo and replace the mode pills with a three-position slider with smooth
+transitions that also fades the axes.
+
+`projMix ∈ [0,2]` (persisted; seeded from the old viewType, Stereo→Torus):
+integer positions are the three modes, fractional positions drive the
+existing GPU cross-fade live (segment A Perspective→Torus; segment B reuses
+the Torus→Hopf fiber collapse, whose separate sliders are now subsumed). The
+4D axis cross fades out over the first segment as the scaffold takes over;
+viewType/fiberCollapse stay derived, so the ambient Yaw/Pitch/Roll switch
+and scaffold/fiber toggles follow the slider. The `stereo` embed param stays
+as an alias for torus. Verified by sweeping 0.5/1.0/1.5/2.0 headlessly.
+
+![mid-morph at 50% between Perspective and Torus, axis cross half-faded](assets/2026-06-10-S01-proj-slider-morph.png)
+
 ### 🟢 code · 13:28 — Demo page simplified to the user's spec: e^z, two windows, applet buttons
 **Why:** the user specified the exact demo: e^z throughout; first plot = the
 plane applet (xy → uv, same coloring); second = the 4D particle plot starting

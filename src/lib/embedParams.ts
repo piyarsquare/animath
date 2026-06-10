@@ -41,7 +41,9 @@ export interface ParticleEmbedConfig {
 
 const PROJ: Record<string, ProjectionMode> = {
   perspective: ProjectionMode.Perspective,
-  stereo: ProjectionMode.Stereo,
+  // 'stereo' is the same stereographic map as the torus view (which also
+  // soft-floors the pole); the UI dropped it, the param stays as an alias.
+  stereo: ProjectionMode.Torus,
   hopf: ProjectionMode.Hopf,
   torus: ProjectionMode.Torus,
   dropx: ProjectionMode.DropX,

@@ -623,6 +623,15 @@ export default function ComplexParticles({
       });
     }, []);
 
+  // Re-apply the restored projection slider once after mount: the fresh
+  // materials start at the persisted viewType, so a non-zero projMix needs
+  // its blend uniforms and axis fade pushed (runs before the embed effect,
+  // letting an embed's proj= param win).
+  useEffect(() => {
+    if (!embed && state.projMix > 0) controls.handleProjMix(state.projMix);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Embed mode: apply the URL-configured view once on mount. Canvas3D's
   // child effect (onMount) has already run by the time this fires, so the
   // materials exist and the normal control surface (projection cross-fade,

@@ -139,6 +139,15 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
 
   // ---- View / projection state ----
   const [viewType, setViewType] = usePersistentState<ProjectionMode>(pk('viewType'), ProjectionMode.Perspective);
+  // The projection slider: 0 = Perspective, 1 = Torus, 2 = Hopf, fractional
+  // positions are live GPU morphs between the neighbors. Seeded from the
+  // restored viewType (Stereo maps to Torus — same stereographic projection,
+  // the Torus path just soft-floors the pole).
+  const [projMix, setProjMix] = usePersistentState(
+    pk('projMix'),
+    viewType === ProjectionMode.Hopf ? 2
+      : viewType === ProjectionMode.Torus || viewType === ProjectionMode.Stereo ? 1 : 0,
+  );
   const [viewMotion, setViewMotion] = usePersistentState<(typeof motionModes)[number]>(pk('viewMotion'), 'Quaternion');
   const [dropAxis, setDropAxis] = usePersistentState<(typeof dropModes)[number]>(pk('dropAxis'), 'None');
   // `proj` is the projection actually applied to the shader (vs. `viewType`, the
@@ -276,6 +285,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
 
     // View state + setters
     viewType, setViewType,
+    projMix, setProjMix,
     viewMotion, setViewMotion,
     dropAxis, setDropAxis,
     proj, setProj,

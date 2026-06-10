@@ -74,10 +74,56 @@ export function useViewControls(state: ParticleState) {
     state.setPanZ(0);
   }
 
+  /** The 4D axis cross belongs to the linear views — fade it out on the way
+   *  to the torus, where the scaffold takes over as the reference frame. */
+  function applyAxisFade(mix: number) {
+    const opacity = Math.max(0, 1 - mix);
+    for (const ref of [state.xAxisRef, state.yAxisRef, state.uAxisRef, state.vAxisRef]) {
+      const ax = ref.current;
+      if (!ax) continue;
+      const mat = ax.line.material as THREE.LineBasicMaterial;
+      mat.transparent = true;
+      mat.opacity = opacity;
+      ax.line.visible = opacity > 0.02;
+    }
+  }
+
   function handleViewType(t: ProjectionMode) {
     setFiberCollapse(0);
     setViewType(t);
+    const mix = t === ProjectionMode.Hopf ? 2
+      : t === ProjectionMode.Torus || t === ProjectionMode.Stereo ? 1 : 0;
+    state.setProjMix(mix);
+    applyAxisFade(mix);
     applyView(t, dropAxis);
+  }
+
+  /**
+   * The Perspective ⇠ Torus ⇢ Hopf projection slider (0 ≤ v ≤ 2): integer
+   * positions are the three modes, fractional positions drive the GPU
+   * cross-fade live (segment A blends Perspective→Torus, segment B reuses the
+   * Torus→Hopf fiber collapse). Also fades the 4D axis cross out toward the
+   * torus and keeps viewType/fiberCollapse consistent so dependent UI (the
+   * ambient rotation controls, the scaffold/fiber toggles) follows along.
+   */
+  function handleProjMix(v: number) {
+    const mix = Math.max(0, Math.min(2, v));
+    state.setProjMix(mix);
+    setViewType(mix < 0.5 ? ProjectionMode.Perspective : mix < 1.5 ? ProjectionMode.Torus : ProjectionMode.Hopf);
+    setFiberCollapse(Math.max(0, mix - 1));
+    if (dropAxis === 'None') {
+      const from = mix <= 1 ? ProjectionMode.Perspective : ProjectionMode.Torus;
+      const to = mix <= 1 ? ProjectionMode.Torus : ProjectionMode.Hopf;
+      const alpha = mix <= 1 ? mix : mix - 1;
+      setProj(from);
+      projRef.current = from;
+      materialsRef.current.forEach(m => {
+        m.uniforms.uProjMode.value = from;
+        m.uniforms.uProjTarget.value = to;
+        m.uniforms.uProjAlpha.value = alpha;
+      });
+    }
+    applyAxisFade(mix);
   }
 
   /**
@@ -191,7 +237,7 @@ export function useViewControls(state: ParticleState) {
   }
 
   return {
-    handleViewType, handleMotion, handleDropAxis, handleFiberCollapse,
+    handleViewType, handleProjMix, handleMotion, handleDropAxis, handleFiberCollapse,
     turn, snapToStandardView, rotateBy, orbitBy, orbitTurn,
   };
 }

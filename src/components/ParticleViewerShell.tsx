@@ -11,7 +11,7 @@ import { clearPersistedState } from '../lib/usePersistentState';
 import {
   ColorStyle, ColorBy, ColorQuantity, CoordMode, coordModeNames, colormapNames,
   SamplePattern, samplePatternNames, JitterMode, AXIS_COLORS,
-  shapeNames, textureNames, viewTypes, motionModes, renderModes,
+  shapeNames, textureNames, motionModes, renderModes,
   useGestureRotation,
 } from '../lib/particles';
 import type { ParticleState, ViewAxis } from '../lib/particles';
@@ -266,23 +266,26 @@ export default function ParticleViewerShell({
     </>
   );
 
+  // The projection slider's value readout: name the detents, narrate the morphs.
+  const fmtProjMix = (v: number) =>
+    v <= 0.02 ? 'Perspective'
+      : Math.abs(v - 1) <= 0.02 ? 'Torus'
+        : v >= 1.98 ? 'Hopf'
+          : v < 1 ? `→ Torus ${Math.round(v * 100)}%`
+            : `→ Hopf ${Math.round((v - 1) * 100)}%`;
+
   const cameraNode = (
     <>
-      <Pills
+      {/* One slider, three worlds: Perspective ⇠ Torus ⇢ Hopf. Fractional
+          positions are live GPU morphs; the 4D axis cross fades out toward
+          the torus, where the scaffold becomes the reference frame. */}
+      <Slider
         label="Projection"
-        options={viewTypes.map(([name, code]) => ({ value: code, label: name }))}
-        value={state.viewType}
-        onChange={controls.handleViewType}
+        value={state.projMix}
+        min={0} max={2} step={0.01}
+        onChange={controls.handleProjMix}
+        format={fmtProjMix}
       />
-      {state.viewType === ProjectionMode.Torus && (
-        <Slider
-          label="Collapse → Hopf"
-          value={state.fiberCollapse}
-          min={0} max={1} step={0.01}
-          onChange={controls.handleFiberCollapse}
-          format={v => v === 0 ? 'torus' : v === 1 ? 'sphere' : v.toFixed(2)}
-        />
-      )}
       {(state.viewType === ProjectionMode.Torus || state.viewType === ProjectionMode.Hopf) && (
         <Checkbox
           label="Reference scaffold"
@@ -546,15 +549,6 @@ export default function ParticleViewerShell({
 
   const rotateNode = (
     <>
-      {state.viewType === ProjectionMode.Torus && (
-        <Slider
-          label="Collapse → Hopf"
-          value={state.fiberCollapse}
-          min={0} max={1} step={0.01}
-          onChange={controls.handleFiberCollapse}
-          format={v => v === 0 ? 'torus' : v === 1 ? 'sphere' : v.toFixed(2)}
-        />
-      )}
       <QuarterTurnControls
         items={turnItems}
         onTurn={handleTurn}
