@@ -29,7 +29,7 @@ the same template:
 | 3 | **Murmurations (Flocking)** | self-propelled agents / emergence | Three.js instanced + spatial hash | new |
 | 4 | **Ant Colonies** | stigmergy / emergence | GPU field + agent layer | new |
 | 5 | **Glassy Networks** | disordered systems / rugged optimization (Ising · QUBO · QKP) | DOM/graph or Three.js + MC | new |
-| 6 | **Quantum Tree** | phylogenetics / quantum-combinatorics viz | SVG + a little canvas 2D (vanilla JS today) | **port** — source in hand |
+| 6 | **Quantum Tree** (likely rename → "Circular Orders, Trees & Nets") | phylogenetics / circular-order tree geometry (classical port; quantum stays an open question) | SVG + a little canvas 2D (vanilla JS today) | **port** — source in hand |
 | 7 | **GAS** (Gene Advocate System) | evolutionary dynamics / landscape exploration | DOM + time-series (port from Python) | **port** — source in hand |
 
 > [!NOTE]
@@ -408,16 +408,23 @@ shared **"best energy vs steps"** race chart would serve both.
 > The deployed app is `https://piyarsquare.github.io/quantum-tree/`. Baseline
 > below is written from the actual source; refine against the code when building.
 
+> [!IMPORTANT]
+> **Port scope (decided).** Port the **classical geometry/combinatorics** only:
+> **circular orders**, **energy functions**, **circular-decomposable metrics**,
+> **trees**, and **NeighborNet + neighbor-joining**. The **quantum layer is out of
+> scope for now** — it is *not* built; it survives only as the stated open research
+> question below. The app is fundamentally about circular orderings, tree geometry,
+> and split networks, so a non-"quantum" name is worth considering (the deployed
+> title is *"Circular Orders, Trees and Nets"*).
+
 ### Concept
 A "map" of how **distance data builds phylogenetic trees**, treating tree-building
-as **evidence assembly** before any probability is imposed. For a set of leaves it
-shows the competing tree topologies, the splits and **circular orderings**
-compatible with them, neighbor-joining, split networks, and the geometry of
-"tree-space" — with an explicit, deferred **quantum reinterpretation** layered on
-top (the quartet/tree states as one-hot quantum registers, Gibbs/thermal states,
-and, in later phases, cost phases + mixers à la QAOA). It is exactly animath's
-sweet spot: a deep, honestly-framed mathematical object made interactive, with a
-companion working paper supplying the rigor.
+as **evidence assembly** (energies/scores) before any probability is imposed. For a
+set of leaves it shows the competing tree topologies, the **splits** and **circular
+orderings** compatible with them, **neighbor-joining**, **NeighborNet** split
+networks, and the geometry of tree-space. It is exactly animath's sweet spot: a
+deep, honestly-framed mathematical object made interactive, with a companion
+working paper supplying the rigor.
 
 ### Canonical model / math
 - **Quartets & the four-point condition.** For leaves `a,b,c,d` the three unrooted
@@ -443,12 +450,17 @@ companion working paper supplying the rigor.
   (associahedron-flavored — see the references: Billera–Holmes–Vogtmann,
   Devadoss, Semple–Steel) showing which orders are compatible with a tree and vice
   versa.
-- **Quantum reinterpretation (deferred).** One-hot encoding `|100>,|010>,|001>`
-  on the Hamming-weight-one subspace; phase-free amplitudes `αᵢ=√pᵢ` today; later
-  `|Tᵢ> → e^{−iγEᵢ}|Tᵢ>` plus an XY-style mixer preserving feasibility. For 5
-  leaves the consistency of five local quartet registers becomes a genuine
-  **entanglement/global-constraint** story (243 local assignments vs 15 valid
-  trees).
+- **Circular-decomposable metrics, NeighborNet & NJ (core of the port).** A metric
+  is **circular- (split-) decomposable** when `d = Σ_S w_S δ_S` is a nonnegative sum
+  of split metrics `δ_S` whose splits are all **compatible with a single circular
+  order** (the Kalmanson condition characterizes such metrics). **NeighborNet**
+  estimates these **circular split weights** to produce a split network;
+  **neighbor-joining** is the tree special case (a fully *compatible* set of splits
+  = a tree). The **energy functions** rank candidate structures: quartet/split
+  support, **circular path sums / tour-length** over an ordering, and Kalmanson
+  violation as a non-tree-likeness score. These — circular orders, energies,
+  circular-decomposable metrics, trees, NeighborNet + NJ — are exactly the port
+  scope.
 
 ### Key phenomena
 The four-point winner; the evidence plane geometry (star ↔ resolved); how the same
@@ -484,9 +496,9 @@ split-network (SplitsTree) methods.
   ordered distance matrix · the evidence plane · the tree/order fiber (flip-graph)
   views. Selecting a split/tree/order highlights the contributing quartets across
   windows (the **linked-views** idiom, like Correspondence).
-- **Quantum layer** as an optional `subject`/`drive` mode: show the one-hot
-  amplitudes `αᵢ=√pᵢ`, and (later) cost-phase/mixer controls — disclosed honestly
-  as "classical thermal state today, literal interference later."
+- **No quantum layer** in the port (out of scope) — the Gibbs `β` posterior stays
+  only as an optional *classical* display closure on the energies, clearly labeled
+  as a display choice.
 
 ### Port strategy
 Two routes, recommend the second:
@@ -502,14 +514,30 @@ Two routes, recommend the second:
    but idiomatic, testable, and it unlocks animath's linked multi-window UX. The
    self-contained `src/animations/QuantumTree/` folder keeps it parallel-branch safe.
 
-### Open questions
-- Scope of the first port: just the **4-leaf** evidence plane + quartet toy (small,
-  high-clarity) before the full 4–7 leaf map? Lean: ship 4-leaf first, then 5, then
-  the map.
-- How much of the **quantum** layer to expose initially vs keep as a documented
-  "Phase 1" — the honest framing ("not yet a quantum circuit") must survive the port.
-- License/attribution: the source repo is **private**; confirm it's fine to
-  relicense the ported code under animath's terms and how to credit the paper.
+### Open research question (carried, not built)
+> Is there a way to use the **tree geometry and circular path sums** to solve for
+> the **optimal tree topology** with a **quantum algorithm that searches many
+> candidate structures simultaneously** — letting **quantum interference
+> (cancellation)** resolve the tree structure (amplitude concentrating on the
+> coherent topology while conflicting evidence cancels)?
+
+This is the project's motivating "what if," kept as a documented question. The port
+deliberately builds only the **classical** machinery above; that classical layer
+(circular-order energies, path sums, split/quartet support, the consistency
+constraints) is exactly the substrate such a quantum-search formulation would phase
+and mix over, so building it well keeps the door open without committing to it.
+
+### Other open questions
+- **MVP scope**: just the **4-leaf** evidence plane + quartet toy (small,
+  high-clarity) before the full 4–7 leaf map and the NeighborNet/NJ network views?
+  Lean: ship 4-leaf first, then 5, then the map + split networks.
+- **App name**: with the quantum layer excluded, "Quantum Tree" no longer describes
+  the app — prefer something like **"Circular Orders, Trees & Nets"** (the deployed
+  title) or "Tree Space"; pick the folder/route name accordingly
+  (`src/animations/...`).
+- **License/attribution**: the source repo is **private**; confirm it's fine to
+  relicense the ported code under animath's terms and how to credit the working
+  paper.
 
 ---
 
@@ -636,8 +664,10 @@ A dependency-aware order, *if* we build the new ones:
    rugged-landscape-exploration view and "best-energy-vs-steps" race); both lean on
    the Analyze tier and the existing DOM-graph approach. GAS is a clean port of
    small NumPy; Glassy supplies the Ising/QUBO/QKP landscape.
-6. **Quantum Tree** — port the math to TS + rebuild SVG views (source in hand);
-   biggest single port, but an unusually good fit for the multi-window UX.
+6. **Quantum Tree** (classical port — circular orders, energies,
+   circular-decomposable metrics, trees, NeighborNet + NJ; quantum layer excluded) —
+   port the math to TS + rebuild SVG views (source in hand); biggest single port,
+   but an unusually good fit for the multi-window UX.
 
 Both ports (Quantum Tree, GAS) now have **source in hand**; the gating items are
 licensing/attribution for the private repos and choosing each MVP's first slice.

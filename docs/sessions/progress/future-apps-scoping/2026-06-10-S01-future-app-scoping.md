@@ -40,6 +40,23 @@ fix; new branch `claude/future-apps-scoping` forked from `main`.
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 23:20 — Quantum Tree port scope locked to the classical core
+**Why:** User decided the port includes circular orders, energy functions,
+circular-decomposable metrics, trees, and NeighborNet + NJ — and **excludes the
+quantum layer for now**, keeping "quantum" only as a stated open research question.
+
+Updated `FUTURE_APPS.md` §6: added a "Port scope (decided)" callout; rewrote the
+concept to drop quantum from the build; added a math bullet on
+**circular-decomposable (Kalmanson) metrics, NeighborNet circular split weights,
+NJ as the tree case, and the energy functions** (quartet/split support, circular
+path sums / tour length, Kalmanson violation); removed the quantum layer from the
+animath mapping (Gibbs β kept only as an optional *classical* display closure);
+and replaced the quantum-exposure open question with the user's verbatim research
+question — *can tree geometry + circular path sums + quantum interference
+(cancellation) search many topologies at once to resolve the optimal tree?* Noted
+a likely **rename** away from "Quantum Tree" (deployed title "Circular Orders,
+Trees & Nets"). Updated the table + sequencing.
+
 ### 🔵 finding · 23:05 — GAS decoded; it unifies with Glassy Networks
 **Why:** User uploaded the GAS Python source and framed the link explicitly:
 "this lead to glassy networks and quadratic [k]napsack — does GAS ease
