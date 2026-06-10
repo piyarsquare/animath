@@ -476,6 +476,13 @@ body {
 .am-sheet-grip { width: 36px; height: 4px; border-radius: 2px; background: var(--track); position: absolute; top: 7px; left: 50%; transform: translateX(-50%); }
 .am-sec-tier { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px; }
 
+/* ============ Embed shell (#/embed/:app — chrome-less applet) ============ */
+.am-embed { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--viz-bg); }
+.am-embed-view { position: relative; flex: 1; min-height: 0; }
+.am-embed-badge { position: absolute; right: 8px; bottom: 8px; z-index: 5; font-family: var(--font-ui); font-size: 11px; font-weight: 700; color: var(--fg); background: var(--panel-solid); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; text-decoration: none; opacity: 0.7; transition: opacity .14s; }
+.am-embed-badge:hover { opacity: 1; }
+.am-embed-caption { padding: 7px 12px; font-family: var(--font-ui); font-size: 12px; color: var(--dim); background: var(--panel-solid); border-top: 1px solid var(--border); flex-shrink: 0; }
+
 /* ============ Responsive gallery + bar ============ */
 @media (max-width: 740px) {
   .am-gal-bar-note { display: none; }

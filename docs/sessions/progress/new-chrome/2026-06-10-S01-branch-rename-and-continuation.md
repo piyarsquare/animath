@@ -30,6 +30,26 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 13:11 — Embed pilot built and tested on a real page
+**Why:** the user okayed the iframe-first approach and asked to test it on a
+real page (and dropped the README-GIF idea — GitHub strips iframes/scripts
+from READMEs, so only a canned animation would work there).
+
+Built the phase-1 pilot: `src/lib/embedParams.ts` (readable URL params: fn,
+p/q, render, proj, motion, spin, count, colorby, colormap, extent, caption,
+controls — garbled values fall back, never crash), an `embed` mode threaded
+through ComplexParticles + ParticleViewerShell (ephemeral state — embeds
+never touch a visitor's saved settings; chrome-less view + corner badge
+linking to the full workspace + optional caption; spin param drives
+composing 4D plane rotations), and the `#/embed/complex-particles` route.
+**Tested on a real host page** — `public/embed-demo.html`, a prose article
+with two plain `<iframe>`s (the e^z cloud, and sin(z) as a sheet under an
+isoclinic double rotation). DOM-probed both frames: badge ✓ caption ✓ zero
+chrome elements ✓ `localStorage.length === 0` ✓. Remaining from the design:
+the `s=` catch-all and the "Embed this view" share dialog.
+
+![the demo article hosting two live applets in iframes](assets/2026-06-10-S01-embed-demo.png)
+
 ### 🟣 decision · 12:26 — Embeddable applets: design captured, iframe-first recommended
 **Why:** the user named the next key work item — packaging app views as
 applets embeddable in web pages (e.g. an explainer that embeds live Complex

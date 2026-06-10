@@ -164,6 +164,7 @@ visible app catalog comes from `src/apps.ts` (+ `src/chrome/catalog.ts`).
 | `#/agentic-sorting`  | `AgenticSorting` | Concurrent agent-based sorting              |
 | `#/stable-matching`  | `StableMatching` | Rebuilt Gale–Shapley lab (matrix · welfare surface · lattice via layouts) |
 | `#/polygon-worlds`   | `PolygonWorlds`  | Walk every closed surface from one glued polygon |
+| `#/embed/complex-particles` | `EmbedComplexParticles` | Chrome-less applet for iframe embedding, URL-configured (docs/EMBEDS.md); demo host: `/embed-demo.html` |
 
 Unknown hashes fall back to the `Gallery`. **`src/apps.ts` is the single source
 of truth** for the user-visible catalog (order, name, icon, blurb); the gallery

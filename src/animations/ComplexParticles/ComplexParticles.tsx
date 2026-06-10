@@ -41,6 +41,9 @@ export interface ComplexParticlesProps {
   branches?: number;
   onViewPointChange?: (view: ViewPoint) => void;
   viewPoint?: ViewPoint;
+  /** Chrome-less applet mode (#/embed/…): URL-configured, ephemeral state
+   *  (never reads or writes the visitor's saved settings). docs/EMBEDS.md. */
+  embed?: import('../../lib/embedParams').ParticleEmbedConfig;
 }
 
 export default function ComplexParticles({
@@ -51,29 +54,38 @@ export default function ComplexParticles({
   branches = 1,
   onViewPointChange,
   viewPoint,
+  embed,
 }: ComplexParticlesProps) {
-  const state = useParticleState({ count, viewPoint, onViewPointChange, storageKey: STORAGE_KEY });
+  const state = useParticleState({
+    count: embed?.count ?? count,
+    viewPoint,
+    onViewPointChange,
+    storageKey: embed ? undefined : STORAGE_KEY,
+  });
   const controls = useViewControls(state);
   useUniformSync(state);
 
+  // Per-field persistence key; null in embed mode (ephemeral, like storageKey).
+  const ek = (field: string) => (embed ? null : `${STORAGE_KEY}:${field}`);
+
   const defaultFunctionIndex = (() => {
-    const idx = functionNames.indexOf(selectedFunction);
+    const idx = functionNames.indexOf(embed?.fn ?? selectedFunction);
     return idx >= 0 ? idx : 0;
   })();
-  const [functionIndex, setFunctionIndex] = usePersistentState(`${STORAGE_KEY}:functionIndex`, defaultFunctionIndex);
-  const [expP, setExpP] = usePersistentState(`${STORAGE_KEY}:expP`, p);
-  const [expQ, setExpQ] = usePersistentState(`${STORAGE_KEY}:expQ`, q);
+  const [functionIndex, setFunctionIndex] = usePersistentState(ek('functionIndex'), defaultFunctionIndex);
+  const [expP, setExpP] = usePersistentState(ek('expP'), embed?.p ?? p);
+  const [expQ, setExpQ] = usePersistentState(ek('expQ'), embed?.q ?? q);
   // Riemann-sheet range. The viewer draws one particle set per sheet, at branch
   // index branchMin..branchMax (multivalued functions read it; single-valued
   // ignore it). Capped at MAX_SHEETS to keep the draw count sane.
-  const [branchMin, setBranchMin] = usePersistentState(`${STORAGE_KEY}:branchMin`, 0);
-  const [branchMax, setBranchMax] = usePersistentState(`${STORAGE_KEY}:branchMax`, branches - 1);
+  const [branchMin, setBranchMin] = usePersistentState(ek('branchMin'), 0);
+  const [branchMax, setBranchMax] = usePersistentState(ek('branchMax'), branches - 1);
   const branchCount = Math.max(1, branchMax - branchMin + 1);
   // Coefficients for the generic quadratic a·z²+b·z+c (each [Re, Im]); default a=1
   // (so the out-of-the-box quadratic is z²).
-  const [quadA, setQuadA] = usePersistentState<Complex2>(`${STORAGE_KEY}:quadA`, [1, 0]);
-  const [quadB, setQuadB] = usePersistentState<Complex2>(`${STORAGE_KEY}:quadB`, [0, 0]);
-  const [quadC, setQuadC] = usePersistentState<Complex2>(`${STORAGE_KEY}:quadC`, [0, 0]);
+  const [quadA, setQuadA] = usePersistentState<Complex2>(ek('quadA'), [1, 0]);
+  const [quadB, setQuadB] = usePersistentState<Complex2>(ek('quadB'), [0, 0]);
+  const [quadC, setQuadC] = usePersistentState<Complex2>(ek('quadC'), [0, 0]);
 
   // Effective sampling box (× axisScale). Locked → symmetric ±extent; unlocked →
   // the independent min/max window.
@@ -611,6 +623,47 @@ export default function ComplexParticles({
       });
     }, []);
 
+  // Embed mode: apply the URL-configured view once on mount. Canvas3D's
+  // child effect (onMount) has already run by the time this fires, so the
+  // materials exist and the normal control surface (projection cross-fade,
+  // drop axis) behaves exactly as in the full app.
+  useEffect(() => {
+    if (!embed) return;
+    if (embed.render) state.setRenderMode(embed.render);
+    if (embed.motion) state.setViewMotion(embed.motion);
+    if (embed.colorBy !== undefined) state.setColorBy(embed.colorBy);
+    if (embed.colormap !== undefined) state.setColormap(embed.colormap);
+    if (embed.extent !== undefined) { state.setExtentX(embed.extent); state.setExtentY(embed.extent); }
+    if (embed.proj !== undefined) {
+      const drop = embed.proj === ProjectionMode.DropX ? 'DropX'
+        : embed.proj === ProjectionMode.DropY ? 'DropY'
+        : embed.proj === ProjectionMode.DropU ? 'DropU'
+        : embed.proj === ProjectionMode.DropV ? 'DropV' : null;
+      if (drop) controls.handleDropAxis(drop);
+      else controls.handleViewType(embed.proj);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Embed spin: continuous 4D plane rotations (composing, like the 4D
+  // Rotation panel's spin toggles); implies a Fixed base motion so the
+  // requested spin reads cleanly rather than stacking on the auto-tumble.
+  useEffect(() => {
+    if (!embed?.spin?.length) return;
+    state.setViewMotion('Fixed');
+    let raf = 0;
+    let last = performance.now();
+    const step = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      for (const pl of embed.spin!) controls.rotateBy(pl, 0.5 * dt);
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const currentName = functionNames[functionIndex];
   const isPowPQ = functionIndex === POW_PQ_INDEX;
   const isQuadratic = functionIndex === QUADRATIC_INDEX;
@@ -699,7 +752,8 @@ export default function ComplexParticles({
       domainExtras={branchControls}
       readme={readmeText}
       explainer={explainerText}
-      settingsStorageKey={STORAGE_KEY}
+      settingsStorageKey={embed ? undefined : STORAGE_KEY}
+      embed={embed ? { caption: embed.caption, controls: embed.controls } : undefined}
     />
   );
 }

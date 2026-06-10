@@ -53,12 +53,15 @@ export interface ParticleViewerShellProps {
   /** localStorage namespace whose saved settings the "Reset settings" action
    *  clears. Omit on ephemeral viewers to hide the button. */
   settingsStorageKey?: string;
+  /** Chrome-less applet mode (#/embed/…, docs/EMBEDS.md): render only the
+   *  view with a corner badge — no workspace, no panels, no top bar. */
+  embed?: { caption?: string; controls: boolean };
 }
 
 export default function ParticleViewerShell({
   appId, state, controls, onMount,
   functionName, functionFormula, functionPicker, variantExtras, domainExtras, readme, explainer,
-  settingsStorageKey,
+  settingsStorageKey, embed,
 }: ParticleViewerShellProps) {
   const gestures = useGestureRotation(state);
 
@@ -664,6 +667,33 @@ export default function ParticleViewerShell({
   // The "?" modal carries both the short explainer and the full About readme,
   // so nothing from the old drawer's About section is lost.
   const help = [explainer, readme].filter(Boolean).join('\n\n---\n\n');
+
+  // Embed mode: the same engine, none of the chrome. The badge links back to
+  // the full workspace so an applet is always one tap from the real app.
+  if (embed) {
+    return (
+      <div className="am-embed">
+        <div className="am-embed-view">
+          <div
+            style={{ position: 'absolute', inset: 0, touchAction: 'none' }}
+            {...(embed.controls ? gestures : {})}
+          >
+            <Canvas3D onMount={onMount} />
+          </div>
+          <a
+            className="am-embed-badge"
+            href={`${import.meta.env.BASE_URL}#/${appId}`}
+            target="_blank"
+            rel="noreferrer"
+            title="Open in animath"
+          >
+            animath ⧉
+          </a>
+        </div>
+        {embed.caption && <div className="am-embed-caption">{embed.caption}</div>}
+      </div>
+    );
+  }
 
   return (
     <Workspace

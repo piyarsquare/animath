@@ -1,8 +1,20 @@
-# Embeddable applets — design proposal
+# Embeddable applets — design + status
 
-> Status: **proposal** (2026-06-10, branch `claude/new-chrome`). Nothing here is
-> built yet; this captures the plan agreed with the user so implementation can
-> start from a stable spec.
+> Status: **phase-1 pilot built** (2026-06-10, branch `claude/new-chrome`):
+> the Complex Particles embed route, the readable-params codec, and the
+> reference host page are live; the `s=` catch-all and the "Embed this view"
+> share dialog are still to do.
+>
+> Try it: `<site>/embed-demo.html` hosts two live applets in plain iframes:
+>
+> ```html
+> <iframe src="https://piyarsquare.github.io/animath/#/embed/complex-particles?fn=sin&render=sheet&spin=xy,uv"
+>         width="640" height="400" loading="lazy" allowfullscreen></iframe>
+> ```
+>
+> Supported params (see `src/lib/embedParams.ts`): `fn` `p` `q` `render`
+> `proj` `motion` `spin` `count` `colorby` `colormap` `extent` `caption`
+> `controls`.
 
 ## Goal
 
