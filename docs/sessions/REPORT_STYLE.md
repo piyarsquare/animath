@@ -46,7 +46,7 @@ status: in-progress       # in-progress | completed | design-only | investigatio
 build: unknown            # passed | failed | unknown
 followup: null            # null | low | medium | high
 pr: null                  # null | a PR URL
-app: StableMarriage       # optional — the src/animations/<App> this concerns
+app: stable-marriage      # category label(s) — see below; null ⇒ inferred from slug
 thumbnail: assets/foo.png # optional — lead screenshot for the control-center card
 ---
 ```
@@ -58,8 +58,29 @@ thumbnail: assets/foo.png # optional — lead screenshot for the control-center 
 | `slug` | ✓ | **provenance**; must equal the folder name |
 | `status` / `build` | ✓ | drive the status badges |
 | `title` | ✓ | shown in the index and as the `#` H1 |
-| `followup` / `pr` / `app` | – | optional; `null` when absent |
+| `app` | – | category label(s) — drives the control-center chips, grouping, and timeline color (see below) |
+| `followup` / `pr` | – | optional; `null` when absent |
 | `thumbnail` | – | optional; a local image ref used as the session's control-center thumbnail (else the first image in the body) |
+
+### The `app` category label
+
+`app` tags a report with the part of the project it concerns, so the control
+center can show colored chips and **group by app** / **sort by app** / build a
+**global timeline**. It accepts one or several comma-separated values:
+
+- an **app slug** from `src/apps.ts` (the route hash without the `/`): e.g.
+  `complex-particles`, `plane-transform`, `fractals`, `correspondence`,
+  `topology-walk`, `trinary`, `stable-marriage`, `stable-matching`,
+  `agentic-sorting`, `polygon-worlds`. App *names* (`Stable Marriage`) also resolve.
+- a **cross-cutting token** for work that isn't one app: `chrome` (AppShell /
+  global framework), `engine` (shared `src/lib` code), or `general` (sessions
+  infra, build tooling, docs, chores).
+
+Examples: `app: stable-marriage` · `app: topology-walk, polygon-worlds` ·
+`app: chrome`. When `app` is `null`/omitted, the builder **infers** a default
+from the branch slug (`docs/sessions/categories.mjs`), so old reports still get a
+sensible chip — but setting it explicitly is preferred. The canonical taxonomy and
+slug-inference live in `categories.mjs`; add new apps there when `src/apps.ts` grows.
 
 ## 2 · Section structure
 
