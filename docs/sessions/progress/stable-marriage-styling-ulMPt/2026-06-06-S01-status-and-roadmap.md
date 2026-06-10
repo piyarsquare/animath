@@ -177,3 +177,5 @@ Begin at **P0.1 — extract the pure engine**. It is unanimously the highest- le
 2. **What could be wrong.** Line numbers are from a single source read and a couple are approximate in the upstream reports; the variant-stability and run-to-completion items remain unverified at runtime. If the `bias` semantics were collectively misread, the synthesis and this report would share that error.
 3. **Bias I'm flagging.** This report reframes the user's stated goal (styling) toward correctness. That's the honest reading of the evidence — but styling is preserved as P3, not discarded, and the user explicitly clarified the "styling" they meant was the parameter structure, which §3 addresses directly.
 4. **Not done.** No code written, no build run, no runtime observation. This is a plan, not an implementation.
+5. **Follow-up value:** MEDIUM — a triage/roadmap, not an implementation; the convergent findings are solid but unbuilt, so follow-up turns them into code.
+

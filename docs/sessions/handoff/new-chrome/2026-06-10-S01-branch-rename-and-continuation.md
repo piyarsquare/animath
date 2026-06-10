@@ -136,5 +136,5 @@ PR #203.
 6. **What would have made this task easier?** A scripted interaction harness
    (the ad-hoc puppeteer probes were rewritten ~6 times); promoting them
    into a `scripts/probe.mjs` utility would pay for itself next session.
-7. **Follow-up value:** **LOW** — the branch is complete and verified;
+7. **Follow-up value:** LOW — the branch is complete and verified;
    follow-ups are new features (share dialog) and hardware validation.

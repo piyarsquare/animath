@@ -105,3 +105,5 @@ both absorbed into the overhaul).
   shots; and inventory `StableMatching` after merging main, not before — its
   rework invalidated the first inventory and the migration agent had to
   re-derive it.
+- **Follow-up value:** LOW — the chrome migration shipped with no control lost and the branch green; follow-ups are interaction-screenshot tooling, not corrections.
+
