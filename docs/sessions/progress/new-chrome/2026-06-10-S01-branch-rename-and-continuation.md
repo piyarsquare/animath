@@ -5,8 +5,8 @@ date: 2026-06-10
 title: Branch rename to new-chrome + continuation
 branch: claude/new-chrome
 slug: new-chrome
-status: in-progress
-build: unknown
+status: completed
+build: passing
 followup: null
 pr: null
 app: null
