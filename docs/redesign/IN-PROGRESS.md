@@ -53,20 +53,18 @@ questions. The implementing agent should update this file as phases land.
 - **Pointer events** (capture-based) for window drag/resize — desktop touch works, closing one
   IN-PROGRESS gap below.
 
-## Designed but mocked (needs real wiring)
-- **All panel controls are local-state mocks.** Sliders/pills/toggles render and remember their own
-  value but drive nothing. Real implementation binds them to app parameters (see PARAM-MAP you will
-  produce in IMPLEMENTATION step 2).
-- **Analyze-tier readouts show illustrative data** (Trinary outcome percentages, survival curve,
-  sorting race, marriage rank stats). Bind to real batch-run results; the visual grammar
-  (Breakdown / MiniHisto / Sparkline / StatGrid) is the spec.
-- **Gallery card previews** are mock canvases (`viz.jsx`). Use the real renderers, small + throttled.
+## Resolved prototype-era sections (kept for the record)
 
-## Designed for 3 apps in depth, 5 by analogy
-Complex Particles, Fractals, and Trinary System were designed against the real repo's controls.
-The other five (Plane Transform, Mandelbrot ↔ Julia, Topology Walk, Stable Marriage, Agentic
-Sorting) have **plausible control sets designed from the app concepts** — validate each against the
-actual code's capabilities and adjust panel contents (not the archetypes) accordingly.
+- ~~Designed but mocked~~ — every panel control is bound to real app state
+  (the PARAM-MAP gate, Phase 4); analyze-tier readouts show real run data;
+  gallery previews are authored per-app sketches (see decision above).
+- ~~Designed for 3 apps in depth, 5 by analogy~~ — every app's panels were
+  validated against the actual code during its migration.
+- ~~Explainer placement~~ — the top-bar "?" modal (see decision above).
+- ~~Touch on desktop-sized touch devices~~ — windows use pointer-capture
+  events (mouse, touch, pen).
+- ~~Dock/rail overflow invisible~~ — both bars show fade + chevron scroll
+  hints at whichever edge has more content.
 
 ## Still open after implementation (carried forward)
 
@@ -79,22 +77,10 @@ actual code's capabilities and adjust panel contents (not the archetypes) accord
 - **Saved-layout management**: naming still via `window.prompt`; no rename/
   reorder/export.
 - **Gallery search** (no UI yet).
-- **Real-renderer gallery previews** (cards use cheap canvas mocks by decision).
-
-## Not yet designed (open branches)
-- **Linked-view semantics** for the two-view apps: exact hover/seed propagation, viewport lock
-  toggle behavior between Mandelbrot↔Julia windows. Prototype shows the windows, not the link logic.
-- **Saved-layout management:** prototype uses `window.prompt` for naming; no rename, no reorder,
-  no export/import of layouts.
-- **Phone:** no landscape spec; one sheet at a time (no split/stacked sheets); no drag-reorder of
-  view cards; dock has no overflow indicator beyond scroll.
-- **Touch support on desktop-sized touch devices** (windows currently mouse-event-driven).
-- **Keyboard window management** (move/dock/cycle windows without a pointer) — needed for full a11y.
-- **Explainer surface:** each app has `about` copy in the catalog; current design surfaces it only on
-  gallery cards. An in-workspace "?" affordance was prototyped earlier and removed — decide placement.
-- **Gallery search** (catalog supports it conceptually; no UI built).
-- **Skin-aware canvases:** define per-skin palettes for the real renderers (prototype only branches
-  light vs dark).
+- **Phone**: no landscape spec; one sheet at a time; no drag-reorder of view
+  cards.
+- **Embeds phase 2** (docs/EMBEDS.md): the `s=` catch-all param and the
+  "Embed this view" share dialog.
 
 ## Deliberate removals (do not resurrect without discussion)
 - The old **draggable floater** → replaced by openable `drive` panels you can place beside the plot.
@@ -110,3 +96,13 @@ actual code's capabilities and adjust panel contents (not the archetypes) accord
   restyle of the same DOM node (fixed inset-0) so WebGL contexts survive; fullscreen is transient
   (not persisted). Phone view cards gain a bottom **resize grip**; per-view heights persist under
   `animath:v1:wsphone:<appId>` (parallel to the desktop `ws:<appId>` rects).
+- 2026-06: Particle camera became a **free-orbit quaternion** (trackball, no pole stops); the
+  Camera panel gains a Drag: Orbit | Pan pill.
+- 2026-06: **Stereo retired** (it was the same stereographic map as Torus); the projection pills
+  became **one slider with sticky labeled stops** — Perspective ⇠ Torus ⇢ Sphere (= Hopf
+  internally) — fractional positions are live GPU morphs, the axis cross fades toward the torus,
+  and the drop axis and slider release each other (most recent intent wins). Hopf fiber overlay
+  and "Hopf study view" removed.
+- 2026-06: **Embeddable applets** (docs/EMBEDS.md): chrome-less `#/embed/...` routes for the
+  particle and plane viewers, URL-configured with ephemeral state; reference host page at
+  `/embed-demo.html`.
