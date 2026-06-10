@@ -379,3 +379,12 @@ appears. (Flagged in PR review, P2.)
   the nonlinear projections should be mutually exclusive in the UI.
 - **Other study-mode polish:** an auto-hint when Hopf is selected with a non-identity
   orientation; optionally disabling the spinners while in study mode.
+
+## New app directions (baseline reference)
+
+A separate scoping doc — [`docs/FUTURE_APPS.md`](docs/FUTURE_APPS.md) — collects
+the next wave of candidate apps with baseline reference material (model/math,
+prior art, and how each maps onto the framework): **Cellular Automata**, **Firefly
+Synchronization**, **Murmurations (flocking)**, **Ant Colonies** (stigmergy),
+**Glassy Networks** (spin glasses), plus two ports — the **Quantum Tree** project
+and **GAS** ("gene advocate system") — pending their source repos.
