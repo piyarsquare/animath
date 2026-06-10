@@ -1,7 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { usePersistentState } from '../../lib/usePersistentState';
+import { ExplainerModal } from '../ExplainerModal';
 import { Icon } from '../icons';
 import { TopBar } from '../TopBar';
+import { useEscLayer } from '../useEscLayer';
 import { useScrollHints } from '../useScrollHints';
 import { sortByTier, ARCHETYPES } from './archetypes';
 import { beginPointerDrag } from './drag';
@@ -26,6 +28,11 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
   const [cardH, setCardH] = usePersistentState<Record<string, number>>(`wsphone:${appId}`, {});
   /* fullscreen is transient view state — deliberately not persisted */
   const [full, setFull] = useState<string | null>(null);
+  /* explainer opened from the fullscreen card header (the top bar is buried) */
+  const [fullHelp, setFullHelp] = useState(false);
+  /* staged Esc via the shared layer stack: most recently opened layer first */
+  useEscLayer(full != null, () => setFull(null));
+  useEscLayer(sheet != null, () => setSheet(null));
 
   // Apps that model mutually exclusive views as layouts (views[id].open) get
   // a chip switcher; the default layout decides which cards start visible.
@@ -46,17 +53,6 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
   const active = sections.find(s => s.id === sheet);
   const dockRef = useRef<HTMLElement>(null);
   const dockHint = useScrollHints(dockRef, 'x');
-
-  useEffect(() => {
-    if (!sheet && !full) return;
-    const k = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      setSheet(null);
-      setFull(null);
-    };
-    window.addEventListener('keydown', k);
-    return () => window.removeEventListener('keydown', k);
-  }, [sheet, full]);
 
   /* drag the bottom grip to resize a card; fullscreen restyles the same DOM
      node (CSS-only), so WebGL engines keep their context either way */
@@ -114,6 +110,16 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
               <div className="am-ws-vhead">
                 <span className="am-ws-vico"><Icon name="window" size={13} /></span>
                 <span className="am-ws-vtitle">{v.title}</span>
+                {isFull && explainer && (
+                  <button
+                    className="am-btn am-btn-icon"
+                    title="What am I looking at?"
+                    aria-label="What am I looking at?"
+                    onClick={() => setFullHelp(true)}
+                  >
+                    <Icon name="help" size={14} />
+                  </button>
+                )}
                 <button
                   className="am-btn am-btn-icon"
                   title={isFull ? 'Exit full screen' : 'Full screen'}
@@ -187,6 +193,9 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
             <div className="am-phone-sheet-body">{active.node}</div>
           </div>
         </>
+      )}
+      {fullHelp && explainer && (
+        <ExplainerModal title={title} markdown={explainer} onClose={() => setFullHelp(false)} />
       )}
     </div>
   );

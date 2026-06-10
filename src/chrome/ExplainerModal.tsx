@@ -1,26 +1,30 @@
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from './icons';
+import { useEscLayer } from './useEscLayer';
 
 // Lazy so `marked` only enters the bundle when an explainer is opened.
 const Readme = React.lazy(() => import('../components/Readme'));
 
 /**
  * "What am I looking at?" — the explainer dialog, opened from the top bar's
- * ? button. Hosts each app's EXPLAINER.md / README.md markdown (decision
+ * ? button (and from a fullscreen view's header, where the top bar is
+ * buried). Hosts each app's EXPLAINER.md / README.md markdown (decision
  * recorded in docs/redesign/IN-PROGRESS.md: this replaces the old drawer
  * About sections and the AppShell help popup).
+ *
+ * Portaled to <body> so the scrim escapes its opener's stacking context —
+ * the modal layer (LAYER.modal / --z-modal) sits above fullscreen views.
+ * Esc goes through the shared layer stack (close the modal first, then the
+ * fullscreen view on the next keypress).
  */
 export function ExplainerModal({ title, markdown, onClose }: {
   title: string;
   markdown: string;
   onClose: () => void;
 }) {
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } };
-    window.addEventListener('keydown', k, true);
-    return () => window.removeEventListener('keydown', k, true);
-  }, [onClose]);
-  return (
+  useEscLayer(true, onClose);
+  return createPortal(
     <div className="am-modal-scrim" onClick={onClose} role="presentation">
       <div
         className="am-modal"
@@ -39,6 +43,7 @@ export function ExplainerModal({ title, markdown, onClose }: {
           <Readme markdown={markdown} />
         </Suspense>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

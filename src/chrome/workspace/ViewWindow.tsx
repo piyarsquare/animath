@@ -1,6 +1,7 @@
 import React from 'react';
 import { Icon } from '../icons';
 import { beginPointerDrag } from './drag';
+import { LAYER } from './layers';
 import type { ViewDef, ViewState } from './types';
 
 /**
@@ -11,7 +12,7 @@ import type { ViewDef, ViewState } from './types';
  * guards zero-size resizes); fullscreen restyles the same node for the same
  * reason.
  */
-export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, onResize, onSettle, onRaise, onToggleCollapse, onToggleFull }: {
+export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, onResize, onSettle, onRaise, onToggleCollapse, onToggleFull, onHelp }: {
   view: ViewDef;
   state: ViewState;
   full: boolean;
@@ -24,6 +25,9 @@ export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, o
   onRaise: () => void;
   onToggleCollapse: () => void;
   onToggleFull: () => void;
+  /** The top bar is buried under a fullscreen view, so the fullscreen header
+   *  carries its own "?" explainer button (CHROME-REVIEW P4a). */
+  onHelp?: () => void;
 }) {
   const onHeadDown = (e: React.PointerEvent) => {
     if (full) return;
@@ -48,13 +52,23 @@ export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, o
         top: state.y,
         width: state.w,
         height: collapsed ? undefined : state.h,
-        zIndex: 30 + (state.z ?? 0),
+        zIndex: LAYER.window + (state.z ?? 0),
       }}
       onPointerDownCapture={onRaise}
     >
       <div className="am-ws-vhead" onPointerDown={onHeadDown}>
         <span className="am-ws-vico"><Icon name="window" size={13} /></span>
         <span className="am-ws-vtitle">{view.title}</span>
+        {full && onHelp && (
+          <button
+            className="am-btn am-btn-icon"
+            title="What am I looking at?"
+            aria-label="What am I looking at?"
+            onClick={onHelp}
+          >
+            <Icon name="help" size={14} />
+          </button>
+        )}
         {!collapsed && (
           <button
             className="am-btn am-btn-icon"

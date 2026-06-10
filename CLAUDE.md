@@ -24,10 +24,12 @@ npm ci              # install dependencies (use ci, not install, for reproducibi
 npm run dev         # Vite dev server at http://localhost:5173/animath/
 npm run build       # TypeScript check + Vite production build → dist/
 npm run preview     # preview production build locally
+npm test            # vitest unit tests (chrome workspace pure logic)
 ```
 
 Node >= 20, npm >= 10 required. The only CI check is `npm run build` (which runs
-`tsc && vite build`). There are no automated tests, linter, or formatter.
+`tsc && vite build`). Unit tests cover the chrome's pure logic (`npm test`,
+vitest, `src/**/__tests__/`); there is no linter or formatter.
 
 ## New here? Read these first
 
@@ -351,8 +353,9 @@ is reachable at `#/fractals-cpu`.
 
 Remaining items:
 
-1. **No linter / formatter / test runner** — no eslint, prettier, or `npm test`.
-   The only validation is `npm run build`.
+1. **No linter / formatter** — no eslint or prettier. CI validation is
+   `npm run build`; `npm test` (vitest) exists but covers only the chrome
+   workspace's pure logic (layouts/z-order, Esc layer stack) so far.
 2. **Deploy workflow has a duplicate `configure-pages` step** (`.github/workflows/deploy.yml`).
 3. **Orphaned utilities** — `lib/ParticleDisplay.ts`, `lib/R2Mapping.ts`, and
    `materials/index.ts` are never imported.

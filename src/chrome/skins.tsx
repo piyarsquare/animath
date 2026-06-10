@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Icon } from './icons';
+import { useEscLayer } from './useEscLayer';
 
 /**
  * Skins — the five switchable styling systems on `data-theme` (see
@@ -59,12 +60,7 @@ export function SkinPicker({ skin, onSetSkin, compact }: {
 }) {
   const [open, setOpen] = useState(false);
   const cur = SKINS.find(s => s.id === skin) ?? SKINS[0];
-  useEffect(() => {
-    if (!open) return;
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    window.addEventListener('keydown', k);
-    return () => window.removeEventListener('keydown', k);
-  }, [open]);
+  useEscLayer(open, () => setOpen(false));
   return (
     <div style={{ position: 'relative' }}>
       <button className="am-skin-btn" title="Skin" aria-label={`Skin: ${cur.name}`} onClick={() => setOpen(m => !m)}>

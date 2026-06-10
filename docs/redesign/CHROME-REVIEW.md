@@ -278,7 +278,9 @@ z-compaction, not a CSS override); staged Esc scoped to transient layers.
 
 - **PR A — P4a+** (standalone bug fix): z-compaction in `sanitize()`, layer
   tokens, `zBase` threading, staged Esc via one layer owner, explainer
-  reachable in fullscreen.
+  reachable in fullscreen. ✅ **Landed** (branch
+  `claude/app-chrome-overhaul-lnqgle`, with vitest + the first unit tests and
+  `scripts/probe-fullscreen.mjs` as the interaction proof).
 - **PR B — P1**: hardened `ActionDef` — buttons-only by type, `sectionId`
   projection link, ≤5 enforced in code, contextual action sets, Step
   first-class beside Play, labeled on phone, `role="toolbar"` — desktop strip
@@ -295,7 +297,9 @@ z-compaction, not a CSS override); staged Esc scoped to transient layers.
   overlay inventory — MovePad + mini-map + captions — before generalizing);
   P4b phone fullscreen dock access.
 
-**Open decisions for the user:** (a) ungate Correspondence tap-to-pick;
-(b) adopt vitest for the chrome's pure functions (`sanitize`, `applyLayout`,
-geometry) as the repo's first tests; (c) whether embeds ever show the action
-strip.
+**Decisions (2026-06-10) — all three approved by the user:**
+(a) **yes** — ungate Correspondence tap-to-pick (lands with PR D);
+(b) **yes** — vitest adopted for the chrome's pure functions (landed with
+PR A: `src/chrome/workspace/__tests__/layouts.test.ts`,
+`src/chrome/__tests__/escStack.test.ts`);
+(c) **yes** — embeds get the action strip (scoped during PR B).

@@ -18,6 +18,25 @@
   --font-ui: "Hanken Grotesk", system-ui, sans-serif;
   --font-mono: "Space Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --ease: cubic-bezier(.2,.7,.3,1);
+
+  /* z-layer scale — mirrors LAYER in src/chrome/workspace/layers.ts (inline
+     window styles use the constants; keep the two in sync). Windows stack
+     at --z-window + z with z compacted to 1..n; fullscreen views sit at
+     --z-full; panels re-base at --z-over-full while one is fullscreen;
+     modals top everything but the rail. */
+  --z-guides: 24;
+  --z-window: 30;
+  --z-topbar: 30;
+  --z-dock: 40;
+  --z-sheet-scrim: 45;
+  --z-sheet: 50;
+  --z-tip: 60;
+  --z-menu-scrim: 70;
+  --z-menu: 71;
+  --z-full: 100;
+  --z-over-full: 110;
+  --z-modal: 120;
+  --z-rail: 200;
 }
 
 /* ---------------- Observatory · dark (default) ----------------
@@ -181,7 +200,7 @@ body {
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
   position: relative;
-  z-index: 30;
+  z-index: var(--z-topbar);
 }
 .am-brand {
   display: flex; align-items: center; gap: 9px;
@@ -278,10 +297,10 @@ body {
 .am-num::-webkit-outer-spin-button, .am-num::-webkit-inner-spin-button { opacity: 0.4; }
 
 /* ============ Generic scrim (menus, modals) ============ */
-.am-menu-scrim { position: fixed; inset: 0; z-index: 70; }
+.am-menu-scrim { position: fixed; inset: 0; z-index: var(--z-menu-scrim); }
 
 /* ============ Explainer modal ============ */
-.am-modal-scrim { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; }
+.am-modal-scrim { position: fixed; inset: 0; z-index: var(--z-modal); background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; }
 .am-modal { width: min(560px, 92%); max-height: 86%; overflow-y: auto; background: var(--panel-solid); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 22px 24px; animation: am-pop .2s var(--ease); }
 .am-modal h2 { margin: 0 0 12px; font-size: 19px; }
 .am-modal-head { display: flex; align-items: center; gap: 10px; }
@@ -319,7 +338,7 @@ body {
 @keyframes am-slideup { from { transform: translateY(100%); } to { transform: none; } }
 
 /* ============ Workspace — left icon rail + windows on a void stage ============ */
-.am-ws-railwrap { position: absolute; top: 14px; left: 14px; bottom: 14px; z-index: 200; }
+.am-ws-railwrap { position: absolute; top: 14px; left: 14px; bottom: 14px; z-index: var(--z-rail); }
 .am-ws-rail {
   position: relative; height: 100%;
   width: 52px; display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -346,7 +365,7 @@ body {
 .am-ws-rail-btn.am-on { background: var(--accent-soft); color: var(--accent); border-color: var(--border); }
 .am-ws-rail-btn.am-on::before { content: ""; position: absolute; left: -6px; top: 50%; transform: translateY(-50%); width: 3px; height: 18px; border-radius: 2px; background: var(--accent); }
 .am-ws-rail-sep { width: 22px; height: 1px; background: var(--border); margin: 4px 0; flex-shrink: 0; }
-.am-ws-rail-tip { position: absolute; left: 52px; top: 50%; transform: translateY(-50%); margin-left: 8px; display: flex; align-items: baseline; gap: 7px; background: var(--panel-solid); border: 1px solid var(--border); color: var(--fg); font-family: var(--font-ui); font-size: 12px; font-weight: 600; padding: 5px 9px; border-radius: 7px; white-space: nowrap; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 60; }
+.am-ws-rail-tip { position: absolute; left: 52px; top: 50%; transform: translateY(-50%); margin-left: 8px; display: flex; align-items: baseline; gap: 7px; background: var(--panel-solid); border: 1px solid var(--border); color: var(--fg); font-family: var(--font-ui); font-size: 12px; font-weight: 600; padding: 5px 9px; border-radius: 7px; white-space: nowrap; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .12s; z-index: var(--z-tip); }
 .am-ws-rail-tip i { font-style: normal; font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
 .am-ws-rail-btn:hover .am-ws-rail-tip { opacity: 1; }
 
@@ -355,7 +374,7 @@ body {
 
 /* floating control panel card */
 .am-ws-panel {
-  position: absolute; z-index: 25; width: 268px;
+  position: absolute; z-index: var(--z-window); width: 268px;
   background: var(--panel); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   border: 1px solid var(--border-strong); border-radius: 13px; box-shadow: var(--shadow);
   display: flex; flex-direction: column; overflow: hidden; animation: am-pop .16s var(--ease);
@@ -389,17 +408,17 @@ body {
 
 /* fullscreen view — same DOM node restyled (CSS-only), so WebGL engines keep
    their context and Canvas3D's ResizeObserver picks up the new size */
-.am-stage.am-has-full { z-index: 100; }
+.am-stage.am-has-full { z-index: var(--z-full); }
 .am-ws-view.am-ws-full,
 .am-phone-view.am-ws-full {
   position: fixed; inset: 0; width: auto; height: auto; max-height: none;
-  border: none; border-radius: 0; z-index: 100; animation: none;
+  border: none; border-radius: 0; z-index: var(--z-full); animation: none;
 }
 .am-phone-view.am-ws-full { display: flex; flex-direction: column; }
 .am-phone-view.am-ws-full .am-phone-view-body { height: auto; max-height: none; flex: 1; min-height: 0; }
 
 /* magnetic snap guides */
-.am-ws-guide { position: absolute; z-index: 24; background: var(--accent); pointer-events: none; opacity: 0.8; box-shadow: 0 0 8px var(--accent-soft); }
+.am-ws-guide { position: absolute; z-index: var(--z-guides); background: var(--accent); pointer-events: none; opacity: 0.8; box-shadow: 0 0 8px var(--accent-soft); }
 .am-ws-guide-v { top: 0; bottom: 0; width: 1.5px; }
 .am-ws-guide-h { left: 0; right: 0; height: 1.5px; }
 
@@ -415,7 +434,7 @@ body {
 .am-layouts-btn:hover { border-color: var(--border-strong); }
 .am-layouts-btn .am-lay-name { font-weight: 700; }
 .am-layouts-menu {
-  position: absolute; top: calc(100% + 6px); left: 0; width: 268px; z-index: 71;
+  position: absolute; top: calc(100% + 6px); left: 0; width: 268px; z-index: var(--z-menu);
   background: var(--panel-solid); border: 1px solid var(--border-strong); border-radius: 13px;
   box-shadow: var(--shadow); overflow: hidden; animation: am-pop .16s var(--ease);
 }
@@ -437,7 +456,7 @@ body {
 .am-skin-btn:hover { border-color: var(--border-strong); background: var(--hover); }
 .am-skin-dots { display: flex; gap: 3px; }
 .am-skin-dots i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid rgba(128,128,128,0.35); }
-.am-skin-menu { position: absolute; top: calc(100% + 8px); right: 0; width: 248px; background: var(--panel-solid); border: 1px solid var(--border-strong); border-radius: 13px; box-shadow: var(--shadow); z-index: 71; overflow: hidden; padding-bottom: 6px; animation: am-pop .16s var(--ease); }
+.am-skin-menu { position: absolute; top: calc(100% + 8px); right: 0; width: 248px; background: var(--panel-solid); border: 1px solid var(--border-strong); border-radius: 13px; box-shadow: var(--shadow); z-index: var(--z-menu); overflow: hidden; padding-bottom: 6px; animation: am-pop .16s var(--ease); }
 .am-skin-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 14px; background: none; border: none; color: var(--fg); font-family: var(--font-ui); cursor: pointer; text-align: left; }
 .am-skin-item:hover { background: var(--hover); }
 .am-skin-item.am-on { background: var(--accent-soft); }
@@ -458,7 +477,7 @@ body {
 .am-phone-layouts .am-chip { flex-shrink: 0; }
 .am-phone-vresize { display: grid; place-items: center; height: 18px; border-top: 1px solid var(--border); background: var(--panel); color: var(--dim-2); cursor: ns-resize; touch-action: none; }
 .am-phone-vresize i { width: 36px; height: 4px; border-radius: 2px; background: var(--track); }
-.am-phone-dockwrap { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 40; }
+.am-phone-dockwrap { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: var(--z-dock); }
 .am-phone-dock { position: relative; display: flex; align-items: center; gap: 2px; padding: 6px; background: var(--panel); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--border-strong); border-radius: 16px; box-shadow: var(--shadow); overflow-x: auto; scrollbar-width: none; }
 .am-phone-dock::-webkit-scrollbar { display: none; }
 /* "more panels" scroll hints: a fade + chevron at the edge that has more */
@@ -471,12 +490,12 @@ body {
 .am-phone-dock-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 58px; min-height: 44px; padding: 7px 6px; border: none; background: none; border-radius: 11px; color: var(--dim); font-family: var(--font-ui); font-size: 9.5px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
 .am-phone-dock-btn.am-on { color: var(--accent); background: var(--accent-soft); }
 .am-phone-dock-sep { width: 1px; height: 30px; background: var(--border); flex-shrink: 0; margin: 0 3px; }
-.am-phone-sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 72%; display: flex; flex-direction: column; background: var(--panel-solid); border-top: 1px solid var(--border-strong); border-radius: 18px 18px 0 0; box-shadow: var(--shadow); z-index: 50; animation: am-slideup .26s var(--ease); }
+.am-phone-sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 72%; display: flex; flex-direction: column; background: var(--panel-solid); border-top: 1px solid var(--border-strong); border-radius: 18px 18px 0 0; box-shadow: var(--shadow); z-index: var(--z-sheet); animation: am-slideup .26s var(--ease); }
 .am-phone-sheet-head { position: relative; display: flex; align-items: center; gap: 9px; padding: 16px 12px 10px 16px; border-bottom: 1px solid var(--border); }
 .am-phone-sheet-head .am-sec-tier { margin-left: auto; }
 .am-phone-sheet-title { font-size: 14.5px; font-weight: 700; }
 .am-phone-sheet-body { overflow-y: auto; padding: 10px 16px 22px; }
-.am-phone-scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.35); z-index: 45; }
+.am-phone-scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.35); z-index: var(--z-sheet-scrim); }
 .am-sheet-grip { width: 36px; height: 4px; border-radius: 2px; background: var(--track); position: absolute; top: 7px; left: 50%; transform: translateX(-50%); }
 .am-sec-tier { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px; }
 

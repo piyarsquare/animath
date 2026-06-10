@@ -111,3 +111,13 @@ questions. The implementing agent should update this file as phases land.
 - 2026-06: **Embeddable applets** (docs/EMBEDS.md): chrome-less `#/embed/...` routes for the
   particle and plane viewers, URL-configured with ephemeral state; reference host page at
   `/embed-demo.html`.
+- 2026-06: **CHROME-REVIEW PR A landed** (three-hats-reviewed; docs/redesign/CHROME-REVIEW.md):
+  window z compacted to 1..n in `sanitize()`/`raiseWindow()` (unbounded persisted z could cross
+  the fullscreen layer); z-layer scale named once (`workspace/layers.ts` ↔ `--z-*` tokens in
+  theme.css); panels re-base above fullscreen views (`zBase`), so the rail works in fullscreen;
+  **staged Esc** via one layer stack (`useEscLayer` — menus/sheets/modals/fullscreen peel one per
+  keypress; panels stay ✕-only); the explainer opens from the fullscreen header (modal portaled
+  to body). **vitest adopted** (`npm test`, first tests on layouts + escStack) and
+  `scripts/probe-fullscreen.mjs` added as the headless interaction proof. User decisions
+  recorded: Correspondence tap-to-pick will be ungated (PR D); embeds will carry the action
+  strip (PR B).

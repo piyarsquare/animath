@@ -6,7 +6,7 @@ title: Whole-scale app chrome overhaul
 branch: claude/app-chrome-overhaul-lnqgle
 slug: app-chrome-overhaul-lnqgle
 status: in-progress
-build: unknown
+build: passing
 followup: null
 pr: 208
 app: chrome
@@ -39,6 +39,33 @@ rename/export, gallery search, phone landscape) and embeds phase 2 (the
      type ∈ decision | code | finding | blocker | milestone
      emoji: 🟣 decision · 🟢 code · 🔵 finding · 🔴 blocker · 🟡 milestone
      Follow each with a "**Why:** …" line, then optional body paragraphs. -->
+
+### 🟡 milestone · 23:50 — PR A landed and probe-verified (fullscreen access + z bug)
+**Why:** With the decisions in, implementation began at the agreed first step.
+
+Implemented and verified the whole PR A scope: **z-compaction** in
+`sanitize()` + a bounded `raiseWindow()` (new tests prove z never exceeds
+window count under 500 raises); the z-layer scale named once
+(`src/chrome/workspace/layers.ts` mirrored by `--z-*` tokens in theme.css);
+**panels re-base above fullscreen** via a `zBase` prop (CSS can't beat the
+inline zIndex, per the consultant); **staged Esc** through one shared layer
+stack (`useEscLayer` replaced five scattered keydown listeners — desktop
+fullscreen, phone sheet+full, skin menu, layouts menu, explainer's
+capture-phase hack); the **explainer** portals to `<body>` at `--z-modal`
+and is openable from a fullscreen view/card header on both desktop and
+phone. Verification: 16 vitest tests green, `npm run build` green, and a new
+committed probe (`scripts/probe-fullscreen.mjs`) drives the real built app —
+all 8 interaction checks pass (panel hit-testable above fullscreen, Esc
+peels explainer → fullscreen, panels survive).
+
+![Stable Matching fullscreen with the rail live and Instance/Algorithm/Playback panels floating above](assets/2026-06-10-S01-fullscreen-panels.png)
+
+### 🟣 decision · 23:20 — User approved all three open decisions
+**Why:** The synthesis left three gates; the user answered "1. yes. 2. yes.
+3. yes."
+
+(a) Correspondence tap-to-pick will be ungated (PR D); (b) vitest adopted
+now; (c) embeds will carry the action strip (PR B scope).
 
 ### 🟡 milestone · 20:15 — Three-hats review complete; synthesis + errata applied
 **Why:** All three expert agents returned; the user asked for the review and a

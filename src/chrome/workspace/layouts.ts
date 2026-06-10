@@ -74,5 +74,63 @@ export function sanitize(
   views.forEach((v, i) => {
     out[v.id] = p.views[v.id] ?? { ...v.defaultRect, z: i + 1, open: true };
   });
-  return { v: 1, layout: p.layout, open, views: out, saved: Array.isArray(p.saved) ? p.saved : [] };
+  return { v: 1, layout: p.layout, ...compactZ(open, out), saved: Array.isArray(p.saved) ? p.saved : [] };
+}
+
+/**
+ * Renumber window z to 1..n, preserving stacking order across panels AND
+ * views (they share one z space). Raise increments z without bound and the
+ * values are persisted, so without compaction a well-used workspace's
+ * windows eventually cross the fullscreen layer (LAYER.window + z ≥
+ * LAYER.fullscreen) — the bug behind CHROME-REVIEW F5's nondeterminism.
+ * Runs on every sanitize, so persisted z stays ≤ window count.
+ */
+export function compactZ(
+  open: Record<string, PanelState>, views: Record<string, ViewState>
+): { open: Record<string, PanelState>; views: Record<string, ViewState> } {
+  const all = [
+    ...Object.keys(open).map(k => ({ kind: 'open' as const, k, z: open[k].z ?? 0 })),
+    ...Object.keys(views).map(k => ({ kind: 'views' as const, k, z: views[k].z ?? 0 })),
+  ].sort((a, b) => a.z - b.z); // Array.sort is stable: ties keep insertion order
+  const o = { ...open };
+  const v = { ...views };
+  let z = 1;
+  for (const e of all) {
+    if (e.kind === 'open') o[e.k] = { ...o[e.k], z: z++ };
+    else v[e.k] = { ...v[e.k], z: z++ };
+  }
+  return { open: o, views: v };
+}
+
+/**
+ * Raise one window (panel or view) to the top of the shared z order,
+ * renumbering everyone 1..n so z stays bounded forever. No-op (same object)
+ * when the window is already the unique top — pointerdown fires this on
+ * every touch, and a no-op skips the localStorage write.
+ */
+export function raiseWindow(
+  s: PersistedWorkspace, kind: 'open' | 'views', id: string
+): PersistedWorkspace {
+  const target = kind === 'open' ? s.open[id] : s.views[id];
+  if (!target) return s;
+  const zs = [
+    ...Object.values(s.open).map(p => p.z ?? 0),
+    ...Object.values(s.views).map(v => v.z ?? 0),
+  ];
+  const top = Math.max(0, ...zs);
+  if ((target.z ?? 0) === top && zs.filter(z => z === top).length === 1) return s;
+  const { open, views } = compactZ(
+    kind === 'open' ? omit(s.open, id) : s.open,
+    kind === 'views' ? omit(s.views, id) : s.views,
+  );
+  const topZ = Object.keys(open).length + Object.keys(views).length + 1;
+  if (kind === 'open') open[id] = { ...s.open[id], z: topZ };
+  else views[id] = { ...s.views[id], z: topZ };
+  return { ...s, open, views };
+}
+
+function omit<T>(rec: Record<string, T>, id: string): Record<string, T> {
+  const out = { ...rec };
+  delete out[id];
+  return out;
 }

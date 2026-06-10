@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Icon } from '../icons';
+import { useEscLayer } from '../useEscLayer';
 import type { LayoutDef, SavedLayout } from './types';
 
 /**
@@ -16,12 +17,7 @@ export function LayoutsControl({ current, builtin, saved, onPick, onSave, onDele
   onDelete: (l: SavedLayout) => void;
 }) {
   const [open, setOpen] = useState(false);
-  useEffect(() => {
-    if (!open) return;
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    window.addEventListener('keydown', k);
-    return () => window.removeEventListener('keydown', k);
-  }, [open]);
+  useEscLayer(open, () => setOpen(false));
 
   const all = [...builtin, ...saved];
   const curName = all.find(l => l.id === current)?.name ?? 'Custom';
