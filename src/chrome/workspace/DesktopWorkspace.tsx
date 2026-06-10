@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { TopBar } from '../TopBar';
 import { sortByTier } from './archetypes';
@@ -46,6 +46,14 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
     setRaw(prev => fn(sanitize(prev, sections, views) ?? initial()));
 
   const [guides, setGuides] = useState<SnapGuides | null>(null);
+  /* fullscreen is transient view state — deliberately not persisted */
+  const [fullView, setFullView] = useState<string | null>(null);
+  useEffect(() => {
+    if (!fullView) return;
+    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullView(null); };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [fullView]);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const panelRefs: RefMap = useRef({});
   const viewRefs: RefMap = useRef({});
@@ -223,7 +231,7 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
         />
       </TopBar>
 
-      <div className="am-stage am-stage-void" ref={stageRef}>
+      <div className={`am-stage am-stage-void${fullView ? ' am-has-full' : ''}`} ref={stageRef}>
         {guides?.gx != null && <div className="am-ws-guide am-ws-guide-v" style={{ left: guides.gx }} />}
         {guides?.gy != null && <div className="am-ws-guide am-ws-guide-h" style={{ top: guides.gy }} />}
 
@@ -236,6 +244,7 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
               key={v.id}
               view={v}
               state={vs}
+              full={fullView === v.id}
               nodeRef={el => { if (el) viewRefs.current[v.id] = el; else delete viewRefs.current[v.id]; }}
               snap={makeSnap(v.id, viewRefs)}
               resize={makeResize(v.id)}
@@ -244,6 +253,7 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
               onSettle={settle}
               onRaise={() => raiseView(v.id)}
               onToggleCollapse={() => collapseView(v.id)}
+              onToggleFull={() => setFullView(f => (f === v.id ? null : v.id))}
             />
           );
         })}

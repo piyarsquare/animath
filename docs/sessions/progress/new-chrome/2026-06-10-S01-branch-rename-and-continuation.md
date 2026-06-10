@@ -30,6 +30,28 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 00:54 — View windows: fullscreen mode + phone resize grip
+**Why:** the user asked for resizable viewports and a full-screen mode,
+particularly on mobile — phone view cards were locked at `56vw`/340px with no
+way to grow them.
+
+Fullscreen is a **CSS-only restyle of the same DOM node** (`position: fixed;
+inset: 0`) so WebGL contexts survive and `Canvas3D`'s ResizeObserver adapts;
+it's transient state (not persisted), exits via the header button or Esc. On
+desktop the stage gets `.am-has-full` (z-index 100) so the overlay covers the
+top bar (`.am-stage` is `isolation: isolate`, so the fixed child's z-index is
+capped by the stage's own level). Phone cards gain a bottom **resize grip**
+(pointer-drag, clamped 140px–80vh) with per-view heights persisted under
+`animath:v1:wsphone:<appId>`. One new chrome icon `shrink` (inward corners)
+mirrors `expand`. Verified by driving headless Chromium: clicked the toggle
+and dragged the grip on `#/complex-particles` at 1280×800 and 390×844.
+
+![phone card taken fullscreen](assets/2026-06-10-S01-phone-fullscreen.png)
+
+![phone card height-resized via the grip](assets/2026-06-10-S01-phone-resized.png)
+
+![desktop view window fullscreen over the top bar](assets/2026-06-10-S01-desktop-fullscreen.png)
+
 ### 🟢 code · 00:52 — Fixed dead screenshot on the deployed session pages
 **Why:** the user reported a dead image link on the deployed preview of the
 S01 report.

@@ -236,7 +236,10 @@ const statsNode = <>
 ### 4b. Views — `ViewDef[]`
 
 A view is a plot window that lives on the stage like any other window:
-draggable by its header, resizable from the bottom-right handle, collapsible.
+draggable by its header, resizable from the bottom-right handle, collapsible,
+and expandable to full screen from the header button (on phone, cards resize
+from a bottom grip instead). Fullscreen restyles the same DOM node, so your
+engine keeps its WebGL context — just handle container resizes.
 The `node` is rendered into a positioned window body — wrap your content in an
 **absolute inset-0 div** that carries the canvas and its gesture handlers:
 

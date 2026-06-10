@@ -56,7 +56,8 @@ full-viewport dotted "void" stage where *everything is a window* — the plot(s)
 * **Windows** drag by their headers with soft-magnetic snapping (accent guide
   lines), dock tightly together, never overlap when opened, reflow as a chain
   when one collapses, and raise to the top when touched. View windows also
-  resize from the bottom-right handle.
+  resize from the bottom-right handle and expand to **full screen** from the
+  header button (Esc restores).
 * **Layouts** — the top-bar `Layout:` menu offers built-in arrangements per app
   plus "Save current layout…"; any manual change marks it `Custom *`.
   Arrangements persist per app.
@@ -67,8 +68,9 @@ full-viewport dotted "void" stage where *everything is a window* — the plot(s)
   all-mono type). The choice persists.
 
 Below **740px** the workspace re-chromes for phones: view windows stack as
-full-width cards, the rail becomes a bottom dock, and panels open one at a
-time as bottom sheets.
+full-width cards (drag the bottom grip to change a card's height, or use the
+header button to take it full screen), the rail becomes a bottom dock, and
+panels open one at a time as bottom sheets.
 
 The Complex Particles viewer puts its **4D rotation controls** in the
 drive-tier "4D Rotation" panel — open it from the rail and drag it beside the

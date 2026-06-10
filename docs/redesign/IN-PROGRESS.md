@@ -103,3 +103,7 @@ actual code's capabilities and adjust panel contents (not the archetypes) accord
   phone mode inherits C's bottom-sheet pattern.
 - 2026-06: Vocabulary frozen at 11 archetypes / 5 tiers.
 - 2026-06: Skins frozen at 5; Phosphor doubles as the "all-mono" stress test of the type system.
+- 2026-06: View windows gain a **fullscreen** toggle (desktop + phone) implemented as a CSS-only
+  restyle of the same DOM node (fixed inset-0) so WebGL contexts survive; fullscreen is transient
+  (not persisted). Phone view cards gain a bottom **resize grip**; per-view heights persist under
+  `animath:v1:wsphone:<appId>` (parallel to the desktop `ws:<appId>` rects).

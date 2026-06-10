@@ -36,6 +36,7 @@ export const ICONS: Record<string, string> = {
   chart: 'M5 20V12M12 20V5M19 20v-6M3 20h18',
   window: 'M3 5h18v14H3zM3 9h18M6 7v.01',
   expand: 'M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5',
+  shrink: 'M3 8h5V3M21 8h-5V3M16 21v-5h5M8 21v-5H3',
 };
 
 export interface IconProps {

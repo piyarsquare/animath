@@ -199,7 +199,9 @@ rendering **one component**:
 - `ViewDef = { id, title, node, defaultRect }` — the node fills a draggable,
   resizable, collapsible window body (`position:absolute; inset:0`); collapsed
   views are hidden, **never unmounted**, so WebGL state survives (`Canvas3D`
-  ignores zero-size resizes).
+  ignores zero-size resizes). A header button takes any view **full screen**
+  (CSS-only restyle of the same node — the WebGL context survives; Esc or the
+  button restores); on phone, cards also height-resize from a bottom grip.
 - `LayoutDef.views[id].open: false` hides a view in that layout (how
   Stable Matching's matrix/welfare/lattice and Trinary's Lab instruments
   present as layouts).

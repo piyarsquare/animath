@@ -6,12 +6,15 @@ import type { ViewDef, ViewState } from './types';
 /**
  * A view window — the plot is a window too (DESIGN-SPEC §2): draggable by
  * the header, resizable from the bottom-right handle, collapsible to its
- * header. The body is HIDDEN while collapsed, never unmounted, so WebGL
- * engines keep their state (Canvas3D guards zero-size resizes).
+ * header, and expandable to a fullscreen overlay. The body is HIDDEN while
+ * collapsed, never unmounted, so WebGL engines keep their state (Canvas3D
+ * guards zero-size resizes); fullscreen restyles the same node for the same
+ * reason.
  */
-export function ViewWindow({ view, state, nodeRef, snap, resize, onMove, onResize, onSettle, onRaise, onToggleCollapse }: {
+export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, onResize, onSettle, onRaise, onToggleCollapse, onToggleFull }: {
   view: ViewDef;
   state: ViewState;
+  full: boolean;
   nodeRef: (el: HTMLDivElement | null) => void;
   snap: (rawX: number, rawY: number) => { x: number; y: number };
   resize: (rawW: number, rawH: number, x: number, y: number) => { w: number; h: number };
@@ -20,8 +23,10 @@ export function ViewWindow({ view, state, nodeRef, snap, resize, onMove, onResiz
   onSettle: () => void;
   onRaise: () => void;
   onToggleCollapse: () => void;
+  onToggleFull: () => void;
 }) {
   const onHeadDown = (e: React.PointerEvent) => {
+    if (full) return;
     if ((e.target as HTMLElement).closest('button')) return;
     e.preventDefault();
     const ox = state.x, oy = state.y;
@@ -33,12 +38,12 @@ export function ViewWindow({ view, state, nodeRef, snap, resize, onMove, onResiz
     const ow = state.w, oh = state.h, x = state.x, y = state.y;
     beginPointerDrag(e, (dx, dy) => onResize(resize(ow + dx, oh + dy, x, y)), onSettle);
   };
-  const collapsed = !!state.collapsed;
+  const collapsed = !full && !!state.collapsed;
   return (
     <div
       ref={nodeRef}
-      className="am-ws-view"
-      style={{
+      className={`am-ws-view${full ? ' am-ws-full' : ''}`}
+      style={full ? undefined : {
         left: state.x,
         top: state.y,
         width: state.w,
@@ -50,20 +55,32 @@ export function ViewWindow({ view, state, nodeRef, snap, resize, onMove, onResiz
       <div className="am-ws-vhead" onPointerDown={onHeadDown}>
         <span className="am-ws-vico"><Icon name="window" size={13} /></span>
         <span className="am-ws-vtitle">{view.title}</span>
-        <button
-          className="am-btn am-btn-icon"
-          title={collapsed ? 'Expand' : 'Collapse'}
-          aria-label={collapsed ? `Expand ${view.title}` : `Collapse ${view.title}`}
-          onClick={onToggleCollapse}
-        >
-          <Icon name={collapsed ? 'chevron' : 'chevrondown'} size={14} />
-        </button>
+        {!collapsed && (
+          <button
+            className="am-btn am-btn-icon"
+            title={full ? 'Exit full screen' : 'Full screen'}
+            aria-label={full ? `Exit full screen ${view.title}` : `Full screen ${view.title}`}
+            onClick={onToggleFull}
+          >
+            <Icon name={full ? 'shrink' : 'expand'} size={13} />
+          </button>
+        )}
+        {!full && (
+          <button
+            className="am-btn am-btn-icon"
+            title={collapsed ? 'Expand' : 'Collapse'}
+            aria-label={collapsed ? `Expand ${view.title}` : `Collapse ${view.title}`}
+            onClick={onToggleCollapse}
+          >
+            <Icon name={collapsed ? 'chevron' : 'chevrondown'} size={14} />
+          </button>
+        )}
       </div>
       {/* hidden, not unmounted, while collapsed — keeps engine state alive */}
       <div className="am-ws-view-body" style={collapsed ? { display: 'none' } : undefined}>
         {view.node}
       </div>
-      {!collapsed && (
+      {!collapsed && !full && (
         <div className="am-ws-resize" onPointerDown={onResizeDown} title="Resize" aria-label={`Resize ${view.title}`}>
           <Icon name="expand" size={10} />
         </div>
