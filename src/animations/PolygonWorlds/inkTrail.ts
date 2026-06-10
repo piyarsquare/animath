@@ -42,6 +42,10 @@ export interface InkTrail {
    *  character's up×forward axis. >0 ⇒ the print reads right-handed (correct)
    *  in that frame; <0 ⇒ it reads mirror-reversed. 0 if the slot is empty. */
   chirality: (i: number, m: THREE.Matrix4 | null, forward: THREE.Vector3, up: THREE.Vector3) => number;
+  /** Rendered center of slot `i` through instance transform `m` (null =
+   *  identity) — the average of the quad's buffered corners after `m`. Null if
+   *  the slot is empty. Diagnostic companion to {@link chirality}. */
+  slotCenter: (i: number, m: THREE.Matrix4 | null) => THREE.Vector3 | null;
   clear: () => void;
   dispose: () => void;
 }
@@ -159,6 +163,18 @@ export function makeInkTrail(capacity: number): InkTrail {
       cy.multiplyScalar(1 / nc); mg.multiplyScalar(1 / nm);
       const axis = new THREE.Vector3().crossVectors(up, forward).normalize();
       return cy.sub(mg).dot(axis); // >0: cyan on the character's left ⇒ right-handed
+    },
+    slotCenter: (i, m) => {
+      if (i < 0 || i >= n) return null;
+      const c = new THREE.Vector3(), v = new THREE.Vector3();
+      const base = i * VPER;
+      for (let k = 0; k < VPER; k++) {
+        const o = (base + k) * 3;
+        v.set(pos[o], pos[o + 1], pos[o + 2]);
+        if (m) v.applyMatrix4(m);
+        c.add(v);
+      }
+      return c.multiplyScalar(1 / VPER);
     },
     clear: () => { n = 0; geo.setDrawRange(0, 0); },
     dispose: () => { geo.dispose(); tex.dispose(); material.dispose(); },

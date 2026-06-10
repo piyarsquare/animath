@@ -157,10 +157,13 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   // mirror twin — no flags, the reflection does the mirroring.
   const ink = makeInkTrail(TRAIL_MAX);
   const inkMesh = new THREE.Mesh(ink.geometry, ink.material); inkMesh.frustumCulled = false;
+  inkMesh.userData.ink = true;   // ink may legitimately render through det<0 — exempt from the decor audit
   root.add(inkMesh);
+  let inkTwin: THREE.Mesh | null = null;
   if (twinM4) {
-    const inkTwin = new THREE.Mesh(ink.geometry, ink.material); inkTwin.frustumCulled = false;
-    inkTwin.matrixAutoUpdate = false; inkTwin.matrix.copy(twinM4);
+    inkTwin = new THREE.Mesh(ink.geometry, ink.material); inkTwin.frustumCulled = false;
+    inkTwin.matrixAutoUpdate = false; inkTwin.userData.ink = true;
+    inkTwin.matrix.copy(twinM4);
     root.add(inkTwin);
   }
   let hist = 0;                                     // frozen stamp count
@@ -272,6 +275,13 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     // the freshest print as rendered (the main mesh carries no transform),
     // read in the character's frame (>0 ⇒ reads right-handed under the player)
     debugProbe: () => ink.chirality(hist - 1, null, fwdU, posU),
+    // the freshest print's mirror image AS RENDERED through the twin's actual
+    // matrix, against the walking shell: mirror ink must hang below the glass
+    auditInk: () => {
+      if (!inkTwin || hist === 0) return null;
+      const c = ink.slotCenter(hist - 1, inkTwin.matrix);
+      return c ? { mirrorR: c.length(), shellR: R } : null;
+    },
     clearTrail: () => { hist = 0; lastFrozen = null; ink.setCount(0); },
     setFloorOpacity: (o: number) => { glassOpacity = o; applyGlass(); },
     setCameraDistance: (d: number) => { camDist = d; },

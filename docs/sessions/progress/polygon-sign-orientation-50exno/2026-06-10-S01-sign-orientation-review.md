@@ -34,6 +34,32 @@ camera/headlamp bug.
 
 ## Working notes
 
+### 🟢 code · 23:05 — Guard infrastructure landed; red run in flight
+**Why:** User approved implementation in the synthesis order; step 1 is
+"guards first, red first" — the new assertions must fail on today's code
+before any geometry changes.
+
+Added (all fix-neutral, so the red run is honest):
+
+- **`__poly.auditDecor()`** (PolygonWorlds.tsx): traverses the visible scene
+  and asserts the decor law — every rendered non-ink mesh sits under a
+  **proper** (det>0) world transform. Ink meshes are tagged
+  `userData.ink = true` in all three presenters (ink may legitimately render
+  through det<0).
+- **`__poly.auditInk()`** (spherical presenter → CoverModel/PolygonEngine
+  optional method): the freshest print's mirror image AS RENDERED through the
+  twin's actual matrix, vs the shell radius — left-handed ink must hang
+  strictly **below** the glass. Uses a new `InkTrail.slotCenter(i, m)`
+  diagnostic.
+- **`scripts/trail-chirality.mjs`**: two new orientable controls (sphere,
+  genus2 — the χ<0 below-floor decor exists there too), decor + twin audit
+  lines per world, and a nonzero exit code on any failure.
+
+Expected red: crosscap3 + genus2 decor audits (baked `scale(sc,−sc,sc)`
+mirrors below the floor), rp2 twin audit (−Id keeps mirror ink at the walking
+radius). Expected green: torus/klein/sphere all checks; all existing A/B
+chirality probes.
+
 ### 🟡 milestone · 22:40 — Three-hats review complete; synthesis written
 **Why:** All three expert reports returned; convergence analysis adjudicates
 their disagreements.

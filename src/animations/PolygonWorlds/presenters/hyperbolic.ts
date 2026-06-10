@@ -220,6 +220,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   type Stamp = { p: Vec3; pf: Vec3; pl: Vec3 };
   const ink = makeInkTrail(TRAIL_MAX * N_DECOR);
   const inkMesh = new THREE.Mesh(ink.geometry, ink.material); inkMesh.frustumCulled = false;
+  inkMesh.userData.ink = true;   // ink may legitimately read mirrored — exempt from the decor audit
   root.add(inkMesh);
   const stamps: Stamp[] = [];
   let lastFrozen: Vec3 | null = null;     // spacing reference (cover coords, folded with the player)

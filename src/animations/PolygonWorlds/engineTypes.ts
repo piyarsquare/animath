@@ -51,5 +51,8 @@ export interface PolygonEngine {
    *  image in the character's frame (see CoverModel.debugProbe). undefined if
    *  unsupported. */
   debugProbe(): number | undefined;
+  /** Test/diagnostic only: mirror-image print radius vs walking-shell radius
+   *  (see CoverModel.auditInk). undefined/null if unsupported. */
+  auditInk(): { mirrorR: number; shellR: number } | null | undefined;
   dispose(): void;
 }

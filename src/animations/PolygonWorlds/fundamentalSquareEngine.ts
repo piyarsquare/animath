@@ -113,6 +113,7 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
     setCameraDistance: (d) => cover.setCameraDistance?.(d),
     getMapState: () => mapState,
     debugProbe: () => cover.debugProbe?.(),
+    auditInk: () => cover.auditInk?.(),
     dispose: () => {
       scene.remove(root);
       cover.dispose();

@@ -67,6 +67,12 @@ export interface CoverModel {
    *  a print in place. */
   debugProbe?(): number;
 
+  /** Test/diagnostic only: the rendered radius of the freshest print's mirror
+   *  image vs the walking-shell radius (spherical twin worlds only; others
+   *  return null/undefined). The law: left-handed ink renders only below the
+   *  glass — `mirrorR` must be strictly less than `shellR`. */
+  auditInk?(): { mirrorR: number; shellR: number } | null;
+
   setFloorOpacity?(o: number): void;
   setSquareSize?(v: number): void;
   setFloorThickness?(t: number): void;

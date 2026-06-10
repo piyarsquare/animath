@@ -87,6 +87,29 @@ export default function PolygonWorlds() {
         map: () => engineRef.current?.getMapState(),
         probe: () => engineRef.current?.debugProbe(),
         setYaw: (v: number) => { yawRef.current = v; },
+        // mirror-ink placement audit (spherical twin worlds; null elsewhere)
+        auditInk: () => engineRef.current?.auditInk(),
+        // The decor law (S06): every rendered decor/scenery mesh is placed by a
+        // PROPER (det>0) world transform — mirror-reading only ever arises from
+        // genuinely viewing the back of ink, or from the ink's own det<0 render
+        // transforms (ink meshes are tagged userData.ink and exempted here).
+        auditDecor: () => {
+          const s = depsRef.current?.scene;
+          if (!s) return null;
+          s.updateMatrixWorld(true);
+          let meshCount = 0, improper = 0;
+          const offenders: string[] = [];
+          s.traverseVisible((o) => {
+            const m = o as THREE.Mesh;
+            if (!m.isMesh || m.userData.ink) return;
+            meshCount++;
+            if (m.matrixWorld.determinant() < 0) {
+              improper++;
+              if (offenders.length < 8) offenders.push(`${o.type}#${o.id}<${o.parent?.type ?? ''}`);
+            }
+          });
+          return { meshes: meshCount, improper, offenders };
+        },
       };
     }
     clockRef.current.start();

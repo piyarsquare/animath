@@ -201,6 +201,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
       // tiles with the ground, and a det<0 cell mirrors it for real
       const trailInk = new THREE.Mesh(ink.geometry, ink.material);
       trailInk.frustumCulled = false;
+      trailInk.userData.ink = true;  // ink may legitimately read mirrored — exempt from the decor audit
       group.add(slab, top, bottom, cornersTop, cornersBottom, trailInk);
       root.add(group);
       cells.push({ group, slab, top, bottom, cornersTop, cornersBottom });
