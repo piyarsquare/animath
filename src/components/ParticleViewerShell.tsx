@@ -635,8 +635,10 @@ export default function ParticleViewerShell({
 
   const layouts: LayoutDef[] = [
     {
-      id: 'essentials', name: 'Essentials', sub: 'Function · Camera', icon: 'tune',
-      open: { function: { x: 84, y: 18 }, camera: { x: 84, y: 240 } },
+      // 4D Rotation opens by default, floating over the plot's right edge —
+      // the successor of the old always-visible Actions floater.
+      id: 'essentials', name: 'Essentials', sub: 'Function · Camera · 4D Rotation', icon: 'tune',
+      open: { function: { x: 84, y: 18 }, camera: { x: 84, y: 240 }, rotate: { x: 800, y: 56 } },
     },
     {
       id: 'appearance', name: 'Appearance', sub: 'Color · Particles · Motion', icon: 'palette',

@@ -30,6 +30,20 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 01:40 — 4D Rotation panel opens by default (user couldn't find it)
+**Why:** the user reported the drop-axis and rotation controls (the old
+Actions floater) missing from the particle viewer.
+
+They survived the redesign intact — turns, spins, spin speed, drop axis,
+reset all live in the drive-tier **4D Rotation** panel — but the default
+Essentials layout didn't open it, so unlike the old always-visible floater
+it was hidden behind a rail icon. Essentials now opens it floating over the
+plot's right edge (the floater's old spot). Note: saved workspace
+arrangements don't auto-change; re-picking Layout → Essentials (or the rail
+icon) restores it for existing users.
+
+![the 4D Rotation panel: turns, spins, drop axis, reset](assets/2026-06-10-S01-rotate-panel.png)
+
 ### 🟢 code · 01:33 — Complex-function work package: complete set, parity, quadratic UX, title shortcut
 **Why:** the user asked for four things: the Plane Transform preview as
 domain/range sheets, the particle viewer's functions wired to the complex
