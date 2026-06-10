@@ -319,6 +319,17 @@ export default function ParticleViewerShell({
         value={state.viewMotion}
         onChange={controls.handleMotion}
       />
+      {/* What a one-finger drag on the plot does. Two-finger drag always pans;
+          Shift+drag pans regardless of the mode. */}
+      <Pills
+        label="Drag"
+        options={[
+          { value: 'orbit', label: 'Orbit' },
+          { value: 'pan', label: 'Pan' },
+        ]}
+        value={state.dragMode}
+        onChange={state.setDragMode}
+      />
       <Slider
         label="Distance"
         value={state.cameraZ}

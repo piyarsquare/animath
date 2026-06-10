@@ -75,47 +75,68 @@ function mulberry32(seed: number) {
   };
 }
 
-/* ---- Particles: rotating complex-function point cloud --------------------- */
-function ParticlePreview({ light, hue = 0 }: { light: boolean; hue?: number }) {
-  const N = 850;
-  const pts = useRef<{ x: number; y: number; a: number; r: number }[] | null>(null);
+/* ---- Particles: a 4D f(z) cloud + the app's four colored axis lines ------- */
+/* Mirrors the real viewer: the (z, f(z)) graph lives in 4D, colored by arg f,
+   tumbling under a double rotation, with the x/y/u/v axis cross. f = e^z. */
+function ParticlePreview({ light }: { light: boolean }) {
+  const N = 800;
+  const pts = useRef<Float32Array | null>(null); // packed [x, y, u, v, hue]
   if (!pts.current) {
-    const arr = [];
+    const arr = new Float32Array(N * 5);
     for (let i = 0; i < N; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const r = Math.sqrt(Math.random()) * 1.7;
-      arr.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, a, r });
+      const x = (Math.random() * 2 - 1) * 1.6;
+      const y = (Math.random() * 2 - 1) * 1.6;
+      const ex = Math.exp(x * 0.9) * 0.45;
+      const u = ex * Math.cos(y * 2.2), v = ex * Math.sin(y * 2.2);
+      arr.set([x, y, u, v, Math.atan2(v, u) / (Math.PI * 2)], i * 5);
     }
     pts.current = arr;
   }
   const bg = light ? '#f4f3ef' : '#000';
+  // axis hues match lib/particles AXIS_COLORS (x 0 · y .25 · u .5 · v .75)
+  const AXES: Array<[number, number, number, number, number]> = [
+    [1.5, 0, 0, 0, 0], [0, 1.5, 0, 0, 0.25], [0, 0, 1.5, 0, 0.5], [0, 0, 0, 1.5, 0.75],
+  ];
   const ref = useCanvas((ctx, W, H, t) => {
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
     const cx = W / 2, cy = H / 2;
-    const scale = Math.min(W, H) * 0.26;
-    const rot = t * 0.18;
+    const scale = Math.min(W, H) * 0.30;
+    // 4D double rotation: the xu and yv planes turn at different rates
+    const a = t * 0.32, b = t * 0.21;
+    const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+    const proj = (x: number, y: number, u: number, v: number): [number, number, number] => {
+      const x2 = x * ca + u * sa, u2 = u * ca - x * sa;
+      const y2 = y * cb + v * sb, v2 = v * cb - y * sb;
+      const persp = 2.6 / (2.6 + v2);                // divide by the 4th axis
+      return [
+        cx + (x2 + 0.32 * u2) * scale * persp,
+        cy + (-y2 + 0.22 * u2) * scale * persp,
+        persp,
+      ];
+    };
     ctx.globalCompositeOperation = light ? 'multiply' : 'lighter';
+    // the axis cross — the viewer's signature 4-color frame
+    ctx.lineWidth = Math.max(1, W * 0.0028);
+    for (const [ax, ay, au, av, hh] of AXES) {
+      const [x1, y1] = proj(-ax, -ay, -au, -av);
+      const [x2, y2] = proj(ax, ay, au, av);
+      ctx.strokeStyle = `hsla(${hh * 360},100%,${light ? 42 : 58}%,${light ? 0.65 : 0.8})`;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    }
     const arr = pts.current!;
-    for (let i = 0; i < arr.length; i++) {
-      const p = arr[i];
-      // pseudo f(z) = swirl + radial lift, projected from "4D" with a tumble
-      const ang = p.a + rot + p.r * 0.9;
-      const lift = Math.sin(p.r * 2.2 - t * 0.6);
-      const px = Math.cos(ang) * p.r;
-      const py = Math.sin(ang) * p.r;
-      const depth = 0.62 + 0.38 * Math.cos(p.a * 2 + rot * 1.3);
-      const sx = cx + px * scale * depth;
-      const sy = cy + py * scale * depth - lift * scale * 0.12;
-      const hh = ((p.a / (Math.PI * 2)) + hue + t * 0.02) % 1;
+    for (let i = 0; i < N; i++) {
+      const k = i * 5;
+      const [sx, sy, persp] = proj(arr[k], arr[k + 1], arr[k + 2], arr[k + 3]);
+      const hh = (arr[k + 4] + 1) % 1;
       const sat = light ? 70 : 95;
-      const lum = light ? 48 : (45 + depth * 22);
+      const lum = light ? 46 : 42 + persp * 24;
       ctx.fillStyle = `hsla(${hh * 360},${sat}%,${lum}%,${light ? 0.55 : 0.85})`;
-      const sz = 1.5 * depth + 0.4;
+      const sz = 1.3 * persp + 0.4;
       ctx.fillRect(sx - sz, sy - sz, sz * 2, sz * 2);
     }
-  }, [light, hue]);
+  }, [light]);
   return <canvas ref={ref} style={canvasStyle} />;
 }
 
@@ -724,7 +745,7 @@ function PolygonPreview({ light }: { light: boolean }) {
   return <canvas ref={ref} style={canvasStyle} />;
 }
 
-export function Preview({ kind, skin, hue }: { kind: PreviewKind; skin: string; hue?: number }) {
+export function Preview({ kind, skin }: { kind: PreviewKind; skin: string; hue?: number }) {
   const light = skin === 'light';
   switch (kind) {
     case 'plane': return <PlanePreview light={light} />;
@@ -736,6 +757,6 @@ export function Preview({ kind, skin, hue }: { kind: PreviewKind; skin: string; 
     case 'sorting': return <SortingPreview light={light} />;
     case 'matrix': return <MatrixPreview light={light} />;
     case 'polygon': return <PolygonPreview light={light} />;
-    default: return <ParticlePreview light={light} hue={hue} />;
+    default: return <ParticlePreview light={light} />;
   }
 }

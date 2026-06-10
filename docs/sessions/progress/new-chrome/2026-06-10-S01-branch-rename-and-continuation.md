@@ -30,6 +30,27 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 12:06 — Free-orbit camera, discoverable pan, authentic particle badge
+**Why:** the user asked for the particle card art to be updated, a way to pan
+the camera, and for the drag rotation to stop behaving like a bounded knob.
+
+- **Free orbit**: replaced the turntable camera (azimuth/elevation with a
+  ±90° elevation clamp and a fixed +Y up) with an orientation quaternion.
+  Drags now apply incremental rotations about the camera's own right/up axes
+  — a trackball tumble with no pole stops; you can roll over the top
+  indefinitely. The ambient Yaw/Pitch/Roll controls (Hopf/Torus) and Reset
+  compose on the same quaternion. Verified by driving 3 long sweeps (~8 rad)
+  past the old stop in headless Chromium.
+- **Pan** already existed (Shift+drag, two-finger drag) but was
+  undiscoverable — the Camera panel gains a **Drag: Orbit | Pan** pill so
+  one-finger pan is a visible choice on mobile.
+- **Particle badge**: the gallery card now sketches the real viewer — the
+  (z, f(z)) graph as a phase-colored e^z cloud tumbling under a 4D double
+  rotation, with the signature x/y/u/v four-color axis cross
+  (hues match `AXIS_COLORS`).
+
+![the new Complex Particles card art](assets/2026-06-10-S01-particle-badge.png)
+
 ### 🟢 code · 03:36 — Mobile performance pass (user: "less smooth since the reskin")
 **Why:** the user reported reduced smoothness on mobile and asked whether the
 new chrome components are a computational burden.

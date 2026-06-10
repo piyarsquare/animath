@@ -8,7 +8,12 @@ import type { ParticleState } from './useParticleState';
 /** Ambient 3D view-rotation axes, used by the Hopf/Torus orbit controls. */
 export type ViewAxis = 'Yaw' | 'Pitch' | 'Roll';
 
-const ELEV_LIMIT = Math.PI / 2 - 0.01; // matches the gesture-orbit pitch clamp
+/** Camera-local rotation axis for each ambient control. */
+const VIEW_AXES: Record<ViewAxis, THREE.Vector3> = {
+  Yaw: new THREE.Vector3(0, 1, 0),
+  Pitch: new THREE.Vector3(1, 0, 0),
+  Roll: new THREE.Vector3(0, 0, 1),
+};
 
 export function useViewControls(state: ParticleState) {
   const {
@@ -63,9 +68,7 @@ export function useViewControls(state: ParticleState) {
     viewPointRef.current = { L: qL.clone(), R: qR.clone() };
     onViewPointChangeRef.current?.(viewPointRef.current);
     // Camera also returns to its default vantage point.
-    state.setAzimuth(0);
-    state.setElevation(0);
-    state.setRoll(0);
+    state.setCamQuat(new THREE.Quaternion());
     state.setPanX(0);
     state.setPanY(0);
     state.setPanZ(0);
@@ -161,14 +164,15 @@ export function useViewControls(state: ParticleState) {
   /**
    * Rotate the *ambient 3D view* (the camera), not the 4D pre-image. Used in
    * Hopf/Torus, where a 4D rotation before the nonlinear map deforms the image:
-   * orbiting the camera keeps the picture rigid. Yaw spins around the vertical,
-   * Pitch tilts up/down (clamped like the gesture orbit), Roll spins about the
-   * view axis.
+   * orbiting the camera keeps the picture rigid. Yaw spins around the camera's
+   * up, Pitch tilts over the top, Roll spins about the view axis — all free
+   * (no pole stops), composing on the orientation quaternion.
    */
   function orbitBy(axis: ViewAxis, theta: number) {
-    if (axis === 'Yaw') state.setAzimuth(a => a + theta);
-    else if (axis === 'Pitch') state.setElevation(e => Math.max(-ELEV_LIMIT, Math.min(ELEV_LIMIT, e + theta)));
-    else state.setRoll(r => r + theta);
+    const sign = axis === 'Pitch' ? -1 : 1; // Pitch+ tilts up, matching the old control
+    state.setCamQuat(q => q.clone()
+      .multiply(new THREE.Quaternion().setFromAxisAngle(VIEW_AXES[axis], sign * theta))
+      .normalize());
   }
 
   /** Animated eighth turn (45°) of the ambient view, mirroring {@link turn}. */

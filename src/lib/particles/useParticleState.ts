@@ -33,9 +33,11 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // Camera orbit + pan are transient "looking" state, not settings — they reset
   // each session (and the Reset orientation button clears them), so they are
   // intentionally NOT persisted.
-  const [azimuth, setAzimuth] = useState(0);
-  const [elevation, setElevation] = useState(0);
-  const [roll, setRoll] = useState(0);
+  // Free orbit: the camera's orientation quaternion (camera-local → world).
+  // Identity = the straight-back default, at (0, 0, cameraZ) facing the target.
+  const [camQuat, setCamQuat] = useState(() => new THREE.Quaternion());
+  /** What a one-finger drag does: orbit the camera or pan the target. */
+  const [dragMode, setDragMode] = useState<'orbit' | 'pan'>('orbit');
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
   const [panZ, setPanZ] = useState(0);
@@ -217,9 +219,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     saturation, setSaturation,
     particleCount, setParticleCount,
     cameraZ, setCameraZ,
-    azimuth, setAzimuth,
-    elevation, setElevation,
-    roll, setRoll,
+    camQuat, setCamQuat,
+    dragMode, setDragMode,
     panX, setPanX,
     panY, setPanY,
     panZ, setPanZ,
