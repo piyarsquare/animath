@@ -30,6 +30,15 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 13:40 — Dropdown category labels unreadable (optgroup unstyled)
+**Why:** the user reported the function-category labels in the dropdown
+washing out on almost every skin.
+
+`ControlPanel.css` styled `option` for the dark skins but not `optgroup`:
+browsers give group labels a default white strip while the text inherits the
+skin's light foreground — light-on-white. `optgroup` now gets the same
+`--panel-solid` background with the dim foreground.
+
 ### 🟢 code · 13:38 — Projection slider: Perspective ⇠ Torus ⇢ Hopf (Stereo retired)
 **Why:** the user spotted that "Torus" and "Stereo" are the same projection
 — confirmed in the shader: both are stereographic from the +v pole after

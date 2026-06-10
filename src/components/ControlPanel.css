@@ -126,6 +126,14 @@
   background: var(--panel-solid, #0c0c10);
   color: var(--cp-fg);
 }
+/* Group labels too — unstyled, browsers give them a white strip while the
+   text inherits the skin's light foreground: light-on-white, unreadable. */
+.cp-row select optgroup {
+  background: var(--panel-solid, #0c0c10);
+  color: var(--cp-fg-dim);
+  font-style: normal;
+  font-weight: 700;
+}
 .cp-row input[type="number"] { padding: 6px 8px; }
 .cp-row input[type="checkbox"] {
   width: 16px;
