@@ -70,8 +70,10 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   const [samplePattern, setSamplePattern] = usePersistentState<SamplePattern>(pk('samplePattern'), SamplePattern.Grid);
   // Reciprocal-symmetric sampling: warp the domain radius to be uniform in log|z|
   // (the unit circle at the middle), so samples reach as deeply inside |z|<1 as
-  // outside. Applies to every render mode (points, sheet, tiles, net).
-  const [reciprocal, setReciprocal] = usePersistentState(pk('reciprocal'), false);
+  // outside. Applies to every render mode (points, sheet, tiles, net). On by
+  // default — most of the function library is as interesting inside the unit
+  // disk as outside.
+  const [reciprocal, setReciprocal] = usePersistentState(pk('reciprocal'), true);
   /** When true, sample more densely where |f'(z)| is large. */
   const [adaptive, setAdaptive] = usePersistentState(pk('adaptive'), COMPLEX_PARTICLES_DEFAULTS.initial.adaptive);
   /** Exponent biasing strength for adaptive sampling. */
@@ -134,9 +136,12 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // classic |·| → brightness domain-coloring shading.
   const [brightnessQuantity, setBrightnessQuantity] = usePersistentState<ColorQuantity>(pk('brightnessQuantity'), ColorQuantity.Uniform);
   // Coordinate chart for the input z and output f planes before they form the
-  // 4-vector (Cartesian / Polar / Log-polar). Color stays Cartesian.
-  const [inputCoord, setInputCoord] = usePersistentState<CoordMode>(pk('inputCoord'), CoordMode.Cartesian);
-  const [outputCoord, setOutputCoord] = usePersistentState<CoordMode>(pk('outputCoord'), CoordMode.Cartesian);
+  // 4-vector (Cartesian / Polar / Log-polar). The chart pickers are removed
+  // from the UI for now (they confused more than they taught), so these are
+  // plain ephemeral state pinned at Cartesian — the engine plumbing stays, and
+  // restoring the two Selects (plus persistence) brings the feature back.
+  const [inputCoord, setInputCoord] = useState<CoordMode>(CoordMode.Cartesian);
+  const [outputCoord, setOutputCoord] = useState<CoordMode>(CoordMode.Cartesian);
 
   // ---- View / projection state ----
   const [viewType, setViewType] = usePersistentState<ProjectionMode>(pk('viewType'), ProjectionMode.Perspective);
@@ -205,6 +210,11 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   useEffect(() => { viewMotionRef.current = viewMotion; }, [viewMotion]);
   const dropAxisRef = useRef(dropAxis);
   useEffect(() => { dropAxisRef.current = dropAxis; }, [dropAxis]);
+  // The user-facing projection stop (Perspective / Torus / Hopf). The loop
+  // reads it to pause the 4D tumble in the nonlinear views, where a 4D
+  // rotation before the map warps the image instead of turning it.
+  const viewTypeRef = useRef(viewType);
+  useEffect(() => { viewTypeRef.current = viewType; }, [viewType]);
   const axisScaleRef = useRef(axisScale);
   useEffect(() => { axisScaleRef.current = axisScale; }, [axisScale]);
   const orientationRef = useRef('');
@@ -315,6 +325,7 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     projRef,
     viewMotionRef,
     dropAxisRef,
+    viewTypeRef,
     orientationRef,
   };
 }

@@ -28,19 +28,20 @@ export const COMPLEX_PARTICLES_DEFAULTS = {
   initial: {
     saturation: 1,
     cameraZ: 5,
-    size: 1,
+    size: 0.3,
     opacity: 0.9,
     intensity: 1,
     shimmer: 0,
     hueShift: 0,
     jitter: 0.1,
     axisWidth: 2,
-    /** Half-width of the sampled domain on the x (real) axis; default ±4. */
-    extentX: 4,
-    /** Half-width of the sampled domain on the y (imaginary) axis; default ±4. */
-    extentY: 4,
-    /** Multiplier on the domain extents and reference axes: 1 or π. */
-    axisScale: 1,
+    /** Half-width of the sampled domain on the x (real) axis (× axisScale). */
+    extentX: 2,
+    /** Half-width of the sampled domain on the y (imaginary) axis (× axisScale). */
+    extentY: 2,
+    /** Multiplier on the domain extents and reference axes: 1 or π.
+     *  Default ×π, so the out-of-the-box domain is ±2π per axis. */
+    axisScale: Math.PI,
     /** Whether the grid samples more densely where |f'(z)| is large. */
     adaptive: false,
     /** Exponent applied to |f'(z)| when adaptive sampling is on; higher

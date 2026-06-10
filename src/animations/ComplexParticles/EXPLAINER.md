@@ -43,9 +43,11 @@ One slider moves between three ways of flattening 4-D to 3-D —
   common phase of input and output — collapses to a single point. So
   `f = c·z` collapses to one point, `f = z + c` covers the sphere once, and
   `eᶻ` wraps it infinitely. For this reading to hold, keep the 4-D
-  orientation at identity — a 4-D spin mixes input and output before the
-  map. Use **Reset orientation** (4D Rotation panel) and set Motion to
-  *Fixed* first.
+  orientation at identity — a 4-D rotation mixes input and output before the
+  map. The viewer protects this for you: the auto-tumble **pauses** in the
+  Torus/Sphere views (a 4-D turn would warp the picture rather than turn it),
+  and the rotation panel switches to rigid Yaw/Pitch/Roll orbits. If you've
+  turned the 4-D view earlier, use **Reset orientation** (4D Rotation panel).
 
 **Positions between the stops are animations, not projections** — the view
 linearly cross-fades each particle between its two images, so a half-way
@@ -57,18 +59,6 @@ toward the Torus, where the scaffold takes over as the reference frame.
   one of the four coordinates and keep the other three (an orthographic
   slice). Picking one returns the slider to Perspective so the two controls
   never fight.
-
-## Coordinate charts (Domain panel)
-
-The **Input chart** and **Output chart** pickers replot the input `z` and the
-output `f` in **Polar** `(|·|, arg)` or **Log-polar** `(log|·|, arg)` before the
-4-D point is assembled (color still uses the raw Cartesian values). These are the
-natural charts for several families: in **log-polar output**, `eᶻ` becomes the
-identity (`log|eᶻ| = Re z`, `arg eᶻ = Im z`), so its trumpet flattens to a plane;
-with **both** in log-polar, `zⁿ` and the roots `√z`/`∛z` become *linear shears*,
-so their Riemann sheets flatten into evenly-spaced tilted planes. (One honest
-caveat: `arg` is read in (−π, π], so a log-polar chart has a seam along the
-negative real axis where the angle wraps.)
 
 ## Sampling (Domain panel)
 

@@ -43,7 +43,7 @@ show no branch controls.
   **Net** (circles/rays, thread width), plus the shared shading, external
   light, opacity, intensity, and light-background controls.
 - **Domain** — units (×1/×π), sampling pattern, reciprocal and adaptive
-  sampling, bounds, input/output coordinate charts, and the branch controls.
+  sampling, bounds, and the branch controls.
 - **Motion** — shimmer (time-varying brightness) and jitter (positional
   noise), with a **Jitter mode**: *Scatter* (the default) perturbs the
   sampled domain point and re-evaluates f, so particles stay on the surface

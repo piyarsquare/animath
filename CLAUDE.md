@@ -283,7 +283,9 @@ become **layouts** (`views[id].open`).
 Particle viewers split **looking** (gestures) from **navigating** (buttons):
 
 - **1-finger / mouse drag** orbits the camera (never the 4D rotation).
-- **2-finger drag** (or `Shift`+drag) pans the look-at target.
+- **2-finger drag** pans the look-at target; on desktop, **right-drag**,
+  **held `Space`+drag** or `Shift`+drag pan (the phone keeps a Drag
+  Orbit | Pan pill for one-finger choice).
 - **2-finger pinch / wheel** zooms.
 - **QuarterTurnControls** (the drive-tier **4D Rotation** panel, draggable
   beside the plot): tap a ↻/↺ button for a single **eighth turn**

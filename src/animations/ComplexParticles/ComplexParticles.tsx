@@ -49,7 +49,7 @@ export interface ComplexParticlesProps {
 
 export default function ComplexParticles({
   count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount,
-  selectedFunction = 'exp',
+  selectedFunction = 'square',
   p = 1,
   q = 2,
   branches = 1,
@@ -624,6 +624,7 @@ export default function ComplexParticles({
         projRef: state.projRef,
         viewMotionRef: state.viewMotionRef,
         dropAxisRef: state.dropAxisRef,
+        viewTypeRef: state.viewTypeRef,
         rotLRef: state.rotLRef,
         rotRRef: state.rotRRef,
         axisScaleRef: state.axisScaleRef,

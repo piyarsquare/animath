@@ -19,6 +19,9 @@ export interface AnimationLoopDeps {
   projRef: React.MutableRefObject<ProjectionMode>;
   viewMotionRef: React.MutableRefObject<string>;
   dropAxisRef: React.MutableRefObject<string>;
+  /** User-facing projection stop — the tumble pauses in Torus/Hopf, where a
+   *  4D rotation before the nonlinear map warps the image. */
+  viewTypeRef: React.MutableRefObject<ProjectionMode>;
   rotLRef: React.MutableRefObject<THREE.Quaternion>;
   rotRRef: React.MutableRefObject<THREE.Quaternion>;
   /** Multiplier on the drawn axis half-length (1 or π). */
@@ -36,7 +39,7 @@ export function startAnimationLoop(deps: AnimationLoopDeps): () => void {
   const {
     renderer, scene, camera,
     materialsRef, axisRefs,
-    realViewRef, projRef, viewMotionRef, dropAxisRef,
+    realViewRef, projRef, viewMotionRef, dropAxisRef, viewTypeRef,
     rotLRef, rotRRef, axisScaleRef, viewPointRef, onViewPointChangeRef,
     orientationRef, setOrientationMatrix,
   } = deps;
@@ -58,6 +61,11 @@ export function startAnimationLoop(deps: AnimationLoopDeps): () => void {
     const elapsed = clock.getElapsedTime();
     const dropMode = dropAxisRef.current !== 'None';
     const fixedMode = viewMotionRef.current === 'Fixed';
+    // In the nonlinear views a 4D tumble warps the image rather than turning
+    // it, so the tumble pauses there (like a drop axis); use the ambient
+    // Yaw/Pitch/Roll controls to orbit the rigid picture instead.
+    const nonlinearMode = viewTypeRef.current === ProjectionMode.Hopf
+      || viewTypeRef.current === ProjectionMode.Torus;
 
     // Handle realView transitions
     if (realViewRef.current !== lastReal) {
@@ -92,7 +100,7 @@ export function startAnimationLoop(deps: AnimationLoopDeps): () => void {
       } else {
         tCurrent = 0;
       }
-    } else if (dropMode || fixedMode) {
+    } else if (dropMode || fixedMode || nonlinearMode) {
       tCurrent = 0;
     } else {
       if (!transitioning) {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Canvas3D from './Canvas3D';
 import { Slider, Pills, Select, Checkbox, RangeSlider } from './ControlPanel';
+import { usePhone } from '../chrome/usePhone';
 import Workspace from '../chrome/workspace/Workspace';
 import type { LayoutDef, SectionDef, ViewDef } from '../chrome/workspace/types';
 import QuarterTurnControls from '../controls/QuarterTurnControls';
@@ -9,7 +10,7 @@ import { COMPLEX_PARTICLES_DEFAULTS } from '../config/defaults';
 import { planes, Plane } from '../math/constants';
 import { clearPersistedState } from '../lib/usePersistentState';
 import {
-  ColorStyle, ColorBy, ColorQuantity, CoordMode, coordModeNames, colormapNames,
+  ColorStyle, ColorBy, ColorQuantity, colormapNames,
   SamplePattern, samplePatternNames, JitterMode, AXIS_COLORS,
   shapeNames, textureNames, motionModes, renderModes,
   useGestureRotation,
@@ -67,6 +68,7 @@ export default function ParticleViewerShell({
   settingsStorageKey, embed,
 }: ParticleViewerShellProps) {
   const gestures = useGestureRotation(state);
+  const phone = usePhone();
 
   // Hopf/Torus projections are nonlinear in the 4D coordinates, so a 4D plane
   // rotation before the map deforms the image. In those modes the turn/spin
@@ -253,18 +255,6 @@ export default function ParticleViewerShell({
           />
         </>
       )}
-      <Select
-        label="Input chart"
-        options={coordModeNames.map((name, i) => ({ value: i as CoordMode, label: name }))}
-        value={state.inputCoord}
-        onChange={state.setInputCoord}
-      />
-      <Select
-        label="Output chart"
-        options={coordModeNames.map((name, i) => ({ value: i as CoordMode, label: name }))}
-        value={state.outputCoord}
-        onChange={state.setOutputCoord}
-      />
       {domainExtras}
     </>
   );
@@ -308,17 +298,24 @@ export default function ParticleViewerShell({
         value={state.viewMotion}
         onChange={controls.handleMotion}
       />
-      {/* What a one-finger drag on the plot does. Two-finger drag always pans;
-          Shift+drag pans regardless of the mode. */}
-      <Pills
-        label="Drag"
-        options={[
-          { value: 'orbit', label: 'Orbit' },
-          { value: 'pan', label: 'Pan' },
-        ]}
-        value={state.dragMode}
-        onChange={state.setDragMode}
-      />
+      {/* Desktop pans with modifiers (right-drag, held Space, Shift), so the
+          mode toggle only exists on phone, where one-finger drag must choose
+          (two-finger drag always pans there). */}
+      {phone ? (
+        <Pills
+          label="Drag"
+          options={[
+            { value: 'orbit', label: 'Orbit' },
+            { value: 'pan', label: 'Pan' },
+          ]}
+          value={state.dragMode}
+          onChange={state.setDragMode}
+        />
+      ) : (
+        <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', margin: '2px 0 4px' }}>
+          Drag orbits · right-drag, Space+drag or Shift+drag pans · wheel zooms
+        </div>
+      )}
       <Slider
         label="Distance"
         value={state.cameraZ}
