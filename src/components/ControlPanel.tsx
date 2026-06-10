@@ -40,9 +40,18 @@ interface SliderProps {
   step: number;
   onChange: (v: number) => void;
   format?: (v: number) => string;
+  /** Labeled detents under the track. Drags are "sticky" — values within 5%
+   *  of the range snap onto a stop — and clicking a label jumps to it. */
+  stops?: { value: number; label: string }[];
 }
 
-export function Slider({ label, value, min, max, step, onChange, format }: SliderProps) {
+export function Slider({ label, value, min, max, step, onChange, format, stops }: SliderProps) {
+  const snap = (v: number) => {
+    if (!stops) return v;
+    const r = (max - min) * 0.05;
+    const near = stops.find(s => Math.abs(v - s.value) <= r);
+    return near ? near.value : v;
+  };
   return (
     <label className="cp-row">
       <div className="cp-row-label">
@@ -55,8 +64,29 @@ export function Slider({ label, value, min, max, step, onChange, format }: Slide
         max={max}
         step={step}
         value={value}
-        onChange={e => onChange(parseFloat(e.target.value))}
+        onChange={e => onChange(snap(parseFloat(e.target.value)))}
       />
+      {stops && (
+        <div className="cp-slider-stops">
+          {stops.map(s => {
+            const pct = ((s.value - min) / (max - min)) * 100;
+            return (
+              <button
+                key={s.value}
+                type="button"
+                className={`cp-stop ${value === s.value ? 'cp-stop-on' : ''}`}
+                style={{
+                  left: `${pct}%`,
+                  transform: pct === 0 ? 'none' : pct === 100 ? 'translateX(-100%)' : 'translateX(-50%)',
+                }}
+                onClick={e => { e.preventDefault(); onChange(s.value); }}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </label>
   );
 }
@@ -232,6 +262,69 @@ export function NumberInput({ label, value, onChange, min, max, step = 1, intege
         {suffix}
       </div>
     </label>
+  );
+}
+
+/** One half of a ComplexInput: a NumberInput-style commit-on-blur field. */
+function ComplexPart({ value, step, ariaLabel, onCommit }: {
+  value: number;
+  step: number;
+  ariaLabel: string;
+  onCommit: (n: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  const [editing, setEditing] = useState(false);
+  useEffect(() => { if (!editing) setDraft(String(value)); }, [value, editing]);
+  const commit = () => {
+    setEditing(false);
+    const n = parseFloat(draft);
+    if (!isFinite(n)) { setDraft(String(value)); return; } // revert
+    setDraft(String(n));
+    if (n !== value) onCommit(n);
+  };
+  return (
+    <input
+      type="number"
+      aria-label={ariaLabel}
+      value={draft}
+      step={step}
+      style={{ flex: 1, minWidth: 0, width: 0 }}
+      onFocus={() => setEditing(true)}
+      onChange={e => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={e => {
+        if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); }
+        else if (e.key === 'Escape') { setDraft(String(value)); setEditing(false); (e.target as HTMLInputElement).blur(); }
+      }}
+    />
+  );
+}
+
+/**
+ * A complex-number field: one labeled row reading `label = [re] + [im]·i`,
+ * with the same commit-on-blur behavior as NumberInput. Use for complex
+ * coefficients (e.g. the quadratic's a, b, c) instead of separate
+ * "(Re)"/"(Im)" rows.
+ */
+export function ComplexInput({ label, value, onChange, step = 0.1 }: {
+  label: string;
+  value: readonly [number, number];
+  onChange: (v: [number, number]) => void;
+  step?: number;
+}) {
+  const dim: React.CSSProperties = { color: 'var(--cp-fg-dim, #9b9ba3)', flexShrink: 0, fontSize: 12 };
+  return (
+    <div className="cp-row">
+      <div className="cp-row-label"><span>{label}</span></div>
+      <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+        <ComplexPart value={value[0]} step={step} ariaLabel={`${label} real part`}
+          onCommit={n => onChange([n, value[1]])} />
+        <span style={dim}>+</span>
+        <ComplexPart value={value[1]} step={step} ariaLabel={`${label} imaginary part`}
+          onCommit={n => onChange([value[0], n])} />
+        <span style={dim}>i</span>
+      </div>
+    </div>
   );
 }
 

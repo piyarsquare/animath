@@ -53,7 +53,10 @@ export default function Canvas3D({ onMount }: Canvas3DProps) {
       if (!mount) return;
       const w = mount.clientWidth;
       const h = mount.clientHeight;
-      
+      // A collapsed/hidden window reports zero size; keep the last good
+      // viewport instead of poisoning the camera with a 0/0 aspect.
+      if (!w || !h) return;
+
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);

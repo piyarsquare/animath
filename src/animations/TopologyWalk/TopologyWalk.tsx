@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
-import { ShellActions, ShellSettings, useAppHeader, useAppExplainer } from '../../components/AppShell';
-import { Section, Slider, Select, Pills, Checkbox } from '../../components/ControlPanel';
+import Workspace from '../../chrome/workspace/Workspace';
+import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import { Slider, Select, Pills, Checkbox } from '../../components/ControlPanel';
 import { THEMES, DEFAULT_THEME } from './themes';
 import { DEFAULT_PARAMS } from './corridorGeometry';
 import {
@@ -69,9 +70,6 @@ export default function TopologyWalk() {
   // The two "rectangular" worlds: both glue a square fundamental domain and share
   // the unified glass / mini-map / other-side presentation.
   const isRect = isFlat || isSpherical;
-
-  useAppHeader('Topology Walk', def.short);
-  useAppExplainer(explainerText);
 
   const ctxRef = useRef<Ctx | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -169,11 +167,20 @@ export default function TopologyWalk() {
       KeyW: 'fwd', ArrowUp: 'fwd', KeyS: 'back', ArrowDown: 'back',
       KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right',
     };
+    // Never hijack keys while the user is typing in a form control (e.g. the
+    // Wall-text input in the Move & write panel) — without this guard WASD /
+    // Space would walk the avatar and stamp writing while they type.
+    const typing = () => {
+      const el = document.activeElement;
+      return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
+    };
     const down = (e: KeyboardEvent) => {
+      if (typing()) return;
       if (e.code === 'Space') { if (!e.repeat) stampRef.current = true; e.preventDefault(); return; }
       const m = map[e.code]; if (m) { keysRef.current[m] = true; e.preventDefault(); }
     };
     const up = (e: KeyboardEvent) => {
+      if (typing()) return;
       const m = map[e.code]; if (m) { keysRef.current[m] = false; e.preventDefault(); }
     };
     window.addEventListener('keydown', down);
@@ -203,133 +210,189 @@ export default function TopologyWalk() {
   const switchWorld = (fam: Family) => setSurfaceId(lastByFamily.current[fam] ?? DEFAULT_SURFACE[fam]);
   const surfaceOptions = SURFACES.filter((s) => s.family === family).map((s) => ({ value: s.id, label: s.label }));
 
-  return (
+  /* ---- archetype panels (docs/redesign/PARAM-MAP.md §5) ---- */
+
+  const worldNode = (
     <>
-      <div
-        style={{ position: 'absolute', inset: 0, cursor: 'grab', touchAction: 'none' }}
-        onPointerDown={onPointerDown} onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
-      >
-        <Canvas3D onMount={onMount} />
+      <Pills
+        label="Setting"
+        options={[
+          { value: 'corridor', label: 'Corridor (hallway)' },
+          { value: 'flat', label: 'Open space (flat)' },
+          { value: 'spherical', label: 'Curved (sphere)' },
+        ]}
+        value={family}
+        onChange={(v) => switchWorld(v as Family)}
+      />
+      <Select label="Surface" options={surfaceOptions} value={surfaceId} onChange={setSurfaceId} />
+      {isSpherical && (
+        <Slider label="Planet radius" value={planetRadius} min={12} max={90} step={2} onChange={setPlanetRadius} format={(v) => `${Math.round(v)} m`} />
+      )}
+      {isCorridor && (
+        <Slider label="Corridor width" value={width} min={0.8} max={4} step={0.1} onChange={setWidth} format={(v) => v.toFixed(1)} />
+      )}
+      <div className="am-hint">
+        {isCorridor
+          ? 'Walk a lap of the Möbius corridor and the floor rolls up into the ceiling.'
+          : isSpherical
+            ? 'A small planet (χ>0, positive curvature). On the projective plane antipodal points are the same spot, so your trail returns to the far side mirror-reversed.'
+            : 'Red edges glue with a flip on the Klein bottle (columns ↔ trees across them); blue edges glue straight.'}
       </div>
+    </>
+  );
 
-      <MovePad onSet={setKey} onWrite={isCorridor ? requestStamp : undefined} />
+  const cameraNode = (
+    <>
+      <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
+      {isFlat && (
+        <Checkbox label="Project avatar into every cell" checked={projectAvatar} onChange={setProjectAvatar} />
+      )}
+      <Checkbox
+        label={isSpherical ? 'Mini-map (sphere)' : isFlat ? 'Mini-map (fundamental domain)' : 'Mini-map'}
+        checked={miniMap}
+        onChange={setMiniMap}
+      />
+      {isFlat && (
+        <Checkbox label="Color each cover cell" checked={colorCells} onChange={setColorCells} />
+      )}
+    </>
+  );
 
-      {isCorridor && miniMap && (
-        <div style={{
-          position: 'absolute', top: 12, right: 12, width: 150, height: 150,
-          pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.18)',
-          borderRadius: 8, boxShadow: '0 4px 14px rgba(0,0,0,0.45)',
-        }}>
-          <div style={{
-            position: 'absolute', top: 4, left: 8, fontSize: 10, letterSpacing: '0.08em',
-            color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase',
-          }}>Map</div>
+  const sceneNode = (
+    <>
+      {isCorridor && (
+        <Select label="Theme" options={THEMES.map((t) => ({ value: t.id, label: t.label }))} value={themeId} onChange={setThemeId} />
+      )}
+      {isCorridor && (
+        <Checkbox label="Floor markers (UP arrows)" checked={markers} onChange={setMarkers} />
+      )}
+      {/* Glass floor "see the other side" — the spherical planet can be turned
+          back to a solid (the flat floor is always glass); the opacity slider is
+          shared by both rectangular worlds via the unified glass helper. */}
+      {isSpherical && (
+        <Checkbox label="Glass floor — see the other side" checked={innerShell} onChange={setInnerShell} />
+      )}
+      {isRect && (isFlat || innerShell) && (
+        <Slider label="Glass floor opacity" value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
+      )}
+      {isCorridor && (
+        <Slider label="Ambient light" value={ambientMul} min={0} max={2.5} step={0.05} onChange={setAmbientMul} format={(v) => `${Math.round(v * 100)}%`} />
+      )}
+    </>
+  );
+
+  const moveNode = (
+    <>
+      <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
+      {isCorridor && (
+        <label className="cp-row">
+          <div className="cp-row-label"><span>Wall text</span></div>
+          <input
+            type="text" value={wallText} maxLength={24}
+            onChange={(e) => setWallText(e.target.value)}
+            style={{
+              background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
+              border: '1px solid var(--cp-border)', borderRadius: 4, padding: '6px 8px', fontSize: 13, width: '100%',
+            }}
+          />
+        </label>
+      )}
+      {isCorridor && (
+        <div className="am-hint">
+          Aim at a wall and press Space (or ✎) to paint it. Come around to read it from the other side.
         </div>
       )}
-
-      {isFlat && miniMap && <FlatMiniMap getState={getMapState} />}
-
-      {isSpherical && miniMap && <SphereMiniMap getState={getSphereState} />}
-
-      <div style={{
-        position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
-        color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
-      }}>
-        {isCorridor
-          ? 'Drag to look · WASD / arrows move · Space (or ✎) writes your text on the wall'
-          : isSpherical
-            ? 'Drag to look · WASD / arrows or the pad to walk a great circle around the planet'
-            : 'Drag to look · WASD / arrows or the pad to walk · landmarks repeat — columns turn to trees across the Klein flip'}
+      <div className="am-hint">Drag to look · W A S D to walk</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+        <button style={actionBtn} onClick={clearTrail}>Clear trail</button>
+        {isCorridor && <button style={actionBtn} onClick={clearWriting}>Clear writing</button>}
       </div>
-
-      <ShellSettings>
-        <Section title="World" icon="∞" defaultOpen>
-          <Pills
-            label="Setting"
-            options={[
-              { value: 'corridor', label: 'Corridor (hallway)' },
-              { value: 'flat', label: 'Open space (flat)' },
-              { value: 'spherical', label: 'Curved (sphere)' },
-            ]}
-            value={family}
-            onChange={(v) => switchWorld(v as Family)}
-          />
-          <Select label="Surface" options={surfaceOptions} value={surfaceId} onChange={setSurfaceId} />
-          <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
-          {isFlat && (
-            <Checkbox label="Project avatar into every cell" checked={projectAvatar} onChange={setProjectAvatar} />
-          )}
-          {isRect && (
-            <Checkbox
-              label={isSpherical ? 'Mini-map (sphere)' : 'Mini-map (fundamental domain)'}
-              checked={miniMap}
-              onChange={setMiniMap}
-            />
-          )}
-          {isFlat && (
-            <Checkbox label="Color each cover cell" checked={colorCells} onChange={setColorCells} />
-          )}
-          {isSpherical && (
-            <Slider label="Planet radius" value={planetRadius} min={12} max={90} step={2} onChange={setPlanetRadius} format={(v) => `${Math.round(v)} m`} />
-          )}
-          {/* Glass floor "see the other side" — the spherical planet can be turned
-              back to a solid (the flat floor is always glass); the opacity slider is
-              shared by both rectangular worlds via the unified glass helper. */}
-          {isSpherical && (
-            <Checkbox label="Glass floor — see the other side" checked={innerShell} onChange={setInnerShell} />
-          )}
-          {isRect && (isFlat || innerShell) && (
-            <Slider label="Glass floor opacity" value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
-          )}
-          <Slider label="Walk speed" value={moveSpeed} min={1} max={16} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
-          <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>
-            {isCorridor
-              ? 'Walk a lap of the Möbius corridor and the floor rolls up into the ceiling.'
-              : isSpherical
-                ? 'A small planet (χ>0, positive curvature). On the projective plane antipodal points are the same spot, so your trail returns to the far side mirror-reversed.'
-                : 'Red edges glue with a flip on the Klein bottle (columns ↔ trees across them); blue edges glue straight.'}
-          </div>
-        </Section>
-
-        {isCorridor && (
-          <Section title="Scene" icon="✦" defaultOpen>
-            <Select label="Theme" options={THEMES.map((t) => ({ value: t.id, label: t.label }))} value={themeId} onChange={setThemeId} />
-            <Checkbox label="Floor markers (UP arrows)" checked={markers} onChange={setMarkers} />
-            <Checkbox label="Cinematic bloom (GPU)" checked={bloom} onChange={setBloom} />
-            <Checkbox label="Mini-map" checked={miniMap} onChange={setMiniMap} />
-            <Slider label="Corridor width" value={width} min={0.8} max={4} step={0.1} onChange={setWidth} format={(v) => v.toFixed(1)} />
-            <Slider label="Ambient light" value={ambientMul} min={0} max={2.5} step={0.05} onChange={setAmbientMul} format={(v) => `${Math.round(v * 100)}%`} />
-          </Section>
-        )}
-
-        {isCorridor && (
-          <Section title="Writing" icon="✎" defaultOpen>
-            <label className="cp-row">
-              <div className="cp-row-label"><span>Wall text</span></div>
-              <input
-                type="text" value={wallText} maxLength={24}
-                onChange={(e) => setWallText(e.target.value)}
-                style={{
-                  background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)',
-                  border: '1px solid var(--cp-border)', borderRadius: 4, padding: '6px 8px', fontSize: 13, width: '100%',
-                }}
-              />
-            </label>
-            <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)' }}>
-              Aim at a wall and press Space (or ✎) to paint it. Come around to read it from the other side.
-            </div>
-          </Section>
-        )}
-      </ShellSettings>
-
-      <ShellActions>
-        <div className="cp-section-body">
-          <button style={actionBtn} onClick={clearTrail}>Clear trail</button>
-          {isCorridor && <button style={actionBtn} onClick={clearWriting}>Clear writing</button>}
-        </div>
-      </ShellActions>
     </>
+  );
+
+  const qualityNode = isCorridor
+    ? <Checkbox label="Cinematic bloom (GPU)" checked={bloom} onChange={setBloom} />
+    : <div className="am-hint">Cinematic bloom applies to the corridor worlds.</div>;
+
+  const sections: SectionDef[] = [
+    { id: 'world', title: 'World', arch: 'subject', node: worldNode, estHeight: 290 },
+    { id: 'camera', title: 'Camera', arch: 'view', node: cameraNode, estHeight: 190 },
+    { id: 'scene', title: 'Scene', arch: 'marks', node: sceneNode, estHeight: 250 },
+    { id: 'move', title: 'Move & write', arch: 'drive', node: moveNode, estHeight: 300 },
+    { id: 'quality', title: 'Quality', arch: 'quality', node: qualityNode, estHeight: 110 },
+  ];
+
+  const views: ViewDef[] = [
+    {
+      id: 'walk',
+      title: 'First-person view',
+      defaultRect: { x: 372, y: 16, w: 712, h: 628 },
+      node: (
+        // Single wrapper: the window body forces `inset: 0` on its direct child,
+        // so the bottom-right MovePad etc. must position against this container,
+        // not the body itself. Look-drag handlers stay on the canvas layer only,
+        // so MovePad / mini-map overlays never start a camera drag.
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+          <div
+            style={{ position: 'absolute', inset: 0, cursor: 'grab', touchAction: 'none' }}
+            onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
+          >
+            <Canvas3D onMount={onMount} />
+          </div>
+
+          <MovePad onSet={setKey} onWrite={isCorridor ? requestStamp : undefined} />
+
+          {isCorridor && miniMap && (
+            <div style={{
+              position: 'absolute', top: 12, right: 12, width: 150, height: 150,
+              pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.18)',
+              borderRadius: 8, boxShadow: '0 4px 14px rgba(0,0,0,0.45)',
+            }}>
+              <div style={{
+                position: 'absolute', top: 4, left: 8, fontSize: 10, letterSpacing: '0.08em',
+                color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase',
+              }}>Map</div>
+            </div>
+          )}
+
+          {isFlat && miniMap && <FlatMiniMap getState={getMapState} />}
+
+          {isSpherical && miniMap && <SphereMiniMap getState={getSphereState} />}
+
+          <div style={{
+            position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
+            color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
+          }}>
+            {isCorridor
+              ? 'Drag to look · WASD / arrows move · Space (or ✎) writes your text on the wall'
+              : isSpherical
+                ? 'Drag to look · WASD / arrows or the pad to walk a great circle around the planet'
+                : 'Drag to look · WASD / arrows or the pad to walk · landmarks repeat — columns turn to trees across the Klein flip'}
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  const layouts: LayoutDef[] = [
+    {
+      id: 'walk', name: 'Walk', sub: 'World · Move', icon: 'move',
+      open: { world: { x: 84, y: 18 }, move: { x: 84, y: 330 } },
+    },
+  ];
+
+  return (
+    <Workspace
+      appId="topology-walk"
+      title="Topology Walk"
+      subtitle={def.short}
+      sections={sections}
+      views={views}
+      layouts={layouts}
+      defaultLayoutId="walk"
+      explainer={explainerText}
+    />
   );
 }
 

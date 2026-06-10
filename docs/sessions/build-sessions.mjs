@@ -39,6 +39,8 @@ const posixJoin = (dir, rel) => {
   return out.join("/");
 };
 const isLocalImg = (s) => s && !/^(https?:)?\/\//.test(s) && !s.startsWith("data:");
+// true when a relative ref climbs above its own folder (e.g. ../../x.png)
+const escapesDir = (rel) => { let d = 0; for (const p of rel.split("/")) { if (p === "" || p === ".") continue; if (p === "..") { if (--d < 0) return true; } else d++; } return false; };
 let imgBytes = 0, imgCount = 0;   // screenshot space budget across all carried reports
 
 const isReport = (p) =>
@@ -70,9 +72,6 @@ for (const rec of byKey.values()) {
   const md = path.endsWith(".md") ? content : htmlToMarkdown(content);
   const dir = join(OUT, rec.kind, rec.slug);
   mkdirSync(dir, { recursive: true });
-  const mdPath = join(dir, rec.base + ".md");
-  writeFileSync(mdPath, md);
-  execFileSync("node", [join(ROOT, "render-report.mjs"), mdPath], { stdio: "ignore" });
 
   const fm = {};
   const fmBlock = md.match(/^---\r?\n([\s\S]*?)\r?\n---/);
@@ -90,22 +89,34 @@ for (const rec of byKey.values()) {
   // otherwise a dedicated thumbnail/crop would leave a broken control-center card.
   const toCarry = new Set(imgRefs);
   if (isLocalImg(fm.thumbnail)) toCarry.add(fm.thumbnail);
+  // A ref that climbs out of the report's folder (e.g. ../../../redesign/shots/x.png)
+  // would mirror to a path outside converted/ — never copied to dist/sessions, so a
+  // dead link on Pages. Re-home those under assets/carried/ and rewrite the body ref.
+  const outRefs = new Map();
+  for (const r of toCarry) outRefs.set(r, escapesDir(r) ? "assets/carried/" + basename(r) : r);
+  let outMd = md;
   const carried = new Set();
   for (const imgRef of toCarry) {
     const repoImg = posixJoin(reportDir, imgRef);
     const blob = gitBuf(["show", `${ref}:${repoImg}`]);
     if (!blob) { console.warn(`  ! missing image ${repoImg} on ${ref}`); continue; }
-    const outImg = join(dir, imgRef);
+    const destRef = outRefs.get(imgRef);
+    const outImg = join(dir, destRef);
     mkdirSync(dirname(outImg), { recursive: true });
     writeFileSync(outImg, blob);
+    if (destRef !== imgRef) outMd = outMd.split(`(${imgRef})`).join(`(${destRef})`);
     carried.add(imgRef);
     imgBytes += blob.length; imgCount++;
   }
 
+  const mdPath = join(dir, rec.base + ".md");
+  writeFileSync(mdPath, outMd);
+  execFileSync("node", [join(ROOT, "render-report.mjs"), mdPath], { stdio: "ignore" });
+
   // Lead thumbnail for the control center: the `thumbnail:` frontmatter ref, else
   // the first body image — but only if it actually carried, so cards never break.
   const thumbRef = isLocalImg(fm.thumbnail) ? fm.thumbnail : imgRefs[0];
-  const thumb = thumbRef && carried.has(thumbRef) ? `converted/${rec.kind}/${rec.slug}/${thumbRef}` : null;
+  const thumb = thumbRef && carried.has(thumbRef) ? `converted/${rec.kind}/${rec.slug}/${outRefs.get(thumbRef)}` : null;
 
   // Categorical label(s): explicit `app:` frontmatter wins, else inferred from slug.
   const apps = normalizeApps(fm.app, rec.slug);

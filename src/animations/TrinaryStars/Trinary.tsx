@@ -9,11 +9,13 @@ import Tour, { type TourStep } from './Tour';
  *   - Lab: run thousands of those worlds headless and map / tally their fates.
  *
  * The two were previously separate catalog entries (`/trinary`, `/trinary-lab`).
- * This wrapper hosts both behind one entry, swapping the active view from a tab
- * bar while preserving the existing hash routes so old deep-links keep working:
- * `#/trinary` → Observatory, `#/trinary-lab` → Lab. Each view still manages its
- * own URL query (shareable configs) and they cross-link by changing the hash,
- * which this wrapper observes.
+ * This wrapper hosts both behind one entry, swapping the active view while
+ * preserving the existing hash routes so old deep-links keep working:
+ * `#/trinary` → Observatory, `#/trinary-lab` → Lab. Each view renders its own
+ * Workspace chrome with Observatory | Lab mode pills in the top bar (the old
+ * bottom tab bar's replacement); the pills switch views by setting the hash,
+ * which this wrapper observes. Each view still manages its own URL query
+ * (shareable configs).
  */
 
 const Observatory = React.lazy(() => import('./TrinaryStars'));
@@ -28,30 +30,26 @@ function tabFromHash(): Tab {
 
 export default function Trinary() {
   const [tab, setTab] = useState<Tab>(tabFromHash);
-  // The guided tour shows once on a user's first visit, then on demand.
+  // The guided tour shows once on a user's first visit, then on demand (the
+  // "Take the tour" button in the Observatory's Sim panel).
   const [tourSeen, setTourSeen] = usePersistentState('trinary:tourSeen', false);
   const [tourOpen, setTourOpen] = useState(() => !tourSeen);
 
   // The hash is the single source of truth for the active view, so deep-links
-  // and each view's own cross-link buttons (which set the hash) stay consistent.
+  // and each view's mode pills (which set the hash) stay consistent.
   useEffect(() => {
     const onHash = () => setTab(tabFromHash());
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const go = (t: Tab) => {
-    if (t === tab) return;
-    window.location.hash = t === 'lab' ? '#/trinary-lab' : '#/trinary';
-  };
   const closeTour = () => { setTourOpen(false); setTourSeen(true); };
 
   return (
     <>
       <Suspense fallback={<div style={{ position: 'absolute', inset: 0, background: '#05060a' }} />}>
-        {tab === 'lab' ? <Lab /> : <Observatory />}
+        {tab === 'lab' ? <Lab /> : <Observatory onTour={() => setTourOpen(true)} />}
       </Suspense>
-      <TabBar tab={tab} onChange={go} onHelp={() => setTourOpen(true)} />
       {tourOpen && <Tour steps={TOUR_STEPS} onClose={closeTour} />}
     </>
   );
@@ -64,7 +62,7 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Pick a system',
-    body: 'Open Settings (the ⚙ button, top-right) to choose a scenario — the dazzling Figure-Eight and Moth choreographies, the violent Pythagorean fall, or a Binary + Star. Each behaves completely differently.',
+    body: 'Open the System panel from the icon rail on the left to choose a scenario — the dazzling Figure-Eight and Moth choreographies, the violent Pythagorean fall, or a Binary + Star. Each behaves completely differently.',
   },
   {
     title: 'Watch chaos unfold',
@@ -72,47 +70,10 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Look around, tune it',
-    body: 'Drag to orbit the camera. In Settings you can change star masses, set the habitable climate band, or even stand on the planet’s surface and watch the suns wheel overhead. Switch Settings to “Advanced” for every knob.',
+    body: 'Drag to orbit the camera. The rail panels let you change star masses, set the habitable climate band, or even stand on the planet’s surface and watch the suns wheel overhead. Pick the “Advanced” layout (top bar) to open every knob at once.',
   },
   {
     title: 'Open the Lab',
-    body: 'Use the tabs at the bottom to switch to the Lab — it runs thousands of these worlds headless and maps their fates into fractal “destiny” portraits and statistics. Enjoy exploring!',
+    body: 'Use the Observatory | Lab pills in the top bar to switch to the Lab — it runs thousands of these worlds headless and maps their fates into fractal “destiny” portraits and statistics. Enjoy exploring!',
   },
 ];
-
-const wrapStyle: React.CSSProperties = {
-  position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
-  display: 'inline-flex', gap: 2, padding: 3, zIndex: 45,
-  background: 'rgba(12,16,24,0.82)', border: '1px solid rgba(120,150,200,0.25)',
-  borderRadius: 999, backdropFilter: 'blur(6px)', boxShadow: '0 4px 18px rgba(0,0,0,0.4)',
-};
-
-function itemStyle(active: boolean): React.CSSProperties {
-  return {
-    appearance: 'none', border: 'none', cursor: 'pointer',
-    padding: '7px 18px', borderRadius: 999,
-    font: '600 13px/1 system-ui, sans-serif', letterSpacing: 0.2,
-    color: active ? '#06121f' : '#cfe0f5',
-    background: active ? '#66f0ff' : 'transparent',
-    transition: 'background 0.15s, color 0.15s',
-  };
-}
-
-function TabBar({ tab, onChange, onHelp }: { tab: Tab; onChange: (t: Tab) => void; onHelp: () => void }) {
-  return (
-    <div style={wrapStyle} role="tablist" aria-label="Trinary view">
-      <button role="tab" aria-selected={tab === 'observatory'} style={itemStyle(tab === 'observatory')}
-        onClick={() => onChange('observatory')}>✸ Observatory</button>
-      <button role="tab" aria-selected={tab === 'lab'} style={itemStyle(tab === 'lab')}
-        onClick={() => onChange('lab')}>▦ Lab</button>
-      <button title="Take the tour" aria-label="Take the tour" style={helpStyle} onClick={onHelp}>?</button>
-    </div>
-  );
-}
-
-const helpStyle: React.CSSProperties = {
-  appearance: 'none', border: 'none', cursor: 'pointer',
-  width: 30, borderRadius: 999, marginLeft: 2,
-  font: '700 14px/1 system-ui, sans-serif', color: '#cfe0f5',
-  background: 'rgba(255,255,255,0.06)',
-};

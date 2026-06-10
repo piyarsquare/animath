@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import ParticleViewerShell from '../../components/ParticleViewerShell';
-import { Select, NumberInput } from '../../components/ControlPanel';
+import { Select, NumberInput, ComplexInput } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
@@ -14,11 +14,11 @@ import {
   createSheetWireGeometry, rebuildSheetWireGeometry, sheetCellSize,
   createTileGeometry, rebuildTileGeometry,
   createNetGeometry, rebuildNetGeometry,
-  createAxes, createHopfScaffold, createHopfFibers, startAnimationLoop,
+  createAxes, createHopfScaffold, startAnimationLoop,
 } from '../../lib/particles';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { ProjectionMode } from '../../lib/viewpoint';
-import type { ViewPoint, HopfScaffold, HopfFibers } from '../../lib/particles';
+import type { ViewPoint, HopfScaffold } from '../../lib/particles';
 
 /** localStorage namespace for this viewer's saved settings. */
 const STORAGE_KEY = 'complex-particles';
@@ -41,6 +41,9 @@ export interface ComplexParticlesProps {
   branches?: number;
   onViewPointChange?: (view: ViewPoint) => void;
   viewPoint?: ViewPoint;
+  /** Chrome-less applet mode (#/embed/…): URL-configured, ephemeral state
+   *  (never reads or writes the visitor's saved settings). docs/EMBEDS.md. */
+  embed?: import('../../lib/embedParams').ParticleEmbedConfig;
 }
 
 export default function ComplexParticles({
@@ -51,29 +54,38 @@ export default function ComplexParticles({
   branches = 1,
   onViewPointChange,
   viewPoint,
+  embed,
 }: ComplexParticlesProps) {
-  const state = useParticleState({ count, viewPoint, onViewPointChange, storageKey: STORAGE_KEY });
+  const state = useParticleState({
+    count: embed?.count ?? count,
+    viewPoint,
+    onViewPointChange,
+    storageKey: embed ? undefined : STORAGE_KEY,
+  });
   const controls = useViewControls(state);
   useUniformSync(state);
 
+  // Per-field persistence key; null in embed mode (ephemeral, like storageKey).
+  const ek = (field: string) => (embed ? null : `${STORAGE_KEY}:${field}`);
+
   const defaultFunctionIndex = (() => {
-    const idx = functionNames.indexOf(selectedFunction);
+    const idx = functionNames.indexOf(embed?.fn ?? selectedFunction);
     return idx >= 0 ? idx : 0;
   })();
-  const [functionIndex, setFunctionIndex] = usePersistentState(`${STORAGE_KEY}:functionIndex`, defaultFunctionIndex);
-  const [expP, setExpP] = usePersistentState(`${STORAGE_KEY}:expP`, p);
-  const [expQ, setExpQ] = usePersistentState(`${STORAGE_KEY}:expQ`, q);
+  const [functionIndex, setFunctionIndex] = usePersistentState(ek('functionIndex'), defaultFunctionIndex);
+  const [expP, setExpP] = usePersistentState(ek('expP'), embed?.p ?? p);
+  const [expQ, setExpQ] = usePersistentState(ek('expQ'), embed?.q ?? q);
   // Riemann-sheet range. The viewer draws one particle set per sheet, at branch
   // index branchMin..branchMax (multivalued functions read it; single-valued
   // ignore it). Capped at MAX_SHEETS to keep the draw count sane.
-  const [branchMin, setBranchMin] = usePersistentState(`${STORAGE_KEY}:branchMin`, 0);
-  const [branchMax, setBranchMax] = usePersistentState(`${STORAGE_KEY}:branchMax`, branches - 1);
+  const [branchMin, setBranchMin] = usePersistentState(ek('branchMin'), 0);
+  const [branchMax, setBranchMax] = usePersistentState(ek('branchMax'), branches - 1);
   const branchCount = Math.max(1, branchMax - branchMin + 1);
   // Coefficients for the generic quadratic a·z²+b·z+c (each [Re, Im]); default a=1
   // (so the out-of-the-box quadratic is z²).
-  const [quadA, setQuadA] = usePersistentState<Complex2>(`${STORAGE_KEY}:quadA`, [1, 0]);
-  const [quadB, setQuadB] = usePersistentState<Complex2>(`${STORAGE_KEY}:quadB`, [0, 0]);
-  const [quadC, setQuadC] = usePersistentState<Complex2>(`${STORAGE_KEY}:quadC`, [0, 0]);
+  const [quadA, setQuadA] = usePersistentState<Complex2>(ek('quadA'), [1, 0]);
+  const [quadB, setQuadB] = usePersistentState<Complex2>(ek('quadB'), [0, 0]);
+  const [quadC, setQuadC] = usePersistentState<Complex2>(ek('quadC'), [0, 0]);
 
   // Effective sampling box (× axisScale). Locked → symmetric ±extent; unlocked →
   // the independent min/max window.
@@ -104,7 +116,6 @@ export default function ComplexParticles({
   const netGeomRef = useRef<THREE.BufferGeometry>();
   const netMeshRef = useRef<THREE.Mesh[]>([]);
   const scaffoldRef = useRef<HopfScaffold>();
-  const fibersRef = useRef<HopfFibers>();
 
   useEffect(() => {
     state.materialsRef.current.forEach(m => { m.uniforms.functionType.value = functionIndex; });
@@ -522,23 +533,6 @@ export default function ComplexParticles({
     s.torusGroup.visible = showTorus;
   }, [state.viewType, state.fiberCollapse, state.showScaffold]);
 
-  // Hopf fibers show in the Torus view (before the collapse swallows them).
-  const fibersVisible = state.showFibers
-    && state.viewType === ProjectionMode.Torus
-    && state.fiberCollapse < 0.5;
-  useEffect(() => {
-    if (fibersRef.current) fibersRef.current.group.visible = fibersVisible;
-  }, [fibersVisible]);
-
-  // Rebuild the fiber overlay when the density changes (skips until mounted).
-  useEffect(() => {
-    if (!sceneRef.current) return;
-    fibersRef.current?.dispose();
-    fibersRef.current = createHopfFibers(sceneRef.current, state.fiberDensity);
-    fibersRef.current.group.visible = fibersVisible;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.fiberDensity]);
-
   const onMount = React.useCallback(
     (ctx: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => {
       const { scene, camera, renderer } = ctx;
@@ -584,12 +578,6 @@ export default function ComplexParticles({
         scaffold.group.visible = state.showScaffold && (showSphere || showTorus);
       }
 
-      const fibers = createHopfFibers(scene, state.fiberDensity);
-      fibersRef.current = fibers;
-      fibers.group.visible = state.showFibers
-        && state.viewType === ProjectionMode.Torus
-        && state.fiberCollapse < 0.5;
-
       state.viewPointRef.current = { L: state.rotLRef.current.clone(), R: state.rotRRef.current.clone() };
       state.onViewPointChangeRef.current?.(state.viewPointRef.current);
 
@@ -610,6 +598,56 @@ export default function ComplexParticles({
         setOrientationMatrix: state.setOrientationMatrix,
       });
     }, []);
+
+  // Re-apply the restored projection slider once after mount: the fresh
+  // materials start at the persisted viewType, so a non-zero projMix needs
+  // its blend uniforms and axis fade pushed (runs before the embed effect,
+  // letting an embed's proj= param win).
+  useEffect(() => {
+    if (!embed && state.projMix > 0) controls.handleProjMix(state.projMix);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Embed mode: apply the URL-configured view once on mount. Canvas3D's
+  // child effect (onMount) has already run by the time this fires, so the
+  // materials exist and the normal control surface (projection cross-fade,
+  // drop axis) behaves exactly as in the full app.
+  useEffect(() => {
+    if (!embed) return;
+    if (embed.render) state.setRenderMode(embed.render);
+    if (embed.motion) state.setViewMotion(embed.motion);
+    if (embed.colorBy !== undefined) state.setColorBy(embed.colorBy);
+    if (embed.colormap !== undefined) state.setColormap(embed.colormap);
+    if (embed.extent !== undefined) { state.setExtentX(embed.extent); state.setExtentY(embed.extent); }
+    if (embed.proj !== undefined) {
+      const drop = embed.proj === ProjectionMode.DropX ? 'DropX'
+        : embed.proj === ProjectionMode.DropY ? 'DropY'
+        : embed.proj === ProjectionMode.DropU ? 'DropU'
+        : embed.proj === ProjectionMode.DropV ? 'DropV' : null;
+      if (drop) controls.handleDropAxis(drop);
+      else controls.handleViewType(embed.proj);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Embed spin: continuous 4D plane rotations (composing, like the 4D
+  // Rotation panel's spin toggles); implies a Fixed base motion so the
+  // requested spin reads cleanly rather than stacking on the auto-tumble.
+  useEffect(() => {
+    if (!embed?.spin?.length) return;
+    state.setViewMotion('Fixed');
+    let raf = 0;
+    let last = performance.now();
+    const step = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      for (const pl of embed.spin!) controls.rotateBy(pl, 0.5 * dt);
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const currentName = functionNames[functionIndex];
   const isPowPQ = functionIndex === POW_PQ_INDEX;
@@ -651,12 +689,12 @@ export default function ComplexParticles({
       )}
       {isQuadratic && (
         <>
-          <NumberInput label="a (Re)" value={quadA[0]} step={0.1} onChange={v => setQuadA([v, quadA[1]])} />
-          <NumberInput label="a (Im)" value={quadA[1]} step={0.1} onChange={v => setQuadA([quadA[0], v])} />
-          <NumberInput label="b (Re)" value={quadB[0]} step={0.1} onChange={v => setQuadB([v, quadB[1]])} />
-          <NumberInput label="b (Im)" value={quadB[1]} step={0.1} onChange={v => setQuadB([quadB[0], v])} />
-          <NumberInput label="c (Re)" value={quadC[0]} step={0.1} onChange={v => setQuadC([v, quadC[1]])} />
-          <NumberInput label="c (Im)" value={quadC[1]} step={0.1} onChange={v => setQuadC([quadC[0], v])} />
+          <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', margin: '4px 0 2px' }}>
+            f(z) = a·z² + b·z + c
+          </div>
+          <ComplexInput label="a" value={quadA} onChange={setQuadA} />
+          <ComplexInput label="b" value={quadB} onChange={setQuadB} />
+          <ComplexInput label="c" value={quadC} onChange={setQuadC} />
         </>
       )}
     </>
@@ -689,6 +727,7 @@ export default function ComplexParticles({
 
   return (
     <ParticleViewerShell
+      appId="complex-particles"
       state={state}
       controls={controls}
       onMount={onMount}
@@ -698,7 +737,8 @@ export default function ComplexParticles({
       domainExtras={branchControls}
       readme={readmeText}
       explainer={explainerText}
-      settingsStorageKey={STORAGE_KEY}
+      settingsStorageKey={embed ? undefined : STORAGE_KEY}
+      embed={embed ? { caption: embed.caption, controls: embed.controls, buttons: embed.buttons } : undefined}
     />
   );
 }

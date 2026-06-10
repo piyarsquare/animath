@@ -1,13 +1,15 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  Activity, AlertTriangle, Check, Copy, Download, FastForward, FlaskConical, Layers, Network, Pause, Play,
+  Activity, AlertTriangle, Check, Copy, Download, FastForward, FlaskConical, Layers, Pause, Play,
   RotateCcw, Shuffle, SkipForward, ShieldCheck,
 } from 'lucide-react';
 import './stableMatching.css';
-import { ShellSettings, ShellActions, useAppHeader, useAppExplainer } from '../../components/AppShell';
-import { Section, Slider, Pills, Select, NumberInput, Checkbox } from '../../components/ControlPanel';
+import Workspace from '../../chrome/workspace/Workspace';
+import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import { Slider, Pills, Select, NumberInput, Checkbox } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
+import readmeText from './README.md?raw';
 import { generateInstance, type Instance } from './model';
 import {
   runRounds, applyLog, blockingPairs, stats,
@@ -252,10 +254,8 @@ function LatticeView({ inst, set, capped, named, picked, onPick }: {
 }
 
 export default function StableMatching() {
-  useAppHeader('Stable Matching');
-  useAppExplainer(explainerText);
-
-  const [view, setView] = usePersistentState<'visualizer' | 'lab' | 'lattice'>(`${NS}:view`, 'visualizer');
+  // (the old `${NS}:view` tab state is gone — the workspace layouts Run / Lab /
+  //  Lattice replace the in-page Visualizer / Lattice / Lab tab strip)
   const [n, setN] = usePersistentState(`${NS}:n`, 8);
   const [seed, setSeed] = usePersistentState(`${NS}:seed`, 1);
   const [consensusA, setConsensusA] = usePersistentState(`${NS}:cA`, 0);
@@ -273,7 +273,9 @@ export default function StableMatching() {
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
   const timer = useRef<number | null>(null);
-  const matrixWrap = useRef<HTMLDivElement>(null);
+  // element state (not a ref) so the measuring effect re-runs when the matrix
+  // view window is closed by one layout and reopened (remounted) by another
+  const [matrixWrap, setMatrixWrap] = useState<HTMLDivElement | null>(null);
   const [cellSize, setCellSize] = useState(40);
 
   const inst = useMemo(() => generateInstance({ n, consensusA: consensusA / 100, consensusB: consensusB / 100, seed }), [n, consensusA, consensusB, seed]);
@@ -457,18 +459,19 @@ export default function StableMatching() {
     return () => { if (timer.current) clearInterval(timer.current); };
   }, [playing, speed, total]);
 
-  // size the matrix so the whole grid fits the available width and height
+  // size the matrix so the whole grid fits the wrap's OWN box. The wrap is a
+  // flex-fill child of the view-window body (see .sm2-stage-matrix in the CSS),
+  // so its ResizeObserver is the single source of truth — window drags/resizes,
+  // layout switches and phone cards all flow through it; never window.innerHeight.
   useLayoutEffect(() => {
-    if (view !== 'visualizer') return;
-    const el = matrixWrap.current;
+    const el = matrixWrap;
     if (!el) return;
     const measure = () => {
       const w = el.clientWidth;
-      const top = el.getBoundingClientRect().top;
-      const availH = window.innerHeight - top - 52;   // just the legend + a little bottom breathing (inspect panel floats, see CSS)
+      const availH = el.clientHeight - 52;   // just the legend + a little bottom breathing (inspect bar is sticky, see CSS)
       const byW = (w - (showLabels ? 34 : 6)) / n - 3 - 8 / n; // minus row header + per-cell gap + a right inset
       const byH = (availH - (showLabels ? 22 : 6)) / n - 3; // minus column header
-      // the largest square that keeps the WHOLE grid on screen (no scroll), capped so a
+      // the largest square that keeps the WHOLE grid in the window (no scroll), capped so a
       // small grid doesn't blow up; floored only so cells stay visible at very large n.
       const fit = Math.floor(Math.min(byW, byH));
       setCellSize(Math.max(6, Math.min(MAX_CELL, fit)));
@@ -476,9 +479,8 @@ export default function StableMatching() {
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    window.addEventListener('resize', measure);
-    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
-  }, [n, view, showLabels]);
+    return () => ro.disconnect();
+  }, [matrixWrap, n, showLabels]);
 
   // markers for the resolution step just applied: the satisfied pair + the two
   // partners it displaced (the blocking cell healing).
@@ -648,72 +650,81 @@ export default function StableMatching() {
   const labHue = labMetric === 'stableCount' ? 168 : labMetric === 'cost' ? 312 : 280;
   const labCaption = labMetric === 'unstable' ? 'unstable %' : labMetric === 'stableCount' ? '# stable' : labMetric === 'cost' ? 'steps' : 'pairs';
 
-  const settings = (
-    <ShellSettings>
-      <Section title="Domain" icon="◷" defaultOpen>
-        <NumberInput label="Population (per side)" value={n} onChange={setN} min={3} max={200} integer />
-        <Slider label="Consensus A" value={consensusA} min={0} max={100} step={1} onChange={setConsensusA} format={v => `${v}%`} />
-        <Slider label="Consensus B" value={consensusB} min={0} max={100} step={1} onChange={setConsensusB} format={v => `${v}%`} />
+  /* ── workspace panels (archetype vocabulary, DESIGN-SPEC §3) ── */
+
+  const instanceNode = (
+    <>
+      <NumberInput label="Population (per side)" value={n} onChange={setN} min={3} max={200} integer />
+      <Slider label="Consensus A" value={consensusA} min={0} max={100} step={1} onChange={setConsensusA} format={v => `${v}%`} />
+      <Slider label="Consensus B" value={consensusB} min={0} max={100} step={1} onChange={setConsensusB} format={v => `${v}%`} />
+      <div className="sm2-seedrow">
         <NumberInput label="Seed" value={seed} onChange={setSeed} min={1} integer />
-      </Section>
-      <Section title="Algorithm" icon="↻" defaultOpen>
-        <Pills label="Schedule (who proposes each round)" value={schedule} onChange={setSchedule} options={[{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'alt', label: 'Alternate' }, { value: 'random', label: 'Random' }]} />
-        {schedule === 'random' && <Slider label="Bias toward A" value={bias} min={0} max={100} step={1} onChange={setBias} format={v => `${v}%`} />}
-      </Section>
-      <Section title="Display" icon="◧">
-        <Pills label="Cell shows" value={cellView} onChange={setCellView} options={[{ value: 'both', label: 'Both (Lego)' }, { value: 'a', label: 'A→B' }, { value: 'b', label: 'B→A' }, { value: 'diff', label: 'Difference' }]} />
-        <Pills label="Order" value={order} onChange={setOrder} options={[{ value: 'matchdiag', label: 'Match diagonal' }, { value: 'settle', label: 'Settle round' }, { value: 'attract', label: 'Attractiveness' }, { value: 'index', label: 'Original' }]} />
-        <Checkbox label="Show index labels" checked={showLabels} onChange={setShowLabels} />
-        <Checkbox label="Tight grid (no gaps)" checked={tight} onChange={setTight} />
-        <Checkbox label="Stable-pair footprint (cells matched in some stable matching)" checked={showFootprint} onChange={setShowFootprint} />
-      </Section>
-    </ShellSettings>
+        <button className="sm2-btn" onClick={shuffle} title="Draw a fresh instance (new random seed)"><Shuffle size={16} />Shuffle</button>
+      </div>
+    </>
   );
 
-  const actions = (
-    <ShellActions>
-      {view === 'visualizer' ? (
-        resolve ? (
-          <div className="sm2-actions">
-            <button className="sm2-btn primary" onClick={() => setRPlaying(p => !p)} disabled={rStep >= resolve.steps.length && !rPlaying}>{rPlaying ? <Pause size={16} /> : <Play size={16} />}{rPlaying ? 'Pause' : 'Play'}</button>
-            <button className="sm2-btn" onClick={() => setRStep(s => Math.min(resolve.steps.length, s + 1))} disabled={rPlaying || rStep >= resolve.steps.length}><SkipForward size={16} />Step</button>
-            <button className="sm2-btn" onClick={() => setRStep(resolve.steps.length)} disabled={rStep >= resolve.steps.length}><FastForward size={16} />Finish</button>
-            <button className="sm2-btn" onClick={endResolve}><RotateCcw size={16} />Back to run</button>
-            <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
-          </div>
-        ) : (
-          <div className="sm2-actions">
-            <button className="sm2-btn primary" onClick={() => { goLive(); setPlaying(p => !p); }} disabled={jump === 'live' && !pickedMatching && done && !playing}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? 'Pause' : 'Play'}</button>
-            <button className="sm2-btn" onClick={() => { goLive(); setStep(s => Math.min(total, s + 1)); }} disabled={playing || (jump === 'live' && !pickedMatching && done)}><SkipForward size={16} />Step</button>
-            <button className="sm2-btn" onClick={() => { goLive(); setStep(total); }} disabled={jump === 'live' && !pickedMatching && done}><FastForward size={16} />Finish</button>
-            <button className="sm2-btn" onClick={reset}><RotateCcw size={16} />Reset</button>
-            <button className="sm2-btn" onClick={shuffle}><Shuffle size={16} />Shuffle</button>
-            <button className="sm2-btn stabilize" onClick={stabilize} disabled={!finalUnstable} title={finalUnstable ? 'Repair the unstable result to a stable matching' : 'Already stable — nothing to repair'}><ShieldCheck size={16} />Stabilize</button>
-            <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
-            <Checkbox label="Live re-sort (build the diagonal as it runs)" checked={liveSort} onChange={setLiveSort} />
-            <Select label="Jump to a stable solution" value={pickedMatching ? 'live' : jump} onChange={(v) => { setPickedNode(null); setJump(v); }}
-              options={(['live', 'aOptimal', 'bOptimal', 'egalitarian', 'median', 'minRegret', 'sexEqual', 'balanced'] as Jump[])
-                .map(k => ({ value: k, label: JUMP_LABELS[k] }))} />
-          </div>
-        )
-      ) : view === 'lab' ? (
-        <div className="sm2-actions">
-          <Pills label="Schedule" value={labSchedule} onChange={setLabSchedule} options={[{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'alt', label: 'Alt' }, { value: 'random', label: 'Rnd' }]} />
-          <Pills label="Surface (what each cell measures)" value={labMetric} onChange={setLabMetric} options={[{ value: 'lego', label: 'Ranks (A·B)' }, { value: 'unstable', label: 'Unstable %' }, { value: 'blocking', label: 'Blocking' }, { value: 'stableCount', label: '# stable' }, { value: 'cost', label: 'Repair cost' }]} />
-          {labMetric !== 'lego' && <Pills label="Show statistic" value={labStat} onChange={setLabStat} options={[{ value: 'mean', label: 'Mean' }, { value: 'sd', label: 'Std dev' }]} />}
-          <NumberInput label="Population (per side)" value={labN} onChange={setLabN} min={6} max={80} integer />
-          <NumberInput label="Cells per axis (resolution)" value={labRes} onChange={setLabRes} min={2} max={LAB_RES_MAX} integer />
-          <NumberInput label="Repeats per cell (trials)" value={labTrials} onChange={setLabTrials} min={1} max={120} integer />
-          <div className="sm2-seedrow">
-            <NumberInput label="Seed" value={labSeed} onChange={setLabSeed} min={1} integer />
-            <button className="sm2-btn" onClick={() => setLabSeed(s => s + 1)} disabled={labRunning} title="Draw a fresh ensemble (new random instances)"><Shuffle size={16} />Re-roll</button>
-          </div>
-          {labRunning
-            ? <button className="sm2-btn" onClick={() => { labCancel.current = true; }}><Pause size={16} />Stop ({labProgress}%)</button>
-            : <button className="sm2-btn primary" onClick={runLab}><FlaskConical size={16} />Run Lab</button>}
-        </div>
-      ) : null}
-    </ShellActions>
+  const algorithmNode = (
+    <>
+      <Pills label="Schedule (who proposes each round)" value={schedule} onChange={setSchedule} options={[{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'alt', label: 'Alternate' }, { value: 'random', label: 'Random' }]} />
+      {schedule === 'random' && <Slider label="Bias toward A" value={bias} min={0} max={100} step={1} onChange={setBias} format={v => `${v}%`} />}
+    </>
+  );
+
+  const displayNode = (
+    <>
+      <Pills label="Cell shows" value={cellView} onChange={setCellView} options={[{ value: 'both', label: 'Both (Lego)' }, { value: 'a', label: 'A→B' }, { value: 'b', label: 'B→A' }, { value: 'diff', label: 'Difference' }]} />
+      <Pills label="Order" value={order} onChange={setOrder} options={[{ value: 'matchdiag', label: 'Match diagonal' }, { value: 'settle', label: 'Settle round' }, { value: 'attract', label: 'Attractiveness' }, { value: 'index', label: 'Original' }]} />
+      <Checkbox label="Show index labels" checked={showLabels} onChange={setShowLabels} />
+      <Checkbox label="Tight grid (no gaps)" checked={tight} onChange={setTight} />
+      <Checkbox label="Stable-pair footprint (cells matched in some stable matching)" checked={showFootprint} onChange={setShowFootprint} />
+      <Checkbox label="Live re-sort (build the diagonal as it runs)" checked={liveSort} onChange={setLiveSort} />
+    </>
+  );
+
+  const playbackNode = (
+    <div className="sm2-actions">
+      <div className="sm2-progress">Round {safeStep} / {total}{done ? ' · complete' : ''}</div>
+      {resolve ? (
+        <>
+          <button className="sm2-btn primary" onClick={() => setRPlaying(p => !p)} disabled={rStep >= resolve.steps.length && !rPlaying}>{rPlaying ? <Pause size={16} /> : <Play size={16} />}{rPlaying ? 'Pause' : 'Play'}</button>
+          <button className="sm2-btn" onClick={() => setRStep(s => Math.min(resolve.steps.length, s + 1))} disabled={rPlaying || rStep >= resolve.steps.length}><SkipForward size={16} />Step</button>
+          <button className="sm2-btn" onClick={() => setRStep(resolve.steps.length)} disabled={rStep >= resolve.steps.length}><FastForward size={16} />Finish</button>
+          <button className="sm2-btn" onClick={endResolve}><RotateCcw size={16} />Back to run</button>
+          <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
+        </>
+      ) : (
+        <>
+          <button className="sm2-btn primary" onClick={() => { goLive(); setPlaying(p => !p); }} disabled={jump === 'live' && !pickedMatching && done && !playing}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? 'Pause' : 'Play'}</button>
+          <button className="sm2-btn" onClick={() => { goLive(); setStep(s => Math.min(total, s + 1)); }} disabled={playing || (jump === 'live' && !pickedMatching && done)}><SkipForward size={16} />Step</button>
+          <button className="sm2-btn" onClick={() => { goLive(); setStep(total); }} disabled={jump === 'live' && !pickedMatching && done}><FastForward size={16} />Finish</button>
+          <button className="sm2-btn" onClick={reset}><RotateCcw size={16} />Reset</button>
+          <button className="sm2-btn stabilize" onClick={stabilize} disabled={!finalUnstable} title={finalUnstable ? 'Repair the unstable result to a stable matching' : 'Already stable — nothing to repair'}><ShieldCheck size={16} />Stabilize</button>
+          <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
+          <Select label="Jump to a stable solution" value={pickedMatching ? 'live' : jump} onChange={(v) => { setPickedNode(null); setJump(v); }}
+            options={(['live', 'aOptimal', 'bOptimal', 'egalitarian', 'median', 'minRegret', 'sexEqual', 'balanced'] as Jump[])
+              .map(k => ({ value: k, label: JUMP_LABELS[k] }))} />
+        </>
+      )}
+    </div>
+  );
+
+  const labNode = (
+    <div className="sm2-actions">
+      <Pills label="Schedule" value={labSchedule} onChange={setLabSchedule} options={[{ value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'alt', label: 'Alt' }, { value: 'random', label: 'Rnd' }]} />
+      <Pills label="Surface (what each cell measures)" value={labMetric} onChange={setLabMetric} options={[{ value: 'lego', label: 'Ranks (A·B)' }, { value: 'unstable', label: 'Unstable %' }, { value: 'blocking', label: 'Blocking' }, { value: 'stableCount', label: '# stable' }, { value: 'cost', label: 'Repair cost' }]} />
+      {labMetric !== 'lego' && <Pills label="Show statistic" value={labStat} onChange={setLabStat} options={[{ value: 'mean', label: 'Mean' }, { value: 'sd', label: 'Std dev' }]} />}
+      <NumberInput label="Population (per side)" value={labN} onChange={setLabN} min={6} max={80} integer />
+      <NumberInput label="Cells per axis (resolution)" value={labRes} onChange={setLabRes} min={2} max={LAB_RES_MAX} integer />
+      <NumberInput label="Repeats per cell (trials)" value={labTrials} onChange={setLabTrials} min={1} max={120} integer />
+      <div className="sm2-seedrow">
+        <NumberInput label="Seed" value={labSeed} onChange={setLabSeed} min={1} integer />
+        <button className="sm2-btn" onClick={() => setLabSeed(s => s + 1)} disabled={labRunning} title="Draw a fresh ensemble (new random instances)"><Shuffle size={16} />Re-roll</button>
+      </div>
+      {labRunning
+        ? <button className="sm2-btn" onClick={() => { labCancel.current = true; }}><Pause size={16} />Stop ({labProgress}%)</button>
+        : <button className="sm2-btn primary" onClick={runLab}><FlaskConical size={16} />Run Lab</button>}
+    </div>
   );
 
   const story = (() => {
@@ -740,89 +751,135 @@ export default function StableMatching() {
     </p>
   );
 
-  return (
-    <div className="sm2-app">
-      {settings}{actions}
-      <header className="sm2-header">
-        <div className="sm2-tabs">
-          <button className={view === 'visualizer' ? 'active' : ''} onClick={() => setView('visualizer')}><Layers size={15} />Visualizer</button>
-          <button className={view === 'lattice' ? 'active' : ''} onClick={() => setView('lattice')}><Network size={15} />Lattice</button>
-          <button className={view === 'lab' ? 'active' : ''} onClick={() => setView('lab')}><FlaskConical size={15} />Lab</button>
-        </div>
-        {view === 'visualizer' && <div className="sm2-progress">Round {safeStep} / {total}{done ? ' · complete' : ''}</div>}
-      </header>
+  /* ── workspace views — each surface is a window on the stage ── */
 
-      {view === 'visualizer' ? (
-        <div className="sm2-visualizer">
-          <p className="sm2-story">{story}</p>
-          {resolve
-            ? <div className="sm2-narrate resolve"><strong>Stabilizing — Roth–Vande Vate</strong>: satisfy a blocking pair, repeat. Step {rStep} / {resolve.steps.length} · {blocking.size === 0 ? <>resolved — <strong>stable</strong> in {resolve.steps.length} steps</> : rStep >= resolve.steps.length && !resolve.converged ? <>stopped at {resolve.steps.length} steps (large instance) — {blocking.size} blocking pair{blocking.size === 1 ? '' : 's'} remain</> : `${blocking.size} blocking pair${blocking.size === 1 ? '' : 's'} left`}. Reset to return to the live run.</div>
-            : jump === 'live'
-              ? <div className="sm2-narrate">{narrate()}</div>
-              : <div className="sm2-narrate jump"><strong>{JUMP_LABELS[jump]} stable matching</strong> — {NAMED_NOTE[jump as NamedKey]}. Σrank {acct.combined} (A {acct.aTot} + B {acct.bTot}){solution.capped ? ' · approximate (enumeration capped)' : ''}. Press Step or Reset to return to the live run.</div>}
-          <div className="sm2-metrics">
-            <div className="sm2-metric big sm2-outcome">
-              <span className="sm2-metric-label"><Activity size={14} /> Partner rank by side — average &amp; distribution (lower = happier)</span>
-              <div className="sm2-rows">
-                <div className="sm2-row">
-                  <span className="sm2-bar-label"><i className="sw sq" />A</span>
-                  <strong style={{ color: rankBurd(acct.aAvg || 1, n) }}>#{acct.aAvg.toFixed(2)}</strong>
-                  <div className="sm2-strip">{acct.aSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
-                </div>
-                <div className="sm2-row">
-                  <span className="sm2-bar-label"><i className="sw disc" />B</span>
-                  <strong style={{ color: rankBurd(acct.bAvg || 1, n) }}>#{acct.bAvg.toFixed(2)}</strong>
-                  <div className="sm2-strip">{acct.bSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
-                </div>
-              </div>
-              <span className="sm2-metric-sub">each tick = one person, sorted best → worst · blue #1 → red #{n} · total rank {acct.combined}{acct.free ? ` · ${acct.free} still free` : ''}</span>
+  const matrixViewNode = (
+    <div className="sm2-stage sm2-stage-matrix">
+      <p className="sm2-story">{story}</p>
+      {resolve
+        ? <div className="sm2-narrate resolve"><strong>Stabilizing — Roth–Vande Vate</strong>: satisfy a blocking pair, repeat. Step {rStep} / {resolve.steps.length} · {blocking.size === 0 ? <>resolved — <strong>stable</strong> in {resolve.steps.length} steps</> : rStep >= resolve.steps.length && !resolve.converged ? <>stopped at {resolve.steps.length} steps (large instance) — {blocking.size} blocking pair{blocking.size === 1 ? '' : 's'} remain</> : `${blocking.size} blocking pair${blocking.size === 1 ? '' : 's'} left`}. Reset to return to the live run.</div>
+        : jump === 'live'
+          ? <div className="sm2-narrate">{narrate()}</div>
+          : <div className="sm2-narrate jump"><strong>{JUMP_LABELS[jump]} stable matching</strong> — {NAMED_NOTE[jump as NamedKey]}. Σrank {acct.combined} (A {acct.aTot} + B {acct.bTot}){solution.capped ? ' · approximate (enumeration capped)' : ''}. Press Step or Reset to return to the live run.</div>}
+      <div className="sm2-metrics">
+        <div className="sm2-metric big sm2-outcome">
+          <span className="sm2-metric-label"><Activity size={14} /> Partner rank by side — average &amp; distribution (lower = happier)</span>
+          <div className="sm2-rows">
+            <div className="sm2-row">
+              <span className="sm2-bar-label"><i className="sw sq" />A</span>
+              <strong style={{ color: rankBurd(acct.aAvg || 1, n) }}>#{acct.aAvg.toFixed(2)}</strong>
+              <div className="sm2-strip">{acct.aSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
             </div>
-            <div className="sm2-metric">
-              <span className="sm2-metric-label"><Layers size={14} /> Solution space</span>
-              <strong>{solution.capped ? `≥${FOOT_CAP}` : solution.count}</strong>
-              <span className="sm2-metric-sub">{solution.count === 1 ? 'a unique stable matching' : `${solution.capped ? 'at least ' : ''}${solution.count} stable matchings`} · footprint {solution.pairs.size} of {n * n} cells</span>
-            </div>
-            <div className={`sm2-metric stability ${!shownDone ? '' : blocking.size === 0 ? 'ok' : 'bad'}`}>
-              <span className="sm2-metric-label">{blocking.size === 0 ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />} Stability</span>
-              <strong>{!shownDone ? '—' : blocking.size === 0 ? 'Stable' : `${blocking.size} blocking`}</strong>
-              <span className="sm2-metric-sub">{!shownDone ? 'finish the run to check' : blocking.size === 0 ? 'no pair would defect' : 'purple-ringed cells would defect'}</span>
+            <div className="sm2-row">
+              <span className="sm2-bar-label"><i className="sw disc" />B</span>
+              <strong style={{ color: rankBurd(acct.bAvg || 1, n) }}>#{acct.bAvg.toFixed(2)}</strong>
+              <div className="sm2-strip">{acct.bSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
             </div>
           </div>
-          <div className="sm2-matrix-wrap" ref={matrixWrap}>
-            <Matrix inst={inst} matching={shown} rows={rows} cols={cols} markers={resolve ? resolveMarkers : jump === 'live' ? markers : EMPTY_MARKERS} blocking={blocking} footprint={showFootprint ? solution.pairs : null}
-              inspect={inspect} onHover={(c) => { if (!pinned) setInspect(c); }} onClick={(c) => { if (pinned && inspect && inspect[0] === c[0] && inspect[1] === c[1]) { setPinned(false); setInspect(null); } else { setInspect(c); setPinned(true); } }}
-              size={cellSize} labels={showLabels && cellSize >= 16} view={cellView} gap={tight ? 0 : 3} trail={resolve || jump !== 'live' ? EMPTY_TRAIL : trail} />
-            {legend}
-            {inspect && (
-              <div className={`sm2-inspect${pinned ? ' pinned' : ''}`}>
-                <PrefList inst={inst} side="A" id={inspect[0]} partner={shown.a[inspect[0]]} mark={inspect[1]} />
-                <PrefList inst={inst} side="B" id={inspect[1]} partner={shown.b[inspect[1]]} mark={inspect[0]} />
-                <span className="sm2-inspect-hint">◆ outline = partner this matching · ▢ = the cell you're on · {pinned ? 'click the cell again to unpin' : 'click a cell to pin'}</span>
-              </div>
-            )}
-          </div>
+          <span className="sm2-metric-sub">each tick = one person, sorted best → worst · blue #1 → red #{n} · total rank {acct.combined}{acct.free ? ` · ${acct.free} still free` : ''}</span>
         </div>
-      ) : view === 'lab' ? (
-        <div className="sm2-lab">
-          <Heatmap data={labData} res={labRun ? labRun.res : Math.max(2, Math.min(LAB_RES_MAX, labRes))} maxV={labMax} hue={labHue} title={labTitle} caption={labCaption} mode={labMetric === 'lego' ? 'lego' : 'single'} maxRank={labN} stat={labStat} />
-          {labSummary && <LabSummary s={labSummary} onCopy={copyCsv} onDownload={downloadCsv} copied={labCopied} />}
-          <p className="sm2-lab-note">{labMetric === 'cost'
-            ? <>Each cell averages the <strong>number of Roth–Vande Vate repair steps</strong> needed to fix the <strong>{labSchedule}</strong> schedule's (often unstable) result into a stable matching, over <strong>{labTrials}</strong> instances. One-sided (A/B) is already stable → 0; the synchronous Alternate / Random schedules cost more to repair where preferences are disordered. The "cost to stabilize" of the frustrated regime.</>
-            : labMetric === 'stableCount'
-            ? <>Each cell counts the <strong>number of stable matchings</strong> (the lattice size), averaged over <strong>{labTrials}</strong> instances — this is a property of the preferences, not of any schedule. It is huge in the disordered (low-consensus) corner and <strong>collapses to exactly 1</strong> as both sides converge on one ranking: a unique, assortative stable matching. The order/disorder phase curve of the whole problem. (Enumeration is capped at 300; keep Population small.)</>
-            : <>Each cell sweeps consensus A × B and averages <strong>{labTrials}</strong> independent instances run with the <strong>{labSchedule}</strong> schedule — signal, not single-draw noise. {labMetric === 'lego'
-              ? 'Lego cells: the square is A’s average rank, the circle B’s, on the same blue→red scale (blue = #1). Low consensus is blue (people want different partners, so everyone does well); as both groups converge on one ranking the cells redden — most chase the same few.'
-              : labMetric === 'unstable'
-                ? 'One-sided (A or B) is stable everywhere (a flat 0); the synchronous Alternate / Random schedules leave blocking pairs across most of the surface — synchronous two-sided deferred acceptance is not guaranteed stable.'
-                : 'Average number of blocking pairs left at the end — zero for one-sided, positive across most of the plane for Alternate / Random.'}</>}</p>
+        <div className="sm2-metric">
+          <span className="sm2-metric-label"><Layers size={14} /> Solution space</span>
+          <strong>{solution.capped ? `≥${FOOT_CAP}` : solution.count}</strong>
+          <span className="sm2-metric-sub">{solution.count === 1 ? 'a unique stable matching' : `${solution.capped ? 'at least ' : ''}${solution.count} stable matchings`} · footprint {solution.pairs.size} of {n * n} cells</span>
         </div>
-      ) : (
-        <div className="sm2-lattice-view">
-          <p className="sm2-story">The <strong>lattice of stable matchings</strong> for this instance — every stable matching, ordered by who-prefers-what. A-optimal sits at the top (best for A), B-optimal at the bottom; each edge is a single <em>rotation</em>. Named solutions are flagged. Click any node to load it into the Visualizer.</p>
-          <LatticeView inst={inst} set={stableSet.matchings} capped={stableSet.capped} named={named} picked={pickedNode}
-            onPick={(i) => { setPickedNode(i); setJump('live'); setResolve(null); setView('visualizer'); }} />
+        <div className={`sm2-metric stability ${!shownDone ? '' : blocking.size === 0 ? 'ok' : 'bad'}`}>
+          <span className="sm2-metric-label">{blocking.size === 0 ? <ShieldCheck size={14} /> : <AlertTriangle size={14} />} Stability</span>
+          <strong>{!shownDone ? '—' : blocking.size === 0 ? 'Stable' : `${blocking.size} blocking`}</strong>
+          <span className="sm2-metric-sub">{!shownDone ? 'finish the run to check' : blocking.size === 0 ? 'no pair would defect' : 'purple-ringed cells would defect'}</span>
+        </div>
+      </div>
+      <div className="sm2-matrix-wrap" ref={setMatrixWrap}>
+        <Matrix inst={inst} matching={shown} rows={rows} cols={cols} markers={resolve ? resolveMarkers : jump === 'live' ? markers : EMPTY_MARKERS} blocking={blocking} footprint={showFootprint ? solution.pairs : null}
+          inspect={inspect} onHover={(c) => { if (!pinned) setInspect(c); }} onClick={(c) => { if (pinned && inspect && inspect[0] === c[0] && inspect[1] === c[1]) { setPinned(false); setInspect(null); } else { setInspect(c); setPinned(true); } }}
+          size={cellSize} labels={showLabels && cellSize >= 16} view={cellView} gap={tight ? 0 : 3} trail={resolve || jump !== 'live' ? EMPTY_TRAIL : trail} />
+        {legend}
+      </div>
+      {inspect && (
+        <div className={`sm2-inspect${pinned ? ' pinned' : ''}`}>
+          <PrefList inst={inst} side="A" id={inspect[0]} partner={shown.a[inspect[0]]} mark={inspect[1]} />
+          <PrefList inst={inst} side="B" id={inspect[1]} partner={shown.b[inspect[1]]} mark={inspect[0]} />
+          <span className="sm2-inspect-hint">◆ outline = partner this matching · ▢ = the cell you're on · {pinned ? 'click the cell again to unpin' : 'click a cell to pin'}</span>
         </div>
       )}
     </div>
+  );
+
+  const surfaceViewNode = (
+    <div className="sm2-stage">
+      <div className="sm2-lab">
+        <Heatmap data={labData} res={labRun ? labRun.res : Math.max(2, Math.min(LAB_RES_MAX, labRes))} maxV={labMax} hue={labHue} title={labTitle} caption={labCaption} mode={labMetric === 'lego' ? 'lego' : 'single'} maxRank={labN} stat={labStat} />
+        {labSummary && <LabSummary s={labSummary} onCopy={copyCsv} onDownload={downloadCsv} copied={labCopied} />}
+        <p className="sm2-lab-note">{labMetric === 'cost'
+          ? <>Each cell averages the <strong>number of Roth–Vande Vate repair steps</strong> needed to fix the <strong>{labSchedule}</strong> schedule's (often unstable) result into a stable matching, over <strong>{labTrials}</strong> instances. One-sided (A/B) is already stable → 0; the synchronous Alternate / Random schedules cost more to repair where preferences are disordered. The "cost to stabilize" of the frustrated regime.</>
+          : labMetric === 'stableCount'
+          ? <>Each cell counts the <strong>number of stable matchings</strong> (the lattice size), averaged over <strong>{labTrials}</strong> instances — this is a property of the preferences, not of any schedule. It is huge in the disordered (low-consensus) corner and <strong>collapses to exactly 1</strong> as both sides converge on one ranking: a unique, assortative stable matching. The order/disorder phase curve of the whole problem. (Enumeration is capped at 300; keep Population small.)</>
+          : <>Each cell sweeps consensus A × B and averages <strong>{labTrials}</strong> independent instances run with the <strong>{labSchedule}</strong> schedule — signal, not single-draw noise. {labMetric === 'lego'
+            ? 'Lego cells: the square is A’s average rank, the circle B’s, on the same blue→red scale (blue = #1). Low consensus is blue (people want different partners, so everyone does well); as both groups converge on one ranking the cells redden — most chase the same few.'
+            : labMetric === 'unstable'
+              ? 'One-sided (A or B) is stable everywhere (a flat 0); the synchronous Alternate / Random schedules leave blocking pairs across most of the surface — synchronous two-sided deferred acceptance is not guaranteed stable.'
+              : 'Average number of blocking pairs left at the end — zero for one-sided, positive across most of the plane for Alternate / Random.'}</>}</p>
+      </div>
+    </div>
+  );
+
+  const latticeViewNode = (
+    <div className="sm2-stage">
+      <div className="sm2-lattice-view">
+        <p className="sm2-story">The <strong>lattice of stable matchings</strong> for this instance — every stable matching, ordered by who-prefers-what. A-optimal sits at the top (best for A), B-optimal at the bottom; each edge is a single <em>rotation</em>. Named solutions are flagged. Click any node to load it into the Matching matrix (the Run layout).</p>
+        <LatticeView inst={inst} set={stableSet.matchings} capped={stableSet.capped} named={named} picked={pickedNode}
+          onPick={(i) => { setPickedNode(i); setJump('live'); setResolve(null); }} />
+      </div>
+    </div>
+  );
+
+  /* ── workspace assembly: panels, view windows, built-in layouts ── */
+
+  const sections: SectionDef[] = [
+    { id: 'algorithm', title: 'Algorithm', arch: 'subject', node: algorithmNode, estHeight: 170 },
+    { id: 'instance', title: 'Instance', arch: 'domain', node: instanceNode, estHeight: 300 },
+    { id: 'display', title: 'Display', arch: 'marks', node: displayNode, estHeight: 360 },
+    { id: 'playback', title: 'Playback', arch: 'playback', node: playbackNode, estHeight: 470 },
+    { id: 'lab', title: 'Lab', arch: 'lab', node: labNode, estHeight: 540 },
+  ];
+
+  const wsViews: ViewDef[] = [
+    { id: 'matrix', title: 'Matching matrix', node: matrixViewNode, defaultRect: { x: 372, y: 16, w: 660, h: 600 } },
+    { id: 'surface', title: 'Welfare surface', node: surfaceViewNode, defaultRect: { x: 372, y: 16, w: 560, h: 600 } },
+    { id: 'lattice', title: 'Stable-matching lattice', node: latticeViewNode, defaultRect: { x: 372, y: 16, w: 640, h: 560 } },
+  ];
+
+  const layouts: LayoutDef[] = [
+    {
+      id: 'run', name: 'Run', sub: 'Matrix · Playback', icon: 'play',
+      open: { instance: { x: 84, y: 18 }, playback: { x: 84, y: 330 } },
+      views: { matrix: { open: true }, surface: { open: false }, lattice: { open: false } },
+    },
+    {
+      id: 'lab', name: 'Lab', sub: 'Sweep the consensus plane', icon: 'flask',
+      open: { lab: { x: 84, y: 18 } },
+      views: { matrix: { open: false }, surface: { open: true }, lattice: { open: false } },
+    },
+    {
+      id: 'lattice', name: 'Lattice', sub: 'The space of stable matchings', icon: 'layers',
+      open: { instance: { x: 84, y: 18 } },
+      views: { matrix: { open: false }, surface: { open: false }, lattice: { open: true } },
+    },
+  ];
+
+  // The "?" modal carries the short explainer and the full README, so nothing
+  // the old chrome could surface is lost.
+  const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
+
+  return (
+    <Workspace
+      appId="stable-matching"
+      title="Stable Matching"
+      sections={sections}
+      views={wsViews}
+      layouts={layouts}
+      defaultLayoutId="run"
+      explainer={help}
+    />
   );
 }

@@ -50,6 +50,15 @@ try {
   page.on('console', (m) => console.log(`[page:${m.type()}] ${m.text()}`));
   page.on('pageerror', (e) => console.log(`[pageerror] ${e.message}`));
 
+  // SKIN env seeds the persisted skin (data-theme) before the app boots,
+  // so non-default skins can be screenshotted: SKIN=phosphor node scripts/shoot.mjs …
+  if (process.env.SKIN) {
+    await page.evaluateOnNewDocument((skin) => {
+      try { localStorage.setItem('animath:v1:chrome:skin', skin); } catch {}
+    }, process.env.SKIN);
+    console.log(`skin: ${process.env.SKIN}`);
+  }
+
   console.log(`navigating → ${url}`);
   await page.goto(url, { waitUntil: 'networkidle0', timeout: 60000 });
 

@@ -1,16 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import FractalPane, { Complex, ViewBounds } from './FractalPane';
-import { useResponsive } from '../../styles/responsive';
-import { ShellSettings, ShellActions, useAppHeader, useAppExplainer, useActionFloaterOff } from '../../components/AppShell';
-import { Section, Slider, Select } from '../../components/ControlPanel';
-import Readme from '../../components/Readme';
-import PlaybackFloater from './PlaybackFloater';
+import Workspace from '../../chrome/workspace/Workspace';
+import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import { Slider, Select, NumberInput } from '../../components/ControlPanel';
+import { Kicker } from '../../chrome/readouts';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { PALETTE_OPTIONS } from '../../lib/colormaps';
 
 export default function Correspondence() {
-  const { isMobile } = useResponsive();
   const baseView: ViewBounds = { xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 };
   const [mandelView, setMandelView] = useState<ViewBounds>(baseView);
   const [juliaView, setJuliaView] = useState<ViewBounds>({ xMin: -2, xMax: 2, yMin: -2, yMax: 2 });
@@ -92,8 +90,9 @@ export default function Correspondence() {
     cancelAnimationFrame(animRef.current!);
   };
 
-  // Jump to a normalized position (0..1) along the path. Used by the floater's
-  // side scrubber; grabbing it while playing pauses so the user stays in control.
+  // Jump to a normalized position (0..1) along the path. Used by the Path
+  // panel's Progress scrubber; grabbing it while playing pauses so the user
+  // stays in control.
   const seek = (t01: number) => {
     if (path.length < 2) return;
     const maxPos = path.length - 1;
@@ -111,20 +110,52 @@ export default function Correspondence() {
     });
   };
 
-  useAppHeader('Mandelbrot ↔ Julia', `c = ${c.real.toFixed(3)} ${c.imag >= 0 ? '+' : '-'} ${Math.abs(c.imag).toFixed(3)}i`);
-  useAppExplainer(explainerText);
-  useActionFloaterOff(); // we ship our own PlaybackFloater (with the scrubber)
+  /* ---- archetype panels (PARAM-MAP §4) ---- */
 
-  // The action controls live in two places at once: the drawer's Actions tab
-  // and the on-screen PlaybackFloater. Defining them once keeps both in sync.
-  // Speed lives here (an action) rather than in Settings.
-  const playbackControls = (
+  const palettesNode = (
     <>
+      <Kicker>Mandelbrot</Kicker>
+      <Select label="Palette"
+        options={PALETTE_OPTIONS}
+        value={paletteM} onChange={setPaletteM} />
+      <Slider label="Offset" value={offsetM}
+        min={0} max={255} step={1}
+        onChange={(v) => setOffsetM(Math.round(v))} format={v => String(v)} />
+      <Kicker>Julia</Kicker>
+      <Select label="Palette"
+        options={PALETTE_OPTIONS}
+        value={paletteJ} onChange={setPaletteJ} />
+      <Slider label="Offset" value={offsetJ}
+        min={0} max={255} step={1}
+        onChange={(v) => setOffsetJ(Math.round(v))} format={v => String(v)} />
+    </>
+  );
+
+  const seedNode = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <ActionButton
         label={selecting ? 'Tap Mandelbrot to pick…' : 'Pick Julia c by tap'}
         active={selecting}
-        onClick={() => setSelecting(true)}
+        onClick={() => setSelecting(s => !s)}
       />
+      <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ flex: 1 }}>
+          <NumberInput label="c real" value={c.real} step={0.001}
+            onChange={v => setC(prev => ({ ...prev, real: v }))} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <NumberInput label="c imag" value={c.imag} step={0.001}
+            onChange={v => setC(prev => ({ ...prev, imag: v }))} />
+        </div>
+      </div>
+      <div className="am-hint">
+        Drag panes to pan · pinch / wheel to zoom · tap "Pick Julia" then tap the Mandelbrot to choose c.
+      </div>
+    </div>
+  );
+
+  const pathNode = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <ActionButton
         label={drawingPath ? 'Finish drawing path' : 'Draw c-path'}
         active={drawingPath}
@@ -150,18 +181,37 @@ export default function Correspondence() {
       <Slider label="Speed" value={speed}
         min={0.005} max={0.5} step={0.005}
         onChange={setSpeed} format={v => v.toFixed(3)} />
-    </>
+      {/* The old floater's vertical scrubber, rebuilt as a horizontal row.
+          seek() pauses a running playback so the user stays in control. */}
+      <div style={path.length < 2 ? { opacity: 0.45, pointerEvents: 'none' } : undefined}>
+        <Slider label="Progress" value={progress}
+          min={0} max={1} step={0.001}
+          onChange={seek} format={v => `${Math.round(v * 100)}%`} />
+      </div>
+    </div>
   );
 
-  return (
-    <>
-      <div style={{
-        position: 'absolute', inset: 0,
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        background: '#0c0c10',
-      }}>
-        <div style={{ flex: 1, position: 'relative', minHeight: 0, borderRight: isMobile ? 'none' : '1px solid #1e293b', borderBottom: isMobile ? '1px solid #1e293b' : 'none' }}>
+  const iterationNode = (
+    <Slider label="Max iterations" value={iter}
+      min={10} max={1000} step={10}
+      onChange={(v) => setIter(Math.max(1, Math.round(v)))}
+      format={v => String(v)} />
+  );
+
+  const sections: SectionDef[] = [
+    { id: 'palettes', title: 'Palettes', arch: 'color', node: palettesNode, estHeight: 330 },
+    { id: 'seed', title: 'Seed', arch: 'drive', node: seedNode, estHeight: 230 },
+    { id: 'path', title: 'Path', arch: 'playback', node: pathNode, estHeight: 360 },
+    { id: 'iteration', title: 'Iteration', arch: 'quality', node: iterationNode, estHeight: 110 },
+  ];
+
+  const views: ViewDef[] = [
+    {
+      id: 'mandel',
+      title: 'Mandelbrot — pick c',
+      defaultRect: { x: 360, y: 16, w: 356, h: 356 },
+      node: (
+        <div style={{ position: 'absolute', inset: 0 }}>
           <FractalPane
             type="mandelbrot"
             view={mandelView}
@@ -176,11 +226,15 @@ export default function Correspondence() {
             path={path}
             onPathChange={handlePathChange}
           />
-          <div style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', color: '#fff', textShadow: '1px 1px 2px black', fontWeight: 700, fontSize: 14 }}>
-            Mandelbrot
-          </div>
         </div>
-        <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+      ),
+    },
+    {
+      id: 'julia',
+      title: 'Julia(c)',
+      defaultRect: { x: 728, y: 16, w: 356, h: 356 },
+      node: (
+        <div style={{ position: 'absolute', inset: 0 }}>
           <FractalPane
             type="julia"
             view={juliaView}
@@ -190,76 +244,37 @@ export default function Correspondence() {
             palette={paletteJ}
             offset={offsetJ}
           />
-          <div style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', color: '#fff', textShadow: '1px 1px 2px black', fontWeight: 700, fontSize: 14 }}>
-            Julia
-          </div>
         </div>
-      </div>
+      ),
+    },
+  ];
 
-      <PlaybackFloater
-        title="Playback"
-        progress={progress}
-        onScrub={seek}
-        scrubDisabled={path.length < 2}
-      >
-        {playbackControls}
-      </PlaybackFloater>
+  const layouts: LayoutDef[] = [
+    {
+      id: 'explore', name: 'Explore', sub: 'Seed · two views', icon: 'tune',
+      open: { seed: { x: 84, y: 18 } },
+    },
+    {
+      id: 'animate', name: 'Animate', sub: 'Path playback', icon: 'play',
+      open: { path: { x: 84, y: 18 } },
+    },
+  ];
 
-      <ShellSettings>
-        <Section title="Iterations" icon="↻" defaultOpen>
-          <Slider label="Max iterations" value={iter}
-            min={10} max={1000} step={10}
-            onChange={(v) => setIter(Math.max(1, Math.round(v)))}
-            format={v => String(v)} />
-        </Section>
+  // The "?" modal carries both the short explainer and the full About readme,
+  // so nothing from the old drawer's About section is lost.
+  const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
 
-        <Section title="Mandelbrot palette" icon="◐" defaultOpen>
-          <Select label="Palette"
-            options={PALETTE_OPTIONS}
-            value={paletteM} onChange={setPaletteM} />
-          <Slider label="Offset" value={offsetM}
-            min={0} max={255} step={1}
-            onChange={(v) => setOffsetM(Math.round(v))} format={v => String(v)} />
-        </Section>
-
-        <Section title="Julia palette" icon="◑">
-          <Select label="Palette"
-            options={PALETTE_OPTIONS}
-            value={paletteJ} onChange={setPaletteJ} />
-          <Slider label="Offset" value={offsetJ}
-            min={0} max={255} step={1}
-            onChange={(v) => setOffsetJ(Math.round(v))} format={v => String(v)} />
-        </Section>
-
-        <Section title="Julia point" icon="·">
-          <div style={{ display: 'flex', gap: 8 }}>
-            <label className="cp-row" style={{ flex: 1 }}>
-              <div className="cp-row-label"><span>c real</span></div>
-              <input type="number" step="any" value={c.real}
-                onChange={e => setC({ ...c, real: parseFloat(e.target.value) || 0 })} />
-            </label>
-            <label className="cp-row" style={{ flex: 1 }}>
-              <div className="cp-row-label"><span>c imag</span></div>
-              <input type="number" step="any" value={c.imag}
-                onChange={e => setC({ ...c, imag: parseFloat(e.target.value) || 0 })} />
-            </label>
-          </div>
-        </Section>
-
-        <Section title="About" icon="ⓘ">
-          <Readme markdown={readmeText} />
-          <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', marginTop: 8 }}>
-            Drag panes to pan · pinch / wheel to zoom · tap "Pick Julia" then tap the Mandelbrot to choose c.
-          </div>
-        </Section>
-      </ShellSettings>
-
-      <ShellActions>
-        <div className="cp-section-body">
-          {playbackControls}
-        </div>
-      </ShellActions>
-    </>
+  return (
+    <Workspace
+      appId="correspondence"
+      title="Mandelbrot ↔ Julia"
+      subtitle={`c = ${c.real.toFixed(3)} ${c.imag >= 0 ? '+' : '-'} ${Math.abs(c.imag).toFixed(3)}i`}
+      sections={sections}
+      views={views}
+      layouts={layouts}
+      defaultLayoutId="explore"
+      explainer={help || null}
+    />
   );
 }
 

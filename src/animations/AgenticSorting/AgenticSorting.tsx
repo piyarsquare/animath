@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Play, Pause, RotateCcw, Zap, Users, Target,
+  Play, Pause, RotateCcw, Zap, Users,
 } from 'lucide-react';
 import './agenticSorting.css';
-import { useAppHeader, useAppExplainer } from '../../components/AppShell';
+import Workspace from '../../chrome/workspace/Workspace';
+import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import { StatGrid } from '../../chrome/readouts';
 import explainerText from './EXPLAINER.md?raw';
+import readmeText from './README.md?raw';
 
 type AgentType = 'standard' | 'blindDate' | 'nomadic' | 'patrolling' | 'perfectionist';
 
@@ -65,8 +68,6 @@ type Stats = {
 type Weights = Record<AgentType, number>;
 
 export default function AgenticSorting() {
-  useAppHeader('Agentic Sorting');
-  useAppExplainer(explainerText);
   const [itemCount, setItemCount] = useState(60);
   const [simulationSpeed, setSimulationSpeed] = useState(20);
   const [isRunning, setIsRunning] = useState(false);
@@ -259,162 +260,176 @@ export default function AgenticSorting() {
     return `as-arena-bar ${AGENT_TYPES[item.type].cssClass}`;
   };
 
-  return (
-    <div className="as-app">
-      <header className="as-header">
-        {/* The app's name lives in the AppShell bar above; this header keeps
-            just a short subtitle for context. */}
-        <p>Concurrent behavioral sorting simulation</p>
-      </header>
+  /* ---- archetype panels (docs/redesign/PARAM-MAP.md §8) ---- */
 
-      <div className="as-layout">
-        {/* Sidebar */}
-        <div className="as-sidebar">
-          <div className="as-card">
-            <div className="as-controls-row">
-              <button
-                className={`as-button as-button-primary ${isRunning ? 'as-button-pause' : ''}`}
-                onClick={() => setIsRunning(!isRunning)}
-              >
-                {isRunning ? <Pause size={20} /> : <Play size={20} />}
-                {isRunning ? 'PAUSE' : 'START'}
-              </button>
-              <button
-                className="as-button as-button-reset"
-                onClick={() => generateItems(itemCount, weights)}
-              >
-                <RotateCcw size={20} />
-              </button>
-            </div>
-
-            <div className="as-slider-group">
-              <div className="as-slider-label">
-                <span><Users size={12} /> Global Density</span>
-                <span>{itemCount} Agents</span>
-              </div>
-              <input
-                type="range" min="10" max="150"
-                value={itemCount}
-                onChange={(e) => setItemCount(parseInt(e.target.value))}
-                className="as-slider as-slider-density"
-              />
-            </div>
-
-            <div className="as-slider-group">
-              <div className="as-slider-label">
-                <span><Zap size={12} /> Processing Delay</span>
-                <span>{simulationSpeed}ms</span>
-              </div>
-              <input
-                type="range" min="1" max="500"
-                value={simulationSpeed}
-                onChange={(e) => setSimulationSpeed(parseInt(e.target.value))}
-                className="as-slider as-slider-speed"
-              />
-            </div>
-
-            <div className="as-display-toggle" role="group" aria-label="Display mode">
-              <button
-                className={`as-display-btn ${display === 'bars' ? 'as-display-btn-active' : ''}`}
-                onClick={() => setDisplay('bars')}
-                aria-pressed={display === 'bars'}
-              >Bars</button>
-              <button
-                className={`as-display-btn ${display === 'dots' ? 'as-display-btn-active' : ''}`}
-                onClick={() => setDisplay('dots')}
-                aria-pressed={display === 'dots'}
-              >Dots</button>
-            </div>
-          </div>
-
-          <div className="as-card">
-            <h2 className="as-card-title">
-              <Target size={14} />
-              Population Mix
-            </h2>
-            <div className="as-weight-list">
-              {(Object.entries(AGENT_TYPES) as [AgentType, AgentConfig][]).map(([key, config]) => (
-                <div key={key} className="as-weight-item">
-                  <div className="as-weight-label">
-                    <span>
-                      <span className={`as-dot ${config.cssClass}`} />
-                      {config.name}
-                    </span>
-                    <span className="as-weight-value">{weights[key]}%</span>
-                  </div>
-                  <input
-                    type="range" min="0" max="100"
-                    value={weights[key]}
-                    onChange={(e) => handleWeightChange(key, e.target.value)}
-                    className="as-slider as-slider-weight"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="as-card as-stats-row">
-            <div className="as-stat">
-              <div className="as-stat-label">Cycles</div>
-              <div className="as-stat-value">{stats.cycles}</div>
-            </div>
-            <div className="as-stat-divider" />
-            <div className="as-stat">
-              <div className="as-stat-label">Wakeups</div>
-              <div className="as-stat-value">{stats.wakeups}</div>
-            </div>
-            <div className="as-stat-divider" />
-            <div className="as-stat">
-              <div className="as-stat-label">Swaps</div>
-              <div className="as-stat-value">{stats.swaps}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main View */}
-        <div className="as-main">
-          <div className="as-arena">
-            <div className="as-arena-midline" />
-            <div className="as-arena-bars">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="as-arena-bar-column"
-                  style={{ width: `${100 / items.length}%` }}
-                >
-                  <div
-                    className={`${getBarClass(item)}${display === 'dots' ? ' as-arena-bar-dot' : ''}`}
-                    // Bars: column from the midline, length = |value|/2 %.
-                    // Dots: a small circle at vertical position = 50% + value/2,
-                    //       offset by half the dot size (set in CSS) to center.
-                    style={display === 'dots' ? {
-                      bottom: `calc(${50 + item.value / 2}% - var(--as-dot-size) / 2)`,
-                    } : {
-                      height: `${Math.abs(item.value) / 2}%`,
-                      top: item.value < 0 ? '50.1%' : undefined,
-                      bottom: item.value < 0 ? undefined : '50.1%',
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="as-arena-label as-arena-label-top">Positive Value</div>
-            <div className="as-arena-label as-arena-label-bottom">Negative Value</div>
-          </div>
-
-          <div className="as-legend">
-            {(Object.entries(AGENT_TYPES) as [AgentType, AgentConfig][]).map(([key, config]) => (
-              <div key={key} className="as-legend-card">
-                <div className="as-legend-header">
-                  <span className="as-legend-icon">{config.icon}</span>
-                  <span className={`as-legend-name ${config.cssClass}-text`}>{config.name}</span>
-                </div>
-                <p className="as-legend-desc">{config.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+  const arrayNode = (
+    <div className="as-slider-group">
+      <div className="as-slider-label">
+        <span><Users size={12} /> Global Density</span>
+        <span>{itemCount} Agents</span>
       </div>
+      <input
+        type="range" min="10" max="150"
+        value={itemCount}
+        onChange={(e) => setItemCount(parseInt(e.target.value))}
+        className="as-slider as-slider-density"
+      />
     </div>
+  );
+
+  // The old standalone legend (icon + description per strategy) is folded
+  // into each weight row, so the strategy reference lives next to its knob.
+  const agentsNode = (
+    <div className="as-weight-list">
+      {(Object.entries(AGENT_TYPES) as [AgentType, AgentConfig][]).map(([key, config]) => (
+        <div key={key} className="as-weight-item">
+          <div className="as-weight-label">
+            <span>
+              <span className={`as-dot ${config.cssClass}`} />
+              <span className="as-legend-icon">{config.icon}</span>
+              <span className={`as-legend-name ${config.cssClass}-text`}>{config.name}</span>
+            </span>
+            <span className="as-weight-value">{weights[key]}%</span>
+          </div>
+          <input
+            type="range" min="0" max="100"
+            value={weights[key]}
+            onChange={(e) => handleWeightChange(key, e.target.value)}
+            className="as-slider as-slider-weight"
+          />
+          <p className="as-weight-desc">{config.description}</p>
+        </div>
+      ))}
+    </div>
+  );
+
+  const runNode = (
+    <>
+      <div className="as-controls-row">
+        <button
+          className={`as-button as-button-primary ${isRunning ? 'as-button-pause' : ''}`}
+          onClick={() => setIsRunning(!isRunning)}
+        >
+          {isRunning ? <Pause size={20} /> : <Play size={20} />}
+          {isRunning ? 'PAUSE' : 'START'}
+        </button>
+        <button
+          className="as-button as-button-reset"
+          onClick={() => generateItems(itemCount, weights)}
+          title="Regenerate the array (applies the current population mix)"
+        >
+          <RotateCcw size={20} />
+        </button>
+      </div>
+      <div className="as-slider-group">
+        <div className="as-slider-label">
+          <span><Zap size={12} /> Processing Delay</span>
+          <span>{simulationSpeed}ms</span>
+        </div>
+        <input
+          type="range" min="1" max="500"
+          value={simulationSpeed}
+          onChange={(e) => setSimulationSpeed(parseInt(e.target.value))}
+          className="as-slider as-slider-speed"
+        />
+      </div>
+    </>
+  );
+
+  const displayNode = (
+    <div className="as-display-toggle" role="group" aria-label="Display mode">
+      <button
+        className={`as-display-btn ${display === 'bars' ? 'as-display-btn-active' : ''}`}
+        onClick={() => setDisplay('bars')}
+        aria-pressed={display === 'bars'}
+      >Bars</button>
+      <button
+        className={`as-display-btn ${display === 'dots' ? 'as-display-btn-active' : ''}`}
+        onClick={() => setDisplay('dots')}
+        aria-pressed={display === 'dots'}
+      >Dots</button>
+    </div>
+  );
+
+  const metricsNode = (
+    <StatGrid stats={[
+      { k: 'Cycles', v: String(stats.cycles) },
+      { k: 'Wakeups', v: String(stats.wakeups) },
+      { k: 'Swaps', v: String(stats.swaps) },
+    ]} />
+  );
+
+  // The arena fills the view window body (absolute inset 0 — see the CSS),
+  // so its size is container-relative, never viewport-relative.
+  const arenaNode = (
+    <div className="as-arena">
+      <div className="as-arena-midline" />
+      <div className="as-arena-bars">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="as-arena-bar-column"
+            style={{ width: `${100 / items.length}%` }}
+          >
+            <div
+              className={`${getBarClass(item)}${display === 'dots' ? ' as-arena-bar-dot' : ''}`}
+              // Bars: column from the midline, length = |value|/2 %.
+              // Dots: a small circle at vertical position = 50% + value/2,
+              //       offset by half the dot size (set in CSS) to center.
+              style={display === 'dots' ? {
+                bottom: `calc(${50 + item.value / 2}% - var(--as-dot-size) / 2)`,
+              } : {
+                height: `${Math.abs(item.value) / 2}%`,
+                top: item.value < 0 ? '50.1%' : undefined,
+                bottom: item.value < 0 ? undefined : '50.1%',
+              }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="as-arena-label as-arena-label-top">Positive Value</div>
+      <div className="as-arena-label as-arena-label-bottom">Negative Value</div>
+    </div>
+  );
+
+  const sections: SectionDef[] = [
+    { id: 'array', title: 'Array', arch: 'subject', node: arrayNode, estHeight: 120 },
+    { id: 'display', title: 'Display', arch: 'marks', node: displayNode, estHeight: 110 },
+    { id: 'agents', title: 'Agents', arch: 'drive', node: agentsNode, estHeight: 470 },
+    { id: 'run', title: 'Run', arch: 'playback', node: runNode, estHeight: 190 },
+    { id: 'metrics', title: 'Metrics', arch: 'readout', node: metricsNode, estHeight: 150 },
+  ];
+
+  const views: ViewDef[] = [
+    { id: 'bars', title: 'Array', node: arenaNode, defaultRect: { x: 372, y: 16, w: 712, h: 560 } },
+  ];
+
+  const layouts: LayoutDef[] = [
+    {
+      id: 'setup', name: 'Setup', sub: 'Array · Agents · Run', icon: 'tune',
+      // The Agents panel is tall (five annotated weight rows), so Run docks
+      // right below Array and Agents takes the rest of the column.
+      open: { array: { x: 84, y: 18 }, run: { x: 84, y: 160 }, agents: { x: 84, y: 356 } },
+    },
+    {
+      id: 'analysis', name: 'Analysis', sub: 'Metrics beside the race', icon: 'chart',
+      open: { metrics: { x: 84, y: 18 } },
+    },
+  ];
+
+  // The "?" modal carries both the short explainer and the full About readme.
+  const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
+
+  return (
+    <Workspace
+      appId="agentic-sorting"
+      title="Agentic Sorting"
+      subtitle="Concurrent behavioral sorting simulation"
+      sections={sections}
+      views={views}
+      layouts={layouts}
+      defaultLayoutId="setup"
+      explainer={help}
+    />
   );
 }

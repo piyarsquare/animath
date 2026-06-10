@@ -8,7 +8,12 @@ import type { ParticleState } from './useParticleState';
 /** Ambient 3D view-rotation axes, used by the Hopf/Torus orbit controls. */
 export type ViewAxis = 'Yaw' | 'Pitch' | 'Roll';
 
-const ELEV_LIMIT = Math.PI / 2 - 0.01; // matches the gesture-orbit pitch clamp
+/** Camera-local rotation axis for each ambient control. */
+const VIEW_AXES: Record<ViewAxis, THREE.Vector3> = {
+  Yaw: new THREE.Vector3(0, 1, 0),
+  Pitch: new THREE.Vector3(1, 0, 0),
+  Roll: new THREE.Vector3(0, 0, 1),
+};
 
 export function useViewControls(state: ParticleState) {
   const {
@@ -63,18 +68,63 @@ export function useViewControls(state: ParticleState) {
     viewPointRef.current = { L: qL.clone(), R: qR.clone() };
     onViewPointChangeRef.current?.(viewPointRef.current);
     // Camera also returns to its default vantage point.
-    state.setAzimuth(0);
-    state.setElevation(0);
-    state.setRoll(0);
+    state.setCamQuat(new THREE.Quaternion());
     state.setPanX(0);
     state.setPanY(0);
     state.setPanZ(0);
   }
 
+  /** The 4D axis cross belongs to the linear views — fade it out on the way
+   *  to the torus, where the scaffold takes over as the reference frame. */
+  function applyAxisFade(mix: number) {
+    const opacity = Math.max(0, 1 - mix);
+    for (const ref of [state.xAxisRef, state.yAxisRef, state.uAxisRef, state.vAxisRef]) {
+      const ax = ref.current;
+      if (!ax) continue;
+      const mat = ax.line.material as THREE.LineBasicMaterial;
+      mat.transparent = true;
+      mat.opacity = opacity;
+      ax.line.visible = opacity > 0.02;
+    }
+  }
+
   function handleViewType(t: ProjectionMode) {
     setFiberCollapse(0);
     setViewType(t);
+    const mix = t === ProjectionMode.Hopf ? 2
+      : t === ProjectionMode.Torus || t === ProjectionMode.Stereo ? 1 : 0;
+    state.setProjMix(mix);
+    applyAxisFade(mix);
     applyView(t, dropAxis);
+  }
+
+  /**
+   * The Perspective ⇠ Torus ⇢ Hopf projection slider (0 ≤ v ≤ 2): integer
+   * positions are the three modes, fractional positions drive the GPU
+   * cross-fade live (segment A blends Perspective→Torus, segment B reuses the
+   * Torus→Hopf fiber collapse). Also fades the 4D axis cross out toward the
+   * torus and keeps viewType/fiberCollapse consistent so dependent UI (the
+   * ambient rotation controls, the scaffold/fiber toggles) follows along.
+   */
+  function handleProjMix(v: number) {
+    const mix = Math.max(0, Math.min(2, v));
+    state.setProjMix(mix);
+    setViewType(mix < 0.5 ? ProjectionMode.Perspective : mix < 1.5 ? ProjectionMode.Torus : ProjectionMode.Hopf);
+    setFiberCollapse(Math.max(0, mix - 1));
+    // Touching the slider releases an active drop axis — most recent intent
+    // wins (the symmetric rule lives in handleDropAxis).
+    if (dropAxis !== 'None') setDropAxis('None');
+    const from = mix <= 1 ? ProjectionMode.Perspective : ProjectionMode.Torus;
+    const to = mix <= 1 ? ProjectionMode.Torus : ProjectionMode.Hopf;
+    const alpha = mix <= 1 ? mix : mix - 1;
+    setProj(from);
+    projRef.current = from;
+    materialsRef.current.forEach(m => {
+      m.uniforms.uProjMode.value = from;
+      m.uniforms.uProjTarget.value = to;
+      m.uniforms.uProjAlpha.value = alpha;
+    });
+    applyAxisFade(mix);
   }
 
   /**
@@ -98,9 +148,21 @@ export function useViewControls(state: ParticleState) {
   }
 
   function handleDropAxis(d: (typeof dropModes)[number]) {
-    if (d !== 'None') snapToStandardView();
-    setDropAxis(d);
-    applyView(viewType, d);
+    if (d !== 'None') {
+      snapToStandardView();
+      // A drop axis is a linear view: the projection slider returns to
+      // Perspective (and the 4D axis cross comes back) so the two controls
+      // never fight over the projection.
+      state.setProjMix(0);
+      setViewType(ProjectionMode.Perspective);
+      setFiberCollapse(0);
+      applyAxisFade(0);
+      setDropAxis(d);
+      applyView(ProjectionMode.Perspective, d);
+    } else {
+      setDropAxis(d);
+      applyView(viewType, d);
+    }
   }
 
   function applyQuarterTurn(plane: Plane, θ: number) {
@@ -161,14 +223,15 @@ export function useViewControls(state: ParticleState) {
   /**
    * Rotate the *ambient 3D view* (the camera), not the 4D pre-image. Used in
    * Hopf/Torus, where a 4D rotation before the nonlinear map deforms the image:
-   * orbiting the camera keeps the picture rigid. Yaw spins around the vertical,
-   * Pitch tilts up/down (clamped like the gesture orbit), Roll spins about the
-   * view axis.
+   * orbiting the camera keeps the picture rigid. Yaw spins around the camera's
+   * up, Pitch tilts over the top, Roll spins about the view axis — all free
+   * (no pole stops), composing on the orientation quaternion.
    */
   function orbitBy(axis: ViewAxis, theta: number) {
-    if (axis === 'Yaw') state.setAzimuth(a => a + theta);
-    else if (axis === 'Pitch') state.setElevation(e => Math.max(-ELEV_LIMIT, Math.min(ELEV_LIMIT, e + theta)));
-    else state.setRoll(r => r + theta);
+    const sign = axis === 'Pitch' ? -1 : 1; // Pitch+ tilts up, matching the old control
+    state.setCamQuat(q => q.clone()
+      .multiply(new THREE.Quaternion().setFromAxisAngle(VIEW_AXES[axis], sign * theta))
+      .normalize());
   }
 
   /** Animated eighth turn (45°) of the ambient view, mirroring {@link turn}. */
@@ -187,7 +250,7 @@ export function useViewControls(state: ParticleState) {
   }
 
   return {
-    handleViewType, handleMotion, handleDropAxis, handleFiberCollapse,
+    handleViewType, handleProjMix, handleMotion, handleDropAxis, handleFiberCollapse,
     turn, snapToStandardView, rotateBy, orbitBy, orbitTurn,
   };
 }
