@@ -111,18 +111,19 @@ export function useViewControls(state: ParticleState) {
     state.setProjMix(mix);
     setViewType(mix < 0.5 ? ProjectionMode.Perspective : mix < 1.5 ? ProjectionMode.Torus : ProjectionMode.Hopf);
     setFiberCollapse(Math.max(0, mix - 1));
-    if (dropAxis === 'None') {
-      const from = mix <= 1 ? ProjectionMode.Perspective : ProjectionMode.Torus;
-      const to = mix <= 1 ? ProjectionMode.Torus : ProjectionMode.Hopf;
-      const alpha = mix <= 1 ? mix : mix - 1;
-      setProj(from);
-      projRef.current = from;
-      materialsRef.current.forEach(m => {
-        m.uniforms.uProjMode.value = from;
-        m.uniforms.uProjTarget.value = to;
-        m.uniforms.uProjAlpha.value = alpha;
-      });
-    }
+    // Touching the slider releases an active drop axis — most recent intent
+    // wins (the symmetric rule lives in handleDropAxis).
+    if (dropAxis !== 'None') setDropAxis('None');
+    const from = mix <= 1 ? ProjectionMode.Perspective : ProjectionMode.Torus;
+    const to = mix <= 1 ? ProjectionMode.Torus : ProjectionMode.Hopf;
+    const alpha = mix <= 1 ? mix : mix - 1;
+    setProj(from);
+    projRef.current = from;
+    materialsRef.current.forEach(m => {
+      m.uniforms.uProjMode.value = from;
+      m.uniforms.uProjTarget.value = to;
+      m.uniforms.uProjAlpha.value = alpha;
+    });
     applyAxisFade(mix);
   }
 
@@ -147,9 +148,21 @@ export function useViewControls(state: ParticleState) {
   }
 
   function handleDropAxis(d: (typeof dropModes)[number]) {
-    if (d !== 'None') snapToStandardView();
-    setDropAxis(d);
-    applyView(viewType, d);
+    if (d !== 'None') {
+      snapToStandardView();
+      // A drop axis is a linear view: the projection slider returns to
+      // Perspective (and the 4D axis cross comes back) so the two controls
+      // never fight over the projection.
+      state.setProjMix(0);
+      setViewType(ProjectionMode.Perspective);
+      setFiberCollapse(0);
+      applyAxisFade(0);
+      setDropAxis(d);
+      applyView(ProjectionMode.Perspective, d);
+    } else {
+      setDropAxis(d);
+      applyView(viewType, d);
+    }
   }
 
   function applyQuarterTurn(plane: Plane, θ: number) {
