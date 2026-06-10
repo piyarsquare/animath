@@ -301,12 +301,13 @@ are saved via the top-bar **Layout** menu and persist per app.
 
 ### Projection modes (Complex Particles)
 
-A 4D point `(x, y, u, v)` maps to 3D via the **projection slider** —
-**Perspective** (divide by `3 + v`) ⇠ **Torus** (stereographic from the +v
-pole, soft-floored; the old "Stereo" was this same map and was retired) ⇢
-**Hopf** (Hopf fibration) — where fractional positions are live GPU morphs,
-the 4D axis cross fades out toward the torus (the scaffold takes over), and
-the Torus→Hopf leg is the fiber collapse. **Drop X / Y / U / V** (discard the
+A 4D point `(x, y, u, v)` maps to 3D via the **projection slider** with three
+sticky, labeled stops — **Perspective** (divide by `3 + v`) ⇠ **Torus**
+(stereographic from the +v pole, soft-floored; the old "Stereo" was this same
+map and was retired) ⇢ **Sphere** (the Hopf view; `ProjectionMode.Hopf`
+internally) — where fractional positions are live GPU morphs, the 4D axis
+cross fades out toward the torus (the scaffold takes over), and the
+Torus→Sphere leg is the fiber collapse. **Drop X / Y / U / V** (discard the
 named axis) remains on the 4D Rotation panel.
 
 ## Code Conventions

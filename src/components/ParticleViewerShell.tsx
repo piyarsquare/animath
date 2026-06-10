@@ -131,18 +131,6 @@ export default function ParticleViewerShell({
     else controls.turn(id as Plane, dir);
   };
 
-  // "Hopf study": the one-tap preset for reading the Hopf sphere. The 4D
-  // spinner/rotation is applied *before* the Hopf map, which remixes input and
-  // output and breaks the z/f reading, so this forces the Hopf projection,
-  // freezes the motion, stops any spins, and snaps the 4D orientation back to
-  // identity — leaving latitude = |z|/|f| and longitude = arg(z) − arg(f) intact.
-  const enterHopfStudy = () => {
-    controls.handleViewType(ProjectionMode.Hopf);
-    controls.handleMotion('Fixed');
-    setSpins({});
-    controls.snapToStandardView();
-  };
-
   // Toggling the ± lock seeds the other representation so the view doesn't jump:
   // unlocking copies the symmetric extents into min/max; re-locking collapses the
   // (possibly off-center) window back to a symmetric half-width.
@@ -270,21 +258,27 @@ export default function ParticleViewerShell({
   const fmtProjMix = (v: number) =>
     v <= 0.02 ? 'Perspective'
       : Math.abs(v - 1) <= 0.02 ? 'Torus'
-        : v >= 1.98 ? 'Hopf'
+        : v >= 1.98 ? 'Sphere'
           : v < 1 ? `→ Torus ${Math.round(v * 100)}%`
-            : `→ Hopf ${Math.round((v - 1) * 100)}%`;
+            : `→ Sphere ${Math.round((v - 1) * 100)}%`;
 
   const cameraNode = (
     <>
-      {/* One slider, three worlds: Perspective ⇠ Torus ⇢ Hopf. Fractional
-          positions are live GPU morphs; the 4D axis cross fades out toward
-          the torus, where the scaffold becomes the reference frame. */}
+      {/* One slider, three worlds: Perspective ⇠ Torus ⇢ Sphere (the Hopf
+          view). The stops are sticky and labeled; fractional positions are
+          live GPU morphs, and the 4D axis cross fades out toward the torus,
+          where the scaffold becomes the reference frame. */}
       <Slider
         label="Projection"
         value={state.projMix}
         min={0} max={2} step={0.01}
         onChange={controls.handleProjMix}
         format={fmtProjMix}
+        stops={[
+          { value: 0, label: 'Perspective' },
+          { value: 1, label: 'Torus' },
+          { value: 2, label: 'Sphere' },
+        ]}
       />
       {(state.viewType === ProjectionMode.Torus || state.viewType === ProjectionMode.Hopf) && (
         <Checkbox
@@ -292,32 +286,6 @@ export default function ParticleViewerShell({
           checked={state.showScaffold}
           onChange={state.setShowScaffold}
         />
-      )}
-      {state.viewType === ProjectionMode.Torus && (
-        <Checkbox
-          label="Hopf fibers"
-          checked={state.showFibers}
-          onChange={state.setShowFibers}
-        />
-      )}
-      {state.viewType === ProjectionMode.Torus && state.showFibers && (
-        <Slider
-          label="Fiber density"
-          value={state.fiberDensity}
-          min={4} max={36} step={1}
-          onChange={state.setFiberDensity}
-          format={v => `${v}/ring`}
-        />
-      )}
-      {(state.viewType === ProjectionMode.Torus || state.viewType === ProjectionMode.Hopf) && (
-        <button
-          className="qtc-reset"
-          style={{ marginTop: 4 }}
-          onClick={enterHopfStudy}
-          title="Switch to Hopf, freeze the motion, and reset the 4D orientation so latitude = |z|/|f| and longitude = arg(z) − arg(f) read cleanly"
-        >
-          Hopf study view
-        </button>
       )}
       <Pills
         label="Motion"

@@ -30,6 +30,20 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 13:50 — Sticky labeled stops on the projection slider; fibers + study view removed
+**Why:** the user wanted Perspective / Torus / Sphere as sticky, labeled
+stops (Sphere = the Hopf detent's new name), and the Hopf-fiber controls and
+"Hopf study view" button gone.
+
+The `Slider` primitive gains `stops` (labeled detents under the track;
+values within 5% of the range snap onto a stop; clicking a label jumps to
+it — the active stop highlights in accent). Verified: 0.96→Torus,
+1.93→Sphere, 0.5 stays a free morph. Removed: the Hopf fibers checkbox +
+density slider, `createHopfFibers` and its state/effects, and the Hopf study
+button. `sphere` joins the embed codec as an alias for the Hopf projection.
+
+![the Camera panel with sticky Perspective · Torus · Sphere stops](assets/2026-06-10-S01-proj-stops.png)
+
 ### 🟢 code · 13:40 — Dropdown category labels unreadable (optgroup unstyled)
 **Why:** the user reported the function-category labels in the dropdown
 washing out on almost every skin.

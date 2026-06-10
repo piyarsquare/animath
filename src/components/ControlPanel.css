@@ -135,6 +135,15 @@
   font-weight: 700;
 }
 .cp-row input[type="number"] { padding: 6px 8px; }
+/* labeled slider detents (Slider `stops`) */
+.cp-slider-stops { position: relative; height: 15px; margin-top: 1px; }
+.cp-stop {
+  position: absolute; top: 0; padding: 0 2px; border: none; background: none;
+  font: inherit; font-size: 10px; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--cp-fg-dim); cursor: pointer; white-space: nowrap;
+}
+.cp-stop:hover { color: var(--cp-fg); }
+.cp-stop-on { color: var(--cp-accent); }
 .cp-row input[type="checkbox"] {
   width: 16px;
   height: 16px;

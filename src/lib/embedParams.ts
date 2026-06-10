@@ -45,6 +45,7 @@ const PROJ: Record<string, ProjectionMode> = {
   // soft-floors the pole); the UI dropped it, the param stays as an alias.
   stereo: ProjectionMode.Torus,
   hopf: ProjectionMode.Hopf,
+  sphere: ProjectionMode.Hopf,
   torus: ProjectionMode.Torus,
   dropx: ProjectionMode.DropX,
   dropy: ProjectionMode.DropY,

@@ -167,8 +167,6 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // Whether to draw the faint sphere/donut reference scaffolding.
   const [showScaffold, setShowScaffold] = usePersistentState(pk('showScaffold'), true);
   // Hopf fiber-trace overlay (Torus view): toggle + how many fibers per latitude.
-  const [showFibers, setShowFibers] = usePersistentState(pk('showFibers'), false);
-  const [fiberDensity, setFiberDensity] = usePersistentState(pk('fiberDensity'), 12);
   const [orientationMatrix, setOrientationMatrix] = useState<number[][]>([
     [0, 0, 0, 0],
     [0, 0, 0, 0],
@@ -291,8 +289,6 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     proj, setProj,
     fiberCollapse, setFiberCollapse,
     showScaffold, setShowScaffold,
-    showFibers, setShowFibers,
-    fiberDensity, setFiberDensity,
     orientationMatrix, setOrientationMatrix,
 
     // Three.js object refs

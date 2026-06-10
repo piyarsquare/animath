@@ -40,9 +40,18 @@ interface SliderProps {
   step: number;
   onChange: (v: number) => void;
   format?: (v: number) => string;
+  /** Labeled detents under the track. Drags are "sticky" — values within 5%
+   *  of the range snap onto a stop — and clicking a label jumps to it. */
+  stops?: { value: number; label: string }[];
 }
 
-export function Slider({ label, value, min, max, step, onChange, format }: SliderProps) {
+export function Slider({ label, value, min, max, step, onChange, format, stops }: SliderProps) {
+  const snap = (v: number) => {
+    if (!stops) return v;
+    const r = (max - min) * 0.05;
+    const near = stops.find(s => Math.abs(v - s.value) <= r);
+    return near ? near.value : v;
+  };
   return (
     <label className="cp-row">
       <div className="cp-row-label">
@@ -55,8 +64,29 @@ export function Slider({ label, value, min, max, step, onChange, format }: Slide
         max={max}
         step={step}
         value={value}
-        onChange={e => onChange(parseFloat(e.target.value))}
+        onChange={e => onChange(snap(parseFloat(e.target.value)))}
       />
+      {stops && (
+        <div className="cp-slider-stops">
+          {stops.map(s => {
+            const pct = ((s.value - min) / (max - min)) * 100;
+            return (
+              <button
+                key={s.value}
+                type="button"
+                className={`cp-stop ${value === s.value ? 'cp-stop-on' : ''}`}
+                style={{
+                  left: `${pct}%`,
+                  transform: pct === 0 ? 'none' : pct === 100 ? 'translateX(-100%)' : 'translateX(-50%)',
+                }}
+                onClick={e => { e.preventDefault(); onChange(s.value); }}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </label>
   );
 }

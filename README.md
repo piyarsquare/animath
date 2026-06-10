@@ -258,12 +258,12 @@ The fractal viewers use:
 ## 7 Projection modes (Complex Particles)
 
 The renderer maps a 4D point `(x, y, u, v)` to 3D along one **projection
-slider** with three detents and live GPU morphs between them:
+slider** with three sticky, labeled stops and live GPU morphs between them:
 
 1. **Perspective** — divide by `3 + v`.
 2. **Torus** — stereographic projection from the +v pole (pole-softened;
-   shows the Clifford-torus structure with its scaffold and Hopf fibers).
-3. **Hopf** — the Hopf fibration; the Torus → Hopf leg of the slider is the
+   shows the Clifford-torus structure with its scaffold).
+3. **Sphere** — the Hopf view; the Torus → Sphere leg of the slider is the
    fiber collapse.
 
 The 4D axis cross fades out as the slider leaves Perspective, handing the
