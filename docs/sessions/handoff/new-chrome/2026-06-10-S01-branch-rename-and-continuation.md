@@ -8,7 +8,7 @@ slug: new-chrome
 status: completed
 build: passing
 followup: null
-pr: pending
+pr: 200
 app: null
 ---
 
