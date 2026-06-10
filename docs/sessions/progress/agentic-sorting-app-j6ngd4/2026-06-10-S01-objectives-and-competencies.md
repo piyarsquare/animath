@@ -47,6 +47,24 @@ the same function" intermediate the user remembered.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 21:53 — Three-hats complete + synthesis written
+**Why:** All three experts returned; need a single convergence read + decisions.
+
+All three endorse the direction and **all three gate it behind the same refactor**:
+extract a pure engine (`step(state)→state`) before features. Reuse `readouts.tsx`;
+clustering must be baseline-normalized (assortativity / excess homophily); reframe
+EXPLAINER/README honestly in the same change. Synthesis with a 4-phase plan +
+3 open decisions written to
+[`2026-06-10-S01-expert-synthesis.md`](2026-06-10-S01-expert-synthesis.md).
+
+Git archaeology (consultant's flag): the 5-agent design is **identical from the
+first commit** (`4ca94d3`); no `descending`/`objective`/`frozen` in any history —
+the "lost intermediate" was never committed, so it's reconstructed, not recovered.
+
+Open decisions for the user: (T1) selfish-goal default *and* labeled asc/desc
+phase-separation mode, or just one? (T2) canvas arena in-scope or deferred?
+(MVP) is Phase 0 + Phase 1 the first shippable slice?
+
 ### 🟣 decision · 21:47 — Dispatched /three-hats review (3 parallel experts)
 **Why:** User asked to run three-hats on how the app can be improved/expanded
 before building.
