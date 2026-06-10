@@ -47,6 +47,32 @@ the same function" intermediate the user remembered.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 22:35 — Phase 3 (delayed-gratification click-to-track) implemented
+**Why:** User: "PR is open, continue with phase 3."
+
+Added the interactive tracker:
+- `arena.ts` `drawArena` now takes `mark` + `selectedId` and draws a highlight
+  column + ring on the tracked agent.
+- `metrics.ts` `homeIndex(values, value)` — the agent's fixed sorted-ascending
+  target (values are immutable; only the *distance* wanders).
+- `AgenticSorting.tsx`: click the canvas → map x→index→agent id, lock its target,
+  and sample `|currentIndex − target|` each metric flush into a Sparkline. New
+  **Track agent** panel (`arch: 'lab'`), opened in the Analysis layout. Tap the
+  tracked agent again to release; selection clears on regenerate. `--accent`
+  read into `markRef` alongside `--dim`.
+
+Validated headlessly (`tsx`): tracking 4 agents through a 12%-frozen run, 2 of 4
+showed the **rise-then-fall** distance signature (e.g. 16→peak 25→24) — the
+delayed-gratification curve is real and non-monotonic, not a flat gimmick.
+`tsc --noEmit` clean; `npm run build` green.
+
+> [!WARNING]
+> Could not capture an *interactive* screenshot this turn: the `vite preview`
+> server is SIGTERM'd (exit 144) on every launch in the resumed container (it
+> succeeded earlier in the session for the static shot). Verification rests on
+> the green build + headless logic tests + the earlier render screenshot. Worth
+> an eyeball next session when the preview server cooperates.
+
 ### 🟡 milestone · 22:10 — Phase 0–2 implemented, build green, engine validated
 **Why:** Deliver the full payload the user chose (engine + competencies + both
 objective modes + canvas), verified.

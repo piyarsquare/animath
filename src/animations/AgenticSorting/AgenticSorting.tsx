@@ -10,7 +10,7 @@ import {
   generate, step, mulberry32,
   AGENT_TYPE_LIST, type AgentType, type SimState, type Weights,
 } from './engine';
-import { measure, type MetricsView } from './metrics';
+import { measure, homeIndex, type MetricsView } from './metrics';
 import { drawArena, TYPE_COLORS } from './arena';
 import explainerText from './EXPLAINER.md?raw';
 import readmeText from './README.md?raw';
@@ -67,6 +67,16 @@ export default function AgenticSorting() {
   const [metrics, setMetrics] = useState<MetricsView>(emptyMetrics);
   const [history, setHistory] = useState<number[]>([]);
 
+  // ---- click-to-track (delayed gratification) ----
+  const [selected, setSelected] = useState<
+    { id: number; value: number; type: AgentType } | null
+  >(null);
+  const [trackHist, setTrackHist] = useState<number[]>([]);
+  const selectedIdRef = useRef<number | null>(null);
+  const selTargetRef = useRef(0);
+  const trackHistRef = useRef<number[]>([]);
+  const markRef = useRef('#ffce47');
+
   // ---- simulation refs (live, read inside the rAF loop) ----
   const stateRef = useRef<SimState>({ agents: [], cycles: 0, wakeups: 0, swaps: 0 });
   const rngRef = useRef<() => number>(mulberry32(1));
@@ -98,6 +108,8 @@ export default function AgenticSorting() {
       display: displayRef.current,
       colorBy: colorByRef.current,
       axis: axisRef.current,
+      mark: markRef.current,
+      selectedId: selectedIdRef.current,
     });
   }, []);
 
@@ -107,6 +119,16 @@ export default function AgenticSorting() {
     histRef.current = [...histRef.current, m.sortedness].slice(-160);
     setMetrics(m);
     setHistory(histRef.current);
+
+    // sample the tracked agent's distance-to-goal
+    if (selectedIdRef.current != null) {
+      const idx = s.agents.findIndex(a => a.id === selectedIdRef.current);
+      if (idx >= 0) {
+        const dist = Math.abs(idx - selTargetRef.current);
+        trackHistRef.current = [...trackHistRef.current, dist].slice(-160);
+        setTrackHist(trackHistRef.current);
+      }
+    }
   }, []);
 
   const regenerate = useCallback(() => {
@@ -121,9 +143,40 @@ export default function AgenticSorting() {
     }, rngRef.current);
     histRef.current = [];
     accRef.current = 0;
+    // dropping/rebuilding the population invalidates any tracked agent
+    selectedIdRef.current = null;
+    trackHistRef.current = [];
+    setSelected(null);
+    setTrackHist([]);
     flushMetrics();
     draw();
   }, [arraySize, weights, objectiveMode, descShare, frozenPct, flushMetrics, draw]);
+
+  // click an agent to follow it: map pointer x → array index → that agent's id
+  const onArenaPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    const cvs = canvasRef.current;
+    if (!cvs) return;
+    const rect = cvs.getBoundingClientRect();
+    const agents = stateRef.current.agents;
+    const n = agents.length;
+    if (n === 0 || rect.width === 0) return;
+    const idx = Math.min(n - 1, Math.max(0, Math.floor(((e.clientX - rect.left) / rect.width) * n)));
+    const a = agents[idx];
+    if (selectedIdRef.current === a.id) {
+      // tap the tracked agent again to stop tracking
+      selectedIdRef.current = null;
+      trackHistRef.current = [];
+      setSelected(null);
+      setTrackHist([]);
+    } else {
+      selectedIdRef.current = a.id;
+      selTargetRef.current = homeIndex(agents.map(g => g.value), a.value);
+      trackHistRef.current = [Math.abs(idx - selTargetRef.current)];
+      setSelected({ id: a.id, value: a.value, type: a.type });
+      setTrackHist(trackHistRef.current);
+    }
+    draw();
+  }, [draw]);
 
   // (re)build the population whenever a structural setting changes
   useEffect(() => { regenerate(); }, [regenerate]);
@@ -148,8 +201,9 @@ export default function AgenticSorting() {
       const ctx = cvs.getContext('2d');
       if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       sizeRef.current = { w, h };
-      const dim = getComputedStyle(cvs).getPropertyValue('--dim').trim();
-      axisRef.current = dim || 'rgba(128,128,128,0.6)';
+      const cs = getComputedStyle(cvs);
+      axisRef.current = cs.getPropertyValue('--dim').trim() || 'rgba(128,128,128,0.6)';
+      markRef.current = cs.getPropertyValue('--accent').trim() || '#ffce47';
       draw();
     });
     ro.observe(cvs);
@@ -319,9 +373,44 @@ export default function AgenticSorting() {
     </div>
   );
 
+  const trackNode = (
+    <div className="as-panel">
+      {selected ? (
+        <>
+          <div className="as-track-head">
+            <span className="as-dot" style={{ background: TYPE_COLORS[selected.type] }} />
+            <span className="as-legend-name">{AGENT_META[selected.type].name}</span>
+            <span className="as-track-meta">value {selected.value} · home #{selTargetRef.current}</span>
+          </div>
+          <Kicker>Distance to goal over time</Kicker>
+          <Sparkline pts={trackHist.length > 1 ? trackHist : [trackHist[0] ?? 0, trackHist[0] ?? 0]} />
+          <StatGrid stats={[
+            { k: 'Now', v: String(trackHist[trackHist.length - 1] ?? 0) },
+            { k: 'Peak', v: String(trackHist.length ? Math.max(...trackHist) : 0) },
+          ]} />
+          <p className="as-hint">
+            If the line rises before it falls, the agent moved <em>away</em> from
+            where it belongs — delayed gratification, most visible with defects
+            present. Tap it again to stop tracking.
+          </p>
+        </>
+      ) : (
+        <p className="as-hint">
+          Click any agent in the array to follow it. Its distance-to-goal often
+          rises before it falls: the agent moves away from its rightful place to
+          let the array sort around obstacles.
+        </p>
+      )}
+    </div>
+  );
+
   const arenaNode = (
     <div className="as-arena">
-      <canvas ref={canvasRef} className="as-arena-canvas" />
+      <canvas
+        ref={canvasRef}
+        className="as-arena-canvas"
+        onPointerDown={onArenaPointerDown}
+      />
       <div className="as-arena-label as-arena-label-top">Positive</div>
       <div className="as-arena-label as-arena-label-bottom">Negative</div>
     </div>
@@ -333,6 +422,7 @@ export default function AgenticSorting() {
     { id: 'agents', title: 'Population mix', arch: 'drive', node: agentsNode, estHeight: 500 },
     { id: 'run', title: 'Run', arch: 'playback', node: runNode, estHeight: 200 },
     { id: 'metrics', title: 'Metrics', arch: 'readout', node: metricsNode, estHeight: 340 },
+    { id: 'track', title: 'Track agent', arch: 'lab', node: trackNode, estHeight: 240 },
   ];
 
   const views: ViewDef[] = [
@@ -345,8 +435,8 @@ export default function AgenticSorting() {
       open: { array: { x: 84, y: 18 }, run: { x: 84, y: 280 }, agents: { x: 84, y: 500 } },
     },
     {
-      id: 'analysis', name: 'Analysis', sub: 'Metrics beside the arena', icon: 'chart',
-      open: { metrics: { x: 84, y: 18 }, array: { x: 84, y: 380 } },
+      id: 'analysis', name: 'Analysis', sub: 'Metrics + agent tracker', icon: 'chart',
+      open: { metrics: { x: 84, y: 18 }, track: { x: 84, y: 372 } },
     },
   ];
 

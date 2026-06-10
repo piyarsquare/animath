@@ -29,6 +29,10 @@ export interface DrawOpts {
   colorBy: 'type' | 'objective';
   /** midline / label color, read from the theme so it works across skins. */
   axis: string;
+  /** highlight color for the tracked agent (read from --accent). */
+  mark: string;
+  /** id of the agent being click-tracked, if any. */
+  selectedId?: number | null;
 }
 
 function colorFor(a: Agent, colorBy: DrawOpts['colorBy']): string {
@@ -66,6 +70,17 @@ export function drawArena(
   if (n === 0) return;
   const colW = w / n;
 
+  // tracked-agent guide column (behind the marks)
+  if (opts.selectedId != null) {
+    const si = agents.findIndex(a => a.id === opts.selectedId);
+    if (si >= 0) {
+      ctx.fillStyle = opts.mark;
+      ctx.globalAlpha = 0.16;
+      ctx.fillRect(si * colW - 0.5, 0, Math.max(2, colW + 1), h);
+      ctx.globalAlpha = 1;
+    }
+  }
+
   if (opts.display === 'bars') {
     for (let i = 0; i < n; i++) {
       const a = agents[i];
@@ -91,5 +106,21 @@ export function drawArena(
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+  }
+
+  // tracked-agent marker on top of its mark
+  if (opts.selectedId != null) {
+    const si = agents.findIndex(a => a.id === opts.selectedId);
+    if (si >= 0) {
+      const a = agents[si];
+      const x = si * colW + colW / 2;
+      const y = midY - (a.value / 100) * half;
+      ctx.strokeStyle = opts.mark;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(5, Math.min(7, colW * 0.6)), 0, Math.PI * 2);
+      ctx.stroke();
+    }
   }
 }

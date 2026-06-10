@@ -110,6 +110,22 @@
   margin: 0;
 }
 
+/* ── Track agent panel ── */
+.as-track-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.as-track-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.as-arena-canvas { cursor: crosshair; }
+
 /* ── Arena (the "Array" view window) ── */
 .as-arena {
   position: absolute;

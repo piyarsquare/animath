@@ -83,6 +83,18 @@ export function frozenCeiling(values: number[], frozen: boolean[]): number {
   return sortedness(result);
 }
 
+/**
+ * The sorted-ascending home index for `value`: how many agents hold a strictly
+ * smaller value. Values never change (only positions do), so an agent's target
+ * is fixed for the run — its *distance* to that target is what wanders. The
+ * delayed-gratification signature is this distance rising before it falls.
+ */
+export function homeIndex(values: number[], value: number): number {
+  let rank = 0;
+  for (const v of values) if (v < value) rank++;
+  return rank;
+}
+
 export interface MetricsView {
   cycles: number;
   wakeups: number;
