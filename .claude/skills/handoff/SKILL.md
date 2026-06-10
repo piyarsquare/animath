@@ -1,7 +1,6 @@
 ---
 name: handoff
-description: "Create a handoff document for the current animath session. Invoke manually at the end of a conversation — never auto-invoke."
-disable-model-invocation: true
+description: "Create a handoff document for the current animath session. Invoke at the end of a conversation when the user or an agent asks to wrap up / hand off the session (e.g. /handoff) — do not auto-invoke spontaneously."
 ---
 
 # Handoff Document Generator

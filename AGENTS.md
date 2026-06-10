@@ -54,8 +54,9 @@ currently no automated tests, linter, or formatter.
 
 ## Session Skills
 
-Three manually-invoked Claude Code skills live in `.claude/skills/` (slash
-commands; they never auto-invoke): **`/start-session`** (orient + open a progress
+Three Claude Code skills live in `.claude/skills/` — invokable both by a human
+(slash command) and by an agent (via the Skill tool), on explicit request rather
+than auto-triggered: **`/start-session`** (orient + open a progress
 report), **`/handoff`** (distil the session, using `npm run build` for status), and
 **`/three-hats`** (parallel design review from three lenses). Session notes are
 committed as self-contained **HTML** under

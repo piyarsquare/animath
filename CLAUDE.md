@@ -418,8 +418,9 @@ For per-PR preview URLs, see `docs/PREVIEW_DEPLOYS.md`.
 
 ### Agent session skills (`.claude/skills/`)
 
-Three manually-invoked Claude Code skills support the session workflow (type the
-slash command; they never auto-invoke):
+Three Claude Code skills support the session workflow. Both a human (typing the
+slash command) and an agent (via the Skill tool) can invoke them; they are
+invoked **on explicit request**, not auto-triggered spontaneously:
 
 - **`/start-session`** — reads the latest handoff, opens a progress report, and
   orients (branch + which app, the append-only parallel-branch rule). Run it first.

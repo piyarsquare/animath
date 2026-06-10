@@ -1,7 +1,6 @@
 ---
 name: start-session
-description: "Start a new working session on animath. Reads the latest handoff, creates a progress report, and presents context. Invoke manually at the beginning of a conversation — never auto-invoke."
-disable-model-invocation: true
+description: "Start a new working session on animath. Reads the latest handoff, creates a progress report, and presents context. Invoke at the beginning of a conversation when the user or an agent asks to start/kick off a session (e.g. /start-session) — do not auto-invoke spontaneously."
 argument-hint: "[session focus, one sentence]"
 ---
 
