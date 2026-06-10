@@ -40,6 +40,28 @@ fix; new branch `claude/future-apps-scoping` forked from `main`.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 22:40 — Filled the Quantum Tree baseline from the uploaded source
+**Why:** User couldn't grant repo access (private; `*.github.io` not on the
+network allowlist; no `add_repo` tool this session) but uploaded a **zip** of
+the source — enough to write a real baseline instead of a stub.
+
+Inspected `quantum-tree-main/`: a **dependency-free vanilla-JS** browser app
+(SVG views + a little canvas 2D, no framework/build/CDN) for **phylogenetic
+tree-building from distance data via quartet evidence**, with a deferred
+**quantum reinterpretation** (one-hot registers, Gibbs/thermal states, later
+cost-phase/mixer QAOA layer). Three pages (`index`/`map`, `four`, `five`) + a
+LaTeX working paper (BHV tree space, associahedra/Devadoss, NeighborNet).
+Rewrote `FUTURE_APPS.md` §6 with concept, math (four-point, evidence plane,
+assembly operators, the two tree-score routes, quantum layer), animath mapping
+(CSS/DOM+SVG like StableMatching; each SVG → its own `ViewDef`; Analyze-tier
+readouts), and a **port strategy** (recommend porting math to TS modules +
+rebuilding views in React/SVG over wrapping the ~216 KB ID-coupled `map.js`).
+
+> [!NOTE]
+> The uploaded source lives at `/tmp/qt-unzip/quantum-tree-main/` (this session
+> only — not committed into animath). The repo is private; relicensing/attribution
+> is an open question before any code is ported in.
+
 ### 🟢 code · 22:20 — Wrote `docs/FUTURE_APPS.md` + IDEAS.md pointer
 **Why:** Capture the baseline reference for all five researchable areas now;
 stub the two ports so the structure is ready when their repos arrive.

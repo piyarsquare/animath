@@ -29,7 +29,7 @@ the same template:
 | 3 | **Murmurations (Flocking)** | self-propelled agents / emergence | Three.js instanced + spatial hash | new |
 | 4 | **Ant Colonies** | stigmergy / emergence | GPU field + agent layer | new |
 | 5 | **Glassy Networks** | disordered systems / optimization | DOM/graph or Three.js + MC | new |
-| 6 | **Quantum Tree** | (TBD) | TBD | **port** — repo pending |
+| 6 | **Quantum Tree** | phylogenetics / quantum-combinatorics viz | SVG + a little canvas 2D (vanilla JS today) | **port** — source in hand |
 | 7 | **GAS — "gene advocate system"** | (TBD) | TBD | **port/confirm** — term + repo pending |
 
 > [!NOTE]
@@ -377,26 +377,113 @@ the Monte Carlo.
 
 ## 6. Quantum Tree (PORT)
 
-> [!IMPORTANT]
-> **Port — source repo pending.** This currently lives in a **separate GitHub
-> repository** the user will point me to. My GitHub scope is restricted to
-> `piyarsquare/animath`, so to port it the repo needs to be **added to the
-> session** (`list_repos` → `add_repo`) or shared another way.
+> [!NOTE]
+> **Source in hand** (private repo `piyarsquare/quantum-tree`, shared as a zip).
+> The deployed app is `https://piyarsquare.github.io/quantum-tree/`. Baseline
+> below is written from the actual source; refine against the code when building.
 
-### What I need to write the baseline
-- Repo URL + access, and a one-line description (best guess: a quantum-circuit /
-  quantum-state **tree** or a measurement/decision tree visualization — to
-  confirm).
-- Current stack (React/TS? plain JS? Python? WebGL/SVG?) and what it renders.
-- The interaction model and any math (state vectors, amplitudes, Born-rule
-  branching?).
+### Concept
+A "map" of how **distance data builds phylogenetic trees**, treating tree-building
+as **evidence assembly** before any probability is imposed. For a set of leaves it
+shows the competing tree topologies, the splits and **circular orderings**
+compatible with them, neighbor-joining, split networks, and the geometry of
+"tree-space" — with an explicit, deferred **quantum reinterpretation** layered on
+top (the quartet/tree states as one-hot quantum registers, Gibbs/thermal states,
+and, in later phases, cost phases + mixers à la QAOA). It is exactly animath's
+sweet spot: a deep, honestly-framed mathematical object made interactive, with a
+companion working paper supplying the rigor.
 
-### Likely animath mapping (to refine once visible)
-If it's already TS/React + WebGL/SVG, the port is mostly **re-chroming**: wrap the
-existing scene as a `ViewDef`, move its controls into archetype `SectionDef`
-panels, register it in `apps.ts` / `index.tsx` / `catalog.ts`, and add an
-`EXPLAINER.md`. If it's Python/other, it's a rewrite against the framework. The
-self-contained-folder rule (`src/animations/QuantumTree/`) keeps it conflict-free.
+### Canonical model / math
+- **Quartets & the four-point condition.** For leaves `a,b,c,d` the three unrooted
+  quartets are `T0=ab|cd`, `T1=ac|bd`, `T2=ad|bc`; the pair-sums
+  `A=d(a,b)+d(c,d)`, `B=d(a,c)+d(b,d)`, `C=d(a,d)+d(b,c)` rank them. The smallest
+  wins; treat `H=diag(A,B,C)` as a diagonal Hamiltonian.
+- **Evidence before probability.** Keep three layers separate:
+  `distance data → evidence/scores/energies → optional probability law`. The
+  primitive object is the **centered support map**, not a distribution; a
+  **Gibbs posterior** `p(Tᵢ) ∝ exp(−β Eᵢ)` is one optional "closure" with β as a
+  display control.
+- **Evidence plane.** Center the pair-sums `(A,B,C) → (A−μ,B−μ,C−μ)`; they live in
+  a 2D plane — origin = unresolved star, three rays = exact tree-metric directions.
+  Radius = resolution, angle = which topology.
+- **Assembly operators (the heart).** Quartets → splits
+  (`support(ab|cde)=mean[support(ab|cd),ab|ce,ab|de]`), splits → circular orderings
+  (mean of displayed splits), and two routes to tree scores:
+  `S_quartet(T)` (direct) vs `S_ordering(T)` (log-mean-exp over compatible
+  orderings). Agreement ⇒ tree-like coherence; disagreement ⇒ network-like
+  conflict.
+- **Circular orderings & compatibility.** A `Tᵢ × πⱼ` compatibility matrix links
+  topologies to circular orders; the app draws **flip graphs / fibers**
+  (associahedron-flavored — see the references: Billera–Holmes–Vogtmann,
+  Devadoss, Semple–Steel) showing which orders are compatible with a tree and vice
+  versa.
+- **Quantum reinterpretation (deferred).** One-hot encoding `|100>,|010>,|001>`
+  on the Hamming-weight-one subspace; phase-free amplitudes `αᵢ=√pᵢ` today; later
+  `|Tᵢ> → e^{−iγEᵢ}|Tᵢ>` plus an XY-style mixer preserving feasibility. For 5
+  leaves the consistency of five local quartet registers becomes a genuine
+  **entanglement/global-constraint** story (243 local assignments vs 15 valid
+  trees).
+
+### Key phenomena
+The four-point winner; the evidence plane geometry (star ↔ resolved); how the same
+distance matrix casts coupled quartet "shadows"; quartets-to-trees **vs**
+quartets-to-splits-to-orderings-to-trees disagreeing on network-like data;
+neighbor-joining vs split networks; the tree↔circular-order fibers; and β sharpening
+a fixed evidence signal into a posterior.
+
+### Prior art
+The bundled working paper (`paper/circular_order_tree_working_paper`) and its
+references — Billera–Holmes–Vogtmann (BHV tree space), Devadoss (associahedra /
+moduli), Semple–Steel and Levy–Pachter (NeighborNet), plus standard NJ and
+split-network (SplitsTree) methods.
+
+### animath mapping
+- **Rendering**: this is a natural **CSS/DOM + SVG app** — the closest precedent is
+  **StableMatching** (DOM/SVG graphs, controls in workspace panels). The current
+  app is **dependency-free vanilla JS** drawing many `<svg>` views
+  (`neighborJoiningSvg`, `splitChordSvg`, `splitGraphSvg`, `orderedMatrixSvg`,
+  the `orderFiber*`/`treeFiber*`/glued-fiber views) plus a little canvas 2D.
+- **Archetypes**:
+  - `subject` — number of leaves (4–7), the distance matrix / presets.
+  - `domain` — the distance inputs (editable matrix), leaf labels.
+  - `drive` — β (Gibbs temperature) as a *display* closure; sign/scale conventions.
+  - `view`/`marks` — the network/tree/fiber SVG renders.
+  - `color` — topology colors (the `treeDefs` palette), support sign (coherent vs
+    opposing evidence).
+  - `lab`/`readout` — the difference engine (`δ_signal=E1−E0`, `δ_deviation=E2−E1`),
+    the two tree-score routes side by side, split weights — perfect for the
+    Analyze-tier readout primitives.
+- **View windows** (animath's multi-window model fits unusually well — each SVG
+  becomes its own draggable `ViewDef`): NJ tree · split-network chords/graph ·
+  ordered distance matrix · the evidence plane · the tree/order fiber (flip-graph)
+  views. Selecting a split/tree/order highlights the contributing quartets across
+  windows (the **linked-views** idiom, like Correspondence).
+- **Quantum layer** as an optional `subject`/`drive` mode: show the one-hot
+  amplitudes `αᵢ=√pᵢ`, and (later) cost-phase/mixer controls — disclosed honestly
+  as "classical thermal state today, literal interference later."
+
+### Port strategy
+Two routes, recommend the second:
+1. **Wrap-as-is (fast, ugly):** mount each existing page in a `ViewDef` via a ref +
+   `useEffect`, keeping the vanilla JS. Risky — `map.js` (~216 KB) is global,
+   ID-coupled DOM code that fights React's lifecycle and animath's conventions
+   (TS strict, local state, no global scripts).
+2. **Port the math to TS modules + rebuild views in React/SVG (recommended):** the
+   logic is well-specified (quartet support, four-point, NJ, splits, compatibility,
+   assembly operators) and portable to `src/animations/QuantumTree/lib/*.ts`; then
+   each SVG view becomes a React `ViewDef` and the sidebars become archetype
+   `SectionDef` panels built on `ControlPanel` + `chrome/readouts.tsx`. More work,
+   but idiomatic, testable, and it unlocks animath's linked multi-window UX. The
+   self-contained `src/animations/QuantumTree/` folder keeps it parallel-branch safe.
+
+### Open questions
+- Scope of the first port: just the **4-leaf** evidence plane + quartet toy (small,
+  high-clarity) before the full 4–7 leaf map? Lean: ship 4-leaf first, then 5, then
+  the map.
+- How much of the **quantum** layer to expose initially vs keep as a documented
+  "Phase 1" — the honest framing ("not yet a quantum circuit") must survive the port.
+- License/attribution: the source repo is **private**; confirm it's fine to
+  relicense the ported code under animath's terms and how to credit the paper.
 
 ---
 
