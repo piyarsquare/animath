@@ -452,6 +452,10 @@ body {
 .am-phone-view .am-ws-vhead { cursor: default; }
 .am-phone-view-body { position: relative; height: 56vw; max-height: 340px; background: var(--viz-bg); }
 .am-phone-view-body > * { position: absolute; inset: 0; }
+/* chip switcher for layout-modeled exclusive views (matrix/welfare/lattice …) */
+.am-phone-layouts { display: flex; gap: 6px; overflow-x: auto; flex-shrink: 0; padding-bottom: 2px; scrollbar-width: none; }
+.am-phone-layouts::-webkit-scrollbar { display: none; }
+.am-phone-layouts .am-chip { flex-shrink: 0; }
 .am-phone-vresize { display: grid; place-items: center; height: 18px; border-top: 1px solid var(--border); background: var(--panel); color: var(--dim-2); cursor: ns-resize; touch-action: none; }
 .am-phone-vresize i { width: 36px; height: 4px; border-radius: 2px; background: var(--track); }
 .am-phone-dockwrap { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 40; }

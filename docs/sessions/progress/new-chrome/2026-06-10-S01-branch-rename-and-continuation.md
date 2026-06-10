@@ -30,6 +30,23 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 14:14 — PR review fix: phone chrome respects layout view visibility
+**Why:** a commit comment on PR #200 flagged that PhoneWorkspace rendered
+every ViewDef unconditionally, ignoring `layouts[].views[id].open` — apps
+that model mutually exclusive views as layouts (Stable Marriage, Stable
+Matching, Trinary Lab) stacked all their instruments on phone with no way
+to switch.
+
+Phone cards now initialize from the default layout's `open` flags and a chip
+row (only shown when the app has view-affecting layouts) switches between
+them; the choice persists under `wsphone:<appId>:layout`. Closed cards are
+hidden, never unmounted — same engine-state rule as desktop windows. Probed
+on `#/stable-matching` at 390×844: default shows only the matrix card
+(chips Run* · Lab · Lattice, 3 cards mounted), tapping Lattice swaps the
+visible instrument; Complex Particles shows no chips and is unchanged.
+
+![Stable Matching on phone: layout chips, single instrument card](assets/2026-06-10-S01-phone-view-layouts.png)
+
 ### 🟢 code · 13:50 — Sticky labeled stops on the projection slider; fibers + study view removed
 **Why:** the user wanted Perspective / Torus / Sphere as sticky, labeled
 stops (Sphere = the Hopf detent's new name), and the Hopf-fiber controls and

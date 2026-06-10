@@ -19,13 +19,30 @@ const maxCardH = () => Math.round(window.innerHeight * 0.8);
  * Layouts menu is hidden on phone.
  */
 export default function PhoneWorkspace(props: WorkspaceProps) {
-  const { appId, title, subtitle, views, explainer, titlePanel, modes, activeMode, onModeChange } = props;
+  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, modes, activeMode, onModeChange } = props;
   const sections = useMemo(() => sortByTier(props.sections), [props.sections]);
   const [sheet, setSheet] = useState<string | null>(null);
   /* per-view card heights are layout state (like desktop view rects) — persisted */
   const [cardH, setCardH] = usePersistentState<Record<string, number>>(`wsphone:${appId}`, {});
   /* fullscreen is transient view state — deliberately not persisted */
   const [full, setFull] = useState<string | null>(null);
+
+  // Apps that model mutually exclusive views as layouts (views[id].open) get
+  // a chip switcher; the default layout decides which cards start visible.
+  // Closed cards are hidden, never unmounted, so engine state survives a
+  // switch (same rule as desktop view windows).
+  const viewLayouts = useMemo(
+    () => (appLayouts ?? []).filter(l => views.some(v => l.views?.[v.id]?.open === false)),
+    [appLayouts, views],
+  );
+  const [layoutId, setLayoutId] = usePersistentState<string | null>(`wsphone:${appId}:layout`, null);
+  const wanted = layoutId ?? defaultLayoutId ?? appLayouts?.[0]?.id;
+  const activeLayout = viewLayouts.find(l => l.id === wanted)
+    ?? viewLayouts.find(l => l.id === defaultLayoutId)
+    ?? viewLayouts[0]
+    ?? null;
+  const viewOpen = (id: string) => (activeLayout ? activeLayout.views?.[id]?.open !== false : true);
+
   const active = sections.find(s => s.id === sheet);
   const dockRef = useRef<HTMLElement>(null);
   const dockHint = useScrollHints(dockRef, 'x');
@@ -70,11 +87,30 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
         }
       />
       <div className="am-phone-scroll">
+        {viewLayouts.length > 1 && (
+          <div className="am-phone-layouts" role="tablist" aria-label="Views">
+            {viewLayouts.map(l => (
+              <button
+                key={l.id}
+                role="tab"
+                aria-selected={l.id === activeLayout?.id}
+                className={`am-chip ${l.id === activeLayout?.id ? 'am-on' : ''}`}
+                onClick={() => setLayoutId(l.id)}
+              >
+                {l.name}
+              </button>
+            ))}
+          </div>
+        )}
         {views.map(v => {
           const isFull = full === v.id;
           const h = cardH[v.id];
           return (
-            <div className={`am-phone-view${isFull ? ' am-ws-full' : ''}`} key={v.id}>
+            <div
+              className={`am-phone-view${isFull ? ' am-ws-full' : ''}`}
+              key={v.id}
+              style={!viewOpen(v.id) ? { display: 'none' } : undefined}
+            >
               <div className="am-ws-vhead">
                 <span className="am-ws-vico"><Icon name="window" size={13} /></span>
                 <span className="am-ws-vtitle">{v.title}</span>
