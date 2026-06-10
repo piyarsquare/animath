@@ -135,20 +135,24 @@ const contentHtml = marked.parse(transformFigures(transformAlerts(transformTimel
 // 4 · header from frontmatter
 const statusBadge = (s) => s ? `<span class="badge ${({ completed: "badge-ok", "in-progress": "badge-warn" })[s] || "badge"}">${esc(s)}</span>` : "";
 const buildBadge = (b) => b ? `<span class="badge ${b === "passed" ? "badge-ok" : b === "failed" ? "badge-bad" : "badge-warn"}">build: ${esc(b)}</span>` : "";
-const metaRows = [
-  ["Session", fm.session && esc(fm.session)],
-  ["Branch", fm.branch && `<code>${esc(fm.branch)}</code>`],
-  ["Status", statusBadge(fm.status)],
-  ["Build", buildBadge(fm.build)],
-  ["App", appChips(normalizeApps(fm.app, fm.slug))],
-].filter(([, v]) => v).map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("\n      ");
 
-// 5 · asset prefix so report.css/js resolve from any depth under docs/sessions
+// asset prefix so report.css/js (and the control-center filter links) resolve from
+// any depth under docs/sessions
 const out = src.replace(/\.md$/, ".preview.html");
 const sessionsRoot = dirname(fileURLToPath(import.meta.url));
 const rel = relative(dirname(resolve(out)), sessionsRoot).split(sep).join("/");
 const A = rel ? rel + "/" : "./";
 
+const metaRows = [
+  ["Session", fm.session && esc(fm.session)],
+  ["Branch", fm.branch && `<code>${esc(fm.branch)}</code>`],
+  ["Status", statusBadge(fm.status)],
+  ["Build", buildBadge(fm.build)],
+  ["App", appChips(normalizeApps(fm.app, fm.slug), (k) => `${A}control-center.html#cat=${k}`)],
+].filter(([, v]) => v).map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("\n      ");
+
+
+// 5 · assemble
 const html = `<!DOCTYPE html>
 <!-- GENERATED from ${esc(src)} by render-report.mjs — edit the .md, not this. -->
 <html lang="en">
