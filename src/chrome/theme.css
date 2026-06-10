@@ -219,6 +219,9 @@ body {
 .am-btn-ghost { color: var(--dim); }
 
 .am-titlewrap { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+/* title-as-button (opens the Function panel): inherit the wrap's look, add affordance */
+.am-title-btn { background: none; border: none; padding: 2px 8px; margin: -2px -8px; font: inherit; color: inherit; text-align: left; cursor: pointer; border-radius: 8px; align-items: flex-start; }
+.am-title-btn:hover { background: var(--hover); }
 .am-title { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .am-sub { font-family: var(--font-mono); font-size: 11px; color: var(--accent); white-space: nowrap; }
 .am-spacer { flex: 1 1 auto; }

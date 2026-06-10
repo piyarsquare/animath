@@ -30,6 +30,37 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 01:33 — Complex-function work package: complete set, parity, quadratic UX, title shortcut
+**Why:** the user asked for four things: the Plane Transform preview as
+domain/range sheets, the particle viewer's functions wired to the complex
+plane, a complete function set (all trig + inverses, 1/z², etc.), better
+quadratic entry, and the function name opening a selector.
+
+- **Function set completed** (append-only indices 23–35 in
+  `lib/complexMath.ts` + both GLSL dispatches): sec, csc, arctan, arccot,
+  arcsec, arccsc, 1/z², sinh, cosh, tanh, arcsinh, arccosh, arctanh. The
+  inverses are branch-aware through their ln (arctan's sheets are π apart);
+  a shared `MULTIVALUED_INDICES` set now drives every viewer's branch UI.
+  Categories regrouped: Trig / Inverse trig / Hyperbolic.
+- **Plane Transform wired to the full set**: its GLSL dispatch stopped at 18,
+  so cot/arcsin/arccos/quadratic silently rendered as identity — now at full
+  parity including the quadratic uniforms, grouped category picker, quadratic
+  coefficient UI, and curve mapping. Verified arctan end-to-end (branch
+  points at ±i visible in the f(z) pane).
+- **Quadratic entry** redone: a new `ComplexInput` ControlPanel primitive —
+  one row per coefficient reading `a = [re] + [im]·i` — replaces the six
+  "(Re)/(Im)" rows, in both viewers, under an `f(z) = a·z² + b·z + c` hint.
+- **Clicking the title/formula opens the Function panel**: `Workspace` gains
+  `titlePanel`; the TopBar title becomes a button (opens/raises the panel on
+  desktop, opens the sheet on phone). Both function viewers opt in.
+- **Gallery preview**: Plane Transform card now shows two tilted sheets —
+  the z grid and its image under z² — with a sweeping probe line whose image
+  parabola animates the correspondence, labeled `z` and `f(z)`.
+
+![Plane Transform running arctan(z), function panel opened from the title](assets/2026-06-10-S01-plane-arctan.png)
+
+![the quadratic's complex-coefficient entry in the particle viewer](assets/2026-06-10-S01-quadratic-entry.png)
+
 ### 🟢 code · 01:21 — Preview feedback round: sorting + polygon redone from the real apps
 **Why:** the user flagged the sorting image as weak and asked for the 3D
 viewpoint on Polygon Worlds.

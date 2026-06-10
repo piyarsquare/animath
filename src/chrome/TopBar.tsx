@@ -11,7 +11,7 @@ export interface WorkspaceMode { id: string; label: string; }
  * optional mode pills (e.g. Trinary's Observatory | Lab), a Layouts-menu
  * slot (children), the ? explainer and the skin picker.
  */
-export function TopBar({ title, subtitle, modes, activeMode, onModeChange, explainer, note, home = true, compact, children }: {
+export function TopBar({ title, subtitle, modes, activeMode, onModeChange, explainer, note, home = true, compact, onTitleClick, children }: {
   title: string;
   subtitle?: string;
   modes?: WorkspaceMode[];
@@ -24,6 +24,8 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
   home?: boolean;
   /** Compact phone bar: tighter padding, compact skin picker. */
   compact?: boolean;
+  /** Makes the title/formula a button (e.g. opens the Function panel). */
+  onTitleClick?: () => void;
   children?: React.ReactNode;
 }) {
   const [skin, setSkin] = useSkin();
@@ -40,10 +42,22 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
         <div className="am-brand"><span className="am-brand-mark">a</span></div>
       )}
       <div className="am-bar-sep" />
-      <div className="am-titlewrap">
-        <span className="am-title">{title}</span>
-        {subtitle && <span className="am-sub">{subtitle}</span>}
-      </div>
+      {onTitleClick ? (
+        <button
+          className="am-titlewrap am-title-btn"
+          title="Change function"
+          aria-label={`${title} — change function`}
+          onClick={onTitleClick}
+        >
+          <span className="am-title">{title}</span>
+          {subtitle && <span className="am-sub">{subtitle}</span>}
+        </button>
+      ) : (
+        <div className="am-titlewrap">
+          <span className="am-title">{title}</span>
+          {subtitle && <span className="am-sub">{subtitle}</span>}
+        </div>
+      )}
       {modes && modes.length > 0 && (
         <>
           <div className="am-bar-sep" />

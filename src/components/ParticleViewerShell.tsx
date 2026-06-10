@@ -662,6 +662,7 @@ export default function ParticleViewerShell({
       layouts={layouts}
       defaultLayoutId="essentials"
       explainer={help || null}
+      titlePanel="function"
     />
   );
 }

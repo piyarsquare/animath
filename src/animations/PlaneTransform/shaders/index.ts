@@ -14,6 +14,9 @@ uniform int   exponentP;
 uniform int   exponentQ;
 uniform int   branchIndex;
 uniform float pointSize;
+uniform vec2  uQuadA;
+uniform vec2  uQuadB;
+uniform vec2  uQuadC;
 
 varying vec2 vSourcePos;
 
@@ -69,6 +72,52 @@ vec2 complexPowRational(vec2 z, int p, int q){
   return vec2(rpq*cos(ang), rpq*sin(ang));
 }
 
+vec2 complexCot(vec2 z){vec2 s=complexSin(z);vec2 c=complexCos(z);float d=s.x*s.x+s.y*s.y;if(d<1e-4)d=1e-4;return vec2((c.x*s.x+c.y*s.y)/d,(c.y*s.x-c.x*s.y)/d);}
+// Multivalued inverse trig — the ln carries the branch; the inner sqrt stays principal.
+vec2 complexArcsin(vec2 z, int b){
+  vec2 omz2 = vec2(1.0 - (z.x*z.x - z.y*z.y), -(2.0*z.x*z.y));
+  vec2 s = complexSqrt(omz2);
+  vec2 w = vec2(-z.y + s.x, z.x + s.y);
+  vec2 lnw = complexLnBranch(w, b);
+  return vec2(lnw.y, -lnw.x);
+}
+vec2 complexArccos(vec2 z, int b){
+  vec2 omz2 = vec2(1.0 - (z.x*z.x - z.y*z.y), -(2.0*z.x*z.y));
+  vec2 s = complexSqrt(omz2);
+  vec2 w = vec2(z.x - s.y, z.y + s.x);
+  vec2 lnw = complexLnBranch(w, b);
+  return vec2(lnw.y, -lnw.x);
+}
+vec2 complexQuadratic(vec2 z){return complexMul(uQuadA, complexSquare(z)) + complexMul(uQuadB, z) + uQuadC;}
+vec2 complexSec(vec2 z){return complexInv(complexCos(z));}
+vec2 complexCsc(vec2 z){return complexInv(complexSin(z));}
+vec2 complexArctan(vec2 z, int b){
+  vec2 num = vec2(1.0 - z.y, z.x);
+  vec2 di = complexInv(vec2(1.0 + z.y, -z.x));
+  vec2 lnw = complexLnBranch(complexMul(num, di), b);
+  return vec2(lnw.y*0.5, -lnw.x*0.5);
+}
+vec2 complexArccot(vec2 z, int b){return complexArctan(complexInv(z), b);}
+vec2 complexArcsec(vec2 z, int b){return complexArccos(complexInv(z), b);}
+vec2 complexArccsc(vec2 z, int b){return complexArcsin(complexInv(z), b);}
+vec2 complexInverseSquare(vec2 z){return complexInv(complexSquare(z));}
+vec2 complexSinh(vec2 z){vec2 e1=complexExp(z);vec2 e2=complexExp(-z);return (e1-e2)*0.5;}
+vec2 complexCosh(vec2 z){vec2 e1=complexExp(z);vec2 e2=complexExp(-z);return (e1+e2)*0.5;}
+vec2 complexTanh(vec2 z){return complexMul(complexSinh(z), complexInv(complexCosh(z)));}
+vec2 complexArcsinh(vec2 z, int b){
+  vec2 z2p1 = vec2(z.x*z.x - z.y*z.y + 1.0, 2.0*z.x*z.y);
+  return complexLnBranch(z + complexSqrt(z2p1), b);
+}
+vec2 complexArccosh(vec2 z, int b){
+  vec2 z2m1 = vec2(z.x*z.x - z.y*z.y - 1.0, 2.0*z.x*z.y);
+  return complexLnBranch(z + complexSqrt(z2m1), b);
+}
+vec2 complexArctanh(vec2 z, int b){
+  vec2 num = vec2(1.0 + z.x, z.y);
+  vec2 di = complexInv(vec2(1.0 - z.x, -z.y));
+  return complexLnBranch(complexMul(num, di), b)*0.5;
+}
+
 vec2 applyComplex(vec2 z, int t){
   if(t==0)  return z;
   if(t==1)  return complexSqrtBranch(z, branchIndex);
@@ -89,6 +138,23 @@ vec2 applyComplex(vec2 z, int t){
   if(t==16) return complexCbrt(z);
   if(t==17) return complexZMinus1OverZPlus1(z);
   if(t==18) return complexPowRational(z, exponentP, exponentQ);
+  if(t==19) return complexCot(z);
+  if(t==20) return complexArcsin(z, branchIndex);
+  if(t==21) return complexArccos(z, branchIndex);
+  if(t==22) return complexQuadratic(z);
+  if(t==23) return complexSec(z);
+  if(t==24) return complexCsc(z);
+  if(t==25) return complexArctan(z, branchIndex);
+  if(t==26) return complexArccot(z, branchIndex);
+  if(t==27) return complexArcsec(z, branchIndex);
+  if(t==28) return complexArccsc(z, branchIndex);
+  if(t==29) return complexInverseSquare(z);
+  if(t==30) return complexSinh(z);
+  if(t==31) return complexCosh(z);
+  if(t==32) return complexTanh(z);
+  if(t==33) return complexArcsinh(z, branchIndex);
+  if(t==34) return complexArccosh(z, branchIndex);
+  if(t==35) return complexArctanh(z, branchIndex);
   return z;
 }
 

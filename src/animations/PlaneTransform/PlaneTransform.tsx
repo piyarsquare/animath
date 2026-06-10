@@ -3,12 +3,13 @@ import * as THREE from 'three';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { usePhone } from '../../chrome/usePhone';
-import { Slider, Pills, Select, NumberInput } from '../../components/ControlPanel';
+import { Slider, Pills, Select, NumberInput, ComplexInput } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import {
-  functionNames, functionFormulas, POW_PQ_INDEX,
-  applyComplexBranch, complexPowRational,
+  functionNames, functionFormulas, functionCategories,
+  POW_PQ_INDEX, QUADRATIC_INDEX, MULTIVALUED_INDICES,
+  applyComplexBranch, complexPowRational, complexQuadratic,
 } from '../../lib/complexMath';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
 import { vertexShader, fragmentShader } from './shaders';
@@ -56,6 +57,11 @@ export default function PlaneTransform() {
   const [expP, setExpP] = usePersistentState(`${STORAGE_KEY}:expP`, 1);
   const [expQ, setExpQ] = usePersistentState(`${STORAGE_KEY}:expQ`, 2);
   const [branchIndex, setBranchIndex] = usePersistentState(`${STORAGE_KEY}:branchIndex`, 0);
+  // Coefficients for the generic quadratic a·z²+b·z+c (each [Re, Im]); default
+  // a=1 so the out-of-the-box quadratic is z². Mirrors ComplexParticles.
+  const [quadA, setQuadA] = usePersistentState<[number, number]>(`${STORAGE_KEY}:quadA`, [1, 0]);
+  const [quadB, setQuadB] = usePersistentState<[number, number]>(`${STORAGE_KEY}:quadB`, [0, 0]);
+  const [quadC, setQuadC] = usePersistentState<[number, number]>(`${STORAGE_KEY}:quadC`, [0, 0]);
   const [density, setDensity] = usePersistentState(`${STORAGE_KEY}:density`, 240);          // points per side
   const [pointSize, setPointSize] = usePersistentState(`${STORAGE_KEY}:pointSize`, 2.5);
   const [viewExtent, setViewExtent] = usePersistentState(`${STORAGE_KEY}:viewExtent`, 3);   // half-side of visible square
@@ -68,10 +74,19 @@ export default function PlaneTransform() {
   const [curve, setCurve] = useState<CurvePoint[]>([]);
   const [drawMode, setDrawMode] = useState(false);
 
+  const fmtComplex = ([re, im]: [number, number]): string => {
+    const r = Number(re.toFixed(3));
+    const i = Number(im.toFixed(3));
+    if (i === 0) return `${r}`;
+    if (r === 0) return i === 1 ? 'i' : i === -1 ? '−i' : `${i}i`;
+    return `${r}${i > 0 ? '+' : '−'}${Math.abs(i)}i`;
+  };
   const fnName = functionNames[functionIndex];
   const fnFormula = functionIndex === POW_PQ_INDEX
     ? `z^(${expP}/${expQ})`
-    : functionFormulas[fnName];
+    : functionIndex === QUADRATIC_INDEX
+      ? `(${fmtComplex(quadA)})·z² + (${fmtComplex(quadB)})·z + (${fmtComplex(quadC)})`
+      : functionFormulas[fnName];
 
   // Mount targets + refs for the two panes (one per view window).
   const inputMountRef  = useRef<HTMLDivElement>(null);
@@ -132,6 +147,9 @@ export default function PlaneTransform() {
           exponentP:     { value: expP },
           exponentQ:     { value: expQ === 0 ? 1 : expQ },
           branchIndex:   { value: branchIndex },
+          uQuadA:        { value: new THREE.Vector2(quadA[0], quadA[1]) },
+          uQuadB:        { value: new THREE.Vector2(quadB[0], quadB[1]) },
+          uQuadC:        { value: new THREE.Vector2(quadC[0], quadC[1]) },
           pointSize:     { value: pointSize },
           colorMode:     { value: colorMode },
           saturation:    { value: saturation },
@@ -194,12 +212,15 @@ export default function PlaneTransform() {
       m.uniforms.exponentP.value    = expP;
       m.uniforms.exponentQ.value    = expQ === 0 ? 1 : expQ;
       m.uniforms.branchIndex.value  = branchIndex;
+      (m.uniforms.uQuadA.value as THREE.Vector2).set(quadA[0], quadA[1]);
+      (m.uniforms.uQuadB.value as THREE.Vector2).set(quadB[0], quadB[1]);
+      (m.uniforms.uQuadC.value as THREE.Vector2).set(quadC[0], quadC[1]);
       m.uniforms.pointSize.value    = pointSize;
       m.uniforms.colorMode.value    = colorMode;
       m.uniforms.saturation.value   = saturation;
       m.uniforms.intensity.value    = intensity;
     }
-  }, [viewExtent, planeMode, functionIndex, expP, expQ, branchIndex, pointSize, colorMode, saturation, intensity, phone]);
+  }, [viewExtent, planeMode, functionIndex, expP, expQ, branchIndex, quadA, quadB, quadC, pointSize, colorMode, saturation, intensity, phone]);
 
   // Map a curve through the active complex function to get the output polyline.
   const outputCurve = useMemo<CurvePoint[]>(() => {
@@ -209,20 +230,23 @@ export default function PlaneTransform() {
       tmp.set(x, y);
       const w = functionIndex === POW_PQ_INDEX
         ? complexPowRational(tmp, expP, expQ === 0 ? 1 : expQ)
-        : applyComplexBranch(tmp, functionIndex, branchIndex);
+        : functionIndex === QUADRATIC_INDEX
+          ? complexQuadratic(tmp,
+              new THREE.Vector2(quadA[0], quadA[1]),
+              new THREE.Vector2(quadB[0], quadB[1]),
+              new THREE.Vector2(quadC[0], quadC[1]))
+          : applyComplexBranch(tmp, functionIndex, branchIndex);
       return [w.x, w.y] as CurvePoint;
     });
-  }, [curve, functionIndex, expP, expQ, branchIndex]);
+  }, [curve, functionIndex, expP, expQ, branchIndex, quadA, quadB, quadC]);
 
   const handleStandardCurve = (id: StandardCurveName) => {
     setCurve(buildStandardCurve(id, viewExtent));
   };
 
   const isPow = functionIndex === POW_PQ_INDEX;
-  const isMulti = functionIndex === 1 /* sqrt */
-               || functionIndex === 3 /* ln */
-               || functionIndex === 14 /* branchSqrtPoly */
-               || isPow;
+  const isQuadratic = functionIndex === QUADRATIC_INDEX;
+  const isMulti = MULTIVALUED_INDICES.has(functionIndex);
 
   const colorPills = useMemo(() => (
     [0, 1, 2] as ColorMode[]
@@ -230,11 +254,16 @@ export default function PlaneTransform() {
 
   /* ---- archetype panels (PARAM-MAP §2; rows unchanged from the old drawer) ---- */
 
+  const functionGroups = functionCategories.map(cat => ({
+    label: cat.label,
+    options: cat.members.map(idx => ({ value: idx, label: functionNames[idx] })),
+  }));
+
   const functionNode = (
     <>
       <Select
         label="Function"
-        options={functionNames.map((n, i) => ({ value: i, label: n }))}
+        groups={functionGroups}
         value={functionIndex}
         onChange={setFunctionIndex}
       />
@@ -244,6 +273,16 @@ export default function PlaneTransform() {
           {/* q = 0 is undefined (z^(p/0)); coerce to 1 so the header/saved value
               matches what actually renders. Negative q stays allowed. */}
           <NumberInput label="q" value={expQ} integer onChange={v => setExpQ(v === 0 ? 1 : v)} />
+        </>
+      )}
+      {isQuadratic && (
+        <>
+          <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', margin: '4px 0 2px' }}>
+            f(z) = a·z² + b·z + c
+          </div>
+          <ComplexInput label="a" value={quadA} onChange={setQuadA} />
+          <ComplexInput label="b" value={quadB} onChange={setQuadB} />
+          <ComplexInput label="c" value={quadC} onChange={setQuadC} />
         </>
       )}
       {isMulti && (
@@ -440,6 +479,7 @@ export default function PlaneTransform() {
       layouts={layouts}
       defaultLayoutId="essentials"
       explainer={help || null}
+      titlePanel="function"
     />
   );
 }

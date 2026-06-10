@@ -111,43 +111,72 @@ function ParticlePreview({ light, hue = 0 }: { light: boolean; hue?: number }) {
   return <canvas ref={ref} style={canvasStyle} />;
 }
 
-/* ---- Plane transform: a colored grid warping under f(z) = z² -------------- */
+/* ---- Plane transform: domain and range as two sheets under f(z) = z² ------ */
+/* Mirrors the app's two view windows: the z-plane grid on the left sheet, its
+   image under f on the right, with a probe line and its image linking them. */
 function PlanePreview({ light }: { light: boolean }) {
   const bg = light ? '#f4f3ef' : '#000';
   const ref = useCanvas((ctx, W, H, t) => {
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
-    const cx = W / 2, cy = H / 2;
-    const scale = Math.min(W, H) * 0.34;
-    // morph identity ↔ z² and back
-    const s = 0.5 - 0.5 * Math.cos(t * 0.55);
-    const LINES = 13, SAMPLES = 36, R = 1.5;
-    ctx.globalCompositeOperation = light ? 'multiply' : 'lighter';
-    ctx.lineWidth = Math.max(1, W * 0.0022);
-    const mapPt = (x: number, y: number): [number, number] => {
-      // w = (1-s)·z + s·z², damped so the image stays in frame
-      const zx = x * x - y * y, zy = 2 * x * y;
-      const k = 1 / (1 + 0.55 * s);
-      const wx = ((1 - s) * x + s * zx) * k;
-      const wy = ((1 - s) * y + s * zy) * k;
-      return [cx + wx * scale, cy + wy * scale];
+    const LINES = 9, SAMPLES = 28, R = 1.15;
+    // a sheet = a gently tilted card; (u, v) in math coords → screen
+    const makeSheet = (cx: number, cy: number) => {
+      const sx = W * 0.155, sy = H * 0.30, kx = W * 0.035, ky = -H * 0.045;
+      return (u: number, v: number): [number, number] =>
+        [cx + u * sx + v * kx, cy - v * sy + u * ky];
     };
-    const drawLine = (pt: (k: number) => [number, number], hh: number) => {
-      ctx.strokeStyle = `hsla(${hh * 360},${light ? 65 : 90}%,${light ? 45 : 62}%,${light ? 0.6 : 0.8})`;
+    const domain = makeSheet(W * 0.26, H * 0.5);
+    const range = makeSheet(W * 0.74, H * 0.52);
+    const fz = (x: number, y: number): [number, number] => {
+      // z² damped so the image sheet stays in frame
+      const k = 1 / 1.35;
+      return [(x * x - y * y) * k, 2 * x * y * k];
+    };
+    const clampPt = ([x, y]: [number, number]): [number, number] =>
+      [Math.max(-1.9, Math.min(1.9, x)), Math.max(-1.9, Math.min(1.9, y))];
+    ctx.globalCompositeOperation = light ? 'multiply' : 'lighter';
+    ctx.lineWidth = Math.max(1, W * 0.002);
+    const drawLine = (
+      sheet: (u: number, v: number) => [number, number],
+      pt: (k: number) => [number, number],
+      map: boolean, hh: number, alpha: number, width?: number,
+    ) => {
+      ctx.strokeStyle = `hsla(${hh * 360},${light ? 65 : 90}%,${light ? 45 : 62}%,${alpha})`;
+      if (width) ctx.lineWidth = width;
       ctx.beginPath();
       for (let k = 0; k <= SAMPLES; k++) {
-        const [x, y] = pt(k / SAMPLES);
-        const [px, py] = mapPt(x, y);
+        let [x, y] = pt(k / SAMPLES);
+        if (map) [x, y] = clampPt(fz(x, y));
+        const [px, py] = sheet(x, y);
         k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
       }
       ctx.stroke();
     };
-    for (let i = 0; i < LINES; i++) {
-      const c = (i / (LINES - 1)) * 2 * R - R;
-      drawLine(k => [c, k * 2 * R - R], 0.55 + (c / R) * 0.12);   // vertical line x = c
-      drawLine(k => [k * 2 * R - R, c], 0.05 + (c / R) * 0.12);   // horizontal line y = c
+    // the same grid on both sheets — left as-is, right through f
+    for (const map of [false, true]) {
+      const sheet = map ? range : domain;
+      const a = light ? 0.55 : 0.7;
+      for (let i = 0; i < LINES; i++) {
+        const c = (i / (LINES - 1)) * 2 * R - R;
+        drawLine(sheet, k => [c, k * 2 * R - R], map, 0.55 + (c / R) * 0.12, a);
+        drawLine(sheet, k => [k * 2 * R - R, c], map, 0.05 + (c / R) * 0.12, a);
+      }
     }
+    // probe: a line sweeping the domain and its image sweeping the range
+    const c = Math.sin(t * 0.6) * 0.85;
+    const probeW = Math.max(1.6, W * 0.0045);
+    drawLine(domain, k => [c, k * 2 * R - R], false, light ? 0.07 : 0.13, 0.95, probeW);
+    drawLine(range, k => [c, k * 2 * R - R], true, light ? 0.07 : 0.13, 0.95, probeW);
+    // sheet labels
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = light ? 'rgba(40,40,50,0.75)' : 'rgba(255,255,255,0.65)';
+    ctx.font = `${Math.max(9, W * 0.032)}px ui-monospace, monospace`;
+    const [zx, zy] = domain(-R, -R);
+    const [fx, fy] = range(-R, -R);
+    ctx.fillText('z', zx, Math.min(H - 4, zy + H * 0.08));
+    ctx.fillText('f(z)', fx, Math.min(H - 4, fy + H * 0.08));
   }, [light]);
   return <canvas ref={ref} style={canvasStyle} />;
 }

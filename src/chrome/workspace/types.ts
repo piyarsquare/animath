@@ -84,6 +84,9 @@ export interface WorkspaceProps {
   defaultLayoutId?: string;
   /** Markdown for the top-bar "?" explainer. */
   explainer?: string | null;
+  /** Panel id the top-bar title opens when clicked (e.g. 'function'), so the
+   *  formula in the bar doubles as a shortcut to its selector. */
+  titlePanel?: string;
   /** Optional top-bar mode pills (e.g. Trinary's Observatory | Lab). */
   modes?: WorkspaceMode[];
   activeMode?: string;

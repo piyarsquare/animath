@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import ParticleViewerShell from '../../components/ParticleViewerShell';
-import { Select, NumberInput } from '../../components/ControlPanel';
+import { Select, NumberInput, ComplexInput } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
@@ -651,12 +651,12 @@ export default function ComplexParticles({
       )}
       {isQuadratic && (
         <>
-          <NumberInput label="a (Re)" value={quadA[0]} step={0.1} onChange={v => setQuadA([v, quadA[1]])} />
-          <NumberInput label="a (Im)" value={quadA[1]} step={0.1} onChange={v => setQuadA([quadA[0], v])} />
-          <NumberInput label="b (Re)" value={quadB[0]} step={0.1} onChange={v => setQuadB([v, quadB[1]])} />
-          <NumberInput label="b (Im)" value={quadB[1]} step={0.1} onChange={v => setQuadB([quadB[0], v])} />
-          <NumberInput label="c (Re)" value={quadC[0]} step={0.1} onChange={v => setQuadC([v, quadC[1]])} />
-          <NumberInput label="c (Im)" value={quadC[1]} step={0.1} onChange={v => setQuadC([quadC[0], v])} />
+          <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', margin: '4px 0 2px' }}>
+            f(z) = a·z² + b·z + c
+          </div>
+          <ComplexInput label="a" value={quadA} onChange={setQuadA} />
+          <ComplexInput label="b" value={quadB} onChange={setQuadB} />
+          <ComplexInput label="c" value={quadC} onChange={setQuadC} />
         </>
       )}
     </>
