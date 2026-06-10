@@ -40,6 +40,39 @@ rename/export, gallery search, phone landscape) and embeds phase 2 (the
      emoji: 🟣 decision · 🟢 code · 🔵 finding · 🔴 blocker · 🟡 milestone
      Follow each with a "**Why:** …" line, then optional body paragraphs. -->
 
+### 🟡 milestone · 19:05 — Design review delivered (CHROME-REVIEW.md)
+**Why:** User asked for a chrome design review across all apps, naming three
+gaps: always-on-screen buttons (Stable Matching has no visible play button to
+begin with), control access in fullscreen, and Plane Transform's planar plots
+living as two separate windows.
+
+Wrote `docs/redesign/CHROME-REVIEW.md` (findings F1–F11, proposals P1–P5,
+ordered plan) and appended a ledger entry to `docs/redesign/IN-PROGRESS.md`.
+Root cause across all three: the spec makes every control a dismissible panel
+resident with no concept of permanent controls or inseparable view pairs.
+
+### 🔵 finding · 18:58 — Phone opens every app inert; fullscreen rail is silently broken
+**Why:** Three parallel code surveys (per-app primary actions, fullscreen
+mechanism, PlaneTransform/Correspondence two-view architecture) to ground the
+review in file:line evidence.
+
+Key findings: (1) on phone, panels are bottom sheets all closed by default —
+8 of 10 apps open with no action visible (the reported Stable Matching
+experience); desktop defaults are right but fragile (✕ + persistence lose the
+playback panel). (2) Fullscreen is z-index occlusion (view z 100); the rail
+stays clickable at z 200 but the panel it opens renders at z≈30 *behind* the
+fullscreen view — a latent bug. (3) The workspace engine has no view-pairing
+concept; PlaneTransform fakes the link internally (shared geometry +
+force-locked `viewExtent`), and mismatched pane resizes make the SVG curve
+overlay geometrically wrong (inscribed-square math); the embed route already
+demonstrates the correct one-container/two-pane model. TopologyWalk and
+PolygonWorlds hand-roll MovePad HUDs — the missing "always-on control"
+concept, invented per app.
+
+### 🟣 decision · 18:50 — Review scope: assessment only, committed under docs/redesign/
+**Why:** The deliverable is a design review, not implementation; proposals
+need a user decision before code changes.
+
 ### 🟡 milestone · 18:43 — Session started
 **Why:** User opened the session with the focus "whole-scale focus on app chrome."
 

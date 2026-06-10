@@ -81,6 +81,11 @@ questions. The implementing agent should update this file as phases land.
   cards.
 - **Embeds phase 2** (docs/EMBEDS.md): the `s=` catch-all param and the
   "Embed this view" share dialog.
+- **Chrome review 2026-06-10** (`docs/redesign/CHROME-REVIEW.md`): always-on
+  **action strip** for primary verbs (phone opens every app inert today);
+  **fullscreen control access** (incl. the rail-opens-hidden-panel z-index
+  bug); a **split-view primitive** so Plane Transform's two panes become one
+  window; per-view start hints; legitimize the MovePad HUDs as `ViewDef.hud`.
 
 ## Deliberate removals (do not resurrect without discussion)
 - The old **draggable floater** → replaced by openable `drive` panels you can place beside the plot.
