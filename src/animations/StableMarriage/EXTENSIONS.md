@@ -124,11 +124,18 @@ side.
 | Matching | Proposing side avg rank | Receiving side avg rank |
 |---|---|---|
 | Stable (proposer-optimal) | ≈ ln n | ≈ n / ln n |
-| Welfare-optimal (unstable allowed) | small constant | small constant |
+| Welfare-optimal (min total two-sided rank) | ≈ √n | ≈ √n |
 
-The proposing side is already near-optimal under stability; the receiving side
-gets dragged from "a top-few choice" to ≈ n/ln n. The **Consensus** knob is the
-dial for how bad it gets: high consensus (everyone agrees who's desirable) ⇒
+Stability is costly — but welfare maximization isn't free for the *proposer*
+either. Minimizing the **total two-sided rank** balances the two sides at ≈ √n
+each: it lifts the receiving side dramatically (from ≈ n/ln n down to ≈ √n) but
+pulls the proposing side *down* from its near-optimal ≈ ln n to ≈ √n. The reason
+the welfare floor is √n and not a constant: a low *combined*-rank edge has to be
+good for **both** endpoints, and a person has only ~k²/n partners who rank each
+other within their mutual top k — so mutually-top-k matches don't become
+plentiful until k ≳ √n. The net price of stability is still large (the receiving
+side's ≈ n/ln n vs. ≈ √n dominates), and the **Consensus** knob is the dial for
+how bad the stable side gets: high consensus (everyone agrees who's desirable) ⇒
 fierce competition ⇒ the receiving side's rank balloons. Low consensus ⇒ nearly
 everyone can get a top choice ⇒ stability is almost free.
 
@@ -165,7 +172,8 @@ i.e., does the **first** unit of tolerated frustration unlock a big welfare jump
 
 **What the theory suggests.**
 - The *total* attainable gain `f(∞) − f(0)` is large for random/high-consensus
-  instances (the n/ln n gap from idea 3), so there is real room.
+  instances (the receiving side falls from ≈ n/ln n toward the ≈ √n welfare floor;
+  see idea 3), so there is real room.
 - Whether the **first** blocking pair captures a big chunk of it is an empirical,
   instance-dependent question — which is exactly why a tool is the right way to
   study it. A natural **hypothesis**: returns are concentrated and diminishing —
