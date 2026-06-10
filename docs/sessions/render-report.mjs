@@ -20,6 +20,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { marked } from "marked";
+import { normalizeApps, appChips } from "./categories.mjs";
 
 marked.setOptions({ gfm: true });
 
@@ -139,7 +140,7 @@ const metaRows = [
   ["Branch", fm.branch && `<code>${esc(fm.branch)}</code>`],
   ["Status", statusBadge(fm.status)],
   ["Build", buildBadge(fm.build)],
-  ["App", fm.app && `<code>${esc(fm.app)}</code>`],
+  ["App", appChips(normalizeApps(fm.app, fm.slug))],
 ].filter(([, v]) => v).map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("\n      ");
 
 // 5 · asset prefix so report.css/js resolve from any depth under docs/sessions

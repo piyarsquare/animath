@@ -9,7 +9,7 @@ status: completed
 build: unknown
 followup: null
 pr: null
-app: [Name or null]
+app: [app slug(s), comma-separated — e.g. stable-marriage; or chrome / engine / general; null ⇒ inferred]
 ---
 
 # [Description]

@@ -117,6 +117,17 @@ dl.meta dd { margin: 0; }
 .chip-finding  { background: color-mix(in srgb, var(--t-finding) 16%, transparent); color: var(--t-finding); }
 .chip-blocker  { background: color-mix(in srgb, var(--t-blocker) 16%, transparent); color: var(--t-blocker); }
 .chip-milestone{ background: color-mix(in srgb, var(--t-milestone) 16%, transparent); color: var(--t-milestone); }
+/* app/category chips (control center + per-report meta); --c is an HSL hue 0–360 */
+.cat {
+  display: inline-block; font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 0.08rem 0.45rem; border-radius: 4px; vertical-align: 0.1em;
+  background: hsl(var(--c, 215) 60% 90%); color: hsl(var(--c, 215) 55% 30%);
+}
+.cat-general { filter: saturate(0.18); }
+@media (prefers-color-scheme: dark) {
+  .cat { background: hsl(var(--c, 215) 38% 18%); color: hsl(var(--c, 215) 65% 75%); }
+}
 
 /* ---- code, tables, quotes ---- */
 code, kbd {
