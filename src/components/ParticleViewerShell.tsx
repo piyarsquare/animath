@@ -55,7 +55,7 @@ export interface ParticleViewerShellProps {
   settingsStorageKey?: string;
   /** Chrome-less applet mode (#/embed/…, docs/EMBEDS.md): render only the
    *  view with a corner badge — no workspace, no panels, no top bar. */
-  embed?: { caption?: string; controls: boolean };
+  embed?: { caption?: string; controls: boolean; buttons?: import('../lib/embedParams').EmbedButton[] };
 }
 
 export default function ParticleViewerShell({
@@ -671,6 +671,24 @@ export default function ParticleViewerShell({
   // Embed mode: the same engine, none of the chrome. The badge links back to
   // the full workspace so an applet is always one tap from the real app.
   if (embed) {
+    // Overlay buttons (buttons= param): drop-axis projections are static
+    // reads, Rotate returns to the full 4D view with the quaternion tumble.
+    const embedButton = (b: import('../lib/embedParams').EmbedButton) => {
+      if (b === 'rotate') {
+        return {
+          label: 'Rotate',
+          on: state.dropAxis === 'None' && state.viewMotion === 'Quaternion',
+          onClick: () => { controls.handleDropAxis('None'); controls.handleMotion('Quaternion'); },
+        };
+      }
+      const axis = b.slice(-1).toUpperCase();
+      const drop = `Drop${axis}` as typeof state.dropAxis;
+      return {
+        label: `Drop ${axis}`,
+        on: state.dropAxis === drop,
+        onClick: () => { controls.handleDropAxis(drop); controls.handleMotion('Fixed'); },
+      };
+    };
     return (
       <div className="am-embed">
         <div className="am-embed-view">
@@ -680,6 +698,18 @@ export default function ParticleViewerShell({
           >
             <Canvas3D onMount={onMount} />
           </div>
+          {embed.buttons && embed.buttons.length > 0 && (
+            <div className="am-embed-buttons">
+              {embed.buttons.map(b => {
+                const { label, on, onClick } = embedButton(b);
+                return (
+                  <button key={b} className={`am-embed-btn ${on ? 'am-on' : ''}`} onClick={onClick}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <a
             className="am-embed-badge"
             href={`${import.meta.env.BASE_URL}#/${appId}`}

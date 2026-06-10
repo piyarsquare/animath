@@ -53,26 +53,32 @@ interface PaneRefs {
  * The Grid panel offers a polar sampling grid (rings + rays) and a log-polar
  * plane layout (plot at (arg, log|·|)) — see polarViews.ts.
  */
-export default function PlaneTransform() {
+export default function PlaneTransform({ embed }: {
+  /** Chrome-less applet mode (#/embed/plane-transform, docs/EMBEDS.md):
+   *  URL-configured, ephemeral state, both panes side by side. */
+  embed?: import('../../lib/embedParams').PlaneEmbedConfig;
+} = {}) {
+  // Per-field persistence key; null in embed mode (ephemeral).
+  const ek = (field: string) => (embed ? null : `${STORAGE_KEY}:${field}`);
   const [functionIndex, setFunctionIndex] = usePersistentState(
-    `${STORAGE_KEY}:functionIndex`, Math.max(0, functionNames.indexOf('sin')),
+    ek('functionIndex'), Math.max(0, functionNames.indexOf(embed?.fn ?? 'sin')),
   );
-  const [expP, setExpP] = usePersistentState(`${STORAGE_KEY}:expP`, 1);
-  const [expQ, setExpQ] = usePersistentState(`${STORAGE_KEY}:expQ`, 2);
-  const [branchIndex, setBranchIndex] = usePersistentState(`${STORAGE_KEY}:branchIndex`, 0);
+  const [expP, setExpP] = usePersistentState(ek('expP'), embed?.p ?? 1);
+  const [expQ, setExpQ] = usePersistentState(ek('expQ'), embed?.q ?? 2);
+  const [branchIndex, setBranchIndex] = usePersistentState(ek('branchIndex'), 0);
   // Coefficients for the generic quadratic a·z²+b·z+c (each [Re, Im]); default
   // a=1 so the out-of-the-box quadratic is z². Mirrors ComplexParticles.
-  const [quadA, setQuadA] = usePersistentState<[number, number]>(`${STORAGE_KEY}:quadA`, [1, 0]);
-  const [quadB, setQuadB] = usePersistentState<[number, number]>(`${STORAGE_KEY}:quadB`, [0, 0]);
-  const [quadC, setQuadC] = usePersistentState<[number, number]>(`${STORAGE_KEY}:quadC`, [0, 0]);
-  const [density, setDensity] = usePersistentState(`${STORAGE_KEY}:density`, 240);          // points per side
-  const [pointSize, setPointSize] = usePersistentState(`${STORAGE_KEY}:pointSize`, 2.5);
-  const [viewExtent, setViewExtent] = usePersistentState(`${STORAGE_KEY}:viewExtent`, 3);   // half-side of visible square
-  const [gridMode, setGridMode] = usePersistentState<GridMode>(`${STORAGE_KEY}:gridMode`, 'cartesian');
-  const [planeMode, setPlaneMode] = usePersistentState<PlaneMode>(`${STORAGE_KEY}:planeMode`, 'cartesian');
-  const [colorMode, setColorMode] = usePersistentState<ColorMode>(`${STORAGE_KEY}:colorMode`, 0);
-  const [saturation, setSaturation] = usePersistentState(`${STORAGE_KEY}:saturation`, 0.85);
-  const [intensity, setIntensity] = usePersistentState(`${STORAGE_KEY}:intensity`, 1.0);
+  const [quadA, setQuadA] = usePersistentState<[number, number]>(ek('quadA'), [1, 0]);
+  const [quadB, setQuadB] = usePersistentState<[number, number]>(ek('quadB'), [0, 0]);
+  const [quadC, setQuadC] = usePersistentState<[number, number]>(ek('quadC'), [0, 0]);
+  const [density, setDensity] = usePersistentState(ek('density'), 240);          // points per side
+  const [pointSize, setPointSize] = usePersistentState(ek('pointSize'), 2.5);
+  const [viewExtent, setViewExtent] = usePersistentState(ek('viewExtent'), embed?.extent ?? 3);   // half-side of visible square
+  const [gridMode, setGridMode] = usePersistentState<GridMode>(ek('gridMode'), 'cartesian');
+  const [planeMode, setPlaneMode] = usePersistentState<PlaneMode>(ek('planeMode'), 'cartesian');
+  const [colorMode, setColorMode] = usePersistentState<ColorMode>(ek('colorMode'), 0);
+  const [saturation, setSaturation] = usePersistentState(ek('saturation'), 0.85);
+  const [intensity, setIntensity] = usePersistentState(ek('intensity'), 1.0);
   // Drawn curve + draw toggle are transient per-session state, not persisted.
   const [curve, setCurve] = useState<CurvePoint[]>([]);
   const [drawMode, setDrawMode] = useState(false);
@@ -479,6 +485,52 @@ export default function PlaneTransform() {
       open: { curves: { x: 84, y: 18 } },
     },
   ];
+
+  // Embed mode: both panes side by side, none of the workspace chrome. The
+  // badge links back to the full app (docs/EMBEDS.md).
+  if (embed) {
+    const zoom = embed.controls
+      ? (factor: number) => setViewExtent(v => Math.min(20, Math.max(0.2, v * factor)))
+      : () => {};
+    return (
+      <div className="am-embed">
+        <div className="am-embed-row">
+          <div className="am-embed-pane">
+            <InputPane
+              mountRef={inputMountRef}
+              viewExtent={viewExtent}
+              planeMode={planeMode}
+              drawMode={false}
+              curve={curve}
+              onAppendCurve={() => {}}
+              onWheelZoom={zoom}
+            />
+            <span className="am-embed-pane-label">z</span>
+          </div>
+          <div className="am-embed-pane">
+            <OutputPane
+              mountRef={outputMountRef}
+              viewExtent={viewExtent}
+              planeMode={planeMode}
+              curve={outputCurve}
+              onWheelZoom={zoom}
+            />
+            <span className="am-embed-pane-label">f(z) = {fnFormula}</span>
+          </div>
+          <a
+            className="am-embed-badge"
+            href={`${import.meta.env.BASE_URL}#/plane-transform`}
+            target="_blank"
+            rel="noreferrer"
+            title="Open in animath"
+          >
+            animath ⧉
+          </a>
+        </div>
+        {embed.caption && <div className="am-embed-caption">{embed.caption}</div>}
+      </div>
+    );
+  }
 
   // The "?" modal carries both the short explainer and the full About readme,
   // so nothing from the old drawer's About section is lost.

@@ -19,6 +19,7 @@ const StableMatching = React.lazy(() => import('./animations/StableMatching/Stab
 const AgenticSorting = React.lazy(() => import('./animations/AgenticSorting/AgenticSorting'));
 const PolygonWorlds = React.lazy(() => import('./animations/PolygonWorlds/PolygonWorlds'));
 const EmbedComplexParticles = React.lazy(() => import('./embed/EmbedComplexParticles'));
+const EmbedPlaneTransform = React.lazy(() => import('./embed/EmbedPlaneTransform'));
 
 const routes: Record<string, React.ComponentType> = {
   '/complex-particles': App,
@@ -39,6 +40,7 @@ const routes: Record<string, React.ComponentType> = {
   '/polygon-worlds': PolygonWorlds,
   // Chrome-less applet routes for embedding in web pages (docs/EMBEDS.md).
   '/embed/complex-particles': EmbedComplexParticles,
+  '/embed/plane-transform': EmbedPlaneTransform,
 };
 
 function getHash(): string {

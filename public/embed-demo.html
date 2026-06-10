@@ -6,7 +6,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Seeing complex functions — an embed demo</title>
+  <title>Seeing e^z — an embed demo</title>
   <style>
     body { margin: 0; background: #faf8f3; color: #232323; font: 17px/1.65 Georgia, 'Times New Roman', serif; }
     main { max-width: 680px; margin: 0 auto; padding: 48px 20px 80px; }
@@ -14,52 +14,43 @@
     .byline { color: #8a8377; font-size: 14px; margin-bottom: 28px; }
     p { margin: 0 0 18px; }
     figure { margin: 28px 0; }
-    figure iframe { width: 100%; height: 400px; border: 1px solid #ddd5c4; border-radius: 10px; display: block; }
+    figure iframe { width: 100%; height: 380px; border: 1px solid #ddd5c4; border-radius: 10px; display: block; }
     figcaption { font-size: 13.5px; color: #8a8377; padding-top: 8px; }
     code { font-family: ui-monospace, monospace; font-size: 0.88em; background: #f0ece1; padding: 1px 5px; border-radius: 4px; }
   </style>
 </head>
 <body>
 <main>
-  <h1>Seeing complex functions</h1>
+  <h1>Seeing e<sup>z</sup></h1>
   <div class="byline">A demo article hosting live animath applets in plain &lt;iframe&gt; tags</div>
 
   <p>
-    A complex function <code>f : &#8450; &rarr; &#8450;</code> eats a point of the plane and
-    returns another. Its graph — every pair <code>(z, f(z))</code> — therefore lives in
-    <em>four</em> real dimensions. The applet below shows the graph of
-    <code>e^z</code> as a particle cloud, projected down to 3D and tumbling so your
-    eye can triangulate the fourth axis. It is live: drag to orbit, pinch or
-    scroll to zoom.
+    The exponential takes a point <code>z = x + iy</code> of the plane to
+    <code>e^z = u + iv</code>. Below, the left pane is the input plane and the
+    right pane is where every point lands — the same point keeps the same
+    color, so you can follow it across.
   </p>
 
   <figure>
     <iframe
-      src="./#/embed/complex-particles?fn=exp&proj=perspective&caption=The%20graph%20of%20e%5Ez%20as%20a%204D%20particle%20cloud"
-      loading="lazy" allowfullscreen title="e^z as a 4D particle cloud"></iframe>
-    <figcaption>Fig. 1 — the exponential's 4D graph, live from the animath engine.</figcaption>
+      src="./#/embed/plane-transform?fn=exp&caption=Left%3A%20the%20(x%2C%20y)%20input%20plane.%20Right%3A%20where%20e%5Ez%20sends%20each%20point%2C%20in%20the%20(u%2C%20v)%20plane."
+      loading="lazy" allowfullscreen title="e^z as a map from the xy plane to the uv plane"></iframe>
+    <figcaption>Fig. 1 — e<sup>z</sup> as a map from the <code>(x, y)</code> plane to the <code>(u, v)</code> plane.</figcaption>
   </figure>
 
   <p>
-    The same engine can draw the graph as a continuous <em>sheet</em> instead of a
-    cloud — better for reading the surface's folds. Here is <code>sin(z)</code>
-    rendered as a translucent sheet, spinning rigidly in the <code>xy</code> and
-    <code>uv</code> planes at once (an isoclinic double rotation):
+    Both planes are shadows of one four-dimensional object: the graph of every
+    pair <code>(z, e^z)</code>. The applet below shows that 4D graph. <em>Drop Y</em>
+    projects out the input's imaginary axis, <em>Drop X</em> its real axis, and
+    <em>Rotate</em> returns to the full 4D view, tumbling. Drag to orbit.
   </p>
 
   <figure>
     <iframe
-      src="./#/embed/complex-particles?fn=sin&render=sheet&spin=xy,uv&caption=sin(z)%20as%20a%20translucent%20sheet%2C%20double-rotating"
-      loading="lazy" allowfullscreen title="sin(z) as a rotating sheet"></iframe>
-    <figcaption>Fig. 2 — <code>sin(z)</code> as a sheet under an isoclinic double rotation.</figcaption>
+      src="./#/embed/complex-particles?fn=exp&proj=dropy&motion=fixed&buttons=dropx,dropy,rotate&caption=The%204D%20graph%20of%20e%5Ez%2C%20starting%20with%20the%20y%20axis%20projected%20out."
+      loading="lazy" allowfullscreen title="The 4D graph of e^z with drop-axis buttons"></iframe>
+    <figcaption>Fig. 2 — the 4D graph of e<sup>z</sup>, starting from <em>Drop Y</em>.</figcaption>
   </figure>
-
-  <p>
-    Each applet is configured entirely by its URL — function, render mode,
-    projection, motion — so an author can quote a precise mathematical moment
-    the way they would quote an equation. The corner badge opens the full
-    workspace, controls and all.
-  </p>
 </main>
 </body>
 </html>

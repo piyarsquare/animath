@@ -753,7 +753,7 @@ export default function ComplexParticles({
       readme={readmeText}
       explainer={explainerText}
       settingsStorageKey={embed ? undefined : STORAGE_KEY}
-      embed={embed ? { caption: embed.caption, controls: embed.controls } : undefined}
+      embed={embed ? { caption: embed.caption, controls: embed.controls, buttons: embed.buttons } : undefined}
     />
   );
 }

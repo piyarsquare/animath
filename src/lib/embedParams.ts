@@ -16,6 +16,10 @@ import { renderModes, type RenderMode } from './particles/types';
  * Unknown or garbled values are ignored (the embed falls back to defaults,
  * never crashes). Versioned via `v=` for future incompatible changes.
  */
+/** In-applet buttons an embed may show (`buttons=dropx,dropy,rotate`). */
+export type EmbedButton = 'dropx' | 'dropy' | 'dropu' | 'dropv' | 'rotate';
+const EMBED_BUTTONS: readonly EmbedButton[] = ['dropx', 'dropy', 'dropu', 'dropv', 'rotate'];
+
 export interface ParticleEmbedConfig {
   fn?: string;
   p?: number;
@@ -31,6 +35,8 @@ export interface ParticleEmbedConfig {
   caption?: string;
   /** Pointer gestures (orbit/pan/zoom) on the embedded view; on by default. */
   controls: boolean;
+  /** Optional overlay button row (projection switchers / rotate toggle). */
+  buttons?: EmbedButton[];
 }
 
 const PROJ: Record<string, ProjectionMode> = {
@@ -86,5 +92,26 @@ export function parseParticleEmbed(query: string): ParticleEmbedConfig {
   const caption = P.get('caption');
   if (caption) cfg.caption = caption.slice(0, 200);
 
+  const buttons = (P.get('buttons') ?? '')
+    .split(',')
+    .map(s => s.trim().toLowerCase())
+    .filter((s): s is EmbedButton => (EMBED_BUTTONS as readonly string[]).includes(s));
+  if (buttons.length) cfg.buttons = buttons;
+
   return cfg;
+}
+
+/** Embed configuration for the plane-transform (two-pane) applet. */
+export interface PlaneEmbedConfig {
+  fn?: string;
+  p?: number;
+  q?: number;
+  extent?: number;
+  caption?: string;
+  controls: boolean;
+}
+
+export function parsePlaneEmbed(query: string): PlaneEmbedConfig {
+  const { fn, p, q, extent, caption, controls } = parseParticleEmbed(query);
+  return { fn, p, q, extent, caption, controls };
 }

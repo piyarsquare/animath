@@ -482,6 +482,14 @@ body {
 .am-embed-badge { position: absolute; right: 8px; bottom: 8px; z-index: 5; font-family: var(--font-ui); font-size: 11px; font-weight: 700; color: var(--fg); background: var(--panel-solid); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; text-decoration: none; opacity: 0.7; transition: opacity .14s; }
 .am-embed-badge:hover { opacity: 1; }
 .am-embed-caption { padding: 7px 12px; font-family: var(--font-ui); font-size: 12px; color: var(--dim); background: var(--panel-solid); border-top: 1px solid var(--border); flex-shrink: 0; }
+.am-embed-row { position: relative; display: flex; flex: 1; min-height: 0; }
+.am-embed-pane { position: relative; flex: 1; min-width: 0; }
+.am-embed-pane + .am-embed-pane { border-left: 1px solid var(--border); }
+.am-embed-pane-label { position: absolute; left: 9px; top: 7px; z-index: 4; font-family: var(--font-mono); font-size: 11px; color: rgba(235,235,245,0.75); pointer-events: none; }
+.am-embed-buttons { position: absolute; left: 8px; top: 8px; z-index: 5; display: flex; gap: 6px; }
+.am-embed-btn { font-family: var(--font-ui); font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--panel-solid); color: var(--fg); cursor: pointer; opacity: 0.88; }
+.am-embed-btn:hover { opacity: 1; }
+.am-embed-btn.am-on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); opacity: 1; }
 
 /* ============ Responsive gallery + bar ============ */
 @media (max-width: 740px) {

@@ -30,6 +30,20 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 13:28 — Demo page simplified to the user's spec: e^z, two windows, applet buttons
+**Why:** the user specified the exact demo: e^z throughout; first plot = the
+plane applet (xy → uv, same coloring); second = the 4D particle plot starting
+on Drop Y with three in-applet buttons (Drop X · Drop Y · Rotate).
+
+Built `#/embed/plane-transform` (both panes side by side, chrome-less,
+ephemeral, `z` / `f(z) = e^z` pane labels) and a `buttons=` embed param:
+drop buttons switch the projection and freeze motion, Rotate restores the
+full 4D view with the quaternion tumble; active button highlighted. Verified
+by driving the buttons inside the iframe: active state Drop Y → Rotate, and
+the projection animated back to the tumbling 4D cloud.
+
+![the simplified e^z demo page: plane applet + 4D plot with buttons](assets/2026-06-10-S01-embed-demo-v2.png)
+
 ### 🟢 code · 13:11 — Embed pilot built and tested on a real page
 **Why:** the user okayed the iframe-first approach and asked to test it on a
 real page (and dropped the README-GIF idea — GitHub strips iframes/scripts

@@ -1,20 +1,25 @@
 # Embeddable applets — design + status
 
 > Status: **phase-1 pilot built** (2026-06-10, branch `claude/new-chrome`):
-> the Complex Particles embed route, the readable-params codec, and the
-> reference host page are live; the `s=` catch-all and the "Embed this view"
-> share dialog are still to do.
+> embed routes for Complex Particles and Plane Transform, the readable-params
+> codec, optional in-applet buttons, and the reference host page are live;
+> the `s=` catch-all and the "Embed this view" share dialog are still to do.
 >
 > Try it: `<site>/embed-demo.html` hosts two live applets in plain iframes:
 >
 > ```html
-> <iframe src="https://piyarsquare.github.io/animath/#/embed/complex-particles?fn=sin&render=sheet&spin=xy,uv"
->         width="640" height="400" loading="lazy" allowfullscreen></iframe>
+> <iframe src="https://piyarsquare.github.io/animath/#/embed/plane-transform?fn=exp"
+>         width="640" height="380" loading="lazy" allowfullscreen></iframe>
+> <iframe src="https://piyarsquare.github.io/animath/#/embed/complex-particles?fn=exp&proj=dropy&motion=fixed&buttons=dropx,dropy,rotate"
+>         width="640" height="380" loading="lazy" allowfullscreen></iframe>
 > ```
 >
 > Supported params (see `src/lib/embedParams.ts`): `fn` `p` `q` `render`
 > `proj` `motion` `spin` `count` `colorby` `colormap` `extent` `caption`
-> `controls`.
+> `controls` `buttons` (particles); `fn` `p` `q` `extent` `caption`
+> `controls` (plane). `buttons=dropx,dropy,…,rotate` overlays projection
+> switchers on the applet; drop buttons freeze the motion, Rotate restores
+> the full 4D view with the quaternion tumble.
 
 ## Goal
 
