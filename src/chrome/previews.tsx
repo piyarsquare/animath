@@ -469,27 +469,32 @@ function MarriagePreview({ light }: { light: boolean }) {
   return <canvas ref={ref} style={canvasStyle} />;
 }
 
-/* ---- Agentic sorting: concurrent agents bubble a bar array into order ----- */
+/* ---- Agentic sorting: agents racing to sort a bipolar bar array ----------- */
+/* Mirrors the app's Array view: bars rise above / hang below a center axis,
+   candy-colored by value band, while agent dots crawl the axis swapping. */
 function SortingPreview({ light }: { light: boolean }) {
-  const N = 26;
+  const N = 34;
   const sim = useRef<{ arr: number[]; agents: number[]; last: number; doneAt: number } | null>(null);
-  const rnd = useRef(mulberry32(77));
+  const rnd = useRef(mulberry32(99));
   const shuffled = () => {
-    const a = Array.from({ length: N }, (_, i) => i);
+    const a = Array.from({ length: N }, (_, i) => -1 + (2 * i) / (N - 1));
     for (let i = N - 1; i > 0; i--) { const j = Math.floor(rnd.current() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
     return a;
   };
-  if (!sim.current) sim.current = { arr: shuffled(), agents: [0, 9, 18], last: 0, doneAt: -1 };
+  if (!sim.current) sim.current = { arr: shuffled(), agents: [2, 11, 20, 29], last: 0, doneAt: -1 };
   const bg = light ? '#f4f3ef' : '#05060d';
+  const pal = light
+    ? ['#b3457a', '#7a4fbf', '#1d7a9e', '#b06a10', '#1d8a5e']
+    : ['#ff5aa6', '#b78cff', '#5ad1ff', '#ffb04d', '#3de8b0'];
   const ref = useCanvas((ctx, W, H, t) => {
     const s = sim.current!;
     const sorted = s.arr.every((v, i) => i === 0 || s.arr[i - 1] <= v);
     if (sorted && s.doneAt < 0) s.doneAt = t;
-    if (sorted && s.doneAt >= 0 && t - s.doneAt > 1.4) {
-      s.arr = shuffled(); s.agents = [0, 9, 18]; s.doneAt = -1;
+    if (sorted && s.doneAt >= 0 && t - s.doneAt > 1.6) {
+      s.arr = shuffled(); s.agents = [2, 11, 20, 29]; s.doneAt = -1;
     }
-    // three concurrent agents, each bubbling at its own cursor
-    if (!sorted && t - s.last > 0.07) {
+    // concurrent agents, each bubbling at its own cursor on the axis
+    if (!sorted && t - s.last > 0.06) {
       s.last = t;
       s.agents = s.agents.map(i => {
         if (s.arr[i] > s.arr[i + 1]) [s.arr[i], s.arr[i + 1]] = [s.arr[i + 1], s.arr[i]];
@@ -498,22 +503,25 @@ function SortingPreview({ light }: { light: boolean }) {
       });
     }
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    const m = W * 0.06, bw = (W - 2 * m) / N;
-    const agentCols = light ? ['#b67d10', '#1d8a78', '#b3457a'] : ['#ffd400', '#5ad1ff', '#ff5aa6'];
+    const mid = H * 0.5, m = W * 0.05, bw = (W - 2 * m) / N, amp = H * 0.38;
     for (let i = 0; i < N; i++) {
-      const v = (s.arr[i] + 1) / N;
-      const bh = v * H * 0.66;
-      const hh = light ? 28 + v * 24 : 190 + v * 130;
-      ctx.fillStyle = light
-        ? `hsla(${hh},60%,42%,0.85)`
-        : `hsla(${hh % 360},85%,62%,0.9)`;
-      ctx.fillRect(m + i * bw + bw * 0.12, H * 0.82 - bh, bw * 0.76, bh);
+      const v = s.arr[i];
+      const bh = Math.max(2, Math.abs(v) * amp);
+      const y = v >= 0 ? mid - bh : mid;
+      ctx.fillStyle = pal[Math.min(pal.length - 1, Math.floor(((v + 1) / 2) * pal.length))];
+      ctx.fillRect(m + i * bw + bw * 0.2, y, bw * 0.6, bh);
     }
-    s.agents.forEach((i, k) => {
-      ctx.strokeStyle = agentCols[k];
-      ctx.lineWidth = Math.max(1.4, W * 0.005);
-      const x = m + i * bw + bw * 0.06, ww = bw * 1.88;
-      ctx.strokeRect(x, H * 0.12, ww, H * 0.72);
+    // center axis + agent dots crawling it
+    ctx.fillStyle = light ? 'rgba(60,60,70,0.35)' : 'rgba(255,255,255,0.22)';
+    ctx.fillRect(m * 0.6, mid - 0.5, W - m * 1.2, 1);
+    s.agents.forEach(i => {
+      const x = m + i * bw + bw * 0.5;
+      const r = Math.max(2.4, W * 0.0085);
+      ctx.fillStyle = light ? '#222' : '#fff';
+      ctx.beginPath(); ctx.arc(x, mid, r, 0, 7); ctx.fill();
+      ctx.strokeStyle = light ? 'rgba(34,34,34,0.35)' : 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = Math.max(1, W * 0.003);
+      ctx.beginPath(); ctx.arc(x, mid, r * 2, 0, 7); ctx.stroke();
     });
   }, [light]);
   return <canvas ref={ref} style={canvasStyle} />;
@@ -570,63 +578,111 @@ function MatrixPreview({ light }: { light: boolean }) {
   return <canvas ref={ref} style={canvasStyle} />;
 }
 
-/* ---- Polygon worlds: a walker on the square-with-glued-edges torus -------- */
+/* ---- Polygon worlds: first-person walk on the torus + glued-square minimap - */
+/* Mirrors the app's layout: the main view walks the tiled universal cover
+   (landmarks repeat every tile — that IS the gluing), with the fundamental
+   square and its edge-identification arrows inset like the app's minimap. */
 function PolygonPreview({ light }: { light: boolean }) {
-  const walker = useRef({ u: -0.4, v: 0.2, pt: 0 });
-  const trail = useRef<{ u: number; v: number; brk: boolean }[]>([]);
-  const bg = light ? '#f4f3ef' : '#04060c';
+  const cam = useRef({ x: 0.3, z: 0, pt: 0 });
   const ref = useCanvas((ctx, W, H, t) => {
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    const cx = W / 2, cy = H / 2, L = Math.min(W, H) * 0.36;
+    const c = cam.current;
+    const dt = Math.min(0.05, Math.max(0, t - c.pt));
+    c.pt = t;
+    c.x += 0.1 * dt; c.z += 0.5 * dt;   // stroll forward with a slow drift
     const gold = light ? '#b67d10' : '#ffd400';
     const cyan = light ? '#1d8a78' : '#5ad1ff';
-    // advance the geodesic; wrapping an edge re-enters the identified edge
-    const w = walker.current;
-    const dt = Math.min(0.05, Math.max(0, t - w.pt));
-    w.pt = t;
-    let brk = false;
-    w.u += 0.42 * dt; w.v += 0.297 * dt;
-    if (w.u > 1) { w.u -= 2; brk = true; }
-    if (w.v > 1) { w.v -= 2; brk = true; }
-    trail.current.push({ u: w.u, v: w.v, brk });
-    if (trail.current.length > 160) trail.current.shift();
-    const px = (u: number) => cx + u * L, py = (v: number) => cy + v * L;
-    // trail (skip wrap jumps), fading with age
-    const tr = trail.current;
-    ctx.lineWidth = Math.max(1.2, W * 0.004);
-    for (let i = 1; i < tr.length; i++) {
-      if (tr[i].brk) continue;
-      const a = (i / tr.length) * 0.85;
-      ctx.strokeStyle = light ? `rgba(60,60,80,${a})` : `rgba(255,255,255,${a})`;
-      ctx.beginPath();
-      ctx.moveTo(px(tr[i - 1].u), py(tr[i - 1].v));
-      ctx.lineTo(px(tr[i].u), py(tr[i].v));
-      ctx.stroke();
+    const pink = light ? '#b3457a' : '#ff5aa6';
+    const horizon = H * 0.4, f = W * 0.42, camH = 0.34;
+    // sky + ground
+    ctx.fillStyle = light ? '#eef0f2' : '#04060c';
+    ctx.fillRect(0, 0, W, horizon);
+    ctx.fillStyle = light ? '#e4dfd2' : '#0a0e1c';
+    ctx.fillRect(0, horizon, W, H - horizon);
+    const frac = (v: number) => ((v % 1) + 1) % 1;
+    // tile grid on the ground: cross lines recede, long lines converge
+    ctx.lineWidth = Math.max(1, W * 0.002);
+    for (let k = 0; k < 12; k++) {
+      const wz = k + 1 - frac(c.z);
+      if (wz < 0.2) continue;
+      const y = horizon + (camH / wz) * f;
+      if (y > H) continue;
+      const a = Math.min(0.5, 1.3 / (wz * wz + 1));
+      ctx.strokeStyle = light ? `rgba(80,85,105,${a})` : `rgba(110,150,210,${a})`;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     }
-    // fundamental square with paired-edge identification arrows
-    ctx.lineWidth = Math.max(1.5, W * 0.005);
+    for (let k = -7; k <= 7; k++) {
+      const wx = k - frac(c.x);
+      const x1 = W / 2 + (wx / 0.3) * f, y1 = horizon + (camH / 0.3) * f;
+      const x2 = W / 2 + (wx / 12) * f, y2 = horizon + (camH / 12) * f;
+      ctx.strokeStyle = light ? 'rgba(80,85,105,0.22)' : 'rgba(110,150,210,0.22)';
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    }
+    // landmarks at fixed intra-tile spots, repeated every tile = the gluing
+    const marks: { wx: number; wz: number; kind: number }[] = [];
+    for (let j = 0; j < 9; j++) {
+      for (let i = -3; i <= 3; i++) {
+        for (const [ox, oz, kind] of [[0.28, 0.62, 0], [0.74, 0.18, 1], [0.52, 0.9, 2]] as const) {
+          const wx = i + ox - frac(c.x), wz = j + oz - frac(c.z);
+          if (wz > 0.25 && wz < 9) marks.push({ wx, wz, kind });
+        }
+      }
+    }
+    marks.sort((a, b) => b.wz - a.wz);
+    for (const mk of marks) {
+      const gx = W / 2 + (mk.wx / mk.wz) * f;
+      const gy = horizon + (camH / mk.wz) * f;
+      if (gx < -W * 0.1 || gx > W * 1.1 || gy > H * 1.05) continue;
+      const hgt = (mk.kind === 0 ? 0.5 : mk.kind === 1 ? 0.34 : 0.22) / mk.wz * f;
+      const ww = Math.max(1.2, (mk.kind === 0 ? 0.035 : 0.06) / mk.wz * f);
+      const fade = Math.min(1, 2.2 / mk.wz);
+      if (mk.kind === 0) {        // gold obelisk
+        ctx.fillStyle = gold; ctx.globalAlpha = fade;
+        ctx.fillRect(gx - ww / 2, gy - hgt, ww, hgt);
+        ctx.beginPath(); ctx.arc(gx, gy - hgt, ww * 0.9, 0, 7); ctx.fill();
+      } else if (mk.kind === 1) { // teal tree-cone
+        ctx.fillStyle = cyan; ctx.globalAlpha = fade;
+        ctx.beginPath();
+        ctx.moveTo(gx, gy - hgt); ctx.lineTo(gx - ww, gy); ctx.lineTo(gx + ww, gy);
+        ctx.closePath(); ctx.fill();
+      } else {                    // pink stone
+        ctx.fillStyle = pink; ctx.globalAlpha = fade * 0.9;
+        ctx.beginPath(); ctx.arc(gx, gy - hgt * 0.4, Math.max(1.2, ww * 0.8), 0, 7); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    // the walker avatar, third-person like the app
+    const ax = W / 2, ay = H * 0.8, ar = Math.max(3, W * 0.013);
+    ctx.fillStyle = gold;
+    ctx.beginPath(); ctx.ellipse(ax, ay, ar * 0.7, ar * 1.4, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(ax, ay - ar * 1.9, ar * 0.55, 0, 7); ctx.fill();
+    // minimap inset: the fundamental square with glued-edge arrows
+    const ms = Math.min(W, H) * 0.32, mx = W - ms - W * 0.03, my = H * 0.06;
+    ctx.fillStyle = light ? 'rgba(244,243,239,0.85)' : 'rgba(5,6,13,0.78)';
+    ctx.fillRect(mx, my, ms, ms);
+    ctx.lineWidth = Math.max(1.4, W * 0.0045);
     ctx.strokeStyle = gold;
-    ctx.beginPath(); ctx.moveTo(px(-1), py(-1)); ctx.lineTo(px(-1), py(1)); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(px(1), py(-1)); ctx.lineTo(px(1), py(1)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx, my + ms); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx + ms, my); ctx.lineTo(mx + ms, my + ms); ctx.stroke();
     ctx.strokeStyle = cyan;
-    ctx.beginPath(); ctx.moveTo(px(-1), py(-1)); ctx.lineTo(px(1), py(-1)); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(px(-1), py(1)); ctx.lineTo(px(1), py(1)); ctx.stroke();
-    const arrow = (x: number, y: number, ang: number, c: string) => {
-      const s = Math.max(4, W * 0.014);
-      ctx.fillStyle = c;
+    ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx + ms, my); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx, my + ms); ctx.lineTo(mx + ms, my + ms); ctx.stroke();
+    const arrow = (x: number, y: number, ang: number, col: string) => {
+      const s = Math.max(3, W * 0.011);
+      ctx.fillStyle = col;
       ctx.beginPath();
       ctx.moveTo(x + Math.cos(ang) * s, y + Math.sin(ang) * s);
       ctx.lineTo(x + Math.cos(ang + 2.5) * s, y + Math.sin(ang + 2.5) * s);
       ctx.lineTo(x + Math.cos(ang - 2.5) * s, y + Math.sin(ang - 2.5) * s);
       ctx.closePath(); ctx.fill();
     };
-    arrow(px(-1), py(0), -Math.PI / 2, gold);  // left edge ↑
-    arrow(px(1), py(0), -Math.PI / 2, gold);   // right edge ↑ (same direction = torus)
-    arrow(px(0), py(-1), 0, cyan);             // top edge →
-    arrow(px(0), py(1), 0, cyan);              // bottom edge →
-    // the walker
+    arrow(mx, my + ms / 2, -Math.PI / 2, gold);       // left edge ↑
+    arrow(mx + ms, my + ms / 2, -Math.PI / 2, gold);  // right edge ↑ (same way = torus)
+    arrow(mx + ms / 2, my, 0, cyan);                  // top edge →
+    arrow(mx + ms / 2, my + ms, 0, cyan);             // bottom edge →
     ctx.fillStyle = light ? '#222' : '#fff';
-    ctx.beginPath(); ctx.arc(px(w.u), py(w.v), Math.max(2.5, W * 0.008), 0, 7); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(mx + frac(c.x) * ms, my + (1 - frac(c.z)) * ms, Math.max(2, W * 0.006), 0, 7);
+    ctx.fill();
   }, [light]);
   return <canvas ref={ref} style={canvasStyle} />;
 }

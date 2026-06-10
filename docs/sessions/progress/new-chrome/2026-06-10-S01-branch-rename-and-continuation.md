@@ -30,6 +30,22 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 01:21 — Preview feedback round: sorting + polygon redone from the real apps
+**Why:** the user flagged the sorting image as weak and asked for the 3D
+viewpoint on Polygon Worlds.
+
+Screenshotted both real apps for reference. Agentic Sorting's Array view is a
+**bipolar** bar chart (positive up / negative down from a center axis, candy
+colors) — the preview now mirrors that, with agent dots crawling the axis
+instead of the clumsy full-height cursor rectangles. Polygon Worlds is a 3D
+third-person walk with a glued-square minimap inset — the preview now flips
+to match: a perspective walk over the tiled universal cover (gold obelisks,
+teal cones, pink stones repeating every tile — the repetition *is* the
+gluing), gold avatar, and the fundamental square with edge arrows as an
+inset minimap.
+
+![sorting and polygon previews, redone from the real apps](assets/2026-06-10-S01-previews-v2.png)
+
 ### 🟢 code · 01:09 — App-specific gallery preview animations (one flavor per app)
 **Why:** the user asked for thumbnail animations that are app-specific and
 relevant — the gallery had 3 shared flavors across 10 cards (Topology Walk,
