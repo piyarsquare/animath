@@ -56,7 +56,7 @@ desktop-dark, phone chrome at 390×844, neon + phosphor skins — and fixed the
 one layout flaw found (Agentic Sorting Setup overlap). All shots eyeballed:
 rail/panels/windows/layouts render per spec on every app.
 
-![the pilot workspace](../../../redesign/shots/p4-complex-particles.png)
+![the pilot workspace](assets/p4-complex-particles.png)
 
 ### 🟢 code · 23:55 — P0–P3 shipped; all nine app migrations dispatched in parallel
 **Why:** foundations and the engine are committed and visually verified; the

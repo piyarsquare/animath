@@ -30,6 +30,27 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟢 code · 00:52 — Fixed dead screenshot on the deployed session pages
+**Why:** the user reported a dead image link on the deployed preview of the
+S01 report.
+
+Root cause was not the rename: the S01 progress report embedded
+`../../../redesign/shots/p4-complex-particles.png`, a ref that climbs out of
+the report's folder. `build-sessions.mjs` mirrored the carried blob to
+`docs/sessions/redesign/…` — *outside* `converted/` — and
+`copy-sessions-to-dist.mjs` only ships `converted/**`, so the deployed page
+404'd (the old slug's page had the same dead link before the rename). Two
+fixes: the report now uses an in-folder `assets/p4-complex-particles.png`
+copy (per REPORT_STYLE convention), and the build re-homes any escaping ref
+under `assets/carried/` inside the converted tree, rewriting the body ref, so
+future cross-folder refs can't 404 on Pages.
+
+> [!NOTE]
+> The deployed site rebuilds only on a push to `main` (or manual dispatch),
+> using `main`'s copy of `build-sessions.mjs` — the report-side fix takes
+> effect on the next deploy; the script hardening lands when this branch
+> merges.
+
 ### 🟡 milestone · 00:37 — Session start on renamed branch
 **Why:** orient before continuing the redesign work.
 
