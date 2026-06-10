@@ -30,6 +30,20 @@ design gaps in `docs/redesign/IN-PROGRESS.md`, touch-hardware pass.
 
 ## Working notes
 
+### 🟣 decision · 12:26 — Embeddable applets: design captured, iframe-first recommended
+**Why:** the user named the next key work item — packaging app views as
+applets embeddable in web pages (e.g. an explainer that embeds live Complex
+Particles / sheet views).
+
+Wrote `docs/EMBEDS.md`: recommend an **iframe embed route** first
+(`#/embed/:appId` + a versioned settings codec + a chrome-less EmbedShell +
+an "Embed this view" share dialog that serializes the current settings),
+because the deployed Pages site already is the applet host — isolation,
+updates and hosting come free, and the codec/shell are exactly what a later
+web-component packaging would reuse. "Complex sheet" is a render mode of
+ComplexParticles, so the one pilot covers both looks. Awaiting the user's
+go-ahead on the recommendation before building.
+
 ### 🟢 code · 12:06 — Free-orbit camera, discoverable pan, authentic particle badge
 **Why:** the user asked for the particle card art to be updated, a way to pan
 the camera, and for the drag rotation to stop behaving like a bounded knob.
