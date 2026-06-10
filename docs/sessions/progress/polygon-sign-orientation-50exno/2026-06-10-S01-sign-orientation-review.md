@@ -34,6 +34,26 @@ camera/headlamp bug.
 
 ## Working notes
 
+### 🟡 milestone · 23:55 — GREEN: all six worlds pass every check
+**Why:** The fixes are verified by the same extended guard that failed before
+them.
+
+```
+torus      A ✅ · decor 0/3282 ✅
+klein      A+B ✅ · decor 0/3282 ✅
+crosscap3  A+B ✅ · decor 0/2281 ✅   (was 1136 improper)
+rp2        A+B ✅ · decor 0/269 ✅ · twin mirrorR=29.880 < shellR=30.000 ✅   (was 30.120)
+sphere     A ✅ · decor 0/138 ✅
+genus2     A ✅ · decor 0/2473 ✅   (was 1232 improper)
+```
+
+The twin radius is exactly R−LIFT — mirror ink hangs under the glass, above
+the inner decor shell. Flip-side captures from the green run:
+
+![ℝP² flip side after crossing the seam — trail and decor consistent](assets/2026-06-10-S01-rp2-flipside-green.png)
+
+![crosscap3 flip side — under-floor decor now rigidly turned over](assets/2026-06-10-S01-crosscap3-flipside-green.png)
+
 ### 🟢 code · 23:35 — RED confirmed exactly as predicted; both geometry fixes applied; green run + prose pass in flight
 **Why:** The guard must fail for the right reasons before the fixes count.
 
