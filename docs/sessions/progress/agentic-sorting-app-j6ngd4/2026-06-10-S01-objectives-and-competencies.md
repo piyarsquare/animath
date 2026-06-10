@@ -47,6 +47,29 @@ the same function" intermediate the user remembered.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 22:55 — All-trajectories delayed-gratification view (replaces weak tracker as primary)
+**Why:** User: the single click-tracker "is not a good way to observe delayed
+gratification" — wants *all* trajectories at once, colored by shape.
+
+Added a **Trajectories** view window: overlays every agent's distance-to-its-
+sorted-home over a run, one line per agent, **colored by backtrack score**
+(max rise above its starting distance) via a cool→warm `heat()` ramp — monotone
+improvers fade out, backtrackers glow warm and draw on top.
+- `arena.ts` `drawTrajectories(ctx, w, h, traj, len, axis)`.
+- Component records one distance sample per agent per frame into `trajRef[id]`
+  (cap `TRAJ_MAX=360`, then freezes); targets fixed per `id` at regenerate;
+  second DPR canvas + ResizeObserver; throttled redraw (~7/s). New `trajectories`
+  ViewDef; Analysis layout stacks arena + trajectories, Setup hides it.
+- Kept the single click-tracker (still useful for one agent's exact curve).
+
+Headless check (140 agents, 10% frozen, 360 samples): **42% of agents backtrack
+at least once** (16 strongly, max overshoot 64) — a clear warm/cool spread, so
+the plot is meaningful, not flat. `tsc` clean; `npm run build` green.
+
+> [!NOTE]
+> Still no interactive screenshot — the preview server is SIGTERM'd (exit 144)
+> on every launch in the resumed container. Verification is build + headless.
+
 ### 🟡 milestone · 22:35 — Phase 3 (delayed-gratification click-to-track) implemented
 **Why:** User: "PR is open, continue with phase 3."
 

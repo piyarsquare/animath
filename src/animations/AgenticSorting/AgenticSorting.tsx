@@ -11,7 +11,7 @@ import {
   AGENT_TYPE_LIST, type AgentType, type SimState, type Weights,
 } from './engine';
 import { measure, homeIndex, type MetricsView } from './metrics';
-import { drawArena, TYPE_COLORS } from './arena';
+import { drawArena, drawTrajectories, TYPE_COLORS } from './arena';
 import explainerText from './EXPLAINER.md?raw';
 import readmeText from './README.md?raw';
 
@@ -93,9 +93,42 @@ export default function AgenticSorting() {
   const colorByRef = useRef(colorBy);
   const axisRef = useRef('rgba(128,128,128,0.6)');
 
-  // ---- canvas ----
+  // ---- canvas (arena) ----
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sizeRef = useRef({ w: 0, h: 0 });
+
+  // ---- trajectories view (population-wide delayed gratification) ----
+  const TRAJ_MAX = 360; // samples captured per run before the plot freezes
+  const trajRef = useRef<number[][]>([]);       // traj[id] = distance samples
+  const trajLenRef = useRef(0);                 // samples recorded so far
+  const targetByIdRef = useRef<number[]>([]);   // fixed sorted-home per agent id
+  const trajCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const trajSizeRef = useRef({ w: 0, h: 0 });
+  const lastTrajDrawRef = useRef(0);
+
+  const drawTraj = useCallback(() => {
+    const cvs = trajCanvasRef.current;
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    if (!ctx) return;
+    const { w, h } = trajSizeRef.current;
+    if (w === 0 || h === 0) return;
+    drawTrajectories(ctx, w, h, trajRef.current, trajLenRef.current, axisRef.current);
+  }, []);
+
+  /** Record one distance-to-home sample for every agent (called once per frame
+   *  while running, until the buffer fills). */
+  const recordTraj = useCallback(() => {
+    if (trajLenRef.current >= TRAJ_MAX) return;
+    const agents = stateRef.current.agents;
+    const target = targetByIdRef.current;
+    const buf = trajRef.current;
+    for (let i = 0; i < agents.length; i++) {
+      const a = agents[i];
+      (buf[a.id] ||= []).push(Math.abs(i - (target[a.id] ?? 0)));
+    }
+    trajLenRef.current += 1;
+  }, []);
 
   const draw = useCallback(() => {
     const cvs = canvasRef.current;
@@ -148,9 +181,19 @@ export default function AgenticSorting() {
     trackHistRef.current = [];
     setSelected(null);
     setTrackHist([]);
+    // fix each agent's sorted-home target and reset the trajectory buffers
+    const agents = stateRef.current.agents;
+    const values = agents.map(g => g.value);
+    const target: number[] = [];
+    for (const a of agents) target[a.id] = homeIndex(values, a.value);
+    targetByIdRef.current = target;
+    trajRef.current = agents.map(() => []);
+    trajLenRef.current = 0;
+    recordTraj(); // seed the trajectories with the initial (shuffled) distances
     flushMetrics();
     draw();
-  }, [arraySize, weights, objectiveMode, descShare, frozenPct, flushMetrics, draw]);
+    drawTraj();
+  }, [arraySize, weights, objectiveMode, descShare, frozenPct, flushMetrics, draw, drawTraj, recordTraj]);
 
   // click an agent to follow it: map pointer x → array index → that agent's id
   const onArenaPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -210,6 +253,26 @@ export default function AgenticSorting() {
     return () => ro.disconnect();
   }, [draw]);
 
+  // DPR-aware sizing for the trajectories canvas
+  useEffect(() => {
+    const cvs = trajCanvasRef.current;
+    if (!cvs) return;
+    const ro = new ResizeObserver(() => {
+      const rect = cvs.getBoundingClientRect();
+      const w = Math.round(rect.width), h = Math.round(rect.height);
+      if (w === 0 || h === 0) return;
+      const dpr = window.devicePixelRatio || 1;
+      cvs.width = Math.round(w * dpr);
+      cvs.height = Math.round(h * dpr);
+      const ctx = cvs.getContext('2d');
+      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      trajSizeRef.current = { w, h };
+      drawTraj();
+    });
+    ro.observe(cvs);
+    return () => ro.disconnect();
+  }, [drawTraj]);
+
   // the simulation loop — fixed-timestep accumulator, one draw per frame
   useEffect(() => {
     if (!isRunning) return;
@@ -227,15 +290,20 @@ export default function AgenticSorting() {
         steps++;
       }
       if (accRef.current > interval * 4) accRef.current = 0; // don't spiral after a stall
+      if (steps > 0) recordTraj();
       draw();
       if (t - lastMetricRef.current > 100) {
         lastMetricRef.current = t;
         flushMetrics();
       }
+      if (t - lastTrajDrawRef.current > 140) {
+        lastTrajDrawRef.current = t;
+        drawTraj();
+      }
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [isRunning, draw, flushMetrics]);
+  }, [isRunning, draw, flushMetrics, recordTraj, drawTraj]);
 
   const setWeight = (type: AgentType, val: number) =>
     setWeights(prev => ({ ...prev, [type]: val }));
@@ -416,6 +484,18 @@ export default function AgenticSorting() {
     </div>
   );
 
+  const trajNode = (
+    <div className="as-arena">
+      <canvas ref={trajCanvasRef} className="as-arena-canvas" />
+      <div className="as-arena-label as-arena-label-top">Far from home</div>
+      <div className="as-arena-label as-arena-label-bottom">Home (sorted)</div>
+      <div className="as-traj-legend">
+        <span className="as-traj-swatch as-traj-warm" /> backtracked
+        <span className="as-traj-swatch as-traj-cool" /> straight to goal
+      </div>
+    </div>
+  );
+
   const sections: SectionDef[] = [
     { id: 'array', title: 'Array', arch: 'subject', node: arrayNode, estHeight: 250 },
     { id: 'display', title: 'Display', arch: 'marks', node: displayNode, estHeight: 180 },
@@ -426,17 +506,26 @@ export default function AgenticSorting() {
   ];
 
   const views: ViewDef[] = [
-    { id: 'arena', title: 'Array', node: arenaNode, defaultRect: { x: 372, y: 16, w: 720, h: 560 } },
+    { id: 'arena', title: 'Array', node: arenaNode, defaultRect: { x: 372, y: 16, w: 720, h: 360 } },
+    { id: 'trajectories', title: 'Trajectories', node: trajNode, defaultRect: { x: 372, y: 392, w: 720, h: 300 } },
   ];
 
   const layouts: LayoutDef[] = [
     {
       id: 'setup', name: 'Setup', sub: 'Array · Mix · Run', icon: 'tune',
       open: { array: { x: 84, y: 18 }, run: { x: 84, y: 280 }, agents: { x: 84, y: 500 } },
+      views: {
+        arena: { x: 372, y: 16, w: 720, h: 560, open: true },
+        trajectories: { open: false },
+      },
     },
     {
-      id: 'analysis', name: 'Analysis', sub: 'Metrics + agent tracker', icon: 'chart',
-      open: { metrics: { x: 84, y: 18 }, track: { x: 84, y: 372 } },
+      id: 'analysis', name: 'Analysis', sub: 'Trajectories + metrics', icon: 'chart',
+      open: { metrics: { x: 84, y: 18 } },
+      views: {
+        arena: { x: 372, y: 16, w: 720, h: 300, open: true },
+        trajectories: { x: 372, y: 324, w: 720, h: 300, open: true },
+      },
     },
   ];
 

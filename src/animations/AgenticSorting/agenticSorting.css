@@ -126,6 +126,32 @@
 
 .as-arena-canvas { cursor: crosshair; }
 
+/* ── Trajectories legend ── */
+.as-traj-legend {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--dim-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+.as-traj-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.as-traj-swatch.as-traj-warm { background: rgba(255, 90, 55, 0.9); margin-left: 4px; }
+.as-traj-swatch.as-traj-cool { background: rgba(150, 150, 155, 0.5); margin-left: 10px; }
+
 /* ── Arena (the "Array" view window) ── */
 .as-arena {
   position: absolute;

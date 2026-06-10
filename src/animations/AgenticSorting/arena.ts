@@ -124,3 +124,82 @@ export function drawArena(
     }
   }
 }
+
+/** A cool→warm ramp: monotone improvers fade out, backtrackers glow warm. */
+function heat(t: number): string {
+  const c = Math.max(0, Math.min(1, t));
+  const r = Math.round(150 + (255 - 150) * c);
+  const g = Math.round(150 + (90 - 150) * c);
+  const b = Math.round(155 + (55 - 155) * c);
+  const a = (0.14 + 0.78 * c).toFixed(3);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/**
+ * Overlay **every** agent's distance-to-its-sorted-home over time — one line per
+ * agent. Lines are colored by *backtrack score* (how far the agent rose above
+ * its starting distance before improving): monotone improvers stay dim, and
+ * agents that practiced delayed gratification glow warm and draw on top. This is
+ * the population-wide view of the competency the single tracker could only hint
+ * at.
+ *
+ * `traj[id]` is that agent's distance samples; `len` is how many samples exist.
+ */
+export function drawTrajectories(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  traj: number[][],
+  len: number,
+  axis: string,
+): void {
+  ctx.clearRect(0, 0, w, h);
+  if (len < 2) return;
+
+  // per-agent backtrack score + global max distance for the y-scale
+  let maxDist = 1;
+  let maxScore = 1e-6;
+  const scores = new Array<number>(traj.length);
+  for (let id = 0; id < traj.length; id++) {
+    const s = traj[id];
+    if (!s || s.length < 2) { scores[id] = 0; continue; }
+    let peak = s[0];
+    let over = 0;
+    for (let t = 0; t < s.length; t++) {
+      if (s[t] > maxDist) maxDist = s[t];
+      if (s[t] > peak) peak = s[t];
+      const o = s[t] - s[0];
+      if (o > over) over = o;
+    }
+    scores[id] = Math.max(0, over);
+    if (scores[id] > maxScore) maxScore = scores[id];
+  }
+
+  // baseline
+  ctx.strokeStyle = axis;
+  ctx.globalAlpha = 0.35;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, h - 1);
+  ctx.lineTo(w, h - 1);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // draw dim (low-score) lines first so backtrackers land on top
+  const order = [...traj.keys()].sort((a, b) => scores[a] - scores[b]);
+  const denom = Math.max(1, len - 1);
+  ctx.lineWidth = 1;
+  for (const id of order) {
+    const s = traj[id];
+    if (!s || s.length < 2) continue;
+    ctx.strokeStyle = heat(scores[id] / maxScore);
+    ctx.beginPath();
+    for (let t = 0; t < s.length; t++) {
+      const x = (t / denom) * w;
+      const y = h - (s[t] / maxDist) * (h - 2);
+      if (t === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+}
