@@ -34,6 +34,33 @@ camera/headlamp bug.
 
 ## Working notes
 
+### 🟡 milestone · 22:40 — Three-hats review complete; synthesis written
+**Why:** All three expert reports returned; convergence analysis adjudicates
+their disagreements.
+
+Reports: [maintainer](2026-06-10-S01-expert-maintainer.md) ·
+[consultant](2026-06-10-S01-expert-consultant.md) ·
+[pedagogy](2026-06-10-S01-expert-pedagogy.md) ·
+[synthesis](2026-06-10-S01-expert-synthesis.md).
+
+**Unanimous:** through-the-floor = reflected, always; hyperbolic below-floor
+`scale(sc,−sc,sc)` is a real baked-mirror bug; `otherSide.ts` is dead + stale;
+the chirality guard sees none of it; prose has drifted (the "mirror-reversed
+on glide tiles" claims are false).
+
+**Adjudicated against the lead's brief (pedagogy's refutations win, verified
+by direct computation):** the ℝP² face-swapping shell deck is *proper* in 3D
+(dF = 2p̂p̂ᵀ − I, det +1), so far-side decor is chirally correct as rendered —
+the real bug is the **ink twin using −Id (the untwisted bundle)**, which
+floats mirror footprints on the walking face; fix = twin → −s·Id,
+s = (R−LIFT)/(R+LIFT). Likewise hyperbolic above-floor det<0 decor is correct
+un-mirrored (Klein-approved semantics); the prose is what must change. Two of
+the lead's candidate fixes would have re-broken S06-repaired behavior.
+
+**Recommended order:** guards red-first → ℝP² twin fix → hyperbolic rigid
+turn-over → prose pass (incl. "Through the glass" explainer paragraph) →
+optional azimuth polish.
+
 ### 🔵 finding · 21:55 — Pre-review investigation: the answer is "reflected," and three residual suspects found
 **Why:** Before dispatching the three hats, establish the geometry and locate the
 code that expresses it, so the experts review concrete claims instead of vibes.
