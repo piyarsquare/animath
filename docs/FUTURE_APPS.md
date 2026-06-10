@@ -29,7 +29,7 @@ the same template:
 | 3 | **Murmurations (Flocking)** | self-propelled agents / emergence | Three.js instanced + spatial hash | new |
 | 4 | **Ant Colonies** | stigmergy / emergence | GPU field + agent layer | new |
 | 5 | **Glassy Networks** | disordered systems / rugged optimization (Ising · QUBO · QKP) | DOM/graph or Three.js + MC | new |
-| 6 | **Quantum Tree** (likely rename → "Circular Orders, Trees & Nets") | phylogenetics / circular-order tree geometry (classical port; quantum stays an open question) | SVG + a little canvas 2D (vanilla JS today) | **port** — source in hand |
+| 6 | **Trees and Nets** (port of "quantum-tree") | phylogenetics / circular-order tree geometry (classical port; quantum stays an open question) | SVG + a little canvas 2D (vanilla JS today) | **port** — source in hand |
 | 7 | **GAS** (Gene Advocate System) | evolutionary dynamics / landscape exploration | DOM + time-series (port from Python) | **port** — source in hand |
 
 > [!NOTE]
@@ -401,7 +401,7 @@ shared **"best energy vs steps"** race chart would serve both.
 
 ---
 
-## 6. Quantum Tree (PORT)
+## 6. Trees and Nets (PORT of "quantum-tree")
 
 > [!NOTE]
 > **Source in hand** (private repo `piyarsquare/quantum-tree`, shared as a zip).
@@ -414,8 +414,8 @@ shared **"best energy vs steps"** race chart would serve both.
 > **trees**, and **NeighborNet + neighbor-joining**. The **quantum layer is out of
 > scope for now** — it is *not* built; it survives only as the stated open research
 > question below. The app is fundamentally about circular orderings, tree geometry,
-> and split networks, so a non-"quantum" name is worth considering (the deployed
-> title is *"Circular Orders, Trees and Nets"*).
+> and split networks, so it ships under the name **"Trees and Nets"** (route/folder
+> `src/animations/TreesAndNets/`), not "Quantum Tree".
 
 ### Concept
 A "map" of how **distance data builds phylogenetic trees**, treating tree-building
@@ -531,10 +531,15 @@ and mix over, so building it well keeps the door open without committing to it.
 - **MVP scope**: just the **4-leaf** evidence plane + quartet toy (small,
   high-clarity) before the full 4–7 leaf map and the NeighborNet/NJ network views?
   Lean: ship 4-leaf first, then 5, then the map + split networks.
-- **App name**: with the quantum layer excluded, "Quantum Tree" no longer describes
-  the app — prefer something like **"Circular Orders, Trees & Nets"** (the deployed
-  title) or "Tree Space"; pick the folder/route name accordingly
-  (`src/animations/...`).
+- **App name**: decided — **"Trees and Nets"** (`src/animations/TreesAndNets/`),
+  since the quantum layer is excluded.
+- **Associahedron view (next-build design goal)**: represent the **entire
+  associahedron** — the polytope whose vertices are the trees/triangulations and
+  whose edges are flips — not just the per-point **fibers**. Play to animath's
+  strengths: the 3D associahedron `K₅` (14 vertices) is a natural **Three.js**
+  polytope, and higher ones invite the **projection slider / 4D viewer** machinery.
+  The current evidence point would live *inside* this polytope (a position in
+  tree-space), making the fibers a local slice of the global object.
 - **License/attribution**: the source repo is **private**; confirm it's fine to
   relicense the ported code under animath's terms and how to credit the working
   paper.
@@ -664,10 +669,11 @@ A dependency-aware order, *if* we build the new ones:
    rugged-landscape-exploration view and "best-energy-vs-steps" race); both lean on
    the Analyze tier and the existing DOM-graph approach. GAS is a clean port of
    small NumPy; Glassy supplies the Ising/QUBO/QKP landscape.
-6. **Quantum Tree** (classical port — circular orders, energies,
+6. **Trees and Nets** (classical port of quantum-tree — circular orders, energies,
    circular-decomposable metrics, trees, NeighborNet + NJ; quantum layer excluded) —
-   port the math to TS + rebuild SVG views (source in hand); biggest single port,
-   but an unusually good fit for the multi-window UX.
+   port the math to TS + rebuild views (source in hand), and design the **whole-
+   associahedron** view; biggest single port, but an unusually good fit for the
+   multi-window + 3D UX. **Slated as the next build.**
 
-Both ports (Quantum Tree, GAS) now have **source in hand**; the gating items are
+Both ports (Trees and Nets, GAS) now have **source in hand**; the gating items are
 licensing/attribution for the private repos and choosing each MVP's first slice.

@@ -40,6 +40,19 @@ fix; new branch `claude/future-apps-scoping` forked from `main`.
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 23:30 — Name "Trees and Nets"; next build + close-out plan
+**Why:** User named the app **"Trees and Nets"** and set the plan: close this
+session with a PR, then start the build immediately (while the uploaded source is
+still in `/tmp`), leading with a **whole-associahedron** view.
+
+Set the name in `FUTURE_APPS.md` (table, §6 heading + scope note, sequencing) →
+`src/animations/TreesAndNets/`. Added an open-question/design-goal: represent the
+**entire associahedron** (vertices = trees/triangulations, edges = flips), not just
+the fibers — `K₅` (14 vertices) as a Three.js polytope, higher ones via the
+projection/4D machinery; the evidence point sits *inside* the polytope and the
+fibers become a local slice. Next: `/handoff` → PR (`future-apps-scoping` → main)
+→ new branch for the Trees and Nets build.
+
 ### 🟣 decision · 23:20 — Quantum Tree port scope locked to the classical core
 **Why:** User decided the port includes circular orders, energy functions,
 circular-decomposable metrics, trees, and NeighborNet + NJ — and **excludes the
