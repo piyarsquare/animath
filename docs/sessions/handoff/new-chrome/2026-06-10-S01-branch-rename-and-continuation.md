@@ -25,11 +25,12 @@ both viewers, shipped the first embeddable-applet routes with a reference
 host page, and unified the projections into one sticky-stop slider
 (Perspective ⇠ Torus ⇢ Sphere) after the user spotted that Stereo and Torus
 were the same map. Build green; `main` was merged at finalization (only
-`StableMarriage/EXTENSIONS.md` arrived); **PR #200** carries the branch
-(title/body updated from this handoff). A post-handoff review fix landed as
-`f4765a4`: the phone chrome now respects `layouts[].views[id].open` (cards
+`StableMarriage/EXTENSIONS.md` arrived); **PR #200 carried the branch and is
+merged**. A post-handoff review fix landed as `f4765a4` (included in the
+merge): the phone chrome now respects `layouts[].views[id].open` (cards
 initialize from the default layout, a chip row switches view-affecting
-layouts, closed cards hide without unmounting).
+layouts, closed cards hide without unmounting). This handoff amendment rides
+PR #203.
 
 ## What changed
 
@@ -83,8 +84,9 @@ layouts, closed cards hide without unmounting).
 
 ## Open / not done
 
-- **PR #200 is open and current** (main merged; review comment on phone view
-  visibility addressed in `f4765a4`) — next step is review/merge.
+- **PR #200 merged** (review comment on phone view visibility addressed in
+  `f4765a4`, included); the deployed Pages site picks up the new chrome and
+  the embed routes on its next run.
 - **Embeds phase 2**: the `s=` catch-all param and the "Embed this view"
   share dialog (configure visually → copy iframe snippet) — the next
   highest-leverage piece for the user's explainer workflow.
