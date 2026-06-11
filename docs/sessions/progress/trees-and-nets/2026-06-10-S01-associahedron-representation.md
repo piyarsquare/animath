@@ -36,6 +36,22 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 13:05 — Local viewpoint map (flip vs cross) + gluing; drop rotation/3D
+**Why:** User: rotation isn't privileged (downgrade it); tree as its own panel;
+clicking an edge has two readings — flip the edge (assoc move) or flip the order
+((n−3)-cube move); and the local map should reveal where the two neighbor-sets glue.
+
+Probed the math first (`/tmp/local_probe.mjs`): each point has **n−3** flip-moves
+and n−3 cross-moves; at every point **exactly one cross is a "twist"** (order changes,
+labeled tree unchanged) and **exactly one cross coincides with a flip** (assoc ↔ cube
+glue). (The order-orbit is bigger than a strict cube globally — local degree n−3.)
+Rebuilt the app: removed the rotate buttons and the big 3D associahedron; **Tree** is
+its own SVG panel (dual tree, smooth flip morph + label-slide on cross, twist edges
+tinted purple); added a **Local map** SVG — center + flip targets (teal) + cross
+targets (orange), coincident targets merge (gold-halo = **glued**), twists drawn as
+purple loops; click a node to navigate. Flip/Cross mode = the two edge-click
+readings. Build green (13.8 kB); n=5 shows 1 glued node + 1 twist as predicted.
+
 ### 🟢 code · 12:45 — Branch name in the Cloudflare preview tab title
 **Why:** User: each Cloudflare build gets a new URL; the tab always said "animath",
 making multi-thread work hard to tell apart.
