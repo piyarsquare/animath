@@ -74,9 +74,13 @@ Four build-green commits:
 `tsc` clean; `npm run build` green at every commit. Reports +
 [synthesis](2026-06-11-S01-expert-synthesis.md) committed.
 
-> [!WARNING]
-> Still no live screenshot — preview server SIGTERM'd in this container. The
-> default-layout coordinates and the phone re-chrome are unverified by eye.
+> [!NOTE]
+> **Verified by eye** (headless Chromium via `scripts/shoot.mjs` + an interaction
+> script): the Explore layout renders correctly, and clicking the *Delayed
+> gratification* preset seeds a frozen population, sorts the array, and draws the
+> rise-then-fall trajectory lines. Two issues the screenshots caught were fixed —
+> the Run panel overlapping Scenarios, and the new `time →` label colliding with
+> the bottom-right axis label. Phone re-chrome (≤740px) is still unscreenshotted.
 
 ### 🟡 milestone · 00:20 — Blend sweep: vary the proportion between two chosen types
 **Why:** User wants sweep control over a mix — select two agent types and test
