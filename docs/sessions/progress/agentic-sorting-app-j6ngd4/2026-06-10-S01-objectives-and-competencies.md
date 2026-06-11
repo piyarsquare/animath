@@ -47,6 +47,26 @@ the same function" intermediate the user remembered.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 23:55 — Lab: current mix access · compare custom mixes · connected sliders
+**Why:** User: need the current mix reachable in the Lab; compare different mixes;
+population sliders should sum to 100%.
+
+- **Connected sliders:** `setWeightBalanced` — dragging one weight rescales the
+  others so the five always sum to 100 (a population is a mix, not five free
+  dials). Integer-rounding drift absorbed on the largest other; all-zero others
+  distribute evenly. Used by the Population-mix sliders everywhere.
+- **Mix in the Lab:** the Population-mix panel (+ Objective/Frozen, now on the Lab
+  Conditions panel) is shown in Lab mode, so the "current mix" is visible/editable
+  there — it's the same `weights` state the experiments read.
+- **Compare mixes:** new `mixes` experiment kind in `lab.ts`; a saved-mixes
+  manager ("+ Add current mix" → snapshot, with a `MixBar` composition strip and
+  remove) compares ≥2 saved mixes head-to-head under identical conditions
+  (renders as the labeled bar chart; Run disabled until two exist).
+
+Headless: Mix(Std50/Patrol50) fully sorts in **418 cyc**, beating pure Blind Date
+(1174) and the even five-way mix (caps at 94%) — a clean, surprising head-to-head.
+`tsc` clean; `npm run build` green.
+
 ### 🟡 milestone · 23:30 — Batch Lab + lightweight Replicate (multi-run)
 **Why:** User wanted "run multiple examples and measure the outcome" (the app was
 one-shot only); chose all three experiment types as a Lab mode, plus a follow-up

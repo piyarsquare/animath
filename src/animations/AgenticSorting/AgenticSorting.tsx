@@ -57,6 +57,18 @@ const METRIC_OPTS: { value: MetricKey; label: string }[] = [
   { value: 'clustering', label: 'Cluster' },
 ];
 
+/** A thin stacked bar showing a population mix's algotype proportions. */
+function MixBar({ weights }: { weights: Weights }) {
+  const total = AGENT_TYPE_LIST.reduce((s, t) => s + weights[t], 0) || 1;
+  return (
+    <span className="as-mixbar">
+      {AGENT_TYPE_LIST.map(t => (
+        <span key={t} style={{ width: `${(weights[t] / total) * 100}%`, background: TYPE_COLORS[t] }} />
+      ))}
+    </span>
+  );
+}
+
 const emptyMetrics: MetricsView = {
   cycles: 0, wakeups: 0, swaps: 0, sortedness: 1, inversions: 0,
   runs: 1, clustering: 0, ceiling: 1, hasFrozen: false, descShareLive: 0,
@@ -85,7 +97,8 @@ export default function AgenticSorting() {
   const [repResult, setRepResult] = useState<GroupResult | null>(null);
 
   // ---- lab (full batch experiments) ----
-  const [labKind, setLabKind] = usePersistentState<'compare' | 'monte' | 'sweep'>('agentic-sorting:labKind', 'compare');
+  const [labKind, setLabKind] = usePersistentState<'compare' | 'mixes' | 'monte' | 'sweep'>('agentic-sorting:labKind', 'compare');
+  const [savedMixes, setSavedMixes] = usePersistentState<{ id: number; label: string; weights: Weights }[]>('agentic-sorting:savedMixes', []);
   const [labTrials, setLabTrials] = usePersistentState('agentic-sorting:labTrials', 24);
   const [labCount, setLabCount] = usePersistentState('agentic-sorting:labCount', 64);
   const [labWake, setLabWake] = usePersistentState('agentic-sorting:labWake', 0.15);
@@ -342,8 +355,40 @@ export default function AgenticSorting() {
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [isRunning, mode, draw, flushMetrics, recordTraj, drawTraj]);
 
-  const setWeight = (type: AgentType, val: number) =>
-    setWeights(prev => ({ ...prev, [type]: val }));
+  // Connected proportions: setting one weight rescales the others so the five
+  // always sum to 100 (a population is a mix, not five independent dials).
+  const setWeightBalanced = (type: AgentType, raw: number) => {
+    setWeights(prev => {
+      const v = Math.max(0, Math.min(100, Math.round(raw)));
+      const others = AGENT_TYPE_LIST.filter(t => t !== type);
+      const otherSum = others.reduce((s, t) => s + prev[t], 0);
+      const remaining = 100 - v;
+      const next = { ...prev, [type]: v } as Weights;
+      if (otherSum > 0) {
+        let acc = 0;
+        for (const t of others) { next[t] = Math.round((prev[t] / otherSum) * remaining); acc += next[t]; }
+        const drift = remaining - acc; // fix integer rounding on the largest other
+        if (drift !== 0) {
+          const big = others.reduce((a, b) => (next[b] > next[a] ? b : a), others[0]);
+          next[big] = Math.max(0, next[big] + drift);
+        }
+      } else {
+        const each = Math.floor(remaining / others.length);
+        let acc = 0;
+        for (const t of others) { next[t] = each; acc += each; }
+        next[others[0]] += remaining - acc;
+      }
+      return next;
+    });
+  };
+
+  // capture the current population mix for head-to-head comparison in the Lab
+  const addCurrentMix = () => {
+    setSavedMixes(prev => prev.length >= 6 ? prev
+      : [...prev, { id: Date.now(), label: `Mix ${prev.length + 1}`, weights: { ...weights } }]);
+  };
+  const removeMix = (id: number) =>
+    setSavedMixes(prev => prev.filter(m => m.id !== id));
 
   // run the current sandbox settings many times on fresh seeds (quick multi-run)
   const runReplicate = useCallback(async () => {
@@ -375,16 +420,21 @@ export default function AgenticSorting() {
     if (labKind === 'sweep') {
       const [from, to] = SWEEP_RANGE[sweepParam];
       spec = { kind: 'sweep', param: sweepParam, from, to, steps: sweepSteps, ...common };
+    } else if (labKind === 'mixes') {
+      spec = { kind: 'mixes', mixes: savedMixes.map(m => ({ label: m.label, weights: m.weights })), ...common };
     } else {
       spec = { kind: labKind, ...common };
     }
     const res = await runExperiment(spec, setLabProgress);
     setLabResults(res);
-    setLabResultKind(labKind);
+    // mixes render like compare (labeled bars); only sweep differs
+    setLabResultKind(labKind === 'sweep' ? 'sweep' : labKind === 'monte' ? 'monte' : 'compare');
     setLabSweepLabel(labKind === 'sweep' ? sweepParam : '');
     setLabRunning(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [labRunning, labKind, labTrials, labCount, labWake, labCap, sweepParam, sweepSteps, objectiveMode, descShare, frozenPct, weights]);
+  }, [labRunning, labKind, labTrials, labCount, labWake, labCap, sweepParam, sweepSteps, savedMixes, objectiveMode, descShare, frozenPct, weights]);
+
+  const labReady = labKind !== 'mixes' || savedMixes.length >= 2;
 
   const pct = (x: number) => `${Math.round(x * 100)}%`;
   const signedPct = (x: number) => `${x >= 0 ? '+' : ''}${Math.round(x * 100)}%`;
@@ -455,7 +505,7 @@ export default function AgenticSorting() {
           </div>
           <Slider
             label="" value={weights[key]} min={0} max={100} step={1}
-            onChange={(v) => setWeight(key, v)} format={(v) => `${v}%`}
+            onChange={(v) => setWeightBalanced(key, v)} format={(v) => `${v}%`}
           />
           <p className="as-weight-desc">{AGENT_META[key].desc}</p>
         </div>
@@ -574,12 +624,30 @@ export default function AgenticSorting() {
       <Pills
         label="Experiment" value={labKind}
         options={[
-          { value: 'compare', label: 'Compare' },
+          { value: 'compare', label: 'Strategies' },
+          { value: 'mixes', label: 'Mixes' },
           { value: 'monte', label: 'Monte-Carlo' },
           { value: 'sweep', label: 'Sweep' },
         ]}
         onChange={setLabKind}
       />
+      {labKind === 'mixes' && (
+        <div className="as-mixes">
+          <button className="as-button as-button-reset" onClick={addCurrentMix} disabled={savedMixes.length >= 6}>
+            + Add current mix
+          </button>
+          {savedMixes.length === 0 && (
+            <p className="as-hint">Set the <strong>Population mix</strong> below, then add it — repeat to build two or more mixes, and compare them under identical conditions.</p>
+          )}
+          {savedMixes.map(m => (
+            <div key={m.id} className="as-mix-row">
+              <span className="as-mix-label">{m.label}</span>
+              <MixBar weights={m.weights} />
+              <button className="as-mix-remove" onClick={() => removeMix(m.id)} title="Remove">×</button>
+            </div>
+          ))}
+        </div>
+      )}
       {labKind === 'sweep' && (
         <>
           <Select
@@ -598,9 +666,11 @@ export default function AgenticSorting() {
       <p className="as-hint">
         {labKind === 'compare'
           ? 'Each pure algotype and the current mix, head-to-head (the "545 swaps" comparison).'
-          : labKind === 'monte'
-            ? 'Repeats the current mix / objective / frozen settings on many seeds.'
-            : 'Varies one knob across its range; the rest come from the current settings.'}
+          : labKind === 'mixes'
+            ? 'Your saved population mixes, head-to-head under identical conditions.'
+            : labKind === 'monte'
+              ? 'Repeats the current mix / objective / frozen settings on many seeds.'
+              : 'Varies one knob across its range; the rest come from the current settings.'}
       </p>
     </div>
   );
@@ -611,7 +681,16 @@ export default function AgenticSorting() {
       <Slider label="Array size" value={labCount} min={16} max={200} step={1} onChange={setLabCount} format={(v) => `${v} agents`} />
       <Slider label="Wake rate" value={labWake} min={0.05} max={0.5} step={0.01} onChange={setLabWake} format={pct} />
       <Slider label="Cycle cap" value={labCap} min={200} max={6000} step={100} onChange={setLabCap} />
-      <p className="as-hint">A trial sorts a fresh population until ≥99% sorted or the cap. Larger array × trials × cap takes longer.</p>
+      <Pills
+        label="Objective" value={objectiveMode}
+        options={[{ value: 'uniform', label: 'Selfish' }, { value: 'split', label: 'Phase sep.' }]}
+        onChange={setObjectiveMode}
+      />
+      {objectiveMode === 'split' && (
+        <Slider label="Descending share" value={descShare} min={0} max={100} step={1} onChange={setDescShare} format={(v) => `${v}%`} />
+      )}
+      <Slider label="Frozen / defective" value={frozenPct} min={0} max={40} step={1} onChange={setFrozenPct} format={(v) => `${v}%`} />
+      <p className="as-hint">A trial sorts a fresh population until ≥99% sorted or the cap. These conditions apply to every group; <strong>Strategies</strong> and <strong>Mixes</strong> vary only the population.</p>
     </div>
   );
 
@@ -630,10 +709,11 @@ export default function AgenticSorting() {
 
   const labRunNode = (
     <div className="as-panel">
-      <button className="as-button as-button-primary" disabled={labRunning} onClick={runLab}>
+      <button className="as-button as-button-primary" disabled={labRunning || !labReady} onClick={runLab}>
         {labRunning ? `Running… ${Math.round(labProgress * 100)}%` : 'Run experiment'}
       </button>
       {labRunning && <div className="as-progress"><div className="as-progress-fill" style={{ width: `${labProgress * 100}%` }} /></div>}
+      {!labReady && !labRunning && <p className="as-hint">Add at least two mixes to compare.</p>}
     </div>
   );
 
@@ -678,10 +758,11 @@ export default function AgenticSorting() {
   ];
 
   const labSections: SectionDef[] = [
-    { id: 'labExperiment', title: 'Experiment', arch: 'subject', node: labExperimentNode, estHeight: 240 },
-    { id: 'labConditions', title: 'Conditions', arch: 'domain', node: labConditionsNode, estHeight: 320 },
-    { id: 'labMetric', title: 'Metric', arch: 'marks', node: labMetricNode, estHeight: 150 },
-    { id: 'labRun', title: 'Run', arch: 'playback', node: labRunNode, estHeight: 150 },
+    { id: 'labExperiment', title: 'Experiment', arch: 'subject', node: labExperimentNode, estHeight: 280 },
+    { id: 'agents', title: 'Population mix', arch: 'drive', node: agentsNode, estHeight: 500 },
+    { id: 'labConditions', title: 'Conditions', arch: 'domain', node: labConditionsNode, estHeight: 420 },
+    { id: 'labMetric', title: 'Metric', arch: 'marks', node: labMetricNode, estHeight: 170 },
+    { id: 'labRun', title: 'Run', arch: 'playback', node: labRunNode, estHeight: 160 },
   ];
 
   const sandboxViews: ViewDef[] = [
@@ -716,10 +797,11 @@ export default function AgenticSorting() {
     {
       id: 'lab', name: 'Lab', sub: 'Experiment · Results', icon: 'chart',
       open: {
-        labExperiment: { x: 84, y: 18 }, labMetric: { x: 84, y: 300 },
-        labRun: { x: 84, y: 470 }, labConditions: { x: 84, y: 600 },
+        labExperiment: { x: 84, y: 18 }, agents: { x: 84, y: 320 },
+        labConditions: { x: 312, y: 18 }, labMetric: { x: 312, y: 460 },
+        labRun: { x: 312, y: 640 },
       },
-      views: { labResults: { x: 372, y: 16, w: 760, h: 600, open: true } },
+      views: { labResults: { x: 560, y: 16, w: 700, h: 600, open: true } },
     },
   ];
 

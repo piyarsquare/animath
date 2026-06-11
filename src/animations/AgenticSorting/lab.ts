@@ -115,6 +115,7 @@ export type SweepParam = 'count' | 'frozenShare' | 'wakeFraction' | 'descShare';
 export type ExperimentSpec =
   | ({ kind: 'compare' } & Common)
   | ({ kind: 'monte' } & Common)
+  | ({ kind: 'mixes'; mixes: { label: string; weights: Weights }[] } & Common)
   | ({ kind: 'sweep'; param: SweepParam; from: number; to: number; steps: number } & Common);
 
 const pureWeights = (t: AgentType): Weights =>
@@ -143,6 +144,9 @@ function buildConditions(spec: ExperimentSpec): Condition[] {
   }
   if (spec.kind === 'monte') {
     return [{ label: 'Current mix', cfg: { ...base, weights: spec.weights } as TrialConfig }];
+  }
+  if (spec.kind === 'mixes') {
+    return spec.mixes.map(m => ({ label: m.label, cfg: { ...base, weights: m.weights } as TrialConfig }));
   }
   // sweep
   const out: Condition[] = [];
