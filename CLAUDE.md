@@ -98,7 +98,7 @@ animath/
     │   ├── AgenticSorting/      # concurrent agent-based sorting (CSS/DOM)
     │   ├── StableMatching/      # rebuilt Gale–Shapley lab: matrix · welfare · lattice (CSS/DOM)
     │   ├── PolygonWorlds/       # walk every closed surface from one glued polygon
-    │   └── TreesAndNets/        # tree-space as a polytope (associahedron of n-gon triangulations); lib/associahedron.ts
+    │   └── TreesAndNets/        # M̄₀,ₙ(ℝ) explorer: associahedron tiles + the gluing mosaic; lib/{associahedron,mosaic}.ts
     │
     ├── components/             # shared app-side UI
     │   ├── ParticleViewerShell.tsx  # turnkey workspace assembly for particle (4D) viewers

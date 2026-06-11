@@ -36,6 +36,21 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 03:40 — Phases 1–2 done: the generic M̄₀,ₙ(ℝ) explorer
+**Why:** "Continue to the end" — deliver the whole-moduli-space explorer.
+
+**P1** `lib/mosaic.ts`: enumerate cyclic orders ((n−1)!/2 dihedral classes), gluing
+graph by contiguous-arc reversal (facet ↔ diagonal), 3D force-directed layout, and
+a `tileCount`/`FULL_TILE_LIMIT` switch to a local BFS neighborhood for big n.
+Verified in /tmp: n=5 → 12 tiles/30 edges, n=6 → 60/270, n=7 → 360/2520 (degree
+n(n−3)/2 exactly). **P2** added the **Atlas** view (the gluing graph of the whole
+space; current tile gold, neighbors teal, click a node to jump) and **cross-facet
+navigation** in the Tile (click a facet → reverse that arc → move to the neighbor
+order; the Atlas highlight follows). New "Cyclic order" panel + reset. Subtitle
+shows the tile count. Build green (16.5 kB); headless n=6 (full 60-tile Atlas) and
+n=8 (2,520 tiles → local neighborhood, 5-D tile as wireframe) both render. The
+Atlas is the scalable whole-space showpiece (P3, per the revised plan).
+
 ### 🟡 milestone · 03:00 — Phase 0 done: canonical solid associahedron
 **Why:** Land the single tile correctly before assembling the moduli space.
 
