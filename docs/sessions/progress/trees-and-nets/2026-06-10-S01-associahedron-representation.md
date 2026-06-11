@@ -36,6 +36,23 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 01:40 — Drop PCA; use canonical Loday coordinates
+**Why:** User: "the PC are not useful... keep the same structure as the regular
+formulation of the associahedron." PCA re-orients axes by data variance, so the
+n=6 solid no longer reads as *the* associahedron and PC axes are meaningless.
+
+Established (and explained to the user) the regular formulation: vertices =
+triangulations; edges = flips (the simple-polytope graph determines the whole
+combinatorics, Blind–Mani/Kalai); faces = the dissection lattice, facets ↔ single
+diagonals with the product law (a diagonal splitting the n-gon into a (p+1)- and
+(q+1)-gon gives facet Kₚ×K_q). Hexagon checked: 14 verts, 21 edges, 9 facets = the
+9 diagonals = 6 pentagons (K₃×K₅) + 3 squares (K₄×K₄). Loday's coordinate map is
+canonical and already computed (`point` via the fixed Helmert basis). **Plan:**
+remove PCA from the viewer and render `point` directly — for n≤6 this is the true
+3D associahedron. Open question put to the user: how to view n≥7 (4D/5D/6D) while
+keeping the structure — Schlegel diagram (through a facet) vs the genuine 4D→3D
+projection (n=7) vs a fixed canonical linear projection vs staying combinatorial.
+
 ### 🟢 code · 01:00 — General mD→3D projection, zoom, directed energy edges
 **Why:** User flagged the 4D-specific transform won't scale (n=8 → 5D, n=9 → 6D)
 and asked for zoom + steerable projection + directed energy edges.
