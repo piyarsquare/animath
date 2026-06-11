@@ -34,6 +34,29 @@ camera/headlamp bug.
 
 ## Working notes
 
+### 🟡 milestone · 06-11 — Session close: handoff written
+**Why:** User asked for the progress update + a handoff carrying the
+improvement roadmap (orbifold worlds and the other chart-showing approaches)
+and the ℝP² inside/outside discussion.
+
+### 🔵 finding · 06-11 — ℝP²: the seam crossing reverses inside↔outside, necessarily
+**Why:** User raised it; it sharpens the app's story and seeds a feature.
+
+For a surface in oriented 3-space, (intrinsic orientation) × (normal
+direction) = (ambient orientation) = conserved — so any orientation-reversing
+loop must also flip the normal: **"mirrored" and "inside-out" are the same
+ℤ/2**, intrinsic vs extrinsic. In the shell model the ℝP² deck
+`(x,t) ↦ (−x,−t)` exchanges the outer and inner boundary spheres, so the
+quotient has ONE connected face (thickened ℝP² = ℝP³ minus a ball; its single
+boundary sphere is the orientation double cover — the app's two-sided sheet
+*is* that double cover everywhere). Outside and inside are two cover-lifts of
+the same face; the app folds the walker to the outer lift and swaps content.
+Klein's top↔bottom crossing is the identical law; it reads as inside↔outside
+on ℝP² only because the sheet is wrapped into a ball. **Feature seed:** an
+"inside walk" — continue onto the inner face at the seam (camera inside the
+hollow planet), re-emerging on the second crossing — the old normal-flip
+roadmap item with correct geometry.
+
 ### 🔵 finding · 06-11 — Zip words: cut-trees on the sphere; cone-point orbifolds elsewhere
 **Why:** User asked why zip pairs (`x x⁻¹`) can't appear in our charts and
 what it would take.
