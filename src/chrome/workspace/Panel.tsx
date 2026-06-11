@@ -2,6 +2,7 @@ import React from 'react';
 import { Icon } from '../icons';
 import { ARCHETYPES } from './archetypes';
 import { beginPointerDrag } from './drag';
+import { LAYER } from './layers';
 import type { PanelState, SectionDef } from './types';
 
 /**
@@ -9,9 +10,12 @@ import type { PanelState, SectionDef } from './types';
  * Dragging is by the header; any pointerdown raises the panel; the body
  * unmounts while collapsed (control state lives in app state).
  */
-export function Panel({ sec, state, nodeRef, snap, onMove, onSettle, onRaise, onToggleCollapse, onClose }: {
+export function Panel({ sec, state, zBase = LAYER.window, nodeRef, snap, onMove, onSettle, onRaise, onToggleCollapse, onClose }: {
   sec: SectionDef;
   state: PanelState;
+  /** Stacking base: LAYER.window normally, LAYER.overFull during fullscreen
+   *  so the rail keeps opening visible panels (CHROME-REVIEW P4a). */
+  zBase?: number;
   nodeRef: (el: HTMLDivElement | null) => void;
   snap: (rawX: number, rawY: number) => { x: number; y: number };
   onMove: (pos: { x: number; y: number }) => void;
@@ -30,7 +34,7 @@ export function Panel({ sec, state, nodeRef, snap, onMove, onSettle, onRaise, on
     <div
       ref={nodeRef}
       className="am-ws-panel"
-      style={{ left: state.x, top: state.y, zIndex: 30 + (state.z ?? 0) }}
+      style={{ left: state.x, top: state.y, zIndex: zBase + (state.z ?? 0) }}
       onPointerDownCapture={onRaise}
     >
       <div className={`am-ws-phead ${state.collapsed ? 'am-collapsed' : ''}`} onPointerDown={onHeadDown}>

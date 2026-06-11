@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import './stableMatching.css';
 import Workspace from '../../chrome/workspace/Workspace';
-import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { Slider, Pills, Select, NumberInput, Checkbox } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
@@ -871,6 +871,22 @@ export default function StableMatching() {
   // the old chrome could surface is lost.
   const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
 
+  /* Always-on action strip — the same verbs as the Playback panel (its
+     projection), contextual: the RVV resolve replay swaps the set. */
+  const actions: ActionDef[] = resolve
+    ? [
+      { id: 'play', icon: rPlaying ? 'pause' : 'play', label: rPlaying ? 'Pause' : 'Play', primary: true, active: rPlaying, sectionId: 'playback', disabled: rStep >= resolve.steps.length && !rPlaying, onClick: () => setRPlaying(p => !p) },
+      { id: 'step', icon: 'step', label: 'Step', sectionId: 'playback', disabled: rPlaying || rStep >= resolve.steps.length, onClick: () => setRStep(s => Math.min(resolve.steps.length, s + 1)) },
+      { id: 'finish', icon: 'finish', label: 'Finish', sectionId: 'playback', disabled: rStep >= resolve.steps.length, onClick: () => setRStep(resolve.steps.length) },
+      { id: 'back', icon: 'back', label: 'Back to run', sectionId: 'playback', onClick: endResolve },
+    ]
+    : [
+      { id: 'play', icon: playing ? 'pause' : 'play', label: playing ? 'Pause' : 'Play', primary: true, active: playing, sectionId: 'playback', disabled: jump === 'live' && !pickedMatching && done && !playing, onClick: () => { goLive(); setPlaying(p => !p); } },
+      { id: 'step', icon: 'step', label: 'Step', sectionId: 'playback', disabled: playing || (jump === 'live' && !pickedMatching && done), onClick: () => { goLive(); setStep(s => Math.min(total, s + 1)); } },
+      { id: 'finish', icon: 'finish', label: 'Finish', sectionId: 'playback', disabled: jump === 'live' && !pickedMatching && done, onClick: () => { goLive(); setStep(total); } },
+      { id: 'reset', icon: 'reset', label: 'Reset', sectionId: 'playback', onClick: reset },
+    ];
+
   return (
     <Workspace
       appId="stable-matching"
@@ -880,6 +896,7 @@ export default function StableMatching() {
       layouts={layouts}
       defaultLayoutId="run"
       explainer={help}
+      actions={actions}
     />
   );
 }

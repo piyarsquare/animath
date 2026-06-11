@@ -1,10 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { usePersistentState } from '../../lib/usePersistentState';
+import { ExplainerModal } from '../ExplainerModal';
 import { TopBar } from '../TopBar';
+import { useEscLayer } from '../useEscLayer';
 import { sortByTier } from './archetypes';
 import { snapPos, snapResize, freeSlot, dockedChainBelow, PANEL_W } from './geometry';
 import type { Rect, SnapGuides } from './geometry';
-import { builtinLayouts, applyLayout, sanitize, DEFAULT_EST } from './layouts';
+import { builtinLayouts, applyLayout, sanitize, raiseWindow, DEFAULT_EST } from './layouts';
+import { ActionBar } from './ActionBar';
+import { LAYER } from './layers';
 import { Panel } from './Panel';
 import { ViewWindow } from './ViewWindow';
 import { Rail } from './Rail';
@@ -21,7 +25,7 @@ type RefMap = React.MutableRefObject<Record<string, HTMLDivElement | null>>;
  * plus the left icon rail and named layouts, persisted per app.
  */
 export default function DesktopWorkspace(props: WorkspaceProps) {
-  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, modes, activeMode, onModeChange } = props;
+  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, actions, modes, activeMode, onModeChange } = props;
   const sections = useMemo(() => sortByTier(props.sections), [props.sections]);
   const builtin = useMemo(
     () => builtinLayouts(sections, appLayouts),
@@ -48,12 +52,10 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
   const [guides, setGuides] = useState<SnapGuides | null>(null);
   /* fullscreen is transient view state — deliberately not persisted */
   const [fullView, setFullView] = useState<string | null>(null);
-  useEffect(() => {
-    if (!fullView) return;
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullView(null); };
-    window.addEventListener('keydown', k);
-    return () => window.removeEventListener('keydown', k);
-  }, [fullView]);
+  /* explainer opened from the fullscreen view header (the top bar is buried) */
+  const [fullHelp, setFullHelp] = useState(false);
+  /* staged Esc: the layer stack peels modal → fullscreen, one per keypress */
+  useEscLayer(fullView != null, () => setFullView(null));
   const stageRef = useRef<HTMLDivElement | null>(null);
   const panelRefs: RefMap = useRef({});
   const viewRefs: RefMap = useRef({});
@@ -123,13 +125,9 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
   };
   const movePanel = (id: string, pos: { x: number; y: number }) =>
     update(s => ({ ...s, layout: 'custom', open: { ...s.open, [id]: { ...s.open[id], ...pos } } }));
-  const raisePanel = (id: string) => {
-    update(s => {
-      const top = topZ(s);
-      if ((s.open[id]?.z ?? 1) === top && top > 1) return s;
-      return { ...s, open: { ...s.open, [id]: { ...s.open[id], z: top + 1 } } };
-    });
-  };
+  /* raiseWindow renumbers z to 1..n on every raise, so persisted z stays
+     bounded below the fullscreen layer (CHROME-REVIEW F5 addendum) */
+  const raisePanel = (id: string) => update(s => raiseWindow(s, 'open', id));
   /* Collapse/expand moves the chain of panels docked below, so a docked stack
      closes up on collapse and pushes out on expand (drift-free restack). */
   const collapsePanel = (id: string) => {
@@ -167,13 +165,7 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
     update(s => ({ ...s, layout: 'custom', views: { ...s.views, [id]: { ...s.views[id], ...pos } } }));
   const resizeView = (id: string, size: { w: number; h: number }) =>
     update(s => ({ ...s, layout: 'custom', views: { ...s.views, [id]: { ...s.views[id], ...size } } }));
-  const raiseView = (id: string) => {
-    update(s => {
-      const top = topZ(s);
-      if ((s.views[id]?.z ?? 1) === top && top > 1) return s;
-      return { ...s, views: { ...s.views, [id]: { ...s.views[id], z: top + 1 } } };
-    });
-  };
+  const raiseView = (id: string) => update(s => raiseWindow(s, 'views', id));
   const collapseView = (id: string) =>
     update(s => ({ ...s, layout: 'custom', views: { ...s.views, [id]: { ...s.views[id], collapsed: !s.views[id].collapsed } } }));
 
@@ -260,6 +252,7 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
               onRaise={() => raiseView(v.id)}
               onToggleCollapse={() => collapseView(v.id)}
               onToggleFull={() => setFullView(f => (f === v.id ? null : v.id))}
+              onHelp={explainer ? () => setFullHelp(true) : undefined}
             />
           );
         })}
@@ -277,6 +270,7 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
             key={s.id}
             sec={s}
             state={state.open[s.id]}
+            zBase={fullView ? LAYER.overFull : LAYER.window}
             nodeRef={el => { if (el) panelRefs.current[s.id] = el; else delete panelRefs.current[s.id]; }}
             snap={makeSnap(s.id, panelRefs)}
             onMove={pos => movePanel(s.id, pos)}
@@ -286,7 +280,12 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
             onClose={() => closePanel(s.id)}
           />
         ))}
+
+        {actions && <ActionBar actions={actions} sections={sections} />}
       </div>
+      {fullHelp && explainer && (
+        <ExplainerModal title={title} markdown={explainer} onClose={() => setFullHelp(false)} />
+      )}
     </div>
   );
 }

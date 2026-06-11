@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Icon } from '../icons';
 import { beginPointerDrag } from './drag';
+import { LAYER } from './layers';
+import { SplitPanes } from './SplitPanes';
 import type { ViewDef, ViewState } from './types';
 
 /**
@@ -11,7 +13,7 @@ import type { ViewDef, ViewState } from './types';
  * guards zero-size resizes); fullscreen restyles the same node for the same
  * reason.
  */
-export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, onResize, onSettle, onRaise, onToggleCollapse, onToggleFull }: {
+export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, onResize, onSettle, onRaise, onToggleCollapse, onToggleFull, onHelp }: {
   view: ViewDef;
   state: ViewState;
   full: boolean;
@@ -24,6 +26,9 @@ export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, o
   onRaise: () => void;
   onToggleCollapse: () => void;
   onToggleFull: () => void;
+  /** The top bar is buried under a fullscreen view, so the fullscreen header
+   *  carries its own "?" explainer button (CHROME-REVIEW P4a). */
+  onHelp?: () => void;
 }) {
   const onHeadDown = (e: React.PointerEvent) => {
     if (full) return;
@@ -39,6 +44,12 @@ export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, o
     beginPointerDrag(e, (dx, dy) => onResize(resize(ow + dx, oh + dy, x, y)), onSettle);
   };
   const collapsed = !full && !!state.collapsed;
+  /* start hint: per-session, gone on first pointer interaction (P2) */
+  const [hintSeen, setHintSeen] = useState(false);
+  const onAnyPointerDown = () => {
+    onRaise();
+    if (!hintSeen) setHintSeen(true);
+  };
   return (
     <div
       ref={nodeRef}
@@ -48,13 +59,23 @@ export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, o
         top: state.y,
         width: state.w,
         height: collapsed ? undefined : state.h,
-        zIndex: 30 + (state.z ?? 0),
+        zIndex: LAYER.window + (state.z ?? 0),
       }}
-      onPointerDownCapture={onRaise}
+      onPointerDownCapture={onAnyPointerDown}
     >
       <div className="am-ws-vhead" onPointerDown={onHeadDown}>
         <span className="am-ws-vico"><Icon name="window" size={13} /></span>
         <span className="am-ws-vtitle">{view.title}</span>
+        {full && onHelp && (
+          <button
+            className="am-btn am-btn-icon"
+            title="What am I looking at?"
+            aria-label="What am I looking at?"
+            onClick={onHelp}
+          >
+            <Icon name="help" size={14} />
+          </button>
+        )}
         {!collapsed && (
           <button
             className="am-btn am-btn-icon"
@@ -78,7 +99,13 @@ export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, o
       </div>
       {/* hidden, not unmounted, while collapsed — keeps engine state alive */}
       <div className="am-ws-view-body" style={collapsed ? { display: 'none' } : undefined}>
-        {view.node}
+        {view.panes ? <SplitPanes panes={view.panes} /> : view.node}
+        {/* the view-overlay layer: hosts the start hint (HUDs later, P3) */}
+        {view.hint && !hintSeen && (
+          <div className="am-view-overlay" aria-hidden="true">
+            <span className="am-view-hint-pill">{view.hint}</span>
+          </div>
+        )}
       </div>
       {!collapsed && !full && (
         <div className="am-ws-resize" onPointerDown={onResizeDown} title="Resize" aria-label={`Resize ${view.title}`}>

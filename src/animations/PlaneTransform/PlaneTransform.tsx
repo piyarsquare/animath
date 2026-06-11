@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Workspace from '../../chrome/workspace/Workspace';
+import { SplitPanes } from '../../chrome/workspace/SplitPanes';
 import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { usePhone } from '../../chrome/usePhone';
 import { Slider, Pills, Select, NumberInput, ComplexInput } from '../../components/ControlPanel';
@@ -438,40 +439,50 @@ export default function PlaneTransform({ embed }: {
     { id: 'detail', title: 'Detail', arch: 'quality', node: detailNode, estHeight: 160 },
   ];
 
-  // The two panes are separable subtrees, so each gets its own view window;
-  // the window titles replace the old in-canvas pane labels.
+  // Domain and image are one mathematical unit, so they live as two PANES of
+  // ONE split view window (CHROME-REVIEW P5): the chrome can no longer
+  // mis-size, half-hide or separate them, and the equal split keeps the two
+  // inscribed squares scale-commensurable (same pixels-per-unit — the whole
+  // point of reading |f'| off the picture). The id is fresh ('plane', not
+  // 'input') so stale persisted rects from the two-window era are dropped.
   const views: ViewDef[] = [
     {
-      id: 'input',
-      title: 'z-plane (input)',
-      defaultRect: { x: 360, y: 16, w: 356, h: 356 },
-      node: (
-        <InputPane
-          mountRef={inputMountRef}
-          viewExtent={viewExtent}
-          planeMode={planeMode}
-          drawMode={drawMode}
-          curve={curve}
-          onAppendCurve={(pt, fresh) => {
-            setCurve(prev => fresh ? [pt] : [...prev, pt]);
-          }}
-          onWheelZoom={(factor) => setViewExtent(v => Math.min(20, Math.max(0.2, v * factor)))}
-        />
-      ),
-    },
-    {
-      id: 'output',
-      title: 'f(z)-plane',
-      defaultRect: { x: 728, y: 16, w: 356, h: 356 },
-      node: (
-        <OutputPane
-          mountRef={outputMountRef}
-          viewExtent={viewExtent}
-          planeMode={planeMode}
-          curve={outputCurve}
-          onWheelZoom={(factor) => setViewExtent(v => Math.min(20, Math.max(0.2, v * factor)))}
-        />
-      ),
+      id: 'plane',
+      title: 'z ↦ f(z)',
+      defaultRect: { x: 360, y: 16, w: 724, h: 380 },
+      hint: 'scroll to zoom both planes · open Curves to draw on z',
+      panes: [
+        {
+          id: 'domain',
+          label: 'z — domain',
+          node: (
+            <InputPane
+              mountRef={inputMountRef}
+              viewExtent={viewExtent}
+              planeMode={planeMode}
+              drawMode={drawMode}
+              curve={curve}
+              onAppendCurve={(pt, fresh) => {
+                setCurve(prev => fresh ? [pt] : [...prev, pt]);
+              }}
+              onWheelZoom={(factor) => setViewExtent(v => Math.min(20, Math.max(0.2, v * factor)))}
+            />
+          ),
+        },
+        {
+          id: 'image',
+          label: 'w = f(z) — image',
+          node: (
+            <OutputPane
+              mountRef={outputMountRef}
+              viewExtent={viewExtent}
+              planeMode={planeMode}
+              curve={outputCurve}
+              onWheelZoom={(factor) => setViewExtent(v => Math.min(20, Math.max(0.2, v * factor)))}
+            />
+          ),
+        },
+      ],
     },
   ];
 
@@ -495,28 +506,38 @@ export default function PlaneTransform({ embed }: {
     return (
       <div className="am-embed">
         <div className="am-embed-row">
-          <div className="am-embed-pane">
-            <InputPane
-              mountRef={inputMountRef}
-              viewExtent={viewExtent}
-              planeMode={planeMode}
-              drawMode={false}
-              curve={curve}
-              onAppendCurve={() => {}}
-              onWheelZoom={zoom}
-            />
-            <span className="am-embed-pane-label">z</span>
-          </div>
-          <div className="am-embed-pane">
-            <OutputPane
-              mountRef={outputMountRef}
-              viewExtent={viewExtent}
-              planeMode={planeMode}
-              curve={outputCurve}
-              onWheelZoom={zoom}
-            />
-            <span className="am-embed-pane-label">f(z) = {fnFormula}</span>
-          </div>
+          <SplitPanes
+            panes={[
+              {
+                id: 'domain',
+                label: 'z',
+                node: (
+                  <InputPane
+                    mountRef={inputMountRef}
+                    viewExtent={viewExtent}
+                    planeMode={planeMode}
+                    drawMode={false}
+                    curve={curve}
+                    onAppendCurve={() => {}}
+                    onWheelZoom={zoom}
+                  />
+                ),
+              },
+              {
+                id: 'image',
+                label: `f(z) = ${fnFormula}`,
+                node: (
+                  <OutputPane
+                    mountRef={outputMountRef}
+                    viewExtent={viewExtent}
+                    planeMode={planeMode}
+                    curve={outputCurve}
+                    onWheelZoom={zoom}
+                  />
+                ),
+              },
+            ]}
+          />
           <a
             className="am-embed-badge"
             href={`${import.meta.env.BASE_URL}#/plane-transform`}

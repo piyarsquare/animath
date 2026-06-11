@@ -1,8 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { usePersistentState } from '../../lib/usePersistentState';
+import { ExplainerModal } from '../ExplainerModal';
 import { Icon } from '../icons';
 import { TopBar } from '../TopBar';
+import { useEscLayer } from '../useEscLayer';
 import { useScrollHints } from '../useScrollHints';
+import { ActionBar } from './ActionBar';
+import { SplitPanes } from './SplitPanes';
 import { sortByTier, ARCHETYPES } from './archetypes';
 import { beginPointerDrag } from './drag';
 import type { WorkspaceProps } from './types';
@@ -19,13 +23,20 @@ const maxCardH = () => Math.round(window.innerHeight * 0.8);
  * Layouts menu is hidden on phone.
  */
 export default function PhoneWorkspace(props: WorkspaceProps) {
-  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, modes, activeMode, onModeChange } = props;
+  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, actions, modes, activeMode, onModeChange } = props;
   const sections = useMemo(() => sortByTier(props.sections), [props.sections]);
   const [sheet, setSheet] = useState<string | null>(null);
   /* per-view card heights are layout state (like desktop view rects) — persisted */
   const [cardH, setCardH] = usePersistentState<Record<string, number>>(`wsphone:${appId}`, {});
   /* fullscreen is transient view state — deliberately not persisted */
   const [full, setFull] = useState<string | null>(null);
+  /* explainer opened from the fullscreen card header (the top bar is buried) */
+  const [fullHelp, setFullHelp] = useState(false);
+  /* start hints (P2): per-session, gone on the card's first pointer touch */
+  const [hintSeen, setHintSeen] = useState<Record<string, boolean>>({});
+  /* staged Esc via the shared layer stack: most recently opened layer first */
+  useEscLayer(full != null, () => setFull(null));
+  useEscLayer(sheet != null, () => setSheet(null));
 
   // Apps that model mutually exclusive views as layouts (views[id].open) get
   // a chip switcher; the default layout decides which cards start visible.
@@ -47,17 +58,6 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
   const dockRef = useRef<HTMLElement>(null);
   const dockHint = useScrollHints(dockRef, 'x');
 
-  useEffect(() => {
-    if (!sheet && !full) return;
-    const k = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      setSheet(null);
-      setFull(null);
-    };
-    window.addEventListener('keydown', k);
-    return () => window.removeEventListener('keydown', k);
-  }, [sheet, full]);
-
   /* drag the bottom grip to resize a card; fullscreen restyles the same DOM
      node (CSS-only), so WebGL engines keep their context either way */
   const onResizeDown = (id: string) => (e: React.PointerEvent) => {
@@ -71,7 +71,7 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
   };
 
   return (
-    <div className="am-app am-phone-app">
+    <div className={`am-app am-phone-app${actions?.length ? ' am-has-actions' : ''}`}>
       <TopBar
         title={title}
         subtitle={subtitle}
@@ -115,6 +115,16 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
               <div className="am-ws-vhead">
                 <span className="am-ws-vico"><Icon name="window" size={13} /></span>
                 <span className="am-ws-vtitle">{v.title}</span>
+                {isFull && explainer && (
+                  <button
+                    className="am-btn am-btn-icon"
+                    title="What am I looking at?"
+                    aria-label="What am I looking at?"
+                    onClick={() => setFullHelp(true)}
+                  >
+                    <Icon name="help" size={14} />
+                  </button>
+                )}
                 <button
                   className="am-btn am-btn-icon"
                   title={isFull ? 'Exit full screen' : 'Full screen'}
@@ -127,8 +137,18 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
               <div
                 className="am-phone-view-body"
                 style={!isFull && h ? { height: h, maxHeight: 'none' } : undefined}
+                onPointerDownCapture={
+                  v.hint && !hintSeen[v.id]
+                    ? () => setHintSeen(s => ({ ...s, [v.id]: true }))
+                    : undefined
+                }
               >
-                {v.node}
+                {v.panes ? <SplitPanes panes={v.panes} /> : v.node}
+                {v.hint && !hintSeen[v.id] && (
+                  <div className="am-view-overlay" aria-hidden="true">
+                    <span className="am-view-hint-pill">{v.hint}</span>
+                  </div>
+                )}
               </div>
               {!isFull && (
                 <div className="am-phone-vresize" onPointerDown={onResizeDown(v.id)} aria-label={`Resize ${v.title}`}>
@@ -139,6 +159,7 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
           );
         })}
       </div>
+      {actions && <ActionBar actions={actions} sections={sections} phone />}
       <div className="am-phone-dockwrap">
         <nav ref={dockRef} className="am-phone-dock" aria-label="Panels">
           {sections.map((s, i) => {
@@ -188,6 +209,9 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
             <div className="am-phone-sheet-body">{active.node}</div>
           </div>
         </>
+      )}
+      {fullHelp && explainer && (
+        <ExplainerModal title={title} markdown={explainer} onClose={() => setFullHelp(false)} />
       )}
     </div>
   );

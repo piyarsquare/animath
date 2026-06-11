@@ -24,10 +24,12 @@ npm ci              # install dependencies (use ci, not install, for reproducibi
 npm run dev         # Vite dev server at http://localhost:5173/animath/
 npm run build       # TypeScript check + Vite production build → dist/
 npm run preview     # preview production build locally
+npm test            # vitest unit tests (chrome workspace pure logic)
 ```
 
 Node >= 20, npm >= 10 required. The only CI check is `npm run build` (which runs
-`tsc && vite build`). There are no automated tests, linter, or formatter.
+`tsc && vite build`). Unit tests cover the chrome's pure logic (`npm test`,
+vitest, `src/**/__tests__/`); there is no linter or formatter.
 
 ## New here? Read these first
 
@@ -155,7 +157,7 @@ visible app catalog comes from `src/apps.ts` (+ `src/chrome/catalog.ts`).
 |----------------------|------------------|--------------------------------------------|
 | `#/` (default)       | `Gallery`        | Landing gallery of all apps                 |
 | `#/complex-particles`| `App → ComplexParticles` | 4D complex-function particle viewer |
-| `#/plane-transform`  | `PlaneTransform` | f as a transformation of the plane (two view windows) |
+| `#/plane-transform`  | `PlaneTransform` | f as a transformation of the plane (one split view window: domain · image) |
 | `#/fractals`         | `FractalsGPU`    | GPU Mandelbrot / Julia / Burning Ship / Tricorn |
 | `#/fractals-cpu`     | `Fractals2D`     | Legacy CPU 2D fractals (unlisted)           |
 | `#/correspondence`   | `Correspondence` | Mandelbrot ↔ Julia, two linked view windows |
@@ -200,12 +202,17 @@ rendering **one component**:
   `drive`/`playback` · Analyze `lab`/`readout` · System `quality`. The rail
   sorts by tier; never invent new icons — propose vocabulary changes in
   `docs/redesign/IN-PROGRESS.md`.
-- `ViewDef = { id, title, node, defaultRect }` — the node fills a draggable,
-  resizable, collapsible window body (`position:absolute; inset:0`); collapsed
+- `ViewDef = { id, title, defaultRect } + (node | panes)` — the node fills a
+  draggable, resizable, collapsible window body (`position:absolute; inset:0`);
+  `panes: PaneDef[]` instead renders a **split view** (two pictures, one
+  window, fixed equal split — Plane Transform's domain/image pair). Collapsed
   views are hidden, **never unmounted**, so WebGL state survives (`Canvas3D`
   ignores zero-size resizes). A header button takes any view **full screen**
   (CSS-only restyle of the same node — the WebGL context survives; Esc or the
   button restores); on phone, cards also height-resize from a bottom grip.
+  While fullscreen, the rail stays live and panels float above; apps with
+  primary verbs pass `actions` (the always-on strip, ≤5 buttons projecting a
+  drive/playback panel).
 - `LayoutDef.views[id].open: false` hides a view in that layout (how
   Stable Matching's matrix/welfare/lattice and Trinary's Lab instruments
   present as layouts).
@@ -359,8 +366,9 @@ is reachable at `#/fractals-cpu`.
 
 Remaining items:
 
-1. **No linter / formatter / test runner** — no eslint, prettier, or `npm test`.
-   The only validation is `npm run build`.
+1. **No linter / formatter** — no eslint or prettier. CI validation is
+   `npm run build`; `npm test` (vitest) exists but covers only the chrome
+   workspace's pure logic (layouts/z-order, Esc layer stack) so far.
 2. **Deploy workflow has a duplicate `configure-pages` step** (`.github/workflows/deploy.yml`).
 3. **Orphaned utilities** — `lib/ParticleDisplay.ts`, `lib/R2Mapping.ts`, and
    `materials/index.ts` are never imported.

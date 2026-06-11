@@ -15,14 +15,39 @@ export interface SectionDef {
   estHeight?: number;
 }
 
-/** One view window: a plot that lives on the stage like any other window. */
-export interface ViewDef {
+/** One pane of a split view window (CHROME-REVIEW P5). */
+export interface PaneDef {
+  id: string;
+  /** Mono corner label (e.g. 'z — domain'); omit for none. */
+  label?: string;
+  /** Canvas/DOM content; rendered into a positioned pane (absolute inset 0). */
+  node: React.ReactNode;
+}
+
+/**
+ * One view window: a plot that lives on the stage like any other window.
+ * Either a single `node`, or `panes` — two (or more) pictures that are one
+ * mathematical unit (CHROME-REVIEW P5): panes render side-by-side inside ONE
+ * window with a fixed equal split, so drag/resize/collapse/fullscreen/layout
+ * act on the pair as a unit and the pictures stay scale-commensurable
+ * (Plane Transform's domain/image is the reference consumer). The union is
+ * deliberate — passing both is a type error, not a silent pick.
+ */
+export type ViewDef = {
   id: string;
   title: string;
-  /** Canvas/DOM content; rendered into a positioned body (absolute inset 0). */
-  node: React.ReactNode;
   defaultRect: Rect;
-}
+  /** Start hint (CHROME-REVIEW P2) for gesture-driven views: a short
+   *  math-anchored invitation ("tap to choose c — the Julia set follows")
+   *  rendered as a centered overlay until the first pointer interaction.
+   *  Per-session only — never persisted. Apps whose begin-affordance is a
+   *  button belong on the action strip instead. */
+  hint?: string;
+} & (
+  | { /** Canvas/DOM content; rendered into a positioned body (absolute inset 0). */
+      node: React.ReactNode; panes?: never }
+  | { node?: never; panes: PaneDef[] }
+);
 
 export interface PanelState {
   x: number;
@@ -64,6 +89,34 @@ export interface PersistedWorkspace {
   saved: SavedLayout[];
 }
 
+/** One always-on action-strip button (CHROME-REVIEW P1).
+ *
+ * The strip is a PROJECTION of an existing drive/playback panel — the few
+ * verbs a first-time user needs (play, step, reset, launch), never the rich
+ * controls (speed, schedules — those stay in the panel). Constraints are
+ * structural on purpose (three-hats ruling vs. the deleted floaters):
+ * buttons only (no node escape hatch), at most MAX_ACTIONS render, labels
+ * are STATIC strings (no live readouts — they re-render and shift layout).
+ * Action sets may be contextual (swap with app mode), and `Step` should be
+ * first-class beside `Play` in algorithm apps. */
+export interface ActionDef {
+  id: string;
+  /** Glyph from the closed chrome icon set (chrome/icons.tsx). */
+  icon: string;
+  /** Static verb — tooltip + aria everywhere, visible text on the strip. */
+  label: string;
+  onClick: () => void;
+  /** Toggle state (play ⇄ pause) — surfaces as aria-pressed. */
+  active?: boolean;
+  /** At most one: the emphasized (accent) action. */
+  primary?: boolean;
+  disabled?: boolean;
+  /** The drive/playback section this action projects; dev-warned when it
+   *  names a section outside the Drive tier (the strip must stay a
+   *  projection, not a new control surface). */
+  sectionId?: string;
+}
+
 export interface WorkspaceMode {
   id: string;
   label: string;
@@ -84,6 +137,10 @@ export interface WorkspaceProps {
   defaultLayoutId?: string;
   /** Markdown for the top-bar "?" explainer. */
   explainer?: string | null;
+  /** Always-on action strip (≤5 verbs projected from a drive/playback
+   *  panel); renders bottom-center on desktop, above the dock on phone,
+   *  and persists through fullscreen. See ActionDef. */
+  actions?: ActionDef[];
   /** Panel id the top-bar title opens when clicked (e.g. 'function'), so the
    *  formula in the bar doubles as a shortcut to its selector. */
   titlePanel?: string;

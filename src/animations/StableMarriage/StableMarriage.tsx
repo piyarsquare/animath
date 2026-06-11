@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import './stableMarriage.css';
 import Workspace from '../../chrome/workspace/Workspace';
-import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import explainerText from './EXPLAINER.md?raw';
 import readmeText from './README.md?raw';
 
@@ -1218,6 +1218,14 @@ export default function StableMarriage() {
     },
   ];
 
+  /* Always-on action strip — projection of the Playback panel's verbs. */
+  const actions: ActionDef[] = [
+    { id: 'play', icon: status === 'running' ? 'pause' : 'play', label: status === 'running' ? 'Pause' : 'Play', primary: true, active: status === 'running', sectionId: 'playback', onClick: status === 'running' ? pauseAutoRun : startAutoRun },
+    { id: 'step', icon: 'step', label: 'Step', sectionId: 'playback', disabled: status === 'running', onClick: stepSimulation },
+    { id: 'finish', icon: 'finish', label: 'Finish', sectionId: 'playback', onClick: runToCompletion },
+    { id: 'reset', icon: 'reset', label: 'Reset', sectionId: 'playback', onClick: resetSimulation },
+  ];
+
   return (
     <Workspace
       appId="stable-marriage"
@@ -1228,6 +1236,7 @@ export default function StableMarriage() {
       layouts={layouts}
       defaultLayoutId="setup"
       explainer={help}
+      actions={actions}
     />
   );
 }

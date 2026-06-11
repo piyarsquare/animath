@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Zap, Users, Snowflake } from 'lucide-react';
 import './agenticSorting.css';
 import Workspace from '../../chrome/workspace/Workspace';
-import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { StatGrid, Sparkline, Kicker } from '../../chrome/readouts';
 import { Slider, Pills, Select } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
@@ -841,6 +841,18 @@ export default function AgenticSorting() {
 
   const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
 
+  /* Always-on action strip — contextual projection of each mode's playback
+     panel (sandbox Run / lab Run), re-wired onto the rewritten engine after
+     the chrome-overhaul merge. Labels stay static (no live progress %). */
+  const actions: ActionDef[] = mode === 'lab'
+    ? [
+      { id: 'run', icon: 'play', label: 'Run experiment', primary: true, sectionId: 'labRun', disabled: labRunning || !labReady, onClick: runLab },
+    ]
+    : [
+      { id: 'run', icon: isRunning ? 'pause' : 'play', label: isRunning ? 'Pause' : 'Start', primary: true, active: isRunning, sectionId: 'run', onClick: () => setIsRunning(r => !r) },
+      { id: 'reset', icon: 'reset', label: 'Reset', sectionId: 'run', onClick: regenerate },
+    ];
+
   return (
     <Workspace
       key={mode}
@@ -855,6 +867,7 @@ export default function AgenticSorting() {
       modes={modes}
       activeMode={mode}
       onModeChange={(id) => setMode(id as 'sandbox' | 'lab')}
+      actions={actions}
     />
   );
 }

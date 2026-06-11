@@ -604,6 +604,7 @@ export default function ParticleViewerShell({
       id: 'plot',
       title: 'f(z) · particle cloud',
       defaultRect: { x: 372, y: 16, w: 712, h: 628 },
+      hint: 'drag to orbit · two fingers or Shift-drag to pan · scroll to zoom',
       node: (
         <div style={{ position: 'absolute', inset: 0, touchAction: 'none' }} {...gestures}>
           <Canvas3D onMount={onMount} />

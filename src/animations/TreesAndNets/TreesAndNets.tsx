@@ -339,7 +339,7 @@ export default function TreesAndNets(): JSX.Element {
   ];
 
   const layouts: LayoutDef[] = [
-    { id: 'fibers', name: 'Fibers', open: { leaves: { x: 16, y: 16 }, nav: { x: 16, y: 190 }, state: { x: 16, y: 380 }, view: { x: 16, y: 510 } }, views: { tree: { open: true }, polygon: { open: false }, overlay: { open: true }, assoc: { open: true }, cube: { open: true } } },
+    { id: 'fibers', name: 'Fibers', open: { leaves: { x: 84, y: 16 }, nav: { x: 84, y: 190 }, state: { x: 84, y: 380 }, view: { x: 84, y: 510 } }, views: { tree: { open: true }, polygon: { open: false }, overlay: { open: true }, assoc: { open: true }, cube: { open: true } } },
   ];
 
   return (

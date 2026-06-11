@@ -495,6 +495,7 @@ export default function FractalsGPU() {
       id: 'plot',
       title: TYPE_NAMES[type],
       defaultRect: { x: 372, y: 16, w: 712, h: 628 },
+      hint: 'drag to pan \u00b7 pinch or scroll to zoom',
       node: (
         <div
           ref={setMount}
