@@ -5,6 +5,10 @@ What if a sort weren't one top-down procedure operating *on* a passive array, bu
 pursuing its own position? Order, when it appears, is *emergent*: a global
 property (sortedness) arising from purely local actions.
 
+> **Start here:** the **Scenarios** panel has five one-click demos — Clustering,
+> Robustness, Delayed gratification, Phase separation, and "the even mix is slow."
+> Each sets up the population and view that make one idea visible, then runs it.
+
 This "cell-view" framing follows Zhang, Goldstein & Levin, *Classical Sorting
 Algorithms as a Model of Morphogenesis* (Adaptive Behavior, 2025;
 [arXiv:2401.05375](https://arxiv.org/abs/2401.05375)), which found that even

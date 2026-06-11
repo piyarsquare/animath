@@ -47,6 +47,37 @@ the same function" intermediate the user remembered.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 01:30 — Legibility pass (3-hats S01): presets, default layout, dedup
+**Why:** User called the app "a hot mess"; ran a second /three-hats focused on
+legibility. All three: don't rewrite — fix the surface. User chose surface +
+presets + code tidy, and remove Replicate.
+
+Four build-green commits:
+1. **Remove Replicate** (duplicated Lab Monte-Carlo) + rename `Lab.tsx`→
+   `LabResults.tsx` + re-tag Track `lab`→`readout`.
+2. **Relabels:** arena Positive/Negative→High/Low; tracker goal→home;
+   Trajectories gain a `time →` axis + clearer legend; objective hint tagged
+   Levin-faithful vs animath-original at the point of choice; shared-vs-Lab-local
+   note; dropped the per-algotype blurbs from the mix panel (the `?` has them).
+3. **Scenarios presets** — a Scenarios panel with five one-click demos (Clustering,
+   Robustness, Delayed gratification, Phase separation, "even mix is slow" → jumps
+   to the Lab and auto-runs Strategies via a pending-run effect). Reworked sandbox
+   layouts so the default **Explore** leads with Scenarios + Run + arena +
+   Trajectories (no more slider-wall hiding the signature plot); added Tinker /
+   Analyze.
+4. **Code tidy:** extracted `useCanvas2D` hook (deduped the two ResizeObserver
+   effects). Deliberately stopped short of `<ObjectiveFrozen>`/`<PopulationMix>`
+   extraction — the two objective/frozen sites aren't identical and agentsNode is
+   already a single reused node, so extraction would add conditionals without
+   simplifying (matches the maintainer's "don't churn" caution).
+
+`tsc` clean; `npm run build` green at every commit. Reports +
+[synthesis](2026-06-11-S01-expert-synthesis.md) committed.
+
+> [!WARNING]
+> Still no live screenshot — preview server SIGTERM'd in this container. The
+> default-layout coordinates and the phone re-chrome are unverified by eye.
+
 ### 🟡 milestone · 00:20 — Blend sweep: vary the proportion between two chosen types
 **Why:** User wants sweep control over a mix — select two agent types and test
 different proportions between them.
