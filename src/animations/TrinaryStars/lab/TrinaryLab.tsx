@@ -337,7 +337,7 @@ export default function TrinaryLab() {
   const engineRef = useRef(engine); engineRef.current = engine;
   useEffect(() => () => { cancelAnimationFrame(rafRef.current); poolRef.current?.dispose(); }, []);
   // Changing the configuration or engine invalidates accumulated stats.
-  useEffect(() => { reset(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [cfg, engine]);
+  useEffect(() => { reset(); }, [cfg, engine]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onPickPreset = (id: string) => {
     setPresetId(id); setTarget(getScenario(id).launch.target);

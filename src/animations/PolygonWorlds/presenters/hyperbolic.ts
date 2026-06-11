@@ -52,8 +52,6 @@ const EDGE_SEGS = 7;        // polyline segments per geodesic polygon edge
 const N_DECOR = 16;         // decorated tile copies kept near the player
 const UP = new THREE.Vector3(0, 1, 0);
 
-const v3 = (p: Vec3): THREE.Vector3 => new THREE.Vector3(p[0], p[1], p[2]);
-
 export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   const { deps, root, decor } = c;
   const { scene, camera } = deps;

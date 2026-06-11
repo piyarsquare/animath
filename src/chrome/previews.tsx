@@ -179,7 +179,7 @@ function PlanePreview({ light }: { light: boolean }) {
         let [x, y] = pt(k / SAMPLES);
         if (map) [x, y] = clampPt(fz(x, y));
         const [px, py] = sheet(x, y);
-        k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+        if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py);
       }
       ctx.stroke();
     };
@@ -391,7 +391,7 @@ function CorridorPreview({ light }: { light: boolean }) {
       ctx.beginPath();
       for (let j = 0; j <= 4; j++) {
         const [x, y] = corners[j % 4];
-        j ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        if (j) ctx.lineTo(x, y); else ctx.moveTo(x, y);
       }
       ctx.stroke();
       if (prev) {
@@ -430,7 +430,7 @@ function TrinaryPreview({ light }: { light: boolean }) {
     if (trail.current.length > 220) trail.current.shift();
     ctx.lineWidth = Math.max(1, W * 0.0016);
     ctx.beginPath();
-    trail.current.forEach((p, i) => { i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); });
+    trail.current.forEach((p, i) => { if (i) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); });
     ctx.strokeStyle = light ? 'rgba(80,80,90,0.5)' : 'rgba(160,200,255,0.55)';
     ctx.stroke();
     stars.forEach(s => {

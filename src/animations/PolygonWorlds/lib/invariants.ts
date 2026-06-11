@@ -16,7 +16,7 @@ import {
   Mat3, Vec3, IDENTITY3, mul, applyMat, det3, inv3, transpose3,
   cosK, sinK, form, rotation, translateX, translateY, translateDir, REFLECT_X,
   distance, geodesicPoint, ORIGIN,
-  makeFrame, framePos, stepForward, turn, isometry, originTo, angleAt,
+  makeFrame, framePos, stepForward, turn, isometry, angleAt,
 } from './cayleyKlein';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from './realize';

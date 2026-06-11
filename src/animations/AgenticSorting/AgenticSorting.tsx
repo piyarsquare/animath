@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Zap, Users, Snowflake } from 'lucide-react';
+import { Play, Pause, RotateCcw, Snowflake } from 'lucide-react';
 import './agenticSorting.css';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';

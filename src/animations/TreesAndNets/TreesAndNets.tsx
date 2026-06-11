@@ -6,7 +6,7 @@ import type { SectionDef, ViewDef, LayoutDef } from '../../chrome/workspace/type
 import { Pills, Checkbox, Slider } from '../../components/ControlPanel';
 import { Kicker } from '../../chrome/readouts';
 import { usePersistentState } from '../../lib/usePersistentState';
-import { buildAssociahedron, type Associahedron, type Triangulation } from './lib/associahedron';
+import { buildAssociahedron, type Triangulation } from './lib/associahedron';
 import { neighborOrder, canonicalKey } from './lib/mosaic';
 import explainer from './EXPLAINER.md?raw';
 

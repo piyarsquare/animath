@@ -112,7 +112,12 @@ and `f = z²` each cover the sphere once (Möbius); `exp` wraps it infinitely.
 Consider keeping the old variant as a separate "Hopf (stylized)" option if its
 look is liked.
 
-### "Hopf study" mode: freeze the 4D orientation + in-app guide — ✅ implemented
+### "Hopf study" mode: freeze the 4D orientation + in-app guide — ✅ implemented, ❌ later removed
+
+> **Update (2026-06):** the Hopf study view button was **removed** in the
+> projection-slider redesign (see `docs/redesign/IN-PROGRESS.md` decision log:
+> Stereo retired, projections became one slider with sticky stops). The
+> EXPLAINER reading ladder survives. Historical record below.
 
 Shipped a **Hopf study view** button (Camera panel, shown in Hopf/Torus): it
 forces the Hopf projection, sets Motion → Fixed, stops any spins, and snaps the
@@ -266,7 +271,11 @@ ideally with a small popup/toast explaining why.
   where intermediate keystrokes (an empty box, a lone "−") would otherwise
   momentarily break the render.
 
-### Show the actual Hopf fibers (the interlocking circles) — ✅ implemented
+### Show the actual Hopf fibers (the interlocking circles) — ✅ implemented, ❌ later removed
+
+> **Update (2026-06):** the Hopf fiber overlay was **removed** in the
+> projection-slider redesign (see `docs/redesign/IN-PROGRESS.md` decision log).
+> Historical record below.
 
 Shipped a **Hopf fibers** toggle + **Fiber density** slider (Camera section, Torus
 view), backed by `createHopfFibers.ts`: it samples base points on S² directly (a
@@ -358,7 +367,12 @@ verified the faint fraction drops 23% → 0% at `b = 2`). Bypassed while adaptiv
 density is on. Open: let radial patterns honor an annulus (`rMin > 0`); a phyllotaxis
 / sunflower option; and per-pattern density controls (ring/spoke counts).
 
-### Hopf study preset refinements (clear drop axis; preset polish) — ⏳ deferred
+### Hopf study preset refinements (clear drop axis; preset polish) — ❌ obsolete
+
+> **Update (2026-06):** obsolete — the Hopf study view button this refines was
+> removed in the projection-slider redesign, and the slider/drop-axis
+> interaction was redefined there ("the drop axis and slider release each
+> other — most recent intent wins"). Kept for the record.
 
 The **Hopf study view** button (`ParticleViewerShell.enterHopfStudy`) calls
 `controls.handleViewType(ProjectionMode.Hopf)`, but `handleViewType` routes the

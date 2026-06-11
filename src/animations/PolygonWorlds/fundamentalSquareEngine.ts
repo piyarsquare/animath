@@ -11,8 +11,6 @@ import {
 } from './engineTypes';
 import { WorldSpec, deriveGeometry } from './worldSpec';
 
-const UP = new THREE.Vector3(0, 1, 0);
-
 /** Per-geometry light intensities. The flat plane is well-lit by the directional
  *  key; the spherical shell is large and far from a single distant light so it
  *  reads dark — give χ>0 a stronger fill + headlamp. The hyperbolic disk is dark

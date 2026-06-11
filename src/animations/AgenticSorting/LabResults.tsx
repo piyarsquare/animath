@@ -1,7 +1,6 @@
 import React from 'react';
 import { MiniHisto, StatGrid } from '../../chrome/readouts';
 import { TYPE_COLORS } from './arena';
-import type { AgentType } from './engine';
 import {
   aggregate, metricValues, METRIC_LABELS,
   type GroupResult, type MetricKey,

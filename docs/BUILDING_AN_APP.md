@@ -473,6 +473,7 @@ re-implementing.
 ```bash
 npm run dev      # open http://localhost:5173/animath/#/my-app
 npm run build    # MUST pass — tsc + vite build, the only CI gate
+npm run lint     # keep at 0 errors (and don't add new warnings)
 ```
 
 Manual checklist before opening a PR:

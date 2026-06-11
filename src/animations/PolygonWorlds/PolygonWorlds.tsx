@@ -134,7 +134,6 @@ export default function PolygonWorlds() {
       rafRef.current = requestAnimationFrame(animate);
     };
     rafRef.current = requestAnimationFrame(animate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Rebuild the engine when the world changes (different cover/gluing) or when the

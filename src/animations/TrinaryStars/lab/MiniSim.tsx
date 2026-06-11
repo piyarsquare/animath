@@ -74,7 +74,7 @@ export default function MiniSim({ cfg, running, size = 200, steps = 140 }: {
         ctx.strokeStyle = 'rgba(102,240,255,0.55)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        trail.forEach(([x, y], i) => { const [px, py] = toPx(x, y); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+        trail.forEach(([x, y], i) => { const [px, py] = toPx(x, y); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); });
         ctx.stroke();
 
         const p = sim.planets[0];

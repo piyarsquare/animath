@@ -444,7 +444,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
 
   // The radspeed plane derives its domain from the shared census box, so only
   // reset the internal domain for the other planes.
-  useEffect(() => { if (mode !== 'radspeed') setDomain(DEFAULT_DOMAIN[mode]); /* eslint-disable-next-line */ }, [mode]);
+  useEffect(() => { if (mode !== 'radspeed') setDomain(DEFAULT_DOMAIN[mode]); }, [mode]);
   useEffect(() => () => { cancelAnimationFrame(rafRef.current); poolRef.current?.dispose(); gpuRef.current?.dispose(); }, []);
 
   // Overlay the stars' orbits on the position plane (where the axes are real x,y

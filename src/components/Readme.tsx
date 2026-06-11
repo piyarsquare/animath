@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 export interface ReadmeProps {
   markdown: string;
@@ -10,7 +11,12 @@ export interface ReadmeProps {
 }
 
 export default function Readme({ markdown, className }: ReadmeProps) {
-  const html = useMemo(() => marked.parse(markdown), [markdown]);
+  // Content is first-party (README/EXPLAINER files shipped with the app), but
+  // sanitize anyway so dangerouslySetInnerHTML is never an XSS surface.
+  const html = useMemo(
+    () => DOMPurify.sanitize(marked.parse(markdown, { async: false })),
+    [markdown]
+  );
   return (
     <div
       className={`markdown-body${className ? ` ${className}` : ''}`}

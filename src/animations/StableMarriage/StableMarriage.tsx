@@ -136,11 +136,10 @@ const runHeadlessSimulation = (n: number, bias: number, corrM: number, corrW: nu
   const menNextProposal = Array(n).fill(0);
   const womenNextProposal = Array(n).fill(0);
 
-  let active = true;
   let loops = 0;
   const maxLoops = n * n * 5;
 
-  while (active && loops < maxLoops) {
+  while (loops < maxLoops) {
     loops += 1;
     const singleMen: number[] = [];
     const singleWomen: number[] = [];
@@ -153,20 +152,19 @@ const runHeadlessSimulation = (n: number, bias: number, corrM: number, corrW: nu
     const validWomen = singleWomen.filter(id => womenNextProposal[id] < n);
 
     if (validMen.length === 0 && validWomen.length === 0) {
-      active = false;
       break;
     }
 
-    let proposerType: 'man' | 'woman' = 'man';
+    let proposerType: 'man' | 'woman';
     const biasProb = bias / 100;
 
     if (validMen.length > 0 && validWomen.length === 0) proposerType = 'man';
     else if (validWomen.length > 0 && validMen.length === 0) proposerType = 'woman';
     else proposerType = Math.random() < biasProb ? 'man' : 'woman';
 
-    let proposerId = 0;
-    let receiverId = 0;
-    let receiverType: 'man' | 'woman' = 'woman';
+    let proposerId: number;
+    let receiverId: number;
+    let receiverType: 'man' | 'woman';
 
     if (proposerType === 'man') {
       const randIndex = Math.floor(Math.random() * validMen.length);
@@ -616,15 +614,15 @@ export default function StableMarriage() {
       return true;
     }
 
-    let proposerType: 'man' | 'woman' = 'man';
+    let proposerType: 'man' | 'woman';
     const biasProb = bias / 100;
     if (validMen.length > 0 && validWomen.length === 0) proposerType = 'man';
     else if (validWomen.length > 0 && validMen.length === 0) proposerType = 'woman';
     else proposerType = Math.random() < biasProb ? 'man' : 'woman';
 
-    let proposerId = 0;
-    let receiverId = 0;
-    let receiverType: 'man' | 'woman' = 'woman';
+    let proposerId: number;
+    let receiverId: number;
+    let receiverType: 'man' | 'woman';
 
     if (proposerType === 'man') {
       const randIndex = Math.floor(Math.random() * validMen.length);
