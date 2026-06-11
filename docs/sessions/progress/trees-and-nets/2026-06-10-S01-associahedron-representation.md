@@ -36,6 +36,33 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 02:35 — Plan: generic M̄₀,ₙ(ℝ) explorer; drop energies & walk
+**Why:** User: content to finish the associahedron, eager to show the whole
+M₀,ₙ, no energies, leave TopologyWalk out (may return). Asked why over ℝ + a plan.
+
+**Why ℝ:** M₀,ₙ(ℂ) has real dim 2(n−3) and is *not* tiled by associahedra; the
+associahedral tessellation is a real phenomenon — n real points on ℝℙ¹ (a circle),
+cyclic order = the discrete invariant, each order's cell closes to an associahedron.
+ℝ is both where the (circular-order) combinatorics live and the viewable dim (n−3).
+
+**Plan (phased):**
+- **P0** Finish the single tile *canonically*: drop PCA, render Loday `point`
+  directly (true 3D at n≤6), render **solid faces** from the dissection lattice
+  (facet ↔ diagonal → the 6 pentagons + 3 squares), and **remove energies**
+  (terrain window, flow, placeholder).
+- **P1** `lib/mosaic.ts`: enumerate cyclic orders ((n−1)!/2) + gluing graph (tiles
+  adjacent iff one is the other with a **contiguous arc reversed**; facets =
+  n(n−3)/2). Verify n=5 → 12 nodes/30 edges (χ = 15−30+12 = −3, non-orientable);
+  n=6 → 60/270. Cross-check rule vs Devadoss mosaic operad.
+- **P2** Atlas view (gluing graph, **any n**) + cross-facet navigation (click a
+  facet → animate to the neighbor tile). = the generic explorer.
+- **P3** n=5 assembled **12-pentagon surface** (non-orientable → immersion or
+  fundamental-domain; decide at build).
+- **P4 (later)** n=6 local 3-manifold patch; n≥7 single-tile Schlegel.
+
+Out for now: energies, TopologyWalk engine. Each phase: build + headless shot +
+assert the combinatorial counts.
+
 ### 🔵 finding · 02:10 — The "bundle of associahedra" = the real moduli space M̄₀,ₙ(ℝ)
 **Why:** User asked whether the structure bundling associahedra over all cyclic
 orders has a name and can be visualized.
