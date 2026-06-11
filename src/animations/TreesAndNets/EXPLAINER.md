@@ -1,27 +1,21 @@
 # Trees and Nets
 
-This view shows **tree-space as a polytope** — the *associahedron*.
+Walk the space of trees, one **flip** at a time.
 
-Fix a circular order of **n leaves** around a polygon. The unrooted binary trees
-compatible with that order are exactly the **triangulations of the n-gon**, and a
-single **flip** of one diagonal turns one tree into a neighbor. Collect every tree
-as a vertex, join flips by edges, and fill in the faces, and you get the
-**associahedron K₍ₙ₋₁₎**, a polytope of dimension **n−3**:
+The **polygon** on the left is your current **tree** — a triangulation of an n‑gon,
+which is the same thing as an unrooted binary tree whose leaves are the polygon's
+edges (labeled by the cyclic order). **Click a chord to flip it:** that one diagonal
+swaps for the other diagonal of its quadrilateral, and you step to a neighboring
+tree. The diagonal that changed flashes, so you can watch the tree move.
 
-- **n = 5** → a pentagon (2-D), 5 trees;
-- **n = 6** → the **3-D associahedron**, 14 trees, bounded by **6 pentagons + 3
-  squares**;
-- **n ≥ 7** → 4-D and up (shown as a canonical projection for now).
+The **Landscape** on the right is the **associahedron** — the map of *all* trees for
+this cyclic order, with one vertex per tree and an edge for every flip. Your current
+tree is the gold node; the trees one flip away are teal. Click any node to walk
+there. So the two views are the same journey seen two ways: the tree itself, and
+your position in the landscape of trees.
 
-The points use the **secondary polytope of the regular n-gon** — a *symmetric*
-canonical realization (it inherits the polygon's dihedral symmetry), so at n ≤ 6
-you are looking at the genuine, symmetric associahedron. Each **2-face** is itself a
-product of smaller associahedra: a pentagon is K₃×K₅ (cut off a triangle) and a
-square is K₄×K₄ (a main diagonal).
+"Rotate" turns the whole cyclic order, relabeling the picture.
 
-**Interact:** drag to orbit, scroll to zoom, click a vertex to read its tree (its
-internal splits) in the side panel.
-
-One associahedron is the slice of tree-space over a single circular order. The full
-tree-space glues one such tile per cyclic order into the real moduli space
-$\overline{M}_{0,n}(\mathbb{R})$ — the explorer for that is being built next.
+> One cyclic order gives one associahedron (one fiber). Gluing every order's
+> associahedron together along shared facets builds the whole moduli space
+> $\overline{M}_{0,n}(\mathbb{R})$ — walking *between* fibers is the next step.

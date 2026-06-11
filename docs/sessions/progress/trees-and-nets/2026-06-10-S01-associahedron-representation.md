@@ -36,6 +36,23 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 12:05 — Pivot to a legible flip-navigation view (drop the Atlas)
+**Why:** User: the whole-space Atlas is too hard to navigate / "can't see where you
+are"; start smaller, show how two fibers connect, "navigate from one tree/order to
+another and watch the tree change naturally as you navigate the landscape."
+
+Replaced the Atlas-heavy app with a **two-window, tree-centric** design (default
+n=5): a **Tree** view (SVG) drawing the current triangulation in the polygon (leaves
+labeled by the cyclic order) where **clicking a chord flips it** → step to a
+neighboring tree, with the changed diagonal flashing; and a **Landscape** view (the
+associahedron, symmetric secondary-polytope) with the current tree gold and one-flip
+neighbors teal, click-a-node-to-walk. The two are linked (flip ↔ position). "Rotate"
+turns the cyclic order. This makes "where you are / what's happening" obvious. Build
+green (11.4 kB). **Still to do:** crossing between *order* fibers (arc reversal) so
+you can walk fiber→fiber — the "two fibers connect" piece — and a smoother flip
+animation. The whole-space Atlas (mosaic.ts) is retained in the lib but no longer
+the main UI.
+
 ### 🟢 code · 03:55 — Symmetric realization (secondary polytope), diagnosed projection
 **Why:** User: the tile isn't symmetric + projection issues; asked how objects
 compose. Diagnosed and fixed (a).

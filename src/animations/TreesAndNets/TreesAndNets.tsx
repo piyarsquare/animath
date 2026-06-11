@@ -1,240 +1,179 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { Pills, Slider, Checkbox } from '../../components/ControlPanel';
-import { StatGrid, Kicker } from '../../chrome/readouts';
+import { Kicker } from '../../chrome/readouts';
 import { usePersistentState } from '../../lib/usePersistentState';
-import { buildAssociahedron, type Associahedron } from './lib/associahedron';
-import {
-  buildMosaic, canonicalKey, neighborOrder, tileCount, FULL_TILE_LIMIT, type Mosaic,
-} from './lib/mosaic';
+import { buildAssociahedron, type Associahedron, type Triangulation } from './lib/associahedron';
 import explainer from './EXPLAINER.md?raw';
 
 const APP_ID = 'trees-and-nets';
 
-const VERTEX = new THREE.Color('#c9b27a');
-const PENTAGON = new THREE.Color('#2f7d74'); // K3×K5 facet
-const SQUARE = new THREE.Color('#8a5fb0'); // K4×K4 facet
-const OTHER = new THREE.Color('#5a6b86');
-const NODE = new THREE.Color('#6b7790');
-const NODE_CUR = new THREE.Color('#ffd54a');
-const NODE_NBR = new THREE.Color('#3fb6a6');
+const dkey = (d: [number, number]) => `${d[0]},${d[1]}`;
 
-// Leaves on the small side of the diagonal (a,b), labeled through the cyclic order.
-function splitLabel(order: number[], a: number, b: number): string {
-  const n = order.length;
-  const side: number[] = [];
-  for (let i = a; i < b; i++) side.push(order[i]);
-  const other: number[] = [];
-  for (let i = 0; i < n; i++) if (i < a || i >= b) other.push(order[i]);
-  const small = side.length <= other.length ? side : other;
-  const big = small === side ? other : side;
-  return `{${small.join(',')}}|{${big.join(',')}}`;
+// ---------------------------------------------------------------------------
+// Polygon / triangulation view (SVG) — the current tree, which you flip.
+// ---------------------------------------------------------------------------
+function PolygonTree({
+  n, order, tri, flash, onFlip,
+}: {
+  n: number;
+  order: number[];
+  tri: Triangulation;
+  flash: Set<string>;
+  onFlip: (d: [number, number]) => void;
+}) {
+  const S = 360;
+  const c = S / 2;
+  const R = S * 0.38;
+  const ang = (k: number) => -Math.PI / 2 + (2 * Math.PI * k) / n;
+  const PX = (k: number) => c + R * Math.cos(ang(k));
+  const PY = (k: number) => c + R * Math.sin(ang(k));
+
+  const boundary = Array.from({ length: n }, (_, k) => `${PX(k)},${PY(k)}`).join(' ');
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+      <svg viewBox={`0 0 ${S} ${S}`} width="100%" height="100%" style={{ maxWidth: '100%', maxHeight: '100%' }}>
+        <polygon points={boundary} fill="rgba(255,255,255,0.04)" stroke="var(--fg, #ccd)" strokeOpacity={0.35} strokeWidth={1.5} />
+        {/* leaf labels — one per boundary edge (k,k+1), labeled by the cyclic order */}
+        {Array.from({ length: n }, (_, k) => {
+          const mx = (PX(k) + PX((k + 1) % n)) / 2;
+          const my = (PY(k) + PY((k + 1) % n)) / 2;
+          const ox = (mx - c) * 0.16;
+          const oy = (my - c) * 0.16;
+          return (
+            <text key={k} x={mx + ox} y={my + oy} fontSize={15} fontFamily="monospace"
+              fill="var(--accent, #cda434)" textAnchor="middle" dominantBaseline="middle">
+              {order[k]}
+            </text>
+          );
+        })}
+        {/* diagonals — click to flip */}
+        {tri.diagonals.map((d) => {
+          const on = flash.has(dkey(d));
+          return (
+            <g key={dkey(d)} style={{ cursor: 'pointer' }} onClick={() => onFlip(d)}>
+              <line x1={PX(d[0])} y1={PY(d[0])} x2={PX(d[1])} y2={PY(d[1])}
+                stroke="transparent" strokeWidth={16} />
+              <line x1={PX(d[0])} y1={PY(d[0])} x2={PX(d[1])} y2={PY(d[1])}
+                stroke={on ? 'var(--accent, #ffd54a)' : 'var(--fg, #9fb)'}
+                strokeWidth={on ? 4 : 2.5} strokeOpacity={on ? 1 : 0.8}
+                style={{ transition: 'stroke 350ms, stroke-width 350ms' }} />
+            </g>
+          );
+        })}
+        {/* polygon vertices */}
+        {Array.from({ length: n }, (_, k) => (
+          <circle key={k} cx={PX(k)} cy={PY(k)} r={3} fill="var(--fg, #ccd)" fillOpacity={0.5} />
+        ))}
+      </svg>
+    </div>
+  );
 }
 
-// Symmetric secondary-polytope coordinates (assoc.vertices[i].point), centered+scaled.
-// True polytope for n≤6; first-3 intrinsic coords (fixed, not PCA) for n≥7.
-function positionsFor(assoc: Associahedron): THREE.Vector3[] {
-  const raw = assoc.vertices.map(
-    (v) => new THREE.Vector3(v.point[0] ?? 0, v.point[1] ?? 0, v.point[2] ?? 0),
-  );
-  const center = raw
-    .reduce((acc, p) => acc.add(p), new THREE.Vector3())
-    .multiplyScalar(1 / Math.max(raw.length, 1));
+// ---------------------------------------------------------------------------
+// Landscape minimap (Three.js) — the associahedron, your position on it.
+// ---------------------------------------------------------------------------
+const to3 = (p: number[]) => new THREE.Vector3(p[0] ?? 0, p[1] ?? 0, p[2] ?? 0);
+
+function landscapePositions(assoc: Associahedron): THREE.Vector3[] {
+  const raw = assoc.vertices.map((v) => to3(v.point));
+  const center = raw.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(1 / Math.max(raw.length, 1));
   let maxR = 0;
   for (const p of raw) { p.sub(center); maxR = Math.max(maxR, p.length()); }
-  const scale = maxR > 1e-6 ? 2.2 / maxR : 1;
-  for (const p of raw) p.multiplyScalar(scale);
+  const s = maxR > 1e-6 ? 2.2 / maxR : 1;
+  for (const p of raw) p.multiplyScalar(s);
   return raw;
 }
 
-function buildFace(pos: THREE.Vector3[], indices: number[]): THREE.BufferGeometry | null {
-  if (indices.length < 3) return null;
-  const pts = indices.map((i) => pos[i]);
-  const centroid = pts
-    .reduce((a, p) => a.add(p.clone()), new THREE.Vector3())
-    .multiplyScalar(1 / pts.length);
-  const normal = new THREE.Vector3();
-  for (let i = 0; i < pts.length; i++) {
-    const cur = pts[i];
-    const nxt = pts[(i + 1) % pts.length];
-    normal.x += (cur.y - nxt.y) * (cur.z + nxt.z);
-    normal.y += (cur.z - nxt.z) * (cur.x + nxt.x);
-    normal.z += (cur.x - nxt.x) * (cur.y + nxt.y);
-  }
-  if (normal.lengthSq() < 1e-12) normal.set(0, 0, 1);
-  normal.normalize();
-  const u = new THREE.Vector3().subVectors(pts[0], centroid).normalize();
-  const w = new THREE.Vector3().crossVectors(normal, u).normalize();
-  const ordered = [...indices].sort((ia, ib) => {
-    const pa = pos[ia].clone().sub(centroid);
-    const pb = pos[ib].clone().sub(centroid);
-    return Math.atan2(pa.dot(w), pa.dot(u)) - Math.atan2(pb.dot(w), pb.dot(u));
-  });
-  const verts: number[] = [];
-  for (let i = 1; i < ordered.length - 1; i++) {
-    const a = pos[ordered[0]], b = pos[ordered[i]], c = pos[ordered[i + 1]];
-    verts.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
-  }
-  const geom = new THREE.BufferGeometry();
-  geom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-  geom.computeVertexNormals();
-  return geom;
-}
-
-interface TileViewProps {
+function Landscape({
+  assoc, cur, neighbors, onWalk, spinRef,
+}: {
   assoc: Associahedron;
-  selected: number | null;
-  onSelect: (i: number | null) => void;
-  onNavigate: (a: number, b: number) => void;
-  zoomRef: React.MutableRefObject<number>;
+  cur: number;
+  neighbors: number[];
+  onWalk: (i: number) => void;
   spinRef: React.MutableRefObject<boolean>;
-  onZoom: (z: number) => void;
-}
-
-/** One associahedron tile in canonical coordinates; click a facet to cross it. */
-function TileView(props: TileViewProps) {
-  const { assoc, selected, zoomRef, spinRef, onZoom } = props;
-  const onSelectRef = useRef(props.onSelect);
-  onSelectRef.current = props.onSelect;
-  const onNavigateRef = useRef(props.onNavigate);
-  onNavigateRef.current = props.onNavigate;
-  const selectedRef = useRef<number | null>(selected);
-  selectedRef.current = selected;
+}) {
+  const curRef = useRef(cur); curRef.current = cur;
+  const nbrRef = useRef(new Set(neighbors)); nbrRef.current = new Set(neighbors);
+  const onWalkRef = useRef(onWalk); onWalkRef.current = onWalk;
 
   const onMount = useCallback(
-    ({ scene, camera, renderer }: {
-      scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer;
-    }) => {
-      scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-      const dir = new THREE.DirectionalLight(0xffffff, 0.85);
-      dir.position.set(3, 5, 4);
-      scene.add(dir);
-      camera.position.set(0, 0, zoomRef.current);
-      const group = new THREE.Group();
-      scene.add(group);
-
-      const pos = positionsFor(assoc);
+    ({ scene, camera, renderer }: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => {
+      scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+      const d = new THREE.DirectionalLight(0xffffff, 0.6); d.position.set(3, 5, 4); scene.add(d);
+      camera.position.set(0, 0, 7);
+      const group = new THREE.Group(); scene.add(group);
       const disposables: { dispose(): void }[] = [];
-      const faceMeshes: THREE.Mesh[] = [];
 
-      const addFace = (indices: number[], color: THREE.Color, diagonal?: [number, number]) => {
-        const geom = buildFace(pos, indices);
-        if (!geom) return;
-        disposables.push(geom);
-        const mat = new THREE.MeshStandardMaterial({
-          color, transparent: true, opacity: 0.4, side: THREE.DoubleSide, roughness: 0.6,
-        });
-        disposables.push(mat);
-        const mesh = new THREE.Mesh(geom, mat);
-        if (diagonal) mesh.userData.diagonal = diagonal;
-        group.add(mesh);
-        faceMeshes.push(mesh);
-      };
+      const pos = landscapePositions(assoc);
+      const ep: number[] = [];
+      for (const [i, j] of assoc.edges) ep.push(pos[i].x, pos[i].y, pos[i].z, pos[j].x, pos[j].y, pos[j].z);
+      const eg = new THREE.BufferGeometry();
+      eg.setAttribute('position', new THREE.Float32BufferAttribute(ep, 3));
+      disposables.push(eg);
+      const em = new THREE.LineBasicMaterial({ color: 0x9aa3b6, transparent: true, opacity: 0.5 });
+      disposables.push(em);
+      group.add(new THREE.LineSegments(eg, em));
 
-      if (assoc.dim === 2) {
-        addFace(assoc.vertices.map((_, i) => i), OTHER);
-      } else if (assoc.dim === 3) {
-        for (const facet of assoc.facets) {
-          const color = facet.vertices.length === 5 ? PENTAGON
-            : facet.vertices.length === 4 ? SQUARE : OTHER;
-          addFace(facet.vertices, color, facet.diagonal);
-        }
-      }
-
-      const edgePts: number[] = [];
-      for (const [i, j] of assoc.edges) {
-        edgePts.push(pos[i].x, pos[i].y, pos[i].z, pos[j].x, pos[j].y, pos[j].z);
-      }
-      const edgeGeom = new THREE.BufferGeometry();
-      edgeGeom.setAttribute('position', new THREE.Float32BufferAttribute(edgePts, 3));
-      disposables.push(edgeGeom);
-      const edgeMat = new THREE.LineBasicMaterial({ color: 0xcdd3df, transparent: true, opacity: 0.7 });
-      disposables.push(edgeMat);
-      group.add(new THREE.LineSegments(edgeGeom, edgeMat));
-
-      const sphereGeom = new THREE.SphereGeometry(0.11, 18, 14);
-      disposables.push(sphereGeom);
+      const sg = new THREE.SphereGeometry(0.12, 16, 12); disposables.push(sg);
       const spheres: THREE.Mesh[] = [];
       pos.forEach((p, i) => {
-        const mat = new THREE.MeshStandardMaterial({
-          color: VERTEX, emissive: new THREE.Color(0x000000), roughness: 0.4, metalness: 0.1,
-        });
-        disposables.push(mat);
-        const mesh = new THREE.Mesh(sphereGeom, mat);
-        mesh.position.copy(p);
-        mesh.userData.index = i;
-        group.add(mesh);
-        spheres.push(mesh);
+        const m = new THREE.MeshStandardMaterial({ color: 0x6b7790, roughness: 0.5 });
+        disposables.push(m);
+        const mesh = new THREE.Mesh(sg, m); mesh.position.copy(p); mesh.userData.index = i;
+        group.add(mesh); spheres.push(mesh);
       });
 
       const raycaster = new THREE.Raycaster();
       const ndc = new THREE.Vector2();
-      let dragging = false, dragMoved = false, lastX = 0, lastY = 0;
+      let dragging = false, moved = false, lx = 0, ly = 0;
       const el = renderer.domElement;
-      const onDown = (e: PointerEvent) => {
-        dragging = true; dragMoved = false; lastX = e.clientX; lastY = e.clientY;
-        el.setPointerCapture(e.pointerId);
-      };
-      const onMove = (e: PointerEvent) => {
-        if (!dragging) return;
-        const dx = e.clientX - lastX, dy = e.clientY - lastY;
-        if (Math.abs(dx) + Math.abs(dy) > 3) dragMoved = true;
-        lastX = e.clientX; lastY = e.clientY;
-        group.rotation.y += dx * 0.01; group.rotation.x += dy * 0.01;
-      };
-      const onUp = (e: PointerEvent) => {
-        dragging = false;
-        try { el.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-      };
-      const onClick = (e: PointerEvent) => {
-        if (dragMoved) return;
-        const rect = el.getBoundingClientRect();
-        ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      const down = (e: PointerEvent) => { dragging = true; moved = false; lx = e.clientX; ly = e.clientY; el.setPointerCapture(e.pointerId); };
+      const move = (e: PointerEvent) => { if (!dragging) return; const dx = e.clientX - lx, dy = e.clientY - ly; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true; lx = e.clientX; ly = e.clientY; group.rotation.y += dx * 0.01; group.rotation.x += dy * 0.01; };
+      const up = (e: PointerEvent) => { dragging = false; try { el.releasePointerCapture(e.pointerId); } catch { /* ignore */ } };
+      const click = (e: PointerEvent) => {
+        if (moved) return;
+        const r = el.getBoundingClientRect();
+        ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+        ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
         raycaster.setFromCamera(ndc, camera);
-        const vHit = raycaster.intersectObjects(spheres, false)[0];
-        if (vHit) { onSelectRef.current(vHit.object.userData.index as number); return; }
-        const fHit = raycaster.intersectObjects(faceMeshes, false)[0];
-        const d = fHit?.object.userData.diagonal as [number, number] | undefined;
-        if (d) onNavigateRef.current(d[0], d[1]);
-        else onSelectRef.current(null);
+        const hit = raycaster.intersectObjects(spheres, false)[0];
+        if (hit) onWalkRef.current(hit.object.userData.index as number);
       };
-      const onWheel = (e: WheelEvent) => {
-        e.preventDefault();
-        onZoom(THREE.MathUtils.clamp(zoomRef.current * (1 + Math.sign(e.deltaY) * 0.1), 3, 22));
-      };
-      el.addEventListener('pointerdown', onDown);
-      el.addEventListener('pointermove', onMove);
-      el.addEventListener('pointerup', onUp);
-      el.addEventListener('click', onClick as EventListener);
-      el.addEventListener('wheel', onWheel, { passive: false });
+      const wheel = (e: WheelEvent) => { e.preventDefault(); camera.position.z = THREE.MathUtils.clamp(camera.position.z * (1 + Math.sign(e.deltaY) * 0.1), 3, 16); };
+      el.addEventListener('pointerdown', down);
+      el.addEventListener('pointermove', move);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('click', click as EventListener);
+      el.addEventListener('wheel', wheel, { passive: false });
 
       let raf = 0;
       const animate = () => {
-        if (!dragging && spinRef.current) group.rotation.y += 0.0025;
-        camera.position.z = zoomRef.current;
-        const sel = selectedRef.current;
+        if (!dragging && spinRef.current) group.rotation.y += 0.002;
+        const cu = curRef.current; const nb = nbrRef.current;
         spheres.forEach((m, i) => {
-          const on = sel === i;
-          (m.material as THREE.MeshStandardMaterial).emissive.setHex(on ? 0xffd54a : 0x000000);
-          m.scale.setScalar(on ? 1.7 : 1);
+          const mat = m.material as THREE.MeshStandardMaterial;
+          if (i === cu) { mat.color.setHex(0xffd54a); m.scale.setScalar(2); }
+          else if (nb.has(i)) { mat.color.setHex(0x3fb6a6); m.scale.setScalar(1.3); }
+          else { mat.color.setHex(0x6b7790); m.scale.setScalar(1); }
         });
         renderer.render(scene, camera);
         raf = requestAnimationFrame(animate);
       };
       raf = requestAnimationFrame(animate);
-
       return () => {
         cancelAnimationFrame(raf);
-        el.removeEventListener('pointerdown', onDown);
-        el.removeEventListener('pointermove', onMove);
-        el.removeEventListener('pointerup', onUp);
-        el.removeEventListener('click', onClick as EventListener);
-        el.removeEventListener('wheel', onWheel);
-        for (const d of disposables) d.dispose();
+        el.removeEventListener('pointerdown', down);
+        el.removeEventListener('pointermove', move);
+        el.removeEventListener('pointerup', up);
+        el.removeEventListener('click', click as EventListener);
+        el.removeEventListener('wheel', wheel);
+        for (const x of disposables) x.dispose();
       };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -244,292 +183,147 @@ function TileView(props: TileViewProps) {
   return <Canvas3D onMount={onMount} />;
 }
 
-interface AtlasViewProps {
-  mosaic: Mosaic;
-  currentKey: string;
-  onPick: (order: number[]) => void;
-  spinRef: React.MutableRefObject<boolean>;
-}
-
-/** The gluing graph of the whole moduli space M̄_{0,n}(ℝ). */
-function AtlasView(props: AtlasViewProps) {
-  const { mosaic, spinRef } = props;
-  const onPickRef = useRef(props.onPick);
-  onPickRef.current = props.onPick;
-  const curKeyRef = useRef(props.currentKey);
-  curKeyRef.current = props.currentKey;
-
-  const onMount = useCallback(
-    ({ scene, camera, renderer }: {
-      scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer;
-    }) => {
-      scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-      const dir = new THREE.DirectionalLight(0xffffff, 0.7);
-      dir.position.set(3, 5, 4);
-      scene.add(dir);
-      let camDist = 12;
-      camera.position.set(0, 0, camDist);
-      const group = new THREE.Group();
-      scene.add(group);
-
-      const disposables: { dispose(): void }[] = [];
-      // edges
-      const edgePts: number[] = [];
-      for (const [i, j] of mosaic.edges) {
-        const a = mosaic.pos[i], b = mosaic.pos[j];
-        edgePts.push(a.x, a.y, a.z, b.x, b.y, b.z);
-      }
-      const edgeGeom = new THREE.BufferGeometry();
-      edgeGeom.setAttribute('position', new THREE.Float32BufferAttribute(edgePts, 3));
-      disposables.push(edgeGeom);
-      const edgeMat = new THREE.LineBasicMaterial({ color: 0x55607a, transparent: true, opacity: 0.35 });
-      disposables.push(edgeMat);
-      group.add(new THREE.LineSegments(edgeGeom, edgeMat));
-
-      // nodes
-      const r = mosaic.orders.length > 120 ? 0.12 : 0.2;
-      const sphereGeom = new THREE.SphereGeometry(r, 14, 10);
-      disposables.push(sphereGeom);
-      const spheres: THREE.Mesh[] = [];
-      mosaic.pos.forEach((p, i) => {
-        const mat = new THREE.MeshStandardMaterial({ color: NODE, roughness: 0.5 });
-        disposables.push(mat);
-        const mesh = new THREE.Mesh(sphereGeom, mat);
-        mesh.position.set(p.x, p.y, p.z);
-        mesh.userData.index = i;
-        group.add(mesh);
-        spheres.push(mesh);
-      });
-
-      const raycaster = new THREE.Raycaster();
-      const ndc = new THREE.Vector2();
-      let dragging = false, dragMoved = false, lastX = 0, lastY = 0;
-      const el = renderer.domElement;
-      const onDown = (e: PointerEvent) => {
-        dragging = true; dragMoved = false; lastX = e.clientX; lastY = e.clientY;
-        el.setPointerCapture(e.pointerId);
-      };
-      const onMove = (e: PointerEvent) => {
-        if (!dragging) return;
-        const dx = e.clientX - lastX, dy = e.clientY - lastY;
-        if (Math.abs(dx) + Math.abs(dy) > 3) dragMoved = true;
-        lastX = e.clientX; lastY = e.clientY;
-        group.rotation.y += dx * 0.01; group.rotation.x += dy * 0.01;
-      };
-      const onUp = (e: PointerEvent) => {
-        dragging = false;
-        try { el.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-      };
-      const onClick = (e: PointerEvent) => {
-        if (dragMoved) return;
-        const rect = el.getBoundingClientRect();
-        ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        raycaster.setFromCamera(ndc, camera);
-        const hit = raycaster.intersectObjects(spheres, false)[0];
-        if (hit) onPickRef.current(mosaic.orders[hit.object.userData.index as number]);
-      };
-      const onWheel = (e: WheelEvent) => {
-        e.preventDefault();
-        camDist = THREE.MathUtils.clamp(camDist * (1 + Math.sign(e.deltaY) * 0.1), 4, 40);
-      };
-      el.addEventListener('pointerdown', onDown);
-      el.addEventListener('pointermove', onMove);
-      el.addEventListener('pointerup', onUp);
-      el.addEventListener('click', onClick as EventListener);
-      el.addEventListener('wheel', onWheel, { passive: false });
-
-      let raf = 0;
-      const animate = () => {
-        if (!dragging && spinRef.current) group.rotation.y += 0.0018;
-        camera.position.z = camDist;
-        const cur = mosaic.index.get(curKeyRef.current);
-        const nbr = cur !== undefined ? new Set(mosaic.adjacency[cur]) : new Set<number>();
-        spheres.forEach((m, i) => {
-          const mat = m.material as THREE.MeshStandardMaterial;
-          if (i === cur) { mat.color.copy(NODE_CUR); m.scale.setScalar(1.9); }
-          else if (nbr.has(i)) { mat.color.copy(NODE_NBR); m.scale.setScalar(1.3); }
-          else { mat.color.copy(NODE); m.scale.setScalar(1); }
-        });
-        renderer.render(scene, camera);
-        raf = requestAnimationFrame(animate);
-      };
-      raf = requestAnimationFrame(animate);
-
-      return () => {
-        cancelAnimationFrame(raf);
-        el.removeEventListener('pointerdown', onDown);
-        el.removeEventListener('pointermove', onMove);
-        el.removeEventListener('pointerup', onUp);
-        el.removeEventListener('click', onClick as EventListener);
-        el.removeEventListener('wheel', onWheel);
-        for (const d of disposables) d.dispose();
-      };
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mosaic],
-  );
-
-  return <Canvas3D onMount={onMount} />;
-}
-
+// ---------------------------------------------------------------------------
 export default function TreesAndNets(): JSX.Element {
-  const [n, setN] = usePersistentState<number>(`${APP_ID}:n`, 6);
+  const [n, setN] = usePersistentState<number>(`${APP_ID}:n`, 5);
   const [spin, setSpin] = usePersistentState<boolean>(`${APP_ID}:spin`, true);
-  const [zoom, setZoom] = useState<number>(8);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [order, setOrder] = useState<number[]>(() => Array.from({ length: 6 }, (_, i) => i));
+  const [order, setOrder] = useState<number[]>(() => [0, 1, 2, 3, 4]);
+  const [cur, setCur] = useState<number>(0);
+  const [flash, setFlash] = useState<Set<string>>(new Set());
 
   const assoc = useMemo(() => buildAssociahedron(n), [n]);
-  const full = tileCount(n) <= FULL_TILE_LIMIT;
-  const seedKey = canonicalKey(order);
-  // Full mosaic depends only on n; local neighborhood also on the seed tile.
-  const mosaic = useMemo(
-    () => buildMosaic(n, seedKey),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [n, full ? '' : seedKey],
-  );
-
-  const zoomRef = useRef(zoom); zoomRef.current = zoom;
   const spinRef = useRef(spin); spinRef.current = spin;
 
-  React.useEffect(() => {
+  // flip adjacency
+  const adjacency = useMemo(() => {
+    const adj: number[][] = assoc.vertices.map(() => []);
+    for (const [i, j] of assoc.edges) { adj[i].push(j); adj[j].push(i); }
+    return adj;
+  }, [assoc]);
+  const diagSets = useMemo(
+    () => assoc.vertices.map((v) => new Set(v.diagonals.map(dkey))),
+    [assoc],
+  );
+
+  useEffect(() => {
     setOrder(Array.from({ length: n }, (_, i) => i));
-    setSelected(null);
+    setCur(0);
+    setFlash(new Set());
   }, [n]);
 
-  const navigate = useCallback((a: number, b: number) => {
-    setOrder((o) => neighborOrder(o, a, b));
-    setSelected(null);
-  }, []);
-  const pickOrder = useCallback((o: number[]) => { setOrder(o); setSelected(null); }, []);
+  const prevDiags = useRef<Set<string>>(new Set());
+  // flash the diagonals that appear when the current tree changes
+  useEffect(() => {
+    const now = diagSets[cur] ?? new Set<string>();
+    const appeared = new Set<string>();
+    for (const k of now) if (!prevDiags.current.has(k)) appeared.add(k);
+    prevDiags.current = now;
+    if (appeared.size) {
+      setFlash(appeared);
+      const t = setTimeout(() => setFlash(new Set()), 400);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [cur, diagSets]);
 
-  const catalan = assoc.vertices.length;
-  const sel = selected != null ? assoc.vertices[selected] : null;
-  const selSplits =
-    sel && sel.diagonals.length
-      ? sel.diagonals.map(([a, b]) => splitLabel(order, a, b)).join('  ·  ')
-      : sel ? '(no internal splits)' : '—';
+  // flipping diagonal d → the unique flip-neighbor whose triangulation drops d
+  const flip = useCallback((d: [number, number]) => {
+    const k = dkey(d);
+    const j = adjacency[cur].find((nb) => !diagSets[nb].has(k));
+    if (j !== undefined) setCur(j);
+  }, [adjacency, cur, diagSets]);
+
+  const walk = useCallback((j: number) => setCur(j), []);
+
+  const rotateOrder = useCallback((dir: number) => {
+    setOrder((o) => (dir > 0 ? [...o.slice(1), o[0]] : [o[o.length - 1], ...o.slice(0, -1)]));
+  }, []);
+
+  const tri = assoc.vertices[cur];
+  const neighbors = adjacency[cur] ?? [];
+
+  const splitText = tri.diagonals.length
+    ? tri.diagonals.map((d) => {
+        const [a, b] = d; const side: number[] = [];
+        for (let i = a; i < b; i++) side.push(order[i]);
+        const other: number[] = []; for (let i = 0; i < n; i++) if (i < a || i >= b) other.push(order[i]);
+        const sm = side.length <= other.length ? side : other;
+        return `{${sm.join('')}}`;
+      }).join(' ')
+    : '—';
 
   const sections: SectionDef[] = [
     {
       id: 'leaves',
       title: 'Leaves',
       arch: 'subject',
-      estHeight: 168,
+      estHeight: 150,
       node: (
         <div style={{ display: 'grid', gap: 10 }}>
           <Pills<number>
             label="Leaf count (n)"
             value={n}
             onChange={setN}
-            options={[4, 5, 6, 7, 8, 9].map((k) => ({ value: k, label: String(k) }))}
+            options={[5, 6, 7, 8].map((k) => ({ value: k, label: String(k) }))}
           />
           <Kicker>
-            Each tile is the associahedron K<sub>{n - 1}</sub> (dim <b>{assoc.dim}</b>,
-            {' '}{catalan} trees) for one cyclic order. Gluing all{' '}
-            {tileCount(n).toLocaleString()} of them gives the moduli space
-            {' '}M̄<sub>0,{n}</sub>(ℝ).
-            {assoc.dim > 3 && ' Tiles above 3-D are shown as a canonical wireframe projection.'}
+            The polygon shows your current <b>tree</b> (a triangulation; leaves are the
+            edge labels). <b>Click a chord to flip it</b> — one diagonal swaps and you
+            step to a neighboring tree. The map shows where that move lands you on the
+            associahedron (the landscape of all trees for this order).
           </Kicker>
         </div>
       ),
     },
     {
-      id: 'order',
-      title: 'Cyclic order',
-      arch: 'domain',
-      estHeight: 150,
+      id: 'nav',
+      title: 'Navigate',
+      arch: 'drive',
+      estHeight: 200,
       node: (
         <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ fontFamily: 'var(--mono, monospace)', fontSize: 13 }}>
-            ({order.join(' ')})
+          <div style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12, lineHeight: 1.6 }}>
+            order ({order.join(' ')})<br />
+            tree #{cur} · splits {splitText}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={() => rotateOrder(-1)} style={{ padding: '4px 10px', cursor: 'pointer' }}>↺ rotate</button>
+            <button type="button" onClick={() => rotateOrder(1)} style={{ padding: '4px 10px', cursor: 'pointer' }}>rotate ↻</button>
           </div>
           <Kicker>
-            The current tile's cyclic order. Click a <b>facet</b> in the tile to cross
-            into a neighbor, or click a node in the Atlas. {mosaic.full
-              ? 'The Atlas shows the whole mosaic.'
-              : 'The Atlas shows the local neighborhood (too many tiles to draw whole).'}
+            Flip chords in the polygon, or click a node on the map, to walk tree→tree.
+            "Rotate" turns the whole cyclic order (relabels the picture).
           </Kicker>
-          <button
-            type="button"
-            onClick={() => pickOrder(Array.from({ length: n }, (_, i) => i))}
-            style={{ justifySelf: 'start', padding: '4px 10px', cursor: 'pointer' }}
-          >
-            Reset order
-          </button>
         </div>
       ),
     },
     {
       id: 'view',
-      title: 'View',
+      title: 'Map',
       arch: 'view',
-      estHeight: 120,
-      node: (
-        <div style={{ display: 'grid', gap: 10 }}>
-          <Slider label="Tile zoom" value={zoom} min={3} max={22} step={0.5}
-            onChange={setZoom} format={(v) => `${(11 / v).toFixed(2)}×`} />
-          <Checkbox label="Auto-rotate" checked={spin} onChange={setSpin} />
-        </div>
-      ),
-    },
-    {
-      id: 'stats',
-      title: 'Tree space',
-      arch: 'readout',
-      estHeight: 240,
-      node: (
-        <div style={{ display: 'grid', gap: 10 }}>
-          <StatGrid
-            stats={[
-              { k: 'trees / tile', v: String(catalan) },
-              { k: 'flips / tile', v: String(assoc.edges.length) },
-              { k: 'tiles (M̄₀,ₙ)', v: tileCount(n).toLocaleString() },
-              { k: 'facets / tile', v: String(assoc.facets.length) },
-            ]}
-          />
-          <div style={{ fontSize: 12, lineHeight: 1.5 }}>
-            <div style={{ opacity: 0.7, marginBottom: 2 }}>
-              Selected {sel ? `tree #${selected}` : 'tree'} — click a vertex:
-            </div>
-            <div style={{ fontFamily: 'var(--mono, monospace)', wordBreak: 'break-word' }}>
-              {selSplits}
-            </div>
-          </div>
-        </div>
-      ),
+      estHeight: 90,
+      node: <Checkbox label="Auto-rotate map" checked={spin} onChange={setSpin} />,
     },
   ];
 
   const views: ViewDef[] = [
     {
-      id: 'tile',
-      title: `Tile — K${n - 1}`,
-      defaultRect: { x: 340, y: 16, w: 560, h: 600 },
-      node: (
-        <TileView
-          key={`tile-${n}`}
-          assoc={assoc}
-          selected={selected}
-          onSelect={setSelected}
-          onNavigate={navigate}
-          zoomRef={zoomRef}
-          spinRef={spinRef}
-          onZoom={setZoom}
-        />
-      ),
+      id: 'tree',
+      title: 'Tree (flip a chord)',
+      defaultRect: { x: 340, y: 16, w: 520, h: 560 },
+      node: <PolygonTree n={n} order={order} tri={tri} flash={flash} onFlip={flip} />,
     },
     {
-      id: 'atlas',
-      title: `Atlas — M̄₀,${n}(ℝ)`,
-      defaultRect: { x: 916, y: 16, w: 540, h: 600 },
+      id: 'landscape',
+      title: `Landscape — K${n - 1}`,
+      defaultRect: { x: 876, y: 16, w: 520, h: 560 },
       node: (
-        <AtlasView
-          key={`atlas-${n}-${mosaic.full ? '' : seedKey}`}
-          mosaic={mosaic}
-          currentKey={seedKey}
-          onPick={pickOrder}
+        <Landscape
+          key={`land-${n}`}
+          assoc={assoc}
+          cur={cur}
+          neighbors={neighbors}
+          onWalk={walk}
           spinRef={spinRef}
         />
       ),
@@ -540,7 +334,7 @@ export default function TreesAndNets(): JSX.Element {
     <Workspace
       appId={APP_ID}
       title="Trees and Nets"
-      subtitle={`M̄₀,${n}(ℝ) · ${tileCount(n).toLocaleString()} tiles`}
+      subtitle={`walk the trees of one cyclic order`}
       sections={sections}
       views={views}
       explainer={explainer}
