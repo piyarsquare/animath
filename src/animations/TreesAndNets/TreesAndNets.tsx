@@ -3,34 +3,73 @@ import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { SectionDef, ViewDef } from '../../chrome/workspace/types';
-import { Pills, Slider, Checkbox } from '../../components/ControlPanel';
+import { Pills, Checkbox } from '../../components/ControlPanel';
 import { Kicker } from '../../chrome/readouts';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { buildAssociahedron, type Associahedron, type Triangulation } from './lib/associahedron';
+import { neighborOrder } from './lib/mosaic';
 import explainer from './EXPLAINER.md?raw';
 
 const APP_ID = 'trees-and-nets';
-
 const dkey = (d: [number, number]) => `${d[0]},${d[1]}`;
+const sameOrder = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
 // ---------------------------------------------------------------------------
-// Polygon / triangulation view (SVG) — the current tree, which you flip.
+// Polygon / triangulation view (SVG): the current tree. Click a chord to Flip
+// (change the tree) or Cross (reverse that chord's arc → the cyclic order changes,
+// and the leaf labels slide around the circle to their new places).
 // ---------------------------------------------------------------------------
 function PolygonTree({
-  n, order, tri, flash, onFlip,
+  n, order, tri, flash, onChord,
 }: {
   n: number;
   order: number[];
   tri: Triangulation;
   flash: Set<string>;
-  onFlip: (d: [number, number]) => void;
+  onChord: (d: [number, number]) => void;
 }) {
   const S = 360;
   const c = S / 2;
-  const R = S * 0.38;
-  const ang = (k: number) => -Math.PI / 2 + (2 * Math.PI * k) / n;
-  const PX = (k: number) => c + R * Math.cos(ang(k));
-  const PY = (k: number) => c + R * Math.sin(ang(k));
+  const R = S * 0.37;
+  const vAng = (k: number) => -Math.PI / 2 + (2 * Math.PI * k) / n; // polygon vertex angle
+  const eAng = (k: number) => -Math.PI / 2 + (2 * Math.PI * (k + 0.5)) / n; // edge-midpoint angle
+  const PX = (k: number) => c + R * Math.cos(vAng(k));
+  const PY = (k: number) => c + R * Math.sin(vAng(k));
+
+  // Animate leaf labels around the circle when the cyclic order changes.
+  const prevRef = useRef(order);
+  const [from, setFrom] = useState(order);
+  const [t, setT] = useState(1);
+  useEffect(() => {
+    if (sameOrder(prevRef.current, order)) return;
+    setFrom(prevRef.current);
+    setT(0);
+    const start = performance.now();
+    const dur = 480;
+    let raf = 0;
+    const step = (now: number) => {
+      const p = Math.min(1, (now - start) / dur);
+      setT(p);
+      if (p < 1) raf = requestAnimationFrame(step);
+      else prevRef.current = order;
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [order]);
+
+  const labelPos = (v: number) => {
+    const iTo = order.indexOf(v);
+    const iFrom = from.indexOf(v);
+    let aFrom = eAng(iFrom);
+    const aTo = eAng(iTo);
+    // shortest angular path
+    let diff = aTo - aFrom;
+    while (diff > Math.PI) diff -= 2 * Math.PI;
+    while (diff < -Math.PI) diff += 2 * Math.PI;
+    const a = aFrom + diff * t;
+    const lr = R * 1.16;
+    return [c + lr * Math.cos(a), c + lr * Math.sin(a)];
+  };
 
   const boundary = Array.from({ length: n }, (_, k) => `${PX(k)},${PY(k)}`).join(' ');
 
@@ -38,26 +77,11 @@ function PolygonTree({
     <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
       <svg viewBox={`0 0 ${S} ${S}`} width="100%" height="100%" style={{ maxWidth: '100%', maxHeight: '100%' }}>
         <polygon points={boundary} fill="rgba(255,255,255,0.04)" stroke="var(--fg, #ccd)" strokeOpacity={0.35} strokeWidth={1.5} />
-        {/* leaf labels — one per boundary edge (k,k+1), labeled by the cyclic order */}
-        {Array.from({ length: n }, (_, k) => {
-          const mx = (PX(k) + PX((k + 1) % n)) / 2;
-          const my = (PY(k) + PY((k + 1) % n)) / 2;
-          const ox = (mx - c) * 0.16;
-          const oy = (my - c) * 0.16;
-          return (
-            <text key={k} x={mx + ox} y={my + oy} fontSize={15} fontFamily="monospace"
-              fill="var(--accent, #cda434)" textAnchor="middle" dominantBaseline="middle">
-              {order[k]}
-            </text>
-          );
-        })}
-        {/* diagonals — click to flip */}
         {tri.diagonals.map((d) => {
           const on = flash.has(dkey(d));
           return (
-            <g key={dkey(d)} style={{ cursor: 'pointer' }} onClick={() => onFlip(d)}>
-              <line x1={PX(d[0])} y1={PY(d[0])} x2={PX(d[1])} y2={PY(d[1])}
-                stroke="transparent" strokeWidth={16} />
+            <g key={dkey(d)} style={{ cursor: 'pointer' }} onClick={() => onChord(d)}>
+              <line x1={PX(d[0])} y1={PY(d[0])} x2={PX(d[1])} y2={PY(d[1])} stroke="transparent" strokeWidth={18} />
               <line x1={PX(d[0])} y1={PY(d[0])} x2={PX(d[1])} y2={PY(d[1])}
                 stroke={on ? 'var(--accent, #ffd54a)' : 'var(--fg, #9fb)'}
                 strokeWidth={on ? 4 : 2.5} strokeOpacity={on ? 1 : 0.8}
@@ -65,20 +89,27 @@ function PolygonTree({
             </g>
           );
         })}
-        {/* polygon vertices */}
         {Array.from({ length: n }, (_, k) => (
           <circle key={k} cx={PX(k)} cy={PY(k)} r={3} fill="var(--fg, #ccd)" fillOpacity={0.5} />
         ))}
+        {order.map((v) => {
+          const [lx, ly] = labelPos(v);
+          return (
+            <text key={v} x={lx} y={ly} fontSize={15} fontFamily="monospace"
+              fill="var(--accent, #cda434)" textAnchor="middle" dominantBaseline="middle">
+              {v}
+            </text>
+          );
+        })}
       </svg>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Landscape minimap (Three.js) — the associahedron, your position on it.
+// Landscape minimap (Three.js): the associahedron, your position on it.
 // ---------------------------------------------------------------------------
 const to3 = (p: number[]) => new THREE.Vector3(p[0] ?? 0, p[1] ?? 0, p[2] ?? 0);
-
 function landscapePositions(assoc: Associahedron): THREE.Vector3[] {
   const raw = assoc.vertices.map((v) => to3(v.point));
   const center = raw.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(1 / Math.max(raw.length, 1));
@@ -187,6 +218,7 @@ function Landscape({
 export default function TreesAndNets(): JSX.Element {
   const [n, setN] = usePersistentState<number>(`${APP_ID}:n`, 5);
   const [spin, setSpin] = usePersistentState<boolean>(`${APP_ID}:spin`, true);
+  const [mode, setMode] = usePersistentState<'flip' | 'cross'>(`${APP_ID}:mode`, 'flip');
   const [order, setOrder] = useState<number[]>(() => [0, 1, 2, 3, 4]);
   const [cur, setCur] = useState<number>(0);
   const [flash, setFlash] = useState<Set<string>>(new Set());
@@ -194,16 +226,12 @@ export default function TreesAndNets(): JSX.Element {
   const assoc = useMemo(() => buildAssociahedron(n), [n]);
   const spinRef = useRef(spin); spinRef.current = spin;
 
-  // flip adjacency
   const adjacency = useMemo(() => {
     const adj: number[][] = assoc.vertices.map(() => []);
     for (const [i, j] of assoc.edges) { adj[i].push(j); adj[j].push(i); }
     return adj;
   }, [assoc]);
-  const diagSets = useMemo(
-    () => assoc.vertices.map((v) => new Set(v.diagonals.map(dkey))),
-    [assoc],
-  );
+  const diagSets = useMemo(() => assoc.vertices.map((v) => new Set(v.diagonals.map(dkey))), [assoc]);
 
   useEffect(() => {
     setOrder(Array.from({ length: n }, (_, i) => i));
@@ -212,7 +240,6 @@ export default function TreesAndNets(): JSX.Element {
   }, [n]);
 
   const prevDiags = useRef<Set<string>>(new Set());
-  // flash the diagonals that appear when the current tree changes
   useEffect(() => {
     const now = diagSets[cur] ?? new Set<string>();
     const appeared = new Set<string>();
@@ -220,21 +247,28 @@ export default function TreesAndNets(): JSX.Element {
     prevDiags.current = now;
     if (appeared.size) {
       setFlash(appeared);
-      const t = setTimeout(() => setFlash(new Set()), 400);
+      const t = setTimeout(() => setFlash(new Set()), 450);
       return () => clearTimeout(t);
     }
     return undefined;
   }, [cur, diagSets]);
 
-  // flipping diagonal d → the unique flip-neighbor whose triangulation drops d
   const flip = useCallback((d: [number, number]) => {
     const k = dkey(d);
     const j = adjacency[cur].find((nb) => !diagSets[nb].has(k));
     if (j !== undefined) setCur(j);
   }, [adjacency, cur, diagSets]);
 
-  const walk = useCallback((j: number) => setCur(j), []);
+  // Cross the facet of chord d: reverse the arc it cuts off → the neighbor fiber.
+  const cross = useCallback((d: [number, number]) => {
+    setOrder((o) => neighborOrder(o, d[0], d[1]));
+  }, []);
 
+  const onChord = useCallback((d: [number, number]) => {
+    if (mode === 'flip') flip(d); else cross(d);
+  }, [mode, flip, cross]);
+
+  const walk = useCallback((j: number) => setCur(j), []);
   const rotateOrder = useCallback((dir: number) => {
     setOrder((o) => (dir > 0 ? [...o.slice(1), o[0]] : [o[o.length - 1], ...o.slice(0, -1)]));
   }, []);
@@ -267,10 +301,9 @@ export default function TreesAndNets(): JSX.Element {
             options={[5, 6, 7, 8].map((k) => ({ value: k, label: String(k) }))}
           />
           <Kicker>
-            The polygon shows your current <b>tree</b> (a triangulation; leaves are the
-            edge labels). <b>Click a chord to flip it</b> — one diagonal swaps and you
-            step to a neighboring tree. The map shows where that move lands you on the
-            associahedron (the landscape of all trees for this order).
+            The polygon is your current <b>tree</b> (a triangulation; leaves are the
+            edge labels). The map on the right is the <b>landscape</b> of all trees for
+            this cyclic order — your tree is gold, one-flip neighbors are teal.
           </Kicker>
         </div>
       ),
@@ -279,21 +312,41 @@ export default function TreesAndNets(): JSX.Element {
       id: 'nav',
       title: 'Navigate',
       arch: 'drive',
-      estHeight: 200,
+      estHeight: 230,
       node: (
         <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12, lineHeight: 1.6 }}>
-            order ({order.join(' ')})<br />
-            tree #{cur} · splits {splitText}
-          </div>
+          <Pills<'flip' | 'cross'>
+            label="Click a chord to…"
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: 'flip', label: 'Flip tree' },
+              { value: 'cross', label: 'Cross order' },
+            ]}
+          />
+          <Kicker>
+            <b>Flip</b> swaps that diagonal — you step to a neighbor tree (same cyclic
+            order), and the map dot moves. <b>Cross</b> reverses the leaves on that
+            chord's arc — you step into the neighbor cyclic-order fiber, and the labels
+            slide around the circle. So flips walk the tree; crossings walk the order.
+          </Kicker>
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" onClick={() => rotateOrder(-1)} style={{ padding: '4px 10px', cursor: 'pointer' }}>↺ rotate</button>
             <button type="button" onClick={() => rotateOrder(1)} style={{ padding: '4px 10px', cursor: 'pointer' }}>rotate ↻</button>
           </div>
-          <Kicker>
-            Flip chords in the polygon, or click a node on the map, to walk tree→tree.
-            "Rotate" turns the whole cyclic order (relabels the picture).
-          </Kicker>
+        </div>
+      ),
+    },
+    {
+      id: 'state',
+      title: 'Where you are',
+      arch: 'readout',
+      estHeight: 120,
+      node: (
+        <div style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12, lineHeight: 1.7 }}>
+          order&nbsp;&nbsp;({order.join(' ')})<br />
+          tree&nbsp;&nbsp;&nbsp;#{cur}<br />
+          splits&nbsp;{splitText}
         </div>
       ),
     },
@@ -309,9 +362,9 @@ export default function TreesAndNets(): JSX.Element {
   const views: ViewDef[] = [
     {
       id: 'tree',
-      title: 'Tree (flip a chord)',
+      title: mode === 'flip' ? 'Tree — click a chord to flip' : 'Tree — click a chord to cross',
       defaultRect: { x: 340, y: 16, w: 520, h: 560 },
-      node: <PolygonTree n={n} order={order} tri={tri} flash={flash} onFlip={flip} />,
+      node: <PolygonTree n={n} order={order} tri={tri} flash={flash} onChord={onChord} />,
     },
     {
       id: 'landscape',
@@ -334,7 +387,7 @@ export default function TreesAndNets(): JSX.Element {
     <Workspace
       appId={APP_ID}
       title="Trees and Nets"
-      subtitle={`walk the trees of one cyclic order`}
+      subtitle={'walk the trees and the orders'}
       sections={sections}
       views={views}
       explainer={explainer}

@@ -36,6 +36,19 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 12:15 — Fiber-crossing: Flip (tree) vs Cross (order), animated
+**Why:** User wanted to navigate tree *and* order and "watch the tree/order change
+naturally" — the two-fibers-connect move.
+
+Added a **Flip / Cross** mode toggle. Clicking a chord either **flips** it (change
+the tree shape, same order — dot moves on the landscape, changed chord flashes) or
+**crosses** it (reverse the leaves on that chord's arc via `neighborOrder` → step
+into the neighbor cyclic-order fiber). On a cyclic-order change the **leaf labels
+animate around the circle** (shortest-angular-path tween, ~480ms) so you watch the
+order reverse. "Rotate" also animates. So flips walk trees within a fiber; crossings
+walk between fibers. Build green (12.3 kB); renders. This realizes the "two fibers
+connect" + "watch the tree/order change" asks on the small, legible local view.
+
 ### 🟣 decision · 12:05 — Pivot to a legible flip-navigation view (drop the Atlas)
 **Why:** User: the whole-space Atlas is too hard to navigate / "can't see where you
 are"; start smaller, show how two fibers connect, "navigate from one tree/order to
