@@ -40,6 +40,30 @@ rename/export, gallery search, phone landscape) and embeds phase 2 (the
      emoji: 🟣 decision · 🟢 code · 🔵 finding · 🔴 blocker · 🟡 milestone
      Follow each with a "**Why:** …" line, then optional body paragraphs. -->
 
+### 🟡 milestone · 01:04 — PR B landed and probe-verified (the action strip)
+**Why:** User said "continue" — next step on the plan of record.
+
+Built the always-on **action strip**: `ActionDef` + `WorkspaceProps.actions`
+with the three-hats constraints structural (buttons-only type, ≤5 rendered,
+one primary, static labels, `sectionId` projection validated against the
+Drive tier by `validateActions` — unit-tested); `ActionBar` renders a fixed
+pill bottom-center on desktop and a labeled row above the dock on phone, at
+`--z-actionbar` 130 so it survives fullscreen (modal moved to 150). Three
+transport glyphs (pause/step/finish) added as chrome utility icons. Wired
+into the four inert-by-default simulation apps — Stable Matching (contextual
+GS-run ↔ RVV-replay action sets), Stable Marriage, Agentic Sorting, Trinary
+Observatory. Embeds (decision c) scoped: the URL-configured `buttons=` row
+is the strip's embed form. Docs ride along: DESIGN-SPEC §2 gains "The action
+strip" + a fullscreen clause, the IN-PROGRESS removals ledger records the
+not-the-floater ruling, BUILDING_AN_APP gains §4d. Verification: 20 vitest
+tests green, build green, `scripts/probe-actionbar.mjs` 11/11 (strip
+hit-testable, Play toggles aria-pressed, works in fullscreen, phone labels
+visible, dock intact).
+
+![Phone: Play / Step / Finish / Reset docked above the dock](assets/2026-06-10-S01-actionbar-phone.png)
+
+![Desktop fullscreen: the strip persists and stays in sync with the Playback panel](assets/2026-06-10-S01-actionbar-fullscreen.png)
+
 ### 🟡 milestone · 23:50 — PR A landed and probe-verified (fullscreen access + z bug)
 **Why:** With the decisions in, implementation began at the agreed first step.
 

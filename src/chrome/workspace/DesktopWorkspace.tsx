@@ -7,6 +7,7 @@ import { sortByTier } from './archetypes';
 import { snapPos, snapResize, freeSlot, dockedChainBelow, PANEL_W } from './geometry';
 import type { Rect, SnapGuides } from './geometry';
 import { builtinLayouts, applyLayout, sanitize, raiseWindow, DEFAULT_EST } from './layouts';
+import { ActionBar } from './ActionBar';
 import { LAYER } from './layers';
 import { Panel } from './Panel';
 import { ViewWindow } from './ViewWindow';
@@ -24,7 +25,7 @@ type RefMap = React.MutableRefObject<Record<string, HTMLDivElement | null>>;
  * plus the left icon rail and named layouts, persisted per app.
  */
 export default function DesktopWorkspace(props: WorkspaceProps) {
-  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, modes, activeMode, onModeChange } = props;
+  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, actions, modes, activeMode, onModeChange } = props;
   const sections = useMemo(() => sortByTier(props.sections), [props.sections]);
   const builtin = useMemo(
     () => builtinLayouts(sections, appLayouts),
@@ -278,6 +279,8 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
             onClose={() => closePanel(s.id)}
           />
         ))}
+
+        {actions && <ActionBar actions={actions} sections={sections} />}
       </div>
       {fullHelp && explainer && (
         <ExplainerModal title={title} markdown={explainer} onClose={() => setFullHelp(false)} />

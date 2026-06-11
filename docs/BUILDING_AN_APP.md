@@ -164,6 +164,7 @@ return (
     layouts={layouts}            // LayoutDef[]  — built-in arrangements (§4c)
     defaultLayoutId="essentials"
     explainer={help}             // the ? modal markdown (§2)
+    actions={actions}            // optional ActionDef[] — always-on strip (§4d)
   />
 );
 ```
@@ -309,6 +310,33 @@ window positions, saved layouts and current layout persist per app under
 `localStorage` `animath:v1:ws:<appId>`; any manual change flips the layout to
 "custom". **Don't manage window state yourself** — stale persisted ids are
 sanitized away, so renaming a panel/view id simply resets that window.
+
+### 4d. Action strip — `ActionDef[]` (only if your app is inert without it)
+
+If a first-time user staring at your default view wouldn't know how to begin
+(simulations, steppable algorithms), pass `actions` — the chrome renders an
+**always-on strip** (bottom-center on desktop, above the dock on phone, alive
+through fullscreen) that can never be closed. Rules (DESIGN-SPEC §2 → "The
+action strip"):
+
+```tsx
+const actions: ActionDef[] = [
+  { id: 'play', icon: playing ? 'pause' : 'play', label: playing ? 'Pause' : 'Play',
+    primary: true, active: playing, sectionId: 'playback',
+    onClick: () => setPlaying(p => !p) },
+  { id: 'step',  icon: 'step',  label: 'Step',  sectionId: 'playback', disabled: playing, onClick: stepOnce },
+  { id: 'reset', icon: 'reset', label: 'Reset', sectionId: 'playback', onClick: reset },
+];
+```
+
+- The strip **projects your drive/playback panel** — same handlers, just the
+  verbs. Set `sectionId` to that panel's id (dev-warned otherwise). Speed
+  sliders, schedules, etc. stay in the panel.
+- **≤ 5 actions**, **one** `primary`, **static labels** (no live numbers).
+  `Step` belongs beside `Play` in algorithm apps. Sets may swap with app
+  context, but the strip never moves.
+- Gesture-driven viewers (pan/zoom/draw apps) should **not** pass actions —
+  their begin-affordance is the view itself.
 
 ---
 

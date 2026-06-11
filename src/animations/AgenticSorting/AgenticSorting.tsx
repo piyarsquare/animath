@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import './agenticSorting.css';
 import Workspace from '../../chrome/workspace/Workspace';
-import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { StatGrid } from '../../chrome/readouts';
 import explainerText from './EXPLAINER.md?raw';
 import readmeText from './README.md?raw';
@@ -420,6 +420,12 @@ export default function AgenticSorting() {
   // The "?" modal carries both the short explainer and the full About readme.
   const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
 
+  /* Always-on action strip — projection of the Run panel's verbs. */
+  const actions: ActionDef[] = [
+    { id: 'run', icon: isRunning ? 'pause' : 'play', label: isRunning ? 'Pause' : 'Start', primary: true, active: isRunning, sectionId: 'run', onClick: () => setIsRunning(!isRunning) },
+    { id: 'reset', icon: 'reset', label: 'Reset', sectionId: 'run', onClick: () => generateItems(itemCount, weights) },
+  ];
+
   return (
     <Workspace
       appId="agentic-sorting"
@@ -430,6 +436,7 @@ export default function AgenticSorting() {
       layouts={layouts}
       defaultLayoutId="setup"
       explainer={help}
+      actions={actions}
     />
   );
 }

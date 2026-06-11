@@ -64,6 +64,34 @@ export interface PersistedWorkspace {
   saved: SavedLayout[];
 }
 
+/** One always-on action-strip button (CHROME-REVIEW P1).
+ *
+ * The strip is a PROJECTION of an existing drive/playback panel — the few
+ * verbs a first-time user needs (play, step, reset, launch), never the rich
+ * controls (speed, schedules — those stay in the panel). Constraints are
+ * structural on purpose (three-hats ruling vs. the deleted floaters):
+ * buttons only (no node escape hatch), at most MAX_ACTIONS render, labels
+ * are STATIC strings (no live readouts — they re-render and shift layout).
+ * Action sets may be contextual (swap with app mode), and `Step` should be
+ * first-class beside `Play` in algorithm apps. */
+export interface ActionDef {
+  id: string;
+  /** Glyph from the closed chrome icon set (chrome/icons.tsx). */
+  icon: string;
+  /** Static verb — tooltip + aria everywhere, visible text on the strip. */
+  label: string;
+  onClick: () => void;
+  /** Toggle state (play ⇄ pause) — surfaces as aria-pressed. */
+  active?: boolean;
+  /** At most one: the emphasized (accent) action. */
+  primary?: boolean;
+  disabled?: boolean;
+  /** The drive/playback section this action projects; dev-warned when it
+   *  names a section outside the Drive tier (the strip must stay a
+   *  projection, not a new control surface). */
+  sectionId?: string;
+}
+
 export interface WorkspaceMode {
   id: string;
   label: string;
@@ -84,6 +112,10 @@ export interface WorkspaceProps {
   defaultLayoutId?: string;
   /** Markdown for the top-bar "?" explainer. */
   explainer?: string | null;
+  /** Always-on action strip (≤5 verbs projected from a drive/playback
+   *  panel); renders bottom-center on desktop, above the dock on phone,
+   *  and persists through fullscreen. See ActionDef. */
+  actions?: ActionDef[];
   /** Panel id the top-bar title opens when clicked (e.g. 'function'), so the
    *  formula in the bar doubles as a shortcut to its selector. */
   titlePanel?: string;

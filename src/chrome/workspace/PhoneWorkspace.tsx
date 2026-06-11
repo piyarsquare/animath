@@ -5,6 +5,7 @@ import { Icon } from '../icons';
 import { TopBar } from '../TopBar';
 import { useEscLayer } from '../useEscLayer';
 import { useScrollHints } from '../useScrollHints';
+import { ActionBar } from './ActionBar';
 import { sortByTier, ARCHETYPES } from './archetypes';
 import { beginPointerDrag } from './drag';
 import type { WorkspaceProps } from './types';
@@ -21,7 +22,7 @@ const maxCardH = () => Math.round(window.innerHeight * 0.8);
  * Layouts menu is hidden on phone.
  */
 export default function PhoneWorkspace(props: WorkspaceProps) {
-  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, modes, activeMode, onModeChange } = props;
+  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, actions, modes, activeMode, onModeChange } = props;
   const sections = useMemo(() => sortByTier(props.sections), [props.sections]);
   const [sheet, setSheet] = useState<string | null>(null);
   /* per-view card heights are layout state (like desktop view rects) — persisted */
@@ -67,7 +68,7 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
   };
 
   return (
-    <div className="am-app am-phone-app">
+    <div className={`am-app am-phone-app${actions?.length ? ' am-has-actions' : ''}`}>
       <TopBar
         title={title}
         subtitle={subtitle}
@@ -144,6 +145,7 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
           );
         })}
       </div>
+      {actions && <ActionBar actions={actions} sections={sections} phone />}
       <div className="am-phone-dockwrap">
         <nav ref={dockRef} className="am-phone-dock" aria-label="Panels">
           {sections.map((s, i) => {

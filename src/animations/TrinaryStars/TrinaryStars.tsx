@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
-import type { LayoutDef, SectionDef, ViewDef, WorkspaceMode } from '../../chrome/workspace/types';
+import type { ActionDef, LayoutDef, SectionDef, ViewDef, WorkspaceMode } from '../../chrome/workspace/types';
 import { Slider, Pills, Select, NumberInput } from '../../components/ControlPanel';
 import {
   step, cloudSpread, lyapunovRenorm, SCENARIOS, getScenario, buildStars, orbitFrame, launchPlanet, Analyzer, DEFAULT_CLASSIFY,
@@ -1011,8 +1011,15 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
     },
   ];
 
+  /* Always-on action strip — projection of the Sim panel's verbs. */
+  const actions: ActionDef[] = [
+    { id: 'play', icon: paused ? 'play' : 'pause', label: paused ? 'Play' : 'Pause', primary: true, active: !paused, sectionId: 'sim', onClick: () => setPaused(p => !p) },
+    { id: 'reset', icon: 'reset', label: 'Reset', sectionId: 'sim', onClick: () => api.current?.reset() },
+  ];
+
   return (
     <Workspace
+      actions={actions}
       appId="trinary-obs"
       title="Trinary System"
       subtitle={preset.name}

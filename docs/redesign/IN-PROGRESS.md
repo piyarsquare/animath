@@ -89,6 +89,10 @@ questions. The implementing agent should update this file as phases land.
 
 ## Deliberate removals (do not resurrect without discussion)
 - The old **draggable floater** → replaced by openable `drive` panels you can place beside the plot.
+  - *2026-06 ruling (three-hats, CHROME-REVIEW P1):* the **action strip** is NOT the floater
+    resurrected — it is fixed-position, chrome-owned, non-draggable, buttons-only, and a
+    structural projection of an existing drive/playback panel (constraints enforced in
+    `ActionDef` + `validateActions`). Keep it that way.
 - The old **in-app cross-app switcher** → gallery is the only hub.
 - **Settings / Actions / Function / About** menu taxonomy → replaced by the 11-archetype vocabulary.
 
@@ -121,3 +125,12 @@ questions. The implementing agent should update this file as phases land.
   `scripts/probe-fullscreen.mjs` added as the headless interaction proof. User decisions
   recorded: Correspondence tap-to-pick will be ungated (PR D); embeds will carry the action
   strip (PR B).
+- 2026-06: **CHROME-REVIEW PR B landed — the action strip** (DESIGN-SPEC §2 "The action strip"):
+  `WorkspaceProps.actions` + `ActionDef` (buttons-only, ≤5, static labels, one primary,
+  `sectionId` projection of a Drive-tier panel, dev-validated by `validateActions`), rendered
+  by the chrome bottom-center on desktop / above the dock on phone, persistent through
+  fullscreen (`--z-actionbar`; explainer modal moved to `--z-modal` 150). Wired into the four
+  simulation apps: Stable Matching (contextual GS-run ↔ RVV-replay sets), Stable Marriage,
+  Agentic Sorting, Trinary Observatory. Three transport glyphs (pause/step/finish) added as
+  chrome *utility* icons — not archetypes. Embeds scoping (decision c): the `buttons=` row is
+  the strip's embed form. Probe: `scripts/probe-actionbar.mjs` (11 checks).

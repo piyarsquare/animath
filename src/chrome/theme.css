@@ -35,7 +35,8 @@
   --z-menu: 71;
   --z-full: 100;
   --z-over-full: 110;
-  --z-modal: 120;
+  --z-actionbar: 130;
+  --z-modal: 150;
   --z-rail: 200;
 }
 
@@ -416,6 +417,41 @@ body {
 }
 .am-phone-view.am-ws-full { display: flex; flex-direction: column; }
 .am-phone-view.am-ws-full .am-phone-view-body { height: auto; max-height: none; flex: 1; min-height: 0; }
+
+/* ============ Action strip (CHROME-REVIEW P1) ============
+   Always-on primary verbs — chrome-owned, never closable, persists through
+   fullscreen. Desktop: floating pill bottom-center of the stage. Phone:
+   a row docked above the bottom dock. Visual sibling of the rail. */
+.am-actionbar {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+  z-index: var(--z-actionbar);
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px; background: var(--panel);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border); border-radius: 999px; box-shadow: var(--shadow);
+  max-width: calc(100% - 160px);
+}
+.am-action-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  min-height: 40px; padding: 0 14px;
+  border: 1px solid transparent; border-radius: 999px;
+  background: transparent; color: var(--fg);
+  font-family: var(--font-ui); font-size: 13px; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+}
+.am-action-btn:hover:not(:disabled) { background: var(--hover); border-color: var(--border); }
+.am-action-btn:disabled { color: var(--dim-2); cursor: default; }
+.am-action-btn.am-primary { background: var(--accent); color: var(--accent-fg); }
+.am-action-btn.am-primary:hover:not(:disabled) { background: var(--accent); border-color: transparent; filter: brightness(1.07); }
+.am-action-btn.am-primary:disabled { background: var(--accent-soft); color: var(--dim); }
+.am-actionbar-phone {
+  bottom: 76px; /* clears the dock */
+  max-width: calc(100% - 20px);
+  overflow-x: auto; scrollbar-width: none;
+}
+.am-actionbar-phone .am-action-btn { min-height: 44px; }
+/* phone cards scroll under the dock + strip — leave room to reach the end */
+.am-phone-app.am-has-actions .am-phone-scroll { padding-bottom: 148px; }
 
 /* magnetic snap guides */
 .am-ws-guide { position: absolute; z-index: var(--z-guides); background: var(--accent); pointer-events: none; opacity: 0.8; box-shadow: 0 0 8px var(--accent-soft); }

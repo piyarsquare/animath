@@ -286,7 +286,10 @@ z-compaction, not a CSS override); staged Esc scoped to transient layers.
   first-class beside Play, labeled on phone, `role="toolbar"` — desktop strip
   + phone row, persists in fullscreen. Skin sweep + explicit embeds decision;
   DESIGN-SPEC, IN-PROGRESS removals-ledger ruling, and BUILDING_AN_APP
-  updates ride the same PR.
+  updates ride the same PR. ✅ **Landed** (wired into Stable Matching,
+  Stable Marriage, Agentic Sorting, Trinary Observatory; embeds scoped:
+  the `buttons=` row is the strip's embed form;
+  `scripts/probe-actionbar.mjs` is the interaction proof).
 - **PR C — P5**: discriminated `node | panes` union, **fresh** merged-window
   id (`plane`, not `input`), split-body component shared with the embed
   route, window title `z ↦ f(z)`, pane labels `z — domain` /

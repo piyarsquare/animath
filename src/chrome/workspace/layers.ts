@@ -23,7 +23,9 @@ export const LAYER = {
   fullscreen: 100,
   /** Base for panels while a view is fullscreen: zIndex = overFull + z. */
   overFull: 110,
+  /** The always-on action strip — above every window, even in fullscreen. */
+  actionbar: 130,
   /** Modals (explainer) — above fullscreen, portaled to <body>. */
-  modal: 120,
+  modal: 150,
   rail: 200,
 } as const;
