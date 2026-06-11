@@ -260,7 +260,7 @@
 .as-traj-legend {
   position: absolute;
   left: 12px;
-  bottom: 10px;
+  top: 10px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -311,4 +311,4 @@
 
 .as-arena-label-top { top: 12px; }
 .as-arena-label-bottom { bottom: 12px; }
-.as-arena-label-time { bottom: 12px; right: 14px; left: auto; }
+.as-arena-label-time { bottom: 12px; left: 14px; right: auto; }

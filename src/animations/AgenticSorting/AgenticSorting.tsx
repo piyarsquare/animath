@@ -456,7 +456,7 @@ export default function AgenticSorting() {
           <span className="as-preset-caption">{p.caption}</span>
         </button>
       ))}
-      <p className="as-hint">One-click demos. Each sets the population and view that make one idea visible, then starts the run.</p>
+      <p className="as-hint">One-click demos — each sets up one idea and starts the run.</p>
     </div>
   );
 
@@ -767,7 +767,7 @@ export default function AgenticSorting() {
   );
 
   const sandboxSections: SectionDef[] = [
-    { id: 'scenarios', title: 'Scenarios', arch: 'subject', node: scenariosNode, estHeight: 320 },
+    { id: 'scenarios', title: 'Scenarios', arch: 'subject', node: scenariosNode, estHeight: 470 },
     { id: 'array', title: 'Array', arch: 'subject', node: arrayNode, estHeight: 250 },
     { id: 'display', title: 'Display', arch: 'marks', node: displayNode, estHeight: 180 },
     { id: 'agents', title: 'Population mix', arch: 'drive', node: agentsNode, estHeight: 330 },
@@ -798,7 +798,7 @@ export default function AgenticSorting() {
       id: 'explore', name: 'Explore', sub: 'Scenarios · arena · trajectories', icon: 'chart',
       // The on-ramp: one-click Scenarios + Run on the left, the moving picture and
       // the trajectories plot (the signature visual) both on the right.
-      open: { scenarios: { x: 84, y: 18 }, run: { x: 84, y: 356 } },
+      open: { scenarios: { x: 84, y: 18 }, run: { x: 84, y: 484 } },
       views: {
         arena: { x: 372, y: 16, w: 720, h: 318, open: true },
         trajectories: { x: 372, y: 350, w: 720, h: 300, open: true },
