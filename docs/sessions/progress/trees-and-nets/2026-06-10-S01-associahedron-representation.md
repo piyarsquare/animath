@@ -36,6 +36,28 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 01:00 — General mD→3D projection, zoom, directed energy edges
+**Why:** User flagged the 4D-specific transform won't scale (n=8 → 5D, n=9 → 6D)
+and asked for zoom + steerable projection + directed energy edges.
+
+Replaced the first-3-coords slice with `lib/projection.ts`: **PCA** (Jacobi
+eigendecomposition) of the intrinsic R^{n-3} polytope coords, with a steerable
+linear projection — the **Projection** panel picks which principal components map
+to screen X/Y/Z (dimension-agnostic "alter the projection"). Added a **zoom**
+slider + wheel (live via a ref, no remount), an **auto-rotate** toggle, and
+**directed energy edges** (`marks`): each flip is an arrow pointing downhill
+(toward lower energy), length/color ∝ |ΔE| — sinks = local optima. Extended leaf
+count to **4–9**. Fixed a latent double-canvas bug by remounting `AssocView` via
+React key on structural changes (Canvas3D re-runs onMount without removing the old
+canvas). Build green (12.58 kB). Headless capture at **n=8 (5D, 132 trees, 330
+flips)** confirms the PCA projection + arrows render and scale.
+
+> [!NOTE]
+> Same PCA path renders n=9 (6D, 429 verts) — no bespoke 4D machinery. Per-vertex
+> meshes are fine to ~429; switch vertices to InstancedMesh if n grows further.
+> Still placeholder energy — the distance-matrix → circular-order energy pipeline
+> is the next piece and is what makes the downhill flow meaningful.
+
 ### 🟡 milestone · 00:05 — Working associahedron viewer renders (n-general)
 **Why:** Deliver the polytope viewer first (user's chosen first slice), built so it
 doesn't depend on the specific value of n; energy shown as both linked windows.
