@@ -12,9 +12,11 @@
     "verify:schemas": "npx --yes tsx scripts/verify-schemas.ts",
     "verify:geometry": "npx --yes tsx scripts/verify-geometry.ts",
     "verify": "npm run verify:schemas && npm run verify:geometry",
+    "lint": "eslint src",
     "test": "vitest run"
   },
   "dependencies": {
+    "dompurify": "^3.4.9",
     "lucide-react": "^0.410.0",
     "marked": "^15.0.12",
     "react": "^18.2.0",
@@ -22,12 +24,17 @@
     "three": "^0.163.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/three": "^0.177.0",
     "@vitejs/plugin-react": "^4.0.0",
+    "eslint": "^10.4.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.6.0",
     "puppeteer": "^24.10.0",
     "typescript": "^5.2.2",
+    "typescript-eslint": "^8.61.0",
     "vite": "^5.0.0",
     "vitest": "^4.1.8"
   }

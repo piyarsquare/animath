@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { applyLayout, compactZ, raiseWindow, sanitize } from '../layouts';
-import type { PersistedWorkspace, SectionDef, ViewDef } from '../types';
+import { applyLayout, compactZ, raiseWindow, sanitize, validateLayouts } from '../layouts';
+import { WS_RAIL } from '../geometry';
+import type { LayoutDef, PersistedWorkspace, SectionDef, ViewDef } from '../types';
 
 /* Minimal fixtures — node bodies are irrelevant to the pure layout math. */
 const sections: SectionDef[] = [
@@ -19,6 +20,22 @@ const ws = (over: Partial<PersistedWorkspace> = {}): PersistedWorkspace => ({
   views: { plot: { x: 360, y: 16, w: 400, h: 300, z: 1 }, aux: { x: 780, y: 16, w: 300, h: 300, z: 2 } },
   saved: [],
   ...over,
+});
+
+describe('validateLayouts — authored panels must clear the rail band', () => {
+  const layout = (open: LayoutDef['open']): LayoutDef =>
+    ({ id: 'essentials', name: 'Essentials', icon: 'layers', open });
+
+  it('flags a panel authored under the rail (the Trees-and-Nets x:16 bug)', () => {
+    const warnings = validateLayouts([layout({ function: { x: 16, y: 18 } })]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('"function"');
+    expect(warnings[0]).toContain('x:16');
+  });
+
+  it('accepts panels at or beyond the rail clearance', () => {
+    expect(validateLayouts([layout({ function: { x: WS_RAIL, y: 18 }, playback: { x: 400, y: 18 } })])).toEqual([]);
+  });
 });
 
 describe('sanitize', () => {

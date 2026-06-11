@@ -6,7 +6,7 @@ import { useEscLayer } from '../useEscLayer';
 import { sortByTier } from './archetypes';
 import { snapPos, snapResize, freeSlot, dockedChainBelow, PANEL_W } from './geometry';
 import type { Rect, SnapGuides } from './geometry';
-import { builtinLayouts, applyLayout, sanitize, raiseWindow, DEFAULT_EST } from './layouts';
+import { builtinLayouts, validateLayouts, applyLayout, sanitize, raiseWindow, DEFAULT_EST } from './layouts';
 import { ActionBar } from './ActionBar';
 import { LAYER } from './layers';
 import { Panel } from './Panel';
@@ -33,6 +33,9 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [sections.map(s => s.id).join(','), appLayouts]
   );
+  if (import.meta.env.DEV && appLayouts) {
+    for (const w of validateLayouts(appLayouts)) console.warn(`[workspace] ${w}`);
+  }
 
   const defaultLayout = (): LayoutDef => {
     const wanted = defaultLayoutId ?? appLayouts?.[0]?.id ?? 'everything';

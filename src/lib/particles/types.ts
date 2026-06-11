@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { ProjectionMode } from '../viewpoint';
 
 export interface ViewPoint {
   L: THREE.Quaternion;

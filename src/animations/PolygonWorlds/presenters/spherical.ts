@@ -10,7 +10,7 @@ import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
 import { develop } from '../lib/develop';
 import {
-  Vec3, Mat3, makeFrame, Frame, framePos, frameForward, originTo,
+  Vec3, makeFrame, Frame, framePos, frameForward, originTo,
   stepForward as kStep, stepHeading as kStrafe, turn as kTurn, reorthonormalize,
 } from '../lib/cayleyKlein';
 
@@ -69,8 +69,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const { scene, camera } = deps;
 
   const real: Realization = realize(parseWord(c.spec.word));
-  const wholeSphere = real.chart;            // sphere: chart the whole shell
-  const antipodal = !real.chart;             // ℝP²: hemisphere domain + Z/2 deck
+  const antipodal = !real.chart;             // ℝP²: hemisphere domain + Z/2 deck (chart ⇒ sphere charts the whole shell)
   const twin = develop(real).elements.find((e) => e.det() < 0) ?? null;
   const twinM4 = twin ? new THREE.Matrix4().set(
     twin.m[0], twin.m[1], twin.m[2], 0, twin.m[3], twin.m[4], twin.m[5], 0,
@@ -149,7 +148,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
 
   // seam ring (ℝP² only): the z=0 great circle where the two skins meet.
   const seamMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffe08a, emissiveIntensity: 0.4, roughness: 0.5 });
-  let seam = antipodal ? new THREE.Mesh(new THREE.TorusGeometry(R, 0.12, 8, 96), seamMat) : null;
+  const seam = antipodal ? new THREE.Mesh(new THREE.TorusGeometry(R, 0.12, 8, 96), seamMat) : null;
   if (seam) root.add(seam);
 
   // ── the ink trail: one buffer in true world coords on the fixed planet ──────

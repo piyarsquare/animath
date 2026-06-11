@@ -1,7 +1,28 @@
-import { packColumns } from './geometry';
+import { packColumns, WS_RAIL } from './geometry';
 import type { LayoutDef, SectionDef, ViewDef, PersistedWorkspace, PanelState, ViewState } from './types';
 
 export const DEFAULT_EST = 224;
+
+/**
+ * Dev-time lint for authored layouts: a panel rect with x < WS_RAIL opens
+ * underneath the floating rail (the Trees-and-Nets `x:16` bug — nothing else
+ * validates authored geometry). Returns warning strings; the workspace logs
+ * them in dev like `validateActions` does for the action strip.
+ */
+export function validateLayouts(layouts: LayoutDef[]): string[] {
+  const warnings: string[] = [];
+  for (const l of layouts) {
+    for (const id of Object.keys(l.open)) {
+      const x = l.open[id].x;
+      if (typeof x === 'number' && x < WS_RAIL) {
+        warnings.push(
+          `layout "${l.id}": panel "${id}" opens at x:${x}, under the rail band (x < ${WS_RAIL}) — it will be covered; use x ≥ ${WS_RAIL}`
+        );
+      }
+    }
+  }
+  return warnings;
+}
 
 /**
  * Built-in layouts for an app: Compact (rail only) first, the app's own

@@ -10,28 +10,11 @@
 // Usage:  npm run build && (npm run preview &) && node scripts/probe-raf.mjs
 // Env:    BASE_URL (default http://localhost:4173/animath/)
 
-import puppeteer from 'puppeteer';
+import { launch, openPage } from './probe-lib.mjs';
 
-const baseUrl = (process.env.BASE_URL ?? 'http://localhost:4173/animath/').replace(/\/?$/, '/');
-
-const args = [
-  '--headless=new',
-  '--use-gl=angle',
-  '--use-angle=swiftshader',
-  '--enable-unsafe-swiftshader',
-  '--no-sandbox',
-  '--disable-dev-shm-usage',
-];
-
-const browser = await puppeteer.launch({ args });
+const browser = await launch();
 try {
-  const page = await browser.newPage();
-  await page.setViewport({ width: 1280, height: 800 });
-  page.on('pageerror', (e) => console.log(`[pageerror] ${e.message}`));
-
-  console.log(`navigating → ${baseUrl}#/complex-particles`);
-  await page.goto(`${baseUrl}#/complex-particles`, { waitUntil: 'networkidle0', timeout: 60000 });
-  await page.waitForSelector('canvas', { timeout: 15000 });
+  const page = await openPage(browser, '#/complex-particles', { waitFor: 'canvas' });
   await new Promise((r) => setTimeout(r, 2500));
 
   // Two app → gallery round trips: leaked loops stack one per mount.

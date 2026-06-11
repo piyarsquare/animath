@@ -6,9 +6,12 @@
 > engine plus `ParticleViewerShell`, complex math moved to `lib/complexMath.ts`,
 > and textures to `lib/textures.ts` — but the concrete folder names below
 > (`core/`, `widgets/`, `ui/`) were **not** adopted. Shared code actually lives in
-> `src/components/` and `src/lib/`. For the current structure and the
-> hook-based AppShell framework, see **CLAUDE.md**; to build a new app, see
-> **docs/BUILDING_AN_APP.md**. Treat this file as background only.
+> `src/components/` and `src/lib/`, and the AppShell described here was later
+> replaced by the workspace chrome (`src/chrome/`). Some files this document
+> analyzes (`lib/R2Mapping.ts`, `lib/ParticleDisplay.ts`, `src/materials/`) have
+> since been deleted as orphans. For the current structure see **CLAUDE.md**; to
+> build a new app, see **docs/BUILDING_AN_APP.md**. Treat this file as background
+> only.
 
 This document provides a detailed analysis of the repository structure, identifies the core primitives, and proposes a consolidated architecture for better maintainability and extensibility.
 

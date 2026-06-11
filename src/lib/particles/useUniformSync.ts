@@ -5,7 +5,7 @@ import type { ParticleState } from './useParticleState';
 
 export function useUniformSync(state: ParticleState): void {
   const {
-    materialsRef, geometryRef, cameraRef, rendererRef, texturesRef,
+    materialsRef, cameraRef, rendererRef, texturesRef,
     xAxisRef, yAxisRef, uAxisRef, vAxisRef,
   } = state;
 

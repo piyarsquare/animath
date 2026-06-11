@@ -25,11 +25,14 @@ npm run dev         # Vite dev server at http://localhost:5173/animath/
 npm run build       # TypeScript check + Vite production build → dist/
 npm run preview     # preview production build locally
 npm test            # vitest unit tests (chrome workspace pure logic)
+npm run lint        # eslint over src/ (keep it at 0 errors)
 ```
 
 Node >= 20, npm >= 10 required. The only CI check is `npm run build` (which runs
 `tsc && vite build`). Unit tests cover the chrome's pure logic (`npm test`,
-vitest, `src/**/__tests__/`); there is no linter or formatter.
+vitest, `src/**/__tests__/`). ESLint is configured (`eslint.config.mjs`,
+lint-only — deliberately **no formatter**: a repo-wide reformat would conflict
+with every in-flight parallel branch).
 
 ## New here? Read these first
 
@@ -45,13 +48,14 @@ vitest, `src/**/__tests__/`); there is no linter or formatter.
 ```
 animath/
 ├── index.html                  # SPA entry point with global CSS
-├── package.json                # deps: react, react-dom, three, marked, lucide-react
+├── package.json                # deps: react, react-dom, three, marked, dompurify, lucide-react
 ├── tsconfig.json               # strict TS, target esnext, path alias @/ → src/
 ├── vite.config.ts              # base: '/animath/', @/ alias
+├── eslint.config.mjs           # ESLint flat config (lint-only; no formatter by design)
 ├── AGENTS.md                   # short instructions for other AI agents
 ├── CLAUDE.md                   # this file
 ├── ARCHITECTURE.md             # historical consolidation proposal (background only)
-├── PLAN.md                     # roadmap / plan notes
+├── PLAN.md                     # the prioritized roadmap of outstanding work
 ├── README.md                   # project documentation
 ├── docs/
 │   ├── BUILDING_AN_APP.md      # how to add a new app to the framework
@@ -131,9 +135,7 @@ animath/
     │   ├── viewpoint.ts                # 4D → 3D projection helpers + ProjectionMode
     │   ├── complexMath.ts              # complex arithmetic + function name/formula tables
     │   ├── colormaps.ts                # GLSL palette source + palette options (fractals)
-    │   ├── textures.ts                 # particle texture factory (checker/stone/metal/HDR)
-    │   ├── ParticleDisplay.ts          # (legacy, unused)
-    │   └── R2Mapping.ts                # (legacy, unused)
+    │   └── textures.ts                 # particle texture factory (checker/stone/metal/HDR)
     │
     ├── math/
     │   ├── constants.ts        # plane names ('XY','XU',…) and QUARTER constant
@@ -141,7 +143,6 @@ animath/
     │
     ├── config/defaults.ts      # shared slider ranges + initial values
     ├── styles/responsive.ts    # breakpoints + useResponsive hook
-    ├── materials/index.ts      # Three.js material presets (legacy, unused)
     ├── types/uniforms.d.ts     # shader uniform type declarations
     └── unported_examples/      # excluded from build (tsconfig exclude)
 ```
@@ -364,19 +365,25 @@ place via `React.lazy`; the HDR texture path is now `base`-aware; touch/gesture
 support exists across the 3D, 2D, and DOM apps; and the former orphan `Fractals2D`
 is reachable at `#/fractals-cpu`.
 
+The 2026-06-11 debt session cleared the long-standing list: ESLint adopted
+(`npm run lint`, 0 errors; lint-only — no formatter, by decision), the orphaned
+utilities (`lib/ParticleDisplay.ts`, `lib/R2Mapping.ts`, `src/materials/`) and
+empty stubs (`requirements.txt`, `run/setup.sh`) deleted, `Readme.tsx` output
+sanitized with DOMPurify, the stale `PLAN.md` replaced by the prioritized
+roadmap, and the deploy-workflow duplicate step confirmed already fixed.
+
 Remaining items:
 
-1. **No linter / formatter** — no eslint or prettier. CI validation is
-   `npm run build`; `npm test` (vitest) exists but covers only the chrome
-   workspace's pure logic (layouts/z-order, Esc layer stack) so far.
-2. **Deploy workflow has a duplicate `configure-pages` step** (`.github/workflows/deploy.yml`).
-3. **Orphaned utilities** — `lib/ParticleDisplay.ts`, `lib/R2Mapping.ts`, and
-   `materials/index.ts` are never imported.
-4. **Placeholder files** — `requirements.txt` and `run/setup.sh` are empty stubs.
-5. **XSS surface** — `Readme.tsx` uses `dangerouslySetInnerHTML` with `marked`
-   output (content is first-party only, but unsanitised).
-6. **`ARCHITECTURE.md` is aspirational** — it proposes a `core/widgets/ui` layout
-   that was not adopted; the actual shared code lives in `components/` and `lib/`.
+1. **CI runs only `npm run build`** — `npm test` and `npm run lint` are not CI
+   gates yet; keep them green by convention. Lint carries ~60 warnings
+   (`exhaustive-deps`, `no-explicit-any`) accepted as the baseline — don't add
+   new ones.
+2. **`npm audit`: 2 moderate dev-only advisories** (esbuild via vite ^5; affects
+   the local dev server only). The fix is a breaking vite major upgrade —
+   scheduled as its own chore in `PLAN.md`, not bolted onto another change.
+3. **`ARCHITECTURE.md` is historical** — it proposes a `core/widgets/ui` layout
+   that was not adopted (banner at its top says so); the actual shared code
+   lives in `components/` and `lib/`.
 
 ## Development Workflow
 

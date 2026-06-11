@@ -10,44 +10,14 @@
 // Usage:  npm run build && (npm run preview &) && node scripts/probe-actionbar.mjs
 // Env:    BASE_URL (default http://localhost:4173/animath/), SHOTS=1 to save PNGs.
 
-import puppeteer from 'puppeteer';
+import { shots, launch, openPage, onTop, makeChecker } from './probe-lib.mjs';
 
-const baseUrl = process.env.BASE_URL ?? 'http://localhost:4173/animath/';
-const url = baseUrl.replace(/\/?$/, '/') + '#/stable-matching';
-const shots = !!process.env.SHOTS;
+const { check, finish } = makeChecker();
 
-const args = [
-  '--headless=new',
-  '--use-gl=angle',
-  '--use-angle=swiftshader',
-  '--enable-unsafe-swiftshader',
-  '--no-sandbox',
-  '--disable-dev-shm-usage',
-];
-
-let failures = 0;
-const check = (name, ok, detail = '') => {
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
-  if (!ok) failures++;
-};
-
-const onTop = (page, sel) => page.evaluate((s) => {
-  const el = document.querySelector(s);
-  if (!el) return false;
-  const r = el.getBoundingClientRect();
-  const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-  return !!hit && (el.contains(hit) || hit.contains(el));
-}, sel);
-
-const browser = await puppeteer.launch({ args });
+const browser = await launch();
 try {
   // ---- desktop ----
-  const page = await browser.newPage();
-  await page.setViewport({ width: 1280, height: 800 });
-  page.on('pageerror', (e) => console.log(`[pageerror] ${e.message}`));
-  console.log(`navigating → ${url} (desktop)`);
-  await page.goto(url, { waitUntil: 'networkidle0', timeout: 60000 });
-  await page.waitForSelector('.am-actionbar', { timeout: 10000 });
+  const page = await openPage(browser, '#/stable-matching', { waitFor: '.am-actionbar' });
 
   check('desktop: action strip renders', true);
   check('desktop: strip is hit-testable', await onTop(page, '.am-actionbar'));
@@ -78,11 +48,8 @@ try {
   await page.click(playSel); // leave paused
 
   // ---- phone ----
-  const phone = await browser.newPage();
-  await phone.setViewport({ width: 390, height: 844 });
-  console.log(`navigating → ${url} (phone 390×844)`);
-  await phone.goto(url, { waitUntil: 'networkidle0', timeout: 60000 });
-  await phone.waitForSelector('.am-actionbar-phone', { timeout: 10000 });
+  const phone = await openPage(browser, '#/stable-matching',
+    { width: 390, height: 844, waitFor: '.am-actionbar-phone' });
   check('phone: strip renders above the dock', await onTop(phone, '.am-actionbar-phone'));
   const labelVisible = await phone.$eval(
     '.am-actionbar-phone .am-action-btn span',
@@ -95,5 +62,4 @@ try {
   await browser.close();
 }
 
-console.log(failures === 0 ? '\nall checks passed' : `\n${failures} check(s) FAILED`);
-process.exit(failures === 0 ? 0 : 1);
+finish();

@@ -153,6 +153,14 @@ questions. The implementing agent should update this file as phases land.
   Mandelbrot ↔ Julia deliberately stays two windows (linkage by parameter, not scale).
   Probe: `scripts/probe-split.mjs` (6 checks: equal panes through resize + fullscreen, embed
   parity).
+- 2026-06-11: **Debt session** (branch `claude/review-todo-prioritize-g66uqj`): ESLint adopted
+  (`npm run lint`, flat config, lint-only — no formatter by decision; React Compiler rules
+  deliberately excluded as incompatible with the ref-driven Three.js engine); the probe scripts'
+  shared boilerplate extracted to `scripts/probe-lib.mjs` (the prior handoff's follow-up); authored
+  layouts now dev-validated by `validateLayouts` (warns when a panel rect opens under the rail band,
+  x < WS_RAIL — the Trees-and-Nets `x:16` class); `Readme.tsx` sanitized with DOMPurify; orphaned
+  files and stubs deleted; `PLAN.md` became the prioritized roadmap (it ranks this file's
+  "Still open" list).
 - 2026-06: **CHROME-REVIEW PR D landed — start hints + ungated pick**: `ViewDef.hint` renders
   a centered, math-anchored invitation on the shared `.am-view-overlay` layer (pass-through;
   P3's HUDs will live there later), gone on the view's first pointer interaction, per-session

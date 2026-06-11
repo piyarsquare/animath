@@ -120,7 +120,6 @@ export default function TopologyWalk() {
       rafRef.current = requestAnimationFrame(animate);
     };
     rafRef.current = requestAnimationFrame(animate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Surface change: rebuild the engine when crossing the corridor/flat divide,
