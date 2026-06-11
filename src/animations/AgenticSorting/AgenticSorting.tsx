@@ -16,7 +16,7 @@ import {
   runExperiment, METRIC_LABELS,
   type MetricKey, type GroupResult, type ExperimentSpec, type SweepParam,
 } from './lab';
-import { LabResults } from './Lab';
+import { LabResults } from './LabResults';
 import explainerText from './EXPLAINER.md?raw';
 import readmeText from './README.md?raw';
 
@@ -88,13 +88,6 @@ export default function AgenticSorting() {
 
   // ---- top-bar mode (Sandbox = live sim · Lab = batch experiments) ----
   const [mode, setMode] = usePersistentState<'sandbox' | 'lab'>('agentic-sorting:mode', 'sandbox');
-
-  // ---- sandbox quick-replicate ("same settings, different instances") ----
-  const [repTrials, setRepTrials] = usePersistentState('agentic-sorting:repTrials', 20);
-  const [repMetric, setRepMetric] = usePersistentState<MetricKey>('agentic-sorting:repMetric', 'cyclesToSort');
-  const [repRunning, setRepRunning] = useState(false);
-  const [repProgress, setRepProgress] = useState(0);
-  const [repResult, setRepResult] = useState<GroupResult | null>(null);
 
   // ---- lab (full batch experiments) ----
   const [labKind, setLabKind] = usePersistentState<'compare' | 'mixes' | 'monte' | 'sweep'>('agentic-sorting:labKind', 'compare');
@@ -392,20 +385,6 @@ export default function AgenticSorting() {
   const removeMix = (id: number) =>
     setSavedMixes(prev => prev.filter(m => m.id !== id));
 
-  // run the current sandbox settings many times on fresh seeds (quick multi-run)
-  const runReplicate = useCallback(async () => {
-    if (repRunning) return;
-    setRepRunning(true); setRepProgress(0); setRepResult(null);
-    const spec: ExperimentSpec = {
-      kind: 'monte', trials: repTrials, count: arraySize, wakeFraction,
-      threshold: 0.99, cap: 4000, objectiveMode, descShare: descShare / 100,
-      frozenShare: frozenPct / 100, weights, seed: (Math.random() * 0xffffffff) >>> 0,
-    };
-    const res = await runExperiment(spec, setRepProgress);
-    setRepResult(res[0]);
-    setRepRunning(false);
-  }, [repRunning, repTrials, arraySize, wakeFraction, objectiveMode, descShare, frozenPct, weights]);
-
   // full lab experiment (compare strategies · monte-carlo · parameter sweep)
   const SWEEP_RANGE: Record<SweepParam, [number, number]> = {
     count: [16, 300], frozenShare: [0, 0.4], wakeFraction: [0.05, 0.5], descShare: [0, 1], blend: [0, 100],
@@ -610,23 +589,6 @@ export default function AgenticSorting() {
     </div>
   );
 
-  // lightweight "same settings, different instances" multi-run (no Lab mode)
-  const replicateNode = (
-    <div className="as-panel">
-      <Slider label="Instances" value={repTrials} min={4} max={100} step={1} onChange={setRepTrials} />
-      <Pills label="Measure" value={repMetric} options={METRIC_OPTS} onChange={setRepMetric} />
-      <button className="as-button as-button-primary" disabled={repRunning} onClick={runReplicate}>
-        {repRunning ? `Running… ${Math.round(repProgress * 100)}%` : `Run ${repTrials} instances`}
-      </button>
-      {repRunning && <div className="as-progress"><div className="as-progress-fill" style={{ width: `${repProgress * 100}%` }} /></div>}
-      {repResult && !repRunning && <LabResults kind="monte" results={[repResult]} metric={repMetric} />}
-      <p className="as-hint">
-        Same settings, different instances: runs the current mix / objective /
-        frozen on {repTrials} fresh random populations and aggregates the outcome.
-      </p>
-    </div>
-  );
-
   /* ---------- lab-mode panels ---------- */
 
   const labExperimentNode = (
@@ -779,8 +741,7 @@ export default function AgenticSorting() {
     { id: 'agents', title: 'Population mix', arch: 'drive', node: agentsNode, estHeight: 500 },
     { id: 'run', title: 'Run', arch: 'playback', node: runNode, estHeight: 200 },
     { id: 'metrics', title: 'Metrics', arch: 'readout', node: metricsNode, estHeight: 340 },
-    { id: 'track', title: 'Track agent', arch: 'lab', node: trackNode, estHeight: 240 },
-    { id: 'replicate', title: 'Replicate', arch: 'lab', node: replicateNode, estHeight: 320 },
+    { id: 'track', title: 'Track agent', arch: 'readout', node: trackNode, estHeight: 240 },
   ];
 
   const labSections: SectionDef[] = [
