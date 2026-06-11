@@ -52,6 +52,22 @@ and the **Monotone runs** readout falls; **Blind Date's** long-range swaps
 frustrate that, keeping the array churned. Watch **Monotone runs**, not sortedness
 — global sortedness no longer tells the story.
 
+## From one run to many (Sandbox vs Lab)
+
+One run tells you a story; many runs tell you a *distribution*. Two ways to go
+beyond one-shot:
+
+- **Replicate** (a Sandbox panel) — re-runs your *current* settings on many fresh
+  random populations and aggregates the outcome: same parameters, different
+  instances. The fastest way to see how variable a configuration is.
+- **Lab** (the top-bar mode) — full batch experiments over headless runs:
+  **Compare** each pure algotype head-to-head (this is where "Blind Date sorts in
+  ~545 swaps" comes from), **Monte-Carlo** the current mix, or **Sweep** one knob
+  across its range. Measure cycles-to-sort, swaps, final sortedness, or clustering,
+  with mean ± sd over the trials.
+
+Because each agent rule is a pure function, thousands of trials run in a moment.
+
 ## The knobs
 
 - **Array size / Wake rate** — how many agents, and what fraction act per cycle.

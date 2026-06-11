@@ -47,6 +47,34 @@ the same function" intermediate the user remembered.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 23:30 — Batch Lab + lightweight Replicate (multi-run)
+**Why:** User wanted "run multiple examples and measure the outcome" (the app was
+one-shot only); chose all three experiment types as a Lab mode, plus a follow-up
+ask for a lighter "same parameters, different instances" multi-run.
+
+- **`lab.ts`** — pure batch engine reusing `step()`: `runTrial` (to cap,
+  recording first crossing of the 0.99 sort threshold) + `runExperiment` (async,
+  chunked, yields for the progress bar). Three specs: **compare** (each pure
+  algotype + current mix), **monte** (current mix on many seeds), **sweep** (one
+  of array size / frozen / wake / descending across its range). Metrics:
+  cyclesToSort, swaps, finalSortedness, clustering; `aggregate()` → mean/sd/min/max.
+- **`Lab.tsx`** — `LabResults`: bar chart w/ error bars (compare), MiniHisto +
+  StatGrid (monte), line chart (sweep), plus a table.
+- **Lab as a top-bar mode** (`modes`/`activeMode`/`onModeChange`, `key={mode}`,
+  per-mode appId so layouts persist independently). Sandbox sim loop + canvas
+  observers now gate on `mode==='sandbox'` and re-attach on mode change.
+- **Replicate** panel in the Sandbox (reuses `runExperiment` monte) — the
+  lightweight multi-run the user asked for, rendered via `LabResults kind="monte"`.
+
+Headless validation (`tsx`): compare ranks patrolling fastest (366 cyc),
+perfectionist cheapest-ish (742 swaps), blindDate fewest swaps (303); sweep
+frozen 0→0.4 gives finalSortedness 94%→67% (clean monotone). **Finding:** the
+equal 5-way mix is genuinely slow to *fully* sort (≈0% converge by cap 3000–5000)
+— every swap still strictly reduces inversions, but the far-from-home tail leans
+on the 40% long-range agents. Surfaced honestly via the convergence column + a
+Metric-panel hint + a README note (no false "mixes always win"). Defaults tuned
+(labCount 64, cap 3000). `tsc` clean; `npm run build` green.
+
 ### 🟡 milestone · 22:55 — All-trajectories delayed-gratification view (replaces weak tracker as primary)
 **Why:** User: the single click-tracker "is not a good way to observe delayed
 gratification" — wants *all* trajectories at once, colored by shape.

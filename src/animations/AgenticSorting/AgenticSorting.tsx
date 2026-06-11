@@ -4,7 +4,7 @@ import './agenticSorting.css';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { StatGrid, Sparkline, Kicker } from '../../chrome/readouts';
-import { Slider, Pills } from '../../components/ControlPanel';
+import { Slider, Pills, Select } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
 import {
   generate, step, mulberry32,
@@ -12,6 +12,11 @@ import {
 } from './engine';
 import { measure, homeIndex, type MetricsView } from './metrics';
 import { drawArena, drawTrajectories, TYPE_COLORS } from './arena';
+import {
+  runExperiment, METRIC_LABELS,
+  type MetricKey, type GroupResult, type ExperimentSpec, type SweepParam,
+} from './lab';
+import { LabResults } from './Lab';
 import explainerText from './EXPLAINER.md?raw';
 import readmeText from './README.md?raw';
 
@@ -45,6 +50,13 @@ const DEFAULT_WEIGHTS: Weights = {
   standard: 20, blindDate: 20, nomadic: 20, patrolling: 20, perfectionist: 20,
 };
 
+const METRIC_OPTS: { value: MetricKey; label: string }[] = [
+  { value: 'cyclesToSort', label: 'Cycles' },
+  { value: 'swaps', label: 'Swaps' },
+  { value: 'finalSortedness', label: 'Sorted' },
+  { value: 'clustering', label: 'Cluster' },
+];
+
 const emptyMetrics: MetricsView = {
   cycles: 0, wakeups: 0, swaps: 0, sortedness: 1, inversions: 0,
   runs: 1, clustering: 0, ceiling: 1, hasFrozen: false, descShareLive: 0,
@@ -61,6 +73,31 @@ export default function AgenticSorting() {
   const [descShare, setDescShare] = usePersistentState('agentic-sorting:descshare', 50);
   const [frozenPct, setFrozenPct] = usePersistentState('agentic-sorting:frozen', 0);
   const [weights, setWeights] = usePersistentState<Weights>('agentic-sorting:weights', DEFAULT_WEIGHTS);
+
+  // ---- top-bar mode (Sandbox = live sim · Lab = batch experiments) ----
+  const [mode, setMode] = usePersistentState<'sandbox' | 'lab'>('agentic-sorting:mode', 'sandbox');
+
+  // ---- sandbox quick-replicate ("same settings, different instances") ----
+  const [repTrials, setRepTrials] = usePersistentState('agentic-sorting:repTrials', 20);
+  const [repMetric, setRepMetric] = usePersistentState<MetricKey>('agentic-sorting:repMetric', 'cyclesToSort');
+  const [repRunning, setRepRunning] = useState(false);
+  const [repProgress, setRepProgress] = useState(0);
+  const [repResult, setRepResult] = useState<GroupResult | null>(null);
+
+  // ---- lab (full batch experiments) ----
+  const [labKind, setLabKind] = usePersistentState<'compare' | 'monte' | 'sweep'>('agentic-sorting:labKind', 'compare');
+  const [labTrials, setLabTrials] = usePersistentState('agentic-sorting:labTrials', 24);
+  const [labCount, setLabCount] = usePersistentState('agentic-sorting:labCount', 64);
+  const [labWake, setLabWake] = usePersistentState('agentic-sorting:labWake', 0.15);
+  const [labCap, setLabCap] = usePersistentState('agentic-sorting:labCap', 3000);
+  const [labMetric, setLabMetric] = usePersistentState<MetricKey>('agentic-sorting:labMetric', 'cyclesToSort');
+  const [sweepParam, setSweepParam] = usePersistentState<SweepParam>('agentic-sorting:sweepParam', 'count');
+  const [sweepSteps, setSweepSteps] = usePersistentState('agentic-sorting:sweepSteps', 7);
+  const [labRunning, setLabRunning] = useState(false);
+  const [labProgress, setLabProgress] = useState(0);
+  const [labResults, setLabResults] = useState<GroupResult[]>([]);
+  const [labResultKind, setLabResultKind] = useState<'compare' | 'monte' | 'sweep'>('compare');
+  const [labSweepLabel, setLabSweepLabel] = useState('');
 
   // ---- transient ----
   const [isRunning, setIsRunning] = useState(false);
@@ -251,7 +288,7 @@ export default function AgenticSorting() {
     });
     ro.observe(cvs);
     return () => ro.disconnect();
-  }, [draw]);
+  }, [draw, mode]);
 
   // DPR-aware sizing for the trajectories canvas
   useEffect(() => {
@@ -271,11 +308,11 @@ export default function AgenticSorting() {
     });
     ro.observe(cvs);
     return () => ro.disconnect();
-  }, [drawTraj]);
+  }, [drawTraj, mode]);
 
   // the simulation loop — fixed-timestep accumulator, one draw per frame
   useEffect(() => {
-    if (!isRunning) return;
+    if (!isRunning || mode !== 'sandbox') return;
     lastRef.current = performance.now();
     const loop = (t: number) => {
       rafRef.current = requestAnimationFrame(loop);
@@ -303,10 +340,51 @@ export default function AgenticSorting() {
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [isRunning, draw, flushMetrics, recordTraj, drawTraj]);
+  }, [isRunning, mode, draw, flushMetrics, recordTraj, drawTraj]);
 
   const setWeight = (type: AgentType, val: number) =>
     setWeights(prev => ({ ...prev, [type]: val }));
+
+  // run the current sandbox settings many times on fresh seeds (quick multi-run)
+  const runReplicate = useCallback(async () => {
+    if (repRunning) return;
+    setRepRunning(true); setRepProgress(0); setRepResult(null);
+    const spec: ExperimentSpec = {
+      kind: 'monte', trials: repTrials, count: arraySize, wakeFraction,
+      threshold: 0.99, cap: 4000, objectiveMode, descShare: descShare / 100,
+      frozenShare: frozenPct / 100, weights, seed: (Math.random() * 0xffffffff) >>> 0,
+    };
+    const res = await runExperiment(spec, setRepProgress);
+    setRepResult(res[0]);
+    setRepRunning(false);
+  }, [repRunning, repTrials, arraySize, wakeFraction, objectiveMode, descShare, frozenPct, weights]);
+
+  // full lab experiment (compare strategies · monte-carlo · parameter sweep)
+  const SWEEP_RANGE: Record<SweepParam, [number, number]> = {
+    count: [16, 300], frozenShare: [0, 0.4], wakeFraction: [0.05, 0.5], descShare: [0, 1],
+  };
+  const runLab = useCallback(async () => {
+    if (labRunning) return;
+    setLabRunning(true); setLabProgress(0);
+    const common = {
+      trials: labTrials, count: labCount, wakeFraction: labWake,
+      threshold: 0.99, cap: labCap, objectiveMode, descShare: descShare / 100,
+      frozenShare: frozenPct / 100, weights, seed: (Math.random() * 0xffffffff) >>> 0,
+    };
+    let spec: ExperimentSpec;
+    if (labKind === 'sweep') {
+      const [from, to] = SWEEP_RANGE[sweepParam];
+      spec = { kind: 'sweep', param: sweepParam, from, to, steps: sweepSteps, ...common };
+    } else {
+      spec = { kind: labKind, ...common };
+    }
+    const res = await runExperiment(spec, setLabProgress);
+    setLabResults(res);
+    setLabResultKind(labKind);
+    setLabSweepLabel(labKind === 'sweep' ? sweepParam : '');
+    setLabRunning(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [labRunning, labKind, labTrials, labCount, labWake, labCap, sweepParam, sweepSteps, objectiveMode, descShare, frozenPct, weights]);
 
   const pct = (x: number) => `${Math.round(x * 100)}%`;
   const signedPct = (x: number) => `${x >= 0 ? '+' : ''}${Math.round(x * 100)}%`;
@@ -472,6 +550,99 @@ export default function AgenticSorting() {
     </div>
   );
 
+  // lightweight "same settings, different instances" multi-run (no Lab mode)
+  const replicateNode = (
+    <div className="as-panel">
+      <Slider label="Instances" value={repTrials} min={4} max={100} step={1} onChange={setRepTrials} />
+      <Pills label="Measure" value={repMetric} options={METRIC_OPTS} onChange={setRepMetric} />
+      <button className="as-button as-button-primary" disabled={repRunning} onClick={runReplicate}>
+        {repRunning ? `Running… ${Math.round(repProgress * 100)}%` : `Run ${repTrials} instances`}
+      </button>
+      {repRunning && <div className="as-progress"><div className="as-progress-fill" style={{ width: `${repProgress * 100}%` }} /></div>}
+      {repResult && !repRunning && <LabResults kind="monte" results={[repResult]} metric={repMetric} />}
+      <p className="as-hint">
+        Same settings, different instances: runs the current mix / objective /
+        frozen on {repTrials} fresh random populations and aggregates the outcome.
+      </p>
+    </div>
+  );
+
+  /* ---------- lab-mode panels ---------- */
+
+  const labExperimentNode = (
+    <div className="as-panel">
+      <Pills
+        label="Experiment" value={labKind}
+        options={[
+          { value: 'compare', label: 'Compare' },
+          { value: 'monte', label: 'Monte-Carlo' },
+          { value: 'sweep', label: 'Sweep' },
+        ]}
+        onChange={setLabKind}
+      />
+      {labKind === 'sweep' && (
+        <>
+          <Select
+            label="Sweep parameter" value={sweepParam}
+            options={[
+              { value: 'count', label: 'Array size' },
+              { value: 'frozenShare', label: 'Frozen %' },
+              { value: 'wakeFraction', label: 'Wake rate' },
+              { value: 'descShare', label: 'Descending %' },
+            ]}
+            onChange={setSweepParam}
+          />
+          <Slider label="Sweep points" value={sweepSteps} min={3} max={12} step={1} onChange={setSweepSteps} />
+        </>
+      )}
+      <p className="as-hint">
+        {labKind === 'compare'
+          ? 'Each pure algotype and the current mix, head-to-head (the "545 swaps" comparison).'
+          : labKind === 'monte'
+            ? 'Repeats the current mix / objective / frozen settings on many seeds.'
+            : 'Varies one knob across its range; the rest come from the current settings.'}
+      </p>
+    </div>
+  );
+
+  const labConditionsNode = (
+    <div className="as-panel">
+      <Slider label="Trials per condition" value={labTrials} min={4} max={80} step={1} onChange={setLabTrials} />
+      <Slider label="Array size" value={labCount} min={16} max={200} step={1} onChange={setLabCount} format={(v) => `${v} agents`} />
+      <Slider label="Wake rate" value={labWake} min={0.05} max={0.5} step={0.01} onChange={setLabWake} format={pct} />
+      <Slider label="Cycle cap" value={labCap} min={200} max={6000} step={100} onChange={setLabCap} />
+      <p className="as-hint">A trial sorts a fresh population until ≥99% sorted or the cap. Larger array × trials × cap takes longer.</p>
+    </div>
+  );
+
+  const labMetricNode = (
+    <div className="as-panel">
+      <Pills label="Show metric" value={labMetric} options={METRIC_OPTS} onChange={setLabMetric} />
+      <p className="as-hint">
+        {METRIC_LABELS[labMetric]} across conditions. A condition that doesn't
+        fully sort within the cap is plotted <em>at</em> the cap — read the
+        convergence column. Try <strong>Final sortedness</strong> for non-
+        converging cases (mixes, frozen, phase separation). Clustering is only
+        meaningful for the mixed population (pure strategies report ≈0).
+      </p>
+    </div>
+  );
+
+  const labRunNode = (
+    <div className="as-panel">
+      <button className="as-button as-button-primary" disabled={labRunning} onClick={runLab}>
+        {labRunning ? `Running… ${Math.round(labProgress * 100)}%` : 'Run experiment'}
+      </button>
+      {labRunning && <div className="as-progress"><div className="as-progress-fill" style={{ width: `${labProgress * 100}%` }} /></div>}
+    </div>
+  );
+
+  const labResultsNode = (
+    <div className="as-arena as-lab-results">
+      <LabResults kind={labResultKind} results={labResults} metric={labMetric} sweepLabel={labSweepLabel} />
+    </div>
+  );
+
   const arenaNode = (
     <div className="as-arena">
       <canvas
@@ -496,21 +667,33 @@ export default function AgenticSorting() {
     </div>
   );
 
-  const sections: SectionDef[] = [
+  const sandboxSections: SectionDef[] = [
     { id: 'array', title: 'Array', arch: 'subject', node: arrayNode, estHeight: 250 },
     { id: 'display', title: 'Display', arch: 'marks', node: displayNode, estHeight: 180 },
     { id: 'agents', title: 'Population mix', arch: 'drive', node: agentsNode, estHeight: 500 },
     { id: 'run', title: 'Run', arch: 'playback', node: runNode, estHeight: 200 },
     { id: 'metrics', title: 'Metrics', arch: 'readout', node: metricsNode, estHeight: 340 },
     { id: 'track', title: 'Track agent', arch: 'lab', node: trackNode, estHeight: 240 },
+    { id: 'replicate', title: 'Replicate', arch: 'lab', node: replicateNode, estHeight: 320 },
   ];
 
-  const views: ViewDef[] = [
+  const labSections: SectionDef[] = [
+    { id: 'labExperiment', title: 'Experiment', arch: 'subject', node: labExperimentNode, estHeight: 240 },
+    { id: 'labConditions', title: 'Conditions', arch: 'domain', node: labConditionsNode, estHeight: 320 },
+    { id: 'labMetric', title: 'Metric', arch: 'marks', node: labMetricNode, estHeight: 150 },
+    { id: 'labRun', title: 'Run', arch: 'playback', node: labRunNode, estHeight: 150 },
+  ];
+
+  const sandboxViews: ViewDef[] = [
     { id: 'arena', title: 'Array', node: arenaNode, defaultRect: { x: 372, y: 16, w: 720, h: 360 } },
     { id: 'trajectories', title: 'Trajectories', node: trajNode, defaultRect: { x: 372, y: 392, w: 720, h: 300 } },
   ];
 
-  const layouts: LayoutDef[] = [
+  const labViews: ViewDef[] = [
+    { id: 'labResults', title: 'Results', node: labResultsNode, defaultRect: { x: 372, y: 16, w: 760, h: 560 } },
+  ];
+
+  const sandboxLayouts: LayoutDef[] = [
     {
       id: 'setup', name: 'Setup', sub: 'Array · Mix · Run', icon: 'tune',
       open: { array: { x: 84, y: 18 }, run: { x: 84, y: 280 }, agents: { x: 84, y: 500 } },
@@ -529,18 +712,38 @@ export default function AgenticSorting() {
     },
   ];
 
+  const labLayouts: LayoutDef[] = [
+    {
+      id: 'lab', name: 'Lab', sub: 'Experiment · Results', icon: 'chart',
+      open: {
+        labExperiment: { x: 84, y: 18 }, labMetric: { x: 84, y: 300 },
+        labRun: { x: 84, y: 470 }, labConditions: { x: 84, y: 600 },
+      },
+      views: { labResults: { x: 372, y: 16, w: 760, h: 600, open: true } },
+    },
+  ];
+
+  const modes = [
+    { id: 'sandbox', label: 'Sandbox' },
+    { id: 'lab', label: 'Lab' },
+  ];
+
   const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
 
   return (
     <Workspace
-      appId="agentic-sorting"
+      key={mode}
+      appId={mode === 'lab' ? 'agentic-sorting-lab' : 'agentic-sorting'}
       title="Agentic Sorting"
-      subtitle="Emergent order from selfish local rules"
-      sections={sections}
-      views={views}
-      layouts={layouts}
-      defaultLayoutId="setup"
+      subtitle={mode === 'lab' ? 'Batch experiments over many instances' : 'Emergent order from selfish local rules'}
+      sections={mode === 'lab' ? labSections : sandboxSections}
+      views={mode === 'lab' ? labViews : sandboxViews}
+      layouts={mode === 'lab' ? labLayouts : sandboxLayouts}
+      defaultLayoutId={mode === 'lab' ? 'lab' : 'setup'}
       explainer={help}
+      modes={modes}
+      activeMode={mode}
+      onModeChange={(id) => setMode(id as 'sandbox' | 'lab')}
     />
   );
 }

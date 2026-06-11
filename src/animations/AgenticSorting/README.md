@@ -52,6 +52,30 @@ An agent's **algotype** (its rule) is independent of its **value** and its
   generally does not fully sort; it forms monotone domains instead. Watch
   **Monotone runs**, not sortedness.
 
+## Sandbox vs Lab
+
+The top-bar pills switch between two modes:
+
+- **Sandbox** — the live simulation, with the arena, the all-agent **Trajectories**
+  plot (every agent's distance-to-home over time, warm = backtracked = delayed
+  gratification), the single-agent tracker, and a **Replicate** panel that re-runs
+  the current settings on many fresh instances and shows the outcome distribution.
+- **Lab** — batch experiments over headless runs:
+  - **Compare** — each pure algotype (and the current mix) head-to-head; the
+    source of head-to-head numbers like "Blind Date ≈ 545 swaps."
+  - **Monte-Carlo** — the current mix repeated on many seeds (same parameters,
+    different instances); a histogram of the outcome.
+  - **Sweep** — vary one knob (array size, frozen %, wake rate, descending share)
+    across its range and plot the outcome curve.
+
+  Outcomes: cycles-to-sort, total swaps, final sortedness, clustering reached —
+  each as mean ± sd, with a convergence rate (a condition that doesn't fully sort
+  within the cycle cap is reported at the cap).
+
+> A note the Lab makes vivid: an equal five-way mix is *slower to fully sort* than
+> its best pure strategies — the long tail of far-from-home elements leans on the
+> minority of long-range agents. "More variety" is not automatically "faster."
+
 ## Parameters
 
 - **Array size** (16–400) and **Wake rate** (fraction of agents acting per cycle).

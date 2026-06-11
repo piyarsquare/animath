@@ -126,6 +126,56 @@
 
 .as-arena-canvas { cursor: crosshair; }
 
+/* ── Lab: progress bar, results, table ── */
+.as-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.as-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.1s linear;
+}
+
+.as-lab-results {
+  padding: 16px;
+  overflow: auto;
+}
+
+.as-lab-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  margin-top: 8px;
+}
+
+.as-lab-table th {
+  text-align: right;
+  font-weight: 600;
+  color: var(--dim);
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.as-lab-table th:first-child { text-align: left; }
+
+.as-lab-table td {
+  text-align: right;
+  padding: 3px 6px;
+  font-family: var(--font-mono);
+  border-bottom: 1px solid var(--border-soft, var(--border));
+}
+
+.as-lab-table td:first-child {
+  text-align: left;
+  font-family: inherit;
+  color: var(--fg);
+}
+
 /* ── Trajectories legend ── */
 .as-traj-legend {
   position: absolute;
