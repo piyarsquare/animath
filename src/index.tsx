@@ -18,6 +18,7 @@ const StableMarriage = React.lazy(() => import('./animations/StableMarriage/Stab
 const StableMatching = React.lazy(() => import('./animations/StableMatching/StableMatching'));
 const AgenticSorting = React.lazy(() => import('./animations/AgenticSorting/AgenticSorting'));
 const PolygonWorlds = React.lazy(() => import('./animations/PolygonWorlds/PolygonWorlds'));
+const TreesAndNets = React.lazy(() => import('./animations/TreesAndNets/TreesAndNets'));
 const EmbedComplexParticles = React.lazy(() => import('./embed/EmbedComplexParticles'));
 const EmbedPlaneTransform = React.lazy(() => import('./embed/EmbedPlaneTransform'));
 
@@ -38,6 +39,7 @@ const routes: Record<string, React.ComponentType> = {
   '/stable-matching': StableMatching,   // rebuild of Stable Marriage; will replace it on switch
   '/agentic-sorting': AgenticSorting,
   '/polygon-worlds': PolygonWorlds,
+  '/trees-and-nets': TreesAndNets,
   // Chrome-less applet routes for embedding in web pages (docs/EMBEDS.md).
   '/embed/complex-particles': EmbedComplexParticles,
   '/embed/plane-transform': EmbedPlaneTransform,
