@@ -34,6 +34,27 @@ camera/headlamp bug.
 
 ## Working notes
 
+### 🔵 finding · 06-11 — Zip words: cut-trees on the sphere; cone-point orbifolds elsewhere
+**Why:** User asked why zip pairs (`x x⁻¹`) can't appear in our charts and
+what it would take.
+
+A zip pair sews the polygon boundary to itself — an all-zip polygon is the
+surface **cut open along a tree** (zip pair = tree edge; lone corner = leaf;
+the shared class = hub). Consequences per cover: (1) **flat/hyperbolic**: the
+zip side-pairing is a rotation about the shared corner — an *elliptic* element
+with a fixed point, breaking the lattice/Fuchsian fixed-point-free model; the
+lone corner classes are genuine **cone points** (the equal-corner-class
+smoothness condition is exactly no-cones), so support would mean orbifold
+rendering (tile fans, deficit-angle transport) — a different kind of world,
+and incidentally a candidate curvature demonstration (Gauss–Bonnet with
+atoms). (2) **spherical**: zips are what `chart=true` already licenses; the
+deferred hex/oct sphere charts should be built by *choosing the cut-tree on
+the round sphere* (e.g., three meridian arcs from the pole) and inverting it —
+n-gon `fullDir`, corner-marker dedup at the hub, distortion disclosed. Honest
+note: the current square sphere's lon/lat chart doesn't literally realize its
+own pillowcase word's seams (left~right + pole collapses); cut-tree-built
+charts would be *more* word-faithful than the status quo.
+
 ### 🟡 milestone · 06-11 — Hexagonal worlds verified: all 8 worlds green
 **Why:** klein6 was the open risk — whether the linear-lattice + parity-flip
 model survives the hexagonal glide (`a a b c c b⁻¹` puts the glide on
