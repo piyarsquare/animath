@@ -112,12 +112,15 @@ const kebab = (s) =>
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-/** One inline-styled category chip. */
-export function appChip(key) {
+/** One category chip. With `href`, it renders as a filter link; else a static span. */
+export function appChip(key, href) {
   const c = CATEGORIES[key];
   const gray = c && c.gray ? " cat-general" : "";
-  return `<span class="cat${gray}" style="--c:${catHue(key)}">${esc(catLabel(key))}</span>`;
+  const inner = `class="cat${gray}" style="--c:${catHue(key)}"`;
+  const label = esc(catLabel(key));
+  return href ? `<a ${inner} href="${esc(href)}">${label}</a>` : `<span ${inner}>${label}</span>`;
 }
 
-/** A run of chips for a key list. */
-export const appChips = (keys) => (keys || []).map(appChip).join(" ");
+/** A run of chips for a key list. Pass `hrefFor(key)` to make each chip a filter link. */
+export const appChips = (keys, hrefFor) =>
+  (keys || []).map((k) => appChip(k, hrefFor ? hrefFor(k) : null)).join(" ");

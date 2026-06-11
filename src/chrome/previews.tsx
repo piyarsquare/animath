@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 
 /**
  * Lightweight, authentic preview animations for the gallery cards. One flavor
@@ -13,7 +13,7 @@ import React, { useEffect, useRef } from 'react';
  */
 export type PreviewKind =
   | 'particles' | 'plane' | 'fractal' | 'julia' | 'corridor'
-  | 'trinary' | 'marriage' | 'sorting' | 'matrix' | 'polygon';
+  | 'trinary' | 'marriage' | 'sorting' | 'matrix' | 'polygon' | 'treenet';
 
 type DrawFn = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
 
@@ -745,6 +745,103 @@ function PolygonPreview({ light }: { light: boolean }) {
   return <canvas ref={ref} style={canvasStyle} />;
 }
 
+// --- Trees and Nets: a pentagon's dual tree walking its flip-cycle ---
+function tnTriangulations(n: number): number[][][] {
+  const rec = (B: number[]): number[][][] => {
+    if (B.length < 3) return [[]];
+    const a = B[0], b = B[B.length - 1], out: number[][][] = [];
+    for (let k = 1; k < B.length - 1; k++)
+      for (const tl of rec(B.slice(0, k + 1)))
+        for (const tr of rec(B.slice(k)))
+          out.push([[a, B[k], b], ...tl, ...tr]);
+    return out;
+  };
+  return rec(Array.from({ length: n }, (_, i) => i));
+}
+function tnDiags(tris: number[][], n: number): Set<string> {
+  const s = new Set<string>();
+  for (const [x, y, z] of tris)
+    for (const [a, b] of [[x, y], [y, z], [x, z]] as [number, number][]) {
+      const lo = Math.min(a, b), hi = Math.max(a, b);
+      if (!(hi - lo === 1 || (lo === 0 && hi === n - 1))) s.add(`${lo},${hi}`);
+    }
+  return s;
+}
+
+function TreeNetPreview({ light }: { light: boolean }) {
+  const cyc = useMemo(() => {
+    const n = 5;
+    const tris = tnTriangulations(n);
+    const ds = tris.map((t) => tnDiags(t, n));
+    const adj: number[][] = tris.map(() => []);
+    for (let i = 0; i < tris.length; i++)
+      for (let j = i + 1; j < tris.length; j++) {
+        let sd = 0;
+        for (const d of ds[i]) if (!ds[j].has(d)) sd++;
+        for (const d of ds[j]) if (!ds[i].has(d)) sd++;
+        if (sd === 2) { adj[i].push(j); adj[j].push(i); }
+      }
+    const order: number[] = [0]; const seen = new Set([0]);
+    while (order.length < tris.length) {
+      const nx = adj[order[order.length - 1]].find((x) => !seen.has(x));
+      if (nx === undefined) break; order.push(nx); seen.add(nx);
+    }
+    return { n, tris: order.map((i) => tris[i]) };
+  }, []);
+
+  const ref = useCanvas((ctx, W, H, t) => {
+    const { n, tris } = cyc;
+    const gold = light ? '#b67d10' : '#ffd400';
+    const teal = light ? '#1d8a78' : '#5ad1ff';
+    const fg = light ? 'rgba(60,65,80,' : 'rgba(200,210,230,';
+    ctx.fillStyle = light ? '#eef0f2' : '#0a0e1c';
+    ctx.fillRect(0, 0, W, H);
+    const cx = W / 2, cy = H * 0.52, R = Math.min(W, H) * 0.34;
+    const vA = (k: number) => -Math.PI / 2 + (2 * Math.PI * k) / n;
+    const eA = (k: number) => -Math.PI / 2 + (2 * Math.PI * (k + 0.5)) / n;
+    const PX = (k: number) => cx + R * Math.cos(vA(k));
+    const PY = (k: number) => cy + R * Math.sin(vA(k));
+    const ease = (x: number) => x * x * (3 - 2 * x);
+    const has = (tr: number[], x: number) => tr.includes(x);
+    const ctr = (tr: number[]) => [(PX(tr[0]) + PX(tr[1]) + PX(tr[2])) / 3, (PY(tr[0]) + PY(tr[1]) + PY(tr[2])) / 3] as [number, number];
+
+    const period = 1.6;
+    const seg = Math.floor(t / period) % tris.length;
+    const lt = ease((t % period) / period);
+    const A = tris[seg], B = tris[(seg + 1) % tris.length];
+    const usedA = new Array(A.length).fill(false);
+    const nodeB = B.map((bt) => {
+      const to = ctr(bt);
+      let mi = A.findIndex((at, k) => !usedA[k] && at.every((x) => has(bt, x)));
+      if (mi < 0) { // nearest unused
+        let bd = Infinity; A.forEach((at, k) => { if (usedA[k]) return; const q = ctr(at); const dd = (to[0] - q[0]) ** 2 + (to[1] - q[1]) ** 2; if (dd < bd) { bd = dd; mi = k; } });
+      }
+      const from = mi >= 0 ? (usedA[mi] = true, ctr(A[mi])) : to;
+      return [from[0] + (to[0] - from[0]) * lt, from[1] + (to[1] - from[1]) * lt] as [number, number];
+    });
+
+    ctx.strokeStyle = `${fg}0.18)`; ctx.lineWidth = Math.max(1, W * 0.004);
+    ctx.beginPath(); for (let k = 0; k < n; k++) { if (k === 0) ctx.moveTo(PX(k), PY(k)); else ctx.lineTo(PX(k), PY(k)); } ctx.closePath(); ctx.stroke();
+
+    ctx.lineWidth = Math.max(1.5, W * 0.006); ctx.strokeStyle = `${fg}0.6)`;
+    for (let k = 0; k < n; k++) {
+      const ti = B.findIndex((bt) => has(bt, k) && has(bt, (k + 1) % n)); if (ti < 0) continue;
+      ctx.beginPath(); ctx.moveTo(nodeB[ti][0], nodeB[ti][1]); ctx.lineTo(cx + R * 0.96 * Math.cos(eA(k)), cy + R * 0.96 * Math.sin(eA(k))); ctx.stroke();
+    }
+    ctx.strokeStyle = teal; ctx.lineWidth = Math.max(2, W * 0.009);
+    for (const key of tnDiags(B, n)) {
+      const [a, b] = key.split(',').map(Number); const ts: number[] = [];
+      B.forEach((bt, i) => { if (has(bt, a) && has(bt, b)) ts.push(i); });
+      if (ts.length === 2) { ctx.beginPath(); ctx.moveTo(nodeB[ts[0]][0], nodeB[ts[0]][1]); ctx.lineTo(nodeB[ts[1]][0], nodeB[ts[1]][1]); ctx.stroke(); }
+    }
+    ctx.fillStyle = light ? '#eef0f2' : '#0a0e1c'; ctx.strokeStyle = `${fg}0.9)`; ctx.lineWidth = Math.max(1, W * 0.004);
+    for (const p of nodeB) { ctx.beginPath(); ctx.arc(p[0], p[1], Math.max(2.5, W * 0.012), 0, 7); ctx.fill(); ctx.stroke(); }
+    ctx.fillStyle = gold;
+    for (let k = 0; k < n; k++) { ctx.beginPath(); ctx.arc(cx + R * 0.96 * Math.cos(eA(k)), cy + R * 0.96 * Math.sin(eA(k)), Math.max(2.5, W * 0.013), 0, 7); ctx.fill(); }
+  }, [light]);
+  return <canvas ref={ref} style={canvasStyle} />;
+}
+
 export function Preview({ kind, skin }: { kind: PreviewKind; skin: string; hue?: number }) {
   const light = skin === 'light';
   switch (kind) {
@@ -757,6 +854,7 @@ export function Preview({ kind, skin }: { kind: PreviewKind; skin: string; hue?:
     case 'sorting': return <SortingPreview light={light} />;
     case 'matrix': return <MatrixPreview light={light} />;
     case 'polygon': return <PolygonPreview light={light} />;
+    case 'treenet': return <TreeNetPreview light={light} />;
     default: return <ParticlePreview light={light} />;
   }
 }

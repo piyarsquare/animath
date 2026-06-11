@@ -19,6 +19,9 @@ export interface AnimationLoopDeps {
   projRef: React.MutableRefObject<ProjectionMode>;
   viewMotionRef: React.MutableRefObject<string>;
   dropAxisRef: React.MutableRefObject<string>;
+  /** User-facing projection stop — the tumble pauses in Torus/Hopf, where a
+   *  4D rotation before the nonlinear map warps the image. */
+  viewTypeRef: React.MutableRefObject<ProjectionMode>;
   rotLRef: React.MutableRefObject<THREE.Quaternion>;
   rotRRef: React.MutableRefObject<THREE.Quaternion>;
   /** Multiplier on the drawn axis half-length (1 or π). */
@@ -29,11 +32,14 @@ export interface AnimationLoopDeps {
   setOrientationMatrix: (m: number[][]) => void;
 }
 
-export function startAnimationLoop(deps: AnimationLoopDeps): void {
+/** Starts the per-frame render loop. Returns a stop function — the caller's
+ *  unmount cleanup MUST invoke it, or the loop (and its renderer) outlives the
+ *  component and keeps rendering forever. */
+export function startAnimationLoop(deps: AnimationLoopDeps): () => void {
   const {
     renderer, scene, camera,
     materialsRef, axisRefs,
-    realViewRef, projRef, viewMotionRef, dropAxisRef,
+    realViewRef, projRef, viewMotionRef, dropAxisRef, viewTypeRef,
     rotLRef, rotRRef, axisScaleRef, viewPointRef, onViewPointChangeRef,
     orientationRef, setOrientationMatrix,
   } = deps;
@@ -47,11 +53,19 @@ export function startAnimationLoop(deps: AnimationLoopDeps): void {
   let transDuration = 0;
   let transStartVal = 0;
   let lastMatrixPush = 0;   // throttles the React orientation-matrix readout
+  let rafId = 0;
+  let stopped = false;
 
   const animate = () => {
+    if (stopped) return;
     const elapsed = clock.getElapsedTime();
     const dropMode = dropAxisRef.current !== 'None';
     const fixedMode = viewMotionRef.current === 'Fixed';
+    // In the nonlinear views a 4D tumble warps the image rather than turning
+    // it, so the tumble pauses there (like a drop axis); use the ambient
+    // Yaw/Pitch/Roll controls to orbit the rigid picture instead.
+    const nonlinearMode = viewTypeRef.current === ProjectionMode.Hopf
+      || viewTypeRef.current === ProjectionMode.Torus;
 
     // Handle realView transitions
     if (realViewRef.current !== lastReal) {
@@ -86,7 +100,7 @@ export function startAnimationLoop(deps: AnimationLoopDeps): void {
       } else {
         tCurrent = 0;
       }
-    } else if (dropMode || fixedMode) {
+    } else if (dropMode || fixedMode || nonlinearMode) {
       tCurrent = 0;
     } else {
       if (!transitioning) {
@@ -170,8 +184,13 @@ export function startAnimationLoop(deps: AnimationLoopDeps): void {
     }
 
     renderer.render(scene, camera);
-    requestAnimationFrame(animate);
+    rafId = requestAnimationFrame(animate);
   };
 
   animate();
+
+  return () => {
+    stopped = true;
+    cancelAnimationFrame(rafId);
+  };
 }

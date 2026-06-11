@@ -77,6 +77,16 @@ questions. The implementing agent should update this file as phases land.
 - **Saved-layout management**: naming still via `window.prompt`; no rename/
   reorder/export.
 - **Gallery search** (no UI yet).
+- **Archetype icon collisions** (raised from Agentic Sorting, but chrome-wide):
+  because the vocabulary is a *closed 11-icon set* while apps routinely have more
+  than one panel per tier, the **same glyph stands for different objects** in one
+  app's rail — Agentic Sorting alone shows the bar-chart icon for both *Metrics*
+  and *Track agent* (both `readout`), one `subject` glyph for both *Scenarios* and
+  *Array*, and the same `chart` layout icon on two layouts. The rail leans on the
+  panel *title* to disambiguate, so an icon-only glance is ambiguous. Options to
+  weigh later: per-panel icon variants within a tier, a numeric/letter affix, or
+  the more expressive UI being explored separately — register only; do not widen
+  the vocabulary unilaterally (it's frozen by decision below).
 - **Phone**: no landscape spec; one sheet at a time; no drag-reorder of view
   cards.
 - **Embeds phase 2** (docs/EMBEDS.md): the `s=` catch-all param and the

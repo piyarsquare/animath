@@ -42,6 +42,15 @@ After that, every PR automatically gets:
   the Pages project settings.
 - A "Production" URL `https://animath.pages.dev` that follows `main`.
 
+### Branch name in the browser tab
+
+So parallel-branch previews are easy to tell apart, the **browser tab title**
+reflects the branch on Cloudflare preview builds: a Vite plugin (`branchTitle` in
+`vite.config.ts`) reads Cloudflare's build-time `CF_PAGES_BRANCH` and rewrites the
+`<title>` to `"<branch> · animath"` (slashes → dashes, matching the `*.pages.dev`
+subdomain, e.g. `claude-trees-and-nets · animath`). Production (`main`) and local
+builds keep the plain `animath` title.
+
 ### What about the existing piyarsquare.github.io URL?
 
 It keeps working unchanged. The two deployments are independent:

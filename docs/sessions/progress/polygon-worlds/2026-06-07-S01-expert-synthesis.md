@@ -209,6 +209,6 @@ the cone‑point flaw myself.
 flagged qualitatively by two hats but never quantified; it should be a spike
 deliverable, not a hope.
 
-**Follow‑up value:** HIGH — the review found a real mathematical flaw in the
+**Follow-up value:** HIGH — the review found a real mathematical flaw in the
 realizer and a clear, low‑risk build sequence; acting on the `V = 1` gate + the
 Phase‑0 spike is the difference between a correct engine and a pretty‑but‑false one.

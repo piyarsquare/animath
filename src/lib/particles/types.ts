@@ -86,13 +86,6 @@ export interface Axis {
 export const shapeNames = ['sphere', 'hexagon', 'pyramid'] as const;
 export const textureNames = ['none', 'checker', 'speckled', 'stone', 'metal', 'royal'] as const;
 
-export const viewTypes = [
-  ['Perspective', ProjectionMode.Perspective],
-  ['Stereo', ProjectionMode.Stereo],
-  ['Hopf', ProjectionMode.Hopf],
-  ['Torus', ProjectionMode.Torus]
-] as const;
-
 export const motionModes = ['Quaternion', 'Fixed'] as const;
 export const dropModes = ['None', 'DropX', 'DropY', 'DropU', 'DropV'] as const;
 

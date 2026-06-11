@@ -1,6 +1,7 @@
 // Plane-transform shader pair. The vertex shader runs the selected complex
 // function on each input point, optionally; the fragment shader paints the
 // point with the chosen annular coloring scheme.
+import { checkGlslDispatch } from '../../../lib/complexMath';
 
 export const vertexShader = `
 attribute vec2 inputPos;
@@ -54,13 +55,37 @@ vec2 complexBranchSqrtPoly(vec2 z, int b){
   vec2 q=vec2(p.x*bb.x - p.y*bb.y, p.x*bb.y + p.y*bb.x);
   return complexSqrtBranch(q, b);
 }
+vec2 cdiv(vec2 a, vec2 b){ float d = max(dot(b,b), 1e-12); return vec2(a.x*b.x + a.y*b.y, a.y*b.x - a.x*b.y) / d; }
+// Γ(z) on Re z ≥ 0.5: Lanczos approximation (g = 7, 9 terms; coefficients
+// mirror LANCZOS_COEFFS in lib/complexMath.ts).
+vec2 complexGammaCore(vec2 z){
+  vec2 w = z - vec2(1.0, 0.0);
+  vec2 acc = vec2(0.99999999999980993, 0.0);
+  acc += cdiv(vec2(676.5203681218851, 0.0),     w + vec2(1.0, 0.0));
+  acc += cdiv(vec2(-1259.1392167224028, 0.0),   w + vec2(2.0, 0.0));
+  acc += cdiv(vec2(771.32342877765313, 0.0),    w + vec2(3.0, 0.0));
+  acc += cdiv(vec2(-176.61502916214059, 0.0),   w + vec2(4.0, 0.0));
+  acc += cdiv(vec2(12.507343278686905, 0.0),    w + vec2(5.0, 0.0));
+  acc += cdiv(vec2(-0.13857109526572012, 0.0),  w + vec2(6.0, 0.0));
+  acc += cdiv(vec2(9.9843695780195716e-6, 0.0), w + vec2(7.0, 0.0));
+  acc += cdiv(vec2(1.5056327351493116e-7, 0.0), w + vec2(8.0, 0.0));
+  vec2 t = w + vec2(7.5, 0.0);
+  vec2 lnT = complexLn(t);   // Re t ≥ 7 here, so the principal ln is smooth
+  vec2 e = w + vec2(0.5, 0.0);
+  vec2 ex = complexExp(vec2(e.x*lnT.x - e.y*lnT.y - t.x, e.x*lnT.y + e.y*lnT.x - t.y));
+  return 2.5066282746310002 * complexMul(ex, acc);   // √(2π)
+}
+// Γ(z): Lanczos + the reflection formula Γ(z) = π/(sin(πz)·Γ(1−z)) for
+// Re z < 0.5 — so the true poles at z = 0, −1, −2, … actually blow up.
 vec2 complexGamma(vec2 z){
   const float PI = 3.141592653589793;
-  vec2 logZ = complexLn(z);
-  vec2 t = complexMul(z - vec2(0.5, 0.0), logZ) - z + vec2(0.5*log(2.0*PI), 0.0);
-  return complexExp(t);
+  if(z.x >= 0.5) return complexGammaCore(z);
+  vec2 s = complexSin(PI * z);
+  vec2 den = complexMul(s, complexGammaCore(vec2(1.0, 0.0) - z));
+  return cdiv(vec2(PI, 0.0), den);
 }
-vec2 complexCbrt(vec2 z){float r=length(z);float a=atan(z.y,z.x);float rr=pow(r, 1.0/3.0);return vec2(rr*cos(a/3.0), rr*sin(a/3.0));}
+// Branch-aware cube root: the three sheets are branch 0, 1, 2.
+vec2 complexCbrt(vec2 z, int b){float r=length(z);float a=(atan(z.y,z.x)+float(b)*6.28318530718)/3.0;float rr=pow(r, 1.0/3.0);return vec2(rr*cos(a), rr*sin(a));}
 vec2 complexZMinus1OverZPlus1(vec2 z){vec2 num=vec2(z.x-1.0, z.y);vec2 denInv=complexInv(vec2(z.x+1.0, z.y));return vec2(num.x*denInv.x - num.y*denInv.y, num.x*denInv.y + num.y*denInv.x);}
 vec2 complexPowRational(vec2 z, int p, int q){
   float r=length(z); if(r<1e-6) return vec2(0.0);
@@ -135,7 +160,7 @@ vec2 applyComplex(vec2 z, int t){
   if(t==13) return complexEssentialExpInv(z);
   if(t==14) return complexBranchSqrtPoly(z, branchIndex);
   if(t==15) return complexGamma(z);
-  if(t==16) return complexCbrt(z);
+  if(t==16) return complexCbrt(z, branchIndex);
   if(t==17) return complexZMinus1OverZPlus1(z);
   if(t==18) return complexPowRational(z, exponentP, exponentQ);
   if(t==19) return complexCot(z);
@@ -235,3 +260,7 @@ void main(){
   gl_FragColor = vec4(col, 1.0);
 }
 `;
+
+// Dev-time lockstep guard: every function index must have a dispatch case
+// (this viewer once silently rendered indices 19–22 as the identity).
+checkGlslDispatch(vertexShader, 'PlaneTransform vertexShader');

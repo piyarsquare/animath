@@ -36,13 +36,13 @@ it is both human- and machine-readable. Keep values **flat** (the parser reads
 
 ```yaml
 ---
-kind: progress            # progress | handoff | three-hats
+kind: progress            # progress | handoff | three-hats | plan
 session: 2026-06-07-S01   # YYYY-MM-DD-SNN
 date: 2026-06-07
 title: Short human title
 branch: claude/<branch>
 slug: <branch-slug>       # provenance — must match the folder name
-status: in-progress       # in-progress | completed | design-only | investigation-only
+status: in-progress       # in-progress | completed | design-only | investigation-only | proposed (plans)
 build: unknown            # passed | failed | unknown
 followup: null            # null | low | medium | high
 pr: null                  # null | a PR URL
@@ -53,7 +53,7 @@ thumbnail: assets/foo.png # optional — lead screenshot for the control-center 
 
 | Field | Required | Notes |
 |------|:--:|------|
-| `kind` | ✓ | drives the icon/section template |
+| `kind` | ✓ | drives the icon/section template. `plan` = a forward-looking, app-specific implementation plan (stored in the branch's `progress/` folder; `status: proposed` until a session executes it, which flips status and fills `pr`) |
 | `session` | ✓ | the unit the control center groups by |
 | `slug` | ✓ | **provenance**; must equal the folder name |
 | `status` / `build` | ✓ | drive the status badges |
@@ -91,6 +91,13 @@ Use `##` for sections (GitHub auto-anchors them and offers an outline TOC). Orde
 - **three-hats** — `Executive summary` → numbered findings → `Verdict` → `Self-reflection`.
 
 Keep the H1 (`# title`) for standalone readability even though `title` is in frontmatter.
+
+The closing **`## Self-reflection`** section (verbatim from
+`.claude/prompts/self-reflection.md`) is not just prose: the control center's
+**Reflections** view scrapes that heading and the final
+`**Follow-up value:** <LEVEL> — …` line (LEVEL ∈ CRITICAL/HIGH/MEDIUM/LOW/NONE) to
+build its exit-interview digest, severity-sorted with a color-coded badge. Keep the
+heading and that line exact so the digest picks the report up.
 
 ## 3 · Elements
 

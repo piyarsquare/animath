@@ -21,6 +21,6 @@ export type { ViewPoint, Axis } from './types';
 export {
   ColorStyle, ColorBy, ColorQuantity, CoordMode, coordModeNames, colormapNames,
   SamplePattern, samplePatternNames, JitterMode, renderModes,
-  shapeNames, textureNames, viewTypes, motionModes, dropModes, AXIS_COLORS,
+  shapeNames, textureNames, motionModes, dropModes, AXIS_COLORS,
 } from './types';
 export type { RenderMode } from './types';

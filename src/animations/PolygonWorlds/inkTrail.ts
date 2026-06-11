@@ -6,7 +6,7 @@ import * as THREE from 'three';
  * One trail exists per world: a sequence of oriented footprint decals
  * ("stamps") stored ONCE, in the world's canonical coordinates, with no mirror
  * flags and no per-side rebuilds. Every visible appearance of the trail — the
- * periodic copies in the neighbouring cells, the ℝP² antipodal twin, the
+ * periodic copies in the neighboring cells, the ℝP² antipodal twin, the
  * reversed read through the glass floor — is produced by rendering this one
  * buffer through the same genuine transforms that already place the decor
  * (deck elements, the sheet flip). An orientation-reversing (det < 0)
@@ -25,6 +25,12 @@ import * as THREE from 'three';
  *
  * The glyph is the classic orientation-test pair: an arrow with an **F**,
  * cyan on the print's left and magenta on its right.
+ *
+ * The one-line law of the app: every deck transform of the thickened sheet is
+ * a PROPER motion of 3-space (det +1) — orientation reversal exists only as
+ * its restriction to the 2D sheet (the transparency flip) — and mirror-reading
+ * only ever appears through the glass (flat ink viewed from its anti-normal
+ * side).
  */
 export interface InkTrail {
   geometry: THREE.BufferGeometry;
@@ -42,6 +48,10 @@ export interface InkTrail {
    *  character's up×forward axis. >0 ⇒ the print reads right-handed (correct)
    *  in that frame; <0 ⇒ it reads mirror-reversed. 0 if the slot is empty. */
   chirality: (i: number, m: THREE.Matrix4 | null, forward: THREE.Vector3, up: THREE.Vector3) => number;
+  /** Rendered center of slot `i` through instance transform `m` (null =
+   *  identity) — the average of the quad's buffered corners after `m`. Null if
+   *  the slot is empty. Diagnostic companion to {@link chirality}. */
+  slotCenter: (i: number, m: THREE.Matrix4 | null) => THREE.Vector3 | null;
   clear: () => void;
   dispose: () => void;
 }
@@ -49,7 +59,12 @@ export interface InkTrail {
 // Decal extent in (along, left) frame coords; UV maps along→v (back→tip) and
 // left→u so the texture's "up" is the travel direction. LIFT pushes the ink
 // off the face along the frame's normal (so a flipped image hangs under it).
-const A_BACK = -0.4, A_TIP = 0.62, HW = 0.46, LIFT = 0.12;
+const A_BACK = -0.4, A_TIP = 0.62, HW = 0.46;
+/** How far ink decals float off the face along the frame's normal — exported so
+ *  presenters can compose genuine face-swapping deck transforms (the spherical
+ *  twin must carry ink from radius R+LIFT to R−LIFT, under the glass). */
+export const INK_LIFT = 0.12;
+const LIFT = INK_LIFT;
 
 function glyphTexture(): THREE.CanvasTexture {
   const s = 128;
@@ -159,6 +174,18 @@ export function makeInkTrail(capacity: number): InkTrail {
       cy.multiplyScalar(1 / nc); mg.multiplyScalar(1 / nm);
       const axis = new THREE.Vector3().crossVectors(up, forward).normalize();
       return cy.sub(mg).dot(axis); // >0: cyan on the character's left ⇒ right-handed
+    },
+    slotCenter: (i, m) => {
+      if (i < 0 || i >= n) return null;
+      const c = new THREE.Vector3(), v = new THREE.Vector3();
+      const base = i * VPER;
+      for (let k = 0; k < VPER; k++) {
+        const o = (base + k) * 3;
+        v.set(pos[o], pos[o + 1], pos[o + 2]);
+        if (m) v.applyMatrix4(m);
+        c.add(v);
+      }
+      return c.multiplyScalar(1 / VPER);
     },
     clear: () => { n = 0; geo.setDrawRange(0, 0); },
     dispose: () => { geo.dispose(); tex.dispose(); material.dispose(); },

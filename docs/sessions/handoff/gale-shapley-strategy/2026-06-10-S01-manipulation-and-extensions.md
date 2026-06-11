@@ -75,3 +75,5 @@ one-sided proposing, so those modes want bias locked to 0% or 100%.
   any future Lab plotting them should be checked against the corrected scaling.
 - **Smallest next step:** the order-independence demo — almost free (run
   `runToCompletion` with shuffled proposal orders, diff the result).
+- **Follow-up value:** LOW — the EXTENSIONS.md design doc is complete and the √n scaling is corrected; what remains is optional Lab demos.
+

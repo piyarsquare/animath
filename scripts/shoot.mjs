@@ -18,6 +18,9 @@
 //   BASE_URL   server origin + base (default http://localhost:4173/animath/)
 //   WAIT_MS    extra settle time after canvas appears (default 2500)
 //   VIEWPORT   "WxH" (default 1280x800)
+//   SEED_LS    JSON object of localStorage key → value (values JSON-encoded as
+//              usePersistentState stores them), seeded before the app boots —
+//              e.g. SEED_LS='{"animath:v1:complex-particles:renderMode":"\"Sheet\""}'
 
 import puppeteer from 'puppeteer';
 
@@ -57,6 +60,16 @@ try {
       try { localStorage.setItem('animath:v1:chrome:skin', skin); } catch {}
     }, process.env.SKIN);
     console.log(`skin: ${process.env.SKIN}`);
+  }
+
+  // SEED_LS seeds arbitrary persisted settings (e.g. a render mode or function
+  // index) so non-default states can be screenshotted without UI scripting.
+  if (process.env.SEED_LS) {
+    const seed = JSON.parse(process.env.SEED_LS);
+    await page.evaluateOnNewDocument((entries) => {
+      try { for (const [k, v] of Object.entries(entries)) localStorage.setItem(k, v); } catch {}
+    }, seed);
+    console.log(`seeded localStorage keys: ${Object.keys(seed).join(', ')}`);
   }
 
   console.log(`navigating → ${url}`);

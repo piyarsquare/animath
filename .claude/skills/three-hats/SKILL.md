@@ -1,7 +1,6 @@
 ---
 name: three-hats
-description: "Evaluate an animath plan, proposal, or design decision from three independent expert perspectives (framework maintainer, architecture consultant, math-visualization & pedagogy), then synthesize. Invoke manually."
-disable-model-invocation: true
+description: "Evaluate an animath plan, proposal, or design decision from three independent expert perspectives (framework maintainer, architecture consultant, math-visualization & pedagogy), then synthesize. Invoke when the user or an agent asks for a multi-lens plan/design review (e.g. /three-hats) — do not auto-invoke spontaneously."
 argument-hint: "<plan / proposal / question, or a path to one>"
 ---
 

@@ -40,6 +40,8 @@ export default function PolygonWorlds() {
   const [planetRadius, setPlanetRadius] = useState(DEFAULT_RADIUS);
   const [landmarkCount, setLandmarkCount] = useState(7);
   const [arrangement, setArrangement] = useState<ArrangementId>('scattered');
+  const [signFront, setSignFront] = useState('FRONT');
+  const [signBack, setSignBack] = useState('BACK');
 
   const spec = worldById(worldId);
   const analysis = useMemo(() => analyzeWorld(spec), [spec]);
@@ -87,6 +89,32 @@ export default function PolygonWorlds() {
         map: () => engineRef.current?.getMapState(),
         probe: () => engineRef.current?.debugProbe(),
         setYaw: (v: number) => { yawRef.current = v; },
+        // mirror-ink placement audit (spherical twin worlds; null elsewhere)
+        auditInk: () => engineRef.current?.auditInk(),
+        // plant/clear the two-inked glass sign without driving the panel UI
+        plantSign: (f: string, b: string) => engineRef.current?.plantSign(f, b),
+        clearSigns: () => engineRef.current?.clearSigns(),
+        // The decor law (S06): every rendered decor/scenery mesh is placed by a
+        // PROPER (det>0) world transform — mirror-reading only ever arises from
+        // genuinely viewing the back of ink, or from the ink's own det<0 render
+        // transforms (ink meshes are tagged userData.ink and exempted here).
+        auditDecor: () => {
+          const s = depsRef.current?.scene;
+          if (!s) return null;
+          s.updateMatrixWorld(true);
+          let meshCount = 0, improper = 0;
+          const offenders: string[] = [];
+          s.traverseVisible((o) => {
+            const m = o as THREE.Mesh;
+            if (!m.isMesh || m.userData.ink) return;
+            meshCount++;
+            if (m.matrixWorld.determinant() < 0) {
+              improper++;
+              if (offenders.length < 8) offenders.push(`${o.type}#${o.id}<${o.parent?.type ?? ''}`);
+            }
+          });
+          return { meshes: meshCount, improper, offenders };
+        },
       };
     }
     clockRef.current.start();
@@ -255,7 +283,7 @@ export default function PolygonWorlds() {
   const terrainNode = (
     <>
       {!isSpherical && (
-        <Slider label={isHyperbolic ? 'Disk scale' : 'Square size'} value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
+        <Slider label={isHyperbolic ? 'Disk scale' : spec.edges ? 'Square size' : 'Polygon size'} value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
       )}
       {!isSpherical && !isHyperbolic && (
         <Slider label="Floor thickness" value={floorThickness} min={0} max={6} step={0.2} onChange={setFloorThickness} format={(v) => `${v.toFixed(1)} m`} />
@@ -286,6 +314,29 @@ export default function PolygonWorlds() {
     </>
   );
 
+  // marks — plant a two-inked glass sign at the player's feet. Each face carries
+  // its own ink (amber front, cyan back); read from its back side, an ink is
+  // mirror-reversed — the orientation cue, now in the player's own words.
+  const signNode = (
+    <>
+      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5 }}>
+        A glass plaque with its own ink on each face. Walk around it; then cross a flipped edge and read it through the floor.
+      </div>
+      <label className="cp-row">
+        <span className="cp-row-label">Front</span>
+        <input type="text" value={signFront} maxLength={16} onChange={(e) => setSignFront(e.target.value)} />
+      </label>
+      <label className="cp-row">
+        <span className="cp-row-label">Back</span>
+        <input type="text" value={signBack} maxLength={16} onChange={(e) => setSignBack(e.target.value)} />
+      </label>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button style={{ ...actionBtn, flex: 1 }} onClick={() => engineRef.current?.plantSign(signFront, signBack)}>Plant sign</button>
+        <button style={{ ...actionBtn, flex: 1 }} onClick={() => engineRef.current?.clearSigns()}>Clear signs</button>
+      </div>
+    </>
+  );
+
   // drive — locomotion.
   const walkNode = (
     <>
@@ -301,6 +352,7 @@ export default function PolygonWorlds() {
     { id: 'terrain', title: 'Terrain', arch: 'domain', node: terrainNode, estHeight: 160 },
     { id: 'camera', title: 'Camera', arch: 'view', node: cameraNode, estHeight: 160 },
     { id: 'decor', title: 'Landmarks & trail', arch: 'marks', node: decorNode, estHeight: 260 },
+    { id: 'sign', title: 'Sign', arch: 'marks', node: signNode, estHeight: 250 },
     { id: 'drive', title: 'Walk', arch: 'drive', node: walkNode, estHeight: 160 },
   ];
 
@@ -411,7 +463,7 @@ function squareSpec(spec: WorldSpec, st: SquareMapState | null): SquareMapSpec {
   const marker = st
     ? { sx: (st.u - 0.5) * 2, sy: (st.v - 0.5) * 2, angle: Math.atan2(-st.hz, st.hx), flipped: st.flipped }
     : null;
-  const label = !st ? '' : st.flipped ? `${spec.label} · mirror side` : spec.label;
+  const label = !st ? '' : st.flipped ? `${spec.label} · other face` : spec.label;
   return { tb, lr, marker, dots: [], border: false, label };
 }
 
@@ -423,11 +475,14 @@ function polygonSpec(spec: WorldSpec, st: SquareMapState | null): PolygonMapSpec
   const marker = st
     ? { px: (st.u - 0.5) * 2, py: (st.v - 0.5) * 2, hx: st.hx, hy: st.hz, flipped: st.flipped }
     : null;
-  const label = !st ? spec.label : st.flipped ? `${spec.label} · mirror tile` : spec.label;
+  const label = !st ? spec.label : st.flipped ? `${spec.label} · other face` : spec.label;
+  // flat n-gon worlds chart in circumcircle units (vertices at radius 1);
+  // hyperbolic worlds chart in Poincaré coordinates (vertices at tanh(R/2))
+  const flat = deriveGeometry(spec).cover === 'euclidean';
   return {
     sides: m,
     baseAngle: -Math.PI / 2 + Math.PI / m,
-    rhoV: Math.tanh(real.circumradius / 2),
+    rhoV: flat ? 1 : Math.tanh(real.circumradius / 2),
     letters: word.map((l) => ({ gen: l.gen, inv: l.inv })),
     marker,
     label,

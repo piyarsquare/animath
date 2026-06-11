@@ -82,6 +82,7 @@ export function project(p: THREE.Vector4, mode: ProjectionMode): THREE.Vector3{
   if(mode===ProjectionMode.DropX) return new THREE.Vector3(p.y,p.z,p.w);
   if(mode===ProjectionMode.DropY) return new THREE.Vector3(p.x,p.z,p.w);
   if(mode===ProjectionMode.DropU) return new THREE.Vector3(p.x,p.y,p.w);
+  if(mode===ProjectionMode.DropV) return new THREE.Vector3(p.x,p.y,p.z); // explicit, not fall-through
   if(mode===ProjectionMode.Torus){
     // Clifford-torus / "un-collapsed Hopf" view: normalize (z1,z2)=(z,f) onto
     // S^3, then stereographically project from the (0,0,0,1) pole. arg(z) runs

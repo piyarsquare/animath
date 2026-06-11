@@ -1,27 +1,25 @@
 # Self-Reflection Protocol
 
-Append this section at the end of your analysis, report, or handoff. Session reports
-are **HTML**, so append the HTML `<section>` below (just before `</main>`), filling
-in each answer. Answer each question honestly. If the honest answer is "nothing,"
-say so — an empty answer is more valuable than a forced one.
+Append this as the **last** section of your handoff (or analysis / three-hats report).
+Session reports are **Markdown**, so write the Markdown below — a `## Self-reflection`
+heading followed by the numbered list. Answer each question honestly. If the honest
+answer is "nothing," say so — an empty answer is more valuable than a forced one.
 
-For the follow-up value, use the matching badge class: `badge-bad` for
-CRITICAL/HIGH, `badge-warn` for MEDIUM, `badge-ok` for LOW/NONE.
+The exact `## Self-reflection` heading and the final `**Follow-up value:** <LEVEL> — …`
+line matter: the cross-branch control center (`npm run sessions`) scrapes them to
+build its **Reflections** view (the exit-interview digest), reading `<LEVEL>` to color
+each entry's follow-up badge. Keep `<LEVEL>` one of CRITICAL / HIGH / MEDIUM / LOW / NONE.
 
-```html
-<section class="self-reflection">
-  <h2>Self-reflection</h2>
-  <ol>
-    <li><strong>What would you do with another session?</strong> …</li>
-    <li><strong>What would you change about what you produced?</strong> …</li>
-    <li><strong>What were you not asked that you think is important?</strong> …</li>
-    <li><strong>What did we both overlook?</strong> …</li>
-    <li><strong>What did you find difficult?</strong> …</li>
-    <li><strong>What would have made this task easier?</strong> …</li>
-    <li><strong>Follow-up value:</strong>
-        <span class="badge badge-ok">LOW</span> — [one-line justification]</li>
-  </ol>
-</section>
+```markdown
+## Self-reflection
+
+1. **What would you do with another session?** …
+2. **What would you change about what you produced?** …
+3. **What were you not asked that you think is important?** …
+4. **What did we both overlook?** …
+5. **What did you find difficult?** …
+6. **What would have made this task easier?** …
+7. **Follow-up value:** LOW — [one-line justification]
 ```
 
 Follow-up value scale:

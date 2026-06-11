@@ -25,7 +25,7 @@ type RefMap = React.MutableRefObject<Record<string, HTMLDivElement | null>>;
  * plus the left icon rail and named layouts, persisted per app.
  */
 export default function DesktopWorkspace(props: WorkspaceProps) {
-  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, actions, modes, activeMode, onModeChange } = props;
+  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, actions, modes, activeMode, onModeChange } = props;
   const sections = useMemo(() => sortByTier(props.sections), [props.sections]);
   const builtin = useMemo(
     () => builtinLayouts(sections, appLayouts),
@@ -212,6 +212,7 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
         activeMode={activeMode}
         onModeChange={onModeChange}
         explainer={explainer}
+        extra={topExtra}
         onTitleClick={
           titlePanel && sections.some(s => s.id === titlePanel)
             ? () => (state.open[titlePanel] ? raisePanel(titlePanel) : togglePanel(titlePanel))

@@ -282,3 +282,5 @@ T5 falsification — independent track; decide app-vs-mode before building.
    to ship fast and stay verifiable, deferring the asymptotically-better min-cut
    egalitarian until n actually demands it.
 4. **Not done.** No code written for any tier yet — this is the reference plan.
+5. **Follow-up value:** MEDIUM — a verifiable reference plan, but no code exists yet; building the solution-space tiers is where the value lands.
+

@@ -102,10 +102,11 @@ export function complexPowRational(z: THREE.Vector2, p: number, q: number): THRE
   return new THREE.Vector2(mag * Math.cos(ang), mag * Math.sin(ang));
 }
 
-/** Principal cube root: r^(1/3) at angle/3. (Vertex shader's complexCbrt.) */
-export function complexCubeRoot(z: THREE.Vector2): THREE.Vector2 {
+/** Branch-aware cube root: r^(1/3) at (angle + 2π·branch)/3 — the three sheets
+ *  are branch 0, 1, 2. (Vertex shader's complexCbrt.) */
+export function complexCubeRoot(z: THREE.Vector2, branch = 0): THREE.Vector2 {
   const r = Math.hypot(z.x, z.y);
-  const t = Math.atan2(z.y, z.x);
+  const t = Math.atan2(z.y, z.x) + branch * 2 * Math.PI;
   const rr = Math.cbrt(r);
   return new THREE.Vector2(rr * Math.cos(t / 3), rr * Math.sin(t / 3));
 }
@@ -120,23 +121,59 @@ export function complexZMinus1OverZPlus1(z: THREE.Vector2): THREE.Vector2 {
   );
 }
 
-/** Gamma function via the Stirling-like approximation used in the vertex
- *  shader: Γ(z) ≈ exp((z − 1/2) · ln z − z + (1/2) ln 2π). Same accuracy
- *  envelope as the GPU path. */
+/** Lanczos coefficients (g = 7, 9 terms) for the gamma function. Shared with
+ *  the GLSL implementations in both viewers' shaders — keep them in lockstep. */
+export const LANCZOS_G = 7;
+export const LANCZOS_COEFFS = [
+  0.99999999999980993,
+  676.5203681218851,
+  -1259.1392167224028,
+  771.32342877765313,
+  -176.61502916214059,
+  12.507343278686905,
+  -0.13857109526572012,
+  9.9843695780195716e-6,
+  1.5056327351493116e-7,
+] as const;
+
+function complexDiv(a: THREE.Vector2, b: THREE.Vector2): THREE.Vector2 {
+  let d = b.x * b.x + b.y * b.y;
+  if (d < 1e-12) d = 1e-12;
+  return new THREE.Vector2((a.x * b.x + a.y * b.y) / d, (a.y * b.x - a.x * b.y) / d);
+}
+
+/** Γ(z) on the half-plane Re z ≥ 0.5, via the Lanczos approximation:
+ *  Γ(z) = √(2π) · t^(z−1/2) · e^(−t) · Σ cᵢ/(z−1+i), with t = z − 1 + g + 1/2. */
+function complexGammaCore(z: THREE.Vector2): THREE.Vector2 {
+  const w = new THREE.Vector2(z.x - 1, z.y);
+  let acc = new THREE.Vector2(LANCZOS_COEFFS[0], 0);
+  for (let i = 1; i < LANCZOS_COEFFS.length; i++) {
+    const term = complexDiv(new THREE.Vector2(LANCZOS_COEFFS[i], 0), new THREE.Vector2(w.x + i, w.y));
+    acc = new THREE.Vector2(acc.x + term.x, acc.y + term.y);
+  }
+  const t = new THREE.Vector2(w.x + LANCZOS_G + 0.5, w.y);
+  // t^(w+1/2) · e^(−t) = exp((w + 1/2)·ln t − t); Re t ≥ 7 here, so the
+  // principal ln is smooth (never near its cut).
+  const lnT = complexLn(t);
+  const e = new THREE.Vector2(w.x + 0.5, w.y);
+  const expArg = new THREE.Vector2(
+    e.x * lnT.x - e.y * lnT.y - t.x,
+    e.x * lnT.y + e.y * lnT.x - t.y,
+  );
+  const ex = complexExp(expArg);
+  const s = Math.sqrt(2 * Math.PI);
+  return new THREE.Vector2(s * (ex.x * acc.x - ex.y * acc.y), s * (ex.x * acc.y + ex.y * acc.x));
+}
+
+/** Gamma function: Lanczos approximation (g = 7, 9 terms), with the reflection
+ *  formula Γ(z) = π / (sin(πz) · Γ(1−z)) for Re z < 0.5 — so the true poles at
+ *  z = 0, −1, −2, … actually blow up. Mirrors the GLSL implementation. */
 export function complexGamma(z: THREE.Vector2): THREE.Vector2 {
-  const halfVec = new THREE.Vector2(0.5, 0);
-  const logZ = complexLn(z);
-  const zMinusHalf = new THREE.Vector2(z.x - halfVec.x, z.y - halfVec.y);
-  // (z − 1/2) · log z, in complex multiplication.
-  const prod = new THREE.Vector2(
-    zMinusHalf.x * logZ.x - zMinusHalf.y * logZ.y,
-    zMinusHalf.x * logZ.y + zMinusHalf.y * logZ.x,
-  );
-  const t = new THREE.Vector2(
-    prod.x - z.x + 0.5 * Math.log(2 * Math.PI),
-    prod.y - z.y,
-  );
-  return complexExp(t);
+  if (z.x >= 0.5) return complexGammaCore(z);
+  const s = complexSin(new THREE.Vector2(Math.PI * z.x, Math.PI * z.y));
+  const g = complexGammaCore(new THREE.Vector2(1 - z.x, -z.y));
+  const den = new THREE.Vector2(s.x * g.x - s.y * g.y, s.x * g.y + s.y * g.x);
+  return complexDiv(new THREE.Vector2(Math.PI, 0), den);
 }
 
 /** Branch-aware sqrt: adds branch * PI to the angle before taking the root. */
@@ -342,7 +379,7 @@ export function applyComplexBranch(z: THREE.Vector2, t: number, branch: number):
     case 13: return complexEssentialExpInv(z);
     case 14: return complexBranchSqrtPolyBranch(z, branch);
     case 15: return complexGamma(z);
-    case 16: return complexCubeRoot(z);
+    case 16: return complexCubeRoot(z, branch);
     case 17: return complexZMinus1OverZPlus1(z);
     case 19: return complexCot(z);
     case 20: return complexArcsin(z, branch);
@@ -378,8 +415,41 @@ export const functionNames = [
 /** Indices of the multivalued functions (their branch index selects a sheet).
  *  Shared by every viewer so the branch controls appear consistently. */
 export const MULTIVALUED_INDICES: ReadonlySet<number> = new Set([
-  1, 3, 14, 18, 20, 21, 25, 26, 27, 28, 33, 34, 35,
+  1, 3, 14, 16, 18, 20, 21, 25, 26, 27, 28, 33, 34, 35,
 ]);
+
+/** How many *distinct* sheets a multivalued function has, or `null` for the
+ *  infinite (ln-carried) families. sqrt and √(z(z−1)(z+1)) repeat with period 2
+ *  (the branch adds k·π to the root's angle), cbrt with period 3, and z^(p/q)
+ *  with period |q|. Viewers use this to stop drawing duplicate sheets. */
+export function branchPeriod(index: number, q = 1): number | null {
+  switch (index) {
+    case 1: case 14: return 2;       // sqrt, √(z(z−1)(z+1))
+    case 16: return 3;               // cbrt
+    case 18: return Math.max(1, Math.abs(q)); // z^(p/q)
+    default: return MULTIVALUED_INDICES.has(index) ? null : 1;
+  }
+}
+
+/** Dev-time guard: every function index must appear in a GLSL applyComplex
+ *  dispatch ladder (`if(t==N)`). The TS tables and the per-app GLSL ladders
+ *  are maintained by hand in lockstep; this catches the known failure mode
+ *  where a new function renders as the identity in one viewer (it happened:
+ *  PlaneTransform silently dropped indices 19–22). No-op in production. */
+export function checkGlslDispatch(source: string, label: string): void {
+  if (!import.meta.env.DEV) return;
+  const missing: number[] = [];
+  for (let i = 0; i < functionNames.length; i++) {
+    if (!new RegExp(`t==${i}\\)`).test(source)) missing.push(i);
+  }
+  if (missing.length) {
+    throw new Error(
+      `[complexMath] ${label}: GLSL applyComplex is missing function indices ` +
+      `${missing.join(', ')} (${missing.map(i => functionNames[i]).join(', ')}) — ` +
+      `every index in functionNames needs an if(t==N) case.`,
+    );
+  }
+}
 
 /** Index of the z^(p/q) rational-power function in {@link functionNames}. */
 export const POW_PQ_INDEX = 18;

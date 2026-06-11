@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
 import type { ParticleState } from './useParticleState';
@@ -18,9 +18,12 @@ const Y_AXIS = new THREE.Vector3(0, 1, 0);
  *
  *   1-pointer drag             → free orbit (trackball tumble around the
  *                                look-at target, no pole limits) — or pan,
- *                                when the Camera panel's Drag mode is Pan.
- *   1-pointer drag + Shift     → pan (translates the look-at target in the
- *                                screen plane, scene follows the finger).
+ *                                when the (phone) Drag mode is Pan.
+ *   right-button drag          → pan (desktop; the canvas context menu is
+ *                                suppressed so the drag reads cleanly).
+ *   Space (held) / Shift +drag → pan (momentary modifiers — translate the
+ *                                look-at target in the screen plane, scene
+ *                                follows the pointer).
  *   2-pointer pinch            → cameraZ (zoom).
  *   2-pointer centroid drag    → pan, in addition to any pinch.
  *   wheel                      → cameraZ.
@@ -29,6 +32,33 @@ export function useGestureRotation(state: ParticleState) {
   const pointers = useRef(new Map<number, Pt>());
   const lastPinchDist = useRef<number | null>(null);
   const lastCentroid = useRef<Pt | null>(null);
+  /** Pointers that started as a right-button press — they pan, not orbit. */
+  const panPointers = useRef(new Set<number>());
+  const spaceHeld = useRef(false);
+
+  // Hold-Space panning: a momentary modifier like Shift, but reachable while
+  // the other hand stays on the mouse. Keystrokes aimed at form controls are
+  // ignored (typing a space in a panel input must not grab the viewport).
+  useEffect(() => {
+    const isFormTarget = () => {
+      const el = document.activeElement as HTMLElement | null;
+      return !!el && (/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(el.tagName) || el.isContentEditable);
+    };
+    const down = (e: KeyboardEvent) => {
+      if (e.code !== 'Space' || isFormTarget()) return;
+      spaceHeld.current = true;
+      e.preventDefault();   // don't scroll the page while panning
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.code === 'Space') spaceHeld.current = false;
+    };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+    };
+  }, []);
 
   function clampedZoomScale(scale: number) {
     const { min, max } = COMPLEX_PARTICLES_DEFAULTS.ranges.cameraZ;
@@ -60,6 +90,7 @@ export function useGestureRotation(state: ParticleState) {
   const onPointerDown = (e: React.PointerEvent) => {
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (e.button === 2) panPointers.current.add(e.pointerId);
     if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()];
       lastPinchDist.current = Math.hypot(a.x - b.x, a.y - b.y);
@@ -77,7 +108,7 @@ export function useGestureRotation(state: ParticleState) {
     if (count === 1) {
       const dx = next.x - prev.x;
       const dy = next.y - prev.y;
-      if (e.shiftKey || state.dragMode === 'pan') {
+      if (e.shiftKey || spaceHeld.current || panPointers.current.has(e.pointerId) || state.dragMode === 'pan') {
         applyPan(dx, dy, el);
       } else {
         // Free trackball orbit: incremental rotations about the camera's own
@@ -115,6 +146,7 @@ export function useGestureRotation(state: ParticleState) {
 
   const onPointerUp = (e: React.PointerEvent) => {
     pointers.current.delete(e.pointerId);
+    panPointers.current.delete(e.pointerId);
     if (pointers.current.size < 2) {
       lastPinchDist.current = null;
       lastCentroid.current  = null;
@@ -125,11 +157,15 @@ export function useGestureRotation(state: ParticleState) {
     clampedZoomDelta(e.deltaY * WHEEL_ZOOM_SENSITIVITY);
   };
 
+  // Right-button drag pans, so the canvas suppresses its context menu.
+  const onContextMenu = (e: React.MouseEvent) => e.preventDefault();
+
   return {
     onPointerDown,
     onPointerMove,
     onPointerUp,
     onPointerCancel: onPointerUp,
     onWheel,
+    onContextMenu,
   };
 }

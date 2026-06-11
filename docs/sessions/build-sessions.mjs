@@ -20,8 +20,26 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, join, basename } from "node:path";
 import { fileURLToPath } from "node:url";
+import { marked } from "marked";
 import { htmlToMarkdown } from "./convert-html.mjs";
 import { CATEGORIES, normalizeApps, shortName, appChips, catHue } from "./categories.mjs";
+
+marked.setOptions({ gfm: true });
+
+// Pull the "Self-reflection" (exit-interview) section out of a report body: the
+// markdown from the `## Self-reflection` heading to the next h2 (or EOF), plus the
+// parsed Follow-up value level when present. Returns null when there's no section.
+const REFL_LEVELS = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE"];
+function extractReflection(md) {
+  const m = /^##\s+Self[-\s]?reflection\s*$/im.exec(md);
+  if (!m) return null;
+  const rest = md.slice(m.index + m[0].length);
+  const next = rest.search(/^##\s+/m);
+  const body = (next === -1 ? rest : rest.slice(0, next)).trim();
+  if (!body) return null;
+  const lv = body.match(/follow[-\s]?up\s+value:?\s*\**\s*(CRITICAL|HIGH|MEDIUM|LOW|NONE)/i);
+  return { md: body, html: marked.parse(body), level: lv ? lv[1].toUpperCase() : null };
+}
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const OUT = join(ROOT, "converted");
@@ -123,12 +141,12 @@ for (const rec of byKey.values()) {
 
   reports.push({ slug: rec.slug, short: shortName(rec.slug), base: rec.base, date,
     kind: fm.kind || "?", session: fm.session || "?", title: fm.title || rec.base, status: fm.status || "?",
-    apps, thumb,
+    apps, thumb, reflection: extractReflection(md),
     href: `converted/${rec.kind}/${rec.slug}/${rec.base}.preview.html` });
 }
 
 // 3 · roll up to short name → session → reports
-const kindRank = { progress: 0, handoff: 1, "three-hats": 2 };
+const kindRank = { progress: 0, handoff: 1, "three-hats": 2, plan: 3 };
 const byRecency = (a, b) => (b || "").localeCompare(a || "");
 const sessions = new Map();
 for (const r of reports) {
@@ -141,6 +159,10 @@ for (const s of sessions.values()) {
   s.date = s.reports.map(r => r.date).sort().slice(-1)[0] || "";
   const p = s.reports.find(r => r.kind === "handoff") || s.reports[0];
   s.title = p.title; s.status = p.status; s.href = p.href;
+  // Exit-interview rollup: the handoff's reflection wins; else the first report
+  // that has one. Link the badge/anchor to the report the reflection came from.
+  const rr = (p.reflection ? p : s.reports.find(r => r.reflection)) || null;
+  s.reflection = rr ? { ...rr.reflection, href: rr.href } : null;
   s.thumb = (s.reports.find(r => r.thumb) || {}).thumb || null;
   // Union of every report's categories; primary = the first one seen.
   const seen = [];
@@ -163,15 +185,28 @@ for (const s of sessionList) {
   let rows = "";
   for (const r of s.reports) rows += `      <a class="cc-row" href="${esc(r.href)}"><span class="chip chip-${esc(r.kind)}">${esc(r.kind)}</span><span class="cc-rtitle">${esc(r.title)}</span></a>\n`;
   const thumb = s.thumb ? `      <img class="cc-thumb" src="${esc(s.thumb)}" alt="" loading="lazy">\n` : "";
-  cardsHtml += `    <article class="cc-session${s.thumb ? " has-thumb" : ""}" data-short="${esc(s.short)}" data-apps="${esc(s.apps.join(" "))}" data-cat="${esc(s.primary)}" data-hue="${catHue(s.primary)}" data-date="${esc(s.date.slice(0, 10))}" data-status="${esc(s.status)}" data-session="${esc(s.session)}" data-title="${esc(s.title)}" data-href="${esc(s.href)}" data-hay="${esc(hay)}">
+  const refl = s.reflection;
+  // Inert <template>: the rendered reflection HTML, carried with each card so the
+  // Reflections view can clone it after the same search/category filtering runs.
+  const reflTpl = refl ? `      <template class="cc-refl-data" data-rhref="${esc(refl.href)}">${refl.html}</template>\n` : "";
+  cardsHtml += `    <article class="cc-session${s.thumb ? " has-thumb" : ""}" data-short="${esc(s.short)}" data-apps="${esc(s.apps.join(" "))}" data-cat="${esc(s.primary)}" data-hue="${catHue(s.primary)}" data-date="${esc(s.date.slice(0, 10))}" data-status="${esc(s.status)}" data-session="${esc(s.session)}" data-title="${esc(s.title)}" data-href="${esc(s.href)}" data-refl="${refl ? 1 : 0}" data-level="${esc(refl?.level || "")}" data-hay="${esc(hay)}">
 ${thumb}      <div class="cc-shead"><span class="cc-sid">${esc(s.session)}</span> ${statusBadge(s.status)} <span class="cc-date">${esc(s.date.slice(0, 10))}</span> <span class="cc-branch"><code>${esc(s.short)}</code></span></div>
       <div class="cc-stitle">${esc(s.title)}</div>
-      <div class="cc-cats">${appChips(s.apps)}</div>
+      <div class="cc-cats">${appChips(s.apps, (k) => "#cat=" + k)}</div>
       <div class="cc-reports">\n${rows}      </div>
-    </article>\n`;
+${reflTpl}    </article>\n`;
 }
+const reflCount = sessionList.filter(s => s.reflection).length;
 
 const CAT_LABELS = Object.fromEntries(Object.entries(CATEGORIES).map(([k, v]) => [k, v.label]));
+
+// Category filter bar: one button per category present (in taxonomy order), each a
+// shareable #cat=<key> link, with a session count. The leading "All" clears the filter.
+const catCounts = {};
+for (const s of sessionList) for (const a of s.apps) catCounts[a] = (catCounts[a] || 0) + 1;
+const catBtns = Object.keys(CATEGORIES).filter((k) => catCounts[k]).map((k) =>
+  `<a class="cc-fbtn" data-cat="${k}" href="#cat=${k}">${appChips([k])}<span class="cc-fcount">${catCounts[k]}</span></a>`).join("\n  ");
+const catBar = `<a class="cc-fbtn cc-fall active" data-cat="" href="#">All <span class="cc-fcount">${sessions.size}</span></a>\n  ${catBtns}`;
 
 writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
 <!-- GENERATED by build-sessions.mjs — do not edit by hand. -->
@@ -196,6 +231,13 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
   .cc-stitle{font-weight:600;margin-top:.15rem}
   .cc-sid,.cc-date{font-family:ui-monospace,monospace;font-size:.78rem;color:var(--muted)}
   .cc-branch code{font-size:.74rem}
+  .cc-fbar{display:flex;flex-wrap:wrap;gap:.4rem;margin:.7rem 0 .2rem}
+  .cc-fbtn{display:inline-flex;align-items:center;gap:.35rem;padding:.2rem .5rem;border:1px solid var(--border);border-radius:999px;background:var(--panel);color:var(--fg);text-decoration:none;font-size:.82rem}
+  .cc-fbtn:hover{border-color:var(--accent);text-decoration:none}
+  .cc-fbtn.active{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+  .cc-fbtn .cat{pointer-events:none}
+  .cc-fcount{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
+  a.cat{cursor:pointer}a.cat:hover{text-decoration:none;filter:brightness(1.06)}
   .cc-cats{margin-top:.35rem;display:flex;flex-wrap:wrap;gap:.3rem}
   .cc-reports{margin-top:.4rem;display:flex;flex-direction:column;gap:.15rem}
   .cc-row{display:flex;align-items:center;gap:.55rem;padding:.3rem .45rem;border-radius:6px;text-decoration:none;color:var(--fg)}
@@ -209,13 +251,23 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
   ol.cc-timeline li.tl h3 a{color:var(--fg)}
   ol.cc-timeline .tl-head{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem}
   .cc-empty{color:var(--muted);padding:2rem 0}
+  section.cc-refl{border:1px solid var(--border);border-left:3px solid hsl(var(--dot,215) 60% 50%);border-radius:8px;padding:.6rem .8rem;margin:.7rem 0;background:var(--panel)}
+  section.cc-refl .cc-rhead{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;font-size:.82rem}
+  section.cc-refl h3{font-size:1rem;margin:.3rem 0 .2rem}
+  section.cc-refl h3 a{color:var(--fg)}
+  .cc-rbody{font-size:.92rem}
+  .cc-rbody ol,.cc-rbody ul{margin:.3rem 0 .2rem;padding-left:1.2rem}
+  .cc-rbody li{margin:.18rem 0}
+  .cc-rbody p{margin:.3rem 0}
+  .cc-home{color:var(--accent);text-decoration:none;font-weight:600}
+  .cc-home:hover{text-decoration:underline}
   @media (max-width:520px){.cc-thumb{width:96px;height:60px}}
 </style></head>
-<body><main class="report"><header><p class="kicker">animath · cross-branch</p>
+<body><main class="report"><header><p class="kicker"><a class="cc-home" href="../embed-demo.html" title="Seeing e^z — live embedded applets in a host article">↗ embed demo</a> · cross-branch session hub</p>
 <h1>Session control center</h1>
 <dl class="meta"><div><dt>Scope</dt><dd>${sessions.size} sessions · ${reports.length} reports · ${branchSet.size} branches · ${catSet.size} categories</dd></div>
 <div><dt>Generated</dt><dd>${new Date().toISOString().slice(0, 16).replace("T", " ")} · <code>build-sessions.mjs</code></dd></div></dl>
-<p class="lineage">Group by app / branch / status / month, sort, or switch to a global timeline. Cards list every app a session touched; grouping uses its primary (first) category. Provenance = slug folder.</p></header>
+<p class="lineage">Filter to a category with the buttons (or click any chip); group by app / branch / status / month, sort, or switch to a global timeline. The active filter lives in the URL (<code>#cat=…</code>), so it's shareable. Cards list every app a session touched. Provenance = slug folder.</p></header>
 <div class="body"><div class="content">
 <div class="cc-tools">
   <input id="q" type="search" placeholder="filter by branch / title / status / app / session…" autocomplete="off">
@@ -227,8 +279,9 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
     <option value="date-desc">newest</option><option value="date-asc">oldest</option>
     <option value="app">app</option><option value="title">title</option>
   </select></label>
-  <span class="cc-seg"><button id="view-cards" class="active" type="button">Cards</button><button id="view-timeline" type="button">Timeline</button></span>
+  <span class="cc-seg"><button id="view-cards" class="active" type="button">Cards</button><button id="view-timeline" type="button">Timeline</button><button id="view-refl" type="button" title="Aggregated end-of-session self-reflections (exit interviews)">Reflections${reflCount ? ` (${reflCount})` : ""}</button></span>
 </div>
+<div class="cc-fbar" id="cc-fbar">${catBar}</div>
 <div id="cc-list">
 ${cardsHtml}</div>
 </div></div></main>
@@ -237,9 +290,16 @@ ${cardsHtml}</div>
   var listEl = document.getElementById("cc-list");
   var ALL = Array.prototype.slice.call(listEl.querySelectorAll(".cc-session"));
   var q = document.getElementById("q"), gb = document.getElementById("groupby"), sb = document.getElementById("sortby");
-  var bCards = document.getElementById("view-cards"), bTl = document.getElementById("view-timeline");
+  var bCards = document.getElementById("view-cards"), bTl = document.getElementById("view-timeline"), bRefl = document.getElementById("view-refl");
+  var fbtns = Array.prototype.slice.call(document.querySelectorAll("#cc-fbar .cc-fbtn"));
   var view = "cards";
+  var REFL_RANK = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, NONE: 4, "": 5 };
+  function reflBadge(lv){ if (!lv) return "";
+    var cls = lv==="CRITICAL"||lv==="HIGH" ? "badge-bad" : lv==="MEDIUM" ? "badge-warn" : "badge-ok";
+    return '<span class="badge '+cls+'">follow-up: '+esc(lv)+'</span>'; }
+  function activeCat(){ var m = (location.hash || "").match(/cat=([^&]+)/); return m ? decodeURIComponent(m[1]) : ""; }
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+  function catChip(key, hue){ return '<a class="cat" style="--c:'+hue+'" href="#cat='+encodeURIComponent(key)+'">'+esc(CAT[key]||key)+'</a>'; }
   function statusBadge(s){ var cls = s==="completed"?"badge-ok":s==="in-progress"?"badge-warn":"badge"; return '<span class="badge '+cls+'">'+esc(s)+'</span>'; }
   function cmp(a, b){
     var k = sb.value, d = a.dataset, e = b.dataset;
@@ -252,11 +312,17 @@ ${cardsHtml}</div>
     return g === "branch" ? c.dataset.short : g === "status" ? c.dataset.status
          : g === "month" ? c.dataset.date.slice(0,7) : g === "none" ? "" : c.dataset.cat; }
   function render(){
-    var t = q.value.trim().toLowerCase();
-    var cards = ALL.filter(function(c){ return !t || c.dataset.hay.indexOf(t) !== -1; });
+    var t = q.value.trim().toLowerCase(), cat = activeCat();
+    fbtns.forEach(function(b){ b.classList.toggle("active", (b.dataset.cat || "") === cat); });
+    var cards = ALL.filter(function(c){
+      if (t && c.dataset.hay.indexOf(t) === -1) return false;
+      if (cat && (" " + c.dataset.apps + " ").indexOf(" " + cat + " ") === -1) return false;
+      return true;
+    });
     listEl.innerHTML = "";
     if (!cards.length){ listEl.innerHTML = '<p class="cc-empty">No sessions match.</p>'; return; }
     if (view === "timeline"){ renderTimeline(cards); return; }
+    if (view === "refl"){ renderReflections(cards); return; }
     cards.sort(cmp);
     var g = gb.value;
     if (g === "none"){ cards.forEach(function(c){ listEl.appendChild(c); }); return; }
@@ -266,7 +332,7 @@ ${cardsHtml}</div>
       var members = bucket[k];
       var h = document.createElement("div"); h.className = "cc-ghead";
       var lbl = g === "app"
-        ? '<span class="cat" style="--c:'+members[0].dataset.hue+'">'+esc(CAT[k]||k)+'</span>'
+        ? catChip(k, members[0].dataset.hue)
         : '<span class="cc-glabel">'+esc(k||"all")+'</span>';
       h.innerHTML = lbl + '<span class="cc-gcount">'+members.length+(members.length>1?" sessions":" session")+'</span>';
       listEl.appendChild(h);
@@ -281,15 +347,39 @@ ${cardsHtml}</div>
       var d = c.dataset, li = document.createElement("li"); li.className = "tl";
       li.style.setProperty("--dot", d.hue);
       li.innerHTML = '<p class="tl-time">'+esc(d.date)+'</p>'
-        + '<div class="tl-head"><span class="cat" style="--c:'+d.hue+'">'+esc(CAT[d.cat]||d.cat)+'</span> '+statusBadge(d.status)+' <code>'+esc(d.short)+'</code></div>'
+        + '<div class="tl-head">'+catChip(d.cat, d.hue)+' '+statusBadge(d.status)+' <code>'+esc(d.short)+'</code></div>'
         + '<h3><a href="'+esc(d.href)+'">'+esc(d.title)+'</a></h3>';
       ol.appendChild(li);
     });
     listEl.appendChild(ol);
   }
-  function setView(v){ view = v; bCards.classList.toggle("active", v==="cards"); bTl.classList.toggle("active", v==="timeline"); gb.disabled = v==="timeline"; render(); }
+  function renderReflections(cards){
+    // Exit-interview digest: only sessions that shipped a self-reflection, sorted
+    // by follow-up severity (CRITICAL→NONE) then newest. Reflection HTML is cloned
+    // from each card's inert <template>.
+    var items = cards.filter(function(c){ return c.dataset.refl === "1"; });
+    items.sort(function(a, b){
+      return (REFL_RANK[a.dataset.level||""] - REFL_RANK[b.dataset.level||""]) || b.dataset.date.localeCompare(a.dataset.date);
+    });
+    if (!items.length){ listEl.innerHTML = '<p class="cc-empty">No self-reflections in this selection.</p>'; return; }
+    items.forEach(function(c){
+      var d = c.dataset, tpl = c.querySelector(".cc-refl-data");
+      var sec = document.createElement("section"); sec.className = "cc-refl"; sec.style.setProperty("--dot", d.hue);
+      sec.innerHTML = '<div class="cc-rhead">'+catChip(d.cat, d.hue)+' '+statusBadge(d.status)+' '+reflBadge(d.level)
+        + ' <span class="cc-date">'+esc(d.date)+'</span> <code>'+esc(d.short)+'</code></div>'
+        + '<h3><a href="'+esc(d.href)+'">'+esc(d.title)+'</a></h3>';
+      var body = document.createElement("div"); body.className = "cc-rbody";
+      if (tpl) body.appendChild(tpl.content.cloneNode(true));
+      sec.appendChild(body); listEl.appendChild(sec);
+    });
+  }
+  function setView(v){ view = v;
+    bCards.classList.toggle("active", v==="cards"); bTl.classList.toggle("active", v==="timeline"); bRefl.classList.toggle("active", v==="refl");
+    gb.disabled = v!=="cards"; render(); }
   q.addEventListener("input", render); gb.addEventListener("change", render); sb.addEventListener("change", render);
   bCards.addEventListener("click", function(){ setView("cards"); }); bTl.addEventListener("click", function(){ setView("timeline"); });
+  bRefl.addEventListener("click", function(){ setView("refl"); });
+  window.addEventListener("hashchange", render);   // filter buttons + chips set #cat=…
   render();
 </script></body></html>
 `);

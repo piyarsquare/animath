@@ -17,8 +17,8 @@ export function sheetCellSize(
  *  average of its four corner colors (one flat color per cell). Vertex
  *  positions still match the points layout (pos.x = x, pos.y = 0, pos.z = y), so
  *  the shared surface math maps them onto the function graph exactly as the
- *  point cloud. `seed` is zero so any Jitter shifts the sheet uniformly rather
- *  than tearing it. */
+ *  point cloud. `seed` is 0.5 — the jitter-neutral value of (seed·2 − 1) — so a
+ *  continuous surface never shifts off the axes / the zero-mean point cloud. */
 export function createSheetGeometry(
   res: number,
   xMin: number = -4, xMax: number = 4, yMin: number = -4, yMax: number = 4,
@@ -62,7 +62,7 @@ export function rebuildSheetWireGeometry(
  *  `position` and a `corner` sign in {−0.5,+0.5}². The tile shader places the
  *  node on the surface and expands the quad along the two local deformed grid
  *  directions, so every tile is a square stretched + oriented to fit the grid.
- *  Non-indexed (6 verts per tile). `seed`/`size` are zero/one as in the sheet. */
+ *  Non-indexed (6 verts per tile). `seed`/`size` are 0.5/1 as in the sheet. */
 export function createTileGeometry(
   res: number,
   xMin: number = -4, xMax: number = 4, yMin: number = -4, yMax: number = 4,
@@ -163,7 +163,7 @@ function fillNet(
   geometry.setAttribute('aOther', new THREE.BufferAttribute(new Float32Array(other), 2));
   geometry.setAttribute('aSide', new THREE.BufferAttribute(new Float32Array(side), 1));
   geometry.setAttribute('size', new THREE.BufferAttribute(new Float32Array(n).fill(1), 1));
-  geometry.setAttribute('seed', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
+  geometry.setAttribute('seed', new THREE.BufferAttribute(new Float32Array(n * 4).fill(0.5), 4));
   geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(index), 1));
   geometry.setDrawRange(0, index.length);
 }
@@ -181,7 +181,7 @@ function fillTiles(
 
   const pos = new Float32Array(vertCount * 3);
   const corner = new Float32Array(vertCount * 2);
-  const seeds = new Float32Array(vertCount * 4); // zero → jitter is a uniform shift
+  const seeds = new Float32Array(vertCount * 4).fill(0.5); // 0.5 → jitter-neutral
   const sizes = new Float32Array(vertCount).fill(1);
 
   // The four corner signs, as two triangles.
@@ -221,7 +221,7 @@ function fillSheet(
 
   const pos = new Float32Array(vertCount * 3);
   const base = new Float32Array(vertCount * 2); // cell lower-left domain point
-  const seeds = new Float32Array(vertCount * 4); // zeros: jitter → uniform shift
+  const seeds = new Float32Array(vertCount * 4).fill(0.5); // 0.5 → jitter-neutral
   const sizes = new Float32Array(vertCount).fill(1);
 
   let v = 0;
@@ -261,7 +261,7 @@ function fillSheetWire(
   const spanX = xMax - xMin, spanY = yMax - yMin;
 
   const pos = new Float32Array(vertCount * 3);
-  const seeds = new Float32Array(vertCount * 4);
+  const seeds = new Float32Array(vertCount * 4).fill(0.5); // 0.5 → jitter-neutral
   const sizes = new Float32Array(vertCount).fill(1);
 
   for (let j = 0; j < n; j++) {

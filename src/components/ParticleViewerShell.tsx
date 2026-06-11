@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Canvas3D from './Canvas3D';
 import { Slider, Pills, Select, Checkbox, RangeSlider } from './ControlPanel';
+import { usePhone } from '../chrome/usePhone';
 import Workspace from '../chrome/workspace/Workspace';
 import type { LayoutDef, SectionDef, ViewDef } from '../chrome/workspace/types';
 import QuarterTurnControls from '../controls/QuarterTurnControls';
@@ -9,7 +10,7 @@ import { COMPLEX_PARTICLES_DEFAULTS } from '../config/defaults';
 import { planes, Plane } from '../math/constants';
 import { clearPersistedState } from '../lib/usePersistentState';
 import {
-  ColorStyle, ColorBy, ColorQuantity, CoordMode, coordModeNames, colormapNames,
+  ColorStyle, ColorBy, ColorQuantity, colormapNames,
   SamplePattern, samplePatternNames, JitterMode, AXIS_COLORS,
   shapeNames, textureNames, motionModes, renderModes,
   useGestureRotation,
@@ -43,6 +44,9 @@ export interface ParticleViewerShellProps {
   functionName: string;
   functionFormula: string;
   functionPicker: React.ReactNode;
+  /** Always-available top-bar control (e.g. a compact function dropdown), so
+   *  switching functions never requires opening a panel. */
+  topExtra?: React.ReactNode;
   /** Extra controls appended to the Function panel (e.g. per-function params). */
   variantExtras?: React.ReactNode;
   /** Extra controls appended to the Domain panel (e.g. the branch range). */
@@ -60,10 +64,11 @@ export interface ParticleViewerShellProps {
 
 export default function ParticleViewerShell({
   appId, state, controls, onMount,
-  functionName, functionFormula, functionPicker, variantExtras, domainExtras, readme, explainer,
+  functionName, functionFormula, functionPicker, topExtra, variantExtras, domainExtras, readme, explainer,
   settingsStorageKey, embed,
 }: ParticleViewerShellProps) {
   const gestures = useGestureRotation(state);
+  const phone = usePhone();
 
   // Hopf/Torus projections are nonlinear in the 4D coordinates, so a 4D plane
   // rotation before the map deforms the image. In those modes the turn/spin
@@ -204,6 +209,18 @@ export default function ParticleViewerShell({
         checked={state.reciprocal}
         onChange={state.setReciprocal}
       />
+      {/* Adaptive density redistributes the samples by |f′(z)| — a sampling
+          choice, so it lives here with the rest of the domain sampling. */}
+      <Checkbox
+        label="Adaptive density (sample where stretched)"
+        checked={state.adaptive}
+        onChange={state.setAdaptive}
+      />
+      {state.adaptive && (
+        <Slider label="Sharpness (α)" value={state.adaptiveAlpha}
+          min={R.adaptiveAlpha.min} max={R.adaptiveAlpha.max} step={R.adaptiveAlpha.step}
+          onChange={state.setAdaptiveAlpha} format={v => v.toFixed(1)} />
+      )}
       <Checkbox
         label="± symmetric bounds"
         checked={state.boundsLock}
@@ -238,18 +255,6 @@ export default function ParticleViewerShell({
           />
         </>
       )}
-      <Select
-        label="Input chart"
-        options={coordModeNames.map((name, i) => ({ value: i as CoordMode, label: name }))}
-        value={state.inputCoord}
-        onChange={state.setInputCoord}
-      />
-      <Select
-        label="Output chart"
-        options={coordModeNames.map((name, i) => ({ value: i as CoordMode, label: name }))}
-        value={state.outputCoord}
-        onChange={state.setOutputCoord}
-      />
       {domainExtras}
     </>
   );
@@ -293,17 +298,24 @@ export default function ParticleViewerShell({
         value={state.viewMotion}
         onChange={controls.handleMotion}
       />
-      {/* What a one-finger drag on the plot does. Two-finger drag always pans;
-          Shift+drag pans regardless of the mode. */}
-      <Pills
-        label="Drag"
-        options={[
-          { value: 'orbit', label: 'Orbit' },
-          { value: 'pan', label: 'Pan' },
-        ]}
-        value={state.dragMode}
-        onChange={state.setDragMode}
-      />
+      {/* Desktop pans with modifiers (right-drag, held Space, Shift), so the
+          mode toggle only exists on phone, where one-finger drag must choose
+          (two-finger drag always pans there). */}
+      {phone ? (
+        <Pills
+          label="Drag"
+          options={[
+            { value: 'orbit', label: 'Orbit' },
+            { value: 'pan', label: 'Pan' },
+          ]}
+          value={state.dragMode}
+          onChange={state.setDragMode}
+        />
+      ) : (
+        <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', margin: '2px 0 4px' }}>
+          Drag orbits · right-drag, Space+drag or Shift+drag pans · wheel zooms
+        </div>
+      )}
       <Slider
         label="Distance"
         value={state.cameraZ}
@@ -311,6 +323,9 @@ export default function ParticleViewerShell({
         onChange={state.setCameraZ}
         format={v => v.toFixed(1)}
       />
+      <Slider label="Axis width" value={state.axisWidth}
+        min={R.axisWidth.min} max={R.axisWidth.max} step={R.axisWidth.step}
+        onChange={state.setAxisWidth} format={v => v.toFixed(1)} />
     </>
   );
 
@@ -384,21 +399,30 @@ export default function ParticleViewerShell({
     </>
   );
 
-  const particlesNode = (
+  // One merged Render panel: how the sampled graph is drawn. The mode pills
+  // lead; mode-specific rows follow; the controls every mode shares (opacity,
+  // intensity, background) close the panel — stated once, not per mode.
+  const isPoints = state.renderMode === 'Points';
+  const isSheet = state.renderMode === 'Sheet';
+  const isTiles = state.renderMode === 'Tiles';
+  const isNet = state.renderMode === 'Net';
+
+  const renderNode = (
     <>
-      {state.renderMode === 'Points' && (
-        <Slider label="Size" value={state.size}
-          min={R.size.min} max={R.size.max} step={R.size.step}
-          onChange={state.setSize} format={v => v.toFixed(1)} />
-      )}
-      <Slider label="Opacity" value={state.opacity}
-        min={R.opacity.min} max={R.opacity.max} step={R.opacity.step}
-        onChange={state.setOpacity} format={v => v.toFixed(2)} />
-      <Slider label="Intensity" value={state.intensity}
-        min={R.intensity.min} max={R.intensity.max} step={R.intensity.step}
-        onChange={state.setIntensity} format={v => v.toFixed(2)} />
-      {state.renderMode === 'Points' && (
+      <Pills
+        label="Render"
+        options={renderModes.map(m => ({ value: m, label: m }))}
+        value={state.renderMode}
+        onChange={state.setRenderMode}
+      />
+      {isPoints && (
         <>
+          <Slider label="Particle count" value={state.particleCount}
+            min={R.particleCount.min} max={R.particleCount.max} step={R.particleCount.step}
+            onChange={state.setParticleCount} format={v => `${(v / 1000).toFixed(0)}k`} />
+          <Slider label="Size" value={state.size}
+            min={R.size.min} max={R.size.max} step={R.size.step}
+            onChange={state.setSize} format={v => v.toFixed(1)} />
           <Select label="Shape"
             options={shapeNames.map((s, i) => ({ value: i, label: s }))}
             value={state.shapeIndex} onChange={state.setShapeIndex} />
@@ -407,31 +431,26 @@ export default function ParticleViewerShell({
             value={state.textureIndex} onChange={state.setTextureIndex} />
         </>
       )}
-      <Checkbox label="Light background"
-        checked={state.objectMode} onChange={state.setObjectMode} />
-    </>
-  );
-
-  const surfaceNode = (
-    <>
-      <Pills
-        label="Render"
-        options={renderModes.map(m => ({ value: m, label: m }))}
-        value={state.renderMode}
-        onChange={state.setRenderMode}
-      />
-      {state.renderMode === 'Sheet' && (
+      {isSheet && (
         <>
           <Checkbox label="Filled sheet"
             checked={state.sheetFill} onChange={state.setSheetFill} />
           <Checkbox label="Wireframe"
             checked={state.sheetWire} onChange={state.setSheetWire} />
-          <Slider label="Resolution" value={state.sheetResolution}
-            min={8} max={500} step={1}
-            onChange={state.setSheetResolution} format={v => `${v}²`} />
-          <Slider label="Shading" value={state.sheetShade}
-            min={0} max={1} step={0.01}
-            onChange={state.setSheetShade} format={v => v.toFixed(2)} />
+        </>
+      )}
+      {(isSheet || isTiles) && (
+        <Slider label="Resolution" value={state.sheetResolution}
+          min={8} max={500} step={1}
+          onChange={state.setSheetResolution} format={v => `${v}²`} />
+      )}
+      {isTiles && (
+        <Slider label="Tile size" value={state.tileSize}
+          min={0.02} max={2} step={0.01}
+          onChange={state.setTileSize} format={v => v.toFixed(2)} />
+      )}
+      {isSheet && (
+        <>
           <Checkbox label="Adaptive (points where stretched)"
             checked={state.sheetAdaptive} onChange={state.setSheetAdaptive} />
           {state.sheetAdaptive && (
@@ -439,36 +458,9 @@ export default function ParticleViewerShell({
               min={0.05} max={3} step={0.05}
               onChange={state.setSheetDensity} format={v => v.toFixed(2)} />
           )}
-          <Checkbox label="External light (inside/outside)"
-            checked={state.lighting} onChange={state.setLighting} />
-          {state.lighting && (
-            <Slider label="Light" value={state.lightStrength}
-              min={0} max={1} step={0.01}
-              onChange={state.setLightStrength} format={v => v.toFixed(2)} />
-          )}
         </>
       )}
-      {state.renderMode === 'Tiles' && (
-        <>
-          <Slider label="Resolution" value={state.sheetResolution}
-            min={8} max={500} step={1}
-            onChange={state.setSheetResolution} format={v => `${v}²`} />
-          <Slider label="Tile size" value={state.tileSize}
-            min={0.02} max={2} step={0.01}
-            onChange={state.setTileSize} format={v => v.toFixed(2)} />
-          <Slider label="Shading" value={state.sheetShade}
-            min={0} max={1} step={0.01}
-            onChange={state.setSheetShade} format={v => v.toFixed(2)} />
-          <Checkbox label="External light (inside/outside)"
-            checked={state.lighting} onChange={state.setLighting} />
-          {state.lighting && (
-            <Slider label="Light" value={state.lightStrength}
-              min={0} max={1} step={0.01}
-              onChange={state.setLightStrength} format={v => v.toFixed(2)} />
-          )}
-        </>
-      )}
-      {state.renderMode === 'Net' && (
+      {isNet && (
         <>
           <Checkbox label="Circles (constant |z|)"
             checked={state.netCircles} onChange={state.setNetCircles} />
@@ -492,6 +484,28 @@ export default function ParticleViewerShell({
             onChange={state.setNetResolution} format={v => `${v}`} />
         </>
       )}
+      {(isSheet || isTiles) && (
+        <>
+          <Slider label="Shading" value={state.sheetShade}
+            min={0} max={1} step={0.01}
+            onChange={state.setSheetShade} format={v => v.toFixed(2)} />
+          <Checkbox label="External light (inside/outside)"
+            checked={state.lighting} onChange={state.setLighting} />
+          {state.lighting && (
+            <Slider label="Light" value={state.lightStrength}
+              min={0} max={1} step={0.01}
+              onChange={state.setLightStrength} format={v => v.toFixed(2)} />
+          )}
+        </>
+      )}
+      <Slider label="Opacity" value={state.opacity}
+        min={R.opacity.min} max={R.opacity.max} step={R.opacity.step}
+        onChange={state.setOpacity} format={v => v.toFixed(2)} />
+      <Slider label="Intensity" value={state.intensity}
+        min={R.intensity.min} max={R.intensity.max} step={R.intensity.step}
+        onChange={state.setIntensity} format={v => v.toFixed(2)} />
+      <Checkbox label="Light background"
+        checked={state.objectMode} onChange={state.setObjectMode} />
     </>
   );
 
@@ -530,24 +544,8 @@ export default function ParticleViewerShell({
         dropAxis={state.dropAxis}
         onDropAxisChange={controls.handleDropAxis}
       />
-    </>
-  );
-
-  const detailNode = (
-    <>
-      <Slider label="Particle count" value={state.particleCount}
-        min={R.particleCount.min} max={R.particleCount.max} step={R.particleCount.step}
-        onChange={state.setParticleCount} format={v => `${(v / 1000).toFixed(0)}k`} />
-      <Checkbox label="Adaptive density"
-        checked={state.adaptive} onChange={state.setAdaptive} />
-      {state.adaptive && (
-        <Slider label="Sharpness (α)" value={state.adaptiveAlpha}
-          min={R.adaptiveAlpha.min} max={R.adaptiveAlpha.max} step={R.adaptiveAlpha.step}
-          onChange={state.setAdaptiveAlpha} format={v => v.toFixed(1)} />
-      )}
-      <Slider label="Axis width" value={state.axisWidth}
-        min={R.axisWidth.min} max={R.axisWidth.max} step={R.axisWidth.step}
-        onChange={state.setAxisWidth} format={v => v.toFixed(1)} />
+      {/* Live orientation readout — the projected images of the four basis
+          vectors. It belongs beside the controls that change it. */}
       <table className="cp-orient-matrix">
         <thead>
           <tr>
@@ -567,33 +565,38 @@ export default function ParticleViewerShell({
           ))}
         </tbody>
       </table>
-      {settingsStorageKey && (
-        <button
-          className="qtc-reset"
-          style={{ marginTop: 8 }}
-          onClick={() => {
-            if (!window.confirm('Reset all settings to their defaults? This clears your saved settings and reloads the page.')) return;
-            clearPersistedState(settingsStorageKey);
-            window.location.reload();
-          }}
-          title="Forget saved settings and restore the defaults"
-        >
-          Reset settings to defaults
-        </button>
-      )}
     </>
   );
 
+  // What used to be the Detail panel: particle count moved to Render, the
+  // adaptive sampling to Domain, axis width to Camera and the orientation
+  // matrix to 4D Rotation — leaving only the system escape hatch.
+  const systemNode = settingsStorageKey ? (
+    <button
+      className="qtc-reset"
+      style={{ marginTop: 4 }}
+      onClick={() => {
+        if (!window.confirm('Reset all settings to their defaults? This clears your saved settings and reloads the page.')) return;
+        clearPersistedState(settingsStorageKey);
+        window.location.reload();
+      }}
+      title="Forget saved settings and restore the defaults"
+    >
+      Reset settings to defaults
+    </button>
+  ) : null;
+
   const sections: SectionDef[] = [
     { id: 'function', title: 'Function', arch: 'subject', node: functionNode, estHeight: 200 },
-    { id: 'domain', title: 'Domain', arch: 'domain', node: domainNode, estHeight: 460 },
-    { id: 'camera', title: 'Camera', arch: 'view', node: cameraNode, estHeight: 300 },
+    { id: 'domain', title: 'Domain', arch: 'domain', node: domainNode, estHeight: 540 },
+    { id: 'camera', title: 'Camera', arch: 'view', node: cameraNode, estHeight: 340 },
     { id: 'color', title: 'Color', arch: 'color', node: colorNode, estHeight: 380 },
-    { id: 'particles', title: 'Particles', arch: 'marks', node: particlesNode, estHeight: 300 },
-    { id: 'surface', title: 'Surface', arch: 'marks', node: surfaceNode, estHeight: 260 },
+    { id: 'render', title: 'Render', arch: 'marks', node: renderNode, estHeight: 400 },
     { id: 'motion', title: 'Motion', arch: 'motion', node: motionNode, estHeight: 210 },
-    { id: 'rotate', title: '4D Rotation', arch: 'drive', node: rotateNode, estHeight: 360 },
-    { id: 'detail', title: 'Detail', arch: 'quality', node: detailNode, estHeight: 360 },
+    { id: 'rotate', title: '4D Rotation', arch: 'drive', node: rotateNode, estHeight: 470 },
+    ...(systemNode
+      ? [{ id: 'system', title: 'System', arch: 'quality' as const, node: systemNode, estHeight: 90 }]
+      : []),
   ];
 
   const views: ViewDef[] = [
@@ -618,8 +621,8 @@ export default function ParticleViewerShell({
       open: { function: { x: 84, y: 18 }, camera: { x: 84, y: 240 }, rotate: { x: 800, y: 56 } },
     },
     {
-      id: 'appearance', name: 'Appearance', sub: 'Color · Particles · Motion', icon: 'palette',
-      open: { color: { x: 84, y: 18 }, particles: { x: 366, y: 18 }, motion: { x: 84, y: 420 } },
+      id: 'appearance', name: 'Appearance', sub: 'Color · Render · Motion', icon: 'palette',
+      open: { color: { x: 84, y: 18 }, render: { x: 366, y: 18 }, motion: { x: 84, y: 420 } },
     },
     {
       id: 'rotate', name: 'Rotate', sub: '4D rotation over the plot', icon: 'rotate',
@@ -699,6 +702,7 @@ export default function ParticleViewerShell({
       defaultLayoutId="essentials"
       explainer={help || null}
       titlePanel="function"
+      topExtra={topExtra}
     />
   );
 }

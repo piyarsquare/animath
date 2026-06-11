@@ -130,6 +130,6 @@ was inline text to `/three-hats`), so the review and the plan lived together. Do
 now: `docs/polygon-worlds-plan.md` + the embedded‑request convention in the
 three‑hats skill.
 
-**Follow‑up value: HIGH** — the foundation is verified and the full plan is written;
+**Follow-up value: HIGH** — the foundation is verified and the full plan is written;
 the next session can build straight from it with the hardest design questions
 already resolved.

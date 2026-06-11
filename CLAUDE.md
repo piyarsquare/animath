@@ -99,7 +99,8 @@ animath/
     │   ├── StableMarriage/      # Gale–Shapley visualizer + heatmap lab (CSS/DOM)
     │   ├── AgenticSorting/      # concurrent agent-based sorting (CSS/DOM)
     │   ├── StableMatching/      # rebuilt Gale–Shapley lab: matrix · welfare · lattice (CSS/DOM)
-    │   └── PolygonWorlds/       # walk every closed surface from one glued polygon
+    │   ├── PolygonWorlds/       # walk every closed surface from one glued polygon
+    │   └── TreesAndNets/        # M̄₀,ₙ(ℝ) explorer: associahedron tiles + the gluing mosaic; lib/{associahedron,mosaic}.ts
     │
     ├── components/             # shared app-side UI
     │   ├── ParticleViewerShell.tsx  # turnkey workspace assembly for particle (4D) viewers
@@ -166,6 +167,7 @@ visible app catalog comes from `src/apps.ts` (+ `src/chrome/catalog.ts`).
 | `#/agentic-sorting`  | `AgenticSorting` | Concurrent agent-based sorting              |
 | `#/stable-matching`  | `StableMatching` | Rebuilt Gale–Shapley lab (matrix · welfare surface · lattice via layouts) |
 | `#/polygon-worlds`   | `PolygonWorlds`  | Walk every closed surface from one glued polygon |
+| `#/trees-and-nets`   | `TreesAndNets`   | Tree-space as a polytope: the associahedron of an n-gon's triangulations (port of the private `quantum-tree`) |
 | `#/embed/complex-particles` | `EmbedComplexParticles` | Chrome-less applet for iframe embedding, URL-configured (docs/EMBEDS.md); demo host: `/embed-demo.html` |
 | `#/embed/plane-transform` | `EmbedPlaneTransform` | Chrome-less two-pane plane applet for iframe embedding (docs/EMBEDS.md) |
 
@@ -258,14 +260,18 @@ explainer>`. The scene (Three.js via `Canvas3D`, or DOM/CSS) is the view node.
 
 The complex viewers are powered by the **`src/lib/particles` engine** plus the
 turnkey `ParticleViewerShell` component, which together provide the standard
-**Function / Domain / Camera / Color / Particles / Surface / Motion /
-4D Rotation / Detail** panels (the `QuarterTurnControls` live in the drive-tier
-4D Rotation panel), gesture handling, and the rAF loop out of the box. The flow
-is: `useParticleState` (state) → `useViewControls` (orientation/projection
-controls) → build geometry/axes in `Canvas3D`'s `onMount` → `useUniformSync`
-pushes React state into shader uniforms → `startAnimationLoop` runs the rAF loop.
-**ComplexParticles is the canonical, simplest consumer** — copy it when building a
-new particle viewer.
+**Function / Domain / Camera / Color / Render / Motion / 4D Rotation / System**
+panels (the `QuarterTurnControls` live in the drive-tier 4D Rotation panel),
+gesture handling, and the rAF loop out of the box. The flow is:
+`useParticleState` (state) → `useViewControls` (orientation/projection
+controls) → build geometry/axes in `Canvas3D`'s `onMount` (which **must return
+the cleanup** that stops the loop and disposes the scene — `startAnimationLoop`
+returns the stop function) → `useUniformSync` pushes React state into shader
+uniforms → `startAnimationLoop` runs the rAF loop.
+**ComplexParticles is the canonical consumer** — though no longer a *simple*
+one (it orchestrates per-branch materials across four render modes); copy its
+shell wiring when building a new particle viewer and skip the multi-sheet
+material plumbing unless you need it.
 
 ### 2D / fractal viewers
 
@@ -286,7 +292,9 @@ become **layouts** (`views[id].open`).
 Particle viewers split **looking** (gestures) from **navigating** (buttons):
 
 - **1-finger / mouse drag** orbits the camera (never the 4D rotation).
-- **2-finger drag** (or `Shift`+drag) pans the look-at target.
+- **2-finger drag** pans the look-at target; on desktop, **right-drag**,
+  **held `Space`+drag** or `Shift`+drag pan (the phone keeps a Drag
+  Orbit | Pan pill for one-finger choice).
 - **2-finger pinch / wheel** zooms.
 - **QuarterTurnControls** (the drive-tier **4D Rotation** panel, draggable
   beside the plot): tap a ↻/↺ button for a single **eighth turn**
@@ -426,8 +434,9 @@ For per-PR preview URLs, see `docs/PREVIEW_DEPLOYS.md`.
 
 ### Agent session skills (`.claude/skills/`)
 
-Three manually-invoked Claude Code skills support the session workflow (type the
-slash command; they never auto-invoke):
+Three Claude Code skills support the session workflow. Both a human (typing the
+slash command) and an agent (via the Skill tool) can invoke them; they are
+invoked **on explicit request**, not auto-triggered spontaneously:
 
 - **`/start-session`** — reads the latest handoff, opens a progress report, and
   orients (branch + which app, the append-only parallel-branch rule). Run it first.
@@ -439,7 +448,10 @@ slash command; they never auto-invoke):
 
 Progress reports and handoffs are **committed** as **Markdown + YAML frontmatter**
 under `docs/sessions/{progress,handoff}/<branch-slug>/` — partitioned **per branch**
-so parallel branches never collide (the slug is the branch name with `claude/`
+so parallel branches never collide. Forward-looking, app-specific implementation
+plans are reports too: **`kind: plan`** files in the branch's `progress/` folder
+(`status: proposed` until a session executes them), surfaced by the control center
+like any report (the slug is the branch name with `claude/`
 stripped and `/`→`-`; keep branch names short and topical). The style is specified
 by `docs/sessions/REPORT_STYLE.md`; skills copy the `docs/sessions/_template-*.md`
 skeletons. Markdown reads natively on GitHub, and **`npm run sessions`**
@@ -447,9 +459,19 @@ skeletons. Markdown reads natively on GitHub, and **`npm run sessions`**
 HTML view (`report.css` + `report.js`: timeline rail, sticky scroll-spy TOC,
 callouts, sortable tables) and builds a **cross-branch control center**
 (`docs/sessions/control-center.html`) that aggregates every active branch's reports
-into one searchable index. The build reads branch tips read-only (never modifies
-other branches), deduping each report to its most-recently-updated copy with
-provenance taken from the slug folder. The converter `docs/sessions/convert-html.mjs`
-turns the older hand-authored HTML reports into Markdown. The shared self-reflection
-protocol lives at `.claude/prompts/self-reflection.md`.
+into one searchable index. The control center has three views — **Cards** ·
+**Timeline** · **Reflections** — plus a **category filter** bar whose active
+selection lives in the URL as `#cat=<key>` (shareable; app chips everywhere link to
+it). The **Reflections** view is an *exit-interview digest*: it scrapes each report's
+`## Self-reflection` section and its `**Follow-up value:** <LEVEL>` line, sorting
+entries by follow-up severity — so authoring that section in the exact format from
+`.claude/prompts/self-reflection.md` is what feeds it (`categories.mjs` holds the
+category taxonomy). The build reads branch tips read-only (never modifies other
+branches), deduping each report to its most-recently-updated copy with provenance
+taken from the slug folder. The converter `docs/sessions/convert-html.mjs` turns the
+older hand-authored HTML reports into Markdown. On deploy (`deploy.yml` runs
+`npm run sessions` then `copy-sessions-to-dist.mjs`) the hub ships to
+`/animath/sessions/control-center.html` (`noindex`, off to the side) and links out to
+the embed demo (`/animath/embed-demo.html`). The shared self-reflection protocol lives
+at `.claude/prompts/self-reflection.md`.
 </content>
