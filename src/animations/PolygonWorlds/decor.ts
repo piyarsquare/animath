@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 /**
  * The decorated fundamental polygon, shared identically by all worlds. It carries a
- * set of numbered, coloured **landmarks**; each landmark has a fixed coordinate
+ * set of numbered, colored **landmarks**; each landmark has a fixed coordinate
  * (u, v) ∈ [0,1]² in the domain and TWO forms keyed by which face of the sheet it
  * is on — a **tree** on the top (blue) face and a **column** on the bottom (brown)
  * face, at the *same* (u, v). They grow *away* from the sheet (tree up, column
@@ -48,8 +48,8 @@ function halton(i: number, base: number): number {
 const hue = (i: number) => new THREE.Color().setHSL((i * 0.61803398875) % 1, 0.62, 0.58).getHex();
 
 /** A unique, evenly-spaced hue for corner marker `i` of `count` — distinct as a
- *  set so every corner reads as its own colour. Shared by the 3D markers and the
- *  mini-map so the numbers + colours correspond. */
+ *  set so every corner reads as its own color. Shared by the 3D markers and the
+ *  mini-map so the numbers + colors correspond. */
 export const cornerColor = (i: number, count: number): number =>
   new THREE.Color().setHSL((i / Math.max(1, count)) % 1, 0.72, 0.56).getHex();
 
@@ -64,11 +64,11 @@ export function romanize(n: number): string {
   return r;
 }
 
-/** Generate the landmark set: one centre beacon, then `count` interior markers laid
+/** Generate the landmark set: one center beacon, then `count` interior markers laid
  *  out by `arrangement`, all kept off the domain edges. Deterministic + stable. */
 export function generateProps(count: number, arrangement: ArrangementId): DecorProp[] {
   const props: DecorProp[] = [];
-  // centre beacon (special; its colour is set per-face by the builder)
+  // center beacon (special; its color is set per-face by the builder)
   props.push({ u: 0.5, v: 0.5, color: 0xffd24a, label: '★', kind: 'center' });
 
   // interior markers — spread through the domain but held clear of the edges
@@ -93,7 +93,7 @@ export function generateProps(count: number, arrangement: ArrangementId): DecorP
   return props;
 }
 
-/** A reasonable default set (7 interior + centre). */
+/** A reasonable default set (7 interior + center). */
 export const DEFAULT_PROPS = generateProps(7, 'scattered');
 
 /** Rounded-rect path helper for the badge backing. */
@@ -214,10 +214,10 @@ function numeralTexture(text: string, color: number, serif: boolean): THREE.Canv
 
 export interface FundamentalSquareDecor {
   readonly props: readonly DecorProp[];
-  /** Top-face form of landmark i (a tree, or the gold centre spire). Grows +y from
+  /** Top-face form of landmark i (a tree, or the gold center spire). Grows +y from
    *  its base at the origin, so the caller plants the base on the face. */
   makeTop(i: number): THREE.Group;
-  /** Bottom-face form of landmark i (a column, or the magenta centre spire). Also
+  /** Bottom-face form of landmark i (a column, or the magenta center spire). Also
    *  grows +y from its base; the caller turns it (rigidly) onto the underside. */
   makeBottom(i: number): THREE.Group;
   /** Top-face **corner marker** — a ground-level manhole-cover disc marking a
@@ -248,7 +248,7 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
   const capitalGeo = new THREE.CylinderGeometry(0.86, 0.62, 0.4, 20);
   const abacusGeo = new THREE.BoxGeometry(1.6, 0.32, 1.6);
 
-  // ── centre beacon: stepped pedestal + faceted spire + glowing finial ──────────
+  // ── center beacon: stepped pedestal + faceted spire + glowing finial ──────────
   const pedestalGeo = new THREE.CylinderGeometry(1.05, 1.25, 0.55, 8);
   const pedestalGeo2 = new THREE.CylinderGeometry(0.78, 0.95, 0.4, 8);
   const spireGeo = new THREE.ConeGeometry(0.7, 5.2, 6);
@@ -370,7 +370,7 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
   const makeCornerTop = (index: number, color: number): THREE.Group => makeCorner(index, color, false);
   const makeCornerBottom = (index: number, color: number): THREE.Group => makeCorner(index, color, true);
 
-  /** The centre beacon — gold spire + orb (top) vs magenta spire + cube (bottom). */
+  /** The center beacon — gold spire + orb (top) vs magenta spire + cube (bottom). */
   const makeCenter = (mat: THREE.MeshStandardMaterial, finial: 'orb' | 'cube'): THREE.Group => {
     const g = new THREE.Group();
     const ped = new THREE.Mesh(pedestalGeo, mat); ped.position.y = 0.27;

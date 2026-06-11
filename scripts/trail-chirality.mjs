@@ -31,6 +31,10 @@ const WORLDS = [
   { id: 'klein', orientable: false },
   { id: 'crosscap3', orientable: false },
   { id: 'rp2', orientable: false },
+  { id: 'sphere', orientable: true },    // orientable spherical control
+  { id: 'genus2', orientable: true },    // orientable hyperbolic control
+  { id: 'torus6', orientable: true },    // hexagonal torus (flat n-gon control)
+  { id: 'klein6', orientable: false },   // hexagonal Klein bottle (flat n-gon glides)
 ];
 const W = 1100, H = 820;
 
@@ -48,6 +52,13 @@ async function selectWorld(page, id) {
 }
 const flipped = (page) => page.evaluate(() => window.__poly?.map?.()?.flipped ?? null);
 const probe = (page) => page.evaluate(() => window.__poly?.probe?.() ?? null);
+// The decor law: every rendered non-ink mesh sits under a PROPER (det>0) world
+// transform — no baked mirrors, ever. (Mirror-reading comes only from genuinely
+// viewing the back of ink, or from the ink's own genuine det<0 render transforms.)
+const auditDecor = (page) => page.evaluate(() => window.__poly?.auditDecor?.() ?? null);
+// The far-side law (spherical twin worlds): left-handed ink renders only BELOW
+// the glass — the freshest print's mirror image must sit strictly inside the shell.
+const auditInk = (page) => page.evaluate(() => window.__poly?.auditInk?.() ?? null);
 const setYaw = (page, y) => page.evaluate((v) => window.__poly?.setYaw?.(v), y);
 const holdW = (page, on) => page.evaluate((d) => window.dispatchEvent(new KeyboardEvent(d ? 'keydown' : 'keyup', { code: 'KeyW' })), on);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -65,6 +76,10 @@ async function run() {
       await selectWorld(page, world.id);
       await sleep(1000);
       const haveBridge = await page.evaluate(() => !!(window.__poly && window.__poly.probe));
+      // plant a user sign so the decor audit covers its instances in every world
+      // (sign placement must be PROPER everywhere — signs are guarded, not exempt)
+      await page.evaluate(() => window.__poly?.plantSign?.('FRONT', 'BACK'));
+      await sleep(400);
 
       // Walk STRAIGHT along several fixed oblique headings (a curving path just circles
       // in place and never reaches an edge; an axis-aligned line can run parallel to a
@@ -109,8 +124,13 @@ async function run() {
       }
       if (pA === null) { pA = await probe(page); sideA = await pngOf(page); }
 
+      // post-walk audits: decor properness (all worlds) + mirror-ink placement
+      // (spherical twin worlds; null elsewhere)
+      const decor = await auditDecor(page);
+      const inkAud = await auditInk(page);
+
       shots[world.id] = { sideA, sideB };
-      results.push({ world: world.id, orientable: world.orientable, haveBridge, crossed: pB !== null, pA, pB });
+      results.push({ world: world.id, orientable: world.orientable, haveBridge, crossed: pB !== null, pA, pB, decor, inkAud });
       await page.close();
     }
   } finally {
@@ -121,6 +141,7 @@ async function run() {
   //    cyan half sits on — a correct print keeps the SAME sign on both faces) ────────
   console.log('\n=== Trail chirality — does the fresh F read correctly in the character frame? ===\n');
   const side = (p) => (p === null || p === undefined ? 'n/a' : p < 0 ? 'cyan@−axis' : 'cyan@+axis');
+  let failures = 0;
   for (const r of results) {
     const aSign = r.pA == null ? 0 : Math.sign(r.pA);
     const bSign = r.pB == null ? 0 : Math.sign(r.pB);
@@ -131,7 +152,27 @@ async function run() {
     } else if (r.pB == null) verdict = '⚠ never reached the flipped side';
     else if (aSign > 0 && bSign > 0) verdict = '✅ PASS — head print reads correct on BOTH sides';
     else verdict = '❌ FAIL — head print mirrored under the player (A and/or B negative)';
+    if (verdict.startsWith('❌')) failures++;
     console.log(`${r.world.padEnd(10)} A=${side(r.pA).padEnd(11)} B=${side(r.pB).padEnd(11)} ${verdict}`);
+
+    // decor properness: NO rendered non-ink mesh may carry a det<0 world transform
+    if (r.decor) {
+      const ok = r.decor.improper === 0;
+      if (!ok) failures++;
+      console.log(`${''.padEnd(10)} decor: ${r.decor.improper}/${r.decor.meshes} improper ${ok ? '✅ all decor placed by proper transforms' : `❌ FAIL — baked mirror(s): ${r.decor.offenders.join(', ')}`}`);
+    } else {
+      console.log(`${''.padEnd(10)} decor: ⚠ audit unavailable`);
+    }
+    // far-side ink placement (spherical twin worlds): mirror ink only BELOW the glass
+    if (r.inkAud) {
+      const ok = r.inkAud.mirrorR < r.inkAud.shellR - 1e-3;
+      if (!ok) failures++;
+      console.log(`${''.padEnd(10)} twin:  mirrorR=${r.inkAud.mirrorR.toFixed(3)} vs shellR=${r.inkAud.shellR.toFixed(3)} ${ok ? '✅ mirror ink hangs below the glass' : '❌ FAIL — mirror ink renders ON the walking face (open air)'}`);
+    }
+  }
+  if (failures) {
+    console.log(`\n${failures} check(s) failed.`);
+    process.exitCode = 1;
   }
 
   // dump the captures for eyeballing (raw PNG bytes from puppeteer)

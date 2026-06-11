@@ -19,8 +19,8 @@ export interface FrameInput {
 /**
  * Player charted into the fundamental square, for the one square mini-map: the
  * position inside the domain (u,v ∈ 0..1, +v "up"), the heading in that frame,
- * and whether the player is on the reversed (mirror) sheet of a non-orientable
- * world (which paints the marker amber).
+ * and whether the player is on the other face of the sheet (non-orientable
+ * worlds), which paints the marker amber.
  */
 export interface SquareMapState {
   u: number;
@@ -51,5 +51,13 @@ export interface PolygonEngine {
    *  image in the character's frame (see CoverModel.debugProbe). undefined if
    *  unsupported. */
   debugProbe(): number | undefined;
+  /** Test/diagnostic only: mirror-image print radius vs walking-shell radius
+   *  (see CoverModel.auditInk). undefined/null if unsupported. */
+  auditInk(): { mirrorR: number; shellR: number } | null | undefined;
+  /** Plant a user-authored two-sided sign at the player's feet, facing them
+   *  (see CoverModel.plantSign). */
+  plantSign(front: string, back: string): void;
+  /** Remove all planted signs. */
+  clearSigns(): void;
   dispose(): void;
 }

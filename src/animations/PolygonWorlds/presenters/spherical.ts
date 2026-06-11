@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverModel';
 import { SquareMapState } from '../engineTypes';
 import { glassState, POLYGON_GLASS } from '../glassSurface';
-import { makeInkTrail } from '../inkTrail';
+import { makeInkTrail, INK_LIFT } from '../inkTrail';
+import { makeSignBuilder, SignBuilder } from '../sign';
 import { cornerColor } from '../decor';
 import { rp2Square, sq2hemi } from '../squareMap';
 import { parseWord } from '../surfaceSchema';
@@ -157,10 +158,27 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   // mirror twin — no flags, the reflection does the mirroring.
   const ink = makeInkTrail(TRAIL_MAX);
   const inkMesh = new THREE.Mesh(ink.geometry, ink.material); inkMesh.frustumCulled = false;
+  inkMesh.userData.ink = true;   // ink may legitimately render through det<0 — exempt from the decor audit
   root.add(inkMesh);
+  let inkTwin: THREE.Mesh | null = null;
+  // The twin draws the trail through the genuine deck of the TWO-SIDED shell —
+  // which swaps faces (the twisted I-bundle over ℝP²): ink floating at radius
+  // R+LIFT on the walked outer face lands at R−LIFT at the antipode, UNDER the
+  // glass, where it reads mirror-reversed through it. The bare antipodal map
+  // −Id preserves radius — it is the deck of the *untwisted* bundle and would
+  // float mirror prints in open air on the walking face ("crossing the seam
+  // mirrored my ink in place" — exactly the misconception this app dispels).
+  // The uniform shrink equals the radial face swap to first order in LIFT/R
+  // for a zero-thickness decal, and must be recomputed when R changes.
+  const placeTwin = () => {
+    if (!inkTwin || !twinM4) return;
+    const s = (R - INK_LIFT) / (R + INK_LIFT);
+    inkTwin.matrix.copy(twinM4).multiply(new THREE.Matrix4().makeScale(s, s, s));
+  };
   if (twinM4) {
-    const inkTwin = new THREE.Mesh(ink.geometry, ink.material); inkTwin.frustumCulled = false;
-    inkTwin.matrixAutoUpdate = false; inkTwin.matrix.copy(twinM4);
+    inkTwin = new THREE.Mesh(ink.geometry, ink.material); inkTwin.frustumCulled = false;
+    inkTwin.matrixAutoUpdate = false; inkTwin.userData.ink = true;
+    placeTwin();
     root.add(inkTwin);
   }
   let hist = 0;                                     // frozen stamp count
@@ -172,10 +190,33 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     ink.setQuad(slot, posW, fwdU, leftV, normV);
   }
 
+  // ── planted signs: a rigid object on the shell + its genuine deck image ──────
+  // On ℝP² the face-swapping deck (proper in 3D: tangent vectors negate, the
+  // radial response is +1) carries the sign to the antipode growing INWARD —
+  // under the glass, where its ink reads reversed only through it.
+  interface PlantedSign { builder: SignBuilder; b: THREE.Vector3; fwdS: THREE.Vector3; main: THREE.Group; twin: THREE.Group | null }
+  const signs: PlantedSign[] = [];
+  const MAX_SIGNS = 4;
+  function placeSign(s: PlantedSign) {
+    const right = new THREE.Vector3().crossVectors(s.b, s.fwdS);
+    s.main.matrix.makeBasis(right, s.b, s.fwdS).setPosition(s.b.x * R, s.b.y * R, s.b.z * R);
+    if (s.twin) {
+      const r2 = right.clone().negate(), f2 = s.fwdS.clone().negate();
+      s.twin.matrix.makeBasis(r2, s.b, f2).setPosition(-s.b.x * R, -s.b.y * R, -s.b.z * R);
+    }
+  }
+  function removeSign(s: PlantedSign) {
+    root.remove(s.main);
+    if (s.twin) root.remove(s.twin);
+    s.builder.dispose();
+  }
+  function clearSignsFn() { signs.forEach(removeSign); signs.length = 0; }
+
   function applyGlass() {
     const g = glassState(glassOpacity, GLASS);
     planetMat.opacity = g.opacity; planetMat.depthWrite = g.depthWrite; planetMat.transparent = glassOpacity < 0.999; planetMat.needsUpdate = true;
     innerG.visible = g.showUnder;
+    for (const s of signs) if (s.twin) s.twin.visible = g.showUnder;
   }
   applyGlass();
 
@@ -263,6 +304,8 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     if (seam) { seam.geometry.dispose(); seam.geometry = new THREE.TorusGeometry(R, 0.12, 8, 96); }
     camera.far = R * 5; camera.updateProjectionMatrix();
     hist = 0; lastFrozen = null; ink.setCount(0);
+    placeTwin();   // the face-swap shrink depends on R
+    signs.forEach(placeSign);   // signs keep their direction on the resized shell
     syncPose();
   }
 
@@ -272,12 +315,37 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     // the freshest print as rendered (the main mesh carries no transform),
     // read in the character's frame (>0 ⇒ reads right-handed under the player)
     debugProbe: () => ink.chirality(hist - 1, null, fwdU, posU),
+    // the freshest print's mirror image AS RENDERED through the twin's actual
+    // matrix, against the walking shell: mirror ink must hang below the glass
+    auditInk: () => {
+      if (!inkTwin || hist === 0) return null;
+      const c = ink.slotCenter(hist - 1, inkTwin.matrix);
+      return c ? { mirrorR: c.length(), shellR: R } : null;
+    },
     clearTrail: () => { hist = 0; lastFrozen = null; ink.setCount(0); },
+    plantSign: (front: string, back: string) => {
+      if (signs.length >= MAX_SIGNS) removeSign(signs.shift()!);
+      const b = posU.clone().addScaledVector(fwdU, 1.2 / R).normalize();
+      const f = fwdU.clone().addScaledVector(b, -b.dot(fwdU)).normalize().negate(); // front faces the player
+      const builder = makeSignBuilder(front, back);
+      const main = builder.make(); main.matrixAutoUpdate = false; root.add(main);
+      let twin: THREE.Group | null = null;
+      if (antipodal) {
+        twin = builder.make(); twin.matrixAutoUpdate = false;
+        twin.visible = innerG.visible;   // under-glass content, gated like the inner shell
+        root.add(twin);
+      }
+      const s: PlantedSign = { builder, b, fwdS: f, main, twin };
+      signs.push(s);
+      placeSign(s);
+    },
+    clearSigns: clearSignsFn,
     setFloorOpacity: (o: number) => { glassOpacity = o; applyGlass(); },
     setCameraDistance: (d: number) => { camDist = d; },
     setRadius,
     dispose: () => {
       ink.dispose();
+      clearSignsFn();
       planet.geometry.dispose();
       grid.dispose(); planetMat.dispose();
       seam?.geometry.dispose(); seamMat.dispose();

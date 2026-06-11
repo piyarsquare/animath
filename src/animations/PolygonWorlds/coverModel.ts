@@ -67,6 +67,21 @@ export interface CoverModel {
    *  a print in place. */
   debugProbe?(): number;
 
+  /** Test/diagnostic only: the rendered radius of the freshest print's mirror
+   *  image vs the walking-shell radius (spherical twin worlds only; others
+   *  return null/undefined). The law: left-handed ink renders only below the
+   *  glass — `mirrorR` must be strictly less than `shellR`. */
+  auditInk?(): { mirrorR: number; shellR: number } | null;
+
+  /** Plant a user-authored two-sided sign at the player's feet, facing them.
+   *  The sign is player-laid content like the ink — its placement is pulled
+   *  back through the whole current render transform — but realized as a rigid
+   *  (det>0) object: the deck's orientation reversal expresses itself as which
+   *  FACE of the sheet the sign hangs from, and mirror-reading happens only
+   *  physically, through the glass (DoubleSide ink planes). */
+  plantSign?(front: string, back: string): void;
+  clearSigns?(): void;
+
   setFloorOpacity?(o: number): void;
   setSquareSize?(v: number): void;
   setFloorThickness?(t: number): void;
