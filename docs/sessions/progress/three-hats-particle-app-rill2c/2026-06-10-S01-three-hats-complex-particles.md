@@ -33,6 +33,30 @@ which directly shaped the Complex Particles viewer under review here).
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟣 decision · 2026-06-11 — Three-hats round 2: expand, don't fork (unanimous)
+**Why:** User asked whether the multi-function direction (render layers ·
+overlay · pair mode) should expand Complex Particles or open a new app; the
+hats were re-convened on that question.
+
+All three say **expand** — new-app loses on repo history (the
+Roots/Multibranch consolidation), architecture (graph/overlay/pair differ by
+one line: which two values fill the 4-vector; identity is already function 0),
+and pedagogy (the projection/rotation/coloring skills are the shared
+investment). The maintainer **revises his prior ruling**: the overlay is the
+"second consumer," so the ~450-line `createSeriesObjects` extraction is now
+agreed by both him and the consultant — extraction PR first,
+behavior-identical, consumer next. Design revision adopted from pedagogy:
+**function identity must not take hue** (the honest intersection test is
+"clouds meet in matching color"); differentiate by layer/lightness. One open
+presentation call for the user: Subject-tier "Axes" pills (2 of 3 hats) vs
+top-bar Graph|Curves pills (pedagogy). Plan: 4 PRs — layers → extraction +
+two-slot shader → overlay ("Compare with g") → pair mode (axis relabel,
+single-valued v1). Reports:
+[synthesis](2026-06-11-S01-expert-synthesis.md) ·
+[maintainer](2026-06-11-S01-expert-maintainer.md) ·
+[consultant](2026-06-11-S01-expert-consultant.md) ·
+[pedagogy](2026-06-11-S01-expert-pedagogy.md).
+
 ### 🟢 code · 21:40 — Defaults round two, interaction polish, PR #205 watched
 **Why:** User feedback batches: landing-view defaults, chart removal, a
 nonlinear-view rotation guard, and modifier-based panning.
