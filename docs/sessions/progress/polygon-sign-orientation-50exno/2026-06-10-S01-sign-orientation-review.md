@@ -34,6 +34,23 @@ camera/headlamp bug.
 
 ## Working notes
 
+### 🟡 milestone · 06-11 — Hexagonal worlds verified: all 8 worlds green
+**Why:** klein6 was the open risk — whether the linear-lattice + parity-flip
+model survives the hexagonal glide (`a a b c c b⁻¹` puts the glide on
+*adjacent* edges, unlike the square Klein's opposite pair).
+
+It does: **klein6 A+B both positive** (print right-handed on both faces
+across the hexagonal glide crossing), torus6 control clean, decor audits
+0/3757 improper on both hexagonal worlds, and every previously-green check
+stayed green. The flip side renders columns-up with upright Roman plates and
+through-glass mirrored ink, exactly like the square Klein.
+
+![Hexagonal Klein bottle, other face: columns up, fresh print right-handed, old ink through the glass](assets/2026-06-11-S01-hex-klein-flipside.png)
+
+Residual caution for next session: the chirality probe doesn't test
+glide-crossing *smoothness* (the S06 pixel-diff check was a temp script);
+worth re-running that recipe on klein6 once.
+
 ### 🟢 code · 06-11 — "Trivial" n-gon worlds: hexagonal torus + hexagonal Klein bottle live
 **Why:** The user's next desire: hexagon/octagon presentations of the simple
 topologies (torus, Klein, sphere, ℝP²) — same world, different fundamental
