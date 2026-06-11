@@ -102,6 +102,7 @@ export default function AgenticSorting() {
   const [blendA, setBlendA] = usePersistentState<AgentType>('agentic-sorting:blendA', 'standard');
   const [blendB, setBlendB] = usePersistentState<AgentType>('agentic-sorting:blendB', 'blindDate');
   const [labRunning, setLabRunning] = useState(false);
+  const [pendingLabRun, setPendingLabRun] = useState(false); // preset → auto-run a Lab experiment
   const [labProgress, setLabProgress] = useState(0);
   const [labResults, setLabResults] = useState<GroupResult[]>([]);
   const [labResultKind, setLabResultKind] = useState<'compare' | 'monte' | 'sweep'>('compare');
@@ -425,10 +426,71 @@ export default function AgenticSorting() {
     (labKind !== 'mixes' || savedMixes.length >= 2) &&
     (labKind !== 'sweep' || sweepParam !== 'blend' || blendA !== blendB);
 
+  // a preset that jumps into the Lab auto-runs once the mode has switched
+  useEffect(() => {
+    if (mode === 'lab' && pendingLabRun && !labRunning && labReady) {
+      setPendingLabRun(false);
+      runLab();
+    }
+  }, [mode, pendingLabRun, labRunning, labReady, runLab]);
+
+  // one-click scenarios — each lands on the settings/view that show one idea
+  const presets = [
+    {
+      id: 'cluster', label: 'Clustering', caption: 'Like-colored agents drift together — a pattern no rule encodes.',
+      apply: () => {
+        setMode('sandbox'); setObjectiveMode('uniform'); setFrozenPct(0);
+        setColorBy('type'); setWeights({ ...DEFAULT_WEIGHTS }); setIsRunning(true);
+      },
+    },
+    {
+      id: 'robust', label: 'Robustness to defects', caption: 'Gray cells are frozen; the rest sort around them, up to a ceiling.',
+      apply: () => {
+        setMode('sandbox'); setObjectiveMode('uniform'); setFrozenPct(20);
+        setColorBy('type'); setWeights({ ...DEFAULT_WEIGHTS }); setIsRunning(true);
+      },
+    },
+    {
+      id: 'delay', label: 'Delayed gratification', caption: 'In the Trajectories plot, warm lines rise before they fall.',
+      apply: () => {
+        setMode('sandbox'); setObjectiveMode('uniform'); setFrozenPct(15);
+        setColorBy('type'); setWeights({ ...DEFAULT_WEIGHTS }); setIsRunning(true);
+      },
+    },
+    {
+      id: 'phase', label: 'Phase separation', caption: 'Agents disagree on direction; monotone domains form (animath-original).',
+      apply: () => {
+        setMode('sandbox'); setObjectiveMode('split'); setDescShare(50); setFrozenPct(0);
+        setColorBy('objective');
+        setWeights({ standard: 34, blindDate: 0, nomadic: 33, patrolling: 33, perfectionist: 0 });
+        setIsRunning(true);
+      },
+    },
+    {
+      id: 'slowmix', label: 'The even mix is slow', caption: 'Lab: pure strategies fully sort faster than the even five-way mix.',
+      apply: () => {
+        setObjectiveMode('uniform'); setFrozenPct(0); setWeights({ ...DEFAULT_WEIGHTS });
+        setLabKind('compare'); setLabMetric('cyclesToSort'); setMode('lab'); setPendingLabRun(true);
+      },
+    },
+  ];
+
   const pct = (x: number) => `${Math.round(x * 100)}%`;
   const signedPct = (x: number) => `${x >= 0 ? '+' : ''}${Math.round(x * 100)}%`;
 
   /* ---------- panels (closed archetype vocabulary) ---------- */
+
+  const scenariosNode = (
+    <div className="as-scenarios">
+      {presets.map(p => (
+        <button key={p.id} className="as-preset" onClick={p.apply}>
+          <span className="as-preset-label">{p.label}</span>
+          <span className="as-preset-caption">{p.caption}</span>
+        </button>
+      ))}
+      <p className="as-hint">One-click demos. Each sets the population and view that make one idea visible, then starts the run.</p>
+    </div>
+  );
 
   const arrayNode = (
     <div className="as-panel">
@@ -737,6 +799,7 @@ export default function AgenticSorting() {
   );
 
   const sandboxSections: SectionDef[] = [
+    { id: 'scenarios', title: 'Scenarios', arch: 'subject', node: scenariosNode, estHeight: 320 },
     { id: 'array', title: 'Array', arch: 'subject', node: arrayNode, estHeight: 250 },
     { id: 'display', title: 'Display', arch: 'marks', node: displayNode, estHeight: 180 },
     { id: 'agents', title: 'Population mix', arch: 'drive', node: agentsNode, estHeight: 330 },
@@ -764,16 +827,26 @@ export default function AgenticSorting() {
 
   const sandboxLayouts: LayoutDef[] = [
     {
-      id: 'setup', name: 'Setup', sub: 'Array · Mix · Run', icon: 'tune',
-      open: { array: { x: 84, y: 18 }, run: { x: 84, y: 280 }, agents: { x: 84, y: 500 } },
+      id: 'explore', name: 'Explore', sub: 'Scenarios · arena · trajectories', icon: 'chart',
+      // The on-ramp: one-click Scenarios + Run on the left, the moving picture and
+      // the trajectories plot (the signature visual) both on the right.
+      open: { scenarios: { x: 84, y: 18 }, run: { x: 84, y: 356 } },
       views: {
-        arena: { x: 372, y: 16, w: 720, h: 560, open: true },
+        arena: { x: 372, y: 16, w: 720, h: 318, open: true },
+        trajectories: { x: 372, y: 350, w: 720, h: 300, open: true },
+      },
+    },
+    {
+      id: 'tinker', name: 'Tinker', sub: 'Array · Mix · Display · Run', icon: 'tune',
+      open: { array: { x: 84, y: 18 }, run: { x: 84, y: 280 }, agents: { x: 84, y: 492 }, display: { x: 312, y: 18 } },
+      views: {
+        arena: { x: 540, y: 16, w: 700, h: 560, open: true },
         trajectories: { open: false },
       },
     },
     {
-      id: 'analysis', name: 'Analysis', sub: 'Trajectories + metrics', icon: 'chart',
-      open: { metrics: { x: 84, y: 18 } },
+      id: 'analyze', name: 'Analyze', sub: 'Metrics · Track · trajectories', icon: 'chart',
+      open: { metrics: { x: 84, y: 18 }, track: { x: 84, y: 372 } },
       views: {
         arena: { x: 372, y: 16, w: 720, h: 300, open: true },
         trajectories: { x: 372, y: 324, w: 720, h: 300, open: true },
@@ -809,7 +882,7 @@ export default function AgenticSorting() {
       sections={mode === 'lab' ? labSections : sandboxSections}
       views={mode === 'lab' ? labViews : sandboxViews}
       layouts={mode === 'lab' ? labLayouts : sandboxLayouts}
-      defaultLayoutId={mode === 'lab' ? 'lab' : 'setup'}
+      defaultLayoutId={mode === 'lab' ? 'lab' : 'explore'}
       explainer={help}
       modes={modes}
       activeMode={mode}

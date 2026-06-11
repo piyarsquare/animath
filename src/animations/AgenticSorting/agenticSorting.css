@@ -20,6 +20,43 @@
   margin: 2px 0 0;
 }
 
+/* ── Scenarios (one-click presets) ── */
+.as-scenarios {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.as-preset {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.as-preset:hover {
+  background: var(--track);
+  border-color: var(--accent);
+}
+
+.as-preset-label {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.as-preset-caption {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--dim);
+}
+
 /* ── Run buttons ── */
 .as-controls-row {
   display: flex;
