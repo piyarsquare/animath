@@ -16,7 +16,7 @@ app: trees-and-nets
 
 > [!NOTE]
 > New app `#/trees-and-nets`, first build (port of the private `quantum-tree`,
-> classical scope only). Not merged, no PR yet. `npm run build` passes
+> classical scope only). On **PR #211** (not merged). `npm run build` passes
 > (`tsc && vite build`, ✓ ~6.4s at `c1a7de1`); own chunk ~16.5 kB.
 
 ## Summary
@@ -77,7 +77,7 @@ app shows a **Tile** window (the canonical associahedron) and an **Atlas** windo
   shape. Consider a small "cross the facet" animation or showing the crossed facet.
 - **Energies / the "Nets" half** (editable distance matrix, NeighborNet/NJ,
   circular-decomposable metrics) are scoped in FUTURE_APPS §6 but not started.
-- **No PR opened** for this branch.
+- **PR #211 open** (not merged); review/merge pending.
 
 ## Context
 
