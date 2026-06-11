@@ -17,6 +17,7 @@ import {
   type MetricKey, type GroupResult, type ExperimentSpec, type SweepParam,
 } from './lab';
 import { LabResults } from './LabResults';
+import { useCanvas2D } from './useCanvas2D';
 import explainerText from './EXPLAINER.md?raw';
 import readmeText from './README.md?raw';
 
@@ -277,47 +278,14 @@ export default function AgenticSorting() {
   useEffect(() => { colorByRef.current = colorBy; draw(); }, [colorBy, draw]);
 
   // DPR-aware canvas sizing (ignores zero-size when the window is collapsed)
-  useEffect(() => {
-    const cvs = canvasRef.current;
-    if (!cvs) return;
-    const ro = new ResizeObserver(() => {
-      const rect = cvs.getBoundingClientRect();
-      const w = Math.round(rect.width), h = Math.round(rect.height);
-      if (w === 0 || h === 0) return;
-      const dpr = window.devicePixelRatio || 1;
-      cvs.width = Math.round(w * dpr);
-      cvs.height = Math.round(h * dpr);
-      const ctx = cvs.getContext('2d');
-      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      sizeRef.current = { w, h };
-      const cs = getComputedStyle(cvs);
-      axisRef.current = cs.getPropertyValue('--dim').trim() || 'rgba(128,128,128,0.6)';
-      markRef.current = cs.getPropertyValue('--accent').trim() || '#ffce47';
-      draw();
-    });
-    ro.observe(cvs);
-    return () => ro.disconnect();
+  useCanvas2D(canvasRef, sizeRef, (cvs) => {
+    const cs = getComputedStyle(cvs);
+    axisRef.current = cs.getPropertyValue('--dim').trim() || 'rgba(128,128,128,0.6)';
+    markRef.current = cs.getPropertyValue('--accent').trim() || '#ffce47';
+    draw();
   }, [draw, mode]);
 
-  // DPR-aware sizing for the trajectories canvas
-  useEffect(() => {
-    const cvs = trajCanvasRef.current;
-    if (!cvs) return;
-    const ro = new ResizeObserver(() => {
-      const rect = cvs.getBoundingClientRect();
-      const w = Math.round(rect.width), h = Math.round(rect.height);
-      if (w === 0 || h === 0) return;
-      const dpr = window.devicePixelRatio || 1;
-      cvs.width = Math.round(w * dpr);
-      cvs.height = Math.round(h * dpr);
-      const ctx = cvs.getContext('2d');
-      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      trajSizeRef.current = { w, h };
-      drawTraj();
-    });
-    ro.observe(cvs);
-    return () => ro.disconnect();
-  }, [drawTraj, mode]);
+  useCanvas2D(trajCanvasRef, trajSizeRef, () => drawTraj(), [drawTraj, mode]);
 
   // the simulation loop — fixed-timestep accumulator, one draw per frame
   useEffect(() => {
