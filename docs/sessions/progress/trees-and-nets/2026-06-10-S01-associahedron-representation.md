@@ -36,6 +36,17 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 12:45 — Branch name in the Cloudflare preview tab title
+**Why:** User: each Cloudflare build gets a new URL; the tab always said "animath",
+making multi-thread work hard to tell apart.
+
+Added a `branchTitle` Vite plugin (`vite.config.ts`) that reads Cloudflare's
+build-time `CF_PAGES_BRANCH` and rewrites `<title>` to `"<branch> · animath"`
+(slashes→dashes, matching the `*.pages.dev` subdomain). Verified across builds:
+preview branch → `claude-trees-and-nets · animath`; `main` and local → `animath`.
+Documented in `docs/PREVIEW_DEPLOYS.md`. (Shared file `vite.config.ts` touched —
+additive plugin only.)
+
 ### 🟢 code · 12:30 — Draw the actual (dual) tree + smooth morphs
 **Why:** User: "I want to see the actual tree" + "animations should be smooth."
 
