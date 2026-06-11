@@ -1,19 +1,66 @@
 /* Agentic Sorting — app-owned styles.
-   Controls render inside Workspace panel bodies (.am-ws-pbody / the phone
-   sheet); the arena fills the "Array" view window body, so all sizing is
-   container-relative — no viewport units.
+   Controls render inside Workspace panel bodies (built from the shared
+   ControlPanel primitives, styled by the theme tokens); the arena is a <canvas>
+   that fills the "Array" view window body, so all sizing is container-relative.
 
-   Class-prefix audit (2026-06): no selector below (and no class the JSX
-   renders) matches any `.as-*` selector in the legacy
-   src/components/AppShell.css, and the only custom property defined here
-   (--as-dot-size) is not among AppShell's --as-* variables — so deleting
-   AppShell.css cannot change this app. */
+   Colors below are theme tokens (var(--fg)/--accent/…) so the app restyles with
+   every skin; the only literal colors live in the canvas palette (arena.ts),
+   chosen color-vision-deficiency-safe. */
 
-/* ── Buttons ── */
+.as-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.as-hint {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--dim);
+  margin: 2px 0 0;
+}
+
+/* ── Scenarios (one-click presets) ── */
+.as-scenarios {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.as-preset {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.as-preset:hover {
+  background: var(--track);
+  border-color: var(--accent);
+}
+
+.as-preset-label {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.as-preset-caption {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--dim);
+}
+
+/* ── Run buttons ── */
 .as-controls-row {
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
 }
 
 .as-button {
@@ -22,323 +69,246 @@
   justify-content: center;
   gap: 8px;
   border: none;
-  border-radius: 12px;
-  font-weight: 900;
-  font-size: 14px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.04em;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
+  transition: background 0.15s, transform 0.1s, filter 0.15s;
 }
 
-.as-button:active {
-  transform: scale(0.97);
-}
+.as-button:active { transform: scale(0.97); }
 
 .as-button-primary {
   flex: 1;
-  padding: 14px;
-  background: #10b981;
-  color: #020617;
+  padding: 12px;
+  background: var(--accent);
+  color: var(--accent-fg, #fff);
 }
 
-.as-button-primary:hover {
-  background: #34d399;
-}
+.as-button-primary:hover { filter: brightness(1.08); }
 
 .as-button-primary.as-button-pause {
-  background: #f59e0b;
-}
-
-.as-button-primary.as-button-pause:hover {
-  background: #fbbf24;
+  background: var(--warn, #f59e0b);
+  color: #1a1205;
 }
 
 .as-button-reset {
-  padding: 14px 18px;
-  background: #1e293b;
-  color: #fff;
-  border: 1px solid #334155;
+  padding: 12px 16px;
+  background: var(--panel-2);
+  color: var(--fg);
+  border: 1px solid var(--border);
 }
 
-.as-button-reset:hover {
-  background: #334155;
-}
+.as-button-reset:hover { background: var(--track); }
 
-/* ── Sliders ── */
-.as-slider-group {
-  margin-bottom: 16px;
-}
-
-.as-slider-group:last-child {
-  margin-bottom: 0;
-}
-
-.as-slider-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 8px;
-}
-
-.as-slider-label span {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.as-slider {
-  width: 100%;
-  height: 4px;
-  background: #1e293b;
-  border-radius: 4px;
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
-  outline: none;
-}
-
-.as-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #94a3b8;
-  cursor: pointer;
-}
-
-.as-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #94a3b8;
-  border: none;
-  cursor: pointer;
-}
-
-.as-slider-density::-webkit-slider-thumb {
-  background: #10b981;
-}
-
-.as-slider-density::-moz-range-thumb {
-  background: #10b981;
-}
-
-.as-slider-speed::-webkit-slider-thumb {
-  background: #f59e0b;
-}
-
-.as-slider-speed::-moz-range-thumb {
-  background: #f59e0b;
-}
-
-.as-slider-weight:hover::-webkit-slider-thumb {
-  background: #fff;
-}
-
-.as-slider-weight:hover::-moz-range-thumb {
-  background: #fff;
-}
-
-/* ── Population mix (Agents panel) ── */
+/* ── Population mix (Population mix panel) ── */
 .as-weight-list {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding-top: 4px;
+  padding-top: 2px;
 }
 
 .as-weight-item {
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
-.as-weight-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-
-.as-weight-label > span:first-child {
+.as-weight-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 700;
-}
-
-.as-weight-value {
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  color: #64748b;
 }
 
 .as-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
+  flex: none;
 }
 
-/* Strategy reference (the old legend cards, folded into each weight row). */
-.as-legend-icon {
-  font-size: 15px;
-}
+.as-legend-icon { font-size: 15px; line-height: 1; }
 
 .as-legend-name {
-  font-size: 10px;
-  font-weight: 900;
+  font-size: 11px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.08em;
+  color: var(--fg);
 }
 
 .as-weight-desc {
-  font-size: 9px;
-  color: #64748b;
-  line-height: 1.4;
-  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--dim);
+  line-height: 1.45;
+  margin: 0;
 }
 
-/* ── Arena (the "Array" view window) ── */
-.as-arena {
-  /* Fill the view window body; the window supplies border/radius/shadow. */
-  position: absolute;
-  inset: 0;
-  background: #020617;
-  padding: 24px;
+/* ── Track agent panel ── */
+.as-track-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.as-track-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.as-arena-canvas { cursor: crosshair; }
+
+/* ── Lab: progress bar, results, table ── */
+.as-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--track);
   overflow: hidden;
 }
 
-.as-arena-midline {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: #0f172a;
-  z-index: 0;
-}
-
-.as-arena-bars {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-}
-
-.as-arena-bar-column {
+.as-progress-fill {
   height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.1s linear;
+}
+
+.as-lab-results {
+  padding: 16px;
+  overflow: auto;
+}
+
+/* ── Lab: saved-mixes manager ── */
+.as-mixes {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  gap: 8px;
+}
+
+.as-mix-row {
+  display: flex;
   align-items: center;
-  position: relative;
+  gap: 8px;
 }
 
-.as-arena-bar {
-  width: 75%;
+.as-mix-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--fg);
+  min-width: 42px;
+}
+
+.as-mixbar {
+  display: flex;
+  flex: 1;
+  height: 9px;
   border-radius: 999px;
+  overflow: hidden;
+  background: var(--track);
+}
+
+.as-mixbar > span { height: 100%; }
+
+.as-mix-remove {
+  border: none;
+  background: transparent;
+  color: var(--dim);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.as-mix-remove:hover { color: var(--fg); }
+
+.as-lab-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  margin-top: 8px;
+}
+
+.as-lab-table th {
+  text-align: right;
+  font-weight: 600;
+  color: var(--dim);
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.as-lab-table th:first-child { text-align: left; }
+
+.as-lab-table td {
+  text-align: right;
+  padding: 3px 6px;
+  font-family: var(--font-mono);
+  border-bottom: 1px solid var(--border-soft, var(--border));
+}
+
+.as-lab-table td:first-child {
+  text-align: left;
+  font-family: inherit;
+  color: var(--fg);
+}
+
+/* ── Trajectories legend ── */
+.as-traj-legend {
   position: absolute;
-  transition: height 0.15s, background 0.15s, bottom 0.15s;
+  left: 12px;
+  top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--dim-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  pointer-events: none;
 }
 
-/* Dot variant: a small fixed-size circle whose vertical position is set
-   inline. The component reads --as-dot-size to center it on its value. */
-:root { --as-dot-size: 10px; }
-.as-arena-bar.as-arena-bar-dot {
-  width: var(--as-dot-size);
-  height: var(--as-dot-size);
-  border-radius: 50%;
-  left: 50%;
-  transform: translateX(-50%);
-  top: auto;
+.as-traj-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
 }
 
-.as-arena-bar-swapping {
-  background: #fff;
-  box-shadow: 0 0 15px #fff;
-  z-index: 20;
+.as-traj-swatch.as-traj-warm { background: rgba(255, 90, 55, 0.9); margin-left: 4px; }
+.as-traj-swatch.as-traj-cool { background: rgba(150, 150, 155, 0.5); margin-left: 10px; }
+
+/* ── Arena (the "Array" view window) ── */
+.as-arena {
+  position: absolute;
+  inset: 0;
+  background: var(--panel-2);
+  overflow: hidden;
 }
 
-.as-arena-bar-active {
-  background: #facc15;
-  box-shadow: 0 0 10px rgba(250, 204, 21, 0.6);
-  z-index: 10;
+.as-arena-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .as-arena-label {
   position: absolute;
-  right: 24px;
-  font-size: 10px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  color: #334155;
+  right: 14px;
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  color: var(--dim-2);
   text-transform: uppercase;
-  letter-spacing: 3px;
+  letter-spacing: 0.18em;
+  pointer-events: none;
 }
 
-.as-arena-label-top {
-  top: 16px;
-}
-
-.as-arena-label-bottom {
-  bottom: 16px;
-}
-
-/* ── Display-mode toggle (Bars / Dots) ── */
-.as-display-toggle {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
-  padding: 4px;
-  background: #1e293b;
-  border-radius: 8px;
-}
-.as-display-btn {
-  flex: 1;
-  padding: 8px 12px;
-  border: none;
-  background: transparent;
-  color: #94a3b8;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background 0.15s, color 0.15s;
-}
-.as-display-btn:hover { color: #e2e8f0; }
-.as-display-btn-active {
-  background: #334155;
-  color: #fff;
-}
-
-/* ── Agent type colors ── */
-.as-color-standard { background: #06b6d4; }
-.as-color-blind-date { background: #818cf8; }
-.as-color-nomadic { background: #fb923c; }
-.as-color-patrolling { background: #a78bfa; }
-.as-color-perfectionist { background: #f472b6; }
-
-.as-color-standard-text { color: #06b6d4; }
-.as-color-blind-date-text { color: #818cf8; }
-.as-color-nomadic-text { color: #fb923c; }
-.as-color-patrolling-text { color: #a78bfa; }
-.as-color-perfectionist-text { color: #f472b6; }
-
-/* ── Phone tweaks (the phone workspace stacks the view + bottom sheet) ── */
-@media (max-width: 600px) {
-  :root { --as-dot-size: 8px; }
-  .as-arena { padding: 12px; }
-  .as-arena-bars { padding: 0 12px; }
-  .as-controls-row { margin-bottom: 14px; }
-  .as-button-primary, .as-button-reset { padding: 12px 16px; font-size: 13px; }
-  .as-slider-group { margin-bottom: 14px; }
-  .as-slider { height: 8px; }
-  .as-slider::-webkit-slider-thumb { width: 22px; height: 22px; }
-  .as-slider::-moz-range-thumb { width: 22px; height: 22px; }
-}
+.as-arena-label-top { top: 12px; }
+.as-arena-label-bottom { bottom: 12px; }
+.as-arena-label-time { bottom: 12px; left: 14px; right: auto; }
