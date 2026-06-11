@@ -3,6 +3,7 @@ import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverMode
 import { SquareMapState } from '../engineTypes';
 import { glassState, POLYGON_GLASS } from '../glassSurface';
 import { makeInkTrail } from '../inkTrail';
+import { makeSignBuilder, SignBuilder } from '../sign';
 import { cornerColor } from '../decor';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
@@ -182,7 +183,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
 
   // ── decor pool (each cell carries a tree + column variant per prop, plus a
   //    numbered corner marker per polygon vertex) ────────────────────────────────
-  interface Cell { trees: THREE.Group; columns: THREE.Group; cornersTop: THREE.Group; cornersBottom: THREE.Group; }
+  interface Cell { trees: THREE.Group; columns: THREE.Group; cornersTop: THREE.Group; cornersBottom: THREE.Group; signsG: THREE.Group }
   const cells: Cell[] = [];
   for (let i = 0; i < N_DECOR; i++) {
     const trees = new THREE.Group(), columns = new THREE.Group();
@@ -193,9 +194,37 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
       cornersTop.add(decor.makeCornerTop(v + 1, col));
       cornersBottom.add(decor.makeCornerBottom(v + 1, col));
     }
-    trees.visible = false; columns.visible = false; cornersTop.visible = false; cornersBottom.visible = false;
-    root.add(trees, columns, cornersTop, cornersBottom);
-    cells.push({ trees, columns, cornersTop, cornersBottom });
+    const signsG = new THREE.Group();
+    trees.visible = false; columns.visible = false; cornersTop.visible = false; cornersBottom.visible = false; signsG.visible = false;
+    root.add(trees, columns, cornersTop, cornersBottom, signsG);
+    cells.push({ trees, columns, cornersTop, cornersBottom, signsG });
+  }
+
+  // ── planted signs: stamp-like canonical triples, realized rigidly per tile ───
+  // A sign is player-laid content exactly like an ink stamp — its frame triple
+  // (position + a step ahead + one to the left) is pulled back into the home
+  // domain through h⁻¹ at plant time, and per frame each visible tile projects
+  // it through its genuine transform. But the 3D realization is always PROPER:
+  // the projected frame's handedness only decides which FACE the sign hangs
+  // from (det<0 image ⇒ the rigid turn-over below the glass), and its ink reads
+  // reversed only through the glass — never from a baked mirror.
+  interface PlantedSign { builder: SignBuilder; p: Vec3; pf: Vec3; pl: Vec3 }
+  const signs: PlantedSign[] = [];
+  const MAX_SIGNS = 4;
+  function rebuildSignInstances() {
+    for (const cell of cells) {
+      cell.signsG.clear();
+      for (const s of signs) {
+        const g = s.builder.make();
+        g.matrixAutoUpdate = false;
+        cell.signsG.add(g);
+      }
+    }
+  }
+  function clearSignsFn() {
+    for (const cell of cells) cell.signsG.clear();
+    for (const s of signs) s.builder.dispose();
+    signs.length = 0;
   }
   // Decor is full-size near the player and shrinks by the conformal factor (1−r²)
   // with Poincaré radius — the correct way to keep a fixed *hyperbolic* size.
@@ -228,6 +257,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   let freshSlot = -1;                     // buffer slot of the freshest print's image nearest the player (probe)
   const pP = new THREE.Vector3(), pF = new THREE.Vector3(), pL = new THREE.Vector3();
   const fV = new THREE.Vector3(), lV = new THREE.Vector3(), nV = new THREE.Vector3();
+  const rV = new THREE.Vector3(), uV = new THREE.Vector3(), fS = new THREE.Vector3();
 
   // ── player frame on the κ=−1 shell ───────────────────────────────────────────
   // Spawn at the in-domain point farthest from every landmark (so the player never
@@ -314,10 +344,36 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
         aj.position.copy(tmp); aj.rotation.set(0, 0, 0); aj.scale.set(sc, sc, sc);
         bj.position.copy(tmp); bj.rotation.set(Math.PI, 0, 0); bj.scale.set(sc, sc, sc);  // rigid turn-over (see above)
       });
+      // planted signs — project each sign's canonical triple through this
+      // tile's genuine transform; the frame's handedness picks the face
+      const sg = cell.signsG;
+      sg.visible = signs.length > 0;
+      if (signs.length) {
+        const Msign = mul(Mtiles, tile.m);
+        signs.forEach((s, k) => {
+          const inst = sg.children[k] as THREE.Object3D;
+          const r2s = poincareR2(Msign, s.p);
+          if (r2s > 0.95) { inst.visible = false; return; }
+          projectM(Msign, s.p, pP); projectM(Msign, s.pf, pF); projectM(Msign, s.pl, pL);
+          fV.subVectors(pF, pP); lV.subVectors(pL, pP);
+          if (fV.lengthSq() < 1e-10) { inst.visible = false; return; }
+          const upY = nV.crossVectors(fV, lV).y >= 0 ? 1 : -1;   // det<0 image ⇒ hangs below the glass
+          const scS = decorBase * (1 - Math.min(0.97, r2s));
+          fV.normalize();
+          uV.set(0, upY, 0);
+          fS.copy(fV).negate();              // the front face looks back along the planted heading
+          rV.crossVectors(uV, fS);           // PROPER basis by construction (det = +scS³)
+          inst.matrix.makeBasis(
+            rV.multiplyScalar(scS), uV.multiplyScalar(scS), fS.multiplyScalar(scS),
+          ).setPosition(pP);
+          inst.visible = true;
+        });
+      }
     }
     for (let k = used; k < cells.length; k++) {
       cells[k].trees.visible = false; cells[k].columns.visible = false;
       cells[k].cornersTop.visible = false; cells[k].cornersBottom.visible = false;
+      cells[k].signsG.visible = false;
     }
   }
 
@@ -493,6 +549,22 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     // read in the character's frame (>0 ⇒ reads right-handed under the player)
     debugProbe: () => ink.chirality(freshSlot, null, fwdW, UP),
     clearTrail: () => { stamps.length = 0; lastFrozen = null; freshSlot = -1; ink.setCount(0); },
+    plantSign: (front: string, back: string) => {
+      if (signs.length >= MAX_SIGNS) signs.shift()!.builder.dispose();
+      // the plant pose ~1.2 world units ahead, pulled back through h⁻¹ exactly
+      // like an ink stamp (mirror-handed triple when planted from det(h)<0)
+      const delta = 2 / DISK_R;
+      const fb = kStep(frame, 2.4 / DISK_R);
+      const di = inv3(h);
+      signs.push({
+        builder: makeSignBuilder(front, back),
+        p: applyMat(di, framePos(fb)),
+        pf: applyMat(di, framePos(kStep(fb, delta))),
+        pl: applyMat(di, framePos(kStrafe(fb, -Math.PI / 2, delta))),
+      });
+      rebuildSignInstances();
+    },
+    clearSigns: clearSignsFn,
     setFloorOpacity: (o: number) => { glassOpacity = o; applyGlass(); },
     setCameraDistance: (d: number) => { camDist = d; },
     // stamps live in cover coordinates, which are scale-free — the ink survives
@@ -500,6 +572,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     setSquareSize: (v: number) => { DISK_R = diskRadiusFor(v); rebuildFloor(); },
     dispose: () => {
       ink.dispose();
+      for (const s of signs) s.builder.dispose();
       floor.geometry.dispose(); floorMat.dispose();
       ring.geometry.dispose(); ringMat.dispose();
       edgeGeo.dispose(); edgeMatHome.dispose();

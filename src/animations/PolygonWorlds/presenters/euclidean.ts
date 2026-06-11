@@ -3,6 +3,7 @@ import { CoverModel, CoverFrameInput, CoverDeps, PlayerPose } from '../coverMode
 import { SquareMapState } from '../engineTypes';
 import { glassState, POLYGON_GLASS } from '../glassSurface';
 import { makeInkTrail } from '../inkTrail';
+import { makeSignBuilder, SignBuilder } from '../sign';
 import { cornerColor } from '../decor';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
@@ -63,7 +64,18 @@ interface Cell {
   bottom: THREE.Group;    // columns (bottom face)
   cornersTop: THREE.Group;    // numbered corner markers just inside each vertex (top face)
   cornersBottom: THREE.Group; // their Roman-numeral counterparts (bottom face)
+  signsG: THREE.Group;    // one instance per planted sign (sheet coordinates)
 }
+
+/** A planted sign in sheet coordinates: in-plane base position + facing
+ *  azimuth + which face the post grows from — the same data as an ink stamp,
+ *  but realized as a rigid object (its per-cell local matrix is always
+ *  PROPER; on face 1 it is pre-composed with the transparency flip, so the
+ *  cell drawn flipped under the player at plant time renders it exactly
+ *  upright before them, and the identification carries it to the other side
+ *  of the sheet where its ink reads reversed only through the glass). */
+interface PlantedSign { builder: SignBuilder; sx: number; sz: number; phi: number; face: number }
+const MAX_SIGNS = 4;
 
 /** A footprint in sheet coordinates: in-plane position + heading + the face the
  *  ink is on (0 = the slab's authored top face, 1 = its bottom face). For face 1
@@ -163,6 +175,35 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   }
   const rewriteStamps = () => { stamps.forEach((s, i) => writeStamp(i, s)); };
 
+  // ── planted signs: rigid sheet-coordinate objects, one instance per cell ─────
+  // A sign's per-cell local matrix is the player's world plant pose pulled back
+  // through the home cell's CURRENT transform (premultiplied by the transparency
+  // flip when planted from the other face) — always a PROPER matrix; every cell
+  // then draws it through its own genuine transform, exactly like the decor.
+  const signs: PlantedSign[] = [];
+  const FLIP = new THREE.Matrix4().makeRotationAxis(glideDir, Math.PI);
+  const signLocal = (s: PlantedSign): THREE.Matrix4 => {
+    const m = new THREE.Matrix4().makeRotationY(s.phi).setPosition(s.sx, thickness / 2, s.sz);
+    return s.face ? m.premultiply(FLIP) : m;
+  };
+  function addSignInstance(cell: Cell, s: PlantedSign) {
+    const g = s.builder.make();
+    g.matrixAutoUpdate = false;
+    g.matrix.copy(signLocal(s));
+    cell.signsG.add(g);
+  }
+  function rebuildSignInstances() {
+    for (const cell of cells) {
+      cell.signsG.clear();
+      for (const s of signs) addSignInstance(cell, s);
+    }
+  }
+  function clearSigns() {
+    for (const cell of cells) cell.signsG.clear();
+    for (const s of signs) s.builder.dispose();
+    signs.length = 0;
+  }
+
   // ── tiled copies of the two-sided sheet ──────────────────────────────────────
   // Authored with the slab mid-plane at the group origin: top face at +t/2 (trees,
   // up), bottom face at −t/2 (columns, grown down). The group sits at world y=−t/2,
@@ -202,9 +243,12 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
       const trailInk = new THREE.Mesh(ink.geometry, ink.material);
       trailInk.frustumCulled = false;
       trailInk.userData.ink = true;  // ink may legitimately read mirrored — exempt from the decor audit
-      group.add(slab, top, bottom, cornersTop, cornersBottom, trailInk);
+      const signsG = new THREE.Group();
+      group.add(slab, top, bottom, cornersTop, cornersBottom, signsG, trailInk);
       root.add(group);
-      cells.push({ group, slab, top, bottom, cornersTop, cornersBottom });
+      const cell: Cell = { group, slab, top, bottom, cornersTop, cornersBottom, signsG };
+      for (const s of signs) addSignInstance(cell, s);
+      cells.push(cell);
     }
     placeDecor();
   }
@@ -368,19 +412,33 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
       return ink.chirality(stamps.length - 1, M, forward, UP);
     },
     clearTrail: () => { stamps.length = 0; lastFrozen = null; ink.setCount(0); },
+    plantSign: (front: string, back: string) => {
+      if (signs.length >= MAX_SIGNS) signs.shift()!.builder.dispose();
+      signs.push({
+        builder: makeSignBuilder(front, back),
+        sx: px + forward.x * 1.2,
+        sz: pz + forward.z * 1.2,
+        phi: Math.atan2(-forward.x, -forward.z),   // front face looks back at the player
+        face: flipAcc,
+      });
+      rebuildSignInstances();
+    },
+    clearSigns,
     setFloorOpacity: applyFloorOpacity,
     setCameraDistance: (d: number) => { camDist = d; },
     setSquareSize: (v: number) => {
       side = v; scale = side / baseLen;
       // the lattice rescaled under the ink — old stamp coordinates no longer
-      // lie on this sheet, so the trail restarts
+      // lie on this sheet, so the trail (and the planted signs) restart
       stamps.length = 0; lastFrozen = null; ink.setCount(0);
+      clearSigns();
       buildCells();
       scene.fog = new THREE.Fog(SKY, side * 0.7, side * 3);
     },
     setFloorThickness: (t: number) => { thickness = t; buildCells(); rewriteStamps(); },
     dispose: () => {
       ink.dispose();
+      for (const s of signs) s.builder.dispose();
       for (const cell of cells) cell.slab.geometry.dispose();
       floorMat.dispose();
     },

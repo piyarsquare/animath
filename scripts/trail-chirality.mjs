@@ -74,6 +74,10 @@ async function run() {
       await selectWorld(page, world.id);
       await sleep(1000);
       const haveBridge = await page.evaluate(() => !!(window.__poly && window.__poly.probe));
+      // plant a user sign so the decor audit covers its instances in every world
+      // (sign placement must be PROPER everywhere — signs are guarded, not exempt)
+      await page.evaluate(() => window.__poly?.plantSign?.('FRONT', 'BACK'));
+      await sleep(400);
 
       // Walk STRAIGHT along several fixed oblique headings (a curving path just circles
       // in place and never reaches an edge; an axis-aligned line can run parallel to a

@@ -34,6 +34,13 @@ the back of your own ink.
 
 ### Through the glass: backwards, or just upside-down?
 
+Don't take the decor's word for it — **plant your own sign** (the Sign panel):
+a glass plaque with *your* text, a different ink on each face — amber on the
+front, cyan on the back. Walk around it; each ink reads straight from its own
+side and ghosts through the other side reversed. Then cross a flipped edge and
+find the sign again: it hangs from the other face now, and you read its inks
+through the floor.
+
 Any flat sign read from its back is **mirror-reversed** — try it on the torus:
 the Roman numerals under the glass read backwards, and nothing topological has
 happened. *Which* axis looks flipped depends on how you got underneath (pitch

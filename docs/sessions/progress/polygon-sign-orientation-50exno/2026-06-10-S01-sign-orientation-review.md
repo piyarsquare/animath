@@ -34,6 +34,48 @@ camera/headlamp bug.
 
 ## Working notes
 
+### 🟢 code · 06-11 — "Plant a sign": user-authored two-sided glass plaque, all three presenters
+**Why:** The user is still befuddled by vision through the floor and asked for
+an instrument beyond the trail: a sign with *their own* text, different on the
+front and back — ground truth they authored themselves.
+
+**Design (one law, three covers).** The sign is player-laid content exactly
+like an ink stamp — its placement is pulled back through the whole current
+render transform — but realized as a **rigid (det>0) object**: the deck's
+orientation reversal expresses itself only as *which face of the sheet the
+sign hangs from*, and mirror-reading happens only physically, through the
+glass (the two ink planes are DoubleSide on a transparent plaque; the back
+ink is *rotated* π, never mirror-scaled). Front ink amber, back ink cyan, so
+the reader always knows which ink they're reading even when it's backwards.
+
+- **`sign.ts`** (new; sub-agent): `makeSignBuilder(front, back)` — shared
+  textures/materials, auto-shrinking canvas text, glass plaque + hue strips.
+- **Euclidean**: sheet-coordinate pose `{sx, sz, phi, face}`; per-cell local
+  matrix premultiplied by the transparency flip when planted from the other
+  face (so the flipped cell under the player renders it exactly upright at
+  plant time); one instance per cell rides the cells' genuine transforms.
+- **Spherical**: rigid frame on the shell; on ℝP² a twin instance through the
+  genuine face-swapping deck (tangent vectors negate, radial response +1 — a
+  PROPER frame growing inward at the antipode, gated by the glass like the
+  inner shell).
+- **Hyperbolic**: stamp-like canonical triple (p, ahead, left) through h⁻¹ at
+  plant time; per visible tile the triple projects through `Mtiles·γ` and the
+  projected frame's handedness picks the face (det<0 image ⇒ rigid turn-over
+  below the glass), conformal scale from (1−r²).
+- **UI** (sub-agent): a `Sign` panel (arch `marks`) — Front/Back text inputs,
+  Plant/Clear; keyboard guard for typing already existed. Bridge gains
+  `plantSign`/`clearSigns`; the guard script now plants a sign in every world
+  so the decor audit covers its instances (one correction to the sub-agent's
+  work: it had tagged the ink planes `userData.ink`, which would *exempt*
+  them from the audit — signs are never legitimately mirrored, so they must
+  be guarded, not exempt).
+- **EXPLAINER**: the Through-the-glass section now opens with the sign.
+- **`scripts/sign-shots.mjs`** (new): headless front/back/flip-side captures.
+
+![Sign front: amber HELLO, planted facing the player](assets/2026-06-11-S01-sign-front.png)
+
+![Sign back: cyan WORLD reads straight from behind; the amber ink ghosts through reversed](assets/2026-06-11-S01-sign-back.png)
+
 ### 🟡 milestone · 00:20 — Prose pass landed; final build green; session deliverables complete
 **Why:** Last step of the adjudicated plan (§4.4); closes the session's
 implementation scope.

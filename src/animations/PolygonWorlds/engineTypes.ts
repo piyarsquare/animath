@@ -54,5 +54,10 @@ export interface PolygonEngine {
   /** Test/diagnostic only: mirror-image print radius vs walking-shell radius
    *  (see CoverModel.auditInk). undefined/null if unsupported. */
   auditInk(): { mirrorR: number; shellR: number } | null | undefined;
+  /** Plant a user-authored two-sided sign at the player's feet, facing them
+   *  (see CoverModel.plantSign). */
+  plantSign(front: string, back: string): void;
+  /** Remove all planted signs. */
+  clearSigns(): void;
   dispose(): void;
 }

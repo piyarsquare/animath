@@ -40,6 +40,8 @@ export default function PolygonWorlds() {
   const [planetRadius, setPlanetRadius] = useState(DEFAULT_RADIUS);
   const [landmarkCount, setLandmarkCount] = useState(7);
   const [arrangement, setArrangement] = useState<ArrangementId>('scattered');
+  const [signFront, setSignFront] = useState('FRONT');
+  const [signBack, setSignBack] = useState('BACK');
 
   const spec = worldById(worldId);
   const analysis = useMemo(() => analyzeWorld(spec), [spec]);
@@ -89,6 +91,9 @@ export default function PolygonWorlds() {
         setYaw: (v: number) => { yawRef.current = v; },
         // mirror-ink placement audit (spherical twin worlds; null elsewhere)
         auditInk: () => engineRef.current?.auditInk(),
+        // plant/clear the two-inked glass sign without driving the panel UI
+        plantSign: (f: string, b: string) => engineRef.current?.plantSign(f, b),
+        clearSigns: () => engineRef.current?.clearSigns(),
         // The decor law (S06): every rendered decor/scenery mesh is placed by a
         // PROPER (det>0) world transform — mirror-reading only ever arises from
         // genuinely viewing the back of ink, or from the ink's own det<0 render
@@ -309,6 +314,29 @@ export default function PolygonWorlds() {
     </>
   );
 
+  // marks — plant a two-inked glass sign at the player's feet. Each face carries
+  // its own ink (amber front, cyan back); read from its back side, an ink is
+  // mirror-reversed — the orientation cue, now in the player's own words.
+  const signNode = (
+    <>
+      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5 }}>
+        A glass plaque with its own ink on each face. Walk around it; then cross a flipped edge and read it through the floor.
+      </div>
+      <label className="cp-row">
+        <span className="cp-row-label">Front</span>
+        <input type="text" value={signFront} maxLength={16} onChange={(e) => setSignFront(e.target.value)} />
+      </label>
+      <label className="cp-row">
+        <span className="cp-row-label">Back</span>
+        <input type="text" value={signBack} maxLength={16} onChange={(e) => setSignBack(e.target.value)} />
+      </label>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button style={{ ...actionBtn, flex: 1 }} onClick={() => engineRef.current?.plantSign(signFront, signBack)}>Plant sign</button>
+        <button style={{ ...actionBtn, flex: 1 }} onClick={() => engineRef.current?.clearSigns()}>Clear signs</button>
+      </div>
+    </>
+  );
+
   // drive — locomotion.
   const walkNode = (
     <>
@@ -324,6 +352,7 @@ export default function PolygonWorlds() {
     { id: 'terrain', title: 'Terrain', arch: 'domain', node: terrainNode, estHeight: 160 },
     { id: 'camera', title: 'Camera', arch: 'view', node: cameraNode, estHeight: 160 },
     { id: 'decor', title: 'Landmarks & trail', arch: 'marks', node: decorNode, estHeight: 260 },
+    { id: 'sign', title: 'Sign', arch: 'marks', node: signNode, estHeight: 250 },
     { id: 'drive', title: 'Walk', arch: 'drive', node: walkNode, estHeight: 160 },
   ];
 
