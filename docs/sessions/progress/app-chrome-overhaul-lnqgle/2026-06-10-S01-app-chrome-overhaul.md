@@ -40,6 +40,31 @@ rename/export, gallery search, phone landscape) and embeds phase 2 (the
      emoji: 🟣 decision · 🟢 code · 🔵 finding · 🔴 blocker · 🟡 milestone
      Follow each with a "**Why:** …" line, then optional body paragraphs. -->
 
+### 🟢 code · 13:55 — Merged main + added 4 spectral apps to FUTURE_APPS
+**Why:** User flagged two new things landed on main (Complex Particles
+three-hats fixes, a new Trees and Nets app) and asked for a status review;
+then asked to merge, and to extend the future-apps backlog.
+
+Reviewed status: main left the **entire chrome core untouched** — the only
+code overlap was AgenticSorting (main rewrote it; PR B had added a strip) and
+the two `WorkspaceProps` additions (`actions` here vs main's `topExtra`).
+Merged `origin/main`: resolved DesktopWorkspace/PhoneWorkspace to keep *both*
+props, took main's rewritten AgenticSorting wholesale and re-wired the action
+strip onto its new API (contextual: sandbox Start/Pause+Reset →
+`setIsRunning`/`regenerate` projecting `'run'`; lab "Run experiment" →
+`runLab` projecting `'labRun'`), and nudged the new **Trees and Nets**
+default panel column from `x:16` → `x:84` (panels were opening under the
+floating rail, clipping titles). Verified on the merged tree: build green, 20
+unit tests green, all four probes green, AgenticSorting strip checked live in
+both modes, Trees and Nets screenshotted.
+
+Then appended four apps to `docs/FUTURE_APPS.md` (user request): **Fourier
+Analysis**, **Eigenvalues & Spectra**, **Heat Kernel**, **Clustering** — with
+a "spectral throughline" note tying the first three (spectral theory of the
+Laplacian) and clustering (spectral clustering) to a shared `lib/spectral`
+kernel + spectrum-strip readout, full template sections each, and a sequencing
+note.
+
 ### 🟡 milestone · 01:16 — PR D landed; plan of record complete (A–D all green)
 **Why:** Last step of the agreed plan; P3/P4b remain deferred by design.
 

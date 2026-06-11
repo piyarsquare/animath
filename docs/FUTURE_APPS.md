@@ -31,6 +31,10 @@ the same template:
 | 5 | **Glassy Networks** | disordered systems / rugged optimization (Ising · QUBO · QKP) | DOM/graph or Three.js + MC | new |
 | 6 | **Trees and Nets** (port of "quantum-tree") | phylogenetics / circular-order tree geometry (classical port; quantum stays an open question) | SVG + a little canvas 2D (vanilla JS today) | **port** — source in hand |
 | 7 | **GAS** (Gene Advocate System) | evolutionary dynamics / landscape exploration | DOM + time-series (port from Python) | **port** — source in hand |
+| 8 | **Fourier Analysis** | spectral analysis / harmonic decomposition | 2D canvas + Three.js (epicycles, spectra) | new |
+| 9 | **Eigenvalues & Spectra** | linear operators / spectral geometry ("hear the drum") | Three.js modes + 2D spectrum/readouts | new |
+| 10 | **Heat Kernel** | diffusion / `e^{−tL}` / scale-space | GPU/CPU field + manifold surface | new |
+| 11 | **Clustering** | unsupervised learning / spectral clustering | 2D canvas + DOM (points, dendrogram) | new |
 
 > [!NOTE]
 > **Two shared engine investments** show up repeatedly below and are worth
@@ -43,6 +47,20 @@ the same template:
 >    interaction rule + a live "how synchronized/ordered are we" timeseries).
 >    Fireflies, boids, and ants all share it; `lib/particles` and
 >    `chrome/readouts.tsx` already cover most of it.
+
+> [!NOTE]
+> **The spectral throughline (apps 8–11).** Fourier analysis, eigenvalues, and
+> the heat kernel are *one subject seen from three sides* — the spectral theory
+> of a self-adjoint operator (the Laplacian above all). Fourier modes **are** the
+> eigenfunctions of `−d²/dx²` on the circle; the heat kernel is
+> `e^{−tL} = Σ e^{−tλₖ} φₖ φₖ` built from that same eigendata; and **spectral
+> clustering** uses the lowest eigenvectors of a graph Laplacian, tying the
+> clustering module straight back in. They're scoped as **separate apps** (each
+> has its own "aha" and default view), but they should **share a `lib/spectral`
+> kernel** — a small symmetric-eigensolver (Jacobi/QR for dense; Lanczos later)
+> plus graph-Laplacian builders — built once for Eigenvalues and reused by Heat
+> Kernel and Clustering. A shared **"spectrum strip"** readout (the sorted `λₖ`
+> as a clickable bar row that drives the other views) would unify their chrome.
 
 ---
 
@@ -654,6 +672,291 @@ sweep with a progress readout. Self-contained `src/animations/GAS/` folder.
 
 ---
 
+## 8. Fourier Analysis
+
+### Concept
+Any reasonable signal is a sum of pure waves. Fourier analysis is the change of
+basis that makes that literal — and the single most reused idea in all of
+applied math (audio, optics, PDEs, probability, number theory). The exhibit:
+build a function out of rotating arrows, watch its spectrum, and *hear/see* what
+adding, removing, or shifting frequencies does.
+
+### Canonical models / math
+- **Fourier series** (periodic `f` on `[0,2π)`): `f(x) = Σₙ cₙ e^{inx}`,
+  `cₙ = (1/2π)∫ f(x) e^{−inx} dx`. Partial sums converge; **Gibbs phenomenon**
+  at jumps is the canonical surprise.
+- **Fourier transform** (the line): `f̂(ξ) = ∫ f(x) e^{−2πixξ} dx`. Key laws to
+  *show*: linearity, **shift ↔ phase ramp**, **convolution ↔ multiplication**,
+  and the **uncertainty** tradeoff (narrow in `x` ⇒ broad in `ξ`).
+- **DFT/FFT** — the finite, computable version `Xₖ = Σₙ xₙ e^{−2πikn/N}`; the
+  bridge from continuous theory to real signals and the basis for everything
+  interactive here.
+- **Spectral lens on the Laplacian** — `e^{inx}` are exactly the eigenfunctions
+  of `−d²/dx²` on the circle (`λ = n²`). This is the sentence that links app 8
+  to apps 9–10.
+
+### Key phenomena
+Square/sawtooth waves from sinusoids; **Gibbs overshoot**; the epicycle drawing
+(sum of rotating arrows tracing any closed curve); shift→phase and
+convolution→product seen live; time–frequency uncertainty; aliasing when `N` is
+too small.
+
+### Prior art
+3Blue1Brown's "But what is a Fourier series / transform" (epicycles, the
+winding-machine integral), Nicky Case-style explorables, the classic
+Fourier-draws-a-path demos.
+
+### animath mapping
+- **Rendering**: a 2D canvas for the **epicycle** view (sum of rotating arrows
+  tracing a target curve) and signal/spectrum plots; optionally a Three.js
+  "stacked sinusoids" 3D view. No new heavy engine — `useViewportGestures` for
+  pan/zoom of plots.
+- **Archetypes**:
+  - `subject` — what's being analyzed: a preset wave (square/sawtooth/pulse), a
+    user-drawn curve (epicycles), or a sampled signal.
+  - `domain` — period/interval, sample count `N`, frequency range.
+  - `drive` — number of terms (drag to add/remove harmonics), phase/amplitude of
+    a selected mode.
+  - `playback` — animate the partial-sum build-up / the epicycle traversal.
+  - `color` — amplitude/phase coloring of modes.
+  - `readout` — the **spectrum** (magnitude/phase bars — `MiniHisto`), the
+    reconstruction error vs term count (`Sparkline`).
+- **View windows**: signal (time) · spectrum (frequency) · epicycle drawing —
+  the **linked-views** idiom (Correspondence): selecting a spectral bar
+  highlights its arrow and its contribution to the signal.
+- **Interaction**: **draw a closed curve** → watch its epicycles; drag harmonics
+  on/off; shift a frequency and see the phase ramp; toggle aliasing.
+- **Engine reuse**: `chrome/readouts.tsx` for the spectrum strip (shared with
+  apps 9–11); the **draw-on-the-view** interaction already exists in Plane
+  Transform and Correspondence.
+
+### Open questions
+- One app spanning series + transform + DFT via a `subject` switch, or start with
+  the epicycle/series exhibit (highest clarity, most shareable) and add the
+  transform laws later? Lean: epicycles first.
+- Audio (Web Audio API) for an actually-audible spectrum — compelling but a new
+  capability; defer past MVP.
+
+---
+
+## 9. Eigenvalues & Spectra
+
+### Concept
+An eigenvector is the rare direction a linear map only **stretches**, by its
+eigenvalue. That one idea is the spine of PCA, vibration, stability, PageRank,
+quantum mechanics, and spectral graph theory. The exhibit: see eigenvectors as
+the axes a transformation doesn't rotate, then meet the spectrum as the
+**resonant modes** of a shape — "can you hear the shape of a drum?"
+
+### Canonical models / math
+- **Matrix eigenproblem** — `A v = λ v`. For symmetric `A`, real eigenvalues and
+  orthogonal eigenvectors (the **spectral theorem** `A = Σ λₖ vₖ vₖᵀ`); the
+  **ellipse image of the unit circle** has its axes along the eigenvectors
+  (SVD/quadratic-form picture).
+- **Operator spectra** — the Laplacian `−Δ φ = λ φ` with boundary conditions:
+  eigenfunctions are the **standing-wave modes** of a drum/string/membrane,
+  `λ` their squared frequencies. **Kac's question** "can you hear the shape of a
+  drum?" (answer: no — isospectral non-congruent drums exist, Gordon–Webb–Wolpert)
+  is the showpiece. **Weyl's law** ties the counting `N(λ)` to area.
+- **Graph Laplacian** — `L = D − W` (or normalized `I − D^{−1/2}WD^{−1/2}`):
+  `λ₀ = 0`, the **Fiedler value `λ₁`** measures connectivity, and its eigenvector
+  gives the best bisection — the hinge to spectral clustering (app 11).
+- **Power iteration / Rayleigh quotient** — how eigenvalues are actually found,
+  and a lovely animation (a random vector swinging onto the dominant eigenvector).
+
+### Key phenomena
+Eigen-axes as the un-rotated directions; the spectral theorem as a sum of rank-1
+projectors; drum modes and nodal lines; isospectrality ("can't hear the shape");
+the Fiedler vector cutting a graph; power iteration converging.
+
+### Prior art
+3Blue1Brown "Eigenvectors and eigenvalues"; Chladni plates (real drum modes);
+Kac (1966) and the Gordon–Webb–Wolpert isospectral drums; spectral graph theory
+(Spielman, Chung).
+
+### animath mapping
+- **Rendering**: a **2×2 / 3×3 transformation** view (unit circle → ellipse, with
+  eigen-axes drawn) in 2D canvas; **drum modes** as a Three.js surface
+  (colored eigenfunction `φₖ` over a membrane, with nodal lines); a **spectrum
+  strip** of sorted `λₖ`. Needs the new **`lib/spectral`** symmetric eigensolver
+  (the shared investment).
+- **Archetypes**:
+  - `subject` — what has a spectrum: an editable matrix, a drum/domain shape, or a
+    graph.
+  - `domain` — matrix entries / domain geometry / graph topology.
+  - `drive` — drag matrix entries (watch eigenvalues move), or **power-iteration**
+    step.
+  - `view`/`marks` — the ellipse + eigen-axes, or the modal surface; nodal lines.
+  - `color` — eigenfunction sign/amplitude.
+  - `playback` — animate a vibrating mode (`φₖ cos(√λₖ t)`), or power iteration.
+  - `readout` — the **spectrum** (`MiniHisto`/bar strip, clickable to select a
+    mode), Rayleigh quotient, Weyl-law count.
+- **View windows**: transformation/modal view · the spectrum strip · (graph mode)
+  the graph with the Fiedler split. Click a `λₖ` bar → that eigenvector/mode lights
+  up everywhere (linked views).
+- **Interaction**: drag matrix entries or domain handles and watch the spectrum
+  respond; pick a mode to vibrate; compare two **isospectral drums** side by side.
+- **Engine reuse**: `lib/particles`/`Canvas3D` for the modal surface;
+  `chrome/readouts.tsx` spectrum strip; **`lib/spectral`** (new, then reused by
+  Heat Kernel and Clustering).
+
+### Open questions
+- Three faces (matrix · drum · graph) in one app via `subject`, or split the
+  graph face into Clustering? Lean: matrix + drum here; graph spectrum lives in
+  Clustering, cross-linked.
+- Eigensolver scope: dense symmetric Jacobi/QR is plenty for teaching sizes; defer
+  Lanczos/sparse until a real need.
+
+---
+
+## 10. Heat Kernel
+
+### Concept
+Let heat diffuse and watch sharp structure melt into smooth structure at a rate
+set by the geometry. The **heat kernel** is the Green's function of that flow —
+and a Rosetta stone linking diffusion, the Laplacian spectrum, Brownian motion,
+Gaussian blur, and "scale space." The exhibit: drop a hot spot, watch it spread,
+and reveal that diffusion is just the spectrum decaying mode-by-mode.
+
+### Canonical models / math
+- **Heat equation** `∂u/∂t = Δu`; solution `u(t) = e^{tΔ} u₀`. On a domain with
+  Laplacian eigenpairs `(λₖ, φₖ)`,
+  `u(x,t) = Σₖ e^{−λₖ t} ⟨u₀,φₖ⟩ φₖ(x)` — **high frequencies die fastest**
+  (this is *why* diffusion smooths, and the direct sequel to apps 8–9).
+- **Heat kernel** `K_t(x,y) = Σₖ e^{−λₖ t} φₖ(x) φₖ(y)`; on `ℝⁿ` it's the
+  **Gaussian** `(4πt)^{−n/2} e^{−|x−y|²/4t}` — so diffusion = Gaussian blur and
+  `t` is "scale." On the circle it's a **theta function** (the Fourier tie-back).
+- **Discrete/graph heat** `u(t) = e^{−tL}u₀`; **diffusion maps** (Coifman–Lafon)
+  embed data by heat flow — the bridge to clustering (app 11).
+- **Probabilistic face** — `K_t` is the transition density of **Brownian motion**;
+  heat flow = the PDE shadow of random walks (ties to the agent apps).
+- **Geometry** — the short-time trace `Σ e^{−λₖ t} ∼ (4πt)^{−n/2}(Vol + …)`
+  ("hearing" volume/curvature), connecting back to Weyl (app 9).
+
+### Key phenomena
+Smoothing as spectral decay (watch each mode's coefficient fall like `e^{−λt}`);
+Gaussian blur **is** diffusion; scale-space (features merging as `t` grows);
+heat flow respecting geometry (slow across bottlenecks — the clustering hint);
+the random-walk ↔ heat-equation duality.
+
+### Prior art
+Evans, *PDE*; Rosenberg, *The Laplacian on a Riemannian Manifold*; Coifman–Lafon
+diffusion maps; scale-space theory (Lindeberg); every image-blur demo.
+
+### animath mapping
+- **Rendering**: two faces. **Field face** — diffuse a 2D heat field on the
+  **CA ping-pong GPU grid** (shared with app 1), or CPU for small grids. **Manifold
+  face** — heat on a Three.js surface/graph via `u(t)=Σ e^{−λₖt}…` using the
+  **`lib/spectral`** eigendata (shared with app 9).
+- **Archetypes**:
+  - `subject` — substrate: 2D field, a surface/drum, or a graph/point cloud.
+  - `domain` — geometry/boundary; initial heat `u₀` (paint hot spots).
+  - `drive`/`playback` — **time `t`** as the master control (scrub diffusion),
+    play/step; diffusivity.
+  - `color` — temperature colormap.
+  - `motion` — the spreading itself.
+  - `readout` — the **spectral decay** (`Σ` coefficients `e^{−λₖt}` as a falling
+    bar strip — the same spectrum strip as app 9), total heat (conserved),
+    entropy/spread over time.
+- **View windows**: the diffusing field/surface · the spectrum-decay strip ·
+  (optional) a `u₀` vs `u(t)` before/after **split view** (Plane Transform's
+  `panes`). Selecting a mode in the strip isolates its `e^{−λt}` contribution.
+- **Interaction**: **paint hot spots**, scrub `t` (the hero control), watch the
+  spectrum strip drain; compare diffusion on two geometries.
+- **Engine reuse**: CA's ping-pong field (app 1) for the 2D face; `lib/spectral`
+  + `Canvas3D` (app 9) for the manifold face; readouts for the decay strip. Heat
+  Kernel is **cheapest to build after CA and Eigenvalues exist**.
+
+### Open questions
+- Lead with the 2D field (immediate, shares CA engine) or the spectral
+  decomposition (the deeper idea, shares `lib/spectral`)? Lean: 2D field first for
+  the "blur = diffusion" punch, then reveal the spectral view.
+- How explicitly to draw the random-walk duality — a Brownian-motion overlay is
+  lovely but is arguably its own exhibit.
+
+---
+
+## 11. Clustering
+
+### Concept
+Find the groups in unlabeled data — the canonical *unsupervised* learning task,
+and a clean stage for "the algorithm's assumptions decide what it sees." The
+exhibit: scatter points, run competing clustering methods on the **same** data,
+and watch where each one's notion of "a cluster" succeeds or fails — culminating
+in **spectral clustering**, which routes the whole thing back through eigenvalues
+and the heat kernel.
+
+### Canonical models / math
+- **k-means** — minimize within-cluster variance `Σᵢ ‖xᵢ − μ_{c(i)}‖²` by Lloyd's
+  alternation (assign → recenter). Fast, but assumes round, comparably-sized
+  blobs; sensitive to `k` and init (**k-means++**).
+- **Gaussian mixtures (EM)** — soft assignment via `K` Gaussians fit by
+  Expectation–Maximization; captures elliptical clusters and uncertainty.
+- **DBSCAN** — density-based (`ε`, `minPts`): finds **arbitrary shapes** and marks
+  outliers, no `k` needed — the foil that cracks the "two moons" k-means fails on.
+- **Hierarchical (agglomerative)** — merge nearest clusters by a linkage
+  (single/complete/average/Ward) → a **dendrogram** you cut at a chosen height.
+- **Spectral clustering** — build an affinity `W` (e.g.
+  `W_ij = e^{−‖xᵢ−xⱼ‖²/2σ²}` — *a heat kernel*), form the graph Laplacian
+  `L = D − W`, embed with its **lowest eigenvectors**, then k-means there. Cuts
+  non-convex clusters that k-means can't — and is **literally apps 9–10 applied to
+  data** (Fiedler vector, diffusion distance).
+- **Evaluation** — inertia/elbow, **silhouette**, and (with labels) ARI/NMI.
+
+### Key phenomena
+k-means' round-blob bias (fails on two moons / concentric rings); DBSCAN finding
+shape and outliers; the dendrogram and where you cut it; **spectral clustering
+succeeding via the graph Laplacian's eigenvectors** (the throughline payoff);
+how `k`, `σ`, `ε`, and linkage change the answer; that there's **no single right
+clustering**.
+
+### Prior art
+Hastie–Tibshirani–Friedman, *ESL*; von Luxburg, "A Tutorial on Spectral
+Clustering"; the scikit-learn "clustering comparison" plate; Ng–Jordan–Weiss
+spectral clustering; DBSCAN (Ester et al.).
+
+### animath mapping
+- **Rendering**: a **2D canvas** point scatter with cluster coloring + centroids /
+  density reachability / affinity edges, plus a **DOM/SVG dendrogram** — closest
+  precedents are **StableMatching** (DOM/SVG + Analyze tier) and the fractal/plane
+  2D viewers. Spectral mode reuses **`lib/spectral`** (graph Laplacian eigenvectors,
+  shared with apps 9–10).
+- **Archetypes**:
+  - `subject` — algorithm (k-means / GMM / DBSCAN / hierarchical / spectral).
+  - `domain` — dataset (blobs / moons / rings / uniform / **drawn points**), `N`,
+    noise.
+  - `drive` — `k`, or `ε`/`minPts`, or linkage, or affinity `σ` — the knob that
+    *is* the lesson; **place seeds by tapping**.
+  - `playback` — step the iterations (Lloyd assign/recenter, EM E/M, agglomerative
+    merges) — algorithms-as-animation, like Stable Matching's rounds.
+  - `color` — cluster assignment; soft responsibilities (GMM); core/border/noise
+    (DBSCAN).
+  - `lab`/`readout` — **silhouette** and inertia (`StatGrid`/`Sparkline`), the
+    elbow curve, the **eigenvalue strip** in spectral mode (the shared spectrum
+    readout), and a small-multiples "same data, every method" comparison.
+- **View windows**: the scatter · the dendrogram (hierarchical) or the spectral
+  **embedding** (points in eigenvector coordinates) · a metrics panel. In spectral
+  mode the affinity-graph view and the eigen-embedding are **linked** (pick an
+  eigenvector → recolor).
+- **Interaction**: **draw/scatter points**, drag the knob (`k`/`ε`/`σ`) and watch
+  clusters reform live, step the algorithm, and **race methods on one dataset**.
+- **Engine reuse**: 2D canvas + `useViewportGestures`; DOM/SVG dendrogram à la
+  StableMatching; `chrome/readouts.tsx`; **`lib/spectral`** for the spectral
+  method — which makes Clustering the natural **capstone** of the spectral trio
+  (it consumes the Laplacian eigensolver app 9 builds and the heat-kernel affinity
+  app 10 explores).
+
+### Open questions
+- One app with an algorithm `subject` switch (best for the "same data, different
+  assumptions" lesson) vs separate apps. Lean: **one app**, switchable — the
+  comparison *is* the point.
+- Spectral mode depends on `lib/spectral`; ship the classic four (k-means / GMM /
+  DBSCAN / hierarchical) first, add spectral once Eigenvalues lands?
+- Dimensionality: keep it 2D for legibility, or allow a projected high-D dataset
+  (ties to a future PCA/embedding exhibit)?
+
+---
+
 ## Suggested sequencing (non-binding)
 
 A dependency-aware order, *if* we build the new ones:
@@ -677,3 +980,12 @@ A dependency-aware order, *if* we build the new ones:
 
 Both ports (Trees and Nets, GAS) now have **source in hand**; the gating items are
 licensing/attribution for the private repos and choosing each MVP's first slice.
+
+7. **Spectral wave** (apps 8–11) — build around the shared `lib/spectral` kernel
+   and spectrum-strip readout. **Fourier Analysis** is the most self-contained and
+   shareable (epicycles, no eigensolver) — a good standalone start. **Eigenvalues
+   & Spectra** builds the symmetric eigensolver; **Heat Kernel** then reuses it
+   (and the CA ping-pong field) almost for free; **Clustering** is the capstone
+   that consumes both (spectral clustering = the Laplacian eigensolver + a
+   heat-kernel affinity). Independent of the emergence apps (1–4) — schedule by
+   appetite.
