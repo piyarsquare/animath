@@ -36,6 +36,26 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 00:05 — Working associahedron viewer renders (n-general)
+**Why:** Deliver the polytope viewer first (user's chosen first slice), built so it
+doesn't depend on the specific value of n; energy shown as both linked windows.
+
+Built `TreesAndNets.tsx`: a `<Workspace>` app with two Three.js view windows —
+**Associahedron** (faithful Loday polytope) and **Energy terrain** (vertices
+displaced radially by energy) — sharing one `AssocView` (orbit + wheel-zoom +
+gentle autospin + click-to-pick a vertex; linked selection highlights both). Panels:
+leaf-count `4–7` (subject), tree-space stats (readout), energy note (color).
+Energy is a labeled **placeholder** (total internal-split span) until the
+distance-metric pipeline lands. Registered route/apps/catalog; added EXPLAINER and
+the CLAUDE.md/README rows. `npm run build` green (own 8.84 kB chunk); headless
+screenshot confirms the 14-vertex n=6 polytope + terrain render correctly.
+
+> [!NOTE]
+> `positionsFor` takes the first 3 intrinsic coords, so **n=7 (4D) is a flat
+> orthographic slice for now** — the real home is the `lib/particles` projection
+> slider (Perspective/Torus/Sphere). Next big piece is the **distance-matrix →
+> circular-order energy** pipeline to replace the placeholder.
+
 ### 🟢 code · 23:58 — Geometry core: `lib/associahedron.ts` (verified, builds)
 **Why:** Prove the representation is real and computable before any rendering.
 

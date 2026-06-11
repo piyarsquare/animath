@@ -72,4 +72,10 @@ export const apps: AppDescriptor[] = [
     icon: '⬚',
     blurb: 'One decorated square, four worlds: glue its edges and let curvature follow — walk a torus, Klein bottle, projective plane or sphere in first person.',
   },
+  {
+    hash: '/trees-and-nets',
+    name: 'Trees and Nets',
+    icon: '⤳',
+    blurb: 'See tree-space as a polytope: every triangulation of an n-gon is a tree, every flip an edge, and the whole associahedron a 3D (or 4D) shape colored by energy.',
+  },
 ];

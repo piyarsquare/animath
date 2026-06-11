@@ -97,7 +97,8 @@ animath/
     │   ├── StableMarriage/      # Gale–Shapley visualizer + heatmap lab (CSS/DOM)
     │   ├── AgenticSorting/      # concurrent agent-based sorting (CSS/DOM)
     │   ├── StableMatching/      # rebuilt Gale–Shapley lab: matrix · welfare · lattice (CSS/DOM)
-    │   └── PolygonWorlds/       # walk every closed surface from one glued polygon
+    │   ├── PolygonWorlds/       # walk every closed surface from one glued polygon
+    │   └── TreesAndNets/        # tree-space as a polytope (associahedron of n-gon triangulations); lib/associahedron.ts
     │
     ├── components/             # shared app-side UI
     │   ├── ParticleViewerShell.tsx  # turnkey workspace assembly for particle (4D) viewers
@@ -164,6 +165,7 @@ visible app catalog comes from `src/apps.ts` (+ `src/chrome/catalog.ts`).
 | `#/agentic-sorting`  | `AgenticSorting` | Concurrent agent-based sorting              |
 | `#/stable-matching`  | `StableMatching` | Rebuilt Gale–Shapley lab (matrix · welfare surface · lattice via layouts) |
 | `#/polygon-worlds`   | `PolygonWorlds`  | Walk every closed surface from one glued polygon |
+| `#/trees-and-nets`   | `TreesAndNets`   | Tree-space as a polytope: the associahedron of an n-gon's triangulations (port of the private `quantum-tree`) |
 | `#/embed/complex-particles` | `EmbedComplexParticles` | Chrome-less applet for iframe embedding, URL-configured (docs/EMBEDS.md); demo host: `/embed-demo.html` |
 | `#/embed/plane-transform` | `EmbedPlaneTransform` | Chrome-less two-pane plane applet for iframe embedding (docs/EMBEDS.md) |
 
