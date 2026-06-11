@@ -457,8 +457,8 @@ export default function AgenticSorting() {
       />
       <p className="as-hint">
         {objectiveMode === 'split'
-          ? 'Agents disagree on which way order runs — watch domains form instead of a single sort.'
-          : 'Every agent pursues the same ascending order, each by its own local rule.'}
+          ? 'Agents disagree on which way order runs — domains form instead of a single sort. (animath-original, not in Levin’s model.)'
+          : 'Every agent pursues the same ascending order, each by its own local rule. (faithful to Levin’s model.)'}
       </p>
     </div>
   );
@@ -496,9 +496,9 @@ export default function AgenticSorting() {
             label="" value={weights[key]} min={0} max={100} step={1}
             onChange={(v) => setWeightBalanced(key, v)} format={(v) => `${v}%`}
           />
-          <p className="as-weight-desc">{AGENT_META[key].desc}</p>
         </div>
       ))}
+      <p className="as-hint">The five sum to 100%. Each algotype’s rule is in the <strong>?</strong> guide.</p>
     </div>
   );
 
@@ -567,7 +567,7 @@ export default function AgenticSorting() {
             <span className="as-legend-name">{AGENT_META[selected.type].name}</span>
             <span className="as-track-meta">value {selected.value} · home #{selTargetRef.current}</span>
           </div>
-          <Kicker>Distance to goal over time</Kicker>
+          <Kicker>Distance to home over time</Kicker>
           <Sparkline pts={trackHist.length > 1 ? trackHist : [trackHist[0] ?? 0, trackHist[0] ?? 0]} />
           <StatGrid stats={[
             { k: 'Now', v: String(trackHist[trackHist.length - 1] ?? 0) },
@@ -575,13 +575,13 @@ export default function AgenticSorting() {
           ]} />
           <p className="as-hint">
             If the line rises before it falls, the agent moved <em>away</em> from
-            where it belongs — delayed gratification, most visible with defects
+            its sorted home — delayed gratification, most visible with defects
             present. Tap it again to stop tracking.
           </p>
         </>
       ) : (
         <p className="as-hint">
-          Click any agent in the array to follow it. Its distance-to-goal often
+          Click any agent in the array to follow it. Its distance-to-home often
           rises before it falls: the agent moves away from its rightful place to
           let the array sort around obstacles.
         </p>
@@ -678,7 +678,7 @@ export default function AgenticSorting() {
         <Slider label="Descending share" value={descShare} min={0} max={100} step={1} onChange={setDescShare} format={(v) => `${v}%`} />
       )}
       <Slider label="Frozen / defective" value={frozenPct} min={0} max={40} step={1} onChange={setFrozenPct} format={(v) => `${v}%`} />
-      <p className="as-hint">A trial sorts a fresh population until ≥99% sorted or the cap. These conditions apply to every group; <strong>Strategies</strong> and <strong>Mixes</strong> vary only the population.</p>
+      <p className="as-hint">A trial sorts a fresh population until ≥99% sorted or the cap. These conditions apply to every group; <strong>Strategies</strong> and <strong>Mixes</strong> vary only the population. <em>Objective and Frozen are shared with the Sandbox; array size and wake rate here are Lab-only.</em></p>
     </div>
   );
 
@@ -718,8 +718,8 @@ export default function AgenticSorting() {
         className="as-arena-canvas"
         onPointerDown={onArenaPointerDown}
       />
-      <div className="as-arena-label as-arena-label-top">Positive</div>
-      <div className="as-arena-label as-arena-label-bottom">Negative</div>
+      <div className="as-arena-label as-arena-label-top">High value</div>
+      <div className="as-arena-label as-arena-label-bottom">Low value</div>
     </div>
   );
 
@@ -727,10 +727,11 @@ export default function AgenticSorting() {
     <div className="as-arena">
       <canvas ref={trajCanvasRef} className="as-arena-canvas" />
       <div className="as-arena-label as-arena-label-top">Far from home</div>
-      <div className="as-arena-label as-arena-label-bottom">Home (sorted)</div>
+      <div className="as-arena-label as-arena-label-bottom">At home (sorted)</div>
+      <div className="as-arena-label as-arena-label-time">time →</div>
       <div className="as-traj-legend">
-        <span className="as-traj-swatch as-traj-warm" /> backtracked
-        <span className="as-traj-swatch as-traj-cool" /> straight to goal
+        <span className="as-traj-swatch as-traj-warm" /> backtracked (rose then fell)
+        <span className="as-traj-swatch as-traj-cool" /> straight to home
       </div>
     </div>
   );
@@ -738,7 +739,7 @@ export default function AgenticSorting() {
   const sandboxSections: SectionDef[] = [
     { id: 'array', title: 'Array', arch: 'subject', node: arrayNode, estHeight: 250 },
     { id: 'display', title: 'Display', arch: 'marks', node: displayNode, estHeight: 180 },
-    { id: 'agents', title: 'Population mix', arch: 'drive', node: agentsNode, estHeight: 500 },
+    { id: 'agents', title: 'Population mix', arch: 'drive', node: agentsNode, estHeight: 330 },
     { id: 'run', title: 'Run', arch: 'playback', node: runNode, estHeight: 200 },
     { id: 'metrics', title: 'Metrics', arch: 'readout', node: metricsNode, estHeight: 340 },
     { id: 'track', title: 'Track agent', arch: 'readout', node: trackNode, estHeight: 240 },
@@ -746,7 +747,7 @@ export default function AgenticSorting() {
 
   const labSections: SectionDef[] = [
     { id: 'labExperiment', title: 'Experiment', arch: 'subject', node: labExperimentNode, estHeight: 280 },
-    { id: 'agents', title: 'Population mix', arch: 'drive', node: agentsNode, estHeight: 500 },
+    { id: 'agents', title: 'Population mix', arch: 'drive', node: agentsNode, estHeight: 330 },
     { id: 'labConditions', title: 'Conditions', arch: 'domain', node: labConditionsNode, estHeight: 420 },
     { id: 'labMetric', title: 'Metric', arch: 'marks', node: labMetricNode, estHeight: 170 },
     { id: 'labRun', title: 'Run', arch: 'playback', node: labRunNode, estHeight: 160 },
