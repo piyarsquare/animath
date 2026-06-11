@@ -6,8 +6,8 @@ title: Trees and Nets — whole-associahedron representation
 branch: claude/trees-and-nets
 slug: trees-and-nets
 status: in-progress
-build: unknown
-followup: null
+build: passing
+followup: MEDIUM
 pr: null
 app: trees-and-nets
 ---
