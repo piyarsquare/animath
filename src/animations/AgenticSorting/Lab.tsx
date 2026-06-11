@@ -18,6 +18,14 @@ function fmt(metric: MetricKey, v: number): string {
   return Math.round(v).toString();
 }
 
+/** Format a swept-parameter value (fractions like 0.25 vs counts like 200). */
+function fmtParam(v: number): string {
+  const a = Math.abs(v);
+  if (a < 1 && a > 0) return v.toFixed(2);
+  if (a < 10) return v.toFixed(1);
+  return Math.round(v).toString();
+}
+
 function barColor(label: string): string {
   return (TYPE_COLORS as Record<string, string>)[label] ?? 'var(--accent)';
 }
@@ -73,8 +81,8 @@ function LineChart({ results, metric, xlabel }: { results: GroupResult[]; metric
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 168, display: 'block' }}>
       <polyline points={d} fill="none" stroke="var(--accent)" strokeWidth={2} />
       {pts.map((p, i) => <circle key={i} cx={px(p.x)} cy={py(p.y)} r={2.5} fill="var(--accent)" />)}
-      <text x={padL} y={H - 9} fontSize={9} fill="var(--dim)" fontFamily="var(--font-mono)">{fmt('cyclesToSort', xmin)}</text>
-      <text x={W - padR} y={H - 9} textAnchor="end" fontSize={9} fill="var(--dim)" fontFamily="var(--font-mono)">{fmt('cyclesToSort', xmax)}</text>
+      <text x={padL} y={H - 9} fontSize={9} fill="var(--dim)" fontFamily="var(--font-mono)">{fmtParam(xmin)}</text>
+      <text x={W - padR} y={H - 9} textAnchor="end" fontSize={9} fill="var(--dim)" fontFamily="var(--font-mono)">{fmtParam(xmax)}</text>
       <text x={W / 2} y={H - 9} textAnchor="middle" fontSize={9.5} fill="var(--dim-2)">{xlabel}</text>
       <text x={padL} y={py(ymax) - 2} fontSize={9} fill="var(--dim)" fontFamily="var(--font-mono)">{fmt(metric, ymax)}</text>
     </svg>

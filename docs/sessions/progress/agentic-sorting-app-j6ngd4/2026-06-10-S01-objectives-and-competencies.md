@@ -47,6 +47,21 @@ the same function" intermediate the user remembered.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 00:20 — Blend sweep: vary the proportion between two chosen types
+**Why:** User wants sweep control over a mix — select two agent types and test
+different proportions between them.
+
+Added a **'blend'** sweep param to `lab.ts`: pick **Type A** and **Type B**; the
+sweep varies A from 0→100% (B = the remainder, all other types 0) and plots the
+outcome curve. UI: two `Select`s in the Sweep section (guarded so A≠B; Run
+disabled otherwise); x-axis labels `% <Type A>`. Also fixed the line-chart x-tick
+formatter (`fmtParam`) so fractional sweep params (frozen/wake/desc) display with
+precision instead of rounding to 0.
+
+Headless: Standard↔Blind Date blend shows a clean **speed/cost trade-off** — 0%→
+100% Std moves cycles 1166→527 (faster) while swaps 219→1037 (costlier), 100%
+converged throughout. Exactly the curve the feature is for. `tsc` clean; build green.
+
 ### 🟡 milestone · 23:55 — Lab: current mix access · compare custom mixes · connected sliders
 **Why:** User: need the current mix reachable in the Lab; compare different mixes;
 population sliders should sum to 100%.

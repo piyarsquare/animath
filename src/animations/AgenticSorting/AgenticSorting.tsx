@@ -106,6 +106,8 @@ export default function AgenticSorting() {
   const [labMetric, setLabMetric] = usePersistentState<MetricKey>('agentic-sorting:labMetric', 'cyclesToSort');
   const [sweepParam, setSweepParam] = usePersistentState<SweepParam>('agentic-sorting:sweepParam', 'count');
   const [sweepSteps, setSweepSteps] = usePersistentState('agentic-sorting:sweepSteps', 7);
+  const [blendA, setBlendA] = usePersistentState<AgentType>('agentic-sorting:blendA', 'standard');
+  const [blendB, setBlendB] = usePersistentState<AgentType>('agentic-sorting:blendB', 'blindDate');
   const [labRunning, setLabRunning] = useState(false);
   const [labProgress, setLabProgress] = useState(0);
   const [labResults, setLabResults] = useState<GroupResult[]>([]);
@@ -406,7 +408,7 @@ export default function AgenticSorting() {
 
   // full lab experiment (compare strategies · monte-carlo · parameter sweep)
   const SWEEP_RANGE: Record<SweepParam, [number, number]> = {
-    count: [16, 300], frozenShare: [0, 0.4], wakeFraction: [0.05, 0.5], descShare: [0, 1],
+    count: [16, 300], frozenShare: [0, 0.4], wakeFraction: [0.05, 0.5], descShare: [0, 1], blend: [0, 100],
   };
   const runLab = useCallback(async () => {
     if (labRunning) return;
@@ -419,7 +421,9 @@ export default function AgenticSorting() {
     let spec: ExperimentSpec;
     if (labKind === 'sweep') {
       const [from, to] = SWEEP_RANGE[sweepParam];
-      spec = { kind: 'sweep', param: sweepParam, from, to, steps: sweepSteps, ...common };
+      spec = sweepParam === 'blend'
+        ? { kind: 'sweep', param: 'blend', from, to, steps: sweepSteps, blend: { a: blendA, b: blendB }, ...common }
+        : { kind: 'sweep', param: sweepParam, from, to, steps: sweepSteps, ...common };
     } else if (labKind === 'mixes') {
       spec = { kind: 'mixes', mixes: savedMixes.map(m => ({ label: m.label, weights: m.weights })), ...common };
     } else {
@@ -429,12 +433,18 @@ export default function AgenticSorting() {
     setLabResults(res);
     // mixes render like compare (labeled bars); only sweep differs
     setLabResultKind(labKind === 'sweep' ? 'sweep' : labKind === 'monte' ? 'monte' : 'compare');
-    setLabSweepLabel(labKind === 'sweep' ? sweepParam : '');
+    setLabSweepLabel(
+      labKind !== 'sweep' ? ''
+        : sweepParam === 'blend' ? `% ${AGENT_META[blendA].name}`
+          : sweepParam,
+    );
     setLabRunning(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [labRunning, labKind, labTrials, labCount, labWake, labCap, sweepParam, sweepSteps, savedMixes, objectiveMode, descShare, frozenPct, weights]);
+  }, [labRunning, labKind, labTrials, labCount, labWake, labCap, sweepParam, sweepSteps, blendA, blendB, savedMixes, objectiveMode, descShare, frozenPct, weights]);
 
-  const labReady = labKind !== 'mixes' || savedMixes.length >= 2;
+  const labReady =
+    (labKind !== 'mixes' || savedMixes.length >= 2) &&
+    (labKind !== 'sweep' || sweepParam !== 'blend' || blendA !== blendB);
 
   const pct = (x: number) => `${Math.round(x * 100)}%`;
   const signedPct = (x: number) => `${x >= 0 ? '+' : ''}${Math.round(x * 100)}%`;
@@ -653,6 +663,7 @@ export default function AgenticSorting() {
           <Select
             label="Sweep parameter" value={sweepParam}
             options={[
+              { value: 'blend', label: 'Mix of two types' },
               { value: 'count', label: 'Array size' },
               { value: 'frozenShare', label: 'Frozen %' },
               { value: 'wakeFraction', label: 'Wake rate' },
@@ -660,6 +671,21 @@ export default function AgenticSorting() {
             ]}
             onChange={setSweepParam}
           />
+          {sweepParam === 'blend' && (
+            <>
+              <Select
+                label="Type A (0→100%)" value={blendA}
+                options={AGENT_TYPE_LIST.map(t => ({ value: t, label: AGENT_META[t].name }))}
+                onChange={setBlendA}
+              />
+              <Select
+                label="Type B (the remainder)" value={blendB}
+                options={AGENT_TYPE_LIST.map(t => ({ value: t, label: AGENT_META[t].name }))}
+                onChange={setBlendB}
+              />
+              {blendA === blendB && <p className="as-hint">Pick two different types to blend.</p>}
+            </>
+          )}
           <Slider label="Sweep points" value={sweepSteps} min={3} max={12} step={1} onChange={setSweepSteps} />
         </>
       )}

@@ -110,13 +110,13 @@ interface Common {
   seed: number;
 }
 
-export type SweepParam = 'count' | 'frozenShare' | 'wakeFraction' | 'descShare';
+export type SweepParam = 'count' | 'frozenShare' | 'wakeFraction' | 'descShare' | 'blend';
 
 export type ExperimentSpec =
   | ({ kind: 'compare' } & Common)
   | ({ kind: 'monte' } & Common)
   | ({ kind: 'mixes'; mixes: { label: string; weights: Weights }[] } & Common)
-  | ({ kind: 'sweep'; param: SweepParam; from: number; to: number; steps: number } & Common);
+  | ({ kind: 'sweep'; param: SweepParam; from: number; to: number; steps: number; blend?: { a: AgentType; b: AgentType } } & Common);
 
 const pureWeights = (t: AgentType): Weights =>
   AGENT_TYPE_LIST.reduce((w, k) => { w[k] = k === t ? 100 : 0; return w; }, {} as Weights);
@@ -158,7 +158,15 @@ function buildConditions(spec: ExperimentSpec): Condition[] {
     else if (spec.param === 'frozenShare') cfg.frozenShare = v;
     else if (spec.param === 'wakeFraction') cfg.wakeFraction = v;
     else if (spec.param === 'descShare') { cfg.objectiveMode = 'split'; cfg.descShare = v; }
-    out.push({ label: v.toFixed(spec.param === 'count' ? 0 : 2), param: v, cfg });
+    else if (spec.param === 'blend' && spec.blend) {
+      // v = percent of type A; the rest is type B, all others zero
+      const w = AGENT_TYPE_LIST.reduce((o, t) => { o[t] = 0; return o; }, {} as Weights);
+      w[spec.blend.a] = v;
+      w[spec.blend.b] = 100 - v;
+      cfg.weights = w;
+    }
+    const intLabel = spec.param === 'count' || spec.param === 'blend';
+    out.push({ label: v.toFixed(intLabel ? 0 : 2), param: v, cfg });
   }
   return out;
 }
