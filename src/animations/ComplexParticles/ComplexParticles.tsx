@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import ParticleViewerShell from '../../components/ParticleViewerShell';
-import { Select, NumberInput, ComplexInput } from '../../components/ControlPanel';
+import { Select, NumberInput, ComplexInput, Checkbox } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
@@ -27,6 +27,7 @@ const MAX_SHEETS = 12;
 import {
   applyComplex, complexPowRational, complexQuadratic,
   functionNames, functionFormulas, functionCategories, POW_PQ_INDEX, QUADRATIC_INDEX,
+  MULTIVALUED_INDICES, branchPeriod,
 } from '../../lib/complexMath';
 
 type Complex2 = [number, number];
@@ -48,7 +49,7 @@ export interface ComplexParticlesProps {
 
 export default function ComplexParticles({
   count = COMPLEX_PARTICLES_DEFAULTS.defaultParticleCount,
-  selectedFunction = 'exp',
+  selectedFunction = 'square',
   p = 1,
   q = 2,
   branches = 1,
@@ -76,11 +77,31 @@ export default function ComplexParticles({
   const [expP, setExpP] = usePersistentState(ek('expP'), embed?.p ?? p);
   const [expQ, setExpQ] = usePersistentState(ek('expQ'), embed?.q ?? q);
   // Riemann-sheet range. The viewer draws one particle set per sheet, at branch
-  // index branchMin..branchMax (multivalued functions read it; single-valued
-  // ignore it). Capped at MAX_SHEETS to keep the draw count sane.
+  // index branchMin..branchMax. Only multivalued functions get extra sheets:
+  // for single-valued ones every sheet would be the same additive cloud drawn
+  // N times (N× brightness and draw cost), so the count is forced to 1. A
+  // finite sheet family (sqrt: 2, cbrt: 3, z^(p/q): q) is also capped at its
+  // period — sheets beyond it repeat. Capped at MAX_SHEETS to keep draws sane.
   const [branchMin, setBranchMin] = usePersistentState(ek('branchMin'), 0);
   const [branchMax, setBranchMax] = usePersistentState(ek('branchMax'), branches - 1);
-  const branchCount = Math.max(1, branchMax - branchMin + 1);
+  // Tint each sheet's HSV hue so simultaneous sheets are distinguishable in
+  // Domain coloring (where they are otherwise colored identically).
+  const [sheetTint, setSheetTint] = usePersistentState(ek('sheetTint'), true);
+  const isMultivalued = MULTIVALUED_INDICES.has(functionIndex);
+  const period = branchPeriod(functionIndex, expQ === 0 ? 1 : expQ);
+  const maxSpan = Math.min(MAX_SHEETS, period ?? MAX_SHEETS);
+  const branchCount = isMultivalued
+    ? Math.min(Math.max(1, branchMax - branchMin + 1), maxSpan)
+    : 1;
+  /** Hue offset for the sheet drawn by tagged branch b: evenly spaced around
+   *  the wheel for a finite family, a gentle progression for the infinite
+   *  (ln-type) ones. 0 when tinting is off or only one sheet shows. */
+  const branchHue = (b: number): number => {
+    if (!sheetTint || branchCount <= 1) return 0;
+    const sheet = branchMin + b;
+    if (period !== null) return (((sheet % period) + period) % period) / period;
+    return ((sheet * 0.13) % 1 + 1) % 1;
+  };
   // Coefficients for the generic quadratic a·z²+b·z+c (each [Re, Im]); default a=1
   // (so the out-of-the-box quadratic is z²).
   const [quadA, setQuadA] = usePersistentState<Complex2>(ek('quadA'), [1, 0]);
@@ -170,11 +191,14 @@ export default function ComplexParticles({
   // Each material renders the Riemann sheet at branchMin + its branch. There are
   // now several materials per branch (points + sheet fill + wire), so the branch
   // is tagged on the material rather than read from its position in the list.
+  // The per-sheet hue tint rides along (it depends on the same inputs).
   useEffect(() => {
     state.materialsRef.current.forEach(m => {
-      m.uniforms.branchIndex.value = branchMin + ((m.userData.branch as number) ?? 0);
+      const b = (m.userData.branch as number) ?? 0;
+      m.uniforms.branchIndex.value = branchMin + b;
+      m.uniforms.uBranchHue.value = branchHue(b);
     });
-  }, [branchMin, branchMax]);
+  }, [branchMin, branchMax, sheetTint, functionIndex, expQ]);
 
   // The full uniform set shared by every material (points + sheet fill + wire),
   // so useUniformSync / the animation loop / useViewControls drive them all
@@ -217,6 +241,7 @@ export default function ComplexParticles({
     uProjTarget: { value: state.projRef.current },
     uProjAlpha: { value: 0 },
     branchIndex: { value: branchMin + b },
+    uBranchHue: { value: branchHue(b) },
   });
 
   // Adaptive fade only applies while the sheet is on screen — in plain Points
@@ -489,7 +514,10 @@ export default function ComplexParticles({
   }, [state.netWidth]);
 
   // Keep the net's screen-space width correct as the canvas resizes (the ribbon
-  // expansion is in pixels, so it needs the live drawing-buffer size).
+  // expansion is in pixels, so it needs the live drawing-buffer size). View
+  // windows resize without a window `resize` event, so observe the canvas
+  // itself (it exists by the time effects run — Canvas3D's child effect mounts
+  // it first); the window listener stays as a belt-and-suspenders fallback.
   useEffect(() => {
     const sync = () => {
       const r = state.rendererRef.current;
@@ -501,9 +529,16 @@ export default function ComplexParticles({
       });
     };
     sync();
+    const canvas = state.rendererRef.current?.domElement;
+    const ro = new ResizeObserver(sync);
+    if (canvas) ro.observe(canvas);
     window.addEventListener('resize', sync);
-    return () => window.removeEventListener('resize', sync);
-  });
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', sync);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Push the faceted-shading strength to the sheet materials (points lack uShade).
   useEffect(() => {
@@ -581,7 +616,7 @@ export default function ComplexParticles({
       state.viewPointRef.current = { L: state.rotLRef.current.clone(), R: state.rotRRef.current.clone() };
       state.onViewPointChangeRef.current?.(state.viewPointRef.current);
 
-      startAnimationLoop({
+      const stopLoop = startAnimationLoop({
         renderer, scene, camera,
         materialsRef: state.materialsRef,
         axisRefs: { x: state.xAxisRef, y: state.yAxisRef, u: state.uAxisRef, v: state.vAxisRef },
@@ -589,6 +624,7 @@ export default function ComplexParticles({
         projRef: state.projRef,
         viewMotionRef: state.viewMotionRef,
         dropAxisRef: state.dropAxisRef,
+        viewTypeRef: state.viewTypeRef,
         rotLRef: state.rotLRef,
         rotRRef: state.rotRRef,
         axisScaleRef: state.axisScaleRef,
@@ -597,6 +633,43 @@ export default function ComplexParticles({
         orientationRef: state.orientationRef,
         setOrientationMatrix: state.setOrientationMatrix,
       });
+
+      // Teardown (Canvas3D runs this on unmount, before disposing the
+      // renderer): stop the render loop, then release every GPU resource this
+      // mount created — otherwise each visit to the route strands a live rAF
+      // loop and its geometries/materials/textures.
+      return () => {
+        stopLoop();
+        const meshes = [
+          ...pointsRef.current, ...fillMeshRef.current, ...wireMeshRef.current,
+          ...tileMeshRef.current, ...netMeshRef.current,
+        ];
+        meshes.forEach(o => scene.remove(o));
+        pointsRef.current = [];
+        fillMeshRef.current = [];
+        wireMeshRef.current = [];
+        tileMeshRef.current = [];
+        netMeshRef.current = [];
+        state.materialsRef.current.forEach(m => m.dispose());
+        state.materialsRef.current = [];
+        for (const ref of [state.geometryRef, sheetGeomRef, sheetWireGeomRef, tileGeomRef, netGeomRef]) {
+          ref.current?.dispose();
+          ref.current = undefined;
+        }
+        for (const ref of [state.xAxisRef, state.yAxisRef, state.uAxisRef, state.vAxisRef]) {
+          const ax = ref.current;
+          if (!ax) continue;
+          scene.remove(ax.line);
+          ax.line.geometry.dispose();
+          (ax.line.material as THREE.Material).dispose();
+          ref.current = undefined;
+        }
+        scaffold.dispose();
+        scaffoldRef.current = undefined;
+        textures.forEach(t => t.dispose());
+        state.texturesRef.current = [];
+        sceneRef.current = undefined;
+      };
     }, []);
 
   // Re-apply the restored projection slider once after mount: the fresh
@@ -700,8 +773,30 @@ export default function ComplexParticles({
     </>
   );
 
-  // Riemann-sheet range (multivalued functions only). Kept ≤ MAX_SHEETS sheets
-  // and min ≤ max by nudging the partner bound. Lives in the Domain section.
+  // Always-available top-bar function picker: switching functions should never
+  // require opening a panel. Per-function parameters (p/q, the quadratic
+  // coefficients) stay in the Function panel — one tap on the title away.
+  const functionTopSelect = (
+    <select
+      className="am-select am-bar-select"
+      aria-label="Function"
+      title="Function"
+      value={functionIndex}
+      onChange={e => setFunctionIndex(Number(e.target.value))}
+    >
+      {functionGroups.map(g => (
+        <optgroup key={g.label} label={g.label}>
+          {g.options.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  );
+
+  // Riemann-sheet range (shown for multivalued functions only). Kept min ≤ max
+  // and within the sheet span (the function's finite period, else MAX_SHEETS)
+  // by nudging the partner bound. Lives in the Domain section.
   const branchControls = (
     <>
       <NumberInput
@@ -710,7 +805,7 @@ export default function ComplexParticles({
         integer
         onChange={v => {
           const nv = Math.min(v, branchMax);
-          setBranchMin(Math.max(nv, branchMax - (MAX_SHEETS - 1)));
+          setBranchMin(Math.max(nv, branchMax - (maxSpan - 1)));
         }}
       />
       <NumberInput
@@ -719,8 +814,18 @@ export default function ComplexParticles({
         integer
         onChange={v => {
           const nv = Math.max(v, branchMin);
-          setBranchMax(Math.min(nv, branchMin + (MAX_SHEETS - 1)));
+          setBranchMax(Math.min(nv, branchMin + (maxSpan - 1)));
         }}
+      />
+      {period !== null && (
+        <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', margin: '4px 0 2px' }}>
+          {period} distinct sheets — a wider span would only repeat them
+        </div>
+      )}
+      <Checkbox
+        label="Tint sheets (hue offset per sheet)"
+        checked={sheetTint}
+        onChange={setSheetTint}
       />
     </>
   );
@@ -734,7 +839,8 @@ export default function ComplexParticles({
       functionName={displayName}
       functionFormula={displayFormula}
       functionPicker={functionPicker}
-      domainExtras={branchControls}
+      topExtra={functionTopSelect}
+      domainExtras={isMultivalued ? branchControls : undefined}
       readme={readmeText}
       explainer={explainerText}
       settingsStorageKey={embed ? undefined : STORAGE_KEY}

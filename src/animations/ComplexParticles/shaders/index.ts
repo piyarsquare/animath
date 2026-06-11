@@ -3,6 +3,8 @@
 // chartCoord). Both the point-cloud and the sheet vertex shaders are built from
 // this common block + their own main(), so the two render modes stay in lockstep.
 import { PALETTE_GLSL } from '../../../lib/colormaps';
+import { POLE_EPS } from '../../../lib/viewpoint';
+import { checkGlslDispatch } from '../../../lib/complexMath';
 
 const vsCommon = PALETTE_GLSL + `
 // DOMAIN–COLORING VERTEX SHADER
@@ -26,6 +28,7 @@ uniform float globalSize;
 uniform float intensity;
 uniform float shimmerAmp;
 uniform float hueShift;
+uniform float uBranchHue;   // per-sheet hue offset (sheet tinting; 0 = off)
 uniform float saturation;
 uniform float realView;
 uniform float jitterAmp;
@@ -134,19 +137,44 @@ vec2 complexBranchSqrtPoly(vec2 z, int branch){
   return complexSqrtBranch(q, branch);
 }
 
-vec2 complexGamma(vec2 z){
-  const float PI = 3.141592653589793;
-  vec2 halfVec = vec2(0.5,0.0);
-  vec2 logZ = complexLn(z);
-  vec2 t = complexMul(z - halfVec, logZ) - z + vec2(0.5*log(2.0*PI),0.0);
-  return complexExp(t);
+vec2 cdiv(vec2 a, vec2 b){ float d = max(dot(b,b), 1e-12); return vec2(a.x*b.x + a.y*b.y, a.y*b.x - a.x*b.y) / d; }
+
+// Γ(z) on Re z ≥ 0.5: Lanczos approximation (g = 7, 9 terms; coefficients
+// mirror LANCZOS_COEFFS in lib/complexMath.ts).
+vec2 complexGammaCore(vec2 z){
+  vec2 w = z - vec2(1.0, 0.0);
+  vec2 acc = vec2(0.99999999999980993, 0.0);
+  acc += cdiv(vec2(676.5203681218851, 0.0),     w + vec2(1.0, 0.0));
+  acc += cdiv(vec2(-1259.1392167224028, 0.0),   w + vec2(2.0, 0.0));
+  acc += cdiv(vec2(771.32342877765313, 0.0),    w + vec2(3.0, 0.0));
+  acc += cdiv(vec2(-176.61502916214059, 0.0),   w + vec2(4.0, 0.0));
+  acc += cdiv(vec2(12.507343278686905, 0.0),    w + vec2(5.0, 0.0));
+  acc += cdiv(vec2(-0.13857109526572012, 0.0),  w + vec2(6.0, 0.0));
+  acc += cdiv(vec2(9.9843695780195716e-6, 0.0), w + vec2(7.0, 0.0));
+  acc += cdiv(vec2(1.5056327351493116e-7, 0.0), w + vec2(8.0, 0.0));
+  vec2 t = w + vec2(7.5, 0.0);
+  vec2 lnT = complexLn(t);   // Re t ≥ 7 here, so the principal ln is smooth
+  vec2 e = w + vec2(0.5, 0.0);
+  vec2 ex = complexExp(vec2(e.x*lnT.x - e.y*lnT.y - t.x, e.x*lnT.y + e.y*lnT.x - t.y));
+  return 2.5066282746310002 * complexMul(ex, acc);   // √(2π)
 }
 
-vec2 complexCbrt(vec2 z){
+// Γ(z): Lanczos + the reflection formula Γ(z) = π/(sin(πz)·Γ(1−z)) for
+// Re z < 0.5 — so the true poles at z = 0, −1, −2, … actually blow up.
+vec2 complexGamma(vec2 z){
+  const float PI = 3.141592653589793;
+  if(z.x >= 0.5) return complexGammaCore(z);
+  vec2 s = complexSin(PI * z);
+  vec2 den = complexMul(s, complexGammaCore(vec2(1.0, 0.0) - z));
+  return cdiv(vec2(PI, 0.0), den);
+}
+
+// Branch-aware cube root: the three sheets are branch 0, 1, 2.
+vec2 complexCbrt(vec2 z, int branch){
   float r = length(z);
-  float ang = atan(z.y, z.x);
+  float ang = (atan(z.y, z.x) + float(branch) * 6.28318530718) / 3.0;
   float rr = pow(r, 1.0/3.0);
-  return vec2(rr*cos(ang/3.0), rr*sin(ang/3.0));
+  return vec2(rr*cos(ang), rr*sin(ang));
 }
 
 vec2 complexZMinus1OverZPlus1(vec2 z){
@@ -244,7 +272,7 @@ vec2 applyComplex(vec2 z, int t){
   if(t==13) return complexEssentialExpInv(z);
   if(t==14) return complexBranchSqrtPoly(z, branchIndex);
   if(t==15) return complexGamma(z);
-  if(t==16) return complexCbrt(z);
+  if(t==16) return complexCbrt(z, branchIndex);
   if(t==17) return complexZMinus1OverZPlus1(z);
   if(t==18) return complexPowRational(z, exponentP, exponentQ);
   if(t==19) return complexCot(z);
@@ -274,13 +302,15 @@ vec3 project(vec4 p, int mode){
   if(mode==3) return vec3(p.y, p.z, p.w);
   if(mode==4) return vec3(p.x, p.z, p.w);
   if(mode==5) return vec3(p.x, p.y, p.w);
+  if(mode==6) return vec3(p.x, p.y, p.z);   // DropV (explicit, not fall-through)
   if(mode==7){
     // Clifford-torus / "un-collapsed Hopf": stereographic from the (0,0,0,1)
     // pole. Soft floor (POLE_EPS in quadrature) keeps the pole from sending
-    // particles to infinity — matches viewpoint.ts POLE_EPS.
+    // particles to infinity — the constant is injected from viewpoint.ts.
     float d = max(length(p), 1e-6);
     float dw = d - p.w;
-    float denom = max(sqrt(dw*dw + (0.08*d)*(0.08*d)), 1e-4);
+    float eps = ${POLE_EPS} * d;
+    float denom = max(sqrt(dw*dw + eps*eps), 1e-4);
     return p.xyz / denom;
   }
   return          vec3(p.x, p.y, p.z);
@@ -300,7 +330,7 @@ vec3 calcColor(vec2 z, vec2 f){
     else if(uColorQty==2) param = 0.5 + 0.5*tanh(w.x);      // real part
     else if(uColorQty==3) param = 0.5 + 0.5*tanh(w.y);      // imag part
     else                   param = angle/TAU + 1.0;          // phase (default)
-    float hue = fract(param + hueShift);
+    float hue = fract(param + hueShift + uBranchHue);
     // Brightness (value), driven independently. Magnitude (default) gives the
     // classic |·| → brightness; Uniform is flat (full strength); others squash.
     float val;
@@ -407,6 +437,10 @@ float cellStretch(vec2 base, vec2 cell){
 }
 `;
 
+// Dev-time lockstep guard: every function index must have a dispatch case
+// (see checkGlslDispatch — drift here renders new functions as the identity).
+checkGlslDispatch(vsCommon, 'ComplexParticles vsCommon');
+
 // Point-cloud vertex shader: shared library + a main that places one gl_Point
 // per sampled vertex.
 export const vertexShader = vsCommon + `
@@ -479,8 +513,8 @@ void main(){
     float ey = min(position.z - uDomainBox.z, uDomainBox.w - position.z) / max(uDomainBox.w - uDomainBox.z, 1e-4);
     vFade = smoothstep(0.0, 0.16, min(ex, ey));   // 0 at the perimeter → no boundary
   }
-  vec4 jit = (seed*2. - 1.) * jitterAmp;          // seed is 0 → uniform shift
-  if(uJitterMode==0) z += jit.xy;
+  // No jitter here: the wire is a continuous surface, so it must stay
+  // registered with the axes and the (zero-mean-jittered) point cloud.
   // Sample a cell centered on this grid node so the wire fades in step with the
   // fill where the function stretches the grid.
   vStretch = cellStretch(z - 0.5*uCellSize, uCellSize);
@@ -522,8 +556,8 @@ void main(){
     float ey = min(c.y - uDomainBox.z, uDomainBox.w - c.y) / max(uDomainBox.w - uDomainBox.z, 1e-4);
     vFade = smoothstep(0.0, 0.16, min(ex, ey));   // 0 at the perimeter → no boundary
   }
-  vec4 jit = (seed*2. - 1.) * jitterAmp;          // seed is 0 → uniform shift
-  if(uJitterMode==0) z += jit.xy;
+  // No jitter here: the fill is a continuous surface, so it must stay
+  // registered with the axes and the (zero-mean-jittered) point cloud.
   // How far the function has stretched this cell in 3D (per-cell, uniform across
   // its six verts since they share cellBase) → drives the adaptive fade.
   vStretch = cellStretch(cellBase, uCellSize);

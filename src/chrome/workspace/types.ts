@@ -87,6 +87,11 @@ export interface WorkspaceProps {
   /** Panel id the top-bar title opens when clicked (e.g. 'function'), so the
    *  formula in the bar doubles as a shortcut to its selector. */
   titlePanel?: string;
+  /** Always-available control rendered in the top bar right after the title
+   *  (e.g. Complex Particles' function picker) — for the one selector a user
+   *  should never have to open a panel to reach. Keep it to a single compact
+   *  element. */
+  topExtra?: React.ReactNode;
   /** Optional top-bar mode pills (e.g. Trinary's Observatory | Lab). */
   modes?: WorkspaceMode[];
   activeMode?: string;

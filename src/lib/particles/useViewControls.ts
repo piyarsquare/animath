@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import * as THREE from 'three';
 import { ProjectionMode } from '../viewpoint';
 import { QUARTER, Plane } from '../../math/constants';
@@ -15,6 +16,15 @@ const VIEW_AXES: Record<ViewAxis, THREE.Vector3> = {
   Roll: new THREE.Vector3(0, 0, 1),
 };
 
+/** An in-flight rAF tween. `finish` stops it and applies its end state (so a
+ *  follow-up motion composes from where this one was headed); `abort` stops it
+ *  and leaves the current state alone (for a control that immediately writes
+ *  its own complete state). At most one tween per category is alive. */
+interface Tween {
+  finish: () => void;
+  abort: () => void;
+}
+
 export function useViewControls(state: ParticleState) {
   const {
     materialsRef, rotLRef, rotRRef, viewPointRef, onViewPointChangeRef,
@@ -22,27 +32,48 @@ export function useViewControls(state: ParticleState) {
     viewType, dropAxis,
   } = state;
 
+  // One slot per animated control, so rapid taps replace the running tween
+  // instead of racing it frame-by-frame (two live slerps fight over the same
+  // uniforms; the loser flickers).
+  const projTweenRef = useRef<Tween | null>(null);
+  const rotTweenRef = useRef<Tween | null>(null);
+  const orbitTweenRef = useRef<Tween | null>(null);
+
   function animateTo(target: ProjectionMode) {
     if (materialsRef.current.length === 0) return;
     if (target === projRef.current) return;
+    // Complete a projection tween already in flight, then morph from its end.
+    projTweenRef.current?.finish();
     const start = performance.now();
     const duration = 1000;
+    let rafId = 0;
+    let done = false;
+    const applyEnd = () => {
+      materialsRef.current.forEach(m => {
+        m.uniforms.uProjMode.value = target;
+        m.uniforms.uProjAlpha.value = 0;
+        m.uniforms.uProjTarget.value = target;
+      });
+      setProj(target);
+    };
+    const settle = () => { done = true; cancelAnimationFrame(rafId); projTweenRef.current = null; };
     const step = (now: number) => {
+      if (done) return;
       const p = Math.min((now - start) / duration, 1);
       materialsRef.current.forEach(m => { m.uniforms.uProjAlpha.value = p; });
       if (p < 1) {
-        requestAnimationFrame(step);
+        rafId = requestAnimationFrame(step);
       } else {
-        materialsRef.current.forEach(m => {
-          m.uniforms.uProjMode.value = target;
-          m.uniforms.uProjAlpha.value = 0;
-          m.uniforms.uProjTarget.value = target;
-        });
-        setProj(target);
+        settle();
+        applyEnd();
       }
     };
+    projTweenRef.current = {
+      finish: () => { if (!done) { settle(); applyEnd(); } },
+      abort: () => { if (!done) settle(); },
+    };
     materialsRef.current.forEach(m => { m.uniforms.uProjTarget.value = target; });
-    requestAnimationFrame(step);
+    rafId = requestAnimationFrame(step);
   }
 
   function applyView(type: ProjectionMode, drop: (typeof dropModes)[number]) {
@@ -55,6 +86,10 @@ export function useViewControls(state: ParticleState) {
   }
 
   function snapToStandardView() {
+    // A running rotation tween would keep writing stale orientations over the
+    // reset; drop it (no need to apply its end — we're snapping to identity).
+    rotTweenRef.current?.abort();
+    orbitTweenRef.current?.abort();
     const qL = new THREE.Quaternion();
     const qR = new THREE.Quaternion();
     rotLRef.current.copy(qL);
@@ -107,6 +142,9 @@ export function useViewControls(state: ParticleState) {
    * ambient rotation controls, the scaffold/fiber toggles) follows along.
    */
   function handleProjMix(v: number) {
+    // The slider writes the complete projection state itself — abandon any
+    // pills/drop tween mid-flight rather than letting it keep writing.
+    projTweenRef.current?.abort();
     const mix = Math.max(0, Math.min(2, v));
     state.setProjMix(mix);
     setViewType(mix < 0.5 ? ProjectionMode.Perspective : mix < 1.5 ? ProjectionMode.Torus : ProjectionMode.Hopf);
@@ -167,6 +205,8 @@ export function useViewControls(state: ParticleState) {
 
   function applyQuarterTurn(plane: Plane, θ: number) {
     if (materialsRef.current.length === 0) return;
+    // Rapid taps compose: complete the previous turn instantly, start from there.
+    rotTweenRef.current?.finish();
     const { L, R } = quarterQuat(plane, θ);
     const startL = rotLRef.current.clone();
     const startR = rotRRef.current.clone();
@@ -177,10 +217,9 @@ export function useViewControls(state: ParticleState) {
     const endR = R.clone().multiply(startR).normalize();
     const duration = 1000;
     const start = performance.now();
-    const step = (now: number) => {
-      const p = Math.min((now - start) / duration, 1);
-      const qL = startL.clone().slerp(endL, p);
-      const qR = startR.clone().slerp(endR, p);
+    let rafId = 0;
+    let done = false;
+    const apply = (qL: THREE.Quaternion, qR: THREE.Quaternion) => {
       materialsRef.current.forEach(m => {
         m.uniforms.uRotL.value.w = qL.w;
         m.uniforms.uRotL.value.v.set(qL.x, qL.y, qL.z);
@@ -191,9 +230,20 @@ export function useViewControls(state: ParticleState) {
       onViewPointChangeRef.current?.(viewPointRef.current);
       rotLRef.current.copy(qL);
       rotRRef.current.copy(qR);
-      if (p < 1) requestAnimationFrame(step);
     };
-    requestAnimationFrame(step);
+    const settle = () => { done = true; cancelAnimationFrame(rafId); rotTweenRef.current = null; };
+    const step = (now: number) => {
+      if (done) return;
+      const p = Math.min((now - start) / duration, 1);
+      apply(startL.clone().slerp(endL, p), startR.clone().slerp(endR, p));
+      if (p < 1) rafId = requestAnimationFrame(step);
+      else settle();
+    };
+    rotTweenRef.current = {
+      finish: () => { if (!done) { settle(); apply(endL, endR); } },
+      abort: () => { if (!done) settle(); },
+    };
+    rafId = requestAnimationFrame(step);
   }
 
   const turn = (plane: Plane, dir: 1 | -1) => {
@@ -236,17 +286,28 @@ export function useViewControls(state: ParticleState) {
 
   /** Animated eighth turn (45°) of the ambient view, mirroring {@link turn}. */
   function orbitTurn(axis: ViewAxis, dir: 1 | -1) {
+    // As with the 4D turns: complete a previous orbit tween, then compose.
+    orbitTweenRef.current?.finish();
     const total = (QUARTER / 2) * dir;
     const duration = 400;
     const start = performance.now();
     let last = 0;
+    let rafId = 0;
+    let done = false;
+    const settle = () => { done = true; cancelAnimationFrame(rafId); orbitTweenRef.current = null; };
     const step = (now: number) => {
+      if (done) return;
       const p = Math.min((now - start) / duration, 1);
       orbitBy(axis, (p - last) * total);
       last = p;
-      if (p < 1) requestAnimationFrame(step);
+      if (p < 1) rafId = requestAnimationFrame(step);
+      else settle();
     };
-    requestAnimationFrame(step);
+    orbitTweenRef.current = {
+      finish: () => { if (!done) { settle(); orbitBy(axis, (1 - last) * total); } },
+      abort: () => { if (!done) settle(); },
+    };
+    rafId = requestAnimationFrame(step);
   }
 
   return {

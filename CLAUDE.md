@@ -251,14 +251,18 @@ explainer>`. The scene (Three.js via `Canvas3D`, or DOM/CSS) is the view node.
 
 The complex viewers are powered by the **`src/lib/particles` engine** plus the
 turnkey `ParticleViewerShell` component, which together provide the standard
-**Function / Domain / Camera / Color / Particles / Surface / Motion /
-4D Rotation / Detail** panels (the `QuarterTurnControls` live in the drive-tier
-4D Rotation panel), gesture handling, and the rAF loop out of the box. The flow
-is: `useParticleState` (state) → `useViewControls` (orientation/projection
-controls) → build geometry/axes in `Canvas3D`'s `onMount` → `useUniformSync`
-pushes React state into shader uniforms → `startAnimationLoop` runs the rAF loop.
-**ComplexParticles is the canonical, simplest consumer** — copy it when building a
-new particle viewer.
+**Function / Domain / Camera / Color / Render / Motion / 4D Rotation / System**
+panels (the `QuarterTurnControls` live in the drive-tier 4D Rotation panel),
+gesture handling, and the rAF loop out of the box. The flow is:
+`useParticleState` (state) → `useViewControls` (orientation/projection
+controls) → build geometry/axes in `Canvas3D`'s `onMount` (which **must return
+the cleanup** that stops the loop and disposes the scene — `startAnimationLoop`
+returns the stop function) → `useUniformSync` pushes React state into shader
+uniforms → `startAnimationLoop` runs the rAF loop.
+**ComplexParticles is the canonical consumer** — though no longer a *simple*
+one (it orchestrates per-branch materials across four render modes); copy its
+shell wiring when building a new particle viewer and skip the multi-sheet
+material plumbing unless you need it.
 
 ### 2D / fractal viewers
 
@@ -279,7 +283,9 @@ become **layouts** (`views[id].open`).
 Particle viewers split **looking** (gestures) from **navigating** (buttons):
 
 - **1-finger / mouse drag** orbits the camera (never the 4D rotation).
-- **2-finger drag** (or `Shift`+drag) pans the look-at target.
+- **2-finger drag** pans the look-at target; on desktop, **right-drag**,
+  **held `Space`+drag** or `Shift`+drag pan (the phone keeps a Drag
+  Orbit | Pan pill for one-finger choice).
 - **2-finger pinch / wheel** zooms.
 - **QuarterTurnControls** (the drive-tier **4D Rotation** panel, draggable
   beside the plot): tap a ↻/↺ button for a single **eighth turn**
@@ -432,7 +438,10 @@ invoked **on explicit request**, not auto-triggered spontaneously:
 
 Progress reports and handoffs are **committed** as **Markdown + YAML frontmatter**
 under `docs/sessions/{progress,handoff}/<branch-slug>/` — partitioned **per branch**
-so parallel branches never collide (the slug is the branch name with `claude/`
+so parallel branches never collide. Forward-looking, app-specific implementation
+plans are reports too: **`kind: plan`** files in the branch's `progress/` folder
+(`status: proposed` until a session executes them), surfaced by the control center
+like any report (the slug is the branch name with `claude/`
 stripped and `/`→`-`; keep branch names short and topical). The style is specified
 by `docs/sessions/REPORT_STYLE.md`; skills copy the `docs/sessions/_template-*.md`
 skeletons. Markdown reads natively on GitHub, and **`npm run sessions`**
