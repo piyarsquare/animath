@@ -45,7 +45,7 @@ export type GluingMode = 'opposite' | 'adjacent';
 export type Cover = 'euclidean' | 'spherical' | 'hyperbolic';
 
 export interface WorldSpec {
-  id: 'torus' | 'klein' | 'rp2' | 'sphere' | 'genus2' | 'crosscap3';
+  id: 'torus' | 'klein' | 'rp2' | 'sphere' | 'genus2' | 'crosscap3' | 'torus6' | 'klein6';
   label: string;
   /** short descriptor for the app header */
   short: string;
@@ -138,6 +138,23 @@ export const WORLDS: WorldSpec[] = [
     id: 'crosscap3', label: 'Three cross-caps', short: 'Dyck surface (hyperbolic)',
     chi: -1, orientable: false,
     word: 'a a b b c c',
+  },
+  {
+    // The HEXAGONAL torus: opposite edges glued by translation. Same topology as
+    // the square torus, different presentation — a regular flat hexagon whose
+    // corner classes are two sets of three 120° corners (3·120° = 360°: smooth,
+    // no cone points), tiling the plane as a honeycomb.
+    id: 'torus6', label: 'Hexagonal torus', short: 'flat torus (hexagon)',
+    chi: 0, orientable: true,
+    word: 'a b c a⁻¹ b⁻¹ c⁻¹',
+  },
+  {
+    // The HEXAGONAL Klein bottle: same topology as the square Klein bottle from a
+    // regular flat hexagon (corner classes 3+3 ⇒ smooth). Two of the pairings are
+    // glides (det<0), so crossing them lands you on the other face, hexagonally.
+    id: 'klein6', label: 'Hexagonal Klein bottle', short: 'flat Klein bottle (hexagon)',
+    chi: 0, orientable: false,
+    word: 'a a b c c b⁻¹',
   },
 ];
 

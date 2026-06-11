@@ -283,7 +283,7 @@ export default function PolygonWorlds() {
   const terrainNode = (
     <>
       {!isSpherical && (
-        <Slider label={isHyperbolic ? 'Disk scale' : 'Square size'} value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
+        <Slider label={isHyperbolic ? 'Disk scale' : spec.edges ? 'Square size' : 'Polygon size'} value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
       )}
       {!isSpherical && !isHyperbolic && (
         <Slider label="Floor thickness" value={floorThickness} min={0} max={6} step={0.2} onChange={setFloorThickness} format={(v) => `${v.toFixed(1)} m`} />
@@ -476,10 +476,13 @@ function polygonSpec(spec: WorldSpec, st: SquareMapState | null): PolygonMapSpec
     ? { px: (st.u - 0.5) * 2, py: (st.v - 0.5) * 2, hx: st.hx, hy: st.hz, flipped: st.flipped }
     : null;
   const label = !st ? spec.label : st.flipped ? `${spec.label} · other face` : spec.label;
+  // flat n-gon worlds chart in circumcircle units (vertices at radius 1);
+  // hyperbolic worlds chart in Poincaré coordinates (vertices at tanh(R/2))
+  const flat = deriveGeometry(spec).cover === 'euclidean';
   return {
     sides: m,
     baseAngle: -Math.PI / 2 + Math.PI / m,
-    rhoV: Math.tanh(real.circumradius / 2),
+    rhoV: flat ? 1 : Math.tanh(real.circumradius / 2),
     letters: word.map((l) => ({ gen: l.gen, inv: l.inv })),
     marker,
     label,

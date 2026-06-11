@@ -34,6 +34,42 @@ camera/headlamp bug.
 
 ## Working notes
 
+### 🟢 code · 06-11 — "Trivial" n-gon worlds: hexagonal torus + hexagonal Klein bottle live
+**Why:** The user's next desire: hexagon/octagon presentations of the simple
+topologies (torus, Klein, sphere, ℝP²) — same world, different fundamental
+polygon.
+
+**The math settled the catalog first** (`scripts/probe-trivial-words.ts`,
+committed): a smooth flat world needs *equal corner classes* (each class's
+angles must sum to 2π on a regular polygon). Brute force over all hexagon
+words: 48 smooth torus presentations (canonical: opposite edges
+`a b c a⁻¹ b⁻¹ c⁻¹`, classes 3+3 of 120° = 360° ✓) and 288 smooth Klein
+presentations (shipped: `a a b c c b⁻¹`). **No smooth flat octagon exists**
+(135° ∤ 360°), so the octagon's trivial worlds are exactly the spherical pair:
+ℝP² `abcdabcd` (smooth hemisphere, R=π/2, classes all 2) and the chart sphere
+`aa⁻¹bb⁻¹cc⁻¹dd⁻¹`; hexagon likewise has smooth ℝP² `abcabc` + chart sphere.
+
+**Implemented now (euclidean half):** the euclidean presenter generalized from
+"the square" to "the kernel's realized polygon" — slab = extruded realized
+m-gon (det+1 mapping, no baked mirror), m corner markers placed radially
+(reproduces the square's ±0.41·side inset exactly at m=4), decor authored in
+the inscribed square (span = 2·inradius ≡ `side` at m=4 — square worlds
+pixel-identical), chart() picks the Dirichlet representative as a *cell* (so
+flip parity rides the right rep) and returns circumcircle units for the n-gon
+mini-map; `polygonSpec` made flat-aware (rhoV=1 vs tanh(R/2)). New worlds
+`torus6`, `klein6` in worldSpec; guard extended to 8 worlds.
+
+![Hexagonal torus: honeycomb tiling, 6 corner discs, n-gon minimap](assets/2026-06-11-S01-hex-torus.png)
+
+![Hexagonal Klein bottle with the ink trail](assets/2026-06-11-S01-hex-klein.png)
+
+**Deferred to next session (spherical half):** hex/oct ℝP² (`abcabc`,
+`abcdabcd` — smooth hemispheres whose equator is divided into 2n antipodally
+identified arcs; generalize `sq2hemi`→`ngon2hemi` + corner count) and the
+hex/oct chart spheres (generalize `fullDir`; the kernel already flags
+`chart=true`). The spherical presenter's square charts (`squareMap.ts`
+`rp2Square`/`sq2hemi`, `CHART_CORNERS`) are the seam.
+
 ### 🟡 milestone · 06-11 — Sign feature verified: six worlds green with a sign planted in each
 **Why:** Same guard, now with sign instances inside the audited population.
 

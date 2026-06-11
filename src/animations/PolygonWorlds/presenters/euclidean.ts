@@ -50,12 +50,9 @@ const TRAIL_SPACING = 1.6;
 const GLASS = POLYGON_GLASS;
 const FLOOR_COLOR = 0x46658f;   // one neutral sheet colour (the two sides are told
                                 // apart by trees vs columns + the warm/cool light)
-// Vertex towers sit just inside every corner of the square cell — the 4-gon's
-// "slightly smaller polygon". Authored in (u,v); 0.82 keeps them clear of the seams.
+// Vertex towers sit just inside every corner of the cell — the m-gon's
+// "slightly smaller polygon". 0.82 keeps them clear of the seams.
 const VERTEX_INSET = 0.82;
-const CELL_CORNERS: [number, number][] = [[0, 0], [1, 0], [1, 1], [0, 1]];
-const insetCorner = ([cu, cv]: [number, number]): [number, number] =>
-  [0.5 + (cu - 0.5) * VERTEX_INSET, 0.5 + (cv - 0.5) * VERTEX_INSET];
 
 interface Cell {
   group: THREE.Group;     // matrix = translate(cellOrigin) · (flipped ? rotateπ(glideDir) : I) — the rigid transparency flip
@@ -89,6 +86,9 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
 
   // ── kernel: realize the word → deck lattice ─────────────────────────────────
   const real: Realization = realize(parseWord(c.spec.word));
+  const m = real.edges;                                       // polygon side count (4 = the square worlds, 6 = hexagonal)
+  const polyVerts = real.vertices.map((v) => [v[0], v[1]] as [number, number]); // kernel units, circumradius 1
+  const squareChart = !!c.spec.edges;                         // square worlds keep the classic square mini-map
   const gens: Isometry[] = real.deckGenerators.filter(Boolean);
   const o = ORIGIN;
   const g0 = applyMat(gens[0].m, o), g1 = applyMat(gens[1].m, o);
@@ -120,6 +120,30 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   let camDist = 3.2;
   const baseLen = Math.hypot(ax, ay) || 1;
   let scale = side / baseLen;
+  // Decor is authored in unit-square (u,v); it spans the polygon's INSCRIBED
+  // square: width 2·inradius. For the square worlds this is exactly `side`, so
+  // their layout is unchanged; on the hexagon everything stays inside the cell.
+  const inradiusK = Math.cos(Math.PI / m);                   // kernel units (circumradius 1)
+  const span = () => 2 * inradiusK * scale;
+  /** World position of polygon corner k, inset radially toward the center
+   *  (matches the old square inset: ±0.41·side at m=4). */
+  const cornerWorld = (k: number): [number, number] =>
+    [polyVerts[k][0] * scale * VERTEX_INSET, polyVerts[k][1] * scale * VERTEX_INSET];
+  /** The cell slab: the realized fundamental polygon extruded to the floor
+   *  thickness, centered on the slab mid-plane (the cell-group origin). The
+   *  rotation maps shape (x,y) → floor plan (x,z) with NO mirror (det +1). */
+  function slabGeometry(): THREE.ExtrudeGeometry {
+    const shape = new THREE.Shape();
+    polyVerts.forEach(([vx, vy], i) => {
+      const wx = vx * scale, wy = vy * scale;
+      if (i === 0) shape.moveTo(wx, wy); else shape.lineTo(wx, wy);
+    });
+    shape.closePath();
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false });
+    geo.rotateX(Math.PI / 2);            // (x,y,extrude z) → (x, y∈[−t,0], plan z=shape y)
+    geo.translate(0, thickness / 2, 0);
+    return geo;
+  }
   const lattice = () => ({ ax: ax * scale, az: ay * scale, bx: bx * scale, bz: by * scale });
   function cellOf(px: number, pz: number): [number, number] {
     const L = lattice();
@@ -216,7 +240,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     cells.length = 0;
     for (let i = 0; i < (2 * K + 1) * (2 * K + 1); i++) {
       const group = new THREE.Group(); group.matrixAutoUpdate = false;
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(side, thickness, side), floorMat);
+      const slab = new THREE.Mesh(slabGeometry(), floorMat);
       const top = new THREE.Group(), bottom = new THREE.Group();
       // Bottom-face decor is turned over RIGIDLY (π about the glide axis), never
       // mirrored with scale.y=−1: a baked reflection would cancel against the
@@ -231,13 +255,13 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
         bottom.add(b);
       });
       const cornersTop = new THREE.Group(), cornersBottom = new THREE.Group();
-      CELL_CORNERS.forEach((_, v) => {
-        const col = cornerColor(v, CELL_CORNERS.length);
+      for (let v = 0; v < m; v++) {
+        const col = cornerColor(v, m);
         cornersTop.add(decor.makeCornerTop(v + 1, col)); // Arabic disc, top face
         const cb = decor.makeCornerBottom(v + 1, col);   // Roman disc, turned onto the bottom face
         cb.setRotationFromAxisAngle(glideDir, Math.PI);
         cornersBottom.add(cb);
-      });
+      }
       // every cell carries an instance of the one shared ink buffer — the trail
       // tiles with the ground, and a det<0 cell mirrors it for real
       const trailInk = new THREE.Mesh(ink.geometry, ink.material);
@@ -254,18 +278,18 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   }
   function placeDecor() {
     const ht = thickness / 2;
+    const s = span();
     for (const cell of cells) {
       decor.props.forEach((p, j) => {
-        const x = (p.u - 0.5) * side, z = (p.v - 0.5) * side;
+        const x = (p.u - 0.5) * s, z = (p.v - 0.5) * s;
         cell.top.children[j].position.set(x, ht, z);
         cell.bottom.children[j].position.set(x, -ht, z);
       });
-      CELL_CORNERS.forEach((corner, v) => {
-        const [iu, iv] = insetCorner(corner);
-        const x = (iu - 0.5) * side, z = (iv - 0.5) * side;
+      for (let v = 0; v < m; v++) {
+        const [x, z] = cornerWorld(v);
         cell.cornersTop.children[v].position.set(x, ht, z);
         cell.cornersBottom.children[v].position.set(x, -ht, z);
-      });
+      }
     }
   }
   buildCells();
@@ -274,19 +298,21 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   // player state (walks the flat plane in world coords). Spawn at the home-cell
   // point farthest from every landmark, so the player never starts inside a tree.
   function clearSpawn(): [number, number] {
+    const s = span();
     const avoid: [number, number][] = [
-      ...decor.props.map((p) => [p.u, p.v] as [number, number]),
-      ...CELL_CORNERS.map(insetCorner),
+      ...decor.props.map((p) => [(p.u - 0.5) * s, (p.v - 0.5) * s] as [number, number]),
+      ...Array.from({ length: m }, (_, k) => cornerWorld(k)),
     ];
-    let best = [0.5, 0.5], bestD = -1;
+    let best: [number, number] = [0, 0], bestD = -1;
     for (let cu = 0.1; cu <= 0.9; cu += 0.1) {
       for (let cv = 0.1; cv <= 0.9; cv += 0.1) {
+        const wx = (cu - 0.5) * s, wz = (cv - 0.5) * s;
         let mind = Infinity;
-        for (const [au, av] of avoid) mind = Math.min(mind, Math.hypot(cu - au, cv - av));
-        if (mind > bestD) { bestD = mind; best = [cu, cv]; }
+        for (const [px2, pz2] of avoid) mind = Math.min(mind, Math.hypot(wx - px2, wz - pz2));
+        if (mind > bestD) { bestD = mind; best = [wx, wz]; }
       }
     }
-    return [(best[0] - 0.5) * side, (best[1] - 0.5) * side];
+    return best;
   }
   let [px, pz] = clearSpawn();
   // Accumulated flip parity carried through folds: each time the player is folded
@@ -389,7 +415,19 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     // heading back through the home cell's current transform (the in-plane part of
     // the transparency flip when on the other face). This is where the classic
     // square-diagram re-entry — exit at v, come back at 1−v — shows up.
-    const [I0, J0] = cellOf(px, pz);
+    // The Dirichlet representative: the NEAREST cell origin (for the square's
+    // orthogonal lattice this equals the oblique round; for the hexagonal
+    // lattice it is what keeps the marker inside the drawn polygon). The flip
+    // parity is read from that cell, so the reflection rides the right rep.
+    const [Ir, Jr] = cellOf(px, pz);
+    let I0 = Ir, J0 = Jr, bd = Infinity;
+    for (let di = -1; di <= 1; di++) {
+      for (let dj = -1; dj <= 1; dj++) {
+        const [ox, oz] = cellOrigin(Ir + di, Jr + dj);
+        const d = (px - ox) * (px - ox) + (pz - oz) * (pz - oz);
+        if (d < bd) { bd = d; I0 = Ir + di; J0 = Jr + dj; }
+      }
+    }
     const [cx, cz] = cellOrigin(I0, J0);
     const flipped = (flipParity(I0, J0) ^ flipAcc) === 1;
     let bx2 = px - cx, bz2 = pz - cz, mhx = forward.x, mhz = forward.z;
@@ -398,7 +436,12 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
       [mhx, mhz] = reflectInPlane(mhx, mhz);
     }
     const mhl = Math.hypot(mhx, mhz) || 1;
-    return { u: bx2 / side + 0.5, v: bz2 / side + 0.5, hx: mhx / mhl, hz: mhz / mhl, flipped };
+    if (squareChart) {
+      return { u: bx2 / side + 0.5, v: bz2 / side + 0.5, hx: mhx / mhl, hz: mhz / mhl, flipped };
+    }
+    // polygon worlds: coordinates normalized to the circumcircle (the n-gon
+    // mini-map draws the polygon's vertices at radius 1 in these units)
+    return { u: (bx2 / scale + 1) / 2, v: (bz2 / scale + 1) / 2, hx: mhx / mhl, hz: mhz / mhl, flipped };
   }
 
   return {
