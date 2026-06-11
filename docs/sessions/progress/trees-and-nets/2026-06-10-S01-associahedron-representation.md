@@ -32,9 +32,54 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 `claude/trees-and-nets` from `main`. **Port source is in `/tmp` this session only**
 (`/tmp/qt-unzip/quantum-tree-main/`).
 
+## Build-out ramp (roadmap for the rest of Trees and Nets)
+
+Where the app goes from here, in dependency order. Current state = local exploration
+of a (tree, order) point with its two fibers (associahedron × (n−3)-cube), the disk
+views, navigation, and a gallery card.
+
+- **R1 — Polish the local exploration** *(small, immediate)*: tidy the default
+  `Fibers` layout (panels off the rail, cube window on-screen); draw a **mini glyph
+  inside each fiber node** (a tree in associahedron nodes, a circular order in cube
+  nodes) so nodes show *what* they are; label the cube axes / associahedron edges by
+  the interior edge they move; smooth the associahedron marker on a twist (it jumps
+  to the re-embedded vertex today).
+- **R2 — The "Nets" half** *(major; the other half of the name)*: an editable n×n
+  **distance matrix** (+ presets); **NeighborNet** circular split weights → the
+  **split network** render; **neighbor-joining** as the tree case; **Kalmanson /
+  circular-decomposable** detection + a "tree-like vs net-like" readout. Grounds the
+  abstract tree-space in data (a metric picks a preferred tree/order).
+- **R3 — Energies on the fibers** *(needs R2)*: a per-tree circular-order energy
+  (path sums) and per-order energy from the metric; **color the associahedron and
+  cube by energy** → the landscape + the optimum; a "descend"/search mode (ties to
+  the GAS/glassy-landscape theme in FUTURE_APPS).
+- **R4 — Higher-n rendering**: associahedron fiber for n≥7 (4D+) via a **Schlegel**
+  diagram or the `lib/particles` 4D→3D projection slider; cube fiber for n≥7
+  (4-cube+) via a better projection / hypercube net (the current first-3 embed is a
+  shadow).
+- **R5 — The whole moduli space, legibly** *(optional)*: revisit the global gluing
+  now the local picture is clear — the n=5 **12-pentagon surface** M̄₀,₅(ℝ) as a
+  showpiece, and/or a better-laid-out gluing graph (the earlier Atlas was a hairball;
+  `lib/mosaic.ts` already has the data).
+- **R6 — Research / port hygiene** *(open)*: the quantum-search question (search the
+  associahedron/cube by interference — the classical substrate is now in place);
+  cross-check the twist/gluing rules vs Devadoss's mosaic operad; licensing /
+  attribution for the quantum-tree port + crediting the working paper.
+
+Cross-cutting: each phase ends with `npm run build` + a headless screenshot and
+asserts the combinatorial invariants (Catalan trees, 2^(n−3) cube, facet counts).
+
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟢 code · 13:40 — Dedicated gallery card (treenet preview)
+**Why:** User wanted a better gallery card than the reused corridor preview.
+
+Added a `treenet` PreviewKind: a pentagon's dual tree walking its flip-cycle (the
+changed branch glides, leaves in gold), in `chrome/previews.tsx`; pointed
+`catalog.ts` at it. Self-contained (inline triangulation enumerator), light/dark
+aware. Build green; gallery screenshot confirms the card.
 
 ### 🟢 code · 13:35 — Two embedded fibers + multi-window; fix flip collapse & twist
 **Why:** User: all windows (keep every version); tree/polygon/overlay as separate
