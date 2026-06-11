@@ -34,8 +34,8 @@ function splitLabel(order: number[], a: number, b: number): string {
   return `{${small.join(',')}}|{${big.join(',')}}`;
 }
 
-// Canonical positions: the Loday point (assoc.vertices[i].point), centered+scaled.
-// True polytope for n≤6; first-3 canonical coords (fixed, not PCA) for n≥7.
+// Symmetric secondary-polytope coordinates (assoc.vertices[i].point), centered+scaled.
+// True polytope for n≤6; first-3 intrinsic coords (fixed, not PCA) for n≥7.
 function positionsFor(assoc: Associahedron): THREE.Vector3[] {
   const raw = assoc.vertices.map(
     (v) => new THREE.Vector3(v.point[0] ?? 0, v.point[1] ?? 0, v.point[2] ?? 0),

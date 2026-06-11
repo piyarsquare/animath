@@ -7,10 +7,11 @@
 // associahedron K_{n-1} of dimension n-3.
 //
 // This module enumerates the triangulations, builds the flip graph, and realizes
-// the polytope with Loday's coordinates — which land in R^{n-2} on the hyperplane
-// (sum = C(n-1,2)), so the intrinsic geometry is (n-3)-dimensional: a 3D polytope
-// for n=6 (14 vertices) and a 4D polytope for n=7 (42 vertices, for the 4D→3D
-// projection viewer). Verified counts: Catalan(n-2) vertices, (n-3)-regular.
+// the polytope. Loday's integer vector (canonical but *rooted* and asymmetric) is
+// kept for reference, but the rendered coordinates come from the SYMMETRIC
+// secondary-polytope (GKZ) realization on the regular n-gon — which inherits the
+// polygon's dihedral symmetry — reduced isometrically to its intrinsic R^{n-3}
+// (3D at n=6, 4D at n=7, ...). Verified counts: Catalan(n-2) vertices, (n-3)-regular.
 
 export interface Triangulation {
   /** Canonical id: sorted diagonal keys joined by "|" (empty for n<4). */
@@ -19,9 +20,9 @@ export interface Triangulation {
   diagonals: [number, number][];
   /** The n-2 triangles as [a, b, c] vertex triples. */
   triangles: [number, number, number][];
-  /** Loday coordinates in R^{n-2}, on the hyperplane sum = C(n-1, 2). */
+  /** Loday coordinates in R^{n-2}, on the hyperplane sum = C(n-1, 2) (reference). */
   loday: number[];
-  /** Intrinsic polytope coordinates in R^{n-3} (orthonormal hyperplane basis). */
+  /** Intrinsic R^{n-3} render coordinates — symmetric secondary-polytope realization. */
   point: number[];
 }
 
@@ -131,38 +132,59 @@ function lodayCoords(triangles: [number, number, number][], n: number): number[]
 }
 
 /**
- * Orthonormal (Helmert) basis of the sum-zero subspace of R^m: m-1 unit vectors
- * orthogonal to the all-ones direction. Projecting a constant-sum point onto them
- * drops the (constant) hyperplane offset and yields intrinsic R^{m-1} coordinates.
+ * Symmetric secondary-polytope (GKZ) realization on the regular n-gon: each
+ * coordinate of a triangulation is the total area of its triangles meeting that
+ * polygon vertex. Because the regular n-gon carries the dihedral group, this
+ * realization is symmetric (unlike Loday's rooted one). The vectors lie on an
+ * (n-3)-dimensional affine subspace; we reduce them isometrically to R^{n-3} via a
+ * Gram–Schmidt basis of their centered span, preserving distances and the symmetry.
  */
-function helmertBasis(m: number): number[][] {
+function secondaryPoints(n: number, triangleSets: [number, number, number][][]): number[][] {
+  const dim = Math.max(n - 3, 0);
+  if (dim === 0) return triangleSets.map(() => []);
+  const px = Array.from({ length: n }, (_, k) => Math.cos((2 * Math.PI * k) / n));
+  const py = Array.from({ length: n }, (_, k) => Math.sin((2 * Math.PI * k) / n));
+  const area = (a: number, b: number, c: number) =>
+    Math.abs((px[b] - px[a]) * (py[c] - py[a]) - (px[c] - px[a]) * (py[b] - py[a])) / 2;
+  const gkz = triangleSets.map((tris) => {
+    const phi = new Array<number>(n).fill(0);
+    for (const [x, y, z] of tris) {
+      const ar = area(x, y, z);
+      phi[x] += ar; phi[y] += ar; phi[z] += ar;
+    }
+    return phi;
+  });
+  const mean = new Array<number>(n).fill(0);
+  for (const v of gkz) for (let i = 0; i < n; i++) mean[i] += v[i];
+  for (let i = 0; i < n; i++) mean[i] /= gkz.length;
+  const centered = gkz.map((v) => v.map((x, i) => x - mean[i]));
+  const dot = (u: number[], w: number[]) => u.reduce((s, ui, i) => s + ui * w[i], 0);
   const basis: number[][] = [];
-  for (let k = 1; k <= m - 1; k++) {
-    const e = new Array<number>(m).fill(0);
-    const norm = Math.sqrt(k * (k + 1));
-    for (let i = 0; i < k; i++) e[i] = 1 / norm;
-    e[k] = -k / norm;
-    basis.push(e);
+  for (const v of centered) {
+    if (basis.length >= dim) break;
+    const w = v.slice();
+    for (const b of basis) { const d = dot(w, b); for (let i = 0; i < n; i++) w[i] -= d * b[i]; }
+    const nrm = Math.sqrt(dot(w, w));
+    if (nrm > 1e-7) { for (let i = 0; i < n; i++) w[i] /= nrm; basis.push(w); }
   }
-  return basis;
+  return centered.map((v) => basis.map((b) => dot(v, b)));
 }
 
 /** Build the associahedron for `n` leaves (n >= 3). */
 export function buildAssociahedron(n: number): Associahedron {
   const dim = Math.max(n - 3, 0);
   const triangleSets = triangulateArc(Array.from({ length: n }, (_, i) => i));
-  const basis = helmertBasis(Math.max(n - 2, 1));
+  const points = secondaryPoints(n, triangleSets);
 
-  const vertices: Triangulation[] = triangleSets.map((triangles) => {
+  const vertices: Triangulation[] = triangleSets.map((triangles, i) => {
     const diagonals = diagonalsOf(triangles, n);
     const loday = lodayCoords(triangles, n);
-    const point = basis.map((e) => e.reduce((sum, ei, i) => sum + ei * loday[i], 0));
     return {
       id: diagonals.map(([a, b]) => `${a},${b}`).join("|"),
       diagonals,
       triangles,
       loday,
-      point,
+      point: points[i],
     };
   });
 

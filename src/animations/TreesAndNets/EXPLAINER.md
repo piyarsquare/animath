@@ -13,10 +13,11 @@ as a vertex, join flips by edges, and fill in the faces, and you get the
   squares**;
 - **n ≥ 7** → 4-D and up (shown as a canonical projection for now).
 
-The points use **Loday's coordinates** — a canonical realization, so at n ≤ 6 you
-are looking at the genuine associahedron, not an arbitrary layout. Each **2-face**
-is itself a product of smaller associahedra: a pentagon is K₃×K₅ (cut off a
-triangle) and a square is K₄×K₄ (a main diagonal).
+The points use the **secondary polytope of the regular n-gon** — a *symmetric*
+canonical realization (it inherits the polygon's dihedral symmetry), so at n ≤ 6
+you are looking at the genuine, symmetric associahedron. Each **2-face** is itself a
+product of smaller associahedra: a pentagon is K₃×K₅ (cut off a triangle) and a
+square is K₄×K₄ (a main diagonal).
 
 **Interact:** drag to orbit, scroll to zoom, click a vertex to read its tree (its
 internal splits) in the side panel.

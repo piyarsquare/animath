@@ -36,6 +36,22 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 03:55 — Symmetric realization (secondary polytope), diagnosed projection
+**Why:** User: the tile isn't symmetric + projection issues; asked how objects
+compose. Diagnosed and fixed (a).
+
+Walked the composition pipeline (triangulations → coordinates → isometric reduce →
+truncate-to-3 → draw) and located both issues: **asymmetry = Loday's rooted
+realization** (measured flip-edge length CoV: Loday n=5 35% / n=6 50%; the secondary
+polytope of the regular n-gon gives n=5 0% (regular pentagon) / n=6 14% — the
+residual is the genuine two edge-orbits). **Projection**: n=6 `point` is exactly 3D
+(faithful — the asymmetry was all Loday); n≥7 truncates coords (real shadow, needs
+Schlegel). **Fixed (a):** replaced Loday→Helmert with `secondaryPoints()` in
+`associahedron.ts` — GKZ area vectors on the regular n-gon, reduced isometrically
+to R^{n-3} by Gram–Schmidt of the centered span (keeps `loday` as reference). n≤6
+tiles now render symmetric; build green; n=6 screenshot confirms. **(b)** Schlegel
+for n≥7 tiles is the queued next step.
+
 ### 🟡 milestone · 03:40 — Phases 1–2 done: the generic M̄₀,ₙ(ℝ) explorer
 **Why:** "Continue to the end" — deliver the whole-moduli-space explorer.
 
