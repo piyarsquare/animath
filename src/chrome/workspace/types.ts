@@ -15,14 +15,33 @@ export interface SectionDef {
   estHeight?: number;
 }
 
-/** One view window: a plot that lives on the stage like any other window. */
-export interface ViewDef {
+/** One pane of a split view window (CHROME-REVIEW P5). */
+export interface PaneDef {
+  id: string;
+  /** Mono corner label (e.g. 'z — domain'); omit for none. */
+  label?: string;
+  /** Canvas/DOM content; rendered into a positioned pane (absolute inset 0). */
+  node: React.ReactNode;
+}
+
+/**
+ * One view window: a plot that lives on the stage like any other window.
+ * Either a single `node`, or `panes` — two (or more) pictures that are one
+ * mathematical unit (CHROME-REVIEW P5): panes render side-by-side inside ONE
+ * window with a fixed equal split, so drag/resize/collapse/fullscreen/layout
+ * act on the pair as a unit and the pictures stay scale-commensurable
+ * (Plane Transform's domain/image is the reference consumer). The union is
+ * deliberate — passing both is a type error, not a silent pick.
+ */
+export type ViewDef = {
   id: string;
   title: string;
-  /** Canvas/DOM content; rendered into a positioned body (absolute inset 0). */
-  node: React.ReactNode;
   defaultRect: Rect;
-}
+} & (
+  | { /** Canvas/DOM content; rendered into a positioned body (absolute inset 0). */
+      node: React.ReactNode; panes?: never }
+  | { node?: never; panes: PaneDef[] }
+);
 
 export interface PanelState {
   x: number;

@@ -270,6 +270,14 @@ const views: ViewDef[] = [{
   `useViewportGestures` (2D pan/zoom/tap) or `useGestureRotation` (3D orbit).
   Multiple views are fine — `Correspondence` ships linked Mandelbrot and Julia
   windows sharing React state; each gets its own `ViewDef`.
+- **Split views.** If two pictures are one mathematical unit (a domain and its
+  image), don't make them two windows — declare `panes` instead of `node` and
+  they render side-by-side in ONE window with a fixed equal split, so resize/
+  collapse/fullscreen/layouts act on the pair and the two pictures keep the
+  same pixels-per-unit. Plane Transform is the reference
+  (`{ id: 'plane', title: 'z ↦ f(z)', panes: [{ id, label?, node }, …] }`).
+  Two windows remain right when independent pan/zoom is the point
+  (Correspondence).
 - **Window-level key handlers** (first-person walkers, etc.) must early-return
   when focus is in a form control, or typing in panels will drive the scene:
   ```ts

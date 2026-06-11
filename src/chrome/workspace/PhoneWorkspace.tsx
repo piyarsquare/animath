@@ -6,6 +6,7 @@ import { TopBar } from '../TopBar';
 import { useEscLayer } from '../useEscLayer';
 import { useScrollHints } from '../useScrollHints';
 import { ActionBar } from './ActionBar';
+import { SplitPanes } from './SplitPanes';
 import { sortByTier, ARCHETYPES } from './archetypes';
 import { beginPointerDrag } from './drag';
 import type { WorkspaceProps } from './types';
@@ -134,7 +135,7 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
                 className="am-phone-view-body"
                 style={!isFull && h ? { height: h, maxHeight: 'none' } : undefined}
               >
-                {v.node}
+                {v.panes ? <SplitPanes panes={v.panes} /> : v.node}
               </div>
               {!isFull && (
                 <div className="am-phone-vresize" onPointerDown={onResizeDown(v.id)} aria-label={`Resize ${v.title}`}>

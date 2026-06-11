@@ -2,6 +2,7 @@ import React from 'react';
 import { Icon } from '../icons';
 import { beginPointerDrag } from './drag';
 import { LAYER } from './layers';
+import { SplitPanes } from './SplitPanes';
 import type { ViewDef, ViewState } from './types';
 
 /**
@@ -92,7 +93,7 @@ export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, o
       </div>
       {/* hidden, not unmounted, while collapsed — keeps engine state alive */}
       <div className="am-ws-view-body" style={collapsed ? { display: 'none' } : undefined}>
-        {view.node}
+        {view.panes ? <SplitPanes panes={view.panes} /> : view.node}
       </div>
       {!collapsed && !full && (
         <div className="am-ws-resize" onPointerDown={onResizeDown} title="Resize" aria-label={`Resize ${view.title}`}>

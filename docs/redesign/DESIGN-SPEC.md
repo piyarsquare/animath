@@ -39,9 +39,15 @@ Two kinds of windows live on it, sharing one interaction model:
   **Esc peels one transient layer per keypress** (menu/sheet/modal → fullscreen) and never closes
   panels (✕-only). Window z is compacted to 1..n on load/raise; the layer scale lives in
   `chrome/workspace/layers.ts` ↔ the `--z-*` tokens.
-- Defined per app in the catalog (`views: [{id,title,kind,x,y,w,h}]`). Two apps open with **two
-  linked views**: Mandelbrot ↔ Julia (`Mandelbrot — pick c` / `Julia(c)`) and Plane Transform
-  (`z-plane (input)` / `f(z)-plane`).
+- **Split views** (CHROME-REVIEW P5): a view may declare `panes` instead of `node` — two
+  pictures that are one mathematical unit render side-by-side inside ONE window with a fixed
+  **equal** split (no draggable divider: equal inscribed squares are the invariant that keeps a
+  domain/image pair scale-commensurable). Drag/resize/collapse/fullscreen/layout act on the
+  pair as a unit. Plane Transform is the reference consumer: one window `z ↦ f(z)` with panes
+  `z — domain` / `w = f(z) — image` (matching its embed presentation).
+- Defined per app in the catalog (`views: [{id,title,kind,x,y,w,h}]`). Mandelbrot ↔ Julia opens
+  with **two linked windows** (`Mandelbrot — pick c` / `Julia(c)`) — there the linkage is by
+  *parameter*, not scale, and independent pan/zoom is a feature, so it stays two windows.
 
 ### Control panels
 - Open/close from the **left icon rail**; also closable via ✕ in the panel header.

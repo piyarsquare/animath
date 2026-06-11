@@ -294,6 +294,9 @@ z-compaction, not a CSS override); staged Esc scoped to transient layers.
   id (`plane`, not `input`), split-body component shared with the embed
   route, window title `z ↦ f(z)`, pane labels `z — domain` /
   `w = f(z) — image`; 50/50 split non-negotiable (no draggable divider).
+  ✅ **Landed** (`SplitPanes` shared by ViewWindow / phone cards / the
+  embed; `scripts/probe-split.mjs` proves equal panes through resize and
+  fullscreen).
 - **PR D — P2** on a minimal shared view-overlay layer: per-session hints,
   math-anchored copy; ungate Correspondence tap-to-pick (decision below).
 - **Deferred:** P3 full `ViewDef.hud` (design against TopologyWalk's actual

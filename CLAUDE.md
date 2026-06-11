@@ -156,7 +156,7 @@ visible app catalog comes from `src/apps.ts` (+ `src/chrome/catalog.ts`).
 |----------------------|------------------|--------------------------------------------|
 | `#/` (default)       | `Gallery`        | Landing gallery of all apps                 |
 | `#/complex-particles`| `App → ComplexParticles` | 4D complex-function particle viewer |
-| `#/plane-transform`  | `PlaneTransform` | f as a transformation of the plane (two view windows) |
+| `#/plane-transform`  | `PlaneTransform` | f as a transformation of the plane (one split view window: domain · image) |
 | `#/fractals`         | `FractalsGPU`    | GPU Mandelbrot / Julia / Burning Ship / Tricorn |
 | `#/fractals-cpu`     | `Fractals2D`     | Legacy CPU 2D fractals (unlisted)           |
 | `#/correspondence`   | `Correspondence` | Mandelbrot ↔ Julia, two linked view windows |
@@ -200,12 +200,17 @@ rendering **one component**:
   `drive`/`playback` · Analyze `lab`/`readout` · System `quality`. The rail
   sorts by tier; never invent new icons — propose vocabulary changes in
   `docs/redesign/IN-PROGRESS.md`.
-- `ViewDef = { id, title, node, defaultRect }` — the node fills a draggable,
-  resizable, collapsible window body (`position:absolute; inset:0`); collapsed
+- `ViewDef = { id, title, defaultRect } + (node | panes)` — the node fills a
+  draggable, resizable, collapsible window body (`position:absolute; inset:0`);
+  `panes: PaneDef[]` instead renders a **split view** (two pictures, one
+  window, fixed equal split — Plane Transform's domain/image pair). Collapsed
   views are hidden, **never unmounted**, so WebGL state survives (`Canvas3D`
   ignores zero-size resizes). A header button takes any view **full screen**
   (CSS-only restyle of the same node — the WebGL context survives; Esc or the
   button restores); on phone, cards also height-resize from a bottom grip.
+  While fullscreen, the rail stays live and panels float above; apps with
+  primary verbs pass `actions` (the always-on strip, ≤5 buttons projecting a
+  drive/playback panel).
 - `LayoutDef.views[id].open: false` hides a view in that layout (how
   Stable Matching's matrix/welfare/lattice and Trinary's Lab instruments
   present as layouts).

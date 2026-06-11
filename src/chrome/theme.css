@@ -453,6 +453,15 @@ body {
 /* phone cards scroll under the dock + strip — leave room to reach the end */
 .am-phone-app.am-has-actions .am-phone-scroll { padding-bottom: 148px; }
 
+/* ============ Split view body (CHROME-REVIEW P5) ============
+   Two pictures, one window: a fixed equal flex split (no divider — equal
+   inscribed squares keep a domain/image pair scale-commensurable). Shared
+   by view windows, phone cards and the embed routes. */
+.am-split { position: absolute; inset: 0; display: flex; }
+.am-split-pane { position: relative; flex: 1 1 0; min-width: 0; }
+.am-split-pane + .am-split-pane { border-left: 1px solid var(--border); }
+.am-split-label { position: absolute; left: 9px; top: 7px; z-index: 4; font-family: var(--font-mono); font-size: 11px; color: var(--dim); pointer-events: none; }
+
 /* magnetic snap guides */
 .am-ws-guide { position: absolute; z-index: var(--z-guides); background: var(--accent); pointer-events: none; opacity: 0.8; box-shadow: 0 0 8px var(--accent-soft); }
 .am-ws-guide-v { top: 0; bottom: 0; width: 1.5px; }
@@ -542,9 +551,6 @@ body {
 .am-embed-badge:hover { opacity: 1; }
 .am-embed-caption { padding: 7px 12px; font-family: var(--font-ui); font-size: 12px; color: var(--dim); background: var(--panel-solid); border-top: 1px solid var(--border); flex-shrink: 0; }
 .am-embed-row { position: relative; display: flex; flex: 1; min-height: 0; }
-.am-embed-pane { position: relative; flex: 1; min-width: 0; }
-.am-embed-pane + .am-embed-pane { border-left: 1px solid var(--border); }
-.am-embed-pane-label { position: absolute; left: 9px; top: 7px; z-index: 4; font-family: var(--font-mono); font-size: 11px; color: rgba(235,235,245,0.75); pointer-events: none; }
 .am-embed-buttons { position: absolute; left: 8px; top: 8px; z-index: 5; display: flex; gap: 6px; }
 .am-embed-btn { font-family: var(--font-ui); font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--panel-solid); color: var(--fg); cursor: pointer; opacity: 0.88; }
 .am-embed-btn:hover { opacity: 1; }

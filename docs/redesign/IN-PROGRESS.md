@@ -134,3 +134,12 @@ questions. The implementing agent should update this file as phases land.
   Agentic Sorting, Trinary Observatory. Three transport glyphs (pause/step/finish) added as
   chrome *utility* icons — not archetypes. Embeds scoping (decision c): the `buttons=` row is
   the strip's embed form. Probe: `scripts/probe-actionbar.mjs` (11 checks).
+- 2026-06: **CHROME-REVIEW PR C landed — split views** (DESIGN-SPEC §2): `ViewDef` became a
+  discriminated `node | panes` union; `SplitPanes` renders a fixed equal flex split (no
+  divider, by ruling — equal inscribed squares keep domain/image scale-commensurable), shared
+  by ViewWindow, phone cards, and the Plane Transform embed (orphaned `.am-embed-pane` CSS
+  removed). Plane Transform migrated to ONE window `z ↦ f(z)` (fresh id `plane`, panes
+  `z — domain` / `w = f(z) — image`); stale two-window persisted rects sanitize away.
+  Mandelbrot ↔ Julia deliberately stays two windows (linkage by parameter, not scale).
+  Probe: `scripts/probe-split.mjs` (6 checks: equal panes through resize + fullscreen, embed
+  parity).

@@ -40,6 +40,24 @@ rename/export, gallery search, phone landscape) and embeds phase 2 (the
      emoji: 🟣 decision · 🟢 code · 🔵 finding · 🔴 blocker · 🟡 milestone
      Follow each with a "**Why:** …" line, then optional body paragraphs. -->
 
+### 🟡 milestone · 01:10 — PR C landed and probe-verified (split views)
+**Why:** Continuing the plan of record after PR B.
+
+`ViewDef` became a discriminated `node | panes` union (passing both is a
+type error, per the consultant); new `SplitPanes` renders a fixed equal flex
+split with mono corner labels — **no draggable divider** by ruling (equal
+inscribed squares are what keep the domain/image pair scale-commensurable).
+Shared by ViewWindow, phone view cards, and the Plane Transform embed (the
+orphaned `.am-embed-pane` CSS deleted). Plane Transform migrated to one
+window `z ↦ f(z)` with panes `z — domain` / `w = f(z) — image` under a
+fresh id (`plane`) so stale two-window rects sanitize away.
+Mandelbrot ↔ Julia deliberately stays two windows. Docs: DESIGN-SPEC split
+clause + linked-windows rewording, BUILDING_AN_APP §4b, CLAUDE.md.
+Verification: build + 20 tests green; `scripts/probe-split.mjs` 6/6 (one
+window, equal panes through resize and fullscreen, embed DOM parity).
+
+![One window, two commensurable panes: z ↦ f(z)](assets/2026-06-10-S01-split-window.png)
+
 ### 🟡 milestone · 01:04 — PR B landed and probe-verified (the action strip)
 **Why:** User said "continue" — next step on the plan of record.
 
