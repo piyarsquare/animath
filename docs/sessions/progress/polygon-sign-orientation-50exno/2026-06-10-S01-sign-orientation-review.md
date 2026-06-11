@@ -34,6 +34,16 @@ camera/headlamp bug.
 
 ## Working notes
 
+### 🟡 milestone · 06-11 — Sign feature verified: six worlds green with a sign planted in each
+**Why:** Same guard, now with sign instances inside the audited population.
+
+All checks pass; the audited mesh counts prove coverage — torus/klein
+3282→3457 (+175 = 25 cells × 7 sign meshes), rp2 269→283 (+14 = main + the
+antipodal twin), crosscap3 2281→2393 and genus2 2473→2536 (+112/+63 ≈ visible
+tiles × 7). Every sign instance in every world is placed by a proper
+transform; the rp2 ink twin still hangs below the glass (29.880 < 30.000);
+every trail probe reads right-handed on both faces.
+
 ### 🟢 code · 06-11 — "Plant a sign": user-authored two-sided glass plaque, all three presenters
 **Why:** The user is still befuddled by vision through the floor and asked for
 an instrument beyond the trail: a sign with *their own* text, different on the
