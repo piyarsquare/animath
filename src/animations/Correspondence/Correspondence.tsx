@@ -13,7 +13,6 @@ export default function Correspondence() {
   const [mandelView, setMandelView] = useState<ViewBounds>(baseView);
   const [juliaView, setJuliaView] = useState<ViewBounds>({ xMin: -2, xMax: 2, yMin: -2, yMax: 2 });
   const [c, setC] = useState<Complex>({ real: -0.7, imag: 0.27015 });
-  const [selecting, setSelecting] = useState(false);
   const [iter, setIter] = useState(100);
   const [paletteM, setPaletteM] = useState(0);
   const [offsetM, setOffsetM] = useState(0);
@@ -35,11 +34,11 @@ export default function Correspondence() {
   useEffect(() => { playingRef.current = playing; }, [playing]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
-  const handlePick = (nc: Complex) => {
-    if (!selecting) return;
-    setC(nc);
-    setSelecting(false);
-  };
+  // Tap-to-pick is always armed (CHROME-REVIEW PR D, user decision a): tap is
+  // already gesture-disambiguated from drag/pinch in useViewportGestures, so
+  // the old Seed-panel arm button was a gate in front of the app's primary
+  // gesture — the obvious move (tap the Mandelbrot) now just works.
+  const handlePick = (nc: Complex) => setC(nc);
 
   const handlePathChange = (pts: Complex[]) => {
     setPath(pts);
@@ -133,11 +132,6 @@ export default function Correspondence() {
 
   const seedNode = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <ActionButton
-        label={selecting ? 'Tap Mandelbrot to pick…' : 'Pick Julia c by tap'}
-        active={selecting}
-        onClick={() => setSelecting(s => !s)}
-      />
       <div style={{ display: 'flex', gap: 8 }}>
         <div style={{ flex: 1 }}>
           <NumberInput label="c real" value={c.real} step={0.001}
@@ -149,7 +143,7 @@ export default function Correspondence() {
         </div>
       </div>
       <div className="am-hint">
-        Drag panes to pan · pinch / wheel to zoom · tap "Pick Julia" then tap the Mandelbrot to choose c.
+        Tap the Mandelbrot to choose c — drag pans, pinch / wheel zooms.
       </div>
     </div>
   );
@@ -210,6 +204,7 @@ export default function Correspondence() {
       id: 'mandel',
       title: 'Mandelbrot — pick c',
       defaultRect: { x: 360, y: 16, w: 356, h: 356 },
+      hint: 'tap to choose c — the Julia set follows',
       node: (
         <div style={{ position: 'absolute', inset: 0 }}>
           <FractalPane

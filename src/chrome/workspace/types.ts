@@ -37,6 +37,12 @@ export type ViewDef = {
   id: string;
   title: string;
   defaultRect: Rect;
+  /** Start hint (CHROME-REVIEW P2) for gesture-driven views: a short
+   *  math-anchored invitation ("tap to choose c — the Julia set follows")
+   *  rendered as a centered overlay until the first pointer interaction.
+   *  Per-session only — never persisted. Apps whose begin-affordance is a
+   *  button belong on the action strip instead. */
+  hint?: string;
 } & (
   | { /** Canvas/DOM content; rendered into a positioned body (absolute inset 0). */
       node: React.ReactNode; panes?: never }

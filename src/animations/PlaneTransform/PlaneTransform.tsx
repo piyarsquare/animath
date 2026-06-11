@@ -450,6 +450,7 @@ export default function PlaneTransform({ embed }: {
       id: 'plane',
       title: 'z ↦ f(z)',
       defaultRect: { x: 360, y: 16, w: 724, h: 380 },
+      hint: 'scroll to zoom both planes · open Curves to draw on z',
       panes: [
         {
           id: 'domain',

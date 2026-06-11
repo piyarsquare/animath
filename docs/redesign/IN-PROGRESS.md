@@ -143,3 +143,12 @@ questions. The implementing agent should update this file as phases land.
   Mandelbrot ↔ Julia deliberately stays two windows (linkage by parameter, not scale).
   Probe: `scripts/probe-split.mjs` (6 checks: equal panes through resize + fullscreen, embed
   parity).
+- 2026-06: **CHROME-REVIEW PR D landed — start hints + ungated pick**: `ViewDef.hint` renders
+  a centered, math-anchored invitation on the shared `.am-view-overlay` layer (pass-through;
+  P3's HUDs will live there later), gone on the view's first pointer interaction, per-session
+  only. Hints on Correspondence ("tap to choose c — the Julia set follows"), Fractals,
+  Plane Transform, and the particle viewers (via ParticleViewerShell). **Correspondence
+  tap-to-pick ungated** (user decision a): the Seed panel's arm button removed — tap is
+  already gesture-disambiguated, so tapping the Mandelbrot just picks c (EXPLAINER updated).
+  Probe: `scripts/probe-hints.mjs`. Follow-up idea (pedagogy): Plane Transform's hint could
+  *arm* draw mode rather than name the Curves panel — deferred with P3.

@@ -32,6 +32,8 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
   const [full, setFull] = useState<string | null>(null);
   /* explainer opened from the fullscreen card header (the top bar is buried) */
   const [fullHelp, setFullHelp] = useState(false);
+  /* start hints (P2): per-session, gone on the card's first pointer touch */
+  const [hintSeen, setHintSeen] = useState<Record<string, boolean>>({});
   /* staged Esc via the shared layer stack: most recently opened layer first */
   useEscLayer(full != null, () => setFull(null));
   useEscLayer(sheet != null, () => setSheet(null));
@@ -134,8 +136,18 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
               <div
                 className="am-phone-view-body"
                 style={!isFull && h ? { height: h, maxHeight: 'none' } : undefined}
+                onPointerDownCapture={
+                  v.hint && !hintSeen[v.id]
+                    ? () => setHintSeen(s => ({ ...s, [v.id]: true }))
+                    : undefined
+                }
               >
                 {v.panes ? <SplitPanes panes={v.panes} /> : v.node}
+                {v.hint && !hintSeen[v.id] && (
+                  <div className="am-view-overlay" aria-hidden="true">
+                    <span className="am-view-hint-pill">{v.hint}</span>
+                  </div>
+                )}
               </div>
               {!isFull && (
                 <div className="am-phone-vresize" onPointerDown={onResizeDown(v.id)} aria-label={`Resize ${v.title}`}>

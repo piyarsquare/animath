@@ -270,6 +270,11 @@ const views: ViewDef[] = [{
   `useViewportGestures` (2D pan/zoom/tap) or `useGestureRotation` (3D orbit).
   Multiple views are fine — `Correspondence` ships linked Mandelbrot and Julia
   windows sharing React state; each gets its own `ViewDef`.
+- **Start hints.** If your view is gesture-driven (its "begin" is a tap or a
+  drag, not a button), declare `hint: 'tap to choose c — the Julia set
+  follows'` — a centered pass-through pill the chrome shows until the view's
+  first pointer interaction (per-session). Keep the copy a short,
+  math-anchored verb phrase.
 - **Split views.** If two pictures are one mathematical unit (a domain and its
   image), don't make them two windows — declare `panes` instead of `node` and
   they render side-by-side in ONE window with a fixed equal split, so resize/

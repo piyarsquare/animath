@@ -45,6 +45,11 @@ Two kinds of windows live on it, sharing one interaction model:
   domain/image pair scale-commensurable). Drag/resize/collapse/fullscreen/layout act on the
   pair as a unit. Plane Transform is the reference consumer: one window `z ↦ f(z)` with panes
   `z — domain` / `w = f(z) — image` (matching its embed presentation).
+- **Start hints** (CHROME-REVIEW P2): gesture-driven views may declare `hint` — a short,
+  math-anchored invitation ("tap to choose c — the Julia set follows") rendered as a centered
+  pass-through pill on the view-overlay layer until the view's first pointer interaction.
+  Per-session only, never persisted. Apps whose begin-affordance is a button use the action
+  strip instead; future view HUDs (P3) share this overlay layer.
 - Defined per app in the catalog (`views: [{id,title,kind,x,y,w,h}]`). Mandelbrot ↔ Julia opens
   with **two linked windows** (`Mandelbrot — pick c` / `Julia(c)`) — there the linkage is by
   *parameter*, not scale, and independent pan/zoom is a feature, so it stays two windows.

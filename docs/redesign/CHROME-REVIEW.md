@@ -299,6 +299,10 @@ z-compaction, not a CSS override); staged Esc scoped to transient layers.
   fullscreen).
 - **PR D — P2** on a minimal shared view-overlay layer: per-session hints,
   math-anchored copy; ungate Correspondence tap-to-pick (decision below).
+  ✅ **Landed** (`ViewDef.hint` + the `.am-view-overlay` layer that P3's
+  HUDs will later share; hints on Correspondence / Fractals / Plane
+  Transform / the particle viewers; tap-to-pick ungated — the Seed arm
+  button removed; `scripts/probe-hints.mjs` is the proof).
 - **Deferred:** P3 full `ViewDef.hud` (design against TopologyWalk's actual
   overlay inventory — MovePad + mini-map + captions — before generalizing);
   P4b phone fullscreen dock access.

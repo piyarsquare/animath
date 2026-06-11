@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Icon } from '../icons';
 import { beginPointerDrag } from './drag';
 import { LAYER } from './layers';
@@ -44,6 +44,12 @@ export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, o
     beginPointerDrag(e, (dx, dy) => onResize(resize(ow + dx, oh + dy, x, y)), onSettle);
   };
   const collapsed = !full && !!state.collapsed;
+  /* start hint: per-session, gone on first pointer interaction (P2) */
+  const [hintSeen, setHintSeen] = useState(false);
+  const onAnyPointerDown = () => {
+    onRaise();
+    if (!hintSeen) setHintSeen(true);
+  };
   return (
     <div
       ref={nodeRef}
@@ -55,7 +61,7 @@ export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, o
         height: collapsed ? undefined : state.h,
         zIndex: LAYER.window + (state.z ?? 0),
       }}
-      onPointerDownCapture={onRaise}
+      onPointerDownCapture={onAnyPointerDown}
     >
       <div className="am-ws-vhead" onPointerDown={onHeadDown}>
         <span className="am-ws-vico"><Icon name="window" size={13} /></span>
@@ -94,6 +100,12 @@ export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, o
       {/* hidden, not unmounted, while collapsed — keeps engine state alive */}
       <div className="am-ws-view-body" style={collapsed ? { display: 'none' } : undefined}>
         {view.panes ? <SplitPanes panes={view.panes} /> : view.node}
+        {/* the view-overlay layer: hosts the start hint (HUDs later, P3) */}
+        {view.hint && !hintSeen && (
+          <div className="am-view-overlay" aria-hidden="true">
+            <span className="am-view-hint-pill">{view.hint}</span>
+          </div>
+        )}
       </div>
       {!collapsed && !full && (
         <div className="am-ws-resize" onPointerDown={onResizeDown} title="Resize" aria-label={`Resize ${view.title}`}>

@@ -453,6 +453,21 @@ body {
 /* phone cards scroll under the dock + strip — leave room to reach the end */
 .am-phone-app.am-has-actions .am-phone-scroll { padding-bottom: 148px; }
 
+/* ============ View overlay layer + start hints (CHROME-REVIEW P2) ============
+   A pass-through layer over the view body. Today it hosts the start hint —
+   a centered, math-anchored invitation that vanishes on the first pointer
+   interaction (per-session); view HUDs (P3) will live here later. */
+.am-view-overlay { display: grid; place-items: center; pointer-events: none; z-index: 5; }
+.am-view-hint-pill {
+  font-family: var(--font-ui); font-size: 12.5px; font-weight: 600;
+  color: var(--fg); background: var(--panel);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border-strong); border-radius: 999px;
+  padding: 8px 15px; box-shadow: var(--shadow);
+  animation: am-pop .3s var(--ease);
+  max-width: 86%; text-align: center;
+}
+
 /* ============ Split view body (CHROME-REVIEW P5) ============
    Two pictures, one window: a fixed equal flex split (no divider — equal
    inscribed squares keep a domain/image pair scale-commensurable). Shared

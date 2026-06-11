@@ -32,7 +32,7 @@ gives the most intricate Julia sets.
 
 ## Controls
 
-Tap **Pick Julia c**, then tap the Mandelbrot to choose `c`. Or draw a
+Tap anywhere on the Mandelbrot to choose `c`. Or draw a
 **c-path** and play it back: the Julia set morphs continuously as `c` traces
 your curve. The scrubber on the side of the playback panel seeks along the
 path.

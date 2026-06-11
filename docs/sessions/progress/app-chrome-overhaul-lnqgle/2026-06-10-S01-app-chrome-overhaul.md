@@ -40,6 +40,22 @@ rename/export, gallery search, phone landscape) and embeds phase 2 (the
      emoji: 🟣 decision · 🟢 code · 🔵 finding · 🔴 blocker · 🟡 milestone
      Follow each with a "**Why:** …" line, then optional body paragraphs. -->
 
+### 🟡 milestone · 01:16 — PR D landed; plan of record complete (A–D all green)
+**Why:** Last step of the agreed plan; P3/P4b remain deferred by design.
+
+`ViewDef.hint` renders a math-anchored start invitation on a new
+pass-through `.am-view-overlay` layer (the future P3 HUD home), dismissed by
+the view's first pointer interaction, per-session only. Hints landed on
+Correspondence, Fractals, Plane Transform, and all particle viewers (via
+the shell). **Correspondence tap-to-pick ungated** (decision a): the Seed
+arm button is gone — tapping the Mandelbrot picks c directly (tap was
+already gesture-disambiguated); EXPLAINER and panel copy updated. Probe
+`scripts/probe-hints.mjs` proves the full loop: hint shows → one tap picks
+c (`-0.700+0.270i → -1.301+0.241i`) AND dismisses the hint. Full
+regression: 20 unit tests + all four probes (8+11+6+6 checks) green.
+
+![Correspondence inviting the first tap](assets/2026-06-10-S01-hint-correspondence.png)
+
 ### 🟡 milestone · 01:10 — PR C landed and probe-verified (split views)
 **Why:** Continuing the plan of record after PR B.
 
