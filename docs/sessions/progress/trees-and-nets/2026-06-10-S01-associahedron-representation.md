@@ -36,6 +36,27 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 13:35 — Two embedded fibers + multi-window; fix flip collapse & twist
+**Why:** User: all windows (keep every version); tree/polygon/overlay as separate
+views; show BOTH local fibers like quantum-tree (associahedron + hypercube),
+embedded in space with a neighborhood size; flip morph had a "collapse".
+
+Verified the order-fiber is a true **(n−3)-cube** (`/tmp/cube_probe.mjs`: orbit
+2^(n−3), degree n−3, twists commute) — which also revealed my earlier "cross" was
+wrong (it changed the tree). Rebuilt the app:
+- **Disk views** (`DiskView` with flags) → three windows: **Tree** (dual tree +
+  circular order), **Polygon** (+ triangulation), **Overlay** (both). Fixed the flip
+  morph with a proper **bijection** old→new triangles (no more collapse).
+- **Correct moves**: `flip` (change tree, keep order) and `twist` (keep labeled
+  tree, reverse the edge's arc, re-embed → new order + matching triangulation).
+- **Two embedded fibers** (`Graph3D`): the **associahedron** (trees | order, teal)
+  and the **(n−3)-cube** (orders | tree, orange), each with a gliding current
+  marker and a **neighborhood-radius** slider (color fades with graph distance).
+  Click a node to navigate. Dropped the disorienting radial "local map".
+- A built-in **Fibers** layout opens tree + overlay + both fibers.
+
+Build green (17.5 kB); n=5 shows the pentagon associahedron + the 2-cube of orders.
+
 ### 🟢 code · 13:05 — Local viewpoint map (flip vs cross) + gluing; drop rotation/3D
 **Why:** User: rotation isn't privileged (downgrade it); tree as its own panel;
 clicking an edge has two readings — flip the edge (assoc move) or flip the order
