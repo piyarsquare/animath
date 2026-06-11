@@ -36,6 +36,19 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 03:00 — Phase 0 done: canonical solid associahedron
+**Why:** Land the single tile correctly before assembling the moduli space.
+
+Dropped PCA (deleted `lib/projection.ts`); the viewer now renders the canonical
+**Loday coordinates** (`point`) directly. Added `facets` to `associahedron.ts`
+(facet ↔ diagonal, the vertices containing it) and the viewer fills the **2-faces**
+as ordered polygons (Newell normal + angular sort + fan), colored by type — teal
+pentagons (K₃×K₅) and purple squares (K₄×K₄). Removed all energy code (terrain
+window, directed flow, placeholder); one Tile window, neutral vertices, click to
+read a tree. n≥7 falls back to a fixed canonical wireframe projection (not PCA).
+Build green (10 kB); headless n=6 shows the recognizable solid (14 v, 21 e, 9
+facets). Next: P1 `lib/mosaic.ts` (cyclic orders + gluing graph, verify counts).
+
 ### 🟣 decision · 02:35 — Plan: generic M̄₀,ₙ(ℝ) explorer; drop energies & walk
 **Why:** User: content to finish the associahedron, eager to show the whole
 M₀,ₙ, no energies, leave TopologyWalk out (may return). Asked why over ℝ + a plan.
@@ -56,8 +69,10 @@ cyclic order = the discrete invariant, each order's cell closes to an associahed
   n=6 → 60/270. Cross-check rule vs Devadoss mosaic operad.
 - **P2** Atlas view (gluing graph, **any n**) + cross-facet navigation (click a
   facet → animate to the neighbor tile). = the generic explorer.
-- **P3** n=5 assembled **12-pentagon surface** (non-orientable → immersion or
-  fundamental-domain; decide at build).
+- **P3** whole-space "showpiece" **scaled to all n**: the gluing-graph Atlas is the
+  universal whole-M̄₀,ₙ object (any n); n≤6 can also inflate tiles + glue a
+  geometric patch; the n=5 12-pentagon surface emerges as the closed special case
+  (non-orientable → immersion/fundamental-domain when shown literally).
 - **P4 (later)** n=6 local 3-manifold patch; n≥7 single-tile Schlegel.
 
 Out for now: energies, TopologyWalk engine. Each phase: build + headless shot +

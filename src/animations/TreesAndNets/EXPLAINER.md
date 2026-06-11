@@ -1,24 +1,26 @@
 # Trees and Nets
 
-This view shows **tree-space itself as a polytope** — the *associahedron*.
+This view shows **tree-space as a polytope** — the *associahedron*.
 
 Fix a circular order of **n leaves** around a polygon. The unrooted binary trees
 compatible with that order are exactly the **triangulations of the n-gon**, and a
 single **flip** of one diagonal turns one tree into a neighbor. Collect every tree
-as a vertex and join flips by edges, and you get the **associahedron K₍ₙ₋₁₎**, a
-polytope of dimension **n−3**:
+as a vertex, join flips by edges, and fill in the faces, and you get the
+**associahedron K₍ₙ₋₁₎**, a polytope of dimension **n−3**:
 
-- **n = 5** → a pentagon (2D), 5 trees;
-- **n = 6** → the **3D associahedron**, 14 trees;
-- **n = 7** → the **4D associahedron**, 42 trees (shown here as a flat slice for now).
+- **n = 5** → a pentagon (2-D), 5 trees;
+- **n = 6** → the **3-D associahedron**, 14 trees, bounded by **6 pentagons + 3
+  squares**;
+- **n ≥ 7** → 4-D and up (shown as a canonical projection for now).
 
-So instead of drawing one circular order's *fiber* as a flat graph, you see the
-whole object as the geometric polytope it actually is.
-
-**Color = energy.** Each tree carries an energy; vertices run teal (low) → magenta
-(high), and the **Energy terrain** window pushes each vertex outward by its energy
-so tree-space becomes a landscape whose lowest point is the best tree. *(The energy
-shown is a placeholder until the distance-matrix pipeline is wired in.)*
+The points use **Loday's coordinates** — a canonical realization, so at n ≤ 6 you
+are looking at the genuine associahedron, not an arbitrary layout. Each **2-face**
+is itself a product of smaller associahedra: a pentagon is K₃×K₅ (cut off a
+triangle) and a square is K₄×K₄ (a main diagonal).
 
 **Interact:** drag to orbit, scroll to zoom, click a vertex to read its tree (its
-internal splits) in the side panel. Both windows stay linked.
+internal splits) in the side panel.
+
+One associahedron is the slice of tree-space over a single circular order. The full
+tree-space glues one such tile per cyclic order into the real moduli space
+$\overline{M}_{0,n}(\mathbb{R})$ — the explorer for that is being built next.

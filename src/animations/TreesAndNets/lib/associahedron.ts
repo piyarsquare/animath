@@ -34,6 +34,14 @@ export interface Associahedron {
   vertices: Triangulation[];
   /** Flip adjacencies as index pairs into `vertices` (the 1-skeleton). */
   edges: [number, number][];
+  /**
+   * Facets (codimension-1 faces), one per diagonal of the n-gon: the diagonal
+   * and the indices of all vertices (triangulations) that contain it. A facet is
+   * the product K_p × K_q of the two sub-polygons the diagonal cuts off; there
+   * are n(n-3)/2 of them. For a 3-D associahedron (n=6) these are the polygonal
+   * 2-faces (the 6 pentagons + 3 squares).
+   */
+  facets: { diagonal: [number, number]; vertices: number[] }[];
 }
 
 const isBoundaryEdge = (a: number, b: number, n: number): boolean => {
@@ -171,5 +179,20 @@ export function buildAssociahedron(n: number): Associahedron {
     }
   }
 
-  return { n, dim, vertices, edges };
+  // Facets: group vertices by each diagonal they contain (facet ↔ diagonal).
+  const facetMap = new Map<string, number[]>();
+  vertices.forEach((v, vi) => {
+    for (const [a, b] of v.diagonals) {
+      const key = `${a},${b}`;
+      const list = facetMap.get(key);
+      if (list) list.push(vi);
+      else facetMap.set(key, [vi]);
+    }
+  });
+  const facets = [...facetMap.entries()].map(([key, vs]) => {
+    const [a, b] = key.split(',').map(Number);
+    return { diagonal: [a, b] as [number, number], vertices: vs };
+  });
+
+  return { n, dim, vertices, edges, facets };
 }

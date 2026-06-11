@@ -3,28 +3,18 @@ import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { SectionDef, ViewDef } from '../../chrome/workspace/types';
-import { Pills, Select, Slider, Checkbox } from '../../components/ControlPanel';
+import { Pills, Slider, Checkbox } from '../../components/ControlPanel';
 import { StatGrid, Kicker } from '../../chrome/readouts';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { buildAssociahedron, type Associahedron } from './lib/associahedron';
-import { pca, projectOnto } from './lib/projection';
 import explainer from './EXPLAINER.md?raw';
 
 const APP_ID = 'trees-and-nets';
 
-// --- Placeholder energy ------------------------------------------------------
-// Until the distance-metric pipeline lands, give each tree a deterministic
-// "energy" so the terrain/flow isn't trivial: the total span of its internal
-// diagonals. Replace with the real circular-order energy from a distance matrix.
-function placeholderEnergies(assoc: Associahedron): number[] {
-  const n = assoc.n;
-  return assoc.vertices.map((v) =>
-    v.diagonals.reduce((sum, [a, b]) => {
-      const raw = Math.abs(a - b);
-      return sum + Math.min(raw, n - raw);
-    }, 0),
-  );
-}
+const VERTEX = new THREE.Color('#c9b27a'); // neutral tree color (no energy)
+const PENTAGON = new THREE.Color('#2f7d74'); // K3×K5 facet
+const SQUARE = new THREE.Color('#8a5fb0'); // K4×K4 facet
+const OTHER = new THREE.Color('#5a6b86'); // any other facet shape
 
 // Leaves are the boundary edges (i, i+1 mod n); a diagonal (a,b) splits them.
 function splitLabel(a: number, b: number, n: number): string {
@@ -37,15 +27,67 @@ function splitLabel(a: number, b: number, n: number): string {
   return `{${small.join(',')}}|{${big.join(',')}}`;
 }
 
-const LOW = new THREE.Color('#2bb6a8'); // low energy (best)
-const HIGH = new THREE.Color('#d6457a'); // high energy
+// Canonical positions: the Loday point projected through the FIXED Helmert basis
+// (assoc.vertices[i].point). For n<=6 this is the true polytope; for n>=7 we take
+// the first 3 of the canonical coordinates (a fixed, data-independent projection —
+// not PCA), pending a Schlegel renderer.
+function positionsFor(assoc: Associahedron): THREE.Vector3[] {
+  const raw = assoc.vertices.map(
+    (v) => new THREE.Vector3(v.point[0] ?? 0, v.point[1] ?? 0, v.point[2] ?? 0),
+  );
+  const center = raw
+    .reduce((acc, p) => acc.add(p), new THREE.Vector3())
+    .multiplyScalar(1 / Math.max(raw.length, 1));
+  let maxR = 0;
+  for (const p of raw) { p.sub(center); maxR = Math.max(maxR, p.length()); }
+  const scale = maxR > 1e-6 ? 2.2 / maxR : 1;
+  for (const p of raw) p.multiplyScalar(scale);
+  return raw;
+}
 
-interface AssocViewProps {
+// Build one filled, ordered polygon face from a set of (planar) vertex indices.
+function buildFace(
+  pos: THREE.Vector3[],
+  indices: number[],
+): THREE.BufferGeometry | null {
+  if (indices.length < 3) return null;
+  const pts = indices.map((i) => pos[i]);
+  const centroid = pts
+    .reduce((a, p) => a.add(p.clone()), new THREE.Vector3())
+    .multiplyScalar(1 / pts.length);
+  // Newell normal (robust for a planar polygon)
+  const normal = new THREE.Vector3();
+  for (let i = 0; i < pts.length; i++) {
+    const cur = pts[i];
+    const nxt = pts[(i + 1) % pts.length];
+    normal.x += (cur.y - nxt.y) * (cur.z + nxt.z);
+    normal.y += (cur.z - nxt.z) * (cur.x + nxt.x);
+    normal.z += (cur.x - nxt.x) * (cur.y + nxt.y);
+  }
+  if (normal.lengthSq() < 1e-12) normal.set(0, 0, 1);
+  normal.normalize();
+  const u = new THREE.Vector3().subVectors(pts[0], centroid).normalize();
+  const w = new THREE.Vector3().crossVectors(normal, u).normalize();
+  const ordered = [...indices].sort((ia, ib) => {
+    const pa = pos[ia].clone().sub(centroid);
+    const pb = pos[ib].clone().sub(centroid);
+    return Math.atan2(pa.dot(w), pa.dot(u)) - Math.atan2(pb.dot(w), pb.dot(u));
+  });
+  const verts: number[] = [];
+  for (let i = 1; i < ordered.length - 1; i++) {
+    const a = pos[ordered[0]];
+    const b = pos[ordered[i]];
+    const c = pos[ordered[i + 1]];
+    verts.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+  }
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  geom.computeVertexNormals();
+  return geom;
+}
+
+interface TileViewProps {
   assoc: Associahedron;
-  energies: number[];
-  displace: boolean;
-  showFlow: boolean;
-  pc: [number, number, number];
   selected: number | null;
   onSelect: (i: number | null) => void;
   zoomRef: React.MutableRefObject<number>;
@@ -53,12 +95,11 @@ interface AssocViewProps {
   onZoom: (z: number) => void;
 }
 
-/** One Three.js window onto the associahedron (faithful, or energy-displaced). */
-function AssocView(props: AssocViewProps) {
-  const { assoc, energies, displace, showFlow, pc, selected, zoomRef, spinRef, onZoom } = props;
+/** A single associahedron tile, in canonical Loday coordinates. */
+function TileView(props: TileViewProps) {
+  const { assoc, selected, zoomRef, spinRef, onZoom } = props;
   const onSelectRef = useRef(props.onSelect);
   onSelectRef.current = props.onSelect;
-  const spheresRef = useRef<THREE.Mesh[]>([]);
   const selectedRef = useRef<number | null>(selected);
   selectedRef.current = selected;
 
@@ -66,7 +107,7 @@ function AssocView(props: AssocViewProps) {
     ({ scene, camera, renderer }: {
       scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer;
     }) => {
-      scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+      scene.add(new THREE.AmbientLight(0xffffff, 0.75));
       const dir = new THREE.DirectionalLight(0xffffff, 0.85);
       dir.position.set(3, 5, 4);
       scene.add(dir);
@@ -75,107 +116,65 @@ function AssocView(props: AssocViewProps) {
       const group = new THREE.Group();
       scene.add(group);
 
-      // --- project intrinsic R^{n-3} coords to 3D via chosen principal axes ---
-      const intrinsic = assoc.vertices.map((v) => v.point);
-      const axes = pca(intrinsic);
-      const raw = intrinsic.map(
-        (p) =>
-          new THREE.Vector3(
-            projectOnto(p, axes, pc[0]),
-            projectOnto(p, axes, pc[1]),
-            projectOnto(p, axes, pc[2]),
-          ),
-      );
-      const c = raw
-        .reduce((acc, p) => acc.add(p), new THREE.Vector3())
-        .multiplyScalar(1 / Math.max(raw.length, 1));
-      let maxR = 0;
-      for (const p of raw) { p.sub(c); maxR = Math.max(maxR, p.length()); }
-      const scale = maxR > 1e-6 ? 2.2 / maxR : 1;
-      for (const p of raw) p.multiplyScalar(scale);
+      const pos = positionsFor(assoc);
+      const disposables: { dispose(): void }[] = [];
 
-      const minE = Math.min(...energies);
-      const maxE = Math.max(...energies);
-      const span = maxE - minE || 1;
+      // --- filled faces (only meaningful when the polytope is <= 3-D) ---
+      if (assoc.dim === 2) {
+        const geom = buildFace(pos, assoc.vertices.map((_, i) => i));
+        if (geom) {
+          disposables.push(geom);
+          const mat = new THREE.MeshStandardMaterial({
+            color: OTHER, transparent: true, opacity: 0.45,
+            side: THREE.DoubleSide, roughness: 0.6,
+          });
+          disposables.push(mat);
+          group.add(new THREE.Mesh(geom, mat));
+        }
+      } else if (assoc.dim === 3) {
+        for (const facet of assoc.facets) {
+          const geom = buildFace(pos, facet.vertices);
+          if (!geom) continue;
+          disposables.push(geom);
+          const color =
+            facet.vertices.length === 5 ? PENTAGON
+              : facet.vertices.length === 4 ? SQUARE : OTHER;
+          const mat = new THREE.MeshStandardMaterial({
+            color, transparent: true, opacity: 0.4,
+            side: THREE.DoubleSide, roughness: 0.6,
+          });
+          disposables.push(mat);
+          group.add(new THREE.Mesh(geom, mat));
+        }
+      }
 
-      const drawPos = raw.map((p, i) => {
-        if (!displace) return p.clone();
-        const t = (energies[i] - minE) / span;
-        return p.clone().addScaledVector(p.clone().normalize(), t * 1.4);
-      });
-
-      // --- structural flip edges (faint lines) ---
+      // --- flip edges ---
       const edgePts: number[] = [];
       for (const [i, j] of assoc.edges) {
-        edgePts.push(drawPos[i].x, drawPos[i].y, drawPos[i].z);
-        edgePts.push(drawPos[j].x, drawPos[j].y, drawPos[j].z);
+        edgePts.push(pos[i].x, pos[i].y, pos[i].z, pos[j].x, pos[j].y, pos[j].z);
       }
       const edgeGeom = new THREE.BufferGeometry();
       edgeGeom.setAttribute('position', new THREE.Float32BufferAttribute(edgePts, 3));
-      const edges = new THREE.LineSegments(
-        edgeGeom,
-        new THREE.LineBasicMaterial({
-          color: 0x8a93a6,
-          transparent: true,
-          opacity: showFlow ? 0.22 : 0.5,
-        }),
-      );
-      group.add(edges);
-
-      // --- directed energy-gradient arrows (downhill, length ∝ |ΔE|) ---
-      let flow: THREE.InstancedMesh | null = null;
-      let coneGeom: THREE.ConeGeometry | null = null;
-      if (showFlow) {
-        const directed = assoc.edges.filter(([i, j]) => energies[i] !== energies[j]);
-        const maxDelta = Math.max(
-          ...assoc.edges.map(([i, j]) => Math.abs(energies[i] - energies[j])),
-          1e-6,
-        );
-        coneGeom = new THREE.ConeGeometry(0.06, 0.24, 10);
-        flow = new THREE.InstancedMesh(
-          coneGeom,
-          new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0.1 }),
-          directed.length,
-        );
-        const dummy = new THREE.Object3D();
-        const up = new THREE.Vector3(0, 1, 0);
-        const col = new THREE.Color();
-        directed.forEach(([i, j], e) => {
-          const hi = energies[i] > energies[j] ? i : j;
-          const lo = hi === i ? j : i;
-          const delta = Math.abs(energies[i] - energies[j]) / maxDelta;
-          const a = drawPos[hi];
-          const b = drawPos[lo];
-          dummy.position.copy(a).add(b).multiplyScalar(0.5);
-          dummy.quaternion.setFromUnitVectors(up, b.clone().sub(a).normalize());
-          dummy.scale.set(1, 0.5 + 1.8 * delta, 1);
-          dummy.updateMatrix();
-          flow!.setMatrixAt(e, dummy.matrix);
-          flow!.setColorAt(e, col.copy(LOW).lerp(HIGH, delta));
-        });
-        flow.instanceMatrix.needsUpdate = true;
-        if (flow.instanceColor) flow.instanceColor.needsUpdate = true;
-        group.add(flow);
-      }
+      disposables.push(edgeGeom);
+      const edgeMat = new THREE.LineBasicMaterial({ color: 0xcdd3df, transparent: true, opacity: 0.7 });
+      disposables.push(edgeMat);
+      group.add(new THREE.LineSegments(edgeGeom, edgeMat));
 
       // --- vertices (trees) ---
-      const sphereGeom = new THREE.SphereGeometry(0.12, 18, 14);
+      const sphereGeom = new THREE.SphereGeometry(0.11, 18, 14);
+      disposables.push(sphereGeom);
       const spheres: THREE.Mesh[] = [];
-      drawPos.forEach((p, i) => {
-        const t = (energies[i] - minE) / span;
+      pos.forEach((p, i) => {
         const mat = new THREE.MeshStandardMaterial({
-          color: LOW.clone().lerp(HIGH, t),
-          emissive: new THREE.Color(0x000000),
-          roughness: 0.45,
-          metalness: 0.1,
+          color: VERTEX, emissive: new THREE.Color(0x000000), roughness: 0.4, metalness: 0.1,
         });
+        disposables.push(mat);
         const mesh = new THREE.Mesh(sphereGeom, mat);
         mesh.position.copy(p);
         mesh.userData.index = i;
         group.add(mesh);
         spheres.push(mesh);
       });
-      spheresRef.current = spheres;
 
       // --- picking + orbit + zoom ---
       const raycaster = new THREE.Raycaster();
@@ -243,16 +242,11 @@ function AssocView(props: AssocViewProps) {
         el.removeEventListener('pointerup', onUp);
         el.removeEventListener('click', onClick as EventListener);
         el.removeEventListener('wheel', onWheel);
-        sphereGeom.dispose();
-        edgeGeom.dispose();
-        spheres.forEach((m) => (m.material as THREE.Material).dispose());
-        if (flow) (flow.material as THREE.Material).dispose();
-        if (coneGeom) coneGeom.dispose();
+        for (const d of disposables) d.dispose();
       };
     },
-    // Rebuild on any change that alters geometry/topology of the scene.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [assoc, displace, showFlow, pc[0], pc[1], pc[2]],
+    [assoc],
   );
 
   return <Canvas3D onMount={onMount} />;
@@ -260,17 +254,11 @@ function AssocView(props: AssocViewProps) {
 
 export default function TreesAndNets(): JSX.Element {
   const [n, setN] = usePersistentState<number>(`${APP_ID}:n`, 6);
-  const [pcX, setPcX] = usePersistentState<number>(`${APP_ID}:pcX`, 0);
-  const [pcY, setPcY] = usePersistentState<number>(`${APP_ID}:pcY`, 1);
-  const [pcZ, setPcZ] = usePersistentState<number>(`${APP_ID}:pcZ`, 2);
   const [spin, setSpin] = usePersistentState<boolean>(`${APP_ID}:spin`, true);
-  const [showFlow, setShowFlow] = usePersistentState<boolean>(`${APP_ID}:flow`, false);
   const [zoom, setZoom] = useState<number>(8);
   const [selected, setSelected] = useState<number | null>(null);
 
   const assoc = useMemo(() => buildAssociahedron(n), [n]);
-  const energies = useMemo(() => placeholderEnergies(assoc), [assoc]);
-
   const zoomRef = useRef(zoom);
   zoomRef.current = zoom;
   const spinRef = useRef(spin);
@@ -278,15 +266,7 @@ export default function TreesAndNets(): JSX.Element {
 
   React.useEffect(() => { setSelected(null); }, [n]);
 
-  // Clamp component choices to the available dimension (d = n-3).
-  const d = Math.max(assoc.dim, 1);
-  const cx = Math.min(pcX, d - 1);
-  const cy = Math.min(pcY, d - 1);
-  const cz = Math.min(pcZ, d - 1);
-  const pcOptions = Array.from({ length: d }, (_, i) => ({ value: i, label: `PC${i + 1}` }));
-
   const catalan = assoc.vertices.length;
-  const minIdx = energies.reduce((best, e, i) => (e < energies[best] ? i : best), 0);
   const sel = selected != null ? assoc.vertices[selected] : null;
   const selSplits =
     sel && sel.diagonals.length
@@ -309,45 +289,25 @@ export default function TreesAndNets(): JSX.Element {
           />
           <Kicker>
             Trees compatible with a circular order of n leaves = triangulations of
-            the n-gon. They are the vertices of the associahedron K<sub>{n - 1}</sub>,
-            a <b>{assoc.dim}-dimensional</b> polytope ({catalan} trees){assoc.dim > 3
-              ? ' — projected to 3D below.' : '.'}
+            the n-gon = vertices of the associahedron K<sub>{n - 1}</sub> (dim{' '}
+            <b>{assoc.dim}</b>, {catalan} trees). Edges are flips; the 2-faces are
+            the pentagons (K₃×K₅) and squares (K₄×K₄).
+            {assoc.dim > 3 && ' Above 3-D it is shown as a canonical projection (wireframe) for now.'}
           </Kicker>
         </div>
       ),
     },
     {
-      id: 'projection',
-      title: 'Projection',
+      id: 'view',
+      title: 'View',
       arch: 'view',
-      estHeight: 280,
+      estHeight: 140,
       node: (
         <div style={{ display: 'grid', gap: 10 }}>
-          <Kicker>
-            The polytope is {assoc.dim}-D; choose which principal components (axes of
-            greatest spread) map to screen X / Y / Z. This scales to any n.
-          </Kicker>
-          <Select<number> label="Screen X" value={cx} onChange={setPcX} options={pcOptions} />
-          <Select<number> label="Screen Y" value={cy} onChange={setPcY} options={pcOptions} />
-          <Select<number> label="Screen Z" value={cz} onChange={setPcZ} options={pcOptions} />
           <Slider label="Zoom" value={zoom} min={3} max={22} step={0.5}
             onChange={setZoom} format={(v) => `${(11 / v).toFixed(2)}×`} />
           <Checkbox label="Auto-rotate" checked={spin} onChange={setSpin} />
-        </div>
-      ),
-    },
-    {
-      id: 'flow',
-      title: 'Energy flow',
-      arch: 'marks',
-      estHeight: 120,
-      node: (
-        <div style={{ display: 'grid', gap: 10 }}>
-          <Checkbox label="Directed energy edges" checked={showFlow} onChange={setShowFlow} />
-          <Kicker>
-            Each flip points <b>downhill</b> (toward lower energy); arrow length and
-            color grow with the energy drop |ΔE|. Sinks are local optima.
-          </Kicker>
+          <Kicker>Drag to orbit, scroll to zoom, click a vertex to read its tree.</Kicker>
         </div>
       ),
     },
@@ -362,8 +322,8 @@ export default function TreesAndNets(): JSX.Element {
             stats={[
               { k: 'trees (vertices)', v: String(catalan) },
               { k: 'flips (edges)', v: String(assoc.edges.length) },
+              { k: 'facets', v: String(assoc.facets.length) },
               { k: 'dimension', v: String(assoc.dim) },
-              { k: 'min-energy tree', v: `#${minIdx}` },
             ]}
           />
           <div style={{ fontSize: 12, lineHeight: 1.5 }}>
@@ -373,54 +333,26 @@ export default function TreesAndNets(): JSX.Element {
             <div style={{ fontFamily: 'var(--mono, monospace)', wordBreak: 'break-word' }}>
               {selSplits}
             </div>
-            {sel && (
-              <div style={{ opacity: 0.7, marginTop: 4 }}>
-                energy {energies[selected as number].toFixed(2)}
-              </div>
-            )}
           </div>
         </div>
-      ),
-    },
-    {
-      id: 'energy-note',
-      title: 'Energy (placeholder)',
-      arch: 'color',
-      estHeight: 110,
-      node: (
-        <Kicker>
-          Energy is currently a <b>placeholder</b> (total internal-split span). The
-          real circular-order energy from an editable distance matrix is the next
-          piece — it will make the terrain and the downhill flow meaningful.
-        </Kicker>
       ),
     },
   ];
 
   const views: ViewDef[] = [
     {
-      id: 'polytope',
-      title: 'Associahedron',
-      defaultRect: { x: 340, y: 16, w: 560, h: 560 },
+      id: 'tile',
+      title: `Associahedron K${n - 1}`,
+      defaultRect: { x: 340, y: 16, w: 760, h: 620 },
       node: (
-        <AssocView
-          key={`faithful-${n}-${cx}-${cy}-${cz}-${showFlow}`}
-          assoc={assoc} energies={energies} displace={false} showFlow={showFlow}
-          pc={[cx, cy, cz]} selected={selected} onSelect={setSelected}
-          zoomRef={zoomRef} spinRef={spinRef} onZoom={setZoom}
-        />
-      ),
-    },
-    {
-      id: 'terrain',
-      title: 'Energy terrain',
-      defaultRect: { x: 916, y: 16, w: 540, h: 560 },
-      node: (
-        <AssocView
-          key={`terrain-${n}-${cx}-${cy}-${cz}-${showFlow}`}
-          assoc={assoc} energies={energies} displace showFlow={showFlow}
-          pc={[cx, cy, cz]} selected={selected} onSelect={setSelected}
-          zoomRef={zoomRef} spinRef={spinRef} onZoom={setZoom}
+        <TileView
+          key={`tile-${n}`}
+          assoc={assoc}
+          selected={selected}
+          onSelect={setSelected}
+          zoomRef={zoomRef}
+          spinRef={spinRef}
+          onZoom={setZoom}
         />
       ),
     },
