@@ -36,6 +36,18 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 12:30 — Draw the actual (dual) tree + smooth morphs
+**Why:** User: "I want to see the actual tree" + "animations should be smooth."
+
+The Tree view now draws the **dual tree** (internal node per triangle, branches
+between adjacent triangles, n leaves on the boundary labeled by the order), with the
+triangulation faint behind it (toggle "Show triangulation"). You click an **internal
+branch** to Flip/Cross. **Smooth transitions:** on a flip the internal nodes glide
+from the nearest old node to their new positions (eased rAF morph, ~420ms); leaf
+labels tween around the circle on a cross; and the Landscape gained a gold
+"you-are-here" **marker that glides** to the current tree (lerp per frame) instead of
+snapping. Build green (14.3 kB). Renders; flip/cross/order all animate.
+
 ### 🟢 code · 12:15 — Fiber-crossing: Flip (tree) vs Cross (order), animated
 **Why:** User wanted to navigate tree *and* order and "watch the tree/order change
 naturally" — the two-fibers-connect move.

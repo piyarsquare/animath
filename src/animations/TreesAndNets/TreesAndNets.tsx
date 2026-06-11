@@ -15,24 +15,26 @@ const dkey = (d: [number, number]) => `${d[0]},${d[1]}`;
 const sameOrder = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
 // ---------------------------------------------------------------------------
-// Polygon / triangulation view (SVG): the current tree. Click a chord to Flip
-// (change the tree) or Cross (reverse that chord's arc → the cyclic order changes,
-// and the leaf labels slide around the circle to their new places).
+// Tree view (SVG): the ACTUAL tree dual to the triangulation. Internal nodes sit
+// at the triangles, branches join adjacent triangles (the diagonals) and run out
+// to the n leaves on the boundary. Click an internal branch to Flip (reconfigure
+// the tree) or Cross (reverse that branch's arc → the cyclic order changes).
 // ---------------------------------------------------------------------------
 function PolygonTree({
-  n, order, tri, flash, onChord,
+  n, order, tri, flash, showPolygon, onChord,
 }: {
   n: number;
   order: number[];
   tri: Triangulation;
   flash: Set<string>;
+  showPolygon: boolean;
   onChord: (d: [number, number]) => void;
 }) {
   const S = 360;
   const c = S / 2;
-  const R = S * 0.37;
-  const vAng = (k: number) => -Math.PI / 2 + (2 * Math.PI * k) / n; // polygon vertex angle
-  const eAng = (k: number) => -Math.PI / 2 + (2 * Math.PI * (k + 0.5)) / n; // edge-midpoint angle
+  const R = S * 0.34;
+  const vAng = (k: number) => -Math.PI / 2 + (2 * Math.PI * k) / n;
+  const eAng = (k: number) => -Math.PI / 2 + (2 * Math.PI * (k + 0.5)) / n;
   const PX = (k: number) => c + R * Math.cos(vAng(k));
   const PY = (k: number) => c + R * Math.sin(vAng(k));
 
@@ -57,48 +59,130 @@ function PolygonTree({
     return () => cancelAnimationFrame(raf);
   }, [order]);
 
+  const ease = (x: number) => x * x * (3 - 2 * x);
   const labelPos = (v: number) => {
-    const iTo = order.indexOf(v);
-    const iFrom = from.indexOf(v);
-    let aFrom = eAng(iFrom);
-    const aTo = eAng(iTo);
-    // shortest angular path
+    const aFrom = eAng(from.indexOf(v));
+    const aTo = eAng(order.indexOf(v));
     let diff = aTo - aFrom;
     while (diff > Math.PI) diff -= 2 * Math.PI;
     while (diff < -Math.PI) diff += 2 * Math.PI;
-    const a = aFrom + diff * t;
-    const lr = R * 1.16;
-    return [c + lr * Math.cos(a), c + lr * Math.sin(a)];
+    const a = aFrom + diff * ease(t);
+    const lr = R * 1.2;
+    return [c + lr * Math.cos(a), c + lr * Math.sin(a)] as const;
   };
+
+  // --- build the dual tree from the triangulation ---
+  const tris = tri.triangles;
+  const has = (tr: number[], x: number) => tr[0] === x || tr[1] === x || tr[2] === x;
+  const centOf = (tr: number[]) => [
+    (PX(tr[0]) + PX(tr[1]) + PX(tr[2])) / 3,
+    (PY(tr[0]) + PY(tr[1]) + PY(tr[2])) / 3,
+  ] as [number, number];
+  const cent = tris.map(centOf);
+
+  // Smoothly morph the internal nodes when the tree changes (a flip): each new
+  // node starts from the nearest old node and glides to its place.
+  const prevTriRef = useRef(tri);
+  const [tt, setTt] = useState(1);
+  const startRef = useRef<[number, number][]>(cent);
+  useEffect(() => {
+    if (prevTriRef.current.id === tri.id) return;
+    const prevCent = prevTriRef.current.triangles.map(centOf);
+    startRef.current = cent.map((p) => {
+      let best = prevCent[0] ?? p;
+      let bd = Infinity;
+      for (const q of prevCent) {
+        const dd = (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2;
+        if (dd < bd) { bd = dd; best = q; }
+      }
+      return best;
+    });
+    setTt(0);
+    const start = performance.now();
+    const dur = 420;
+    let raf = 0;
+    const step = (now: number) => {
+      const p = Math.min(1, (now - start) / dur);
+      setTt(p);
+      if (p < 1) raf = requestAnimationFrame(step);
+      else prevTriRef.current = tri;
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tri.id]);
+
+  const e = ease(tt);
+  const node = cent.map((p, i) => {
+    const s = startRef.current[i] ?? p;
+    return tt >= 1 ? p : ([s[0] + (p[0] - s[0]) * e, s[1] + (p[1] - s[1]) * e] as [number, number]);
+  });
+
+  const leafStub = (k: number): readonly [number, number] => {
+    const a = eAng(k);
+    return [c + R * 0.96 * Math.cos(a), c + R * 0.96 * Math.sin(a)];
+  };
+  const triOfEdge = (k: number) => tris.findIndex((tr) => has(tr, k) && has(tr, (k + 1) % n));
+  const internal = tri.diagonals.map((d) => {
+    const ts: number[] = [];
+    tris.forEach((tr, i) => { if (has(tr, d[0]) && has(tr, d[1])) ts.push(i); });
+    return { d, a: ts[0], b: ts[1] };
+  });
 
   const boundary = Array.from({ length: n }, (_, k) => `${PX(k)},${PY(k)}`).join(' ');
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
       <svg viewBox={`0 0 ${S} ${S}`} width="100%" height="100%" style={{ maxWidth: '100%', maxHeight: '100%' }}>
-        <polygon points={boundary} fill="rgba(255,255,255,0.04)" stroke="var(--fg, #ccd)" strokeOpacity={0.35} strokeWidth={1.5} />
-        {tri.diagonals.map((d) => {
+        {showPolygon && (
+          <>
+            <polygon points={boundary} fill="none" stroke="var(--fg, #ccd)" strokeOpacity={0.18} strokeWidth={1.2} />
+            {tri.diagonals.map((d) => (
+              <line key={`c${dkey(d)}`} x1={PX(d[0])} y1={PY(d[0])} x2={PX(d[1])} y2={PY(d[1])}
+                stroke="var(--fg, #9fb)" strokeOpacity={0.12} strokeWidth={1} strokeDasharray="3 4" />
+            ))}
+          </>
+        )}
+
+        {/* leaf branches: each triangle out to its boundary leaves */}
+        {Array.from({ length: n }, (_, k) => {
+          const ti = triOfEdge(k);
+          if (ti < 0) return null;
+          const [sx, sy] = leafStub(k);
+          return <line key={`l${k}`} x1={node[ti][0]} y1={node[ti][1]} x2={sx} y2={sy}
+            stroke="var(--fg, #aeb6c8)" strokeOpacity={0.85} strokeWidth={2} strokeLinecap="round" />;
+        })}
+
+        {/* internal branches: between adjacent triangles (the diagonals) — clickable */}
+        {internal.map(({ d, a, b }) => {
+          if (a == null || b == null) return null;
           const on = flash.has(dkey(d));
           return (
-            <g key={dkey(d)} style={{ cursor: 'pointer' }} onClick={() => onChord(d)}>
-              <line x1={PX(d[0])} y1={PY(d[0])} x2={PX(d[1])} y2={PY(d[1])} stroke="transparent" strokeWidth={18} />
-              <line x1={PX(d[0])} y1={PY(d[0])} x2={PX(d[1])} y2={PY(d[1])}
-                stroke={on ? 'var(--accent, #ffd54a)' : 'var(--fg, #9fb)'}
-                strokeWidth={on ? 4 : 2.5} strokeOpacity={on ? 1 : 0.8}
+            <g key={`i${dkey(d)}`} style={{ cursor: 'pointer' }} onClick={() => onChord(d)}>
+              <line x1={node[a][0]} y1={node[a][1]} x2={node[b][0]} y2={node[b][1]} stroke="transparent" strokeWidth={18} />
+              <line x1={node[a][0]} y1={node[a][1]} x2={node[b][0]} y2={node[b][1]}
+                stroke={on ? 'var(--accent, #ffd54a)' : 'var(--accent, #4fc4b6)'}
+                strokeWidth={on ? 5 : 3.5} strokeOpacity={1} strokeLinecap="round"
                 style={{ transition: 'stroke 350ms, stroke-width 350ms' }} />
             </g>
           );
         })}
-        {Array.from({ length: n }, (_, k) => (
-          <circle key={k} cx={PX(k)} cy={PY(k)} r={3} fill="var(--fg, #ccd)" fillOpacity={0.5} />
+
+        {/* internal nodes */}
+        {node.map((p, i) => (
+          <circle key={`n${i}`} cx={p[0]} cy={p[1]} r={4.5} fill="var(--bg, #1b1e27)" stroke="var(--fg, #cdd)" strokeWidth={1.5} />
         ))}
-        {order.map((v) => {
+
+        {/* leaves + labels */}
+        {order.map((v, k) => {
+          const [sx, sy] = leafStub(k);
           const [lx, ly] = labelPos(v);
           return (
-            <text key={v} x={lx} y={ly} fontSize={15} fontFamily="monospace"
-              fill="var(--accent, #cda434)" textAnchor="middle" dominantBaseline="middle">
-              {v}
-            </text>
+            <g key={`v${v}`}>
+              <circle cx={sx} cy={sy} r={3.5} fill="var(--accent, #cda434)" />
+              <text x={lx} y={ly} fontSize={15} fontFamily="monospace"
+                fill="var(--accent, #cda434)" textAnchor="middle" dominantBaseline="middle">{v}</text>
+            </g>
           );
         })}
       </svg>
@@ -160,6 +244,14 @@ function Landscape({
         group.add(mesh); spheres.push(mesh);
       });
 
+      // a "you are here" marker that glides smoothly to the current tree
+      const markerGeom = new THREE.SphereGeometry(0.2, 20, 16); disposables.push(markerGeom);
+      const markerMat = new THREE.MeshStandardMaterial({ color: 0xffd54a, emissive: 0xffd54a, emissiveIntensity: 0.5, roughness: 0.3 });
+      disposables.push(markerMat);
+      const marker = new THREE.Mesh(markerGeom, markerMat);
+      marker.position.copy(pos[cur] ?? new THREE.Vector3());
+      group.add(marker);
+
       const raycaster = new THREE.Raycaster();
       const ndc = new THREE.Vector2();
       let dragging = false, moved = false, lx = 0, ly = 0;
@@ -189,10 +281,11 @@ function Landscape({
         const cu = curRef.current; const nb = nbrRef.current;
         spheres.forEach((m, i) => {
           const mat = m.material as THREE.MeshStandardMaterial;
-          if (i === cu) { mat.color.setHex(0xffd54a); m.scale.setScalar(2); }
-          else if (nb.has(i)) { mat.color.setHex(0x3fb6a6); m.scale.setScalar(1.3); }
+          if (nb.has(i)) { mat.color.setHex(0x3fb6a6); m.scale.setScalar(1.3); }
           else { mat.color.setHex(0x6b7790); m.scale.setScalar(1); }
         });
+        const target = pos[cu] ?? marker.position;
+        marker.position.lerp(target, 0.18); // glide to the current tree
         renderer.render(scene, camera);
         raf = requestAnimationFrame(animate);
       };
@@ -219,6 +312,7 @@ export default function TreesAndNets(): JSX.Element {
   const [n, setN] = usePersistentState<number>(`${APP_ID}:n`, 5);
   const [spin, setSpin] = usePersistentState<boolean>(`${APP_ID}:spin`, true);
   const [mode, setMode] = usePersistentState<'flip' | 'cross'>(`${APP_ID}:mode`, 'flip');
+  const [showPoly, setShowPoly] = usePersistentState<boolean>(`${APP_ID}:poly`, true);
   const [order, setOrder] = useState<number[]>(() => [0, 1, 2, 3, 4]);
   const [cur, setCur] = useState<number>(0);
   const [flash, setFlash] = useState<Set<string>>(new Set());
@@ -352,10 +446,15 @@ export default function TreesAndNets(): JSX.Element {
     },
     {
       id: 'view',
-      title: 'Map',
+      title: 'Display',
       arch: 'view',
-      estHeight: 90,
-      node: <Checkbox label="Auto-rotate map" checked={spin} onChange={setSpin} />,
+      estHeight: 120,
+      node: (
+        <div style={{ display: 'grid', gap: 8 }}>
+          <Checkbox label="Show triangulation behind tree" checked={showPoly} onChange={setShowPoly} />
+          <Checkbox label="Auto-rotate map" checked={spin} onChange={setSpin} />
+        </div>
+      ),
     },
   ];
 
@@ -364,7 +463,7 @@ export default function TreesAndNets(): JSX.Element {
       id: 'tree',
       title: mode === 'flip' ? 'Tree — click a chord to flip' : 'Tree — click a chord to cross',
       defaultRect: { x: 340, y: 16, w: 520, h: 560 },
-      node: <PolygonTree n={n} order={order} tri={tri} flash={flash} onChord={onChord} />,
+      node: <PolygonTree n={n} order={order} tri={tri} flash={flash} showPolygon={showPoly} onChord={onChord} />,
     },
     {
       id: 'landscape',

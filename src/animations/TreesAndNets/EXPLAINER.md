@@ -2,15 +2,16 @@
 
 Walk the space of trees — and the space of orders — one move at a time.
 
-The **polygon** is your current **tree**: a triangulation of an n‑gon, which is an
-unrooted binary tree whose leaves are the polygon's edges (labeled by the cyclic
-order). Clicking a chord does one of two moves, chosen by the **Flip / Cross**
-toggle:
+The left view is your current **tree** — the actual unrooted binary tree, drawn
+dual to a triangulation of an n‑gon: an internal node sits at each triangle, the
+branches join them, and the n leaves sit on the boundary, labeled by the cyclic
+order. (Turn on "Show triangulation" to see the polygon it comes from.) Clicking an
+**internal branch** does one of two moves, chosen by the **Flip / Cross** toggle:
 
-- **Flip** swaps that diagonal for the other diagonal of its quadrilateral. You
-  step to a neighboring **tree** in the *same* cyclic order; the changed chord
-  flashes, and your dot moves on the map.
-- **Cross** reverses the leaves on that chord's arc. You step into the neighbor
+- **Flip** swaps that branch's diagonal for the other one. You step to a neighboring
+  **tree** in the *same* cyclic order — the branches glide into their new shape, and
+  your marker moves on the map.
+- **Cross** reverses the leaves on that branch's arc. You step into the neighbor
   **cyclic‑order fiber**; the labels slide around the circle to their new places.
 
 So flips walk the *trees*; crossings walk the *orders*. (The two are the two ways
