@@ -36,6 +36,26 @@ circular-decomposable metrics, trees, NeighborNet + NJ) and named it. New branch
 
 <!-- Newest entry first. -->
 
+### 🔵 finding · 02:10 — The "bundle of associahedra" = the real moduli space M̄₀,ₙ(ℝ)
+**Why:** User asked whether the structure bundling associahedra over all cyclic
+orders has a name and can be visualized.
+
+It is the **real Deligne–Mumford moduli space $\overline{M}_{0,n}(\mathbb{R})$**:
+a smooth compact $(n-3)$-manifold **tessellated by $(n-1)!/2$ associahedra**
+$K_{n-1}$, one per cyclic ordering, glued along facets (Devadoss, *mosaic operad*,
+1999 — already in `paper/references/`). Not a fiber bundle (the cyclic-order index
+is discrete); the gluing across a facet = a degeneration linking adjacent orders.
+Visualizable:
+- **n=5** → a closed surface of **12 pentagons** ($K_4$ each); $V{-}E{+}F = 15-30+12
+  = -3$ ⇒ odd χ ⇒ **non-orientable**, the connected sum of 5 ℝP². Renderable — and
+  a natural fit for the **TopologyWalk / PolygonWorlds** walk-a-surface engine
+  ("walk tree-space"; crossing an edge = a flip / order change).
+- **n=6** → a 3-manifold tiled by **60** 3-D associahedra.
+- any n → the **gluing graph** (nodes = cyclic orders, edges = shared facets).
+Design implication: a mode escalation — tree ⊂ associahedron (one order) ⊂
+$\overline{M}_{0,n}(\mathbb{R})$ (all orders). The n=5 12-pentagon surface is a
+strong flagship for the "entire structure" view.
+
 ### 🟣 decision · 01:40 — Drop PCA; use canonical Loday coordinates
 **Why:** User: "the PC are not useful... keep the same structure as the regular
 formulation of the associahedron." PCA re-orients axes by data variance, so the
