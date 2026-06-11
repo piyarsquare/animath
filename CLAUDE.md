@@ -437,7 +437,10 @@ slash command; they never auto-invoke):
 
 Progress reports and handoffs are **committed** as **Markdown + YAML frontmatter**
 under `docs/sessions/{progress,handoff}/<branch-slug>/` — partitioned **per branch**
-so parallel branches never collide (the slug is the branch name with `claude/`
+so parallel branches never collide. Forward-looking, app-specific implementation
+plans are reports too: **`kind: plan`** files in the branch's `progress/` folder
+(`status: proposed` until a session executes them), surfaced by the control center
+like any report (the slug is the branch name with `claude/`
 stripped and `/`→`-`; keep branch names short and topical). The style is specified
 by `docs/sessions/REPORT_STYLE.md`; skills copy the `docs/sessions/_template-*.md`
 skeletons. Markdown reads natively on GitHub, and **`npm run sessions`**

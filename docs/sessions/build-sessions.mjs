@@ -128,7 +128,7 @@ for (const rec of byKey.values()) {
 }
 
 // 3 · roll up to short name → session → reports
-const kindRank = { progress: 0, handoff: 1, "three-hats": 2 };
+const kindRank = { progress: 0, handoff: 1, "three-hats": 2, plan: 3 };
 const byRecency = (a, b) => (b || "").localeCompare(a || "");
 const sessions = new Map();
 for (const r of reports) {
