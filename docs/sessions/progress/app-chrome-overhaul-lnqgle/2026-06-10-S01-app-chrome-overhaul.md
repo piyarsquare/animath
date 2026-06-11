@@ -5,7 +5,7 @@ date: 2026-06-10
 title: Whole-scale app chrome overhaul
 branch: claude/app-chrome-overhaul-lnqgle
 slug: app-chrome-overhaul-lnqgle
-status: in-progress
+status: completed
 build: passing
 followup: null
 pr: 208
