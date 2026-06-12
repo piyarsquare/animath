@@ -5,7 +5,7 @@ date: 2026-06-11
 title: To-do review — order and priority
 branch: claude/review-todo-prioritize-g66uqj
 slug: review-todo-prioritize-g66uqj
-status: in-progress
+status: completed
 build: passing
 followup: null
 pr: 212
