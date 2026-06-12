@@ -39,6 +39,23 @@ session is a separate, user-driven polish pass, not a direct continuation.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 20:40 — Randomized landing hero (package drop)
+
+**Why:** User supplied a "package drop" (handoff + `hero-verbs.js`) to make the
+gallery hero nicer: a headline that draws three verbs at random per load, the
+strangest last, click-to-reroll.
+
+The handoff targeted the redesign *prototype* (`redesign/journey.jsx`, global
+`React`/`window`); ported it idiomatically to production: typed
+`chrome/heroVerbs.ts` module (`rollHeroVerbs()`), and rewrote the `Gallery.tsx`
+hero — kicker removed (per approved design), accented `<b>` verbs, click-to-
+reroll with a soft cross-fade that respects `prefers-reduced-motion`, new
+subline. Three `theme.css` lines for the accent/cursor/fade. Verified by
+screenshot (two loads differ) and a puppeteer click test (9 distinct headlines,
+tier-2 verb always last). Build green; the raw package files were not committed.
+
+User decisions: remove kicker · soft cross-fade · silent egg (no tooltip).
+
 ### 🟢 code · 17:50 — Radar sweep: skins, first paint, immersive toggle, single-tap dismiss
 
 **Why:** User said "fix everything on your list" + a new ask: a single tap off a

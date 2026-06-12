@@ -4,6 +4,7 @@ import { useSkin } from './skins';
 import { TopBar } from './TopBar';
 import { Preview } from './previews';
 import { CARDS, CATEGORIES } from './catalog';
+import { rollHeroVerbs } from './heroVerbs';
 
 /**
  * The landing gallery (DESIGN-SPEC §1): hero, category filter chips, one
@@ -15,6 +16,19 @@ export default function Gallery() {
   const [cat, setCat] = useState<(typeof CATEGORIES)[number]>('All');
   const [skin] = useSkin();
   const cards = CARDS.filter(c => cat === 'All' || c.cat === cat);
+  // Randomized hero verbs — three drawn per load, the strangest one last.
+  // Clicking the headline rerolls them (a quiet easter egg), cross-fading
+  // unless the visitor prefers reduced motion.
+  const [verbs, setVerbs] = useState(rollHeroVerbs);
+  const [swapping, setSwapping] = useState(false);
+  const reroll = () => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setVerbs(rollHeroVerbs());
+      return;
+    }
+    setSwapping(true);
+    window.setTimeout(() => { setVerbs(rollHeroVerbs()); setSwapping(false); }, 180);
+  };
   return (
     <div className="am-app am-gallery-app">
       <TopBar
@@ -24,11 +38,14 @@ export default function Gallery() {
       />
       <div className="am-gal-scroll">
         <div className="am-gal-hero">
-          <div className="am-gal-kicker">Animated mathematics</div>
-          <h1 className="am-gal-title">See the math move.</h1>
+          <h1
+            className={`am-gal-title am-gal-title-roll${swapping ? ' is-swapping' : ''}`}
+            onClick={reroll}
+          >
+            Small worlds you can <b>{verbs[0]}</b>, <b>{verbs[1]}</b>, and <b>{verbs[2]}</b>.
+          </h1>
           <p className="am-gal-tag">
-            Each tool turns an idea — complex functions, fractals, chaotic orbits —
-            into something you can steer. Pick one to open its workspace.
+            Move a slider, change a rule, and watch how the world responds.
           </p>
         </div>
         <div className="am-gal-filters">
