@@ -1,10 +1,11 @@
 import React from 'react';
+import { LoadingScreen } from './chrome/LoadingScreen';
 
 const ComplexParticles = React.lazy(() => import('./animations/ComplexParticles/ComplexParticles'));
 
 export default function App() {
   return (
-    <React.Suspense fallback={<div style={{ background: 'var(--bg, #000)', width: '100%', height: '100%' }} />}>
+    <React.Suspense fallback={<LoadingScreen />}>
       <ComplexParticles />
     </React.Suspense>
   );

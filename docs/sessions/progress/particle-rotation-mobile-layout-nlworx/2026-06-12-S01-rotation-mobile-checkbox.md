@@ -39,6 +39,20 @@ session is a separate, user-driven polish pass, not a direct continuation.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 16:48 — Branded loading screen for lazy routes
+
+**Why:** User asked about the load screen — the Suspense fallback was a blank
+themed `<div>`, so switching into a code-split app (≈133 KB Three.js for the
+3D/fractal viewers) flashed an empty screen. (No, nothing was sped up — it was
+just blank.)
+
+Added `chrome/LoadingScreen.tsx`: the brand mark pulsing inside a spinning
+accent ring on the dotted stage, "Loading…" beneath, all from theme tokens so
+it matches the persisted skin. Wired it as the Suspense fallback in both
+`index.tsx` (every lazy route) and `App.tsx` (the default Complex Particles
+route has its own inner Suspense). Verified by throttling the app chunk in
+puppeteer — captured the splash in dark and Blueprint. Build/lint/test green.
+
 ### 🟢 code · 16:43 — Phone bottom sheet now sits above the action strip
 
 **Why:** User reported app buttons rendering on top of an open bottom menu on

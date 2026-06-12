@@ -379,6 +379,32 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
 @keyframes am-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes am-pop { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
 @keyframes am-slideup { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes am-spin { to { transform: rotate(360deg); } }
+@keyframes am-loading-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.9); opacity: .8; } }
+
+/* ============ Loading screen (lazy-route Suspense fallback) ============
+   A skinned splash on the dotted stage — the brand mark pulsing inside a
+   spinning accent ring — while a route's code-split chunk (and Three.js)
+   downloads, instead of a blank flash. */
+.am-loading {
+  position: absolute; inset: 0; z-index: var(--z-modal);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+  background-color: var(--bg);
+  background-image: radial-gradient(circle at 1px 1px, var(--dot-color, rgba(132,132,156,0.13)) 1px, transparent 1.5px);
+  background-size: 24px 24px;
+  color: var(--dim); animation: am-fade .2s var(--ease);
+}
+.am-loading-mark { position: relative; width: 58px; height: 58px; display: grid; place-items: center; }
+.am-loading-ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2.5px solid var(--border); border-top-color: var(--accent);
+  animation: am-spin .85s linear infinite;
+}
+.am-loading-mark .am-brand-mark {
+  width: 36px; height: 36px; border-radius: 10px; font-size: 21px;
+  animation: am-loading-pulse 1.5s var(--ease) infinite;
+}
+.am-loading-text { font-family: var(--font-ui); font-size: 13px; font-weight: 600; letter-spacing: .03em; }
 
 /* ============ Workspace — left icon rail + windows on a void stage ============ */
 .am-ws-railwrap { position: absolute; top: 14px; left: 14px; bottom: 14px; z-index: var(--z-rail); }
