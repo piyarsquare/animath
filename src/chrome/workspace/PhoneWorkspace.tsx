@@ -25,6 +25,10 @@ const maxCardH = () => Math.round(window.innerHeight * 0.8);
 export default function PhoneWorkspace(props: WorkspaceProps) {
   const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, actions, modes, activeMode, onModeChange } = props;
   const sections = useMemo(() => sortByTier(props.sections), [props.sections]);
+  // Single-view apps go full-bleed: the lone view fills the whole screen and
+  // the top bar floats over it (overlaid), rather than sitting above it. Multi-
+  // view apps keep the stacked cards below the bar.
+  const immersive = views.length === 1;
   const [sheet, setSheet] = useState<string | null>(null);
   /* per-view card heights are layout state (like desktop view rects) — persisted */
   const [cardH, setCardH] = usePersistentState<Record<string, number>>(`wsphone:${appId}`, {});
@@ -72,7 +76,7 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
   };
 
   return (
-    <div className={`am-app am-phone-app${actions?.length ? ' am-has-actions' : ''}`}>
+    <div className={`am-app am-phone-app${actions?.length ? ' am-has-actions' : ''}${immersive ? ' am-phone-immersive' : ''}`}>
       <TopBar
         title={title}
         subtitle={subtitle}
@@ -116,7 +120,7 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
               : undefined;
           return (
             <div
-              className={`am-phone-view${isFull ? ' am-ws-full' : ''}`}
+              className={`am-phone-view${isFull ? ' am-ws-full' : ''}${immersive ? ' am-phone-view-solo' : ''}`}
               key={v.id}
               style={cardStyle}
             >

@@ -39,6 +39,24 @@ session is a separate, user-driven polish pass, not a direct continuation.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 16:34 — Global checkbox + immersive single-view mobile
+
+**Why:** Follow-up asks — make *every* app's checkboxes match, and on mobile
+present single-screen apps full-bleed with the toolbar overlaid (not above).
+
+- **Checkboxes globalized.** Moved the token-styled box to a single
+  `input[type="checkbox"]` rule in `chrome/theme.css` (loaded app-wide) using
+  raw theme tokens, and removed the now-redundant per-app rules (the `.cp-row`
+  block in `ControlPanel.css` and `.sm-toggle`'s `accent-color` in
+  `stableMarriage.css`). One look for current and future apps; custom pill
+  switches (`.am-switch`, a div) are unaffected.
+- **Immersive single-view phones.** `PhoneWorkspace` flags `immersive` when
+  `views.length === 1`; the lone view goes edge-to-edge (no card chrome, header
+  or grip hidden, zero scroll padding) and the floating bar + dock overlay it.
+  Multi-view apps keep the stacked-cards-below-the-bar layout. Verified on
+  Complex Particles (dark + Blueprint): canvas fills the screen, frosted bar
+  floats on top. Build/lint/test green (0 errors, 22 tests).
+
 ### 🟢 code · 16:28 — Token-styled checkbox (visible in every skin)
 
 **Why:** Root cause confirmed — the shared `ControlPanel` checkbox was a bare
