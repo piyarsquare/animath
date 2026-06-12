@@ -39,6 +39,20 @@ session is a separate, user-driven polish pass, not a direct continuation.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 16:43 — Phone bottom sheet now sits above the action strip
+
+**Why:** User reported app buttons rendering on top of an open bottom menu on
+mobile. Root cause: the always-on phone action strip is at `actionbar: 130`
+while the bottom sheet/scrim were at `50/45`, so the primary verbs poked through
+an open panel sheet.
+
+Lifted `phoneScrim`/`phoneSheet` above `actionbar` (135/136) in both the
+`layers.ts` scale and its `theme.css` mirror. Verified interactively (puppeteer
+tap on a dock button) on Stable Marriage: the Preferences sheet now covers the
+Play/Step/Finish/Reset strip instead of letting it show through. Affects all
+four action-bar apps (Stable Marriage, Stable Matching, Trinary, Agentic
+Sorting). Build/lint/test green.
+
 ### 🟢 code · 16:34 — Global checkbox + immersive single-view mobile
 
 **Why:** Follow-up asks — make *every* app's checkboxes match, and on mobile

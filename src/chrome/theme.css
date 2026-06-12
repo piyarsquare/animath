@@ -28,14 +28,16 @@
   --z-window: 30;
   --z-topbar: 30;
   --z-dock: 40;
-  --z-sheet-scrim: 45;
-  --z-sheet: 50;
   --z-tip: 60;
   --z-menu-scrim: 70;
   --z-menu: 71;
   --z-full: 100;
   --z-over-full: 110;
   --z-actionbar: 130;
+  /* the phone bottom sheet + scrim sit above the always-on action strip, so an
+     open panel covers the primary verbs instead of letting them poke through */
+  --z-sheet-scrim: 135;
+  --z-sheet: 136;
   --z-modal: 150;
   --z-rail: 200;
 }
