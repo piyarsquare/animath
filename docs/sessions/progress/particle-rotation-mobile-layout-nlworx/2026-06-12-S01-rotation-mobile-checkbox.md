@@ -5,7 +5,7 @@ date: 2026-06-12
 title: Bounded turntable orbit · full-bleed mobile views · checkbox skin bug
 branch: claude/particle-rotation-mobile-layout-nlworx
 slug: particle-rotation-mobile-layout-nlworx
-status: in-progress
+status: completed
 build: passing
 followup: null
 pr: null
