@@ -298,9 +298,22 @@ export default function ParticleViewerShell({
         value={state.viewMotion}
         onChange={controls.handleMotion}
       />
+      {/* How a drag tumbles the camera. Turntable (default) is the bounded
+          orbit — up stays up, elevation clamps at the poles — so the scene is
+          easy to recenter by hand; Free is the unbounded trackball that tumbles
+          past the poles and can roll. */}
+      <Pills
+        label="Orbit"
+        options={[
+          { value: 'turntable', label: 'Turntable' },
+          { value: 'free', label: 'Free' },
+        ]}
+        value={state.orbitMode}
+        onChange={state.setOrbitMode}
+      />
       {/* Desktop pans with modifiers (right-drag, held Space, Shift), so the
-          mode toggle only exists on phone, where one-finger drag must choose
-          (two-finger drag always pans there). */}
+          drag-mode toggle only exists on phone, where one-finger drag must
+          choose (two-finger drag always pans there). */}
       {phone ? (
         <Pills
           label="Drag"

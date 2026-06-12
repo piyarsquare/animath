@@ -102,8 +102,11 @@ export function useViewControls(state: ParticleState) {
     });
     viewPointRef.current = { L: qL.clone(), R: qR.clone() };
     onViewPointChangeRef.current?.(viewPointRef.current);
-    // Camera also returns to its default vantage point.
+    // Camera also returns to its default vantage point. Zero the turntable
+    // accumulator too, so the bounded orbit restarts from the straight-back pose.
     state.setCamQuat(new THREE.Quaternion());
+    state.azimuthRef.current = 0;
+    state.elevationRef.current = 0;
     state.setPanX(0);
     state.setPanY(0);
     state.setPanZ(0);
