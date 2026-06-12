@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import Gallery from './chrome/Gallery';
+import { LoadingScreen } from './chrome/LoadingScreen';
 import './chrome/theme.css';
 import { applyPersistedSkin } from './chrome/skins';
 
@@ -68,7 +69,7 @@ function Router(): JSX.Element {
   if (path === '/' || !Component) return <Gallery />;
 
   return (
-    <React.Suspense fallback={<div style={{ background: 'var(--bg, #000)', width: '100%', height: '100%' }} />}>
+    <React.Suspense fallback={<LoadingScreen />}>
       <Component />
     </React.Suspense>
   );

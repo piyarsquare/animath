@@ -14,8 +14,6 @@ export const LAYER = {
   window: 30,
   topbar: 30,
   phoneDock: 40,
-  phoneScrim: 45,
-  phoneSheet: 50,
   railTip: 60,
   menuScrim: 70,
   menu: 71,
@@ -25,6 +23,11 @@ export const LAYER = {
   overFull: 110,
   /** The always-on action strip — above every window, even in fullscreen. */
   actionbar: 130,
+  /** The phone bottom sheet (an open panel) + its scrim sit above the action
+   *  strip, so opening a control panel covers the always-on verbs instead of
+   *  letting them poke through. */
+  phoneScrim: 135,
+  phoneSheet: 136,
   /** Modals (explainer) — above fullscreen, portaled to <body>. */
   modal: 150,
   rail: 200,

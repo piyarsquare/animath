@@ -25,6 +25,10 @@ const maxCardH = () => Math.round(window.innerHeight * 0.8);
 export default function PhoneWorkspace(props: WorkspaceProps) {
   const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, actions, modes, activeMode, onModeChange } = props;
   const sections = useMemo(() => sortByTier(props.sections), [props.sections]);
+  // Single-view apps go full-bleed: the lone view fills the whole screen and
+  // the top bar floats over it (overlaid), rather than sitting above it. Multi-
+  // view apps keep the stacked cards below the bar.
+  const immersive = views.length === 1;
   const [sheet, setSheet] = useState<string | null>(null);
   /* per-view card heights are layout state (like desktop view rects) — persisted */
   const [cardH, setCardH] = usePersistentState<Record<string, number>>(`wsphone:${appId}`, {});
@@ -58,12 +62,13 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
   const dockRef = useRef<HTMLElement>(null);
   const dockHint = useScrollHints(dockRef, 'x');
 
-  /* drag the bottom grip to resize a card; fullscreen restyles the same DOM
-     node (CSS-only), so WebGL engines keep their context either way */
+  /* Cards fill the screen by default (flex), so the bottom grip resizes the
+     whole card by pinning its flex-basis; fullscreen restyles the same DOM
+     node (CSS-only), so WebGL engines keep their context either way. */
   const onResizeDown = (id: string) => (e: React.PointerEvent) => {
     e.preventDefault();
-    const body = (e.currentTarget as HTMLElement).previousElementSibling as HTMLElement | null;
-    const oh = body?.offsetHeight ?? 240;
+    const card = (e.currentTarget as HTMLElement).parentElement as HTMLElement | null;
+    const oh = card?.offsetHeight ?? 280;
     beginPointerDrag(e, (_dx, dy) => {
       const h = Math.round(Math.min(Math.max(oh + dy, MIN_CARD_H), maxCardH()));
       setCardH(prev => ({ ...prev, [id]: h }));
@@ -71,7 +76,7 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
   };
 
   return (
-    <div className={`am-app am-phone-app${actions?.length ? ' am-has-actions' : ''}`}>
+    <div className={`am-app am-phone-app${actions?.length ? ' am-has-actions' : ''}${immersive ? ' am-phone-immersive' : ''}`}>
       <TopBar
         title={title}
         subtitle={subtitle}
@@ -106,11 +111,18 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
         {views.map(v => {
           const isFull = full === v.id;
           const h = cardH[v.id];
+          // A manually-resized card pins its flex-basis (and stops growing);
+          // otherwise it flex-fills the stage. Fullscreen ignores both.
+          const cardStyle: React.CSSProperties | undefined = !viewOpen(v.id)
+            ? { display: 'none' }
+            : !isFull && h
+              ? { flex: `0 0 ${h}px` }
+              : undefined;
           return (
             <div
-              className={`am-phone-view${isFull ? ' am-ws-full' : ''}`}
+              className={`am-phone-view${isFull ? ' am-ws-full' : ''}${immersive ? ' am-phone-view-solo' : ''}`}
               key={v.id}
-              style={!viewOpen(v.id) ? { display: 'none' } : undefined}
+              style={cardStyle}
             >
               <div className="am-ws-vhead">
                 <span className="am-ws-vico"><Icon name="window" size={13} /></span>
@@ -136,7 +148,6 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
               </div>
               <div
                 className="am-phone-view-body"
-                style={!isFull && h ? { height: h, maxHeight: 'none' } : undefined}
                 onPointerDownCapture={
                   v.hint && !hintSeen[v.id]
                     ? () => setHintSeen(s => ({ ...s, [v.id]: true }))
@@ -154,6 +165,19 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
                 <div className="am-phone-vresize" onPointerDown={onResizeDown(v.id)} aria-label={`Resize ${v.title}`}>
                   <i />
                 </div>
+              )}
+              {/* Immersive apps hide the card header, so this floating button is
+                  the way into (chrome-free) full screen; the fullscreen header
+                  brings back exit + help. */}
+              {immersive && !isFull && (
+                <button
+                  className="am-phone-immersive-expand"
+                  title="Full screen"
+                  aria-label={`Full screen ${v.title}`}
+                  onClick={() => setFull(v.id)}
+                >
+                  <Icon name="expand" size={15} />
+                </button>
               )}
             </div>
           );
@@ -193,7 +217,7 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
       </div>
       {active && (
         <>
-          <div className="am-phone-scrim" onClick={() => setSheet(null)} role="presentation" />
+          <div className="am-phone-scrim" onPointerDown={() => setSheet(null)} role="presentation" />
           <div className="am-phone-sheet" role="dialog" aria-label={active.title}>
             <div className="am-sheet-grip" />
             <div className="am-phone-sheet-head">

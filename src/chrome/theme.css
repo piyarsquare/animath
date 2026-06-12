@@ -28,14 +28,16 @@
   --z-window: 30;
   --z-topbar: 30;
   --z-dock: 40;
-  --z-sheet-scrim: 45;
-  --z-sheet: 50;
   --z-tip: 60;
   --z-menu-scrim: 70;
   --z-menu: 71;
   --z-full: 100;
   --z-over-full: 110;
   --z-actionbar: 130;
+  /* the phone bottom sheet + scrim sit above the always-on action strip, so an
+     open panel covers the primary verbs instead of letting them poke through */
+  --z-sheet-scrim: 135;
+  --z-sheet: 136;
   --z-modal: 150;
   --z-rail: 200;
 }
@@ -43,6 +45,7 @@
 /* ---------------- Observatory · dark (default) ----------------
    Cool blue-black ink, warm refined gold, faint cyan structure. */
 [data-theme="dark"] {
+  color-scheme: dark;
   --bg: #0a0c12;
   --viz-bg: #04060c;
   --panel: rgba(18,21,30,0.84);
@@ -66,6 +69,7 @@
 /* ---------------- Paper · light ----------------
    Warm paper, deep ink, deepened amber for contrast. */
 [data-theme="light"] {
+  color-scheme: light;
   --bg: #f0ede4;
   --viz-bg: #f6f3ec;
   --panel: rgba(255,255,255,0.92);
@@ -89,6 +93,7 @@
 /* ---------------- Blueprint · drafting board ----------------
    Deep drafting blue, chalk-white line work, technical and crisp. */
 [data-theme="blueprint"] {
+  color-scheme: dark;
   --bg: #0e2148;
   --viz-bg: #0a1838;
   --panel: rgba(18,42,90,0.88);
@@ -113,6 +118,7 @@
 /* ---------------- Phosphor · CRT terminal ----------------
    Near-black green glass, phosphor trace, everything mono. */
 [data-theme="phosphor"] {
+  color-scheme: dark;
   --bg: #03100a;
   --viz-bg: #020c07;
   --panel: rgba(8,28,17,0.88);
@@ -139,6 +145,7 @@
 /* ---------------- Spectrum · neon ----------------
    Deep space black, cyan primary, magenta counter-accent. */
 [data-theme="neon"] {
+  color-scheme: dark;
   --bg: #05060f;
   --viz-bg: #04050d;
   --panel: rgba(13,17,33,0.62);
@@ -278,6 +285,41 @@ body {
 .am-toggle.am-on .am-switch { background: var(--accent); }
 .am-toggle.am-on .am-switch::after { transform: translateX(16px); }
 
+/* Checkboxes — one token-styled box for every app. Native checkboxes paint
+   from the page color-scheme (which the app never sets), so in skins whose
+   accent is near-white (e.g. Blueprint) the native box vanished into the
+   panel. This draws our own box from theme tokens so the affordance reads in
+   every skin. Custom pill switches (.am-switch) are divs, so they opt out. */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin: 0;
+  border: 1.5px solid var(--dim, #9b9ba3);
+  border-radius: 4px;
+  background: var(--panel-solid, #16161c);
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  vertical-align: middle;
+}
+input[type="checkbox"]:hover { border-color: var(--fg, #f0f0f3); }
+input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+input[type="checkbox"]::after {
+  content: "";
+  width: 4px;
+  height: 8px;
+  margin-top: -1px;
+  border: solid var(--accent-fg, #0c0c10);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  opacity: 0;
+}
+input[type="checkbox"]:checked::after { opacity: 1; }
+input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 .am-num { width: 100%; background: var(--panel-2); border: 1px solid var(--border); color: var(--fg); font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 7px; }
 
 /* segmented mini buttons (turn pads, playback rows) */
@@ -303,10 +345,12 @@ body {
 .am-num::-webkit-outer-spin-button, .am-num::-webkit-inner-spin-button { opacity: 0.4; }
 
 /* ============ Generic scrim (menus, modals) ============ */
-.am-menu-scrim { position: fixed; inset: 0; z-index: var(--z-menu-scrim); }
+/* cursor:pointer + touch-action keep these bare dismiss layers tappable in one
+   touch (Safari only synthesizes taps on elements it deems clickable). */
+.am-menu-scrim { position: fixed; inset: 0; z-index: var(--z-menu-scrim); cursor: pointer; touch-action: manipulation; }
 
 /* ============ Explainer modal ============ */
-.am-modal-scrim { position: fixed; inset: 0; z-index: var(--z-modal); background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; }
+.am-modal-scrim { position: fixed; inset: 0; z-index: var(--z-modal); background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; }
 .am-modal { width: min(560px, 92%); max-height: 86%; overflow-y: auto; background: var(--panel-solid); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 22px 24px; animation: am-pop .2s var(--ease); }
 .am-modal h2 { margin: 0 0 12px; font-size: 19px; }
 .am-modal-head { display: flex; align-items: center; gap: 10px; }
@@ -321,6 +365,20 @@ body {
 .am-gal-hero { padding: 40px 40px 8px; }
 .am-gal-kicker { font-family: var(--font-mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
 .am-gal-title { font-size: 40px; font-weight: 850; letter-spacing: -0.03em; margin: 8px 0 6px; }
+/* Randomized hero verbs: accented, at the title's own weight, cross-fading on
+   reroll. The headline itself is the (silent) reroll target — just a pointer. */
+.am-gal-title-roll { cursor: pointer; }
+.am-gal-title b { color: var(--accent); font-weight: inherit; transition: opacity .18s ease; }
+.am-gal-title.is-swapping b { opacity: 0; }
+/* Blueprint's accent equals its text color (chalk-white on blue), so the verbs
+   wouldn't stand out — use the counter-accent (blue) there instead. */
+[data-theme="blueprint"] .am-gal-title b { color: var(--accent-2); }
+/* Phosphor sets the title in a monospace display face, which runs much wider —
+   pull the size down so the longer randomized headline doesn't blow out. */
+[data-theme="phosphor"] .am-gal-title { font-size: 30px; letter-spacing: -0.01em; }
+@media (prefers-reduced-motion: reduce) {
+  .am-gal-title b { transition: none; }
+}
 .am-gal-tag { font-size: 15px; color: var(--dim); max-width: 52ch; line-height: 1.5; }
 .am-gal-filters { display: flex; gap: 8px; padding: 18px 40px 0; flex-wrap: wrap; }
 .am-chip { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--dim); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
@@ -342,6 +400,32 @@ body {
 @keyframes am-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes am-pop { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
 @keyframes am-slideup { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes am-spin { to { transform: rotate(360deg); } }
+@keyframes am-loading-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.9); opacity: .8; } }
+
+/* ============ Loading screen (lazy-route Suspense fallback) ============
+   A skinned splash on the dotted stage — the brand mark pulsing inside a
+   spinning accent ring — while a route's code-split chunk (and Three.js)
+   downloads, instead of a blank flash. */
+.am-loading {
+  position: absolute; inset: 0; z-index: var(--z-modal);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+  background-color: var(--bg);
+  background-image: radial-gradient(circle at 1px 1px, var(--dot-color, rgba(132,132,156,0.13)) 1px, transparent 1.5px);
+  background-size: 24px 24px;
+  color: var(--dim); animation: am-fade .2s var(--ease);
+}
+.am-loading-mark { position: relative; width: 58px; height: 58px; display: grid; place-items: center; }
+.am-loading-ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2.5px solid var(--border); border-top-color: var(--accent);
+  animation: am-spin .85s linear infinite;
+}
+.am-loading-mark .am-brand-mark {
+  width: 36px; height: 36px; border-radius: 10px; font-size: 21px;
+  animation: am-loading-pulse 1.5s var(--ease) infinite;
+}
+.am-loading-text { font-family: var(--font-ui); font-size: 13px; font-weight: 600; letter-spacing: .03em; }
 
 /* ============ Workspace — left icon rail + windows on a void stage ============ */
 .am-ws-railwrap { position: absolute; top: 14px; left: 14px; bottom: 14px; z-index: var(--z-rail); }
@@ -531,11 +615,40 @@ body {
 
 /* ============ Phone workspace (≤740px) ============ */
 .am-phone-app { display: flex; flex-direction: column; }
-.am-phone-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 14px 90px; display: flex; flex-direction: column; gap: 12px; background-color: var(--bg); background-image: radial-gradient(circle at 1px 1px, var(--dot-color, rgba(132,132,156,0.13)) 1px, transparent 1.5px); background-size: 24px 24px; }
-.am-phone-view { border: 1px solid var(--border-strong); border-radius: 13px; overflow: hidden; background: var(--panel-solid); box-shadow: var(--shadow); flex-shrink: 0; }
-.am-phone-view .am-ws-vhead { cursor: default; }
-.am-phone-view-body { position: relative; height: 56vw; max-height: 340px; background: var(--viz-bg); }
+/* The top bar floats over the stage as a translucent pill, so the view cards
+   reclaim its strip and fill the screen (the dock floats the same way below). */
+.am-phone-app > .am-bar {
+  position: absolute; top: 8px; left: 8px; right: 8px;
+  height: 48px; padding: 0 8px;
+  border: 1px solid var(--border-strong); border-bottom: 1px solid var(--border-strong);
+  border-radius: 15px; box-shadow: var(--shadow); z-index: var(--z-dock);
+}
+/* View cards fill the space between the floating bar and the floating dock;
+   with one open view it fills the screen, with several they split it. */
+.am-phone-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 64px 10px 92px; display: flex; flex-direction: column; gap: 10px; background-color: var(--bg); background-image: radial-gradient(circle at 1px 1px, var(--dot-color, rgba(132,132,156,0.13)) 1px, transparent 1.5px); background-size: 24px 24px; }
+.am-phone-view { display: flex; flex-direction: column; flex: 1 1 0; min-height: 200px; border: 1px solid var(--border-strong); border-radius: 13px; overflow: hidden; background: var(--panel-solid); box-shadow: var(--shadow); }
+.am-phone-view .am-ws-vhead { cursor: default; flex-shrink: 0; }
+.am-phone-view-body { position: relative; flex: 1; min-height: 0; background: var(--viz-bg); }
 .am-phone-view-body > * { position: absolute; inset: 0; }
+
+/* Immersive single-view apps: the lone view fills the screen edge-to-edge and
+   the floating bar + dock overlay it (no reserved strip, no card chrome). The
+   header (and its full-screen/help buttons) is hidden until the view is taken
+   full screen — there the chrome-free fullscreen header returns so you can
+   exit and reach help. */
+.am-phone-immersive .am-phone-scroll { padding: 0; gap: 0; }
+.am-phone-immersive .am-phone-view-solo { border: none; border-radius: 0; min-height: 0; box-shadow: none; }
+.am-phone-immersive .am-phone-view-solo:not(.am-ws-full) > .am-ws-vhead,
+.am-phone-immersive .am-phone-view-solo > .am-phone-vresize { display: none; }
+/* The lone affordance overlaid on an immersive view: take it full screen,
+   which lifts it above the floating bar + dock for a chrome-free canvas. */
+.am-phone-immersive-expand {
+  position: absolute; top: 64px; right: 12px; z-index: var(--z-actionbar);
+  width: 38px; height: 38px; display: grid; place-items: center;
+  border-radius: 11px; border: 1px solid var(--border-strong);
+  background: var(--panel); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  color: var(--fg); box-shadow: var(--shadow); cursor: pointer;
+}
 /* chip switcher for layout-modeled exclusive views (matrix/welfare/lattice …) */
 .am-phone-layouts { display: flex; gap: 6px; overflow-x: auto; flex-shrink: 0; padding-bottom: 2px; scrollbar-width: none; }
 .am-phone-layouts::-webkit-scrollbar { display: none; }
@@ -560,7 +673,7 @@ body {
 .am-phone-sheet-head .am-sec-tier { margin-left: auto; }
 .am-phone-sheet-title { font-size: 14.5px; font-weight: 700; }
 .am-phone-sheet-body { overflow-y: auto; padding: 10px 16px 22px; }
-.am-phone-scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.35); z-index: var(--z-sheet-scrim); }
+.am-phone-scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.35); z-index: var(--z-sheet-scrim); cursor: pointer; touch-action: manipulation; }
 .am-sheet-grip { width: 36px; height: 4px; border-radius: 2px; background: var(--track); position: absolute; top: 7px; left: 50%; transform: translateX(-50%); }
 .am-sec-tier { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px; }
 

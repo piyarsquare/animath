@@ -55,6 +55,12 @@ picture is a morph to help your eye track points, not a mathematical map in
 its own right. The 4-D axis cross belongs to the linear views and fades out
 toward the Torus, where the scaffold takes over as the reference frame.
 
+The **Orbit** toggle (Camera panel) sets how a drag moves the camera:
+**Turntable** (default) keeps "up" pointing up and stops at the poles, so the
+view is easy to recenter by hand; **Free** is an unbounded trackball that
+tumbles past the poles and can roll. Either way a drag only moves the *camera* —
+the 4-D rotation lives on the buttons.
+
 - **Drop axis** (4D Rotation panel) — the bluntest projection: just forget
   one of the four coordinates and keep the other three (an orthographic
   slice). Picking one returns the slider to Perspective so the two controls

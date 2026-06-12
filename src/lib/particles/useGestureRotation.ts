@@ -5,20 +5,34 @@ import type { ParticleState } from './useParticleState';
 
 const ORBIT_SENSITIVITY = 0.006;     // radians of camera orbit per pixel
 const WHEEL_ZOOM_SENSITIVITY = 0.01; // cameraZ delta per wheel deltaY
+const ELEV_LIMIT = Math.PI / 2 - 0.01; // turntable elevation clamp (just shy of the poles)
 
 interface Pt { x: number; y: number; }
 
 const X_AXIS = new THREE.Vector3(1, 0, 0);
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
+
+/** The bounded "turntable" orientation: azimuth around world-up, then
+ *  elevation about the camera's right axis. Keeps the horizon level (no roll),
+ *  so identity (az=el=0) is the straight-back default and recentering is easy. */
+function turntableQuat(az: number, el: number) {
+  return new THREE.Quaternion()
+    .setFromAxisAngle(Y_AXIS, az)
+    .multiply(new THREE.Quaternion().setFromAxisAngle(X_AXIS, -el));
+}
 
 /**
  * Pointer-driven CAMERA controls for a particle viewer. Gestures never touch
  * the 4D quaternion rotation — plane rotations live on the on-screen
  * quarter-turn buttons.
  *
- *   1-pointer drag             → free orbit (trackball tumble around the
- *                                look-at target, no pole limits) — or pan,
- *                                when the (phone) Drag mode is Pan.
+ *   1-pointer drag             → orbit the camera around the look-at target.
+ *                                Bounded "turntable" by default (up stays up,
+ *                                elevation clamps at the poles); the Camera
+ *                                panel's Orbit toggle switches to a free
+ *                                trackball that tumbles without limits. Drags
+ *                                pan instead when the (phone) Drag mode is Pan.
  *   right-button drag          → pan (desktop; the canvas context menu is
  *                                suppressed so the drag reads cleanly).
  *   Space (held) / Shift +drag → pan (momentary modifiers — translate the
@@ -87,10 +101,20 @@ export function useGestureRotation(state: ParticleState) {
     state.setPanZ(p => p + right.z * sx + up.z * sy);
   }
 
+  /** Re-derive the turntable's azimuth/elevation from the current camera
+   *  orientation, so a turntable drag continues smoothly from wherever the
+   *  camera is (after a reset, a free-mode tumble, or the ambient orbit). */
+  function syncTurntableFromQuat() {
+    const p = Z_AXIS.clone().applyQuaternion(state.camQuat);
+    state.elevationRef.current = Math.asin(Math.max(-1, Math.min(1, p.y)));
+    state.azimuthRef.current = Math.atan2(p.x, p.z);
+  }
+
   const onPointerDown = (e: React.PointerEvent) => {
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (e.button === 2) panPointers.current.add(e.pointerId);
+    if (state.orbitMode === 'turntable') syncTurntableFromQuat();
     if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()];
       lastPinchDist.current = Math.hypot(a.x - b.x, a.y - b.y);
@@ -110,7 +134,7 @@ export function useGestureRotation(state: ParticleState) {
       const dy = next.y - prev.y;
       if (e.shiftKey || spaceHeld.current || panPointers.current.has(e.pointerId) || state.dragMode === 'pan') {
         applyPan(dx, dy, el);
-      } else {
+      } else if (state.orbitMode === 'free') {
         // Free trackball orbit: incremental rotations about the camera's own
         // right/up axes, so the tumble never hits a pole stop. Drag-right
         // turns the camera right; drag-up pitches over the top and keeps going.
@@ -118,6 +142,15 @@ export function useGestureRotation(state: ParticleState) {
           .multiply(new THREE.Quaternion().setFromAxisAngle(Y_AXIS, dx * ORBIT_SENSITIVITY))
           .multiply(new THREE.Quaternion().setFromAxisAngle(X_AXIS, dy * ORBIT_SENSITIVITY))
           .normalize());
+      } else {
+        // Bounded turntable: azimuth around world-up, elevation clamped at the
+        // poles. The horizon stays level, so the view is easy to recenter.
+        state.azimuthRef.current += dx * ORBIT_SENSITIVITY;
+        state.elevationRef.current = Math.max(
+          -ELEV_LIMIT,
+          Math.min(ELEV_LIMIT, state.elevationRef.current - dy * ORBIT_SENSITIVITY),
+        );
+        state.setCamQuat(turntableQuat(state.azimuthRef.current, state.elevationRef.current));
       }
     } else if (count >= 2) {
       const others = [...pointers.current.entries()].filter(([id]) => id !== e.pointerId);

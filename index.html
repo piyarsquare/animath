@@ -21,9 +21,17 @@
       body {
         overflow: hidden;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        background: #0c0c10;
-        color: #f0f0f3;
+        background: #0a0c12;
+        color: #eef1f7;
       }
+      /* Boot background per skin — applied by the inline script below via
+         <html data-theme>, so the first paint matches the persisted skin
+         instead of flashing dark before the bundled theme.css loads. */
+      html[data-theme='light']     body { background: #f0ede4; color: #1d1c18; }
+      html[data-theme='blueprint'] body { background: #0e2148; color: #f2f6ff; }
+      html[data-theme='phosphor']  body { background: #03100a; color: #d4ffe0; }
+      html[data-theme='neon']      body { background: #05060f; color: #e9f0ff; }
+      html[data-theme='dark']      body { background: #0a0c12; color: #eef1f7; }
       #root { height: 100%; }
 
       button {
@@ -41,6 +49,18 @@
         }
       }
     </style>
+    <script>
+      /* Set <html data-theme> from the persisted skin at parse time, before the
+         bundle loads, so the boot background (above) matches — no skin flash.
+         applyPersistedSkin() in the bundle re-applies the same value. */
+      (function () {
+        try {
+          var s = localStorage.getItem('animath:v1:chrome:skin');
+          var ok = ['dark', 'light', 'blueprint', 'phosphor', 'neon'];
+          document.documentElement.setAttribute('data-theme', ok.indexOf(s) >= 0 ? s : 'dark');
+        } catch (e) { /* private mode — fall back to the default skin */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

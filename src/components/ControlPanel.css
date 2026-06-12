@@ -144,11 +144,8 @@
 }
 .cp-stop:hover { color: var(--cp-fg); }
 .cp-stop-on { color: var(--cp-accent); }
-.cp-row input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--cp-accent);
-}
+/* Checkboxes are styled globally (token-styled box) in chrome/theme.css, so
+   every app shares one look — nothing to override here. */
 
 /* Two-thumb range slider (RangeSlider) — two overlapping native range inputs
    over a shared rail + fill. The inputs' tracks ignore pointer events so both

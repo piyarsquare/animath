@@ -33,9 +33,20 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
   // Camera orbit + pan are transient "looking" state, not settings — they reset
   // each session (and the Reset orientation button clears them), so they are
   // intentionally NOT persisted.
-  // Free orbit: the camera's orientation quaternion (camera-local → world).
-  // Identity = the straight-back default, at (0, 0, cameraZ) facing the target.
+  // The camera's orientation quaternion (camera-local → world). Identity = the
+  // straight-back default, at (0, 0, cameraZ) facing the target. Both orbit
+  // modes write it; useUniformSync reads it to place the camera.
   const [camQuat, setCamQuat] = useState(() => new THREE.Quaternion());
+  // How a drag tumbles the camera. 'turntable' (default) is the bounded orbit:
+  // horizontal = azimuth around world-up, vertical = elevation clamped to the
+  // poles, so "up" stays up and the scene is easy to recenter by hand.
+  // 'free' is the unbounded trackball — it tumbles past the poles and can roll,
+  // which is powerful but easy to get lost in. This is a setting (persisted).
+  const [orbitMode, setOrbitMode] = usePersistentState<'turntable' | 'free'>(pk('orbitMode'), 'turntable');
+  // Turntable accumulator (azimuth/elevation, radians). Refs, not state, so a
+  // continuous drag never races React renders; camQuat is the rendered output.
+  const azimuthRef = useRef(0);
+  const elevationRef = useRef(0);
   /** What a one-finger drag does: orbit the camera or pan the target. */
   const [dragMode, setDragMode] = useState<'orbit' | 'pan'>('orbit');
   const [panX, setPanX] = useState(0);
@@ -239,6 +250,8 @@ export function useParticleState(options: UseParticleStateOptions = {}) {
     particleCount, setParticleCount,
     cameraZ, setCameraZ,
     camQuat, setCamQuat,
+    orbitMode, setOrbitMode,
+    azimuthRef, elevationRef,
     dragMode, setDragMode,
     panX, setPanX,
     panY, setPanY,

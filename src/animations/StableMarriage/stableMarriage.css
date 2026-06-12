@@ -180,11 +180,7 @@
   gap: 8px;
 }
 
-.sm-toggle input[type='checkbox'] {
-  accent-color: var(--accent);
-  width: 16px;
-  height: 16px;
-}
+/* the checkbox itself is token-styled globally (chrome/theme.css) */
 
 /* playback transport: 2×2 button grid */
 .sm-actions {

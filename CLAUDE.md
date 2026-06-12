@@ -292,7 +292,11 @@ become **layouts** (`views[id].open`).
 
 Particle viewers split **looking** (gestures) from **navigating** (buttons):
 
-- **1-finger / mouse drag** orbits the camera (never the 4D rotation).
+- **1-finger / mouse drag** orbits the camera (never the 4D rotation). The
+  Camera panel's **Orbit** toggle picks the style: **Turntable** (default) is
+  the bounded orbit — azimuth around world-up, elevation clamped at the poles,
+  so "up" stays up and the view is easy to recenter by hand — and **Free** is
+  the unbounded trackball that tumbles past the poles and can roll.
 - **2-finger drag** pans the look-at target; on desktop, **right-drag**,
   **held `Space`+drag** or `Shift`+drag pan (the phone keeps a Drag
   Orbit | Pan pill for one-finger choice).

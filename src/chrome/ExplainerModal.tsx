@@ -25,13 +25,13 @@ export function ExplainerModal({ title, markdown, onClose }: {
 }) {
   useEscLayer(true, onClose);
   return createPortal(
-    <div className="am-modal-scrim" onClick={onClose} role="presentation">
+    <div className="am-modal-scrim" onPointerDown={onClose} role="presentation">
       <div
         className="am-modal"
         role="dialog"
         aria-modal="true"
         aria-label={`${title} — explainer`}
-        onClick={e => e.stopPropagation()}
+        onPointerDown={e => e.stopPropagation()}
       >
         <div className="am-modal-head">
           <h2>{title}</h2>

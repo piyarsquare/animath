@@ -70,7 +70,7 @@ export function SkinPicker({ skin, onSetSkin, compact }: {
       </button>
       {open && (
         <>
-          <div className="am-menu-scrim" onClick={() => setOpen(false)} />
+          <div className="am-menu-scrim" onPointerDown={() => setOpen(false)} />
           <div className="am-skin-menu">
             <div className="am-lay-group">Skins</div>
             {SKINS.map(s => (
