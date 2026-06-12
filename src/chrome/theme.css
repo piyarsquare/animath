@@ -370,6 +370,12 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
 .am-gal-title-roll { cursor: pointer; }
 .am-gal-title b { color: var(--accent); font-weight: inherit; transition: opacity .18s ease; }
 .am-gal-title.is-swapping b { opacity: 0; }
+/* Blueprint's accent equals its text color (chalk-white on blue), so the verbs
+   wouldn't stand out — use the counter-accent (blue) there instead. */
+[data-theme="blueprint"] .am-gal-title b { color: var(--accent-2); }
+/* Phosphor sets the title in a monospace display face, which runs much wider —
+   pull the size down so the longer randomized headline doesn't blow out. */
+[data-theme="phosphor"] .am-gal-title { font-size: 30px; letter-spacing: -0.01em; }
 @media (prefers-reduced-motion: reduce) {
   .am-gal-title b { transition: none; }
 }
