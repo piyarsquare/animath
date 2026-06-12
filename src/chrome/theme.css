@@ -45,6 +45,7 @@
 /* ---------------- Observatory · dark (default) ----------------
    Cool blue-black ink, warm refined gold, faint cyan structure. */
 [data-theme="dark"] {
+  color-scheme: dark;
   --bg: #0a0c12;
   --viz-bg: #04060c;
   --panel: rgba(18,21,30,0.84);
@@ -68,6 +69,7 @@
 /* ---------------- Paper · light ----------------
    Warm paper, deep ink, deepened amber for contrast. */
 [data-theme="light"] {
+  color-scheme: light;
   --bg: #f0ede4;
   --viz-bg: #f6f3ec;
   --panel: rgba(255,255,255,0.92);
@@ -91,6 +93,7 @@
 /* ---------------- Blueprint · drafting board ----------------
    Deep drafting blue, chalk-white line work, technical and crisp. */
 [data-theme="blueprint"] {
+  color-scheme: dark;
   --bg: #0e2148;
   --viz-bg: #0a1838;
   --panel: rgba(18,42,90,0.88);
@@ -115,6 +118,7 @@
 /* ---------------- Phosphor · CRT terminal ----------------
    Near-black green glass, phosphor trace, everything mono. */
 [data-theme="phosphor"] {
+  color-scheme: dark;
   --bg: #03100a;
   --viz-bg: #020c07;
   --panel: rgba(8,28,17,0.88);
@@ -141,6 +145,7 @@
 /* ---------------- Spectrum · neon ----------------
    Deep space black, cyan primary, magenta counter-accent. */
 [data-theme="neon"] {
+  color-scheme: dark;
   --bg: #05060f;
   --viz-bg: #04050d;
   --panel: rgba(13,17,33,0.62);
@@ -340,10 +345,12 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
 .am-num::-webkit-outer-spin-button, .am-num::-webkit-inner-spin-button { opacity: 0.4; }
 
 /* ============ Generic scrim (menus, modals) ============ */
-.am-menu-scrim { position: fixed; inset: 0; z-index: var(--z-menu-scrim); }
+/* cursor:pointer + touch-action keep these bare dismiss layers tappable in one
+   touch (Safari only synthesizes taps on elements it deems clickable). */
+.am-menu-scrim { position: fixed; inset: 0; z-index: var(--z-menu-scrim); cursor: pointer; touch-action: manipulation; }
 
 /* ============ Explainer modal ============ */
-.am-modal-scrim { position: fixed; inset: 0; z-index: var(--z-modal); background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; }
+.am-modal-scrim { position: fixed; inset: 0; z-index: var(--z-modal); background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; }
 .am-modal { width: min(560px, 92%); max-height: 86%; overflow-y: auto; background: var(--panel-solid); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 22px 24px; animation: am-pop .2s var(--ease); }
 .am-modal h2 { margin: 0 0 12px; font-size: 19px; }
 .am-modal-head { display: flex; align-items: center; gap: 10px; }
@@ -611,11 +618,23 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
 .am-phone-view-body > * { position: absolute; inset: 0; }
 
 /* Immersive single-view apps: the lone view fills the screen edge-to-edge and
-   the floating bar + dock overlay it (no reserved strip, no card chrome). */
+   the floating bar + dock overlay it (no reserved strip, no card chrome). The
+   header (and its full-screen/help buttons) is hidden until the view is taken
+   full screen — there the chrome-free fullscreen header returns so you can
+   exit and reach help. */
 .am-phone-immersive .am-phone-scroll { padding: 0; gap: 0; }
 .am-phone-immersive .am-phone-view-solo { border: none; border-radius: 0; min-height: 0; box-shadow: none; }
-.am-phone-immersive .am-phone-view-solo > .am-ws-vhead,
+.am-phone-immersive .am-phone-view-solo:not(.am-ws-full) > .am-ws-vhead,
 .am-phone-immersive .am-phone-view-solo > .am-phone-vresize { display: none; }
+/* The lone affordance overlaid on an immersive view: take it full screen,
+   which lifts it above the floating bar + dock for a chrome-free canvas. */
+.am-phone-immersive-expand {
+  position: absolute; top: 64px; right: 12px; z-index: var(--z-actionbar);
+  width: 38px; height: 38px; display: grid; place-items: center;
+  border-radius: 11px; border: 1px solid var(--border-strong);
+  background: var(--panel); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  color: var(--fg); box-shadow: var(--shadow); cursor: pointer;
+}
 /* chip switcher for layout-modeled exclusive views (matrix/welfare/lattice …) */
 .am-phone-layouts { display: flex; gap: 6px; overflow-x: auto; flex-shrink: 0; padding-bottom: 2px; scrollbar-width: none; }
 .am-phone-layouts::-webkit-scrollbar { display: none; }
@@ -640,7 +659,7 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
 .am-phone-sheet-head .am-sec-tier { margin-left: auto; }
 .am-phone-sheet-title { font-size: 14.5px; font-weight: 700; }
 .am-phone-sheet-body { overflow-y: auto; padding: 10px 16px 22px; }
-.am-phone-scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.35); z-index: var(--z-sheet-scrim); }
+.am-phone-scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.35); z-index: var(--z-sheet-scrim); cursor: pointer; touch-action: manipulation; }
 .am-sheet-grip { width: 36px; height: 4px; border-radius: 2px; background: var(--track); position: absolute; top: 7px; left: 50%; transform: translateX(-50%); }
 .am-sec-tier { font-family: var(--font-mono); font-size: 9px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px; }
 

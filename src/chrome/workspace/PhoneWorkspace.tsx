@@ -166,6 +166,19 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
                   <i />
                 </div>
               )}
+              {/* Immersive apps hide the card header, so this floating button is
+                  the way into (chrome-free) full screen; the fullscreen header
+                  brings back exit + help. */}
+              {immersive && !isFull && (
+                <button
+                  className="am-phone-immersive-expand"
+                  title="Full screen"
+                  aria-label={`Full screen ${v.title}`}
+                  onClick={() => setFull(v.id)}
+                >
+                  <Icon name="expand" size={15} />
+                </button>
+              )}
             </div>
           );
         })}
@@ -204,7 +217,7 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
       </div>
       {active && (
         <>
-          <div className="am-phone-scrim" onClick={() => setSheet(null)} role="presentation" />
+          <div className="am-phone-scrim" onPointerDown={() => setSheet(null)} role="presentation" />
           <div className="am-phone-sheet" role="dialog" aria-label={active.title}>
             <div className="am-sheet-grip" />
             <div className="am-phone-sheet-head">

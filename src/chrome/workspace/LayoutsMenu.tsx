@@ -58,7 +58,7 @@ export function LayoutsControl({ current, builtin, saved, onPick, onSave, onDele
       </button>
       {open && (
         <>
-          <div className="am-menu-scrim" onClick={() => setOpen(false)} />
+          <div className="am-menu-scrim" onPointerDown={() => setOpen(false)} />
           <div className="am-layouts-menu" role="menu">
             <div className="am-lay-group">Workspaces</div>
             {builtin.map(Item)}

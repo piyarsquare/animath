@@ -39,6 +39,31 @@ session is a separate, user-driven polish pass, not a direct continuation.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 17:50 — Radar sweep: skins, first paint, immersive toggle, single-tap dismiss
+
+**Why:** User said "fix everything on your list" + a new ask: a single tap off a
+menu should dismiss it on mobile.
+
+- **Single-tap dismiss.** Scrims dismissed on `onClick` on bare `<div>`s, which
+  Safari needs two taps for (it only synthesizes taps on "clickable" elements).
+  Switched the menu, sheet and modal scrims to `onPointerDown` (+ `cursor:
+  pointer; touch-action: manipulation`), and stopped pointer-down propagation on
+  the modal content. Verified in puppeteer: one tap on the scrim closes the
+  sheet.
+- **Native controls per skin.** Added `color-scheme` to each `[data-theme]`
+  block (light → light, the rest → dark) so native selects/scrollbars/spinners
+  match the skin. ControlPanel's range/select were already custom-styled.
+- **First-paint flash.** `index.html` now seeds `<html data-theme>` from the
+  persisted skin via an inline boot script + per-skin body background, so the
+  first paint matches the skin instead of flashing dark before theme.css loads.
+- **Immersive chrome escape.** The full-bleed single-view phone layout hid the
+  header; added a floating full-screen button that lifts the view above the
+  bar+dock (reusing the existing fullscreen layer), and the fullscreen header
+  returns so you can exit/reach help.
+- **Verified the other action-bar apps on mobile** (Stable Matching, Agentic
+  Sorting, Trinary) and the **ComplexParticles EXPLAINER** now documents the
+  Orbit toggle. Build/lint/test green.
+
 ### 🟢 code · 16:48 — Branded loading screen for lazy routes
 
 **Why:** User asked about the load screen — the Suspense fallback was a blank
