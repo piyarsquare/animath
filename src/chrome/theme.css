@@ -504,6 +504,9 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
   position: fixed; inset: 0; width: auto; height: auto; max-height: none;
   border: none; border-radius: 0; z-index: var(--z-full); animation: none;
 }
+/* On mobile the dynamic toolbar makes a fixed inset:0 box unreliable; pin it
+   to the visible viewport explicitly so full screen truly fills the screen. */
+.am-phone-view.am-ws-full { height: 100dvh; }
 .am-phone-view.am-ws-full { display: flex; flex-direction: column; }
 .am-phone-view.am-ws-full .am-phone-view-body { height: auto; max-height: none; flex: 1; min-height: 0; }
 
