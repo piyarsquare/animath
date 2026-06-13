@@ -106,17 +106,9 @@ the surface drapes through each projection.
 
 ### Domain region
 
-You can carve down and mark the sampled plane by polar criteria — applied live
-in the shader, so every render mode and projection updates instantly with no
-rebuild. **Radius `|z|`** keeps an annulus (drag the top thumb to ∞ for no upper
-limit); the **Unit circle** pills keep only `|z|<1` or `|z|>1`; the **Quadrants**
-chips toggle the four sign regions of `z` on and off. **Region tint** then recolors
-what's left to expose its structure: **Quadrants** hue-tags the four regions
-(amber `Q1`, green `Q2`, blue `Q3`, rose `Q4` — the chips show the legend),
-**In/out** applies a divergent log-`|z|` shade that's neutral exactly on the unit
-circle and cools inward / warms outward so inside and outside read apart, and
-**Both** overlays the two. The tint is independent of the on/off chips, so you can
-color all four quadrants while keeping only some of them visible.
+**Radius `|z|`** restricts the sampled plane to a polar band — keep only an
+annulus, or drag the top thumb to ∞ for no upper limit. It's a shader mask, so
+every render mode and projection updates instantly with no rebuild.
 
 ## Branches and Riemann sheets (Domain panel)
 

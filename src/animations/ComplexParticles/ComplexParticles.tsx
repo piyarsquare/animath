@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import ParticleViewerShell from '../../components/ParticleViewerShell';
-import { Select, NumberInput, ComplexInput, Checkbox, RangeSlider, Pills } from '../../components/ControlPanel';
+import { Select, NumberInput, ComplexInput, Checkbox, RangeSlider } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
@@ -110,24 +110,11 @@ export default function ComplexParticles({
   const [quadB, setQuadB] = usePersistentState<Complex2>(ek('quadB'), [0, 0]);
   const [quadC, setQuadC] = usePersistentState<Complex2>(ek('quadC'), [0, 0]);
 
-  // Domain region (Domain panel): restrict and/or recolor the sampled plane by
-  // polar criteria, applied live in the shaders (no geometry rebuild). A radius
-  // band on |z| (max thumb = no limit), a union of the four quadrants (by sign
-  // of z), and an inside/outside-the-unit-circle filter; `regionTint` recolors to
-  // mark structure: 'sides' is a divergent log|z| map neutral at |z|=1 (so the unit
-  // circle reads and inside/outside differ), 'quadrants' hue-tags the four quadrants,
-  // 'both' overlays the two. The tint is independent of the on/off quadrant chips.
+  // Domain region (Domain panel): restrict the sampled plane to a polar radius
+  // band on |z| (max thumb = no limit), applied live in the shaders (no geometry
+  // rebuild). rMax at the ceiling means "no upper limit".
   const [radiusRange, setRadiusRange] = usePersistentState<[number, number]>(ek('radiusRange'), [0, REGION_RMAX]);
-  const [quadrants, setQuadrants] = usePersistentState<boolean[]>(ek('quadrants'), [true, true, true, true]);
-  const [sideFilter, setSideFilter] = usePersistentState<'both' | 'inside' | 'outside'>(ek('sideFilter'), 'both');
-  const [regionTint, setRegionTint] = usePersistentState<'off' | 'quadrants' | 'sides' | 'both'>(ek('regionTint'), 'off');
-  // Pack the region state into the shader's uniform shapes (one place, reused by
-  // makeUniforms and the sync effect). rMax at the ceiling means "no upper limit".
   const regionRMax = () => (radiusRange[1] >= REGION_RMAX ? 1e9 : radiusRange[1]);
-  const sideFilterCode = () => (sideFilter === 'inside' ? 1 : sideFilter === 'outside' ? 2 : 0);
-  const quadFlag = (i: number) => (quadrants[i] ? 1 : 0);
-  const tintSidesFlag = () => (regionTint === 'sides' || regionTint === 'both' ? 1 : 0);
-  const tintQuadFlag = () => (regionTint === 'quadrants' || regionTint === 'both' ? 1 : 0);
 
   // Effective sampling box (× axisScale). Locked → symmetric ±extent; unlocked →
   // the independent min/max window.
@@ -264,10 +251,6 @@ export default function ComplexParticles({
     branchIndex: { value: branchMin + b },
     uBranchHue: { value: branchHue(b) },
     uRegionRadius: { value: new THREE.Vector2(radiusRange[0], regionRMax()) },
-    uRegionQuad: { value: new THREE.Vector4(quadFlag(0), quadFlag(1), quadFlag(2), quadFlag(3)) },
-    uSideFilter: { value: sideFilterCode() },
-    uTintSides: { value: tintSidesFlag() },
-    uTintQuad: { value: tintQuadFlag() },
   });
 
   // Adaptive fade only applies while the sheet is on screen — in plain Points
@@ -601,20 +584,15 @@ export default function ComplexParticles({
     });
   }, [state.tileSize]);
 
-  // Push the domain-region controls (radius band, quadrants, side filter, tint)
-  // to every material — live masking/recoloring, no geometry rebuild.
+  // Push the domain-region radius band to every material — live masking, no
+  // geometry rebuild.
   useEffect(() => {
     const rMax = regionRMax();
-    const sf = sideFilterCode();
     state.materialsRef.current.forEach(m => {
       if (m.uniforms.uRegionRadius) (m.uniforms.uRegionRadius.value as THREE.Vector2).set(radiusRange[0], rMax);
-      if (m.uniforms.uRegionQuad) (m.uniforms.uRegionQuad.value as THREE.Vector4).set(quadFlag(0), quadFlag(1), quadFlag(2), quadFlag(3));
-      if (m.uniforms.uSideFilter) m.uniforms.uSideFilter.value = sf;
-      if (m.uniforms.uTintSides) m.uniforms.uTintSides.value = tintSidesFlag();
-      if (m.uniforms.uTintQuad) m.uniforms.uTintQuad.value = tintQuadFlag();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [radiusRange, quadrants, sideFilter, regionTint]);
+  }, [radiusRange]);
 
   // Show the sphere scaffold in the Hopf view (or once the Torus → Hopf collapse
   // is past halfway) and the donut scaffold in the Torus view; hide both in the
@@ -892,73 +870,19 @@ export default function ComplexParticles({
     </>
   );
 
-  // Domain-region controls (polar bounds · quadrant subset · inside/outside the
-  // unit circle). A shader mask, so these toggle live in every render mode.
-  // Quadrants are laid out 2×2 to match the plane (Q2 Q1 / Q3 Q4).
-  // Swatch ≈ the shader's quadrantTint multiplier applied to a neutral gray, so the
-  // chips read as a legend once quadrant tinting is on (laid out 2×2 = Q2 Q1 / Q3 Q4).
-  const quadCells: Array<{ i: number; label: string; title: string; swatch: string }> = [
-    { i: 1, label: 'Q2', title: 'Re z < 0, Im z > 0', swatch: '#7fd09a' },
-    { i: 0, label: 'Q1', title: 'Re z > 0, Im z > 0', swatch: '#d8b96e' },
-    { i: 2, label: 'Q3', title: 'Re z < 0, Im z < 0', swatch: '#8fbdf2' },
-    { i: 3, label: 'Q4', title: 'Re z > 0, Im z < 0', swatch: '#e29acc' },
-  ];
-  const showQuadSwatch = regionTint === 'quadrants' || regionTint === 'both';
+  // Domain-region control: a polar radius band on |z|. A shader mask, so it
+  // applies live in every render mode (max thumb = ∞ = no upper limit).
   const regionControls = (
-    <>
-      <RangeSlider
-        label="Radius |z|"
-        min={0}
-        max={REGION_RMAX}
-        step={0.05}
-        valueMin={radiusRange[0]}
-        valueMax={radiusRange[1]}
-        onChange={(lo, hi) => setRadiusRange([lo, hi])}
-        format={v => (v >= REGION_RMAX ? '∞' : v.toFixed(2))}
-      />
-      <Pills
-        label="Unit circle"
-        options={[
-          { value: 'both', label: 'Both' },
-          { value: 'inside', label: '|z|<1' },
-          { value: 'outside', label: '|z|>1' },
-        ]}
-        value={sideFilter}
-        onChange={setSideFilter}
-      />
-      <div className="cp-row">
-        <div className="cp-row-label"><span>Quadrants</span></div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, maxWidth: 140 }}>
-          {quadCells.map(({ i, label, title, swatch }) => (
-            <button
-              key={label}
-              type="button"
-              className={`am-chip ${quadrants[i] ? 'am-on' : ''}`}
-              aria-pressed={quadrants[i]}
-              title={title}
-              onClick={() => setQuadrants(q => { const n = [...q]; n[i] = !n[i]; return n; })}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
-            >
-              {showQuadSwatch && (
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: swatch, flex: '0 0 auto' }} />
-              )}
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <Pills
-        label="Region tint"
-        options={[
-          { value: 'off', label: 'Off' },
-          { value: 'quadrants', label: 'Quadrants' },
-          { value: 'sides', label: 'In/out' },
-          { value: 'both', label: 'Both' },
-        ]}
-        value={regionTint}
-        onChange={setRegionTint}
-      />
-    </>
+    <RangeSlider
+      label="Radius |z|"
+      min={0}
+      max={REGION_RMAX}
+      step={0.05}
+      valueMin={radiusRange[0]}
+      valueMax={radiusRange[1]}
+      onChange={(lo, hi) => setRadiusRange([lo, hi])}
+      format={v => (v >= REGION_RMAX ? '∞' : v.toFixed(2))}
+    />
   );
 
   return (
