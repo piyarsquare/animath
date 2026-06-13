@@ -405,6 +405,20 @@ export default function ComplexParticles({
     const tileGeom = tileGeomRef.current;
     const netGeom = netGeomRef.current;
     if (!pointsGeom || !fillGeom || !wireGeom || !tileGeom || !netGeom) return;
+    // Preserve the live projection across the rebuild. Fresh materials start at
+    // makeUniforms' defaults (uProjMode = uProjTarget = projRef, alpha 0), which
+    // collapses any active cross-fade — so a Torus/Sphere/mid-morph view would
+    // snap back to Perspective when the sheet count changes. The animation loop
+    // re-pushes rotation every frame (orientation self-heals) but never touches
+    // the projection cross-fade, so capture it here and restore it after rebuild.
+    const prevMat = state.materialsRef.current[0];
+    const projSnap = prevMat
+      ? {
+          mode: prevMat.uniforms.uProjMode.value as number,
+          target: prevMat.uniforms.uProjTarget.value as number,
+          alpha: prevMat.uniforms.uProjAlpha.value as number,
+        }
+      : null;
     pointsRef.current.forEach(o => scene.remove(o));
     fillMeshRef.current.forEach(o => scene.remove(o));
     wireMeshRef.current.forEach(o => scene.remove(o));
@@ -443,6 +457,13 @@ export default function ComplexParticles({
       tileMeshRef.current.push(tiles);
       netMeshRef.current.push(net);
       scene.add(pts, fill, wire, tiles, net);
+    }
+    if (projSnap) {
+      state.materialsRef.current.forEach(m => {
+        m.uniforms.uProjMode.value = projSnap.mode;
+        m.uniforms.uProjTarget.value = projSnap.target;
+        m.uniforms.uProjAlpha.value = projSnap.alpha;
+      });
     }
     applyRenderVisibility();
   };
