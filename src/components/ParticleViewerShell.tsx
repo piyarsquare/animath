@@ -131,6 +131,15 @@ export default function ParticleViewerShell({
     setSpins(s => ({ ...s, [key]: !s[key] }));
   };
 
+  // Touching the projection knob stabilizes the view first: stop every running
+  // spin so the morph isn't fighting a per-frame 4D rotation (which sweeps a
+  // steep function's projection singularity across the grid frame after frame —
+  // the worst case for the GPU). handleProjMix already releases any drop axis.
+  const handleProjMix = (v: number) => {
+    if (anySpin) setSpins({});
+    controls.handleProjMix(v);
+  };
+
   const handleTurn = (id: string, dir: 1 | -1) => {
     if (ambient) controls.orbitTurn(id as ViewAxis, dir);
     else controls.turn(id as Plane, dir);
@@ -277,7 +286,7 @@ export default function ParticleViewerShell({
         label="Projection"
         value={state.projMix}
         min={0} max={2} step={0.01}
-        onChange={controls.handleProjMix}
+        onChange={handleProjMix}
         format={fmtProjMix}
         stops={[
           { value: 0, label: 'Perspective' },
