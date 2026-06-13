@@ -68,11 +68,12 @@ export function makeUnitQuat(angle: number, axis: Axis4D): {L: THREE.Vector4, R:
 }
 
 export function project(p: THREE.Vector4, mode: ProjectionMode): THREE.Vector3{
-  // Perspective denominator (3 + p.w) is floored in magnitude so the eye-plane
-  // singularity (p.w = -3) yields a finite, far-off point instead of infinity —
-  // matches the shader's mode-0 guard (shaders/index.ts) so the 4D axis cross
-  // tracks the rendered geometry. Stereo's pole (n.w = 1) is floored likewise.
-  if(mode===ProjectionMode.Perspective){ const den=3+p.w; const s=den<0?-1:1; return new THREE.Vector3(p.x,p.y,p.z).multiplyScalar(1/(s*Math.max(Math.abs(den),0.35))); }
+  // Perspective denominator (3 + p.w) is floored to a positive minimum so the
+  // eye-plane singularity (p.w = -3) yields a finite point instead of infinity,
+  // continuously (no sign flip as p.w crosses the plane) — matches the shader's
+  // mode-0 guard (shaders/index.ts) so the 4D axis cross tracks the rendered
+  // geometry. Stereo's pole (n.w = 1) is floored likewise.
+  if(mode===ProjectionMode.Perspective){ return new THREE.Vector3(p.x,p.y,p.z).multiplyScalar(1/Math.max(3+p.w,0.35)); }
   if(mode===ProjectionMode.Stereo){ const n=p.clone().normalize(); return new THREE.Vector3(n.x,n.y,n.z).multiplyScalar(1/Math.max(1-n.w,0.04)); }
   if(mode===ProjectionMode.Hopf){
     // Faithful Hopf map of the complex pair (z1,z2) = (x+iy, u+iv) = (z, f):

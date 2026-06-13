@@ -300,10 +300,11 @@ vec3 project(vec4 p, int mode){
   // eye plane (p.w = -3), sending vertices to infinity — for steep functions
   // (exp) that locus is inside the sampled box, and an infinite/NaN vertex makes
   // a Tiles quad anchored there rasterize as garbage and hang mobile GPUs. Floor
-  // the denominator's magnitude (sign-preserving) so such points land far off
-  // screen but finite, mirroring the Torus pole's soft floor. Non-singular
-  // points (|3 + p.w| ≥ floor) are unchanged.
-  if(mode==0){ float den = 3.0 + p.w; float s = den < 0.0 ? -1.0 : 1.0; return p.xyz / (s * max(abs(den), 0.35)); }
+  // the denominator to a positive minimum (no sign flip): the projection stays
+  // continuous as p.w sweeps through the eye plane (a spin would otherwise pop a
+  // crossing vertex from +X/floor to -X/floor), front-facing points (3 + p.w >=
+  // floor) are unchanged, and everything stays finite.
+  if(mode==0){ return p.xyz / max(3.0 + p.w, 0.35); }
   if(mode==1){ vec4 n = normalize(p); return n.xyz / max(1.0 - n.w, 0.04); }
   if(mode==2){ float d = max(dot(p,p), 1e-6); return vec3(2.0*(p.x*p.z + p.y*p.w), 2.0*(p.y*p.z - p.x*p.w), p.x*p.x + p.y*p.y - p.z*p.z - p.w*p.w) / d; }
   if(mode==3) return vec3(p.y, p.z, p.w);
