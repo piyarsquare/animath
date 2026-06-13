@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import ParticleViewerShell from '../../components/ParticleViewerShell';
-import { Select, NumberInput, ComplexInput, Checkbox } from '../../components/ControlPanel';
+import { Select, NumberInput, ComplexInput, Checkbox, RangeSlider, Pills } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
@@ -24,6 +24,8 @@ import type { ViewPoint, HopfScaffold } from '../../lib/particles';
 const STORAGE_KEY = 'complex-particles';
 /** Cap on how many Riemann sheets (particle sets) can be drawn at once. */
 const MAX_SHEETS = 12;
+/** Radius-band slider ceiling; the max thumb here means "no upper |z| limit". */
+const REGION_RMAX = 12;
 import {
   applyComplex, complexPowRational, complexQuadratic,
   functionNames, functionFormulas, functionCategories, POW_PQ_INDEX, QUADRATIC_INDEX,
@@ -107,6 +109,21 @@ export default function ComplexParticles({
   const [quadA, setQuadA] = usePersistentState<Complex2>(ek('quadA'), [1, 0]);
   const [quadB, setQuadB] = usePersistentState<Complex2>(ek('quadB'), [0, 0]);
   const [quadC, setQuadC] = usePersistentState<Complex2>(ek('quadC'), [0, 0]);
+
+  // Domain region (Domain panel): restrict and/or recolor the sampled plane by
+  // polar criteria, applied live in the shaders (no geometry rebuild). A radius
+  // band on |z| (max thumb = no limit), a union of the four quadrants (by sign
+  // of z), and an inside/outside-the-unit-circle filter; `tintSides` recolors by
+  // log|z| with a divergent map neutral at |z|=1, so the unit circle reads.
+  const [radiusRange, setRadiusRange] = usePersistentState<[number, number]>(ek('radiusRange'), [0, REGION_RMAX]);
+  const [quadrants, setQuadrants] = usePersistentState<boolean[]>(ek('quadrants'), [true, true, true, true]);
+  const [sideFilter, setSideFilter] = usePersistentState<'both' | 'inside' | 'outside'>(ek('sideFilter'), 'both');
+  const [tintSides, setTintSides] = usePersistentState(ek('tintSides'), false);
+  // Pack the region state into the shader's uniform shapes (one place, reused by
+  // makeUniforms and the sync effect). rMax at the ceiling means "no upper limit".
+  const regionRMax = () => (radiusRange[1] >= REGION_RMAX ? 1e9 : radiusRange[1]);
+  const sideFilterCode = () => (sideFilter === 'inside' ? 1 : sideFilter === 'outside' ? 2 : 0);
+  const quadFlag = (i: number) => (quadrants[i] ? 1 : 0);
 
   // Effective sampling box (× axisScale). Locked → symmetric ±extent; unlocked →
   // the independent min/max window.
@@ -242,6 +259,10 @@ export default function ComplexParticles({
     uProjAlpha: { value: 0 },
     branchIndex: { value: branchMin + b },
     uBranchHue: { value: branchHue(b) },
+    uRegionRadius: { value: new THREE.Vector2(radiusRange[0], regionRMax()) },
+    uRegionQuad: { value: new THREE.Vector4(quadFlag(0), quadFlag(1), quadFlag(2), quadFlag(3)) },
+    uSideFilter: { value: sideFilterCode() },
+    uTintSides: { value: tintSides ? 1 : 0 },
   });
 
   // Adaptive fade only applies while the sheet is on screen — in plain Points
@@ -575,6 +596,20 @@ export default function ComplexParticles({
     });
   }, [state.tileSize]);
 
+  // Push the domain-region controls (radius band, quadrants, side filter, tint)
+  // to every material — live masking/recoloring, no geometry rebuild.
+  useEffect(() => {
+    const rMax = regionRMax();
+    const sf = sideFilterCode();
+    state.materialsRef.current.forEach(m => {
+      if (m.uniforms.uRegionRadius) (m.uniforms.uRegionRadius.value as THREE.Vector2).set(radiusRange[0], rMax);
+      if (m.uniforms.uRegionQuad) (m.uniforms.uRegionQuad.value as THREE.Vector4).set(quadFlag(0), quadFlag(1), quadFlag(2), quadFlag(3));
+      if (m.uniforms.uSideFilter) m.uniforms.uSideFilter.value = sf;
+      if (m.uniforms.uTintSides) m.uniforms.uTintSides.value = tintSides ? 1 : 0;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [radiusRange, quadrants, sideFilter, tintSides]);
+
   // Show the sphere scaffold in the Hopf view (or once the Torus → Hopf collapse
   // is past halfway) and the donut scaffold in the Torus view; hide both in the
   // flat/perspective projections.
@@ -851,6 +886,60 @@ export default function ComplexParticles({
     </>
   );
 
+  // Domain-region controls (polar bounds · quadrant subset · inside/outside the
+  // unit circle). A shader mask, so these toggle live in every render mode.
+  // Quadrants are laid out 2×2 to match the plane (Q2 Q1 / Q3 Q4).
+  const quadCells: Array<{ i: number; label: string; title: string }> = [
+    { i: 1, label: 'Q2', title: 'Re z < 0, Im z > 0' },
+    { i: 0, label: 'Q1', title: 'Re z > 0, Im z > 0' },
+    { i: 2, label: 'Q3', title: 'Re z < 0, Im z < 0' },
+    { i: 3, label: 'Q4', title: 'Re z > 0, Im z < 0' },
+  ];
+  const regionControls = (
+    <>
+      <RangeSlider
+        label="Radius |z|"
+        min={0}
+        max={REGION_RMAX}
+        step={0.05}
+        valueMin={radiusRange[0]}
+        valueMax={radiusRange[1]}
+        onChange={(lo, hi) => setRadiusRange([lo, hi])}
+        format={v => (v >= REGION_RMAX ? '∞' : v.toFixed(2))}
+      />
+      <Pills
+        label="Unit circle"
+        options={[
+          { value: 'both', label: 'Both' },
+          { value: 'inside', label: '|z|<1' },
+          { value: 'outside', label: '|z|>1' },
+        ]}
+        value={sideFilter}
+        onChange={setSideFilter}
+      />
+      <div className="cp-row">
+        <div className="cp-row-label"><span>Quadrants</span></div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, maxWidth: 140 }}>
+          {quadCells.map(({ i, label, title }) => (
+            <button
+              key={label}
+              type="button"
+              className={`am-chip ${quadrants[i] ? 'am-on' : ''}`}
+              aria-pressed={quadrants[i]}
+              title={title}
+              onClick={() => setQuadrants(q => { const n = [...q]; n[i] = !n[i]; return n; })}
+            >{label}</button>
+          ))}
+        </div>
+      </div>
+      <Checkbox
+        label="Tint by |z| (divergent, log — neutral at |z|=1)"
+        checked={tintSides}
+        onChange={setTintSides}
+      />
+    </>
+  );
+
   return (
     <ParticleViewerShell
       appId="complex-particles"
@@ -861,7 +950,7 @@ export default function ComplexParticles({
       functionFormula={displayFormula}
       functionPicker={functionPicker}
       topExtra={functionTopSelect}
-      domainExtras={isMultivalued ? branchControls : undefined}
+      domainExtras={<>{regionControls}{isMultivalued ? branchControls : null}</>}
       readme={readmeText}
       explainer={explainerText}
       settingsStorageKey={embed ? undefined : STORAGE_KEY}

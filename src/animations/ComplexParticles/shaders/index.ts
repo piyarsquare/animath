@@ -55,6 +55,12 @@ uniform int   uColorQty;
 uniform int   uBrightnessQty;
 uniform int   uInCoord;
 uniform int   uOutCoord;
+// Domain region controls (Domain panel). The mask gates which samples render;
+// the tint recolors by |z| so the unit circle reads as a boundary.
+uniform vec2  uRegionRadius;   // keep |z| in [x, y]
+uniform vec4  uRegionQuad;     // per-quadrant keep flag (Q1,Q2,Q3,Q4), by sign of z
+uniform int   uSideFilter;     // 0 both · 1 inside |z|<1 · 2 outside |z|>1
+uniform int   uTintSides;      // 1 → divergent log-|z| tint centered on |z|=1
 attribute float size;
 attribute vec4 seed;
 varying vec3 vColor;
@@ -417,6 +423,31 @@ vec2 domainWarp(vec2 z){
   float rNew = pow(R, 2.0 * (r / R) - 1.0);
   return z * (rNew / r);
 }
+// Domain region gate: 1.0 if the domain point z (post-warp, the value fed to f)
+// is inside the active region — the radius band ∩ the selected quadrants ∩ the
+// inside/outside filter — else 0.0. Axes (z.x or z.y == 0) fall into a quadrant
+// by the >= tests, so they never gap. Each render mode multiplies its alpha by
+// this (or discards on it) so masking is live and needs no geometry rebuild.
+float regionMask(vec2 z){
+  float r = length(z);
+  if(r < uRegionRadius.x || r > uRegionRadius.y) return 0.0;
+  float quad = (z.x >= 0.0) ? ((z.y >= 0.0) ? uRegionQuad.x : uRegionQuad.w)
+                            : ((z.y >= 0.0) ? uRegionQuad.y : uRegionQuad.z);
+  if(quad < 0.5) return 0.0;
+  if(uSideFilter == 1 && r > 1.0) return 0.0;
+  if(uSideFilter == 2 && r < 1.0) return 0.0;
+  return 1.0;
+}
+// Divergent tint by log|z|, neutral (×1) at |z|=1 so the unit circle is the
+// pivot: cools toward the inside (|z|<1), warms toward the outside (|z|>1). The
+// log scale spreads decades evenly; tanh softens the far field. Multiplied onto
+// the base color so the domain-coloring structure still shows through.
+vec3 divergentTint(float r){
+  float u = clamp(0.5 + 0.5*tanh(log(r + 1e-6) / 1.5), 0.0, 1.0);
+  vec3 cool = vec3(0.45, 0.65, 1.35);
+  vec3 warm = vec3(1.35, 0.60, 0.40);
+  return (u < 0.5) ? mix(cool, vec3(1.0), u * 2.0) : mix(vec3(1.0), warm, (u - 0.5) * 2.0);
+}
 // Full surface placement of a domain point (no jitter): warp → chart → 4-vector →
 // 4D rotation → projection → scale. The sheet shaders use this both to place
 // each vertex and to sample a cell's four corners so they can measure how far
@@ -465,7 +496,7 @@ varying float vPointKeep;
 // clean z, then add the full independent 4D offset to (x, y, Re f, Im f), pushing
 // the point off the surface on all four axes. Color uses the effective z/f, so
 // it stays consistent in both modes.
-void main(){vec2 z = vec2(position.x, position.z);vec4 jit = (seed*2. - 1.) * jitterAmp;if(uJitterMode==0) z += jit.xy;vPointKeep = (uAdaptive==1) ? smoothstep(uDensity, uDensity*2.0, cellStretch(z - 0.5*uCellSize, uCellSize)) : 1.0;vec2 zc = domainWarp(z);vec2 f = applyComplex(zc, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec2 zPlot = chartCoord(zc, uInCoord);vec2 fPlot = chartCoord(f, uOutCoord);vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);if(uJitterMode==1) p4 += jit;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColor(zc,f);}`;
+void main(){vec2 z = vec2(position.x, position.z);vec4 jit = (seed*2. - 1.) * jitterAmp;if(uJitterMode==0) z += jit.xy;vPointKeep = (uAdaptive==1) ? smoothstep(uDensity, uDensity*2.0, cellStretch(z - 0.5*uCellSize, uCellSize)) : 1.0;vec2 zc = domainWarp(z);vPointKeep *= regionMask(zc);vec2 f = applyComplex(zc, functionType);if(length(f) > 1e3) f = normalize(f)*1e3;vec2 zPlot = chartCoord(zc, uInCoord);vec2 fPlot = chartCoord(f, uOutCoord);vec4 p4 = vec4(zPlot.x, zPlot.y, fPlot.x, fPlot.y);if(uJitterMode==1) p4 += jit;p4 = quatRotate4D(p4, uRotL, uRotR);vec3 Pold = project(p4, uProjMode);vec3 Pnew = project(p4, uProjTarget);vec3 pos3 = mix(Pold, Pnew, uProjAlpha) * 1.5;vec4 mv  = modelViewMatrix * vec4(pos3,1.);gl_Position = projectionMatrix * mv;gl_PointSize = size * globalSize * (80. / -mv.z);vColor = calcColor(zc,f);if(uTintSides==1) vColor *= divergentTint(length(zc));}`;
 
 export const fragmentShader = `
 uniform float opacity;
@@ -514,6 +545,7 @@ uniform vec2 uCellSize;    // domain units per cell (for the adaptive metric)
 varying vec3 vViewPos;
 varying float vFade;
 varying float vStretch;
+varying float vRegion;
 void main(){
   vec2 z = vec2(position.x, position.z);
   {
@@ -527,6 +559,7 @@ void main(){
   // fill where the function stretches the grid.
   vStretch = cellStretch(z - 0.5*uCellSize, uCellSize);
   vec2 zc = domainWarp(z);
+  vRegion = regionMask(zc);
   vec2 f = applyComplex(zc, functionType);
   if(length(f) > 1e3) f = normalize(f)*1e3;
   vec3 pos3 = surfacePos(z);
@@ -534,6 +567,7 @@ void main(){
   vViewPos = mv.xyz;
   gl_Position = projectionMatrix * mv;
   vColor = calcColor(zc, f);
+  if(uTintSides==1) vColor *= divergentTint(length(zc));
 }`;
 
 // Sheet FILL vertex shader: same surface placement, but each rectangle gets a
@@ -548,6 +582,7 @@ uniform vec4 uDomainBox;   // xMin, xMax, yMin, yMax
 varying vec3 vViewPos;
 varying float vFade;
 varying float vStretch;
+varying float vRegion;
 vec3 cornerColor(vec2 zc){
   zc = domainWarp(zc);
   vec2 fc = applyComplex(zc, functionType);
@@ -569,6 +604,7 @@ void main(){
   // How far the function has stretched this cell in 3D (per-cell, uniform across
   // its six verts since they share cellBase) → drives the adaptive fade.
   vStretch = cellStretch(cellBase, uCellSize);
+  vRegion = regionMask(domainWarp(cellBase + 0.5 * uCellSize));
   vec3 pos3 = surfacePos(z);
   vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
   vViewPos = mv.xyz;
@@ -578,6 +614,7 @@ void main(){
          + cornerColor(cellBase + vec2(0.0, uCellSize.y))
          + cornerColor(cellBase + uCellSize);
   vColor = c * 0.25;
+  if(uTintSides==1) vColor *= divergentTint(length(domainWarp(cellBase + 0.5 * uCellSize)));
 }`;
 
 // Shared external-light snippet: a single directional light that shades whichever
@@ -614,6 +651,7 @@ varying vec3 vColor;
 varying vec3 vViewPos;
 varying float vFade;
 varying float vStretch;
+varying float vRegion;
 void main(){
   vec3 col = vColor;
   float alpha = opacity;
@@ -632,6 +670,7 @@ void main(){
     // stretched the cell past the threshold so the point cloud shows through.
     alpha *= 1.0 - smoothstep(uDensity, uDensity*2.0, vStretch);
   }
+  alpha *= vRegion;
   if(alpha < 0.003) discard;
   gl_FragColor = vec4(col, alpha);
 }`;
@@ -649,6 +688,7 @@ uniform float uMaxTile;      // max world-space half-... edge length per tile
 varying float vFacing;       // |view-space normal . z| for depth shading
 varying vec3  vNormalView;   // signed view-space normal (for external lighting)
 varying vec3  vViewPos;      // view-space position (for external lighting)
+varying float vRegion;       // domain-region keep flag (0 → masked out)
 void main(){
   vec2 z = vec2(position.x, position.z);
   vec3 c0 = surfacePos(z);
@@ -673,9 +713,11 @@ void main(){
   vViewPos = mv.xyz;
   gl_Position = projectionMatrix * mv;
   vec2 zc = domainWarp(z);
+  vRegion = regionMask(zc);
   vec2 f = applyComplex(zc, functionType);
   if(length(f) > 1e3) f = normalize(f)*1e3;
   vColor = calcColor(zc, f);                // one flat color per tile (shared node)
+  if(uTintSides==1) vColor *= divergentTint(length(zc));
 }`;
 
 // Tiles fragment: flat per-tile color with a facing-ratio shade so the faceted
@@ -688,7 +730,9 @@ varying vec3  vColor;
 varying float vFacing;
 varying vec3  vNormalView;
 varying vec3  vViewPos;
+varying float vRegion;
 void main(){
+  if(vRegion < 0.5) discard;
   float shade = mix(1.0, 0.45 + 0.55*vFacing, clamp(uShade, 0.0, 1.0));
   vec3 col = applyExternalLight(vColor * shade, vNormalView, vViewPos, gl_FrontFacing);
   gl_FragColor = vec4(col, opacity);
@@ -702,6 +746,7 @@ attribute vec2 aOther;       // the segment's other endpoint (domain coords)
 attribute float aSide;       // ±1 ribbon side
 uniform vec2 uResolution;    // drawing-buffer size in px (for screen-space width)
 uniform float uLineWidth;    // ribbon width in px
+varying float vRegion;
 void main(){
   vec2 z = vec2(position.x, position.z);
   vec4 clipA = projectionMatrix * modelViewMatrix * vec4(surfacePos(z), 1.0);
@@ -717,9 +762,11 @@ void main(){
   clipA.xy += offsetNdc * clipA.w;
   gl_Position = clipA;
   vec2 zc = domainWarp(z);
+  vRegion = regionMask(zc);
   vec2 f = applyComplex(zc, functionType);
   if(length(f) > 1e3) f = normalize(f)*1e3;
   vColor = calcColor(zc, f);
+  if(uTintSides==1) vColor *= divergentTint(length(zc));
 }`;
 
 // Fiber-net fragment: the line color, a touch brighter/opaquer so the threads
@@ -727,6 +774,8 @@ void main(){
 export const netFragmentShader = `
 uniform float opacity;
 varying vec3 vColor;
+varying float vRegion;
 void main(){
+  if(vRegion < 0.5) discard;
   gl_FragColor = vec4(vColor, clamp(opacity*1.3 + 0.2, 0.0, 1.0));
 }`;
