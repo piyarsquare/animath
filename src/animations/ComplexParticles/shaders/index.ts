@@ -659,7 +659,13 @@ void main(){
   vec3 duC = du * min(1.0, uMaxTile / lu);   // clamp edge length → tiles cap, then detach
   vec3 dvC = dv * min(1.0, uMaxTile / lv);
   vec3 pos3 = c0 + corner.x * duC + corner.y * dvC;
-  vec3 nrm = normalize(cross(du, dv));
+  // Guard the face normal: near a projection singularity du and dv can go
+  // parallel or vanish, so cross(du,dv) -> 0 and normalize() would emit NaN.
+  // A NaN here poisons the varying and can hard-crash real mobile GL drivers
+  // (software renderers tolerate it), so fall back to a screen-facing normal.
+  vec3 cr = cross(du, dv);
+  float crl = length(cr);
+  vec3 nrm = (crl > 1e-9) ? cr / crl : vec3(0.0, 0.0, 1.0);
   vNormalView = normalize(normalMatrix * nrm);
   vFacing = abs(vNormalView.z);
   vec4 mv = modelViewMatrix * vec4(pos3, 1.0);
