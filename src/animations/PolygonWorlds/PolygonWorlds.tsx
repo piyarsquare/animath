@@ -487,13 +487,14 @@ function polygonSpec(spec: WorldSpec, st: SquareMapState | null): PolygonMapSpec
     ? { px: (st.u - 0.5) * 2, py: (st.v - 0.5) * 2, hx: st.hx, hy: st.hz, flipped: st.flipped }
     : null;
   const label = !st ? spec.label : st.flipped ? `${spec.label} · other face` : spec.label;
-  // flat n-gon worlds chart in circumcircle units (vertices at radius 1);
-  // hyperbolic worlds chart in Poincaré coordinates (vertices at tanh(R/2))
-  const flat = deriveGeometry(spec).cover === 'euclidean';
+  // flat + spherical n-gon worlds chart in circumcircle units (vertices at radius 1
+  // — the chart()'s disk coords); only hyperbolic worlds chart in Poincaré
+  // coordinates (vertices at tanh(R/2)).
+  const hyper = deriveGeometry(spec).cover === 'hyperbolic';
   return {
     sides: m,
     baseAngle: -Math.PI / 2 + Math.PI / m,
-    rhoV: flat ? 1 : Math.tanh(real.circumradius / 2),
+    rhoV: hyper ? Math.tanh(real.circumradius / 2) : 1,
     letters: word.map((l) => ({ gen: l.gen, inv: l.inv })),
     marker,
     label,

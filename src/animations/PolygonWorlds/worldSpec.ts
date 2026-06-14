@@ -45,7 +45,7 @@ export type GluingMode = 'opposite' | 'adjacent';
 export type Cover = 'euclidean' | 'spherical' | 'hyperbolic';
 
 export interface WorldSpec {
-  id: 'torus' | 'klein' | 'rp2' | 'sphere' | 'genus2' | 'crosscap3' | 'torus6' | 'klein6';
+  id: 'torus' | 'klein' | 'rp2' | 'sphere' | 'genus2' | 'crosscap3' | 'torus6' | 'klein6' | 'rp2hex' | 'rp2oct';
   label: string;
   /** short descriptor for the app header */
   short: string;
@@ -155,6 +155,24 @@ export const WORLDS: WorldSpec[] = [
     id: 'klein6', label: 'Hexagonal Klein bottle', short: 'flat Klein bottle (hexagon)',
     chi: 0, orientable: false,
     word: 'a a b c c b⁻¹',
+  },
+  {
+    // The HEXAGONAL projective plane: same topology as the square ℝP² (`a b a b`),
+    // realized from a regular spherical hexagon. Its three antipodal edge pairs
+    // (`a b c a b c`) give corner classes all of size 2 (V=3), so cos R = cot(π/6)·
+    // cot(π/2) = 0 ⇒ R = π/2: a *smooth* upper hemisphere whose boundary is the
+    // equator and whose Z/2 deck is the antipodal map −Id, exactly like the square.
+    id: 'rp2hex', label: 'Hexagonal projective plane', short: 'projective plane (hexagon)',
+    chi: 1, orientable: false,
+    word: 'a b c a b c',
+  },
+  {
+    // The OCTAGONAL projective plane: `a b c d a b c d`, four antipodal pairs,
+    // corner classes all size 2 (V=4) ⇒ R = π/2, the same smooth hemisphere +
+    // antipodal deck as the square/hex ℝP², from a regular spherical octagon.
+    id: 'rp2oct', label: 'Octagonal projective plane', short: 'projective plane (octagon)',
+    chi: 1, orientable: false,
+    word: 'a b c d a b c d',
   },
 ];
 

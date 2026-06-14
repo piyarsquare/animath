@@ -35,6 +35,8 @@ const WORLDS = [
   { id: 'genus2', orientable: true },    // orientable hyperbolic control
   { id: 'torus6', orientable: true },    // hexagonal torus (flat n-gon control)
   { id: 'klein6', orientable: false },   // hexagonal Klein bottle (flat n-gon glides)
+  { id: 'rp2hex', orientable: false },   // hexagonal ℝP² (smooth hemisphere, n-gon chart)
+  { id: 'rp2oct', orientable: false },   // octagonal ℝP² (smooth hemisphere, n-gon chart)
 ];
 const W = 1100, H = 820;
 

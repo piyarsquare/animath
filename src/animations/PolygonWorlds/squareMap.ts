@@ -86,6 +86,49 @@ export function sq2hemi(sx: number, sy: number): THREE.Vector3 {
 }
 
 /**
+ * The n-gon generalization of {@link sq2hemi}/{@link rp2Square}: a chart between a
+ * regular m-gon disk (circumradius 1, vertices at `baseAngle + 2πk/m`) and the z≥0
+ * hemisphere. The polygon boundary maps to the z=0 equator and the center to the
+ * north pole, so the m vertices land on the equator at their azimuths — exactly the
+ * realize() ℝP² hexagon/octagon vertices — and the antipodal disk gluing matches the
+ * antipodal sphere gluing. For m=4 this carries the same boundary→equator,
+ * center→pole structure as the square chart (the square keeps its own `sq2hemi`).
+ *
+ * The shared device is the **polygon gauge** g = r / R(θ) ∈ [0,1] (1 on the
+ * boundary), where R(θ) = cos(π/m)/cos(((θ−baseAngle) mod 2π/m) − π/m) is the
+ * regular m-gon's boundary radius at azimuth θ. The point at gauge g maps to the
+ * hemisphere at in-plane radius g, z = √(1−g²) — so the colatitude grows with the
+ * gauge and the boundary (g=1) reaches the equator (z=0).
+ */
+function ngonBoundaryRadius(theta: number, m: number, baseAngle: number): number {
+  const seg = (2 * Math.PI) / m;
+  const phi = (((theta - baseAngle) % seg) + seg) % seg;   // [0, seg)
+  return Math.cos(Math.PI / m) / Math.cos(phi - Math.PI / m);
+}
+
+/** m-gon disk point (px, py; vertices at radius 1) → unit direction on the z≥0
+ *  hemisphere (the inverse chart used for decor + corner-marker placement). */
+export function ngon2hemi(px: number, py: number, m: number, baseAngle: number): THREE.Vector3 {
+  const r = Math.hypot(px, py);
+  if (r < 1e-6) return new THREE.Vector3(0, 0, 1);
+  const theta = Math.atan2(py, px);
+  const g = Math.min(1, r / ngonBoundaryRadius(theta, m, baseAngle));
+  const z = Math.sqrt(Math.max(0, 1 - g * g));
+  return new THREE.Vector3(g * Math.cos(theta), g * Math.sin(theta), z);
+}
+
+/** z≥0 hemisphere direction → m-gon disk point (vertices at radius 1) — the forward
+ *  chart used for the player marker. `d` should already be the upper-hemisphere
+ *  representative (caller negates a z<0 point and reports it as the flipped face). */
+export function hemi2ngon(d: THREE.Vector3, m: number, baseAngle: number): [number, number] {
+  const g = Math.hypot(d.x, d.y);             // = sin(colatitude) ∈ [0,1]
+  if (g < 1e-6) return [0, 0];
+  const theta = Math.atan2(d.y, d.x);
+  const r = g * ngonBoundaryRadius(theta, m, baseAngle);
+  return [r * Math.cos(theta), r * Math.sin(theta)];
+}
+
+/**
  * Draw the square mini-map. `spec === null` renders just the empty backdrop +
  * square (the first-frame, no-state case).
  */

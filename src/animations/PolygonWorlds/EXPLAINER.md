@@ -24,11 +24,17 @@ So different gluings give different worlds:
 | hexagon `aabbcc` | **three cross-caps** (Dyck) | −1 | hyperbolic |
 | hexagon, opposite edges, all straight | **torus** again — new polygon, same world | 0 | flat |
 | hexagon `aabccb⁻¹` | **Klein bottle** again | 0 | flat |
+| hexagon `abcabc` | **projective plane** again | 1 | spherical |
+| octagon `abcdabcd` | **projective plane** again | 1 | spherical |
 
-The last two are the same topologies as the square worlds — the fundamental
+The last four are the same topologies as the square worlds — the fundamental
 polygon is a *presentation*, not the surface. The hexagonal torus is genuinely
 flat (each corner class collects three 120° corners: exactly 360°, no cone
-points) and tiles the plane as a honeycomb.
+points) and tiles the plane as a honeycomb. The hexagonal and octagonal
+projective planes fold onto the *same* round hemisphere as the square ℝP²: each
+of their corner classes collects two equal corners, so a regular spherical
+hexagon (or octagon) closes up smoothly, with its vertices on the equator and
+the same antipodal seam.
 
 Walk it in first person. The **mini-map** is always the fundamental square, its
 edges marked with the identification arrows. Your footprints are **ink on the

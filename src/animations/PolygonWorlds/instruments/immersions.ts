@@ -176,6 +176,22 @@ const DESCRIPTORS: Record<string, ImmersionDescriptor> = {
     at: (u, v, out) => roman(sq2hemi((u - 0.5) * 2, (v - 0.5) * 2), out),
     marker: (_st, dir) => (dir ? roman(dir, new THREE.Vector3()) : null),
   },
+  // The hexagonal/octagonal ℝP² worlds immerse as the same Steiner Roman surface
+  // (ℝP² is ℝP², regardless of which polygon presents it). The marker rides the
+  // player's true sphere direction, so it is word-agnostic — only `at` (the static
+  // chart preview) is square-flavored, which is invisible once the marker moves.
+  rp2hex: {
+    caption: 'Roman surface · same walk', camDist: 5.2,
+    build: romanMesh,
+    at: (u, v, out) => roman(sq2hemi((u - 0.5) * 2, (v - 0.5) * 2), out),
+    marker: (_st, dir) => (dir ? roman(dir, new THREE.Vector3()) : null),
+  },
+  rp2oct: {
+    caption: 'Roman surface · same walk', camDist: 5.2,
+    build: romanMesh,
+    at: (u, v, out) => roman(sq2hemi((u - 0.5) * 2, (v - 0.5) * 2), out),
+    marker: (_st, dir) => (dir ? roman(dir, new THREE.Vector3()) : null),
+  },
   torus: chartImmersion('Torus of revolution · same walk', 4.6, () => paramMesh(torusParam, 64, 32), (u, v, o) => { torusParam(u, v, o); return o; }),
   klein: chartImmersion('Klein bottle (figure-8) · same walk', 4.8, () => paramMesh(kleinParam, 96, 36), (u, v, o) => { kleinParam(u, v, o); return o; }),
   torus6: chartImmersion('Torus of revolution · same walk', 4.6, () => paramMesh(torusParam, 64, 32), (u, v, o) => { torusParam(u, v, o); return o; }),

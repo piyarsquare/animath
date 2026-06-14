@@ -5,7 +5,7 @@ import { glassState, POLYGON_GLASS } from '../glassSurface';
 import { makeInkTrail, INK_LIFT } from '../inkTrail';
 import { makeSignBuilder, SignBuilder } from '../sign';
 import { cornerColor } from '../decor';
-import { rp2Square, sq2hemi } from '../squareMap';
+import { rp2Square, sq2hemi, ngon2hemi, hemi2ngon } from '../squareMap';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
 import { develop } from '../lib/develop';
@@ -32,6 +32,11 @@ import {
  *  - **ℝP² (`a b a b`, isometric hemisphere):** the Z/2 antipodal deck (from
  *    {@link develop}, det<0) puts the *flipped* sheet on the lower hemisphere — the
  *    trees↔columns swap and the mirror trail twin both fall out of that one det<0.
+ *  - **Hexagonal / octagonal ℝP² (`a b c a b c`, `a b c d a b c d`):** the same
+ *    smooth hemisphere + antipodal deck, charted through the m-gon gauge map
+ *    ({@link ngon2hemi}) instead of the square's `sq2hemi`. The realize() polygon's
+ *    m vertices land on the equator; the only square-specific code (chart map,
+ *    corner count, player marker) branches on `nGon`.
  */
 
 const EYE = 1.7;
@@ -89,6 +94,14 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
 
   const real: Realization = realize(parseWord(c.spec.word));
   const antipodal = !real.chart;             // ℝP²: hemisphere domain + Z/2 deck (chart ⇒ sphere charts the whole shell)
+  // The hexagonal/octagonal ℝP² worlds (`a b c a b c`, `a b c d a b c d`) carry no
+  // square `edges`, so they chart through the polygon-gauge map (`ngon2hemi`); the
+  // square ℝP² and the round sphere keep their dedicated sq2hemi / fullDir path.
+  // Their deck is the same antipodal −Id, so twin/ink/sign/seam logic is unchanged.
+  const nGon = antipodal && !c.spec.edges;
+  const M = real.edges;                       // 6 (hexagon) · 8 (octagon)
+  const BASE = -Math.PI / 2 + Math.PI / M;    // vertex-0 azimuth — matches realize() + polygonMap
+  const APO = Math.cos(Math.PI / M);          // incircle radius (circumradius-1 units)
   const twin = develop(real).elements.find((e) => e.det() < 0) ?? null;
   const twinM4 = twin ? new THREE.Matrix4().set(
     twin.m[0], twin.m[1], twin.m[2], 0, twin.m[3], twin.m[4], twin.m[5], 0,
@@ -126,9 +139,37 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     const lon = (u - 0.5) * Math.PI * 2, lat = (v - 0.5) * Math.PI, cl = Math.cos(lat);
     return new THREE.Vector3(cl * Math.cos(lon), Math.sin(lat), cl * Math.sin(lon));
   }
+  /** Map a unit-square landmark (u,v) into the m-gon's incircle, then onto the
+   *  hemisphere — so interior decor clusters around the pole, clear of the equator
+   *  seam (a landmark on a gluing edge reads confused). */
+  function ngonDir(u: number, v: number): THREE.Vector3 {
+    const k = (APO * 0.96) / Math.SQRT2;      // the whole unit square fits inside the incircle
+    return ngon2hemi((u - 0.5) * 2 * k, (v - 0.5) * 2 * k, M, BASE);
+  }
   /** Outer direction for landmark i. */
   const dirFor = (u: number, v: number) =>
-    antipodal ? sq2hemi((u - 0.5) * 2, (v - 0.5) * 2) : fullDir(u, v);
+    antipodal ? (nGon ? ngonDir(u, v) : sq2hemi((u - 0.5) * 2, (v - 0.5) * 2)) : fullDir(u, v);
+
+  /** The corner-marker placements: the m polygon vertices (n-gon worlds), else the
+   *  square's four chart corners. Each carries its 1-based index + unique hue,
+   *  matching the mini-map's numbered chips (vertex k ↔ `cornerColor(k, m)`). */
+  function cornerPlacements(): { dir: THREE.Vector3; color: number; index: number }[] {
+    if (nGon) {
+      const out: { dir: THREE.Vector3; color: number; index: number }[] = [];
+      for (let k = 0; k < M; k++) {
+        const a = BASE + (2 * Math.PI * k) / M;
+        out.push({
+          dir: ngon2hemi(Math.cos(a) * VERTEX_INSET, Math.sin(a) * VERTEX_INSET, M, BASE),
+          color: cornerColor(k, M), index: k + 1,
+        });
+      }
+      return out;
+    }
+    return CHART_CORNERS.map(([cu, cv], v) => {
+      const iu = 0.5 + (cu - 0.5) * VERTEX_INSET, iv = 0.5 + (cv - 0.5) * VERTEX_INSET;
+      return { dir: dirFor(iu, iv), color: cornerColor(v, CHART_CORNERS.length), index: v + 1 };
+    });
+  }
 
   // ── markers ──────────────────────────────────────────────────────────────────
   // OUTER (walked): trees at +dir, grown outward. On ℝP² the antipodal half (−dir)
@@ -158,18 +199,16 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
         const tIn = decor.makeTop(i); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
       }
     });
-    // numbered corner markers just inside each chart corner (the square's corners)
-    CHART_CORNERS.forEach(([cu, cv], v) => {
-      const col = cornerColor(v, CHART_CORNERS.length);
-      const iu = 0.5 + (cu - 0.5) * VERTEX_INSET, iv = 0.5 + (cv - 0.5) * VERTEX_INSET;
-      const d = dirFor(iu, iv);
+    // numbered corner markers just inside each polygon vertex (the square's four
+    // corners, or the hex/oct vertices for the n-gon worlds)
+    cornerPlacements().forEach(({ dir: d, color: col, index }) => {
       treeDirs.push(d);
-      const tOut = decor.makeCornerTop(v + 1, col); place(tOut, d, R, true); outerG.add(tOut);
-      const cIn = decor.makeCornerBottom(v + 1, col); place(cIn, d, R * SHELL_GAP, false); innerG.add(cIn);
+      const tOut = decor.makeCornerTop(index, col); place(tOut, d, R, true); outerG.add(tOut);
+      const cIn = decor.makeCornerBottom(index, col); place(cIn, d, R * SHELL_GAP, false); innerG.add(cIn);
       if (antipodal) {
         const ad = deckDir(d);
-        const cOut = decor.makeCornerBottom(v + 1, col); place(cOut, ad, R, true); outerG.add(cOut);
-        const tIn = decor.makeCornerTop(v + 1, col); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
+        const cOut = decor.makeCornerBottom(index, col); place(cOut, ad, R, true); outerG.add(cOut);
+        const tIn = decor.makeCornerTop(index, col); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
       }
     });
   }
@@ -314,6 +353,20 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   }
 
   function chart(): SquareMapState {
+    if (nGon) {
+      // m-gon disk chart (vertices at radius 1). Take the z≥0 representative; a z<0
+      // player is on the flipped face, charted as its antipode (−px,−py) — the disk's
+      // antipodal gluing. Both the player point and a small geodesic step ahead are
+      // charted with the player's representative so the heading stays continuous.
+      const rep = posU.z < 0;
+      const base = rep ? posU.clone().negate() : posU.clone();
+      const [px, py] = hemi2ngon(base, M, BASE);
+      const ahead = posU.clone().multiplyScalar(Math.cos(0.06)).addScaledVector(fwdU, Math.sin(0.06)).normalize();
+      if (rep) ahead.negate();
+      const [qx, qy] = hemi2ngon(ahead, M, BASE);
+      let hx = qx - px, hz = qy - py; const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
+      return { u: (px + 1) / 2, v: (py + 1) / 2, hx, hz, flipped: rep };
+    }
     const rep = posU.z < 0;
     const [sx, sy] = rp2Square(posU.x, posU.y, posU.z, rep);
     const e = 0.06, ce = Math.cos(e), se = Math.sin(e);
