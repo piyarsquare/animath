@@ -37,6 +37,18 @@ six-part improvement roadmap (A–F).
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 15:12 — Reverted all ℝP² seam work to the original sphere
+**Why:** User: "this is not working. please revert to the original behavior." None of
+the seam attempts (camera somersault → smooth eversion → latitude-driven → fixed
+everted surface) matched the intended behavior.
+
+`git checkout 02dda65 -- spherical.ts EXPLAINER.md` restores both to their state right
+after the embedding-inset feature — the original convex sphere + seam, with the
+inset-for-every-world feature **kept** (it was never in question). Build + lint clean;
+screenshot confirms the original ℝP² renders. Roadmap item **C is parked** — the
+inside/outside reversal needs a clearer shared spec before another attempt (the four
+tries are recorded below for context, not to be resurrected as-is).
+
 ### 🟡 milestone · 14:55 — Eversion → a FIXED everted surface (local curvature reversal)
 **Why:** User: the previous version made the *entire* world flatten (a global scale by
 the character's latitude). They want the **local** curvature to flatten then reverse —
