@@ -39,6 +39,37 @@ confirms the current state of the projection math (`viewpoint.ts` /
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 16:55 — Split heavy guides; cut applet weight; align plane/particles
+**Why:** User: applet weight too high (many WebGL iframes/page), and Plane vs
+Particles felt confusing. Chosen fixes: split pages + fewer/more-capable applets.
+
+The two heavy guides each had too many live applets for one page (functions 7,
+projections 6 — browsers cap concurrent WebGL contexts). Split both into Part 1 / 2:
+- **Functions** → `complex-functions-guide.html` (Pt 1: color, z^n, 1/z, exp) +
+  `complex-functions-2-guide.html` (Pt 2: branches, trig, special, field guide).
+  3 applets each.
+- **Projections** → `complex-particles-guide.html` (Pt 1: graph, pipeline,
+  perspective, drop) + `complex-particles-2-guide.html` (Pt 2: torus, hopf,
+  quaternions, honesty). Folded the two duplicate drop-explorers into one capable
+  applet (all four Drop buttons + Rotate) → Pt 1 = 2 applets, Pt 2 = 3.
+
+Kept the original filenames as Part 1, so **every existing inbound link still
+resolves**; only the hub + intra-chapter Prev/Next nav are new. Max applets/page is
+now 4 (rendering); the 6–7 offenders are gone.
+
+**Plane/particles alignment** (per the user's tip): the functions guide's "bare
+colored plane" figure now uses a **linear Complex Particles** plot
+(`fn=linear&proj=dropv`) instead of a Plane Transform embed — verified it renders as
+the flat colored x,y plane. Plane Transform stays only where the two-pane
+*transformation* is the subject (z^n, exp, sin, Joukowski, and the plane-transform
+guide itself).
+
+![Bare x,y plane via linear particles](assets/2026-06-14-S02-bareplane.png)
+
+Hub (`guides.html`) updated to list both parts; `EMBEDS.md` notes the split.
+`npm run build` passes; split pages compose and the new embed renders. No TS
+changed this turn (HTML/docs only).
+
 ### 🟡 milestone · 15:30 — Track A complete: color, sampling, plane-transform + hub
 **Why:** User asked to complete A1–A3 from the roadmap.
 

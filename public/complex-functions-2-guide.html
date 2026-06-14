@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<!-- What the functions do — Part 2. Deployed at <site>/complex-functions-2-guide.html.
+     Branches & roots (Riemann surfaces), trig as exp in disguise, the special maps,
+     and a field guide. Part 1 is complex-functions-guide.html. Source:
+     src/lib/complexMath.ts. Live applets via #/embed/ (docs/EMBEDS.md). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>What the functions do (Part 2) — branches, trig &amp; special maps</title>
+  <style>
+    :root {
+      --bg: #faf8f3; --fg: #232323; --muted: #8a8377; --rule: #ddd5c4;
+      --codebg: #1d1f23; --codefg: #e6e6e6; --codekw: #c8a26a; --codecm: #7f8a78;
+      --inlinebg: #f0ece1; --accent: #7a5cff; --eqbg: #f4f1e8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+           font: 17px/1.65 Georgia, 'Times New Roman', serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 48px 20px 96px; }
+    h1 { font-size: 33px; line-height: 1.2; margin: 0 0 6px; }
+    h2 { font-size: 24px; line-height: 1.25; margin: 52px 0 4px; padding-top: 12px;
+         border-top: 1px solid var(--rule); }
+    h2 .num { color: var(--accent); font-size: 18px; margin-right: 8px; }
+    h3 { font-size: 18px; margin: 30px 0 4px; }
+    .byline { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+    .prev { font-size: 14px; color: var(--muted); margin-bottom: 18px; }
+    p { margin: 0 0 18px; }
+    a { color: var(--accent); }
+    em { color: #4a443a; }
+    figure { margin: 26px 0; }
+    figure iframe { width: 100%; height: 400px; border: 1px solid var(--rule);
+                    border-radius: 10px; display: block; background: #0c0c10; }
+    figcaption { font-size: 13.5px; color: var(--muted); padding-top: 8px; }
+    code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+           font-size: 0.86em; background: var(--inlinebg); padding: 1px 5px;
+           border-radius: 4px; }
+    .eq { background: var(--eqbg); border-left: 3px solid var(--accent);
+          padding: 12px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+          font-size: 16px; overflow-x: auto; }
+    .eq code { background: none; padding: 0; font-size: 1em; }
+    .listing { margin: 18px 0; }
+    .listing .src { font: 12px/1.2 ui-monospace, Menlo, Consolas, monospace;
+                    color: var(--muted); margin: 0 0 5px; }
+    .listing .src b { color: #5a5346; font-weight: 600; }
+    pre { background: var(--codebg); color: var(--codefg); margin: 0;
+          padding: 16px 18px; border-radius: 9px; overflow-x: auto;
+          font: 13px/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+    pre .cm { color: var(--codecm); font-style: italic; }
+    table { border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 15px; }
+    th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule);
+             vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: 13.5px;
+         text-transform: uppercase; letter-spacing: 0.03em; }
+    td code { font-size: 0.9em; }
+    nav.toc { background: var(--eqbg); border: 1px solid var(--rule);
+              border-radius: 10px; padding: 16px 20px; margin: 28px 0 8px;
+              font-size: 15px; }
+    nav.toc strong { display: block; font-size: 13px; text-transform: uppercase;
+                     letter-spacing: 0.04em; color: var(--muted); margin-bottom: 8px; }
+    nav.toc ol { margin: 0; padding-left: 22px; }
+    nav.toc li { margin: 3px 0; }
+    .note { border-left: 3px solid #c8a26a; background: #f7f1e3;
+            padding: 11px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+            font-size: 15.5px; }
+    .note b { color: #7a5a1e; }
+    .seealso { background: var(--eqbg); border: 1px solid var(--rule);
+               border-radius: 10px; padding: 12px 18px; margin: 24px 0;
+               font-size: 15px; }
+    .footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--rule);
+              color: var(--muted); font-size: 14px; }
+    .footer a.hub { font-weight: 600; }
+    sup, sub { line-height: 0; }
+  </style>
+</head>
+<body>
+<main>
+
+  <div class="prev"><a href="./complex-functions-guide.html">&larr; Part 1: coloring, powers, poles, growth</a></div>
+  <h1>What the functions do</h1>
+  <div class="byline"><strong>Part 2 of 2</strong> &mdash; the inverse and many-valuedness, trigonometry, and the functions that earn their place by the shapes they make</div>
+
+  <p>
+    Part 1 built up four moves &mdash; coloring the plane, multiplying (powers),
+    dividing (poles), and exponentiating (growth). This part shows what happens when
+    you run those backward and combine them: the inverse <code>ln</code> opens a plane
+    into infinitely many sheets, every trigonometric function turns out to be
+    <code>e<sup>z</sup></code> in disguise, and a handful of special maps make
+    memorable shapes. Functions are still quoted from
+    <code>src/lib/complexMath.ts</code>.
+  </p>
+
+  <nav class="toc">
+    <strong>Part 2 &mdash; contents</strong>
+    <ol>
+      <li><a href="#branches">The inverse is many-valued: ln and the branch index</a></li>
+      <li><a href="#trig">Everything trigonometric is e&#8202;<sup>z</sup> in disguise</a></li>
+      <li><a href="#special">Special shapes: Joukowski, M&ouml;bius, Gamma</a></li>
+      <li><a href="#fieldguide">Reading any function at a glance</a></li>
+    </ol>
+  </nav>
+
+  <!-- ===================================================================== -->
+  <h2 id="branches"><span class="num">1</span>The inverse is many-valued: ln and the branch index</h2>
+
+  <p>
+    Because <code>e<sup>z</sup></code> sends every <code>2&pi;</code>-tall strip onto
+    the same plane, its inverse <code>ln</code> cannot pick a single answer: a point
+    has <em>infinitely many</em> logarithms, one per strip, all sharing a magnitude
+    but differing in angle by multiples of <code>2&pi;</code>. The viewer makes the
+    choice explicit with a <strong>branch index</strong> that adds whole turns to the
+    angle:
+  </p>
+
+  <div class="eq">
+    <code>ln(z) = ln|z| + i(arg&nbsp;z + 2&pi;k)</code>, &nbsp; integer
+    <code>k</code> = the branch
+  </div>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/complexMath.ts</b> : 188&ndash;192</p>
+    <pre>export function complexLnBranch(z, branch) {
+  const r = Math.hypot(z.x, z.y);
+  const t = Math.atan2(z.y, z.x) + branch * 2 * Math.PI;  <span class="cm">// + 2πk</span>
+  return new THREE.Vector2(Math.log(r), t);               <span class="cm">// (ln|z|, arg z + 2πk)</span>
+}</pre>
+  </div>
+
+  <p>
+    Stack those branches and they form a spiral ramp &mdash; the
+    <strong>Riemann surface</strong> &mdash; where walking once around the origin
+    lifts you to the next sheet instead of back to the start. The <em>roots</em> are
+    the same idea but with finitely many sheets, because their angle is
+    <em>scaled</em> rather than free: <code>&radic;z</code> halves the angle (and
+    adds <code>&pi;</code> per branch), so two laps bring you home;
+    <code>&#8731;z</code> needs three. The code adds the branch offset before scaling,
+    and a tiny table records how many distinct sheets result:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/complexMath.ts</b> : 180&ndash;184, 107&ndash;111, 425&ndash;431</p>
+    <pre>export function complexSqrtBranch(z, branch) {
+  const t = Math.atan2(z.y, z.x) + branch * Math.PI;   <span class="cm">// √ sheets are π apart</span>
+  const sr = Math.sqrt(Math.hypot(z.x, z.y));
+  return new THREE.Vector2(sr*Math.cos(t*0.5), sr*Math.sin(t*0.5));
+}
+<span class="cm">// distinct sheets: √ repeats every 2, ∛ every 3, z^(p/q) every |q|</span>
+export function branchPeriod(index, q = 1) {
+  switch (index) {
+    case 1: case 14: return 2;                 <span class="cm">// sqrt, √(z(z−1)(z+1))</span>
+    case 16: return 3;                         <span class="cm">// cbrt</span>
+    case 18: return Math.max(1, Math.abs(q));  <span class="cm">// z^(p/q)</span>
+    default: return /* ln-family */ null;      <span class="cm">// infinitely many</span>
+  }
+}</pre>
+  </div>
+
+  <p>
+    A flat plane can't show a spiral ramp without it crashing into itself, which is
+    exactly why these functions want the <strong>4-D</strong> viewer: lift the sheets
+    into the extra dimensions and they separate cleanly, meeting only at the
+    <em>branch point</em> at the origin. Below, <code>&radic;z</code> shows both of
+    its sheets joined into one smooth surface &mdash; drag to see the two layers:
+  </p>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="The two sheets of the square root"
+      src="./#/embed/complex-particles?fn=sqrt&proj=perspective&render=Sheet&motion=quaternion&spin=xy&caption=%E2%88%9Az%20has%20two%20sheets%20%E2%80%94%20lifted%20into%204D%20they%20join%20into%20one%20smooth%20surface%2C%20meeting%20at%20the%20branch%20point."></iframe>
+    <figcaption>Fig. 1 &mdash; the Riemann surface of <code>&radic;z</code>: two sheets that the branch index selects between, joined at the origin and shown as one surface in 4-D.</figcaption>
+  </figure>
+
+  <!-- ===================================================================== -->
+  <h2 id="trig"><span class="num">2</span>Everything trigonometric is e&#8202;<sup>z</sup> in disguise</h2>
+
+  <p>
+    The trig functions are not separate machinery &mdash; they are combinations of
+    the exponential. From Euler's formula,
+    <code>sin&nbsp;z = (e<sup>iz</sup> &minus; e<sup>&minus;iz</sup>) / 2i</code>, and
+    the code computes it by literally calling <code>complexExp</code> twice:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/complexMath.ts</b> : 25&ndash;31</p>
+    <pre>export function complexSin(z) {
+  const iz = new THREE.Vector2(-z.y, z.x);   <span class="cm">// i·z (rotate by 90°)</span>
+  const e1 = complexExp(iz);                 <span class="cm">// e^{iz}</span>
+  const e2 = complexExp(new THREE.Vector2(-iz.x, -iz.y));   <span class="cm">// e^{−iz}</span>
+  const diff = new THREE.Vector2(e1.x - e2.x, e1.y - e2.y);
+  return new THREE.Vector2(diff.y*0.5, -diff.x*0.5);        <span class="cm">// ÷ 2i</span>
+}</pre>
+  </div>
+
+  <p>
+    Everything cascades from there. <code>cos</code> is the same with a plus;
+    <code>tan = sin/cos</code>, and <code>sec, csc, cot</code> are reciprocals of
+    those, so they inherit <code>1/z</code>'s poles wherever the denominator vanishes.
+    The <strong>hyperbolic</strong> family is the identical construction without the
+    <code>i</code> (<code>sinh&nbsp;z = (e<sup>z</sup>&minus;e<sup>&minus;z</sup>)/2</code>)
+    &mdash; which is why <code>sin</code> and <code>sinh</code> are the same surface
+    turned a quarter-turn in the input plane. And the <strong>inverse</strong> trig
+    functions run the chain backward into a logarithm
+    (<code>arcsin&nbsp;z = &minus;i&middot;ln(iz + &radic;(1&minus;z&sup2;))</code>),
+    so they are multivalued and carry the very same branch index from the section
+    above. Real sine waves up and down; complex <code>sin</code> also grows
+    exponentially as you move off the real axis, because the hidden
+    <code>e<sup>z</sup></code> takes over:
+  </p>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="sin z as a transformation of the plane"
+      src="./#/embed/plane-transform?fn=sin&caption=sin%20z%20is%20(e%5E%7Biz%7D%E2%88%92e%5E%7B%E2%88%92iz%7D)%2F2i%20%E2%80%94%20periodic%20along%20the%20real%20axis%2C%20exponential%20growth%20off%20it."></iframe>
+    <figcaption>Fig. 2 &mdash; <code>sin&nbsp;z</code>. Periodic along the real axis like its real cousin, but growing exponentially in the imaginary direction &mdash; the exponential showing through.</figcaption>
+  </figure>
+
+  <!-- ===================================================================== -->
+  <h2 id="special"><span class="num">3</span>Special shapes: Joukowski, M&ouml;bius, Gamma</h2>
+
+  <p>
+    A few functions earn their place by the shapes they make.
+  </p>
+
+  <p>
+    The <strong>Joukowski</strong> map <code>&frac12;(z + 1/z)</code> is just the
+    average of a number and its reciprocal &mdash; two transformations you already
+    know, added together &mdash; yet that combination famously bends circles near the
+    unit circle into the cross-section of an <strong>airfoil</strong>, which is how it
+    first earned its keep in early aerodynamics:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/complexMath.ts</b> : 70&ndash;73</p>
+    <pre>export function complexJoukowski(z) {
+  const inv = complexInv(z);                     <span class="cm">// reuses 1/z, guard and all</span>
+  return new THREE.Vector2(0.5*(z.x + inv.x), 0.5*(z.y + inv.y));
+}</pre>
+  </div>
+
+  <p>
+    The <strong>M&ouml;bius</strong> map <code>(z&minus;1)/(z+1)</code> is a ratio of
+    two lines; like all such fractional-linear maps it sends circles and lines to
+    circles and lines, carrying the right half-plane neatly onto the unit disk.
+    The <strong>Gamma</strong> function <code>&Gamma;(z)</code> &mdash; the
+    factorial extended to the whole plane &mdash; has no elementary formula at all,
+    so it is computed by the <em>Lanczos approximation</em> (a short weighted sum)
+    together with the <em>reflection formula</em>
+    <code>&Gamma;(z) = &pi; / (sin&nbsp;&pi;z &middot; &Gamma;(1&minus;z))</code>, which
+    folds the troublesome left half-plane onto the easy right half and, in doing so,
+    makes the genuine poles at <code>0, &minus;1, &minus;2, &hellip;</code> appear:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/complexMath.ts</b> : 171&ndash;177</p>
+    <pre>export function complexGamma(z) {
+  if (z.x &gt;= 0.5) return complexGammaCore(z);          <span class="cm">// Lanczos sum directly</span>
+  <span class="cm">// reflect the left half-plane in: Γ(z) = π / (sin(πz)·Γ(1−z))</span>
+  const s = complexSin(...PI_z);
+  const g = complexGammaCore(oneMinus_z);
+  return complexDiv(new THREE.Vector2(Math.PI, 0), complexMul(s, g));
+}</pre>
+  </div>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="The Joukowski map as a transformation of the plane"
+      src="./#/embed/plane-transform?fn=joukowski&caption=The%20Joukowski%20map%20%C2%BD(z%2B1%2Fz)%20bends%20circles%20near%20%7Cz%7C%3D1%20into%20airfoil%20cross-sections."></iframe>
+    <figcaption>Fig. 3 &mdash; the Joukowski map. The average of <code>z</code> and <code>1/z</code>; offset circles near the unit circle come out wing-shaped.</figcaption>
+  </figure>
+
+  <!-- ===================================================================== -->
+  <h2 id="fieldguide"><span class="num">4</span>Reading any function at a glance</h2>
+
+  <p>
+    Put the pieces together and the colored picture becomes legible. Four features
+    tell you almost everything:
+  </p>
+
+  <table>
+    <thead><tr><th>What you see</th><th>What it means</th><th>From</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Dark point</strong>, hues meeting counterclockwise</td><td>a <strong>zero</strong>; the number of color cycles is its order</td><td>Pt 1 &sect;2</td></tr>
+      <tr><td><strong>Bright spike</strong>, hues meeting clockwise (reversed)</td><td>a <strong>pole</strong>; order = cycle count</td><td>Pt 1 &sect;3</td></tr>
+      <tr><td>A color <strong>seam</strong> you can walk around onto a new sheet</td><td>a <strong>branch point</strong> of a multivalued function</td><td>&sect;1</td></tr>
+      <tr><td>A repeating <strong>tile</strong> of the picture</td><td>a <strong>period</strong> (e.g. <code>2&pi;i</code> for <code>e<sup>z</sup></code>)</td><td>Pt 1 &sect;4</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    The deeper pattern is that the whole library is built from a handful of moves
+    &mdash; multiply (add angles), divide (invert and reflect), exponentiate (split
+    magnitude from angle), and take logarithms (open up the sheets) &mdash; composed
+    and combined. <code>tan</code> is <code>sin</code> over <code>cos</code>;
+    <code>sinh</code> is <code>sin</code> without the <code>i</code>; <code>arcsin</code>
+    is a <code>ln</code> wearing a square root; Joukowski is <code>z</code> plus
+    <code>1/z</code>. Learn the four moves and you can predict the picture before the
+    GPU draws it &mdash; and when you want to know exactly how the drawing is done,
+    every routine is a dozen readable lines away in
+    <code>src/lib/complexMath.ts</code>.
+  </p>
+
+  <div class="seealso">
+    <strong>The series &mdash; the math:</strong>
+    <a href="./complex-functions-guide.html">What the functions do</a> (Part 1 &amp; 2) &middot;
+    <a href="./complex-particles-guide.html">From 4D to your screen</a> &middot;
+    <a href="./complex-rendering-guide.html">How the surface is drawn</a>.
+    <strong>Going deeper:</strong>
+    <a href="./complex-color-guide.html">Color</a> &middot;
+    <a href="./complex-sampling-guide.html">Sampling the plane</a> &middot;
+    <a href="./complex-plane-transform-guide.html">Two planes, one map</a>.
+  </div>
+
+  <div class="footer">
+    <p>
+      <a class="hub" href="./guides.html">&larr; All guides</a> &nbsp;&middot;&nbsp;
+      <a href="./complex-functions-guide.html">&larr; Part 1</a> &nbsp;&middot;&nbsp;
+      The functions all live in <code>src/lib/complexMath.ts</code>. Open the
+      <a href="./#/plane-transform">Plane Transform</a> or
+      <a href="./#/complex-particles">Complex Particles</a> viewer to explore them.
+    </p>
+  </div>
+
+</main>
+</body>
+</html>

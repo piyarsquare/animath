@@ -115,14 +115,16 @@ site.
 
 > **Built so far:** a guide series ships under `public/` (copied to the Pages
 > root), indexed by **`guides.html`** and cross-linked. The math trilogy —
-> `complex-functions-guide.html` (*What the functions do*),
-> `complex-particles-guide.html` (*From 4D to your screen*),
-> `complex-rendering-guide.html` (*How the surface is drawn*) — plus three
+> *What the functions do* (`complex-functions-guide.html` + `…-2-guide.html`),
+> *From 4D to your screen* (`complex-particles-guide.html` + `…-2-guide.html`),
+> and *How the surface is drawn* (`complex-rendering-guide.html`) — plus three
 > "going deeper" pages: `complex-color-guide.html` (domain coloring +
 > `colormaps.ts`), `complex-sampling-guide.html` (the domain patterns; uses the
 > `pattern=` param), and `complex-plane-transform-guide.html` (conformality +
-> log-polar). The older `embed-demo.html` is the minimal starting demo. Each
-> page pairs a live `#/embed/` applet with the exact source lines it documents.
+> log-polar). The two longest guides are split into Part 1 / Part 2 so each page
+> keeps only a few live applets (WebGL contexts are limited per page). The older
+> `embed-demo.html` is the minimal starting demo. Each page pairs a live
+> `#/embed/` applet with the exact source lines it documents.
 >
 > A roadmap for extending the series to the other apps (and the embed-route
 > investment that unlocks them) is in the branch's session reports

@@ -50,11 +50,13 @@
   <div class="byline">The math <em>and</em> the code behind the complex-function viewers &mdash; each page pairs a live applet with the exact source lines that compute it</div>
 
   <p class="lead">
-    These six pages take the <a href="./#/complex-particles">Complex Particles</a> and
+    These guides take the <a href="./#/complex-particles">Complex Particles</a> and
     <a href="./#/plane-transform">Plane Transform</a> viewers apart and explain how
     they work, from the functions through the projections to the pixels. They read
     like a code manual crossed with a short math course: drag the embedded applets,
-    then read the routine that drew them. Start anywhere &mdash; they cross-link.
+    then read the routine that drew them. The two longest are split into a Part 1 and
+    Part 2; each page keeps only a few live applets so it stays light. Start anywhere
+    &mdash; they cross-link.
   </p>
 
   <h2>The math &mdash; from a function to your screen</h2>
@@ -63,14 +65,18 @@
       <a class="title" href="./complex-functions-guide.html">What the functions do</a>
       <div class="desc">How each complex function is computed, and what that does to
         the plane it transforms &mdash; angle-doubling, poles, branches, and the
-        functions that are secretly <code>e<sup>z</sup></code>.</div>
+        functions that are secretly <code>e<sup>z</sup></code>.
+        <br><a href="./complex-functions-guide.html">Part 1: coloring, powers, growth</a>
+        &middot; <a href="./complex-functions-2-guide.html">Part 2: branches, trig &amp; special</a></div>
       <div class="src">src/lib/complexMath.ts</div>
     </li>
     <li>
       <a class="title" href="./complex-particles-guide.html">From 4D to your screen</a>
       <div class="desc">The 4-D graph of <code>(z, f(z))</code>, the projections that
         flatten it (Perspective, Drop-axis, Torus, the Hopf sphere), and the
-        quaternion rotations that turn it.</div>
+        quaternion rotations that turn it.
+        <br><a href="./complex-particles-guide.html">Part 1: the graph &amp; flat projections</a>
+        &middot; <a href="./complex-particles-2-guide.html">Part 2: curved projections &amp; rotations</a></div>
       <div class="src">src/lib/viewpoint.ts &middot; src/math/quat4.ts</div>
     </li>
     <li>

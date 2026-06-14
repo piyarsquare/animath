@@ -1,16 +1,14 @@
 <!DOCTYPE html>
-<!-- A math-and-code guide to the complex functions in the animath viewers.
-     Deployed at <site>/complex-functions-guide.html — a self-contained article,
-     companion to complex-particles-guide.html (which covers the 4D->3D
-     projections). This one covers the functions themselves: how each is computed
-     in src/lib/complexMath.ts (+ the GLSL twin in the viewers' shaders) and what
-     that computation means for the transformation you see. Live applets use the
-     same <iframe> embed mechanism as embed-demo.html (docs/EMBEDS.md). -->
+<!-- A math-and-code guide to the complex functions in the animath viewers — Part 1.
+     Deployed at <site>/complex-functions-guide.html. Part 1: coloring, powers,
+     poles, growth. Part 2 (complex-functions-2-guide.html): branches, trig, special.
+     Source: src/lib/complexMath.ts (+ the GLSL twin). Live applets via #/embed/
+     (docs/EMBEDS.md). -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>What the functions do — the math and code of complex transformations</title>
+  <title>What the functions do (Part 1) — coloring, powers, growth</title>
   <style>
     :root {
       --bg: #faf8f3; --fg: #232323; --muted: #8a8377; --rule: #ddd5c4;
@@ -66,11 +64,19 @@
             padding: 11px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
             font-size: 15.5px; }
     .note b { color: #7a5a1e; }
+    .next { display: block; background: var(--accent); color: #fff;
+            border-radius: 11px; padding: 16px 20px; margin: 32px 0 8px;
+            text-decoration: none; font-size: 17px; }
+    .next:hover { background: #6848e6; }
+    .next .k { display: block; font-size: 12px; text-transform: uppercase;
+               letter-spacing: 0.06em; opacity: 0.85; margin-bottom: 2px; }
+    .next b { font-size: 19px; }
     .seealso { background: var(--eqbg); border: 1px solid var(--rule);
                border-radius: 10px; padding: 12px 18px; margin: 24px 0;
                font-size: 15px; }
-    .footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--rule);
+    .footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--rule);
               color: var(--muted); font-size: 14px; }
+    .footer a.hub { font-weight: 600; }
     sup, sub { line-height: 0; }
   </style>
 </head>
@@ -78,7 +84,7 @@
 <main>
 
   <h1>What the functions do</h1>
-  <div class="byline">How each complex function is computed in <em>animath</em> &mdash; and what that computation does to the plane it transforms</div>
+  <div class="byline"><strong>Part 1 of 2</strong> &mdash; coloring, powers, poles, and growth. How each complex function is computed in <em>animath</em>, and what that does to the plane it transforms</div>
 
   <p>
     A complex function <code>f : &#8450; &rarr; &#8450;</code> takes a point of the
@@ -98,22 +104,20 @@
     a GLSL twin in each viewer's shader, kept index-for-index in lockstep so the
     picture and the math never disagree. The live applets are the
     <strong>Plane Transform</strong> viewer (left pane: the colored input; right
-    pane: where <code>f</code> sends it) and, for the many-valued functions, the
-    4-D <strong>Complex Particles</strong> viewer.
+    pane: where <code>f</code> sends it) and the 4-D <strong>Complex Particles</strong>
+    viewer. <strong>Part 2</strong> picks up the multivalued, trigonometric, and
+    special functions.
   </p>
 
   <nav class="toc">
-    <strong>Contents</strong>
+    <strong>Part 1 &mdash; contents</strong>
     <ol>
       <li><a href="#color">The color is the function's fingerprint</a></li>
       <li><a href="#powers">Multiplication is rotation: z&sup2;, z&sup3;</a></li>
       <li><a href="#poles">Division turns the plane inside out: 1/z</a></li>
       <li><a href="#exp">Growth and periodicity: e&#8202;<sup>z</sup></a></li>
-      <li><a href="#branches">The inverse is many-valued: ln and the branch index</a></li>
-      <li><a href="#trig">Everything trigonometric is e&#8202;<sup>z</sup> in disguise</a></li>
-      <li><a href="#special">Special shapes: Joukowski, M&ouml;bius, Gamma</a></li>
-      <li><a href="#fieldguide">Reading any function at a glance</a></li>
     </ol>
+    <div style="margin-top:8px;font-size:14px;color:var(--muted)">Part 2 &rarr; branches &amp; roots, trigonometry, the special maps, and a field guide.</div>
   </nav>
 
   <!-- ===================================================================== -->
@@ -145,14 +149,16 @@ float val = 0.5 * (1.0 + tanh(log(r + 1e-6)));</pre>
     counterclockwise around a point, the function has a <em>zero</em> there; where it
     sweeps the other way, a <em>pole</em>; how many full color cycles you count is
     the <em>order</em>. The identity <code>f(z) = z</code> moves nothing, so it shows
-    you the reference coloring itself &mdash; the two panes below are identical:
+    you the reference coloring itself &mdash; the bare colored <code>x, y</code> plane,
+    drawn here as a linear Complex Particles plot (the same viewer the rest of the
+    series uses):
   </p>
 
   <figure>
     <iframe loading="lazy" allowfullscreen
-      title="The colored plane under the identity map"
-      src="./#/embed/plane-transform?fn=linear&caption=The%20reference%20coloring%3A%20hue%20%3D%20angle%2C%20brightness%20%3D%20magnitude.%20The%20identity%20moves%20nothing%2C%20so%20both%20panes%20match."></iframe>
-    <figcaption>Fig. 1 &mdash; domain coloring under <code>f(z) = z</code>. Hue is the angle, brightness the magnitude; the origin is the dark point where every hue meets.</figcaption>
+      title="The colored x,y plane under the identity map"
+      src="./#/embed/complex-particles?fn=linear&proj=dropv&motion=fixed&caption=The%20reference%20coloring%20on%20the%20bare%20x%2Cy%20plane%3A%20hue%20%3D%20angle%2C%20brightness%20%3D%20magnitude.%20The%20identity%20moves%20nothing."></iframe>
+    <figcaption>Fig. 1 &mdash; domain coloring under <code>f(z) = z</code>, the bare <code>x, y</code> plane. Hue is the angle, brightness the magnitude; the origin is the dark point where every hue meets. Drag to orbit.</figcaption>
   </figure>
 
   <!-- ===================================================================== -->
@@ -191,17 +197,18 @@ export function complexCube(z) {
   <p>
     Doubling every angle means the plane is <strong>wrapped around itself twice</strong>:
     the top half-plane alone already covers every direction once, so <code>z&sup2;</code>
-    paints the full color wheel <em>twice</em> as you circle the origin. Watch the hue
-    cycle through twice per loop in the image pane &mdash; that doubled cycle is the
-    visual signature of a double zero. (<code>z&sup3;</code> wraps three times; the
-    in-app <em>z<sup>p/q</sup></em> function dials the winding to any rational.)
+    paints the full color wheel <em>twice</em> as you circle the origin. In the
+    transform below, <code>z&sup3;</code> wraps three times &mdash; watch the hue cycle
+    through three times per loop in the image pane; that count is the visual signature
+    of the order of the zero. (The in-app <em>z<sup>p/q</sup></em> function dials the
+    winding to any rational.)
   </p>
 
   <figure>
     <iframe loading="lazy" allowfullscreen
       title="z cubed as a transformation of the plane"
       src="./#/embed/plane-transform?fn=cube&caption=z%C2%B3%20wraps%20the%20plane%20around%20the%20origin%20three%20times%20%E2%80%94%20the%20hue%20cycles%20thrice%20per%20loop."></iframe>
-    <figcaption>Fig. 2 &mdash; <code>z&sup3;</code> wraps the plane three times around the origin. Count the hue cycles per revolution to read the order of the zero.</figcaption>
+    <figcaption>Fig. 2 &mdash; <code>z&sup3;</code> wraps the plane three times around the origin (left: input, right: image). Count the hue cycles per revolution to read the order of the zero.</figcaption>
   </figure>
 
   <!-- ===================================================================== -->
@@ -229,19 +236,14 @@ export function complexInv(z) {
     The guard <code>if (d &lt; 1e-4) d = 1e-4</code> is where the math meets the
     machine: at <code>z = 0</code> the true value is infinite, so the code floors the
     denominator and the viewer additionally caps the output magnitude at
-    <code>10&sup3;</code> (see the
-    <a href="./complex-particles-guide.html#honesty">companion guide, &sect;8</a>).
+    <code>10&sup3;</code> (see
+    <a href="./complex-particles-2-guide.html#honesty">the projections guide, Part&nbsp;2</a>).
     That spot &mdash; where the hue wheel runs <em>backwards</em> and the surface
-    spikes &mdash; is a <strong>pole</strong>, the exact opposite of a zero. The
-    reciprocal map below turns the colored plane inside out around it:
+    spikes &mdash; is a <strong>pole</strong>, the exact opposite of a zero. Where
+    <code>z&sup2;</code> wrapped the plane <em>onto</em> the origin, <code>1/z</code>
+    turns it <em>inside out</em> around the origin: the unit circle stays put while
+    <code>0</code> and <code>&infin;</code> trade places.
   </p>
-
-  <figure>
-    <iframe loading="lazy" allowfullscreen
-      title="1/z as a transformation of the plane"
-      src="./#/embed/plane-transform?fn=inverse&caption=1%2Fz%20swaps%20inside%20and%20outside%20the%20unit%20circle%20and%20reflects%20across%20the%20real%20axis%20%E2%80%94%20the%20origin%20becomes%20a%20pole."></iframe>
-    <figcaption>Fig. 3 &mdash; <code>1/z</code>. The unit circle stays put while 0 and &infin; trade places; the reversed hue wheel marks the pole.</figcaption>
-  </figure>
 
   <!-- ===================================================================== -->
   <h2 id="exp"><span class="num">4</span>Growth and periodicity: e&#8202;<sup>z</sup></h2>
@@ -280,210 +282,26 @@ export function complexInv(z) {
     <iframe loading="lazy" allowfullscreen
       title="e^z as a transformation of the plane"
       src="./#/embed/plane-transform?fn=exp&caption=e%5Ez%3A%20vertical%20lines%20become%20circles%2C%20horizontal%20lines%20become%20rays%2C%20and%20every%202%CF%80-tall%20strip%20tiles%20the%20whole%20plane."></iframe>
-    <figcaption>Fig. 4 &mdash; <code>e<sup>z</sup></code> carries the Cartesian grid to a polar one. Re&nbsp;z controls radius, Im&nbsp;z controls angle.</figcaption>
+    <figcaption>Fig. 3 &mdash; <code>e<sup>z</sup></code> carries the Cartesian grid to a polar one. Re&nbsp;z controls radius, Im&nbsp;z controls angle.</figcaption>
   </figure>
 
-  <!-- ===================================================================== -->
-  <h2 id="branches"><span class="num">5</span>The inverse is many-valued: ln and the branch index</h2>
-
   <p>
-    Because <code>e<sup>z</sup></code> sends every <code>2&pi;</code>-tall strip onto
-    the same plane, its inverse <code>ln</code> cannot pick a single answer: a point
-    has <em>infinitely many</em> logarithms, one per strip, all sharing a magnitude
-    but differing in angle by multiples of <code>2&pi;</code>. The viewer makes the
-    choice explicit with a <strong>branch index</strong> that adds whole turns to the
-    angle:
+    The exponential is also the engine underneath the trigonometric functions, and
+    its inverse <code>ln</code> opens the door to the multivalued world &mdash; both of
+    which Part 2 takes up.
   </p>
 
-  <div class="eq">
-    <code>ln(z) = ln|z| + i(arg&nbsp;z + 2&pi;k)</code>, &nbsp; integer
-    <code>k</code> = the branch
-  </div>
-
-  <div class="listing">
-    <p class="src"><b>src/lib/complexMath.ts</b> : 188&ndash;192</p>
-    <pre>export function complexLnBranch(z, branch) {
-  const r = Math.hypot(z.x, z.y);
-  const t = Math.atan2(z.y, z.x) + branch * 2 * Math.PI;  <span class="cm">// + 2πk</span>
-  return new THREE.Vector2(Math.log(r), t);               <span class="cm">// (ln|z|, arg z + 2πk)</span>
-}</pre>
-  </div>
-
-  <p>
-    Stack those branches and they form a spiral ramp &mdash; the
-    <strong>Riemann surface</strong> &mdash; where walking once around the origin
-    lifts you to the next sheet instead of back to the start. The <em>roots</em> are
-    the same idea but with finitely many sheets, because their angle is
-    <em>scaled</em> rather than free: <code>&radic;z</code> halves the angle (and
-    adds <code>&pi;</code> per branch), so two laps bring you home;
-    <code>&#8731;z</code> needs three. The code adds the branch offset before scaling,
-    and a tiny table records how many distinct sheets result:
-  </p>
-
-  <div class="listing">
-    <p class="src"><b>src/lib/complexMath.ts</b> : 180&ndash;184, 107&ndash;111, 425&ndash;431</p>
-    <pre>export function complexSqrtBranch(z, branch) {
-  const t = Math.atan2(z.y, z.x) + branch * Math.PI;   <span class="cm">// √ sheets are π apart</span>
-  const sr = Math.sqrt(Math.hypot(z.x, z.y));
-  return new THREE.Vector2(sr*Math.cos(t*0.5), sr*Math.sin(t*0.5));
-}
-<span class="cm">// distinct sheets: √ repeats every 2, ∛ every 3, z^(p/q) every |q|</span>
-export function branchPeriod(index, q = 1) {
-  switch (index) {
-    case 1: case 14: return 2;                 <span class="cm">// sqrt, √(z(z−1)(z+1))</span>
-    case 16: return 3;                         <span class="cm">// cbrt</span>
-    case 18: return Math.max(1, Math.abs(q));  <span class="cm">// z^(p/q)</span>
-    default: return /* ln-family */ null;      <span class="cm">// infinitely many</span>
-  }
-}</pre>
-  </div>
-
-  <p>
-    A flat plane can't show a spiral ramp without it crashing into itself, which is
-    exactly why these functions want the <strong>4-D</strong> viewer: lift the sheets
-    into the extra dimensions and they separate cleanly, meeting only at the
-    <em>branch point</em> at the origin. Below, <code>&radic;z</code> shows both of
-    its sheets joined into one smooth surface &mdash; drag to see the two layers:
-  </p>
-
-  <figure>
-    <iframe loading="lazy" allowfullscreen
-      title="The two sheets of the square root"
-      src="./#/embed/complex-particles?fn=sqrt&proj=perspective&render=Sheet&motion=quaternion&spin=xy&caption=%E2%88%9Az%20has%20two%20sheets%20%E2%80%94%20lifted%20into%204D%20they%20join%20into%20one%20smooth%20surface%2C%20meeting%20at%20the%20branch%20point."></iframe>
-    <figcaption>Fig. 5 &mdash; the Riemann surface of <code>&radic;z</code>: two sheets that the branch index selects between, joined at the origin and shown as one surface in 4-D.</figcaption>
-  </figure>
-
-  <!-- ===================================================================== -->
-  <h2 id="trig"><span class="num">6</span>Everything trigonometric is e&#8202;<sup>z</sup> in disguise</h2>
-
-  <p>
-    The trig functions are not separate machinery &mdash; they are combinations of
-    the exponential. From Euler's formula,
-    <code>sin&nbsp;z = (e<sup>iz</sup> &minus; e<sup>&minus;iz</sup>) / 2i</code>, and
-    the code computes it by literally calling <code>complexExp</code> twice:
-  </p>
-
-  <div class="listing">
-    <p class="src"><b>src/lib/complexMath.ts</b> : 25&ndash;31</p>
-    <pre>export function complexSin(z) {
-  const iz = new THREE.Vector2(-z.y, z.x);   <span class="cm">// i·z (rotate by 90°)</span>
-  const e1 = complexExp(iz);                 <span class="cm">// e^{iz}</span>
-  const e2 = complexExp(new THREE.Vector2(-iz.x, -iz.y));   <span class="cm">// e^{−iz}</span>
-  const diff = new THREE.Vector2(e1.x - e2.x, e1.y - e2.y);
-  return new THREE.Vector2(diff.y*0.5, -diff.x*0.5);        <span class="cm">// ÷ 2i</span>
-}</pre>
-  </div>
-
-  <p>
-    Everything cascades from there. <code>cos</code> is the same with a plus;
-    <code>tan = sin/cos</code>, and <code>sec, csc, cot</code> are reciprocals of
-    those, so they inherit <code>1/z</code>'s poles wherever the denominator vanishes.
-    The <strong>hyperbolic</strong> family is the identical construction without the
-    <code>i</code> (<code>sinh&nbsp;z = (e<sup>z</sup>&minus;e<sup>&minus;z</sup>)/2</code>)
-    &mdash; which is why <code>sin</code> and <code>sinh</code> are the same surface
-    turned a quarter-turn in the input plane. And the <strong>inverse</strong> trig
-    functions run the chain backward into a logarithm
-    (<code>arcsin&nbsp;z = &minus;i&middot;ln(iz + &radic;(1&minus;z&sup2;))</code>),
-    so they are multivalued and carry the very same branch index from &sect;5. Real
-    sine waves up and down; complex <code>sin</code> also grows exponentially as you
-    move off the real axis, because the hidden <code>e<sup>z</sup></code> takes over:
-  </p>
-
-  <figure>
-    <iframe loading="lazy" allowfullscreen
-      title="sin z as a transformation of the plane"
-      src="./#/embed/plane-transform?fn=sin&caption=sin%20z%20is%20(e%5E%7Biz%7D%E2%88%92e%5E%7B%E2%88%92iz%7D)%2F2i%20%E2%80%94%20periodic%20along%20the%20real%20axis%2C%20exponential%20growth%20off%20it."></iframe>
-    <figcaption>Fig. 6 &mdash; <code>sin&nbsp;z</code>. Periodic along the real axis like its real cousin, but growing exponentially in the imaginary direction &mdash; the exponential showing through.</figcaption>
-  </figure>
-
-  <!-- ===================================================================== -->
-  <h2 id="special"><span class="num">7</span>Special shapes: Joukowski, M&ouml;bius, Gamma</h2>
-
-  <p>
-    A few functions earn their place by the shapes they make.
-  </p>
-
-  <p>
-    The <strong>Joukowski</strong> map <code>&frac12;(z + 1/z)</code> is just the
-    average of a number and its reciprocal &mdash; two transformations you already
-    know, added together &mdash; yet that combination famously bends circles near the
-    unit circle into the cross-section of an <strong>airfoil</strong>, which is how it
-    first earned its keep in early aerodynamics:
-  </p>
-
-  <div class="listing">
-    <p class="src"><b>src/lib/complexMath.ts</b> : 70&ndash;73</p>
-    <pre>export function complexJoukowski(z) {
-  const inv = complexInv(z);                     <span class="cm">// reuses 1/z, guard and all</span>
-  return new THREE.Vector2(0.5*(z.x + inv.x), 0.5*(z.y + inv.y));
-}</pre>
-  </div>
-
-  <p>
-    The <strong>M&ouml;bius</strong> map <code>(z&minus;1)/(z+1)</code> is a ratio of
-    two lines; like all such fractional-linear maps it sends circles and lines to
-    circles and lines, carrying the right half-plane neatly onto the unit disk.
-    The <strong>Gamma</strong> function <code>&Gamma;(z)</code> &mdash; the
-    factorial extended to the whole plane &mdash; has no elementary formula at all,
-    so it is computed by the <em>Lanczos approximation</em> (a short weighted sum)
-    together with the <em>reflection formula</em>
-    <code>&Gamma;(z) = &pi; / (sin&nbsp;&pi;z &middot; &Gamma;(1&minus;z))</code>, which
-    folds the troublesome left half-plane onto the easy right half and, in doing so,
-    makes the genuine poles at <code>0, &minus;1, &minus;2, &hellip;</code> appear:
-  </p>
-
-  <div class="listing">
-    <p class="src"><b>src/lib/complexMath.ts</b> : 171&ndash;177</p>
-    <pre>export function complexGamma(z) {
-  if (z.x &gt;= 0.5) return complexGammaCore(z);          <span class="cm">// Lanczos sum directly</span>
-  <span class="cm">// reflect the left half-plane in: Γ(z) = π / (sin(πz)·Γ(1−z))</span>
-  const s = complexSin(...PI_z);
-  const g = complexGammaCore(oneMinus_z);
-  return complexDiv(new THREE.Vector2(Math.PI, 0), complexMul(s, g));
-}</pre>
-  </div>
-
-  <figure>
-    <iframe loading="lazy" allowfullscreen
-      title="The Joukowski map as a transformation of the plane"
-      src="./#/embed/plane-transform?fn=joukowski&caption=The%20Joukowski%20map%20%C2%BD(z%2B1%2Fz)%20bends%20circles%20near%20%7Cz%7C%3D1%20into%20airfoil%20cross-sections."></iframe>
-    <figcaption>Fig. 7 &mdash; the Joukowski map. The average of <code>z</code> and <code>1/z</code>; offset circles near the unit circle come out wing-shaped.</figcaption>
-  </figure>
-
-  <!-- ===================================================================== -->
-  <h2 id="fieldguide"><span class="num">8</span>Reading any function at a glance</h2>
-
-  <p>
-    Put the pieces together and the colored picture becomes legible. Four features
-    tell you almost everything:
-  </p>
-
-  <table>
-    <thead><tr><th>What you see</th><th>What it means</th><th>From</th></tr></thead>
-    <tbody>
-      <tr><td><strong>Dark point</strong>, hues meeting counterclockwise</td><td>a <strong>zero</strong>; the number of color cycles is its order</td><td>&sect;2</td></tr>
-      <tr><td><strong>Bright spike</strong>, hues meeting clockwise (reversed)</td><td>a <strong>pole</strong>; order = cycle count</td><td>&sect;3</td></tr>
-      <tr><td>A color <strong>seam</strong> you can walk around onto a new sheet</td><td>a <strong>branch point</strong> of a multivalued function</td><td>&sect;5</td></tr>
-      <tr><td>A repeating <strong>tile</strong> of the picture</td><td>a <strong>period</strong> (e.g. <code>2&pi;i</code> for <code>e<sup>z</sup></code>)</td><td>&sect;4</td></tr>
-    </tbody>
-  </table>
-
-  <p>
-    The deeper pattern is that the whole library is built from a handful of moves
-    &mdash; multiply (add angles), divide (invert and reflect), exponentiate (split
-    magnitude from angle), and take logarithms (open up the sheets) &mdash; composed
-    and combined. <code>tan</code> is <code>sin</code> over <code>cos</code>;
-    <code>sinh</code> is <code>sin</code> without the <code>i</code>; <code>arcsin</code>
-    is a <code>ln</code> wearing a square root; Joukowski is <code>z</code> plus
-    <code>1/z</code>. Learn the four moves and you can predict the picture before the
-    GPU draws it &mdash; and when you want to know exactly how the drawing is done,
-    every routine is a dozen readable lines away in
-    <code>src/lib/complexMath.ts</code>.
-  </p>
+  <a class="next" href="./complex-functions-2-guide.html">
+    <span class="k">Continue &mdash; Part 2 of 2</span>
+    <b>Branches, trigonometry &amp; the special maps &rarr;</b>
+    The inverse <code>ln</code> and the Riemann-surface roots, why all of trig is
+    <code>e<sup>z</sup></code> in disguise, Joukowski/M&ouml;bius/Gamma, and a field
+    guide for reading any function.
+  </a>
 
   <div class="seealso">
     <strong>The series &mdash; the math:</strong>
-    <em>What the functions do</em> (here) &middot;
+    <em>What the functions do</em> (Part 1) &middot;
     <a href="./complex-particles-guide.html">From 4D to your screen</a> &middot;
     <a href="./complex-rendering-guide.html">How the surface is drawn</a>.
     <strong>Going deeper:</strong>
@@ -494,15 +312,13 @@ export function branchPeriod(index, q = 1) {
 
   <div class="footer">
     <p>
-      <a href="./guides.html"><strong>&larr; All guides</strong></a> &nbsp;&middot;&nbsp;
+      <a class="hub" href="./guides.html">&larr; All guides</a> &nbsp;&middot;&nbsp;
       This guide documents the live source of the <em>animath</em> complex viewers.
       The functions all live in <code>src/lib/complexMath.ts</code> (with GLSL twins
-      in each viewer's <code>shaders/index.ts</code>); the function table, formulas,
-      and picker categories are at the bottom of that file. Open the
+      in each viewer's <code>shaders/index.ts</code>). Open the
       <a href="./#/plane-transform">Plane Transform</a> or
       <a href="./#/complex-particles">Complex Particles</a> viewer to explore all
-      thirty-some functions, or read the
-      <a href="./embed-demo.html">embed demo</a>.
+      thirty-some functions.
     </p>
   </div>
 
