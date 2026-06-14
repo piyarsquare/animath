@@ -68,8 +68,13 @@ export function makeUnitQuat(angle: number, axis: Axis4D): {L: THREE.Vector4, R:
 }
 
 export function project(p: THREE.Vector4, mode: ProjectionMode): THREE.Vector3{
-  if(mode===ProjectionMode.Perspective) return new THREE.Vector3(p.x,p.y,p.z).multiplyScalar(1/(3+p.w));
-  if(mode===ProjectionMode.Stereo){ const n=p.clone().normalize(); return new THREE.Vector3(n.x,n.y,n.z).multiplyScalar(1/(1-n.w)); }
+  // Perspective denominator (3 + p.w) is floored to a positive minimum so the
+  // eye-plane singularity (p.w = -3) yields a finite point instead of infinity,
+  // continuously (no sign flip as p.w crosses the plane) — matches the shader's
+  // mode-0 guard (shaders/index.ts) so the 4D axis cross tracks the rendered
+  // geometry. Stereo's pole (n.w = 1) is floored likewise.
+  if(mode===ProjectionMode.Perspective){ return new THREE.Vector3(p.x,p.y,p.z).multiplyScalar(1/Math.max(3+p.w,0.35)); }
+  if(mode===ProjectionMode.Stereo){ const n=p.clone().normalize(); return new THREE.Vector3(n.x,n.y,n.z).multiplyScalar(1/Math.max(1-n.w,0.04)); }
   if(mode===ProjectionMode.Hopf){
     // Faithful Hopf map of the complex pair (z1,z2) = (x+iy, u+iv) = (z, f):
     //   H = ( 2 Re(z1 conj z2), 2 Im(z1 conj z2), |z1|^2 - |z2|^2 ) / |(z1,z2)|^2

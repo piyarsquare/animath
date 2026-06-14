@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import ParticleViewerShell from '../../components/ParticleViewerShell';
-import { Select, NumberInput, ComplexInput, Checkbox } from '../../components/ControlPanel';
+import { Select, NumberInput, ComplexInput, Checkbox, RangeSlider } from '../../components/ControlPanel';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { COMPLEX_PARTICLES_DEFAULTS } from '../../config/defaults';
@@ -24,6 +24,8 @@ import type { ViewPoint, HopfScaffold } from '../../lib/particles';
 const STORAGE_KEY = 'complex-particles';
 /** Cap on how many Riemann sheets (particle sets) can be drawn at once. */
 const MAX_SHEETS = 12;
+/** Radius-band slider ceiling; the max thumb here means "no upper |z| limit". */
+const REGION_RMAX = 12;
 import {
   applyComplex, complexPowRational, complexQuadratic,
   functionNames, functionFormulas, functionCategories, POW_PQ_INDEX, QUADRATIC_INDEX,
@@ -107,6 +109,12 @@ export default function ComplexParticles({
   const [quadA, setQuadA] = usePersistentState<Complex2>(ek('quadA'), [1, 0]);
   const [quadB, setQuadB] = usePersistentState<Complex2>(ek('quadB'), [0, 0]);
   const [quadC, setQuadC] = usePersistentState<Complex2>(ek('quadC'), [0, 0]);
+
+  // Domain region (Domain panel): restrict the sampled plane to a polar radius
+  // band on |z| (max thumb = no limit), applied live in the shaders (no geometry
+  // rebuild). rMax at the ceiling means "no upper limit".
+  const [radiusRange, setRadiusRange] = usePersistentState<[number, number]>(ek('radiusRange'), [0, REGION_RMAX]);
+  const regionRMax = () => (radiusRange[1] >= REGION_RMAX ? 1e9 : radiusRange[1]);
 
   // Effective sampling box (× axisScale). Locked → symmetric ±extent; unlocked →
   // the independent min/max window.
@@ -242,6 +250,7 @@ export default function ComplexParticles({
     uProjAlpha: { value: 0 },
     branchIndex: { value: branchMin + b },
     uBranchHue: { value: branchHue(b) },
+    uRegionRadius: { value: new THREE.Vector2(radiusRange[0], regionRMax()) },
   });
 
   // Adaptive fade only applies while the sheet is on screen — in plain Points
@@ -405,6 +414,20 @@ export default function ComplexParticles({
     const tileGeom = tileGeomRef.current;
     const netGeom = netGeomRef.current;
     if (!pointsGeom || !fillGeom || !wireGeom || !tileGeom || !netGeom) return;
+    // Preserve the live projection across the rebuild. Fresh materials start at
+    // makeUniforms' defaults (uProjMode = uProjTarget = projRef, alpha 0), which
+    // collapses any active cross-fade — so a Torus/Sphere/mid-morph view would
+    // snap back to Perspective when the sheet count changes. The animation loop
+    // re-pushes rotation every frame (orientation self-heals) but never touches
+    // the projection cross-fade, so capture it here and restore it after rebuild.
+    const prevMat = state.materialsRef.current[0];
+    const projSnap = prevMat
+      ? {
+          mode: prevMat.uniforms.uProjMode.value as number,
+          target: prevMat.uniforms.uProjTarget.value as number,
+          alpha: prevMat.uniforms.uProjAlpha.value as number,
+        }
+      : null;
     pointsRef.current.forEach(o => scene.remove(o));
     fillMeshRef.current.forEach(o => scene.remove(o));
     wireMeshRef.current.forEach(o => scene.remove(o));
@@ -443,6 +466,13 @@ export default function ComplexParticles({
       tileMeshRef.current.push(tiles);
       netMeshRef.current.push(net);
       scene.add(pts, fill, wire, tiles, net);
+    }
+    if (projSnap) {
+      state.materialsRef.current.forEach(m => {
+        m.uniforms.uProjMode.value = projSnap.mode;
+        m.uniforms.uProjTarget.value = projSnap.target;
+        m.uniforms.uProjAlpha.value = projSnap.alpha;
+      });
     }
     applyRenderVisibility();
   };
@@ -553,6 +583,16 @@ export default function ComplexParticles({
       if (m.uniforms.uMaxTile) m.uniforms.uMaxTile.value = state.tileSize;
     });
   }, [state.tileSize]);
+
+  // Push the domain-region radius band to every material — live masking, no
+  // geometry rebuild.
+  useEffect(() => {
+    const rMax = regionRMax();
+    state.materialsRef.current.forEach(m => {
+      if (m.uniforms.uRegionRadius) (m.uniforms.uRegionRadius.value as THREE.Vector2).set(radiusRange[0], rMax);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [radiusRange]);
 
   // Show the sphere scaffold in the Hopf view (or once the Torus → Hopf collapse
   // is past halfway) and the donut scaffold in the Torus view; hide both in the
@@ -830,6 +870,21 @@ export default function ComplexParticles({
     </>
   );
 
+  // Domain-region control: a polar radius band on |z|. A shader mask, so it
+  // applies live in every render mode (max thumb = ∞ = no upper limit).
+  const regionControls = (
+    <RangeSlider
+      label="Radius |z|"
+      min={0}
+      max={REGION_RMAX}
+      step={0.05}
+      valueMin={radiusRange[0]}
+      valueMax={radiusRange[1]}
+      onChange={(lo, hi) => setRadiusRange([lo, hi])}
+      format={v => (v >= REGION_RMAX ? '∞' : v.toFixed(2))}
+    />
+  );
+
   return (
     <ParticleViewerShell
       appId="complex-particles"
@@ -840,7 +895,7 @@ export default function ComplexParticles({
       functionFormula={displayFormula}
       functionPicker={functionPicker}
       topExtra={functionTopSelect}
-      domainExtras={isMultivalued ? branchControls : undefined}
+      domainExtras={<>{regionControls}{isMultivalued ? branchControls : null}</>}
       readme={readmeText}
       explainer={explainerText}
       settingsStorageKey={embed ? undefined : STORAGE_KEY}

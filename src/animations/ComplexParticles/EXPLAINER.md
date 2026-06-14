@@ -104,6 +104,12 @@ projection can still evert the sheet where it stretches past the camera divide
 non-folding surface. It's the clearest way to see folds, branch sheets, and how
 the surface drapes through each projection.
 
+### Domain region
+
+**Radius `|z|`** restricts the sampled plane to a polar band — keep only an
+annulus, or drag the top thumb to ∞ for no upper limit. It's a shader mask, so
+every render mode and projection updates instantly with no rebuild.
+
 ## Branches and Riemann sheets (Domain panel)
 
 Multivalued functions (`√z`, `∛z`, `ln z`, `z^(p/q)`, `√(z(z−1)(z+1))`, the
