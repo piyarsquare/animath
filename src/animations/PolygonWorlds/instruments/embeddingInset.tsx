@@ -20,11 +20,12 @@ import { immersionFor } from './immersions';
 const SIZE = 156;
 
 export function EmbeddingInset({
-  worldId, getState, getDir,
+  worldId, getState, getDir, phone,
 }: {
   worldId: string;
   getState: () => SquareMapState | null;
   getDir: () => THREE.Vector3 | null;
+  phone?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stateRef = useRef(getState); stateRef.current = getState;
@@ -65,22 +66,7 @@ export function EmbeddingInset({
     const mesh = immersion.build();
     spin.add(mesh);
 
-    // fixed reference markers — the domain-center "pole" + the identified corners,
-    // colored to match the mini-map, so the inset reads as an orientable map.
-    const refMats: THREE.Material[] = [];
-    const refGeos: THREE.BufferGeometry[] = [];
-    const at = new THREE.Vector3();
-    for (const ref of immersion.refs) {
-      immersion.at(ref.u, ref.v, at);
-      const geo = new THREE.SphereGeometry(ref.pole ? 0.12 : 0.09, 14, 10);
-      const mat = new THREE.MeshStandardMaterial({ color: ref.color, emissive: ref.color, emissiveIntensity: 0.75, roughness: 0.35 });
-      const dot = new THREE.Mesh(geo, mat);
-      dot.position.copy(at);
-      spin.add(dot);
-      refMats.push(mat); refGeos.push(geo);
-    }
-
-    // player marker — a bright bead riding the immersed surface
+    // player marker — a bright bead riding the immersed surface (shows your location)
     const markerMat = new THREE.MeshStandardMaterial({ color: 0x8ef0ff, emissive: 0x8ef0ff, emissiveIntensity: 0.9, roughness: 0.25 });
     const marker = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 12), markerMat);
     marker.visible = false;
@@ -102,8 +88,6 @@ export function EmbeddingInset({
         const mo = o as THREE.Mesh;
         if (mo.isMesh) { mo.geometry.dispose(); (mo.material as THREE.Material).dispose(); }
       });
-      refGeos.forEach((g) => g.dispose());
-      refMats.forEach((mm) => mm.dispose());
       marker.geometry.dispose();
       markerMat.dispose();
       renderer.dispose();
@@ -111,14 +95,20 @@ export function EmbeddingInset({
   }, [immersion]);
 
   if (!immersion) return null;
+  // On phone, sit top-left under the bar (paired with the mini-map at top-right),
+  // shrunk, so it clears the floating bottom dock and the walk pad.
+  const box = phone ? 112 : SIZE;
+  const pos: React.CSSProperties = phone
+    ? { top: 52, left: 8 }
+    : { bottom: 86, left: 12 };
   return (
     <div style={{
-      position: 'absolute', bottom: 86, left: 12, width: SIZE, height: SIZE,
+      position: 'absolute', ...pos, width: box, height: box,
       pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.18)',
       borderRadius: 8, boxShadow: '0 4px 14px rgba(0,0,0,0.45)', overflow: 'hidden',
       background: 'rgba(8,10,18,0.66)',
     }}>
-      <canvas ref={canvasRef} style={{ width: SIZE, height: SIZE, display: 'block' }} />
+      <canvas ref={canvasRef} style={{ width: box, height: box, display: 'block' }} />
       <div style={{
         position: 'absolute', top: 4, left: 8, fontSize: 10, letterSpacing: '0.06em',
         color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase',

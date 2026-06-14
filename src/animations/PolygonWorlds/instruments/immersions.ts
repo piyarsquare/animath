@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { SquareMapState } from '../engineTypes';
-import { cornerColor } from '../decor';
 import { sq2hemi } from '../squareMap';
 
 /**
@@ -12,15 +11,12 @@ import { sq2hemi } from '../squareMap';
  * double torus for genus-2.
  *
  * Each {@link ImmersionDescriptor} provides a procedural mesh, a chart→surface map
- * `at(u,v)`, a live character `marker`, and a set of fixed **reference markers**
- * (`refs`) — the domain-center *pole* and the four identified corners, colored to
- * match the mini-map — so the inset reads as a map you can orient on, not just a
- * spinning shape. The spherical worlds ride the player's true direction; the flat
- * and hyperbolic worlds ride the fundamental-domain chart `(u,v)` (exact for the
- * flat tori/bottles, an honest approximation on the hyperbolic disk).
+ * `at(u,v)`, and a live character `marker` that rides it, so the inset shows where
+ * you are on the immersed shape. The spherical worlds ride the player's true
+ * direction; the flat and hyperbolic worlds ride the fundamental-domain chart
+ * `(u,v)` (exact for the flat tori/bottles, an honest approximation on the
+ * hyperbolic disk).
  */
-
-export interface RefMarker { u: number; v: number; color: number; pole?: boolean }
 
 export interface ImmersionDescriptor {
   caption: string;
@@ -30,8 +26,6 @@ export interface ImmersionDescriptor {
   at(u: number, v: number, out: THREE.Vector3): THREE.Vector3;
   /** Live character position; spherical worlds prefer the true `dir`. null ⇒ hide. */
   marker(st: SquareMapState | null, dir: THREE.Vector3 | null): THREE.Vector3 | null;
-  /** Fixed reference dots (pole at the domain center + identified corners). */
-  refs: RefMarker[];
 }
 
 /* ── parametric mesh helper ──────────────────────────────────────────────────── */
@@ -147,16 +141,6 @@ function dyckMesh(): THREE.Mesh {
 
 /* ── per-world registry ──────────────────────────────────────────────────────── */
 
-/** Standard reference set: the domain-center "pole" (amber) + the four identified
- *  corners (mini-map hues), so the inset orients like the square mini-map. */
-const STD_REFS: RefMarker[] = [
-  { u: 0.5, v: 0.5, color: 0xffd24a, pole: true },
-  { u: 0, v: 0, color: cornerColor(0, 4) },
-  { u: 1, v: 0, color: cornerColor(1, 4) },
-  { u: 1, v: 1, color: cornerColor(2, 4) },
-  { u: 0, v: 1, color: cornerColor(3, 4) },
-];
-
 /** Flat/hyperbolic descriptor whose live marker rides the chart through `at`. */
 function chartImmersion(
   caption: string, camDist: number, build: () => THREE.Object3D,
@@ -165,7 +149,6 @@ function chartImmersion(
   return {
     caption, camDist, build, at,
     marker: (st) => (st ? at(st.u, st.v, new THREE.Vector3()) : null),
-    refs: STD_REFS,
   };
 }
 
@@ -186,14 +169,12 @@ const DESCRIPTORS: Record<string, ImmersionDescriptor> = {
     },
     at: (u, v, out) => sphereDir(u, v, out).multiplyScalar(1.3),
     marker: (_st, dir) => (dir ? dir.clone().multiplyScalar(1.3) : null),
-    refs: STD_REFS,
   },
   rp2: {
     caption: 'Roman surface · same walk', camDist: 5.2,
     build: romanMesh,
     at: (u, v, out) => roman(sq2hemi((u - 0.5) * 2, (v - 0.5) * 2), out),
     marker: (_st, dir) => (dir ? roman(dir, new THREE.Vector3()) : null),
-    refs: STD_REFS,
   },
   torus: chartImmersion('Torus of revolution · same walk', 4.6, () => paramMesh(torusParam, 64, 32), (u, v, o) => { torusParam(u, v, o); return o; }),
   klein: chartImmersion('Klein bottle (figure-8) · same walk', 4.8, () => paramMesh(kleinParam, 96, 36), (u, v, o) => { kleinParam(u, v, o); return o; }),
