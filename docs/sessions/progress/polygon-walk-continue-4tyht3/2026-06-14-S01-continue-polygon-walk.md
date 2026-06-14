@@ -33,6 +33,30 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 milestone · 00:30 — Hardened the chirality guard's flip-side read; full 12-world run all green
+**Why:** the klein6 "failure" earlier was a flaky false-fail of the guard — the
+safety net that protects every orientation world (including the four I added).
+Rather than guess into a large new roadmap feature (B/C/D all need a steer),
+fixing the net compounds the whole session's work.
+
+**Root cause:** trail prints lay only every ~0.12–1.6 units, so the *freshest*
+print right after crossing to the flipped face can still be the **pre-crossing**
+stamp (laid on face A) — which reads mirrored in the flipped frame → a false
+`B=−axis`. The old gate ("sign stable for 3 reads") didn't prove the print was
+laid on the flip side, so a stale stamp could be accepted.
+
+**Fix (no engine plumbing):** exposed the existing `clearTrail` on the
+`__poly` debug bridge; the guard now **wipes the trail on crossing** and accepts
+the **first stamp laid while still flipped** (guaranteed a genuine flip-side
+print), re-confirming the face hasn't changed at read time.
+
+**Verification:** `npm run build` ✓, `npm run lint` ✓ (0 errors). Full guard,
+all **12 worlds green** — every flip-side world (klein, crosscap3, rp2, klein6,
+rp2hex, rp2oct) PASS on BOTH faces; every orientable control (torus, sphere,
+genus2, torus6, zipsphere6, zipsphere8) PASS; **all decor 0 improper**; twin
+mirror-ink below the glass on all three twin worlds. **klein6 now passes
+reliably** — the flake is gone.
+
 ### 🟡 milestone · 23:55 — A2 implemented + verified: hex/oct zip spheres with visible seams
 **Why:** the star-tree insight made A2 tractable — the walk/decor reuse the
 round-sphere path, so the new code is just the seams + corner topology.

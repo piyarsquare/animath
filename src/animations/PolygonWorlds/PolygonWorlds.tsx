@@ -95,6 +95,9 @@ export default function PolygonWorlds() {
         setYaw: (v: number) => { yawRef.current = v; },
         // mirror-ink placement audit (spherical twin worlds; null elsewhere)
         auditInk: () => engineRef.current?.auditInk(),
+        // wipe the trail (used by the chirality guard to force a guaranteed
+        // FRESH print on the flip side, free of any pre-crossing stamp)
+        clearTrail: () => engineRef.current?.clearTrail(),
         // plant/clear the two-inked glass sign without driving the panel UI
         plantSign: (f: string, b: string) => engineRef.current?.plantSign(f, b),
         clearSigns: () => engineRef.current?.clearSigns(),

@@ -64,6 +64,7 @@ const auditDecor = (page) => page.evaluate(() => window.__poly?.auditDecor?.() ?
 // the glass — the freshest print's mirror image must sit strictly inside the shell.
 const auditInk = (page) => page.evaluate(() => window.__poly?.auditInk?.() ?? null);
 const setYaw = (page, y) => page.evaluate((v) => window.__poly?.setYaw?.(v), y);
+const clearTrail = (page) => page.evaluate(() => window.__poly?.clearTrail?.());
 const holdW = (page, on) => page.evaluate((d) => window.dispatchEvent(new KeyboardEvent(d ? 'keydown' : 'keyup', { code: 'KeyW' })), on);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -104,21 +105,25 @@ async function run() {
           const pr = await probe(page);
           if (pr === null || Math.abs(pr) < 1e-6) continue;     // no print yet
           if (fl === false && pA === null) { pA = pr; sideA = await pngOf(page); }
-          else if (fl === true && pB === null) {
-            // Dwell on the flip side until a genuinely flip-side print is laid (the trail
-            // only records a new print every ~0.12–1.6 units, so an immediate read can
-            // still return the last PRE-crossing print). Walk on, and accept the probe
-            // only once it is stable across reads while still flipped.
+          else if (fl === true && pB === null && pA !== null) {
+            // Robust flip-side read. Prints only lay every ~0.12–1.6 units, so the
+            // freshest print right after crossing can still be the PRE-crossing stamp
+            // (laid on face A) — which reads mirrored in the flipped frame and yields a
+            // false negative. WIPE the trail here, then accept the FIRST stamp laid while
+            // still flipped: it is guaranteed a genuine flip-side print. (A stale-print
+            // false fail on klein6 is exactly what this replaces.)
+            await clearTrail(page);
             let last = null, stable = 0;
             const tb = Date.now();
-            while (Date.now() - tb < 4000) {
-              await sleep(220);
-              if ((await flipped(page)) !== true) break;        // crossed back; abandon
+            while (Date.now() - tb < 5000) {
+              await sleep(180);
+              if ((await flipped(page)) !== true) break;        // crossed back before a fresh stamp; retry
               const q = await probe(page);
-              if (q === null || Math.abs(q) < 1e-6) continue;
+              if (q === null || Math.abs(q) < 1e-6) continue;    // no fresh stamp yet
+              if ((await flipped(page)) !== true) break;         // re-confirm: still flipped at read time
               if (last !== null && Math.sign(q) === Math.sign(last)) stable++; else stable = 0;
               last = q;
-              if (stable >= 3 && Date.now() - tb > 1400) { pB = q; sideB = await pngOf(page); break; }
+              if (stable >= 2) { pB = q; sideB = await pngOf(page); break; }
             }
           }
           if (pA !== null && (pB !== null || world.orientable)) break;
