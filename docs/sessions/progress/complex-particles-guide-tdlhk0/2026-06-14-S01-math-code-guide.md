@@ -39,6 +39,35 @@ confirms the current state of the projection math (`viewpoint.ts` /
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 15:30 — Track A complete: color, sampling, plane-transform + hub
+**Why:** User asked to complete A1–A3 from the roadmap.
+
+Built three "going deeper" pages, taking the series to **six** cross-linked pages
+plus a hub:
+- **A1 `complex-color-guide.html`** — domain coloring: phase→hue / magnitude→brightness
+  (`calcColor`), domain-vs-range, the quantity/brightness channels, the sequential
+  colormap polynomial fits (`colormaps.ts`), contour bands. Live `colorby=`/`colormap=`.
+- **A2 `complex-sampling-guide.html`** — the domain patterns (`fillPattern`): grid,
+  the radial fiber family, the equal-area `√` radius, the per-point seed. **Needed a
+  small additive `pattern=` embed param** (`embedParams.ts` + the ComplexParticles
+  embed effect + doc) so the page shows live Rings/Spokes/Web.
+- **A3 `complex-plane-transform-guide.html`** — `f` as a flat plane transform: the two
+  panes, that it's the Drop-X+Drop-Y shadow of the 4-D graph, **conformality** (angle
+  preservation as the signature of differentiability, with `z²`'s origin exception),
+  and the **log-polar** unrolling (multiply→translate, `zⁿ`→shear, `ln`→flatten).
+- **`guides.html`** — index hub, grouped "The math" (trilogy) + "Going deeper" (these
+  three) + the embed demo. All trilogy pages now footer-link the hub.
+
+Verified headless: `pattern=rings/spokes/web` render distinctly (low count to resolve
+structure), `colorby=range` and `colormap=2` (Viridis) wire through state, the
+`plane-transform?fn=square` two-pane renders. All four new pages compose. `npm run
+build` passes. `docs/EMBEDS.md` updated (pattern= param + the six-page list); the S02
+plan marks Track A + the hub DONE, leaving Track B (B0 embed routes → B1–B4) open.
+
+One honesty fix: softened A3's Fig-2 claim — the plane-transform embed shows points by
+default (grid lines are an in-app toggle), so the prose points to the app for the
+explicit right-angle view rather than asserting visible grid cells.
+
 ### 🟡 milestone · 14:55 — Third page (rendering) + series roadmap
 **Why:** User asked to build the render-modes guide and write a plan for the rest.
 

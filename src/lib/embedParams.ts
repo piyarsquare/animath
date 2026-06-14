@@ -1,7 +1,7 @@
 import { ProjectionMode } from './viewpoint';
 import { functionNames } from './complexMath';
 import { planes, type Plane } from '../math/constants';
-import { renderModes, type RenderMode } from './particles/types';
+import { renderModes, type RenderMode, SamplePattern, samplePatternNames } from './particles/types';
 
 /**
  * URL-param codec for the embeddable applet routes (docs/EMBEDS.md).
@@ -10,7 +10,8 @@ import { renderModes, type RenderMode } from './particles/types';
  *
  *   fn=exp · p=1&q=2 · render=sheet · proj=hopf|perspective|stereo|torus|
  *   dropx|dropy|dropu|dropv · motion=fixed|quaternion · spin=xy,uv ·
- *   count=120000 · colorby=domain|range · colormap=2 · extent=2 ·
+ *   count=120000 · colorby=domain|range · colormap=2 ·
+ *   pattern=grid|polar|rings|spokes|web|squares|random · extent=2 ·
  *   caption=… · controls=0|1
  *
  * Unknown or garbled values are ignored (the embed falls back to defaults,
@@ -28,6 +29,8 @@ export interface ParticleEmbedConfig {
   proj?: ProjectionMode;
   motion?: 'Quaternion' | 'Fixed';
   spin?: Plane[];
+  /** Domain sampling layout (Grid default; the radial patterns trace fibers). */
+  pattern?: SamplePattern;
   count?: number;
   colorBy?: 0 | 1;
   colormap?: number;
@@ -80,6 +83,10 @@ export function parseParticleEmbed(query: string): ParticleEmbedConfig {
     .map(s => s.trim().toUpperCase())
     .filter((s): s is Plane => (planes as readonly string[]).includes(s));
   if (spin.length) cfg.spin = spin;
+
+  const pat = (P.get('pattern') ?? '').toLowerCase();
+  const patIdx = samplePatternNames.findIndex(n => n.toLowerCase() === pat);
+  if (patIdx >= 0) cfg.pattern = patIdx as SamplePattern;
 
   const count = num('count');
   if (count !== undefined) cfg.count = Math.max(1000, Math.min(1_000_000, Math.round(count)));

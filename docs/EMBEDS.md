@@ -15,9 +15,11 @@
 > ```
 >
 > Supported params (see `src/lib/embedParams.ts`): `fn` `p` `q` `render`
-> `proj` `motion` `spin` `count` `colorby` `colormap` `extent` `caption`
-> `controls` `buttons` (particles); `fn` `p` `q` `extent` `caption`
-> `controls` (plane). `buttons=dropx,dropy,…,rotate` overlays projection
+> `proj` `motion` `spin` `pattern` `count` `colorby` `colormap` `extent`
+> `caption` `controls` `buttons` (particles); `fn` `p` `q` `extent` `caption`
+> `controls` (plane). `pattern=grid|polar|rings|spokes|web|squares|random`
+> picks the domain sampling layout.
+> `buttons=dropx,dropy,…,rotate` overlays projection
 > switchers on the applet; drop buttons freeze the motion, Rotate restores
 > the full 4D view with the quaternion tumble.
 
@@ -111,18 +113,16 @@ gets a short "Embedding" note. A demo explainer page (e.g.
 sessions pipeline) can serve as the reference embed host on the same Pages
 site.
 
-> **Built so far:** reference host pages ship under `public/` (copied to the
-> Pages root) and cross-link:
-> - `embed-demo.html` — the minimal "Seeing e^z" demo.
-> - `complex-functions-guide.html` — *What the functions do*: how each `f` is
->   computed (`complexMath.ts`) and what it does to the plane (Plane Transform
->   embeds).
-> - `complex-particles-guide.html` — *From 4D to your screen*: the 4D→3D
->   projections and quaternion rotations (`viewpoint.ts`, `quat4.ts`, the
->   `surfacePos` shader).
-> - `complex-rendering-guide.html` — *How the surface is drawn*: the render
->   modes (Points/Sheet/Tiles/Net) and adaptive density
->   (`createParticleGeometry.ts` + the per-mode shaders).
+> **Built so far:** a guide series ships under `public/` (copied to the Pages
+> root), indexed by **`guides.html`** and cross-linked. The math trilogy —
+> `complex-functions-guide.html` (*What the functions do*),
+> `complex-particles-guide.html` (*From 4D to your screen*),
+> `complex-rendering-guide.html` (*How the surface is drawn*) — plus three
+> "going deeper" pages: `complex-color-guide.html` (domain coloring +
+> `colormaps.ts`), `complex-sampling-guide.html` (the domain patterns; uses the
+> `pattern=` param), and `complex-plane-transform-guide.html` (conformality +
+> log-polar). The older `embed-demo.html` is the minimal starting demo. Each
+> page pairs a live `#/embed/` applet with the exact source lines it documents.
 >
 > A roadmap for extending the series to the other apps (and the embed-route
 > investment that unlocks them) is in the branch's session reports

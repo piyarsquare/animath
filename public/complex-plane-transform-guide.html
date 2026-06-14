@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<!-- A math-and-code guide to the Plane Transform viewer.
+     Deployed at <site>/complex-plane-transform-guide.html — part of the animath
+     complex viewer guide series. Covers f as a transformation of the colored plane:
+     the two panes, conformality (angle preservation as the signature of complex
+     differentiability), and the log-polar unrolling. Companion to the 4D guides;
+     Plane Transform is the flat cousin. Live applets via #/embed/plane-transform
+     (docs/EMBEDS.md). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Two planes, one map — the Plane Transform viewer</title>
+  <style>
+    :root {
+      --bg: #faf8f3; --fg: #232323; --muted: #8a8377; --rule: #ddd5c4;
+      --codebg: #1d1f23; --codefg: #e6e6e6; --codekw: #c8a26a; --codecm: #7f8a78;
+      --inlinebg: #f0ece1; --accent: #7a5cff; --eqbg: #f4f1e8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+           font: 17px/1.65 Georgia, 'Times New Roman', serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 48px 20px 96px; }
+    h1 { font-size: 33px; line-height: 1.2; margin: 0 0 6px; }
+    h2 { font-size: 24px; line-height: 1.25; margin: 52px 0 4px; padding-top: 12px;
+         border-top: 1px solid var(--rule); }
+    h2 .num { color: var(--accent); font-size: 18px; margin-right: 8px; }
+    h3 { font-size: 18px; margin: 30px 0 4px; }
+    .byline { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+    p { margin: 0 0 18px; }
+    a { color: var(--accent); }
+    em { color: #4a443a; }
+    figure { margin: 26px 0; }
+    figure iframe { width: 100%; height: 400px; border: 1px solid var(--rule);
+                    border-radius: 10px; display: block; background: #0c0c10; }
+    figcaption { font-size: 13.5px; color: var(--muted); padding-top: 8px; }
+    code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+           font-size: 0.86em; background: var(--inlinebg); padding: 1px 5px;
+           border-radius: 4px; }
+    .eq { background: var(--eqbg); border-left: 3px solid var(--accent);
+          padding: 12px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+          font-size: 16px; overflow-x: auto; }
+    .eq code { background: none; padding: 0; font-size: 1em; }
+    .listing { margin: 18px 0; }
+    .listing .src { font: 12px/1.2 ui-monospace, Menlo, Consolas, monospace;
+                    color: var(--muted); margin: 0 0 5px; }
+    .listing .src b { color: #5a5346; font-weight: 600; }
+    pre { background: var(--codebg); color: var(--codefg); margin: 0;
+          padding: 16px 18px; border-radius: 9px; overflow-x: auto;
+          font: 13px/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+    pre .cm { color: var(--codecm); font-style: italic; }
+    table { border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 15px; }
+    th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule);
+             vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: 13.5px;
+         text-transform: uppercase; letter-spacing: 0.03em; }
+    td code { font-size: 0.9em; }
+    nav.toc { background: var(--eqbg); border: 1px solid var(--rule);
+              border-radius: 10px; padding: 16px 20px; margin: 28px 0 8px;
+              font-size: 15px; }
+    nav.toc strong { display: block; font-size: 13px; text-transform: uppercase;
+                     letter-spacing: 0.04em; color: var(--muted); margin-bottom: 8px; }
+    nav.toc ol { margin: 0; padding-left: 22px; }
+    nav.toc li { margin: 3px 0; }
+    .note { border-left: 3px solid #c8a26a; background: #f7f1e3;
+            padding: 11px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+            font-size: 15.5px; }
+    .note b { color: #7a5a1e; }
+    .seealso { background: var(--eqbg); border: 1px solid var(--rule);
+               border-radius: 10px; padding: 12px 18px; margin: 24px 0;
+               font-size: 15px; }
+    .footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--rule);
+              color: var(--muted); font-size: 14px; }
+    .footer a.hub { font-weight: 600; }
+    sup, sub { line-height: 0; }
+  </style>
+</head>
+<body>
+<main>
+
+  <h1>Two planes, one map</h1>
+  <div class="byline">The <em>Plane Transform</em> viewer &mdash; <code>f</code> shown not as a 4-D graph but as a flat transformation of the colored plane</div>
+
+  <p>
+    The other guides build the four-dimensional graph of <code>(z, f(z))</code> and
+    work to flatten it. <em>Plane Transform</em> takes the opposite, older route: it
+    shows the function as a <strong>transformation of the plane</strong> &mdash; two
+    pictures side by side, the input on the left and where <code>f</code> sends it on
+    the right. There is no extra dimension to project; you simply watch the colored
+    plane get rotated, stretched, folded, and torn. It is the most direct way to feel
+    what a complex function <em>does</em>, and it surfaces one idea the 4-D view hides:
+    <strong>conformality</strong>.
+  </p>
+
+  <p>
+    The applets are the live two-pane viewer (<code>#/embed/plane-transform</code>);
+    the left pane is the input, the right pane its image under <code>f</code>. Drag to
+    pan, scroll to zoom.
+  </p>
+
+  <nav class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#panes">The two panes: same color, same point</a></li>
+      <li><a href="#samef">The same function, shown flat</a></li>
+      <li><a href="#conformal">Conformality: the signature of differentiability</a></li>
+      <li><a href="#logpolar">The log-polar plane: turning curves into lines</a></li>
+    </ol>
+  </nav>
+
+  <!-- ===================================================================== -->
+  <h2 id="panes"><span class="num">1</span>The two panes: same color, same point</h2>
+
+  <p>
+    The input pane is a colored field of sample points <code>z = x + iy</code>: hue is
+    the <em>argument</em> of <code>z</code>, brightness its <em>magnitude</em> &mdash;
+    the same domain coloring as everywhere else (see
+    <a href="./complex-color-guide.html">the color guide</a>). The output pane plots
+    the <em>same</em> points at their images <code>w = f(z)</code>, carrying each
+    point's color with it. So the rule for reading the pair is simply:
+  </p>
+
+  <div class="eq">
+    <strong>Same color = same point.</strong> &nbsp; Find a patch of color on the
+    left to know <em>which</em> input it is; find that color on the right to see
+    <em>where</em> <code>f</code> sent it.
+  </div>
+
+  <p>
+    Because the color is glued to the point, every move the function makes is visible:
+    a rotation spins the colors, a stretch spreads them, a fold brings two colors
+    together, a zero pulls a whole neighborhood into one spot. The function below,
+    <code>e<sup>z</sup></code>, carries the input's straight grid into the output's
+    rings and rays &mdash; vertical lines become circles, horizontal lines become
+    rays:
+  </p>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="e^z as a transformation of the plane, two panes"
+      src="./#/embed/plane-transform?fn=exp&caption=Left%3A%20the%20colored%20input%20plane.%20Right%3A%20where%20e%5Ez%20sends%20each%20point%20%E2%80%94%20straight%20grid%20lines%20become%20circles%20and%20rays."></iframe>
+    <figcaption>Fig. 1 &mdash; <code>e<sup>z</sup></code>. The input grid (left) is carried to a polar grid (right); matching colors mark matching points.</figcaption>
+  </figure>
+
+  <!-- ===================================================================== -->
+  <h2 id="samef"><span class="num">2</span>The same function, shown flat</h2>
+
+  <p>
+    This is not a different mathematics from the particle viewer &mdash; it is the
+    <em>same</em> <code>f</code>, drawn with one fewer dimension. Plane Transform
+    evaluates each output point by the same complex-function library documented in
+    <a href="./complex-functions-guide.html">What the functions do</a>; it just plots
+    the result directly in 2-D instead of lifting <code>(z, f(z))</code> into 4-D
+    first. Conceptually, the output pane is exactly the
+    <a href="./complex-particles-guide.html#drop"><em>Drop&nbsp;X&nbsp;+&nbsp;Drop&nbsp;Y</em></a>
+    shadow of the 4-D graph &mdash; keep the output coordinates <code>(u, v)</code>,
+    discard the input ones &mdash; while the input pane is the <code>(x, y)</code>
+    shadow. Two orthographic slices of the same object, placed side by side so you can
+    watch one become the other.
+  </p>
+
+  <p>
+    The trade-off is what each view shows best. The 4-D viewer keeps input and output
+    <em>together</em>, so it can show a continuous surface, its sheets, and its
+    self-intersections. Plane Transform separates them, which loses the surface but
+    wins something the graph obscures: a clean, undistorted look at how the map warps
+    the plane &mdash; and, in particular, at the angles between curves.
+  </p>
+
+  <!-- ===================================================================== -->
+  <h2 id="conformal"><span class="num">3</span>Conformality: the signature of differentiability</h2>
+
+  <p>
+    Here is the payoff. A function that is <strong>complex-differentiable</strong>
+    (analytic) is <strong>conformal</strong>: it <em>preserves angles</em>. Two curves
+    that cross at a right angle in the input still cross at a right angle in the
+    output &mdash; even where the map bends and stretches them beyond recognition. The
+    grid is the perfect probe: its horizontal and vertical lines meet at
+    <code>90&deg;</code> everywhere, and under an analytic <code>f</code> the warped
+    grid <em>still</em> meets at <code>90&deg;</code> in every cell.
+  </p>
+
+  <div class="eq">
+    Analytic <code>f</code> &rArr; locally a rotation + uniform scale by
+    <code>f&prime;(z)</code>. A rotation-and-scale keeps angles &mdash; so right angles
+    survive.
+  </div>
+
+  <p>
+    That is why the warped pictures, however wild, never <em>shear</em>: locally,
+    multiplication by the complex derivative <code>f&prime;(z)</code> rotates by
+    <code>arg&nbsp;f&prime;</code> and scales by <code>|f&prime;|</code>, and a
+    rotation-plus-scale cannot turn a square into a non-square parallelogram. Switch on
+    the grid lines in the viewer and you can watch this directly: the cells of
+    <code>z&sup2;</code> swell and curve, but each little cell stays a <em>square</em>.
+    The image below carries the input's color field across without tearing its local
+    structure:
+  </p>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="z squared as a transformation of the plane"
+      src="./#/embed/plane-transform?fn=square&caption=z%C2%B2%20is%20conformal%3A%20it%20preserves%20angles%20everywhere%20except%20the%20origin%2C%20where%20f%27%3D0%20and%20angles%20double."></iframe>
+    <figcaption>Fig. 2 &mdash; <code>z&sup2;</code> warps the plane, yet the map is locally a rotation-and-scale &mdash; conformal &mdash; everywhere <em>except</em> the origin. Turn on grid lines in the viewer to watch right angles survive.</figcaption>
+  </figure>
+
+  <p>
+    The exception proves the rule. Conformality needs <code>f&prime;(z) &ne; 0</code>,
+    and <code>z&sup2;</code> has <code>f&prime; = 2z = 0</code> at the origin. There, the
+    angle-preservation breaks down and angles instead <em>double</em> &mdash; which is
+    why the grid lines fan out into a corner where four cells used to meet. Spotting
+    where the grid stops being locally square is spotting the zeros of the derivative.
+  </p>
+
+  <!-- ===================================================================== -->
+  <h2 id="logpolar"><span class="num">4</span>The log-polar plane: turning curves into lines</h2>
+
+  <p>
+    Plane Transform has one more trick the particle viewer doesn't: it can
+    <strong>unroll</strong> the plane. The <em>Log-polar</em> view plots each point not
+    at <code>(x, y)</code> but at <code>(arg, log|&middot;|)</code> &mdash; angle across,
+    log-radius up. This re-coordinatization is chosen to straighten the most common
+    complex operations into the simplest possible motions:
+  </p>
+
+  <table>
+    <thead><tr><th>Operation</th><th>On the log-polar plane becomes</th></tr></thead>
+    <tbody>
+      <tr><td>multiply by a constant <code>c</code></td><td>a <strong>translation</strong> (by <code>(arg c, log|c|)</code>)</td></tr>
+      <tr><td><code>z<sup>n</sup></code></td><td>a <strong>linear shear / scale</strong> (angle &times;<code>n</code>, height &times;<code>n</code>)</td></tr>
+      <tr><td><code>ln&nbsp;z</code></td><td><strong>flattens</strong> the strip into a square (it is the inverse coordinate map)</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    The reason is the same Euler identity that powers
+    <a href="./complex-functions-guide.html#exp"><code>e<sup>z</sup></code></a>:
+    <code>log(re<sup>i&theta;</sup>) = log&nbsp;r + i&theta;</code> turns multiplication
+    (which adds logs and adds angles) into vector addition. So on the log-polar plane,
+    the rich nonlinear behavior of powers and products collapses into translations and
+    shears you can read at a glance &mdash; and combining a <em>polar</em> sampling grid
+    with the <em>log-polar</em> plane turns the input into a clean square lattice,
+    making those shears especially stark.
+  </p>
+
+  <div class="note">
+    <b>In the app.</b> The <em>Grid</em> (Cartesian / Polar) and <em>Plane</em>
+    (Standard / Log-polar) toggles live on the viewer's View panel, not on the embed
+    URL. Open the <a href="./#/plane-transform">full viewer</a>, set Plane to
+    Log-polar, and switch between <code>z&sup2;</code> and <code>z&sup3;</code> to watch
+    the shear angle change with the exponent.
+  </div>
+
+  <div class="seealso">
+    <strong>The series &mdash; the math:</strong>
+    <a href="./complex-functions-guide.html">What the functions do</a> &middot;
+    <a href="./complex-particles-guide.html">From 4D to your screen</a> &middot;
+    <a href="./complex-rendering-guide.html">How the surface is drawn</a>.
+    <strong>Going deeper:</strong>
+    <a href="./complex-color-guide.html">Color</a> &middot;
+    <a href="./complex-sampling-guide.html">Sampling the plane</a> &middot;
+    <em>Two planes, one map</em> (here).
+  </div>
+
+  <div class="footer">
+    <p>
+      <a class="hub" href="./guides.html">&larr; All guides</a> &nbsp;&middot;&nbsp;
+      Plane Transform is <code>src/animations/PlaneTransform/</code>; it shares the
+      complex functions in <code>src/lib/complexMath.ts</code> with the particle
+      viewer. Open the <a href="./#/plane-transform">full viewer</a> for the grid and
+      log-polar toggles, or read the <a href="./embed-demo.html">embed demo</a>.
+    </p>
+  </div>
+
+</main>
+</body>
+</html>

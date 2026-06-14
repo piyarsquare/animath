@@ -47,10 +47,16 @@ investment** that unlocks every app-specific guide after it.
 
 ---
 
+> **Update (S02, 2026-06-14):** Track A is **done** — all three pages built and
+> verified, plus the **Guides hub** (`public/guides.html`). A2 needed a small
+> additive `pattern=` embed param (now in `embedParams.ts`). The trilogy +
+> these three + the hub = six cross-linked pages. Track B (B0 embed-route
+> investment → B1–B4) remains the open roadmap.
+
 ## Track A — reuses existing embeds (cheap, high-confidence)
 
 ### A1. "How a complex number becomes a color" — coloring & colormaps
-**Status: proposed · effort: S · embeds: existing**
+**Status: DONE (S02) · `public/complex-color-guide.html`**
 
 The rendering guide and the functions guide both touch domain coloring lightly.
 A dedicated page would cover the full `calcColor` (shaders/index.ts:331–401):
@@ -67,8 +73,8 @@ A dedicated page would cover the full `calcColor` (shaders/index.ts:331–401):
 Embeds: `#/embed/complex-particles?...&colormap=2&colorby=range` etc. — all params
 already in `embedParams.ts`. **Recommended next page.**
 
-### A2. "Sampling the plane" — the domain patterns (could merge into A1 or rendering)
-**Status: proposed · effort: XS · embeds: existing (no param yet)**
+### A2. "Sampling the plane" — the domain patterns
+**Status: DONE (S02) · `public/complex-sampling-guide.html`** (added a `pattern=` embed param)
 
 Grid / Polar / Rings / Spokes / Web / Squares / Random from `fillPattern`
 (`createParticleGeometry.ts`). Note: `SamplePattern` is **not** an embed param
@@ -77,7 +83,7 @@ today, so this either (a) folds into the rendering guide as an extra section, or
 likely a section, not a page.
 
 ### A3. "Two planes, one map" — Plane Transform deep-dive
-**Status: proposed · effort: S · embeds: existing (plane-transform)**
+**Status: DONE (S02) · `public/complex-plane-transform-guide.html`**
 
 The functions guide uses Plane Transform as an illustration; a dedicated page
 could explain the domain↔image linkage, the grid-warp rendering, and how it is the
@@ -136,6 +142,10 @@ deep; lower priority than B1–B3.
 ---
 
 ## Meta-move — a Guides hub
+
+**Status: `guides.html` DONE (S02)** — the index page ships, grouping the six
+pages into "The math" + "Going deeper" and linking the embed demo. Still open:
+the **Gallery link** and the **EXPLAINER deep-links** (both touch app code).
 
 Once there are 4+ pages, collect them into a small **`guides.html` index** (same
 serif styling) and:
