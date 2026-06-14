@@ -2,129 +2,133 @@
 kind: handoff
 session: 2026-06-14-S01
 date: 2026-06-14
-title: Math-and-code guide series — split heavy pages, align plane/particles
+title: Complex guide series (split + aligned) + session-dashboard signals/to-do/App-map
 branch: claude/complex-particles-guide-tdlhk0
 slug: complex-particles-guide-tdlhk0
 status: completed
 build: passed
 followup: null
 pr: null
-app: docs, complex-particles
-signals: phone-needed, not-live
-next: Real-device mobile pass on the guide pages; optionally split the rendering guide 2+2.
+app: docs, complex-particles, chrome
+signals: needs-dan, phone-needed, not-live
+next: Decide the plane/particles unification (backlog !high), then a real-device mobile pass on the guides.
 ---
 
-# Math-and-code guide series — split heavy pages, align plane/particles
+# Complex guide series + session-dashboard productionization
 
 > [!NOTE]
-> This is a **documentation track** (new `docs` category): a series of static
-> guide pages under `public/*-guide.html`, each pairing prose + quoted source with
-> live `#/embed/` applets. No app/TypeScript behavior changed this session except a
-> small additive `pattern=` embed param built earlier in the branch. Expect another
-> round of user feedback.
+> Two workstreams this session, both on branch `claude/complex-particles-guide-tdlhk0`,
+> neither merged yet. (1) A **documentation** series under `public/*-guide.html`.
+> (2) A **session-tooling** upgrade under `docs/sessions/` (signals + to-do +
+> App-map). The only app/TS change all session was one additive embed param
+> (`pattern=`) built early on; everything else is static HTML + the Node session
+> builder. `npm run build` passes throughout.
 
 ## Summary
 
-The branch ships an 8-file guide series (indexed by `public/guides.html`) that
-documents the Complex Particles + Plane Transform viewers. This session's last round
-addressed **applet weight** (too many live WebGL iframes per page — browsers cap
-concurrent contexts) and **plane/particles confusion**. The two heaviest guides were
-each split into Part 1 / Part 2, the duplicate drop-axis applet folded into one, and
-the "bare colored plane" figure moved from a Plane Transform embed to a **linear
-Complex Particles** plot. Build passes; all pages verified headless. State is
-**stable and shippable**; awaiting feedback.
+Started as a math-and-code guide series for the Complex Particles / Plane Transform
+viewers, then split the two heaviest guides into parts and aligned the "bare plane"
+figure to a linear particle plot. The session then pivoted (at the user's request)
+to **productionizing the session-report dashboard**: a closed signal vocabulary, a
+hand-curated `TODO.md` backlog, an auto "Start here" digest, filter-aware panels, an
+**App-map** view, full-history signal inference, and the agent-facing docs/skills to
+keep it fed. Everything is committed + pushed; **state is stable and shippable**.
 
-## What changed (this round)
+## What changed
 
-- **Split the two heavy guides into parts**, keeping the original filenames as
-  Part 1 so every existing inbound link still resolves:
-  - `complex-functions-guide.html` (Pt 1: color · z^n · 1/z · exp) +
-    **new** `complex-functions-2-guide.html` (Pt 2: branches · trig · special · field guide).
-  - `complex-particles-guide.html` (Pt 1: graph · pipeline · perspective · drop) +
-    **new** `complex-particles-2-guide.html` (Pt 2: torus · hopf · quaternions · honesty).
-- **Cut applet weight.** Folded the projections guide's two duplicate drop-axis
-  explorers into one capable applet (all four Drop buttons + Rotate). Per-page applet
-  counts now: functions Pt1 = 3, Pt2 = 3; projections Pt1 = 2, Pt2 = 3. **Max on any
-  page is now 4** (the rendering guide); the former 6–7 offenders are gone.
-- **Plane/particles alignment.** The functions guide's reference-coloring figure now
-  uses `#/embed/complex-particles?fn=linear&proj=dropv&motion=fixed` (verified: renders
-  as the flat colored x,y plane). Plane Transform is reserved for figures where the
-  two-pane *transformation* is the subject (z^n, exp, sin, Joukowski).
-- **Nav + taxonomy.** Part 1 pages get a "Continue to Part 2" button; Part 2 pages a
-  "← Part 1" link. `guides.html` lists both parts; `docs/EMBEDS.md` notes the split.
-  Added a **`docs` category** to `docs/sessions/categories.mjs` (label "Docs /
-  Guides", hue 130) and tagged this track's reports `app: docs, complex-particles`.
+### A · The guide series (`public/`, indexed by `guides.html`)
+Eight cross-linked pages. The math trilogy — **What the functions do**
+(`complex-functions-guide.html` + `…-2-guide.html`), **From 4D to your screen**
+(`complex-particles-guide.html` + `…-2-guide.html`), **How the surface is drawn**
+(`complex-rendering-guide.html`) — plus three "going deeper" pages (color, sampling,
+plane-transform). The two longest were **split into Part 1 / Part 2** (original
+filename = Part 1, so inbound links still resolve) to cap each page at ≤3 live WebGL
+applets. **Plane/particles alignment:** the functions guide's bare-plane figure now
+uses `#/embed/complex-particles?fn=linear&proj=dropv`; Plane Transform is reserved
+for true two-pane transformations.
 
-Earlier in the branch (see the S01 progress log): built the math trilogy
-(functions / projections / rendering), three "going deeper" pages (color, sampling,
-plane-transform), the `guides.html` hub, and a small additive `pattern=` embed param.
+### B · Session-dashboard productionization (`docs/sessions/`)
+- **Closed `SIGNALS` vocab** in `categories.mjs` (needs-dan · phone-needed ·
+  visual-unverified · not-live) + flat `signals:` / `next:` frontmatter, parsed per
+  report. Explicit wins; only `high-followup` (reflection level), `needs-dan`
+  (proposed plans), and `not-live` (report absent on `main`) are **inferred**, so the
+  whole 102-report history backfills without editing old files.
+- **`TODO.md`** — a hand-edited backlog (the durable to-do list with notes), rendered
+  as the top **"To-do"** panel. **"Start here"** digest is the auto counterpart. Both
+  are **filter-aware** (pick a category → they narrow to that app).
+- **App-map** view (4th, beside Cards/Timeline/Reflections): per-app rollup of latest
+  · risk · open (signals + backlog count) · next, sorted worst-risk-first.
+- **Taxonomy:** added `docs` and `trees-and-nets` categories.
+- **Agent-facing:** `REPORT_STYLE.md §1.2`, both templates, and the handoff +
+  start-session skills now author/consult `signals:`/`next:` + the backlog.
+
+> [!CAUTION]
+> The `not-live` signal = "the report's path is absent on `main`". Do **not** use a
+> git `is-ancestor` check on the dedupe winner ref — a branch forked from main
+> contains all of main's history, so every old report looks unmerged (this bug first
+> read "Not landed: 40"). Verify the path-on-main test still behaves once a feature
+> branch is squash-merged + deleted (backlog `!low`).
 
 ## Key files
 
 | File | Role |
 |---|---|
-| [`public/guides.html`](https://github.com/piyarsquare/animath/blob/3518250/public/guides.html) | Series index hub; lists both parts of the split guides |
-| [`public/complex-functions-guide.html`](https://github.com/piyarsquare/animath/blob/3518250/public/complex-functions-guide.html) | Functions Pt 1 (color, powers, poles, exp) — linear-particle plane figure |
-| [`public/complex-functions-2-guide.html`](https://github.com/piyarsquare/animath/blob/3518250/public/complex-functions-2-guide.html) | Functions Pt 2 (branches, trig, special, field guide) |
-| [`public/complex-particles-guide.html`](https://github.com/piyarsquare/animath/blob/3518250/public/complex-particles-guide.html) | Projections Pt 1 (graph, pipeline, perspective, drop) |
-| [`public/complex-particles-2-guide.html`](https://github.com/piyarsquare/animath/blob/3518250/public/complex-particles-2-guide.html) | Projections Pt 2 (torus, hopf, quaternions, honesty) |
-| [`public/complex-rendering-guide.html`](https://github.com/piyarsquare/animath/blob/3518250/public/complex-rendering-guide.html) | Render modes — still **4 applets** (the remaining heaviest page) |
-| [`docs/EMBEDS.md`](https://github.com/piyarsquare/animath/blob/3518250/docs/EMBEDS.md) | Embed-param reference + the guide-series inventory |
-| [`docs/sessions/categories.mjs:27`](https://github.com/piyarsquare/animath/blob/3518250/docs/sessions/categories.mjs#L27) | New `docs` category + `guide`/`instruction`/`explainer` aliases |
-| [`src/animations/ComplexParticles/embedParams.ts`](https://github.com/piyarsquare/animath/blob/3518250/src/animations/ComplexParticles/embedParams.ts) | Embed URL params incl. the `pattern=` addition; `buttons=` overlay |
+| [`docs/sessions/build-sessions.mjs`](https://github.com/piyarsquare/animath/blob/8c67231/docs/sessions/build-sessions.mjs) | The control-center builder: signal rollup, TODO parser, Start-here/To-do panels, App-map, filter JS |
+| [`docs/sessions/categories.mjs`](https://github.com/piyarsquare/animath/blob/8c67231/docs/sessions/categories.mjs) | Category + closed `SIGNALS` vocabularies, `normalizeSignals`, chips |
+| [`docs/sessions/TODO.md`](https://github.com/piyarsquare/animath/blob/8c67231/docs/sessions/TODO.md) | The hand-edited backlog (format spec in its header) |
+| [`docs/sessions/REPORT_STYLE.md`](https://github.com/piyarsquare/animath/blob/8c67231/docs/sessions/REPORT_STYLE.md) | §1.2 documents `signals:`/`next:` + the backlog workflow |
+| [`public/guides.html`](https://github.com/piyarsquare/animath/blob/8c67231/public/guides.html) | Guide-series index hub |
+| [`public/complex-functions-guide.html`](https://github.com/piyarsquare/animath/blob/8c67231/public/complex-functions-guide.html) | Functions Pt 1 (+ `…-2-guide.html`); projections split mirrors it |
+| [`src/animations/ComplexParticles/embedParams.ts`](https://github.com/piyarsquare/animath/blob/8c67231/src/animations/ComplexParticles/embedParams.ts) | Embed URL params incl. the `pattern=` addition + `buttons=` overlay |
 
 ## Open / not done
 
-- **Rendering guide is still 4 applets** — acceptable but the only page above the
-  others. If a future round wants strict consistency, split it 2+2
-  (Points+Sheet / Tiles+Net) the same way.
-- **Deeper plane/particles unification** the user hinted at ("bring them more in
-  line") is a larger design question, deliberately left for a dedicated pass — this
-  session only did the one concrete swap (bare plane → linear particles).
-- **Track B of the series plan** (`2026-06-14-S02-explainer-series-plan.md`) is still
-  open: app-specific guides (Fractals/Correspondence, Topology, Trinary, Stable
-  Matching) gated on the **embed-route investment (B0)** — those apps have no
-  `#/embed/` routes yet.
-- **Not a PR yet** (`pr: null`). When finalizing: `git fetch && git merge origin/main`,
+From `TODO.md` (the live list), highest-value first:
+- **`!high` plane/particles unification** — one "which plane am I looking at"
+  convention across the viewers + guides. This is the original product question that
+  started the session; it's a **decision for Dan** (`needs-dan`).
+- **`!med` real-device mobile pass** on the guide pages (desktop-verified only;
+  iframes pinned to 400px). `phone-needed`.
+- **`!low` split the rendering guide 2+2** — the only guide page still at 4 applets.
+- **`!med` App-map polish** — open-from-chip, link "N backlog" to the filtered To-do.
+- **`!low` confirm `not-live`** flips to landed after a real squash-merge.
+- **Not a PR yet** (`pr: null`). To finalize: `git fetch && git merge origin/main`,
   keep every app's append-only entries, re-run `npm run build`.
 
 ## Context
 
-- The guides live in `public/` and are copied to the Pages root by the deploy
-  workflow; they are **not** part of the SPA bundle. Edit and reload — no rebuild
-  needed for local viewing, but `npm run build` must still pass (it copies `public/`).
-- To preview an embed headlessly: `npm run build && (npm run preview &)` then
-  `node scripts/shoot.mjs 'embed/complex-particles?fn=linear&proj=dropv' out.png`
-  (WAIT_MS env tunes settle time). SwiftShader WebGL works in this container.
-- Embed params of note: `fn`, `proj` (perspective/torus/hopf/dropx…dropv), `render`
-  (points/sheet/tiles/net), `motion`, `spin`, `pattern` (grid/rings/spokes/web),
-  `colorby`, `colormap`, `buttons` (overlay: dropx,dropy,dropu,dropv,rotate). Full
-  list in `docs/EMBEDS.md`.
-- The split keeps inbound links alive because Part 1 reuses the original filename;
-  do **not** rename Part 1 files.
+- Guides live in `public/` (copied to the Pages root by deploy); not part of the SPA
+  bundle. The session dashboard builds with `npm run sessions`
+  (`build-sessions.mjs`) and ships to `/animath/sessions/control-center.html`.
+- `control-center.html` + `converted/` are **generated** (regenerated on deploy) —
+  don't hand-edit or commit them; edit the builder/reports and run `npm run sessions`.
+- The builder reads reports from each branch's **git ref read-only**; `TODO.md` is
+  read from the working tree. To enrich an old report, edit it on whatever branch is
+  newest (latest copy wins the dedupe) — but prefer inference over bulk edits.
+- Preview an embed headlessly: `npm run build && (npm run preview &)` then
+  `node scripts/shoot.mjs 'embed/complex-particles?fn=linear&proj=dropv' out.png`.
 
 ## Self-reflection
 
-1. **What would you do with another session?** Act on the next round of user
-   feedback. If none specific: split the rendering guide 2+2 for consistency, and
-   sketch the plane/particles unification (a shared "what plane am I looking at"
-   convention across both viewers' guides).
-2. **What would you change about what you produced?** I authored the four split files
-   as full `Write`s rather than surgical edits, duplicating the shared `<style>`
-   block four more times. A shared CSS file (or a tiny build step) would remove the
-   copy-paste drift risk across now-8 guide pages.
-3. **What were you not asked that you think is important?** Whether these guides
-   should be linked from the in-app **?** explainer or the gallery, so users actually
-   discover them — right now `guides.html` is only reachable if you know the URL.
-4. **What did we both overlook?** Mobile: each guide pins `iframe` height to 400px and
-   the body to 720px; I verified desktop composition only. Small-screen layout and
-   whether 2–3 live WebGL contexts are tolerable on a phone are unverified.
-5. **What did you find difficult?** Deciding split granularity without over-fragmenting
-   into a dozen tiny pages. Settled on 2 parts each (cap ~3 applets) as the balance
-   between page weight and not exploding the file count.
-6. **What would have made this task easier?** A shared guide template/partial for the
-   `<head>`+CSS+footer, and an automated per-page applet-count check so "too many
-   iframes" is caught mechanically rather than by eye.
-7. **Follow-up value:** LOW — output is complete, builds, and is verified on desktop;
-   follow-up is the user's next feedback round plus optional polish (rendering split,
-   mobile check, discoverability).
+1. **What would you do with another session?** Take the `!high` plane/particles
+   unification (the original ask) — it needs a decision from Dan first, then guide +
+   possibly viewer alignment. Otherwise: App-map polish and the mobile pass.
+2. **What would you change about what you produced?** The eight guide pages each
+   duplicate the same `<head>`+CSS; a shared partial would stop drift. And the
+   "Start here" / "To-do" panels are server-rendered then filtered client-side —
+   clean, but a single client render path would be tidier.
+3. **What were you not asked that you think is important?** Discoverability — the
+   guides and the control center are URL-only; nothing in-app links to them.
+4. **What did we both overlook?** Mobile, on both fronts: the guides are
+   desktop-verified only, and the control-center panels/App-map grid weren't checked
+   at phone width.
+5. **What did you find difficult?** Judging signal-inference precision without a
+   large labelled set — I deliberately kept it conservative (structured fields only)
+   so the dashboard wouldn't cry wolf, which the modest, correct bucket counts bore
+   out.
+6. **What would have made this task easier?** A couple of already-merged feature
+   branches to test `not-live` against a real squash-merge, rather than reasoning
+   about it.
+7. **Follow-up value:** LOW — both workstreams are complete, build green, and
+   verified (guides on desktop; dashboard end-to-end headless). Remaining items are
+   the user's product decision + polish, not corrections.

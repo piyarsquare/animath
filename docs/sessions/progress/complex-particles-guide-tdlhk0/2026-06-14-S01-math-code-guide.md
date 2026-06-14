@@ -5,7 +5,7 @@ date: 2026-06-14
 title: A math-and-code user guide for Complex Particles
 branch: claude/complex-particles-guide-tdlhk0
 slug: complex-particles-guide-tdlhk0
-status: in-progress
+status: completed
 build: passed
 followup: null
 thumbnail: assets/2026-06-14-S01-guide-top.png
