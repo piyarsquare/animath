@@ -80,7 +80,6 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   let R = Math.max(12, c.squareSize);
   let glassOpacity = 0.45;   // clear-but-present default (host re-pushes on mount)
   let camDist = 4.5;
-  let underVisible = true;   // inner-decor gate from the glass slider (see applyGlass)
 
   camera.fov = 75; camera.near = 0.05; camera.far = R * 5; camera.updateProjectionMatrix();
   camera.up.set(0, 1, 0);
@@ -88,10 +87,15 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   scene.fog = null;
 
   // ── one neutral two-sided shell ──────────────────────────────────────────────
+  // Everything the player walks among (shell + decor + trail + signs) lives in
+  // `planetG`, the group the seam **eversion** transforms — see `evert()`.
+  const planetG = new THREE.Group();
+  planetG.matrixAutoUpdate = false;
+  root.add(planetG);
   const grid = gridTexture();
   const planetMat = new THREE.MeshStandardMaterial({ map: grid, color: SHELL_COLOR, emissive: SHELL_COLOR, emissiveIntensity: 0.12, roughness: 0.6, transparent: true, opacity: 1, side: THREE.DoubleSide });
   const planet = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 48), planetMat);
-  root.add(planet);
+  planetG.add(planet);
 
   /** Spread a square (u,v) over the WHOLE sphere (lon×lat) — the sphere's one skin. */
   function fullDir(u: number, v: number): THREE.Vector3 {
@@ -108,7 +112,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   // form at each direction, grown inward — back-to-back, no penetration.
   const outerG = new THREE.Group();
   const innerG = new THREE.Group();
-  root.add(outerG, innerG);
+  planetG.add(outerG, innerG);
   const treeDirs: THREE.Vector3[] = [];
 
   function place(g: THREE.Group, dir: THREE.Vector3, radius: number, outward: boolean) {
@@ -150,7 +154,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   // seam ring (ℝP² only): the z=0 great circle where the two skins meet.
   const seamMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffe08a, emissiveIntensity: 0.4, roughness: 0.5 });
   const seam = antipodal ? new THREE.Mesh(new THREE.TorusGeometry(R, 0.12, 8, 96), seamMat) : null;
-  if (seam) root.add(seam);
+  if (seam) planetG.add(seam);
 
   // ── the ink trail: one buffer in true world coords on the fixed planet ──────
   // The sphere IS the cover, so the stamps are simply where you walked. On ℝP²
@@ -159,7 +163,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const ink = makeInkTrail(TRAIL_MAX);
   const inkMesh = new THREE.Mesh(ink.geometry, ink.material); inkMesh.frustumCulled = false;
   inkMesh.userData.ink = true;   // ink may legitimately render through det<0 — exempt from the decor audit
-  root.add(inkMesh);
+  planetG.add(inkMesh);
   let inkTwin: THREE.Mesh | null = null;
   // The twin draws the trail through the genuine deck of the TWO-SIDED shell —
   // which swaps faces (the twisted I-bundle over ℝP²): ink floating at radius
@@ -179,7 +183,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     inkTwin = new THREE.Mesh(ink.geometry, ink.material); inkTwin.frustumCulled = false;
     inkTwin.matrixAutoUpdate = false; inkTwin.userData.ink = true;
     placeTwin();
-    root.add(inkTwin);
+    planetG.add(inkTwin);
   }
   let hist = 0;                                     // frozen stamp count
   let lastFrozen: THREE.Vector3 | null = null;      // spacing reference
@@ -206,8 +210,8 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     }
   }
   function removeSign(s: PlantedSign) {
-    root.remove(s.main);
-    if (s.twin) root.remove(s.twin);
+    planetG.remove(s.main);
+    if (s.twin) planetG.remove(s.twin);
     s.builder.dispose();
   }
   function clearSignsFn() { signs.forEach(removeSign); signs.length = 0; }
@@ -215,8 +219,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   function applyGlass() {
     const g = glassState(glassOpacity, GLASS);
     planetMat.opacity = g.opacity; planetMat.depthWrite = g.depthWrite; planetMat.transparent = glassOpacity < 0.999; planetMat.needsUpdate = true;
-    underVisible = g.showUnder;
-    innerG.visible = g.showUnder;   // per-frame update() re-shows it while inside
+    innerG.visible = g.showUnder;
     for (const s of signs) if (s.twin) s.twin.visible = g.showUnder;
   }
   applyGlass();
@@ -243,18 +246,18 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const posU = new THREE.Vector3(), fwdU = new THREE.Vector3();
   const posW = new THREE.Vector3(), eye = new THREE.Vector3(), look = new THREE.Vector3();
   const camPos = new THREE.Vector3();
-  // ── the inside walk (ℝP² only) ───────────────────────────────────────────────
-  // On ℝP² the seam (z=0 great circle) is where the orientation cover changes
-  // sheet. Crossing it physically dives the camera through the floor onto the
-  // INNER face of the shell — you walk the hollow planet from inside, the world
-  // you came from now overhead through the glass — and crossing back re-emerges
-  // you. The flip is a smooth somersault about the heading: `rollT` eases 0→1 as
-  // the player crosses into z<0, rotating local "up" from +normal to −normal and
-  // sliding the eye from R+EYE (outside) to R−EYE (inside). Matches chart()'s
-  // `flipped` (= the antipodal sheet), so map, decor sheet and camera agree.
-  const localUp = new THREE.Vector3();
-  const rollQ = new THREE.Quaternion();
-  let rollT = 0;
+  // ── the seam eversion (ℝP² only) ─────────────────────────────────────────────
+  // The player never flips: "up" stays the surface normal, they always walk
+  // upright. Instead, crossing the seam (z=0) turns the WORLD inside-out around
+  // them. `evertT` eases 0→1 as the player enters the antipodal sheet; `evert()`
+  // scales the planet's radial component about the player's foot by (1−2·evertT),
+  // so the shell smoothly goes convex (a ball you stand on) → flat (at the seam) →
+  // concave (a dome enclosing you). At evertT=1 that scale is a reflection through
+  // the tangent plane — the orientation reversal made physical (inside-out and
+  // mirror are the same ℤ/2). The player's foot is the fixed point, so they stay
+  // planted and level the whole way; only the surrounding world folds over.
+  const evertM = new THREE.Matrix4();
+  let evertT = 0;
 
   function syncPose() {
     posU.copy(v3(framePos(frame)));
@@ -262,6 +265,24 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     posW.copy(posU).multiplyScalar(R);
   }
   syncPose();
+
+  // Evert the planet group about the player's foot: scale the radial (normal)
+  // component by k = 1−2s, fixing the foot P = R·posU. s=0 ⇒ identity (convex
+  // ball); s=0.5 ⇒ k=0, the world flattens to the tangent plane; s=1 ⇒ k=−1, a
+  // reflection through that plane (concave dome / mirror). Recomputed each frame
+  // from the live normal so the fold tracks the player. (n·n = 1, P = R·n.)
+  function evert(s: number) {
+    const k = 1 - 2 * s, a = k - 1;
+    const nx = posU.x, ny = posU.y, nz = posU.z, tr = (1 - k) * R;
+    evertM.set(
+      1 + a * nx * nx, a * nx * ny, a * nx * nz, tr * nx,
+      a * ny * nx, 1 + a * ny * ny, a * ny * nz, tr * ny,
+      a * nz * nx, a * nz * ny, 1 + a * nz * nz, tr * nz,
+      0, 0, 0, 1,
+    );
+    planetG.matrix.copy(evertM);
+    planetG.matrixWorldNeedsUpdate = true;
+  }
 
   function update(input: CoverFrameInput, cam: THREE.PerspectiveCamera) {
     const { fwd: f, strafe, yaw, pitch, dt, moveSpeed, thirdPerson } = input;
@@ -272,31 +293,27 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     if (dyaw || f || strafe) frame = reorthonormalize(frame);
     syncPose();
 
-    // ease the somersault toward the current sheet (inside ⇔ on the z<0 sheet)
-    const targetInside = antipodal && posU.z < 0 ? 1 : 0;
-    const rate = dt / 0.5;                       // ~half-second flip
-    rollT += Math.max(-rate, Math.min(rate, targetInside - rollT));
-    // local up = surface normal rolled about the heading: +normal → −normal
-    rollQ.setFromAxisAngle(fwdU, rollT * Math.PI);
-    localUp.copy(posU).applyQuaternion(rollQ);
-    const eyeR = R + EYE * Math.cos(rollT * Math.PI);   // R+EYE (out) → R−EYE (in)
-    // inner decor is your foreground once you are inside — show it regardless of glass
-    innerG.visible = underVisible || rollT > 0.02;
-    // lift the shell's self-glow as you dive inside, so the hollow interior reads
-    // (the directional key lights graze the inner face near the seam)
-    planetMat.emissiveIntensity = 0.12 + 0.34 * rollT;
+    // ── smoothly evert the world around the (fixed, upright) player ──────────────
+    // ease toward the antipodal sheet, then fold the planet inside-out about the
+    // player's foot. The player frame is untouched — they always walk level.
+    const targetEvert = antipodal && posU.z < 0 ? 1 : 0;
+    const rate = dt / 0.7;                          // ~0.7s fold
+    evertT += Math.max(-rate, Math.min(rate, targetEvert - evertT));
+    const s = evertT * evertT * (3 - 2 * evertT);   // smoothstep for an easy fold
+    evert(s);
+    // lift the shell's self-glow as the world closes over you, so the concave
+    // interior reads (the directional key lights graze it near the seam)
+    planetMat.emissiveIntensity = 0.12 + 0.34 * s;
 
-    cam.up.copy(localUp);
+    cam.up.copy(posU);
     if (thirdPerson) {
-      // orbit the avatar (fixed at posW on the shell); localUp carries the inside
-      // flip, so the rig swings toward the planet's center once you are inside
-      camPos.copy(posW).addScaledVector(fwdU, -camDist).addScaledVector(localUp, 2.6 + pitch * 1.6);
+      camPos.copy(posW).addScaledVector(fwdU, -camDist).addScaledVector(posU, 2.6 + pitch * 1.6);
       cam.position.copy(camPos);
-      cam.lookAt(posW.x + localUp.x * 1.2, posW.y + localUp.y * 1.2, posW.z + localUp.z * 1.2);
+      cam.lookAt(posW.x + posU.x * 1.2, posW.y + posU.y * 1.2, posW.z + posU.z * 1.2);
     } else {
-      eye.copy(posU).multiplyScalar(eyeR);
+      eye.copy(posU).multiplyScalar(R + EYE);
       const cp = Math.cos(Math.max(-MAX_PITCH, Math.min(MAX_PITCH, pitch)));
-      look.copy(fwdU).multiplyScalar(cp).addScaledVector(localUp, Math.sin(pitch));
+      look.copy(fwdU).multiplyScalar(cp).addScaledVector(posU, Math.sin(pitch));
       cam.position.copy(eye);
       cam.lookAt(eye.x + look.x, eye.y + look.y, eye.z + look.z);
     }
@@ -357,12 +374,12 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
       const b = posU.clone().addScaledVector(fwdU, 1.2 / R).normalize();
       const f = fwdU.clone().addScaledVector(b, -b.dot(fwdU)).normalize().negate(); // front faces the player
       const builder = makeSignBuilder(front, back);
-      const main = builder.make(); main.matrixAutoUpdate = false; root.add(main);
+      const main = builder.make(); main.matrixAutoUpdate = false; planetG.add(main);
       let twin: THREE.Group | null = null;
       if (antipodal) {
         twin = builder.make(); twin.matrixAutoUpdate = false;
         twin.visible = innerG.visible;   // under-glass content, gated like the inner shell
-        root.add(twin);
+        planetG.add(twin);
       }
       const s: PlantedSign = { builder, b, fwdS: f, main, twin };
       signs.push(s);

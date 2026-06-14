@@ -37,7 +37,40 @@ six-part improvement roadmap (A–F).
 
 <!-- Newest entry first. -->
 
-### 🟡 milestone · 13:35 — C: ℝP² inside-walk implemented + verified
+### 🟡 milestone · 14:05 — C reworked: smooth **eversion** (the somersault was wrong)
+**Why:** User rejected the somersault — "I don't want the normal to change and have
+the character walking upside down, I want inside and outside to reverse at the
+seam… a smooth eversion." Confirmed the intent via AskUserQuestion: **world everts
+around a fixed, upright character.**
+
+**What changed (spherical presenter).**
+- Reverted the camera somersault entirely — the player frame is untouched again
+  (up = surface normal, always level, never flips).
+- The shell + decor + ink + signs now live in a `planetG` group. Crossing the seam
+  eases `evertT` 0→1 (smoothstep, ~0.7 s) and `evert(s)` scales the planet's
+  **radial component about the player's foot** by `k = 1−2s`: s=0 identity (convex
+  ball you stand on) → s=0.5 `k=0` the world flattens to the tangent plane → s=1
+  `k=−1` a **reflection** through that plane (concave dome enclosing you). The
+  foot `P = R·posU` is the fixed point, so the player stays planted and upright
+  while the world folds inside-out. At s=1 it's a genuine reflection — the
+  orientation reversal made physical ("inside-out and mirror are the same ℤ/2").
+- Shell self-glow lifts with `s` so the concave interior reads. EXPLAINER rewritten
+  from "dive through the floor / somersault" to the eversion.
+
+**Verification (headless).** Drove across the seam on ℝP²: captured the fold
+sequence — the avatar stays **upright** through convex → flat → concave (no
+upside-down), the seam sweeps from underfoot to overhead, mini-map reads *other
+face*, outside unregressed. Build + lint clean.
+
+![Mid-fold: avatar upright, world everting](assets/S01-rp2-evert-fold.png)
+
+> [!NOTE]
+> The eversion is correct and smooth, but at the default planet radius (30) the
+> everted dome is large/far, so the "inside" reads sparse and dark in a
+> landmark-thin spot. Tuning the enclosure feel (camera framing, a tighter fold,
+> interior lighting) is the natural next step — flagged for the user.
+
+### 🟡 milestone · 13:35 — C (v1): ℝP² inside-walk via camera somersault — SUPERSEDED
 **Why:** Feature 2 (roadmap C) — crossing the seam now dives you inside the hollow planet.
 
 **What landed (spherical presenter, camera-only — no decor/deck change).**

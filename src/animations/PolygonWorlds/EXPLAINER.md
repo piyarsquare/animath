@@ -71,13 +71,14 @@ surface you walk. The curved worlds are subtler, and the difference is honest:
   hemisphere is the same square seen through the **antipodal** identification
   `x ∼ −x`, so the trees there wear columns and the trail's antipodal image is
   its mirror twin — on the **other face**, hanging under the glass.
-  Walk over the bright **seam** (the equator) and you **dive through the floor**:
-  the view somersaults onto the **inside** of the hollow planet, the world you came
-  from now overhead through the glass, and the mini-map flags the *other face*.
-  Cross the seam a **second** time and you re-emerge — the two-laps-to-come-home
-  signature of a non-orientable surface. The bottom-left inset shows ℝP²
-  **immersed in 3-space** (the Steiner *Roman surface*); because that immersion
-  identifies antipodes, both faces land on the *same* point.
+  Walk over the bright **seam** (the equator) and the world **everts** around you:
+  the convex ground you stand on smoothly flattens and turns **concave**, doming
+  over you — you never tip over, the planet turns inside-out instead (inside-out and
+  mirror are the same single bit of orientation) — and the mini-map flags the
+  *other face*. Cross the seam a **second** time and it everts back: the
+  two-laps-to-come-home signature of a non-orientable surface. The bottom-left inset
+  shows ℝP² **immersed in 3-space** (the Steiner *Roman surface*); because that
+  immersion identifies antipodes, both faces land on the *same* point.
 - **Sphere.** The square here is a **chart**, not an isometric copy: it is *stretched*
   over the whole round sphere (the way a flat map distorts the globe), so distances
   on the mini-map square are not the distances you walk. The world you actually move
