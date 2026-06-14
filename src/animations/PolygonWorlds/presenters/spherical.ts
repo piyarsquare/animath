@@ -124,14 +124,17 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     decor.props.forEach((p, i) => {
       const d = dirFor(p.u, p.v);
       treeDirs.push(d);
-      // outer: tree at +d (grown out); inner: column at +d (grown in)
+      // ONE uniform skin: trees on the OUTER wall, columns on the INNER wall, at
+      // every direction. The orientation flip is carried by the eversion, not by
+      // swapping skins — so crossing the seam, the world folds inside-out and the
+      // *same* landmark you saw as an outside tree now reads as an inside column.
       const tOut = decor.makeTop(i); place(tOut, d, R, true); outerG.add(tOut);
       const cIn = decor.makeBottom(i); place(cIn, d, R * SHELL_GAP, false); innerG.add(cIn);
       if (antipodal) {
-        // antipodal half wears the flipped skin (column out at −d, tree in at −d)
+        // the antipodal preimage of the same ℝP² point — same uniform skin
         const ad = deckDir(d);
-        const cOut = decor.makeBottom(i); place(cOut, ad, R, true); outerG.add(cOut);
-        const tIn = decor.makeTop(i); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
+        const tOut2 = decor.makeTop(i); place(tOut2, ad, R, true); outerG.add(tOut2);
+        const cIn2 = decor.makeBottom(i); place(cIn2, ad, R * SHELL_GAP, false); innerG.add(cIn2);
       }
     });
     // numbered corner markers just inside each chart corner (the square's corners)
@@ -144,8 +147,8 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
       const cIn = decor.makeCornerBottom(v + 1, col); place(cIn, d, R * SHELL_GAP, false); innerG.add(cIn);
       if (antipodal) {
         const ad = deckDir(d);
-        const cOut = decor.makeCornerBottom(v + 1, col); place(cOut, ad, R, true); outerG.add(cOut);
-        const tIn = decor.makeCornerTop(v + 1, col); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
+        const tOut2 = decor.makeCornerTop(v + 1, col); place(tOut2, ad, R, true); outerG.add(tOut2);
+        const cIn2 = decor.makeCornerBottom(v + 1, col); place(cIn2, ad, R * SHELL_GAP, false); innerG.add(cIn2);
       }
     });
   }
@@ -219,15 +222,23 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   function applyGlass() {
     const g = glassState(glassOpacity, GLASS);
     planetMat.opacity = g.opacity; planetMat.depthWrite = g.depthWrite; planetMat.transparent = glassOpacity < 0.999; planetMat.needsUpdate = true;
-    innerG.visible = g.showUnder;
-    for (const s of signs) if (s.twin) s.twin.visible = g.showUnder;
+    // ℝP²: the inner (column) world is always present — seen through the glass from
+    // outside, and directly once the eversion has folded you inside. The shell's own
+    // opacity (occlusion) still hides it when the glass is opaque and you're outside.
+    innerG.visible = antipodal ? true : g.showUnder;
+    for (const s of signs) if (s.twin) s.twin.visible = antipodal ? true : g.showUnder;
   }
   applyGlass();
 
   // ── player pose as a kernel Frame on the κ=+1 shell (the unit sphere) ─────────
-  // Spawn at the surface direction farthest from every landmark, so the player
-  // never starts inside a tree or on the centre beacon.
+  // ℝP²: spawn near the +z **pole** — the fully-convex "outside" cap (s=0) — so the
+  // walk to the seam is the gradual eversion and the far pole is full inside-out.
+  // Other χ>0 worlds keep the farthest-from-landmark spawn (no eversion).
   function clearSpawnFrame(): Frame {
+    if (antipodal) {
+      const d = new THREE.Vector3(0.14, 0.05, 1).normalize();   // just off the pole
+      return makeFrame(1, originTo(1, [d.x, d.y, d.z]));
+    }
     let best: THREE.Vector3 = treeDirs[0] ?? new THREE.Vector3(0, 0, 1);
     let bestD = -1;
     const cand = new THREE.Vector3();
@@ -246,18 +257,16 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const posU = new THREE.Vector3(), fwdU = new THREE.Vector3();
   const posW = new THREE.Vector3(), eye = new THREE.Vector3(), look = new THREE.Vector3();
   const camPos = new THREE.Vector3();
-  // ── the seam eversion (ℝP² only) ─────────────────────────────────────────────
-  // The player never flips: "up" stays the surface normal, they always walk
-  // upright. Instead, crossing the seam (z=0) turns the WORLD inside-out around
-  // them. `evertT` eases 0→1 as the player enters the antipodal sheet; `evert()`
-  // scales the planet's radial component about the player's foot by (1−2·evertT),
-  // so the shell smoothly goes convex (a ball you stand on) → flat (at the seam) →
-  // concave (a dome enclosing you). At evertT=1 that scale is a reflection through
-  // the tangent plane — the orientation reversal made physical (inside-out and
-  // mirror are the same ℤ/2). The player's foot is the fixed point, so they stay
-  // planted and level the whole way; only the surrounding world folds over.
+  // ── the latitude eversion (ℝP² only) ─────────────────────────────────────────
+  // The player never flips: "up" stays the surface normal, they always walk level.
+  // Instead the WORLD everts around them as a smooth function of latitude (see
+  // update): `evert(s)` scales the planet's radial component about the player's
+  // foot by k = 1−2s, fixing the foot P = R·posU. s=0 ⇒ identity (a convex ball
+  // you stand on); s=0.5 ⇒ k=0, the world flattens to the tangent plane; s=1 ⇒
+  // k=−1, a reflection through it (a concave dome). That reflection is the
+  // orientation reversal made physical — inside-out and mirror are the same ℤ/2 —
+  // so the eversion *is* the antipodal double cover, not a separate effect.
   const evertM = new THREE.Matrix4();
-  let evertT = 0;
 
   function syncPose() {
     posU.copy(v3(framePos(frame)));
@@ -293,13 +302,15 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     if (dyaw || f || strafe) frame = reorthonormalize(frame);
     syncPose();
 
-    // ── smoothly evert the world around the (fixed, upright) player ──────────────
-    // ease toward the antipodal sheet, then fold the planet inside-out about the
-    // player's foot. The player frame is untouched — they always walk level.
-    const targetEvert = antipodal && posU.z < 0 ? 1 : 0;
-    const rate = dt / 0.7;                          // ~0.7s fold
-    evertT += Math.max(-rate, Math.min(rate, targetEvert - evertT));
-    const s = evertT * evertT * (3 - 2 * evertT);   // smoothstep for an easy fold
+    // ── evert the world around the (fixed, upright) player, by LATITUDE ──────────
+    // Not a timed event: the eversion is a smooth function of *where you stand*. At
+    // the spawn pole (z=+1) the planet is a convex ball you stand on (s=0); it
+    // flattens to the tangent plane as you near the seam (z=0 ⇒ s=0.5); past it the
+    // world folds concave around you, full inside-out at the far pole (z=−1 ⇒ s=1).
+    // So the fold begins the moment you leave the pole and the seam is just its flat
+    // midpoint — and it is exactly the antipodal double cover: the far hemisphere is
+    // the near one turned inside-out, trees↔columns following from the fold alone.
+    const s = antipodal ? (1 - posU.z) / 2 : 0;
     evert(s);
     // lift the shell's self-glow as the world closes over you, so the concave
     // interior reads (the directional key lights graze it near the seam)

@@ -37,6 +37,40 @@ six-part improvement roadmap (A–F).
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 14:30 — Eversion reworked per feedback: latitude-driven + unified with the double cover
+**Why:** User refined C: (1) eversion smooth and beginning *away* from the seam,
+not a sudden event; (2) columns always inside / trees always outside, with the
+eversion and the double cover being the *same* process; (3) spawn near the pole.
+
+**What changed (spherical presenter).**
+- **Latitude-driven eversion.** Dropped the timed ease. The fold is now a smooth
+  function of position: `s = (1 − posU.z)/2`, so `k = 1−2s = posU.z`. At the spawn
+  pole (z=+1) `s=0` (convex ball you stand on); it flattens to the tangent plane as
+  you near the seam (z=0 ⇒ `s=0.5`); past it the world folds concave, full
+  inside-out at the far pole (z=−1 ⇒ `s=1`). Begins the instant you leave the pole.
+- **Unified decor.** Removed the antipodal skin-swap — trees now sit on the OUTER
+  wall and columns on the INNER wall at *every* direction (incl. the antipodal
+  preimage). The orientation flip is carried entirely by the eversion: walking to
+  the antipode, the *same* landmark you saw as an outside tree reads as an inside
+  column, because the fold reflects the inner face toward you. (Verified the
+  reflection geometry: at s=1 the inner-face columns grow into the dome toward the
+  player; the outer trees grow away.) Inner decor is always present on ℝP² now.
+- **Near-pole spawn** on ℝP² (just off +z), so the whole walk to the seam is the
+  gradual eversion.
+
+**Verification (headless walk pole→seam).** Captured the progression: upright on
+the convex cap with trees on the outer wall → the world smoothly flattening → flat
+at the seam → past it, concave with columns. Avatar stays upright throughout; build
++ lint clean.
+
+![Convex cap at the pole (trees outside)](assets/S01-rp2-pole-convex.png)
+![Flat at the seam — the eversion midpoint](assets/S01-rp2-seam-flat.png)
+
+> [!NOTE]
+> Right at the seam the concavity is shallow and the spot is landmark-thin, so the
+> just-crossed view reads sparse; it fills in toward the far pole. Interior-lighting
+> / enclosure polish is still the open visual follow-up.
+
 ### 🟡 milestone · 14:05 — C reworked: smooth **eversion** (the somersault was wrong)
 **Why:** User rejected the somersault — "I don't want the normal to change and have
 the character walking upside down, I want inside and outside to reverse at the
