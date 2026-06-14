@@ -77,66 +77,6 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const deckDir = (d: THREE.Vector3): THREE.Vector3 =>
     twinM4 ? d.clone().applyMatrix4(twinM4) : d.clone().negate();
 
-  // ── the everted surface (ℝP² only — a FIXED shape) ───────────────────────────
-  // The north hemisphere (z≥0) is the round sphere: convex, you stand on top. Across
-  // the z=0 **seam** the meridian's curvature reverses — the surface leaves the seam
-  // vertically (so the seam itself is smooth/flat) and the south hemisphere folds UP
-  // and out around you into a concave brim (a sun-hat). You always walk the upper
-  // face, so "up" stays up and you never tip; only the curvature *under* you flips
-  // sign, locally, as you cross — the rest of the world keeps its shape.
-  const EVERT_FLARE = 1.7;    // the far (south) rim reaches FLARE·R outward…
-  const EVERT_LIFT = 1.05;    // …and LIFT·R upward
-  const HALF_PI = Math.PI / 2;
-  /** Everted UNIT position of a sphere direction (north hemisphere = identity). */
-  function evertDir(d: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
-    if (!antipodal || d.z >= 0) return out.copy(d);
-    const u = -d.z;                                  // 0 at the seam → 1 at the far rim
-    const rho0 = Math.hypot(d.x, d.y);
-    const ax = rho0 > 1e-6 ? d.x / rho0 : 1, ay = rho0 > 1e-6 ? d.y / rho0 : 0;
-    const rho = 1 + (EVERT_FLARE - 1) * (1 - Math.cos(u * HALF_PI));   // vertical tangent at the seam
-    return out.set(rho * ax, rho * ay, EVERT_LIFT * Math.sin(u * HALF_PI));
-  }
-  const _eN0 = new THREE.Vector3(), _eNf = new THREE.Vector3(), _eNl = new THREE.Vector3();
-  const _eNd = new THREE.Vector3(), _eNn = new THREE.Vector3();
-  /** Everted surface normal at direction `d` (numerical), oriented to the walked
-   *  upper face. `fwd` is any tangent used to span the surface. */
-  function evertNormal(d: THREE.Vector3, fwd: THREE.Vector3, outN: THREE.Vector3): THREE.Vector3 {
-    const E = 1e-3;
-    const left = _eNn.crossVectors(d, fwd).normalize();
-    evertDir(d, _eN0);
-    _eNf.copy(evertDir(_eNd.copy(d).addScaledVector(fwd, E).normalize(), new THREE.Vector3())).sub(_eN0);
-    _eNl.copy(evertDir(_eNd.copy(d).addScaledVector(left, E).normalize(), new THREE.Vector3())).sub(_eN0);
-    outN.crossVectors(_eNf, _eNl).normalize();
-    if (outN.dot(d) < 0) outN.negate();              // face the side you walk
-    return outN;
-  }
-  /** Build the everted shell as a custom lon/lat surface (UV'd for the grid map). */
-  function buildShellGeometry(rad: number): THREE.BufferGeometry {
-    const LO = 120, LA = 80;
-    const pos: number[] = [], uvs: number[] = [], idx: number[] = [];
-    for (let j = 0; j <= LA; j++) {
-      const lat = HALF_PI - (j / LA) * Math.PI, z = Math.sin(lat), cl = Math.cos(lat);
-      let rho: number, h: number;
-      if (!antipodal || z >= 0) { rho = cl; h = z; }
-      else { const u = -z; rho = 1 + (EVERT_FLARE - 1) * (1 - Math.cos(u * HALF_PI)); h = EVERT_LIFT * Math.sin(u * HALF_PI); }
-      for (let i = 0; i <= LO; i++) {
-        const lon = (i / LO) * Math.PI * 2;
-        pos.push(rho * Math.cos(lon) * rad, rho * Math.sin(lon) * rad, h * rad);
-        uvs.push(i / LO, j / LA);
-      }
-    }
-    const row = LO + 1;
-    for (let j = 0; j < LA; j++) for (let i = 0; i < LO; i++) {
-      const a = j * row + i, b = a + 1, cc = a + row, dd = cc + 1;
-      idx.push(a, cc, b, b, cc, dd);
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-    g.setIndex(idx); g.computeVertexNormals();
-    return g;
-  }
-
   let R = Math.max(12, c.squareSize);
   let glassOpacity = 0.45;   // clear-but-present default (host re-pushes on mount)
   let camDist = 4.5;
@@ -147,15 +87,10 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   scene.fog = null;
 
   // ── one neutral two-sided shell ──────────────────────────────────────────────
-  // Everything the player walks among (shell + decor + trail + signs) lives in
-  // `planetG`, the group the seam **eversion** transforms — see `evert()`.
-  const planetG = new THREE.Group();
-  planetG.matrixAutoUpdate = false;
-  root.add(planetG);
   const grid = gridTexture();
   const planetMat = new THREE.MeshStandardMaterial({ map: grid, color: SHELL_COLOR, emissive: SHELL_COLOR, emissiveIntensity: 0.12, roughness: 0.6, transparent: true, opacity: 1, side: THREE.DoubleSide });
-  const planet = new THREE.Mesh(buildShellGeometry(R), planetMat);
-  planetG.add(planet);
+  const planet = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 48), planetMat);
+  root.add(planet);
 
   /** Spread a square (u,v) over the WHOLE sphere (lon×lat) — the sphere's one skin. */
   function fullDir(u: number, v: number): THREE.Vector3 {
@@ -172,37 +107,26 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   // form at each direction, grown inward — back-to-back, no penetration.
   const outerG = new THREE.Group();
   const innerG = new THREE.Group();
-  planetG.add(outerG, innerG);
+  root.add(outerG, innerG);
   const treeDirs: THREE.Vector3[] = [];
 
-  const _plP = new THREE.Vector3(), _plN = new THREE.Vector3(), _plF = new THREE.Vector3();
   function place(g: THREE.Group, dir: THREE.Vector3, radius: number, outward: boolean) {
-    // sit the marker on the EVERTED surface, oriented by its everted normal — so
-    // trees stand off the upper (walked) face and columns hang under it, on the
-    // sun-hat brim just as on the round north cap.
-    _plF.set(-dir.y, dir.x, 0); if (_plF.lengthSq() < 1e-6) _plF.set(1, 0, 0); _plF.normalize();
-    evertNormal(dir, _plF, _plN);
-    evertDir(dir, _plP).multiplyScalar(R);
-    const off = radius - R;                         // inner markers sit slightly under
-    g.position.copy(_plP).addScaledVector(_plN, off);
-    g.quaternion.setFromUnitVectors(upY, outward ? _plN : _plN.clone().negate());
+    g.position.copy(dir).multiplyScalar(radius);
+    g.quaternion.setFromUnitVectors(upY, outward ? dir : dir.clone().negate());
   }
   function buildMarkers() {
     outerG.clear(); innerG.clear(); treeDirs.length = 0;
     decor.props.forEach((p, i) => {
       const d = dirFor(p.u, p.v);
       treeDirs.push(d);
-      // ONE uniform skin: trees on the OUTER wall, columns on the INNER wall, at
-      // every direction. The orientation flip is carried by the eversion, not by
-      // swapping skins — so crossing the seam, the world folds inside-out and the
-      // *same* landmark you saw as an outside tree now reads as an inside column.
+      // outer: tree at +d (grown out); inner: column at +d (grown in)
       const tOut = decor.makeTop(i); place(tOut, d, R, true); outerG.add(tOut);
       const cIn = decor.makeBottom(i); place(cIn, d, R * SHELL_GAP, false); innerG.add(cIn);
       if (antipodal) {
-        // the antipodal preimage of the same ℝP² point — same uniform skin
+        // antipodal half wears the flipped skin (column out at −d, tree in at −d)
         const ad = deckDir(d);
-        const tOut2 = decor.makeTop(i); place(tOut2, ad, R, true); outerG.add(tOut2);
-        const cIn2 = decor.makeBottom(i); place(cIn2, ad, R * SHELL_GAP, false); innerG.add(cIn2);
+        const cOut = decor.makeBottom(i); place(cOut, ad, R, true); outerG.add(cOut);
+        const tIn = decor.makeTop(i); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
       }
     });
     // numbered corner markers just inside each chart corner (the square's corners)
@@ -215,8 +139,8 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
       const cIn = decor.makeCornerBottom(v + 1, col); place(cIn, d, R * SHELL_GAP, false); innerG.add(cIn);
       if (antipodal) {
         const ad = deckDir(d);
-        const tOut2 = decor.makeCornerTop(v + 1, col); place(tOut2, ad, R, true); outerG.add(tOut2);
-        const cIn2 = decor.makeCornerBottom(v + 1, col); place(cIn2, ad, R * SHELL_GAP, false); innerG.add(cIn2);
+        const cOut = decor.makeCornerBottom(v + 1, col); place(cOut, ad, R, true); outerG.add(cOut);
+        const tIn = decor.makeCornerTop(v + 1, col); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
       }
     });
   }
@@ -225,7 +149,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   // seam ring (ℝP² only): the z=0 great circle where the two skins meet.
   const seamMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffe08a, emissiveIntensity: 0.4, roughness: 0.5 });
   const seam = antipodal ? new THREE.Mesh(new THREE.TorusGeometry(R, 0.12, 8, 96), seamMat) : null;
-  if (seam) planetG.add(seam);
+  if (seam) root.add(seam);
 
   // ── the ink trail: one buffer in true world coords on the fixed planet ──────
   // The sphere IS the cover, so the stamps are simply where you walked. On ℝP²
@@ -234,7 +158,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const ink = makeInkTrail(TRAIL_MAX);
   const inkMesh = new THREE.Mesh(ink.geometry, ink.material); inkMesh.frustumCulled = false;
   inkMesh.userData.ink = true;   // ink may legitimately render through det<0 — exempt from the decor audit
-  planetG.add(inkMesh);
+  root.add(inkMesh);
   let inkTwin: THREE.Mesh | null = null;
   // The twin draws the trail through the genuine deck of the TWO-SIDED shell —
   // which swaps faces (the twisted I-bundle over ℝP²): ink floating at radius
@@ -253,15 +177,16 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   if (twinM4) {
     inkTwin = new THREE.Mesh(ink.geometry, ink.material); inkTwin.frustumCulled = false;
     inkTwin.matrixAutoUpdate = false; inkTwin.userData.ink = true;
-    inkTwin.visible = false;   // retired: the eversion itself reflects the south trail
     placeTwin();
-    planetG.add(inkTwin);
+    root.add(inkTwin);
   }
   let hist = 0;                                     // frozen stamp count
   let lastFrozen: THREE.Vector3 | null = null;      // spacing reference
+  const leftV = new THREE.Vector3(), normV = new THREE.Vector3();
   function writeStamp(slot: number) {
-    // lay the print on the everted surface in the player's everted frame
-    ink.setQuad(slot, ePosW, eFwd, eLeft, eUp);
+    leftV.crossVectors(posU, fwdU);                 // up×fwd — the player's left
+    normV.copy(posU);
+    ink.setQuad(slot, posW, fwdU, leftV, normV);
   }
 
   // ── planted signs: a rigid object on the shell + its genuine deck image ──────
@@ -280,8 +205,8 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     }
   }
   function removeSign(s: PlantedSign) {
-    planetG.remove(s.main);
-    if (s.twin) planetG.remove(s.twin);
+    root.remove(s.main);
+    if (s.twin) root.remove(s.twin);
     s.builder.dispose();
   }
   function clearSignsFn() { signs.forEach(removeSign); signs.length = 0; }
@@ -289,23 +214,15 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   function applyGlass() {
     const g = glassState(glassOpacity, GLASS);
     planetMat.opacity = g.opacity; planetMat.depthWrite = g.depthWrite; planetMat.transparent = glassOpacity < 0.999; planetMat.needsUpdate = true;
-    // ℝP²: the inner (column) world is always present — seen through the glass from
-    // outside, and directly once the eversion has folded you inside. The shell's own
-    // opacity (occlusion) still hides it when the glass is opaque and you're outside.
-    innerG.visible = antipodal ? true : g.showUnder;
-    for (const s of signs) if (s.twin) s.twin.visible = antipodal ? true : g.showUnder;
+    innerG.visible = g.showUnder;
+    for (const s of signs) if (s.twin) s.twin.visible = g.showUnder;
   }
   applyGlass();
 
   // ── player pose as a kernel Frame on the κ=+1 shell (the unit sphere) ─────────
-  // ℝP²: spawn near the +z **pole** — the fully-convex "outside" cap (s=0) — so the
-  // walk to the seam is the gradual eversion and the far pole is full inside-out.
-  // Other χ>0 worlds keep the farthest-from-landmark spawn (no eversion).
+  // Spawn at the surface direction farthest from every landmark, so the player
+  // never starts inside a tree or on the centre beacon.
   function clearSpawnFrame(): Frame {
-    if (antipodal) {
-      const d = new THREE.Vector3(0.14, 0.05, 1).normalize();   // just off the pole
-      return makeFrame(1, originTo(1, [d.x, d.y, d.z]));
-    }
     let best: THREE.Vector3 = treeDirs[0] ?? new THREE.Vector3(0, 0, 1);
     let bestD = -1;
     const cand = new THREE.Vector3();
@@ -324,27 +241,11 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const posU = new THREE.Vector3(), fwdU = new THREE.Vector3();
   const posW = new THREE.Vector3(), eye = new THREE.Vector3(), look = new THREE.Vector3();
   const camPos = new THREE.Vector3();
-  // The player frame lives on the unit sphere (posU/fwdU/posW — used by the kernel,
-  // the chart and the ink twin). Its **everted** image — where the avatar, camera
-  // and ink actually render on the fixed everted surface — is ePosW (foot), eUp
-  // (everted normal = the walked-face up), eFwd, eLeft. The player never flips: eUp
-  // stays the upper-face normal, so they walk level while the ground's curvature
-  // reverses under them across the seam.
-  const ePosW = new THREE.Vector3(), eUp = new THREE.Vector3(), eFwd = new THREE.Vector3(), eLeft = new THREE.Vector3();
-  const _spP = new THREE.Vector3(), _spF = new THREE.Vector3();
 
   function syncPose() {
     posU.copy(v3(framePos(frame)));
     fwdU.copy(v3(frameForward(frame)));
     posW.copy(posU).multiplyScalar(R);
-    // everted render frame
-    evertDir(posU, ePosW).multiplyScalar(R);
-    evertNormal(posU, fwdU, eUp);
-    evertDir(_spP.copy(posU).addScaledVector(fwdU, 1e-3).normalize(), _spF).multiplyScalar(R).sub(ePosW);
-    _spF.addScaledVector(eUp, -_spF.dot(eUp));        // project the step onto the surface
-    if (_spF.lengthSq() < 1e-9) _spF.copy(fwdU);
-    eFwd.copy(_spF).normalize();
-    eLeft.crossVectors(eUp, eFwd).normalize();
   }
   syncPose();
 
@@ -357,37 +258,30 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     if (dyaw || f || strafe) frame = reorthonormalize(frame);
     syncPose();
 
-    // lift the shell's self-glow as the ground curls up around you (south), so the
-    // concave brim reads (the directional key lights graze it past the seam)
-    const s = antipodal ? (1 - posU.z) / 2 : 0;
-    planetMat.emissiveIntensity = 0.12 + 0.34 * s;
-
-    // camera + avatar ride the EVERTED surface — eUp is the walked-face up, so the
-    // view stays level while the ground's curvature reverses under you at the seam.
-    cam.up.copy(eUp);
+    cam.up.copy(posU);
     if (thirdPerson) {
-      camPos.copy(ePosW).addScaledVector(eFwd, -camDist).addScaledVector(eUp, 2.6 + pitch * 1.6);
+      camPos.copy(posW).addScaledVector(fwdU, -camDist).addScaledVector(posU, 2.6 + pitch * 1.6);
       cam.position.copy(camPos);
-      cam.lookAt(ePosW.x + eUp.x * 1.2, ePosW.y + eUp.y * 1.2, ePosW.z + eUp.z * 1.2);
+      cam.lookAt(posW.x + posU.x * 1.2, posW.y + posU.y * 1.2, posW.z + posU.z * 1.2);
     } else {
-      eye.copy(ePosW).addScaledVector(eUp, EYE);
+      eye.copy(posU).multiplyScalar(R + EYE);
       const cp = Math.cos(Math.max(-MAX_PITCH, Math.min(MAX_PITCH, pitch)));
-      look.copy(eFwd).multiplyScalar(cp).addScaledVector(eUp, Math.sin(pitch));
+      look.copy(fwdU).multiplyScalar(cp).addScaledVector(posU, Math.sin(pitch));
       cam.position.copy(eye);
       cam.lookAt(eye.x + look.x, eye.y + look.y, eye.z + look.z);
     }
 
-    // ── ink the surface: freeze a footprint every TRAIL_SPACING of walked path ──
-    if (!lastFrozen || lastFrozen.distanceTo(ePosW) > TRAIL_SPACING) {
+    // ── ink the shell: freeze a footprint every TRAIL_SPACING of walked path ──
+    if (!lastFrozen || lastFrozen.distanceTo(posW) > TRAIL_SPACING) {
       if (hist >= TRAIL_MAX) { ink.dropOldest(); hist--; }
       writeStamp(hist); hist++;
       ink.setCount(hist);
-      lastFrozen = ePosW.clone();
+      lastFrozen = posW.clone();
     }
   }
 
   function pose(): PlayerPose {
-    return { position: ePosW.clone(), up: eUp.clone(), forward: eFwd.clone() };
+    return { position: posW.clone(), up: posU.clone(), forward: fwdU.clone() };
   }
 
   function chart(): SquareMapState {
@@ -404,7 +298,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   function setRadius(r: number) {
     if (r <= 0 || r === R) return;
     R = r;
-    planet.geometry.dispose(); planet.geometry = buildShellGeometry(R);
+    planet.geometry.dispose(); planet.geometry = new THREE.SphereGeometry(R, 64, 48);
     buildMarkers();
     if (seam) { seam.geometry.dispose(); seam.geometry = new THREE.TorusGeometry(R, 0.12, 8, 96); }
     camera.far = R * 5; camera.updateProjectionMatrix();
@@ -433,12 +327,12 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
       const b = posU.clone().addScaledVector(fwdU, 1.2 / R).normalize();
       const f = fwdU.clone().addScaledVector(b, -b.dot(fwdU)).normalize().negate(); // front faces the player
       const builder = makeSignBuilder(front, back);
-      const main = builder.make(); main.matrixAutoUpdate = false; planetG.add(main);
+      const main = builder.make(); main.matrixAutoUpdate = false; root.add(main);
       let twin: THREE.Group | null = null;
       if (antipodal) {
         twin = builder.make(); twin.matrixAutoUpdate = false;
         twin.visible = innerG.visible;   // under-glass content, gated like the inner shell
-        planetG.add(twin);
+        root.add(twin);
       }
       const s: PlantedSign = { builder, b, fwdS: f, main, twin };
       signs.push(s);

@@ -71,14 +71,11 @@ surface you walk. The curved worlds are subtler, and the difference is honest:
   hemisphere is the same square seen through the **antipodal** identification
   `x ∼ −x`, so the trees there wear columns and the trail's antipodal image is
   its mirror twin — on the **other face**, hanging under the glass.
-  Walk over the bright **seam** (the equator) and the world **everts** around you:
-  the convex ground you stand on smoothly flattens and turns **concave**, doming
-  over you — you never tip over, the planet turns inside-out instead (inside-out and
-  mirror are the same single bit of orientation) — and the mini-map flags the
-  *other face*. Cross the seam a **second** time and it everts back: the
-  two-laps-to-come-home signature of a non-orientable surface. The bottom-left inset
-  shows ℝP² **immersed in 3-space** (the Steiner *Roman surface*); because that
-  immersion identifies antipodes, both faces land on the *same* point.
+  Walk over the bright **seam** (the equator) and the mini-map flags the *other face*.
+  The bottom-left inset shows ℝP² **immersed in 3-space** (the Steiner *Roman
+  surface*) — the same surface you walk, wildly reshaped; your marker rides it, and
+  because the immersion identifies antipodes, both faces land on the
+  *same* point.
 - **Sphere.** The square here is a **chart**, not an isometric copy: it is *stretched*
   over the whole round sphere (the way a flat map distorts the globe), so distances
   on the mini-map square are not the distances you walk. The world you actually move
@@ -101,13 +98,3 @@ plane has). Each tile is one more copy of the fundamental polygon; the mini-map
 shows that polygon with its edge identifications. On the non-orientable cross-cap
 worlds the glide tiles wear the **other face's** skin — columns and Roman plates,
 upright; the reversed numbers are underneath, through the glass.
-
-### The shape from outside (the ℝ³ inset)
-
-The intrinsic world is the one you *walk*; the bottom-left **inset** shows that
-same abstract surface **immersed in ordinary 3-space** — the donut a flat torus is
-secretly shaped like, the figure-8 *bottle* for the Klein, the Steiner *Roman
-surface* for ℝP², a *double torus* for the genus-2 world. Your bright marker rides
-the immersed shape at the same point you occupy intrinsically, so you can watch the
-familiar shape and the abstract walk move together. (The hyperbolic worlds show a
-representative shape only — their disk has no tidy global picture in 3-space.)
