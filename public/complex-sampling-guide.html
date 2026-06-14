@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<!-- A math-and-code guide to how the Complex Particles viewer samples the domain.
+     Deployed at <site>/complex-sampling-guide.html — part of the animath complex
+     viewer guide series. Covers the domain sampling patterns (Grid / Polar / Rings /
+     Spokes / Web / Squares / Random) from lib/particles/createParticleGeometry.ts,
+     why equal-area radius matters, and the per-point seed. Live applets use the
+     pattern= embed param (added to embedParams.ts). docs/EMBEDS.md. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sampling the plane — the domain patterns of Complex Particles</title>
+  <style>
+    :root {
+      --bg: #faf8f3; --fg: #232323; --muted: #8a8377; --rule: #ddd5c4;
+      --codebg: #1d1f23; --codefg: #e6e6e6; --codekw: #c8a26a; --codecm: #7f8a78;
+      --inlinebg: #f0ece1; --accent: #7a5cff; --eqbg: #f4f1e8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+           font: 17px/1.65 Georgia, 'Times New Roman', serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 48px 20px 96px; }
+    h1 { font-size: 33px; line-height: 1.2; margin: 0 0 6px; }
+    h2 { font-size: 24px; line-height: 1.25; margin: 52px 0 4px; padding-top: 12px;
+         border-top: 1px solid var(--rule); }
+    h2 .num { color: var(--accent); font-size: 18px; margin-right: 8px; }
+    h3 { font-size: 18px; margin: 30px 0 4px; }
+    .byline { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+    p { margin: 0 0 18px; }
+    a { color: var(--accent); }
+    em { color: #4a443a; }
+    figure { margin: 26px 0; }
+    figure iframe { width: 100%; height: 400px; border: 1px solid var(--rule);
+                    border-radius: 10px; display: block; background: #0c0c10; }
+    figcaption { font-size: 13.5px; color: var(--muted); padding-top: 8px; }
+    code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+           font-size: 0.86em; background: var(--inlinebg); padding: 1px 5px;
+           border-radius: 4px; }
+    .eq { background: var(--eqbg); border-left: 3px solid var(--accent);
+          padding: 12px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+          font-size: 16px; overflow-x: auto; }
+    .eq code { background: none; padding: 0; font-size: 1em; }
+    .listing { margin: 18px 0; }
+    .listing .src { font: 12px/1.2 ui-monospace, Menlo, Consolas, monospace;
+                    color: var(--muted); margin: 0 0 5px; }
+    .listing .src b { color: #5a5346; font-weight: 600; }
+    pre { background: var(--codebg); color: var(--codefg); margin: 0;
+          padding: 16px 18px; border-radius: 9px; overflow-x: auto;
+          font: 13px/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+    pre .cm { color: var(--codecm); font-style: italic; }
+    table { border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 15px; }
+    th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule);
+             vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: 13.5px;
+         text-transform: uppercase; letter-spacing: 0.03em; }
+    td code { font-size: 0.9em; }
+    nav.toc { background: var(--eqbg); border: 1px solid var(--rule);
+              border-radius: 10px; padding: 16px 20px; margin: 28px 0 8px;
+              font-size: 15px; }
+    nav.toc strong { display: block; font-size: 13px; text-transform: uppercase;
+                     letter-spacing: 0.04em; color: var(--muted); margin-bottom: 8px; }
+    nav.toc ol { margin: 0; padding-left: 22px; }
+    nav.toc li { margin: 3px 0; }
+    .note { border-left: 3px solid #c8a26a; background: #f7f1e3;
+            padding: 11px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+            font-size: 15.5px; }
+    .note b { color: #7a5a1e; }
+    .seealso { background: var(--eqbg); border: 1px solid var(--rule);
+               border-radius: 10px; padding: 12px 18px; margin: 24px 0;
+               font-size: 15px; }
+    .footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--rule);
+              color: var(--muted); font-size: 14px; }
+    .footer a.hub { font-weight: 600; }
+    sup, sub { line-height: 0; }
+  </style>
+</head>
+<body>
+<main>
+
+  <h1>Sampling the plane</h1>
+  <div class="byline">Where <em>Complex Particles</em> places its points before <code>f</code> ever acts &mdash; and why the layout changes what you see</div>
+
+  <p>
+    The plane is continuous; a GPU draws a finite number of points. So before any
+    function runs, the viewer must choose <em>where</em> to place its cloud of
+    samples across the domain. That choice is quiet but consequential: the same
+    function can look like a solid surface, a spray of fibers, or a spider's web
+    depending only on how the input points were laid down. This guide is the sampling
+    layer &mdash; the patterns in
+    <code>src/lib/particles/createParticleGeometry.ts</code> &mdash; and how to drive
+    it. (For the <em>complementary</em> question of moving samples toward where the
+    function stretches, see
+    <a href="./complex-rendering-guide.html#adaptive">the rendering guide, &sect;5</a>.)
+  </p>
+
+  <p>
+    The applets are live and use the <code>pattern=</code> parameter; the patterns
+    read most clearly as <em>Points</em> (used below), and they shape the
+    <em>Net</em> mode's fibers too. Drag to orbit.
+  </p>
+
+  <nav class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#grid">The grid &mdash; the default</a></li>
+      <li><a href="#radial">The radial family &mdash; rings, spokes, webs</a></li>
+      <li><a href="#equalarea">Why equal-area radius matters</a></li>
+      <li><a href="#seed">The hidden fourth coordinate: the seed</a></li>
+      <li><a href="#choosing">Which pattern, when</a></li>
+    </ol>
+  </nav>
+
+  <!-- ===================================================================== -->
+  <h2 id="grid"><span class="num">1</span>The grid &mdash; the default</h2>
+
+  <p>
+    The default pattern is the obvious one: a square grid. Lay
+    <code>&#8730;count</code> points along each side of the domain box, each at the
+    center of its cell. It is the right choice when you want a <em>surface</em>,
+    because the regular mesh connects cleanly into the sheet and tile modes.
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/particles/createParticleGeometry.ts</b> : 144&ndash;152</p>
+    <pre>const side = Math.max(1, Math.ceil(Math.sqrt(count)));
+for (let i = 0; i &lt; count; i++) {
+  const ix = i % side, iy = Math.floor(i / side);
+  set(i, xMin + ((ix + 0.5) / side) * spanX,    <span class="cm">// evenly across x</span>
+        yMin + ((iy + 0.5) / side) * spanY);    <span class="cm">// evenly across y</span>
+}</pre>
+  </div>
+
+  <p>
+    Each call to <code>set</code> writes the point's position and a random seed (more
+    on that in &sect;4). The grid treats every part of the box equally &mdash; which is
+    exactly why it is a poor way to see anything organized around the <em>origin</em>,
+    where most interesting complex behavior lives. For that, go polar.
+  </p>
+
+  <!-- ===================================================================== -->
+  <h2 id="radial"><span class="num">2</span>The radial family &mdash; rings, spokes, webs</h2>
+
+  <p>
+    A complex function's structure is usually radial: zeros and poles sit at points,
+    phase circles around them, magnitude grows outward. Sampling along
+    <em>circles and rays</em> rather than a grid lines the points up with that
+    structure. The viewer offers a small family &mdash; <strong>Rings</strong>
+    (concentric circles), <strong>Spokes</strong> (rays from the center),
+    <strong>Web</strong> (half rings, half spokes), <strong>Polar</strong> (an
+    interleaved lattice), and <strong>Squares</strong> (concentric square outlines).
+    Spokes is the clearest to read in code:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/particles/createParticleGeometry.ts</b> : 93&ndash;103 (Spokes)</p>
+    <pre>const nS = Math.max(6, Math.round(Math.sqrt(count) / 2));  <span class="cm">// number of rays</span>
+const per = Math.ceil(count / nS);                        <span class="cm">// points per ray</span>
+for (let i = 0; i &lt; count; i++) {
+  const spoke = Math.floor(i / per), j = i % per;
+  const ang = 2 * Math.PI * (spoke / nS);                 <span class="cm">// this ray's angle</span>
+  const r = R * ((j + 0.5) / per);                        <span class="cm">// march outward</span>
+  set(i, cx + r * Math.cos(ang), cy + r * Math.sin(ang));
+}</pre>
+  </div>
+
+  <p>
+    These layouts are the domain's <strong>fibers</strong> &mdash; the level sets
+    <code>|z| = const</code> (rings) and <code>arg&nbsp;z = const</code> (spokes)
+    &mdash; so drawing them and letting <code>f</code> carry them is a direct picture
+    of how the function bends circles and rays. (That is exactly what the
+    <a href="./complex-rendering-guide.html#net">Net mode</a> does with ribbons; here
+    the same fibers appear as point trails.) Compare the three:
+  </p>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="The Rings sampling pattern"
+      src="./#/embed/complex-particles?fn=linear&render=Points&pattern=rings&proj=dropv&motion=fixed&count=6000&caption=Rings%3A%20concentric%20circles%2C%20each%20with%20a%20golden-angle%20offset%20%E2%80%94%20samples%20on%20the%20level%20sets%20%7Cz%7C%3Dconst."></iframe>
+    <figcaption>Fig. 1 &mdash; <strong>Rings</strong>: concentric circles (golden-angle offset per ring), the level sets <code>|z| = const</code>.</figcaption>
+  </figure>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="The Spokes sampling pattern"
+      src="./#/embed/complex-particles?fn=linear&render=Points&pattern=spokes&proj=dropv&motion=fixed&count=6000&caption=Spokes%3A%20radial%20rays%20from%20the%20center%20%E2%80%94%20samples%20on%20the%20level%20sets%20arg%20z%3Dconst."></iframe>
+    <figcaption>Fig. 2 &mdash; <strong>Spokes</strong>: rays from the center, the level sets <code>arg&nbsp;z = const</code>.</figcaption>
+  </figure>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="The Web sampling pattern"
+      src="./#/embed/complex-particles?fn=linear&render=Points&pattern=web&proj=dropv&motion=fixed&count=6000&caption=Web%3A%20half%20the%20points%20on%20rings%2C%20half%20on%20spokes%20%E2%80%94%20both%20fiber%20families%20at%20once."></iframe>
+    <figcaption>Fig. 3 &mdash; <strong>Web</strong>: half the budget on rings, half on spokes &mdash; both fiber families at once.</figcaption>
+  </figure>
+
+  <!-- ===================================================================== -->
+  <h2 id="equalarea"><span class="num">3</span>Why equal-area radius matters</h2>
+
+  <p>
+    There is one subtlety that separates a good radial sampler from a naive one. If
+    you space the rings evenly in radius, the points crowd near the center and thin
+    out toward the rim, because a thin annulus at large <code>r</code> covers far more
+    area than one near the origin. To keep the density uniform, the radius must grow
+    as the <strong>square root</strong> of the ring index:
+  </p>
+
+  <div class="eq">
+    <code>r = R&middot;&#8730;((ring + &frac12;) / nR)</code>
+  </div>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/particles/createParticleGeometry.ts</b> : 75 (Polar, the equal-area radius)</p>
+    <pre>const r = R * Math.sqrt((ring + 0.5) / nR);   <span class="cm">// √ → equal area per ring</span></pre>
+  </div>
+
+  <p>
+    The <code>&#8730;</code> is exactly the inverse of "area grows like
+    <code>r&sup2;</code>": annulus area is proportional to <code>r&middot;dr</code>, so
+    equal-area rings have <code>r&sup2;</code> evenly spaced, i.e. <code>r</code>
+    spaced like <code>&#8730;</code>. The same idea is why a uniform sample of a disk
+    uses <code>r = R&#8730;u</code> for uniform <code>u</code>. Without it, a radial
+    pattern wastes most of its points in a bright knot at the center; with it, the
+    plane is sampled evenly all the way out.
+  </p>
+
+  <!-- ===================================================================== -->
+  <h2 id="seed"><span class="num">4</span>The hidden fourth coordinate: the seed</h2>
+
+  <p>
+    Every sample, in every pattern, also gets a random four-component
+    <strong>seed</strong> written alongside its position:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/particles/createParticleGeometry.ts</b> : 62&ndash;65</p>
+    <pre>const set = (i, x, y) =&gt; {
+  pos[3*i] = x; pos[3*i + 1] = 0; pos[3*i + 2] = y;
+  for (let k = 0; k &lt; 4; k++) seeds[4*i + k] = Math.random();  <span class="cm">// a vec4 per point</span>
+};</pre>
+  </div>
+
+  <p>
+    That seed is what gives each particle its own small personality on the GPU. The
+    shader uses it for <strong>jitter</strong> (perturbing the sample so a hard grid
+    softens into an organic cloud &mdash; either scattering the input <code>z</code> or
+    fuzzing the 4-D position, per the jitter mode) and for <strong>shimmer</strong>
+    (a per-particle phase on the time-varying brightness, so the cloud twinkles
+    instead of pulsing in unison). The position says <em>where</em>; the seed says
+    <em>how this one wiggles</em>.
+  </p>
+
+  <!-- ===================================================================== -->
+  <h2 id="choosing"><span class="num">5</span>Which pattern, when</h2>
+
+  <table>
+    <thead><tr><th>Pattern</th><th>Good for</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Grid</strong></td><td>surfaces &mdash; Sheet and Tiles need the regular mesh</td></tr>
+      <tr><td><strong>Rings / Spokes / Web</strong></td><td>seeing what <code>f</code> does to circles and rays (the fibers)</td></tr>
+      <tr><td><strong>Polar</strong></td><td>an even radial cloud that still respects the origin</td></tr>
+      <tr><td><strong>Squares</strong></td><td>axis-aligned structure; how <code>f</code> bends straight contours</td></tr>
+      <tr><td><strong>Random</strong></td><td>a texture with no sampling artifacts &mdash; pure density</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    Sampling is the first decision in the pipeline and the easiest to overlook: it
+    fixes <em>which points exist</em> before the function moves them, the projection
+    flattens them, and the render mode draws them. Match the pattern to the structure
+    you want to see &mdash; a grid for a surface, fibers for a flow &mdash; and the
+    rest of the viewer has better raw material to work with.
+  </p>
+
+  <div class="note">
+    <b>In the app.</b> The pattern lives on the viewer's <em>Domain</em> panel, and
+    the point <em>count</em>, <em>jitter</em>, and <em>shimmer</em> on the Domain and
+    Motion panels. The embed URL exposes <code>pattern=</code> and <code>count=</code>;
+    open the <a href="./#/complex-particles">full viewer</a> for the rest.
+  </div>
+
+  <div class="seealso">
+    <strong>The series &mdash; the math:</strong>
+    <a href="./complex-functions-guide.html">What the functions do</a> &middot;
+    <a href="./complex-particles-guide.html">From 4D to your screen</a> &middot;
+    <a href="./complex-rendering-guide.html">How the surface is drawn</a>.
+    <strong>Going deeper:</strong>
+    <a href="./complex-color-guide.html">Color</a> &middot;
+    <em>Sampling</em> (here) &middot;
+    <a href="./complex-plane-transform-guide.html">Two planes, one map</a>.
+  </div>
+
+  <div class="footer">
+    <p>
+      <a class="hub" href="./guides.html">&larr; All guides</a> &nbsp;&middot;&nbsp;
+      The sampling patterns are in
+      <code>src/lib/particles/createParticleGeometry.ts</code>
+      (<code>fillPattern</code>); the live <code>pattern=</code> embed parameter is in
+      <code>src/lib/embedParams.ts</code>. Open the
+      <a href="./#/complex-particles">full viewer</a> to switch patterns on the Domain
+      panel, or read the <a href="./embed-demo.html">embed demo</a>.
+    </p>
+  </div>
+
+</main>
+</body>
+</html>

@@ -38,13 +38,16 @@ short and topical** so the folders stay tidy.
    that folder is empty (new branch), fall back to the single most-recent handoff
    across all branch folders for continuity, and note that this is the first
    tracked session on this branch.
-3. **Determine the session number** — check
+3. **Read the backlog** — `docs/sessions/TODO.md` (the project to-do list, rendered
+   as the control center's "To-do" panel). Note any open items touching this
+   session's focus; they carry the notes meant to inform this round.
+4. **Determine the session number** — check
    `docs/sessions/progress/<branch-slug>/` for today's date. If files exist for
    today (e.g., `2026-06-05-S03-...`), the next session is S04. If none exist for
    today, start at S01.
-4. **Get the session focus** — use `$ARGUMENTS` if provided, otherwise ask the user
+5. **Get the session focus** — use `$ARGUMENTS` if provided, otherwise ask the user
    (one sentence).
-5. **Orient in the repo** — note which **app** (`src/animations/<Name>/`) the focus
+6. **Orient in the repo** — note which **app** (`src/animations/<Name>/`) the focus
    names, if any. Skim `CLAUDE.md` / `AGENTS.md` for any conventions relevant to the
    focus. Remember the parallel-branch rule: shared files (`src/index.tsx`,
    `src/apps.ts`, `CLAUDE.md`, `README.md`) are **append-only** — never reorder
@@ -52,11 +55,11 @@ short and topical** so the folders stay tidy.
    fresh clone is already current, and this branch may be stacked on another
    feature branch (see CLAUDE.md → *Branch sync*). Main-sync happens only at PR
    finalization.
-6. **Create the progress report** at
+7. **Create the progress report** at
    `docs/sessions/progress/<branch-slug>/YYYY-MM-DD-SNN-description.md` by copying
    `docs/sessions/_template-progress.md` and filling the `[bracketed]` frontmatter
    and sections (see structure below).
-7. **Present a summary** of the last handoff: status, what was done, what's pending.
+8. **Present a summary** of the last handoff: status, what was done, what's pending.
    Include the **live-preview links** (see below). Then wait for the user to direct
    what to work on.
 

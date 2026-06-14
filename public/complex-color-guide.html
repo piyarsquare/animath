@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<!-- A math-and-code guide to how the complex viewers turn a value into a color.
+     Deployed at <site>/complex-color-guide.html — part of the animath complex
+     viewer guide series. Covers domain coloring: phase->hue, magnitude->brightness,
+     the quantity/brightness channels, the sequential colormaps (lib/colormaps.ts),
+     contour bands, and domain-vs-range coloring. Source: the calcColor function in
+     the viewers' shaders + lib/colormaps.ts. Live applets via the #/embed/ routes
+     (docs/EMBEDS.md). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How a complex number becomes a color — domain coloring in animath</title>
+  <style>
+    :root {
+      --bg: #faf8f3; --fg: #232323; --muted: #8a8377; --rule: #ddd5c4;
+      --codebg: #1d1f23; --codefg: #e6e6e6; --codekw: #c8a26a; --codecm: #7f8a78;
+      --inlinebg: #f0ece1; --accent: #7a5cff; --eqbg: #f4f1e8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+           font: 17px/1.65 Georgia, 'Times New Roman', serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 48px 20px 96px; }
+    h1 { font-size: 33px; line-height: 1.2; margin: 0 0 6px; }
+    h2 { font-size: 24px; line-height: 1.25; margin: 52px 0 4px; padding-top: 12px;
+         border-top: 1px solid var(--rule); }
+    h2 .num { color: var(--accent); font-size: 18px; margin-right: 8px; }
+    h3 { font-size: 18px; margin: 30px 0 4px; }
+    .byline { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+    p { margin: 0 0 18px; }
+    a { color: var(--accent); }
+    em { color: #4a443a; }
+    figure { margin: 26px 0; }
+    figure iframe { width: 100%; height: 400px; border: 1px solid var(--rule);
+                    border-radius: 10px; display: block; background: #0c0c10; }
+    figcaption { font-size: 13.5px; color: var(--muted); padding-top: 8px; }
+    code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+           font-size: 0.86em; background: var(--inlinebg); padding: 1px 5px;
+           border-radius: 4px; }
+    .eq { background: var(--eqbg); border-left: 3px solid var(--accent);
+          padding: 12px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+          font-size: 16px; overflow-x: auto; }
+    .eq code { background: none; padding: 0; font-size: 1em; }
+    .listing { margin: 18px 0; }
+    .listing .src { font: 12px/1.2 ui-monospace, Menlo, Consolas, monospace;
+                    color: var(--muted); margin: 0 0 5px; }
+    .listing .src b { color: #5a5346; font-weight: 600; }
+    pre { background: var(--codebg); color: var(--codefg); margin: 0;
+          padding: 16px 18px; border-radius: 9px; overflow-x: auto;
+          font: 13px/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+    pre .cm { color: var(--codecm); font-style: italic; }
+    table { border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 15px; }
+    th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule);
+             vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: 13.5px;
+         text-transform: uppercase; letter-spacing: 0.03em; }
+    td code { font-size: 0.9em; }
+    nav.toc { background: var(--eqbg); border: 1px solid var(--rule);
+              border-radius: 10px; padding: 16px 20px; margin: 28px 0 8px;
+              font-size: 15px; }
+    nav.toc strong { display: block; font-size: 13px; text-transform: uppercase;
+                     letter-spacing: 0.04em; color: var(--muted); margin-bottom: 8px; }
+    nav.toc ol { margin: 0; padding-left: 22px; }
+    nav.toc li { margin: 3px 0; }
+    .note { border-left: 3px solid #c8a26a; background: #f7f1e3;
+            padding: 11px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+            font-size: 15.5px; }
+    .note b { color: #7a5a1e; }
+    .seealso { background: var(--eqbg); border: 1px solid var(--rule);
+               border-radius: 10px; padding: 12px 18px; margin: 24px 0;
+               font-size: 15px; }
+    .footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--rule);
+              color: var(--muted); font-size: 14px; }
+    .footer a.hub { font-weight: 600; }
+    sup, sub { line-height: 0; }
+  </style>
+</head>
+<body>
+<main>
+
+  <h1>How a complex number becomes a color</h1>
+  <div class="byline">Domain coloring in the <em>animath</em> viewers &mdash; turning a value <code>w = u + iv</code> into a pixel you can read</div>
+
+  <p>
+    Every picture in the complex viewers is painted by a single rule that turns a
+    complex number into a color. Once you know the rule, the colors stop being
+    decoration and become <em>data</em>: you can read a function's zeros, poles, and
+    growth straight off the image. This guide is that rule &mdash; the
+    <code>calcColor</code> routine that runs once per particle &mdash; and the ways
+    you can re-aim it. It is the companion to
+    <a href="./complex-functions-guide.html">What the functions do</a>, which used the
+    coloring to read functions; here we open up the coloring itself.
+  </p>
+
+  <p>
+    Code is quoted from the viewers' shader
+    (<code>src/animations/ComplexParticles/shaders/index.ts</code>, the
+    <code>calcColor</code> function) and the shared palette library
+    (<code>src/lib/colormaps.ts</code>). The applets are live; drag to orbit.
+  </p>
+
+  <nav class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#wheel">The wheel: phase to hue, magnitude to brightness</a></li>
+      <li><a href="#domainrange">Color by where it came from, or where it's going</a></li>
+      <li><a href="#quantity">Re-aiming the hue: the quantity channels</a></li>
+      <li><a href="#colormaps">Sequential colormaps: Viridis and friends</a></li>
+      <li><a href="#contours">Contour bands: turning color into level sets</a></li>
+      <li><a href="#reading">Reading a picture back into math</a></li>
+    </ol>
+  </nav>
+
+  <!-- ===================================================================== -->
+  <h2 id="wheel"><span class="num">1</span>The wheel: phase to hue, magnitude to brightness</h2>
+
+  <p>
+    Write the value in polar form, <code>w = r&middot;e<sup>i&theta;</sup></code>. The
+    default coloring gives each of its two parts one job: the <strong>angle</strong>
+    <code>&theta;</code> picks a <em>hue</em> by walking once around the color wheel,
+    and the <strong>magnitude</strong> <code>r</code> sets the <em>brightness</em>,
+    rising from dark near zero to full far out:
+  </p>
+
+  <div class="eq">
+    <code>hue = &theta; / 2&pi;</code> &nbsp;(mod 1) &nbsp;&middot;&nbsp;
+    <code>brightness = &frac12;(1 + tanh(ln&nbsp;r))</code>
+  </div>
+
+  <div class="listing">
+    <p class="src"><b>shaders/index.ts</b> : 336&ndash;352 (calcColor, abridged)</p>
+    <pre>float r = length(w);
+float angle = atan(w.y, w.x);
+<span class="cm">// phase (default quantity): the angle, mapped once around the wheel</span>
+float param = angle / TAU + 1.0;
+float hue = fract(param + hueShift + uBranchHue);
+<span class="cm">// magnitude (default brightness): log-squashed so it never clips</span>
+float val = 0.5 * (1.0 + tanh(log(r + 1e-6)));
+...
+return hsv2rgb(vec3(hue, saturation, val)) * intensity;</pre>
+  </div>
+
+  <p>
+    The <code>tanh(log&nbsp;r)</code> squash is what keeps the brightness usable: a
+    function's magnitude ranges over many orders of magnitude, and a raw
+    <code>r</code> would be black almost everywhere and blinding near a pole. The log
+    compresses that range; the <code>tanh</code> bounds it to <code>[0, 1]</code>. The
+    result is the familiar phase wheel &mdash; the identity map below paints it
+    directly, with the six primary hues spaced evenly around the origin:
+  </p>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="The phase wheel painted by tan z"
+      src="./#/embed/complex-particles?fn=tan&render=Sheet&proj=dropv&motion=fixed&caption=Domain%20coloring%3A%20hue%20%3D%20phase%2C%20brightness%20%3D%20magnitude.%20tan%20z%20has%20zeros%20(dark%2C%20hues%20meeting)%20and%20poles%20(bright%2C%20hues%20reversed)."></iframe>
+    <figcaption>Fig. 1 &mdash; <code>tan&nbsp;z</code> colored by value. Dark points where every hue meets are zeros; bright points where the hue wheel runs backward are poles.</figcaption>
+  </figure>
+
+  <!-- ===================================================================== -->
+  <h2 id="domainrange"><span class="num">2</span>Color by where it came from, or where it's going</h2>
+
+  <p>
+    The very first choice is <em>which</em> complex number to color by. Each particle
+    knows two: its input <code>z</code> and its output <code>f(z)</code>. The
+    <strong>Color by</strong> switch picks between them &mdash; one line at the top of
+    <code>calcColor</code>:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>shaders/index.ts</b> : 333</p>
+    <pre>vec2 w = (uColorBy == 0) ? z : f;   <span class="cm">// 0 = domain (input), 1 = range (output)</span></pre>
+  </div>
+
+  <p>
+    <strong>Domain</strong> coloring paints each point by where it <em>started</em>,
+    so the colors are a fixed map of the input plane that you watch get dragged
+    around &mdash; the paint is glued to the plane. <strong>Range</strong> coloring
+    paints by where it <em>landed</em>, so two inputs that <code>f</code> sends to the
+    same place get the same color &mdash; which makes the function's
+    <em>many-to-one</em> structure pop out (every sheet of a multivalued function, or
+    every period of <code>e<sup>z</sup></code>, repeats the same colors). The applet
+    below colors <code>z&sup2;</code> by its <em>output</em>; note how the upper and
+    lower halves of the plane wear identical colors, because <code>z&sup2;</code> sends
+    both to the same value:
+  </p>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="z squared colored by range"
+      src="./#/embed/complex-particles?fn=square&colorby=range&render=Sheet&proj=perspective&motion=quaternion&spin=xy&caption=Range%20coloring%3A%20z%C2%B2%20painted%20by%20its%20output.%20Inputs%20that%20land%20on%20the%20same%20value%20share%20a%20color%2C%20exposing%20the%20two-to-one%20wrap."></iframe>
+    <figcaption>Fig. 2 &mdash; <code>z&sup2;</code> colored by range (output). The two-to-one wrapping shows as two regions of the domain wearing the same colors.</figcaption>
+  </figure>
+
+  <!-- ===================================================================== -->
+  <h2 id="quantity"><span class="num">3</span>Re-aiming the hue: the quantity channels</h2>
+
+  <p>
+    By default the hue tracks <em>phase</em> and the brightness tracks
+    <em>magnitude</em>, but each channel can be re-pointed at a different scalar of
+    <code>w</code>. The <strong>Quantity</strong> selector chooses what drives the hue:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>shaders/index.ts</b> : 339&ndash;343</p>
+    <pre>if(uColorQty==1)      param = fract(0.5*log(r+1e-6));  <span class="cm">// modulus (log, cyclic)</span>
+else if(uColorQty==2) param = 0.5 + 0.5*tanh(w.x);     <span class="cm">// real part</span>
+else if(uColorQty==3) param = 0.5 + 0.5*tanh(w.y);     <span class="cm">// imaginary part</span>
+else                   param = angle/TAU + 1.0;         <span class="cm">// phase (default)</span></pre>
+  </div>
+
+  <p>
+    Color by <em>modulus</em> and you get concentric bands of hue at constant
+    <code>|w|</code> (a contour map of magnitude); color by the <em>real</em> or
+    <em>imaginary</em> part and the hue tracks one axis of the output, squashed into
+    range by <code>tanh</code>. A second, independent <strong>Brightness</strong>
+    selector (lines 348&ndash;352) does the same for the value channel &mdash; including
+    a flat <em>Uniform</em> setting that turns brightness off entirely, so the hue
+    carries all the information. Mixing the two lets you isolate exactly the feature
+    you want to see.
+  </p>
+
+  <div class="note">
+    <b>In the app.</b> Quantity, Brightness, and the contour controls below live on
+    the viewer's <em>Color</em> panel, not on the embed URL. Open the
+    <a href="./#/complex-particles">full viewer</a> and switch Quantity to
+    <em>Modulus</em> while watching <code>e<sup>z</sup></code> to see the magnitude
+    contours.
+  </div>
+
+  <!-- ===================================================================== -->
+  <h2 id="colormaps"><span class="num">4</span>Sequential colormaps: Viridis and friends</h2>
+
+  <p>
+    The HSV wheel is cyclic, which is perfect for <em>phase</em> but misleading for a
+    quantity that simply increases &mdash; red wraps back to red, so high and low look
+    alike. For those, the viewer offers <strong>sequential</strong> colormaps:
+    Grayscale, Viridis, Magma, Inferno, Plasma, Fire, Ocean. They are evaluated not
+    from a lookup texture but from compact <strong>polynomial fits</strong> &mdash; the
+    well-known sixth-order approximations to the matplotlib maps &mdash; so they cost a
+    few multiplies per pixel and no memory:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/colormaps.ts</b> : <code>PALETTE_GLSL</code>, the Viridis fit</p>
+    <pre>vec3 cmViridis(float x){
+  const vec3 c0=vec3(0.2777, 0.0054, 0.3341);
+  const vec3 c1=vec3(0.1051, 1.4046, 1.3846);
+  ... <span class="cm">// six more coefficients</span>
+  return c0+x*(c1+x*(c2+x*(c3+x*(c4+x*(c5+x*c6)))));  <span class="cm">// Horner form</span>
+}</pre>
+  </div>
+
+  <p>
+    When a colormap is active, the chosen Quantity drives its axis (magnitude is
+    log-scaled), and the Brightness channel still modulates it. Below,
+    <code>e<sup>z</sup></code>'s magnitude is shown through Viridis &mdash; the
+    perceptually uniform ramp makes the exponential growth read as an even climb from
+    dark blue to yellow:
+  </p>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="e^z through the Viridis colormap"
+      src="./#/embed/complex-particles?fn=exp&colormap=2&render=Sheet&proj=perspective&motion=quaternion&spin=xy&caption=The%20Viridis%20colormap%20on%20e%5Ez%3A%20a%20perceptually%20uniform%20ramp%20instead%20of%20the%20cyclic%20hue%20wheel."></iframe>
+    <figcaption>Fig. 3 &mdash; <code>e<sup>z</sup></code> through Viridis (<code>colormap=2</code>). Sequential maps suit a quantity that grows; the wheel suits phase.</figcaption>
+  </figure>
+
+  <!-- ===================================================================== -->
+  <h2 id="contours"><span class="num">5</span>Contour bands: turning color into level sets</h2>
+
+  <p>
+    One more control turns the smooth coloring into a contour map. With
+    <strong>Repeat</strong> on, the colormap axis is tiled by a mirrored, seamless
+    triangle wave &mdash; so instead of one ramp across the whole range you get a stack
+    of repeating bands, the complex-analysis equivalent of contour lines on a
+    topographic map:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>shaders/index.ts</b> : 360&ndash;365</p>
+    <pre>if(uColorRepeat &gt; 0.0){
+  float raw = ... lg;                              <span class="cm">// the chosen quantity (e.g. log|w|)</span>
+  s = abs(fract(raw * uColorRepeat) * 2.0 - 1.0);  <span class="cm">// mirrored → seamless bands</span>
+}</pre>
+  </div>
+
+  <p>
+    The <code>abs(fract(x)*2 - 1)</code> is the trick: <code>fract</code> alone would
+    jump from 1 back to 0 at each band edge (a visible seam), but folding it into a
+    triangle wave makes consecutive bands mirror each other, so the color is
+    continuous across every boundary. Point it at log-magnitude and the bands are
+    level sets of <code>|f|</code>; point it at phase and they are equal-angle wedges.
+  </p>
+
+  <!-- ===================================================================== -->
+  <h2 id="reading"><span class="num">6</span>Reading a picture back into math</h2>
+
+  <p>
+    Put it together and the default coloring is a dense readout of the function. The
+    same field guide from the functions page applies, now grounded in the code above:
+  </p>
+
+  <table>
+    <thead><tr><th>In the picture</th><th>In the math</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Dark</strong> point, full hue wheel counterclockwise</td><td>a <strong>zero</strong> (<code>r&rarr;0</code> dims it; phase circles once per order)</td></tr>
+      <tr><td><strong>Bright</strong> point, hue wheel clockwise (reversed)</td><td>a <strong>pole</strong> (<code>r&rarr;&infin;</code>; phase winds the other way)</td></tr>
+      <tr><td>Repeated <strong>color tiles</strong> under range coloring</td><td>a <strong>many-to-one</strong> map (periods, sheets)</td></tr>
+      <tr><td><strong>Banding</strong> with Repeat on</td><td><strong>level sets</strong> of the chosen quantity</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    The whole system is two independent channels &mdash; a hue and a brightness, each
+    aimable at phase, magnitude, or a part of <code>w</code>, optionally through a
+    sequential colormap and optionally banded &mdash; all riding on the single choice
+    of coloring by the input or the output. That is enough vocabulary to make almost
+    any complex function legible at a glance.
+  </p>
+
+  <div class="seealso">
+    <strong>The series &mdash; the math:</strong>
+    <a href="./complex-functions-guide.html">What the functions do</a> &middot;
+    <a href="./complex-particles-guide.html">From 4D to your screen</a> &middot;
+    <a href="./complex-rendering-guide.html">How the surface is drawn</a>.
+    <strong>Going deeper:</strong> <em>Color</em> (here) &middot;
+    <a href="./complex-sampling-guide.html">Sampling the plane</a> &middot;
+    <a href="./complex-plane-transform-guide.html">Two planes, one map</a>.
+  </div>
+
+  <div class="footer">
+    <p>
+      <a class="hub" href="./guides.html">&larr; All guides</a> &nbsp;&middot;&nbsp;
+      Coloring lives in <code>calcColor</code>
+      (<code>src/animations/ComplexParticles/shaders/index.ts</code>) with the
+      palette fits in <code>src/lib/colormaps.ts</code>. Open the
+      <a href="./#/complex-particles">full viewer</a>'s Color panel to drive every
+      channel live, or read the <a href="./embed-demo.html">embed demo</a>.
+    </p>
+  </div>
+
+</main>
+</body>
+</html>

@@ -17,12 +17,13 @@
  * every report link still work.
  */
 import { execFileSync } from "node:child_process";
-import { writeFileSync, mkdirSync, rmSync } from "node:fs";
+import { writeFileSync, mkdirSync, rmSync, readFileSync } from "node:fs";
 import { dirname, join, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { marked } from "marked";
 import { htmlToMarkdown } from "./convert-html.mjs";
-import { CATEGORIES, normalizeApps, shortName, appChips, catHue } from "./categories.mjs";
+import { CATEGORIES, SIGNALS, normalizeApps, shortName, appChips, catHue,
+  normalizeSignals, signalChips, signalDigest, SIGNAL_KEYS, DIGEST_ORDER } from "./categories.mjs";
 
 marked.setOptions({ gfm: true });
 
@@ -42,10 +43,57 @@ function extractReflection(md) {
 }
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
+
+// Parse the hand-edited backlog (docs/sessions/TODO.md) into todo items. Format:
+//   - [ ] [category] !priority Title
+//     indented note lines…
+// A blank line ends an item. Category resolves through the taxonomy (unknown →
+// none); priority is high|med|low (default med). See TODO.md's header for the spec.
+const PRANK = { high: 0, med: 1, low: 2 };
+function parseTodos(file) {
+  let txt; try { txt = readFileSync(file, "utf8"); } catch { return []; }
+  const items = []; let cur = null;
+  const flush = () => { if (cur) { cur.title = cur.title.trim(); cur.note = cur.note.trim(); items.push(cur); } cur = null; };
+  for (const ln of txt.split(/\r?\n/)) {
+    const m = /^[-*]\s+\[([ xX])\]\s+(.*)$/.exec(ln);
+    if (m) {
+      flush();
+      let text = m[2]; const done = m[1].toLowerCase() === "x";
+      let cat = null, prio = "med";
+      const cm = text.match(/^\[([A-Za-z0-9-]+)\]\s*/);
+      if (cm) { const k = normalizeApps(cm[1], "none")[0];        // bogus slug ⇒ 'general' if unknown
+        cat = (k && (k !== "general" || cm[1].toLowerCase() === "general")) ? k : null;
+        text = text.slice(cm[0].length); }
+      const pm = text.match(/(?:^|\s)!(p1|p2|p3|high|med|medium|low)\b/i);
+      if (pm) { const p = pm[1].toLowerCase();
+        prio = (p === "p1" || p === "high") ? "high" : (p === "p3" || p === "low") ? "low" : "med";
+        text = text.replace(pm[0], " "); }
+      cur = { done, cat, prio, title: text, note: "" };
+    } else if (cur && /^\s+\S/.test(ln)) {
+      cur.note += (cur.note ? " " : "") + ln.trim();
+    } else { flush(); }
+  }
+  flush();
+  return items;
+}
+
 const OUT = join(ROOT, "converted");
 const REPO = "piyarsquare/animath";
 const git = (a) => { try { return execFileSync("git", a, { encoding: "utf8", maxBuffer: 64 << 20 }); } catch { return ""; } };
 const gitBuf = (a) => { try { return execFileSync("git", a, { maxBuffer: 256 << 20 }); } catch { return null; } };
+const gitOk = (a) => { try { execFileSync("git", a, { stdio: "ignore" }); return true; } catch { return false; } };
+// Integration ref (main, else master). A report has "landed" when its file is
+// present on that ref. NOTE: we can't use `is-ancestor` on the dedupe winner ref,
+// because a feature branch forked from main contains all of main's history — so
+// every old report would look like it lives on the unmerged branch. Asking whether
+// the *path* exists on main is the honest test.
+const MAIN_REF = ["origin/main", "origin/master"].find((r) => gitOk(["rev-parse", "--verify", "-q", r])) || null;
+const onMainCache = new Map();
+const existsOnMain = (path) => {
+  if (!MAIN_REF) return true;                          // can't tell → don't nag
+  if (!onMainCache.has(path)) onMainCache.set(path, gitOk(["cat-file", "-e", `${MAIN_REF}:${path}`]));
+  return onMainCache.get(path);
+};
 
 // Markdown image refs in a report body, and a POSIX path join for resolving them
 // relative to the report's location in the repo.
@@ -139,9 +187,10 @@ for (const rec of byKey.values()) {
   // Categorical label(s): explicit `app:` frontmatter wins, else inferred from slug.
   const apps = normalizeApps(fm.app, rec.slug);
 
-  reports.push({ slug: rec.slug, short: shortName(rec.slug), base: rec.base, date,
+  reports.push({ slug: rec.slug, short: shortName(rec.slug), base: rec.base, date, ref, onMain: existsOnMain(path),
     kind: fm.kind || "?", session: fm.session || "?", title: fm.title || rec.base, status: fm.status || "?",
     apps, thumb, reflection: extractReflection(md),
+    signals: normalizeSignals(fm.signals), next: fm.next || null,
     href: `converted/${rec.kind}/${rec.slug}/${rec.base}.preview.html` });
 }
 
@@ -169,6 +218,22 @@ for (const s of sessions.values()) {
   for (const r of s.reports) for (const a of r.apps) if (!seen.includes(a)) seen.push(a);
   s.apps = seen.length ? seen : ["general"];
   s.primary = s.apps[0];
+  // Dashboard signals: explicit declared signals win; the rest are *backfilled*
+  // from STRUCTURED fields only (high precision — never prose-scraped), so the
+  // whole history populates without editing every old report:
+  //   high-followup ← rolled-up reflection level HIGH/CRITICAL
+  //   needs-dan     ← a proposed plan (kind:plan + status:proposed awaits a call)
+  //   not-live      ← none of the session's reports are present on main yet
+  // The handoff's "next" wins (authoritative end-state), else the first that has one.
+  const explicit = new Set();
+  for (const r of s.reports) for (const k of r.signals) explicit.add(k);
+  const sig = new Set(explicit);
+  if (s.reflection && (s.reflection.level === "HIGH" || s.reflection.level === "CRITICAL")) sig.add("high-followup");
+  if (s.reports.some((r) => r.kind === "plan" && r.status === "proposed")) sig.add("needs-dan");
+  if (!s.reports.some((r) => r.onMain)) sig.add("not-live");
+  s.signals = SIGNAL_KEYS.filter((k) => sig.has(k));
+  s.inferred = s.signals.filter((k) => !explicit.has(k));   // for the build readout
+  s.next = p.next || (s.reports.find(r => r.next) || {}).next || null;
 }
 
 const branchSet = new Set([...sessions.values()].map(s => s.short));
@@ -181,7 +246,7 @@ const statusBadge = (s) => `<span class="badge ${({ completed: "badge-ok", "in-p
 
 let cardsHtml = "";
 for (const s of sessionList) {
-  const hay = [s.short, s.slug, s.session, s.status, ...s.apps, ...s.reports.map(r => r.title)].join(" ").toLowerCase();
+  const hay = [s.short, s.slug, s.session, s.status, ...s.apps, ...s.signals, s.next || "", ...s.reports.map(r => r.title)].join(" ").toLowerCase();
   let rows = "";
   for (const r of s.reports) rows += `      <a class="cc-row" href="${esc(r.href)}"><span class="chip chip-${esc(r.kind)}">${esc(r.kind)}</span><span class="cc-rtitle">${esc(r.title)}</span></a>\n`;
   const thumb = s.thumb ? `      <img class="cc-thumb" src="${esc(s.thumb)}" alt="" loading="lazy">\n` : "";
@@ -189,11 +254,13 @@ for (const s of sessionList) {
   // Inert <template>: the rendered reflection HTML, carried with each card so the
   // Reflections view can clone it after the same search/category filtering runs.
   const reflTpl = refl ? `      <template class="cc-refl-data" data-rhref="${esc(refl.href)}">${refl.html}</template>\n` : "";
-  cardsHtml += `    <article class="cc-session${s.thumb ? " has-thumb" : ""}" data-short="${esc(s.short)}" data-apps="${esc(s.apps.join(" "))}" data-cat="${esc(s.primary)}" data-hue="${catHue(s.primary)}" data-date="${esc(s.date.slice(0, 10))}" data-status="${esc(s.status)}" data-session="${esc(s.session)}" data-title="${esc(s.title)}" data-href="${esc(s.href)}" data-refl="${refl ? 1 : 0}" data-level="${esc(refl?.level || "")}" data-hay="${esc(hay)}">
+  const sigs = s.signals.length ? `      <div class="cc-sigs">${signalChips(s.signals)}</div>\n` : "";
+  const nextLine = s.next ? `      <div class="cc-cnext"><span class="cc-nlabel">next</span> ${esc(s.next)}</div>\n` : "";
+  cardsHtml += `    <article class="cc-session${s.thumb ? " has-thumb" : ""}" data-short="${esc(s.short)}" data-apps="${esc(s.apps.join(" "))}" data-cat="${esc(s.primary)}" data-hue="${catHue(s.primary)}" data-date="${esc(s.date.slice(0, 10))}" data-status="${esc(s.status)}" data-session="${esc(s.session)}" data-title="${esc(s.title)}" data-href="${esc(s.href)}" data-refl="${refl ? 1 : 0}" data-level="${esc(refl?.level || "")}" data-signals="${esc(s.signals.join(" "))}" data-next="${esc(s.next || "")}" data-hay="${esc(hay)}">
 ${thumb}      <div class="cc-shead"><span class="cc-sid">${esc(s.session)}</span> ${statusBadge(s.status)} <span class="cc-date">${esc(s.date.slice(0, 10))}</span> <span class="cc-branch"><code>${esc(s.short)}</code></span></div>
       <div class="cc-stitle">${esc(s.title)}</div>
       <div class="cc-cats">${appChips(s.apps, (k) => "#cat=" + k)}</div>
-      <div class="cc-reports">\n${rows}      </div>
+${sigs}${nextLine}      <div class="cc-reports">\n${rows}      </div>
 ${reflTpl}    </article>\n`;
 }
 const reflCount = sessionList.filter(s => s.reflection).length;
@@ -207,6 +274,49 @@ for (const s of sessionList) for (const a of s.apps) catCounts[a] = (catCounts[a
 const catBtns = Object.keys(CATEGORIES).filter((k) => catCounts[k]).map((k) =>
   `<a class="cc-fbtn" data-cat="${k}" href="#cat=${k}">${appChips([k])}<span class="cc-fcount">${catCounts[k]}</span></a>`).join("\n  ");
 const catBar = `<a class="cc-fbtn cc-fall active" data-cat="" href="#">All <span class="cc-fcount">${sessions.size}</span></a>\n  ${catBtns}`;
+
+// "Start here" digest: roll every session up into the buckets of the signals it
+// carries (a session can land in several), in DIGEST_ORDER. Server-rendered above
+// the toolbar so it's the first thing the eye lands on — the project's open-items
+// map, not a list to read. Each entry links to the session and shows its `next`.
+const DIGEST_CAP = 8;                                  // keep each column scannable
+const LV_RANK = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, NONE: 4, "": 5 };
+const bucketMap = {};
+for (const s of sessionList) {
+  for (const b of new Set(s.signals.map(signalDigest))) (bucketMap[b] = bucketMap[b] || []).push(s);
+}
+const digestCols = DIGEST_ORDER.filter((b) => bucketMap[b]?.length).map((b) => {
+  const all = bucketMap[b];
+  // High follow-up sorts by severity then recency; the rest newest-first.
+  all.sort((x, y) => b === "High follow-up"
+    ? (LV_RANK[x.reflection?.level || ""] - LV_RANK[y.reflection?.level || ""]) || byRecency(x.date, y.date)
+    : byRecency(x.date, y.date));
+  const shown = all.slice(0, DIGEST_CAP);
+  const items = shown.map((s) =>
+    `        <li class="cc-dli" data-apps="${esc(s.apps.join(" "))}"><a href="${esc(s.href)}"><code>${esc(s.short)}</code> ${esc(s.title)}</a>${s.next ? `<span class="cc-dnext">${esc(s.next)}</span>` : ""}</li>`).join("\n");
+  const more = all.length > DIGEST_CAP ? `\n        <li class="cc-dmore">+${all.length - DIGEST_CAP} more</li>` : "";
+  return `      <div class="cc-dcol"><h3>${esc(b)} <span>${all.length}</span></h3>\n      <ul>\n${items}${more}\n      </ul></div>`;
+}).join("\n");
+const startHere = digestCols
+  ? `<section class="cc-starthere"><h2>Start here</h2><p class="cc-dsub">Auto-derived from each session's <code>signals:</code> and self-reflection &mdash; the project map, not a list to read. Click through to act.</p>\n    <div class="cc-digest">\n${digestCols}\n    </div></section>\n`
+  : "";
+
+// The curated backlog (TODO.md) — hand-maintained, rendered as the top "To-do"
+// panel. Open items sort by priority; done items drop to the bottom, dimmed.
+const todos = parseTodos(join(ROOT, "TODO.md"));
+const openTodos = todos.filter((t) => !t.done).sort((a, b) => PRANK[a.prio] - PRANK[b.prio]);
+const doneTodos = todos.filter((t) => t.done);
+const prioBadge = (p) => `<span class="cc-prio cc-prio-${p}">${p}</span>`;
+const todoLi = (t) => `      <li class="cc-tli${t.done ? " cc-done" : ""}" data-apps="${esc(t.cat || "")}">`
+  + `<span class="cc-tcheck">${t.done ? "✓" : "○"}</span>`
+  + `<div class="cc-tbody"><div class="cc-ttitle">${t.cat ? appChips([t.cat], (k) => "#cat=" + k) + " " : ""}${t.done ? "" : prioBadge(t.prio) + " "}${esc(t.title)}</div>`
+  + `${t.note ? `<div class="cc-tnote">${esc(t.note)}</div>` : ""}</div></li>`;
+const todoHtml = todos.length
+  ? `<section class="cc-todo"><h2>To-do <span class="cc-tcount">${openTodos.length} open</span></h2>`
+    + `<p class="cc-dsub">The curated backlog (<code>docs/sessions/TODO.md</code>) &mdash; notes meant to inform future rounds. Use the category buttons below to filter it by app.</p>\n`
+    + `    <ul class="cc-tlist">\n${openTodos.map(todoLi).join("\n")}`
+    + `${doneTodos.length ? `\n      <li class="cc-tdone-h">recently done</li>\n${doneTodos.map(todoLi).join("\n")}` : ""}\n    </ul></section>\n`
+  : "";
 
 writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
 <!-- GENERATED by build-sessions.mjs — do not edit by hand. -->
@@ -262,6 +372,54 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
   .cc-home{color:var(--accent);text-decoration:none;font-weight:600}
   .cc-home:hover{text-decoration:underline}
   @media (max-width:520px){.cc-thumb{width:96px;height:60px}}
+  /* dashboard signals + "Start here" digest */
+  .sig{display:inline-flex;align-items:center;font-size:.7rem;line-height:1.6;padding:.02rem .45rem;border-radius:999px;white-space:nowrap;
+       border:1px solid hsl(var(--c,215) 55% 50% / .55);color:hsl(var(--c,215) 60% 40%);background:hsl(var(--c,215) 65% 55% / .12)}
+  .cc-sigs{margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.3rem}
+  .cc-cnext{margin-top:.35rem;font-size:.84rem;color:var(--muted)}
+  .cc-cnext .cc-nlabel{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);border:1px solid var(--accent-soft);border-radius:4px;padding:0 .25rem;margin-right:.35rem}
+  .cc-starthere{border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;background:var(--panel);padding:.7rem .95rem .85rem;margin:.3rem 0 1.1rem}
+  .cc-starthere>h2{margin:.1rem 0 .15rem;font-size:1.1rem}
+  .cc-dsub{margin:.1rem 0 .7rem;font-size:.82rem;color:var(--muted)}
+  .cc-digest{display:grid;grid-template-columns:repeat(auto-fit,minmax(15.5rem,1fr));gap:.5rem 1.4rem}
+  .cc-dcol h3{font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:.1rem 0 .4rem;display:flex;align-items:center;gap:.4rem}
+  .cc-dcol h3 span{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:0 .42rem;font-size:.72rem;font-weight:700}
+  .cc-dcol ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.4rem}
+  .cc-dcol li{font-size:.86rem;line-height:1.3}
+  .cc-dcol li a{color:var(--fg);text-decoration:none;font-weight:600}
+  .cc-dcol li a:hover{color:var(--accent)}
+  .cc-dcol li code{font-size:.72rem;color:var(--muted);font-weight:400}
+  .cc-dnext{display:block;color:var(--muted);font-size:.79rem;font-weight:400;margin-top:.05rem}
+  .cc-dmore{font-size:.78rem;color:var(--muted);font-style:italic}
+  .cc-dli[hidden],.cc-dcol[hidden],.cc-starthere[hidden],.cc-todo[hidden]{display:none}
+  /* curated to-do panel */
+  .cc-todo{border:1px solid var(--border);border-left:3px solid hsl(140 55% 45%);border-radius:10px;background:var(--panel);padding:.7rem .95rem .85rem;margin:.3rem 0 1.1rem}
+  .cc-todo>h2{margin:.1rem 0 .15rem;font-size:1.1rem;display:flex;align-items:center;gap:.5rem}
+  .cc-tcount{font-size:.74rem;font-weight:400;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:.05rem .55rem}
+  .cc-tlist{list-style:none;margin:.4rem 0 0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+  .cc-tli{display:flex;gap:.5rem;align-items:flex-start;font-size:.9rem}
+  .cc-tli[hidden]{display:none}
+  .cc-tcheck{color:var(--muted);line-height:1.45;font-size:.95rem}
+  .cc-tbody{flex:1;min-width:0}
+  .cc-ttitle{font-weight:600;display:flex;flex-wrap:wrap;align-items:center;gap:.35rem}
+  .cc-tnote{color:var(--muted);font-size:.82rem;font-weight:400;margin-top:.12rem;line-height:1.42}
+  .cc-tli.cc-done{opacity:.5}.cc-tli.cc-done .cc-ttitle{text-decoration:line-through}
+  .cc-tdone-h{list-style:none;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:.35rem;border-top:1px dashed var(--border);padding-top:.45rem}
+  .cc-prio{font-size:.62rem;text-transform:uppercase;letter-spacing:.03em;font-weight:700;padding:.02rem .4rem;border-radius:999px;white-space:nowrap}
+  .cc-prio-high{background:hsl(0 70% 55% / .15);color:hsl(0 62% 46%);border:1px solid hsl(0 70% 55% / .45)}
+  .cc-prio-med{background:hsl(35 80% 55% / .15);color:hsl(35 72% 38%);border:1px solid hsl(35 80% 55% / .45)}
+  .cc-prio-low{background:hsl(215 25% 55% / .12);color:var(--muted);border:1px solid var(--border)}
+  /* app-map view */
+  .cc-appmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(20rem,1fr));gap:.6rem;margin-top:1rem}
+  .cc-appcard{border:1px solid var(--border);border-left:3px solid hsl(var(--dot,215) 60% 50%);border-radius:8px;padding:.55rem .7rem;background:var(--panel)}
+  .cc-aphead{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin-bottom:.15rem}
+  .cc-apmeta{font-size:.76rem;color:var(--muted);font-variant-numeric:tabular-nums}
+  .cc-aplatest,.cc-apopen,.cc-apnext{font-size:.85rem;margin-top:.28rem;line-height:1.35}
+  .cc-aplabel{font-size:.6rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-right:.35rem}
+  .cc-aplatest a{color:var(--fg);text-decoration:none;font-weight:600}
+  .cc-aplatest a:hover{color:var(--accent)}
+  .cc-apnext{color:var(--muted)}
+  .cc-apbacklog{font-size:.72rem;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:.02rem .45rem;white-space:nowrap}
 </style></head>
 <body><main class="report"><header><p class="kicker"><a class="cc-home" href="../embed-demo.html" title="Seeing e^z — live embedded applets in a host article">↗ embed demo</a> · cross-branch session hub</p>
 <h1>Session control center</h1>
@@ -269,7 +427,7 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
 <div><dt>Generated</dt><dd>${new Date().toISOString().slice(0, 16).replace("T", " ")} · <code>build-sessions.mjs</code></dd></div></dl>
 <p class="lineage">Filter to a category with the buttons (or click any chip); group by app / branch / status / month, sort, or switch to a global timeline. The active filter lives in the URL (<code>#cat=…</code>), so it's shareable. Cards list every app a session touched. Provenance = slug folder.</p></header>
 <div class="body"><div class="content">
-<div class="cc-tools">
+${todoHtml}${startHere}<div class="cc-tools">
   <input id="q" type="search" placeholder="filter by branch / title / status / app / session…" autocomplete="off">
   <label>group <select id="groupby">
     <option value="app">app</option><option value="branch">branch</option>
@@ -279,7 +437,7 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
     <option value="date-desc">newest</option><option value="date-asc">oldest</option>
     <option value="app">app</option><option value="title">title</option>
   </select></label>
-  <span class="cc-seg"><button id="view-cards" class="active" type="button">Cards</button><button id="view-timeline" type="button">Timeline</button><button id="view-refl" type="button" title="Aggregated end-of-session self-reflections (exit interviews)">Reflections${reflCount ? ` (${reflCount})` : ""}</button></span>
+  <span class="cc-seg"><button id="view-cards" class="active" type="button">Cards</button><button id="view-map" type="button" title="Per-app rollup: latest · risk · open · next">App map</button><button id="view-timeline" type="button">Timeline</button><button id="view-refl" type="button" title="Aggregated end-of-session self-reflections (exit interviews)">Reflections${reflCount ? ` (${reflCount})` : ""}</button></span>
 </div>
 <div class="cc-fbar" id="cc-fbar">${catBar}</div>
 <div id="cc-list">
@@ -287,10 +445,12 @@ ${cardsHtml}</div>
 </div></div></main>
 <script>
   var CAT = ${JSON.stringify(CAT_LABELS)};
+  var HUE = ${JSON.stringify(Object.fromEntries(Object.entries(CATEGORIES).map(([k, v]) => [k, v.hue ?? 215])))};
+  var SIG = ${JSON.stringify(SIGNALS)};
   var listEl = document.getElementById("cc-list");
   var ALL = Array.prototype.slice.call(listEl.querySelectorAll(".cc-session"));
   var q = document.getElementById("q"), gb = document.getElementById("groupby"), sb = document.getElementById("sortby");
-  var bCards = document.getElementById("view-cards"), bTl = document.getElementById("view-timeline"), bRefl = document.getElementById("view-refl");
+  var bCards = document.getElementById("view-cards"), bMap = document.getElementById("view-map"), bTl = document.getElementById("view-timeline"), bRefl = document.getElementById("view-refl");
   var fbtns = Array.prototype.slice.call(document.querySelectorAll("#cc-fbar .cc-fbtn"));
   var view = "cards";
   var REFL_RANK = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, NONE: 4, "": 5 };
@@ -300,6 +460,7 @@ ${cardsHtml}</div>
   function activeCat(){ var m = (location.hash || "").match(/cat=([^&]+)/); return m ? decodeURIComponent(m[1]) : ""; }
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
   function catChip(key, hue){ return '<a class="cat" style="--c:'+hue+'" href="#cat='+encodeURIComponent(key)+'">'+esc(CAT[key]||key)+'</a>'; }
+  function sigChip(k){ var s = SIG[k]; return s ? '<span class="sig" style="--c:'+s.hue+'">'+esc(s.label)+'</span>' : ""; }
   function statusBadge(s){ var cls = s==="completed"?"badge-ok":s==="in-progress"?"badge-warn":"badge"; return '<span class="badge '+cls+'">'+esc(s)+'</span>'; }
   function cmp(a, b){
     var k = sb.value, d = a.dataset, e = b.dataset;
@@ -311,9 +472,24 @@ ${cardsHtml}</div>
   function groupKey(c){ var g = gb.value;
     return g === "branch" ? c.dataset.short : g === "status" ? c.dataset.status
          : g === "month" ? c.dataset.date.slice(0,7) : g === "none" ? "" : c.dataset.cat; }
+  // The top "To-do" + "Start here" panels filter by the active category too, so a
+  // category view doubles as that app's project map. Items with no category hide
+  // under a specific filter; empty columns/panels collapse.
+  var TLI = Array.prototype.slice.call(document.querySelectorAll(".cc-tli"));
+  var DLI = Array.prototype.slice.call(document.querySelectorAll(".cc-dli"));
+  function inCat(apps, cat){ return !cat || (" " + (apps || "") + " ").indexOf(" " + cat + " ") !== -1; }
+  function filterPanels(cat){
+    TLI.forEach(function(li){ li.hidden = !inCat(li.dataset.apps, cat); });
+    DLI.forEach(function(li){ li.hidden = !inCat(li.dataset.apps, cat); });
+    document.querySelectorAll(".cc-dcol").forEach(function(c){ c.hidden = !c.querySelector(".cc-dli:not([hidden])"); });
+    var sh = document.querySelector(".cc-starthere"); if (sh) sh.hidden = !sh.querySelector(".cc-dli:not([hidden])");
+    var td = document.querySelector(".cc-todo"); if (td) td.hidden = !td.querySelector(".cc-tli:not([hidden]):not(.cc-done)");
+    var dh = document.querySelector(".cc-tdone-h"); if (dh) dh.hidden = !document.querySelector(".cc-tli.cc-done:not([hidden])");
+  }
   function render(){
     var t = q.value.trim().toLowerCase(), cat = activeCat();
     fbtns.forEach(function(b){ b.classList.toggle("active", (b.dataset.cat || "") === cat); });
+    filterPanels(cat);
     var cards = ALL.filter(function(c){
       if (t && c.dataset.hay.indexOf(t) === -1) return false;
       if (cat && (" " + c.dataset.apps + " ").indexOf(" " + cat + " ") === -1) return false;
@@ -321,6 +497,7 @@ ${cardsHtml}</div>
     });
     listEl.innerHTML = "";
     if (!cards.length){ listEl.innerHTML = '<p class="cc-empty">No sessions match.</p>'; return; }
+    if (view === "map"){ renderAppMap(cards); return; }
     if (view === "timeline"){ renderTimeline(cards); return; }
     if (view === "refl"){ renderReflections(cards); return; }
     cards.sort(cmp);
@@ -373,11 +550,47 @@ ${cardsHtml}</div>
       sec.appendChild(body); listEl.appendChild(sec);
     });
   }
+  function renderAppMap(cards){
+    // Per-app project map: roll the (filtered) sessions up by every app they touch,
+    // then show each app's latest activity, risk (worst follow-up), open items
+    // (session signals + backlog count), and next action. Sorted worst-risk first,
+    // then most-recently-active.
+    var groups = {};
+    cards.forEach(function(c){ (c.dataset.apps||"").split(" ").filter(Boolean).forEach(function(a){ (groups[a]=groups[a]||[]).push(c); }); });
+    var apps = Object.keys(groups);
+    if (!apps.length){ listEl.innerHTML = '<p class="cc-empty">No apps match.</p>'; return; }
+    var todos = Array.prototype.slice.call(document.querySelectorAll(".cc-tli:not(.cc-done)"));
+    function todoCount(app){ return todos.filter(function(li){ return (" "+(li.dataset.apps||"")+" ").indexOf(" "+app+" ")!==-1; }).length; }
+    function latestDate(list){ return list.reduce(function(m,c){ return c.dataset.date>m?c.dataset.date:m; }, ""); }
+    function risk(list){ var best="", br=9; list.forEach(function(c){ var r=REFL_RANK[c.dataset.level||""]; if(r<br){br=r;best=c.dataset.level||"";} }); return best; }
+    apps.sort(function(a,b){ return (REFL_RANK[risk(groups[a])||""]-REFL_RANK[risk(groups[b])||""]) || latestDate(groups[b]).localeCompare(latestDate(groups[a])); });
+    var wrap = document.createElement("div"); wrap.className = "cc-appmap";
+    apps.forEach(function(app){
+      var list = groups[app].slice().sort(function(a,b){ return b.dataset.date.localeCompare(a.dataset.date); });
+      var latest = list[0], hue = HUE[app]!=null?HUE[app]:215;
+      var sset = {}; list.forEach(function(c){ (c.dataset.signals||"").split(" ").filter(Boolean).forEach(function(s){ sset[s]=1; }); });
+      var sigs = Object.keys(sset).map(sigChip).join(" ");
+      var tc = todoCount(app), rlv = risk(list);
+      var nx = latest.dataset.next || (list.filter(function(c){return c.dataset.next;})[0]||{dataset:{}}).dataset.next || "";
+      var open = []; if (sigs) open.push(sigs); if (tc) open.push('<span class="cc-apbacklog">'+tc+' backlog</span>');
+      var art = document.createElement("article"); art.className = "cc-appcard"; art.style.setProperty("--dot", hue);
+      art.innerHTML =
+        '<div class="cc-aphead">'+catChip(app,hue)
+          +'<span class="cc-apmeta">'+list.length+(list.length>1?" sessions":" session")+' · '+esc(latestDate(list).slice(0,10))+'</span>'
+          +((rlv==="HIGH"||rlv==="CRITICAL")?(' '+reflBadge(rlv)):'')+'</div>'
+        +'<div class="cc-aplatest"><span class="cc-aplabel">latest</span> <a href="'+esc(latest.dataset.href)+'">'+esc(latest.dataset.title)+'</a></div>'
+        +(open.length?'<div class="cc-apopen"><span class="cc-aplabel">open</span> '+open.join(" ")+'</div>':'')
+        +(nx?'<div class="cc-apnext"><span class="cc-aplabel">next</span> '+esc(nx)+'</div>':'');
+      wrap.appendChild(art);
+    });
+    listEl.appendChild(wrap);
+  }
   function setView(v){ view = v;
-    bCards.classList.toggle("active", v==="cards"); bTl.classList.toggle("active", v==="timeline"); bRefl.classList.toggle("active", v==="refl");
+    bCards.classList.toggle("active", v==="cards"); bMap.classList.toggle("active", v==="map"); bTl.classList.toggle("active", v==="timeline"); bRefl.classList.toggle("active", v==="refl");
     gb.disabled = v!=="cards"; render(); }
   q.addEventListener("input", render); gb.addEventListener("change", render); sb.addEventListener("change", render);
-  bCards.addEventListener("click", function(){ setView("cards"); }); bTl.addEventListener("click", function(){ setView("timeline"); });
+  bCards.addEventListener("click", function(){ setView("cards"); }); bMap.addEventListener("click", function(){ setView("map"); });
+  bTl.addEventListener("click", function(){ setView("timeline"); });
   bRefl.addEventListener("click", function(){ setView("refl"); });
   window.addEventListener("hashchange", render);   // filter buttons + chips set #cat=…
   render();

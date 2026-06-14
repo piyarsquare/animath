@@ -728,6 +728,7 @@ export default function ComplexParticles({
   useEffect(() => {
     if (!embed) return;
     if (embed.render) state.setRenderMode(embed.render);
+    if (embed.pattern !== undefined) state.setSamplePattern(embed.pattern);
     if (embed.motion) state.setViewMotion(embed.motion);
     if (embed.colorBy !== undefined) state.setColorBy(embed.colorBy);
     if (embed.colormap !== undefined) state.setColormap(embed.colormap);

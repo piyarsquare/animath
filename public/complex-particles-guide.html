@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<!-- From 4D to your screen — Part 1. Deployed at <site>/complex-particles-guide.html.
+     Part 1: the 4D graph, the surfacePos pipeline, and the flat projections
+     (Perspective, Drop-axis). Part 2 (complex-particles-2-guide.html): the curved
+     projections (Torus, Hopf), the quaternion rotations, and numerical honesty.
+     Live applets via #/embed/ (docs/EMBEDS.md). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>From 4D to your screen (Part 1) — the graph and the flat projections</title>
+  <style>
+    :root {
+      --bg: #faf8f3; --fg: #232323; --muted: #8a8377; --rule: #ddd5c4;
+      --codebg: #1d1f23; --codefg: #e6e6e6; --codekw: #c8a26a; --codecm: #7f8a78;
+      --inlinebg: #f0ece1; --accent: #7a5cff; --eqbg: #f4f1e8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+           font: 17px/1.65 Georgia, 'Times New Roman', serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 48px 20px 96px; }
+    h1 { font-size: 33px; line-height: 1.2; margin: 0 0 6px; }
+    h2 { font-size: 24px; line-height: 1.25; margin: 52px 0 4px; padding-top: 12px;
+         border-top: 1px solid var(--rule); }
+    h2 .num { color: var(--accent); font-size: 18px; margin-right: 8px; }
+    h3 { font-size: 18px; margin: 30px 0 4px; }
+    .byline { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+    p { margin: 0 0 18px; }
+    a { color: var(--accent); }
+    em { color: #4a443a; }
+    figure { margin: 26px 0; }
+    figure iframe { width: 100%; height: 400px; border: 1px solid var(--rule);
+                    border-radius: 10px; display: block; background: #0c0c10; }
+    figcaption { font-size: 13.5px; color: var(--muted); padding-top: 8px; }
+    code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+           font-size: 0.86em; background: var(--inlinebg); padding: 1px 5px;
+           border-radius: 4px; }
+    .eq { background: var(--eqbg); border-left: 3px solid var(--accent);
+          padding: 12px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+          font-size: 16px; overflow-x: auto; }
+    .eq code { background: none; padding: 0; font-size: 1em; }
+    .listing { margin: 18px 0; }
+    .listing .src { font: 12px/1.2 ui-monospace, Menlo, Consolas, monospace;
+                    color: var(--muted); margin: 0 0 5px; }
+    .listing .src b { color: #5a5346; font-weight: 600; }
+    pre { background: var(--codebg); color: var(--codefg); margin: 0;
+          padding: 16px 18px; border-radius: 9px; overflow-x: auto;
+          font: 13px/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+    pre .cm { color: var(--codecm); font-style: italic; }
+    table { border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 15px; }
+    th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); }
+    th { color: var(--muted); font-weight: 600; font-size: 13.5px;
+         text-transform: uppercase; letter-spacing: 0.03em; }
+    td code { font-size: 0.9em; }
+    nav.toc { background: var(--eqbg); border: 1px solid var(--rule);
+              border-radius: 10px; padding: 16px 20px; margin: 28px 0 8px;
+              font-size: 15px; }
+    nav.toc strong { display: block; font-size: 13px; text-transform: uppercase;
+                     letter-spacing: 0.04em; color: var(--muted); margin-bottom: 8px; }
+    nav.toc ol { margin: 0; padding-left: 22px; }
+    nav.toc li { margin: 3px 0; }
+    .note { border-left: 3px solid #c8a26a; background: #f7f1e3;
+            padding: 11px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+            font-size: 15.5px; }
+    .note b { color: #7a5a1e; }
+    .next { display: block; background: var(--accent); color: #fff;
+            border-radius: 11px; padding: 16px 20px; margin: 32px 0 8px;
+            text-decoration: none; font-size: 17px; }
+    .next:hover { background: #6848e6; }
+    .next .k { display: block; font-size: 12px; text-transform: uppercase;
+               letter-spacing: 0.06em; opacity: 0.85; margin-bottom: 2px; }
+    .next b { font-size: 19px; }
+    .seealso { background: var(--eqbg); border: 1px solid var(--rule);
+               border-radius: 10px; padding: 12px 18px; margin: 24px 0;
+               font-size: 15px; }
+    .footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--rule);
+              color: var(--muted); font-size: 14px; }
+    .footer a.hub { font-weight: 600; }
+    sup, sub { line-height: 0; }
+  </style>
+</head>
+<body>
+<main>
+
+  <h1>From 4D to your screen</h1>
+  <div class="byline"><strong>Part 1 of 2</strong> &mdash; the 4-D graph and the flat projections. The math and code behind the <em>Complex&nbsp;Particles</em> viewer</div>
+
+  <p>
+    <em>Complex Particles</em> draws a complex function <code>f : &#8450; &rarr; &#8450;</code>
+    as a cloud of particles. Its natural home is <strong>four dimensions</strong>,
+    and almost everything the viewer does is a way of getting those 4D points onto
+    a flat, 3D-looking screen. This guide is about <em>that machinery</em>: the
+    equations that flatten 4D to 3D, and the quaternions that let you turn the 4D
+    object before you flatten it. It is not about any particular function — it is
+    about the transformations every function passes through.
+  </p>
+  <p>
+    Each section pairs a <strong>live applet</strong> you can drag and tap with the
+    <strong>exact source lines</strong> that compute the math. File references like
+    <code>src/lib/viewpoint.ts:76</code> point at the live source &mdash; quoted
+    snippets are trimmed for reading. <strong>Part 1</strong> covers the 4-D graph and
+    the two <em>flat</em> projections (Perspective and Drop-axis);
+    <strong>Part 2</strong> takes the curved ones (Torus, the Hopf sphere) and the
+    quaternion rotations.
+  </p>
+
+  <nav class="toc">
+    <strong>Part 1 &mdash; contents</strong>
+    <ol>
+      <li><a href="#graph">A function whose graph lives in 4D</a></li>
+      <li><a href="#pipeline">The pipeline: one function, seven steps</a></li>
+      <li><a href="#perspective">Perspective &mdash; the 4D camera divide</a></li>
+      <li><a href="#drop">Drop-axis &mdash; the orthographic slice</a></li>
+    </ol>
+    <div style="margin-top:8px;font-size:14px;color:var(--muted)">Part 2 &rarr; Torus &amp; the Hopf sphere, the quaternion rotations, and the numerical guards.</div>
+  </nav>
+
+  <!-- ===================================================================== -->
+  <h2 id="graph"><span class="num">1</span>A function whose graph lives in 4D</h2>
+
+  <p>
+    A real function <code>y = g(x)</code> has a 2D graph: one axis for the input,
+    one for the output. A <strong>complex</strong> function needs <em>two</em> real
+    axes for its input <code>z = x + iy</code> and <em>two</em> for its output
+    <code>w = f(z) = u + iv</code>. So its honest graph &mdash; the set of all pairs
+    <code>(z, f(z))</code> &mdash; lives in four dimensions:
+  </p>
+
+  <table>
+    <thead><tr><th>Axis</th><th>Meaning</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td><code>x</code></td><td>Re&nbsp;z &mdash; real part of the input</td><td rowspan="2"><code>position.x</code>, <code>position.z</code></td></tr>
+      <tr><td><code>y</code></td><td>Im&nbsp;z &mdash; imaginary part of the input</td></tr>
+      <tr><td><code>u</code></td><td>Re&nbsp;f(z) &mdash; real part of the output</td><td rowspan="2">computed by <code>applyComplex</code></td></tr>
+      <tr><td><code>v</code></td><td>Im&nbsp;f(z) &mdash; imaginary part of the output</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    Every particle sits at the 4D point <code>(x, y, u, v)</code>. The input
+    coordinates <code>(x, y)</code> come straight from where the particle was
+    sampled in the plane; the output coordinates <code>(u, v)</code> are whatever
+    <code>f</code> returns there. Each complex function is a short closed-form
+    routine &mdash; for example <code>e<sup>z</sup></code> is the textbook
+    <code>e<sup>x</sup>(cos&nbsp;y + i&nbsp;sin&nbsp;y)</code>:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/complexMath.ts</b> : 20&ndash;23 &nbsp;(the GLSL twin is <b>shaders/index.ts</b> : 68)</p>
+    <pre><span class="cm">// e^z = e^x (cos y + i sin y)</span>
+export function complexExp(z: THREE.Vector2): THREE.Vector2 {
+  const ex = Math.exp(z.x);
+  return new THREE.Vector2(ex * Math.cos(z.y), ex * Math.sin(z.y));
+}</pre>
+  </div>
+
+  <p>
+    A numeric index selects which one runs &mdash; the same index in the
+    TypeScript reference (<code>applyComplex</code>) and in the GPU shader, kept in
+    lockstep so the picture and the math never disagree. We can't <em>look</em> at
+    4D directly, so the rest of this guide is the projection from those four
+    numbers down to the three on your screen. The applet below is your
+    <strong>drop-axis explorer</strong> for all of Part 1: it starts with the
+    input's imaginary axis projected out (<em>Drop Y</em>); each button projects out
+    one of the four axes, and <em>Rotate</em> returns to the full tumbling 4D view.
+    We come back to it in &sect;4.
+  </p>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="The 4D graph of e^z with all four drop-axis buttons"
+      src="./#/embed/complex-particles?fn=exp&proj=dropy&motion=fixed&buttons=dropx,dropy,dropu,dropv,rotate&caption=The%204D%20graph%20of%20e%5Ez.%20Each%20button%20projects%20out%20one%20of%20the%20four%20axes%3B%20Rotate%20returns%20to%20the%20full%20view."></iframe>
+    <figcaption>Fig. 1 &mdash; the 4D graph of <code>e<sup>z</sup></code>, with the four Drop buttons and Rotate. Drag to orbit the camera; the buttons change which axis is projected out.</figcaption>
+  </figure>
+
+  <!-- ===================================================================== -->
+  <h2 id="pipeline"><span class="num">2</span>The pipeline: one function, seven steps</h2>
+
+  <p>
+    Before we take the projections one at a time, here is the whole journey in a
+    single function. Every render mode &mdash; points, sheet, tiles, net &mdash;
+    routes each vertex through <code>surfacePos</code> in the vertex shader. Read it
+    top to bottom and you have read the entire 4D&rarr;3D transformation:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/animations/ComplexParticles/shaders/index.ts</b> : 436&ndash;447</p>
+    <pre>vec3 surfacePos(vec2 zc){
+  zc = domainWarp(zc);                       <span class="cm">// 1. optional log-radial warp of z</span>
+  vec2 fc = applyComplex(zc, functionType);  <span class="cm">// 2. f(z) -&gt; the output (u, v)</span>
+  if(length(fc) &gt; 1e3) fc = normalize(fc)*1e3;  <span class="cm">// 3. clamp runaway poles</span>
+  vec2 zP = chartCoord(zc, uInCoord);        <span class="cm">// 4. chart the input  (Cartesian/polar)</span>
+  vec2 fP = chartCoord(fc, uOutCoord);       <span class="cm">//    chart the output</span>
+  vec4 p4 = vec4(zP.x, zP.y, fP.x, fP.y);    <span class="cm">// 5. assemble the 4D point (x, y, u, v)</span>
+  p4 = quatRotate4D(p4, uRotL, uRotR);       <span class="cm">// 6. rotate in 4D (the quaternions)</span>
+  vec3 Po = project(p4, uProjMode);          <span class="cm">// 7. flatten 4D -&gt; 3D ...</span>
+  vec3 Pn = project(p4, uProjTarget);        <span class="cm">//    ... and the slider's other stop</span>
+  return mix(Po, Pn, uProjAlpha) * 1.5;      <span class="cm">//    cross-fade between the two, then scale</span>
+}</pre>
+  </div>
+
+  <p>
+    Steps 5&ndash;7 are the heart of it. Step&nbsp;5 packs the input and output into
+    one 4-vector. Step&nbsp;6 rotates that 4-vector (Part&nbsp;2). Step&nbsp;7 calls
+    <code>project()</code> &mdash; <em>twice</em>: once for the projection slider's
+    current stop and once for its neighbor, then <code>mix()</code> blends them by
+    <code>uProjAlpha</code>. That blend is why dragging the slider <em>morphs</em>
+    smoothly: a half-way frame is a linear cross-fade between two projections, not a
+    projection in its own right. The rest of this guide is the <code>project()</code>
+    function, one <code>mode</code> at a time.
+  </p>
+
+  <div class="note">
+    <b>Note.</b> <code>project()</code> exists twice in the repo, kept identical on
+    purpose: a readable TypeScript reference in <code>src/lib/viewpoint.ts</code>
+    (used for the 4D axis cross and any CPU-side math), and the GLSL twin in
+    <code>shaders/index.ts</code> that actually runs per-vertex on the GPU. We quote
+    the TypeScript &mdash; it reads like the equations &mdash; and drop to GLSL only
+    where the GPU path adds a guard worth seeing.
+  </div>
+
+  <!-- ===================================================================== -->
+  <h2 id="perspective"><span class="num">3</span>Perspective &mdash; the 4D camera divide</h2>
+
+  <p>
+    The default projection is the four-dimensional analog of a camera. A 3D
+    perspective camera divides <code>(x, y)</code> by depth <code>z</code> so distant
+    things look smaller. Here we have one extra dimension, so we keep three
+    coordinates and divide by the fourth:
+  </p>
+
+  <div class="eq">
+    <code>(x, y, u, v) &nbsp;&#8614;&nbsp; (x, y, u) / (3 + v)</code>
+  </div>
+
+  <p>
+    The eye sits at <code>v = &minus;3</code>; points with larger <code>v</code> are
+    "farther" and shrink toward the center. In code it is a single reciprocal scale:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/viewpoint.ts</b> : 76</p>
+    <pre>if(mode===ProjectionMode.Perspective){
+  return new THREE.Vector3(p.x,p.y,p.z).multiplyScalar(1/Math.max(3+p.w,0.35));
+}</pre>
+  </div>
+
+  <p>
+    Two details. First, in this 4-vector the components are named
+    <code>(x, y, z, w)</code> but they <em>mean</em> <code>(x, y, u, v)</code>
+    &mdash; so <code>p.w</code> is the output's imaginary part <code>v</code>, and
+    <code>p.z</code> is the output's real part <code>u</code>. Second, the divide
+    is <strong>floored</strong>: <code>Math.max(3 + p.w, 0.35)</code>. Without it,
+    a steep function (try <code>e<sup>z</sup></code>) drives <code>v</code> through
+    <code>&minus;3</code>, the denominator hits zero, and that vertex flies to
+    infinity &mdash; which on a real mobile GPU rasterizes as garbage and can crash
+    the context. The floor keeps every point finite, and it does so
+    <em>continuously</em> (no sign flip as <code>v</code> crosses the eye plane), so
+    a spin doesn't pop a crossing vertex from one side to the other. The GLSL twin
+    carries the same guard and a long comment explaining why:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/animations/ComplexParticles/shaders/index.ts</b> : 301&ndash;310</p>
+    <pre>vec3 project(vec4 p, int mode){
+  <span class="cm">// Perspective from the eye at w = -3. The denominator 3 + p.w vanishes</span>
+  <span class="cm">// on the eye plane (p.w = -3) ... Floor the denominator to a positive</span>
+  <span class="cm">// minimum (no sign flip): the projection stays continuous, front-facing</span>
+  <span class="cm">// points are unchanged, and everything stays finite.</span>
+  if(mode==0){ return p.xyz / max(3.0 + p.w, 0.35); }</pre>
+  </div>
+
+  <p>
+    In the applet below, <code>z<sup>3</sup></code> tumbles under a slow 4D spin in
+    perspective. Watch the surface swell and shrink as parts of it sweep toward and
+    away from the 4D eye.
+  </p>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="z cubed under perspective projection with a 4D spin"
+      src="./#/embed/complex-particles?fn=cube&proj=perspective&motion=quaternion&spin=xy&render=sheet&caption=z%C2%B3%20as%20a%20continuous%20sheet%20under%20the%20Perspective%20projection%2C%20spinning%20in%20the%20xy%20plane."></iframe>
+    <figcaption>Fig. 2 &mdash; <code>z<sup>3</sup></code> as a Sheet under Perspective, spinning in the <code>xy</code> plane. The reciprocal divide is what makes it read as depth.</figcaption>
+  </figure>
+
+  <!-- ===================================================================== -->
+  <h2 id="drop"><span class="num">4</span>Drop-axis &mdash; the orthographic slice</h2>
+
+  <p>
+    The bluntest way to flatten 4D is to <em>forget one coordinate</em> and keep the
+    other three. No divide, no distortion &mdash; just an orthographic slice. There
+    are four of them, one per axis:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/viewpoint.ts</b> : 87&ndash;90</p>
+    <pre>if(mode===ProjectionMode.DropX) return new THREE.Vector3(p.y,p.z,p.w);
+if(mode===ProjectionMode.DropY) return new THREE.Vector3(p.x,p.z,p.w);
+if(mode===ProjectionMode.DropU) return new THREE.Vector3(p.x,p.y,p.w);
+if(mode===ProjectionMode.DropV) return new THREE.Vector3(p.x,p.y,p.z);</pre>
+  </div>
+
+  <p>
+    Each line simply drops one component of <code>(x, y, u, v)</code> and repacks the
+    survivors as a 3D point. <em>Drop&nbsp;V</em> keeps <code>(x, y, u)</code> &mdash;
+    the input plane plus the real part of the output, the classic "real surface"
+    view. <em>Drop&nbsp;Y</em> keeps <code>(x, u, v)</code> &mdash; the real input
+    against the full complex output. Because a drop is exact and never folds, it is
+    the honest way to check the shape the other, nonlinear projections are
+    distorting. <strong>Use the four Drop buttons on the explorer in
+    Fig.&nbsp;1</strong> to step through all four slices of <code>e<sup>z</sup></code>
+    and compare them &mdash; spotting which structure the curved projections (Part 2)
+    bend.
+  </p>
+
+  <a class="next" href="./complex-particles-2-guide.html">
+    <span class="k">Continue &mdash; Part 2 of 2</span>
+    <b>Curved projections &amp; the quaternion rotations &rarr;</b>
+    The Torus (onto S&sup3;, then stereographic), the Hopf sphere, how a pair of
+    quaternions turns 4-space, and the numerical guards that keep the poles finite.
+  </a>
+
+  <div class="seealso">
+    <strong>The series &mdash; the math:</strong>
+    <a href="./complex-functions-guide.html">What the functions do</a> &middot;
+    <em>From 4D to your screen</em> (Part 1) &middot;
+    <a href="./complex-rendering-guide.html">How the surface is drawn</a>.
+    <strong>Going deeper:</strong>
+    <a href="./complex-color-guide.html">Color</a> &middot;
+    <a href="./complex-sampling-guide.html">Sampling the plane</a> &middot;
+    <a href="./complex-plane-transform-guide.html">Two planes, one map</a>.
+  </div>
+
+  <div class="footer">
+    <p>
+      <a class="hub" href="./guides.html">&larr; All guides</a> &nbsp;&middot;&nbsp;
+      This guide documents the live source of <em>Complex Particles</em>. The key
+      files: <code>src/lib/viewpoint.ts</code> (the projections),
+      <code>src/math/quat4.ts</code> (the rotations), and
+      <code>src/animations/ComplexParticles/shaders/index.ts</code> (the GPU twin,
+      with <code>surfacePos</code> tying them together). Open the full viewer at
+      <a href="./#/complex-particles">#/complex-particles</a>.
+    </p>
+  </div>
+
+</main>
+</body>
+</html>

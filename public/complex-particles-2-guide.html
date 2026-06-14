@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<!-- From 4D to your screen — Part 2. Deployed at <site>/complex-particles-2-guide.html.
+     Part 2: the curved projections (Torus onto S^3 + stereographic, the Hopf sphere),
+     the quaternion rotations, and numerical honesty. Part 1 is
+     complex-particles-guide.html. Live applets via #/embed/ (docs/EMBEDS.md). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>From 4D to your screen (Part 2) — curved projections &amp; rotations</title>
+  <style>
+    :root {
+      --bg: #faf8f3; --fg: #232323; --muted: #8a8377; --rule: #ddd5c4;
+      --codebg: #1d1f23; --codefg: #e6e6e6; --codekw: #c8a26a; --codecm: #7f8a78;
+      --inlinebg: #f0ece1; --accent: #7a5cff; --eqbg: #f4f1e8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+           font: 17px/1.65 Georgia, 'Times New Roman', serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 48px 20px 96px; }
+    h1 { font-size: 33px; line-height: 1.2; margin: 0 0 6px; }
+    h2 { font-size: 24px; line-height: 1.25; margin: 52px 0 4px; padding-top: 12px;
+         border-top: 1px solid var(--rule); }
+    h2 .num { color: var(--accent); font-size: 18px; margin-right: 8px; }
+    h3 { font-size: 18px; margin: 30px 0 4px; }
+    .byline { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+    .prev { font-size: 14px; color: var(--muted); margin-bottom: 18px; }
+    p { margin: 0 0 18px; }
+    a { color: var(--accent); }
+    em { color: #4a443a; }
+    figure { margin: 26px 0; }
+    figure iframe { width: 100%; height: 400px; border: 1px solid var(--rule);
+                    border-radius: 10px; display: block; background: #0c0c10; }
+    figcaption { font-size: 13.5px; color: var(--muted); padding-top: 8px; }
+    code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+           font-size: 0.86em; background: var(--inlinebg); padding: 1px 5px;
+           border-radius: 4px; }
+    .eq { background: var(--eqbg); border-left: 3px solid var(--accent);
+          padding: 12px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+          font-size: 16px; overflow-x: auto; }
+    .eq code { background: none; padding: 0; font-size: 1em; }
+    .listing { margin: 18px 0; }
+    .listing .src { font: 12px/1.2 ui-monospace, Menlo, Consolas, monospace;
+                    color: var(--muted); margin: 0 0 5px; }
+    .listing .src b { color: #5a5346; font-weight: 600; }
+    pre { background: var(--codebg); color: var(--codefg); margin: 0;
+          padding: 16px 18px; border-radius: 9px; overflow-x: auto;
+          font: 13px/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+    pre .cm { color: var(--codecm); font-style: italic; }
+    table { border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 15px; }
+    th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); }
+    th { color: var(--muted); font-weight: 600; font-size: 13.5px;
+         text-transform: uppercase; letter-spacing: 0.03em; }
+    td code { font-size: 0.9em; }
+    nav.toc { background: var(--eqbg); border: 1px solid var(--rule);
+              border-radius: 10px; padding: 16px 20px; margin: 28px 0 8px;
+              font-size: 15px; }
+    nav.toc strong { display: block; font-size: 13px; text-transform: uppercase;
+                     letter-spacing: 0.04em; color: var(--muted); margin-bottom: 8px; }
+    nav.toc ol { margin: 0; padding-left: 22px; }
+    nav.toc li { margin: 3px 0; }
+    .note { border-left: 3px solid #c8a26a; background: #f7f1e3;
+            padding: 11px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+            font-size: 15.5px; }
+    .note b { color: #7a5a1e; }
+    .seealso { background: var(--eqbg); border: 1px solid var(--rule);
+               border-radius: 10px; padding: 12px 18px; margin: 24px 0;
+               font-size: 15px; }
+    .footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--rule);
+              color: var(--muted); font-size: 14px; }
+    .footer a.hub { font-weight: 600; }
+    sup, sub { line-height: 0; }
+  </style>
+</head>
+<body>
+<main>
+
+  <div class="prev"><a href="./complex-particles-guide.html">&larr; Part 1: the 4-D graph and the flat projections</a></div>
+  <h1>From 4D to your screen</h1>
+  <div class="byline"><strong>Part 2 of 2</strong> &mdash; the curved projections and the quaternion rotations</div>
+
+  <p>
+    Part 1 packed each point into a 4-vector <code>(x, y, u, v)</code> and flattened
+    it with the two <em>flat</em> projections &mdash; the perspective divide and the
+    orthographic drops. This part takes the two <em>curved</em> projections, which
+    throw away scale and keep only direction, and then the rotations that let you turn
+    the 4-D object before any of it is flattened. Code is still quoted from the
+    readable TypeScript reference (<code>src/lib/viewpoint.ts</code>,
+    <code>src/math/quat4.ts</code>), with the GLSL twin noted where it differs.
+  </p>
+
+  <nav class="toc">
+    <strong>Part 2 &mdash; contents</strong>
+    <ol>
+      <li><a href="#torus">Torus &mdash; onto S&sup3;, then stereographic</a></li>
+      <li><a href="#hopf">Sphere &mdash; the Hopf map</a></li>
+      <li><a href="#quaternions">Turning 4D: the quaternion rotations</a></li>
+      <li><a href="#honesty">Numerical honesty: the guards</a></li>
+    </ol>
+  </nav>
+
+  <!-- ===================================================================== -->
+  <h2 id="torus"><span class="num">1</span>Torus &mdash; onto S&sup3;, then stereographic</h2>
+
+  <p>
+    The next two projections throw away the overall <em>size</em> of
+    <code>(z, f)</code> and keep only its <em>shape</em> &mdash; its direction in 4D.
+    Discarding scale means rescaling every 4-vector to unit length, which lands it on
+    the unit <strong>3-sphere</strong> <code>S&sup3;</code> (the set of 4D points at
+    distance 1 from the origin, just as <code>S&sup2;</code> is the ordinary sphere
+    in 3D). The <strong>Torus</strong> view then carries <code>S&sup3;</code> into our
+    3D space by <strong>stereographic projection</strong>: pick a pole, draw the line
+    from the pole through each point, and read off where that line crosses the space
+    &mdash; the same construction that flattens a globe onto a map, one dimension up.
+  </p>
+
+  <div class="eq">
+    <code>P(p) = (x, y, u) / ( |p| &minus; v )</code> &nbsp; after normalizing,
+    where <code>|p| = &#8730;(x&sup2;+y&sup2;+u&sup2;+v&sup2;)</code> &mdash;
+    stereographic from the <code>v</code> pole.
+  </div>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/viewpoint.ts</b> : 91&ndash;101</p>
+    <pre>if(mode===ProjectionMode.Torus){
+  <span class="cm">// normalize (z,f) onto S^3, then stereographically project from the</span>
+  <span class="cm">// (0,0,0,1) pole. arg(z) runs around the hole, arg(f) around the tube,</span>
+  <span class="cm">// and |z|/|f| selects which nested donut; the overall scale is discarded.</span>
+  const d = Math.hypot(p.x,p.y,p.z,p.w) || 1e-6;
+  const denom = Math.hypot(d - p.w, POLE_EPS * d) || 1e-4;
+  return new THREE.Vector3(p.x/denom, p.y/denom, p.z/denom);
+}</pre>
+  </div>
+
+  <p>
+    The plain stereographic denominator would be <code>d &minus; p.w</code> (the
+    point's length minus its <code>v</code> component): zero exactly at the pole,
+    where the projection shoots to infinity. The code <strong>soft-floors</strong> it
+    by combining it with a small constant <em>in quadrature</em> &mdash;
+    <code>&#8730;((d&minus;v)&sup2; + (&epsilon;&middot;d)&sup2;)</code> &mdash; so a
+    point at the pole bends to a large-but-finite radius instead of escaping. The
+    constant <code>POLE_EPS</code> is shared between the TypeScript and the shader so
+    both bend identically:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/viewpoint.ts</b> : 19</p>
+    <pre><span class="cm">// Soft floor (in quadrature) on the Torus stereographic denominator, so</span>
+<span class="cm">// points near the projection pole map to a bounded radius, not infinity.</span>
+export const POLE_EPS = 0.08;</pre>
+  </div>
+
+  <p>
+    The image is a stack of <strong>nested donuts</strong> (Clifford tori) filling
+    space: <code>arg&nbsp;z</code> walks around the hole, <code>arg&nbsp;f</code>
+    around the tube, and the ratio <code>|z|/|f|</code> chooses which donut. The
+    <strong>Reference scaffold</strong> toggle draws the faint donuts. The Möbius map
+    <code>(z&minus;1)/(z+1)</code> makes the nesting especially clean:
+  </p>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="The Mobius map under the Torus projection"
+      src="./#/embed/complex-particles?fn=zMinus1OverZPlus1&proj=torus&caption=(z%E2%88%921)%2F(z%2B1)%20under%20the%20Torus%20projection%20%E2%80%94%20a%20stack%20of%20nested%20donuts."></iframe>
+    <figcaption>Fig. 1 &mdash; <code>(z&minus;1)/(z+1)</code> under the Torus projection. Drag to orbit and look down the hole of the nested tori.</figcaption>
+  </figure>
+
+  <!-- ===================================================================== -->
+  <h2 id="hopf"><span class="num">2</span>Sphere &mdash; the Hopf map</h2>
+
+  <p>
+    The <strong>Sphere</strong> stop goes one step further than the Torus. Instead of
+    spreading <code>S&sup3;</code> out into space, it collapses it onto an ordinary
+    2-sphere by the <strong>Hopf map</strong> <code>S&sup3; &rarr; S&sup2;</code>.
+    Read the 4D point as a <em>pair of complex numbers</em>
+    <code>z<sub>1</sub> = x + iy = z</code> and
+    <code>z<sub>2</sub> = u + iv = f</code>; the Hopf map is then a tidy formula in
+    those two:
+  </p>
+
+  <div class="eq">
+    <code>H = ( 2&nbsp;Re(z<sub>1</sub> &middot; z&#773;<sub>2</sub>),&nbsp;
+    2&nbsp;Im(z<sub>1</sub> &middot; z&#773;<sub>2</sub>),&nbsp;
+    |z<sub>1</sub>|&sup2; &minus; |z<sub>2</sub>|&sup2; ) / |(z<sub>1</sub>, z<sub>2</sub>)|&sup2;</code>
+  </div>
+
+  <p>
+    Expanding the complex products in real coordinates gives exactly the three
+    components in the code (<code>z&#773;<sub>2</sub></code> is the conjugate, so its
+    imaginary part flips sign):
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/viewpoint.ts</b> : 78&ndash;86</p>
+    <pre>if(mode===ProjectionMode.Hopf){
+  const x=p.x, y=p.y, u=p.z, v=p.w;
+  const d=(x*x+y*y+u*u+v*v)||1e-6;
+  return new THREE.Vector3(
+    2*(x*u + y*v)/d,    <span class="cm">// 2 Re(z1 * conj z2)</span>
+    2*(y*u - x*v)/d,    <span class="cm">// 2 Im(z1 * conj z2)</span>
+    (x*x+y*y - u*u-v*v)/d   <span class="cm">// |z1|^2 - |z2|^2</span>
+  );
+}</pre>
+  </div>
+
+  <p>
+    Every particle lands on the unit sphere, and the landing spot reads as the
+    <strong>ratio</strong> <code>z / f(z)</code>: the <em>latitude</em> encodes
+    <code>|z| / |f|</code> (equator where input and output have equal magnitude, one
+    pole where the output vanishes, the other where the input does), and the
+    <em>longitude</em> encodes the phase difference
+    <code>arg(z) &minus; arg(f)</code>. Because only the ratio survives, an entire
+    circle of 4D points &mdash; the ones that differ by a common phase of input and
+    output &mdash; collapses to a single point on the sphere. That circle is the
+    Hopf <em>fiber</em>, and it is exactly the circle the Torus view kept separate.
+    The consequence is striking:
+  </p>
+
+  <ul>
+    <li><code>f = c&middot;z</code> (a constant ratio) collapses to <strong>one point</strong>.</li>
+    <li><code>e<sup>z</sup></code> wraps the sphere <strong>infinitely</strong>.</li>
+  </ul>
+
+  <p>
+    Compare them live. The linear map below collapses the whole cloud to a single
+    speck; swap to <code>e<sup>z</sup></code> and it smears across the sphere.
+  </p>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="The Hopf map of e^z onto the sphere"
+      src="./#/embed/complex-particles?fn=exp&proj=hopf&caption=e%5Ez%20under%20the%20Hopf%20map%20S%C2%B3%E2%86%92S%C2%B2%3A%20latitude%20is%20%7Cz%7C%2F%7Cf%7C%2C%20longitude%20is%20arg(z)%E2%88%92arg(f)."></iframe>
+    <figcaption>Fig. 2 &mdash; <code>e<sup>z</sup></code> under the Hopf map. Each point's position is the ratio <code>z / f(z)</code>; the whole picture is a sphere.</figcaption>
+  </figure>
+
+  <div class="note">
+    <b>Why the tumble pauses here.</b> The Hopf and Torus maps are <em>nonlinear</em>,
+    so a 4D rotation applied <em>before</em> them warps the picture rather than
+    turning it. The viewer detects these two modes and freezes the 4D tumble,
+    switching the rotation panel to rigid Yaw/Pitch/Roll camera orbits instead
+    (<code>createAnimationLoop.ts:67</code> &mdash; <code>nonlinearMode</code>). For
+    the ratio reading above to hold, keep the 4D orientation at identity.
+  </div>
+
+  <!-- ===================================================================== -->
+  <h2 id="quaternions"><span class="num">3</span>Turning 4D: the quaternion rotations</h2>
+
+  <p>
+    Projection answers "how do I flatten 4D?" Rotation answers "from which angle?"
+    In 3D you rotate <em>around an axis</em>; in 4D you rotate <em>in a plane</em>.
+    There are six coordinate planes &mdash; <code>xy, xu, xv, yu, yv, uv</code>
+    &mdash; and a turn in, say, the <code>xu</code> plane swaps the input's real axis
+    with the output's real axis, mixing domain and range. The clean way to express a
+    4D rotation is with a <strong>pair</strong> of unit quaternions, one multiplying
+    on the left and one (conjugated) on the right:
+  </p>
+
+  <div class="eq">
+    <code>p &nbsp;&#8614;&nbsp; a &middot; p &middot; b&#773;</code>
+    &nbsp;&mdash; reading the 4-vector <code>p</code> as a quaternion, for unit
+    quaternions <code>a</code> (left) and <code>b</code> (right).
+  </div>
+
+  <p>
+    That sandwich product is the rotation itself. In the reference code it is three
+    quaternion multiplies (<code>quatMul</code> is the Hamilton product;
+    <code>quatConj(b)</code> is <code>b&#773;</code>):
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/viewpoint.ts</b> : 39&ndash;43</p>
+    <pre>export function quatRotate4D(p, a, b){
+  const q = new THREE.Vector4(p.x,p.y,p.z,p.w);
+  const r = quatMul(quatMul(a, q), quatConj(b));   <span class="cm">// a · p · b̄</span>
+  return new THREE.Vector4(r.x,r.y,r.z,r.w);
+}</pre>
+  </div>
+
+  <p>
+    Choosing <code>a</code> and <code>b</code> <em>independently</em> reaches every
+    possible 4D rotation. The viewer never asks you to type quaternions &mdash; each
+    of the six plane buttons hands back the right pair for an angle <code>&theta;</code>
+    from <code>quarterQuat</code>. The pattern is worth seeing, because it encodes a
+    real fact about which planes are "the same kind":
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/math/quat4.ts</b> : 11&ndash;22</p>
+    <pre>export function quarterQuat(plane: string, &theta;: number) {
+  const s = Math.sin(&theta; / 2), c = Math.cos(&theta; / 2);   <span class="cm">// half-angle</span>
+  switch (plane) {
+    case 'XY': return { L: new Q(0, 0, -s, c), R: new Q(0, 0, -s, c) };   <span class="cm">// L = R</span>
+    case 'XU': return { L: new Q(0, s, 0, c), R: new Q(0, s, 0, c) };     <span class="cm">// L = R</span>
+    case 'XV': return { L: new Q(s, 0, 0, c), R: new Q(-s, 0, 0, c) };    <span class="cm">// R = conj(L)</span>
+    case 'YU': return { L: new Q(-s, 0, 0, c), R: new Q(-s, 0, 0, c) };   <span class="cm">// L = R</span>
+    case 'YV': return { L: new Q(0, s, 0, c), R: new Q(0, -s, 0, c) };    <span class="cm">// R = conj(L)</span>
+    case 'UV': return { L: new Q(0, 0, s, c), R: new Q(0, 0, -s, c) };    <span class="cm">// R = conj(L)</span>
+  }
+}</pre>
+  </div>
+
+  <p>
+    Two things determine each pair. First, the <strong>half-angle</strong>: a unit
+    quaternion built from <code>sin(&theta;/2)</code> and <code>cos(&theta;/2)</code>
+    rotates by a full <code>&theta;</code> through the sandwich product, so an
+    eighth-turn button passes <code>&theta; = 45&deg;</code>. Second, the
+    <strong>left/right relationship</strong>:
+  </p>
+  <ul>
+    <li>The three <em>imaginary&ndash;imaginary</em> planes <code>xy, xu, yu</code>
+        (built from the three vector parts) use <code>L = R</code>.</li>
+    <li>The three planes that include the <code>v</code> axis &mdash; the quaternion's
+        <em>scalar</em> part &mdash; <code>xv, yv, uv</code> use
+        <code>R = conj(L)</code>, the sign flip on the vector part.</li>
+  </ul>
+  <p>
+    That split is exactly the difference between an <em>isoclinic</em> rotation
+    (same angle in two orthogonal planes at once, what <code>L = R</code> gives) and
+    a <em>simple</em> rotation in one plane (what the conjugate pairing isolates).
+    A positive <code>&theta;</code> sends the first axis toward the negative second
+    (<code>+A &rarr; &minus;B</code>) the same way in all six planes, so the
+    <code>&#8635;</code>&thinsp;/&thinsp;<code>&#8634;</code> buttons mean the same
+    thing everywhere.
+  </p>
+
+  <h3>What feeds the quaternions each frame</h3>
+
+  <p>
+    The "Motion = Quaternion" tumble you see by default is built right in the render
+    loop. Three plane turns at different rates are composed into a left/right pair,
+    then multiplied onto whatever fixed orientation your buttons have accumulated:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/particles/createAnimationLoop.ts</b> : 122&ndash;128</p>
+    <pre><span class="cm">// Compute combined quaternion rotation</span>
+const qxy = quarterQuat('XY', tCurrent * 0.5);
+const qyu = quarterQuat('YU', tCurrent * 0.7);
+const qxv = quarterQuat('XV', tCurrent);
+const dynL = qxv.L.clone().multiply(qyu.L).multiply(qxy.L);
+const dynR = qxv.R.clone().multiply(qyu.R).multiply(qxy.R);
+const Lq = dynL.clone().multiply(rotLRef.current);   <span class="cm">// × the buttons' accumulated turn</span>
+const Rq = dynR.clone().multiply(rotRRef.current);</pre>
+  </div>
+
+  <p>
+    The three <em>incommensurate</em> rates (0.5, 0.7, 1.0) are why the default
+    tumble never quite repeats &mdash; it explores 4D orientations endlessly.
+    <code>Lq</code> and <code>Rq</code> are then pushed straight into the shader
+    uniforms <code>uRotL</code>/<code>uRotR</code> that <code>surfacePos</code> reads
+    at step&nbsp;6. The applet below composes two <em>continuous</em> spins,
+    <code>xy</code> and <code>uv</code> &mdash; an <strong>isoclinic double
+    rotation</strong>, the cleanest 4D turn there is:
+  </p>
+
+  <figure>
+    <iframe loading="lazy" allowfullscreen
+      title="An isoclinic double rotation of z cubed"
+      src="./#/embed/complex-particles?fn=cube&proj=perspective&motion=quaternion&spin=xy,uv&caption=z%C2%B3%20under%20a%20double%20isoclinic%20spin%20(xy%20%2B%20uv)%20%E2%80%94%20equal%20rotation%20in%20two%20orthogonal%20planes%20at%20once."></iframe>
+    <figcaption>Fig. 3 &mdash; <code>z<sup>3</sup></code> under simultaneous <code>xy</code> and <code>uv</code> spins. Equal angles in two orthogonal planes: an isoclinic rotation of 4-space.</figcaption>
+  </figure>
+
+  <!-- ===================================================================== -->
+  <h2 id="honesty"><span class="num">4</span>Numerical honesty: the guards</h2>
+
+  <p>
+    Everything above is 32-bit floating point on a GPU, and complex functions have
+    poles &mdash; places where the output runs to infinity. The viewer is honest
+    about where it bends the truth, and it does so at exactly the spots a
+    complex-analysis eye looks first. You have already met two; here they are
+    together.
+  </p>
+
+  <p>
+    <strong>Output magnitude is capped.</strong> Right after <code>f(z)</code> is
+    computed, any output longer than <code>10&sup3;</code> is pulled back to that
+    radius &mdash; so the spike at a pole of <code>1/z</code> or <code>tan&nbsp;z</code>
+    has a finite, by-construction height:
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/animations/ComplexParticles/shaders/index.ts</b> : 439 (inside <code>surfacePos</code>)</p>
+    <pre>vec2 fc = applyComplex(zc, functionType);
+if(length(fc) &gt; 1e3) fc = normalize(fc)*1e3;   <span class="cm">// clamp the pole's height</span></pre>
+  </div>
+
+  <p>
+    <strong>Divisions floor their denominators.</strong> The individual functions
+    never divide by a bare zero &mdash; <code>1/z</code>, <code>tan</code>, and the
+    rest clamp the denominator to a tiny positive number first (here
+    <code>10<sup>&minus;4</sup></code>):
+  </p>
+
+  <div class="listing">
+    <p class="src"><b>src/lib/complexMath.ts</b> : 49&ndash;53</p>
+    <pre>export function complexInv(z: THREE.Vector2): THREE.Vector2 {
+  let d = z.x * z.x + z.y * z.y;
+  if (d &lt; 1e-4) d = 1e-4;                 <span class="cm">// 1/z never divides by zero</span>
+  return new THREE.Vector2(z.x / d, -z.y / d);
+}</pre>
+  </div>
+
+  <p>
+    And the <strong>Torus pole</strong> is soft-floored by <code>POLE_EPS</code>
+    (&sect;1). One more worth naming: <code>&Gamma;(z)</code> is evaluated by the
+    Lanczos approximation with the reflection formula, so its poles at
+    <code>0, &minus;1, &minus;2, &hellip;</code> are genuine &mdash; accurate to a few
+    parts in <code>10<sup>6</sup></code>, far below what the eye can resolve here.
+    The positions <em>between</em> the projection slider's stops, finally, are not
+    projections at all but linear cross-fades (Part 1 &sect;2): an animation to help
+    your eye track points, not a map with its own meaning.
+  </p>
+
+  <div class="seealso">
+    <strong>The series &mdash; the math:</strong>
+    <a href="./complex-functions-guide.html">What the functions do</a> &middot;
+    <a href="./complex-particles-guide.html">From 4D to your screen</a> (Part 1 &amp; 2) &middot;
+    <a href="./complex-rendering-guide.html">How the surface is drawn</a>.
+    <strong>Going deeper:</strong>
+    <a href="./complex-color-guide.html">Color</a> &middot;
+    <a href="./complex-sampling-guide.html">Sampling the plane</a> &middot;
+    <a href="./complex-plane-transform-guide.html">Two planes, one map</a>.
+  </div>
+
+  <div class="footer">
+    <p>
+      <a class="hub" href="./guides.html">&larr; All guides</a> &nbsp;&middot;&nbsp;
+      <a href="./complex-particles-guide.html">&larr; Part 1</a> &nbsp;&middot;&nbsp;
+      The projections are <code>src/lib/viewpoint.ts</code>, the rotations
+      <code>src/math/quat4.ts</code>, and the GPU twin of both is in
+      <code>src/animations/ComplexParticles/shaders/index.ts</code>. Open the full
+      viewer at <a href="./#/complex-particles">#/complex-particles</a>.
+    </p>
+  </div>
+
+</main>
+</body>
+</html>
