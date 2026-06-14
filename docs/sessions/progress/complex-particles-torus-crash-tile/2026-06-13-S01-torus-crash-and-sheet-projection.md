@@ -5,9 +5,9 @@ date: 2026-06-13
 title: Torus-switch mobile crash + sheet-count projection reset
 branch: claude/complex-particles-torus-crash-tile
 slug: complex-particles-torus-crash-tile
-status: in-progress
+status: completed
 build: passed
-followup: high
+followup: low
 pr: https://github.com/piyarsquare/animath/pull/216
 app: complex-particles, engine
 ---
@@ -30,6 +30,15 @@ written mid-session at the user's request).
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 2026-06-14 — Crash confirmed fixed on the real device
+**Why:** the headline fix could only ever be verified on Adreno hardware, not headless.
+
+User verified on the actual Android device: the **exp · Drop X · XY spin · Tiles**
+sequence sliding **Perspective → Torus** no longer loses the WebGL context. The
+NaN-guarded tile normal (`f910ca0`) + the floored/continuous perspective
+denominator (`8601da1` → `86e6eff`) hold up on hardware. This was the branch's one
+open risk — now closed. Follow-up downgraded HIGH → LOW.
 
 ### 🟢 code · 17:35 — Preserve the projection across a sheet-count rebuild
 **Why:** rebuilt materials reset the projection cross-fade, snapping to Perspective.
@@ -97,7 +106,7 @@ that distinguishes the crashing path from the stable Drop X state.
 
 ## Self-reflection
 
-**Follow-up value:** HIGH
+**Follow-up value:** LOW _(updated 2026-06-14: crash confirmed fixed on the real device; was HIGH pending that check)_
 
 My first diagnosis (perspective singularity) was correct but **incomplete** — I
 shipped it as "the fix" and made a PR before the user could confirm, then learned
