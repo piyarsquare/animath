@@ -111,6 +111,13 @@ gets a short "Embedding" note. A demo explainer page (e.g.
 sessions pipeline) can serve as the reference embed host on the same Pages
 site.
 
+> **Built so far:** two reference host pages ship under `public/` (copied to
+> the Pages root): `embed-demo.html` (the minimal "Seeing e^z" demo) and
+> `complex-particles-guide.html` — *From 4D to your screen*, a math-and-code
+> guide that pairs the same live applets with the exact source lines computing
+> each 4D→3D projection and the quaternion rotations (`viewpoint.ts`,
+> `quat4.ts`, `complexMath.ts`, and the `surfacePos` shader). They cross-link.
+
 ## Phase 2+ (separately scoped)
 
 - **More apps**: the codec is per-app (each app declares its param table);
