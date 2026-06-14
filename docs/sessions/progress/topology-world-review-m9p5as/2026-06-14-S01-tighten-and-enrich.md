@@ -37,6 +37,61 @@ six-part improvement roadmap (A–F).
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 12:40 — Embedding inset now ships for every world (verified headlessly)
+**Why:** Feature 1 complete — the "immersed in ℝ³" 3D model is no longer ℝP²-only.
+
+**What landed.**
+- New `instruments/immersions.ts` — a per-world registry of immersion descriptors
+  (procedural mesh + marker map + caption). Standard immersions: torus/torus6 →
+  torus of revolution, klein/klein6 → figure-8 (Lawson) Klein bottle, rp2 →
+  Steiner Roman surface (moved here), sphere → round sphere, genus2 → double
+  torus, crosscap3 → non-orientable schematic.
+- `instruments/embeddingInset.tsx` rewritten world-general: takes `worldId` +
+  `getState` + `getDir`, picks its descriptor from the registry, rides the bead
+  on the immersion. Spherical worlds drive the bead from the player's true unit
+  direction (full sphere coverage); flat worlds from the chart `(u,v)`.
+- Engine now exposes `getPose()` (`engineTypes.ts`, `fundamentalSquareEngine.ts`);
+  host passes `getDir = pose.up` and renders the inset for **all** worlds
+  (removed the `spec.id === 'rp2'` gate).
+
+**Verification.** Built (passes), lint clean (0 errors, no new warnings), and
+captured 156² insets for all 8 worlds headlessly (SwiftShader) — torus donut,
+Klein figure-8, Roman surface, round sphere, double torus, Dyck schematic, and
+both hexagonal worlds all render with the live bead where applicable. Screenshots
+in `assets/`.
+
+![Inset across worlds: torus, Klein, ℝP², genus-2](assets/S01-inset-torus.png)
+
+> [!NOTE]
+> The hyperbolic pair (genus2, crosscap3) show a recognizable representative mesh
+> with **no live marker** — their Poincaré-disk chart has no clean global map to a
+> 3-space immersion. genus2's double torus is the correct topology; crosscap3 is a
+> captioned non-orientable schematic. A faithful hyperbolic marker is a possible
+> follow-up, not blocking.
+
+### 🟣 decision · 12:10 — Scope: two features, sequenced (inset-for-everyone first, then C)
+**Why:** User chose roadmap **C** (ℝP² inside walk) *and* asked to bring the 3D
+embedding model — currently ℝP²-only — to every world. Both are substantial; I
+sequence the lower-risk, higher-confidence one first.
+
+**Plan.**
+1. **Embedding inset for every world.** The inset (`instruments/embeddingInset.tsx`)
+   is hard-gated to `spec.id === 'rp2'` and hard-codes the Steiner Roman surface.
+   Generalize into a per-world **immersion registry** (`instruments/immersions.ts`):
+   each world supplies an immersed mesh + a marker map from the uniform
+   `SquareMapState` / player pose. Faithful live markers for the 6 non-hyperbolic
+   worlds (sphere → round sphere, rp2 → Roman, torus/torus6 → torus of revolution,
+   klein/klein6 → figure-8 Klein bottle); a representative spinning mesh for the
+   two hyperbolic worlds (genus2 → double torus; crosscap3 → Dyck/cross-capped),
+   marker best-effort. Expose the player **pose** through the engine so the
+   spherical marker rides the true direction (full sphere, not a hemisphere chart).
+2. **C — ℝP² inside walk.** In the spherical presenter, when the player is in the
+   `flipped` (antipodal) state, place the camera on the **inner** face of the
+   shell (inside the hollow planet) with the outer ink/decor seen overhead through
+   the glass, re-emerging on the second seam crossing. Orientation geometry here
+   is the subtle part that bit prior sessions — verify with headless screenshots
+   (`scripts/shoot.mjs`) and the existing chirality/decor guards before committing.
+
 ### 🔵 finding · 03:50 — Reviewed current status and outstanding work
 **Why:** Re-oriented onto Polygon Worlds after the focus correction, before
 taking direction.

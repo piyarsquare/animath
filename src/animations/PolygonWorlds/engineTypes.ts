@@ -47,6 +47,9 @@ export interface PolygonEngine {
   /** Third-person camera distance from the character (world units). */
   setCameraDistance(d: number): void;
   getMapState(): SquareMapState | null;
+  /** Latest player pose in world space (foot position + surface normal + heading),
+   *  for the extrinsic embedding inset's marker. null before the first frame. */
+  getPose(): { position: THREE.Vector3; up: THREE.Vector3; forward: THREE.Vector3 } | null;
   /** Test/diagnostic only: signed handedness of the freshest print's rendered
    *  image in the character's frame (see CoverModel.debugProbe). undefined if
    *  unsupported. */

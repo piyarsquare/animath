@@ -250,6 +250,10 @@ export default function PolygonWorlds() {
   }, [zoomBy]);
 
   const getMapState = useCallback(() => engineRef.current?.getMapState() ?? null, []);
+  // Player's unit surface-normal direction (pose up). For the spherical worlds this
+  // is the point on the unit sphere the player occupies, which the embedding inset's
+  // sphere/Roman marker rides; flat/hyperbolic immersions ignore it.
+  const getDir = useCallback(() => engineRef.current?.getPose()?.up ?? null, []);
   const worldOptions = WORLDS.map((w) => ({ value: w.id, label: w.label }));
 
   /* ---- archetype panels (one row per legacy control; nothing dropped) ---- */
@@ -375,7 +379,7 @@ export default function PolygonWorlds() {
 
           <MovePad onSet={setKey} />
           <SquareMiniMap getState={getMapState} spec={spec} />
-          {spec.id === 'rp2' && <EmbeddingInset key="rp2-embed" getState={getMapState} />}
+          <EmbeddingInset key={`embed-${spec.id}`} worldId={spec.id} getState={getMapState} getDir={getDir} />
 
           <div style={{
             position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',

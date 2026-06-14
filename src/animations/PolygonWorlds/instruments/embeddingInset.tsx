@@ -1,83 +1,40 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { SquareMapState } from '../engineTypes';
-import { sq2hemi } from '../squareMap';
+import { immersionFor } from './immersions';
 
 /**
  * Extrinsic embedding inset — the same walk, a wildly different shape.
  *
- * The intrinsic world (what you walk in the main view) is a *genuinely round*
- * surface; this corner shows one way that abstract surface can be *immersed* into
- * ordinary 3-space. For ℝP² we use the **Steiner Roman surface**, the image of the
- * map
- *
- *     S² → ℝ³,   (a, b, c) ↦ (a·b, b·c, c·a)
- *
- * (a quadratic, so antipodal points `±(a,b,c)` land on the **same** image point —
- * which is exactly why this map *factors through ℝP²* and immerses the projective
- * plane). It is fully procedural (no asset import), self-intersects along three
- * segments (the famous "tetrahedral" Roman shape), and the player's marker traces
- * the very same point whether they are on the near sheet or the antipodal mirror
- * sheet — making the `x ∼ −x` gluing visible as a single dot.
- *
- * A tiny self-contained renderer (its own WebGL context + rAF), cleaned up on
- * unmount; it reads the player chart from the engine's mini-map state, so it needs
- * no extra plumbing into the geometry kernel.
+ * The intrinsic world (what you walk in the main view) is a genuinely round / flat
+ * / hyperbolic surface; this corner shows one way that abstract surface can be
+ * *immersed* into ordinary 3-space (the donut for a torus, the figure-8 bottle for
+ * the Klein, the Steiner Roman surface for ℝP²). The per-world shape + marker map
+ * live in {@link immersionFor}; this component is just the little self-contained
+ * renderer (its own WebGL context + rAF), rebuilt when the world changes and torn
+ * down on unmount. The player's bead rides the immersion at the same point they
+ * occupy intrinsically — read from the engine's chart + pose, so no extra plumbing
+ * into the geometry kernel.
  */
 
 const SIZE = 156;
-const SCALE = 3.2;        // Roman surface coords ∈ [−0.5, 0.5] → fit the frame
-const LON = 64, LAT = 48;
 
-/** The Roman immersion of a unit-sphere direction into ℝ³. */
-function roman(d: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
-  return out.set(d.x * d.y, d.y * d.z, d.z * d.x).multiplyScalar(SCALE);
-}
-
-/** Build the Roman surface mesh from a lon/lat sphere grid, coloured by direction
- *  so the lobes + self-intersections read on a dark inset. */
-function buildRoman(): THREE.Mesh {
-  const geo = new THREE.BufferGeometry();
-  const pos: number[] = [];
-  const col: number[] = [];
-  const idx: number[] = [];
-  const d = new THREE.Vector3(), p = new THREE.Vector3(), c = new THREE.Color();
-  for (let j = 0; j <= LAT; j++) {
-    const lat = (j / LAT) * Math.PI - Math.PI / 2, cl = Math.cos(lat), sl = Math.sin(lat);
-    for (let i = 0; i <= LON; i++) {
-      const lon = (i / LON) * Math.PI * 2;
-      d.set(cl * Math.cos(lon), sl, cl * Math.sin(lon));
-      roman(d, p);
-      pos.push(p.x, p.y, p.z);
-      c.setHSL((Math.atan2(d.z, d.x) / (Math.PI * 2) + 0.5) % 1, 0.55, 0.55 + 0.12 * d.y);
-      col.push(c.r, c.g, c.b);
-    }
-  }
-  const row = LON + 1;
-  for (let j = 0; j < LAT; j++) for (let i = 0; i < LON; i++) {
-    const a = j * row + i, b = a + 1, cc = a + row, dd = cc + 1;
-    idx.push(a, cc, b, b, cc, dd);
-  }
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  geo.setIndex(idx);
-  geo.computeVertexNormals();
-  const mat = new THREE.MeshStandardMaterial({
-    vertexColors: true, roughness: 0.45, metalness: 0.05,
-    transparent: true, opacity: 0.92, side: THREE.DoubleSide,
-    emissive: 0x101820, emissiveIntensity: 0.5, flatShading: false,
-  });
-  return new THREE.Mesh(geo, mat);
-}
-
-export function EmbeddingInset({ getState }: { getState: () => SquareMapState | null }) {
+export function EmbeddingInset({
+  worldId, getState, getDir,
+}: {
+  worldId: string;
+  getState: () => SquareMapState | null;
+  getDir: () => THREE.Vector3 | null;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const getStateRef = useRef(getState);
-  getStateRef.current = getState;
+  const stateRef = useRef(getState); stateRef.current = getState;
+  const dirRef = useRef(getDir); dirRef.current = getDir;
+
+  const immersion = immersionFor(worldId);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !immersion) return;
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
@@ -90,7 +47,7 @@ export function EmbeddingInset({ getState }: { getState: () => SquareMapState | 
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 50);
-    camera.position.set(0, 2.6, 5.2);
+    camera.position.set(0, immersion.camDist * 0.5, immersion.camDist);
     camera.lookAt(0, 0, 0);
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
     const dir = new THREE.DirectionalLight(0xffffff, 0.9);
@@ -99,7 +56,7 @@ export function EmbeddingInset({ getState }: { getState: () => SquareMapState | 
 
     const spin = new THREE.Group();
     scene.add(spin);
-    const mesh = buildRoman();
+    const mesh = immersion.build();
     spin.add(mesh);
 
     // player marker — a bright bead riding the immersed surface
@@ -107,21 +64,12 @@ export function EmbeddingInset({ getState }: { getState: () => SquareMapState | 
     const marker = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), markerMat);
     marker.visible = false;
     spin.add(marker);
-    const mDir = new THREE.Vector3(), mPos = new THREE.Vector3();
 
     let raf = 0;
     const loop = () => {
       spin.rotation.y += 0.006;
-      const st = getStateRef.current();
-      if (st) {
-        const hemi = sq2hemi((st.u - 0.5) * 2, (st.v - 0.5) * 2);
-        mDir.copy(hemi);
-        roman(mDir, mPos);
-        marker.position.copy(mPos);
-        marker.visible = true;
-      } else {
-        marker.visible = false;
-      }
+      const at = immersion.marker(stateRef.current(), dirRef.current());
+      if (at) { marker.position.copy(at); marker.visible = true; } else { marker.visible = false; }
       renderer.render(scene, camera);
       raf = requestAnimationFrame(loop);
     };
@@ -129,14 +77,17 @@ export function EmbeddingInset({ getState }: { getState: () => SquareMapState | 
 
     return () => {
       cancelAnimationFrame(raf);
-      mesh.geometry.dispose();
-      (mesh.material as THREE.Material).dispose();
+      mesh.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (m.isMesh) { m.geometry.dispose(); (m.material as THREE.Material).dispose(); }
+      });
       marker.geometry.dispose();
       markerMat.dispose();
       renderer.dispose();
     };
-  }, []);
+  }, [immersion]);
 
+  if (!immersion) return null;
   return (
     <div style={{
       position: 'absolute', bottom: 86, left: 12, width: SIZE, height: SIZE,
@@ -152,7 +103,7 @@ export function EmbeddingInset({ getState }: { getState: () => SquareMapState | 
       <div style={{
         position: 'absolute', bottom: 4, left: 0, right: 0, textAlign: 'center',
         fontSize: 9, color: 'rgba(255,255,255,0.5)',
-      }}>Roman surface · same walk</div>
+      }}>{immersion.caption}</div>
     </div>
   );
 }

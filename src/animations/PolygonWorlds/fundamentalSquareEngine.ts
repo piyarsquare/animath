@@ -81,6 +81,7 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
   let stridePhase = 0;
 
   const mapState: SquareMapState = { u: 0.5, v: 0.5, hx: 0, hz: -1, flipped: false };
+  let poseState: { position: THREE.Vector3; up: THREE.Vector3; forward: THREE.Vector3 } | null = null;
   const right = new THREE.Vector3();
   const basis = new THREE.Matrix4();
 
@@ -88,6 +89,7 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
     cover.update(input, camera);
     headlamp.position.copy(camera.position);
     const p = cover.pose();
+    poseState = p;
 
     right.crossVectors(p.up, p.forward).normalize();
     character.group.position.copy(p.position);
@@ -110,6 +112,7 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
     setFloorThickness: (t) => cover.setFloorThickness?.(t),
     setCameraDistance: (d) => cover.setCameraDistance?.(d),
     getMapState: () => mapState,
+    getPose: () => poseState,
     debugProbe: () => cover.debugProbe?.(),
     auditInk: () => cover.auditInk?.(),
     plantSign: (front, back) => cover.plantSign?.(front, back),
