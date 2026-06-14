@@ -6,7 +6,7 @@ title: Continue the Polygon Worlds walk
 branch: claude/polygon-walk-continue-4tyht3
 slug: polygon-walk-continue-4tyht3
 status: in-progress
-build: unknown
+build: passed
 followup: null
 pr: null
 app: polygon-worlds
@@ -78,12 +78,13 @@ work is just drawing the n seam arcs + the hub/leaf corner topology + the
 minimap chart. Far smaller than a bespoke unfolding.
 
 **Full guard (10 worlds):** my new worlds (rp2hex/rp2oct) PASS; the touched
-square worlds (rp2/sphere) PASS; all decor proper everywhere. **One failure:
-`klein6` `B=cyan@−axis`.** klein6 is a *euclidean* world rendered by
-`euclidean.ts`, which this branch never touched — so it is not caused by my
-changes. It matches the prior handoff's open **E2** (klein6 glide-crossing
-smoothness was never pixel-verified). Flagged for the handoff; out of scope
-here.
+square worlds (rp2/sphere) PASS; all decor proper everywhere. One world
+flagged `klein6` `B=cyan@−axis` — but **two clean re-runs of klein6 alone both
+PASS** (`B=cyan@+axis`), so this was a **flaky false-positive** of the guard's
+timing-sensitive flip-side detection (it caught a transitional, pre-crossing
+print that one time), not a real bug. klein6 chirality is correct. (Worth
+noting as a guard-robustness item: the B-side dwell could be hardened — it is
+the fragility the prior handoff's self-reflection #2 hinted at.)
 
 ### 🟣 decision · 23:05 — Next: A2 (hex/oct zip spheres), user-chosen
 **Why:** asked the user for direction at the post-A1 fork; they chose A2 — the
