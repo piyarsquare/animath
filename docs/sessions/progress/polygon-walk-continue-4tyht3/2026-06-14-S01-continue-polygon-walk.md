@@ -33,6 +33,16 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 tweak · 00:45 — Zip seams restyled as stitches (user request)
+Replaced each solid seam tube with a row of short **stitch bars** crossing the
+geodesic, alternately slanted for a hand-sewn look — sutures closing the cut,
+thematically apt for *zip* words. One `InstancedMesh` per world (unit box,
+per-instance matrices; density tracks arc length so it reads the same at any
+radius). Build + lint green; zip guard re-run still PASS, **decor 0 improper**
+(the instanced stitches present one proper world matrix, so the audit is
+unaffected). `spherical.ts` docstring + EXPLAINER updated tube→stitch; the
+report asset now shows the stitched seam.
+
 ### 🟢 milestone · 00:30 — Hardened the chirality guard's flip-side read; full 12-world run all green
 **Why:** the klein6 "failure" earlier was a flaky false-fail of the guard — the
 safety net that protects every orientation world (including the four I added).

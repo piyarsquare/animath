@@ -92,9 +92,10 @@ surface you walk. The curved worlds are subtler, and the difference is honest:
   round sphere, presented by a polygon whose edges fold together in adjacent
   pairs (`x x⁻¹`). Each fold is a **cut** in the sphere: the polygon is the round
   sphere sliced open along a little **star** — a hub where the cuts meet and one
-  spoke per fold — then flattened. The world carries those **n glowing seam
-  arcs** (the cuts made visible) running from the hub out to the rim; walking
-  across one is seamless, because the sphere was only *cut* there, never bent.
+  spoke per fold — then flattened. The world carries those **n seams** as rows
+  of glowing **stitches** (the cuts shown sewn shut) running from the hub out to
+  the rim; walking across one is seamless, because the sphere was only *cut*
+  there, never bent.
   The polygon's many corners collapse to just two kinds of point: the single
   **hub** (every other corner) and the **n leaf tips** — the whole 2n-gon glues
   down to one hub + n leaves on one smooth sphere.

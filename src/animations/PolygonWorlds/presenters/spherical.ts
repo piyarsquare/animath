@@ -40,8 +40,9 @@ import {
  *  - **Zip spheres (`a a⁻¹ b b⁻¹ c c⁻¹ …`):** a genuinely round, orientable sphere
  *    (chart, so the walk + decor reuse the round-sphere path) whose gluing cuts it
  *    along a STAR tree — a hub at the north pole + n leaves on the equator joined by
- *    n seam arcs (one per `x x⁻¹` fold), drawn explicitly. The `zip` branch adds only
- *    those seams + the hub/leaf corner markers; everything else is the round sphere.
+ *    n seams (one per `x x⁻¹` fold), drawn as rows of stitches (sutures closing the
+ *    cut). The `zip` branch adds only those seams + the hub/leaf corner markers;
+ *    everything else is the round sphere.
  */
 
 const EYE = 1.7;
@@ -248,31 +249,50 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const seam = antipodal ? new THREE.Mesh(new THREE.TorusGeometry(R, 0.12, 8, 96), seamMat) : null;
   if (seam) root.add(seam);
 
-  // zip seams: the n cut-arcs of the star tree, each a geodesic tube from the hub
+  // zip seams: the n cut-arcs of the star tree, each a row of STITCHES from the hub
   // (north pole) out to a leaf on the equator — the round-sphere image of the n
-  // `x x⁻¹` folds. Rebuilt with the shell (a tube hugs the radius R).
+  // `x x⁻¹` folds, drawn as sutures closing the cut. One InstancedMesh of short bars
+  // crossing the geodesic, alternately slanted for a hand-sewn look. Rebuilt with the
+  // shell (stitch density tracks arc length, so it reads the same at any radius).
   const zipSeamGroup = new THREE.Group();
   // a brighter, dedicated material — the seams are the headline feature of these
   // worlds (the n cut-arcs of the gluing made visible on the round shell).
-  const zipSeamMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffd24a, emissiveIntensity: 0.85, roughness: 0.4, metalness: 0.1 });
+  const zipSeamMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffd24a, emissiveIntensity: 0.9, roughness: 0.4, metalness: 0.1 });
+  const stitchGeo = new THREE.BoxGeometry(1, 1, 1); // unit cube; placed/scaled per instance
+  let zipStitches: THREE.InstancedMesh | null = null;
   if (zip) root.add(zipSeamGroup);
-  function seamArcCurve(a: THREE.Vector3, b: THREE.Vector3): THREE.CatmullRomCurve3 {
-    const pts: THREE.Vector3[] = [];
-    for (let i = 0; i <= 48; i++) {
-      // lift just proud of the shell so the arc reads as a ridge on the surface
-      // (and never z-fights the planet it hugs)
-      const v = new THREE.Vector3().copy(a).lerp(b, i / 48).normalize().multiplyScalar(R + 0.18);
-      pts.push(v);
+  function stitchMatrices(): THREE.Matrix4[] {
+    const STEP = 1.6, LEN = 1.15, WIDTH = 0.34, TALL = 0.24, SLANT = 0.45;
+    const out: THREE.Matrix4[] = [];
+    for (let k = 0; k < N_LEAVES; k++) {
+      const B = leafDir(k);
+      const arcLen = R * HUB_DIR.angleTo(B);
+      const count = Math.max(6, Math.round(arcLen / STEP));
+      for (let i = 0; i < count; i++) {
+        const t = (i + 0.5) / count;
+        const pos = new THREE.Vector3().copy(HUB_DIR).lerp(B, t).normalize();
+        const nrm = pos.clone();                 // outward surface normal (unit)
+        const ahead = new THREE.Vector3().copy(HUB_DIR).lerp(B, Math.min(1, t + 1e-3)).normalize();
+        const tang = ahead.sub(pos).normalize();  // along the seam
+        const across = new THREE.Vector3().crossVectors(nrm, tang).normalize();
+        // a short bar crossing the seam, slant alternating ±SLANT (running-stitch look)
+        const s = (i % 2 ? -1 : 1) * SLANT;
+        const xdir = across.multiplyScalar(Math.cos(s)).addScaledVector(tang, Math.sin(s)).normalize();
+        const zdir = new THREE.Vector3().crossVectors(xdir, nrm).normalize();
+        const quat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xdir, nrm, zdir));
+        out.push(new THREE.Matrix4().compose(
+          pos.multiplyScalar(R + 0.1), quat, new THREE.Vector3(LEN, TALL, WIDTH)));
+      }
     }
-    return new THREE.CatmullRomCurve3(pts);
+    return out;
   }
   function rebuildZipSeams() {
-    zipSeamGroup.children.forEach((m) => (m as THREE.Mesh).geometry.dispose());
-    zipSeamGroup.clear();
-    for (let k = 0; k < N_LEAVES; k++) {
-      const tube = new THREE.TubeGeometry(seamArcCurve(HUB_DIR, leafDir(k)), 48, 0.3, 10, false);
-      zipSeamGroup.add(new THREE.Mesh(tube, zipSeamMat));
-    }
+    if (zipStitches) { zipSeamGroup.remove(zipStitches); zipStitches.dispose(); zipStitches = null; }
+    const mats = stitchMatrices();
+    zipStitches = new THREE.InstancedMesh(stitchGeo, zipSeamMat, mats.length);
+    mats.forEach((m, i) => zipStitches!.setMatrixAt(i, m));
+    zipStitches.instanceMatrix.needsUpdate = true;
+    zipSeamGroup.add(zipStitches);
   }
   if (zip) rebuildZipSeams();
 
@@ -490,8 +510,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
       grid.dispose(); planetMat.dispose();
       sky.geometry.dispose(); (sky.material as THREE.Material).dispose();
       seam?.geometry.dispose(); seamMat.dispose();
-      zipSeamGroup.children.forEach((m) => (m as THREE.Mesh).geometry.dispose());
-      zipSeamMat.dispose();
+      zipStitches?.dispose(); stitchGeo.dispose(); zipSeamMat.dispose();
     },
   };
 }
