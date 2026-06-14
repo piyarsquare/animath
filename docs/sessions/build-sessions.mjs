@@ -47,6 +47,19 @@ const OUT = join(ROOT, "converted");
 const REPO = "piyarsquare/animath";
 const git = (a) => { try { return execFileSync("git", a, { encoding: "utf8", maxBuffer: 64 << 20 }); } catch { return ""; } };
 const gitBuf = (a) => { try { return execFileSync("git", a, { maxBuffer: 256 << 20 }); } catch { return null; } };
+const gitOk = (a) => { try { execFileSync("git", a, { stdio: "ignore" }); return true; } catch { return false; } };
+// Integration ref (main, else master). A report has "landed" when its file is
+// present on that ref. NOTE: we can't use `is-ancestor` on the dedupe winner ref,
+// because a feature branch forked from main contains all of main's history — so
+// every old report would look like it lives on the unmerged branch. Asking whether
+// the *path* exists on main is the honest test.
+const MAIN_REF = ["origin/main", "origin/master"].find((r) => gitOk(["rev-parse", "--verify", "-q", r])) || null;
+const onMainCache = new Map();
+const existsOnMain = (path) => {
+  if (!MAIN_REF) return true;                          // can't tell → don't nag
+  if (!onMainCache.has(path)) onMainCache.set(path, gitOk(["cat-file", "-e", `${MAIN_REF}:${path}`]));
+  return onMainCache.get(path);
+};
 
 // Markdown image refs in a report body, and a POSIX path join for resolving them
 // relative to the report's location in the repo.
@@ -140,7 +153,7 @@ for (const rec of byKey.values()) {
   // Categorical label(s): explicit `app:` frontmatter wins, else inferred from slug.
   const apps = normalizeApps(fm.app, rec.slug);
 
-  reports.push({ slug: rec.slug, short: shortName(rec.slug), base: rec.base, date,
+  reports.push({ slug: rec.slug, short: shortName(rec.slug), base: rec.base, date, ref, onMain: existsOnMain(path),
     kind: fm.kind || "?", session: fm.session || "?", title: fm.title || rec.base, status: fm.status || "?",
     apps, thumb, reflection: extractReflection(md),
     signals: normalizeSignals(fm.signals), next: fm.next || null,
@@ -171,13 +184,21 @@ for (const s of sessions.values()) {
   for (const r of s.reports) for (const a of r.apps) if (!seen.includes(a)) seen.push(a);
   s.apps = seen.length ? seen : ["general"];
   s.primary = s.apps[0];
-  // Dashboard signals: union of every report's declared signals, plus the one
-  // *derived* signal — high-followup, lifted from the rolled-up reflection level.
+  // Dashboard signals: explicit declared signals win; the rest are *backfilled*
+  // from STRUCTURED fields only (high precision — never prose-scraped), so the
+  // whole history populates without editing every old report:
+  //   high-followup ← rolled-up reflection level HIGH/CRITICAL
+  //   needs-dan     ← a proposed plan (kind:plan + status:proposed awaits a call)
+  //   not-live      ← none of the session's reports are present on main yet
   // The handoff's "next" wins (authoritative end-state), else the first that has one.
-  const sig = new Set();
-  for (const r of s.reports) for (const k of r.signals) sig.add(k);
+  const explicit = new Set();
+  for (const r of s.reports) for (const k of r.signals) explicit.add(k);
+  const sig = new Set(explicit);
   if (s.reflection && (s.reflection.level === "HIGH" || s.reflection.level === "CRITICAL")) sig.add("high-followup");
+  if (s.reports.some((r) => r.kind === "plan" && r.status === "proposed")) sig.add("needs-dan");
+  if (!s.reports.some((r) => r.onMain)) sig.add("not-live");
   s.signals = SIGNAL_KEYS.filter((k) => sig.has(k));
+  s.inferred = s.signals.filter((k) => !explicit.has(k));   // for the build readout
   s.next = p.next || (s.reports.find(r => r.next) || {}).next || null;
 }
 
@@ -224,14 +245,23 @@ const catBar = `<a class="cc-fbtn cc-fall active" data-cat="" href="#">All <span
 // carries (a session can land in several), in DIGEST_ORDER. Server-rendered above
 // the toolbar so it's the first thing the eye lands on — the project's open-items
 // map, not a list to read. Each entry links to the session and shows its `next`.
+const DIGEST_CAP = 8;                                  // keep each column scannable
+const LV_RANK = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, NONE: 4, "": 5 };
 const bucketMap = {};
 for (const s of sessionList) {
   for (const b of new Set(s.signals.map(signalDigest))) (bucketMap[b] = bucketMap[b] || []).push(s);
 }
 const digestCols = DIGEST_ORDER.filter((b) => bucketMap[b]?.length).map((b) => {
-  const items = bucketMap[b].map((s) =>
+  const all = bucketMap[b];
+  // High follow-up sorts by severity then recency; the rest newest-first.
+  all.sort((x, y) => b === "High follow-up"
+    ? (LV_RANK[x.reflection?.level || ""] - LV_RANK[y.reflection?.level || ""]) || byRecency(x.date, y.date)
+    : byRecency(x.date, y.date));
+  const shown = all.slice(0, DIGEST_CAP);
+  const items = shown.map((s) =>
     `        <li><a href="${esc(s.href)}"><code>${esc(s.short)}</code> ${esc(s.title)}</a>${s.next ? `<span class="cc-dnext">${esc(s.next)}</span>` : ""}</li>`).join("\n");
-  return `      <div class="cc-dcol"><h3>${esc(b)} <span>${bucketMap[b].length}</span></h3>\n      <ul>\n${items}\n      </ul></div>`;
+  const more = all.length > DIGEST_CAP ? `\n        <li class="cc-dmore">+${all.length - DIGEST_CAP} more</li>` : "";
+  return `      <div class="cc-dcol"><h3>${esc(b)} <span>${all.length}</span></h3>\n      <ul>\n${items}${more}\n      </ul></div>`;
 }).join("\n");
 const startHere = digestCols
   ? `<section class="cc-starthere"><h2>Start here</h2><p class="cc-dsub">Open items rolled up from each session's <code>signals:</code> and self-reflection &mdash; the project map, not a list to read. Click through to act.</p>\n    <div class="cc-digest">\n${digestCols}\n    </div></section>\n`
@@ -309,6 +339,7 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
   .cc-dcol li a:hover{color:var(--accent)}
   .cc-dcol li code{font-size:.72rem;color:var(--muted);font-weight:400}
   .cc-dnext{display:block;color:var(--muted);font-size:.79rem;font-weight:400;margin-top:.05rem}
+  .cc-dmore{font-size:.78rem;color:var(--muted);font-style:italic}
 </style></head>
 <body><main class="report"><header><p class="kicker"><a class="cc-home" href="../embed-demo.html" title="Seeing e^z — live embedded applets in a host article">↗ embed demo</a> · cross-branch session hub</p>
 <h1>Session control center</h1>
