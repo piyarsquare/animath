@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import { usePhone } from '../../chrome/usePhone';
 import { Slider, Select, Checkbox } from '../../components/ControlPanel';
 import { WORLDS, worldById, WorldSpec, deriveGeometry, analyzeWorld } from './worldSpec';
 import { generateProps, ARRANGEMENTS, ArrangementId } from './decor';
@@ -49,6 +50,9 @@ export default function PolygonWorlds() {
   const isSpherical = cover === 'spherical';
   const isHyperbolic = cover === 'hyperbolic';
   const props = useMemo(() => generateProps(landmarkCount, arrangement), [landmarkCount, arrangement]);
+  // Below 740px the workspace re-chromes (full-bleed view + floating bottom dock):
+  // lift the walk pad clear of the dock and move the corner overlays off the bar.
+  const phone = usePhone();
 
   const engineRef = useRef<PolygonEngine | null>(null);
   const depsRef = useRef<EngineDeps | null>(null);
@@ -250,6 +254,10 @@ export default function PolygonWorlds() {
   }, [zoomBy]);
 
   const getMapState = useCallback(() => engineRef.current?.getMapState() ?? null, []);
+  // Player's unit surface-normal direction (pose up). For the spherical worlds this
+  // is the point on the unit sphere the player occupies, which the embedding inset's
+  // sphere/Roman marker rides; flat/hyperbolic immersions ignore it.
+  const getDir = useCallback(() => engineRef.current?.getPose()?.up ?? null, []);
   const worldOptions = WORLDS.map((w) => ({ value: w.id, label: w.label }));
 
   /* ---- archetype panels (one row per legacy control; nothing dropped) ---- */
@@ -373,16 +381,18 @@ export default function PolygonWorlds() {
             <Canvas3D onMount={onMount} />
           </div>
 
-          <MovePad onSet={setKey} />
-          <SquareMiniMap getState={getMapState} spec={spec} />
-          {spec.id === 'rp2' && <EmbeddingInset key="rp2-embed" getState={getMapState} />}
+          <MovePad onSet={setKey} phone={phone} />
+          <SquareMiniMap getState={getMapState} spec={spec} phone={phone} />
+          <EmbeddingInset key={`embed-${spec.id}`} worldId={spec.id} getState={getMapState} getDir={getDir} phone={phone} />
 
-          <div style={{
-            position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
-            color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
-          }}>
-            Drag to look · WASD / arrows or the pad to walk · the polygon's gluing decides the world
-          </div>
+          {!phone && (
+            <div style={{
+              position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
+              color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
+            }}>
+              Drag to look · WASD / arrows or the pad to walk · the polygon's gluing decides the world
+            </div>
+          )}
         </div>
       ),
     },
@@ -416,7 +426,7 @@ const actionBtn: React.CSSProperties = {
   background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)', cursor: 'pointer', fontSize: 14, textAlign: 'left',
 };
 
-function MovePad({ onSet }: { onSet: (k: MoveKey, v: boolean) => void }) {
+function MovePad({ onSet, phone }: { onSet: (k: MoveKey, v: boolean) => void; phone?: boolean }) {
   const mv = (k: MoveKey, label: string, style: React.CSSProperties) => (
     <button
       aria-label={k}
@@ -427,8 +437,10 @@ function MovePad({ onSet }: { onSet: (k: MoveKey, v: boolean) => void }) {
       style={padBtn(style)}
     >{label}</button>
   );
+  // On phone the floating bottom dock sits at the screen's bottom edge; lift the
+  // pad above it so the back arrow stays tappable.
   return (
-    <div style={{ position: 'absolute', bottom: 20, right: 20, width: 150, height: 150, zIndex: 20 }}>
+    <div style={{ position: 'absolute', bottom: phone ? 100 : 20, right: phone ? 14 : 20, width: 150, height: 150, zIndex: 20 }}>
       {mv('fwd', '▲', { top: 0, left: 52 })}
       {mv('left', '◀', { top: 52, left: 0 })}
       {mv('right', '▶', { top: 52, left: 104 })}
@@ -488,7 +500,7 @@ function polygonSpec(spec: WorldSpec, st: SquareMapState | null): PolygonMapSpec
   };
 }
 
-function SquareMiniMap({ getState, spec }: { getState: () => SquareMapState | null; spec: WorldSpec }) {
+function SquareMiniMap({ getState, spec, phone }: { getState: () => SquareMapState | null; spec: WorldSpec; phone?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const specRef = useRef(spec);
   specRef.current = spec;
@@ -509,13 +521,15 @@ function SquareMiniMap({ getState, spec }: { getState: () => SquareMapState | nu
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [getState]);
+  // On phone, drop below the floating top bar and shrink so it shares the top row.
+  const box = phone ? 112 : 150;
   return (
     <div style={{
-      position: 'absolute', top: 12, right: 12, width: 150, height: 150,
+      position: 'absolute', top: phone ? 52 : 12, right: phone ? 8 : 12, width: box, height: box,
       pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.18)',
       borderRadius: 8, boxShadow: '0 4px 14px rgba(0,0,0,0.45)', overflow: 'hidden',
     }}>
-      <canvas ref={canvasRef} style={{ width: 150, height: 150, display: 'block' }} />
+      <canvas ref={canvasRef} style={{ width: box, height: box, display: 'block' }} />
       <div style={{
         position: 'absolute', top: 4, left: 8, fontSize: 10, letterSpacing: '0.08em',
         color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase',
