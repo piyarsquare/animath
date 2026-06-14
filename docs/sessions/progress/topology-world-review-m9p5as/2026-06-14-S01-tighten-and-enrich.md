@@ -37,6 +37,23 @@ six-part improvement roadmap (A–F).
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 17:00 — Dropped inset reference markers + fixed the phone layout
+**Why:** User: the inset reference markers ("pillars") were wrong — remove them from
+the mini 3D map; and make everything accessible on mobile (attached a phone shot where
+the walk pad was buried under the dock).
+
+- **Inset markers:** removed the fixed reference dots (pole + corners) from
+  `embeddingInset.tsx`; kept the live character bead. Cleaned the now-dead refs
+  machinery out of `immersions.ts` (`at` stays — the live markers use it).
+- **Phone layout (`PolygonWorlds.tsx` + `embeddingInset.tsx`):** the workspace goes
+  full-bleed below 740px with a floating bottom dock that buried the MovePad's lower
+  buttons and the inset. Now phone-aware via `usePhone()`: the **MovePad lifts above
+  the dock** (`bottom:100`), the **inset → top-left** and **mini-map → top-right**
+  (below the bar, shrunk to ~112px), and the desktop hint line is hidden. Verified at
+  390×844 — walk pad, panel dock, sheets, and both overlays all reachable.
+
+![Phone layout fixed (390×844)](assets/S01-phone-fixed.png)
+
 ### 🟡 milestone · 16:40 — Inset markers for every world + richer scene shading
 **Why:** User: (1) the genus-2 and Dyck insets showed no character location, and they
 want reference markers "like the pole at the center of the domain"; (2) give the
