@@ -39,6 +39,31 @@ confirms the current state of the projection math (`viewpoint.ts` /
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 14:55 — Third page (rendering) + series roadmap
+**Why:** User asked to build the render-modes guide and write a plan for the rest.
+
+`public/complex-rendering-guide.html` — *How the surface is drawn*, completing the
+trilogy (functions → projections → rendering). Six sections: Points + the sampling
+patterns (`fillPattern` Grid) → Sheet (four-corner cell color, derivative-recovered
+normals) → Tiles (deformed-grid quads capped by `uMaxTile`, tearing where stretched)
+→ Net (constant-width fiber ribbons) → adaptive density, **both** mechanisms (GPU
+`cellStretch` complementarity + CPU `redistributeAdaptive` via the Jacobian
+Frobenius norm with the median clamp) → a "which mode when" table. All three guides
+now cross-link as a series.
+
+Headless-verified the load-bearing embeds: `render=Tiles` on `exp` (fabric tears
+into detached squares where it stretches) and `render=Net` on `1/z` (the polar
+fibers — circles→circles, rays→rays). Both live WebGL; page composes.
+
+![Net mode: 1/z polar fibers](assets/2026-06-14-S02-net-inverse.png)
+
+Wrote the forward plan: `2026-06-14-S02-explainer-series-plan.md` (`kind: plan`,
+`status: proposed`). Two tracks — Track A reuses existing embeds (A1 coloring &
+colormaps is the recommended next page), Track B needs the **embed-route
+investment (B0)** that unlocks app-specific guides (Fractals/Correspondence,
+Topology, Trinary, Stable Matching). Plus a Guides-hub meta-move. `docs/EMBEDS.md`
+note now lists all three pages + points at the plan.
+
 ### 🟡 milestone · 14:40 — Functions guide written + verified
 **Why:** Second page complete; build green and both new embed kinds confirmed live.
 

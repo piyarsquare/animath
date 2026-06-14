@@ -111,12 +111,22 @@ gets a short "Embedding" note. A demo explainer page (e.g.
 sessions pipeline) can serve as the reference embed host on the same Pages
 site.
 
-> **Built so far:** two reference host pages ship under `public/` (copied to
-> the Pages root): `embed-demo.html` (the minimal "Seeing e^z" demo) and
-> `complex-particles-guide.html` — *From 4D to your screen*, a math-and-code
-> guide that pairs the same live applets with the exact source lines computing
-> each 4D→3D projection and the quaternion rotations (`viewpoint.ts`,
-> `quat4.ts`, `complexMath.ts`, and the `surfacePos` shader). They cross-link.
+> **Built so far:** reference host pages ship under `public/` (copied to the
+> Pages root) and cross-link:
+> - `embed-demo.html` — the minimal "Seeing e^z" demo.
+> - `complex-functions-guide.html` — *What the functions do*: how each `f` is
+>   computed (`complexMath.ts`) and what it does to the plane (Plane Transform
+>   embeds).
+> - `complex-particles-guide.html` — *From 4D to your screen*: the 4D→3D
+>   projections and quaternion rotations (`viewpoint.ts`, `quat4.ts`, the
+>   `surfacePos` shader).
+> - `complex-rendering-guide.html` — *How the surface is drawn*: the render
+>   modes (Points/Sheet/Tiles/Net) and adaptive density
+>   (`createParticleGeometry.ts` + the per-mode shaders).
+>
+> A roadmap for extending the series to the other apps (and the embed-route
+> investment that unlocks them) is in the branch's session reports
+> (`docs/sessions/.../2026-06-14-S02-explainer-series-plan.md`).
 
 ## Phase 2+ (separately scoped)
 
