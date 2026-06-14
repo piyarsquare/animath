@@ -68,6 +68,16 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
   const headlamp = new THREE.PointLight(0xfff0d8, L.lamp, 0, 1.4);
   root.add(headlamp);
 
+  // Richer materials: filmic tone mapping + a soft gradient image-based environment,
+  // so the shells, decor and avatar catch specular life and a graded ambient instead
+  // of reading flat under the direct lights alone.
+  deps.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  deps.renderer.toneMappingExposure = 1.06;
+  deps.renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const envTex = makeGradientEnv(deps.renderer);
+  const prevEnv = scene.environment;
+  scene.environment = envTex;
+
   const decor = makeFundamentalSquareDecor(opts.props ?? DEFAULT_PROPS);
 
   const coverDeps = { deps, root, spec, decor, squareSize, floorThickness };
@@ -119,9 +129,35 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
     clearSigns: () => cover.clearSigns?.(),
     dispose: () => {
       scene.remove(root);
+      scene.environment = prevEnv;
+      envTex.dispose();
       cover.dispose();
       decor.dispose();
       character.dispose();
     },
   };
+}
+
+/** A soft three-stop vertical gradient prefiltered into an environment map — a cheap
+ *  "studio sky" (cool zenith → indigo → near-black) that gives image-based fill and
+ *  gentle specular highlights without loading an HDR asset. */
+function makeGradientEnv(renderer: THREE.WebGLRenderer): THREE.Texture {
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const sky = new THREE.Scene();
+  const geo = new THREE.SphereGeometry(40, 32, 16);
+  const top = new THREE.Color(0x3a5aa0), mid = new THREE.Color(0x141b34), bot = new THREE.Color(0x05060d);
+  const c = new THREE.Color(), p = new THREE.Vector3(), cols: number[] = [];
+  const pa = geo.attributes.position;
+  for (let i = 0; i < pa.count; i++) {
+    p.fromBufferAttribute(pa, i).normalize();
+    const t = p.y * 0.5 + 0.5;
+    c.copy(t > 0.5 ? mid.clone().lerp(top, (t - 0.5) * 2) : bot.clone().lerp(mid, t * 2));
+    cols.push(c.r, c.g, c.b);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  const mat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide });
+  sky.add(new THREE.Mesh(geo, mat));
+  const rt = pmrem.fromScene(sky);
+  geo.dispose(); mat.dispose(); pmrem.dispose();
+  return rt.texture;
 }

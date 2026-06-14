@@ -64,6 +64,25 @@ function gridTexture(): THREE.CanvasTexture {
   return t;
 }
 
+/** Unit-radius gradient sky dome (zenith glow → deep space), scaled to the planet.
+ *  Unlit, fog-immune, drawn first behind everything. */
+function skyDome(): THREE.Mesh {
+  const geo = new THREE.SphereGeometry(1, 32, 16);
+  const top = new THREE.Color(0x1b2750), horizon = new THREE.Color(0x070b18), bot = new THREE.Color(0x02030a);
+  const c = new THREE.Color(), p = new THREE.Vector3(), cols: number[] = [];
+  const pa = geo.attributes.position;
+  for (let i = 0; i < pa.count; i++) {
+    p.fromBufferAttribute(pa, i).normalize();
+    const ty = p.y * 0.5 + 0.5;
+    c.copy(ty > 0.5 ? horizon.clone().lerp(top, (ty - 0.5) * 2) : bot.clone().lerp(horizon, ty * 2));
+    cols.push(c.r, c.g, c.b);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  const mat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false });
+  const m = new THREE.Mesh(geo, mat); m.renderOrder = -1;
+  return m;
+}
+
 export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const { deps, root, decor } = c;
   const { scene, camera } = deps;
@@ -86,9 +105,19 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   scene.background = new THREE.Color(SKY);
   scene.fog = null;
 
+  // gradient sky dome (zenith glow → deep space), so the void around the planet has
+  // depth instead of a flat fill. Unlit, fog-immune, behind everything.
+  const sky = skyDome();
+  sky.scale.setScalar(R * 4);
+  root.add(sky);
+
   // ── one neutral two-sided shell ──────────────────────────────────────────────
   const grid = gridTexture();
-  const planetMat = new THREE.MeshStandardMaterial({ map: grid, color: SHELL_COLOR, emissive: SHELL_COLOR, emissiveIntensity: 0.12, roughness: 0.6, transparent: true, opacity: 1, side: THREE.DoubleSide });
+  const planetMat = new THREE.MeshStandardMaterial({
+    map: grid, color: SHELL_COLOR, emissive: SHELL_COLOR, emissiveIntensity: 0.12,
+    roughness: 0.42, metalness: 0.12, envMapIntensity: 1.1,
+    transparent: true, opacity: 1, side: THREE.DoubleSide,
+  });
   const planet = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 48), planetMat);
   root.add(planet);
 
@@ -299,6 +328,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     if (r <= 0 || r === R) return;
     R = r;
     planet.geometry.dispose(); planet.geometry = new THREE.SphereGeometry(R, 64, 48);
+    sky.scale.setScalar(R * 4);
     buildMarkers();
     if (seam) { seam.geometry.dispose(); seam.geometry = new THREE.TorusGeometry(R, 0.12, 8, 96); }
     camera.far = R * 5; camera.updateProjectionMatrix();
@@ -347,6 +377,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
       clearSignsFn();
       planet.geometry.dispose();
       grid.dispose(); planetMat.dispose();
+      sky.geometry.dispose(); (sky.material as THREE.Material).dispose();
       seam?.geometry.dispose(); seamMat.dispose();
     },
   };

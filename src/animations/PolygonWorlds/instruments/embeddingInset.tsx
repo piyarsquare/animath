@@ -44,32 +44,53 @@ export function EmbeddingInset({
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     renderer.setPixelRatio(dpr);
     renderer.setSize(SIZE, SIZE, false);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 50);
     camera.position.set(0, immersion.camDist * 0.5, immersion.camDist);
     camera.lookAt(0, 0, 0);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    scene.add(new THREE.HemisphereLight(0xbfd2ff, 0x202535, 0.6));
+    const dir = new THREE.DirectionalLight(0xfff2e0, 1.0);
     dir.position.set(2, 3, 2);
     scene.add(dir);
+    const rim = new THREE.DirectionalLight(0x88aaff, 0.5);
+    rim.position.set(-2, -1, -2);
+    scene.add(rim);
 
     const spin = new THREE.Group();
     scene.add(spin);
     const mesh = immersion.build();
     spin.add(mesh);
 
+    // fixed reference markers — the domain-center "pole" + the identified corners,
+    // colored to match the mini-map, so the inset reads as an orientable map.
+    const refMats: THREE.Material[] = [];
+    const refGeos: THREE.BufferGeometry[] = [];
+    const at = new THREE.Vector3();
+    for (const ref of immersion.refs) {
+      immersion.at(ref.u, ref.v, at);
+      const geo = new THREE.SphereGeometry(ref.pole ? 0.12 : 0.09, 14, 10);
+      const mat = new THREE.MeshStandardMaterial({ color: ref.color, emissive: ref.color, emissiveIntensity: 0.75, roughness: 0.35 });
+      const dot = new THREE.Mesh(geo, mat);
+      dot.position.copy(at);
+      spin.add(dot);
+      refMats.push(mat); refGeos.push(geo);
+    }
+
     // player marker — a bright bead riding the immersed surface
-    const markerMat = new THREE.MeshStandardMaterial({ color: 0x8ef0ff, emissive: 0x8ef0ff, emissiveIntensity: 0.8, roughness: 0.3 });
-    const marker = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), markerMat);
+    const markerMat = new THREE.MeshStandardMaterial({ color: 0x8ef0ff, emissive: 0x8ef0ff, emissiveIntensity: 0.9, roughness: 0.25 });
+    const marker = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 12), markerMat);
     marker.visible = false;
     spin.add(marker);
 
     let raf = 0;
     const loop = () => {
       spin.rotation.y += 0.006;
-      const at = immersion.marker(stateRef.current(), dirRef.current());
-      if (at) { marker.position.copy(at); marker.visible = true; } else { marker.visible = false; }
+      const m = immersion.marker(stateRef.current(), dirRef.current());
+      if (m) { marker.position.copy(m); marker.visible = true; } else { marker.visible = false; }
       renderer.render(scene, camera);
       raf = requestAnimationFrame(loop);
     };
@@ -78,9 +99,11 @@ export function EmbeddingInset({
     return () => {
       cancelAnimationFrame(raf);
       mesh.traverse((o) => {
-        const m = o as THREE.Mesh;
-        if (m.isMesh) { m.geometry.dispose(); (m.material as THREE.Material).dispose(); }
+        const mo = o as THREE.Mesh;
+        if (mo.isMesh) { mo.geometry.dispose(); (mo.material as THREE.Material).dispose(); }
       });
+      refGeos.forEach((g) => g.dispose());
+      refMats.forEach((mm) => mm.dispose());
       marker.geometry.dispose();
       markerMat.dispose();
       renderer.dispose();

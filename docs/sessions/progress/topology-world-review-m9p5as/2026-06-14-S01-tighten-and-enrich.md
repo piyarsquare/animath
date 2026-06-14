@@ -37,6 +37,40 @@ six-part improvement roadmap (A–F).
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 16:40 — Inset markers for every world + richer scene shading
+**Why:** User: (1) the genus-2 and Dyck insets showed no character location, and they
+want reference markers "like the pole at the center of the domain"; (2) give the
+surface + environment a richer feeling, better shading/effects.
+
+**Markers (`immersions.ts` + `embeddingInset.tsx`).**
+- Every world now has a live character bead, including the hyperbolic pair — the
+  double torus and Dyck insets ride the Poincaré-disk chart (`genus2At`/`dyckAt`,
+  an honest approximation since the disk has no exact global immersion). Captions
+  updated ("Double torus · same walk", "Dyck surface · schematic").
+- Added fixed **reference markers**: the domain-center **pole** (amber) plus the four
+  identified corners in the mini-map hues (`cornerColor`), so the inset reads as an
+  orientable map, not just a spinning shape.
+
+**Shading (`fundamentalSquareEngine.ts` shared + `spherical.ts` + the inset).**
+- ACES filmic tone mapping + a prefiltered **gradient environment** (`makeGradientEnv`,
+  a cheap studio sky via `PMREMGenerator.fromScene`) set as `scene.environment` — all
+  worlds' materials now catch image-based fill + soft specular instead of reading flat.
+- Spherical: a graded **sky dome** (zenith glow → deep space) behind the planet, and a
+  shinier shell (metalness/roughness + envMapIntensity). The glass floor and decor now
+  pick up reflections.
+- Inset renderer: tone mapping + hemisphere/rim lights for nicer beads + surfaces.
+
+Build + lint clean. Verified headlessly across torus/rp2/genus2/crosscap3.
+
+![Genus-2 inset: character bead + pole/corner refs](assets/S01-inset-genus2-marked.png)
+![Richer shading — reflective glass floor + graded ambient](assets/S01-shading-torus.png)
+
+> [!NOTE]
+> Shading lift is moderate (tone mapping + IBL + gradient sky). A true **bloom** pass
+> for the bright elements (beacon, seam, markers) would need EffectComposer in the
+> engine's render path — deferred as a larger, riskier change in this multi-window
+> workspace.
+
 ### 🟣 decision · 15:12 — Reverted all ℝP² seam work to the original sphere
 **Why:** User: "this is not working. please revert to the original behavior." None of
 the seam attempts (camera somersault → smooth eversion → latitude-driven → fixed
