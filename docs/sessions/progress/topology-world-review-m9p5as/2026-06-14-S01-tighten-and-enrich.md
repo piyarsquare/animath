@@ -9,79 +9,94 @@ status: in-progress
 build: unknown
 followup: null
 pr: null
-app: topology-walk
+app: polygon-worlds
 ---
 
 # Tighten the app and enrich the visuals
 
 ## Session purpose
 
-Topology Walk is the target. This is an exercise in **tightening the
-application and providing a richer visual experience**. Begin by reviewing the
-current status of the app and any outstanding requests or TODOs, then take
-direction from the user.
+**Polygon Worlds** (`#/polygon-worlds`) is the target. This is an exercise in
+**tightening the application and providing a richer visual experience**. Begin
+by reviewing the current status of the app and any outstanding requests or
+TODOs, then take direction from the user.
+
+> Note: the branch is named `topology-world-review-…` from an initial
+> mis-statement of the focus; the actual app under work is **Polygon Worlds**.
 
 ## Previous session
 
-First tracked session on this branch. The most relevant prior handoff is
-[klein-bottle-fix · S01](../../handoff/klein-bottle-fix/2026-06-05-S01-klein-bottle-fix.md)
-(status: in-progress, followup: HIGH) — it grew the app into a multi-family
-closed-surface walker but shipped its chirality/handedness logic
-**logically complete, visually unverified** because no headless WebGL existed
-at the time.
+Latest handoff is
+[polygon-sign-orientation · S01](../../handoff/polygon-sign-orientation-50exno/2026-06-10-S01-sign-orientation-review.md)
+(status: **completed**, followup: **medium**) — fixed orientation end-to-end,
+added the two-sided glass **sign** instrument, generalized the euclidean
+presenter to arbitrary polygons (hexagonal torus + Klein), and laid out a
+six-part improvement roadmap (A–F).
 
 ## Working notes
 
 <!-- Newest entry first. -->
 
-### 🔵 finding · 02:32 — Reviewed current status and outstanding work
-**Why:** The session opens with a status review before taking direction.
+### 🔵 finding · 03:50 — Reviewed current status and outstanding work
+**Why:** Re-oriented onto Polygon Worlds after the focus correction, before
+taking direction.
 
-**What exists (shipped).** Topology Walk (`#/topology-walk`; `#/mobius` and
-`#/wrap-world` redirect here) is a first-person closed-surface walker with three
-engine families:
-- **Corridor** (`corridorEngine.ts`) — twisting (Möbius / double / triple) and
-  knotted (trefoil) tubes you walk *through*.
-- **Flat** (`flatEngine.ts`) — Euclidean torus + Klein bottle you walk *across*;
-  universal-cover tiling, trees↔columns cover skins, glass floor + mirrored
-  underside world, square mini-map, F-arrow footprint trail.
-- **Spherical** (`sphericalEngine.ts`) — sphere + ℝP² (antipodal), great-circle
-  walk, ℝP² inner shell.
+**What exists (shipped).** Polygon Worlds (`#/polygon-worlds`) walks every
+closed surface generated from one glued polygon, in first person. Architecture:
+- **Kernel** (`lib/`: `cayleyKlein.ts`, `develop.ts`, `invariants.ts`,
+  `realize.ts`) — the geometry engine; `npm run verify` guards it.
+- **Three presenters** — `euclidean.ts` (flat, now polygon-general),
+  `spherical.ts`, `hyperbolic.ts`.
+- **8 worlds** (`worldSpec.ts`): torus, klein, rp2, sphere, genus2,
+  crosscap3, **torus6**, **klein6**.
+- **Instruments:** the **ink trail** (`inkTrail.ts` — one canonical trail, no
+  mirror flags; every mirrored appearance is a genuine orientation-reversing
+  render transform), the two-sided glass **sign** (`sign.ts`), and an
+  **embedding inset** (`instruments/embeddingInset.tsx`).
+- **Guards:** `scripts/trail-chirality.mjs` (8-world chirality + decor/ink
+  audit, plants a sign per world), `scripts/probe-trivial-words.ts`,
+  `scripts/sign-shots.mjs`.
 
-Supporting modules since the klein handoff: `otherSide.ts`, `squareMap.ts`,
-`glassSurface.ts` — the shared "mirror to the glued other side" + square
-mini-map factoring that the klein handoff flagged as the unification debt
-appears to have landed.
-
-Shipped in commits #174 (Möbius → surface walker + flat torus/Klein), #186
-(legible Klein flip + spherical), #200 (workspace chrome redesign), #212 (debt
-pass).
-
-**Outstanding (from `docs/topology-walk-surface-tour.md` §6 roadmap):**
-- ⬜ **Normal-flip — "dive through the floor"** (instrument zero): Euler
-  somersault to the opposite face, eased roll. Prereq for orientation
-  experiments.
-- ⬜ **Euler's instruments**: intrinsic probes (straight-line return,
-  mirror-reversed trail, triangle angle-sum, circle radius↔circumference,
-  compass holonomy, hall-of-mirrors). Suggested start: hall-of-mirrors (nearly
-  free in the flat engine).
-- ⬜ **Embedding inset**: cross-cap → Roman → Boy's surface with player position
-  dotted — "the headline compare-the-three."
-- ⬜ **Hexagonal flat torus** (quick win).
-- ⬜ **Hyperbolic engine**: genus-2 octagon walk in ℍ² (the hard finale).
-
-**Open questions (roadmap §7):** embedding-inset rendering (2D canvas vs WebGL
-scissor viewport); hyperbolic projection (Poincaré vs Beltrami–Klein); how far
-to push the classification.
+Shipped across PRs #193 (the app), #200 (chrome redesign), #209/#212.
 
 > [!IMPORTANT]
-> **Headless WebGL is now available.** The session-start hook installed a
-> headless GL runtime (`node scripts/shoot.mjs '#/topology-walk' shot.png`).
-> This directly unblocks the **HIGH-priority visual-verification debt** from the
-> klein-bottle-fix handoff — the walk feel, the trees↔columns flip across the
-> red edge, the underside reading at 35%, and the ℝP²/antipodal trail reversal
-> were all shipped on hand-traced confidence and have never been seen rendered.
+> **PLAN.md's HIGH "path-demonstration redesign" item is stale.** That flag
+> came from spherical-p2 **S05** ("the path demonstration must be redesigned").
+> It was *resolved* in **S06** — the trail was rebuilt from first principles as
+> "ink on the sheet" and the user approved it in every world ("excellent!") —
+> and the sign-orientation session then hardened orientation correctness. The
+> live backlog is the sign-orientation handoff's **roadmap A–F**, all
+> medium-priority and awaiting the user's prioritization.
+
+**Outstanding (sign-orientation handoff roadmap A–F):**
+- **A. Remaining spherical n-gon worlds** — hex/oct ℝP² (smooth hemispheres)
+  and hex/oct zip spheres; generalize the spherical presenter's square chart
+  (`sq2hemi`/`fullDir`, `CHART_CORNERS=4`) to n-gon. *Recommended next target;
+  kernel is ready, seam identified.*
+- **B. Orbifold worlds** (cone points) — big separate feature; payoff is
+  curvature you can stand next to (Gauss–Bonnet with deficit angles).
+- **C. ℝP² "inside walk"** — let the seam crossing continue onto the inner
+  shell face; small relative to payoff.
+- **D. Curvature demonstrations** (user pick pending since S06) — holonomy
+  square (recommended), vertex-plate holonomy ring, or cone-point orbifolds.
+- **E. Fidelity polish** — hyperbolic decor azimuth equivariance; klein6
+  glide-crossing pixel-diff; sign-text persistence decision.
+- **F. Hygiene** — British spellings in `lib/develop.ts`, `polygonMap.ts`;
+  (TopologyWalk sibling audit — out of scope here).
+
+**Open question (roadmap §D / S06):** how to *show* negative curvature without
+relying on hyperbolic distances — holonomy square recommended, no decision yet.
+
+> [!NOTE]
+> Headless rendering already exists for this app (SwiftShader via
+> `scripts/trail-chirality.mjs`, `scripts/sign-shots.mjs`); the session-start
+> hook's headless WebGL reconfirms `scripts/shoot.mjs '#/polygon-worlds'` is
+> available for ad-hoc captures.
+
+### 🟣 decision · 03:49 — Focus corrected to Polygon Worlds
+**Why:** User clarified the target is **Polygon Worlds**, not Topology Walk
+(the branch name `topology-world-review` reflects the original mis-statement).
 
 ### 🟣 decision · 02:31 — Session focus: tighten + enrich visuals
-**Why:** User set the target (Topology World) and the goal (tightening +
-richer visual experience), then said to continue.
+**Why:** User set the goal (tightening + richer visual experience), then said
+to continue.
