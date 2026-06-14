@@ -10,7 +10,7 @@ build: passed
 followup: null
 thumbnail: assets/2026-06-14-S01-guide-top.png
 pr: null
-app: complex-particles
+app: docs, complex-particles
 ---
 
 # A math-and-code user guide for Complex Particles

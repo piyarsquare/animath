@@ -10,7 +10,7 @@ build: passed
 followup: null
 thumbnail: assets/2026-06-14-S02-net-inverse.png
 pr: null
-app: complex-particles
+app: docs, complex-particles
 ---
 
 # An explainer-page series for animath — roadmap beyond the complex trilogy

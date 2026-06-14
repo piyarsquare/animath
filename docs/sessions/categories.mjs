@@ -4,10 +4,11 @@
  * "App" meta), so a report's category label looks identical everywhere.
  *
  * Keys mirror the app slugs in src/apps.ts (the hash with its leading "/" dropped),
- * plus three cross-cutting tokens for work that isn't a single app:
+ * plus four cross-cutting tokens for work that isn't a single app:
  *   chrome   — the AppShell / global framework (top bar, drawer, routing)
  *   engine   — shared libraries under src/lib (particle engine, nbody, …)
- *   general  — sessions infra, build tooling, docs, cross-cutting chores
+ *   docs     — explainer / guide pages, instructional writing (public/*-guide.html)
+ *   general  — sessions infra, build tooling, cross-cutting chores
  *
  * `hue` drives the chip color (an HSL hue 0–360); `general` renders neutral.
  */
@@ -24,6 +25,7 @@ export const CATEGORIES = {
   "polygon-worlds":    { label: "Polygon Worlds",    hue: 175 },
   "chrome":            { label: "Chrome / Shell",    hue: 220 },
   "engine":            { label: "Engine / lib",      hue: 285 },
+  "docs":              { label: "Docs / Guides",     hue: 130 },
   "general":           { label: "General",           hue: 215, gray: true },
 };
 
@@ -40,7 +42,8 @@ for (const [key, { label }] of Object.entries(CATEGORIES)) {
 Object.assign(ALIAS, {
   shell: "chrome", framework: "chrome", appshell: "chrome",
   lib: "engine", particles: "engine", nbody: "engine",
-  docs: "general", infra: "general", tooling: "general", sessions: "general",
+  guide: "docs", guides: "docs", instruction: "docs", explainer: "docs",
+  infra: "general", tooling: "general", sessions: "general",
   "gale-shapley": "stable-marriage", marriage: "stable-marriage",
   matching: "stable-matching", topology: "topology-walk",
   mobius: "topology-walk", klein: "topology-walk",
