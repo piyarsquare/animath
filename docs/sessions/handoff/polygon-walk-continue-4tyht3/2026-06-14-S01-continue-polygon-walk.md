@@ -41,9 +41,11 @@ Four commits this session (newest last):
   the *same round sphere* as the pillowcase sphere, cut along a **star tree** (hub +
   one spoke per `x x⁻¹` fold). Because they're orientable round spheres, the walk
   (kernel Frame) and decor (`fullDir`) reuse the round-sphere path **unchanged**; the
-  only new geometry is a `zip = !antipodal && !spec.edges` branch that draws **n seam
-  arcs** (glowing geodesic tubes, hub→equator-leaf, lifted just proud of the shell)
-  and places 1 hub + n leaf corner markers.
+  only new geometry is a `zip = !antipodal && !spec.edges` branch that draws **n seams
+  as rows of stitches** (short bars crossing the hub→equator-leaf geodesic, alternately
+  slanted — sutures closing the cut; one `InstancedMesh` per world, density tracks arc
+  length) and places 1 hub + n leaf corner markers. (Initially drawn as solid tubes;
+  restyled to stitches at the user's request — commit `72836a0`.)
 
 - **`f59f1cc` Guard hardening.** The earlier full-guard run flagged `klein6`
   `B=cyan@−axis` — but two clean re-runs of klein6 alone both passed. **Root cause:**
@@ -70,7 +72,7 @@ worlds).
 | File | Role |
 |---|---|
 | [`presenters/spherical.ts:116`](https://github.com/piyarsquare/animath/blob/f59f1cc/src/animations/PolygonWorlds/presenters/spherical.ts#L116) | `zip` detection; the zip branch (seams + hub/leaf markers) lives below |
-| [`presenters/spherical.ts:269`](https://github.com/piyarsquare/animath/blob/f59f1cc/src/animations/PolygonWorlds/presenters/spherical.ts#L269) | `rebuildZipSeams()` — n geodesic seam tubes, rebuilt with the shell radius |
+| [`presenters/spherical.ts`](https://github.com/piyarsquare/animath/blob/72836a0/src/animations/PolygonWorlds/presenters/spherical.ts) | `stitchMatrices()` + `rebuildZipSeams()` — the seam stitches (InstancedMesh), rebuilt with the shell radius |
 | [`presenters/spherical.ts:176`](https://github.com/piyarsquare/animath/blob/f59f1cc/src/animations/PolygonWorlds/presenters/spherical.ts#L176) | `cornerPlacements()` zip branch — 1 hub (north pole) + n leaf markers |
 | [`squareMap.ts:111`](https://github.com/piyarsquare/animath/blob/f59f1cc/src/animations/PolygonWorlds/squareMap.ts#L111) | `ngon2hemi` / `hemi2ngon` — the A1 polygon-gauge hemisphere chart |
 | [`worldSpec.ts:165`](https://github.com/piyarsquare/animath/blob/f59f1cc/src/animations/PolygonWorlds/worldSpec.ts#L165) | the 4 new world specs (rp2hex/oct, zipsphere6/8) + id union at L48 |
