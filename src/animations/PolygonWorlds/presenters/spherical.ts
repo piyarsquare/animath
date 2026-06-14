@@ -80,6 +80,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   let R = Math.max(12, c.squareSize);
   let glassOpacity = 0.45;   // clear-but-present default (host re-pushes on mount)
   let camDist = 4.5;
+  let underVisible = true;   // inner-decor gate from the glass slider (see applyGlass)
 
   camera.fov = 75; camera.near = 0.05; camera.far = R * 5; camera.updateProjectionMatrix();
   camera.up.set(0, 1, 0);
@@ -214,7 +215,8 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   function applyGlass() {
     const g = glassState(glassOpacity, GLASS);
     planetMat.opacity = g.opacity; planetMat.depthWrite = g.depthWrite; planetMat.transparent = glassOpacity < 0.999; planetMat.needsUpdate = true;
-    innerG.visible = g.showUnder;
+    underVisible = g.showUnder;
+    innerG.visible = g.showUnder;   // per-frame update() re-shows it while inside
     for (const s of signs) if (s.twin) s.twin.visible = g.showUnder;
   }
   applyGlass();
@@ -241,6 +243,18 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const posU = new THREE.Vector3(), fwdU = new THREE.Vector3();
   const posW = new THREE.Vector3(), eye = new THREE.Vector3(), look = new THREE.Vector3();
   const camPos = new THREE.Vector3();
+  // ── the inside walk (ℝP² only) ───────────────────────────────────────────────
+  // On ℝP² the seam (z=0 great circle) is where the orientation cover changes
+  // sheet. Crossing it physically dives the camera through the floor onto the
+  // INNER face of the shell — you walk the hollow planet from inside, the world
+  // you came from now overhead through the glass — and crossing back re-emerges
+  // you. The flip is a smooth somersault about the heading: `rollT` eases 0→1 as
+  // the player crosses into z<0, rotating local "up" from +normal to −normal and
+  // sliding the eye from R+EYE (outside) to R−EYE (inside). Matches chart()'s
+  // `flipped` (= the antipodal sheet), so map, decor sheet and camera agree.
+  const localUp = new THREE.Vector3();
+  const rollQ = new THREE.Quaternion();
+  let rollT = 0;
 
   function syncPose() {
     posU.copy(v3(framePos(frame)));
@@ -258,15 +272,31 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     if (dyaw || f || strafe) frame = reorthonormalize(frame);
     syncPose();
 
-    cam.up.copy(posU);
+    // ease the somersault toward the current sheet (inside ⇔ on the z<0 sheet)
+    const targetInside = antipodal && posU.z < 0 ? 1 : 0;
+    const rate = dt / 0.5;                       // ~half-second flip
+    rollT += Math.max(-rate, Math.min(rate, targetInside - rollT));
+    // local up = surface normal rolled about the heading: +normal → −normal
+    rollQ.setFromAxisAngle(fwdU, rollT * Math.PI);
+    localUp.copy(posU).applyQuaternion(rollQ);
+    const eyeR = R + EYE * Math.cos(rollT * Math.PI);   // R+EYE (out) → R−EYE (in)
+    // inner decor is your foreground once you are inside — show it regardless of glass
+    innerG.visible = underVisible || rollT > 0.02;
+    // lift the shell's self-glow as you dive inside, so the hollow interior reads
+    // (the directional key lights graze the inner face near the seam)
+    planetMat.emissiveIntensity = 0.12 + 0.34 * rollT;
+
+    cam.up.copy(localUp);
     if (thirdPerson) {
-      camPos.copy(posW).addScaledVector(fwdU, -camDist).addScaledVector(posU, 2.6 + pitch * 1.6);
+      // orbit the avatar (fixed at posW on the shell); localUp carries the inside
+      // flip, so the rig swings toward the planet's center once you are inside
+      camPos.copy(posW).addScaledVector(fwdU, -camDist).addScaledVector(localUp, 2.6 + pitch * 1.6);
       cam.position.copy(camPos);
-      cam.lookAt(posW.x + posU.x * 1.2, posW.y + posU.y * 1.2, posW.z + posU.z * 1.2);
+      cam.lookAt(posW.x + localUp.x * 1.2, posW.y + localUp.y * 1.2, posW.z + localUp.z * 1.2);
     } else {
-      eye.copy(posU).multiplyScalar(R + EYE);
+      eye.copy(posU).multiplyScalar(eyeR);
       const cp = Math.cos(Math.max(-MAX_PITCH, Math.min(MAX_PITCH, pitch)));
-      look.copy(fwdU).multiplyScalar(cp).addScaledVector(posU, Math.sin(pitch));
+      look.copy(fwdU).multiplyScalar(cp).addScaledVector(localUp, Math.sin(pitch));
       cam.position.copy(eye);
       cam.lookAt(eye.x + look.x, eye.y + look.y, eye.z + look.z);
     }

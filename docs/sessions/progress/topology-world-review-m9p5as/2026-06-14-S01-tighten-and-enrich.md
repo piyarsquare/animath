@@ -37,6 +37,41 @@ six-part improvement roadmap (A–F).
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 13:35 — C: ℝP² inside-walk implemented + verified
+**Why:** Feature 2 (roadmap C) — crossing the seam now dives you inside the hollow planet.
+
+**What landed (spherical presenter, camera-only — no decor/deck change).**
+- Crossing the ℝP² seam (z=0) eases a `rollT` 0→1 tied to the `flipped` sheet
+  (`posU.z < 0`). The camera **somersaults** — a 180° roll about the heading
+  (`localUp = posU` rotated π about `fwdU`) — which flips up (+normal→−normal)
+  **and** swaps left/right (the mirror), exactly the orientation reversal, while
+  keeping you walking forward. The eye slides R+EYE (outside) → R−EYE (inside) so
+  you end up on the **inner** face of the shell.
+- Inner decor is force-shown while inside (`innerG.visible`), and the shell's
+  self-glow lifts with `rollT` so the hollow interior reads (the key lights graze
+  the inner face near the seam). Third-person rig swings toward the planet center
+  via `localUp`. Re-crossing eases back out — two laps to come home.
+- EXPLAINER's ℝP² section rewritten for the dive-through-the-floor behavior; added
+  a general "shape from outside" section for the now-universal inset.
+
+**Why it respects the orientation law.** The deck already places south-inner ≡
+north-outer (both trees) and south-outer ≡ north-inner (both columns), all det>0.
+So the inside walk is a pure *camera* move onto the already-correct inner face —
+it does **not** touch the deck/decor the sign-orientation session enshrined.
+
+**Verification (headless, ?polydebug bridge).** Drove the avatar across the seam
+on ℝP²: chart flips to `flipped:true`, mini-map reads *other face*, camera lands
+inside (third- and first-person), inner trees visible, outside unregressed. The
+geometric correctness of the roll is argued above; a chirality-guard extension for
+the inside camera would be a good belt-and-suspenders follow-up.
+
+![Inside the hollow ℝP² planet (third person)](assets/S01-rp2-inside.png)
+
+> [!NOTE]
+> Near the equator the interior is a dim "night" read (grazing key light); it
+> brightens toward the poles and with the glow lift. Further inside-lighting polish
+> (an interior fill / headlamp boost) is a low-risk visual follow-up, not blocking.
+
 ### 🟡 milestone · 12:40 — Embedding inset now ships for every world (verified headlessly)
 **Why:** Feature 1 complete — the "immersed in ℝ³" 3D model is no longer ℝP²-only.
 
