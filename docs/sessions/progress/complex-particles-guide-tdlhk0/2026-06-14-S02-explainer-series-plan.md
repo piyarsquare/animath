@@ -11,6 +11,8 @@ followup: null
 thumbnail: assets/2026-06-14-S02-net-inverse.png
 pr: null
 app: docs, complex-particles
+signals: needs-dan, not-live
+next: Decide whether to fund the embed-route work (B0) that unlocks app-specific guides.
 ---
 
 # An explainer-page series for animath — roadmap beyond the complex trilogy

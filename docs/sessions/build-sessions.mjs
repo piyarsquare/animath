@@ -22,7 +22,8 @@ import { dirname, join, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { marked } from "marked";
 import { htmlToMarkdown } from "./convert-html.mjs";
-import { CATEGORIES, normalizeApps, shortName, appChips, catHue } from "./categories.mjs";
+import { CATEGORIES, normalizeApps, shortName, appChips, catHue,
+  normalizeSignals, signalChips, signalDigest, SIGNAL_KEYS, DIGEST_ORDER } from "./categories.mjs";
 
 marked.setOptions({ gfm: true });
 
@@ -142,6 +143,7 @@ for (const rec of byKey.values()) {
   reports.push({ slug: rec.slug, short: shortName(rec.slug), base: rec.base, date,
     kind: fm.kind || "?", session: fm.session || "?", title: fm.title || rec.base, status: fm.status || "?",
     apps, thumb, reflection: extractReflection(md),
+    signals: normalizeSignals(fm.signals), next: fm.next || null,
     href: `converted/${rec.kind}/${rec.slug}/${rec.base}.preview.html` });
 }
 
@@ -169,6 +171,14 @@ for (const s of sessions.values()) {
   for (const r of s.reports) for (const a of r.apps) if (!seen.includes(a)) seen.push(a);
   s.apps = seen.length ? seen : ["general"];
   s.primary = s.apps[0];
+  // Dashboard signals: union of every report's declared signals, plus the one
+  // *derived* signal — high-followup, lifted from the rolled-up reflection level.
+  // The handoff's "next" wins (authoritative end-state), else the first that has one.
+  const sig = new Set();
+  for (const r of s.reports) for (const k of r.signals) sig.add(k);
+  if (s.reflection && (s.reflection.level === "HIGH" || s.reflection.level === "CRITICAL")) sig.add("high-followup");
+  s.signals = SIGNAL_KEYS.filter((k) => sig.has(k));
+  s.next = p.next || (s.reports.find(r => r.next) || {}).next || null;
 }
 
 const branchSet = new Set([...sessions.values()].map(s => s.short));
@@ -181,7 +191,7 @@ const statusBadge = (s) => `<span class="badge ${({ completed: "badge-ok", "in-p
 
 let cardsHtml = "";
 for (const s of sessionList) {
-  const hay = [s.short, s.slug, s.session, s.status, ...s.apps, ...s.reports.map(r => r.title)].join(" ").toLowerCase();
+  const hay = [s.short, s.slug, s.session, s.status, ...s.apps, ...s.signals, s.next || "", ...s.reports.map(r => r.title)].join(" ").toLowerCase();
   let rows = "";
   for (const r of s.reports) rows += `      <a class="cc-row" href="${esc(r.href)}"><span class="chip chip-${esc(r.kind)}">${esc(r.kind)}</span><span class="cc-rtitle">${esc(r.title)}</span></a>\n`;
   const thumb = s.thumb ? `      <img class="cc-thumb" src="${esc(s.thumb)}" alt="" loading="lazy">\n` : "";
@@ -189,11 +199,13 @@ for (const s of sessionList) {
   // Inert <template>: the rendered reflection HTML, carried with each card so the
   // Reflections view can clone it after the same search/category filtering runs.
   const reflTpl = refl ? `      <template class="cc-refl-data" data-rhref="${esc(refl.href)}">${refl.html}</template>\n` : "";
-  cardsHtml += `    <article class="cc-session${s.thumb ? " has-thumb" : ""}" data-short="${esc(s.short)}" data-apps="${esc(s.apps.join(" "))}" data-cat="${esc(s.primary)}" data-hue="${catHue(s.primary)}" data-date="${esc(s.date.slice(0, 10))}" data-status="${esc(s.status)}" data-session="${esc(s.session)}" data-title="${esc(s.title)}" data-href="${esc(s.href)}" data-refl="${refl ? 1 : 0}" data-level="${esc(refl?.level || "")}" data-hay="${esc(hay)}">
+  const sigs = s.signals.length ? `      <div class="cc-sigs">${signalChips(s.signals)}</div>\n` : "";
+  const nextLine = s.next ? `      <div class="cc-cnext"><span class="cc-nlabel">next</span> ${esc(s.next)}</div>\n` : "";
+  cardsHtml += `    <article class="cc-session${s.thumb ? " has-thumb" : ""}" data-short="${esc(s.short)}" data-apps="${esc(s.apps.join(" "))}" data-cat="${esc(s.primary)}" data-hue="${catHue(s.primary)}" data-date="${esc(s.date.slice(0, 10))}" data-status="${esc(s.status)}" data-session="${esc(s.session)}" data-title="${esc(s.title)}" data-href="${esc(s.href)}" data-refl="${refl ? 1 : 0}" data-level="${esc(refl?.level || "")}" data-signals="${esc(s.signals.join(" "))}" data-hay="${esc(hay)}">
 ${thumb}      <div class="cc-shead"><span class="cc-sid">${esc(s.session)}</span> ${statusBadge(s.status)} <span class="cc-date">${esc(s.date.slice(0, 10))}</span> <span class="cc-branch"><code>${esc(s.short)}</code></span></div>
       <div class="cc-stitle">${esc(s.title)}</div>
       <div class="cc-cats">${appChips(s.apps, (k) => "#cat=" + k)}</div>
-      <div class="cc-reports">\n${rows}      </div>
+${sigs}${nextLine}      <div class="cc-reports">\n${rows}      </div>
 ${reflTpl}    </article>\n`;
 }
 const reflCount = sessionList.filter(s => s.reflection).length;
@@ -207,6 +219,23 @@ for (const s of sessionList) for (const a of s.apps) catCounts[a] = (catCounts[a
 const catBtns = Object.keys(CATEGORIES).filter((k) => catCounts[k]).map((k) =>
   `<a class="cc-fbtn" data-cat="${k}" href="#cat=${k}">${appChips([k])}<span class="cc-fcount">${catCounts[k]}</span></a>`).join("\n  ");
 const catBar = `<a class="cc-fbtn cc-fall active" data-cat="" href="#">All <span class="cc-fcount">${sessions.size}</span></a>\n  ${catBtns}`;
+
+// "Start here" digest: roll every session up into the buckets of the signals it
+// carries (a session can land in several), in DIGEST_ORDER. Server-rendered above
+// the toolbar so it's the first thing the eye lands on — the project's open-items
+// map, not a list to read. Each entry links to the session and shows its `next`.
+const bucketMap = {};
+for (const s of sessionList) {
+  for (const b of new Set(s.signals.map(signalDigest))) (bucketMap[b] = bucketMap[b] || []).push(s);
+}
+const digestCols = DIGEST_ORDER.filter((b) => bucketMap[b]?.length).map((b) => {
+  const items = bucketMap[b].map((s) =>
+    `        <li><a href="${esc(s.href)}"><code>${esc(s.short)}</code> ${esc(s.title)}</a>${s.next ? `<span class="cc-dnext">${esc(s.next)}</span>` : ""}</li>`).join("\n");
+  return `      <div class="cc-dcol"><h3>${esc(b)} <span>${bucketMap[b].length}</span></h3>\n      <ul>\n${items}\n      </ul></div>`;
+}).join("\n");
+const startHere = digestCols
+  ? `<section class="cc-starthere"><h2>Start here</h2><p class="cc-dsub">Open items rolled up from each session's <code>signals:</code> and self-reflection &mdash; the project map, not a list to read. Click through to act.</p>\n    <div class="cc-digest">\n${digestCols}\n    </div></section>\n`
+  : "";
 
 writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
 <!-- GENERATED by build-sessions.mjs — do not edit by hand. -->
@@ -262,6 +291,24 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
   .cc-home{color:var(--accent);text-decoration:none;font-weight:600}
   .cc-home:hover{text-decoration:underline}
   @media (max-width:520px){.cc-thumb{width:96px;height:60px}}
+  /* dashboard signals + "Start here" digest */
+  .sig{display:inline-flex;align-items:center;font-size:.7rem;line-height:1.6;padding:.02rem .45rem;border-radius:999px;white-space:nowrap;
+       border:1px solid hsl(var(--c,215) 55% 50% / .55);color:hsl(var(--c,215) 60% 40%);background:hsl(var(--c,215) 65% 55% / .12)}
+  .cc-sigs{margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.3rem}
+  .cc-cnext{margin-top:.35rem;font-size:.84rem;color:var(--muted)}
+  .cc-cnext .cc-nlabel{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);border:1px solid var(--accent-soft);border-radius:4px;padding:0 .25rem;margin-right:.35rem}
+  .cc-starthere{border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;background:var(--panel);padding:.7rem .95rem .85rem;margin:.3rem 0 1.1rem}
+  .cc-starthere>h2{margin:.1rem 0 .15rem;font-size:1.1rem}
+  .cc-dsub{margin:.1rem 0 .7rem;font-size:.82rem;color:var(--muted)}
+  .cc-digest{display:grid;grid-template-columns:repeat(auto-fit,minmax(15.5rem,1fr));gap:.5rem 1.4rem}
+  .cc-dcol h3{font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:.1rem 0 .4rem;display:flex;align-items:center;gap:.4rem}
+  .cc-dcol h3 span{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:0 .42rem;font-size:.72rem;font-weight:700}
+  .cc-dcol ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.4rem}
+  .cc-dcol li{font-size:.86rem;line-height:1.3}
+  .cc-dcol li a{color:var(--fg);text-decoration:none;font-weight:600}
+  .cc-dcol li a:hover{color:var(--accent)}
+  .cc-dcol li code{font-size:.72rem;color:var(--muted);font-weight:400}
+  .cc-dnext{display:block;color:var(--muted);font-size:.79rem;font-weight:400;margin-top:.05rem}
 </style></head>
 <body><main class="report"><header><p class="kicker"><a class="cc-home" href="../embed-demo.html" title="Seeing e^z — live embedded applets in a host article">↗ embed demo</a> · cross-branch session hub</p>
 <h1>Session control center</h1>
@@ -269,7 +316,7 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
 <div><dt>Generated</dt><dd>${new Date().toISOString().slice(0, 16).replace("T", " ")} · <code>build-sessions.mjs</code></dd></div></dl>
 <p class="lineage">Filter to a category with the buttons (or click any chip); group by app / branch / status / month, sort, or switch to a global timeline. The active filter lives in the URL (<code>#cat=…</code>), so it's shareable. Cards list every app a session touched. Provenance = slug folder.</p></header>
 <div class="body"><div class="content">
-<div class="cc-tools">
+${startHere}<div class="cc-tools">
   <input id="q" type="search" placeholder="filter by branch / title / status / app / session…" autocomplete="off">
   <label>group <select id="groupby">
     <option value="app">app</option><option value="branch">branch</option>

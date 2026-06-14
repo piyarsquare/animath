@@ -10,6 +10,8 @@ build: passed
 followup: null
 pr: null
 app: docs, complex-particles
+signals: phone-needed, not-live
+next: Real-device mobile pass on the guide pages; optionally split the rendering guide 2+2.
 ---
 
 # Math-and-code guide series — split heavy pages, align plane/particles

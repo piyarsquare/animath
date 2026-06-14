@@ -23,6 +23,7 @@ export const CATEGORIES = {
   "agentic-sorting":   { label: "Agentic Sorting",   hue: 95  },
   "stable-matching":   { label: "Stable Matching",   hue: 355 },
   "polygon-worlds":    { label: "Polygon Worlds",    hue: 175 },
+  "trees-and-nets":    { label: "Trees and Nets",    hue: 115 },
   "chrome":            { label: "Chrome / Shell",    hue: 220 },
   "engine":            { label: "Engine / lib",      hue: 285 },
   "docs":              { label: "Docs / Guides",     hue: 130 },
@@ -47,6 +48,7 @@ Object.assign(ALIAS, {
   "gale-shapley": "stable-marriage", marriage: "stable-marriage",
   matching: "stable-matching", topology: "topology-walk",
   mobius: "topology-walk", klein: "topology-walk",
+  trees: "trees-and-nets", nets: "trees-and-nets", associahedron: "trees-and-nets",
   // legacy src/animations/<App> names whose kebab form ≠ the route slug
   "trinary-stars": "trinary",
   "fractals-gpu": "fractals", "fractals2-d": "fractals", "fractals-cpu": "fractals",
@@ -127,3 +129,60 @@ export function appChip(key, href) {
 /** A run of chips for a key list. Pass `hrefFor(key)` to make each chip a filter link. */
 export const appChips = (keys, hrefFor) =>
   (keys || []).map((k) => appChip(k, hrefFor ? hrefFor(k) : null)).join(" ");
+
+/* ─── Dashboard signals ────────────────────────────────────────────────────
+ * A *closed* vocabulary of "what needs attention" tokens a report may declare in
+ * its flat `signals:` frontmatter (comma/space separated). Like the category and
+ * archetype vocabularies, it's deliberately small: unknown tokens are dropped so a
+ * typo never invents a phantom badge. `hue` colors the pill; `digest` is the
+ * "Start here" bucket the signal rolls up into (and `DIGEST_ORDER` ranks them).
+ *
+ * Most signals are author-declared. Exactly one is *derived* by the builder:
+ * `high-followup`, lifted from a report's Self-reflection Follow-up value
+ * (HIGH/CRITICAL). Inference is kept high-precision on purpose — the dashboard is
+ * useless if it cries wolf, so the consequential signals (needs-dan, not-live) are
+ * never guessed from prose; they must be declared. */
+export const SIGNALS = {
+  "needs-dan":         { label: "needs Dan",  hue: 35,  digest: "Needs you" },
+  "high-followup":     { label: "follow-up",  hue: 280, digest: "High follow-up" },
+  "phone-needed":      { label: "phone",      hue: 200, digest: "Needs verification" },
+  "visual-unverified": { label: "unverified", hue: 200, digest: "Needs verification" },
+  "not-live":          { label: "not live",   hue: 0,   digest: "Not landed" },
+};
+export const SIGNAL_KEYS = Object.keys(SIGNALS);
+export const DIGEST_ORDER = ["Needs you", "High follow-up", "Needs verification", "Not landed"];
+
+const SIGNAL_ALIAS = {};
+for (const k of SIGNAL_KEYS) SIGNAL_ALIAS[k] = k;
+Object.assign(SIGNAL_ALIAS, {
+  "needs-user": "needs-dan", "needsdan": "needs-dan", decision: "needs-dan", "awaiting-user": "needs-dan",
+  followup: "high-followup", "high-follow-up": "high-followup",
+  phone: "phone-needed", mobile: "phone-needed", device: "phone-needed",
+  unverified: "visual-unverified", visual: "visual-unverified", headless: "visual-unverified",
+  "branch-only": "not-live", unmerged: "not-live", "needs-merge": "not-live", "not-landed": "not-live",
+});
+
+/** Resolve a report's `signals:` field to a de-duplicated list of valid keys,
+ *  ordered canonically (SIGNAL_KEYS order). Unknown tokens are ignored. */
+export function normalizeSignals(field) {
+  const raw = (field == null ? "" : String(field)).trim();
+  if (!raw || /^(null|none|tbd)$/i.test(raw)) return [];
+  const set = new Set();
+  for (const tok of raw.split(/[,/]+|\s+/).map((s) => s.trim().toLowerCase()).filter(Boolean)) {
+    const key = SIGNAL_ALIAS[tok];
+    if (key) set.add(key);
+  }
+  return SIGNAL_KEYS.filter((k) => set.has(k));
+}
+
+export const signalLabel  = (k) => (SIGNALS[k] || {}).label || k;
+export const signalHue    = (k) => (SIGNALS[k] || {}).hue ?? 215;
+export const signalDigest = (k) => (SIGNALS[k] || {}).digest || "Other";
+
+/** One signal pill. */
+export function signalChip(key) {
+  if (!SIGNALS[key]) return "";
+  return `<span class="sig" style="--c:${signalHue(key)}">${esc(signalLabel(key))}</span>`;
+}
+/** A run of signal pills for a key list. */
+export const signalChips = (keys) => (keys || []).map(signalChip).join(" ");
