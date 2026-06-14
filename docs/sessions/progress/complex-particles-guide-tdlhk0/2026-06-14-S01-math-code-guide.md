@@ -39,6 +39,28 @@ confirms the current state of the projection math (`viewpoint.ts` /
 
 <!-- Newest entry first. -->
 
+### 🟢 milestone · 20:50 — Session-dashboard productionized: signals · to-do · App-map
+**Why:** User wanted the report system to surface a project map + a usable to-do list.
+
+Built a signals/backlog system into `docs/sessions/build-sessions.mjs` + `categories.mjs`:
+- **Closed `signals:` vocabulary** (needs-dan · phone-needed · visual-unverified ·
+  not-live) + `next:` flat frontmatter, parsed per report. High-precision: explicit
+  wins; only `high-followup` (from reflection level), `needs-dan` (proposed plans),
+  and `not-live` (report absent on main) are *inferred* — so the full 102-report
+  history backfills without editing old files. (Caught + fixed a not-live bug: a
+  branch forked from main contains main's history, so is-ancestor flags everything —
+  switched to "path exists on main".)
+- **"Start here" digest** (auto) + **"To-do" panel** from a new hand-edited
+  **`docs/sessions/TODO.md`** backlog (the durable to-do list with notes). Both are
+  **filter-aware** — pick a category and they narrow to that app.
+- **App-map view** (4th view): per-app rollup — latest · risk (worst follow-up) ·
+  open (signals + backlog count) · next — sorted worst-risk first.
+- **Taxonomy:** added `docs` + `trees-and-nets` categories.
+- **Productionized for agents:** REPORT_STYLE §1.2, both templates, and the handoff +
+  start-session skills now author/consult `signals:`/`next:` + the backlog.
+
+![App-map view](assets/2026-06-14-S03-appmap.png)
+
 ### 🟡 milestone · 16:55 — Split heavy guides; cut applet weight; align plane/particles
 **Why:** User: applet weight too high (many WebGL iframes/page), and Plane vs
 Particles felt confusing. Chosen fixes: split pages + fewer/more-capable applets.

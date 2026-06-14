@@ -36,9 +36,9 @@ informs future rounds. Delete or check off items as they land.
   start-session skills so every session declares `signals:`/`next:` and consults +
   appends this backlog. Without that, the dashboard only stays rich by inference.
 
-- [ ] [chrome] !med App-map view in the control center — per-app rollup (latest · open · risk · next).
-  The session model already unions apps and picks a primary; this is a natural
-  fourth view next to Cards / Timeline / Reflections.
+- [ ] [chrome] !med Make the App-map richer — open it from a chip, link "N backlog" to the filtered To-do, maybe roll trends over time.
+  The base App-map view now ships (per-app latest · risk · open · next, sorted
+  worst-risk-first); these are the polish follow-ups.
 
 - [ ] [complex-particles] !low Split the rendering guide 2+2 for consistency.
   It is the only guide page still at 4 live applets (Points/Sheet/Tiles/Net).
@@ -53,6 +53,8 @@ informs future rounds. Delete or check off items as they land.
   Today "not live" = the report's path is absent from main. When a branch is
   squash-merged and deleted its reports land on main and correctly flip to landed —
   confirm that on the next real merge.
+
+- [x] [chrome] App-map view in the control center — per-app rollup (latest · risk · open · next).
 
 - [x] [docs] Split the two heavy complex guides into Part 1 / Part 2; cut applet weight.
 
