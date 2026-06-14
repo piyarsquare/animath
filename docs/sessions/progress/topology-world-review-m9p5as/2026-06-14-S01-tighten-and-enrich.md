@@ -37,6 +37,43 @@ six-part improvement roadmap (A–F).
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 14:55 — Eversion → a FIXED everted surface (local curvature reversal)
+**Why:** User: the previous version made the *entire* world flatten (a global scale by
+the character's latitude). They want the **local** curvature to flatten then reverse —
+"along the seam the sphere flattens open, starts to fold upward around the character" —
+a fixed shape, not a global event.
+
+**What changed (spherical presenter — substantial rework).**
+- Dropped the group-matrix flatten entirely. The ℝP² shell is now a **custom everted
+  surface** built per-vertex (`buildShellGeometry` + `evertDir`): the north hemisphere
+  (z≥0) is the round sphere (convex, you stand on top); across the z=0 seam the
+  meridian leaves *vertically* (so the seam is locally flat/smooth) and the south
+  hemisphere folds **up and out** into a concave brim (a sun-hat). The shape is FIXED —
+  it does not reshape as you move; you simply experience convex → flat → concave
+  *locally* as you walk across it.
+- Avatar, camera, decor and ink all ride the everted surface via an everted frame
+  (`evertDir`/`evertNormal` → `ePosW`, `eUp`, `eFwd`, `eLeft`). `eUp` is the
+  upper-face normal, so the player stays upright the whole way — only the ground's
+  curvature reverses under them. The mirror ink-twin is retired (the eversion's own
+  reflection is the mirror now).
+- Trees on the outer/upper face, columns on the inner/under face, uniformly — so
+  crossing the seam, the same landmark reads as an outside tree then an inside column,
+  carried by the fold. Spawn near the +z pole (kept).
+
+**Verification (headless walk pole→seam→past).** Convex cap with trees at the pole →
+ground locally **flat at the seam** while the rest of the world keeps its shape (not a
+global flatten) → past the seam, concave with columns; avatar upright throughout.
+Build + lint clean.
+
+![Convex cap at the pole](assets/S01-rp2-evert2-pole.png)
+![Locally flat at the seam (world keeps its shape)](assets/S01-rp2-evert2-seam.png)
+
+> [!NOTE]
+> Shape params `EVERT_FLARE`/`EVERT_LIFT` set how far the south brim folds up/out;
+> easy to tune if the user wants more/less enclosure. The far (south) rim is an open
+> sombrero edge — fine for the walk, but closing it into a full bowl is a possible
+> follow-up.
+
 ### 🟡 milestone · 14:30 — Eversion reworked per feedback: latitude-driven + unified with the double cover
 **Why:** User refined C: (1) eversion smooth and beginning *away* from the seam,
 not a sudden event; (2) columns always inside / trees always outside, with the
