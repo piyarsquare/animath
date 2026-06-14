@@ -39,6 +39,40 @@ confirms the current state of the projection math (`viewpoint.ts` /
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 14:40 — Functions guide written + verified
+**Why:** Second page complete; build green and both new embed kinds confirmed live.
+
+`public/complex-functions-guide.html` — *What the functions do*, same series
+style. Eight sections: color-as-fingerprint (`calcColor` core) → z^n angle-doubling
+(`complexSquare`/`complexCube`) → 1/z inside-out + the pole guard (`complexInv`) →
+exp (`complexExp`) → ln & the branch index, finite-sheet roots (`complexLnBranch`,
+`complexSqrtBranch`, `branchPeriod`) → trig-is-exp (`complexSin`) → Joukowski /
+Möbius / Gamma (`complexJoukowski`, `complexGamma` reflection) → a "read any
+function at a glance" field-guide table. Plane-Transform embeds show f warping the
+colored plane; the √z particle embed shows the two-sheet Riemann surface.
+
+![√z two-sheet Riemann surface (particle embed)](assets/2026-06-14-S01-sqrt-sheets.png)
+
+`npm run build` passes; copies to `dist/`. Headless: `plane-transform?fn=exp`
+(two-pane domain·image) and `complex-particles?fn=sqrt&render=Sheet` both report
+live WebGL and render the expected pictures. Cross-linked both guides' footers.
+
+### 🟢 code · 14:35 — Second page: the functions guide
+**Why:** User asked for a companion explaining the functions — how each is
+computed and what that means for its transformation — plus where else this
+exposition would help.
+
+Building `public/complex-functions-guide.html` in the same series style. Key
+illustration vehicle: the **Plane Transform** embed
+(`#/embed/plane-transform?fn=…`, params from `embedParams.ts` →
+`parsePlaneEmbed`: `fn p q extent caption controls`), which shows `f` warping the
+colored plane (domain · image) — exactly "what the computation means." Multivalued
+sheets use the particle embed (`render=Sheet`). Sections: color-as-fingerprint →
+z^n (angle-doubling) → 1/z & poles → exp → ln + the branch index (finite-sheet
+roots: `branchPeriod` 2/3/q) → trig-is-exp → special (Joukowski/Möbius/Gamma) →
+a "read any function at a glance" field guide. Quotes `complexMath.ts` (the
+readable reference) with the GLSL twin noted. Cross-links with guide 1.
+
 ### 🟡 milestone · 12:55 — Guide written + verified headless; discoverability wired
 **Why:** Deliverable complete; build green and every applet confirmed live.
 
