@@ -33,6 +33,64 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 23:55 — A2 implemented + verified: hex/oct zip spheres with visible seams
+**Why:** the star-tree insight made A2 tractable — the walk/decor reuse the
+round-sphere path, so the new code is just the seams + corner topology.
+
+Added `zipsphere6` (`a a⁻¹ b b⁻¹ c c⁻¹`) and `zipsphere8`
+(`a a⁻¹ b b⁻¹ c c⁻¹ d d⁻¹`). In `spherical.ts`, a `zip = !antipodal &&
+!spec.edges` branch: places **1 hub marker (north pole) + n leaf markers
+(equator)** and draws the **n seam arcs** (glowing tubes, geodesic hub→leaf,
+lifted just proud of the shell). Decor (`fullDir`), walk (kernel Frame),
+`chart()` (rp2Square marker), and the word-driven 2n-gon minimap all reused
+unchanged. Immersions: zip ids → the round-sphere immersion. EXPLAINER gains a
+"Zip spheres" bullet.
+
+Verification:
+- `npm run build` ✓, `npm run lint` ✓ (0 errors).
+- Scene probe confirmed the seams render (`TubeGeometry: 3` hex, `4` oct).
+- Visual: the seams read as bright arcs from the hub across the shell (the
+  shipped brighter/thicker tubes); minimap shows the hexagon/octagon; the
+  embedding inset shows the round sphere.
+- Focused chirality guard (orientable A-control): `zipsphere6`/`zipsphere8`
+  both PASS — head print reads correct, **decor 0 improper**.
+
+![zipsphere6 seam](assets/2026-06-14-S01-zipsphere6-seams.png)
+
+> [!NOTE]
+> The seam screenshot used a temporary north-pole spawn purely for framing
+> (the shipped spawn is far from the hub, which is why the seams were hard to
+> catch on camera); the seam geometry shown is the shipped code. Open polish:
+> the 2n-gon minimap marker stays the approximate rp2Square one (matches the
+> existing round sphere's bar) — a faithful zip-chart marker is future work,
+> as is optionally giving the existing square `sphere` the same visible seams.
+
+### 🔵 finding · 23:20 — Zip-sphere structure is a star tree; klein6 fails the guard (pre-existing, not mine)
+**Why:** kernel probe of the zip words + the full 10-world guard, before
+building A2.
+
+**Zip structure** (`a a⁻¹ b b⁻¹ c c⁻¹ …`, n pairs, m=2n): corner classes are
+ONE hub = all even vertices {0,2,4,…} (size n) + n leaves = the odd vertices
+(size 1 each). The cut-tree is the **star K_{1,n}** — a hub with n spokes (one
+per `x x⁻¹` pair). Orientable (χ=2), `chart:true`. Consequence: the **walk and
+decor reuse the round-sphere machinery** (kernel Frame + `fullDir`); the new
+work is just drawing the n seam arcs + the hub/leaf corner topology + the
+minimap chart. Far smaller than a bespoke unfolding.
+
+**Full guard (10 worlds):** my new worlds (rp2hex/rp2oct) PASS; the touched
+square worlds (rp2/sphere) PASS; all decor proper everywhere. **One failure:
+`klein6` `B=cyan@−axis`.** klein6 is a *euclidean* world rendered by
+`euclidean.ts`, which this branch never touched — so it is not caused by my
+changes. It matches the prior handoff's open **E2** (klein6 glide-crossing
+smoothness was never pixel-verified). Flagged for the handoff; out of scope
+here.
+
+### 🟣 decision · 23:05 — Next: A2 (hex/oct zip spheres), user-chosen
+**Why:** asked the user for direction at the post-A1 fork; they chose A2 — the
+"complete the set" option (zip-sphere n-gon worlds), the larger design-heavy
+item. Starting with a kernel probe of the exact cut-tree structure before
+designing the chart.
+
 ### 🟡 milestone · 22:50 — A1 verified green end-to-end; committed
 **Why:** the focused chirality guard is the decisive correctness test for a
 non-orientable walker world.

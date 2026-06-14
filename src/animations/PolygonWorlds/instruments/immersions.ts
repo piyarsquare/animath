@@ -194,6 +194,20 @@ const DESCRIPTORS: Record<string, ImmersionDescriptor> = {
   },
   torus: chartImmersion('Torus of revolution · same walk', 4.6, () => paramMesh(torusParam, 64, 32), (u, v, o) => { torusParam(u, v, o); return o; }),
   klein: chartImmersion('Klein bottle (figure-8) · same walk', 4.8, () => paramMesh(kleinParam, 96, 36), (u, v, o) => { kleinParam(u, v, o); return o; }),
+  // zip spheres are genuinely round spheres (a different polygon, same surface), so
+  // they immerse as the round sphere; the marker rides the player's true direction.
+  zipsphere6: {
+    caption: 'Round sphere · same walk', camDist: 4.4,
+    build: () => DESCRIPTORS.sphere.build(),
+    at: (u, v, out) => sphereDir(u, v, out).multiplyScalar(1.3),
+    marker: (_st, dir) => (dir ? dir.clone().multiplyScalar(1.3) : null),
+  },
+  zipsphere8: {
+    caption: 'Round sphere · same walk', camDist: 4.4,
+    build: () => DESCRIPTORS.sphere.build(),
+    at: (u, v, out) => sphereDir(u, v, out).multiplyScalar(1.3),
+    marker: (_st, dir) => (dir ? dir.clone().multiplyScalar(1.3) : null),
+  },
   torus6: chartImmersion('Torus of revolution · same walk', 4.6, () => paramMesh(torusParam, 64, 32), (u, v, o) => { torusParam(u, v, o); return o; }),
   klein6: chartImmersion('Klein bottle (figure-8) · same walk', 4.8, () => paramMesh(kleinParam, 96, 36), (u, v, o) => { kleinParam(u, v, o); return o; }),
   genus2: chartImmersion('Double torus · same walk', 4.6, doubleTorusMesh, genus2At),

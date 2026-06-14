@@ -37,6 +37,11 @@ import {
  *    ({@link ngon2hemi}) instead of the square's `sq2hemi`. The realize() polygon's
  *    m vertices land on the equator; the only square-specific code (chart map,
  *    corner count, player marker) branches on `nGon`.
+ *  - **Zip spheres (`a a⁻¹ b b⁻¹ c c⁻¹ …`):** a genuinely round, orientable sphere
+ *    (chart, so the walk + decor reuse the round-sphere path) whose gluing cuts it
+ *    along a STAR tree — a hub at the north pole + n leaves on the equator joined by
+ *    n seam arcs (one per `x x⁻¹` fold), drawn explicitly. The `zip` branch adds only
+ *    those seams + the hub/leaf corner markers; everything else is the round sphere.
  */
 
 const EYE = 1.7;
@@ -102,6 +107,20 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const M = real.edges;                       // 6 (hexagon) · 8 (octagon)
   const BASE = -Math.PI / 2 + Math.PI / M;    // vertex-0 azimuth — matches realize() + polygonMap
   const APO = Math.cos(Math.PI / M);          // incircle radius (circumradius-1 units)
+  // Zip-sphere worlds (`a a⁻¹ b b⁻¹ c c⁻¹ …`, no square `edges`): a genuinely round,
+  // orientable sphere (chart=true ⇒ antipodal=false, so the walk + decor reuse the
+  // round-sphere machinery). Their gluing cuts the sphere along a STAR tree — a hub
+  // (all even polygon vertices = one point, placed at the north pole) and n leaves
+  // (the odd vertices), joined by n seam arcs (one per `x x⁻¹` fold). Those seams +
+  // the hub/leaf corner topology are the only zip-specific geometry.
+  const zip = !antipodal && !c.spec.edges;
+  const N_LEAVES = M / 2;                      // n fold pairs ⇒ n leaves + 1 hub
+  const LEAF_COLAT = Math.PI / 2;             // leaves on the equator; seams are pole→equator arcs
+  const HUB_DIR = new THREE.Vector3(0, 1, 0); // the star hub sits at the north pole
+  const leafDir = (k: number): THREE.Vector3 => {
+    const lat = Math.PI / 2 - LEAF_COLAT, lon = (2 * Math.PI * k) / N_LEAVES;
+    return new THREE.Vector3(Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon));
+  };
   const twin = develop(real).elements.find((e) => e.det() < 0) ?? null;
   const twinM4 = twin ? new THREE.Matrix4().set(
     twin.m[0], twin.m[1], twin.m[2], 0, twin.m[3], twin.m[4], twin.m[5], 0,
@@ -154,6 +173,16 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
    *  square's four chart corners. Each carries its 1-based index + unique hue,
    *  matching the mini-map's numbered chips (vertex k ↔ `cornerColor(k, m)`). */
   function cornerPlacements(): { dir: THREE.Vector3; color: number; index: number }[] {
+    if (zip) {
+      // one hub marker (the north pole = every even polygon vertex) + n leaf markers
+      // (the odd vertices). Leaf colors/numbers match the mini-map's odd chips; the
+      // hub takes the first even chip's hue (all even chips are this one point).
+      const out = [{ dir: HUB_DIR.clone(), color: cornerColor(0, M), index: 1 }];
+      for (let k = 0; k < N_LEAVES; k++) {
+        out.push({ dir: leafDir(k), color: cornerColor(2 * k + 1, M), index: 2 * k + 2 });
+      }
+      return out;
+    }
     if (nGon) {
       const out: { dir: THREE.Vector3; color: number; index: number }[] = [];
       for (let k = 0; k < M; k++) {
@@ -218,6 +247,34 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const seamMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffe08a, emissiveIntensity: 0.4, roughness: 0.5 });
   const seam = antipodal ? new THREE.Mesh(new THREE.TorusGeometry(R, 0.12, 8, 96), seamMat) : null;
   if (seam) root.add(seam);
+
+  // zip seams: the n cut-arcs of the star tree, each a geodesic tube from the hub
+  // (north pole) out to a leaf on the equator — the round-sphere image of the n
+  // `x x⁻¹` folds. Rebuilt with the shell (a tube hugs the radius R).
+  const zipSeamGroup = new THREE.Group();
+  // a brighter, dedicated material — the seams are the headline feature of these
+  // worlds (the n cut-arcs of the gluing made visible on the round shell).
+  const zipSeamMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffd24a, emissiveIntensity: 0.85, roughness: 0.4, metalness: 0.1 });
+  if (zip) root.add(zipSeamGroup);
+  function seamArcCurve(a: THREE.Vector3, b: THREE.Vector3): THREE.CatmullRomCurve3 {
+    const pts: THREE.Vector3[] = [];
+    for (let i = 0; i <= 48; i++) {
+      // lift just proud of the shell so the arc reads as a ridge on the surface
+      // (and never z-fights the planet it hugs)
+      const v = new THREE.Vector3().copy(a).lerp(b, i / 48).normalize().multiplyScalar(R + 0.18);
+      pts.push(v);
+    }
+    return new THREE.CatmullRomCurve3(pts);
+  }
+  function rebuildZipSeams() {
+    zipSeamGroup.children.forEach((m) => (m as THREE.Mesh).geometry.dispose());
+    zipSeamGroup.clear();
+    for (let k = 0; k < N_LEAVES; k++) {
+      const tube = new THREE.TubeGeometry(seamArcCurve(HUB_DIR, leafDir(k)), 48, 0.3, 10, false);
+      zipSeamGroup.add(new THREE.Mesh(tube, zipSeamMat));
+    }
+  }
+  if (zip) rebuildZipSeams();
 
   // ── the ink trail: one buffer in true world coords on the fixed planet ──────
   // The sphere IS the cover, so the stamps are simply where you walked. On ℝP²
@@ -384,6 +441,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     sky.scale.setScalar(R * 4);
     buildMarkers();
     if (seam) { seam.geometry.dispose(); seam.geometry = new THREE.TorusGeometry(R, 0.12, 8, 96); }
+    if (zip) rebuildZipSeams();
     camera.far = R * 5; camera.updateProjectionMatrix();
     hist = 0; lastFrozen = null; ink.setCount(0);
     placeTwin();   // the face-swap shrink depends on R
@@ -432,6 +490,8 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
       grid.dispose(); planetMat.dispose();
       sky.geometry.dispose(); (sky.material as THREE.Material).dispose();
       seam?.geometry.dispose(); seamMat.dispose();
+      zipSeamGroup.children.forEach((m) => (m as THREE.Mesh).geometry.dispose());
+      zipSeamMat.dispose();
     },
   };
 }

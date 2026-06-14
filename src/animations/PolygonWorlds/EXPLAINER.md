@@ -88,6 +88,16 @@ surface you walk. The curved worlds are subtler, and the difference is honest:
   through is the smooth round sphere — there are **no cone points**, no creases. Any
   intrinsic measurement (how far, what angle) reads the true round-sphere metric,
   never the flattened square.
+- **Zip spheres (hexagon `aa⁻¹bb⁻¹cc⁻¹`, octagon `aa⁻¹bb⁻¹cc⁻¹dd⁻¹`).** Same
+  round sphere, presented by a polygon whose edges fold together in adjacent
+  pairs (`x x⁻¹`). Each fold is a **cut** in the sphere: the polygon is the round
+  sphere sliced open along a little **star** — a hub where the cuts meet and one
+  spoke per fold — then flattened. The world carries those **n glowing seam
+  arcs** (the cuts made visible) running from the hub out to the rim; walking
+  across one is seamless, because the sphere was only *cut* there, never bent.
+  The polygon's many corners collapse to just two kinds of point: the single
+  **hub** (every other corner) and the **n leaf tips** — the whole 2n-gon glues
+  down to one hub + n leaves on one smooth sphere.
 
 In both, **χ forces the curvature**: ∫K dA = 2πχ, so a positive χ *must* round up
 onto a sphere — a flat square simply cannot close those corners.

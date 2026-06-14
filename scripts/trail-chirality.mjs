@@ -37,6 +37,8 @@ const WORLDS = [
   { id: 'klein6', orientable: false },   // hexagonal Klein bottle (flat n-gon glides)
   { id: 'rp2hex', orientable: false },   // hexagonal ℝP² (smooth hemisphere, n-gon chart)
   { id: 'rp2oct', orientable: false },   // octagonal ℝP² (smooth hemisphere, n-gon chart)
+  { id: 'zipsphere6', orientable: true },// hexagonal zip sphere (round sphere + 3 seams)
+  { id: 'zipsphere8', orientable: true },// octagonal zip sphere (round sphere + 4 seams)
 ];
 const W = 1100, H = 820;
 

@@ -45,7 +45,7 @@ export type GluingMode = 'opposite' | 'adjacent';
 export type Cover = 'euclidean' | 'spherical' | 'hyperbolic';
 
 export interface WorldSpec {
-  id: 'torus' | 'klein' | 'rp2' | 'sphere' | 'genus2' | 'crosscap3' | 'torus6' | 'klein6' | 'rp2hex' | 'rp2oct';
+  id: 'torus' | 'klein' | 'rp2' | 'sphere' | 'genus2' | 'crosscap3' | 'torus6' | 'klein6' | 'rp2hex' | 'rp2oct' | 'zipsphere6' | 'zipsphere8';
   label: string;
   /** short descriptor for the app header */
   short: string;
@@ -173,6 +173,22 @@ export const WORLDS: WorldSpec[] = [
     id: 'rp2oct', label: 'Octagonal projective plane', short: 'projective plane (octagon)',
     chi: 1, orientable: false,
     word: 'a b c d a b c d',
+  },
+  {
+    // The HEXAGONAL zip sphere: `a a⁻¹ b b⁻¹ c c⁻¹`, three adjacent fold pairs. Same
+    // topology as the round sphere (χ=2, orientable) from a different polygon — the
+    // hexagon is the sphere cut along a STAR tree (a hub + three seams), so the world
+    // is a genuinely round sphere carrying three visible cut-arcs, not a new shape.
+    id: 'zipsphere6', label: 'Hexagonal sphere', short: 'round sphere (hexagon, 3 seams)',
+    chi: 2, orientable: true,
+    word: 'a a⁻¹ b b⁻¹ c c⁻¹',
+  },
+  {
+    // The OCTAGONAL zip sphere: `a a⁻¹ b b⁻¹ c c⁻¹ d d⁻¹`, four fold pairs ⇒ a hub +
+    // four seams on the same round sphere.
+    id: 'zipsphere8', label: 'Octagonal sphere', short: 'round sphere (octagon, 4 seams)',
+    chi: 2, orientable: true,
+    word: 'a a⁻¹ b b⁻¹ c c⁻¹ d d⁻¹',
   },
 ];
 
