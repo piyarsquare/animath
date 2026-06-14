@@ -47,6 +47,8 @@ build: unknown            # passed | failed | unknown
 followup: null            # null | low | medium | high
 pr: null                  # null | a PR URL
 app: stable-marriage      # category label(s) — see below; null ⇒ inferred from slug
+signals: phone-needed, not-live   # optional — dashboard "Start here" signals (see below)
+next: Real-device pass on the new controls.  # optional — one-line next action
 thumbnail: assets/foo.png # optional — lead screenshot for the control-center card
 ---
 ```
@@ -60,6 +62,7 @@ thumbnail: assets/foo.png # optional — lead screenshot for the control-center 
 | `title` | ✓ | shown in the index and as the `#` H1 |
 | `app` | – | category label(s) — drives the control-center chips, grouping, and timeline color (see below) |
 | `followup` / `pr` | – | optional; `null` when absent |
+| `signals` / `next` | – | optional; feed the control center's **"Start here"** digest (see §1.2) |
 | `thumbnail` | – | optional; a local image ref used as the session's control-center thumbnail (else the first image in the body) |
 
 ### The `app` category label
@@ -71,16 +74,41 @@ center can show colored chips and **group by app** / **sort by app** / build a
 - an **app slug** from `src/apps.ts` (the route hash without the `/`): e.g.
   `complex-particles`, `plane-transform`, `fractals`, `correspondence`,
   `topology-walk`, `trinary`, `stable-marriage`, `stable-matching`,
-  `agentic-sorting`, `polygon-worlds`. App *names* (`Stable Marriage`) also resolve.
+  `agentic-sorting`, `polygon-worlds`, `trees-and-nets`. App *names* (`Stable
+  Marriage`) also resolve.
 - a **cross-cutting token** for work that isn't one app: `chrome` (AppShell /
-  global framework), `engine` (shared `src/lib` code), or `general` (sessions
-  infra, build tooling, docs, chores).
+  global framework), `engine` (shared `src/lib` code), `docs` (explainer/guide
+  pages, instructional writing), or `general` (sessions infra, build tooling, chores).
 
 Examples: `app: stable-marriage` · `app: topology-walk, polygon-worlds` ·
 `app: chrome`. When `app` is `null`/omitted, the builder **infers** a default
 from the branch slug (`docs/sessions/categories.mjs`), so old reports still get a
 sensible chip — but setting it explicitly is preferred. The canonical taxonomy and
 slug-inference live in `categories.mjs`; add new apps there when `src/apps.ts` grows.
+
+### 1.2 · Dashboard signals (`signals:` / `next:`)
+
+The control center's top **"Start here"** digest surfaces what needs attention.
+Two optional flat fields feed it:
+
+- **`signals:`** — a comma/space list from the *closed* vocabulary in
+  `categories.mjs` (`SIGNALS`): `needs-dan` (a decision/input is on Dan),
+  `phone-needed` / `visual-unverified` (needs a real-device or visual check),
+  `not-live` (branch-only, not yet on main). Unknown tokens are ignored, so a typo
+  never invents a phantom badge. Declare the ones that are genuinely true — these
+  are trusted over inference.
+- **`next:`** — one short line: the single most useful next action. Shown under the
+  session in the digest and on its card.
+
+The builder also **derives** a few signals from structure so old reports populate
+without editing: `high-followup` from a HIGH/CRITICAL Self-reflection level,
+`needs-dan` from a `proposed` plan, and `not-live` from a report being absent on
+main. Declared signals always win; never infer the consequential ones from prose.
+
+The durable, hand-curated backlog lives in **`docs/sessions/TODO.md`** (rendered as
+the top **"To-do"** panel). At **handoff**, append any carry-over work there with a
+`[category]`, a `!priority`, and a note that will inform the next round; at **session
+start**, read it for orientation. See that file's header for the one-line format.
 
 ## 2 · Section structure
 

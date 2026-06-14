@@ -40,6 +40,14 @@ center indexes it). Always includes: **Summary**; **What changed** (or "What we
 found" / "The problem"); **Key files**; **Open / not done**; **Context**;
 **Self-reflection**.
 
+Also set the **dashboard signals** in the frontmatter when they apply — `signals:`
+(any of `needs-dan` / `phone-needed` / `visual-unverified` / `not-live`) and `next:`
+(one line, the single most useful next action). These feed the control center's
+"Start here" digest; declare only what's genuinely true. Then **append any
+carry-over work to `docs/sessions/TODO.md`** — the durable backlog — each item with a
+`[category]`, a `!priority`, and a note that will inform the next round (see that
+file's header for the format, and `REPORT_STYLE.md` §1.2).
+
 - **Key files** in a Markdown table. Make each `file:line` a real link pinned to the
   commit `<SHA>` so it doesn't rot:
   `[\`path:line\`](https://github.com/piyarsquare/animath/blob/<SHA>/<path>#L<line>)`.
