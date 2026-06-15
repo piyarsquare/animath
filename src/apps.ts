@@ -37,12 +37,6 @@ export const apps: AppDescriptor[] = [
     blurb: 'See how every point of the Mandelbrot set seeds its own Julia set.',
   },
   {
-    hash: '/topology-walk',
-    name: 'Topology Walk',
-    icon: '∞',
-    blurb: 'Walk a closed surface in first person — twisting corridor or flat torus / Klein bottle — and read the topology off your own footprints.',
-  },
-  {
     hash: '/trinary',
     name: 'Trinary System',
     icon: '✸',

@@ -46,6 +46,8 @@ export interface PolygonEngine {
   setFloorThickness(t: number): void;
   /** Third-person camera distance from the character (world units). */
   setCameraDistance(d: number): void;
+  /** Switch the scene atmosphere (sky/fog tint, exposure, light rig). See looks.ts. */
+  setLook(id: string): void;
   getMapState(): SquareMapState | null;
   /** Latest player pose in world space (foot position + surface normal + heading),
    *  for the extrinsic embedding inset's marker. null before the first frame. */

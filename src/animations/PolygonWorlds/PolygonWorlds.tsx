@@ -8,6 +8,7 @@ import { Slider, Select } from '../../components/ControlPanel';
 import { WORLDS, worldById, WorldSpec, deriveGeometry, analyzeWorld } from './worldSpec';
 import { generateProps, ARRANGEMENTS, ArrangementId } from './decor';
 import { makeFundamentalSquareEngine } from './fundamentalSquareEngine';
+import { LOOKS } from './looks';
 import {
   EngineDeps, PolygonEngine, SquareMapState,
   DEFAULT_SQUARE_SIZE, DEFAULT_FLOOR_THICKNESS,
@@ -50,6 +51,7 @@ export default function PolygonWorlds() {
   const [arrangement, setArrangement] = usePersistentState<ArrangementId>(pk('arrangement'), 'scattered');
   const [signFront, setSignFront] = usePersistentState(pk('signFront'), 'FRONT');
   const [signBack, setSignBack] = usePersistentState(pk('signBack'), 'BACK');
+  const [look, setLook] = usePersistentState(pk('look'), 'daytime');
 
   const spec = worldById(worldId);
   const analysis = useMemo(() => analyzeWorld(spec), [spec]);
@@ -77,6 +79,7 @@ export default function PolygonWorlds() {
   const thickRef = useRef(floorThickness);
   const opacityRef = useRef(floorOpacity);
   const radiusRef = useRef(planetRadius);
+  const lookRef = useRef(look);
   const propsRef = useRef(props);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
@@ -92,6 +95,7 @@ export default function PolygonWorlds() {
     engineRef.current.setFloorOpacity(opacityRef.current);
     engineRef.current.setRadius(radiusRef.current);
     engineRef.current.setCameraDistance(camDistRef.current);
+    engineRef.current.setLook(lookRef.current);
     // Test seam (opt-in via ?polydebug): exposes the live minimap chart so a headless
     // harness can tell which side of the sheet the character is on. No effect on the
     // shipped app — the bridge is only attached when the query flag is present.
@@ -164,6 +168,7 @@ export default function PolygonWorlds() {
     engineRef.current.setFloorOpacity(opacityRef.current);
     engineRef.current.setRadius(radiusRef.current);
     engineRef.current.setCameraDistance(camDistRef.current);
+    engineRef.current.setLook(lookRef.current);
   }, [spec, props]);
 
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
@@ -173,6 +178,7 @@ export default function PolygonWorlds() {
   useEffect(() => { thickRef.current = floorThickness; engineRef.current?.setFloorThickness(floorThickness); }, [floorThickness]);
   useEffect(() => { radiusRef.current = planetRadius; engineRef.current?.setRadius(planetRadius); }, [planetRadius]);
   useEffect(() => { camDistRef.current = camDistance; engineRef.current?.setCameraDistance(camDistance); }, [camDistance]);
+  useEffect(() => { lookRef.current = look; engineRef.current?.setLook(look); }, [look]);
 
   useEffect(() => {
     const map: Record<string, MoveKey> = {
@@ -322,6 +328,7 @@ export default function PolygonWorlds() {
   // first/third person is a top-bar pill now, so it's gone from here).
   const viewNode = (
     <>
+      <Select label="Look" options={LOOKS.map((l) => ({ value: l.id, label: l.label }))} value={look} onChange={setLook} />
       {thirdPerson && (
         <Slider label="Camera distance" value={camDistance} min={1.5} max={12} step={0.5} onChange={setCamDistance} format={(v) => `${v.toFixed(1)}`} />
       )}
@@ -379,7 +386,7 @@ export default function PolygonWorlds() {
 
   const sections: SectionDef[] = [
     { id: 'world', title: 'World', arch: 'subject', node: worldNode, estHeight: 150 },
-    { id: 'view', title: 'View', arch: 'view', node: viewNode, estHeight: 170 },
+    { id: 'view', title: 'View', arch: 'view', node: viewNode, estHeight: 220 },
     { id: 'marks', title: 'Landmarks & sign', arch: 'marks', node: marksNode, estHeight: 320 },
     { id: 'drive', title: 'Walk', arch: 'drive', node: walkNode, estHeight: 150 },
   ];

@@ -10,6 +10,7 @@ import {
   DEFAULT_SQUARE_SIZE, DEFAULT_FLOOR_THICKNESS,
 } from './engineTypes';
 import { WorldSpec, deriveGeometry } from './worldSpec';
+import { PolygonLook, findLook } from './looks';
 
 /** Per-geometry light intensities. The flat plane is well-lit by the directional
  *  key; the spherical shell is large and far from a single distant light so it
@@ -54,7 +55,8 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
   // Each world scales these by a per-geometry profile (the big sphere shell reads
   // dark under a single distant key, so χ>0 gets brighter fills).
   const L = lightingProfile(geom.cover);
-  root.add(new THREE.AmbientLight(0xffffff, 0.42 * L.fill));
+  const ambient = new THREE.AmbientLight(0xffffff, 0.42 * L.fill);
+  root.add(ambient);
   const hemi = new THREE.HemisphereLight(0xffe6c2, 0x5b73a6, 0.4 * L.fill);
   root.add(hemi);
   const warm = new THREE.DirectionalLight(0xffd2a1, 0.95 * L.key);
@@ -105,6 +107,34 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
       : geom.cover === 'hyperbolic' ? makeHyperbolicPresenter(coverDeps)
         : makeEuclideanPresenter(coverDeps);
 
+  // Snapshot the presenter's own sky/fog (the Daytime baseline) so a look can
+  // override it and the Daytime look can restore it. Fog is rebuilt on size /
+  // radius changes, so the active look's atmosphere is re-applied after those.
+  const baseBg = scene.background instanceof THREE.Color ? scene.background.clone() : null;
+  const baseFog = scene.fog instanceof THREE.Fog ? scene.fog.color.clone() : null;
+  let look: PolygonLook = findLook('daytime');
+
+  const applyAtmosphere = () => {
+    if (look.sky != null) {
+      if (scene.background instanceof THREE.Color) scene.background.setHex(look.sky);
+      if (scene.fog instanceof THREE.Fog) scene.fog.color.setHex(look.sky);
+    } else {
+      if (baseBg && scene.background instanceof THREE.Color) scene.background.copy(baseBg);
+      if (baseFog && scene.fog instanceof THREE.Fog) scene.fog.color.copy(baseFog);
+    }
+  };
+  const applyLook = (next: PolygonLook) => {
+    look = next;
+    deps.renderer.toneMappingExposure = look.exposure;
+    ambient.intensity = look.ambient * L.fill;
+    hemi.color.setHex(look.hemiSky); hemi.groundColor.setHex(look.hemiGround);
+    hemi.intensity = look.hemi * L.fill;
+    warm.color.setHex(look.warmColor); warm.intensity = look.warm * L.key;
+    cool.color.setHex(look.coolColor); cool.intensity = look.cool * L.key;
+    headlamp.color.setHex(look.lampColor); headlamp.intensity = L.lamp * look.lampMul;
+    applyAtmosphere();
+  };
+
   const character = makeCharacter();
   root.add(character.group);
   character.group.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) m.castShadow = true; });
@@ -137,9 +167,10 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
     clearTrail: () => cover.clearTrail(),
     setFloorOpacity: (o) => cover.setFloorOpacity?.(o),
     setColorCells: () => {},
-    setRadius: (r) => cover.setRadius?.(r),
-    setSquareSize: (v) => cover.setSquareSize?.(v),
-    setFloorThickness: (t) => cover.setFloorThickness?.(t),
+    setRadius: (r) => { cover.setRadius?.(r); applyAtmosphere(); },
+    setSquareSize: (v) => { cover.setSquareSize?.(v); applyAtmosphere(); },
+    setFloorThickness: (t) => { cover.setFloorThickness?.(t); applyAtmosphere(); },
+    setLook: (id) => applyLook(findLook(id)),
     setCameraDistance: (d) => cover.setCameraDistance?.(d),
     getMapState: () => mapState,
     getPose: () => poseState,

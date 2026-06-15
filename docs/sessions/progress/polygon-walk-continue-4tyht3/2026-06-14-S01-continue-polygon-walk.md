@@ -33,6 +33,32 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 feature · 16:45 — Salvage Topology Walk into Polygon Worlds (looks) + retire it
+Topology Walk is being retired — Polygon Worlds is better in every way except
+its skins/lighting and the Möbius hallway. User steer (AskUserQuestion): port
+**only the few looks that translate**, **no bloom**, and **unlist** the old app
+(back closet). Done:
+
+- **`looks.ts`** — distilled the corridor themes into 4 outdoor *atmospheres*
+  (sky/fog tint + exposure + light-rig colors/intensities; no wall textures, no
+  torches, no bloom): **Daytime** (the engine's original look, default → no
+  regression), **Overcast**, **Ember dusk**, **Moonlit**.
+- **Engine** (`fundamentalSquareEngine`): captured the ambient handle + a
+  snapshot of each presenter's base sky/fog, added `applyLook` (exposure +
+  ambient/hemi/warm/cool/headlamp + sky/fog override, all scaled by the existing
+  per-cover lighting profile) and `setLook(id)`; re-applies the atmosphere after
+  size/radius rebuilds (fog is rebuilt there). New `setLook` on `PolygonEngine`.
+- **Component**: persisted `look` state, a **Look** `Select` at the top of the
+  View panel, pushed in onMount + the world-recreate effect + a live effect.
+- **Retire**: removed Topology Walk from `apps.ts` + `catalog.ts` (gallery
+  unlist); route + redirects kept in `index.tsx` so it's still URL-reachable.
+
+Verified: build + lint green (0 err / 60 warn); all 4 looks read distinctly on
+euclidean, and Moonlit applies cleanly across spherical (sky-shell limitation:
+mood comes from the lights, bg is behind the shell) + hyperbolic, persisting
+through world switches (0 console errors); gallery no longer lists Topology Walk
+but `#/topology-walk` still loads. Möbius hallway left in its back closet.
+
 ### 🟢 chrome · 16:05 — Desktop "immersive" mode (full-bleed scene, top bar kept)
 The user has been on mobile (which they love) and wanted the same on desktop:
 top bar visible, scene full-screen, controls still reachable — *not* the little
