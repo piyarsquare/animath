@@ -49,9 +49,24 @@ Picked up the fidelity/hygiene set after the beauty detour.
   landing; third-person + camera distance per the "don't persist camera"
   convention). Verified: slider change → localStorage → reload reads it back.
 
-Build + lint green throughout. Remaining roadmap: E1 (hyperbolic decor azimuth
-equivariance), E2 (klein6 glide pixel-diff — chirality already shown flaky-OK),
-F-TopologyWalk audit; and the features B/C/D await an explicit pick.
+Build + lint green throughout.
+
+**E1 (hyperbolic decor azimuth equivariance) — assessed, deferred to pair with
+demo D.** The signs already implement the equivariant pattern (project a
+position+forward+left triple → proper basis) and the hyperbolic decor is
+det-audited by the guard (genus2: 0/2536 improper), so chirality would be safe.
+But: (1) the current decor is largely **rotationally symmetric** — trees are
+cone-stacks, so per-tile azimuth is essentially invisible on them; the only
+beneficiaries are number decals / square column bases / corner plates; (2) its
+real payoff is the **vertex-ring holonomy demo (D)**, where the rotation becomes
+meaningful *and* visually verifiable; (3) azimuth *correctness* is unguarded
+(only det>0 is) and too subtle to verify by screenshot standalone. So a
+moderate basis-refactor for near-zero standalone benefit, unverifiable by eye —
+deferred to land together with D.
+
+Remaining: E1 (with D), E2 (klein6 glide smoothness pixel-diff — chirality
+already shown flaky-OK; this would be a *new permanent guard* for crossing
+smoothness), F-TopologyWalk audit (cross-app); features B/C/D await a pick.
 
 ### 🔴 revert · 11:55 — Bloom removed (user: "looks terrible")
 User rejected the bloom outright. Reverted the render path to the direct
