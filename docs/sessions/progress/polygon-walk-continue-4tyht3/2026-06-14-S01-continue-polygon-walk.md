@@ -33,6 +33,26 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🔵 finding · 20:39 — Clouds in the sky: feasible, but likely needs the cover model (future)
+User asked what clouds would take, then chose to stop here — **future work**.
+Scoping captured so the next session doesn't re-derive it:
+
+- **Straightforward version:** a procedural cloud texture (canvas noise/soft
+  blobs — no assets, no libs) painted onto a sky dome, tied into the existing
+  look system (cloud density/tint/opacity per look; optional slow drift in
+  `frame()`). Spherical already has a retintable `skyDome`; the **flat + hyperbolic
+  presenters have no sky geometry** (just `scene.background` + fog) and would each
+  need a dome added. Lift `skyDome` into a shared helper. Main gotcha: blending
+  the dome's lower band into the flat worlds' distance **fog** at the horizon.
+- **The real subtlety (user's instinct):** the **sky may depend on which side of
+  the sheet you're on.** In non-orientable worlds (Klein, ℝP², cross-caps) crossing
+  a flipped edge swaps faces; a single naïve dome ignores that. A faithful sky
+  would have to behave like the trail/sign — i.e. live in / respond to the
+  **`CoverModel`** and its deck transform (the flip), not be a static decoration.
+  That's the "something more complex" — treat clouds as cover-aware, not chrome.
+  Recommend: prototype the simple dome on **orientable** worlds first (torus,
+  sphere), then decide the side-dependent treatment for the flip worlds.
+
 ### 🟢 fix · 20:30 — Brighten daytime + move the rail off the scene (desktop)
 Two follow-ups: day looked gloomy, and the vertical icon rail overlaid the
 immersive scene.
