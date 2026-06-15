@@ -33,6 +33,13 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🔴 revert · 11:55 — Bloom removed (user: "looks terrible")
+User rejected the bloom outright. Reverted the render path to the direct
+`renderer.render(scene, camera)`, removed the `makeSelectiveBloom` wiring, and
+deleted `bloom.ts`. Build + lint green; sphere confirmed back to the clean
+matte look. **Kept** (not objected to): the flat-world soft shadows and the
+sun in the environment map — offered to revert those too.
+
 ### 🟢 beauty · 04:10 — Atmosphere overhaul pt.2: soft shadows (flat worlds)
 Soft `PCFSoftShadowMap` shadows from the warm key, **gated to the euclidean
 (flat) worlds**. Empirically: on the torus floor the decor's soft cast shadows

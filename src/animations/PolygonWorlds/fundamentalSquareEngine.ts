@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { makeSelectiveBloom } from './bloom';
 import { makeCharacter } from './character';
 import { makeFundamentalSquareDecor, DecorProp, DEFAULT_PROPS } from './decor';
 import { makeEuclideanPresenter } from './presenters/euclidean';
@@ -98,12 +97,6 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
   const prevEnv = scene.environment;
   scene.environment = envTex;
 
-  // Emissive-keyed selective bloom so only the things that genuinely emit (seams,
-  // markers, the ★ beacon, the avatar's glow) bleed light — keyed to emissive, not
-  // to the lights, so the camera headlamp never blows the nearby decor into glare.
-  let bufW = deps.renderer.domElement.width, bufH = deps.renderer.domElement.height;
-  const bloom = makeSelectiveBloom(deps.renderer, scene, camera, { strength: 0.9, radius: 0.5, threshold: 0 });
-
   const decor = makeFundamentalSquareDecor(opts.props ?? DEFAULT_PROPS);
 
   const coverDeps = { deps, root, spec, decor, squareSize, floorThickness };
@@ -136,9 +129,7 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
     character.stride(stridePhase);
 
     Object.assign(mapState, cover.chart());
-    const dw = deps.renderer.domElement.width, dh = deps.renderer.domElement.height;
-    if (dw !== bufW || dh !== bufH) { bufW = dw; bufH = dh; bloom.setSize(dw, dh); }
-    bloom.render();
+    deps.renderer.render(scene, camera);
   }
 
   return {
@@ -160,7 +151,6 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
       scene.remove(root);
       scene.environment = prevEnv;
       envTex.dispose();
-      bloom.dispose();
       cover.dispose();
       decor.dispose();
       character.dispose();
