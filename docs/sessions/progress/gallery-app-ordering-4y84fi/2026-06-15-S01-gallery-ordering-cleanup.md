@@ -8,9 +8,9 @@ slug: gallery-app-ordering-4y84fi
 status: completed
 build: passed
 followup: low
-pr: null
+pr: 220
 app: chrome
-next: Open a PR if desired; at merge keep every app's apps.ts entry and apply this curated order (apps.ts was reordered, not appended).
+next: At merge keep every app's apps.ts entry and apply this curated order (apps.ts was reordered, not appended).
 ---
 
 # Gallery ordering cleanup — feature top three, retire Stable Marriage, demote Topology Walk
@@ -30,6 +30,13 @@ parked). Nothing pending there blocks this gallery work. This is the **first
 tracked session on `claude/gallery-app-ordering-4y84fi`**.
 
 ## Working notes
+
+### 🟡 milestone · 21:11 — Pushed; PR #220 opened from the Claude Code UI
+**Why:** Branch published and a PR now tracks it; recording the reference.
+
+Committed and pushed to `claude/gallery-app-ordering-4y84fi`; the PR
+([#220](https://github.com/piyarsquare/animath/pull/220)) was created from the UI
+(not by this session). Further commits to the branch update the PR.
 
 ### 🟡 milestone · 03:32 — Shipped: reorder + retire, build green, gallery verified
 **Why:** Both decisions answered (hide / named-changes-only); implemented and verified.
