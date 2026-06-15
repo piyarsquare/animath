@@ -4,7 +4,7 @@ import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { usePhone } from '../../chrome/usePhone';
-import { Slider, Select } from '../../components/ControlPanel';
+import { Slider, Select, Pills } from '../../components/ControlPanel';
 import { WORLDS, worldById, WorldSpec, deriveGeometry, analyzeWorld } from './worldSpec';
 import { generateProps, ARRANGEMENTS, ArrangementId } from './decor';
 import { makeFundamentalSquareEngine } from './fundamentalSquareEngine';
@@ -328,6 +328,11 @@ export default function PolygonWorlds() {
   // first/third person is a top-bar pill now, so it's gone from here).
   const viewNode = (
     <>
+      {/* Perspective lives in the top-bar pills on desktop; on the cramped phone
+          bar those pills are dropped, so it rides here in the View sheet instead. */}
+      {phone && (
+        <Pills label="Perspective" options={[{ value: 'third', label: 'Third person' }, { value: 'first', label: 'First person' }]} value={thirdPerson ? 'third' : 'first'} onChange={(v) => setThirdPerson(v === 'third')} />
+      )}
       <Select label="Look" options={LOOKS.map((l) => ({ value: l.id, label: l.label }))} value={look} onChange={setLook} />
       {thirdPerson && (
         <Slider label="Camera distance" value={camDistance} min={1.5} max={12} step={0.5} onChange={setCamDistance} format={(v) => `${v.toFixed(1)}`} />
@@ -433,7 +438,7 @@ export default function PolygonWorlds() {
       subtitle={spec.short}
       topExtra={worldTopSelect}
       titlePanel="world"
-      modes={[{ id: 'third', label: 'Third person' }, { id: 'first', label: 'First person' }]}
+      modes={phone ? undefined : [{ id: 'third', label: 'Third person' }, { id: 'first', label: 'First person' }]}
       activeMode={thirdPerson ? 'third' : 'first'}
       onModeChange={(id) => setThirdPerson(id === 'third')}
       actions={actions}

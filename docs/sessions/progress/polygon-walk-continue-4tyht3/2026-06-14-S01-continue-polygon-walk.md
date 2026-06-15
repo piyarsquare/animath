@@ -33,6 +33,25 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 fix · 17:00 — Mobile top bar overcrowded (reported with screenshot)
+The phone bar was overflowing: brand + title + world-select + the two
+long-labeled First/Third pills (`flex:0 0 auto`, won't shrink) + ? + skins all
+collided in a no-wrap flex row. Two-part fix:
+
+- **Chrome (general):** on a phone bar (`compact`) that has an always-on `extra`
+  selector, drop the now-redundant title + its separator — the selector already
+  names the subject. Helps any app that puts a picker in the bar (e.g. Complex
+  Particles).
+- **Polygon Worlds:** pass the First/Third `modes` pills only on desktop; on
+  phone the perspective toggle rides in the **View** sheet as a `Pills` control
+  (one dock tap), keeping the world-select — the thing you most want visible —
+  in the bar.
+
+Verified at 390px: bar no longer overflows (maxRight 371 ≤ 374), reads
+**Home · world-select · ? · skins**; the View sheet carries Perspective + Look +
+scale. Desktop unchanged (title + pills + world-select all still in the bar).
+Build + lint green.
+
 ### 🟢 feature · 16:45 — Salvage Topology Walk into Polygon Worlds (looks) + retire it
 Topology Walk is being retired — Polygon Worlds is better in every way except
 its skins/lighting and the Möbius hallway. User steer (AskUserQuestion): port

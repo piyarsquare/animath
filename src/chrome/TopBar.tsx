@@ -32,6 +32,9 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
 }) {
   const [skin, setSkin] = useSkin();
   const [helpOpen, setHelpOpen] = useState(false);
+  // On the cramped phone bar, an always-on `extra` selector already names the
+  // subject, so the title is redundant — drop it (and its separator) to make room.
+  const hideTitle = !!compact && !!extra;
   return (
     <header className="am-bar" style={compact ? { padding: '0 10px' } : undefined}>
       {home ? (
@@ -43,8 +46,8 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
       ) : (
         <div className="am-brand"><span className="am-brand-mark">a</span></div>
       )}
-      <div className="am-bar-sep" />
-      {onTitleClick ? (
+      {!hideTitle && <div className="am-bar-sep" />}
+      {!hideTitle && (onTitleClick ? (
         <button
           className="am-titlewrap am-title-btn"
           title="Change function"
@@ -59,7 +62,7 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
           <span className="am-title">{title}</span>
           {subtitle && <span className="am-sub">{subtitle}</span>}
         </div>
-      )}
+      ))}
       {extra && (
         <>
           <div className="am-bar-sep" />
