@@ -2,8 +2,8 @@
  * The n-gon edge-diagram mini-map — the general fundamental-polygon picture for
  * worlds whose domain is not a square (the hyperbolic genus-2 octagon, the
  * cross-cap hexagons). It draws the regular 2n-gon read straight from the edge
- * word: each generator gets a colour, each boundary edge an arrow in the word's
- * direction (reversed for an inverse letter), so glued edges share a colour and
+ * word: each generator gets a color, each boundary edge an arrow in the word's
+ * direction (reversed for an inverse letter), so glued edges share a color and
  * their arrows show how they identify. The player marker is the Poincaré-disk
  * position of the player's representative inside the home polygon.
  *

@@ -63,7 +63,7 @@ export interface WorldSpec {
   /** Euler characteristic V−E+F after identification. A *topological invariant*;
    *  for these fixed presets it is a known constant (it is what forces the geometry
    *  below). Stored rather than recomputed because the presets are fixed — the word
-   *  still drives every visible gluing + the cover's behaviour. */
+   *  still drives every visible gluing + the cover's behavior. */
   chi: number;
   /** Whether a consistent global orientation survives the gluing. Like χ, a fact
    *  about the chosen gluing. */

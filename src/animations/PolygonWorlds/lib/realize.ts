@@ -109,7 +109,7 @@ export function realize(word: EdgeWord, opts: { baseAngle?: number } = {}): Real
     circumradius = 1; // any radius works; a regular Euclidean m-gon closes for χ=0
     policy = 'lattice';
   } else {
-    // Regular geodesic polygon condition (right triangle centre–vertex–edge-mid):
+    // Regular geodesic polygon condition (right triangle center–vertex–edge-mid):
     //   Cκ(R) = cot(π/m)·cot(α),  α = half interior angle = π·V/m.
     // At κ=0 this is the Euclidean identity; it is the same formula for both signs.
     const alpha = (Math.PI * V) / m;
@@ -137,9 +137,9 @@ export function realize(word: EdgeWord, opts: { baseAngle?: number } = {}): Real
   }
 
   // Side-pairing isometries from the edge pairings. The deck generator for letter
-  // x is the transformation g_x that maps the polygon to the neighbour glued
-  // across the x edge — equivalently it carries the x⁻¹-labelled edge onto the
-  // x-labelled edge, matching the generator's arrow (tail→tail). With this
+  // x is the transformation g_x that maps the polygon to the neighbor glued
+  // across the x edge — equivalently it carries the x⁻¹-labeled edge onto the
+  // x-labeled edge, matching the generator's arrow (tail→tail). With this
   // direction the boundary word, read with a → g_x and a⁻¹ → g_x⁻¹, multiplies to
   // the identity (the surface relation) for a single-vertex fundamental polygon.
   const inv = (e: number) => word[e].inv;

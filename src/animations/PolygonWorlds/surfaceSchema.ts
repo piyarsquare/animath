@@ -89,7 +89,7 @@ class DSU {
   classes(): number { const s = new Set<number>(); for (let i = 0; i < this.p.length; i++) s.add(this.find(i)); return s.size; }
 }
 
-/** Analyse an edge word: identify the surface and all its invariants. */
+/** Analyze an edge word: identify the surface and all its invariants. */
 export function analyzeSchema(w: EdgeWord): SchemaAnalysis {
   const n = w.length;                       // 2 · (polygon "n")
   const genCount = new Map<number, number[]>(); // gen → edge indices it appears at
@@ -161,7 +161,7 @@ function classify(chi: number, orientable: boolean): {
   return { kind: 'non-orientable', name, crosscaps };
 }
 
-/** Convenience: analyse a word given as a string. */
+/** Convenience: analyze a word given as a string. */
 export function analyze(word: string): SchemaAnalysis {
   return analyzeSchema(parseWord(word));
 }

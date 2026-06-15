@@ -20,12 +20,12 @@ import {
  * {@link framePos} lands on it (world = framePos·R) and walking/turning are
  * `stepForward`/`turn`.
  *
- * The planet is a **two-sided sheet wrapped into a ball** (one neutral colour): the
+ * The planet is a **two-sided sheet wrapped into a ball** (one neutral color): the
  * **outer face wears the trees** (you walk it) and the **inner face the columns**
  * (seen through the glass). Each landmark's tree (outer, grown outward) and column
  * (inner, grown inward) sit at the *same* direction and grow *away* from the shell,
  * so neither penetrates it — fixing the "columns inside trees" overlap. Boundary
- * landmarks land on the seam/equator and the centre beacon at the chart centre.
+ * landmarks land on the seam/equator and the center beacon at the chart center.
  *
  *  - **Sphere (`a a⁻¹ b b⁻¹`, chart):** the square is charted over the whole shell;
  *    trees outside, columns inside, no antipodal identification. It is the n=2 zip
@@ -54,7 +54,7 @@ const TRAIL_SPACING = 1.6;
 const SKY = 0x05070e;
 const GLASS = POLYGON_GLASS;   // shared spec — slider feels the same in every world
 const LON = 24, LAT = 16;
-const SHELL_COLOR = 0x46658f; // one neutral shell colour (sides told apart by
+const SHELL_COLOR = 0x46658f; // one neutral shell color (sides told apart by
                               // trees vs columns + the warm/cool light)
 const SHELL_GAP = 0.985;      // inner-marker radius fraction (the sheet thickness)
 const VERTEX_INSET = 0.82;    // vertex towers sit just inside the square's corners
@@ -375,7 +375,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
 
   // ── player pose as a kernel Frame on the κ=+1 shell (the unit sphere) ─────────
   // Spawn at the surface direction farthest from every landmark, so the player
-  // never starts inside a tree or on the centre beacon.
+  // never starts inside a tree or on the center beacon.
   function clearSpawnFrame(): Frame {
     let best: THREE.Vector3 = treeDirs[0] ?? new THREE.Vector3(0, 0, 1);
     let bestD = -1;
@@ -455,10 +455,10 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     }
     if (zip) {
       // Star/gore chart into the 2n-gon (the abstract gluing diagram — there is no
-      // isometric map from a round sphere to a regular 2n-gon). South pole → centre;
+      // isometric map from a round sphere to a regular 2n-gon). South pole → center;
       // each leaf (odd vertex 2k+1, sphere longitude 2πk/n) → its vertex; each gore
       // between two seams → the hub (even) vertex it surrounds; a seam → the
-      // centre→leaf diagonal. Continuous and ALWAYS inside the polygon — unlike the
+      // center→leaf diagonal. Continuous and ALWAYS inside the polygon — unlike the
       // old square fallback, whose [-1,1]² coords the hex/oct mini-map misread (the
       // marker could land outside the polygon with a meaningless heading).
       const n = N_LEAVES;

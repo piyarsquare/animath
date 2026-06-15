@@ -16,7 +16,7 @@ import { applyMat, det3, ORIGIN, Isometry } from '../lib/cayleyKlein';
  * (I, J) is γ₀ᴵ · γ₁ᴶ, whose translation places the copy and whose **sign of the
  * determinant** decides whether the copy is mirror-reflected.
  *
- * Each cell is a **two-sided sheet** (a thin slab) of one neutral colour: **trees on
+ * Each cell is a **two-sided sheet** (a thin slab) of one neutral color: **trees on
  * the top face**, **columns on the bottom face**, each landmark's two forms at the
  * identical (u, v) and growing *away* from the sheet (so they never penetrate it).
  * A mirror-reflected cell (`det < 0`) is the sheet **flipped over like a
@@ -48,7 +48,7 @@ const TRAIL_SPACING = 1.6;
 // sheet solid. The threshold spec is shared across all three worlds so the
 // slider feels identical everywhere (see POLYGON_GLASS).
 const GLASS = POLYGON_GLASS;
-const FLOOR_COLOR = 0x46658f;   // one neutral sheet colour (the two sides are told
+const FLOOR_COLOR = 0x46658f;   // one neutral sheet color (the two sides are told
                                 // apart by trees vs columns + the warm/cool light)
 // Vertex towers sit just inside every corner of the cell — the m-gon's
 // "slightly smaller polygon". 0.82 keeps them clear of the seams.
@@ -99,7 +99,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     ((detA < 0 && (I & 1)) ? 1 : 0) ^ ((detB < 0 && (J & 1)) ? 1 : 0);
   // The glide axis: a glide reflection's mirror line is parallel to its own
   // translation. The flipped cell transform is the π-rotation about this axis
-  // (through the cell centre at slab mid-height) — the "flip the transparency
+  // (through the cell center at slab mid-height) — the "flip the transparency
   // over" move: face swap + genuine in-plane mirror in one proper rotation.
   const glideDir = new THREE.Vector3();
   if (detA < 0) glideDir.set(ax, 0, ay).normalize();
@@ -162,7 +162,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   scene.background = new THREE.Color(SKY);
   scene.fog = new THREE.Fog(SKY, side * 0.7, side * 3);
 
-  // ── one neutral glass slab material (no per-side colour) ─────────────────────
+  // ── one neutral glass slab material (no per-side color) ─────────────────────
   const floorMat = new THREE.MeshStandardMaterial({
     color: FLOOR_COLOR, emissive: FLOOR_COLOR, emissiveIntensity: 0.16, roughness: 0.5,
     metalness: 0.05, transparent: true, opacity: floorOpacity, side: THREE.DoubleSide,
@@ -232,7 +232,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   // Authored with the slab mid-plane at the group origin: top face at +t/2 (trees,
   // up), bottom face at −t/2 (columns, grown down). The group sits at world y=−t/2,
   // so the top face — the walking surface — is at y=0. A flipped cell is rotated π
-  // about the glide axis through its centre at slab mid-height: faces swap AND the
+  // about the glide axis through its center at slab mid-height: faces swap AND the
   // content mirrors in-plane — the transparency flipped over.
   const cells: Cell[] = [];
   function buildCells() {
