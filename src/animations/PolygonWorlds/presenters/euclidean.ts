@@ -241,6 +241,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
     for (let i = 0; i < (2 * K + 1) * (2 * K + 1); i++) {
       const group = new THREE.Group(); group.matrixAutoUpdate = false;
       const slab = new THREE.Mesh(slabGeometry(), floorMat);
+      slab.receiveShadow = true;   // the flat floor catches the decor's soft shadows
       const top = new THREE.Group(), bottom = new THREE.Group();
       // Bottom-face decor is turned over RIGIDLY (π about the glide axis), never
       // mirrored with scale.y=−1: a baked reflection would cancel against the

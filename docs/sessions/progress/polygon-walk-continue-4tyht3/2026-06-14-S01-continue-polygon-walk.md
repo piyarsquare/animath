@@ -33,6 +33,26 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 beauty · 04:10 — Atmosphere overhaul pt.2: soft shadows (flat worlds)
+Soft `PCFSoftShadowMap` shadows from the warm key, **gated to the euclidean
+(flat) worlds**. Empirically: on the torus floor the decor's soft cast shadows
+(plus the beacon's long shadow) clearly ground the scene; on the *spherical*
+shell shadows gave neither benefit nor artifact (translucent, curved — the map
+fights the glass), so they stay off there and on hyperbolic.
+
+Robustness: cast/receive flags are set at **build time** — `markShadow()` in
+`decor.ts` tags the lit (non-decal) decor meshes, the euclidean floor slab sets
+`receiveShadow`, the avatar casts — so they survive the per-radius/per-thickness
+**rebuilds** (verified: shadows persist after a floor-thickness change). The
+first attempt (a one-time `root.traverse`) would have dropped them on rebuild;
+also fixed `normalBias` (0.6 → 0.05, which had peter-panned the shadows away).
+`shadowMap.enabled` tracks `cover === 'euclidean'` so switching worlds resets it.
+
+Verified: build + lint green; chirality guard PASS (rp2 both faces, zipsphere6),
+decor 0 improper across euclidean/spherical.
+
+![shadows · torus](assets/2026-06-15-S01-beauty-shadows-torus.png)
+
 ### 🟢 beauty · 03:40 — Atmosphere overhaul pt.1: emissive selective bloom + sun env
 **Why:** user asked to "turn up the beauty" (basic decor, flat lighting, the ground
 not reading as glass) and chose the atmosphere overhaul (bloom + shadows + richer

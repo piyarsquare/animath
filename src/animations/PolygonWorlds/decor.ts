@@ -367,8 +367,20 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
     g.add(disc, rim, plate);
     return g;
   };
-  const makeCornerTop = (index: number, color: number): THREE.Group => makeCorner(index, color, false);
-  const makeCornerBottom = (index: number, color: number): THREE.Group => makeCorner(index, color, true);
+  // Tag the lit (non-decal) meshes to cast/receive shadows. Set at build time so the
+  // flags survive every rebuild; only the euclidean engine actually enables the map,
+  // where they ground the decor on the flat floor (harmless no-op everywhere else).
+  const markShadow = (g: THREE.Group): THREE.Group => {
+    g.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh && (m.material as THREE.Material | undefined)?.type !== 'MeshBasicMaterial') {
+        m.castShadow = true; m.receiveShadow = true;
+      }
+    });
+    return g;
+  };
+  const makeCornerTop = (index: number, color: number): THREE.Group => markShadow(makeCorner(index, color, false));
+  const makeCornerBottom = (index: number, color: number): THREE.Group => markShadow(makeCorner(index, color, true));
 
   /** The center beacon — gold spire + orb (top) vs magenta spire + cube (bottom). */
   const makeCenter = (mat: THREE.MeshStandardMaterial, finial: 'orb' | 'cube'): THREE.Group => {
@@ -382,9 +394,9 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
   };
 
   const makeTop = (i: number): THREE.Group =>
-    props[i].kind === 'center' ? makeCenter(goldMat, 'orb') : makeTree(i);
+    markShadow(props[i].kind === 'center' ? makeCenter(goldMat, 'orb') : makeTree(i));
   const makeBottom = (i: number): THREE.Group =>
-    props[i].kind === 'center' ? makeCenter(magentaMat, 'cube') : makeColumn(i);
+    markShadow(props[i].kind === 'center' ? makeCenter(magentaMat, 'cube') : makeColumn(i));
 
   return {
     props,

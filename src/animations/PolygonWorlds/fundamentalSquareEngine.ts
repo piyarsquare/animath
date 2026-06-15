@@ -61,6 +61,25 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
   const warm = new THREE.DirectionalLight(0xffd2a1, 0.95 * L.key);
   warm.position.set(0.4, 1, 0.3);
   root.add(warm);
+  // Soft shadows from the warm key — but only on the flat (euclidean) floor, where the
+  // receiver is opaque and planar so cast shadows ground the decor cleanly. The
+  // spherical/hyperbolic shells are translucent and curved, where shadow maps fight the
+  // glass for little gain, so they stay off (decor still carries `castShadow`, harmless
+  // when the map is disabled). Decor + floor set their cast/receive flags at build time,
+  // so they survive the per-radius / per-thickness rebuilds.
+  deps.renderer.shadowMap.enabled = geom.cover === 'euclidean';
+  if (geom.cover === 'euclidean') {
+    deps.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    const F = squareSize * 1.7 + 18;
+    warm.castShadow = true;
+    warm.position.set(0.4, 1, 0.3).normalize().multiplyScalar(F * 2);
+    warm.shadow.mapSize.set(2048, 2048);
+    warm.shadow.camera.left = -F; warm.shadow.camera.right = F;
+    warm.shadow.camera.top = F; warm.shadow.camera.bottom = -F;
+    warm.shadow.camera.near = 1; warm.shadow.camera.far = F * 4.5;
+    warm.shadow.bias = -0.0004; warm.shadow.normalBias = 0.05;
+    warm.shadow.camera.updateProjectionMatrix();
+  }
   const cool = new THREE.DirectionalLight(0x9bc2ff, 0.62 * L.key);
   cool.position.set(-0.35, -1, -0.2);
   root.add(cool);
@@ -95,6 +114,7 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
 
   const character = makeCharacter();
   root.add(character.group);
+  character.group.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) m.castShadow = true; });
   let stridePhase = 0;
 
   const mapState: SquareMapState = { u: 0.5, v: 0.5, hx: 0, hz: -1, flipped: false };
