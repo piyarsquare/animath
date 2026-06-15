@@ -268,14 +268,36 @@ export default function PolygonWorlds() {
   // is the point on the unit sphere the player occupies, which the embedding inset's
   // sphere/Roman marker rides; flat/hyperbolic immersions ignore it.
   const getDir = useCallback(() => engineRef.current?.getPose()?.up ?? null, []);
-  const worldOptions = WORLDS.map((w) => ({ value: w.id, label: w.label }));
+  // The world picker lives in the TOP BAR (topExtra) — the one selector you should
+  // never open a panel to reach — grouped by the geometry χ forces.
+  const GEO_GROUPS: { cover: ReturnType<typeof deriveGeometry>['cover']; label: string }[] = [
+    { cover: 'euclidean', label: 'Flat · χ = 0' },
+    { cover: 'spherical', label: 'Sphere · χ > 0' },
+    { cover: 'hyperbolic', label: 'Hyperbolic · χ < 0' },
+  ];
+  const worldTopSelect = (
+    <select
+      className="am-select am-bar-select"
+      aria-label="World" title="World"
+      value={worldId}
+      onChange={(e) => setWorldId(e.target.value)}
+    >
+      {GEO_GROUPS.map((g) => (
+        <optgroup key={g.cover} label={g.label}>
+          {WORLDS.filter((w) => deriveGeometry(w).cover === g.cover).map((w) => (
+            <option key={w.id} value={w.id}>{w.label}</option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  );
 
   /* ---- archetype panels (one row per legacy control; nothing dropped) ---- */
 
-  // subject — which gluing, plus the live topological invariants it forces.
+  // subject — the live topological invariants the chosen gluing forces (the world
+  // picker itself is in the top bar; this panel reads out what it implies).
   const worldNode = (
     <>
-      <Select label="Gluing" options={worldOptions} value={worldId} onChange={setWorldId} />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5 }}>
         <div style={{ marginBottom: 4 }}>
           <span style={{ color: 'var(--cp-fg)' }}>Edge word</span>{' '}
@@ -413,6 +435,8 @@ export default function PolygonWorlds() {
       appId="polygon-worlds"
       title="Polygon Worlds"
       subtitle={spec.short}
+      topExtra={worldTopSelect}
+      titlePanel="world"
       sections={sections}
       views={views}
       layouts={LAYOUTS}

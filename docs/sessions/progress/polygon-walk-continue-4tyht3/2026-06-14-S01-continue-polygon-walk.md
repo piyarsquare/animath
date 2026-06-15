@@ -33,6 +33,18 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 layout · 13:40 — World picker moved to the top bar (user request)
+User asked to improve the layout/controls — "should be able to change world from
+the top bar." Moved the world (gluing) selector out of the World panel into the
+top bar via the framework's `topExtra` slot (the idiom for "the one selector you
+should never open a panel to reach" — Complex Particles' function picker). It's a
+native `am-bar-select` grouped by the geometry χ forces (Flat · χ=0 / Sphere ·
+χ>0 / Hyperbolic · χ<0). The World panel is now a pure topology readout (edge
+word + name/χ/orientability/curvature); `titlePanel="world"` makes the top-bar
+title double as a shortcut to it. Verified: selector renders in the top bar with
+the three optgroups; switching to a world updates the subtitle + scene. Build +
+lint green. (Broader layout/control polish: awaiting the user's specifics.)
+
 ### 🔵 finding · 13:10 — F audit: TopologyWalk's "baked mirror" is deliberate, not a bug
 The prior handoff worried TopologyWalk "likely carries the same baked-mirror bug
 class, never audited." Audited it. Conclusion: **it uses det<0 transforms on
