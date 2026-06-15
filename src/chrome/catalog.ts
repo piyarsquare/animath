@@ -2,11 +2,13 @@ import { apps } from '../apps';
 import type { PreviewKind } from './previews';
 
 /**
- * Gallery catalog — the 9 cards on the landing page, grouped by topic
- * (DESIGN-SPEC §1). Derives name/glyph/blurb from src/apps.ts (the canonical
- * registry, append-only) and adds the gallery-only metadata here: category
- * and preview kind. `#/fractals-cpu` is intentionally absent (unlisted
- * legacy route).
+ * Gallery catalog — the landing-page cards, grouped by topic (DESIGN-SPEC §1).
+ * Derives name/glyph/blurb from src/apps.ts (the canonical registry) and adds
+ * the gallery-only metadata here: category and preview kind. The card order
+ * follows src/apps.ts. An app is shown only if it has a META entry below, so
+ * dropping an entry retires its card while keeping the route live:
+ * `#/fractals-cpu` (legacy) and `#/stable-marriage` (retired in favor of
+ * `#/stable-matching`) are intentionally absent.
  */
 export type Category = 'Complex' | 'Fractal' | 'Dynamics' | 'Algorithm';
 
@@ -32,7 +34,6 @@ const META: Record<string, { cat: Category; kind: PreviewKind; hue?: number }> =
   '/correspondence': { cat: 'Fractal', kind: 'julia' },
   '/topology-walk': { cat: 'Dynamics', kind: 'corridor' },
   '/trinary': { cat: 'Dynamics', kind: 'trinary' },
-  '/stable-marriage': { cat: 'Algorithm', kind: 'marriage' },
   '/agentic-sorting': { cat: 'Algorithm', kind: 'sorting' },
   '/stable-matching': { cat: 'Algorithm', kind: 'matrix' },
   '/polygon-worlds': { cat: 'Dynamics', kind: 'polygon' },
