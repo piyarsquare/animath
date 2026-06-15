@@ -85,11 +85,14 @@ worlds).
 - **No PR / not synced with `main`.** If this branch goes to a PR, do the prescribed
   `git fetch && git merge origin/main`, keep every app's entries in the append-only
   shared files, and re-run `npm run build` (per CLAUDE.md / BUILDING_AN_APP.md §8).
-- **Zip-sphere minimap marker is approximate.** The 2n-gon minimap (word-driven) is
-  the abstract gluing diagram; the player marker still uses the existing rp2Square
-  chart (same bar as the existing round `sphere`). A *faithful* zip-chart marker —
-  and an optional matching custom minimap (azimuthal disk with n seam-spokes) — is
-  future work. The 3D seams are the faithful payload and are correct.
+- **Zip-sphere minimap marker — done.** `chart()` has a `zip` branch (a star/gore
+  chart into the 2n-gon: south pole → center, each leaf → its vertex, each gore → the
+  hub vertex, barycentric so the marker is always inside). It replaced the old square
+  fallback, which the hex/oct minimap misread (marker could land outside the polygon).
+  Note there is *no* isometric round-sphere → regular-2n-gon map (the true unfolding is
+  n-spiked), so the polygon stays the abstract gluing diagram; an optional matching
+  custom minimap (azimuthal disk with n seam-spokes) is still possible future work. The
+  3D seams (now drawn as stitches) are the faithful payload.
 - **Optional: give the existing square `sphere` the same visible seams.** It is the
   same star-tree structure (2 folds) but currently draws no seams. Low-risk, would
   unify the family; deferred to avoid changing a shipped world this session.

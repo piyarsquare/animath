@@ -33,6 +33,29 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 fix · 01:10 — Zip minimap marker: real star/gore chart (was misreading square coords)
+**Why:** user caught a real bug — for zip worlds `chart()` fell through to the
+**square** rp2Square path, but the minimap renders the hex/oct disk via
+`drawPolygonMap`. So `[-1,1]²` square coords were misread as polygon-disk
+coords: near diagonal-equator directions the marker landed **outside** the
+polygon with a heading unrelated to the displayed gluing.
+
+Added a `zip` branch to `chart()` — a continuous **star/gore chart** into the
+2n-gon: colatitude-from-hub → radius, longitude → gore sector, barycentric into
+each `(center, V_A, V_B)` triangle (so it's *always* inside by construction).
+South pole → center, each leaf (odd vertex 2k+1, sphere longitude 2πk/n) →
+**exactly** its vertex, each gore → the hub (even) vertex it surrounds, a seam →
+the center→leaf diagonal. (There is no isometric map from a round sphere to a
+*regular* 2n-gon — the true unfolding of this star is an n-spiked shape — so the
+polygon stays the abstract gluing diagram; this chart respects its combinatorics
+and keeps the marker honest.)
+
+Verified: build + lint green; standalone math check — south pole→center, each
+leaf→its vertex (err 0.0000), **0/1600 sampled points outside** the polygon
+(hex & oct), the diagonal-equator case now inside; runtime while walking
+**0/24 marker samples outside**; minimap screenshot shows the marker inside the
+hexagon with a sensible heading.
+
 ### 🟢 tweak · 00:45 — Zip seams restyled as stitches (user request)
 Replaced each solid seam tube with a row of short **stitch bars** crossing the
 geodesic, alternately slanted for a hand-sewn look — sutures closing the cut,

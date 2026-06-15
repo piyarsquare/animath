@@ -444,6 +444,36 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
       let hx = qx - px, hz = qy - py; const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
       return { u: (px + 1) / 2, v: (py + 1) / 2, hx, hz, flipped: rep };
     }
+    if (zip) {
+      // Star/gore chart into the 2n-gon (the abstract gluing diagram — there is no
+      // isometric map from a round sphere to a regular 2n-gon). South pole → centre;
+      // each leaf (odd vertex 2k+1, sphere longitude 2πk/n) → its vertex; each gore
+      // between two seams → the hub (even) vertex it surrounds; a seam → the
+      // centre→leaf diagonal. Continuous and ALWAYS inside the polygon — unlike the
+      // old square fallback, whose [-1,1]² coords the hex/oct mini-map misread (the
+      // marker could land outside the polygon with a meaningless heading).
+      const n = N_LEAVES;
+      const zipPt = (d: THREE.Vector3): [number, number] => {
+        const phi = Math.acos(Math.max(-1, Math.min(1, d.y)));     // colatitude from the hub (+Y)
+        let lam = Math.atan2(d.z, d.x); if (lam < 0) lam += 2 * Math.PI;
+        const seg = (lam * n) / Math.PI + 1;                       // leaf k ↦ ray 2k+1 (odd)
+        const r = Math.floor(seg), t = seg - r;
+        const rA = ((r % (2 * n)) + 2 * n) % (2 * n), rB = (rA + 1) % (2 * n);
+        const angA = BASE + (Math.PI * rA) / n, angB = BASE + (Math.PI * rB) / n;
+        // boundary colatitude per ray: even = hub vertex (φ=0), odd = leaf vertex (φ=π/2)
+        const bndA = rA % 2 === 0 ? 0 : Math.PI / 2, bndB = rB % 2 === 0 ? 0 : Math.PI / 2;
+        const bnd = bndA * (1 - t) + bndB * t;
+        const rho = Math.max(0, Math.min(1, (Math.PI - phi) / (Math.PI - bnd)));
+        const ex = (1 - t) * Math.cos(angA) + t * Math.cos(angB);
+        const ey = (1 - t) * Math.sin(angA) + t * Math.sin(angB);
+        return [rho * ex, rho * ey];                                // disk coords (math axes, +y up)
+      };
+      const [px, py] = zipPt(posU);
+      const ahead = posU.clone().multiplyScalar(Math.cos(0.06)).addScaledVector(fwdU, Math.sin(0.06)).normalize();
+      const [qx, qy] = zipPt(ahead);
+      let hx = qx - px, hz = qy - py; const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
+      return { u: px / 2 + 0.5, v: py / 2 + 0.5, hx, hz, flipped: false };
+    }
     const rep = posU.z < 0;
     const [sx, sy] = rp2Square(posU.x, posU.y, posU.z, rep);
     const e = 0.06, ce = Math.cos(e), se = Math.sin(e);
