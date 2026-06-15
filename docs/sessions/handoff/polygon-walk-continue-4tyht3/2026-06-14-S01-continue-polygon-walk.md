@@ -1,160 +1,147 @@
 ---
 kind: handoff
 session: 2026-06-14-S01
-date: 2026-06-14
-title: Polygon Worlds — spherical n-gon worlds (ℝP² + zip spheres) and guard hardening
+date: 2026-06-15
+title: Polygon Worlds — new worlds, immersive desktop, scene looks, Topology Walk retired
 branch: claude/polygon-walk-continue-4tyht3
 slug: polygon-walk-continue-4tyht3
 status: completed
 build: passed
 followup: null
 pr: null
-app: polygon-worlds
+app: polygon-worlds, chrome
 ---
 
-# Polygon Worlds — spherical n-gon worlds (ℝP² + zip spheres) and guard hardening
+# Polygon Worlds — new worlds, immersive desktop, scene looks, Topology Walk retired
+
+> [!NOTE]
+> Long session, two arcs. **Arc 1 (math/worlds + beauty):** finished roadmap A1/A2
+> (new ℝP² + zip-sphere worlds), hardened the chirality guard, added soft shadows.
+> **Arc 2 (UX, the bulk of recent work):** a desktop "immersive" mode, a scene
+> "looks" system salvaged from the now-retired Topology Walk, and a string of
+> layout/mobile/atmosphere fixes from live user feedback. Everything is committed
+> and pushed to the branch; build passes; **no PR opened** (not requested).
 
 ## Summary
 
-Continued the Polygon Worlds spherical track. Shipped the **complete roadmap-A set**:
-four new worlds — hexagonal/octagonal **projective planes** (A1) and
-hexagonal/octagonal **zip spheres** (A2) — plus a fix to the chirality guard that
-was producing intermittent **false failures**. Everything is committed and pushed to
-`claude/polygon-walk-continue-4tyht3`; `npm run build` and `npm run lint` are green,
-and the full 12-world chirality guard passes **reliably**. This branch targets `main`
-but has **no PR yet** and has not been synced with `main` (see Open / not done).
+PolygonWorlds (`src/animations/PolygonWorlds/`) gained four new worlds and a full
+UX/atmosphere pass. The walker now runs **full-bleed on desktop** (new opt-in
+`immersive` workspace mode), carries selectable **scene looks** (Daytime / Overcast /
+Ember dusk / Moonlit), and its controls were reorganized (world picker in the World
+panel, primary verbs in a bottom action strip, perspective as top-bar pills on
+desktop / a View-sheet toggle on phone). **Topology Walk was retired** — unlisted from
+the gallery, route kept. All 12 worlds pass the chirality guard; build + lint are
+green (0 errors, 60 baseline warnings). The branch is ahead of `main` and has **not**
+been synced/merged.
 
 ## What changed
 
-Four commits this session (newest last):
+**New worlds (roadmap A1 + A2).** `rp2hex` (`a b c a b c`), `rp2oct` (`a b c d a b c d`)
+— smooth hexagonal/octagonal ℝP² (same antipodal deck as square ℝP², charted via a new
+polygon-gauge map `ngon2hemi`/`hemi2ngon`); and `zipsphere6`/`zipsphere8`
+(`a a⁻¹ b b⁻¹ …`) — round spheres cut along a star tree, drawn with stitched seam arcs.
+The square `sphere` now also shows its 2 seams. Chirality guard extended and **green on
+all 12 worlds** (both faces of every flip world), decor 0 improper everywhere.
 
-- **`d9482bc` A1 — hex/oct projective planes** (`a b c a b c`, `a b c d a b c d`).
-  Smooth spherical hemispheres + antipodal deck, charted through a **new
-  polygon-gauge map** `ngon2hemi`/`hemi2ngon` (a regular m-gon ↦ hemisphere,
-  azimuthal-equidistant in the gauge radius) instead of the square's `sq2hemi`. The
-  realize() polygon's m vertices land on the equator. All square-specific code in the
-  spherical presenter now branches on an `nGon` flag.
+**Beauty.** Soft `PCFSoftShadowMap` shadows gated to the flat (euclidean) worlds; a sun
+disc in the gradient environment map. A **bloom** experiment was built then **reverted**
+(user: "looks terrible") — `bloom.ts` deleted, render path back to direct
+`renderer.render`.
 
-- **`1685416` A2 — hex/oct zip spheres** (`a a⁻¹ b b⁻¹ c c⁻¹`, `…d d⁻¹`). A kernel
-  probe established the structure: corner classes are **one hub** (all even polygon
-  vertices) **+ n leaves** (the odd vertices), orientable, `chart:true`. So each is
-  the *same round sphere* as the pillowcase sphere, cut along a **star tree** (hub +
-  one spoke per `x x⁻¹` fold). Because they're orientable round spheres, the walk
-  (kernel Frame) and decor (`fullDir`) reuse the round-sphere path **unchanged**; the
-  only new geometry is a `zip = !antipodal && !spec.edges` branch that draws **n seams
-  as rows of stitches** (short bars crossing the hub→equator-leaf geodesic, alternately
-  slanted — sutures closing the cut; one `InstancedMesh` per world, density tracks arc
-  length) and places 1 hub + n leaf corner markers. (Initially drawn as solid tubes;
-  restyled to stitches at the user's request — commit `72836a0`.)
+**Desktop "immersive" mode** (chrome, opt-in). New `immersive?: boolean` on
+`WorkspaceProps`; on a single-view app the view fills the stage below the top bar
+(frameless, no dotted void) with rail/panels/action-strip overlaid — the desktop twin
+of the phone solo view. Gated; other apps unaffected.
 
-- **`f59f1cc` Guard hardening.** The earlier full-guard run flagged `klein6`
-  `B=cyan@−axis` — but two clean re-runs of klein6 alone both passed. **Root cause:**
-  trail prints lay only every ~0.12–1.6 units, so the *freshest* print right after
-  crossing to the flipped face can still be the **pre-crossing** stamp (laid on face
-  A), which reads mirrored in the flipped frame → a false negative; the old gate
-  ("sign stable for 3 reads") didn't prove the stamp was laid on the flip side. Fix:
-  exposed the existing `clearTrail` on the `__poly` debug bridge; the guard now
-  **wipes the trail on crossing** and accepts the **first stamp laid while still
-  flipped** (guaranteed genuine), re-confirming the face at read time.
+**Scene "looks"** (`looks.ts`, salvaged from Topology Walk's corridor themes, minus the
+wall textures/torches/bloom). A look sets sky/fog tint + exposure + the shared light
+rig's colors/intensities, scaled by the per-cover lighting profile. **Topology Walk
+retired** — removed from `apps.ts` + `catalog.ts`; route + `#/mobius`/`#/wrap-world`
+redirects kept (URL-reachable).
 
-Supporting edits: `worldSpec.ts` (4 world specs + id union), `immersions.ts` (zip ids
-→ round-sphere immersion; rp2hex/oct → hemisphere immersion), `EXPLAINER.md` (ℝP²
-n-gon + zip-sphere bullets), `trail-chirality.mjs` (4 new worlds added as controls).
-
-Verification: build + lint green; a temporary scene probe confirmed the seam tubes
-render (`TubeGeometry: 3` hex, `4` oct) and was then removed; the full 12-world guard
-is all green (every flip-side world passes on **both** faces, every orientable control
-passes, **all decor 0 improper**, twin mirror-ink below the glass on all three twin
-worlds).
+**Controls reorg + fixes** (from live feedback). World picker lives in the **World
+panel** (grouped `Select`; title opens it); primary verbs (Plant/Clear signs, Clear
+trail) in a bottom-center **action strip**; First/Third person as **top-bar pills on
+desktop**, a **View-sheet toggle on phone** (the phone bar was overflowing); panels
+consolidated 6→4; default layout opens just World. Daytime sky black→soft blue then
+**brightened** to a sunny midday. The sphere's atmosphere now responds to looks (its
+sky is a `skyDome` mesh hiding `scene.background`, so it got a retintable dome —
+`paintDome` + `setSky` on the `CoverModel`). In immersive desktop the vertical rail is
+replaced by a **horizontal icon row in the top bar** (`Rail orientation="horizontal"`)
+and the bar **title is hidden** (it duplicated the rail's World icon).
 
 ## Key files
 
 | File | Role |
 |---|---|
-| [`presenters/spherical.ts:116`](https://github.com/piyarsquare/animath/blob/f59f1cc/src/animations/PolygonWorlds/presenters/spherical.ts#L116) | `zip` detection; the zip branch (seams + hub/leaf markers) lives below |
-| [`presenters/spherical.ts`](https://github.com/piyarsquare/animath/blob/72836a0/src/animations/PolygonWorlds/presenters/spherical.ts) | `stitchMatrices()` + `rebuildZipSeams()` — the seam stitches (InstancedMesh), rebuilt with the shell radius |
-| [`presenters/spherical.ts:176`](https://github.com/piyarsquare/animath/blob/f59f1cc/src/animations/PolygonWorlds/presenters/spherical.ts#L176) | `cornerPlacements()` zip branch — 1 hub (north pole) + n leaf markers |
-| [`squareMap.ts:111`](https://github.com/piyarsquare/animath/blob/f59f1cc/src/animations/PolygonWorlds/squareMap.ts#L111) | `ngon2hemi` / `hemi2ngon` — the A1 polygon-gauge hemisphere chart |
-| [`worldSpec.ts:165`](https://github.com/piyarsquare/animath/blob/f59f1cc/src/animations/PolygonWorlds/worldSpec.ts#L165) | the 4 new world specs (rp2hex/oct, zipsphere6/8) + id union at L48 |
-| [`instruments/immersions.ts:199`](https://github.com/piyarsquare/animath/blob/f59f1cc/src/animations/PolygonWorlds/instruments/immersions.ts#L199) | zip ids → round-sphere immersion (rp2hex/oct at L183) |
-| [`PolygonWorlds.tsx:100`](https://github.com/piyarsquare/animath/blob/f59f1cc/src/animations/PolygonWorlds/PolygonWorlds.tsx#L100) | `clearTrail` exposed on the `__poly` debug bridge |
-| [`scripts/trail-chirality.mjs:115`](https://github.com/piyarsquare/animath/blob/f59f1cc/scripts/trail-chirality.mjs#L115) | hardened flip-side read (wipe trail, accept first fresh flip-side stamp) |
+| [`PolygonWorlds.tsx:437`](https://github.com/piyarsquare/animath/blob/339c27d0679af30ebaf676196c46022a17e42fad/src/animations/PolygonWorlds/PolygonWorlds.tsx#L437) | App: `immersive`, desktop-only `modes` pills, `actions`, World-panel picker, look state |
+| [`looks.ts:39`](https://github.com/piyarsquare/animath/blob/339c27d0679af30ebaf676196c46022a17e42fad/src/animations/PolygonWorlds/looks.ts#L39) | The 4 scene looks (atmosphere presets) |
+| [`fundamentalSquareEngine.ts:127`](https://github.com/piyarsquare/animath/blob/339c27d0679af30ebaf676196c46022a17e42fad/src/animations/PolygonWorlds/fundamentalSquareEngine.ts#L127) | `applyLook`/`applyAtmosphere`/`setLook`; calls `cover.setSky` |
+| [`presenters/spherical.ts:83`](https://github.com/piyarsquare/animath/blob/339c27d0679af30ebaf676196c46022a17e42fad/src/animations/PolygonWorlds/presenters/spherical.ts#L83) | `paintDome` + `setSky` — retintable sky dome (sphere atmosphere) |
+| [`worldSpec.ts:48`](https://github.com/piyarsquare/animath/blob/339c27d0679af30ebaf676196c46022a17e42fad/src/animations/PolygonWorlds/worldSpec.ts#L48) | World ids incl. new `rp2hex`/`rp2oct`/`zipsphere6`/`zipsphere8` |
+| [`chrome/workspace/types.ts:139`](https://github.com/piyarsquare/animath/blob/339c27d0679af30ebaf676196c46022a17e42fad/src/chrome/workspace/types.ts#L139) | `immersive?: boolean` on WorkspaceProps |
+| [`chrome/workspace/DesktopWorkspace.tsx:31`](https://github.com/piyarsquare/animath/blob/339c27d0679af30ebaf676196c46022a17e42fad/src/chrome/workspace/DesktopWorkspace.tsx#L31) | `soloImmersive`; horizontal rail in bar; hide title |
+| [`chrome/workspace/Rail.tsx:43`](https://github.com/piyarsquare/animath/blob/339c27d0679af30ebaf676196c46022a17e42fad/src/chrome/workspace/Rail.tsx#L43) | `orientation` prop (horizontal top-bar variant) |
+| [`chrome/TopBar.tsx:40`](https://github.com/piyarsquare/animath/blob/339c27d0679af30ebaf676196c46022a17e42fad/src/chrome/TopBar.tsx#L40) | `hideTitle` (immersive + phone-with-extra) |
+| [`scripts/trail-chirality.mjs`](https://github.com/piyarsquare/animath/blob/339c27d0679af30ebaf676196c46022a17e42fad/scripts/trail-chirality.mjs) | The decisive orientation guard (run per-world or all 12) |
 
 ## Open / not done
 
-- **No PR / not synced with `main`.** If this branch goes to a PR, do the prescribed
-  `git fetch && git merge origin/main`, keep every app's entries in the append-only
-  shared files, and re-run `npm run build` (per CLAUDE.md / BUILDING_AN_APP.md §8).
-- **Zip-sphere minimap marker — done.** `chart()` has a `zip` branch (a star/gore
-  chart into the 2n-gon: south pole → center, each leaf → its vertex, each gore → the
-  hub vertex, barycentric so the marker is always inside). It replaced the old square
-  fallback, which the hex/oct minimap misread (marker could land outside the polygon).
-  Note there is *no* isometric round-sphere → regular-2n-gon map (the true unfolding is
-  n-spiked), so the polygon stays the abstract gluing diagram; an optional matching
-  custom minimap (azimuthal disk with n seam-spokes) is still possible future work. The
-  3D seams (now drawn as stitches) are the faithful payload.
-- **Square `sphere` seams — done.** It's the n=2 zip sphere, so it now wears its 2
-  stitched seams + hub/leaf corner markers via a shared `starSeams = !antipodal` flag,
-  while keeping its square mini-map + rp2Square marker (only `zip` gates the star/gore
-  `chart()`). The whole sphere family (sphere · zipsphere6 · zipsphere8) is consistent.
-- **Roadmap B/C/D remain** (orbifold worlds; "inside" ℝP² walk; curvature/Gauss–Bonnet
-  readout) — all substantial new directions awaiting a steer. The user chose to wrap
-  up after A1+A2 rather than start one.
-- **Guard-robustness nicety:** the flip-side dwell is now correct but still
-  time-boxed; a print-count signal through the engine would be the most rigorous
-  version (not needed — `clearTrail` suffices).
+- **Clouds (future).** Scoped in the progress report's top note. Simple version = a
+  procedural cloud dome tied into the looks. **But the sky likely needs to be
+  cover-aware** — it may depend on which side of the sheet the walker is on in
+  non-orientable worlds, so treat it as part of the `CoverModel`/deck, not static
+  chrome. Prototype on orientable worlds first.
+- **Roadmap B/C/D unpicked** — the marquee features (D = vertex-ring **curvature/
+  holonomy demo**; C = ℝP² **inside-walk**; B). D is the highest-value next build.
+- **E1** (hyperbolic decor azimuth equivariance) — deferred to land *with* D, where the
+  rotation becomes visible/verifiable. **E2** (klein6 glide-crossing smoothness pixel
+  guard) — a new permanent guard, not yet built.
+- **Narrow-desktop bar clip:** between ~740–860px the immersive top bar overflows ~20px
+  (skin-picker edge). Cosmetic; reclaim space by shortening the perspective pills or
+  moving perspective into the View panel on desktop too.
+- **Not synced to `main`.** Before any PR: `git fetch && git merge origin/main`, keep
+  every app's entries in the append-only shared files, re-run `npm run build`.
 
 ## Context
 
-- **The chirality guard is the safety net.** `scripts/trail-chirality.mjs` walks each
-  world headless (requires `?polydebug` + a running `npm run preview` on :4173), reads
-  the exact geometry probe (the signed side of the freshest footprint in the player's
-  frame) on both faces, and audits that every decor mesh is placed by a proper (det>0)
-  transform. Orientable worlds are A-only controls (never reach a flipped face);
-  non-orientable worlds must read correct on **both** faces. Run focused subsets by
-  `sed`-injecting a `WORLDS` slice (examples are in the progress report).
-- **Zip spheres are orientable**, so the guard only A-controls them — chart
-  faithfulness (seam placement) is **not** machine-checked. It was verified by a
-  one-off scene probe + screenshots; the seam math (n great-circle arcs from the north
-  pole to n equator leaves 360°/n apart) is simple and deterministic.
-- The seam screenshot in the progress report used a **temporary north-pole spawn**
-  purely for framing (the shipped spawn sits far from the hub, which is why the seams
-  are hard to catch on camera). The seam *geometry* shown is the shipped code; the
-  spawn hack was reverted.
-- Build is the only CI gate; `npm test` and `npm run lint` are green-by-convention
-  (lint baseline is 60 warnings — don't add new ones).
+- **Shared chrome touched** (all additive/gated; safe for parallel branches but worth a
+  re-check on merge): `types.ts`, `DesktopWorkspace.tsx`, `ViewWindow.tsx`, `Rail.tsx`,
+  `TopBar.tsx`, `theme.css`. CLAUDE.md + Routing table updated (Topology Walk marked
+  unlisted/retiring; PolygonWorlds notes its looks).
+- **Two pedagogies, deliberately different** (audited this session, item F): Topology
+  Walk shows the flip via a reversed "F" (intentional det<0 on content); PolygonWorlds
+  *hides* it (you carry your frame; mirror only through the glass). Don't "fix" one to
+  match the other — it's a product decision.
+- **Verification tooling:** headless screenshots via puppeteer + swiftshader
+  (`--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`); the
+  `?polydebug` query flag exposes the `__poly` bridge (map/probe/clearTrail) for guards.
+- **Looks persist** under `polygon-worlds:look`; world selection is session-only by
+  design. Daytime is the engine's original rig (no regression) over the new blue sky.
 
 ## Self-reflection
 
-1. **What would you do with another session?** Build the *faithful* zip-sphere
-   minimap (azimuthal disk with n seam-spokes) so the 2D map and 3D seams share one
-   chart, and add the visible seams to the existing square `sphere` to unify the
-   family. Then pick up roadmap C (inside ℝP² walk) — it's the smallest payoff-per-
-   effort of the remaining items and lives in the spherical presenter I now know well.
-2. **What would you change about what you produced?** The zip seams' visual prominence
-   was tuned by eye (radius 0.3, lifted 0.18, brighter material) without a headless
-   check of how they read at the default spawn/camera — a user landing on the world
-   may not immediately see a seam. A "spawn facing the nearest seam" tweak, or a faint
-   hub beacon, would make the headline feature land on first view.
-3. **What were you not asked that you think is important?** Whether the four new worlds
-   should appear in the gallery/registry ordering or get preview cards — I only wired
-   them into the Polygon Worlds dropdown; I did not touch `apps.ts`/`catalog.ts`
-   (Polygon Worlds is a single app, so this is correct, but worth confirming the new
-   worlds are discoverable enough).
-4. **What did we both overlook?** Nothing surfaced as wrong, but the zip-sphere
-   *chart faithfulness* has no automated guard (orientable ⇒ the chirality probe is an
-   A-only control). The whole project's lesson is "even a plausible-looking sphere
-   chart can be silently wrong"; a zip-specific assertion (e.g. the n seam arcs are
-   geodesics meeting at one hub point) would close that gap.
-5. **What did you find difficult?** Getting a *visual* of the seams: the character
-   spawns far from the hub and the third-person camera centers on the character, so
-   the pole-region seams stayed out of frame across many capture attempts. The scene
-   geometry probe (counting `TubeGeometry`) was what actually settled "do they render"
-   — the screenshots only confirmed placement once I forced a pole spawn.
-6. **What would have made this task easier?** A debug bridge hook to teleport the
-   player to a named point (hub / a leaf / antipode) would have made both the seam
-   screenshots and any future chart verification far quicker than walking there.
-7. **Follow-up value:** LOW — A1+A2 are shipped, built, linted, and pass the full
-   reliable guard; the open items are polish (faithful minimap marker, seam
-   discoverability) and new roadmap directions, none of which cast doubt on what
-   shipped.
+1. **What would you do with another session?** Build roadmap **D** (the curvature/
+   holonomy demo) — highest-value unbuilt feature, and it unlocks E1. Failing that,
+   prototype the cover-aware cloud sky on orientable worlds.
+2. **What would you change about what you produced?** The top bar accreted across
+   feedback rounds (world picker in → out; pills added; rail moved in). Each step was
+   user-directed and sound, but one deliberate "immersive desktop bar" layout up front
+   would have avoided the narrow-width overflow left behind. The View panel is also now
+   the densest (Look + camera + scale).
+3. **What were you not asked that you think is important?** Whether looks should persist
+   per-world or globally (currently global) — a night ℝP² + a day torus may beat one
+   look everywhere.
+4. **What did we both overlook?** That atmosphere (sky/clouds), like the trail and sign,
+   is genuinely *cover-dependent* in non-orientable worlds — the user flagged it for
+   clouds, but the same applies to any future skybox/horizon treatment.
+5. **What did you find difficult?** Making one "look" read consistently across three
+   very different renderers (flat background+fog vs. a sphere's sky-dome-over-shell vs.
+   hyperbolic disk) — the sphere needed a separate retint path the others don't.
+6. **What would have made this task easier?** A single sky/atmosphere abstraction owned
+   by the `CoverModel` (each cover renders its own sky) instead of the engine reaching
+   into `scene.background`/fog plus a cover-specific dome hook. That's also the right
+   foundation for clouds.
+7. **Follow-up value:** LOW — everything shipped is verified (build/lint green, guard
+   green on all 12 worlds, screenshots across covers/devices) and self-contained; the
+   open items are new features and one cosmetic narrow-width nit, not corrections.
