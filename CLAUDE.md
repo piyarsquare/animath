@@ -213,7 +213,10 @@ rendering **one component**:
   button restores); on phone, cards also height-resize from a bottom grip.
   While fullscreen, the rail stays live and panels float above; apps with
   primary verbs pass `actions` (the always-on strip, ≤5 buttons projecting a
-  drive/playback panel).
+  drive/playback panel). A single-view app can also pass `immersive` to make
+  that one view fill the stage below the top bar (frameless, no dotted void),
+  with the rail, floating panels and action strip overlaid — the desktop twin
+  of the phone solo view, used by Polygon Worlds for its first-person walk.
 - `LayoutDef.views[id].open: false` hides a view in that layout (how
   Stable Matching's matrix/welfare/lattice and Trinary's Lab instruments
   present as layouts).

@@ -33,6 +33,29 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 chrome · 16:05 — Desktop "immersive" mode (full-bleed scene, top bar kept)
+The user has been on mobile (which they love) and wanted the same on desktop:
+top bar visible, scene full-screen, controls still reachable — *not* the little
+windowed view on the dotted void. Added an opt-in **`immersive`** prop to the
+workspace (`WorkspaceProps`):
+
+- New `DesktopWorkspace` flag `soloImmersive = immersive && views.length === 1`.
+  The lone view renders with `am-ws-immersive` → `position:absolute; inset:0`
+  inside the stage (so it sits *below* the top bar, not over it like the
+  viewport-fixed `.am-ws-full`), `z-index:1`, frameless, header + resize hidden,
+  not draggable. The stage drops its dotted void (`am-stage-immersive`) and the
+  empty-panels hint is suppressed.
+- Rail (z 200), floating panels (z 30+) and the action strip (z 130) all overlay
+  the z-1 scene, so every control stays live — the desktop twin of the phone
+  solo view. Esc/fullscreen untouched; phone ignores the prop (it already solos
+  single views). Fully gated — other apps unchanged.
+- Polygon Worlds opts in (`immersive`). Verified: scene fills the stage exactly
+  (y 54→bottom, full width), top bar + rail + 2 floating panels + verb strip all
+  present and clickable; build + lint green (0 errors, 60 warnings).
+
+Touched shared chrome: `types.ts`, `DesktopWorkspace.tsx`, `ViewWindow.tsx`,
+`theme.css` (all additive/gated), plus a CLAUDE.md framework note.
+
 ### 🟢 layout · 14:10 — Layout/controls overhaul (user picked all four)
 Following the top-bar world picker, the user chose all four further improvements:
 

@@ -504,6 +504,17 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
   position: fixed; inset: 0; width: auto; height: auto; max-height: none;
   border: none; border-radius: 0; z-index: var(--z-full); animation: none;
 }
+/* Desktop immersive: a single view fills the stage (below the top bar),
+   frameless and fixed in place. Unlike fullscreen it stays stage-relative and
+   sits at the bottom of the stack, so the top bar, rail, floating panels and
+   action strip all overlay it (the desktop twin of the phone solo view). */
+.am-stage-immersive { background: var(--bg); }
+.am-ws-view.am-ws-immersive {
+  position: absolute; inset: 0; width: auto; height: auto; max-height: none;
+  border: none; border-radius: 0; box-shadow: none; z-index: 1; animation: none;
+}
+.am-ws-immersive > .am-ws-vhead,
+.am-ws-immersive > .am-ws-resize { display: none; }
 /* On mobile the dynamic toolbar makes a fixed inset:0 box unreliable; pin it
    to the visible viewport explicitly so full screen truly fills the screen. */
 .am-phone-view.am-ws-full { height: 100dvh; }

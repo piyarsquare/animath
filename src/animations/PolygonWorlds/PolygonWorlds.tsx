@@ -430,6 +430,7 @@ export default function PolygonWorlds() {
       activeMode={thirdPerson ? 'third' : 'first'}
       onModeChange={(id) => setThirdPerson(id === 'third')}
       actions={actions}
+      immersive
       sections={sections}
       views={views}
       layouts={LAYOUTS}
