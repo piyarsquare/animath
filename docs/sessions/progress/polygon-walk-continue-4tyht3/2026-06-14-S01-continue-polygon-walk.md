@@ -33,6 +33,41 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🔵 finding · 13:10 — F audit: TopologyWalk's "baked mirror" is deliberate, not a bug
+The prior handoff worried TopologyWalk "likely carries the same baked-mirror bug
+class, never audited." Audited it. Conclusion: **it uses det<0 transforms on
+content on purpose, and it is carefully built — not an accidental bug.**
+
+Evidence:
+- `footprints.ts` glyph is **intentionally chiral** (an "F" + cyan-left/
+  magenta-right halves); its docstring states the design: *through an
+  orientation-reversing transform (a mirrored Klein cell, the antipodal map, the
+  Möbius floor) the F comes back reversed and the colors swap — making the flip
+  impossible to miss.* The reversed F is TopologyWalk's signature teaching cue.
+- `flatEngine.ts:463` `S.makeScale(1, 1, sz)` with `sz = −1` on every other
+  Klein column ⇒ **det<0 cell transform on the trail/decor** (the deliberate
+  mirror). Separately the glued under-face uses `makeScale(1,−1,−1)` (det **+1**,
+  proper) — correct, with an explicit z-mirror-for-chiral-marks comment.
+- `sphericalEngine.ts:266` `antipode.scale.set(-1,-1,-1)` ⇒ det<0 point
+  reflection on the ℝP² antipode decor (intended "twin reads mirrored").
+- `flatEngine.ts:426` `sz0` **bakes in the home cell's mirror parity** so your
+  *current* cell reads right — i.e. the walking face is parity-corrected; only
+  *other* cells show the reversed F.
+
+**This contradicts the PolygonWorlds "one-line law"** (deck transforms proper in
+3D; walking-face never reversed; mirror only through the glass) — but the two
+apps embody two *different, internally-consistent pedagogies* for the same math:
+TopologyWalk makes the flip **visible** (reversed F on mirrored cells);
+PolygonWorlds **hides** it (you carry your frame; the mirror only appears on the
+far side through glass). TopologyWalk's per-cell det<0 + home-parity correction
+is deliberate and careful, not a naive `scale.y=-1` oversight.
+
+**Recommendation: no hygiene fix.** Migrating TopologyWalk to the one-line law
+would delete its core "spot the flip" device — a product/pedagogy decision for
+the user, not an autonomous cleanup, and it would need its own adapted chirality
+guard first. Reframes handoff item F: confirmed-at-code-level, but *deliberate*,
+so closed as "no action without product direction."
+
 ### 🟢 polish · 12:30 — Roadmap E/F set: American spellings + settings persistence
 Picked up the fidelity/hygiene set after the beauty detour.
 
