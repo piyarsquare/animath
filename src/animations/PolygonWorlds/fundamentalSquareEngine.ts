@@ -118,6 +118,7 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
     if (look.sky != null) {
       if (scene.background instanceof THREE.Color) scene.background.setHex(look.sky);
       if (scene.fog instanceof THREE.Fog) scene.fog.color.setHex(look.sky);
+      cover.setSky?.(look.sky);  // spherical: retint its sky dome (hides scene.background)
     } else {
       if (baseBg && scene.background instanceof THREE.Color) scene.background.copy(baseBg);
       if (baseFog && scene.fog instanceof THREE.Fog) scene.fog.color.copy(baseFog);

@@ -50,8 +50,8 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
       {!hideTitle && (onTitleClick ? (
         <button
           className="am-titlewrap am-title-btn"
-          title="Change function"
-          aria-label={`${title} — change function`}
+          title="Open settings"
+          aria-label={`${title} — open settings`}
           onClick={onTitleClick}
         >
           <span className="am-title">{title}</span>

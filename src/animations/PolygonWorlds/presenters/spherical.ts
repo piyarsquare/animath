@@ -77,13 +77,18 @@ function gridTexture(): THREE.CanvasTexture {
   return t;
 }
 
-/** Unit-radius gradient sky dome (zenith glow → deep space), scaled to the planet.
- *  Unlit, fog-immune, drawn first behind everything. */
-function skyDome(): THREE.Mesh {
-  const geo = new THREE.SphereGeometry(1, 32, 16);
-  const top = new THREE.Color(0x1b2750), horizon = new THREE.Color(0x070b18), bot = new THREE.Color(0x02030a);
-  const c = new THREE.Color(), p = new THREE.Vector3(), cols: number[] = [];
+/** Paint a sky dome's vertex gradient from one base sky color: a brighter zenith
+ *  glow fading down through the horizon tone to a deep floor. Drives both the
+ *  initial dome and live look re-tints (so the sphere's sky tracks the look). */
+function paintDome(mesh: THREE.Mesh, base: number) {
+  const b = new THREE.Color(base);
+  const top = b.clone().multiplyScalar(1.35);
+  top.r = Math.min(1, top.r); top.g = Math.min(1, top.g); top.b = Math.min(1, top.b);
+  const horizon = b.clone();
+  const bot = b.clone().multiplyScalar(0.4);
+  const geo = mesh.geometry;
   const pa = geo.attributes.position;
+  const c = new THREE.Color(), p = new THREE.Vector3(), cols: number[] = [];
   for (let i = 0; i < pa.count; i++) {
     p.fromBufferAttribute(pa, i).normalize();
     const ty = p.y * 0.5 + 0.5;
@@ -91,8 +96,15 @@ function skyDome(): THREE.Mesh {
     cols.push(c.r, c.g, c.b);
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+}
+
+/** Unit-radius gradient sky dome (zenith glow → deep space), scaled to the planet.
+ *  Unlit, fog-immune, drawn first behind everything. */
+function skyDome(base: number): THREE.Mesh {
+  const geo = new THREE.SphereGeometry(1, 32, 16);
   const mat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false });
   const m = new THREE.Mesh(geo, mat); m.renderOrder = -1;
+  paintDome(m, base);
   return m;
 }
 
@@ -149,7 +161,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
 
   // gradient sky dome (zenith glow → deep space), so the void around the planet has
   // depth instead of a flat fill. Unlit, fog-immune, behind everything.
-  const sky = skyDome();
+  const sky = skyDome(SKY);
   sky.scale.setScalar(R * 4);
   root.add(sky);
 
@@ -542,6 +554,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     setFloorOpacity: (o: number) => { glassOpacity = o; applyGlass(); },
     setCameraDistance: (d: number) => { camDist = d; },
     setRadius,
+    setSky: (hex: number) => paintDome(sky, hex),
     dispose: () => {
       ink.dispose();
       clearSignsFn();

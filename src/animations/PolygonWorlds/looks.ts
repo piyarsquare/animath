@@ -7,9 +7,10 @@
  * colors + intensities. The per-cover lighting profile still scales these, so a
  * look reads consistently across the flat / spherical / hyperbolic worlds.
  *
- * Daytime is the engine's original look (so the default is unchanged); the rest
- * are the few Topology Walk themes that read well outdoors — a warm dusk and a
- * cool night — plus a flat overcast.
+ * Daytime is the engine's original rig (so the default lighting is unchanged)
+ * but now over a soft blue sky instead of the old near-black; the rest are the
+ * few Topology Walk themes that read well outdoors — a flat overcast, a warm
+ * dusk, and a cool night.
  */
 export interface PolygonLook {
   id: string;
@@ -38,7 +39,7 @@ export interface PolygonLook {
 export const LOOKS: PolygonLook[] = [
   {
     id: 'daytime', label: 'Daytime',
-    exposure: 1.06, ambient: 0.42,
+    sky: 0x6f9bcb, exposure: 1.06, ambient: 0.42,
     hemiSky: 0xffe6c2, hemiGround: 0x5b73a6, hemi: 0.4,
     warmColor: 0xffd2a1, warm: 0.95, coolColor: 0x9bc2ff, cool: 0.62,
     lampColor: 0xfff0d8, lampMul: 1,

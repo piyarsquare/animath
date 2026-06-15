@@ -274,36 +274,29 @@ export default function PolygonWorlds() {
   // is the point on the unit sphere the player occupies, which the embedding inset's
   // sphere/Roman marker rides; flat/hyperbolic immersions ignore it.
   const getDir = useCallback(() => engineRef.current?.getPose()?.up ?? null, []);
-  // The world picker lives in the TOP BAR (topExtra) — the one selector you should
-  // never open a panel to reach — grouped by the geometry χ forces.
+  // World groups for the picker — grouped by the geometry χ forces. The picker
+  // itself now lives in the World panel (the title opens it); see worldNode.
   const GEO_GROUPS: { cover: ReturnType<typeof deriveGeometry>['cover']; label: string }[] = [
     { cover: 'euclidean', label: 'Flat · χ = 0' },
     { cover: 'spherical', label: 'Sphere · χ > 0' },
     { cover: 'hyperbolic', label: 'Hyperbolic · χ < 0' },
   ];
-  const worldTopSelect = (
-    <select
-      className="am-select am-bar-select"
-      aria-label="World" title="World"
-      value={worldId}
-      onChange={(e) => setWorldId(e.target.value)}
-    >
-      {GEO_GROUPS.map((g) => (
-        <optgroup key={g.cover} label={g.label}>
-          {WORLDS.filter((w) => deriveGeometry(w).cover === g.cover).map((w) => (
-            <option key={w.id} value={w.id}>{w.label}</option>
-          ))}
-        </optgroup>
-      ))}
-    </select>
-  );
 
   /* ---- archetype panels (one row per legacy control; nothing dropped) ---- */
 
-  // subject — the live topological invariants the chosen gluing forces (the world
-  // picker itself is in the top bar; this panel reads out what it implies).
+  // subject — pick the world (grouped by the geometry χ forces) and read out the
+  // invariants the chosen gluing implies. The title doubles as a shortcut here.
   const worldNode = (
     <>
+      <Select
+        label="World"
+        groups={GEO_GROUPS.map((g) => ({
+          label: g.label,
+          options: WORLDS.filter((w) => deriveGeometry(w).cover === g.cover).map((w) => ({ value: w.id, label: w.label })),
+        }))}
+        value={worldId}
+        onChange={(v) => setWorldId(v)}
+      />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5 }}>
         <div style={{ marginBottom: 4 }}>
           <span style={{ color: 'var(--cp-fg)' }}>Edge word</span>{' '}
@@ -390,7 +383,7 @@ export default function PolygonWorlds() {
   );
 
   const sections: SectionDef[] = [
-    { id: 'world', title: 'World', arch: 'subject', node: worldNode, estHeight: 150 },
+    { id: 'world', title: 'World', arch: 'subject', node: worldNode, estHeight: 210 },
     { id: 'view', title: 'View', arch: 'view', node: viewNode, estHeight: 220 },
     { id: 'marks', title: 'Landmarks & sign', arch: 'marks', node: marksNode, estHeight: 320 },
     { id: 'drive', title: 'Walk', arch: 'drive', node: walkNode, estHeight: 150 },
@@ -436,7 +429,6 @@ export default function PolygonWorlds() {
       appId="polygon-worlds"
       title="Polygon Worlds"
       subtitle={spec.short}
-      topExtra={worldTopSelect}
       titlePanel="world"
       modes={phone ? undefined : [{ id: 'third', label: 'Third person' }, { id: 'first', label: 'First person' }]}
       activeMode={thirdPerson ? 'third' : 'first'}
@@ -456,8 +448,8 @@ export default function PolygonWorlds() {
  *  column beside the walk window (Compact + Everything are auto-appended). */
 const LAYOUTS: LayoutDef[] = [
   {
-    id: 'walk', name: 'Walk', sub: 'World · Walk', icon: 'move',
-    open: { world: { x: 84, y: 18 }, drive: { x: 84, y: 196 } },
+    id: 'walk', name: 'Walk', sub: 'World', icon: 'move',
+    open: { world: { x: 84, y: 18 } },
   },
 ];
 

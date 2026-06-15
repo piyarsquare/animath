@@ -33,6 +33,31 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 fix · 19:55 — Sphere atmosphere, daytime sky, declutter (4 reports)
+Four issues from the user:
+
+- **Looks didn't work on the sphere.** The spherical cover paints its sky from a
+  gradient `skyDome` mesh that hides `scene.background`, so the look's bg/fog
+  override never showed. Made the dome retintable (`paintDome(mesh, base)` →
+  brighter zenith · horizon · deep floor from one base color), exposed
+  `setSky(hex)` on the `CoverModel`, and call it from the engine's
+  `applyAtmosphere`. Sphere sky now tracks the look (blue day ↔ dark night).
+- **Daytime sky was black.** All presenters default to a near-black SKY; gave
+  the Daytime look an explicit soft-blue sky (`0x6f9bcb`) — applies to the flat
+  background + fog and the sphere dome.
+- **Dead "world button".** The world picker had moved to the top bar, leaving
+  the title→World-panel shortcut opening a readout-only panel. Moved the picker
+  **back into the World panel** (grouped `Select`, the title opens it), and
+  removed it from the top bar — which also declutters the bar. Fixed TopBar's
+  hardcoded "Change function" title tooltip → neutral "Open settings".
+- **Overloaded menu.** Default layout now opens just the World panel (was
+  World + Walk); the picker lives there with the readout.
+
+Verified: build + lint green; daytime euclidean now has a blue sky, the sphere
+dome retints across looks (day/moonlit), bar has no world-select, the World
+panel carries the picker, title opens it (desktop + mobile sheet), mobile bar
+doesn't overflow, 0 console errors.
+
 ### 🟢 fix · 17:00 — Mobile top bar overcrowded (reported with screenshot)
 The phone bar was overflowing: brand + title + world-select + the two
 long-labeled First/Third pills (`flex:0 0 auto`, won't shrink) + ? + skins all
