@@ -459,6 +459,18 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
 .am-ws-rail-tip i { font-style: normal; font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
 .am-ws-rail-btn:hover .am-ws-rail-tip { opacity: 1; }
 
+/* horizontal rail — a flat icon row that lives in the top bar (immersive desktop),
+   so the full-bleed scene keeps its left edge. No floating card / scroll hints. */
+.am-ws-rail-h {
+  position: static; height: auto; width: auto; flex-direction: row; align-items: center;
+  gap: 2px; padding: 3px; background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 9px; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; overflow: visible;
+}
+.am-ws-rail-h .am-ws-rail-btn { width: 34px; height: 32px; border-radius: 7px; }
+.am-ws-rail-h .am-ws-rail-btn.am-on::before { left: 50%; top: auto; bottom: -4px; transform: translateX(-50%); width: 18px; height: 3px; }
+.am-ws-rail-h .am-ws-rail-sep { width: 1px; height: 22px; margin: 0 3px; }
+.am-ws-rail-h .am-ws-rail-tip { left: 50%; top: 100%; transform: translateX(-50%); margin-left: 0; margin-top: 8px; }
+
 /* the stage as a void canvas with a dot grid */
 .am-stage-void { background-color: var(--bg); background-image: radial-gradient(circle at 1px 1px, var(--dot-color, rgba(132,132,156,0.13)) 1px, transparent 1.5px); background-size: 24px 24px; }
 

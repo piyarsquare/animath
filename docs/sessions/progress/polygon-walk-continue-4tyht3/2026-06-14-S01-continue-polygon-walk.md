@@ -33,6 +33,25 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 fix · 20:30 — Brighten daytime + move the rail off the scene (desktop)
+Two follow-ups: day looked gloomy, and the vertical icon rail overlaid the
+immersive scene.
+
+- **Brighter daytime look**: lighter sky (`0x9cc6ef`), exposure 1.06 → 1.16,
+  ambient 0.42 → 0.6, hemi 0.4 → 0.62, warm key → 1.05, softer headlamp. Reads
+  as a sunny midday instead of dusky.
+- **Horizontal rail for immersive desktop**: added `orientation` to `Rail`; in
+  `soloImmersive` the panel icons render as a flat row **in the top bar**
+  (`.am-ws-rail-h`) and the left vertical `am-ws-railwrap` is dropped, so the
+  full-bleed scene keeps its left edge. Also hide the bar title in immersive
+  (new `TopBar.hideTitle`) — it duplicated the rail's World icon and crowded the
+  row.
+
+Verified: build + lint green; sunny daytime sky; no left rail, 4 panel icons in
+the bar that open their panels; bar fits cleanly at normal desktop widths (only
+the skin picker clips ~20px below ~860px, where windows approach the 740px phone
+breakpoint anyway). Non-immersive apps + phone unaffected.
+
 ### 🟢 fix · 19:55 — Sphere atmosphere, daytime sky, declutter (4 reports)
 Four issues from the user:
 

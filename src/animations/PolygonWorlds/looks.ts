@@ -39,10 +39,10 @@ export interface PolygonLook {
 export const LOOKS: PolygonLook[] = [
   {
     id: 'daytime', label: 'Daytime',
-    sky: 0x6f9bcb, exposure: 1.06, ambient: 0.42,
-    hemiSky: 0xffe6c2, hemiGround: 0x5b73a6, hemi: 0.4,
-    warmColor: 0xffd2a1, warm: 0.95, coolColor: 0x9bc2ff, cool: 0.62,
-    lampColor: 0xfff0d8, lampMul: 1,
+    sky: 0x9cc6ef, exposure: 1.16, ambient: 0.6,
+    hemiSky: 0xfff1dc, hemiGround: 0x7d93bf, hemi: 0.62,
+    warmColor: 0xffe0bc, warm: 1.05, coolColor: 0xb8d4ff, cool: 0.6,
+    lampColor: 0xfff0d8, lampMul: 0.85,
   },
   {
     id: 'overcast', label: 'Overcast',

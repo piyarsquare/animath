@@ -214,6 +214,7 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
       <TopBar
         title={title}
         subtitle={subtitle}
+        hideTitle={soloImmersive}
         modes={modes}
         activeMode={activeMode}
         onModeChange={onModeChange}
@@ -225,6 +226,9 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
             : undefined
         }
       >
+        {soloImmersive && (
+          <Rail orientation="horizontal" sections={sections} openIds={state.open} onToggle={togglePanel} />
+        )}
         <LayoutsControl
           current={state.layout}
           builtin={builtin}
@@ -264,7 +268,7 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
           );
         })}
 
-        <Rail sections={sections} openIds={state.open} onToggle={togglePanel} />
+        {!soloImmersive && <Rail sections={sections} openIds={state.open} onToggle={togglePanel} />}
 
         {openIds.length === 0 && !soloImmersive && (
           <div className="am-ws-empty">
