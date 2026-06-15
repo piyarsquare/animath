@@ -33,6 +33,26 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 polish · 12:30 — Roadmap E/F set: American spellings + settings persistence
+Picked up the fidelity/hygiene set after the beauty detour.
+
+- **F (spellings):** swept the module's code comments to American English per
+  CLAUDE.md (color/center/normalize/neighbor/behavior/analyze/labeled) — ~42
+  occurrences across presenters/lib/maps, including a few introduced earlier
+  this session. Comment-only; `.md` files were already clean. Committed.
+- **E3 (sign-text persistence):** the broader finding was that PolygonWorlds
+  persisted **nothing** — every control was plain `useState`. Resolved
+  consistently: the genuine *settings* now use `usePersistentState`
+  (`polygon-worlds:<field>`) — moveSpeed, floorOpacity, squareSize,
+  floorThickness, planetRadius, landmarkCount, arrangement, signFront, signBack
+  — while navigation/view stay session-only (selected world for predictable
+  landing; third-person + camera distance per the "don't persist camera"
+  convention). Verified: slider change → localStorage → reload reads it back.
+
+Build + lint green throughout. Remaining roadmap: E1 (hyperbolic decor azimuth
+equivariance), E2 (klein6 glide pixel-diff — chirality already shown flaky-OK),
+F-TopologyWalk audit; and the features B/C/D await an explicit pick.
+
 ### 🔴 revert · 11:55 — Bloom removed (user: "looks terrible")
 User rejected the bloom outright. Reverted the render path to the direct
 `renderer.render(scene, camera)`, removed the `makeSelectiveBloom` wiring, and

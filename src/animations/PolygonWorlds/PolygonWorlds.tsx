@@ -16,6 +16,7 @@ import { drawSquareMap, SquareMapSpec, SquareEdgeSpec } from './squareMap';
 import { drawPolygonMap, PolygonMapSpec } from './polygonMap';
 import { parseWord } from './surfaceSchema';
 import { realize } from './lib/realize';
+import { usePersistentState } from '../../lib/usePersistentState';
 import { EmbeddingInset } from './instruments/embeddingInset';
 import explainerText from './EXPLAINER.md?raw';
 
@@ -28,21 +29,27 @@ const clampCam = (d: number) => Math.max(CAM_MIN, Math.min(CAM_MAX, d));
 type MoveKey = 'fwd' | 'back' | 'left' | 'right';
 
 export default function PolygonWorlds() {
+  // Persistence: the genuine *settings* survive a reload (per CLAUDE.md), keyed
+  // `animath:<ver>:polygon-worlds:<field>`. Navigation/view state stays
+  // session-only — the selected world (so you land predictably), the
+  // third-person toggle and the camera distance (transient view, per the
+  // "don't persist camera" convention).
+  const pk = (f: string) => `polygon-worlds:${f}`;
   const [worldId, setWorldId] = useState('klein');
-  const [moveSpeed, setMoveSpeed] = useState(6);
+  const [moveSpeed, setMoveSpeed] = usePersistentState(pk('moveSpeed'), 6);
   const [thirdPerson, setThirdPerson] = useState(true);
   const [camDistance, setCamDistance] = useState(3.2);
   // Start as clear-but-present glass: see-through enough to read the underside
   // (other face + columns + footprints), but tinted enough to know the floor is
   // there. The same value reads the same in every world (shared POLYGON_GLASS).
-  const [floorOpacity, setFloorOpacity] = useState(0.45);
-  const [squareSize, setSquareSize] = useState(DEFAULT_SQUARE_SIZE);
-  const [floorThickness, setFloorThickness] = useState(DEFAULT_FLOOR_THICKNESS);
-  const [planetRadius, setPlanetRadius] = useState(DEFAULT_RADIUS);
-  const [landmarkCount, setLandmarkCount] = useState(7);
-  const [arrangement, setArrangement] = useState<ArrangementId>('scattered');
-  const [signFront, setSignFront] = useState('FRONT');
-  const [signBack, setSignBack] = useState('BACK');
+  const [floorOpacity, setFloorOpacity] = usePersistentState(pk('floorOpacity'), 0.45);
+  const [squareSize, setSquareSize] = usePersistentState(pk('squareSize'), DEFAULT_SQUARE_SIZE);
+  const [floorThickness, setFloorThickness] = usePersistentState(pk('floorThickness'), DEFAULT_FLOOR_THICKNESS);
+  const [planetRadius, setPlanetRadius] = usePersistentState(pk('planetRadius'), DEFAULT_RADIUS);
+  const [landmarkCount, setLandmarkCount] = usePersistentState(pk('landmarkCount'), 7);
+  const [arrangement, setArrangement] = usePersistentState<ArrangementId>(pk('arrangement'), 'scattered');
+  const [signFront, setSignFront] = usePersistentState(pk('signFront'), 'FRONT');
+  const [signBack, setSignBack] = usePersistentState(pk('signBack'), 'BACK');
 
   const spec = worldById(worldId);
   const analysis = useMemo(() => analyzeWorld(spec), [spec]);
