@@ -87,7 +87,9 @@ surface you walk. The curved worlds are subtler, and the difference is honest:
   on the mini-map square are not the distances you walk. The world you actually move
   through is the smooth round sphere — there are **no cone points**, no creases. Any
   intrinsic measurement (how far, what angle) reads the true round-sphere metric,
-  never the flattened square.
+  never the flattened square. Its two adjacent folds (`a a⁻¹`, `b b⁻¹`) make it the
+  smallest **zip sphere**, so it too carries its **2 stitched seams** (a hub + 2
+  leaf tips) — the same cut shown on the hexagon/octagon spheres below.
 - **Zip spheres (hexagon `aa⁻¹bb⁻¹cc⁻¹`, octagon `aa⁻¹bb⁻¹cc⁻¹dd⁻¹`).** Same
   round sphere, presented by a polygon whose edges fold together in adjacent
   pairs (`x x⁻¹`). Each fold is a **cut** in the sphere: the polygon is the round

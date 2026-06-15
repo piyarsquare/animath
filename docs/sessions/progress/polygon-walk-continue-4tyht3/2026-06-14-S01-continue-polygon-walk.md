@@ -33,6 +33,25 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 polish · 01:40 — Square `sphere` now shows its seams too (whole family consistent)
+**Why:** user audit — the square pillowcase `a a⁻¹ b b⁻¹` is the n=2 zip sphere
+but drew no seams (it carries square `edges`, so the `zip` branch skipped it),
+and its 4 `CHART_CORNERS` collapsed to the two poles under `fullDir` (a lat/lon
+sphere, not a realized pillowcase).
+
+Added `starSeams = !antipodal` (exactly {sphere, zipsphere6, zipsphere8}) and
+gated the seams + hub/leaf corner markers on it instead of `zip`. So the square
+sphere now wears its **2 stitched seams** (hub at the pole + 2 equator leaves)
+with the same code, while **`zip` still gates the star/gore `chart()`** — the
+square sphere keeps its square mini-map + rp2Square marker (the n-gons keep the
+polygon mini-map). Switching its corners from the 4 pole-collapsed `CHART_CORNERS`
+to hub+2 leaves is what makes the seams connect to real marked points.
+
+Verified: build + lint green; guard PASS for sphere/zipsphere6/zipsphere8
+(controls) **and** rp2 (both faces unaffected), decor 0 improper everywhere;
+screenshot confirms the square sphere shows the stitched seam while its mini-map
+stays the square diagram. EXPLAINER + docstring updated.
+
 ### 🟢 fix · 01:10 — Zip minimap marker: real star/gore chart (was misreading square coords)
 **Why:** user caught a real bug — for zip worlds `chart()` fell through to the
 **square** rp2Square path, but the minimap renders the hex/oct disk via

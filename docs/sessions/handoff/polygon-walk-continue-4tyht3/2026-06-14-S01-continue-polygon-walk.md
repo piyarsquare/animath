@@ -93,9 +93,10 @@ worlds).
   n-spiked), so the polygon stays the abstract gluing diagram; an optional matching
   custom minimap (azimuthal disk with n seam-spokes) is still possible future work. The
   3D seams (now drawn as stitches) are the faithful payload.
-- **Optional: give the existing square `sphere` the same visible seams.** It is the
-  same star-tree structure (2 folds) but currently draws no seams. Low-risk, would
-  unify the family; deferred to avoid changing a shipped world this session.
+- **Square `sphere` seams — done.** It's the n=2 zip sphere, so it now wears its 2
+  stitched seams + hub/leaf corner markers via a shared `starSeams = !antipodal` flag,
+  while keeping its square mini-map + rp2Square marker (only `zip` gates the star/gore
+  `chart()`). The whole sphere family (sphere · zipsphere6 · zipsphere8) is consistent.
 - **Roadmap B/C/D remain** (orbifold worlds; "inside" ℝP² walk; curvature/Gauss–Bonnet
   readout) — all substantial new directions awaiting a steer. The user chose to wrap
   up after A1+A2 rather than start one.

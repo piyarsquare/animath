@@ -28,7 +28,9 @@ import {
  * landmarks land on the seam/equator and the centre beacon at the chart centre.
  *
  *  - **Sphere (`a a⁻¹ b b⁻¹`, chart):** the square is charted over the whole shell;
- *    trees outside, columns inside, no antipodal identification.
+ *    trees outside, columns inside, no antipodal identification. It is the n=2 zip
+ *    sphere (two adjacent folds), so it wears the same star seams (2 stitched arcs,
+ *    a hub + 2 leaves) — only its mini-map/chart stay square.
  *  - **ℝP² (`a b a b`, isometric hemisphere):** the Z/2 antipodal deck (from
  *    {@link develop}, det<0) puts the *flipped* sheet on the lower hemisphere — the
  *    trees↔columns swap and the mirror trail twin both fall out of that one det<0.
@@ -115,6 +117,13 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   // (the odd vertices), joined by n seam arcs (one per `x x⁻¹` fold). Those seams +
   // the hub/leaf corner topology are the only zip-specific geometry.
   const zip = !antipodal && !c.spec.edges;
+  // The seams + hub/leaf corner markers are shared by EVERY orientable sphere chart
+  // in this presenter — the zip n-gons *and* the square pillowcase (`a a⁻¹ b b⁻¹`),
+  // which is just the n=2 zip sphere wearing square `edges`. (`!antipodal` here is
+  // exactly {sphere, zipsphere6, zipsphere8}.) Only the *chart()*/mini-map differs:
+  // the square sphere keeps its square diagram + rp2Square marker, the n-gons get the
+  // star/gore chart — so `zip` (not `starSeams`) still gates that branch below.
+  const starSeams = !antipodal;
   const N_LEAVES = M / 2;                      // n fold pairs ⇒ n leaves + 1 hub
   const LEAF_COLAT = Math.PI / 2;             // leaves on the equator; seams are pole→equator arcs
   const HUB_DIR = new THREE.Vector3(0, 1, 0); // the star hub sits at the north pole
@@ -174,7 +183,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
    *  square's four chart corners. Each carries its 1-based index + unique hue,
    *  matching the mini-map's numbered chips (vertex k ↔ `cornerColor(k, m)`). */
   function cornerPlacements(): { dir: THREE.Vector3; color: number; index: number }[] {
-    if (zip) {
+    if (starSeams) {
       // one hub marker (the north pole = every even polygon vertex) + n leaf markers
       // (the odd vertices). Leaf colors/numbers match the mini-map's odd chips; the
       // hub takes the first even chip's hue (all even chips are this one point).
@@ -260,7 +269,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const zipSeamMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffd24a, emissiveIntensity: 0.9, roughness: 0.4, metalness: 0.1 });
   const stitchGeo = new THREE.BoxGeometry(1, 1, 1); // unit cube; placed/scaled per instance
   let zipStitches: THREE.InstancedMesh | null = null;
-  if (zip) root.add(zipSeamGroup);
+  if (starSeams) root.add(zipSeamGroup);
   function stitchMatrices(): THREE.Matrix4[] {
     const STEP = 1.6, LEN = 1.15, WIDTH = 0.34, TALL = 0.24, SLANT = 0.45;
     const out: THREE.Matrix4[] = [];
@@ -294,7 +303,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     zipStitches.instanceMatrix.needsUpdate = true;
     zipSeamGroup.add(zipStitches);
   }
-  if (zip) rebuildZipSeams();
+  if (starSeams) rebuildZipSeams();
 
   // ── the ink trail: one buffer in true world coords on the fixed planet ──────
   // The sphere IS the cover, so the stamps are simply where you walked. On ℝP²
@@ -491,7 +500,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     sky.scale.setScalar(R * 4);
     buildMarkers();
     if (seam) { seam.geometry.dispose(); seam.geometry = new THREE.TorusGeometry(R, 0.12, 8, 96); }
-    if (zip) rebuildZipSeams();
+    if (starSeams) rebuildZipSeams();
     camera.far = R * 5; camera.updateProjectionMatrix();
     hist = 0; lastFrozen = null; ink.setCount(0);
     placeTwin();   // the face-swap shrink depends on R
