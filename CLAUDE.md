@@ -97,13 +97,13 @@ animath/
     │   ├── FractalsGPU/         # GPU Mandelbrot / Julia / Burning Ship / Tricorn
     │   ├── Fractals/            # legacy CPU 2D fractals (routed at #/fractals-cpu)
     │   ├── Correspondence/      # Mandelbrot ↔ Julia split-pane explorer
-    │   ├── TopologyWalk/        # first-person walk on a closed surface: twisting corridor + flat torus / Klein bottle
+    │   ├── TopologyWalk/        # UNLISTED / being retired (Polygon Worlds supersedes it; absorbed its scene looks). Möbius corridor + flat torus / Klein bottle
     │   ├── TrinaryStars/        # three-body planet sandbox (Observatory) + ensemble Lab
     │   │                        #   (Trinary.tsx hosts both as tabs; engine in lib/nbody)
     │   ├── StableMarriage/      # Gale–Shapley visualizer + heatmap lab (CSS/DOM)
     │   ├── AgenticSorting/      # concurrent agent-based sorting (CSS/DOM)
     │   ├── StableMatching/      # rebuilt Gale–Shapley lab: matrix · welfare · lattice (CSS/DOM)
-    │   ├── PolygonWorlds/       # walk every closed surface from one glued polygon
+    │   ├── PolygonWorlds/       # walk every closed surface from one glued polygon; selectable scene "looks" (looks.ts, distilled from Topology Walk's themes)
     │   └── TreesAndNets/        # M̄₀,ₙ(ℝ) explorer: associahedron tiles + the gluing mosaic; lib/{associahedron,mosaic}.ts
     │
     ├── components/             # shared app-side UI
@@ -162,7 +162,7 @@ visible app catalog comes from `src/apps.ts` (+ `src/chrome/catalog.ts`).
 | `#/fractals`         | `FractalsGPU`    | GPU Mandelbrot / Julia / Burning Ship / Tricorn |
 | `#/fractals-cpu`     | `Fractals2D`     | Legacy CPU 2D fractals (unlisted)           |
 | `#/correspondence`   | `Correspondence` | Mandelbrot ↔ Julia, two linked view windows |
-| `#/topology-walk`    | `TopologyWalk`   | First-person walk on a closed surface (twisting corridor / flat torus / Klein); `#/mobius` and `#/wrap-world` redirect here |
+| `#/topology-walk`    | `TopologyWalk`   | **Unlisted** (being retired; superseded by Polygon Worlds, which absorbed its scene looks). First-person walk on a closed surface (twisting Möbius corridor / flat torus / Klein); still URL-reachable, `#/mobius` and `#/wrap-world` redirect here |
 | `#/trinary`          | `Trinary`        | Three-star system: Observatory + Lab as top-bar modes (`#/trinary-lab` opens the Lab) |
 | `#/stable-marriage`  | `StableMarriage` | Gale–Shapley algorithm + heatmap lab        |
 | `#/agentic-sorting`  | `AgenticSorting` | Concurrent agent-based sorting              |
@@ -213,7 +213,10 @@ rendering **one component**:
   button restores); on phone, cards also height-resize from a bottom grip.
   While fullscreen, the rail stays live and panels float above; apps with
   primary verbs pass `actions` (the always-on strip, ≤5 buttons projecting a
-  drive/playback panel).
+  drive/playback panel). A single-view app can also pass `immersive` to make
+  that one view fill the stage below the top bar (frameless, no dotted void),
+  with the rail, floating panels and action strip overlaid — the desktop twin
+  of the phone solo view, used by Polygon Worlds for its first-person walk.
 - `LayoutDef.views[id].open: false` hides a view in that layout (how
   Stable Matching's matrix/welfare/lattice and Trinary's Lab instruments
   present as layouts).

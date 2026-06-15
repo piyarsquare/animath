@@ -5,7 +5,7 @@ import { glassState, POLYGON_GLASS } from '../glassSurface';
 import { makeInkTrail, INK_LIFT } from '../inkTrail';
 import { makeSignBuilder, SignBuilder } from '../sign';
 import { cornerColor } from '../decor';
-import { rp2Square, sq2hemi } from '../squareMap';
+import { rp2Square, sq2hemi, ngon2hemi, hemi2ngon } from '../squareMap';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
 import { develop } from '../lib/develop';
@@ -20,18 +20,31 @@ import {
  * {@link framePos} lands on it (world = framePos·R) and walking/turning are
  * `stepForward`/`turn`.
  *
- * The planet is a **two-sided sheet wrapped into a ball** (one neutral colour): the
+ * The planet is a **two-sided sheet wrapped into a ball** (one neutral color): the
  * **outer face wears the trees** (you walk it) and the **inner face the columns**
  * (seen through the glass). Each landmark's tree (outer, grown outward) and column
  * (inner, grown inward) sit at the *same* direction and grow *away* from the shell,
  * so neither penetrates it — fixing the "columns inside trees" overlap. Boundary
- * landmarks land on the seam/equator and the centre beacon at the chart centre.
+ * landmarks land on the seam/equator and the center beacon at the chart center.
  *
  *  - **Sphere (`a a⁻¹ b b⁻¹`, chart):** the square is charted over the whole shell;
- *    trees outside, columns inside, no antipodal identification.
+ *    trees outside, columns inside, no antipodal identification. It is the n=2 zip
+ *    sphere (two adjacent folds), so it wears the same star seams (2 stitched arcs,
+ *    a hub + 2 leaves) — only its mini-map/chart stay square.
  *  - **ℝP² (`a b a b`, isometric hemisphere):** the Z/2 antipodal deck (from
  *    {@link develop}, det<0) puts the *flipped* sheet on the lower hemisphere — the
  *    trees↔columns swap and the mirror trail twin both fall out of that one det<0.
+ *  - **Hexagonal / octagonal ℝP² (`a b c a b c`, `a b c d a b c d`):** the same
+ *    smooth hemisphere + antipodal deck, charted through the m-gon gauge map
+ *    ({@link ngon2hemi}) instead of the square's `sq2hemi`. The realize() polygon's
+ *    m vertices land on the equator; the only square-specific code (chart map,
+ *    corner count, player marker) branches on `nGon`.
+ *  - **Zip spheres (`a a⁻¹ b b⁻¹ c c⁻¹ …`):** a genuinely round, orientable sphere
+ *    (chart, so the walk + decor reuse the round-sphere path) whose gluing cuts it
+ *    along a STAR tree — a hub at the north pole + n leaves on the equator joined by
+ *    n seams (one per `x x⁻¹` fold), drawn as rows of stitches (sutures closing the
+ *    cut). The `zip` branch adds only those seams + the hub/leaf corner markers;
+ *    everything else is the round sphere.
  */
 
 const EYE = 1.7;
@@ -41,7 +54,7 @@ const TRAIL_SPACING = 1.6;
 const SKY = 0x05070e;
 const GLASS = POLYGON_GLASS;   // shared spec — slider feels the same in every world
 const LON = 24, LAT = 16;
-const SHELL_COLOR = 0x46658f; // one neutral shell colour (sides told apart by
+const SHELL_COLOR = 0x46658f; // one neutral shell color (sides told apart by
                               // trees vs columns + the warm/cool light)
 const SHELL_GAP = 0.985;      // inner-marker radius fraction (the sheet thickness)
 const VERTEX_INSET = 0.82;    // vertex towers sit just inside the square's corners
@@ -64,13 +77,18 @@ function gridTexture(): THREE.CanvasTexture {
   return t;
 }
 
-/** Unit-radius gradient sky dome (zenith glow → deep space), scaled to the planet.
- *  Unlit, fog-immune, drawn first behind everything. */
-function skyDome(): THREE.Mesh {
-  const geo = new THREE.SphereGeometry(1, 32, 16);
-  const top = new THREE.Color(0x1b2750), horizon = new THREE.Color(0x070b18), bot = new THREE.Color(0x02030a);
-  const c = new THREE.Color(), p = new THREE.Vector3(), cols: number[] = [];
+/** Paint a sky dome's vertex gradient from one base sky color: a brighter zenith
+ *  glow fading down through the horizon tone to a deep floor. Drives both the
+ *  initial dome and live look re-tints (so the sphere's sky tracks the look). */
+function paintDome(mesh: THREE.Mesh, base: number) {
+  const b = new THREE.Color(base);
+  const top = b.clone().multiplyScalar(1.35);
+  top.r = Math.min(1, top.r); top.g = Math.min(1, top.g); top.b = Math.min(1, top.b);
+  const horizon = b.clone();
+  const bot = b.clone().multiplyScalar(0.4);
+  const geo = mesh.geometry;
   const pa = geo.attributes.position;
+  const c = new THREE.Color(), p = new THREE.Vector3(), cols: number[] = [];
   for (let i = 0; i < pa.count; i++) {
     p.fromBufferAttribute(pa, i).normalize();
     const ty = p.y * 0.5 + 0.5;
@@ -78,8 +96,15 @@ function skyDome(): THREE.Mesh {
     cols.push(c.r, c.g, c.b);
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+}
+
+/** Unit-radius gradient sky dome (zenith glow → deep space), scaled to the planet.
+ *  Unlit, fog-immune, drawn first behind everything. */
+function skyDome(base: number): THREE.Mesh {
+  const geo = new THREE.SphereGeometry(1, 32, 16);
   const mat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false });
   const m = new THREE.Mesh(geo, mat); m.renderOrder = -1;
+  paintDome(m, base);
   return m;
 }
 
@@ -89,6 +114,35 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
 
   const real: Realization = realize(parseWord(c.spec.word));
   const antipodal = !real.chart;             // ℝP²: hemisphere domain + Z/2 deck (chart ⇒ sphere charts the whole shell)
+  // The hexagonal/octagonal ℝP² worlds (`a b c a b c`, `a b c d a b c d`) carry no
+  // square `edges`, so they chart through the polygon-gauge map (`ngon2hemi`); the
+  // square ℝP² and the round sphere keep their dedicated sq2hemi / fullDir path.
+  // Their deck is the same antipodal −Id, so twin/ink/sign/seam logic is unchanged.
+  const nGon = antipodal && !c.spec.edges;
+  const M = real.edges;                       // 6 (hexagon) · 8 (octagon)
+  const BASE = -Math.PI / 2 + Math.PI / M;    // vertex-0 azimuth — matches realize() + polygonMap
+  const APO = Math.cos(Math.PI / M);          // incircle radius (circumradius-1 units)
+  // Zip-sphere worlds (`a a⁻¹ b b⁻¹ c c⁻¹ …`, no square `edges`): a genuinely round,
+  // orientable sphere (chart=true ⇒ antipodal=false, so the walk + decor reuse the
+  // round-sphere machinery). Their gluing cuts the sphere along a STAR tree — a hub
+  // (all even polygon vertices = one point, placed at the north pole) and n leaves
+  // (the odd vertices), joined by n seam arcs (one per `x x⁻¹` fold). Those seams +
+  // the hub/leaf corner topology are the only zip-specific geometry.
+  const zip = !antipodal && !c.spec.edges;
+  // The seams + hub/leaf corner markers are shared by EVERY orientable sphere chart
+  // in this presenter — the zip n-gons *and* the square pillowcase (`a a⁻¹ b b⁻¹`),
+  // which is just the n=2 zip sphere wearing square `edges`. (`!antipodal` here is
+  // exactly {sphere, zipsphere6, zipsphere8}.) Only the *chart()*/mini-map differs:
+  // the square sphere keeps its square diagram + rp2Square marker, the n-gons get the
+  // star/gore chart — so `zip` (not `starSeams`) still gates that branch below.
+  const starSeams = !antipodal;
+  const N_LEAVES = M / 2;                      // n fold pairs ⇒ n leaves + 1 hub
+  const LEAF_COLAT = Math.PI / 2;             // leaves on the equator; seams are pole→equator arcs
+  const HUB_DIR = new THREE.Vector3(0, 1, 0); // the star hub sits at the north pole
+  const leafDir = (k: number): THREE.Vector3 => {
+    const lat = Math.PI / 2 - LEAF_COLAT, lon = (2 * Math.PI * k) / N_LEAVES;
+    return new THREE.Vector3(Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon));
+  };
   const twin = develop(real).elements.find((e) => e.det() < 0) ?? null;
   const twinM4 = twin ? new THREE.Matrix4().set(
     twin.m[0], twin.m[1], twin.m[2], 0, twin.m[3], twin.m[4], twin.m[5], 0,
@@ -107,7 +161,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
 
   // gradient sky dome (zenith glow → deep space), so the void around the planet has
   // depth instead of a flat fill. Unlit, fog-immune, behind everything.
-  const sky = skyDome();
+  const sky = skyDome(SKY);
   sky.scale.setScalar(R * 4);
   root.add(sky);
 
@@ -126,9 +180,47 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     const lon = (u - 0.5) * Math.PI * 2, lat = (v - 0.5) * Math.PI, cl = Math.cos(lat);
     return new THREE.Vector3(cl * Math.cos(lon), Math.sin(lat), cl * Math.sin(lon));
   }
+  /** Map a unit-square landmark (u,v) into the m-gon's incircle, then onto the
+   *  hemisphere — so interior decor clusters around the pole, clear of the equator
+   *  seam (a landmark on a gluing edge reads confused). */
+  function ngonDir(u: number, v: number): THREE.Vector3 {
+    const k = (APO * 0.96) / Math.SQRT2;      // the whole unit square fits inside the incircle
+    return ngon2hemi((u - 0.5) * 2 * k, (v - 0.5) * 2 * k, M, BASE);
+  }
   /** Outer direction for landmark i. */
   const dirFor = (u: number, v: number) =>
-    antipodal ? sq2hemi((u - 0.5) * 2, (v - 0.5) * 2) : fullDir(u, v);
+    antipodal ? (nGon ? ngonDir(u, v) : sq2hemi((u - 0.5) * 2, (v - 0.5) * 2)) : fullDir(u, v);
+
+  /** The corner-marker placements: the m polygon vertices (n-gon worlds), else the
+   *  square's four chart corners. Each carries its 1-based index + unique hue,
+   *  matching the mini-map's numbered chips (vertex k ↔ `cornerColor(k, m)`). */
+  function cornerPlacements(): { dir: THREE.Vector3; color: number; index: number }[] {
+    if (starSeams) {
+      // one hub marker (the north pole = every even polygon vertex) + n leaf markers
+      // (the odd vertices). Leaf colors/numbers match the mini-map's odd chips; the
+      // hub takes the first even chip's hue (all even chips are this one point).
+      const out = [{ dir: HUB_DIR.clone(), color: cornerColor(0, M), index: 1 }];
+      for (let k = 0; k < N_LEAVES; k++) {
+        out.push({ dir: leafDir(k), color: cornerColor(2 * k + 1, M), index: 2 * k + 2 });
+      }
+      return out;
+    }
+    if (nGon) {
+      const out: { dir: THREE.Vector3; color: number; index: number }[] = [];
+      for (let k = 0; k < M; k++) {
+        const a = BASE + (2 * Math.PI * k) / M;
+        out.push({
+          dir: ngon2hemi(Math.cos(a) * VERTEX_INSET, Math.sin(a) * VERTEX_INSET, M, BASE),
+          color: cornerColor(k, M), index: k + 1,
+        });
+      }
+      return out;
+    }
+    return CHART_CORNERS.map(([cu, cv], v) => {
+      const iu = 0.5 + (cu - 0.5) * VERTEX_INSET, iv = 0.5 + (cv - 0.5) * VERTEX_INSET;
+      return { dir: dirFor(iu, iv), color: cornerColor(v, CHART_CORNERS.length), index: v + 1 };
+    });
+  }
 
   // ── markers ──────────────────────────────────────────────────────────────────
   // OUTER (walked): trees at +dir, grown outward. On ℝP² the antipodal half (−dir)
@@ -158,18 +250,16 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
         const tIn = decor.makeTop(i); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
       }
     });
-    // numbered corner markers just inside each chart corner (the square's corners)
-    CHART_CORNERS.forEach(([cu, cv], v) => {
-      const col = cornerColor(v, CHART_CORNERS.length);
-      const iu = 0.5 + (cu - 0.5) * VERTEX_INSET, iv = 0.5 + (cv - 0.5) * VERTEX_INSET;
-      const d = dirFor(iu, iv);
+    // numbered corner markers just inside each polygon vertex (the square's four
+    // corners, or the hex/oct vertices for the n-gon worlds)
+    cornerPlacements().forEach(({ dir: d, color: col, index }) => {
       treeDirs.push(d);
-      const tOut = decor.makeCornerTop(v + 1, col); place(tOut, d, R, true); outerG.add(tOut);
-      const cIn = decor.makeCornerBottom(v + 1, col); place(cIn, d, R * SHELL_GAP, false); innerG.add(cIn);
+      const tOut = decor.makeCornerTop(index, col); place(tOut, d, R, true); outerG.add(tOut);
+      const cIn = decor.makeCornerBottom(index, col); place(cIn, d, R * SHELL_GAP, false); innerG.add(cIn);
       if (antipodal) {
         const ad = deckDir(d);
-        const cOut = decor.makeCornerBottom(v + 1, col); place(cOut, ad, R, true); outerG.add(cOut);
-        const tIn = decor.makeCornerTop(v + 1, col); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
+        const cOut = decor.makeCornerBottom(index, col); place(cOut, ad, R, true); outerG.add(cOut);
+        const tIn = decor.makeCornerTop(index, col); place(tIn, ad, R * SHELL_GAP, false); innerG.add(tIn);
       }
     });
   }
@@ -179,6 +269,53 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   const seamMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffe08a, emissiveIntensity: 0.4, roughness: 0.5 });
   const seam = antipodal ? new THREE.Mesh(new THREE.TorusGeometry(R, 0.12, 8, 96), seamMat) : null;
   if (seam) root.add(seam);
+
+  // zip seams: the n cut-arcs of the star tree, each a row of STITCHES from the hub
+  // (north pole) out to a leaf on the equator — the round-sphere image of the n
+  // `x x⁻¹` folds, drawn as sutures closing the cut. One InstancedMesh of short bars
+  // crossing the geodesic, alternately slanted for a hand-sewn look. Rebuilt with the
+  // shell (stitch density tracks arc length, so it reads the same at any radius).
+  const zipSeamGroup = new THREE.Group();
+  // a brighter, dedicated material — the seams are the headline feature of these
+  // worlds (the n cut-arcs of the gluing made visible on the round shell).
+  const zipSeamMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffd24a, emissiveIntensity: 0.9, roughness: 0.4, metalness: 0.1 });
+  const stitchGeo = new THREE.BoxGeometry(1, 1, 1); // unit cube; placed/scaled per instance
+  let zipStitches: THREE.InstancedMesh | null = null;
+  if (starSeams) root.add(zipSeamGroup);
+  function stitchMatrices(): THREE.Matrix4[] {
+    const STEP = 1.6, LEN = 1.15, WIDTH = 0.34, TALL = 0.24, SLANT = 0.45;
+    const out: THREE.Matrix4[] = [];
+    for (let k = 0; k < N_LEAVES; k++) {
+      const B = leafDir(k);
+      const arcLen = R * HUB_DIR.angleTo(B);
+      const count = Math.max(6, Math.round(arcLen / STEP));
+      for (let i = 0; i < count; i++) {
+        const t = (i + 0.5) / count;
+        const pos = new THREE.Vector3().copy(HUB_DIR).lerp(B, t).normalize();
+        const nrm = pos.clone();                 // outward surface normal (unit)
+        const ahead = new THREE.Vector3().copy(HUB_DIR).lerp(B, Math.min(1, t + 1e-3)).normalize();
+        const tang = ahead.sub(pos).normalize();  // along the seam
+        const across = new THREE.Vector3().crossVectors(nrm, tang).normalize();
+        // a short bar crossing the seam, slant alternating ±SLANT (running-stitch look)
+        const s = (i % 2 ? -1 : 1) * SLANT;
+        const xdir = across.multiplyScalar(Math.cos(s)).addScaledVector(tang, Math.sin(s)).normalize();
+        const zdir = new THREE.Vector3().crossVectors(xdir, nrm).normalize();
+        const quat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xdir, nrm, zdir));
+        out.push(new THREE.Matrix4().compose(
+          pos.multiplyScalar(R + 0.1), quat, new THREE.Vector3(LEN, TALL, WIDTH)));
+      }
+    }
+    return out;
+  }
+  function rebuildZipSeams() {
+    if (zipStitches) { zipSeamGroup.remove(zipStitches); zipStitches.dispose(); zipStitches = null; }
+    const mats = stitchMatrices();
+    zipStitches = new THREE.InstancedMesh(stitchGeo, zipSeamMat, mats.length);
+    mats.forEach((m, i) => zipStitches!.setMatrixAt(i, m));
+    zipStitches.instanceMatrix.needsUpdate = true;
+    zipSeamGroup.add(zipStitches);
+  }
+  if (starSeams) rebuildZipSeams();
 
   // ── the ink trail: one buffer in true world coords on the fixed planet ──────
   // The sphere IS the cover, so the stamps are simply where you walked. On ℝP²
@@ -250,7 +387,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
 
   // ── player pose as a kernel Frame on the κ=+1 shell (the unit sphere) ─────────
   // Spawn at the surface direction farthest from every landmark, so the player
-  // never starts inside a tree or on the centre beacon.
+  // never starts inside a tree or on the center beacon.
   function clearSpawnFrame(): Frame {
     let best: THREE.Vector3 = treeDirs[0] ?? new THREE.Vector3(0, 0, 1);
     let bestD = -1;
@@ -314,6 +451,50 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
   }
 
   function chart(): SquareMapState {
+    if (nGon) {
+      // m-gon disk chart (vertices at radius 1). Take the z≥0 representative; a z<0
+      // player is on the flipped face, charted as its antipode (−px,−py) — the disk's
+      // antipodal gluing. Both the player point and a small geodesic step ahead are
+      // charted with the player's representative so the heading stays continuous.
+      const rep = posU.z < 0;
+      const base = rep ? posU.clone().negate() : posU.clone();
+      const [px, py] = hemi2ngon(base, M, BASE);
+      const ahead = posU.clone().multiplyScalar(Math.cos(0.06)).addScaledVector(fwdU, Math.sin(0.06)).normalize();
+      if (rep) ahead.negate();
+      const [qx, qy] = hemi2ngon(ahead, M, BASE);
+      let hx = qx - px, hz = qy - py; const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
+      return { u: (px + 1) / 2, v: (py + 1) / 2, hx, hz, flipped: rep };
+    }
+    if (zip) {
+      // Star/gore chart into the 2n-gon (the abstract gluing diagram — there is no
+      // isometric map from a round sphere to a regular 2n-gon). South pole → center;
+      // each leaf (odd vertex 2k+1, sphere longitude 2πk/n) → its vertex; each gore
+      // between two seams → the hub (even) vertex it surrounds; a seam → the
+      // center→leaf diagonal. Continuous and ALWAYS inside the polygon — unlike the
+      // old square fallback, whose [-1,1]² coords the hex/oct mini-map misread (the
+      // marker could land outside the polygon with a meaningless heading).
+      const n = N_LEAVES;
+      const zipPt = (d: THREE.Vector3): [number, number] => {
+        const phi = Math.acos(Math.max(-1, Math.min(1, d.y)));     // colatitude from the hub (+Y)
+        let lam = Math.atan2(d.z, d.x); if (lam < 0) lam += 2 * Math.PI;
+        const seg = (lam * n) / Math.PI + 1;                       // leaf k ↦ ray 2k+1 (odd)
+        const r = Math.floor(seg), t = seg - r;
+        const rA = ((r % (2 * n)) + 2 * n) % (2 * n), rB = (rA + 1) % (2 * n);
+        const angA = BASE + (Math.PI * rA) / n, angB = BASE + (Math.PI * rB) / n;
+        // boundary colatitude per ray: even = hub vertex (φ=0), odd = leaf vertex (φ=π/2)
+        const bndA = rA % 2 === 0 ? 0 : Math.PI / 2, bndB = rB % 2 === 0 ? 0 : Math.PI / 2;
+        const bnd = bndA * (1 - t) + bndB * t;
+        const rho = Math.max(0, Math.min(1, (Math.PI - phi) / (Math.PI - bnd)));
+        const ex = (1 - t) * Math.cos(angA) + t * Math.cos(angB);
+        const ey = (1 - t) * Math.sin(angA) + t * Math.sin(angB);
+        return [rho * ex, rho * ey];                                // disk coords (math axes, +y up)
+      };
+      const [px, py] = zipPt(posU);
+      const ahead = posU.clone().multiplyScalar(Math.cos(0.06)).addScaledVector(fwdU, Math.sin(0.06)).normalize();
+      const [qx, qy] = zipPt(ahead);
+      let hx = qx - px, hz = qy - py; const hl = Math.hypot(hx, hz) || 1; hx /= hl; hz /= hl;
+      return { u: px / 2 + 0.5, v: py / 2 + 0.5, hx, hz, flipped: false };
+    }
     const rep = posU.z < 0;
     const [sx, sy] = rp2Square(posU.x, posU.y, posU.z, rep);
     const e = 0.06, ce = Math.cos(e), se = Math.sin(e);
@@ -331,6 +512,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     sky.scale.setScalar(R * 4);
     buildMarkers();
     if (seam) { seam.geometry.dispose(); seam.geometry = new THREE.TorusGeometry(R, 0.12, 8, 96); }
+    if (starSeams) rebuildZipSeams();
     camera.far = R * 5; camera.updateProjectionMatrix();
     hist = 0; lastFrozen = null; ink.setCount(0);
     placeTwin();   // the face-swap shrink depends on R
@@ -372,6 +554,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
     setFloorOpacity: (o: number) => { glassOpacity = o; applyGlass(); },
     setCameraDistance: (d: number) => { camDist = d; },
     setRadius,
+    setSky: (hex: number) => paintDome(sky, hex),
     dispose: () => {
       ink.dispose();
       clearSignsFn();
@@ -379,6 +562,7 @@ export function makeSphericalPresenter(c: CoverDeps): CoverModel {
       grid.dispose(); planetMat.dispose();
       sky.geometry.dispose(); (sky.material as THREE.Material).dispose();
       seam?.geometry.dispose(); seamMat.dispose();
+      zipStitches?.dispose(); stitchGeo.dispose(); zipSeamMat.dispose();
     },
   };
 }

@@ -10,6 +10,7 @@ import {
   DEFAULT_SQUARE_SIZE, DEFAULT_FLOOR_THICKNESS,
 } from './engineTypes';
 import { WorldSpec, deriveGeometry } from './worldSpec';
+import { PolygonLook, findLook } from './looks';
 
 /** Per-geometry light intensities. The flat plane is well-lit by the directional
  *  key; the spherical shell is large and far from a single distant light so it
@@ -54,12 +55,32 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
   // Each world scales these by a per-geometry profile (the big sphere shell reads
   // dark under a single distant key, so χ>0 gets brighter fills).
   const L = lightingProfile(geom.cover);
-  root.add(new THREE.AmbientLight(0xffffff, 0.42 * L.fill));
+  const ambient = new THREE.AmbientLight(0xffffff, 0.42 * L.fill);
+  root.add(ambient);
   const hemi = new THREE.HemisphereLight(0xffe6c2, 0x5b73a6, 0.4 * L.fill);
   root.add(hemi);
   const warm = new THREE.DirectionalLight(0xffd2a1, 0.95 * L.key);
   warm.position.set(0.4, 1, 0.3);
   root.add(warm);
+  // Soft shadows from the warm key — but only on the flat (euclidean) floor, where the
+  // receiver is opaque and planar so cast shadows ground the decor cleanly. The
+  // spherical/hyperbolic shells are translucent and curved, where shadow maps fight the
+  // glass for little gain, so they stay off (decor still carries `castShadow`, harmless
+  // when the map is disabled). Decor + floor set their cast/receive flags at build time,
+  // so they survive the per-radius / per-thickness rebuilds.
+  deps.renderer.shadowMap.enabled = geom.cover === 'euclidean';
+  if (geom.cover === 'euclidean') {
+    deps.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    const F = squareSize * 1.7 + 18;
+    warm.castShadow = true;
+    warm.position.set(0.4, 1, 0.3).normalize().multiplyScalar(F * 2);
+    warm.shadow.mapSize.set(2048, 2048);
+    warm.shadow.camera.left = -F; warm.shadow.camera.right = F;
+    warm.shadow.camera.top = F; warm.shadow.camera.bottom = -F;
+    warm.shadow.camera.near = 1; warm.shadow.camera.far = F * 4.5;
+    warm.shadow.bias = -0.0004; warm.shadow.normalBias = 0.05;
+    warm.shadow.camera.updateProjectionMatrix();
+  }
   const cool = new THREE.DirectionalLight(0x9bc2ff, 0.62 * L.key);
   cool.position.set(-0.35, -1, -0.2);
   root.add(cool);
@@ -86,8 +107,38 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
       : geom.cover === 'hyperbolic' ? makeHyperbolicPresenter(coverDeps)
         : makeEuclideanPresenter(coverDeps);
 
+  // Snapshot the presenter's own sky/fog (the Daytime baseline) so a look can
+  // override it and the Daytime look can restore it. Fog is rebuilt on size /
+  // radius changes, so the active look's atmosphere is re-applied after those.
+  const baseBg = scene.background instanceof THREE.Color ? scene.background.clone() : null;
+  const baseFog = scene.fog instanceof THREE.Fog ? scene.fog.color.clone() : null;
+  let look: PolygonLook = findLook('daytime');
+
+  const applyAtmosphere = () => {
+    if (look.sky != null) {
+      if (scene.background instanceof THREE.Color) scene.background.setHex(look.sky);
+      if (scene.fog instanceof THREE.Fog) scene.fog.color.setHex(look.sky);
+      cover.setSky?.(look.sky);  // spherical: retint its sky dome (hides scene.background)
+    } else {
+      if (baseBg && scene.background instanceof THREE.Color) scene.background.copy(baseBg);
+      if (baseFog && scene.fog instanceof THREE.Fog) scene.fog.color.copy(baseFog);
+    }
+  };
+  const applyLook = (next: PolygonLook) => {
+    look = next;
+    deps.renderer.toneMappingExposure = look.exposure;
+    ambient.intensity = look.ambient * L.fill;
+    hemi.color.setHex(look.hemiSky); hemi.groundColor.setHex(look.hemiGround);
+    hemi.intensity = look.hemi * L.fill;
+    warm.color.setHex(look.warmColor); warm.intensity = look.warm * L.key;
+    cool.color.setHex(look.coolColor); cool.intensity = look.cool * L.key;
+    headlamp.color.setHex(look.lampColor); headlamp.intensity = L.lamp * look.lampMul;
+    applyAtmosphere();
+  };
+
   const character = makeCharacter();
   root.add(character.group);
+  character.group.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) m.castShadow = true; });
   let stridePhase = 0;
 
   const mapState: SquareMapState = { u: 0.5, v: 0.5, hx: 0, hz: -1, flipped: false };
@@ -117,9 +168,10 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
     clearTrail: () => cover.clearTrail(),
     setFloorOpacity: (o) => cover.setFloorOpacity?.(o),
     setColorCells: () => {},
-    setRadius: (r) => cover.setRadius?.(r),
-    setSquareSize: (v) => cover.setSquareSize?.(v),
-    setFloorThickness: (t) => cover.setFloorThickness?.(t),
+    setRadius: (r) => { cover.setRadius?.(r); applyAtmosphere(); },
+    setSquareSize: (v) => { cover.setSquareSize?.(v); applyAtmosphere(); },
+    setFloorThickness: (t) => { cover.setFloorThickness?.(t); applyAtmosphere(); },
+    setLook: (id) => applyLook(findLook(id)),
     setCameraDistance: (d) => cover.setCameraDistance?.(d),
     getMapState: () => mapState,
     getPose: () => poseState,
@@ -157,7 +209,18 @@ function makeGradientEnv(renderer: THREE.WebGLRenderer): THREE.Texture {
   geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
   const mat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide });
   sky.add(new THREE.Mesh(geo, mat));
+  // a soft warm "sun" in the warm-key direction — gives the glass + metals a moving
+  // specular highlight to catch, instead of a flat featureless gradient to reflect.
+  const sunGeo = new THREE.SphereGeometry(5, 24, 16);
+  const sunMat = new THREE.MeshBasicMaterial({ color: 0xfff1d6 });
+  const sun = new THREE.Mesh(sunGeo, sunMat);
+  sun.position.copy(new THREE.Vector3(0.4, 1, 0.3).normalize().multiplyScalar(34));
+  sky.add(sun);
+  const haloGeo = new THREE.SphereGeometry(9, 24, 16);
+  const haloMat = new THREE.MeshBasicMaterial({ color: 0x6a5a44, transparent: true, opacity: 0.5, side: THREE.BackSide });
+  const halo = new THREE.Mesh(haloGeo, haloMat); halo.position.copy(sun.position);
+  sky.add(halo);
   const rt = pmrem.fromScene(sky);
-  geo.dispose(); mat.dispose(); pmrem.dispose();
+  geo.dispose(); mat.dispose(); sunGeo.dispose(); sunMat.dispose(); haloGeo.dispose(); haloMat.dispose(); pmrem.dispose();
   return rt.texture;
 }

@@ -131,6 +131,12 @@ export interface WorkspaceProps {
   /** Panels in authored order; the rail tier-sorts them. */
   sections: SectionDef[];
   views: ViewDef[];
+  /** Desktop "immersive" mode: when set and the app has a single view, that
+   *  view fills the stage (no window frame) below the top bar, with the rail,
+   *  floating panels and action strip overlaid — the desktop counterpart to
+   *  the phone's solo-view layout. Ignored on phone (it solos single views
+   *  already) and when there isn't exactly one view. */
+  immersive?: boolean;
   /** App-specific built-in layouts; Compact + Everything are auto-appended. */
   layouts?: LayoutDef[];
   /** Initial layout; default: first app layout, else 'everything'. */

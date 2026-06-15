@@ -13,10 +13,13 @@ import type { ViewDef, ViewState } from './types';
  * guards zero-size resizes); fullscreen restyles the same node for the same
  * reason.
  */
-export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, onResize, onSettle, onRaise, onToggleCollapse, onToggleFull, onHelp }: {
+export function ViewWindow({ view, state, full, immersive, nodeRef, snap, resize, onMove, onResize, onSettle, onRaise, onToggleCollapse, onToggleFull, onHelp }: {
   view: ViewDef;
   state: ViewState;
   full: boolean;
+  /** Desktop immersive: fill the stage below the top bar, frameless and fixed
+   *  in place (the rail + floating panels + action strip overlay it). */
+  immersive?: boolean;
   nodeRef: (el: HTMLDivElement | null) => void;
   snap: (rawX: number, rawY: number) => { x: number; y: number };
   resize: (rawW: number, rawH: number, x: number, y: number) => { w: number; h: number };
@@ -31,7 +34,7 @@ export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, o
   onHelp?: () => void;
 }) {
   const onHeadDown = (e: React.PointerEvent) => {
-    if (full) return;
+    if (full || immersive) return;
     if ((e.target as HTMLElement).closest('button')) return;
     e.preventDefault();
     const ox = state.x, oy = state.y;
@@ -43,7 +46,7 @@ export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, o
     const ow = state.w, oh = state.h, x = state.x, y = state.y;
     beginPointerDrag(e, (dx, dy) => onResize(resize(ow + dx, oh + dy, x, y)), onSettle);
   };
-  const collapsed = !full && !!state.collapsed;
+  const collapsed = !full && !immersive && !!state.collapsed;
   /* start hint: per-session, gone on first pointer interaction (P2) */
   const [hintSeen, setHintSeen] = useState(false);
   const onAnyPointerDown = () => {
@@ -53,8 +56,8 @@ export function ViewWindow({ view, state, full, nodeRef, snap, resize, onMove, o
   return (
     <div
       ref={nodeRef}
-      className={`am-ws-view${full ? ' am-ws-full' : ''}`}
-      style={full ? undefined : {
+      className={`am-ws-view${full ? ' am-ws-full' : ''}${immersive ? ' am-ws-immersive' : ''}`}
+      style={full || immersive ? undefined : {
         left: state.x,
         top: state.y,
         width: state.w,

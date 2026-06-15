@@ -45,7 +45,7 @@ export type GluingMode = 'opposite' | 'adjacent';
 export type Cover = 'euclidean' | 'spherical' | 'hyperbolic';
 
 export interface WorldSpec {
-  id: 'torus' | 'klein' | 'rp2' | 'sphere' | 'genus2' | 'crosscap3' | 'torus6' | 'klein6';
+  id: 'torus' | 'klein' | 'rp2' | 'sphere' | 'genus2' | 'crosscap3' | 'torus6' | 'klein6' | 'rp2hex' | 'rp2oct' | 'zipsphere6' | 'zipsphere8';
   label: string;
   /** short descriptor for the app header */
   short: string;
@@ -63,7 +63,7 @@ export interface WorldSpec {
   /** Euler characteristic V−E+F after identification. A *topological invariant*;
    *  for these fixed presets it is a known constant (it is what forces the geometry
    *  below). Stored rather than recomputed because the presets are fixed — the word
-   *  still drives every visible gluing + the cover's behaviour. */
+   *  still drives every visible gluing + the cover's behavior. */
   chi: number;
   /** Whether a consistent global orientation survives the gluing. Like χ, a fact
    *  about the chosen gluing. */
@@ -155,6 +155,40 @@ export const WORLDS: WorldSpec[] = [
     id: 'klein6', label: 'Hexagonal Klein bottle', short: 'flat Klein bottle (hexagon)',
     chi: 0, orientable: false,
     word: 'a a b c c b⁻¹',
+  },
+  {
+    // The HEXAGONAL projective plane: same topology as the square ℝP² (`a b a b`),
+    // realized from a regular spherical hexagon. Its three antipodal edge pairs
+    // (`a b c a b c`) give corner classes all of size 2 (V=3), so cos R = cot(π/6)·
+    // cot(π/2) = 0 ⇒ R = π/2: a *smooth* upper hemisphere whose boundary is the
+    // equator and whose Z/2 deck is the antipodal map −Id, exactly like the square.
+    id: 'rp2hex', label: 'Hexagonal projective plane', short: 'projective plane (hexagon)',
+    chi: 1, orientable: false,
+    word: 'a b c a b c',
+  },
+  {
+    // The OCTAGONAL projective plane: `a b c d a b c d`, four antipodal pairs,
+    // corner classes all size 2 (V=4) ⇒ R = π/2, the same smooth hemisphere +
+    // antipodal deck as the square/hex ℝP², from a regular spherical octagon.
+    id: 'rp2oct', label: 'Octagonal projective plane', short: 'projective plane (octagon)',
+    chi: 1, orientable: false,
+    word: 'a b c d a b c d',
+  },
+  {
+    // The HEXAGONAL zip sphere: `a a⁻¹ b b⁻¹ c c⁻¹`, three adjacent fold pairs. Same
+    // topology as the round sphere (χ=2, orientable) from a different polygon — the
+    // hexagon is the sphere cut along a STAR tree (a hub + three seams), so the world
+    // is a genuinely round sphere carrying three visible cut-arcs, not a new shape.
+    id: 'zipsphere6', label: 'Hexagonal sphere', short: 'round sphere (hexagon, 3 seams)',
+    chi: 2, orientable: true,
+    word: 'a a⁻¹ b b⁻¹ c c⁻¹',
+  },
+  {
+    // The OCTAGONAL zip sphere: `a a⁻¹ b b⁻¹ c c⁻¹ d d⁻¹`, four fold pairs ⇒ a hub +
+    // four seams on the same round sphere.
+    id: 'zipsphere8', label: 'Octagonal sphere', short: 'round sphere (octagon, 4 seams)',
+    chi: 2, orientable: true,
+    word: 'a a⁻¹ b b⁻¹ c c⁻¹ d d⁻¹',
   },
 ];
 

@@ -11,7 +11,7 @@ export interface WorkspaceMode { id: string; label: string; }
  * optional mode pills (e.g. Trinary's Observatory | Lab), a Layouts-menu
  * slot (children), the ? explainer and the skin picker.
  */
-export function TopBar({ title, subtitle, modes, activeMode, onModeChange, explainer, note, home = true, compact, onTitleClick, extra, children }: {
+export function TopBar({ title, subtitle, modes, activeMode, onModeChange, explainer, note, home = true, compact, hideTitle: hideTitleProp, onTitleClick, extra, children }: {
   title: string;
   subtitle?: string;
   modes?: WorkspaceMode[];
@@ -24,6 +24,9 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
   home?: boolean;
   /** Compact phone bar: tighter padding, compact skin picker. */
   compact?: boolean;
+  /** Force-hide the title (e.g. immersive desktop, where the bar carries the
+   *  panel rail and the title would duplicate its World icon + crowd the row). */
+  hideTitle?: boolean;
   /** Makes the title/formula a button (e.g. opens the Function panel). */
   onTitleClick?: () => void;
   /** Always-available inline control right after the title (WorkspaceProps.topExtra). */
@@ -32,6 +35,9 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
 }) {
   const [skin, setSkin] = useSkin();
   const [helpOpen, setHelpOpen] = useState(false);
+  // On the cramped phone bar, an always-on `extra` selector already names the
+  // subject, so the title is redundant — drop it (and its separator) to make room.
+  const hideTitle = (!!compact && !!extra) || !!hideTitleProp;
   return (
     <header className="am-bar" style={compact ? { padding: '0 10px' } : undefined}>
       {home ? (
@@ -43,12 +49,12 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
       ) : (
         <div className="am-brand"><span className="am-brand-mark">a</span></div>
       )}
-      <div className="am-bar-sep" />
-      {onTitleClick ? (
+      {!hideTitle && <div className="am-bar-sep" />}
+      {!hideTitle && (onTitleClick ? (
         <button
           className="am-titlewrap am-title-btn"
-          title="Change function"
-          aria-label={`${title} — change function`}
+          title="Open settings"
+          aria-label={`${title} — open settings`}
           onClick={onTitleClick}
         >
           <span className="am-title">{title}</span>
@@ -59,7 +65,7 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
           <span className="am-title">{title}</span>
           {subtitle && <span className="am-sub">{subtitle}</span>}
         </div>
-      )}
+      ))}
       {extra && (
         <>
           <div className="am-bar-sep" />

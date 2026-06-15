@@ -2,12 +2,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
-import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { usePhone } from '../../chrome/usePhone';
-import { Slider, Select, Checkbox } from '../../components/ControlPanel';
+import { Slider, Select, Pills } from '../../components/ControlPanel';
 import { WORLDS, worldById, WorldSpec, deriveGeometry, analyzeWorld } from './worldSpec';
 import { generateProps, ARRANGEMENTS, ArrangementId } from './decor';
 import { makeFundamentalSquareEngine } from './fundamentalSquareEngine';
+import { LOOKS } from './looks';
 import {
   EngineDeps, PolygonEngine, SquareMapState,
   DEFAULT_SQUARE_SIZE, DEFAULT_FLOOR_THICKNESS,
@@ -16,6 +17,7 @@ import { drawSquareMap, SquareMapSpec, SquareEdgeSpec } from './squareMap';
 import { drawPolygonMap, PolygonMapSpec } from './polygonMap';
 import { parseWord } from './surfaceSchema';
 import { realize } from './lib/realize';
+import { usePersistentState } from '../../lib/usePersistentState';
 import { EmbeddingInset } from './instruments/embeddingInset';
 import explainerText from './EXPLAINER.md?raw';
 
@@ -28,21 +30,28 @@ const clampCam = (d: number) => Math.max(CAM_MIN, Math.min(CAM_MAX, d));
 type MoveKey = 'fwd' | 'back' | 'left' | 'right';
 
 export default function PolygonWorlds() {
+  // Persistence: the genuine *settings* survive a reload (per CLAUDE.md), keyed
+  // `animath:<ver>:polygon-worlds:<field>`. Navigation/view state stays
+  // session-only — the selected world (so you land predictably), the
+  // third-person toggle and the camera distance (transient view, per the
+  // "don't persist camera" convention).
+  const pk = (f: string) => `polygon-worlds:${f}`;
   const [worldId, setWorldId] = useState('klein');
-  const [moveSpeed, setMoveSpeed] = useState(6);
+  const [moveSpeed, setMoveSpeed] = usePersistentState(pk('moveSpeed'), 6);
   const [thirdPerson, setThirdPerson] = useState(true);
   const [camDistance, setCamDistance] = useState(3.2);
   // Start as clear-but-present glass: see-through enough to read the underside
   // (other face + columns + footprints), but tinted enough to know the floor is
   // there. The same value reads the same in every world (shared POLYGON_GLASS).
-  const [floorOpacity, setFloorOpacity] = useState(0.45);
-  const [squareSize, setSquareSize] = useState(DEFAULT_SQUARE_SIZE);
-  const [floorThickness, setFloorThickness] = useState(DEFAULT_FLOOR_THICKNESS);
-  const [planetRadius, setPlanetRadius] = useState(DEFAULT_RADIUS);
-  const [landmarkCount, setLandmarkCount] = useState(7);
-  const [arrangement, setArrangement] = useState<ArrangementId>('scattered');
-  const [signFront, setSignFront] = useState('FRONT');
-  const [signBack, setSignBack] = useState('BACK');
+  const [floorOpacity, setFloorOpacity] = usePersistentState(pk('floorOpacity'), 0.45);
+  const [squareSize, setSquareSize] = usePersistentState(pk('squareSize'), DEFAULT_SQUARE_SIZE);
+  const [floorThickness, setFloorThickness] = usePersistentState(pk('floorThickness'), DEFAULT_FLOOR_THICKNESS);
+  const [planetRadius, setPlanetRadius] = usePersistentState(pk('planetRadius'), DEFAULT_RADIUS);
+  const [landmarkCount, setLandmarkCount] = usePersistentState(pk('landmarkCount'), 7);
+  const [arrangement, setArrangement] = usePersistentState<ArrangementId>(pk('arrangement'), 'scattered');
+  const [signFront, setSignFront] = usePersistentState(pk('signFront'), 'FRONT');
+  const [signBack, setSignBack] = usePersistentState(pk('signBack'), 'BACK');
+  const [look, setLook] = usePersistentState(pk('look'), 'daytime');
 
   const spec = worldById(worldId);
   const analysis = useMemo(() => analyzeWorld(spec), [spec]);
@@ -70,6 +79,7 @@ export default function PolygonWorlds() {
   const thickRef = useRef(floorThickness);
   const opacityRef = useRef(floorOpacity);
   const radiusRef = useRef(planetRadius);
+  const lookRef = useRef(look);
   const propsRef = useRef(props);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
@@ -85,6 +95,7 @@ export default function PolygonWorlds() {
     engineRef.current.setFloorOpacity(opacityRef.current);
     engineRef.current.setRadius(radiusRef.current);
     engineRef.current.setCameraDistance(camDistRef.current);
+    engineRef.current.setLook(lookRef.current);
     // Test seam (opt-in via ?polydebug): exposes the live minimap chart so a headless
     // harness can tell which side of the sheet the character is on. No effect on the
     // shipped app — the bridge is only attached when the query flag is present.
@@ -95,6 +106,9 @@ export default function PolygonWorlds() {
         setYaw: (v: number) => { yawRef.current = v; },
         // mirror-ink placement audit (spherical twin worlds; null elsewhere)
         auditInk: () => engineRef.current?.auditInk(),
+        // wipe the trail (used by the chirality guard to force a guaranteed
+        // FRESH print on the flip side, free of any pre-crossing stamp)
+        clearTrail: () => engineRef.current?.clearTrail(),
         // plant/clear the two-inked glass sign without driving the panel UI
         plantSign: (f: string, b: string) => engineRef.current?.plantSign(f, b),
         clearSigns: () => engineRef.current?.clearSigns(),
@@ -154,6 +168,7 @@ export default function PolygonWorlds() {
     engineRef.current.setFloorOpacity(opacityRef.current);
     engineRef.current.setRadius(radiusRef.current);
     engineRef.current.setCameraDistance(camDistRef.current);
+    engineRef.current.setLook(lookRef.current);
   }, [spec, props]);
 
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
@@ -163,6 +178,7 @@ export default function PolygonWorlds() {
   useEffect(() => { thickRef.current = floorThickness; engineRef.current?.setFloorThickness(floorThickness); }, [floorThickness]);
   useEffect(() => { radiusRef.current = planetRadius; engineRef.current?.setRadius(planetRadius); }, [planetRadius]);
   useEffect(() => { camDistRef.current = camDistance; engineRef.current?.setCameraDistance(camDistance); }, [camDistance]);
+  useEffect(() => { lookRef.current = look; engineRef.current?.setLook(look); }, [look]);
 
   useEffect(() => {
     const map: Record<string, MoveKey> = {
@@ -258,14 +274,29 @@ export default function PolygonWorlds() {
   // is the point on the unit sphere the player occupies, which the embedding inset's
   // sphere/Roman marker rides; flat/hyperbolic immersions ignore it.
   const getDir = useCallback(() => engineRef.current?.getPose()?.up ?? null, []);
-  const worldOptions = WORLDS.map((w) => ({ value: w.id, label: w.label }));
+  // World groups for the picker — grouped by the geometry χ forces. The picker
+  // itself now lives in the World panel (the title opens it); see worldNode.
+  const GEO_GROUPS: { cover: ReturnType<typeof deriveGeometry>['cover']; label: string }[] = [
+    { cover: 'euclidean', label: 'Flat · χ = 0' },
+    { cover: 'spherical', label: 'Sphere · χ > 0' },
+    { cover: 'hyperbolic', label: 'Hyperbolic · χ < 0' },
+  ];
 
   /* ---- archetype panels (one row per legacy control; nothing dropped) ---- */
 
-  // subject — which gluing, plus the live topological invariants it forces.
+  // subject — pick the world (grouped by the geometry χ forces) and read out the
+  // invariants the chosen gluing implies. The title doubles as a shortcut here.
   const worldNode = (
     <>
-      <Select label="Gluing" options={worldOptions} value={worldId} onChange={setWorldId} />
+      <Select
+        label="World"
+        groups={GEO_GROUPS.map((g) => ({
+          label: g.label,
+          options: WORLDS.filter((w) => deriveGeometry(w).cover === g.cover).map((w) => ({ value: w.id, label: w.label })),
+        }))}
+        value={worldId}
+        onChange={(v) => setWorldId(v)}
+      />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5 }}>
         <div style={{ marginBottom: 4 }}>
           <span style={{ color: 'var(--cp-fg)' }}>Edge word</span>{' '}
@@ -286,9 +317,19 @@ export default function PolygonWorlds() {
     </>
   );
 
-  // domain — the size/shape of the fundamental domain the walk lives in.
-  const terrainNode = (
+  // view — camera distance + the scene's scale (the old Terrain panel folded in;
+  // first/third person is a top-bar pill now, so it's gone from here).
+  const viewNode = (
     <>
+      {/* Perspective lives in the top-bar pills on desktop; on the cramped phone
+          bar those pills are dropped, so it rides here in the View sheet instead. */}
+      {phone && (
+        <Pills label="Perspective" options={[{ value: 'third', label: 'Third person' }, { value: 'first', label: 'First person' }]} value={thirdPerson ? 'third' : 'first'} onChange={(v) => setThirdPerson(v === 'third')} />
+      )}
+      <Select label="Look" options={LOOKS.map((l) => ({ value: l.id, label: l.label }))} value={look} onChange={setLook} />
+      {thirdPerson && (
+        <Slider label="Camera distance" value={camDistance} min={1.5} max={12} step={0.5} onChange={setCamDistance} format={(v) => `${v.toFixed(1)}`} />
+      )}
       {!isSpherical && (
         <Slider label={isHyperbolic ? 'Disk scale' : spec.edges ? 'Square size' : 'Polygon size'} value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
       )}
@@ -301,33 +342,17 @@ export default function PolygonWorlds() {
     </>
   );
 
-  // view — camera rig.
-  const cameraNode = (
-    <>
-      <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
-      {thirdPerson && (
-        <Slider label="Camera distance" value={camDistance} min={1.5} max={12} step={0.5} onChange={setCamDistance} format={(v) => `${v.toFixed(1)}`} />
-      )}
-    </>
-  );
-
-  // marks — decor, glass and the ink trail.
-  const decorNode = (
+  // marks — landmarks + glass + the ink trail, and the two-faced glass sign's
+  // text. Each sign face carries its own ink (amber front, cyan back); read from
+  // its back side an ink is mirror-reversed — the orientation cue in your own
+  // words. The verbs (plant / clear) live in the always-on action strip.
+  const marksNode = (
     <>
       <Slider label="Landmarks" value={landmarkCount} min={1} max={14} step={1} onChange={(v) => setLandmarkCount(Math.round(v))} format={(v) => `${Math.round(v)}`} />
       <Select label="Arrangement" options={ARRANGEMENTS.map((a) => ({ value: a.id, label: a.label }))} value={arrangement} onChange={(v) => setArrangement(v as ArrangementId)} />
       <Slider label={isSpherical ? 'Planet glass opacity' : 'Glass floor opacity'} value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
-      <button style={actionBtn} onClick={() => engineRef.current?.clearTrail()}>Clear trail</button>
-    </>
-  );
-
-  // marks — plant a two-inked glass sign at the player's feet. Each face carries
-  // its own ink (amber front, cyan back); read from its back side, an ink is
-  // mirror-reversed — the orientation cue, now in the player's own words.
-  const signNode = (
-    <>
-      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5 }}>
-        A glass plaque with its own ink on each face. Walk around it; then cross a flipped edge and read it through the floor.
+      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5, marginTop: 2 }}>
+        Sign — a glass plaque with its own ink on each face. Plant it (below), walk around it, then cross a flipped edge and read it through the floor.
       </div>
       <label className="cp-row">
         <span className="cp-row-label">Front</span>
@@ -337,12 +362,15 @@ export default function PolygonWorlds() {
         <span className="cp-row-label">Back</span>
         <input type="text" value={signBack} maxLength={16} onChange={(e) => setSignBack(e.target.value)} />
       </label>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button style={{ ...actionBtn, flex: 1 }} onClick={() => engineRef.current?.plantSign(signFront, signBack)}>Plant sign</button>
-        <button style={{ ...actionBtn, flex: 1 }} onClick={() => engineRef.current?.clearSigns()}>Clear signs</button>
-      </div>
     </>
   );
+
+  // always-on verbs (bottom-center strip) — reachable without opening a panel.
+  const actions: ActionDef[] = [
+    { id: 'plant', icon: 'pin', label: 'Plant sign', primary: true, onClick: () => engineRef.current?.plantSign(signFront, signBack) },
+    { id: 'clear-signs', icon: 'close', label: 'Clear signs', onClick: () => engineRef.current?.clearSigns() },
+    { id: 'clear-trail', icon: 'reset', label: 'Clear trail', onClick: () => engineRef.current?.clearTrail() },
+  ];
 
   // drive — locomotion.
   const walkNode = (
@@ -355,12 +383,10 @@ export default function PolygonWorlds() {
   );
 
   const sections: SectionDef[] = [
-    { id: 'world', title: 'World', arch: 'subject', node: worldNode, estHeight: 250 },
-    { id: 'terrain', title: 'Terrain', arch: 'domain', node: terrainNode, estHeight: 160 },
-    { id: 'camera', title: 'Camera', arch: 'view', node: cameraNode, estHeight: 160 },
-    { id: 'decor', title: 'Landmarks & trail', arch: 'marks', node: decorNode, estHeight: 260 },
-    { id: 'sign', title: 'Sign', arch: 'marks', node: signNode, estHeight: 250 },
-    { id: 'drive', title: 'Walk', arch: 'drive', node: walkNode, estHeight: 160 },
+    { id: 'world', title: 'World', arch: 'subject', node: worldNode, estHeight: 210 },
+    { id: 'view', title: 'View', arch: 'view', node: viewNode, estHeight: 220 },
+    { id: 'marks', title: 'Landmarks & sign', arch: 'marks', node: marksNode, estHeight: 320 },
+    { id: 'drive', title: 'Walk', arch: 'drive', node: walkNode, estHeight: 150 },
   ];
 
   const views: ViewDef[] = [
@@ -403,6 +429,12 @@ export default function PolygonWorlds() {
       appId="polygon-worlds"
       title="Polygon Worlds"
       subtitle={spec.short}
+      titlePanel="world"
+      modes={phone ? undefined : [{ id: 'third', label: 'Third person' }, { id: 'first', label: 'First person' }]}
+      activeMode={thirdPerson ? 'third' : 'first'}
+      onModeChange={(id) => setThirdPerson(id === 'third')}
+      actions={actions}
+      immersive
       sections={sections}
       views={views}
       layouts={LAYOUTS}
@@ -416,15 +448,10 @@ export default function PolygonWorlds() {
  *  column beside the walk window (Compact + Everything are auto-appended). */
 const LAYOUTS: LayoutDef[] = [
   {
-    id: 'walk', name: 'Walk', sub: 'World · Camera · Walk', icon: 'move',
-    open: { world: { x: 84, y: 18 }, camera: { x: 84, y: 258 }, drive: { x: 84, y: 458 } },
+    id: 'walk', name: 'Walk', sub: 'World', icon: 'move',
+    open: { world: { x: 84, y: 18 } },
   },
 ];
-
-const actionBtn: React.CSSProperties = {
-  padding: '12px 16px', borderRadius: 6, border: '1px solid var(--cp-border)',
-  background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)', cursor: 'pointer', fontSize: 14, textAlign: 'left',
-};
 
 function MovePad({ onSet, phone }: { onSet: (k: MoveKey, v: boolean) => void; phone?: boolean }) {
   const mv = (k: MoveKey, label: string, style: React.CSSProperties) => (
@@ -487,13 +514,14 @@ function polygonSpec(spec: WorldSpec, st: SquareMapState | null): PolygonMapSpec
     ? { px: (st.u - 0.5) * 2, py: (st.v - 0.5) * 2, hx: st.hx, hy: st.hz, flipped: st.flipped }
     : null;
   const label = !st ? spec.label : st.flipped ? `${spec.label} · other face` : spec.label;
-  // flat n-gon worlds chart in circumcircle units (vertices at radius 1);
-  // hyperbolic worlds chart in Poincaré coordinates (vertices at tanh(R/2))
-  const flat = deriveGeometry(spec).cover === 'euclidean';
+  // flat + spherical n-gon worlds chart in circumcircle units (vertices at radius 1
+  // — the chart()'s disk coords); only hyperbolic worlds chart in Poincaré
+  // coordinates (vertices at tanh(R/2)).
+  const hyper = deriveGeometry(spec).cover === 'hyperbolic';
   return {
     sides: m,
     baseAngle: -Math.PI / 2 + Math.PI / m,
-    rhoV: flat ? 1 : Math.tanh(real.circumradius / 2),
+    rhoV: hyper ? Math.tanh(real.circumradius / 2) : 1,
     letters: word.map((l) => ({ gen: l.gen, inv: l.inv })),
     marker,
     label,

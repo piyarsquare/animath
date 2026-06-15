@@ -21,7 +21,7 @@ import {
  * The player is a kernel {@link Frame} on the κ=−1 shell (the hyperboloid). It is
  * **only ever moved by `stepForward`/`turn`/`stepHeading`, so its frame stays
  * orientation-preserving (det > 0)** — the controls never invert. The scene is
- * re-centred on the player (the view `Tview = frame⁻¹` carries them to the basepoint
+ * re-centered on the player (the view `Tview = frame⁻¹` carries them to the basepoint
  * O); cover points map hyperboloid → Poincaré disk `(x,y)/(1+w)` → a flat **glass
  * disk floor** (radius `DISK_R`).
  *
@@ -63,8 +63,8 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   const elems = dev.elements;                     // deck cosets (incl. identity)
   const m = real.edges;                           // polygon side count (2n)
 
-  // Normalise the disk scale so the home polygon's world size tracks the same
-  // `squareSize` slider as the flat cell — its circumradius (centre→vertex) is set
+  // Normalize the disk scale so the home polygon's world size tracks the same
+  // `squareSize` slider as the flat cell — its circumradius (center→vertex) is set
   // to the flat cell's half-diagonal (squareSize·√2/2). Without this the hyperbolic
   // worlds rendered ~1.5× larger than the torus at the same setting, so switching
   // topology felt like a radical change of scale.
@@ -81,8 +81,8 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   scene.fog = new THREE.Fog(SKY, DISK_R * 1.1, DISK_R * 3.2);
 
   // ── geometry helpers (hyperboloid → Poincaré disk → floor) ───────────────────
-  // Tview re-centres the player (det > 0, never mirrored); Mtiles = Tview·h draws
-  // the tiling re-centred on the player's current tile. Both refreshed in update().
+  // Tview re-centers the player (det > 0, never mirrored); Mtiles = Tview·h draws
+  // the tiling re-centered on the player's current tile. Both refreshed in update().
   let Tview: Mat3 = IDENTITY3;
   let Mtiles: Mat3 = IDENTITY3;
 
@@ -94,7 +94,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     const k = 1 / (1 + w);
     return out.set(x * k * DISK_R, 0, y * k * DISK_R);
   }
-  /** Poincaré radius² of a cover point through M (0 at centre → 1 at the horizon). */
+  /** Poincaré radius² of a cover point through M (0 at center → 1 at the horizon). */
   function poincareR2(M: Mat3, Q: Vec3): number {
     const x = M[0] * Q[0] + M[1] * Q[1] + M[2] * Q[2];
     const y = M[3] * Q[0] + M[4] * Q[1] + M[5] * Q[2];
@@ -124,7 +124,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   }
 
   // Vertex towers sit just inside every polygon vertex — the "slightly smaller
-  // n-gon" inscribed by pulling each vertex a fraction of the way back to centre.
+  // n-gon" inscribed by pulling each vertex a fraction of the way back to center.
   const TOWER_INSET = 0.85;
   const nVerts = verts.length;
   const homeTowers = verts.map((V) => geodInterp(ORIGIN, V, TOWER_INSET));
@@ -259,7 +259,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
 
   // ── player frame on the κ=−1 shell ───────────────────────────────────────────
   // Spawn at the in-domain point farthest from every landmark (so the player never
-  // starts inside a tree or on the centre beacon).
+  // starts inside a tree or on the center beacon).
   function clearSpawn(): Frame {
     let bu = 0.5, bv = 0.5, bd = -1;
     for (let cu = 0.15; cu <= 0.85; cu += 0.1) {
@@ -275,7 +275,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   let h: Mat3 = IDENTITY3;                          // deck element of the player's tile
   let detH = 1;
   let lastYaw = 0;
-  const fwdW = new THREE.Vector3(1, 0, 0);         // re-centred ⇒ player always faces +X
+  const fwdW = new THREE.Vector3(1, 0, 0);         // re-centered ⇒ player always faces +X
   const tmp = new THREE.Vector3();
 
   function applyGlass() {
@@ -299,7 +299,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
   }
 
   function placeDecor(order: { i: number }[]) {
-    // tiles nearest the player on screen (their rendered centre nearest the disk
+    // tiles nearest the player on screen (their rendered center nearest the disk
     // origin); the whole skin flips with det(h) so crossing a glide flips you.
     let used = 0;
     for (const { i } of order) {
@@ -407,7 +407,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     const { fwd: f, strafe, yaw, pitch, dt, moveSpeed, thirdPerson } = input;
     const dyaw = yaw - lastYaw; lastYaw = yaw;
     if (dyaw) frame = kTurn(frame, -dyaw);
-    // ×2: near the (always re-centred) origin the Poincaré map compresses by the
+    // ×2: near the (always re-centered) origin the Poincaré map compresses by the
     // factor tanh(d/2)≈d/2, so a raw step of moveSpeed·dt/DISK_R slides the ground
     // at only moveSpeed/2 world-units/sec — half the flat/spherical rate. Doubling
     // the step restores parity, so walking feels the same speed in every world.
@@ -441,10 +441,10 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     // camera teleports across the identified edge with no visible pop — while keeping
     // det(frame) > 0 (controls never invert) and the sign of det(h) (the sheet side you
     // are on) unchanged. The player is thus always inside the home polygon or its one
-    // mirror neighbour ("one side or the other"), so the frame can never drift far.
+    // mirror neighbor ("one side or the other"), so the frame can never drift far.
     let D: Mat3 = h;
     if (det3(h) < 0) {
-      // On a flipped tile: fold to the nearest orientation-preserving neighbour so D
+      // On a flipped tile: fold to the nearest orientation-preserving neighbor so D
       // stays det > 0 (keeps the frame right-handed) and the flipped skin still shows.
       let bestD = Infinity, bestM: Mat3 | null = null;
       for (const gm of genMats) {
@@ -481,7 +481,7 @@ export function makeHyperbolicPresenter(c: CoverDeps): CoverModel {
     // camera (forward +X, up +Y ⇒ camera-right = +Z = cover-left), so the
     // pull-back of the avatar's left is the kernel-RIGHT direction (−π/2).
     // δ sets the decal's intrinsic size — chosen so the print is ~1 world unit
-    // at the disk centre (it shrinks conformally outward).
+    // at the disk center (it shrinks conformally outward).
     if (!lastFrozen || distance(kappa, lastFrozen, pPos) > 3.2 / DISK_R) {
       const delta = 2 / DISK_R;
       const di = inv3(h);

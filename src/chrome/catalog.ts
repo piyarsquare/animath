@@ -30,7 +30,6 @@ const META: Record<string, { cat: Category; kind: PreviewKind; hue?: number }> =
   '/plane-transform': { cat: 'Complex', kind: 'plane' },
   '/fractals': { cat: 'Fractal', kind: 'fractal' },
   '/correspondence': { cat: 'Fractal', kind: 'julia' },
-  '/topology-walk': { cat: 'Dynamics', kind: 'corridor' },
   '/trinary': { cat: 'Dynamics', kind: 'trinary' },
   '/stable-marriage': { cat: 'Algorithm', kind: 'marriage' },
   '/agentic-sorting': { cat: 'Algorithm', kind: 'sorting' },

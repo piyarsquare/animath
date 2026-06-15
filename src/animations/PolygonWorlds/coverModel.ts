@@ -88,5 +88,9 @@ export interface CoverModel {
   setRadius?(r: number): void;
   /** Third-person camera distance from the character. */
   setCameraDistance?(d: number): void;
+  /** Retint the cover's own sky to a look's base color (the spherical cover's
+   *  sky dome hides scene.background, so it needs this; flat/hyperbolic covers
+   *  ride scene.background + fog, which the engine sets directly). */
+  setSky?(hex: number): void;
   dispose(): void;
 }

@@ -24,11 +24,17 @@ So different gluings give different worlds:
 | hexagon `aabbcc` | **three cross-caps** (Dyck) | −1 | hyperbolic |
 | hexagon, opposite edges, all straight | **torus** again — new polygon, same world | 0 | flat |
 | hexagon `aabccb⁻¹` | **Klein bottle** again | 0 | flat |
+| hexagon `abcabc` | **projective plane** again | 1 | spherical |
+| octagon `abcdabcd` | **projective plane** again | 1 | spherical |
 
-The last two are the same topologies as the square worlds — the fundamental
+The last four are the same topologies as the square worlds — the fundamental
 polygon is a *presentation*, not the surface. The hexagonal torus is genuinely
 flat (each corner class collects three 120° corners: exactly 360°, no cone
-points) and tiles the plane as a honeycomb.
+points) and tiles the plane as a honeycomb. The hexagonal and octagonal
+projective planes fold onto the *same* round hemisphere as the square ℝP²: each
+of their corner classes collects two equal corners, so a regular spherical
+hexagon (or octagon) closes up smoothly, with its vertices on the equator and
+the same antipodal seam.
 
 Walk it in first person. The **mini-map** is always the fundamental square, its
 edges marked with the identification arrows. Your footprints are **ink on the
@@ -81,7 +87,20 @@ surface you walk. The curved worlds are subtler, and the difference is honest:
   on the mini-map square are not the distances you walk. The world you actually move
   through is the smooth round sphere — there are **no cone points**, no creases. Any
   intrinsic measurement (how far, what angle) reads the true round-sphere metric,
-  never the flattened square.
+  never the flattened square. Its two adjacent folds (`a a⁻¹`, `b b⁻¹`) make it the
+  smallest **zip sphere**, so it too carries its **2 stitched seams** (a hub + 2
+  leaf tips) — the same cut shown on the hexagon/octagon spheres below.
+- **Zip spheres (hexagon `aa⁻¹bb⁻¹cc⁻¹`, octagon `aa⁻¹bb⁻¹cc⁻¹dd⁻¹`).** Same
+  round sphere, presented by a polygon whose edges fold together in adjacent
+  pairs (`x x⁻¹`). Each fold is a **cut** in the sphere: the polygon is the round
+  sphere sliced open along a little **star** — a hub where the cuts meet and one
+  spoke per fold — then flattened. The world carries those **n seams** as rows
+  of glowing **stitches** (the cuts shown sewn shut) running from the hub out to
+  the rim; walking across one is seamless, because the sphere was only *cut*
+  there, never bent.
+  The polygon's many corners collapse to just two kinds of point: the single
+  **hub** (every other corner) and the **n leaf tips** — the whole 2n-gon glues
+  down to one hub + n leaves on one smooth sphere.
 
 In both, **χ forces the curvature**: ∫K dA = 2πχ, so a positive χ *must* round up
 onto a sphere — a flat square simply cannot close those corners.

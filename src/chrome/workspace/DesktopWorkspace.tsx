@@ -25,7 +25,10 @@ type RefMap = React.MutableRefObject<Record<string, HTMLDivElement | null>>;
  * plus the left icon rail and named layouts, persisted per app.
  */
 export default function DesktopWorkspace(props: WorkspaceProps) {
-  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, actions, modes, activeMode, onModeChange } = props;
+  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, actions, modes, activeMode, onModeChange, immersive } = props;
+  /* immersive desktop: a single view fills the stage (no frame), top bar + rail
+   *  + floating panels + action strip stay live over it. Single-view only. */
+  const soloImmersive = !!immersive && views.length === 1;
   const sections = useMemo(() => sortByTier(props.sections), [props.sections]);
   const builtin = useMemo(
     () => builtinLayouts(sections, appLayouts),
@@ -211,6 +214,7 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
       <TopBar
         title={title}
         subtitle={subtitle}
+        hideTitle={soloImmersive}
         modes={modes}
         activeMode={activeMode}
         onModeChange={onModeChange}
@@ -222,6 +226,9 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
             : undefined
         }
       >
+        {soloImmersive && (
+          <Rail orientation="horizontal" sections={sections} openIds={state.open} onToggle={togglePanel} />
+        )}
         <LayoutsControl
           current={state.layout}
           builtin={builtin}
@@ -232,7 +239,7 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
         />
       </TopBar>
 
-      <div className={`am-stage am-stage-void${fullView ? ' am-has-full' : ''}`} ref={stageRef}>
+      <div className={`am-stage ${soloImmersive && !fullView ? 'am-stage-immersive' : 'am-stage-void'}${fullView ? ' am-has-full' : ''}`} ref={stageRef}>
         {guides?.gx != null && <div className="am-ws-guide am-ws-guide-v" style={{ left: guides.gx }} />}
         {guides?.gy != null && <div className="am-ws-guide am-ws-guide-h" style={{ top: guides.gy }} />}
 
@@ -246,6 +253,7 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
               view={v}
               state={vs}
               full={fullView === v.id}
+              immersive={soloImmersive && fullView == null}
               nodeRef={el => { if (el) viewRefs.current[v.id] = el; else delete viewRefs.current[v.id]; }}
               snap={makeSnap(v.id, viewRefs)}
               resize={makeResize(v.id)}
@@ -260,9 +268,9 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
           );
         })}
 
-        <Rail sections={sections} openIds={state.open} onToggle={togglePanel} />
+        {!soloImmersive && <Rail sections={sections} openIds={state.open} onToggle={togglePanel} />}
 
-        {openIds.length === 0 && (
+        {openIds.length === 0 && !soloImmersive && (
           <div className="am-ws-empty">
             No panels open — click an icon on the <b>rail</b> to open one, arrange
             the cards, then save the arrangement as a layout.

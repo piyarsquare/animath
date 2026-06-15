@@ -6,7 +6,7 @@
  * growing) Fuchsian group for the hyperbolic plane. So tiling lives behind a
  * single strategy keyed by {@link Realization.policy}, with a common BFS:
  * breadth-first over the Cayley graph of the side-pairing generators (and their
- * inverses), de-duplicating group elements and culling tiles whose centre falls
+ * inverses), de-duplicating group elements and culling tiles whose center falls
  * beyond a geodesic horizon. The cap (`maxTiles`) protects the hyperbolic case on
  * a phone; the horizon protects all three.
  */
@@ -17,7 +17,7 @@ import {
 } from './cayleyKlein';
 
 export interface DevelopOptions {
-  /** Geodesic radius beyond which a tile centre is culled. */
+  /** Geodesic radius beyond which a tile center is culled. */
   horizon: number;
   /** Hard cap on tiles enumerated (BFS stops when reached). */
   maxTiles: number;
@@ -26,7 +26,7 @@ export interface DevelopOptions {
 export interface DevelopResult {
   /** Deck elements whose tile should be drawn (includes the identity = home tile). */
   elements: Isometry[];
-  /** Tile centres (element · O), parallel to `elements`. */
+  /** Tile centers (element · O), parallel to `elements`. */
   centers: Vec3[];
   /** True if BFS hit `maxTiles` before exhausting the horizon (i.e. there are more). */
   truncated: boolean;
@@ -41,7 +41,7 @@ function matKey(m: Mat3): string {
   return s;
 }
 
-// Budget (measured, genus-2 octagon, R≈2.45, nearest neighbour at d≈3.06; ℍ²
+// Budget (measured, genus-2 octagon, R≈2.45, nearest neighbor at d≈3.06; ℍ²
 // tile count grows exponentially with the horizon): h=6 → ~100 tiles (~3ms),
 // h=7 → ~265 (~6ms), h=8 → ~800 (~15ms). The default sits where a frame's tile
 // enumeration stays a few ms; maxTiles is the hard backstop on a phone.
