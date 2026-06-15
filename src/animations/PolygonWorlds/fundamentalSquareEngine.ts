@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { makeSelectiveBloom } from './bloom';
 import { makeCharacter } from './character';
 import { makeFundamentalSquareDecor, DecorProp, DEFAULT_PROPS } from './decor';
 import { makeEuclideanPresenter } from './presenters/euclidean';
@@ -78,6 +79,12 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
   const prevEnv = scene.environment;
   scene.environment = envTex;
 
+  // Emissive-keyed selective bloom so only the things that genuinely emit (seams,
+  // markers, the ★ beacon, the avatar's glow) bleed light — keyed to emissive, not
+  // to the lights, so the camera headlamp never blows the nearby decor into glare.
+  let bufW = deps.renderer.domElement.width, bufH = deps.renderer.domElement.height;
+  const bloom = makeSelectiveBloom(deps.renderer, scene, camera, { strength: 0.9, radius: 0.5, threshold: 0 });
+
   const decor = makeFundamentalSquareDecor(opts.props ?? DEFAULT_PROPS);
 
   const coverDeps = { deps, root, spec, decor, squareSize, floorThickness };
@@ -109,7 +116,9 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
     character.stride(stridePhase);
 
     Object.assign(mapState, cover.chart());
-    deps.renderer.render(scene, camera);
+    const dw = deps.renderer.domElement.width, dh = deps.renderer.domElement.height;
+    if (dw !== bufW || dh !== bufH) { bufW = dw; bufH = dh; bloom.setSize(dw, dh); }
+    bloom.render();
   }
 
   return {
@@ -131,6 +140,7 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
       scene.remove(root);
       scene.environment = prevEnv;
       envTex.dispose();
+      bloom.dispose();
       cover.dispose();
       decor.dispose();
       character.dispose();
@@ -157,7 +167,18 @@ function makeGradientEnv(renderer: THREE.WebGLRenderer): THREE.Texture {
   geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
   const mat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide });
   sky.add(new THREE.Mesh(geo, mat));
+  // a soft warm "sun" in the warm-key direction — gives the glass + metals a moving
+  // specular highlight to catch, instead of a flat featureless gradient to reflect.
+  const sunGeo = new THREE.SphereGeometry(5, 24, 16);
+  const sunMat = new THREE.MeshBasicMaterial({ color: 0xfff1d6 });
+  const sun = new THREE.Mesh(sunGeo, sunMat);
+  sun.position.copy(new THREE.Vector3(0.4, 1, 0.3).normalize().multiplyScalar(34));
+  sky.add(sun);
+  const haloGeo = new THREE.SphereGeometry(9, 24, 16);
+  const haloMat = new THREE.MeshBasicMaterial({ color: 0x6a5a44, transparent: true, opacity: 0.5, side: THREE.BackSide });
+  const halo = new THREE.Mesh(haloGeo, haloMat); halo.position.copy(sun.position);
+  sky.add(halo);
   const rt = pmrem.fromScene(sky);
-  geo.dispose(); mat.dispose(); pmrem.dispose();
+  geo.dispose(); mat.dispose(); sunGeo.dispose(); sunMat.dispose(); haloGeo.dispose(); haloMat.dispose(); pmrem.dispose();
   return rt.texture;
 }

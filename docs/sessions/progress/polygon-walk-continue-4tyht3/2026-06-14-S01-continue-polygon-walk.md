@@ -33,6 +33,32 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 beauty · 03:40 — Atmosphere overhaul pt.1: emissive selective bloom + sun env
+**Why:** user asked to "turn up the beauty" (basic decor, flat lighting, the ground
+not reading as glass) and chose the atmosphere overhaul (bloom + shadows + richer
+env). This is pt.1 (bloom + env); shadows next.
+
+- **`bloom.ts`** (new): emissive-keyed **selective bloom**. Two composers — a bloom
+  pass renders an *emissive-only* copy of the scene (each mesh swapped for a flat
+  material showing just its `emissive`, against black) and blurs it; the final pass
+  renders normally, adds the bloom, then ACES-tonemaps via `OutputPass`. Keying on
+  emissive (not luminance) is essential: the first attempt (plain full-scene
+  `UnrealBloomPass`) had the **90-intensity camera headlamp blow the avatar/beacon
+  into a giant glare**. Emissive-keyed means the lights can be as hot as they like and
+  only the seams / markers / ★ beacon / avatar (the genuine emitters) bloom.
+- **Sun in the env** (`makeGradientEnv`): a warm sun disc + halo in the key-light
+  direction, so glass + metals catch a moving specular highlight instead of a flat
+  gradient.
+
+Verified: build + lint green; screenshots across spherical (zipsphere6), euclidean
+(torus), hyperbolic (genus2) all read richer without blowing out; chirality guard
+PASS (rp2 both faces, sphere) with decor 0 improper — the per-frame emissive swap is
+restored each frame, and the guards key on geometry/transforms not pixels, so the
+pipeline change is safe.
+
+![bloom · sphere](assets/2026-06-15-S01-beauty-bloom-sphere.png)
+![bloom · torus](assets/2026-06-15-S01-beauty-bloom-torus.png)
+
 ### 🟢 polish · 01:40 — Square `sphere` now shows its seams too (whole family consistent)
 **Why:** user audit — the square pillowcase `a a⁻¹ b b⁻¹` is the n=2 zip sphere
 but drew no seams (it carries square `edges`, so the `zip` branch skipped it),
