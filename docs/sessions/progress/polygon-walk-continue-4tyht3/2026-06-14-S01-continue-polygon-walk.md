@@ -33,6 +33,28 @@ is merged to `main`. Build: passed; follow-up value: MEDIUM.
 
 <!-- Newest entry first. -->
 
+### 🟢 layout · 14:10 — Layout/controls overhaul (user picked all four)
+Following the top-bar world picker, the user chose all four further improvements:
+
+- **Action strip:** the primary verbs — **Plant sign · Clear signs · Clear
+  trail** — now live in the always-on bottom-center `actions` strip (Plant sign
+  is the accent/primary). `sectionId` omitted (they're marks verbs, not a
+  drive-tier projection — avoids the dev-warning while keeping them always
+  reachable).
+- **First/Third-person pills:** moved out of the Camera panel checkbox into
+  top-bar `modes` pills (`activeMode` ↔ `thirdPerson`). Verified the pill
+  switches the view.
+- **Consolidated panels 6 → 4:** World (pure topology readout) · **View**
+  (camera distance + the old Terrain scale: size/thickness/radius) · **Landmarks
+  & sign** (decor + glass + the sign's front/back text) · Walk (speed). Removed
+  the now-unused `actionBtn` style + `Checkbox` import.
+- **Cleaner default layout:** the `walk` layout now opens just World + Walk in a
+  tidy left column (was World · Camera · Walk).
+
+Verified: build + lint green (no new warnings); screenshots confirm the top bar
+(world select + pills), the 4-panel rail, the bottom-center verb strip, and the
+first↔third toggle.
+
 ### 🟢 layout · 13:40 — World picker moved to the top bar (user request)
 User asked to improve the layout/controls — "should be able to change world from
 the top bar." Moved the world (gluing) selector out of the World panel into the

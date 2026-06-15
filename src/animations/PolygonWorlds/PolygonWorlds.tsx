@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
-import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { usePhone } from '../../chrome/usePhone';
-import { Slider, Select, Checkbox } from '../../components/ControlPanel';
+import { Slider, Select } from '../../components/ControlPanel';
 import { WORLDS, worldById, WorldSpec, deriveGeometry, analyzeWorld } from './worldSpec';
 import { generateProps, ARRANGEMENTS, ArrangementId } from './decor';
 import { makeFundamentalSquareEngine } from './fundamentalSquareEngine';
@@ -318,9 +318,13 @@ export default function PolygonWorlds() {
     </>
   );
 
-  // domain — the size/shape of the fundamental domain the walk lives in.
-  const terrainNode = (
+  // view — camera distance + the scene's scale (the old Terrain panel folded in;
+  // first/third person is a top-bar pill now, so it's gone from here).
+  const viewNode = (
     <>
+      {thirdPerson && (
+        <Slider label="Camera distance" value={camDistance} min={1.5} max={12} step={0.5} onChange={setCamDistance} format={(v) => `${v.toFixed(1)}`} />
+      )}
       {!isSpherical && (
         <Slider label={isHyperbolic ? 'Disk scale' : spec.edges ? 'Square size' : 'Polygon size'} value={squareSize} min={14} max={60} step={2} onChange={setSquareSize} format={(v) => `${Math.round(v)} m`} />
       )}
@@ -333,33 +337,17 @@ export default function PolygonWorlds() {
     </>
   );
 
-  // view — camera rig.
-  const cameraNode = (
-    <>
-      <Checkbox label="Third-person view" checked={thirdPerson} onChange={setThirdPerson} />
-      {thirdPerson && (
-        <Slider label="Camera distance" value={camDistance} min={1.5} max={12} step={0.5} onChange={setCamDistance} format={(v) => `${v.toFixed(1)}`} />
-      )}
-    </>
-  );
-
-  // marks — decor, glass and the ink trail.
-  const decorNode = (
+  // marks — landmarks + glass + the ink trail, and the two-faced glass sign's
+  // text. Each sign face carries its own ink (amber front, cyan back); read from
+  // its back side an ink is mirror-reversed — the orientation cue in your own
+  // words. The verbs (plant / clear) live in the always-on action strip.
+  const marksNode = (
     <>
       <Slider label="Landmarks" value={landmarkCount} min={1} max={14} step={1} onChange={(v) => setLandmarkCount(Math.round(v))} format={(v) => `${Math.round(v)}`} />
       <Select label="Arrangement" options={ARRANGEMENTS.map((a) => ({ value: a.id, label: a.label }))} value={arrangement} onChange={(v) => setArrangement(v as ArrangementId)} />
       <Slider label={isSpherical ? 'Planet glass opacity' : 'Glass floor opacity'} value={floorOpacity} min={0} max={1} step={0.05} onChange={setFloorOpacity} format={(v) => `${Math.round(v * 100)}%`} />
-      <button style={actionBtn} onClick={() => engineRef.current?.clearTrail()}>Clear trail</button>
-    </>
-  );
-
-  // marks — plant a two-inked glass sign at the player's feet. Each face carries
-  // its own ink (amber front, cyan back); read from its back side, an ink is
-  // mirror-reversed — the orientation cue, now in the player's own words.
-  const signNode = (
-    <>
-      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5 }}>
-        A glass plaque with its own ink on each face. Walk around it; then cross a flipped edge and read it through the floor.
+      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5, marginTop: 2 }}>
+        Sign — a glass plaque with its own ink on each face. Plant it (below), walk around it, then cross a flipped edge and read it through the floor.
       </div>
       <label className="cp-row">
         <span className="cp-row-label">Front</span>
@@ -369,12 +357,15 @@ export default function PolygonWorlds() {
         <span className="cp-row-label">Back</span>
         <input type="text" value={signBack} maxLength={16} onChange={(e) => setSignBack(e.target.value)} />
       </label>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button style={{ ...actionBtn, flex: 1 }} onClick={() => engineRef.current?.plantSign(signFront, signBack)}>Plant sign</button>
-        <button style={{ ...actionBtn, flex: 1 }} onClick={() => engineRef.current?.clearSigns()}>Clear signs</button>
-      </div>
     </>
   );
+
+  // always-on verbs (bottom-center strip) — reachable without opening a panel.
+  const actions: ActionDef[] = [
+    { id: 'plant', icon: 'pin', label: 'Plant sign', primary: true, onClick: () => engineRef.current?.plantSign(signFront, signBack) },
+    { id: 'clear-signs', icon: 'close', label: 'Clear signs', onClick: () => engineRef.current?.clearSigns() },
+    { id: 'clear-trail', icon: 'reset', label: 'Clear trail', onClick: () => engineRef.current?.clearTrail() },
+  ];
 
   // drive — locomotion.
   const walkNode = (
@@ -387,12 +378,10 @@ export default function PolygonWorlds() {
   );
 
   const sections: SectionDef[] = [
-    { id: 'world', title: 'World', arch: 'subject', node: worldNode, estHeight: 250 },
-    { id: 'terrain', title: 'Terrain', arch: 'domain', node: terrainNode, estHeight: 160 },
-    { id: 'camera', title: 'Camera', arch: 'view', node: cameraNode, estHeight: 160 },
-    { id: 'decor', title: 'Landmarks & trail', arch: 'marks', node: decorNode, estHeight: 260 },
-    { id: 'sign', title: 'Sign', arch: 'marks', node: signNode, estHeight: 250 },
-    { id: 'drive', title: 'Walk', arch: 'drive', node: walkNode, estHeight: 160 },
+    { id: 'world', title: 'World', arch: 'subject', node: worldNode, estHeight: 150 },
+    { id: 'view', title: 'View', arch: 'view', node: viewNode, estHeight: 170 },
+    { id: 'marks', title: 'Landmarks & sign', arch: 'marks', node: marksNode, estHeight: 320 },
+    { id: 'drive', title: 'Walk', arch: 'drive', node: walkNode, estHeight: 150 },
   ];
 
   const views: ViewDef[] = [
@@ -437,6 +426,10 @@ export default function PolygonWorlds() {
       subtitle={spec.short}
       topExtra={worldTopSelect}
       titlePanel="world"
+      modes={[{ id: 'third', label: 'Third person' }, { id: 'first', label: 'First person' }]}
+      activeMode={thirdPerson ? 'third' : 'first'}
+      onModeChange={(id) => setThirdPerson(id === 'third')}
+      actions={actions}
       sections={sections}
       views={views}
       layouts={LAYOUTS}
@@ -450,15 +443,10 @@ export default function PolygonWorlds() {
  *  column beside the walk window (Compact + Everything are auto-appended). */
 const LAYOUTS: LayoutDef[] = [
   {
-    id: 'walk', name: 'Walk', sub: 'World · Camera · Walk', icon: 'move',
-    open: { world: { x: 84, y: 18 }, camera: { x: 84, y: 258 }, drive: { x: 84, y: 458 } },
+    id: 'walk', name: 'Walk', sub: 'World · Walk', icon: 'move',
+    open: { world: { x: 84, y: 18 }, drive: { x: 84, y: 196 } },
   },
 ];
-
-const actionBtn: React.CSSProperties = {
-  padding: '12px 16px', borderRadius: 6, border: '1px solid var(--cp-border)',
-  background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg)', cursor: 'pointer', fontSize: 14, textAlign: 'left',
-};
 
 function MovePad({ onSet, phone }: { onSet: (k: MoveKey, v: boolean) => void; phone?: boolean }) {
   const mv = (k: MoveKey, label: string, style: React.CSSProperties) => (
