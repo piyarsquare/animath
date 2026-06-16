@@ -10,9 +10,16 @@ build: passing
 followup: null
 pr: 222
 app: complex-particles
-signals: needs-dan
-next: PR-1 (per-function preset defaults) — pending Dan's reversible-decision calls.
+signals: on-track
+next: PR-2 (posture plot-captions); then Phase-2 — the Rays X→Y linked split view.
 ---
+
+> [!NOTE]
+> **Shipped on PR #222 (2026-06-16):** PR-0 (calm `single` default + five postures
+> as Layout-menu entries) · the tablet-width onstage fix (codex review) · **PR-1**
+> (per-function recommended-view presets — auto-snap domain/projection on a function
+> change, z² landing preserved; verified across switches). Decisions all resolved
+> (see below). Remaining: PR-2 posture captions, then Phase-2 (Rays split view first).
 
 # Plan: tame Complex Particles' surface — postures, presets, a calm default (no new apps)
 
