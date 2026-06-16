@@ -5,13 +5,13 @@ date: 2026-06-16
 title: "Plan: tame Complex Particles' surface — postures, presets, a calm default (no new apps)"
 branch: claude/sleepy-bardeen-uk0cal
 slug: sleepy-bardeen-uk0cal
-status: proposed
+status: in-progress
 build: passing
 followup: null
-pr: null
+pr: 222
 app: complex-particles
 signals: needs-dan
-next: Build PR-0 (calm default + posture layouts) — the cheap, reversible, high-leverage win.
+next: PR-1 (per-function preset defaults) — pending Dan's reversible-decision calls.
 ---
 
 # Plan: tame Complex Particles' surface — postures, presets, a calm default (no new apps)
@@ -84,7 +84,7 @@ geometry" axis (Plane / Cylinder / Sphere / Branch sheets) is the **presets**.
   as **one more posture** ("Function Pairs") on the same engine. Splitting into apps
   now would *collide* with that plan (it strands pair mode's shared state).
 
-## PR-0 — A calm default + posture layouts (the high-leverage win)
+## PR-0 — A calm default + posture layouts (the high-leverage win) — ✅ shipped ([#222](https://github.com/piyarsquare/animath/pull/222))
 
 **Goal:** stop cold-opening the cockpit. Land in one quiet single-function posture;
 recast the layout menu as task-shaped postures. **No engine or state-field change** —
