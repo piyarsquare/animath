@@ -31,6 +31,7 @@ import {
   functionNames, functionFormulas, functionCategories, POW_PQ_INDEX, QUADRATIC_INDEX,
   MULTIVALUED_INDICES, branchPeriod,
 } from '../../lib/complexMath';
+import { decodeFunction, encodeFunction, type FunctionState } from '../../lib/functionHandoff';
 
 // ── Per-function "recommended view" presets (PR-1, 2026-06-16) ──────────────
 // Picking a *different* function auto-snaps the DOMAIN/PROJECTION to what that
@@ -125,6 +126,23 @@ export default function ComplexParticles({
   const [quadA, setQuadA] = usePersistentState<Complex2>(ek('quadA'), [1, 0]);
   const [quadB, setQuadB] = usePersistentState<Complex2>(ek('quadB'), [0, 0]);
   const [quadC, setQuadC] = usePersistentState<Complex2>(ek('quadC'), [0, 0]);
+
+  // One-time function handoff (Phase-2 "graph ↔ map"): arriving from Plane
+  // Transform's "↗ 4D graph" link carries the function in the URL (?fn=…). Adopt
+  // it once, then strip the query so a later reload uses the user's own saved
+  // choice. Embed mode parses its own params, so it is skipped here.
+  useEffect(() => {
+    if (embed) return;
+    const seed = decodeFunction(window.location.hash);
+    if (seed.index === undefined) return;
+    setFunctionIndex(seed.index);
+    if (seed.p !== undefined) setExpP(seed.p);
+    if (seed.q !== undefined) setExpQ(seed.q === 0 ? 1 : seed.q);
+    if (seed.quad) { setQuadA(seed.quad.a); setQuadB(seed.quad.b); setQuadC(seed.quad.c); }
+    window.history.replaceState(null, '', window.location.hash.split('?')[0] || '#/complex-particles');
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Domain region (Domain panel): restrict the sampled plane to a polar radius
   // band on |z| (max thumb = no limit), applied live in the shaders (no geometry
@@ -878,6 +896,22 @@ export default function ComplexParticles({
     </select>
   );
 
+  // Cross-app handoff (Phase-2 "graph ↔ map"): open the same function as a plane
+  // map (domain → image) in Plane Transform. The link carries ONLY the function
+  // (name + p/q or quadratic coeffs), never the view — the two apps are two ways
+  // of seeing one function, not two persistence roots.
+  const fnState: FunctionState = { index: functionIndex, p: expP, q: expQ, quad: { a: quadA, b: quadB, c: quadC } };
+  const topBarExtra = (
+    <span className="am-bar-extra">
+      {functionTopSelect}
+      <a
+        className="am-bar-link"
+        href={`#/plane-transform?${encodeFunction(fnState)}`}
+        title="See this function as a plane map — the domain z-plane beside its image f(z)"
+      >↗ plane map</a>
+    </span>
+  );
+
   // Riemann-sheet range (shown for multivalued functions only). Kept min ≤ max
   // and within the sheet span (the function's finite period, else MAX_SHEETS)
   // by nudging the partner bound. Lives in the Domain section.
@@ -938,7 +972,7 @@ export default function ComplexParticles({
       functionName={displayName}
       functionFormula={displayFormula}
       functionPicker={functionPicker}
-      topExtra={functionTopSelect}
+      topExtra={topBarExtra}
       domainExtras={<>{regionControls}{isMultivalued ? branchControls : null}</>}
       readme={readmeText}
       explainer={explainerText}

@@ -4,6 +4,15 @@ Shows a complex function **f : ℂ → ℂ** as a *transformation of the plane*.
 The input pane is a colored grid of points `z = x + iy`; the output pane
 shows where each point lands, `w = f(z)`.
 
+## The map, and the graph next door
+
+This app draws the **map** `z ↦ f(z)`: the domain plane and its image, side by
+side. A complementary way to see the *same* function is as its 4-D **graph** —
+every input paired with its output as one point `(z, f(z))`, drawn as a particle
+cloud. That view is its own app, **Complex Particles** — open it on the current
+function with the **↗ 4D graph** link in the top bar. The map and the graph are
+two honest pictures of one object, not two different things.
+
 ## Reading the two panes
 
 - **Same color = same point.** A patch of color in the input pane tells you

@@ -672,10 +672,14 @@ export default function ParticleViewerShell({
       open: { camera: { x: 84, y: 18 } },
     },
     {
-      // Net + Motion: watch the domain net sweep into the image (Domain coloring,
-      // the shipped default, carries each point's identity across). The linked
-      // domain | image split view upgrades this posture in Phase 2.
-      id: 'rays', name: 'Rays (X→Y)', sub: 'Follow the domain net into the image', icon: 'waves',
+      // The mapping z → f(z): Net + Motion watch the domain net sweep into the
+      // image (Domain coloring carries each point's identity across). The Phase-2
+      // three-hats review found a domain|image split *here* would duplicate the
+      // Plane Transform app, so the linked plane map lives there — one click away
+      // via the top-bar "↗ plane map" handoff. Named "z → f(z)", not "Rays":
+      // "rays" already means polar spokes (Net mode, Plane Transform). Id stays
+      // 'rays' to keep saved layouts stable.
+      id: 'rays', name: 'z → f(z)', sub: 'Watch the domain net sweep to its image', icon: 'waves',
       open: { render: { x: 84, y: 18 }, motion: { x: 356, y: 18 } },
     },
   ];

@@ -13,6 +13,7 @@ import {
   applyComplexBranch, complexPowRational, complexQuadratic,
 } from '../../lib/complexMath';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
+import { decodeFunction, encodeFunction, type FunctionState } from '../../lib/functionHandoff';
 import { vertexShader, fragmentShader } from './shaders';
 import {
   buildStandardCurve, STANDARD_CURVES,
@@ -72,6 +73,23 @@ export default function PlaneTransform({ embed }: {
   const [quadA, setQuadA] = usePersistentState<[number, number]>(ek('quadA'), [1, 0]);
   const [quadB, setQuadB] = usePersistentState<[number, number]>(ek('quadB'), [0, 0]);
   const [quadC, setQuadC] = usePersistentState<[number, number]>(ek('quadC'), [0, 0]);
+
+  // One-time function handoff (Phase-2 "graph ↔ map"): arriving from Complex
+  // Particles' "↗ plane map" link carries the function in the URL (?fn=…). Adopt
+  // it once, then strip the query so a reload uses the user's own saved choice.
+  // Embed mode parses its own params, so it is skipped here.
+  useEffect(() => {
+    if (embed) return;
+    const seed = decodeFunction(window.location.hash);
+    if (seed.index === undefined) return;
+    setFunctionIndex(seed.index);
+    if (seed.p !== undefined) setExpP(seed.p);
+    if (seed.q !== undefined) setExpQ(seed.q === 0 ? 1 : seed.q);
+    if (seed.quad) { setQuadA(seed.quad.a); setQuadB(seed.quad.b); setQuadC(seed.quad.c); }
+    window.history.replaceState(null, '', window.location.hash.split('?')[0] || '#/plane-transform');
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [density, setDensity] = usePersistentState(ek('density'), 240);          // points per side
   const [pointSize, setPointSize] = usePersistentState(ek('pointSize'), 2.5);
   const [viewExtent, setViewExtent] = usePersistentState(ek('viewExtent'), embed?.extent ?? 3);   // half-side of visible square
@@ -557,6 +575,18 @@ export default function PlaneTransform({ embed }: {
   // so nothing from the old drawer's About section is lost.
   const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
 
+  // Cross-app handoff (Phase-2 "graph ↔ map"): open the same function as its 4D
+  // graph in Complex Particles. Carries ONLY the function (name + p/q or quadratic
+  // coeffs), never view/appearance state.
+  const handoffState: FunctionState = { index: functionIndex, p: expP, q: expQ, quad: { a: quadA, b: quadB, c: quadC } };
+  const topBarExtra = (
+    <a
+      className="am-bar-link"
+      href={`#/complex-particles?${encodeFunction(handoffState)}`}
+      title="See this function as its 4D graph — the particle cloud (z, f(z)) in ℂ²"
+    >↗ 4D graph</a>
+  );
+
   return (
     <Workspace
       appId="plane-transform"
@@ -568,6 +598,7 @@ export default function PlaneTransform({ embed }: {
       defaultLayoutId="essentials"
       explainer={help || null}
       titlePanel="function"
+      topExtra={topBarExtra}
     />
   );
 }

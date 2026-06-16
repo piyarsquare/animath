@@ -19,6 +19,16 @@ graph lives in **four dimensions**:
 Every particle sits at the 4-D point **(x, y, u, v)**. We can't look at 4-D
 directly, so the view *projects* it down into the 3-D scene on screen.
 
+## The graph, and the map next door
+
+This app draws the **graph** of `f` — every input paired with its output as one
+point `(z, f(z))`. A complementary way to see the *same* function is as a **map**
+of the plane: the domain `z`-plane beside its image `f(z)`. That view is its own
+app, **Plane Transform** — open it on the current function with the **↗ plane
+map** link in the top bar (it carries the function across, so you land on the
+same `f`). The graph and the map are two honest pictures of one object, not two
+different things.
+
 ## The projection slider (Camera panel)
 
 One slider moves between three ways of flattening 4-D to 3-D —
