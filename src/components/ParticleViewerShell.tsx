@@ -635,20 +635,42 @@ export default function ParticleViewerShell({
     },
   ];
 
+  // Task-shaped "postures" (decomposition plan, 2026-06-16): each layout is one
+  // job, not a panel dump. The default lands calm — one quiet posture with the
+  // plot left clear — and the full cockpit stays one click away in the other
+  // postures and the auto-appended Everything layout ("hide, keep power").
   const layouts: LayoutDef[] = [
     {
-      // 4D Rotation opens by default, floating over the plot's right edge —
-      // the successor of the old always-visible Actions floater.
-      id: 'essentials', name: 'Essentials', sub: 'Function · Camera · 4D Rotation', icon: 'tune',
-      open: { function: { x: 84, y: 18 }, camera: { x: 84, y: 240 }, rotate: { x: 800, y: 56 } },
+      // The calm default: only Color opens (Domain/Range), parked in the left
+      // gutter; the plot is left completely clear and the auto-tumble does the
+      // 4D work. The cockpit (4D rig, render variety, projection morph) is one
+      // posture away — nothing is removed, only tucked behind a click.
+      id: 'single', name: 'Single Function', sub: 'One graph, seen plainly', icon: 'fx',
+      open: { color: { x: 84, y: 18 } },
     },
     {
-      id: 'appearance', name: 'Appearance', sub: 'Color · Render · Motion', icon: 'palette',
-      open: { color: { x: 84, y: 18 }, render: { x: 366, y: 18 }, motion: { x: 84, y: 420 } },
+      // The four ways to draw the same graph: Points · Sheet · Tiles · Net.
+      id: 'represent', name: 'Representations', sub: 'Points · Sheet · Tiles · Net', icon: 'layers',
+      open: { render: { x: 84, y: 18 }, color: { x: 800, y: 18 } },
     },
     {
-      id: 'rotate', name: 'Rotate', sub: '4D rotation over the plot', icon: 'rotate',
-      open: { rotate: { x: 360, y: 96 } },
+      // The six 4D plane-turns are the star here — the only posture that opens
+      // the 4D Rotation rig over the plot on purpose.
+      id: 'basis', name: 'Change of Basis', sub: 'The six 4D plane-turns', icon: 'rotate',
+      open: { camera: { x: 84, y: 18 }, rotate: { x: 800, y: 56 } },
+    },
+    {
+      // The projection slider (Perspective → Torus → Sphere) is the whole show;
+      // keep the plot clear so the fiber collapse is legible.
+      id: 'hopf', name: 'Hopf & Projection', sub: 'Perspective → Torus → Sphere', icon: 'orbit',
+      open: { camera: { x: 84, y: 18 } },
+    },
+    {
+      // Net + Motion: watch the domain net sweep into the image (Domain coloring,
+      // the shipped default, carries each point's identity across). The linked
+      // domain | image split view upgrades this posture in Phase 2.
+      id: 'rays', name: 'Rays (X→Y)', sub: 'Follow the domain net into the image', icon: 'waves',
+      open: { render: { x: 84, y: 18 }, motion: { x: 800, y: 18 } },
     },
   ];
 
@@ -721,7 +743,7 @@ export default function ParticleViewerShell({
       sections={sections}
       views={views}
       layouts={layouts}
-      defaultLayoutId="essentials"
+      defaultLayoutId="single"
       explainer={help || null}
       titlePanel="function"
       topExtra={topExtra}

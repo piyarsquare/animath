@@ -48,6 +48,17 @@ session deferred two big rocks: a **unified channel-mapping matrix** and **custo
 
 ## Working notes
 
+### 🟢 milestone · 21:20 — PR-0 built: calm default + five posture layouts
+**What:** Recast `ParticleViewerShell`'s `layouts` into five task **postures**
+(Single Function · Representations · Change of Basis · Hopf & Projection · Rays);
+`defaultLayoutId` `essentials → single`. The default now lands **clear of the plot**
+(only the Color panel opens, left gutter — screenshot-verified in a fresh profile);
+the 470px 4D rig only appears in **Change of Basis** (also screenshot-verified). No
+engine or state-field change — pure layout data; returning users keep saved
+arrangements (the `layout` label is cosmetic, `open`/`views` hold positions).
+`npm run build` + 22 vitest tests green. Next: create the PR; review Dan's
+reversible decisions.
+
 ### 🟡 milestone · 19:14 — Plan authored (`kind: plan`, proposed)
 **Why:** Distilled the synthesis into an executable, PR-sized plan:
 [Plan: tame the surface](2026-06-16-S01-plan-tame-the-surface.md). PR-0 = calm
