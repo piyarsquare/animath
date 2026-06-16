@@ -11,17 +11,23 @@ followup: null
 pr: 222
 app: complex-particles
 signals: on-track
-next: Phase-2 — the Rays X→Y linked split view (the one genuinely new capability).
+next: Phase-2 Step 2 (optional) — the graph-native correspondence tie-line overlay; needs its own design pass.
 ---
 
 > [!NOTE]
 > **Shipped on PR #222 (2026-06-16):** PR-0 (calm `single` default + five postures
 > as Layout-menu entries) · the tablet-width onstage fix (codex review) · **PR-1**
 > (per-function recommended-view presets — auto-snap domain/projection on a function
-> change, z² landing preserved; verified across switches) · **PR-2** (opt-in posture
-> plot-captions — the active layout's `sub` as a subtle bottom-center caption, desktop
-> only, fades on rearrange). Decisions all resolved (see below). Remaining: **Phase-2**,
-> starting with the Rays X→Y linked split view.
+> change, z² landing preserved) · **PR-2** (opt-in posture plot-captions) · **Phase-2
+> MVP** (graph ↔ map function handoff). The original "Rays domain|image split inside
+> Complex Particles" was **dropped**: a [three-hats review](2026-06-16-S01-expert-synthesis.md)
+> unanimously found it would duplicate Plane Transform (Option A) or be mathematically
+> false (Option B — `DropU`/`DropV` keep `(x,y,Im f)`/`(x,y,Re f)`, neither isolates the
+> z-plane). Adopted **Option C+**: link the 4D *graph* (Complex Particles) to the plane
+> *map* (Plane Transform) via a pure, tested function-handoff codec + a top-bar link each
+> way, and renamed the posture **"Rays (X→Y)" → "z → f(z)"**. Remaining (optional):
+> **Step 2** — a graph-native correspondence tie-line overlay (`z₀ → f(z₀)` in the live
+> 3D scene), which needs its own short design pass (density/picking/perf at 80k).
 
 # Plan: tame Complex Particles' surface — postures, presets, a calm default (no new apps)
 
