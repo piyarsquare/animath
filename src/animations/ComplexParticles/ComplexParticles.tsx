@@ -32,6 +32,22 @@ import {
   MULTIVALUED_INDICES, branchPeriod,
 } from '../../lib/complexMath';
 
+// ── Per-function "recommended view" presets (PR-1, 2026-06-16) ──────────────
+// Picking a *different* function auto-snaps the DOMAIN/PROJECTION to what that
+// function wants — never the user's appearance choices (color, size, render
+// mode, motion stay exactly as set). Anything a function doesn't list here falls
+// back to the shipped default — Perspective · ×π units (±2π) · one sheet — so
+// snapping back to an entire function restores the calm default framing, and z²
+// (the initial load, which is never a "change") is left byte-for-byte untouched.
+//
+// Poles & Möbius read best on the sphere (the Hopf projection): 1/z, 1/z², 1/z³,
+// (z²+1)/(z²−1), (z−1)/(z+1).
+const HOPF_PROJECTION_FUNCS = new Set<number>([8, 29, 10, 12, 17]);
+// Near-origin branch / essential structure frames tighter at ±2 (×1 units) than
+// at the ±2π default: the roots & logs, inverse trig, inverse hyperbolics,
+// e^{1/z}, and the Joukowski map.
+const UNIT_SCALE_FUNCS = new Set<number>([1, 16, 18, 3, 14, 20, 21, 25, 26, 27, 28, 33, 34, 35, 13, 11]);
+
 type Complex2 = [number, number];
 
 export type { ViewPoint };
@@ -785,13 +801,40 @@ export default function ComplexParticles({
     options: cat.members.map(idx => ({ value: idx, label: functionNames[idx] })),
   }));
 
+  // Auto-snap the recommended domain/projection when the function actually
+  // changes (PR-1). Domain/projection only — color, size, render mode and motion
+  // are the user's and are left exactly as set. A same-function re-pick and the
+  // initial restore never call this, so the z² landing is preserved.
+  const applyFunctionPreset = (idx: number) => {
+    state.setAxisScale(UNIT_SCALE_FUNCS.has(idx) ? 1 : Math.PI);
+    // Projection: Sphere (Hopf) for poles & Möbius, else Perspective. Only morph
+    // when it differs, so switching among same-projection functions is calm.
+    const proj = HOPF_PROJECTION_FUNCS.has(idx) ? ProjectionMode.Hopf : ProjectionMode.Perspective;
+    if (state.viewType !== proj) controls.handleViewType(proj);
+    // Sheets: a multivalued function arrives showing its full Riemann-sheet set
+    // (capped, tinted by the default sheetTint); single-valued collapses to one.
+    if (MULTIVALUED_INDICES.has(idx)) {
+      const sheets = branchPeriod(idx, expQ === 0 ? 1 : expQ) ?? 3;
+      setBranchMin(0);
+      setBranchMax(Math.min(sheets, MAX_SHEETS) - 1);
+    } else {
+      setBranchMin(0);
+      setBranchMax(0);
+    }
+  };
+
+  const selectFunction = (idx: number) => {
+    if (idx !== functionIndex) applyFunctionPreset(idx);
+    setFunctionIndex(idx);
+  };
+
   const functionPicker = (
     <>
       <Select
         label="Function"
         groups={functionGroups}
         value={functionIndex}
-        onChange={setFunctionIndex}
+        onChange={selectFunction}
       />
       {isPowPQ && (
         <>
@@ -823,7 +866,7 @@ export default function ComplexParticles({
       aria-label="Function"
       title="Function"
       value={functionIndex}
-      onChange={e => setFunctionIndex(Number(e.target.value))}
+      onChange={e => selectFunction(Number(e.target.value))}
     >
       {functionGroups.map(g => (
         <optgroup key={g.label} label={g.label}>
