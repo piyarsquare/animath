@@ -639,6 +639,12 @@ export default function ParticleViewerShell({
   // job, not a panel dump. The default lands calm — one quiet posture with the
   // plot left clear — and the full cockpit stays one click away in the other
   // postures and the auto-appended Everything layout ("hide, keep power").
+  //
+  // Second panels sit in the canonical second column (x:356 = WS_RAIL + one
+  // PANEL_W column), never out at the right edge: a panel there stays onstage
+  // down to a ~624px stage, i.e. across the whole desktop range (narrower than
+  // that re-chromes to phone at 740px), so no posture can push a control
+  // off-stage on tablet-width desktops.
   const layouts: LayoutDef[] = [
     {
       // The calm default: only Color opens (Domain/Range), parked in the left
@@ -651,13 +657,13 @@ export default function ParticleViewerShell({
     {
       // The four ways to draw the same graph: Points · Sheet · Tiles · Net.
       id: 'represent', name: 'Representations', sub: 'Points · Sheet · Tiles · Net', icon: 'layers',
-      open: { render: { x: 84, y: 18 }, color: { x: 800, y: 18 } },
+      open: { render: { x: 84, y: 18 }, color: { x: 356, y: 18 } },
     },
     {
       // The six 4D plane-turns are the star here — the only posture that opens
       // the 4D Rotation rig over the plot on purpose.
       id: 'basis', name: 'Change of Basis', sub: 'The six 4D plane-turns', icon: 'rotate',
-      open: { camera: { x: 84, y: 18 }, rotate: { x: 800, y: 56 } },
+      open: { camera: { x: 84, y: 18 }, rotate: { x: 356, y: 18 } },
     },
     {
       // The projection slider (Perspective → Torus → Sphere) is the whole show;
@@ -670,7 +676,7 @@ export default function ParticleViewerShell({
       // the shipped default, carries each point's identity across). The linked
       // domain | image split view upgrades this posture in Phase 2.
       id: 'rays', name: 'Rays (X→Y)', sub: 'Follow the domain net into the image', icon: 'waves',
-      open: { render: { x: 84, y: 18 }, motion: { x: 800, y: 18 } },
+      open: { render: { x: 84, y: 18 }, motion: { x: 356, y: 18 } },
     },
   ];
 
