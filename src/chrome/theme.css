@@ -565,6 +565,21 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
   overflow-x: auto; scrollbar-width: none;
 }
 .am-actionbar-phone .am-action-btn { min-height: 44px; }
+/* Layout caption (opt-in, desktop): the active posture's one-line subtitle, a
+   faint "guided chapter" label sitting under the plot. Non-interactive, so it
+   never intercepts canvas gestures; same layer as the action strip. */
+.am-caption {
+  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+  z-index: var(--z-actionbar); pointer-events: none;
+  max-width: calc(100% - 200px);
+  padding: 5px 14px;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
+  color: var(--dim); background: var(--panel);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border); border-radius: 999px; box-shadow: var(--shadow);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.am-caption-raised { bottom: 64px; } /* clear the action strip when both are present */
 /* phone cards scroll under the dock + strip — leave room to reach the end */
 .am-phone-app.am-has-actions .am-phone-scroll { padding-bottom: 148px; }
 

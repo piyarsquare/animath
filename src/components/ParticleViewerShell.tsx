@@ -753,6 +753,7 @@ export default function ParticleViewerShell({
       explainer={help || null}
       titlePanel="function"
       topExtra={topExtra}
+      layoutCaptions
     />
   );
 }
