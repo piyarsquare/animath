@@ -186,10 +186,15 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
           );
         })}
       </div>
-      {actions && !mergeActions && <ActionBar actions={actions} sections={sections} phone />}
+      {/* The action verbs normally fold into the dock (mergeActions). But a
+          fullscreen view sits at --z-full, above the --z-dock the merged
+          cluster rides — so in fullscreen we fall back to the standalone
+          ActionBar (--z-actionbar, above fullscreen), preserving the contract
+          that primary verbs stay reachable while full. */}
+      {actions && (!mergeActions || full != null) && <ActionBar actions={actions} sections={sections} phone />}
       <div className="am-phone-dockwrap">
         <nav ref={dockRef} className="am-phone-dock" aria-label="Panels">
-          {mergeActions && (
+          {mergeActions && full == null && (
             <>
               {actions!.map(a => (
                 <button
