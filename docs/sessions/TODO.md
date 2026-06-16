@@ -54,6 +54,13 @@ informs future rounds. Delete or check off items as they land.
   squash-merged and deleted its reports land on main and correctly flip to landed —
   confirm that on the next real merge.
 
+- [ ] [chrome] !low Decide Stable Marriage's final fate — keep as unlisted route or fully delete.
+  Its gallery card was retired in favor of Stable Matching (PR #220): `META` entry
+  dropped in `src/chrome/catalog.ts`, but `#/stable-marriage` still routes and the
+  `src/animations/StableMarriage/` folder + `apps.ts` entry remain (reversible, like
+  `#/fractals-cpu`). If it's truly dead, follow up by deleting the folder, the route
+  in `index.tsx`, the `apps.ts` entry, and the now-unused `marriage` `PreviewKind`.
+
 - [x] [chrome] App-map view in the control center — per-app rollup (latest · risk · open · next).
 
 - [x] [docs] Split the two heavy complex guides into Part 1 / Part 2; cut applet weight.
