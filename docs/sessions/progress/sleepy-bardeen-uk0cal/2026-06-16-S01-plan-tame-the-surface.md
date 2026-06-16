@@ -221,15 +221,15 @@ already carries (panel pills vs top-bar pills) — let one resolution serve both
 - **Pair mode as a sixth posture.** When the pair-mode plan lands, `(f,g)` becomes a
   "Function Pairs" posture — same engine, same `appId`.
 
-## Open decisions (Dan's)
+## Decisions (resolved 2026-06-16, Dan)
 
-> [!IMPORTANT]
-> 1. **Posture affordance** (PR-2): layout-menu only · + top-bar pills · + per-view
->    captions. Recommendation: layouts now, captions cheap, pills if salience demands.
-> 2. **Preset re-apply** (PR-1): apply on change-of-function only (recommended), or
->    also a "reset to recommended view" gesture.
-> 3. **Phase-2 priority**: the Rays split-view (#5, the only new capability) vs the
->    immersive stages vs the plane/particles naming — which first.
+1. **Posture affordance → Layout menu + plot captions.** Postures stay in the Layout
+   menu (PR-0, shipped); each posture also sets a one-line caption under the plot
+   (the guided-chapter feel). **No** top-bar pills.
+2. **Presets → apply on function change** (PR-1): set domain/projection fields only,
+   never the user's appearance choices; fire on a change to a *different* function.
+3. **Phase-2 order → Rays X→Y linked split-view first** (the only genuinely new
+   capability), ahead of immersive stages and the graph-vs-map naming pass.
 
 ## Risks
 
