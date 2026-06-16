@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
+import { Icon } from '../../chrome/icons';
+import { useEscLayer } from '../../chrome/useEscLayer';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { usePhone } from '../../chrome/usePhone';
 import { Slider, Select, Pills } from '../../components/ControlPanel';
@@ -365,11 +368,18 @@ export default function PolygonWorlds() {
     </>
   );
 
-  // always-on verbs (bottom-center strip) — reachable without opening a panel.
+  // always-on verbs (bottom-center strip on desktop; folded into the bottom
+  // dock on phone). The two clears collapse into one verb that opens a small
+  // chooser (trail · signs · both), keeping the strip to two buttons.
+  const [clearOpen, setClearOpen] = useState(false);
+  const clearWhat = useCallback((what: 'trail' | 'signs' | 'both') => {
+    if (what === 'trail' || what === 'both') engineRef.current?.clearTrail();
+    if (what === 'signs' || what === 'both') engineRef.current?.clearSigns();
+    setClearOpen(false);
+  }, []);
   const actions: ActionDef[] = [
     { id: 'plant', icon: 'pin', label: 'Plant sign', primary: true, onClick: () => engineRef.current?.plantSign(signFront, signBack) },
-    { id: 'clear-signs', icon: 'close', label: 'Clear signs', onClick: () => engineRef.current?.clearSigns() },
-    { id: 'clear-trail', icon: 'reset', label: 'Clear trail', onClick: () => engineRef.current?.clearTrail() },
+    { id: 'clear', icon: 'reset', label: 'Clear', onClick: () => setClearOpen(true) },
   ];
 
   // drive — locomotion.
@@ -425,22 +435,85 @@ export default function PolygonWorlds() {
   ];
 
   return (
-    <Workspace
-      appId="polygon-worlds"
-      title="Polygon Worlds"
-      subtitle={spec.short}
-      titlePanel="world"
-      modes={phone ? undefined : [{ id: 'third', label: 'Third person' }, { id: 'first', label: 'First person' }]}
-      activeMode={thirdPerson ? 'third' : 'first'}
-      onModeChange={(id) => setThirdPerson(id === 'third')}
-      actions={actions}
-      immersive
-      sections={sections}
-      views={views}
-      layouts={LAYOUTS}
-      defaultLayoutId="walk"
-      explainer={explainerText}
-    />
+    <>
+      <Workspace
+        appId="polygon-worlds"
+        // On the phone bar the app name is dead weight (the subtitle is hidden
+        // there anyway), so the title names the world you're standing in — and
+        // tapping it still opens the World picker (titlePanel). Desktop keeps
+        // the app name, since it has the perspective pills and far more room.
+        title={phone ? spec.label : 'Polygon Worlds'}
+        subtitle={spec.short}
+        titlePanel="world"
+        modes={phone ? undefined : [{ id: 'third', label: 'Third person' }, { id: 'first', label: 'First person' }]}
+        activeMode={thirdPerson ? 'third' : 'first'}
+        onModeChange={(id) => setThirdPerson(id === 'third')}
+        actions={actions}
+        phoneActionsInDock
+        immersive
+        sections={sections}
+        views={views}
+        layouts={LAYOUTS}
+        defaultLayoutId="walk"
+        explainer={explainerText}
+      />
+      {clearOpen && <ClearMenu phone={phone} onClear={clearWhat} onClose={() => setClearOpen(false)} />}
+    </>
+  );
+}
+
+/** The "Clear" chooser — one verb, three targets (the trail, the signs, or
+ *  both). Portaled to <body> so it floats above the dock/action strip on either
+ *  layout: a bottom sheet on phone, a small centered card on desktop. */
+function ClearMenu({ phone, onClear, onClose }: {
+  phone: boolean;
+  onClear: (what: 'trail' | 'signs' | 'both') => void;
+  onClose: () => void;
+}) {
+  useEscLayer(true, onClose);
+  const items: { what: 'trail' | 'signs' | 'both'; icon: string; label: string }[] = [
+    { what: 'trail', icon: 'reset', label: 'Clear trail' },
+    { what: 'signs', icon: 'close', label: 'Clear signs' },
+    { what: 'both', icon: 'reset', label: 'Clear both' },
+  ];
+  return createPortal(
+    <div
+      className={phone ? 'am-phone-scrim' : 'am-modal-scrim'}
+      style={{ position: 'fixed' }}
+      onPointerDown={onClose}
+      role="presentation"
+    >
+      <div
+        className={phone ? 'am-phone-sheet' : 'am-modal'}
+        role="dialog"
+        aria-label="Clear"
+        onPointerDown={(e) => e.stopPropagation()}
+        style={phone
+          ? undefined
+          : { width: 240, padding: 14, display: 'flex', flexDirection: 'column', gap: 6 }}
+      >
+        {phone && <div className="am-sheet-grip" />}
+        <div className={phone ? 'am-phone-sheet-head' : undefined} style={phone ? undefined : { fontWeight: 700, marginBottom: 4 }}>
+          {phone
+            ? <span className="am-phone-sheet-title">Clear</span>
+            : 'Clear'}
+        </div>
+        <div style={phone ? { padding: '8px 12px 18px', display: 'flex', flexDirection: 'column', gap: 8 } : { display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {items.map((it) => (
+            <button
+              key={it.what}
+              className="am-action-btn"
+              style={{ justifyContent: 'flex-start', width: '100%', border: '1px solid var(--border)' }}
+              onClick={() => onClear(it.what)}
+            >
+              <Icon name={it.icon} size={15} />
+              <span>{it.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -465,9 +538,10 @@ function MovePad({ onSet, phone }: { onSet: (k: MoveKey, v: boolean) => void; ph
     >{label}</button>
   );
   // On phone the floating bottom dock sits at the screen's bottom edge; lift the
-  // pad above it so the back arrow stays tappable.
+  // pad just clear of that single bar (the action verbs now live inside it, so
+  // there's no second row to clear — the pad can sit low and out of the scene).
   return (
-    <div style={{ position: 'absolute', bottom: phone ? 100 : 20, right: phone ? 14 : 20, width: 150, height: 150, zIndex: 20 }}>
+    <div style={{ position: 'absolute', bottom: phone ? 84 : 20, right: phone ? 14 : 20, width: 150, height: 150, zIndex: 20 }}>
       {mv('fwd', '▲', { top: 0, left: 52 })}
       {mv('left', '◀', { top: 52, left: 0 })}
       {mv('right', '▶', { top: 52, left: 104 })}

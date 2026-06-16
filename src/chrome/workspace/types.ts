@@ -147,6 +147,11 @@ export interface WorkspaceProps {
    *  panel); renders bottom-center on desktop, above the dock on phone,
    *  and persists through fullscreen. See ActionDef. */
   actions?: ActionDef[];
+  /** Phone opt-in: fold the action verbs into the bottom dock as a leading
+   *  cluster (one consolidated bar) instead of a separate strip above it.
+   *  Saves a row on cramped immersive views (Polygon Worlds). Desktop is
+   *  unaffected — the verbs stay in the floating action pill there. */
+  phoneActionsInDock?: boolean;
   /** Panel id the top-bar title opens when clicked (e.g. 'function'), so the
    *  formula in the bar doubles as a shortcut to its selector. */
   titlePanel?: string;

@@ -23,8 +23,11 @@ const maxCardH = () => Math.round(window.innerHeight * 0.8);
  * Layouts menu is hidden on phone.
  */
 export default function PhoneWorkspace(props: WorkspaceProps) {
-  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, actions, modes, activeMode, onModeChange } = props;
+  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, actions, phoneActionsInDock, modes, activeMode, onModeChange } = props;
   const sections = useMemo(() => sortByTier(props.sections), [props.sections]);
+  // When an app opts in, the action verbs ride inside the dock as a leading
+  // cluster (one consolidated bottom bar) rather than a separate strip above it.
+  const mergeActions = !!phoneActionsInDock && !!actions?.length;
   // Single-view apps go full-bleed: the lone view fills the whole screen and
   // the top bar floats over it (overlaid), rather than sitting above it. Multi-
   // view apps keep the stacked cards below the bar.
@@ -76,7 +79,7 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
   };
 
   return (
-    <div className={`am-app am-phone-app${actions?.length ? ' am-has-actions' : ''}${immersive ? ' am-phone-immersive' : ''}`}>
+    <div className={`am-app am-phone-app${actions?.length && !mergeActions ? ' am-has-actions' : ''}${immersive ? ' am-phone-immersive' : ''}`}>
       <TopBar
         title={title}
         subtitle={subtitle}
@@ -183,9 +186,31 @@ export default function PhoneWorkspace(props: WorkspaceProps) {
           );
         })}
       </div>
-      {actions && <ActionBar actions={actions} sections={sections} phone />}
+      {/* The action verbs normally fold into the dock (mergeActions). But a
+          fullscreen view sits at --z-full, above the --z-dock the merged
+          cluster rides — so in fullscreen we fall back to the standalone
+          ActionBar (--z-actionbar, above fullscreen), preserving the contract
+          that primary verbs stay reachable while full. */}
+      {actions && (!mergeActions || full != null) && <ActionBar actions={actions} sections={sections} phone />}
       <div className="am-phone-dockwrap">
         <nav ref={dockRef} className="am-phone-dock" aria-label="Panels">
+          {mergeActions && full == null && (
+            <>
+              {actions!.map(a => (
+                <button
+                  key={`act-${a.id}`}
+                  className={`am-phone-dock-btn am-phone-dock-verb${a.primary ? ' am-primary' : ''}`}
+                  aria-label={a.label}
+                  disabled={a.disabled}
+                  onClick={a.onClick}
+                >
+                  <Icon name={a.icon} size={19} />
+                  <span>{a.label}</span>
+                </button>
+              ))}
+              <div className="am-phone-dock-sep" />
+            </>
+          )}
           {sections.map((s, i) => {
             const arch = ARCHETYPES[s.arch];
             const prev = i > 0 ? ARCHETYPES[sections[i - 1].arch] : null;
