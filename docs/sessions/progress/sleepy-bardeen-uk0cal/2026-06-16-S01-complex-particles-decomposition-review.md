@@ -11,7 +11,7 @@ followup: null
 pr: null
 app: complex-particles
 signals: needs-dan
-next: Synthesize the six persona reviews into a recommended decomposition (or "don't split, do X instead") for Dan's decision.
+next: Build PR-0 from the plan (calm default + posture layouts) when Dan gives the go.
 ---
 
 # Complex Particles — should it become several sub-apps? (multi-lens review)
@@ -47,6 +47,24 @@ The [ideas-triage](../particle-viewer-ideas-priority-UDZRe/2026-06-05-S01-ideas-
 session deferred two big rocks: a **unified channel-mapping matrix** and **custom f**.
 
 ## Working notes
+
+### 🟡 milestone · 19:14 — Plan authored (`kind: plan`, proposed)
+**Why:** Distilled the synthesis into an executable, PR-sized plan:
+[Plan: tame the surface](2026-06-16-S01-plan-tame-the-surface.md). PR-0 = calm
+default + five posture layouts (the highest-leverage, ~one-array change); PR-1 =
+per-function preset-defaults keyed by target geometry (real `functionNames` indices);
+PR-2 = the posture affordance (open decision); Phase 2 = the Rays linked split-view
+(the only genuinely new capability), immersive stages, plane/particles naming. Grounded
+in the actual `LayoutDef`/`modes`/`immersive`/`panes` types and the 36-function library.
+Composes with the in-flight pair-mode plan (pair mode becomes a sixth posture).
+
+### 🟣 decision · 19:05 — Dan's call: draft the plan; "hide, keep power"
+**Why:** Dan chose (1) turn the synthesis into a committed `kind: plan` report, and
+(2) on the subtract-vs-hide dissent, **progressive disclosure** — the calm default
+hides ~80% but everything stays reachable behind an "Advanced" reveal; delete only
+genuinely dead code. So the plan adopts the Maintainer/UI position over the
+Aesthete's cut-to-the-bone, while still serving her "calm default" goal. Authoring
+the plan report next (separate `kind: plan` file, `status: proposed`).
 
 ### 🟡 milestone · 19:02 — Six reviews in; near-unanimous, with three live dissents
 **Why:** The panel returned and converged hard. All six verdicts are **"partial ·
