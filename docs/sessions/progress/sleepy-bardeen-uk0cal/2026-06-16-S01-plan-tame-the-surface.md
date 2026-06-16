@@ -11,15 +11,17 @@ followup: null
 pr: 222
 app: complex-particles
 signals: on-track
-next: PR-2 (posture plot-captions); then Phase-2 — the Rays X→Y linked split view.
+next: Phase-2 — the Rays X→Y linked split view (the one genuinely new capability).
 ---
 
 > [!NOTE]
 > **Shipped on PR #222 (2026-06-16):** PR-0 (calm `single` default + five postures
 > as Layout-menu entries) · the tablet-width onstage fix (codex review) · **PR-1**
 > (per-function recommended-view presets — auto-snap domain/projection on a function
-> change, z² landing preserved; verified across switches). Decisions all resolved
-> (see below). Remaining: PR-2 posture captions, then Phase-2 (Rays split view first).
+> change, z² landing preserved; verified across switches) · **PR-2** (opt-in posture
+> plot-captions — the active layout's `sub` as a subtle bottom-center caption, desktop
+> only, fades on rearrange). Decisions all resolved (see below). Remaining: **Phase-2**,
+> starting with the Rays X→Y linked split view.
 
 # Plan: tame Complex Particles' surface — postures, presets, a calm default (no new apps)
 
