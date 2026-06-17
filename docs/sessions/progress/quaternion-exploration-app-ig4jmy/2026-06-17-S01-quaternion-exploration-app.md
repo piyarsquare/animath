@@ -33,6 +33,43 @@ complex-particles three-hats PR #205) remain in flight but are likewise unrelate
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 14:45 — Ran `/explore-concept quaternions` — Phase 1 (foundation)
+**Why:** Begin the divergent scoping pass for the quaternion app.
+
+Added Educator + Game Designer lenses to the skill first (Dan's request) — now eight
+lenses. Kicked off the skill. Phase 1: delegated the cited foundation research to a
+dedicated research agent (deep-research style, writing
+`2026-06-17-S01-concept-foundation.md` directly) and ran the codebase prior-art scan
+in parallel.
+
+**Prior-art scan (for the Builder lens + synthesis):** the framework already has
+deep quaternion/4D machinery to reuse —
+- `src/lib/viewpoint.ts` — `quatMul`, `quatConj`, `quatRotate4D` (p ↦ a·p·conj(b)),
+  `makeUnitQuat(angle, axis)`, and `project()` with Perspective / Stereo / **Hopf**
+  (faithful Hopf map to S²) / **Torus** (Clifford-torus stereographic) / Drop modes.
+  The Hopf fibration is *already implemented and shipping* in Complex Particles.
+- `src/math/quat4.ts` — `quarterQuat(plane, θ)` left/right unit-quaternion builder.
+- `src/controls/QuarterTurnControls` — the 4D-rotation panel (eighth-turns, spins,
+  isoclinic doubles); context-switches to Yaw/Pitch/Roll in nonlinear projections.
+- `ParticleViewerShell` + `src/lib/particles` — turnkey 4D particle viewer (but it is
+  function-graph oriented: domain sampling, colormaps, render modes; a *rotation*
+  app would use a different subject, so likely a **custom Three.js app** on `Canvas3D`
+  + `<Workspace>`, not the shell).
+- `<Workspace>` supports `immersive` (single view fills the stage) and an `actions`
+  strip (≤5 verbs) — good for a focused rotation toy. `ViewDef.panes` gives a split
+  view (e.g. object ↔ S³ map side-by-side).
+- Closed archetype vocabulary: `subject·domain · view·color·marks·motion ·
+  drive·playback · lab·readout · quality`.
+
+### 🔵 finding · 14:50 — Codebase prior-art scanned; foundation research dispatched
+**Why:** The Builder lens and synthesis need an accurate picture of what's reusable.
+
+See the prior-art block above. Key takeaway: the **Hopf fibration and S³ machinery
+already exist** (`viewpoint.ts`), so a quaternion app that leans on them is cheaper
+than it looks; a unit-quaternion **rotation visualizer** would be a new custom
+`Canvas3D` app. Awaiting the foundation research file before dispatching the eight
+lens agents.
+
 ### 🟢 code · 14:30 — Authored the `/explore-concept` skill
 **Why:** Dan wants a reusable method for scoping *any* new concept before building,
 not a one-off for quaternions.
