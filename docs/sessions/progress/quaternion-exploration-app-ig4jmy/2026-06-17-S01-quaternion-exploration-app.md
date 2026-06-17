@@ -33,6 +33,30 @@ complex-particles three-hats PR #205) remain in flight but are likewise unrelate
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 15:40 — Phase 3 synthesis written (concept plan)
+**Why:** All eight lenses returned; converge into ranked candidates + a draft build plan.
+
+`2026-06-17-S01-concept-plan.md` (`kind: plan`, `status: proposed`). The eight lenses
+converged hard on one spine: **lead with a visible failure** (gimbal lock / failed
+triplets), **on-ramp from ℂ-multiplication = plane rotation**, **core verb = the
+two-sided sandwich q v q⁻¹ as conjugation**, and **the "two clocks" scene** (object
+turning at θ beside q on a stereographic S³ at θ/2) — which defuses four of the five
+worst pitfalls in one frame. S³ projection **already ships** in `viewpoint.ts`.
+
+**Recommendation:** one chaptered app — **"The Two Clocks" quaternion rotation
+studio** (custom `Canvas3D` + `<Workspace>`, split `panes` object↔S³, chapters as
+layouts) that *absorbs* the failed-triplet forge (cold open) and the orientation-
+docking game (play chapter) rather than splitting into separate apps. Build the
+S/S–M spine first; spike two unknowns (two `Canvas3D` in one pane; mid-sandwich
+legibility).
+
+> [!IMPORTANT]
+> Self-reflection flags the convergence may be partly an **artifact**: my lens
+> prompts pre-loaded each agent with the foundation's leading visuals (S³, half-angle,
+> belt trick), so they partly agreed because they were told the same answers. The top
+> skill refinement: give lenses the *facts* but not the *candidate pictures*. To
+> discuss with Dan along with the lens-set design.
+
 ### 🟢 code · 15:05 — Phase 2: eight lens agents dispatched in parallel
 **Why:** Produce a full draft to critique (Dan wants to assess on real outputs and
 then refine the skill + lens set).
