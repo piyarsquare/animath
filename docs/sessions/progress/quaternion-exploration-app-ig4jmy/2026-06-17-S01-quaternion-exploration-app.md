@@ -33,6 +33,29 @@ complex-particles three-hats PR #205) remain in flight but are likewise unrelate
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 15:05 — Phase 2: eight lens agents dispatched in parallel
+**Why:** Produce a full draft to critique (Dan wants to assess on real outputs and
+then refine the skill + lens set).
+
+Foundation research landed (high quality, well-cited; committed). Key decision-relevant
+findings: (1) the **"impossible 3D" theorem** (Frobenius/Hurwitz — ℝ³ provably can't be
+a division algebra) makes Hamilton's wasted decade a *forced* failure → strong hook;
+(2) **stereographic projection of S³** is the field's gold-standard visual (eater.net /
+3Blue1Brown), and it **already exists in `viewpoint.ts`**; (3) the **half-angle θ/2 and
+the double cover are the same phenomenon** (the two-sided sandwich q v q⁻¹), defusable
+with one interaction; (4) the **720° belt/plate trick** is the most visceral hook;
+(5) **gimbal lock** is the cleanest "why bother."
+
+Launched eight lens agents (originator, foundations, in-the-wild, new-light, geometer,
+builder, educator, game-designer), each reading the foundation and writing its own
+`kind: lens` report. Synthesis follows once all return.
+
+> [!NOTE]
+> Dan flagged that his original concept list was illustrative, not a careful
+> orthogonal/exhaustive set — he expected augmentation + back-and-forth. Plan: let this
+> run produce a full draft, then critique the **outputs** (and the lens set itself) and
+> refine the skill before committing to a build.
+
 ### 🟢 code · 14:45 — Ran `/explore-concept quaternions` — Phase 1 (foundation)
 **Why:** Begin the divergent scoping pass for the quaternion app.
 
