@@ -1,6 +1,6 @@
 ---
 name: explore-concept
-description: "Explore a mathematical concept from many independent perspectives — history/originator, genetic build-up, natural & applied appearances, reframings, geometric essence, framework fit — then synthesize into 2-4 candidate animath app concepts and a draft build plan. Invoke before designing a new app, when the user or an agent asks to explore/scope a concept (e.g. /explore-concept quaternions) — do not auto-invoke spontaneously."
+description: "Explore a mathematical concept from many independent perspectives — history/originator, genetic build-up, natural & applied appearances, reframings, geometric essence, framework fit, pedagogy, and play — then synthesize into 2-4 candidate animath app concepts and a draft build plan. Invoke before designing a new app, when the user or an agent asks to explore/scope a concept (e.g. /explore-concept quaternions) — do not auto-invoke spontaneously."
 argument-hint: "<a math concept to explore — e.g. quaternions>"
 ---
 
@@ -46,6 +46,8 @@ identifier):
 - `docs/sessions/progress/<branch-slug>/{id}-lens-new-light.md` — New Light
 - `docs/sessions/progress/<branch-slug>/{id}-lens-geometer.md` — The Geometer
 - `docs/sessions/progress/<branch-slug>/{id}-lens-builder.md` — The Builder
+- `docs/sessions/progress/<branch-slug>/{id}-lens-educator.md` — The Educator
+- `docs/sessions/progress/<branch-slug>/{id}-lens-game-designer.md` — The Game Designer
 - `docs/sessions/progress/<branch-slug>/{id}-concept-plan.md` — Synthesis + candidates + draft build plan (`kind: plan`)
 
 Each file is **Markdown + YAML frontmatter** per `docs/sessions/REPORT_STYLE.md`:
@@ -85,7 +87,7 @@ pattern — and skim `docs/BUILDING_AN_APP.md` and the closed archetype vocabula
 
 ## Phase 2 — Perspectives (parallel lenses)
 
-Launch the six lens agents **in parallel** using the Agent tool (subagent_type:
+Launch the eight lens agents **in parallel** using the Agent tool (subagent_type:
 "general-purpose"). Each agent receives: (1) the concept; (2) the **full text** of
 `{id}-concept-foundation.md`; (3) its role below; (4) instruction to write a focused
 **150–300 line** analysis to its designated output file as Markdown + YAML
@@ -148,9 +150,31 @@ must show or let the user do; (6) the **Self-Reflection Protocol**
 > fight the framework. Cite concrete prior art to reuse and realistic build cost. Your
 > gift is *feasibility* — the filter that keeps candidates buildable.
 
+### Lens 7: The Educator (learning design)
+
+> You are an experienced educator who designs lessons, not just pictures. Where the
+> Geometer names the misconceptions, you design the **learning arc** that defeats
+> them: the sequence from first contact to "aha" to fluency, what a learner should
+> *do* at each step, how the app reveals complexity gradually (progressive
+> disclosure), and how a learner could *check their own understanding* inside the
+> tool. Consider the audience range (curious beginner ↔ working mathematician) and
+> what differentiates the experience for each. Your gift is the *pedagogical
+> sequence* — the order and scaffolding that makes the concept stick.
+
+### Lens 8: The Game Designer (play & motivation)
+
+> You are a game designer who turns abstract systems into things people *want* to
+> poke at. Identify the **core interaction loop**: the smallest satisfying
+> action→feedback cycle, the goals or challenges that create productive curiosity,
+> the sense of discovery and mastery. What would make a learner lose track of time
+> exploring <concept>? Think toys (open sandboxes), puzzles (a target to reach), and
+> juice (responsive, legible feedback) — but keep it **honest to the math** (no
+> mechanic that rewards a wrong mental model). Your gift is *engagement* — the reason
+> someone keeps playing long enough to learn.
+
 ## Phase 3 — Synthesis: candidates + draft build plan
 
-After all six lenses return, read every file and write
+After all eight lenses return, read every file and write
 `{id}-concept-plan.md` (frontmatter `kind: plan`, `status: proposed`). It opens with
 the collapsible `Concept under exploration` block, then:
 
