@@ -11,7 +11,7 @@ followup: null
 pr: 222
 app: complex-particles
 signals: on-track
-next: Phase-2 Step 2 (optional) — the graph-native correspondence tie-line overlay; needs its own design pass.
+next: Two deferred domain-legibility follow-ups, each needs its own design pass — (1) the graph-native correspondence tie-line overlay (z₀→f(z₀)); (2) unit-circle inside/outside marking (|z|<1 vs ≥1), e.g. two colormaps or a diverging palette centered on |z|=1.
 ---
 
 > [!NOTE]
@@ -235,6 +235,31 @@ already carries (panel pills vs top-bar pills) — let one resolution serve both
   not "merge them." Cheap doc/labeling task.
 - **Pair mode as a sixth posture.** When the pair-mode plan lands, `(f,g)` becomes a
   "Function Pairs" posture — same engine, same `appId`.
+- **Unit-circle inside/outside marking (`|z| = 1`) — domain legibility (Dan, 2026-06-17).**
+  Make the unit circle *visible* in the 4D graph: distinguish `|z| < 1` (inside the disk)
+  from `|z| ≥ 1` (outside). The circle is where so many of these functions hinge — the
+  Möbius/Blaschke maps swap inside↔outside, Joukowski folds it to a slit, the roots of
+  unity sit on it — so seeing the two regions is genuinely illuminating. This is a
+  **shader/color change** (per-particle `|z|` is already in the shader — it computes
+  `f(z)` from `z`; there is no DOM-overlay path for an 80k point cloud), which is exactly
+  why it was kept *out* of #222 (whose scope is "no engine/shader/persistence change").
+  Design forks for its own pass:
+  - **(a) two colormaps split at `|z|=1`** (Dan's instinct) — inside palette A, outside
+    palette B; most flexible, can read busy with two full palettes competing;
+  - **(b) a diverging palette centered on `|z|=1`** — the circle becomes the palette's
+    visible zero-crossing (cool inside / warm outside); the most *mathematically honest*
+    "see the boundary," since the unit circle is the isoline;
+  - **(c) a side treatment on one palette** — outside dimmed/desaturated, hue meaning
+    intact; the calmest, least garish option;
+  - **(d) a literal drawn `|z|=1` ring** — a `LineLoop` in the domain projected like the
+    axis cross; cheapest, marks the boundary but doesn't *fill* the two regions (could
+    ship alongside any of a–c as a reference).
+  Open decisions: domain `|z|` vs image `|f|`; a new **Color by: "Unit disk"** option vs
+  a *modifier* layered on the existing Domain/Range coloring; default palettes. Honors the
+  **hue-never-encodes-identity** veto (this colors by a *geometric region of `z`*, not
+  function/mode/posture identity). Pairs naturally with the tie-line overlay above — both
+  are "make the domain legible" — so a future session could scope them as one
+  domain-legibility PR.
 
 ## Decisions (resolved 2026-06-16, Dan)
 

@@ -157,8 +157,8 @@ visible app catalog comes from `src/apps.ts` (+ `src/chrome/catalog.ts`).
 | Hash Route            | Component        | Description                                |
 |----------------------|------------------|--------------------------------------------|
 | `#/` (default)       | `Gallery`        | Landing gallery of all apps                 |
-| `#/complex-particles`| `App → ComplexParticles` | 4D complex-function particle viewer |
-| `#/plane-transform`  | `PlaneTransform` | f as a transformation of the plane (one split view window: domain · image) |
+| `#/complex-particles`| `App → ComplexParticles` | 4D complex-function particle viewer (top-bar **↗ plane map** link hands the function to Plane Transform — the "graph ↔ map" pair; codec in `lib/functionHandoff.ts`) |
+| `#/plane-transform`  | `PlaneTransform` | f as a transformation of the plane (one split view window: domain · image); **↗ 4D graph** link hands the function back to Complex Particles |
 | `#/fractals`         | `FractalsGPU`    | GPU Mandelbrot / Julia / Burning Ship / Tricorn |
 | `#/fractals-cpu`     | `Fractals2D`     | Legacy CPU 2D fractals (unlisted)           |
 | `#/correspondence`   | `Correspondence` | Mandelbrot ↔ Julia, two linked view windows |
