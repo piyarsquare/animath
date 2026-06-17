@@ -1,6 +1,6 @@
 ---
 name: explore-concept
-description: "Explore a mathematical concept from many independent perspectives — history/originator, genetic build-up, natural & applied appearances, reframings, geometric essence, framework fit, pedagogy, and play — then synthesize into 2-4 candidate animath app concepts and a draft build plan. Invoke before designing a new app, when the user or an agent asks to explore/scope a concept (e.g. /explore-concept quaternions) — do not auto-invoke spontaneously."
+description: "Explore a mathematical concept from many independent perspectives — history/originator, genetic build-up, natural & applied appearances, reframings, geometric essence, framework fit, pedagogy, play, a naive learner, and a contrarian red team — then synthesize into 2-4 candidate animath app concepts and a draft build plan. Invoke before designing a new app, when the user or an agent asks to explore/scope a concept (e.g. /explore-concept quaternions) — do not auto-invoke spontaneously."
 argument-hint: "<a math concept to explore — e.g. quaternions>"
 ---
 
@@ -48,6 +48,8 @@ identifier):
 - `docs/sessions/progress/<branch-slug>/{id}-lens-builder.md` — The Builder
 - `docs/sessions/progress/<branch-slug>/{id}-lens-educator.md` — The Educator
 - `docs/sessions/progress/<branch-slug>/{id}-lens-game-designer.md` — The Game Designer
+- `docs/sessions/progress/<branch-slug>/{id}-lens-audience.md` — The Audience (naive learner)
+- `docs/sessions/progress/<branch-slug>/{id}-lens-contrarian.md` — The Contrarian (red team)
 - `docs/sessions/progress/<branch-slug>/{id}-concept-plan.md` — Synthesis + candidates + draft build plan (`kind: plan`)
 
 Each file is **Markdown + YAML frontmatter** per `docs/sessions/REPORT_STYLE.md`:
@@ -75,8 +77,19 @@ something like:
 
 Capture the result into `{id}-concept-foundation.md` (frontmatter `kind: research`).
 If the `deep-research` skill is unavailable, do a lighter targeted web pass (WebSearch
-+ WebFetch) covering the same five points and write the same file. This foundation
-file is passed verbatim to every Phase 2 agent.
++ WebFetch) covering the same five points and write the same file.
+
+> [!IMPORTANT]
+> **Quarantine the candidate visuals to avoid leading the lenses.** Put area (4) —
+> "the standard visual representations" — in its own clearly delimited
+> `## Prior-art visualizations (quarantined — do not lead generative lenses)` section.
+> The generative lenses (1–5, 9–10 below) are passed the **facts** (history, genetic
+> origin, applications, pitfalls) but are told to **form their own picture first** and
+> to treat the quarantined section as prior art to *differentiate from or earn*, not a
+> menu to adopt. Only the Builder (lens 6), Geometer (lens 5) and the synthesis may
+> lean on it freely. This is deliberate: in the first quaternions run every lens
+> converged on the same "S³ + half-angle + belt" picture largely because the prompt
+> handed them that picture — convergence should be *discovered*, not *seeded*.
 
 Also do a quick **codebase prior-art scan** (for the Builder lens and the synthesis):
 note what already exists that a new app could lean on — e.g. `src/math/quat4.ts`,
@@ -87,10 +100,13 @@ pattern — and skim `docs/BUILDING_AN_APP.md` and the closed archetype vocabula
 
 ## Phase 2 — Perspectives (parallel lenses)
 
-Launch the eight lens agents **in parallel** using the Agent tool (subagent_type:
+Launch the ten lens agents **in parallel** using the Agent tool (subagent_type:
 "general-purpose"). Each agent receives: (1) the concept; (2) the **full text** of
-`{id}-concept-foundation.md`; (3) its role below; (4) instruction to write a focused
-**150–300 line** analysis to its designated output file as Markdown + YAML
+`{id}-concept-foundation.md` — but each **generative** lens (1–5, 9, 10) is reminded
+that the `## Prior-art visualizations` section is **quarantined**: form your own
+picture from the facts *first*, then treat that section as prior art to differentiate
+from or earn, never a menu to adopt; (3) its role below; (4) instruction to write a
+focused **150–300 line** analysis to its designated output file as Markdown + YAML
 frontmatter (`kind: lens`), opening — right after the H1 — with a collapsible
 `<details><summary>Concept under exploration</summary> … </details>` block naming
 the concept, then the analysis as `##` sections; (5) instruction to end with a
@@ -172,13 +188,40 @@ must show or let the user do; (6) the **Self-Reflection Protocol**
 > mechanic that rewards a wrong mental model). Your gift is *engagement* — the reason
 > someone keeps playing long enough to learn.
 
+### Lens 9: The Audience (the naive learner)
+
+> You **are** the learner, not a teacher — smart and curious but meeting <concept>
+> for the *first time*. You have only the prerequisites a general audience owns. Read
+> the facts and react honestly: which words make you bounce, which sentence is the
+> first you don't follow, what you *think* it means (including the wrong guess you'd
+> make), what would make you click vs. close the tab, and the one question you'd ask
+> out loud. Do **not** look up the standard pictures — describe the picture *you*
+> wish existed. Your gift is the *real* first-contact experience the expert lenses
+> can't recover, and the misconceptions a learner actually arrives with (not the ones
+> we assume).
+
+### Lens 10: The Contrarian (red team)
+
+> You are the skeptic whose job is to **resist the obvious app**. Assume the rest of
+> the room is converging on the predictable visualization (for a rotation-flavored
+> concept, "rotate an object and show a sphere") and argue it is **wrong, overrated,
+> or a trap** — too pretty to be honest, teaching recognition instead of
+> understanding, or solving a problem nobody has. Then propose at least one
+> **genuinely different** app: a different subject entirely (e.g. the pure algebra /
+> multiplication structure, an adjacent generalization, a historical-instruments or
+> applications-first framing, a puzzle with no 3D scene at all). Steelman your
+> alternative. Your gift is *insurance against consensus* — a real fork so the
+> synthesis chooses rather than rationalizes.
+
 ## Phase 3 — Synthesis: candidates + draft build plan
 
-After all eight lenses return, read every file and write
+After all ten lenses return, read every file and write
 `{id}-concept-plan.md` (frontmatter `kind: plan`, `status: proposed`). It opens with
 the collapsible `Concept under exploration` block, then:
 
-1. **Synthesis of perspectives** — what the six lenses converge on; the tensions
+1. **Synthesis of perspectives** — what the lenses converge on (and whether that
+   convergence was *discovered* or merely *seeded* — flag it if the lenses leaned on
+   the quarantined prior-art); the tensions
    (e.g. the most beautiful picture vs. the most buildable one); blind spots.
 2. **Candidate app concepts** — **2–4** distinct concepts, each a short pitch (what
    you see, what you do, what it teaches) scored in a Markdown table on three axes:

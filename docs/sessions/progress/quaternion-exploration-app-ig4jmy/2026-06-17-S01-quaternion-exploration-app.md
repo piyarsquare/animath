@@ -33,6 +33,26 @@ complex-particles three-hats PR #205) remain in flight but are likewise unrelate
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 16:00 — Refined the skill (de-lead + audience/contrarian), opening a PR for review
+**Why:** Dan reviewed the AskUserQuestion options: lens-set = "audience/contrarian mix"
+(de-lead the prompts AND add new vantages); next step = "rerun, but review current
+outputs first — open a PR."
+
+Applied to `/explore-concept`:
+- **Quarantine the candidate visuals.** The foundation's "standard visual
+  representations" now go in a `## Prior-art visualizations (quarantined …)` section;
+  generative lenses (1–5, 9–10) get the *facts* but must form their own picture first
+  and treat that section as prior art to differentiate from — fixing the convergence-
+  as-artifact problem.
+- **Two new lenses → ten total:** **The Audience** (a naive first-contact learner —
+  the misconceptions people *actually* arrive with) and **The Contrarian** (red team —
+  resist the obvious app, propose a genuinely different fork so the synthesis chooses
+  rather than rationalizes).
+
+Updated CLAUDE.md to ten lenses. **Not re-running yet** — opening a PR so Dan can read
+the eight current lens reports + the concept plan first; the de-led re-run follows his
+review.
+
 ### 🟡 milestone · 15:40 — Phase 3 synthesis written (concept plan)
 **Why:** All eight lenses returned; converge into ranked candidates + a draft build plan.
 

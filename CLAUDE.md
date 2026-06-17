@@ -457,10 +457,11 @@ invoked **on explicit request**, not auto-triggered spontaneously:
 - **`/handoff`** — distills the session into a handoff doc; uses `npm run build`
   (the only CI check) for status and appends the self-reflection protocol.
 - **`/explore-concept <concept>`** — the divergent scoping pass *before* designing a
-  new app: a deep-research foundation, then eight parallel "lens" agents (originator ·
+  new app: a deep-research foundation (whose candidate visuals are *quarantined* so
+  they don't seed the lenses), then ten parallel "lens" agents (originator ·
   foundations · in-the-wild · new-light · geometer · builder · educator · game
-  designer), synthesized into 2–4 candidate app concepts and a `kind: plan` draft
-  build plan. Feeds `/three-hats`.
+  designer · audience · contrarian), synthesized into 2–4 candidate app concepts and
+  a `kind: plan` draft build plan. Feeds `/three-hats`.
 - **`/three-hats <plan>`** — reviews a plan/design from three lenses (framework
   maintainer · architecture consultant · math-viz & pedagogy) in parallel, then
   synthesizes.
