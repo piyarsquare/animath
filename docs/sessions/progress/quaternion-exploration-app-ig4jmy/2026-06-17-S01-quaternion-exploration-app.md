@@ -8,7 +8,7 @@ slug: quaternion-exploration-app-ig4jmy
 status: in-progress
 build: unknown
 followup: null
-pr: null
+pr: 223
 app: quaternions
 signals: needs-dan
 next: Scope what the quaternion app should teach/show, then design panels + views
