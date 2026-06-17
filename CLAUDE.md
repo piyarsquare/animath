@@ -448,7 +448,7 @@ For per-PR preview URLs, see `docs/PREVIEW_DEPLOYS.md`.
 
 ### Agent session skills (`.claude/skills/`)
 
-Three Claude Code skills support the session workflow. Both a human (typing the
+Four Claude Code skills support the session workflow. Both a human (typing the
 slash command) and an agent (via the Skill tool) can invoke them; they are
 invoked **on explicit request**, not auto-triggered spontaneously:
 
@@ -456,6 +456,10 @@ invoked **on explicit request**, not auto-triggered spontaneously:
   orients (branch + which app, the append-only parallel-branch rule). Run it first.
 - **`/handoff`** — distills the session into a handoff doc; uses `npm run build`
   (the only CI check) for status and appends the self-reflection protocol.
+- **`/explore-concept <concept>`** — the divergent scoping pass *before* designing a
+  new app: a deep-research foundation, then six parallel "lens" agents (originator ·
+  foundations · in-the-wild · new-light · geometer · builder), synthesized into 2–4
+  candidate app concepts and a `kind: plan` draft build plan. Feeds `/three-hats`.
 - **`/three-hats <plan>`** — reviews a plan/design from three lenses (framework
   maintainer · architecture consultant · math-viz & pedagogy) in parallel, then
   synthesizes.
