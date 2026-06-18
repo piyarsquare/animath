@@ -1,258 +1,238 @@
 ---
 name: explore-concept
-description: "Explore a mathematical concept from many independent perspectives — history/originator, genetic build-up, natural & applied appearances, reframings, geometric essence, framework fit, pedagogy, play, a naive learner, and a contrarian red team — then synthesize into 2-4 candidate animath app concepts and a draft build plan. Invoke before designing a new app, when the user or an agent asks to explore/scope a concept (e.g. /explore-concept quaternions) — do not auto-invoke spontaneously."
+description: "Explore a mathematical concept by convening the people and things that understand it — originators, near-misses, practitioners, and the concept's embodied instantiations in the universe — in a carried-out dialogue where they ask each other questions, then read the friction out of the transcript and hand it to an artifact-building stage. Invoke before designing a new app, when the user or an agent asks to explore/scope a concept (e.g. /explore-concept quaternions) — do not auto-invoke spontaneously."
 argument-hint: "<a math concept to explore — e.g. quaternions>"
 ---
 
 # Explore a Concept
 
 The **divergent gathering phase** that comes *before* designing a new animath app.
-Given a mathematical concept, gather a wide, genuinely independent set of
-perspectives on it, then converge to **2–4 candidate app concepts** scored for
-animath, recommend one, and draft its build plan. The pipeline this skill opens:
+Given a mathematical concept, this skill does **not** collect parallel essays and
+average them. It convenes the holders of *orthogonal, embodied* understandings of
+the concept in **one room** and makes them **teach each other** — and then reads
+the design-relevant friction out of what they actually said. The pipeline:
 
-> **explore-concept** (diverge → candidates → draft plan) → **/three-hats**
-> (stress-test the chosen plan) → **BUILDING_AN_APP.md** (build).
+> **Stage 1 — Foundation** (cited research) → **Stage 2 — The Room** (a
+> carried-out dialogue) → **Stage 3 — The Friction Atlas** (read the crossings out
+> of the transcript) → **Stage 4 — Building the artifact** (the design team turns
+> crossings into 2–4 candidate apps + a draft plan) → **/three-hats** → **BUILDING_AN_APP.md**.
 
-The whole skill is filtered through one animath-specific question: *what is the
-single best first visualization to build here?* A concept can be explored a
-hundred ways; we want the one or two that land in the framework's sweet spot
-(3D/4D particle viewers via `lib/particles`, 2D shader viewers, CSS/DOM
-algorithm visualizers, the draggable-window workspace) **and** carry the most
-pedagogical payoff.
+## Why a dialogue, not parallel lenses
+
+This skill used to fan out ten independent "lens" essays and let a narrator
+synthesize them. That **flattens the very thing that is generative.** A synthesis
+can only surface what each lens already brought; a *dialogue* surfaces what **no
+single voice held** — the content that exists only in the translation between two
+of them. (In the quaternion trial run, "why can't we do it in three numbers?"
+produced nothing useful until Hamilton was allowed to *refuse* Frobenius's
+one-line "the wall is a wall" and keep asking — at which point the room had to
+manufacture the concrete answer *15 is not a sum of three squares*, aimed straight
+into Hamilton's own failing `ij` term. That fact was not retrieved. The friction
+made it.) The whole skill is therefore organized around **keeping the voices
+orthogonal and in genuine dialogue**, and only culling *after the fact, from the
+words*.
+
+The animath-specific question the whole thing serves is unchanged: *what is the
+single best first visualization to build here?* — but we now answer it by first
+finding **where the learning actually crosses difficult terrain**, and only then
+asking what is buildable.
 
 ## Input
 
-The user provides: `$ARGUMENTS` — the concept to explore (e.g. `quaternions`,
-`the Fourier transform`, `Gaussian curvature`). A bare concept name is fine; this
-skill's job is to widen it. If the argument is empty, ask the user for the
-concept in one line before proceeding.
+`$ARGUMENTS` — the concept to explore (e.g. `quaternions`, `the Fourier
+transform`, `Gaussian curvature`). A bare concept name is fine; this skill's job is
+to widen it. If the argument is empty, ask the user for the concept in one line.
 
 ## Output Files
 
-**Every agent writes its complete output to a file.** Nothing is lost to context.
-
 Resolve the **branch slug** first: `git branch --show-current`, strip a leading
-`claude/`, replace `/` with `-`. All outputs go in that branch's progress folder,
-matching the current session. Get the `YYYY-MM-DD-SNN` identifier from the most
-recent file in `docs/sessions/progress/<branch-slug>/`; if there is no progress
-report yet, use today's date with `S01`. Write these files (`{id}` = that
+`claude/`, replace `/` with `-`. All outputs go in that branch's progress folder.
+Get the `YYYY-MM-DD-SNN` identifier from the most recent file in
+`docs/sessions/progress/<branch-slug>/` (use the current session's; if there is no
+progress report yet, use today's date with `S01`). Write these files (`{id}` = that
 identifier):
 
-- `docs/sessions/progress/<branch-slug>/{id}-concept-foundation.md` — Phase 1 research base
-- `docs/sessions/progress/<branch-slug>/{id}-lens-originator.md` — The Originator
-- `docs/sessions/progress/<branch-slug>/{id}-lens-foundations.md` — Foundations
-- `docs/sessions/progress/<branch-slug>/{id}-lens-in-the-wild.md` — In the Wild
-- `docs/sessions/progress/<branch-slug>/{id}-lens-new-light.md` — New Light
-- `docs/sessions/progress/<branch-slug>/{id}-lens-geometer.md` — The Geometer
-- `docs/sessions/progress/<branch-slug>/{id}-lens-builder.md` — The Builder
-- `docs/sessions/progress/<branch-slug>/{id}-lens-educator.md` — The Educator
-- `docs/sessions/progress/<branch-slug>/{id}-lens-game-designer.md` — The Game Designer
-- `docs/sessions/progress/<branch-slug>/{id}-lens-audience.md` — The Audience (naive learner)
-- `docs/sessions/progress/<branch-slug>/{id}-lens-contrarian.md` — The Contrarian (red team)
-- `docs/sessions/progress/<branch-slug>/{id}-concept-plan.md` — Synthesis + candidates + draft build plan (`kind: plan`)
+- `docs/sessions/progress/<branch-slug>/{id}-concept-foundation.md` — Stage 1 research base (`kind: research`)
+- `docs/sessions/progress/<branch-slug>/{id}-room-transcript.md` — Stage 2 the carried-out dialogue (`kind: dialogue`)
+- `docs/sessions/progress/<branch-slug>/{id}-friction-atlas.md` — Stage 3 crossings read out of the transcript (`kind: atlas`)
+- `docs/sessions/progress/<branch-slug>/{id}-concept-plan.md` — Stage 4 candidates + draft build plan (`kind: plan`, `status: proposed`)
 
-Each file is **Markdown + YAML frontmatter** per `docs/sessions/REPORT_STYLE.md`:
-frontmatter (`kind`, `session`, `date`, `title`, `branch`, `slug`, `status`,
-`build`), then `##` sections, GitHub-alert callouts (`> [!IMPORTANT]` etc.) and
-Markdown tables. They read on GitHub as-is and `npm run sessions` renders them to
-the rich HTML view.
+Each file is **Markdown + YAML frontmatter** per `docs/sessions/REPORT_STYLE.md`
+(`kind`, `session`, `date`, `title`, `branch`, `slug`, `status`, `build`), then
+`##` sections, GitHub-alert callouts and Markdown tables. `npm run sessions`
+renders them to the rich HTML view. (Stage 4 may *optionally* spawn the design-team
+roles as separate `kind: lens` files — see Stage 4 — but the four files above are
+the required spine.)
 
-## Phase 1 — Foundation (deep research)
+## Stage 1 — Foundation (deep research)
 
-Build a cited, fact-checked evidence base **first**, so every perspective downstream
-argues from the same facts rather than from model memory. Invoke the **`deep-research`
-skill** (via the Skill tool) with a prompt assembled from the concept and the lenses
-below, scoped tightly enough that it does not need to ask clarifying questions —
-something like:
+Build a cited, fact-checked evidence base **first**, so the room argues from shared
+facts rather than model memory, and so the transcript is **auditable** (every claim
+a voice makes should trace to this document). Invoke the **`deep-research` skill**
+with a prompt assembled from the concept and the angles below, scoped tightly
+enough that it does not need to ask clarifying questions — something like:
 
 > Research **<concept>** for the purpose of designing an educational, interactive
 > visualization. Cover, with sources: (1) **history & originator** — who introduced
-> it, when, what problem they were actually trying to solve, and the key moment/insight;
-> (2) **genetic origin** — how it emerges from simpler, well-understood ideas;
-> (3) **natural & applied appearances** — where it shows up in physics, engineering,
-> nature, or other math; (4) **the standard visual representations** people use to
-> teach it, and which reveal vs. obscure the structure; (5) **canonical learner
-> confusions / pitfalls**. Prefer authoritative sources.
+> it, when, what problem they were actually trying to solve, the key insight, **and
+> the near-misses** (who reached it and didn't publish, who hit the wall and
+> failed, who saw a piece without recognizing it); (2) **genetic origin** — how it
+> emerges from simpler, well-understood ideas, and *why the obvious simpler version
+> is impossible* if it is; (3) **natural & applied appearances** — where it shows
+> up in physics, engineering, computer graphics, biology, nature, other math, and
+> **where it is physically *felt*** (demonstrations a body can do); (4) the standard
+> **visual representations** used to teach it, and which reveal vs. obscure the
+> structure; (5) **canonical learner confusions / pitfalls**. Prefer authoritative
+> sources.
 
-Capture the result into `{id}-concept-foundation.md` (frontmatter `kind: research`).
-If the `deep-research` skill is unavailable, do a lighter targeted web pass (WebSearch
-+ WebFetch) covering the same five points and write the same file.
+Capture the result into `{id}-concept-foundation.md`. If `deep-research` is
+unavailable, do a lighter targeted WebSearch + WebFetch pass over the same points.
 
 > [!IMPORTANT]
-> **Quarantine the candidate visuals to avoid leading the lenses.** Put area (4) —
-> "the standard visual representations" — in its own clearly delimited
-> `## Prior-art visualizations (quarantined — do not lead generative lenses)` section.
-> The generative lenses (1–5, 9–10 below) are passed the **facts** (history, genetic
-> origin, applications, pitfalls) but are told to **form their own picture first** and
-> to treat the quarantined section as prior art to *differentiate from or earn*, not a
-> menu to adopt. Only the Builder (lens 6), Geometer (lens 5) and the synthesis may
-> lean on it freely. This is deliberate: in the first quaternions run every lens
-> converged on the same "S³ + half-angle + belt" picture largely because the prompt
-> handed them that picture — convergence should be *discovered*, not *seeded*.
+> **Quarantine the candidate visuals.** Put area (4) — "the standard visual
+> representations" — in its own `## Prior-art visualizations (quarantined — do not
+> lead the room)` section. The room is seeded with the *facts* (history,
+> near-misses, genetic origin, applications, felt demonstrations, pitfalls) but is
+> told to let the picture **emerge from the dialogue**, treating the quarantined
+> section as prior art to *differentiate from or earn*, never a menu to adopt. Only
+> the Stage 4 design team and the synthesis may lean on it freely.
 
-Also do a quick **codebase prior-art scan** (for the Builder lens and the synthesis):
-note what already exists that a new app could lean on — e.g. `src/math/quat4.ts`,
-`src/controls/QuarterTurnControls`, the `src/lib/particles/` engine +
-`ParticleViewerShell`, the 4D projection modes, `lib/colormaps.ts`, the CSS/DOM app
-pattern — and skim `docs/BUILDING_AN_APP.md` and the closed archetype vocabulary
-(`src/chrome/workspace/archetypes.ts`).
+Also do a quick **codebase prior-art scan** (for Stage 4): note what already exists
+that a new app could lean on — e.g. `src/math/quat4.ts`, `src/controls/QuarterTurnControls`,
+the `src/lib/particles/` engine + `ParticleViewerShell`, the 4D projection modes,
+`lib/colormaps.ts`, the CSS/DOM app pattern — and skim `docs/BUILDING_AN_APP.md`
+and the closed archetype vocabulary (`src/chrome/workspace/archetypes.ts`).
 
-## Phase 2 — Perspectives (parallel lenses)
+## Stage 2 — The Room (the carried-out dialogue)
 
-Launch the ten lens agents **in parallel** using the Agent tool (subagent_type:
-"general-purpose"). Each agent receives: (1) the concept; (2) the **full text** of
-`{id}-concept-foundation.md` — but each **generative** lens (1–5, 9, 10) is reminded
-that the `## Prior-art visualizations` section is **quarantined**: form your own
-picture from the facts *first*, then treat that section as prior art to differentiate
-from or earn, never a menu to adopt; (3) its role below; (4) instruction to write a
-focused **150–300 line** analysis to its designated output file as Markdown + YAML
-frontmatter (`kind: lens`), opening — right after the H1 — with a collapsible
-`<details><summary>Concept under exploration</summary> … </details>` block naming
-the concept, then the analysis as `##` sections; (5) instruction to end with a
-**Takeaways for a visualization** section — the 2–3 things *this lens* says the app
-must show or let the user do; (6) the **Self-Reflection Protocol**
-(`.claude/prompts/self-reflection.md`), appended as a `## Self-reflection` section.
+**Convene a cast of orthogonal, embodied understandings and write the dialogue out
+in full as text.** This is authored as **one sustained transcript by a single
+writer holding every voice** — not as parallel agents. The friction is *relational*
+(it lives between voices) and cannot be produced by isolated agents writing in
+separate contexts; that is precisely the failure mode of the old parallel-lens
+approach. Seed strictly from the Stage-1 foundation.
 
-### Lens 1: The Originator (first-person)
+### Casting — span the trajectory `no-knowledge → all-we-know → how-we-use-it`
 
-> You **are** the mathematician who originated <concept> (identify them from the
-> foundation research). Write substantially **in the first person, in their voice and
-> era**: what problem obsessed you, what you tried that failed, the insight that broke
-> it open, and — crucially — **the visualization you wish you'd had**: the picture or
-> interactive scene that would have made the idea obvious to you and to your
-> contemporaries. Be historically faithful (use the foundation's facts) but vivid.
-> Your gift to the app is *motivation* and a *narrative spine*.
+Draw the cast from the foundation's facts. Aim to fill each band; some concepts
+won't populate all of them, and that is itself a finding.
 
-### Lens 2: Foundations (genetic build-up)
+- **Originators & near-misses** — the historical lineage, *including* those who
+  reached it and didn't publish, who hit the wall and failed, or who saw a piece
+  without recognizing it. (For quaternions: Hamilton, Rodrigues, Gauss-in-a-drawer,
+  Cayley.)
+- **The impossibility / structure voices** — whoever can answer "**why can't we**
+  do the obvious simpler thing?" *concretely*, not by assertion. The wall must have
+  a keeper who can hand a learner a fact they can check. (Frobenius, Hurwitz.)
+- **Practitioners** — the people who *use* it, who carry the "why care" and the
+  "how we use it" end. (The animator, aerospace attitude control, the graphics
+  engineer; Shoemake.)
+- **Embodied & natural instantiations** — where the concept is *felt* in the
+  universe, especially **felt-but-unformalized**: a body, an organism, a physical
+  phenomenon that "knows" the concept without symbols. (The Dirac belt / spinning
+  plate, the spin-½ electron, the falling cat, the brain's head-direction code / a
+  navigating bee or bat.) These are the most valuable voices for animath's
+  *manipulate-to-learn* ethos — they are pure felt.
+- **The naive learner** — meets the concept for the first time, bounces honestly,
+  says the wrong guess out loud.
+- **The skeptic** — resists the obvious app; keeps the room honest.
 
-> You are a teacher who never introduces an idea before its prerequisites. Trace how
-> <concept> **grows from simpler ideas the audience already owns** — the minimal chain
-> of familiar concepts that makes it feel inevitable rather than arbitrary. Identify
-> the single best **on-ramp**: the prior concept the app should open from, and the one
-> move that turns it into the new idea. Your gift is the app's *starting point*.
+### Register — how they speak (this is load-bearing)
 
-### Lens 3: In the Wild (natural & applied)
+- **Questions, not declamations.** No speeches, no "I, Hamilton, declare…". The
+  room runs on genuine questions across the gaps: **"How do you…", "What about…",
+  "Why can't we…", "Is *that* your…?"**
+- **Press.** When a voice hits a hard question, do not let the room drop it with a
+  one-line answer everyone nods at. Make the asker *refuse to leave it alone* until
+  the room manufactures an answer a learner could actually hold. (The richest
+  content in the trial run came entirely from this rule.)
+- **Carry it out fully as text.** Do not summarize "they discussed X." Write the
+  exchange. Some voices speak a lot; some barely; some choose not to speak (a
+  near-miss who "put it in a drawer" can embody that silence). Everyone gets the
+  chance.
+- **Felt before formal.** Let the embodied voices *show* (a belt, a turning object)
+  rather than state. Where the felt and the formal land on the same spot, let the
+  room notice it *in dialogue* — do not annotate it from outside.
+- **Do not pre-cull.** The transcript is not pre-filtered for "useful" moments. The
+  words do the culling; Stage 3 reads it out. Resist the urge to append "here are
+  the takeaways" — that is Stage 3's job, and doing it here destroys the evidence.
 
-> You are an applied scientist. Catalog where <concept> **actually shows up** — in
-> physics, engineering, computer graphics, biology, other mathematics, everyday
-> phenomena. Pick the **most visceral, recognizable** appearances (the ones a learner
-> already has intuition for). Your gift is concrete *hooks* and an honest answer to
-> "why should I care?"
+Write the full transcript to `{id}-room-transcript.md`, opening with a short
+**"Seeded from"** note linking the foundation (for auditability) and a **Cast**
+list grouped by the bands above, then the dialogue.
 
-### Lens 4: New Light (reframing)
+## Stage 3 — The Friction Atlas (read the crossings out of the transcript)
 
-> You are the mathematician who loves saying "that's just ___ in disguise." Show
-> <concept> as **a new view of a well-understood concept** — the reframing that
-> collapses apparent complexity (e.g. rotations as multiplication, a transform as a
-> change of basis). Identify the single most clarifying re-description. Your gift is
-> the *aha* that reorganizes everything.
+Now, and only now, cull — *from the words*. Read the transcript and extract the
+**atlas of crossings**: the places of **friction, interest, and explanatory load**
+strung along the trajectory `no-knowledge → all-we-know → how-we-use-it`. For each
+crossing record: the gap (from → to), who stood on each side, **what the friction
+was**, why it is interesting, whether/how it is **felt**, and — flagged as a Stage-4
+seed, not a design — the *shared handle the dialogue kept reaching for* (the
+concrete object two voices were forced to meet on).
 
-### Lens 5: The Geometer (visual essence + traps)
+Then surface the **emergent invariants**: the motifs that showed up at *multiple
+independent crossings without being put there* (in quaternions: the half-angle
+reappearing at three unrelated crossings; the twin walls bookending the path; the
+felt anchors clustering exactly at the hardest formal crossing). These recurrences
+are **the pattern of learning the concept itself dictates** — they, not the topic
+name, are the real spine. Every atlas entry must cite the transcript moment it came
+from. Write to `{id}-friction-atlas.md`.
 
-> You are a geometer and visualizer. Strip <concept> to **the picture**: what *moves*,
-> what stays *invariant*, what the *surprising image* is. Then name the **canonical
-> learner confusions** the picture must make tangible (not hide) — the things people
-> get wrong. Your gift is the *essential scene* and the misconceptions the app must
-> resolve.
+## Stage 4 — Building the artifact (the design team + draft plan)
 
-### Lens 6: The Builder (animath framework fit)
+Only here does design begin. Hand the **friction atlas** (and the quarantined
+prior-art, now usable) to the artifact-building roles. Either reason through them
+inline, or spawn them as parallel agents writing `kind: lens` files
+(`{id}-design-builder.md`, `-educator.md`, `-game-designer.md`, `-illustrator.md`,
+`-visual-designer.md`):
 
-> You are the animath framework engineer (you know `CLAUDE.md`, `BUILDING_AN_APP.md`,
-> the `lib/particles` engine + `ParticleViewerShell`, the 2D shader viewers, the
-> CSS/DOM apps, the closed 11-archetype panel vocabulary, the `<Workspace>` contract,
-> and the existing quaternion/4D machinery). For the kinds of pictures the other
-> lenses imply, assess **what animath can render well and cheaply** vs. what would
-> fight the framework. Cite concrete prior art to reuse and realistic build cost. Your
-> gift is *feasibility* — the filter that keeps candidates buildable.
+- **The Builder** — what animath can render well and cheaply vs. what fights the
+  framework; concrete prior art to reuse (the `lib/particles` engine,
+  `QuarterTurnControls`, 2D shader viewers, CSS/DOM); realistic build cost.
+- **The Educator** — the learning arc that walks the atlas's crossings in order;
+  progressive disclosure; how a learner checks their own understanding.
+- **The Game Designer** — the core interaction loop; the smallest satisfying
+  action→feedback cycle built on a crossing; honest-to-the-math play.
+- **The Illustrator & Visual Designer** — the look, the legibility, what the
+  *shared handle* from each crossing actually looks like on screen.
 
-### Lens 7: The Educator (learning design)
+Then write `{id}-concept-plan.md` (`kind: plan`, `status: proposed`):
 
-> You are an experienced educator who designs lessons, not just pictures. Where the
-> Geometer names the misconceptions, you design the **learning arc** that defeats
-> them: the sequence from first contact to "aha" to fluency, what a learner should
-> *do* at each step, how the app reveals complexity gradually (progressive
-> disclosure), and how a learner could *check their own understanding* inside the
-> tool. Consider the audience range (curious beginner ↔ working mathematician) and
-> what differentiates the experience for each. Your gift is the *pedagogical
-> sequence* — the order and scaffolding that makes the concept stick.
-
-### Lens 8: The Game Designer (play & motivation)
-
-> You are a game designer who turns abstract systems into things people *want* to
-> poke at. Identify the **core interaction loop**: the smallest satisfying
-> action→feedback cycle, the goals or challenges that create productive curiosity,
-> the sense of discovery and mastery. What would make a learner lose track of time
-> exploring <concept>? Think toys (open sandboxes), puzzles (a target to reach), and
-> juice (responsive, legible feedback) — but keep it **honest to the math** (no
-> mechanic that rewards a wrong mental model). Your gift is *engagement* — the reason
-> someone keeps playing long enough to learn.
-
-### Lens 9: The Audience (the naive learner)
-
-> You **are** the learner, not a teacher — smart and curious but meeting <concept>
-> for the *first time*. You have only the prerequisites a general audience owns. Read
-> the facts and react honestly: which words make you bounce, which sentence is the
-> first you don't follow, what you *think* it means (including the wrong guess you'd
-> make), what would make you click vs. close the tab, and the one question you'd ask
-> out loud. Do **not** look up the standard pictures — describe the picture *you*
-> wish existed. Your gift is the *real* first-contact experience the expert lenses
-> can't recover, and the misconceptions a learner actually arrives with (not the ones
-> we assume).
-
-### Lens 10: The Contrarian (red team)
-
-> You are the skeptic whose job is to **resist the obvious app**. Assume the rest of
-> the room is converging on the predictable visualization (for a rotation-flavored
-> concept, "rotate an object and show a sphere") and argue it is **wrong, overrated,
-> or a trap** — too pretty to be honest, teaching recognition instead of
-> understanding, or solving a problem nobody has. Then propose at least one
-> **genuinely different** app: a different subject entirely (e.g. the pure algebra /
-> multiplication structure, an adjacent generalization, a historical-instruments or
-> applications-first framing, a puzzle with no 3D scene at all). Steelman your
-> alternative. Your gift is *insurance against consensus* — a real fork so the
-> synthesis chooses rather than rationalizes.
-
-## Phase 3 — Synthesis: candidates + draft build plan
-
-After all ten lenses return, read every file and write
-`{id}-concept-plan.md` (frontmatter `kind: plan`, `status: proposed`). It opens with
-the collapsible `Concept under exploration` block, then:
-
-1. **Synthesis of perspectives** — what the lenses converge on (and whether that
-   convergence was *discovered* or merely *seeded* — flag it if the lenses leaned on
-   the quarantined prior-art); the tensions
-   (e.g. the most beautiful picture vs. the most buildable one); blind spots.
+1. **From atlas to app** — which crossing(s) the app is built on, and why (favor
+   the ones where *felt and formal coincide* and the emergent invariants concentrate).
 2. **Candidate app concepts** — **2–4** distinct concepts, each a short pitch (what
-   you see, what you do, what it teaches) scored in a Markdown table on three axes:
-   **framework fit** · **pedagogical payoff** · **visual appeal** (each Low/Med/High,
-   with a one-line justification).
+   you see, what you do, what it teaches) scored in a table on **framework fit ·
+   pedagogical payoff · visual appeal** (Low/Med/High, one-line justification each).
 3. **Recommendation** — the single best first course of action, and why.
-4. **Draft build plan for the recommendation** — concrete enough to hand to
-   `BUILDING_AN_APP.md`: the engine to build on; the **`SectionDef[]` panels** (each
-   tagged with an archetype from the closed vocabulary); the **`ViewDef[]` view(s)**;
-   the **default / on-ramp view** (the most illuminating first frame); the
-   **explainer angle**, ideally using the Originator's framing for the `?` text; the
-   route/registry edits (`index.tsx`, `apps.ts`, `catalog.ts`); and the honest
-   caveats the Geometer flagged (what the picture distorts or approximates).
-5. **Next steps** — recommend running `/three-hats <path to this plan>` to
-   stress-test before building.
+4. **Draft build plan** — concrete enough for `BUILDING_AN_APP.md`: engine to build
+   on; **`SectionDef[]` panels** (each tagged with a closed-vocabulary archetype);
+   **`ViewDef[]` view(s)**; the **on-ramp view** (most illuminating first frame);
+   the **explainer angle** (use the originator's framing from the transcript); the
+   route/registry edits (`index.tsx`, `apps.ts`, `catalog.ts`); honest caveats (what
+   the picture distorts).
+5. **Next steps** — recommend `/three-hats <path to this plan>` before building.
 
-End the plan with the **Self-Reflection Protocol** as a `## Self-reflection` section.
+End the plan with the **Self-Reflection Protocol** (`.claude/prompts/self-reflection.md`)
+as a `## Self-reflection` section.
 
-## After Synthesis
+## After Stage 4
 
-Present a condensed summary in the conversation: the recommended concept and the
-runner-up, the scoring at a glance, and the one-paragraph build plan — with pointers
-to the full files. Then **stop and let the user choose** the direction before any
-implementation; offer `/three-hats` on the plan as the natural next step.
+Present a condensed summary in the conversation: the crossing(s) the app is built
+on, the recommended concept and runner-up, the scoring at a glance, and the
+one-paragraph build plan — with pointers to the full files. Then **stop and let the
+user choose** before any implementation; offer `/three-hats` as the next step.
 
 ## Rules
 
 - This is **exploration and planning only** — do **not** write app code or edit the
   registry during this skill. The deliverable is the plan.
-- Keep the perspectives genuinely independent: each lens agent argues its own view;
-  reconciliation happens only in the synthesis.
-- Update the session progress report after each phase transition (Phase 1 done,
-  agents dispatched, synthesis written) per the progress-report rule.
+- **Keep the voices orthogonal in the room; reconcile only in the atlas.** A voice
+  that already agrees with another is a wasted seat — recast it.
+- **The room is authored, not parallelized.** Stage 4's design roles may be
+  parallel agents; the dialogue itself never is.
+- **Cull from the words, never ahead of them.** The transcript stays un-pre-filtered;
+  the atlas cites it.
+- Update the session progress report after each stage transition per the
+  progress-report rule.
 - Commit and push the new report files when the skill completes.
