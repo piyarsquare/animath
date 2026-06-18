@@ -181,9 +181,14 @@ from. Write to `{id}-friction-atlas.md`.
 
 ## Stage 4 — Building the artifact (the design team + draft plan)
 
-Only here does design begin. Hand the **friction atlas** (and the quarantined
-prior-art, now usable) to the artifact-building roles. Either reason through them
-inline, or spawn them as parallel agents writing `kind: lens` files
+Only here does design begin. Hand the artifact-building roles **everything the
+prior stages produced** — the full Stage-1 foundation (now including the
+quarantined prior-art, usable here), the complete Stage-2 transcript, and the
+Stage-3 atlas — not the atlas alone. The atlas is the *spine* (it says which
+crossings matter), but the transcript's exact phrasings, the originator's framing,
+and the foundation's formulas and citations are the raw material the explainer, the
+on-ramp, and the panels are built from. Either reason through the roles inline, or
+spawn them as parallel agents writing `kind: lens` files
 (`{id}-design-builder.md`, `-educator.md`, `-game-designer.md`, `-illustrator.md`,
 `-visual-designer.md`):
 
