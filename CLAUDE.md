@@ -362,6 +362,26 @@ named axis) remains on the 4D Rotation panel.
   `normalize()`), so code and prose stay uniform. When merging a branch that
   introduced British prose, normalize it back to American.
 
+## Attribution & AI collaboration
+
+These apps are built in collaboration with AI collaborators (see
+[`ATTRIBUTION.md`](ATTRIBUTION.md) for the full policy). Ideas are often reached by
+independent reasoning, but few are new to the world — and the collaborators are
+trained on a vast, largely uncredited corpus. So **identifying an app's possible
+sources is a standing part of building it**, even when none were in mind while the
+idea was worked out:
+
+- Each app's `EXPLAINER.md` (or guide page) ends with a short **"Possible sources
+  & where to go further"** block — annotated pointers to prior work and analogues,
+  framed as a reader's next step, **not** a priority claim. This is wayfinding as
+  much as credit.
+- **Name what you can stand behind; flag uncertainty — never fabricate** a
+  citation, DOI, or date. A vaguer-but-true pointer beats a crisp fabricated one.
+- Record both provenances honestly: how an idea was *reached* and what it *lands
+  near* (with a name) are different questions; keep both.
+- Sessions note possible sources surfaced during the work in their handoff, so
+  attributions are captured while fresh.
+
 ## Known Issues and Technical Debt
 
 Much of the old debt has been paid down: the three near-identical complex viewers
