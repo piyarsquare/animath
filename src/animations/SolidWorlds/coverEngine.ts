@@ -23,7 +23,13 @@ import { footprintTexture, signTexture } from './textures';
 
 interface Gen { g: THREE.Matrix4; gInv: THREE.Matrix4; gLin: THREE.Matrix4; gLinInv: THREE.Matrix4; }
 
-interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; }
+interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; fogAmount: number; showFloor: boolean; }
+
+/** Furniture reference scale — the sign, props, footprints, avatars and eye
+ *  height are sized from this CONSTANT, not from the room size, so growing the
+ *  room enlarges only the room's dimensions (and how far apart the props sit),
+ *  never the things standing in it. */
+const U = 9;
 
 function mat4From(m: M3, tx: number, ty: number, tz: number): THREE.Matrix4 {
   return new THREE.Matrix4().set(
@@ -43,6 +49,8 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   let depth = opts.coverDepth;
   let camDist = opts.cameraDistance;
   let lookId = opts.lookId;
+  let fogAmount = opts.fogAmount;
+  let showFloor = opts.showFloor;
 
   // ── pose (developing map) ──────────────────────────────────────────────
   const pos = new THREE.Vector3();
@@ -64,10 +72,14 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     const L = findLook(id);
     const R = (depth + 0.55) * size; // matches the cover render radius
     scene.background = new THREE.Color(L.sky);
-    // Very light fog: every rendered ring stays crisp (the hall-of-mirrors), and
-    // only the cull boundary itself feathers into the sky. near sits past the
-    // farthest drawn room, so nothing inside the cover hazes over.
-    scene.fog = new THREE.Fog(L.sky, R * 0.95, R * 1.2);
+    // User-controlled fog: 0 = none (crisp to the cull boundary); 1 = thick
+    // (closes in to a few rooms). Linear near→far scaled to the cover radius.
+    if (fogAmount <= 0.001) scene.fog = null;
+    else {
+      const near = R * (1.05 - 0.95 * fogAmount);
+      const far = R * (1.3 - 0.85 * fogAmount);
+      scene.fog = new THREE.Fog(L.sky, Math.max(0.1, near), Math.max(near + 1, far));
+    }
     renderer.toneMappingExposure = L.exposure;
     ambient.intensity = L.ambient;
     hemi.color.setHex(L.hemiSky); hemi.groundColor.setHex(L.hemiGround); hemi.intensity = L.hemi;
@@ -108,7 +120,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       trailN--;
     }
     const i = trailN;
-    const aBack = -size * 0.07, aTip = size * 0.12, hw = size * 0.075, lift = size * 0.02;
+    const aBack = -U * 0.07, aTip = U * 0.12, hw = U * 0.075, lift = U * 0.02;
     // [along, left, u, v]; left=+hw ↔ u=0 (cyan) so a right-handed frame reads cyan-left
     const C: [number, number, number, number][] = [
       [aBack, -hw, 1, 0], [aTip, -hw, 1, 1], [aTip, hw, 0, 1],
@@ -132,7 +144,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   // Solid parts become one InstancedMesh each over the whole cover; line parts
   // are merged into one LineSegments — so draw calls stay ~constant no matter how
   // many cover cells (depth) we draw. Each part carries its local transform.
-  interface Part { geo: THREE.BufferGeometry; mat: THREE.Material; matrix: THREE.Matrix4; }
+  interface Part { geo: THREE.BufferGeometry; mat: THREE.Material; matrix: THREE.Matrix4; floor?: boolean; }
   let meshParts: Part[] = [];
   let lineParts: Part[] = [];
   const roomDisposables: { dispose: () => void }[] = [];
@@ -148,44 +160,45 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       const m = new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.1, side: THREE.DoubleSide });
       roomDisposables.push(m); return m;
     };
-    const mesh = (geo: THREE.BufferGeometry, mat: THREE.Material, matrix: THREE.Matrix4) => {
-      roomDisposables.push(geo); meshParts.push({ geo, mat, matrix });
+    const mesh = (geo: THREE.BufferGeometry, mat: THREE.Material, matrix: THREE.Matrix4, floor = false) => {
+      roomDisposables.push(geo); meshParts.push({ geo, mat, matrix, floor });
     };
 
-    // cube edge frame (lines)
+    // cube edge frame (lines) — scales with the room
     const boxGeo = new THREE.BoxGeometry(size, size, size);
     const edges = new THREE.EdgesGeometry(boxGeo); boxGeo.dispose();
     roomDisposables.push(edges);
     const frameMat = new THREE.LineBasicMaterial({ color: 0x9fc0e0 }); roomDisposables.push(frameMat);
     lineParts.push({ geo: edges, mat: frameMat, matrix: new THREE.Matrix4() });
 
-    // floor: a see-through reference plane (a landmark for moving in 3D)
+    // floor: a see-through reference plane (optional; scales with the room)
     const floorMat = new THREE.MeshBasicMaterial({ color: 0x2a3c54, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
     roomDisposables.push(floorMat);
-    mesh(new THREE.PlaneGeometry(size, size), floorMat, localM(0, -h, 0, -Math.PI / 2));
+    mesh(new THREE.PlaneGeometry(size, size), floorMat, localM(0, -h, 0, -Math.PI / 2), true);
 
-    // floor grid (lines), built by hand so it merges cleanly
-    const gp: number[] = []; const n = 8, step = size / n;
+    // floor grid (lines), fixed cell size so a bigger room just has more cells
+    const gp: number[] = []; const n = Math.max(4, Math.round(size / (U * 0.5))), step = size / n;
     for (let i = 0; i <= n; i++) { const t = -h + i * step; gp.push(-h, 0, t, h, 0, t, t, 0, -h, t, 0, h); }
     const gridGeo = new THREE.BufferGeometry();
     gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3));
     roomDisposables.push(gridGeo);
     const gridMat = new THREE.LineBasicMaterial({ color: 0x6f93b8 }); roomDisposables.push(gridMat);
-    lineParts.push({ geo: gridGeo, mat: gridMat, matrix: localM(0, -h + 0.02, 0) });
+    lineParts.push({ geo: gridGeo, mat: gridMat, matrix: localM(0, -h + 0.02, 0), floor: true });
 
-    // asymmetric landmark props, so a copy is recognizable — and its mirror obvious
-    mesh(new THREE.CylinderGeometry(size * 0.04, size * 0.05, size * 0.42, 14), std(0xffcf5a), localM(h * 0.55, -h + size * 0.21, h * 0.42));
+    // asymmetric landmark props (FIXED size — only their spread grows with the
+    // room); each sits on the floor so a copy is recognizable and its mirror obvious
+    mesh(new THREE.CylinderGeometry(U * 0.04, U * 0.05, U * 0.42, 14), std(0xffcf5a), localM(h * 0.55, -h + U * 0.21, h * 0.42));
     const lMat = std(0x46c8b0);
-    mesh(new THREE.BoxGeometry(size * 0.06, size * 0.28, size * 0.06), lMat, localM(-h * 0.5, -h + size * 0.14, -h * 0.4));
-    mesh(new THREE.BoxGeometry(size * 0.34, size * 0.06, size * 0.06), lMat, localM(-h * 0.5 + size * 0.14, -h + size * 0.03, -h * 0.4));
-    mesh(new THREE.SphereGeometry(size * 0.09, 18, 14), std(0xff6aa0), localM(h * 0.22, -h + size * 0.1, -h * 0.62));
+    mesh(new THREE.BoxGeometry(U * 0.06, U * 0.28, U * 0.06), lMat, localM(-h * 0.5, -h + U * 0.14, -h * 0.4));
+    mesh(new THREE.BoxGeometry(U * 0.34, U * 0.06, U * 0.06), lMat, localM(-h * 0.5 + U * 0.14, -h + U * 0.03, -h * 0.4));
+    mesh(new THREE.SphereGeometry(U * 0.09, 18, 14), std(0xff6aa0), localM(h * 0.22, -h + U * 0.09, -h * 0.62));
 
     // the opaque "HELLO" sign — reads forwards here, mirror-reversed once you
     // walk an orientation-reversing loop (the conversation's headline case)
-    mesh(new THREE.CylinderGeometry(size * 0.012, size * 0.012, size * 0.34, 10), std(0x9a9aa4), localM(0, -h + size * 0.17, -h * 0.5));
+    mesh(new THREE.CylinderGeometry(U * 0.012, U * 0.012, U * 0.34, 10), std(0x9a9aa4), localM(0, -h + U * 0.17, -h * 0.5));
     const signTex = signTexture('HELLO'); roomDisposables.push(signTex);
     const plaqueMat = new THREE.MeshBasicMaterial({ map: signTex, side: THREE.DoubleSide }); roomDisposables.push(plaqueMat);
-    mesh(new THREE.PlaneGeometry(size * 0.34, size * 0.17), plaqueMat, localM(0, -h + size * 0.38, -h * 0.5));
+    mesh(new THREE.PlaneGeometry(U * 0.34, U * 0.17), plaqueMat, localM(0, -h + U * 0.38, -h * 0.5));
   }
 
   // ── deck generators + the cover shell ────────────────────────────────────
@@ -206,6 +219,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   const coverRoot = new THREE.Group();
   scene.add(coverRoot);
   const coverDisposables: THREE.BufferGeometry[] = []; // merged line geos, per rebuild
+  let floorObjs: THREE.Object3D[] = [];                 // floor plane + grid, for the toggle
   function buildCover() {
     while (coverRoot.children.length) coverRoot.remove(coverRoot.children[0]);
     coverDisposables.forEach((g) => g.dispose()); coverDisposables.length = 0;
@@ -214,7 +228,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     // non-abelian turn-space / amphicosm groups).
     const genList: THREE.Matrix4[] = [];
     for (const axis of AXES) genList.push(gens[axis].g, gens[axis].gInv);
-    const R = (depth + 0.55) * size, cap = 1700;
+    const R = (depth + 0.55) * size, cap = 6000;
     const seen = new Set<string>();
     const key = (m: THREE.Matrix4) => m.elements.map((e) => Math.round(e * 1000)).join(',');
     const cells: THREE.Matrix4[] = [];
@@ -235,12 +249,14 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     const N = cells.length;
     const tmp = new THREE.Matrix4();
 
+    floorObjs = [];
     // each solid decor part → one InstancedMesh over all cells (one draw call)
     for (const part of meshParts) {
       const inst = new THREE.InstancedMesh(part.geo, part.mat, N);
       inst.frustumCulled = false;
       for (let i = 0; i < N; i++) inst.setMatrixAt(i, tmp.multiplyMatrices(cells[i], part.matrix));
       inst.instanceMatrix.needsUpdate = true;
+      if (part.floor) { inst.visible = showFloor; floorObjs.push(inst); }
       coverRoot.add(inst);
     }
     // each line part → one merged LineSegments across all cells
@@ -260,6 +276,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
       coverDisposables.push(g);
       const ls = new THREE.LineSegments(g, part.mat); ls.frustumCulled = false;
+      if (part.floor) { ls.visible = showFloor; floorObjs.push(ls); }
       coverRoot.add(ls);
     }
     // the footprint trail → one InstancedMesh; the shared geometry's drawRange
@@ -280,49 +297,49 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
 
   function buildPerson(): THREE.Group {
     const g = new THREE.Group();
-    const body = new THREE.Mesh(track(new THREE.CylinderGeometry(size * 0.045, size * 0.06, size * 0.26, 14)), mat(0xffe08a));
-    const head = new THREE.Mesh(track(new THREE.SphereGeometry(size * 0.05, 14, 10)), mat(0xffd27a)); head.position.y = size * 0.18;
-    const nose = new THREE.Mesh(track(new THREE.ConeGeometry(size * 0.022, size * 0.08, 10)), mat(0xfff0c0));
-    nose.rotation.x = -Math.PI / 2; nose.position.set(0, size * 0.18, -size * 0.07);
-    const sg = track(new THREE.SphereGeometry(size * 0.026, 10, 8));
-    const l = new THREE.Mesh(sg, mat(CYAN)); l.position.set(-size * 0.075, size * 0.02, 0);
-    const r = new THREE.Mesh(sg, mat(MAGENTA)); r.position.set(size * 0.075, size * 0.02, 0);
+    const body = new THREE.Mesh(track(new THREE.CylinderGeometry(U * 0.045, U * 0.06, U * 0.26, 14)), mat(0xffe08a));
+    const head = new THREE.Mesh(track(new THREE.SphereGeometry(U * 0.05, 14, 10)), mat(0xffd27a)); head.position.y = U * 0.18;
+    const nose = new THREE.Mesh(track(new THREE.ConeGeometry(U * 0.022, U * 0.08, 10)), mat(0xfff0c0));
+    nose.rotation.x = -Math.PI / 2; nose.position.set(0, U * 0.18, -U * 0.07);
+    const sg = track(new THREE.SphereGeometry(U * 0.026, 10, 8));
+    const l = new THREE.Mesh(sg, mat(CYAN)); l.position.set(-U * 0.075, U * 0.02, 0);
+    const r = new THREE.Mesh(sg, mat(MAGENTA)); r.position.set(U * 0.075, U * 0.02, 0);
     g.add(body, head, nose, l, r);
     return g;
   }
 
   function buildAirplane(): THREE.Group {
     const g = new THREE.Group();
-    const fuse = new THREE.Mesh(track(new THREE.CylinderGeometry(size * 0.05, size * 0.035, size * 0.5, 14)), mat(0xe6ecf5));
+    const fuse = new THREE.Mesh(track(new THREE.CylinderGeometry(U * 0.05, U * 0.035, U * 0.5, 14)), mat(0xe6ecf5));
     fuse.rotation.x = Math.PI / 2; // length along z
-    const nose = new THREE.Mesh(track(new THREE.ConeGeometry(size * 0.05, size * 0.14, 14)), mat(0xcdd7e6));
-    nose.rotation.x = -Math.PI / 2; nose.position.z = -size * 0.32;
-    const wing = new THREE.Mesh(track(new THREE.BoxGeometry(size * 0.62, size * 0.02, size * 0.14)), mat(0xb9c6da));
-    const tailFin = new THREE.Mesh(track(new THREE.BoxGeometry(size * 0.02, size * 0.12, size * 0.1)), mat(0xb9c6da));
-    tailFin.position.set(0, size * 0.06, size * 0.22);
-    const tailWing = new THREE.Mesh(track(new THREE.BoxGeometry(size * 0.24, size * 0.02, size * 0.08)), mat(0xb9c6da));
-    tailWing.position.z = size * 0.22;
-    const tipGeo = track(new THREE.BoxGeometry(size * 0.06, size * 0.03, size * 0.14));
-    const lTip = new THREE.Mesh(tipGeo, mat(CYAN)); lTip.position.set(-size * 0.31, 0, 0);    // left wingtip cyan
-    const rTip = new THREE.Mesh(tipGeo, mat(MAGENTA)); rTip.position.set(size * 0.31, 0, 0);   // right wingtip magenta
+    const nose = new THREE.Mesh(track(new THREE.ConeGeometry(U * 0.05, U * 0.14, 14)), mat(0xcdd7e6));
+    nose.rotation.x = -Math.PI / 2; nose.position.z = -U * 0.32;
+    const wing = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.62, U * 0.02, U * 0.14)), mat(0xb9c6da));
+    const tailFin = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.02, U * 0.12, U * 0.1)), mat(0xb9c6da));
+    tailFin.position.set(0, U * 0.06, U * 0.22);
+    const tailWing = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.24, U * 0.02, U * 0.08)), mat(0xb9c6da));
+    tailWing.position.z = U * 0.22;
+    const tipGeo = track(new THREE.BoxGeometry(U * 0.06, U * 0.03, U * 0.14));
+    const lTip = new THREE.Mesh(tipGeo, mat(CYAN)); lTip.position.set(-U * 0.31, 0, 0);    // left wingtip cyan
+    const rTip = new THREE.Mesh(tipGeo, mat(MAGENTA)); rTip.position.set(U * 0.31, 0, 0);   // right wingtip magenta
     g.add(fuse, nose, wing, tailFin, tailWing, lTip, rTip);
     return g;
   }
 
   function buildCar(): THREE.Group {
     const g = new THREE.Group();
-    const body = new THREE.Mesh(track(new THREE.BoxGeometry(size * 0.3, size * 0.1, size * 0.5)), mat(0xe06a4a));
-    body.position.y = size * 0.06;
-    const cabin = new THREE.Mesh(track(new THREE.BoxGeometry(size * 0.24, size * 0.1, size * 0.24)), mat(0xf0e6d0));
-    cabin.position.set(0, size * 0.15, size * 0.02);
-    const wheelGeo = track(new THREE.CylinderGeometry(size * 0.05, size * 0.05, size * 0.04, 12));
+    const body = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.3, U * 0.1, U * 0.5)), mat(0xe06a4a));
+    body.position.y = U * 0.06;
+    const cabin = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.24, U * 0.1, U * 0.24)), mat(0xf0e6d0));
+    cabin.position.set(0, U * 0.15, U * 0.02);
+    const wheelGeo = track(new THREE.CylinderGeometry(U * 0.05, U * 0.05, U * 0.04, 12));
     for (const [x, z] of [[-0.16, -0.16], [0.16, -0.16], [-0.16, 0.16], [0.16, 0.16]] as const) {
       const w = new THREE.Mesh(wheelGeo, mat(0x222228)); w.rotation.z = Math.PI / 2;
-      w.position.set(x * size, size * 0.02, z * size); g.add(w);
+      w.position.set(x * U, U * 0.02, z * U); g.add(w);
     }
-    const stripeGeo = track(new THREE.BoxGeometry(size * 0.02, size * 0.06, size * 0.4));
-    const l = new THREE.Mesh(stripeGeo, mat(CYAN)); l.position.set(-size * 0.155, size * 0.06, 0);   // left flank cyan
-    const r = new THREE.Mesh(stripeGeo, mat(MAGENTA)); r.position.set(size * 0.155, size * 0.06, 0);  // right flank magenta
+    const stripeGeo = track(new THREE.BoxGeometry(U * 0.02, U * 0.06, U * 0.4));
+    const l = new THREE.Mesh(stripeGeo, mat(CYAN)); l.position.set(-U * 0.155, U * 0.06, 0);   // left flank cyan
+    const r = new THREE.Mesh(stripeGeo, mat(MAGENTA)); r.position.set(U * 0.155, U * 0.06, 0);  // right flank magenta
     g.add(body, cabin, l, r);
     return g;
   }
@@ -342,7 +359,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   const avatarLinear = new THREE.Matrix4(), yawMat = new THREE.Matrix4();
   const camPos = new THREE.Vector3(), stampPos = new THREE.Vector3();
   const h = () => size / 2;
-  const floorEye = () => -h() + size * 0.16; // eye height above the floor when grounded
+  const floorEye = () => -h() + U * 0.16; // fixed eye height above the floor when grounded
 
   function recompFrame() {
     Rview.makeRotationY(yaw).multiply(new THREE.Matrix4().makeRotationX(pitch));
@@ -420,7 +437,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     else if (!hasStamp) { lastStamp.copy(pos); hasStamp = true; }
     else {
       const d = pos.distanceTo(lastStamp);
-      if (d > size * 0.13 && d < size * 0.6) { // dense enough to read as a trail; upper bound skips the wrap jump
+      if (d > U * 0.55 && d < size * 0.7) { // a stride apart (absolute); upper bound skips the wrap jump
         const upS = new THREE.Vector3(0, 1, 0).applyMatrix4(bodyLinear).normalize();
         const fwdS = fwd.clone().addScaledVector(upS, -fwd.dot(upS));
         if (fwdS.lengthSq() < 1e-4) fwdS.copy(right); // looking straight up/down
@@ -473,6 +490,8 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     setRoomSize(s) { size = s; buildRoom(); buildGenerators(); buildCover(); applyLook(lookId); },
     setCameraDistance(d) { camDist = d; },
     setLook(id) { lookId = id; applyLook(id); },
+    setFog(amount) { fogAmount = amount; applyLook(lookId); },
+    setFloor(on) { showFloor = on; for (const o of floorObjs) o.visible = on; },
     recenter() {
       pos.set(0, 0, 0); bodyLinear.identity();
       cell.x = 0; cell.y = 0; cell.z = 0; hasStamp = false;

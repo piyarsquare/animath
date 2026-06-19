@@ -34,6 +34,30 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟢 code · 12:01 — Solid Worlds tuning: furniture-size decoupled, fog control, floor toggle, depth→10, sparser trail
+**Why:** Dan's tuning batch.
+
+- **Room size no longer scales the furniture.** New constant `U = 9`: the sign,
+  props, footprints, avatars and eye height are sized from `U`, while the cube
+  frame/floor/grid scale with `size`. Growing the room enlarges only the room
+  (and how far apart props sit), not the things standing in it.
+- **Fog under control:** a **Fog** slider (0 = off … 1 = thick); maps to fog
+  near/far scaled to the cover radius. Default 12%.
+- **Floor plane is optional:** a **Floor plane** checkbox toggles the
+  see-through slab + grid (tagged floor parts; visibility flipped live).
+- **Depth → 10** (slider max 5 → 10), room size max → 30, BFS cap → 6000.
+- **Trail sparser:** spacing now an absolute stride (`U·0.55`), so footprints
+  read as steps, not a smear.
+
+![bigger room, fixed-size furniture, light fog](assets/2026-06-18-S01-solid-worlds-tuned.png)
+
+> [!NOTE]
+> **Open for discussion (Dan):** (1) the **"ground floor"** idea — make the start
+> cell the lowest level, with a solid floor (no portal) on it and its horizontal
+> neighbors, so you can look down but not fall through; this trades the vertical
+> torus loop for a grounded world (likely a walk/drive-mode option). (2) **corner
+> markers / face labeling** to read orientation and the gluing. Asked via the UI.
+
 ### 🟢 code · 11:25 — Solid Worlds: fix the lost trail, instanced cover (depth 4–5), bigger rooms, further camera
 **Why:** Dan: "we lost the trail", + move the camera further out, bigger rooms,
 repeat size 4–5.

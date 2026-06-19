@@ -67,6 +67,10 @@ export interface SolidEngine {
   setCameraDistance(d: number): void;
   /** Switch the scene atmosphere (see looks.ts). */
   setLook(id: string): void;
+  /** Fog amount, 0 (none) … 1 (thick). */
+  setFog(amount: number): void;
+  /** Show/hide the floor plane + grid. */
+  setFloor(on: boolean): void;
   /** Return the walker to the cube center, frame upright, holonomy cleared. */
   recenter(): void;
   getChirality(): ChiralityState | null;

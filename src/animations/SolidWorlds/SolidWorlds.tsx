@@ -35,6 +35,8 @@ export default function SolidWorlds() {
   // win on load — otherwise a stale stored value hides the hall-of-mirrors depth.
   const [coverDepth, setCoverDepth] = useState(DEFAULT_COVER_DEPTH);
   const [roomSize, setRoomSize] = usePersistentState(pk('roomSize'), DEFAULT_ROOM_SIZE);
+  const [fog, setFog] = usePersistentState(pk('fog'), 0.12);
+  const [showFloor, setShowFloor] = usePersistentState(pk('floor'), true);
   const [look, setLook] = usePersistentState(pk('look'), 'daytime');
 
   const spec = worldById(worldId);
@@ -57,6 +59,8 @@ export default function SolidWorlds() {
   const worldRef = useRef(spec);
   const depthRef = useRef(coverDepth);
   const sizeRef = useRef(roomSize);
+  const fogRef = useRef(fog);
+  const floorRef = useRef(showFloor);
   const lookRef = useRef(look);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
@@ -69,6 +73,7 @@ export default function SolidWorlds() {
     engineRef.current = makeCoverEngine(deps, worldRef.current, {
       roomSize: sizeRef.current, coverDepth: depthRef.current,
       cameraDistance: camDistRef.current, lookId: lookRef.current,
+      fogAmount: fogRef.current, showFloor: floorRef.current,
     });
     engineRef.current.setTrailEnabled(trailRef.current);
     clockRef.current.start();
@@ -101,6 +106,7 @@ export default function SolidWorlds() {
     engineRef.current = makeCoverEngine(deps, spec, {
       roomSize: sizeRef.current, coverDepth: depthRef.current,
       cameraDistance: camDistRef.current, lookId: lookRef.current,
+      fogAmount: fogRef.current, showFloor: floorRef.current,
     });
     engineRef.current.setTrailEnabled(trailRef.current);
   }, [spec]);
@@ -112,6 +118,8 @@ export default function SolidWorlds() {
   useEffect(() => { camDistRef.current = camDistance; engineRef.current?.setCameraDistance(camDistance); }, [camDistance]);
   useEffect(() => { depthRef.current = coverDepth; engineRef.current?.setCoverDepth(coverDepth); }, [coverDepth]);
   useEffect(() => { sizeRef.current = roomSize; engineRef.current?.setRoomSize(roomSize); }, [roomSize]);
+  useEffect(() => { fogRef.current = fog; engineRef.current?.setFog(fog); }, [fog]);
+  useEffect(() => { floorRef.current = showFloor; engineRef.current?.setFloor(showFloor); }, [showFloor]);
   useEffect(() => { lookRef.current = look; engineRef.current?.setLook(look); }, [look]);
 
   useEffect(() => {
@@ -237,8 +245,10 @@ export default function SolidWorlds() {
       {thirdPerson && (
         <Slider label="Camera distance" value={camDistance} min={CAM_MIN} max={CAM_MAX} step={0.5} onChange={setCamDistance} format={(v) => v.toFixed(1)} />
       )}
-      <Slider label="Cover depth" value={coverDepth} min={0} max={5} step={1} onChange={(v) => setCoverDepth(Math.round(v))} format={(v) => `${Math.round(v)} ${Math.round(v) === 1 ? 'ring' : 'rings'}`} />
-      <Slider label="Room size" value={roomSize} min={6} max={24} step={1} onChange={setRoomSize} format={(v) => `${Math.round(v)} m`} />
+      <Slider label="Cover depth" value={coverDepth} min={0} max={10} step={1} onChange={(v) => setCoverDepth(Math.round(v))} format={(v) => `${Math.round(v)} ${Math.round(v) === 1 ? 'ring' : 'rings'}`} />
+      <Slider label="Room size" value={roomSize} min={6} max={30} step={1} onChange={setRoomSize} format={(v) => `${Math.round(v)} m`} />
+      <Slider label="Fog" value={fog} min={0} max={1} step={0.05} onChange={setFog} format={(v) => (v <= 0.001 ? 'off' : `${Math.round(v * 100)}%`)} />
+      <Checkbox label="Floor plane" checked={showFloor} onChange={setShowFloor} />
     </>
   );
 
