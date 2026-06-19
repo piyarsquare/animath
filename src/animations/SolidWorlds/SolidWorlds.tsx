@@ -37,6 +37,8 @@ export default function SolidWorlds() {
   const [roomSize, setRoomSize] = usePersistentState(pk('roomSize'), DEFAULT_ROOM_SIZE);
   const [fog, setFog] = usePersistentState(pk('fog'), 0.12);
   const [showFloor, setShowFloor] = usePersistentState(pk('floor'), true);
+  const [showLabels, setShowLabels] = usePersistentState(pk('labels'), false);
+  const [showCorners, setShowCorners] = usePersistentState(pk('corners'), false);
   const [look, setLook] = usePersistentState(pk('look'), 'daytime');
 
   const spec = worldById(worldId);
@@ -61,6 +63,8 @@ export default function SolidWorlds() {
   const sizeRef = useRef(roomSize);
   const fogRef = useRef(fog);
   const floorRef = useRef(showFloor);
+  const labelsRef = useRef(showLabels);
+  const cornersRef = useRef(showCorners);
   const lookRef = useRef(look);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
@@ -74,6 +78,7 @@ export default function SolidWorlds() {
       roomSize: sizeRef.current, coverDepth: depthRef.current,
       cameraDistance: camDistRef.current, lookId: lookRef.current,
       fogAmount: fogRef.current, showFloor: floorRef.current,
+      showLabels: labelsRef.current, showCorners: cornersRef.current,
     });
     engineRef.current.setTrailEnabled(trailRef.current);
     clockRef.current.start();
@@ -107,6 +112,7 @@ export default function SolidWorlds() {
       roomSize: sizeRef.current, coverDepth: depthRef.current,
       cameraDistance: camDistRef.current, lookId: lookRef.current,
       fogAmount: fogRef.current, showFloor: floorRef.current,
+      showLabels: labelsRef.current, showCorners: cornersRef.current,
     });
     engineRef.current.setTrailEnabled(trailRef.current);
   }, [spec]);
@@ -120,6 +126,8 @@ export default function SolidWorlds() {
   useEffect(() => { sizeRef.current = roomSize; engineRef.current?.setRoomSize(roomSize); }, [roomSize]);
   useEffect(() => { fogRef.current = fog; engineRef.current?.setFog(fog); }, [fog]);
   useEffect(() => { floorRef.current = showFloor; engineRef.current?.setFloor(showFloor); }, [showFloor]);
+  useEffect(() => { labelsRef.current = showLabels; engineRef.current?.setLabels(showLabels); }, [showLabels]);
+  useEffect(() => { cornersRef.current = showCorners; engineRef.current?.setCorners(showCorners); }, [showCorners]);
   useEffect(() => { lookRef.current = look; engineRef.current?.setLook(look); }, [look]);
 
   useEffect(() => {
@@ -249,6 +257,8 @@ export default function SolidWorlds() {
       <Slider label="Room size" value={roomSize} min={6} max={30} step={1} onChange={setRoomSize} format={(v) => `${Math.round(v)} m`} />
       <Slider label="Fog" value={fog} min={0} max={1} step={0.05} onChange={setFog} format={(v) => (v <= 0.001 ? 'off' : `${Math.round(v * 100)}%`)} />
       <Checkbox label="Floor plane" checked={showFloor} onChange={setShowFloor} />
+      <Checkbox label="Face labels" checked={showLabels} onChange={setShowLabels} />
+      <Checkbox label="Corner markers" checked={showCorners} onChange={setShowCorners} />
     </>
   );
 

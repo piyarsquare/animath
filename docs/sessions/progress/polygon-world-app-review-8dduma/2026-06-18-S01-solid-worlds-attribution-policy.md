@@ -34,6 +34,20 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟢 code · 12:24 — Solid Worlds: face labels + corner markers (both toggles)
+**Why:** Dan picked both, as options that can be turned off.
+
+- **Face labels:** per-face axis letter (X/Y/Z) with a glyph + color for what its
+  pairing does (↔ straight · ↻ turn · ⇋ flip), facing inward. One InstancedMesh
+  per face (6), instanced over the cover. `faceLabelTexture` in textures.ts.
+- **Corner markers:** a ball at each of the 8 cube corners, colored by its sign
+  bits (the RGB-cube scheme) so you can read orientation + mirroring across cells.
+  One InstancedMesh with per-instance `instanceColor`, N×8 instances.
+- Both default **off** (clean default), toggled by **Face labels** / **Corner
+  markers** checkboxes; persisted.
+
+![face labels (X/Y/Z, pairing-colored) + RGB corner markers](assets/2026-06-18-S01-solid-worlds-labels-corners.png)
+
 ### 🟢 code · 12:19 — Solid Worlds: the "ground floor" for walk/drive
 **Why:** Dan's design call — grounded modes get a solid floor; Fly stays free.
 Refined: the floor is about *how you pass through space*, not the topology —

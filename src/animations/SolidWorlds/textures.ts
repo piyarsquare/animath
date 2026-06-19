@@ -46,6 +46,29 @@ export function footprintTexture(): THREE.CanvasTexture {
 }
 
 /**
+ * A face label — a big axis letter (X/Y/Z) in the pairing's color, with a glyph
+ * for what the gluing does (↔ straight · ↻ turn · ⇋ flip), on a transparent
+ * ground so it floats on the cube face. Lets you read which axis you face and
+ * what crossing it does.
+ */
+export function faceLabelTexture(letter: string, glyph: string, color: string): THREE.CanvasTexture {
+  const s = 256;
+  const cvs = document.createElement('canvas');
+  cvs.width = cvs.height = s;
+  const ctx = cvs.getContext('2d')!;
+  ctx.clearRect(0, 0, s, s);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 10; ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+  ctx.font = `900 ${Math.round(s * 0.5)}px "Segoe UI", system-ui, sans-serif`;
+  ctx.strokeText(letter, s / 2, s * 0.44); ctx.fillStyle = color; ctx.fillText(letter, s / 2, s * 0.44);
+  ctx.font = `700 ${Math.round(s * 0.26)}px "Segoe UI", system-ui, sans-serif`;
+  ctx.lineWidth = 6; ctx.strokeText(glyph, s / 2, s * 0.8); ctx.fillText(glyph, s / 2, s * 0.8);
+  const t = new THREE.CanvasTexture(cvs);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
+/**
  * An opaque sign face: bold text on a solid plaque. Read from the front it says
  * what it says; viewed from the back (or by a mirror-reversed walker) it reads
  * laterally reversed — "HELLO" → its mirror image — purely by geometry, no baked

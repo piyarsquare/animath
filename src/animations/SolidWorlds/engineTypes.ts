@@ -71,6 +71,10 @@ export interface SolidEngine {
   setFog(amount: number): void;
   /** Show/hide the floor plane + grid. */
   setFloor(on: boolean): void;
+  /** Show/hide the per-face gluing labels. */
+  setLabels(on: boolean): void;
+  /** Show/hide the cube-corner markers. */
+  setCorners(on: boolean): void;
   /** Return the walker to the cube center, frame upright, holonomy cleared. */
   recenter(): void;
   getChirality(): ChiralityState | null;

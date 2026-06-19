@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import {
   EngineDeps3, FrameInput3, SolidEngine, ChiralityState, SolidMapState, TravelMode,
 } from './engineTypes';
-import { AXES, Axis, axisIndex, M3, SolidWorldSpec } from './solidSchema';
+import { AXES, Axis, axisIndex, M3, SolidWorldSpec, detM3, I3 } from './solidSchema';
 import { findLook } from './looks';
-import { footprintTexture, signTexture } from './textures';
+import { footprintTexture, signTexture, faceLabelTexture } from './textures';
 
 /**
  * Solid Worlds — the flat (κ = 0) cover engine. The 3D port of Topology Walk's
@@ -23,7 +23,7 @@ import { footprintTexture, signTexture } from './textures';
 
 interface Gen { g: THREE.Matrix4; gInv: THREE.Matrix4; gLin: THREE.Matrix4; gLinInv: THREE.Matrix4; }
 
-interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; fogAmount: number; showFloor: boolean; }
+interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; fogAmount: number; showFloor: boolean; showLabels: boolean; showCorners: boolean; }
 
 /** Furniture reference scale — the sign, props, footprints, avatars and eye
  *  height are sized from this CONSTANT, not from the room size, so growing the
@@ -51,6 +51,8 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   let lookId = opts.lookId;
   let fogAmount = opts.fogAmount;
   let showFloor = opts.showFloor;
+  let showLabels = opts.showLabels;
+  let showCorners = opts.showCorners;
   let groundedState = false; // walk/drive get a solid ground floor; fly gets the full cover
 
   // ── pose (developing map) ──────────────────────────────────────────────
@@ -150,6 +152,11 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   interface Part { geo: THREE.BufferGeometry; mat: THREE.Material; matrix: THREE.Matrix4; floor?: boolean; }
   let meshParts: Part[] = [];
   let lineParts: Part[] = [];
+  // label/marker resources (built in buildRoom, instanced in buildCover)
+  let labelMats: THREE.Material[] = [];      // one per axis, colored by pairing kind
+  let labelPlaneGeo: THREE.BufferGeometry | null = null;
+  let cornerGeo: THREE.BufferGeometry | null = null;
+  let cornerMat: THREE.Material | null = null;
   const roomDisposables: { dispose: () => void }[] = [];
   const localM = (x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) =>
     new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rx, ry, rz)).setPosition(x, y, z);
@@ -202,6 +209,25 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     const signTex = signTexture('HELLO'); roomDisposables.push(signTex);
     const plaqueMat = new THREE.MeshBasicMaterial({ map: signTex, side: THREE.DoubleSide }); roomDisposables.push(plaqueMat);
     mesh(new THREE.PlaneGeometry(U * 0.34, U * 0.17), plaqueMat, localM(0, -h + U * 0.38, -h * 0.5));
+
+    // face-label resources: a letter per axis, colored + glyphed by what its
+    // pairing does (↔ straight translation · ↻ turn · ⇋ flip).
+    const KIND_COLOR: Record<string, string> = { translation: '#7fa8d8', rotation: '#ffcf5a', glide: '#ff5aa6' };
+    const KIND_GLYPH: Record<string, string> = { translation: '↔', rotation: '↻', glide: '⇋' };
+    labelMats = AXES.map((axis) => {
+      const p = spec.pairings.find((q) => q.axis === axis)!;
+      const isId = p.linear.every((v, k) => v === I3[k]);
+      const kind = detM3(p.linear) < 0 ? 'glide' : isId ? 'translation' : 'rotation';
+      const tex = faceLabelTexture(axis.toUpperCase(), KIND_GLYPH[kind], KIND_COLOR[kind]);
+      roomDisposables.push(tex);
+      const m = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+      roomDisposables.push(m); return m;
+    });
+    labelPlaneGeo = new THREE.PlaneGeometry(U * 0.45, U * 0.45); roomDisposables.push(labelPlaneGeo);
+
+    // corner-marker resources: one small ball, colored per corner via instanceColor
+    cornerGeo = new THREE.SphereGeometry(U * 0.05, 10, 8); roomDisposables.push(cornerGeo);
+    cornerMat = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.1 }); roomDisposables.push(cornerMat);
   }
 
   // ── deck generators + the cover shell ────────────────────────────────────
@@ -293,6 +319,47 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     for (let i = 0; i < N; i++) trailInst.setMatrixAt(i, cells[i]);
     trailInst.instanceMatrix.needsUpdate = true;
     coverRoot.add(trailInst);
+
+    // corner markers — one ball per cube corner, colored by its sign bits (the
+    // RGB-cube scheme), so you can read orientation + mirroring at a glance
+    if (showCorners && cornerGeo && cornerMat) {
+      const corners: [number, number, number][] = [];
+      for (let b = 0; b < 8; b++) corners.push([(b & 1) ? 1 : -1, (b & 2) ? 1 : -1, (b & 4) ? 1 : -1]);
+      const hh = size / 2;
+      const inst = new THREE.InstancedMesh(cornerGeo, cornerMat, N * 8);
+      inst.frustumCulled = false;
+      const col = new THREE.Color();
+      let idx = 0;
+      for (let i = 0; i < N; i++) for (const cc of corners) {
+        tmp.copy(cells[i]).multiply(new THREE.Matrix4().setPosition(cc[0] * hh, cc[1] * hh, cc[2] * hh));
+        inst.setMatrixAt(idx, tmp);
+        inst.setColorAt(idx, col.setRGB(cc[0] > 0 ? 1 : 0.22, cc[1] > 0 ? 1 : 0.22, cc[2] > 0 ? 1 : 0.22));
+        idx++;
+      }
+      inst.instanceMatrix.needsUpdate = true;
+      if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
+      coverRoot.add(inst);
+    }
+
+    // face labels — one InstancedMesh per face, facing inward
+    if (showLabels && labelPlaneGeo) {
+      const faceMat4 = (axis: number, s: number): THREE.Matrix4 => {
+        const m = new THREE.Matrix4();
+        if (axis === 0) m.makeRotationY(s > 0 ? -Math.PI / 2 : Math.PI / 2);
+        else if (axis === 1) m.makeRotationX(s > 0 ? Math.PI / 2 : -Math.PI / 2);
+        else m.makeRotationY(s > 0 ? Math.PI : 0);
+        const t = [0, 0, 0]; t[axis] = s * (size / 2) * 0.97;
+        return m.setPosition(t[0], t[1], t[2]);
+      };
+      for (let axis = 0; axis < 3; axis++) for (const s of [-1, 1]) {
+        const inst = new THREE.InstancedMesh(labelPlaneGeo, labelMats[axis], N);
+        inst.frustumCulled = false;
+        const fm = faceMat4(axis, s);
+        for (let i = 0; i < N; i++) inst.setMatrixAt(i, tmp.multiplyMatrices(cells[i], fm));
+        inst.instanceMatrix.needsUpdate = true;
+        coverRoot.add(inst);
+      }
+    }
 
     // the solid ground slab under the start level (grounded modes only)
     if (groundedState) {
@@ -509,6 +576,8 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     setLook(id) { lookId = id; applyLook(id); },
     setFog(amount) { fogAmount = amount; applyLook(lookId); },
     setFloor(on) { showFloor = on; for (const o of floorObjs) o.visible = on; },
+    setLabels(on) { showLabels = on; buildCover(); },
+    setCorners(on) { showCorners = on; buildCover(); },
     recenter() {
       pos.set(0, 0, 0); bodyLinear.identity();
       cell.x = 0; cell.y = 0; cell.z = 0; hasStamp = false;
