@@ -59,11 +59,12 @@ you just can't **pass through** the floor by walking (vertical travel is the
 plane's job). Since the y-gluing here doesn't interact with x/z, the vertical
 direction is "look at, don't traverse."
 
-- **Grounded cover** (walk/drive): the BFS keeps the start level + every room
-  **above** it, but drops cells **below** (`c.y < −0.4·size`), so the bottom cell
-  is the bottom of the world. The floor you stand on is just the bottom cell's
-  own room floor — no separate floor plane/material (the glass-slab experiment
-  was reverted; it didn't read well). Look up → the hall of mirrors climbing away.
+- **Grounded movement** (walk/drive): the cover is the **same full lattice** as
+  fly — walking never changes what you see. The only grounded behavior is an
+  invisible **floor-height lock**: the up-coordinate is pinned to floor eye-height
+  each frame (in the carried frame, so the amphicosm flip is handled), so you
+  stay on the floor and don't drift vertically. No clipping, no separate floor
+  plane (both experiments looked funny and were reverted).
 - **Grounded movement**: horizontal only — the up-coordinate is locked to floor
   eye-height each frame (in the *carried* frame, so the amphicosm's flip is
   handled), so you never sink through the floor.

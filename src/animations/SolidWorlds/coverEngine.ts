@@ -53,7 +53,6 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   let showFloor = opts.showFloor;
   let showLabels = opts.showLabels;
   let showCorners = opts.showCorners;
-  let groundedState = false; // walk/drive get a solid ground floor; fly gets the full cover
 
   // ── pose (developing map) ──────────────────────────────────────────────
   const pos = new THREE.Vector3();
@@ -266,9 +265,6 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       const cur = queue.shift()!;
       c.setFromMatrixPosition(cur);
       if (c.length() > R) continue;
-      // ground floor: keep the start level + the rooms stacked ABOVE it (you look
-      // up at them), but no rooms below — the floor is solid, you don't pass down.
-      if (groundedState && c.y < -size * 0.4) continue;
       cells.push(cur);
       for (const gen of genList) {
         const cand = cur.clone().multiply(gen);
@@ -462,7 +458,6 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     // gravity-bound — it moves on the horizontal floor plane and settles back to
     // floor height when you're not actively rising.
     const grounded = input.mode !== 'fly';
-    if (grounded !== groundedState) { groundedState = grounded; buildCover(); } // clip below + add/remove the ground slab
     if (!grounded) {
       disp.set(0, 0, 0)
         .addScaledVector(fwd, input.fwd)
