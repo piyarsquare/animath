@@ -74,5 +74,5 @@ export interface SolidEngine {
   dispose(): void;
 }
 
-export const DEFAULT_ROOM_SIZE = 9;
-export const DEFAULT_COVER_DEPTH = 3;
+export const DEFAULT_ROOM_SIZE = 11;
+export const DEFAULT_COVER_DEPTH = 4;

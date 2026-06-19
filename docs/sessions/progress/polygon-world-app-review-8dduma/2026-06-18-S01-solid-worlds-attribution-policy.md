@@ -34,6 +34,29 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟢 code · 11:25 — Solid Worlds: fix the lost trail, instanced cover (depth 4–5), bigger rooms, further camera
+**Why:** Dan: "we lost the trail", + move the camera further out, bigger rooms,
+repeat size 4–5.
+
+- **Lost-trail bug found & fixed.** A headless probe showed `stampCalls = 1`: the
+  spacing (`> 0.3·size`) plus the wrap-reset meant footprints almost never
+  dropped, and the few that did were tiny floor decals. Spacing → `0.13·size`
+  (upper bound `0.6·size` still skips the wrap jump) and the decal is larger; the
+  trail now reads clearly when enabled (still off by default).
+- **Instanced cover (the real perf win).** `buildRoom` now yields reusable PARTS;
+  `buildCover` draws each solid part as **one `InstancedMesh`** over all cells and
+  merges each line part into **one `LineSegments`** — so draw calls stay ~constant
+  (~10) regardless of cell count. This is what makes **depth 4–5** viable
+  (previously ~12 draw calls × N cells). Cap raised to 1700; the trail is one
+  instanced draw too (its shared geometry's drawRange tiles + mirrors through
+  every cell).
+- **Bigger / further / deeper:** cover-depth slider max 3 → **5** (default **4**),
+  room-size max 14 → **24** (default 9 → **11**), camera-distance max 14 → **40**.
+
+![depth-4 instanced hall of mirrors, bigger rooms, trail off](assets/2026-06-18-S01-solid-worlds-depth4-instanced.png)
+
+![the restored flat footprint trail behind the airplane](assets/2026-06-18-S01-solid-worlds-trail-restored.png)
+
 ### 🟢 code · 04:37 — Solid Worlds: trail revert + off-by-default, the plane flies, carried-frame gravity
 **Why:** Dan's three corrections.
 

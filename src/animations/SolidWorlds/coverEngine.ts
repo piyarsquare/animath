@@ -94,13 +94,8 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   const trailMat = track(new THREE.MeshBasicMaterial({
     map: footTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide, depthWrite: true,
   }));
-  const trailMesh = new THREE.Mesh(trailGeo, trailMat);
-  // The geometry is preallocated at the origin with drawRange 0, so Three caches
-  // a zero-radius bounding sphere before any footprint is written and buffer
-  // writes never invalidate it — a per-cell clone whose cell origin is off-screen
-  // would then be wrongly culled while its footprints are still visible. Disable
-  // frustum culling on the trail (clone() copies the flag to every cover cell).
-  trailMesh.frustumCulled = false;
+  // Drawn instanced (one InstancedMesh over all cover cells, in buildCover) so the
+  // trail tiles + mirrors through every deck-translate in a single draw call.
   let trailN = 0;
   let trailOn = false;
   const lastStamp = new THREE.Vector3();
@@ -113,7 +108,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       trailN--;
     }
     const i = trailN;
-    const aBack = -size * 0.05, aTip = size * 0.085, hw = size * 0.055, lift = size * 0.014;
+    const aBack = -size * 0.07, aTip = size * 0.12, hw = size * 0.075, lift = size * 0.02;
     // [along, left, u, v]; left=+hw ↔ u=0 (cyan) so a right-handed frame reads cyan-left
     const C: [number, number, number, number][] = [
       [aBack, -hw, 1, 0], [aTip, -hw, 1, 1], [aTip, hw, 0, 1],
@@ -133,83 +128,64 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     trailGeo.setDrawRange(0, trailN * VPER);
   }
 
-  // ── the fundamental room (decor), rebuilt when the size changes ──────────
-  let room = new THREE.Group();
+  // ── the fundamental room (decor) as reusable PARTS, rebuilt on size change ──
+  // Solid parts become one InstancedMesh each over the whole cover; line parts
+  // are merged into one LineSegments — so draw calls stay ~constant no matter how
+  // many cover cells (depth) we draw. Each part carries its local transform.
+  interface Part { geo: THREE.BufferGeometry; mat: THREE.Material; matrix: THREE.Matrix4; }
+  let meshParts: Part[] = [];
+  let lineParts: Part[] = [];
   const roomDisposables: { dispose: () => void }[] = [];
+  const localM = (x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) =>
+    new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rx, ry, rz)).setPosition(x, y, z);
 
   function buildRoom() {
     roomDisposables.forEach((d) => d.dispose());
     roomDisposables.length = 0;
-    room = new THREE.Group();
+    meshParts = []; lineParts = [];
     const h = size / 2;
     const std = (color: number) => {
       const m = new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.1, side: THREE.DoubleSide });
       roomDisposables.push(m); return m;
     };
+    const mesh = (geo: THREE.BufferGeometry, mat: THREE.Material, matrix: THREE.Matrix4) => {
+      roomDisposables.push(geo); meshParts.push({ geo, mat, matrix });
+    };
 
-    // cube edge frame
+    // cube edge frame (lines)
     const boxGeo = new THREE.BoxGeometry(size, size, size);
-    const edges = new THREE.EdgesGeometry(boxGeo);
-    boxGeo.dispose();
+    const edges = new THREE.EdgesGeometry(boxGeo); boxGeo.dispose();
     roomDisposables.push(edges);
-    const frameMat = new THREE.LineBasicMaterial({ color: 0x9fc0e0 });
-    roomDisposables.push(frameMat);
-    room.add(new THREE.LineSegments(edges, frameMat));
+    const frameMat = new THREE.LineBasicMaterial({ color: 0x9fc0e0 }); roomDisposables.push(frameMat);
+    lineParts.push({ geo: edges, mat: frameMat, matrix: new THREE.Matrix4() });
 
-    // floor: a clear horizontal reference plane (a landmark for moving in 3D —
-    // there is no global "down", but a plane keeps you oriented). A faint solid
-    // slab you can see through, topped by a bright grid.
-    const floorGeo = new THREE.PlaneGeometry(size, size);
-    roomDisposables.push(floorGeo);
-    const floorMat = new THREE.MeshBasicMaterial({
-      color: 0x2a3c54, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false,
-    });
+    // floor: a see-through reference plane (a landmark for moving in 3D)
+    const floorMat = new THREE.MeshBasicMaterial({ color: 0x2a3c54, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
     roomDisposables.push(floorMat);
-    const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2; floor.position.y = -h;
-    room.add(floor);
-    const grid = new THREE.GridHelper(size, 8, 0x9fc4ec, 0x53708f);
-    grid.position.y = -h + 0.02;
-    roomDisposables.push(grid.geometry, grid.material as THREE.Material);
-    room.add(grid);
+    mesh(new THREE.PlaneGeometry(size, size), floorMat, localM(0, -h, 0, -Math.PI / 2));
+
+    // floor grid (lines), built by hand so it merges cleanly
+    const gp: number[] = []; const n = 8, step = size / n;
+    for (let i = 0; i <= n; i++) { const t = -h + i * step; gp.push(-h, 0, t, h, 0, t, t, 0, -h, t, 0, h); }
+    const gridGeo = new THREE.BufferGeometry();
+    gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3));
+    roomDisposables.push(gridGeo);
+    const gridMat = new THREE.LineBasicMaterial({ color: 0x6f93b8 }); roomDisposables.push(gridMat);
+    lineParts.push({ geo: gridGeo, mat: gridMat, matrix: localM(0, -h + 0.02, 0) });
 
     // asymmetric landmark props, so a copy is recognizable — and its mirror obvious
-    const pillarGeo = new THREE.CylinderGeometry(size * 0.04, size * 0.05, size * 0.42, 14);
-    roomDisposables.push(pillarGeo);
-    const pillar = new THREE.Mesh(pillarGeo, std(0xffcf5a));
-    pillar.position.set(h * 0.55, -h + size * 0.21, h * 0.42);
-    room.add(pillar);
-
-    const barGeo = new THREE.BoxGeometry(size * 0.34, size * 0.06, size * 0.06);
-    const postGeo = new THREE.BoxGeometry(size * 0.06, size * 0.28, size * 0.06);
-    roomDisposables.push(barGeo, postGeo);
+    mesh(new THREE.CylinderGeometry(size * 0.04, size * 0.05, size * 0.42, 14), std(0xffcf5a), localM(h * 0.55, -h + size * 0.21, h * 0.42));
     const lMat = std(0x46c8b0);
-    const lUp = new THREE.Mesh(postGeo, lMat); lUp.position.set(-h * 0.5, -h + size * 0.14, -h * 0.4);
-    const lFoot = new THREE.Mesh(barGeo, lMat); lFoot.position.set(-h * 0.5 + size * 0.14, -h + size * 0.03, -h * 0.4);
-    room.add(lUp, lFoot);
-
-    const ballGeo = new THREE.SphereGeometry(size * 0.09, 18, 14);
-    roomDisposables.push(ballGeo);
-    const ball = new THREE.Mesh(ballGeo, std(0xff6aa0));
-    ball.position.set(h * 0.22, -h + size * 0.1, -h * 0.62);
-    room.add(ball);
+    mesh(new THREE.BoxGeometry(size * 0.06, size * 0.28, size * 0.06), lMat, localM(-h * 0.5, -h + size * 0.14, -h * 0.4));
+    mesh(new THREE.BoxGeometry(size * 0.34, size * 0.06, size * 0.06), lMat, localM(-h * 0.5 + size * 0.14, -h + size * 0.03, -h * 0.4));
+    mesh(new THREE.SphereGeometry(size * 0.09, 18, 14), std(0xff6aa0), localM(h * 0.22, -h + size * 0.1, -h * 0.62));
 
     // the opaque "HELLO" sign — reads forwards here, mirror-reversed once you
     // walk an orientation-reversing loop (the conversation's headline case)
-    const postG = new THREE.CylinderGeometry(size * 0.012, size * 0.012, size * 0.34, 10);
-    roomDisposables.push(postG);
-    const sign = new THREE.Mesh(postG, std(0x9a9aa4));
-    sign.position.set(0, -h + size * 0.17, -h * 0.5);
-    room.add(sign);
-    const plaqueGeo = new THREE.PlaneGeometry(size * 0.34, size * 0.17);
-    roomDisposables.push(plaqueGeo);
-    const signTex = signTexture('HELLO');
-    roomDisposables.push(signTex);
-    const plaqueMat = new THREE.MeshBasicMaterial({ map: signTex, side: THREE.DoubleSide });
-    roomDisposables.push(plaqueMat);
-    const plaque = new THREE.Mesh(plaqueGeo, plaqueMat);
-    plaque.position.set(0, -h + size * 0.38, -h * 0.5);
-    room.add(plaque);
+    mesh(new THREE.CylinderGeometry(size * 0.012, size * 0.012, size * 0.34, 10), std(0x9a9aa4), localM(0, -h + size * 0.17, -h * 0.5));
+    const signTex = signTexture('HELLO'); roomDisposables.push(signTex);
+    const plaqueMat = new THREE.MeshBasicMaterial({ map: signTex, side: THREE.DoubleSide }); roomDisposables.push(plaqueMat);
+    mesh(new THREE.PlaneGeometry(size * 0.34, size * 0.17), plaqueMat, localM(0, -h + size * 0.38, -h * 0.5));
   }
 
   // ── deck generators + the cover shell ────────────────────────────────────
@@ -229,36 +205,71 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
 
   const coverRoot = new THREE.Group();
   scene.add(coverRoot);
+  const coverDisposables: THREE.BufferGeometry[] = []; // merged line geos, per rebuild
   function buildCover() {
     while (coverRoot.children.length) coverRoot.remove(coverRoot.children[0]);
+    coverDisposables.forEach((g) => g.dispose()); coverDisposables.length = 0;
+
+    // BFS the deck group out to a radius; dedupe by matrix key (works for the
+    // non-abelian turn-space / amphicosm groups).
     const genList: THREE.Matrix4[] = [];
     for (const axis of AXES) genList.push(gens[axis].g, gens[axis].gInv);
-    const R = (depth + 0.55) * size, cap = 400;
+    const R = (depth + 0.55) * size, cap = 1700;
     const seen = new Set<string>();
     const key = (m: THREE.Matrix4) => m.elements.map((e) => Math.round(e * 1000)).join(',');
-    const out: THREE.Matrix4[] = [];
+    const cells: THREE.Matrix4[] = [];
     const queue: THREE.Matrix4[] = [new THREE.Matrix4()];
     seen.add(key(queue[0]));
     const c = new THREE.Vector3();
-    while (queue.length && out.length < cap) {
+    while (queue.length && cells.length < cap) {
       const cur = queue.shift()!;
       c.setFromMatrixPosition(cur);
       if (c.length() > R) continue;
-      out.push(cur);
+      cells.push(cur);
       for (const gen of genList) {
         const cand = cur.clone().multiply(gen);
         const k = key(cand);
         if (!seen.has(k)) { seen.add(k); queue.push(cand); }
       }
     }
-    for (const m of out) {
-      const cellGroup = new THREE.Group();
-      cellGroup.matrixAutoUpdate = false;
-      cellGroup.matrix.copy(m);
-      cellGroup.add(room.clone(true));
-      cellGroup.add(trailMesh.clone());
-      coverRoot.add(cellGroup);
+    const N = cells.length;
+    const tmp = new THREE.Matrix4();
+
+    // each solid decor part → one InstancedMesh over all cells (one draw call)
+    for (const part of meshParts) {
+      const inst = new THREE.InstancedMesh(part.geo, part.mat, N);
+      inst.frustumCulled = false;
+      for (let i = 0; i < N; i++) inst.setMatrixAt(i, tmp.multiplyMatrices(cells[i], part.matrix));
+      inst.instanceMatrix.needsUpdate = true;
+      coverRoot.add(inst);
     }
+    // each line part → one merged LineSegments across all cells
+    const v = new THREE.Vector3();
+    for (const part of lineParts) {
+      const src = part.geo.getAttribute('position');
+      const arr = new Float32Array(src.count * 3 * N);
+      let o = 0;
+      for (let i = 0; i < N; i++) {
+        tmp.multiplyMatrices(cells[i], part.matrix);
+        for (let j = 0; j < src.count; j++) {
+          v.fromBufferAttribute(src as THREE.BufferAttribute, j).applyMatrix4(tmp);
+          arr[o++] = v.x; arr[o++] = v.y; arr[o++] = v.z;
+        }
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
+      coverDisposables.push(g);
+      const ls = new THREE.LineSegments(g, part.mat); ls.frustumCulled = false;
+      coverRoot.add(ls);
+    }
+    // the footprint trail → one InstancedMesh; the shared geometry's drawRange
+    // (updated as you walk) draws the same stamps tiled + mirrored through every
+    // cell. frustumCulled off — the preallocated geometry has a stale zero bound.
+    const trailInst = new THREE.InstancedMesh(trailGeo, trailMat, N);
+    trailInst.frustumCulled = false;
+    for (let i = 0; i < N; i++) trailInst.setMatrixAt(i, cells[i]);
+    trailInst.instanceMatrix.needsUpdate = true;
+    coverRoot.add(trailInst);
   }
 
   // ── third-person avatars (fundamental cell only), one per travel mode ─────
@@ -409,7 +420,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     else if (!hasStamp) { lastStamp.copy(pos); hasStamp = true; }
     else {
       const d = pos.distanceTo(lastStamp);
-      if (d > size * 0.3 && d < size * 0.95) {
+      if (d > size * 0.13 && d < size * 0.6) { // dense enough to read as a trail; upper bound skips the wrap jump
         const upS = new THREE.Vector3(0, 1, 0).applyMatrix4(bodyLinear).normalize();
         const fwdS = fwd.clone().addScaledVector(upS, -fwd.dot(upS));
         if (fwdS.lengthSq() < 1e-4) fwdS.copy(right); // looking straight up/down
@@ -488,9 +499,9 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     dispose() {
       scene.remove(coverRoot, avatars.fly, avatars.walk, avatars.drive, ambient, hemi, keyLight, fillLight);
       while (coverRoot.children.length) coverRoot.remove(coverRoot.children[0]);
+      coverDisposables.forEach((g) => g.dispose());
       roomDisposables.forEach((d) => d.dispose());
       disposables.forEach((d) => d.dispose());
-      trailMesh.geometry.dispose();
     },
   };
 }

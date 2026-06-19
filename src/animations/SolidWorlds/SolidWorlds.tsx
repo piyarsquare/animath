@@ -18,7 +18,7 @@ import explainerText from './EXPLAINER.md?raw';
 
 const LOOK_SENS = 0.0035;
 const MAX_PITCH = 1.3;
-const CAM_MIN = 1.5, CAM_MAX = 14;
+const CAM_MIN = 1.5, CAM_MAX = 40;
 const clampCam = (d: number) => Math.max(CAM_MIN, Math.min(CAM_MAX, d));
 
 type MoveKey = 'fwd' | 'back' | 'left' | 'right' | 'up' | 'down';
@@ -237,8 +237,8 @@ export default function SolidWorlds() {
       {thirdPerson && (
         <Slider label="Camera distance" value={camDistance} min={CAM_MIN} max={CAM_MAX} step={0.5} onChange={setCamDistance} format={(v) => v.toFixed(1)} />
       )}
-      <Slider label="Cover depth" value={coverDepth} min={0} max={3} step={1} onChange={(v) => setCoverDepth(Math.round(v))} format={(v) => `${Math.round(v)} ${Math.round(v) === 1 ? 'ring' : 'rings'}`} />
-      <Slider label="Room size" value={roomSize} min={6} max={14} step={1} onChange={setRoomSize} format={(v) => `${Math.round(v)} m`} />
+      <Slider label="Cover depth" value={coverDepth} min={0} max={5} step={1} onChange={(v) => setCoverDepth(Math.round(v))} format={(v) => `${Math.round(v)} ${Math.round(v) === 1 ? 'ring' : 'rings'}`} />
+      <Slider label="Room size" value={roomSize} min={6} max={24} step={1} onChange={setRoomSize} format={(v) => `${Math.round(v)} m`} />
     </>
   );
 
