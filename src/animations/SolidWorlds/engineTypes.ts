@@ -1,0 +1,65 @@
+import * as THREE from 'three';
+import type { Axis } from './solidSchema';
+
+export interface EngineDeps3 {
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  renderer: THREE.WebGLRenderer;
+}
+
+export interface FrameInput3 {
+  dt: number;
+  fwd: number;     // −1..1 forward intent (fly along look)
+  strafe: number;  // −1..1
+  rise: number;    // −1..1 (Q/E) vertical fly
+  yaw: number;     // look azimuth (radians)
+  pitch: number;   // look elevation (radians)
+  moveSpeed: number;
+  thirdPerson: boolean;
+}
+
+/** The walker's chirality state — the headline readout. `loopSign` is the
+ *  handedness of the carried frame relative to the start (the value of w₁ along
+ *  the path walked so far): +1 returned identical, −1 returned mirror-reversed.
+ *  `perStepDet` is the determinant of the *continuous* developing step, which is
+ *  +1 the entire way — the engine's own proof that nothing local flipped; the
+ *  reversal is the loop's, not a point's. */
+export interface ChiralityState {
+  perStepDet: 1;
+  loopSign: 1 | -1;
+  /** Net signed crossings of each face-pairing (the cell you are in). */
+  crossings: Record<Axis, number>;
+}
+
+/** Where the walker is in the fundamental cube, for the mini-map. */
+export interface SolidMapState {
+  /** Position within the cube, each in −1..1 (+ = toward the +axis face). */
+  u: number;
+  v: number;
+  w: number;
+  cell: Record<Axis, number>;
+  mirrored: boolean;
+}
+
+/** The one engine the host drives — geometry-agnostic; owns the cover model.
+ *  The 3D successor to PolygonEngine. */
+export interface SolidEngine {
+  frame(input: FrameInput3): void;
+  clearTrail(): void;
+  /** How many rings of deck-translates to draw around the camera. */
+  setCoverDepth(n: number): void;
+  /** Fundamental cube edge length (world units). */
+  setRoomSize(size: number): void;
+  /** Third-person camera distance from the walker. */
+  setCameraDistance(d: number): void;
+  /** Switch the scene atmosphere (see looks.ts). */
+  setLook(id: string): void;
+  /** Return the walker to the cube center, frame upright, holonomy cleared. */
+  recenter(): void;
+  getChirality(): ChiralityState | null;
+  getMapState(): SolidMapState | null;
+  dispose(): void;
+}
+
+export const DEFAULT_ROOM_SIZE = 9;
+export const DEFAULT_COVER_DEPTH = 1;

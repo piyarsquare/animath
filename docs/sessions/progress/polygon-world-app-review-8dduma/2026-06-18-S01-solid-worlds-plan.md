@@ -5,21 +5,25 @@ date: 2026-06-18
 title: "Plan: Solid Worlds — walking closed 3-manifolds (successor to Polygon Worlds)"
 branch: claude/polygon-world-app-review-8dduma
 slug: polygon-world-app-review-8dduma
-status: proposed
+status: in-progress
 build: passing
 followup: null
 pr: null
-app: polygon-worlds
-next: Start Tier 1 — solidSchema.ts + cube face-pairings for the 3-torus and one amphicosm, κ=0, cover render + footstep chirality probe.
+app: solid-worlds
+next: Tier 2 — full platycosm catalog, vertex-link manifold check + H₁ (Smith normal form), Schlegel mini-map; plus a 3D walk-the-loop chirality test (the flagged harness gap).
 ---
 
 # Plan: Solid Worlds — walking closed 3-manifolds
 
-A forward-looking implementation plan — **the build has not started.** It
-distills the uploaded `threemanifoldsplan.md` and this session's design
-discussion into a concrete, ordered, file-level sequence grounded in the *actual*
-`PolygonWorlds` codebase (not the plan's idealized references), so a future
-session can pick it up cold.
+A forward-looking implementation plan grounded in the *actual* `PolygonWorlds`
+codebase (not the plan's idealized references), so a future session can pick it
+up cold.
+
+> [!NOTE]
+> **Tier 1 is built** (S01, 2026-06-18) — `src/animations/SolidWorlds/`: flat
+> 3-torus + amphicosm, the developing-map cover engine, the chiral footprint
+> trail, and the chirality HUD. Route `#/solid-worlds`, build + lint green. Tiers
+> 2–4 below remain. See the S01 progress report for the build notes.
 
 > [!NOTE]
 > This plan supersedes the uploaded draft where the draft and the real code

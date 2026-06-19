@@ -11,7 +11,7 @@ followup: null
 pr: null
 app: docs, polygon-worlds
 signals: needs-dan
-next: Commit + push the attribution-policy changes; then return to the Solid Worlds plan (Tier 1 build vs. a kind:plan report).
+next: Tier 2 of Solid Worlds — full platycosm catalog, vertex-link manifold check + H₁, Schlegel mini-map, and an automated walk-the-loop chirality test.
 ---
 
 # Solid Worlds review + AI-collaboration attribution policy
@@ -33,6 +33,51 @@ this session is generalizing into a standing policy). Latest handoff overall is
 `gallery-app-ordering` (2026-06-15), unrelated to this focus.
 
 ## Working notes
+
+### 🟡 milestone · 02:58 — Solid Worlds Tier 1 built, registered, and renders (build + lint green)
+**Why:** Author asked to "build out the plan." Tier 1 is the shippable entry —
+walk the flat cube worlds and exercise the genuine 3D mirror-flip.
+
+New app `src/animations/SolidWorlds/` — a self-contained first-person walker for
+closed 3-manifolds, the 3D successor to Polygon Worlds:
+
+- **`solidSchema.ts`** — pure (Three-free) cube face-pairing algebra; computes
+  orientability from the pairing determinants (H₁ / manifold name carried as
+  curated catalog facts, per the honesty rule). **`worlds.ts`** — the Tier-1
+  catalog: 3-torus + amphicosm (Klein × S¹).
+- **`coverEngine.ts`** — the developing-map cover engine. The walker carries a
+  body frame; crossing a glide-reflection face premultiplies it by a det −1 linear
+  part, so the camera world matrix goes **left-handed** and the whole view renders
+  mirror-reversed (DoubleSide materials throughout so the reflected view doesn't
+  cull). Seamless universal-cover tiling via a BFS over the deck generators
+  (works for the non-abelian amphicosm group), shared room + trail geometry cloned
+  per cell. Chiral footprint trail (F/arrow/cyan-magenta) + an opaque HELLO sign.
+- **`SolidWorlds.tsx`** — Workspace integration (immersive, third/first-person
+  modes, looks, cover-depth/room-size, free-flight WASD+QE, drag-look, pinch-zoom)
+  + the **chirality HUD** (ORIGINAL / MIRRORED, per-axis loop counts) and a
+  readout panel. **`textures.ts`**, **`looks.ts`**, **`engineTypes.ts`**,
+  **`EXPLAINER.md`** (with the policy-mandated lineage block).
+- Registered: `index.tsx` route `#/solid-worlds`, `apps.ts` entry, `catalog.ts`
+  META (new `solid` preview kind in `previews.tsx` — a rotating cube-strip with a
+  chiral F pair), CLAUDE.md routing table + tree, README.md.
+
+**Verified headless** (`scripts/shoot.mjs`, SwiftShader): the 3-torus tiles the
+room in all directions with all signs reading forward (no loop flips it); the
+amphicosm cover shows genuinely reflected neighbor cells across the x-pairing. The
+first-person mirror is confirmed by construction — after one +x crossing
+`bodyLinear = diag(1,−1,1)`, det −1, HUD → MIRRORED. `npm run build` ✓ (4.39s),
+`eslint src/` 0 errors (60 baseline warnings, none new).
+
+![3-torus: one room repeating in all directions, signs all forward](assets/2026-06-18-S01-solid-worlds-3torus.png)
+
+![amphicosm: neighbor cells reflected across the x-pairing](assets/2026-06-18-S01-solid-worlds-amphicosm.png)
+
+> [!NOTE]
+> **Tier-1 scope honestly stated.** Flat (κ = 0) only; two worlds; the post-loop
+> first-person mirror is verified by the determinant logic, not yet by an
+> automated walk-the-loop test (the flagged 3D `trail-chirality` harness gap is
+> still open). Tiers 2–4 (full platycosm catalog, Schlegel mini-map, the 4×4
+> kernel + curved render, seam slider) remain as planned.
 
 ### 🟡 milestone · 00:07 — Solid Worlds written up as a `kind: plan` report
 **Why:** Author chose "write it up as a planned report first" (over starting the
