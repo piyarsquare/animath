@@ -34,6 +34,29 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟢 code · 03:45 — Solid Worlds: the infinite-mirror effect + 3D footprint arrows
+**Why:** Dan: fog too thick (couldn't see into neighbors — the hall-of-mirrors
+was lost), and the footprints needed thickness in a 3D world.
+
+- **Fog fixed:** the old `near = size·0.9` (8 units) was *closer than one room*
+  (9), so it hazed the first neighbor. Now tied to the cull radius
+  (`near = R·0.8`, `far = R·1.08`) so the corridor of rooms stays clear and only
+  the outermost shell fades into the sky. Default cover depth 2 → **3** (a 7×7×7
+  shell) for a real hall-of-mirrors corridor.
+- **3D footprint arrows:** replaced the flat decal (which vanished edge-on and
+  looked paper-thin in a 3-manifold) with a **solid raised tetra-arrow** —
+  vertex-colored (LEFT face cyan, RIGHT face magenta, back/underside dark), so it
+  reads from any angle and keeps its chirality (a mirrored walker / det < 0 cover
+  cell shows the opposite face). The trail is one vertex-colored
+  `MeshBasicMaterial` geometry, cloned per cover cell.
+
+![infinite-mirror corridor of rooms receding into the distance](assets/2026-06-18-S01-solid-worlds-infinite-mirror.png)
+
+> [!NOTE]
+> Cover depth 3 = up to 343 cells (~3k draw calls). It renders fine; the Cover
+> depth slider (0–3 rings) is the escape hatch for weaker machines. A future
+> perf pass could merge each room's decor into one vertex-colored mesh.
+
 ### 🟢 code · 03:36 — Solid Worlds: denser cover + the "you-are-here" cube mini-map (Schlegel-style)
 **Why:** Dan asked for more cubes receding into the distance, and for the next
 Tier-2 item (the polyhedron mini-map).

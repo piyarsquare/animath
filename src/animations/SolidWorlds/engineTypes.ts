@@ -68,4 +68,4 @@ export interface SolidEngine {
 }
 
 export const DEFAULT_ROOM_SIZE = 9;
-export const DEFAULT_COVER_DEPTH = 2;
+export const DEFAULT_COVER_DEPTH = 3;

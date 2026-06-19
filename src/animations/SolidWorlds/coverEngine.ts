@@ -4,7 +4,7 @@ import {
 } from './engineTypes';
 import { AXES, Axis, axisIndex, M3, SolidWorldSpec } from './solidSchema';
 import { findLook } from './looks';
-import { footprintTexture, signTexture } from './textures';
+import { signTexture } from './textures';
 
 /**
  * Solid Worlds — the flat (κ = 0) cover engine. The 3D port of Topology Walk's
@@ -34,8 +34,12 @@ function mat4From(m: M3, tx: number, ty: number, tz: number): THREE.Matrix4 {
   );
 }
 
-const TRAIL_CAP = 480;
-const VPER = 6;
+const TRAIL_CAP = 420;
+const VPER = 12; // 4 triangles per 3D arrow stamp
+
+const CY: [number, number, number] = [0.2, 0.84, 1];   // cyan — the print's left
+const MG: [number, number, number] = [1, 0.31, 0.64];  // magenta — its right
+const DK: [number, number, number] = [0.12, 0.13, 0.18]; // back & underside
 
 export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: Opts): SolidEngine {
   const { scene, camera, renderer } = deps;
@@ -64,7 +68,10 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     const L = findLook(id);
     const R = (depth + 0.55) * size; // matches the cover render radius
     scene.background = new THREE.Color(L.sky);
-    scene.fog = new THREE.Fog(L.sky, size * 0.9, R * 1.12); // distant cubes fade into the sky at the cull boundary
+    // Light fog: keep the hall-of-mirrors clear most of the way, fading only the
+    // outermost shell so the hard cull boundary doesn't pop. (near must be well
+    // beyond one room, or the first neighbor hazes over.)
+    scene.fog = new THREE.Fog(L.sky, R * 0.8, R * 1.08);
     renderer.toneMappingExposure = L.exposure;
     ambient.intensity = L.ambient;
     hemi.color.setHex(L.hemiSky); hemi.groundColor.setHex(L.hemiGround); hemi.intensity = L.hemi;
@@ -77,16 +84,18 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   const track = <T extends { dispose: () => void }>(o: T): T => { disposables.push(o); return o; };
 
   // ── the footprint trail (stored once, in fundamental coordinates) ────────
+  // Each stamp is a small SOLID 3D arrow (a raised tetra-arrow) so it reads from
+  // any angle and never vanishes edge-on: a peak raised along the frame normal,
+  // its LEFT face cyan and its RIGHT face magenta — the print's chirality. A
+  // stamp written through a det < 0 transform (or viewed by a mirrored walker)
+  // swaps which face you see, exactly as a real stamp through a real reflection.
   const trailPos = new Float32Array(TRAIL_CAP * VPER * 3);
-  const trailUv = new Float32Array(TRAIL_CAP * VPER * 2);
+  const trailCol = new Float32Array(TRAIL_CAP * VPER * 3);
   const trailGeo = track(new THREE.BufferGeometry());
   trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
-  trailGeo.setAttribute('uv', new THREE.BufferAttribute(trailUv, 2));
+  trailGeo.setAttribute('color', new THREE.BufferAttribute(trailCol, 3));
   trailGeo.setDrawRange(0, 0);
-  const footTex = track(footprintTexture());
-  const trailMat = track(new THREE.MeshBasicMaterial({
-    map: footTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide, depthWrite: true,
-  }));
+  const trailMat = track(new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
   const trailMesh = new THREE.Mesh(trailGeo, trailMat);
   let trailN = 0;
   const lastStamp = new THREE.Vector3();
@@ -95,27 +104,35 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   function writeStamp(p: THREE.Vector3, fwd: THREE.Vector3, left: THREE.Vector3, nrm: THREE.Vector3) {
     if (trailN >= TRAIL_CAP) {
       trailPos.copyWithin(0, VPER * 3, trailN * VPER * 3);
-      trailUv.copyWithin(0, VPER * 2, trailN * VPER * 2);
+      trailCol.copyWithin(0, VPER * 3, trailN * VPER * 3);
       trailN--;
     }
-    const i = trailN;
-    const aBack = -size * 0.045, aTip = size * 0.075, hw = size * 0.05, lift = size * 0.012;
-    // [along, left, u, v]; left=+hw ↔ u=0 (cyan) so a right-handed frame reads cyan-left
-    const C: [number, number, number, number][] = [
-      [aBack, -hw, 1, 0], [aTip, -hw, 1, 1], [aTip, hw, 0, 1],
-      [aBack, -hw, 1, 0], [aTip, hw, 0, 1], [aBack, hw, 0, 0],
+    const aTip = size * 0.1, aBack = -size * 0.06, hw = size * 0.055, th = size * 0.06;
+    // corner points in the (forward, left, normal) frame
+    const P = (along: number, lt: number, up: number): [number, number, number] => [
+      p.x + along * fwd.x + lt * left.x + up * nrm.x,
+      p.y + along * fwd.y + lt * left.y + up * nrm.y,
+      p.z + along * fwd.z + lt * left.z + up * nrm.z,
     ];
-    let op = i * VPER * 3, ou = i * VPER * 2;
-    for (const [along, lt, u, v] of C) {
-      trailPos[op] = p.x + along * fwd.x + lt * left.x + lift * nrm.x;
-      trailPos[op + 1] = p.y + along * fwd.y + lt * left.y + lift * nrm.y;
-      trailPos[op + 2] = p.z + along * fwd.z + lt * left.z + lift * nrm.z;
-      trailUv[ou] = u; trailUv[ou + 1] = v;
-      op += 3; ou += 2;
+    const tip = P(aTip, 0, 0), bl = P(aBack, hw, 0), br = P(aBack, -hw, 0), pk = P((aTip + aBack) / 2, 0, th);
+    // 4 faces: left (cyan), right (magenta), back & bottom (dark)
+    const tris: [[number, number, number], [number, number, number], [number, number, number], [number, number, number]][] = [
+      [tip, bl, pk, CY],
+      [tip, pk, br, MG],
+      [bl, br, pk, DK],
+      [tip, br, bl, DK],
+    ];
+    let o = trailN * VPER * 3;
+    for (const [a, b, c, col] of tris) {
+      for (const v of [a, b, c]) {
+        trailPos[o] = v[0]; trailPos[o + 1] = v[1]; trailPos[o + 2] = v[2];
+        trailCol[o] = col[0]; trailCol[o + 1] = col[1]; trailCol[o + 2] = col[2];
+        o += 3;
+      }
     }
     trailN++;
     (trailGeo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
-    (trailGeo.getAttribute('uv') as THREE.BufferAttribute).needsUpdate = true;
+    (trailGeo.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
     trailGeo.setDrawRange(0, trailN * VPER);
   }
 
