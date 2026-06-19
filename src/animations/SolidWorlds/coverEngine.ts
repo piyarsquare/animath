@@ -231,7 +231,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     labelPlaneGeo = new THREE.PlaneGeometry(U * 0.45, U * 0.45); roomDisposables.push(labelPlaneGeo);
 
     // corner-marker resources: one small ball, colored per corner via instanceColor
-    cornerGeo = new THREE.SphereGeometry(U * 0.05, 10, 8); roomDisposables.push(cornerGeo);
+    cornerGeo = new THREE.SphereGeometry(U * 0.07, 12, 9); roomDisposables.push(cornerGeo);
     cornerMat = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.1 }); roomDisposables.push(cornerMat);
   }
 
@@ -325,29 +325,25 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     trailInst.instanceMatrix.needsUpdate = true;
     coverRoot.add(trailInst);
 
-    // corner markers — at each of the 8 cube corners, just inside the room, a
-    // little cluster of 4 colored balls in a chiral tetrahedron (R·G·B·white).
-    // A 4-color tetrad has no mirror symmetry, so when you cross a wall the
-    // gluing's rotation OR reflection is read straight off how the colors land.
+    // corner markers — one ball per cube corner, set just INSIDE the corner and
+    // colored by its sign bits (the RGB-cube scheme: 8 distinct colors). Because
+    // cells tile and meet at shared corners, looking into a corner shows your
+    // ball plus the balls of every cell joined there — so the colors clustered
+    // at a vertex read off exactly which corners the gluing identifies.
     if (showCorners && cornerGeo && cornerMat) {
-      const TETRA: [number, number, number][] = [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]];
-      const TCOL: [number, number, number][] = [[1, 0.25, 0.25], [0.3, 1, 0.35], [0.4, 0.55, 1], [1, 1, 1]];
-      const hh = (size / 2) * 0.82;        // cluster centers, just inside the walls
-      const r = U * 0.16 / Math.sqrt(3);   // tetrad radius (fixed, furniture-scaled)
-      const inst = new THREE.InstancedMesh(cornerGeo, cornerMat, N * 8 * 4);
+      const inset = U * 0.45;             // fixed inward offset from the corner
+      const inst = new THREE.InstancedMesh(cornerGeo, cornerMat, N * 8);
       inst.frustumCulled = false;
       const col = new THREE.Color();
       const off = new THREE.Matrix4();
       let idx = 0;
       for (let i = 0; i < N; i++) {
         for (let b = 0; b < 8; b++) {
-          const cx = ((b & 1) ? 1 : -1) * hh, cy = ((b & 2) ? 1 : -1) * hh, cz = ((b & 4) ? 1 : -1) * hh;
-          for (let k = 0; k < 4; k++) {
-            off.setPosition(cx + TETRA[k][0] * r, cy + TETRA[k][1] * r, cz + TETRA[k][2] * r);
-            inst.setMatrixAt(idx, tmp.multiplyMatrices(cells[i], off));
-            inst.setColorAt(idx, col.setRGB(TCOL[k][0], TCOL[k][1], TCOL[k][2]));
-            idx++;
-          }
+          const sx = (b & 1) ? 1 : -1, sy = (b & 2) ? 1 : -1, sz = (b & 4) ? 1 : -1;
+          off.setPosition(sx * (size / 2 - inset), sy * (size / 2 - inset), sz * (size / 2 - inset));
+          inst.setMatrixAt(idx, tmp.multiplyMatrices(cells[i], off));
+          inst.setColorAt(idx, col.setRGB(sx > 0 ? 1 : 0.22, sy > 0 ? 1 : 0.22, sz > 0 ? 1 : 0.22));
+          idx++;
         }
       }
       inst.instanceMatrix.needsUpdate = true;

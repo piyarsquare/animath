@@ -40,10 +40,12 @@ this session is generalizing into a standing policy). Latest handoff overall is
 - **Face labels:** per-face axis letter (X/Y/Z) with a glyph + color for what its
   pairing does (↔ straight · ↻ turn · ⇋ flip), facing inward. One InstancedMesh
   per face (6), instanced over the cover. `faceLabelTexture` in textures.ts.
-- **Corner markers:** at each of the 8 cube corners, **just inside the room**, a
-  cluster of **4 colored balls** in a chiral tetrahedron (R·G·B·white). A 4-color
-  tetrad has no mirror symmetry, so crossing a wall reveals the gluing's rotation
-  *or* reflection straight off how the colors land. One InstancedMesh, N×8×4.
+- **Corner markers:** one ball **just inside** each of the 8 cube corners,
+  colored by its sign bits (the RGB-cube scheme → 8 distinct colors). Because
+  cells tile and meet at shared corners, looking into a corner shows your ball
+  *plus* the balls of every cell joined there — so the colors clustered at a
+  vertex read off exactly which corners the gluing identifies (all 8 converge at
+  a 3-torus vertex; a twist permutes them). One InstancedMesh, N×8.
 - Both default **off** (clean default), toggled by **Face labels** / **Corner
   markers** checkboxes; persisted.
 
