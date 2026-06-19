@@ -62,8 +62,9 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
 
   function applyLook(id: string) {
     const L = findLook(id);
+    const R = (depth + 0.55) * size; // matches the cover render radius
     scene.background = new THREE.Color(L.sky);
-    scene.fog = new THREE.Fog(L.sky, size * 1.2, size * (depth + 2.6));
+    scene.fog = new THREE.Fog(L.sky, size * 0.9, R * 1.12); // distant cubes fade into the sky at the cull boundary
     renderer.toneMappingExposure = L.exposure;
     ambient.intensity = L.ambient;
     hemi.color.setHex(L.hemiSky); hemi.groundColor.setHex(L.hemiGround); hemi.intensity = L.hemi;
@@ -207,7 +208,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     while (coverRoot.children.length) coverRoot.remove(coverRoot.children[0]);
     const genList: THREE.Matrix4[] = [];
     for (const axis of AXES) genList.push(gens[axis].g, gens[axis].gInv);
-    const R = (depth + 0.55) * size, cap = 220;
+    const R = (depth + 0.55) * size, cap = 400;
     const seen = new Set<string>();
     const key = (m: THREE.Matrix4) => m.elements.map((e) => Math.round(e * 1000)).join(',');
     const out: THREE.Matrix4[] = [];
@@ -374,6 +375,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     getMapState(): SolidMapState {
       return {
         u: pos.x / h(), v: pos.y / h(), w: pos.z / h(),
+        fwd: [fwd.x, fwd.y, fwd.z],
         cell: { x: cell.x, y: cell.y, z: cell.z },
         mirrored: bodyLinear.determinant() < 0,
       };

@@ -34,6 +34,23 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟢 code · 03:36 — Solid Worlds: denser cover + the "you-are-here" cube mini-map (Schlegel-style)
+**Why:** Dan asked for more cubes receding into the distance, and for the next
+Tier-2 item (the polyhedron mini-map).
+
+- **More cubes:** default cover depth 1 → 2 (a 5×5×5 shell), BFS cap 220 → 400,
+  slider max 2 → 3 ("rings"). Fog now tied to the render radius
+  (`far = (depth+0.55)·size·1.12`) so distant cubes **fade into the sky** at the
+  cull boundary instead of popping.
+- **Mini-map** (`SolidMiniMap` in `SolidWorlds.tsx`): an isometric wireframe of
+  the fundamental cube with the walker as a dot + heading arrow. Each axis's
+  edges are colored by what its pairing *does* — translation (blue) · rotation
+  (amber) · glide-reflection (pink) — so the gluing is legible at a glance; the
+  dot turns **pink when you're mirror-reversed**. Engine `getMapState` now also
+  returns the forward direction in fundamental coordinates.
+
+![denser cover receding into the distance + the cube mini-map](assets/2026-06-18-S01-solid-worlds-cover-minimap.png)
+
 ### 🟡 milestone · 03:22 — Solid Worlds Tier 2: H₁ computed from the chain complex (Smith normal form), cross-checked
 **Why:** The plan's central schema deliverable — turn the catalog's H₁ from
 asserted facts into *computed, verified* invariants ("validate invariants, never

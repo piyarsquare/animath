@@ -41,6 +41,8 @@ export interface SolidMapState {
   u: number;
   v: number;
   w: number;
+  /** Unit forward direction in fundamental-cube coordinates (for the heading). */
+  fwd: [number, number, number];
   cell: Record<Axis, number>;
   mirrored: boolean;
 }
@@ -66,4 +68,4 @@ export interface SolidEngine {
 }
 
 export const DEFAULT_ROOM_SIZE = 9;
-export const DEFAULT_COVER_DEPTH = 1;
+export const DEFAULT_COVER_DEPTH = 2;
