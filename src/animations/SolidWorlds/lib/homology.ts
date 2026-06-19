@@ -31,11 +31,13 @@ const applyM3 = (m: M3, v: V3): V3 => [
   m[6] * v[0] + m[7] * v[1] + m[8] * v[2],
 ];
 
-/** g(v) = M·v + t, with t the edge-length translation along the pairing's axis. */
+/** g(v) = M·v + t, with t the edge-length step along the pairing's axis plus the
+ *  optional off-axis `offset` (also in edge-length units — a screw component). */
 function pairingMap(p: Pairing, v: V3): V3 {
   const w = applyM3(p.linear, v);
   const i = axisIndex(p.axis);
   w[i] += EDGE_LEN;
+  if (p.offset) { w[0] += p.offset[0] * EDGE_LEN; w[1] += p.offset[1] * EDGE_LEN; w[2] += p.offset[2] * EDGE_LEN; }
   return w;
 }
 

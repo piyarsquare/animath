@@ -34,6 +34,27 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟡 code · 13:25 — Solid Worlds: `Pairing.offset` plumbing (screws now walkable; HW homology blocked)
+**Why:** Dan: "add pairing.offset" — to unlock the screw platycosms (Hantzsche–Wendt
++ the amphidicosms).
+
+- **Plumbing done:** `Pairing.offset?: [x,y,z]` (cube-edge units) — an extra
+  translation beyond the full step along the axis, i.e. the off-axis screw
+  component. Wired through `solidSchema.ts`, `coverEngine.ts` (`buildGenerators`),
+  and `homology.ts` (`pairingMap`). Existing worlds set no offset → unchanged,
+  14/14 tests pass. The render/walk engine handles offsets fully (it just composes
+  isometries and tiles the deck group), so screw worlds are **walkable**.
+- **Blocked: HW invariants.** Derived a torsion-free ℤ/2×ℤ/2 screw set (half-turns
+  about x/y/z with cyclic −1 offsets) — almost certainly HW. But `computeHomology`
+  **crashes** on it: a screw's perpendicular offset *staggers* the faces, so the
+  cube no longer pairs opposite-faces as whole squares, and the sign-fold vertex
+  identification (and `EDGE_INDEX` lookup) breaks. **HW is not added to the
+  catalog** until the homology is correct (won't ship a wrong/crashing H₁).
+- **Next:** rework `homology.ts` to a cellular method valid for screws — a **2×
+  cube subdivision** (half-offset gluings become cellular) or **abelianizing the
+  Bieberbach group** (H₁ = Γᵃᵇ). Then add HW + amphidicosms with computed,
+  cross-checked invariants. Its own focused pass.
+
 ### 🟢 code · 12:55 — Solid Worlds: "Show seams" toggle (hide the grid framework)
 **Why:** Dan wanted to drop the cube-edge wireframe so the tiling reads as a
 continuous world. New **Show seams (cell edges)** checkbox (default on); off

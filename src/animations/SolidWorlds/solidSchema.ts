@@ -74,10 +74,16 @@ export function detM3(m: M3): number {
 /**
  * One face-pairing: the +`axis` face glued to the −`axis` face by linear part
  * `linear` (orthogonal, det ±1) then translation by the cube edge along +axis.
+ *
+ * `offset` adds an extra translation (in cube-edge units) *beyond* that full
+ * step along the axis — the off-axis component that turns a plain rotation into
+ * a **screw** (and lets the Hantzsche–Wendt half-turn screws be expressed).
+ * Defaults to none.
  */
 export interface Pairing {
   axis: Axis;
   linear: M3;
+  offset?: readonly [number, number, number];
 }
 
 /** Sign of a pairing's linear part: +1 proper (translation/rotation), −1 a

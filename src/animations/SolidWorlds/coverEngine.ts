@@ -292,7 +292,8 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   function buildGenerators() {
     for (const axis of AXES) {
       const p = spec.pairings.find((q) => q.axis === axis)!;
-      const t = [0, 0, 0]; t[axisIndex(axis)] = size;
+      const o = p.offset ?? [0, 0, 0];
+      const t = [o[0] * size, o[1] * size, o[2] * size]; t[axisIndex(axis)] += size;
       const g = mat4From(p.linear, t[0], t[1], t[2]);
       const gLin = mat4From(p.linear, 0, 0, 0);
       gens[axis] = { g, gInv: g.clone().invert(), gLin, gLinInv: gLin.clone().invert() };
