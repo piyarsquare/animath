@@ -29,6 +29,27 @@ export function reflect(axis: Axis): M3 {
   return [i === 0 ? -1 : 1, 0, 0, 0, i === 1 ? -1 : 1, 0, 0, 0, i === 2 ? -1 : 1];
 }
 
+/** Rotation by `deg` degrees about one axis (a turn-space's linear part). */
+export function rot(axis: Axis, deg: number): M3 {
+  const r = (deg * Math.PI) / 180, c = Math.round(Math.cos(r)), s = Math.round(Math.sin(r));
+  if (axis === 'x') return [1, 0, 0, 0, c, -s, 0, s, c];
+  if (axis === 'y') return [c, 0, s, 0, 1, 0, -s, 0, c];
+  return [c, -s, 0, s, c, 0, 0, 0, 1];
+}
+
+export function transposeM3(m: M3): M3 {
+  return [m[0], m[3], m[6], m[1], m[4], m[7], m[2], m[5], m[8]];
+}
+
+export function traceM3(m: M3): number { return m[0] + m[4] + m[8]; }
+
+/** The rotation angle (degrees) of a proper orthogonal matrix; 0 for the
+ *  identity. Meaningless for improper matrices (det −1) — callers gate on det. */
+export function rotationAngleDeg(m: M3): number {
+  const t = Math.max(-1, Math.min(1, (traceM3(m) - 1) / 2));
+  return (Math.acos(t) * 180) / Math.PI;
+}
+
 export function mulM3(a: M3, b: M3): M3 {
   const r = new Array(9).fill(0);
   for (let i = 0; i < 3; i++)

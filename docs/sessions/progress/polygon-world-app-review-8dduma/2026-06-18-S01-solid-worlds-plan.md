@@ -20,10 +20,16 @@ codebase (not the plan's idealized references), so a future session can pick it
 up cold.
 
 > [!NOTE]
-> **Tier 1 is built** (S01, 2026-06-18) — `src/animations/SolidWorlds/`: flat
-> 3-torus + amphicosm, the developing-map cover engine, the chiral footprint
-> trail, and the chirality HUD. Route `#/solid-worlds`, build + lint green. Tiers
-> 2–4 below remain. See the S01 progress report for the build notes.
+> **Tier 1 built + Tier 2 in progress** (S01, 2026-06-18) —
+> `src/animations/SolidWorlds/`: flat catalog now 4 worlds (3-torus, half- &
+> quarter-turn spaces, amphicosm), developing-map cover engine, chiral footprint
+> trail, and a three-state chirality HUD (original · rotated · mirrored) with
+> schema unit tests. Route `#/solid-worlds`, build + lint + tests green.
+> **Still in Tier 2:** the vertex-link manifold check + H₁ via Smith normal form
+> (H₁ is currently a curated catalog value), the Schlegel mini-map, the remaining
+> platycosms (third/sixth-turn + Hantzsche–Wendt need a non-cube domain), and a
+> headless walk-the-loop chirality test. Tiers 3–4 (curved render, seam slider)
+> unchanged. See the S01 progress report for build notes.
 
 > [!NOTE]
 > This plan supersedes the uploaded draft where the draft and the real code

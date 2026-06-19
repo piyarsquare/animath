@@ -105,7 +105,7 @@ animath/
     │   ├── StableMatching/      # rebuilt Gale–Shapley lab: matrix · welfare · lattice (CSS/DOM)
     │   ├── PolygonWorlds/       # walk every closed surface from one glued polygon; selectable scene "looks" (looks.ts, distilled from Topology Walk's themes)
     │   ├── TreesAndNets/        # M̄₀,ₙ(ℝ) explorer: associahedron tiles + the gluing mosaic; lib/{associahedron,mosaic}.ts
-    │   └── SolidWorlds/         # walk inside a closed 3-manifold from one glued cube (3D successor to Polygon Worlds); Tier 1 flat worlds (3-torus, amphicosm), developing-map cover engine (coverEngine.ts), chirality HUD
+    │   └── SolidWorlds/         # walk inside a closed 3-manifold from one glued cube (3D successor to Polygon Worlds); flat worlds (3-torus, half/quarter-turn spaces, amphicosm), developing-map cover engine (coverEngine.ts), chirality HUD (original · rotated · mirrored)
     │
     ├── components/             # shared app-side UI
     │   ├── ParticleViewerShell.tsx  # turnkey workspace assembly for particle (4D) viewers

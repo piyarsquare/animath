@@ -27,6 +27,10 @@ export interface FrameInput3 {
 export interface ChiralityState {
   perStepDet: 1;
   loopSign: 1 | -1;
+  /** Rotation angle (degrees) of the carried frame relative to the start — the
+   *  *cosmetic* part of the holonomy (you can always reorient your body to undo
+   *  a rotation; you cannot undo a reflection). Meaningful when loopSign = +1. */
+  rotationDeg: number;
   /** Net signed crossings of each face-pairing (the cell you are in). */
   crossings: Record<Axis, number>;
 }

@@ -34,6 +34,38 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟢 code · 03:13 — Solid Worlds Tier 2: turn-spaces, rotation-vs-reflection HUD, schema tests; + an avatar bug fix
+**Why:** Continue the plan into Tier 2 (richer catalog + matured schema), and fix
+a real bug Dan spotted: the third-person avatar's chirality colors were reversed
+relative to the footprints.
+
+- **Catalog grew 2 → 4** (`worlds.ts`): added the **half-turn (dicosm)** and
+  **quarter-turn (tetracosm)** spaces — mapping tori of the 180°/90° rotation of
+  the xy-torus, glued on the z-pair (cube-compatible). They're the
+  rotation-vs-reflection teaching pair: a proper rotation you can reorient away
+  vs. the amphicosm's un-fixable mirror. (Third/sixth-turn + Hantzsche–Wendt need
+  a hexagonal prism / richer gluing — deferred.)
+- **HUD upgraded** to three states: **ORIGINAL · ROTATED N° · MIRRORED**. The
+  engine now reports `rotationDeg` (angle of the carried frame from the trace of
+  `bodyLinear`); `det −1` ⇒ mirrored, `det +1` with angle ⇒ rotated. Makes the
+  "rotation is cosmetic, reflection is the invariant" lesson visible live.
+- **Schema matured** (`solidSchema.ts`): added `rot`, `transposeM3`, `traceM3`,
+  `rotationAngleDeg`. **9 vitest tests** (`__tests__/solidSchema.test.ts`) assert
+  orientability per world, the amphicosm reverses only on x, the x-loop holonomy
+  (once → det −1, twice → identity), and the quarter-turn z-loop is a proper 90°
+  rotation of order 4. This closes the **pure-math half** of the flagged
+  chirality-harness gap (a headless walk-the-loop test is still TODO).
+- **Avatar fix** (`coverEngine.ts`): the third-person figure now puts **cyan on
+  its left, magenta on its right**, matching the footprint convention exactly
+  (its nose also now points forward); rebuilt as a clearer little figure (body +
+  head + nose + side markers).
+- EXPLAINER + CLAUDE tree updated for the grown catalog. Build ✓ (4.29s), 9/9
+  tests ✓, `eslint src/` 0 errors.
+
+![quarter-turn space: neighbor rooms rotated 90°](assets/2026-06-18-S01-solid-worlds-quarter-turn.png)
+
+![the corrected third-person avatar](assets/2026-06-18-S01-solid-worlds-avatar.png)
+
 ### 🟡 milestone · 02:58 — Solid Worlds Tier 1 built, registered, and renders (build + lint green)
 **Why:** Author asked to "build out the plan." Tier 1 is the shippable entry —
 walk the flat cube worlds and exercise the genuine 3D mirror-flip.

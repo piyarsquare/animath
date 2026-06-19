@@ -236,18 +236,28 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   }
 
   // ── third-person avatar (fundamental cell only) ──────────────────────────
+  // A deliberately CHIRAL little figure so you can watch yourself become your
+  // own mirror image: a body + a nose-cone showing facing, with cyan on its
+  // LEFT and magenta on its RIGHT — matching the footprint convention exactly
+  // (forward = −z, up = +y ⇒ the walker's left is −x).
   const avatar = new THREE.Group();
   avatar.matrixAutoUpdate = false;
   {
-    const coneGeo = track(new THREE.ConeGeometry(size * 0.04, size * 0.16, 12));
-    const head = new THREE.Mesh(coneGeo, track(new THREE.MeshStandardMaterial({ color: 0xffe08a, side: THREE.DoubleSide })));
-    head.rotation.x = -Math.PI / 2; head.position.z = -size * 0.04; // points toward −z (forward)
-    const lGeo = track(new THREE.SphereGeometry(size * 0.025, 10, 8));
-    const lBall = new THREE.Mesh(lGeo, track(new THREE.MeshStandardMaterial({ color: 0x33d6ff })));
-    lBall.position.set(size * 0.07, 0, 0);  // right side cyan vs left magenta → chiral
-    const rBall = new THREE.Mesh(lGeo, track(new THREE.MeshStandardMaterial({ color: 0xff4fa3 })));
-    rBall.position.set(-size * 0.07, 0, 0);
-    avatar.add(head, lBall, rBall);
+    const bodyGeo = track(new THREE.CylinderGeometry(size * 0.045, size * 0.06, size * 0.26, 14));
+    const body = new THREE.Mesh(bodyGeo, track(new THREE.MeshStandardMaterial({ color: 0xffe08a, side: THREE.DoubleSide })));
+    const headGeo = track(new THREE.SphereGeometry(size * 0.05, 14, 10));
+    const head = new THREE.Mesh(headGeo, track(new THREE.MeshStandardMaterial({ color: 0xffd27a, side: THREE.DoubleSide })));
+    head.position.y = size * 0.18;
+    const noseGeo = track(new THREE.ConeGeometry(size * 0.022, size * 0.08, 10));
+    const nose = new THREE.Mesh(noseGeo, track(new THREE.MeshStandardMaterial({ color: 0xfff0c0, side: THREE.DoubleSide })));
+    nose.rotation.x = Math.PI / 2;       // cone +y → −z (points forward)
+    nose.position.set(0, size * 0.18, -size * 0.07);
+    const sideGeo = track(new THREE.SphereGeometry(size * 0.026, 10, 8));
+    const leftBall = new THREE.Mesh(sideGeo, track(new THREE.MeshStandardMaterial({ color: 0x33d6ff })));
+    leftBall.position.set(-size * 0.075, size * 0.02, 0);  // cyan on the LEFT (−x)
+    const rightBall = new THREE.Mesh(sideGeo, track(new THREE.MeshStandardMaterial({ color: 0xff4fa3 })));
+    rightBall.position.set(size * 0.075, size * 0.02, 0);  // magenta on the RIGHT (+x)
+    avatar.add(body, head, nose, leftBall, rightBall);
   }
   scene.add(avatar);
 
@@ -351,9 +361,13 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       cell.x = 0; cell.y = 0; cell.z = 0; hasStamp = false;
     },
     getChirality(): ChiralityState {
+      const e = bodyLinear.elements; // column-major; diagonal at 0, 5, 10
+      const trace = e[0] + e[5] + e[10];
+      const rotationDeg = Math.acos(Math.max(-1, Math.min(1, (trace - 1) / 2))) * 180 / Math.PI;
       return {
         perStepDet: 1,
         loopSign: bodyLinear.determinant() < 0 ? -1 : 1,
+        rotationDeg,
         crossings: { x: cell.x, y: cell.y, z: cell.z },
       };
     },

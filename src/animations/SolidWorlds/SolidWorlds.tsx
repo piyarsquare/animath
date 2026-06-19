@@ -310,6 +310,15 @@ const LAYOUTS: LayoutDef[] = [
   },
 ];
 
+/** The three holonomy states a loop can leave you in. A rotation (det +1) is
+ *  cosmetic — you can turn your body to undo it; a reflection (det −1) is the
+ *  real invariant — no reorientation fixes it. */
+function handedness(c: ChiralityState): { label: string; color: string } {
+  if (c.loopSign === -1) return { label: 'MIRRORED', color: '#ff5aa6' };
+  if (c.rotationDeg > 5) return { label: `ROTATED ${Math.round(c.rotationDeg)}°`, color: '#ffcf5a' };
+  return { label: 'ORIGINAL', color: '#5ad1ff' };
+}
+
 /** The live handedness HUD, overlaid on the canvas — the headline instrument. */
 function ChiralityHUD({ get, phone }: { get: () => ChiralityState | null; phone?: boolean }) {
   const tagRef = useRef<HTMLSpanElement>(null);
@@ -319,9 +328,9 @@ function ChiralityHUD({ get, phone }: { get: () => ChiralityState | null; phone?
     const loop = () => {
       const c = get();
       if (c && tagRef.current && subRef.current) {
-        const mirrored = c.loopSign === -1;
-        tagRef.current.textContent = mirrored ? 'MIRRORED' : 'ORIGINAL';
-        tagRef.current.style.color = mirrored ? '#ff5aa6' : '#5ad1ff';
+        const s = handedness(c);
+        tagRef.current.textContent = s.label;
+        tagRef.current.style.color = s.color;
         subRef.current.textContent = `loops · x ${c.crossings.x} · y ${c.crossings.y} · z ${c.crossings.z}`;
       }
       raf = requestAnimationFrame(loop);
@@ -352,7 +361,8 @@ function ChiralityReadout({ get }: { get: () => ChiralityState | null }) {
       const c = get();
       if (c && ref.current) {
         const mirrored = c.loopSign === -1;
-        ref.current.textContent = `Handedness: ${mirrored ? 'MIRRORED' : 'original'} · per-step det = +1 (no local flip)`;
+        const rot = c.rotationDeg > 5 ? `, rotated ${Math.round(c.rotationDeg)}°` : '';
+        ref.current.textContent = `Handedness: ${mirrored ? 'MIRRORED' : 'original'}${mirrored ? '' : rot} · per-step det = +1 (no local flip)`;
         ref.current.style.color = mirrored ? '#ff5aa6' : 'var(--cp-fg)';
       }
       raf = requestAnimationFrame(loop);

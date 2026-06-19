@@ -17,15 +17,27 @@ gone** — every closed 3-manifold has χ = 0, so χ says nothing. (Geometry is 
 *locally* instead, by the angles around each glued edge; the curved worlds that
 needs are a later chapter. These first two are flat.)
 
-What survives, and becomes the star, is **orientation**:
+What survives, and becomes the star, is **orientation** — and the worlds sort into
+a telling ladder of what a loop can do to you:
 
 - **3-Torus.** All three face pairs glued by straight translations. Walk any
   loop and you come back exactly as you left. Orientable.
+- **Half-turn & Quarter-turn spaces.** The top and bottom glue with a **rotation**
+  (180° / 90°), so walking the up-down loop brings the world back **spun**. But a
+  spin is *cosmetic*: you can always turn your own body to match it. The readout
+  says **ROTATED**, never mirrored — orientation is preserved (you can still tell
+  left from right).
 - **Klein × Circle** (an *amphicosm*). One face pair is glued with a **flip** (a
   glide-reflection); the other two straight. Walk the **x-loop once** and the whole
   world — the room, the sign, and **your own footprints** — comes back
   **mirror-reversed**. Walk it twice and you're restored. Walk the y- or z-loop and
   nothing flips.
+
+That contrast is the lesson: a **rotation you can undo** by reorienting; a
+**reflection you cannot**. Only the second is a real, un-fixable property of the
+loop — and even *which way* the mirror looks flipped is a matter of how you're
+standing. The handedness readout draws the line: *original* · *rotated N°* ·
+*mirrored*.
 
 ### Read it off your own footprints (and the sign)
 
