@@ -35,6 +35,27 @@ That branch's Solid Worlds code is **already present on this branch** (engine,
 
 ## Working notes
 
+### 🟡 milestone · 20:18 — Homology-rework plan written (`…-homology-rework-plan.md`)
+**Why:** Dan: "develop a plan for the homology rework." Researched the failure,
+designed the method (Explore ×3 + a Plan agent), settled scope with Dan.
+
+Plan: replace the fixed 8/12/3 CW complex with an **N-subdivided cubical chain
+complex** (N=2) + per-pairing lattice reduction; reuse the existing integer
+`smith()` SNF; gate correctness with three independent guards (∂∂=0, N=1↔N=2
+golden invariance, and a Γᵃᵇ cross-check implemented in-test). Root cause
+confirmed: screw offsets *stagger* the faces so "opposite faces glue as whole
+2-cells" is false → `vIndex`/`EDGE_INDEX` crash.
+
+Scope decided with Dan:
+- **Rework only — no new catalog worlds** this pass. Hantzsche–Wendt is wired as
+  a **test fixture** to exercise the screw path (target (ℤ/4)²), not added to
+  `worlds.ts`.
+- **Include the vertex-link = S² manifold certifier** (reuse PolygonWorlds'
+  `surfaceSchema.ts`).
+
+Plan: [`2026-06-19-S01-homology-rework-plan.md`](2026-06-19-S01-homology-rework-plan.md)
+(`kind: plan`, `status: proposed`).
+
 ### 🔵 finding · 20:01 — Reviewed handoff + plan; state confirmed on-branch
 **Why:** Orientation before any work, per /start-session.
 
