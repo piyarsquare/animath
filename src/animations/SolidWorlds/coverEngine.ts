@@ -97,6 +97,12 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   trailGeo.setDrawRange(0, 0);
   const trailMat = track(new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
   const trailMesh = new THREE.Mesh(trailGeo, trailMat);
+  // The geometry is preallocated at the origin with drawRange 0, so Three caches
+  // a zero-radius bounding sphere before any footprint is written and buffer
+  // writes never invalidate it — a per-cell clone whose cell origin is off-screen
+  // would then be wrongly culled while its footprints are still visible. Disable
+  // frustum culling on the trail (clone() copies the flag to every cover cell).
+  trailMesh.frustumCulled = false;
   let trailN = 0;
   const lastStamp = new THREE.Vector3();
   let hasStamp = false;
