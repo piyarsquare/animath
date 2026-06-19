@@ -35,6 +35,44 @@ That branch's Solid Worlds code is **already present on this branch** (engine,
 
 ## Working notes
 
+### 🔴 blocker · 22:00 — Adding screw worlds is blocked: the engine has false positives on rotation/reflection+screw cases
+**Why:** Dan: "add the screw manifolds consistent with the schema." Began the
+enumeration; it surfaced correctness gaps that must be fixed before any world is
+added.
+
+Findings:
+- **The vertex-link = S² certifier is insufficient.** A rotational *cone point*
+  (an orbifold singularity) has a link that is *topologically* an S², so the link
+  test silently accepts orbifolds. Replaced the manifold criterion with a genuine
+  **free-action test** (`lib/freeness.ts`): point group + translation lattice
+  (Reidemeister–Schreier) + an exact integer fixed-point test per holonomy
+  element. The four catalog worlds correctly test free; many orbifolds are now
+  rejected.
+- **But the pipeline still has false positives.** Enumerating the schema
+  (perpendicular offsets only — an offset *on the pairing's own axis* secretly
+  halves the axial step and breaks the opposite-face gluing, so those specs are
+  invalid) over the 8 axis-fixing linear parts × {0,½}² offsets still yields the
+  **same H₁ as both orientable and non-orientable** (e.g. ℤ³, ℤ⊕(ℤ/2)² appear in
+  both lists). Since the ten platycosms have **pairwise-distinct H₁**, that's a
+  *provable* false positive — independent of any reference table.
+- Several spot checks are correct (sheared 3-torus → ℤ³; quarter-turn + a
+  perpendicular screw → ℤ⊕ℤ/2). So the bug is specifically in the
+  **reflection/rotation + half-edge-screw** cases of either `computeHomology`
+  (boundary-orientation signs under a staggered glued reflection) or `isFreeAction`
+  — to be isolated.
+
+> [!CAUTION]
+> **Do not add screw worlds until the pipeline is verified.** Required: an
+> independent H₁ cross-check (Bieberbach abelianization Γᵃᵇ from the point
+> group + lattice, which `freeness.ts` already half-builds) that agrees with
+> `computeHomology` on every spec, plus the authoritative platycosm H₁ table
+> (Conway–Rossetti, *Describing the Platycosms*, arXiv:math/0311476) to name the
+> survivors. The currently-shipped catalog (4 screw-free worlds) is unaffected and
+> correct.
+
+`lib/freeness.ts` is committed as investigation scaffolding (not wired into the
+app yet).
+
 ### 🟡 milestone · 21:33 — Homology rework implemented, validated, shipped (build/lint/test green)
 **Why:** Dan: "please complete the plan." Executed the homology-rework plan.
 
