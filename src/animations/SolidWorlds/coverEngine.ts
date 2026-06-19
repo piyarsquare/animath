@@ -93,13 +93,6 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   // ── disposal bookkeeping ─────────────────────────────────────────────────
   const disposables: { dispose: () => void }[] = [];
   const track = <T extends { dispose: () => void }>(o: T): T => { disposables.push(o); return o; };
-  // the world floor for the grounded modes: one big sheet of translucent glass
-  // that IS the bottom of the world — the whole cover sits on top of it, and
-  // you can look down through it. Not part of any room.
-  const groundMat = track(new THREE.MeshStandardMaterial({
-    color: 0xa9cbe8, roughness: 0.08, metalness: 0, side: THREE.DoubleSide,
-    transparent: true, opacity: 0.22, depthWrite: false,
-  }));
 
   // ── the footprint trail (stored once, in fundamental coordinates) ────────
   // The classic flat orientation decal: an arrow with an F, cyan on its LEFT and
@@ -231,7 +224,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     labelPlaneGeo = new THREE.PlaneGeometry(U * 0.45, U * 0.45); roomDisposables.push(labelPlaneGeo);
 
     // corner-marker resources: one small ball, colored per corner via instanceColor
-    cornerGeo = new THREE.SphereGeometry(U * 0.07, 12, 9); roomDisposables.push(cornerGeo);
+    cornerGeo = new THREE.SphereGeometry(U * 0.04, 12, 9); roomDisposables.push(cornerGeo);
     cornerMat = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.1 }); roomDisposables.push(cornerMat);
   }
 
@@ -371,17 +364,6 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       }
     }
 
-    // the glass world floor under the bottom cell (grounded modes only): the
-    // whole cover rests on it; you stand on it and can look down through it
-    if (groundedState) {
-      const gGeo = new THREE.PlaneGeometry(R * 2.4, R * 2.4);
-      coverDisposables.push(gGeo);
-      const ground = new THREE.Mesh(gGeo, groundMat);
-      ground.rotation.x = -Math.PI / 2; ground.position.y = -size / 2;
-      ground.frustumCulled = false;
-      ground.renderOrder = 2;            // draw the transparent glass after the rooms
-      coverRoot.add(ground);
-    }
   }
 
   // ── third-person avatars (fundamental cell only), one per travel mode ─────

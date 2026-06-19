@@ -45,7 +45,7 @@ this session is generalizing into a standing policy). Latest handoff overall is
   cells tile and meet at shared corners, looking into a corner shows your ball
   *plus* the balls of every cell joined there — so the colors clustered at a
   vertex read off exactly which corners the gluing identifies (all 8 converge at
-  a 3-torus vertex; a twist permutes them). One InstancedMesh, N×8.
+  a 3-torus vertex; a twist permutes them). Small balls (U·0.04). One InstancedMesh, N×8.
 - Both default **off** (clean default), toggled by **Face labels** / **Corner
   markers** checkboxes; persisted.
 
@@ -60,10 +60,10 @@ plane's job). Since the y-gluing here doesn't interact with x/z, the vertical
 direction is "look at, don't traverse."
 
 - **Grounded cover** (walk/drive): the BFS keeps the start level + every room
-  **above** it, but drops cells **below** (`c.y < −0.4·size`). A single sheet of
-  **translucent glass** is the bottom of the world — a separate plane (not baked
-  into any room), with the whole cover resting on top; you stand on it and look
-  down *through* it into the void. Look up → the hall of mirrors climbing away.
+  **above** it, but drops cells **below** (`c.y < −0.4·size`), so the bottom cell
+  is the bottom of the world. The floor you stand on is just the bottom cell's
+  own room floor — no separate floor plane/material (the glass-slab experiment
+  was reverted; it didn't read well). Look up → the hall of mirrors climbing away.
 - **Grounded movement**: horizontal only — the up-coordinate is locked to floor
   eye-height each frame (in the *carried* frame, so the amphicosm's flip is
   handled), so you never sink through the floor.
