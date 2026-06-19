@@ -105,7 +105,7 @@ animath/
     │   ├── StableMatching/      # rebuilt Gale–Shapley lab: matrix · welfare · lattice (CSS/DOM)
     │   ├── PolygonWorlds/       # walk every closed surface from one glued polygon; selectable scene "looks" (looks.ts, distilled from Topology Walk's themes)
     │   ├── TreesAndNets/        # M̄₀,ₙ(ℝ) explorer: associahedron tiles + the gluing mosaic; lib/{associahedron,mosaic}.ts
-    │   └── SolidWorlds/         # walk inside a closed 3-manifold from one glued cube (3D successor to Polygon Worlds); flat worlds (3-torus, half/quarter-turn spaces, amphicosm), developing-map cover engine (coverEngine.ts), chirality HUD (original · rotated · mirrored), H₁ computed from the chain complex (lib/homology.ts, Smith normal form)
+    │   └── SolidWorlds/         # walk inside a closed flat 3-manifold from one glued cube (3D successor to Polygon Worlds); catalog now 8 of the 10 platycosms (3-torus, half/quarter-turn, both amphicosms, both amphidicosms, Hantzsche–Wendt); developing-map cover engine (coverEngine.ts), chirality HUD (original · rotated · mirrored). Invariants: H₁ from the deck group's abelianization (lib/freeness.ts: point group + Reidemeister–Schreier lattice → Smith form) — the authoritative, screw-safe H₁ — plus a free-action test certifying a genuine manifold (vs a cone-point orbifold); the cube cell complex (lib/homology.ts) is kept for χ and as a cross-check (known screw-homology bug, so trusted only on the screw-free worlds)
     │
     ├── components/             # shared app-side UI
     │   ├── ParticleViewerShell.tsx  # turnkey workspace assembly for particle (4D) viewers

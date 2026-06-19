@@ -35,6 +35,36 @@ That branch's Solid Worlds code is **already present on this branch** (engine,
 
 ## Working notes
 
+### 🟡 milestone · 23:32 — Shipped the 4 new platycosms (Γᵃᵇ authoritative); 8/10 catalog
+**Why:** Dan: "Add only worlds whose deck group is free and whose invariants
+match the catalog… all 4 incl. Hantzsche–Wendt." Chose Γᵃᵇ-authoritative (vs
+fixing the cell engine) — Γᵃᵇ is the rigorous H₁ and the cell screw-bug is subtle.
+
+- **`analyzeSolid` rewired**: H₁ from `abelianizationH1` (deck-group, screw-safe),
+  manifold from `isFreeAction`; χ from the free-action theorem (=0); a `verified`
+  flag = the cube cell complex independently agrees (h1 **and** χ=0).
+- **4 worlds added to `worlds.ts`** with clean, verified generators: second
+  amphicosm (ℤ²), first amphidicosm (ℤ⊕(ℤ/2)²), second amphidicosm (ℤ⊕ℤ/4), and
+  **Hantzsche–Wendt** (ℤ/4⊕ℤ/4). Three are **dual-verified** (cell agrees);
+  the second amphidicosm is **Γᵃᵇ-only / experimental** (the cell engine gives it
+  χ=1 — its known screw bug), exactly per Dan's "experimental until both agree".
+- HUD shows H₁ (from the deck group), the manifold certificate, and the
+  cross-check/experimental status. EXPLAINER + CLAUDE.md updated; Conway–Rossetti
+  + Hantzsche–Wendt added to "Possible sources". Build/lint/test green (28 tests).
+
+> [!NOTE]
+> **Catalog is now 8 of the 10 platycosms** — only the tricosm and hexacosm are
+> missing (they need a hexagonal prism, not a cube). The original 4 worlds are
+> unchanged and stable.
+
+> [!CAUTION]
+> **Cell-homology screw bug still open** (`lib/homology.ts`): wrong H₁/χ for some
+> rotated/reflected staggered gluings. It does not affect the shipped catalog
+> (the screw-free worlds are exact; the new worlds use Γᵃᵇ and 3/4 are
+> cell-cross-checked). Fixing it would graduate the second amphidicosm to
+> dual-verified — the clean follow-up. Confirm −a2 = ℤ⊕ℤ/4 vs Conway–Rossetti
+> Table 6.
+
 ### 🟡 milestone · 22:45 — Verified classifier: 8 of 10 platycosms are cube-expressible; Γᵃᵇ corrects the cell engine
 **Why:** Dan: "proceed with the Γᵃᵇ cross-check… correct the classifier premise first
 (H₁ is NOT pairwise-distinct: c2 and +a2 both ℤ⊕(ℤ/2)²)."

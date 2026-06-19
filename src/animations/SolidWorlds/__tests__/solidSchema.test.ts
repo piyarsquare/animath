@@ -65,34 +65,38 @@ describe('solidSchema — loop holonomy (the chirality acceptance test)', () => 
   });
 });
 
-describe('homology — H₁ computed from the chain complex matches the catalog', () => {
+describe('homology — analyzeSolid reports the catalog H₁ (via Γᵃᵇ)', () => {
   const expected: Record<string, string> = {
-    '3-torus': 'ℤ³',
-    'half-turn': 'ℤ ⊕ ℤ/2 ⊕ ℤ/2',
-    'quarter-turn': 'ℤ ⊕ ℤ/2',
-    'amphicosm': 'ℤ² ⊕ ℤ/2',
+    '3-torus': 'ℤ³', 'half-turn': 'ℤ ⊕ ℤ/2 ⊕ ℤ/2', 'quarter-turn': 'ℤ ⊕ ℤ/2', 'amphicosm': 'ℤ² ⊕ ℤ/2',
+    'second-amphicosm': 'ℤ²', 'first-amphidicosm': 'ℤ ⊕ ℤ/2 ⊕ ℤ/2',
+    'second-amphidicosm': 'ℤ ⊕ ℤ/4', 'didicosm': 'ℤ/4 ⊕ ℤ/4',
   };
   for (const w of SOLID_WORLDS) {
-    it(`${w.id}: computed H₁ = curated catalog value (${w.h1})`, () => {
+    it(`${w.id}: H₁ = curated catalog value (${w.h1})`, () => {
       const a = analyzeSolid(w);
       expect(a.h1).toBe(expected[w.id]);
       expect(a.h1).toBe(w.h1);          // computed agrees with the curated spec
     });
   }
 
-  it('every world has χ = 0 (closed-3-manifold sanity check)', () => {
-    for (const w of SOLID_WORLDS) expect(analyzeSolid(w).euler).toBe(0);
+  it('every world is a free flat manifold with χ = 0', () => {
+    for (const w of SOLID_WORLDS) {
+      expect(analyzeSolid(w).isManifold).toBe(true);
+      expect(analyzeSolid(w).euler).toBe(0);
+    }
   });
 });
 
-describe('homology — the gluing-agnostic engine (subdivided complex)', () => {
+// the four original worlds are screw-free, where the cube cell complex is valid.
+const SCREW_FREE = ['3-torus', 'half-turn', 'quarter-turn', 'amphicosm'];
+
+describe('homology — the gluing-agnostic cell engine (screw-free worlds)', () => {
   it('H₁ is subdivision-invariant: N=1 reproduces the old fixed-CW values exactly', () => {
-    // N=1 is the old hard-coded complex; the general engine must agree with N=2.
     const expected: Record<string, string> = {
       '3-torus': 'ℤ³', 'half-turn': 'ℤ ⊕ ℤ/2 ⊕ ℤ/2',
       'quarter-turn': 'ℤ ⊕ ℤ/2', 'amphicosm': 'ℤ² ⊕ ℤ/2',
     };
-    for (const w of SOLID_WORLDS) {
+    for (const w of SOLID_WORLDS.filter((s) => SCREW_FREE.includes(s.id))) {
       const a = computeHomology(w, 1), b = computeHomology(w, 2);
       expect(a.h1).toBe(expected[w.id]);
       expect(b.h1).toBe(a.h1);            // subdivision invariance is a theorem
@@ -101,8 +105,8 @@ describe('homology — the gluing-agnostic engine (subdivided complex)', () => {
     }
   });
 
-  it('every catalog world certifies as a manifold (all vertex links are S²)', () => {
-    for (const w of SOLID_WORLDS) expect(analyzeSolid(w).isManifold).toBe(true);
+  it('every screw-free world certifies as a manifold (all vertex links are S²)', () => {
+    for (const w of SOLID_WORLDS.filter((s) => SCREW_FREE.includes(s.id))) expect(analyzeSolid(w).isManifold).toBe(true);
   });
 
   it('a full-lattice perpendicular offset is absorbed: it is still the 3-torus', () => {

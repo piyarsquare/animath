@@ -8,10 +8,16 @@
  * curved catalog arrive in Tiers 2–3 (see the plan).
  */
 
-import { reflect, rot, I3, Pairing, SolidWorldSpec } from './solidSchema';
+import { reflect, rot, I3, M3, Pairing, SolidWorldSpec } from './solidSchema';
 import type { Axis } from './solidSchema';
 
 const straight = (axis: Axis): Pairing => ({ axis, linear: I3 });
+/** Reflection that swaps two axes (a glide across a diagonal plane, det −1). */
+const swap = (a: Axis, b: Axis): M3 => {
+  const i = a === 'x' ? 0 : a === 'y' ? 1 : 2, j = b === 'x' ? 0 : b === 'y' ? 1 : 2;
+  const m = [...I3]; m[i * 3 + i] = 0; m[j * 3 + j] = 0; m[i * 3 + j] = 1; m[j * 3 + i] = 1;
+  return m;
+};
 
 export const SOLID_WORLDS: SolidWorldSpec[] = [
   {
@@ -55,8 +61,56 @@ export const SOLID_WORLDS: SolidWorldSpec[] = [
     // +x ↔ −x glued by reflect-in-Y then translate (the mirror headliner);
     // +y/+z straight. Orientation-reversing on x only.
     pairings: [{ axis: 'x', linear: reflect('y') }, straight('y'), straight('z')],
-    manifold: 'Klein bottle × S¹ (amphicosm)',
+    manifold: 'Klein bottle × S¹ (first amphicosm)',
     h1: 'ℤ² ⊕ ℤ/2',
+  },
+
+  // ── the screw / mirror platycosms (S02): the cube's remaining flat worlds ───
+  // Found by enumerating the schema and certifying free action; H₁ from the deck
+  // group's abelianization, cross-checked against the cube cell complex. (Of the
+  // ten platycosms only the tricosm and hexacosm are missing — they need a
+  // hexagonal prism, not a cube.)
+  {
+    id: 'second-amphicosm',
+    label: 'Second amphicosm',
+    short: 'cube · top↔bottom glued with a diagonal mirror (swap x↔y)',
+    blurb:
+      'Top and bottom glue with a mirror that swaps the two horizontal axes; the sides straight. Non-orientable like the Klein × S¹ world, but a genuinely different one — its first homology is ℤ² (no ℤ/2 torsion).',
+    pairings: [straight('x'), straight('y'), { axis: 'z', linear: swap('x', 'y') }],
+    manifold: 'second amphicosm (−a1)',
+    h1: 'ℤ²',
+  },
+  {
+    id: 'first-amphidicosm',
+    label: 'First amphidicosm',
+    short: 'cube · two perpendicular mirror-flips, one pair straight',
+    blurb:
+      'Two of the three face pairs glue with mirror-flips about perpendicular planes; the third straight. Holonomy ℤ/2 × ℤ/2. Non-orientable — yet it carries exactly the homology of the orientable half-turn space, H₁ = ℤ ⊕ (ℤ/2)², a flat-3-manifold homology coincidence.',
+    pairings: [straight('x'), { axis: 'y', linear: reflect('z') }, { axis: 'z', linear: reflect('x') }],
+    manifold: 'first amphidicosm (+a2)',
+    h1: 'ℤ ⊕ ℤ/2 ⊕ ℤ/2',
+  },
+  {
+    id: 'second-amphidicosm',
+    label: 'Second amphidicosm',
+    short: 'cube · two perpendicular mirrors, one carrying a screw',
+    blurb:
+      'Two perpendicular mirror-flips — one of them also slides a quarter-period (a glide screw) — and the third pair straight. Still ℤ/2 × ℤ/2 holonomy, but the screw twists the first homology to H₁ = ℤ ⊕ ℤ/4.',
+    pairings: [{ axis: 'x', linear: reflect('y') }, { axis: 'y', linear: reflect('x'), offset: [0, 0, 0.5] }, straight('z')],
+    manifold: 'second amphidicosm (−a2)',
+    h1: 'ℤ ⊕ ℤ/4',
+  },
+  {
+    id: 'didicosm',
+    label: 'Hantzsche–Wendt',
+    short: 'cube · two perpendicular half-turn screws (the didicosm)',
+    blurb:
+      'Two perpendicular half-turn screws; the third direction’s half-turn comes free as their product (holonomy ℤ/2 × ℤ/2). The famous Hantzsche–Wendt manifold — the only closed flat 3-manifold with finite first homology (H₁ = ℤ/4 ⊕ ℤ/4, first Betti number 0). Orientable, yet every loop twists you and none is a mirror.',
+    // mapping-torus-free realization: half-turns about y and z (about x is M_y·M_z),
+    // made fixed-point-free by a perpendicular screw on the z-pairing.
+    pairings: [straight('x'), { axis: 'y', linear: rot('y', 180) }, { axis: 'z', linear: rot('z', 180), offset: [0.5, 0, 0] }],
+    manifold: 'didicosm / Hantzsche–Wendt (c22)',
+    h1: 'ℤ/4 ⊕ ℤ/4',
   },
 ];
 
