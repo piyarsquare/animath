@@ -526,11 +526,14 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     }
 
     // Keep the lighting fixed in the *developing frame*: rotate the directional
-    // lights by the carried body frame (the holonomy), so the room's shading
-    // never jumps as you cross a turn/glide or wrap — the light stays "above
-    // you" while only the world reorients. (3-torus: bodyLinear = I, so fixed.)
+    // lights AND the hemisphere sky/ground axis by the carried body frame (the
+    // holonomy), so the room's shading never jumps as you cross a turn/glide or
+    // wrap — the light stays "above you" while only the world reorients. The
+    // hemisphere especially mattered in the quarter-turn world, where the carried
+    // up tilts away from world-up. (3-torus: bodyLinear = I, so fixed.)
     keyLight.position.set(0.4, 1, 0.3).transformDirection(bodyLinear);
     fillLight.position.set(-0.3, -1, -0.2).transformDirection(bodyLinear);
+    hemi.position.set(0, 1, 0).transformDirection(bodyLinear);
 
     // place the camera (its world matrix carries the holonomy — left-handed
     // once you have crossed an odd number of glide-reflections)
