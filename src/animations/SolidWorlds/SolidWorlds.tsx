@@ -4,7 +4,7 @@ import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { usePhone } from '../../chrome/usePhone';
-import { Slider, Select, Pills } from '../../components/ControlPanel';
+import { Slider, Select, Pills, Checkbox } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { SOLID_WORLDS, DEFAULT_WORLD_ID, worldById } from './worlds';
 import { analyzeSolid, AxisAnalysis } from './solidSchema';
@@ -29,6 +29,7 @@ export default function SolidWorlds() {
   const [moveSpeed, setMoveSpeed] = usePersistentState(pk('moveSpeed'), 5);
   const [thirdPerson, setThirdPerson] = useState(true);
   const [mode, setMode] = usePersistentState<TravelMode>(pk('mode'), 'walk');
+  const [trailEnabled, setTrailEnabled] = useState(false); // off by default
   const [camDistance, setCamDistance] = useState(6);
   // Session-only (not persisted): a quality/perf knob whose default should always
   // win on load — otherwise a stale stored value hides the hall-of-mirrors depth.
@@ -51,6 +52,7 @@ export default function SolidWorlds() {
   const speedRef = useRef(moveSpeed);
   const thirdRef = useRef(thirdPerson);
   const modeRef = useRef(mode);
+  const trailRef = useRef(trailEnabled);
   const camDistRef = useRef(camDistance);
   const worldRef = useRef(spec);
   const depthRef = useRef(coverDepth);
@@ -68,6 +70,7 @@ export default function SolidWorlds() {
       roomSize: sizeRef.current, coverDepth: depthRef.current,
       cameraDistance: camDistRef.current, lookId: lookRef.current,
     });
+    engineRef.current.setTrailEnabled(trailRef.current);
     clockRef.current.start();
     const animate = () => {
       const eng = engineRef.current;
@@ -99,11 +102,13 @@ export default function SolidWorlds() {
       roomSize: sizeRef.current, coverDepth: depthRef.current,
       cameraDistance: camDistRef.current, lookId: lookRef.current,
     });
+    engineRef.current.setTrailEnabled(trailRef.current);
   }, [spec]);
 
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
   useEffect(() => { thirdRef.current = thirdPerson; }, [thirdPerson]);
   useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => { trailRef.current = trailEnabled; engineRef.current?.setTrailEnabled(trailEnabled); }, [trailEnabled]);
   useEffect(() => { camDistRef.current = camDistance; engineRef.current?.setCameraDistance(camDistance); }, [camDistance]);
   useEffect(() => { depthRef.current = coverDepth; engineRef.current?.setCoverDepth(coverDepth); }, [coverDepth]);
   useEffect(() => { sizeRef.current = roomSize; engineRef.current?.setRoomSize(roomSize); }, [roomSize]);
@@ -262,6 +267,7 @@ export default function SolidWorlds() {
         face flips it; cross again and it restores. The flip is the loop's (a global
         holonomy), not any one doorway's — the continuous step never reverses.
       </div>
+      <Checkbox label="Footprint trail" checked={trailEnabled} onChange={setTrailEnabled} />
       <ChiralityReadout get={getChirality} />
     </>
   );

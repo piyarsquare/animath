@@ -4,7 +4,7 @@ import {
 } from './engineTypes';
 import { AXES, Axis, axisIndex, M3, SolidWorldSpec } from './solidSchema';
 import { findLook } from './looks';
-import { signTexture } from './textures';
+import { footprintTexture, signTexture } from './textures';
 
 /**
  * Solid Worlds — the flat (κ = 0) cover engine. The 3D port of Topology Walk's
@@ -34,11 +34,8 @@ function mat4From(m: M3, tx: number, ty: number, tz: number): THREE.Matrix4 {
   );
 }
 
-const TRAIL_CAP = 360;
-const VPER = 24; // 8 triangles per 3D arrowhead stamp (top + bottom + 3 side walls)
-
-const CY: [number, number, number] = [0.2, 0.84, 1];   // cyan — the print's left
-const MG: [number, number, number] = [1, 0.31, 0.64];  // magenta — its right
+const TRAIL_CAP = 480;
+const VPER = 6; // two triangles per flat footprint decal
 
 export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: Opts): SolidEngine {
   const { scene, camera, renderer } = deps;
@@ -83,18 +80,20 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   const track = <T extends { dispose: () => void }>(o: T): T => { disposables.push(o); return o; };
 
   // ── the footprint trail (stored once, in fundamental coordinates) ────────
-  // Each stamp is a small SOLID 3D arrow (a raised tetra-arrow) so it reads from
-  // any angle and never vanishes edge-on: a peak raised along the frame normal,
-  // its LEFT face cyan and its RIGHT face magenta — the print's chirality. A
-  // stamp written through a det < 0 transform (or viewed by a mirrored walker)
-  // swaps which face you see, exactly as a real stamp through a real reflection.
+  // The classic flat orientation decal: an arrow with an F, cyan on its LEFT and
+  // magenta on its RIGHT. The frame's handedness IS the print's chirality, so a
+  // stamp written through a det < 0 transform — or viewed by a mirror-reversed
+  // walker — reads backwards. Off by default; toggle it on to leave a trail.
   const trailPos = new Float32Array(TRAIL_CAP * VPER * 3);
-  const trailCol = new Float32Array(TRAIL_CAP * VPER * 3);
+  const trailUv = new Float32Array(TRAIL_CAP * VPER * 2);
   const trailGeo = track(new THREE.BufferGeometry());
   trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
-  trailGeo.setAttribute('color', new THREE.BufferAttribute(trailCol, 3));
+  trailGeo.setAttribute('uv', new THREE.BufferAttribute(trailUv, 2));
   trailGeo.setDrawRange(0, 0);
-  const trailMat = track(new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+  const footTex = track(footprintTexture());
+  const trailMat = track(new THREE.MeshBasicMaterial({
+    map: footTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide, depthWrite: true,
+  }));
   const trailMesh = new THREE.Mesh(trailGeo, trailMat);
   // The geometry is preallocated at the origin with drawRange 0, so Three caches
   // a zero-radius bounding sphere before any footprint is written and buffer
@@ -103,50 +102,34 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   // frustum culling on the trail (clone() copies the flag to every cover cell).
   trailMesh.frustumCulled = false;
   let trailN = 0;
+  let trailOn = false;
   const lastStamp = new THREE.Vector3();
   let hasStamp = false;
 
   function writeStamp(p: THREE.Vector3, fwd: THREE.Vector3, left: THREE.Vector3, nrm: THREE.Vector3) {
     if (trailN >= TRAIL_CAP) {
       trailPos.copyWithin(0, VPER * 3, trailN * VPER * 3);
-      trailCol.copyWithin(0, VPER * 3, trailN * VPER * 3);
+      trailUv.copyWithin(0, VPER * 2, trailN * VPER * 2);
       trailN--;
     }
-    // A flat-lying arrowhead with thickness: a solid prism (top + bottom faces +
-    // 3 side walls) pointing along travel, colored by its LEFT coordinate
-    // (cyan-left → magenta-right) so the print's chirality reads from any angle.
-    const aTip = size * 0.13, aBack = -size * 0.08, hw = size * 0.08, th = size * 0.022;
-    const P = (along: number, lt: number, up: number): [number, number, number] => [
-      p.x + along * fwd.x + lt * left.x + up * nrm.x,
-      p.y + along * fwd.y + lt * left.y + up * nrm.y,
-      p.z + along * fwd.z + lt * left.z + up * nrm.z,
+    const i = trailN;
+    const aBack = -size * 0.05, aTip = size * 0.085, hw = size * 0.055, lift = size * 0.014;
+    // [along, left, u, v]; left=+hw ↔ u=0 (cyan) so a right-handed frame reads cyan-left
+    const C: [number, number, number, number][] = [
+      [aBack, -hw, 1, 0], [aTip, -hw, 1, 1], [aTip, hw, 0, 1],
+      [aBack, -hw, 1, 0], [aTip, hw, 0, 1], [aBack, hw, 0, 0],
     ];
-    const col = (lt: number): [number, number, number] => {
-      const t = Math.max(0, Math.min(1, lt / hw * 0.5 + 0.5)); // +hw → cyan, −hw → magenta
-      return [MG[0] + (CY[0] - MG[0]) * t, MG[1] + (CY[1] - MG[1]) * t, MG[2] + (CY[2] - MG[2]) * t];
-    };
-    // the three corners (tip, back-left, back-right), each at top (+th) and bottom (−th)
-    const aT = P(aTip, 0, th), bT = P(aBack, hw, th), cT = P(aBack, -hw, th);
-    const aB = P(aTip, 0, -th), bB = P(aBack, hw, -th), cB = P(aBack, -hw, -th);
-    const lA = 0, lB = hw, lC = -hw; // left coords for coloring
-    type Vert = [[number, number, number], number];
-    const tris: [Vert, Vert, Vert][] = [
-      [[aT, lA], [bT, lB], [cT, lC]],          // top
-      [[aB, lA], [cB, lC], [bB, lB]],          // bottom
-      [[aT, lA], [aB, lA], [bB, lB]], [[aT, lA], [bB, lB], [bT, lB]], // tip→back-left wall
-      [[bT, lB], [bB, lB], [cB, lC]], [[bT, lB], [cB, lC], [cT, lC]], // back wall
-      [[cT, lC], [cB, lC], [aB, lA]], [[cT, lC], [aB, lA], [aT, lA]], // back-right→tip wall
-    ];
-    let o = trailN * VPER * 3;
-    for (const tri of tris) for (const [v, lt] of tri) {
-      const c = col(lt);
-      trailPos[o] = v[0]; trailPos[o + 1] = v[1]; trailPos[o + 2] = v[2];
-      trailCol[o] = c[0]; trailCol[o + 1] = c[1]; trailCol[o + 2] = c[2];
-      o += 3;
+    let op = i * VPER * 3, ou = i * VPER * 2;
+    for (const [along, lt, u, v] of C) {
+      trailPos[op] = p.x + along * fwd.x + lt * left.x + lift * nrm.x;
+      trailPos[op + 1] = p.y + along * fwd.y + lt * left.y + lift * nrm.y;
+      trailPos[op + 2] = p.z + along * fwd.z + lt * left.z + lift * nrm.z;
+      trailUv[ou] = u; trailUv[ou + 1] = v;
+      op += 3; ou += 2;
     }
     trailN++;
     (trailGeo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
-    (trailGeo.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true;
+    (trailGeo.getAttribute('uv') as THREE.BufferAttribute).needsUpdate = true;
     trailGeo.setDrawRange(0, trailN * VPER);
   }
 
@@ -342,7 +325,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   const Rview = new THREE.Matrix4();
   const camLinear = new THREE.Matrix4();
   const fwd = new THREE.Vector3(), right = new THREE.Vector3(), up = new THREE.Vector3();
-  const fwdFlat = new THREE.Vector3(), rightFlat = new THREE.Vector3();
+  const fwdFlat = new THREE.Vector3(), rightFlat = new THREE.Vector3(), upDir = new THREE.Vector3();
   const disp = new THREE.Vector3();
   const camWorld = new THREE.Matrix4();
   const avatarLinear = new THREE.Matrix4(), yawMat = new THREE.Matrix4();
@@ -382,18 +365,23 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       if (disp.lengthSq() > 1) disp.normalize();
       pos.addScaledVector(disp, input.moveSpeed * dt);
     } else {
-      // horizontal forward/right (project the look onto the floor plane, ⊥ +y)
-      fwdFlat.copy(fwd); fwdFlat.y = 0;
-      if (fwdFlat.lengthSq() < 1e-4) { fwdFlat.copy(right); fwdFlat.y = 0; }
+      // Gravity lives in the CARRIED frame: "up" is the body up (bodyLinear·+y),
+      // which the holonomy rotates as you cross faces — so down stays consistent
+      // as you move from cube to cube, but WHICH face is the floor depends on how
+      // you entered the room. Move on the plane ⊥ up; settle onto the −up face.
+      upDir.set(0, 1, 0).applyMatrix4(bodyLinear).normalize();
+      fwdFlat.copy(fwd).addScaledVector(upDir, -fwd.dot(upDir));
+      if (fwdFlat.lengthSq() < 1e-4) fwdFlat.copy(right).addScaledVector(upDir, -right.dot(upDir));
       fwdFlat.normalize();
-      rightFlat.copy(right); rightFlat.y = 0; rightFlat.normalize();
+      rightFlat.copy(right).addScaledVector(upDir, -right.dot(upDir)).normalize();
       disp.set(0, 0, 0).addScaledVector(fwdFlat, input.fwd).addScaledVector(rightFlat, input.strafe);
       if (disp.lengthSq() > 1) disp.normalize();
       pos.addScaledVector(disp, input.moveSpeed * dt);
-      // vertical: rise input lets you jump/fly between floors; otherwise gravity
-      // eases you down to the floor walk-height of the current cell.
-      if (input.rise !== 0) pos.y += input.rise * input.moveSpeed * dt;
-      else pos.y += (floorEye() - pos.y) * Math.min(1, dt * 6);
+      if (input.rise !== 0) pos.addScaledVector(upDir, input.rise * input.moveSpeed * dt);
+      else {
+        const along = pos.dot(upDir);          // height along up; floor is the −up face
+        pos.addScaledVector(upDir, (floorEye() - along) * Math.min(1, dt * 6));
+      }
     }
 
     // wrap each axis back into the fundamental cube via the deck generators,
@@ -417,7 +405,8 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     // drop a footprint at a steady spacing (skip the wrap jump). The stamp lies
     // FLAT on the body's horizontal plane (normal = body up, not the pitched
     // camera up), so the trail reads as a clean ribbon however you are looking.
-    if (!hasStamp) { lastStamp.copy(pos); hasStamp = true; }
+    if (!trailOn) { hasStamp = false; }
+    else if (!hasStamp) { lastStamp.copy(pos); hasStamp = true; }
     else {
       const d = pos.distanceTo(lastStamp);
       if (d > size * 0.3 && d < size * 0.95) {
@@ -426,8 +415,10 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
         if (fwdS.lengthSq() < 1e-4) fwdS.copy(right); // looking straight up/down
         fwdS.normalize();
         const leftS = new THREE.Vector3().crossVectors(upS, fwdS).normalize();
-        // grounded: lay the print on the floor under your feet; flying: at the craft
-        const sp = grounded ? stampPos.set(pos.x, -h() + size * 0.014, pos.z) : pos;
+        // grounded: lay the print on the carried-frame floor (the −up face) under
+        // your feet; flying: at the craft itself.
+        let sp = pos;
+        if (grounded) sp = stampPos.copy(pos).addScaledVector(upS, (-h() + size * 0.014) - pos.dot(upS));
         writeStamp(sp, fwdS, leftS, upS);
         lastStamp.copy(pos);
       }
@@ -451,7 +442,10 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     if (input.thirdPerson) {
       const av = avatars[input.mode];
       av.visible = true;
-      avatarLinear.copy(bodyLinear).multiply(yawMat.makeRotationY(yaw));
+      // the airplane noses along the full flight direction (yaw + pitch); the
+      // grounded person/car stay upright and only turn (yaw).
+      if (input.mode === 'fly') avatarLinear.copy(camLinear);
+      else avatarLinear.copy(bodyLinear).multiply(yawMat.makeRotationY(yaw));
       avatarLinear.setPosition(pos);
       av.matrix.copy(avatarLinear);
       av.matrixWorldNeedsUpdate = true;
@@ -463,6 +457,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   return {
     frame,
     clearTrail() { trailN = 0; trailGeo.setDrawRange(0, 0); hasStamp = false; },
+    setTrailEnabled(on) { trailOn = on; if (!on) { trailN = 0; trailGeo.setDrawRange(0, 0); hasStamp = false; } },
     setCoverDepth(n) { depth = Math.max(0, Math.round(n)); applyLook(lookId); buildCover(); },
     setRoomSize(s) { size = s; buildRoom(); buildGenerators(); buildCover(); applyLook(lookId); },
     setCameraDistance(d) { camDist = d; },

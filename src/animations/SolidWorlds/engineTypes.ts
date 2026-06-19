@@ -57,6 +57,8 @@ export interface SolidMapState {
 export interface SolidEngine {
   frame(input: FrameInput3): void;
   clearTrail(): void;
+  /** Turn the footprint trail on/off (off by default; off also clears it). */
+  setTrailEnabled(on: boolean): void;
   /** How many rings of deck-translates to draw around the camera. */
   setCoverDepth(n: number): void;
   /** Fundamental cube edge length (world units). */

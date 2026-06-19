@@ -34,6 +34,25 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟢 code · 04:37 — Solid Worlds: trail revert + off-by-default, the plane flies, carried-frame gravity
+**Why:** Dan's three corrections.
+
+1. **Trail reverted** to the classic flat F-arrow decal (textured, cyan-left /
+   magenta-right), and **off by default** — a "Footprint trail" checkbox in the
+   Chirality panel turns it on (off also clears it).
+2. **The plane flies:** in Fly mode the airplane now noses along the **full**
+   flight direction (yaw + pitch, = `camLinear`), so it climbs/dives as you do;
+   the grounded person/car stay upright and only turn.
+3. **Gravity lives in the carried frame:** "up" is `bodyLinear·(+y)`, which the
+   holonomy rotates as you cross faces. So down stays consistent cube-to-cube,
+   but **which face is the floor depends on how you entered the room** (the path's
+   holonomy) — the amphicosm x-loop lands you on the old ceiling (no fall, frame
+   flipped with you); a turn-space z-loop drops you onto a former wall. Movement
+   is on the plane ⊥ up; you settle onto the −up face; rise (E/Space) jumps between
+   floors. Footprints (when on) lie on that carried-frame floor.
+
+![walk mode, trail off by default — standing on the floor at the sign](assets/2026-06-18-S01-solid-worlds-walk-notrail.png)
+
 ### 🟢 code · 04:09 — Solid Worlds: travel modes — airplane (fly) · person (walk) · car (drive)
 **Why:** Dan meant an *airplane* for free exploration and a *person or car* for a
 gravity-bound version (I'd read "plane" as a 2D floor — which luckily became the
