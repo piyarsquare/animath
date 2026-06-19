@@ -156,10 +156,60 @@ won't populate all of them, and that is itself a finding.
 - **Do not pre-cull.** The transcript is not pre-filtered for "useful" moments. The
   words do the culling; Stage 3 reads it out. Resist the urge to append "here are
   the takeaways" — that is Stage 3's job, and doing it here destroys the evidence.
+- **The transcript is spoken dialogue only.** No margin commentary, no inline "what
+  just happened here" notes, no `>` annotations wedged between lines. If you can see
+  the friction, *leave it* for the reader and the atlas — narrating it inside the
+  room is the same contamination, merely relocated.
 
 Write the full transcript to `{id}-room-transcript.md`, opening with a short
 **"Seeded from"** note linking the foundation (for auditability) and a **Cast**
 list grouped by the bands above, then the dialogue.
+
+### Two ways to run the room
+
+The room can be **authored** or **live**; both are legitimate, with different
+guarantees.
+
+- **The authored room** — one writer holds every voice and writes the whole
+  transcript. Fast, coherent, the default. Its risk is *self-collusion*: a single
+  author can unconsciously have one voice ask the question whose answer it already
+  knows, *staging* the reveal rather than earning it.
+- **The live room** — the cast is split across **multiple model-diverse agents**
+  (Agent tool, each with a different `model`), each a *troupe* of personas, **routed
+  turn-by-turn by you as director**. No agent holds both sides of a friction, so no
+  single context authors both a question and its answer. This is the collusion-proof
+  mode — use it to *test* whether the surfacing is real, or for a high-stakes
+  concept. It is slower and token-heavy.
+
+Live-room discipline (each rule was learned by violating it; breaking any one
+reintroduces the contamination the mode exists to remove):
+
+1. **Split antagonists across troupes.** The presser (naive learner, skeptic) and
+   the voice that must answer them belong to *different* agents on *different*
+   models. Put the impossibility-keeper in the same troupe as the skeptic and you
+   are back to self-collusion.
+2. **The director relays verbatim and adds nothing.** Route each line into the next
+   agent's prompt exactly as spoken. Paraphrasing while relaying *is* co-authoring.
+3. **Never seed the payload.** Withhold from every brief the things you want to see
+   *emerge* (the concrete counterexample, the key reframe). Give a voice the
+   *principle* it would plausibly hold, never the punchline. If you catch yourself
+   leaking an answer into a brief, **discard that line and re-run from a clean
+   brief** (in the quaternion live run this caught a seeded "15" and the clean
+   re-run produced a different, hand-built counterexample — `3·21 = 63`).
+4. **Pressers get a no-jargon clause.** A naive learner / skeptic who reaches for
+   textbook words ("fiber bundle", "topological charge") has broken character. Brief
+   them to demand, and speak in, plain checkable terms only.
+5. **Stateless is fine — and is a feature.** If no agent-to-agent message tool
+   exists, spawn a fresh agent of the troupe each turn with its brief + the public
+   transcript, directed to speak as one persona. A context with no persistent self
+   cannot plan a reveal ahead.
+6. **Record the audit.** The transcript header carries a model→persona table and a
+   provenance note flagging any beat re-run for contamination.
+
+Honest limit: even done perfectly, the director still chooses turn order and when
+to press — residual influence the live room reduces but does not erase. The
+quaternion runs are on the branch: `…-room-transcript.md` (authored) and
+`…-live-room-transcript.md` (live, model-diverse).
 
 ## Stage 3 — The Friction Atlas (read the crossings out of the transcript)
 
