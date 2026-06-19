@@ -58,9 +58,10 @@ plane's job). Since the y-gluing here doesn't interact with x/z, the vertical
 direction is "look at, don't traverse."
 
 - **Grounded cover** (walk/drive): the BFS keeps the start level + every room
-  **above** it, but drops cells **below** (`c.y < −0.4·size`), and a single big
-  opaque **ground slab** sits just under the start level. So you look down and
-  see a floor, up and see the hall of mirrors climbing away.
+  **above** it, but drops cells **below** (`c.y < −0.4·size`). A single sheet of
+  **translucent glass** is the bottom of the world — a separate plane (not baked
+  into any room), with the whole cover resting on top; you stand on it and look
+  down *through* it into the void. Look up → the hall of mirrors climbing away.
 - **Grounded movement**: horizontal only — the up-coordinate is locked to floor
   eye-height each frame (in the *carried* frame, so the amphicosm's flip is
   handled), so you never sink through the floor.

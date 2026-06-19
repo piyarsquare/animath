@@ -93,8 +93,13 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   // ── disposal bookkeeping ─────────────────────────────────────────────────
   const disposables: { dispose: () => void }[] = [];
   const track = <T extends { dispose: () => void }>(o: T): T => { disposables.push(o); return o; };
-  // solid ground slab for the grounded modes (one big opaque plane below the start level)
-  const groundMat = track(new THREE.MeshStandardMaterial({ color: 0x1b2535, roughness: 0.92, metalness: 0, side: THREE.DoubleSide }));
+  // the world floor for the grounded modes: one big sheet of translucent glass
+  // that IS the bottom of the world — the whole cover sits on top of it, and
+  // you can look down through it. Not part of any room.
+  const groundMat = track(new THREE.MeshStandardMaterial({
+    color: 0xa9cbe8, roughness: 0.08, metalness: 0, side: THREE.DoubleSide,
+    transparent: true, opacity: 0.22, depthWrite: false,
+  }));
 
   // ── the footprint trail (stored once, in fundamental coordinates) ────────
   // The classic flat orientation decal: an arrow with an F, cyan on its LEFT and
@@ -370,13 +375,15 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       }
     }
 
-    // the solid ground slab under the start level (grounded modes only)
+    // the glass world floor under the bottom cell (grounded modes only): the
+    // whole cover rests on it; you stand on it and can look down through it
     if (groundedState) {
       const gGeo = new THREE.PlaneGeometry(R * 2.4, R * 2.4);
       coverDisposables.push(gGeo);
       const ground = new THREE.Mesh(gGeo, groundMat);
-      ground.rotation.x = -Math.PI / 2; ground.position.y = -size / 2 - 0.05;
+      ground.rotation.x = -Math.PI / 2; ground.position.y = -size / 2;
       ground.frustumCulled = false;
+      ground.renderOrder = 2;            // draw the transparent glass after the rooms
       coverRoot.add(ground);
     }
   }
