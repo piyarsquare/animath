@@ -7,10 +7,15 @@ import { Slider, Checkbox } from '../../components/ControlPanel';
 import { Kicker, StatGrid } from '../../chrome/readouts';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
 import { buildBelt, type BeltColors } from './ribbon';
-import { beltReadout, formatW } from './belt';
+import { beltReadout, formatW, isContractible } from './belt';
 import explainerText from './EXPLAINER.md?raw';
 
 const NS = 'the-belt';
+const UNTWIST_MS = 1500; // a single designed "comes free" beat
+const REFUSAL_MS = 950; // the shorter "won't budge, springs back" beat
+const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+
+interface UntwistAnim { mode: 'success' | 'refusal'; turn: number; start: number }
 
 function themeColors(): BeltColors {
   const cs = getComputedStyle(document.documentElement);
@@ -30,7 +35,7 @@ export default function TheBelt() {
 
   // The scene reads the latest control values through this ref each frame
   // (Canvas3D's onMount closes over state once — see BUILDING_AN_APP §5).
-  const refs = useRef({ turnDeg, showStripe, az: 0.15, el: 0.12 });
+  const refs = useRef({ turnDeg, showStripe, az: 0.15, el: 0.12, untwist: null as UntwistAnim | null });
   refs.current.turnDeg = turnDeg;
   refs.current.showStripe = showStripe;
 
@@ -53,13 +58,26 @@ export default function TheBelt() {
     let vis = refs.current.turnDeg; // eased visual angle (smooth motion)
     let raf = 0;
     const tick = () => {
-      const target = refs.current.turnDeg;
-      vis += (target - vis) * 0.18;
-      if (Math.abs(target - vis) < 0.05) vis = target;
-      belt.setTurn(vis);
+      const u = refs.current.untwist;
+      if (u) {
+        const elapsed = performance.now() - u.start;
+        if (u.mode === 'success') {
+          const t = Math.min(1, elapsed / UNTWIST_MS);
+          belt.setUntwist(u.turn, easeInOut(t));
+          if (t >= 1) { refs.current.untwist = null; vis = 0; setTurnDeg(0); }
+        } else {
+          const t = elapsed / REFUSAL_MS;
+          if (t >= 1) { refs.current.untwist = null; belt.setTurn(refs.current.turnDeg); }
+          else belt.setStrain(u.turn, 0.9 * Math.sin(Math.PI * t)); // strain and recoil; block never moves
+        }
+      } else {
+        const target = refs.current.turnDeg;
+        vis += (target - vis) * 0.18;
+        if (Math.abs(target - vis) < 0.05) vis = target;
+        belt.setTurn(vis);
+      }
 
-      const stripe = belt.group.children[2]; // stripeMesh added third
-      if (stripe) stripe.visible = refs.current.showStripe;
+      belt.stripe.visible = refs.current.showStripe;
 
       const { az, el } = refs.current;
       camera.position.set(R * Math.cos(el) * Math.sin(az), R * Math.sin(el), R * Math.cos(el) * Math.cos(az));
@@ -75,7 +93,7 @@ export default function TheBelt() {
       scene.remove(belt.group);
       belt.dispose();
     };
-  }, []);
+  }, [setTurnDeg]); // setTurnDeg is a stable setter — no remount
 
   // --- minimal camera orbit (looking), kept separate from the block's turn ---
   const drag = useRef<{ x: number; y: number } | null>(null);
@@ -95,6 +113,18 @@ export default function TheBelt() {
     onPointerUp: (e: React.PointerEvent) => { drag.current = null; void e; },
     onPointerCancel: () => { drag.current = null; },
   };
+
+  // Attempt to shed the twist by looping the belt around — succeeds only when
+  // the block is back at +1 (an even number of half-turns), refuses otherwise.
+  const attemptUntwist = useCallback(() => {
+    const td = refs.current.turnDeg;
+    if (td <= 0 || refs.current.untwist) return;
+    refs.current.untwist = {
+      mode: isContractible(td) ? 'success' : 'refusal',
+      turn: td,
+      start: performance.now(),
+    };
+  }, []);
 
   const r = beltReadout(turnDeg);
 
@@ -165,10 +195,10 @@ export default function TheBelt() {
   }], []);
 
   const actions: ActionDef[] = useMemo(() => [
-    { id: 'untwist', icon: 'reset', label: 'Untwist', primary: true, sectionId: 'turn', onClick: () => setTurnDeg(0) },
+    { id: 'untwist', icon: 'reset', label: 'Untwist', primary: true, sectionId: 'turn', onClick: attemptUntwist },
     { id: 'plus', icon: 'play', label: 'Turn +360°', sectionId: 'turn', onClick: () => setTurnDeg(d => Math.min(720, d + 360)) },
     { id: 'minus', icon: 'play', label: 'Turn −360°', sectionId: 'turn', onClick: () => setTurnDeg(d => Math.max(0, d - 360)) },
-  ], [setTurnDeg]);
+  ], [setTurnDeg, attemptUntwist]);
 
   return (
     <Workspace
