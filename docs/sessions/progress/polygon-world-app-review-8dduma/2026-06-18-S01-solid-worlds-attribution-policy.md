@@ -34,6 +34,21 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟡 milestone · 00:07 — Solid Worlds written up as a `kind: plan` report
+**Why:** Author chose "write it up as a planned report first" (over starting the
+Tier 1 build). A pick-up-cold plan preserves the design discussion before context
+is lost.
+
+Wrote [`2026-06-18-S01-solid-worlds-plan.md`](2026-06-18-S01-solid-worlds-plan.md)
+(`kind: plan`, `status: proposed`). It distills the uploaded draft + this session's
+discussion into a file-level, tiered sequence grounded in the *real* codebase:
+the reality-check table (app-local kernel, `surfaceSchema.ts` reused as the 3D
+manifold-certifier, `coverModel.ts`/`looks.ts` reuse), the separate-app decision,
+the session's design calls (footstep chirality headline, `ollɘH` sign, rotation-
+vs-reflection pair, portal rooms / free-frame / cover view), Tiers 1–4, the
+validation strategy (with the flagged 3D-`trail-chirality` harness gap), risks,
+naming, and a policy-conformant "Possible sources" block.
+
 ### 🟡 milestone · 23:55 — Attribution policy added across the workflow (full scope); build green
 **Why:** Author chose the full-workflow option; a policy doc only sticks if the
 binding rule, the build checklist, and a worked example are all in place.
