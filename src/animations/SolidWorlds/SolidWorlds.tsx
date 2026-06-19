@@ -201,11 +201,16 @@ export default function SolidWorlds() {
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5 }}>
         <div>
           <strong style={{ color: 'var(--cp-fg)' }}>{analysis.manifold}</strong> ·{' '}
-          {analysis.orientable ? 'orientable' : 'non-orientable'} · H₁ = {analysis.h1}
+          {analysis.orientable ? 'orientable' : 'non-orientable'}
+        </div>
+        <div style={{ marginTop: 2 }}>
+          H₁ = {analysis.h1} · χ = {analysis.euler}
+          {analysis.manifoldConsistent ? ' ✓' : ' (!)'}{' '}
+          <span style={{ opacity: 0.7 }}>(computed from the gluing)</span>
         </div>
         <div style={{ marginTop: 4, opacity: 0.9 }}>{analysis.note}</div>
         <div style={{ marginTop: 4, opacity: 0.8 }}>
-          χ = 0 (it always is in 3D) — geometry is forced per edge, not by χ.
+          χ is always 0 in 3D — it can&apos;t pick the geometry; H₁ is the fingerprint instead.
         </div>
       </div>
     </>

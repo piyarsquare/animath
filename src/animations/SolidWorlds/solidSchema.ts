@@ -14,6 +14,8 @@
  * facts**, never claimed as a classification (per the plan's honesty rule).
  */
 
+import { computeHomology } from './lib/homology';
+
 export type Axis = 'x' | 'y' | 'z';
 export const AXES: readonly Axis[] = ['x', 'y', 'z'];
 export const axisIndex = (a: Axis): 0 | 1 | 2 => (a === 'x' ? 0 : a === 'y' ? 1 : 2);
@@ -108,7 +110,12 @@ export interface SolidAnalysis {
   perAxis: AxisAnalysis[];
   reversingAxes: Axis[];
   manifold: string;
+  /** H₁ computed from the cellular chain complex (lib/homology.ts). */
   h1: string;
+  /** Euler characteristic V − E + F − 1; 0 for a closed 3-manifold. */
+  euler: number;
+  /** True when χ = 0 (a necessary manifold sanity check). */
+  manifoldConsistent: boolean;
   note: string;
 }
 
@@ -125,8 +132,12 @@ export function analyzeSolid(w: SolidWorldSpec): SolidAnalysis {
   });
   const reversingAxes = perAxis.filter((a) => a.reversing).map((a) => a.axis);
   const orientable = reversingAxes.length === 0;
+  const hom = computeHomology(w);
   const note = orientable
     ? 'Every face pairing is a proper motion (det +1) — orientation survives every loop.'
     : `Crossing the ${reversingAxes.join('/')}-pairing reverses orientation (det −1): walk that loop once and you return mirror-reversed.`;
-  return { orientable, perAxis, reversingAxes, manifold: w.manifold, h1: w.h1, note };
+  return {
+    orientable, perAxis, reversingAxes, manifold: w.manifold,
+    h1: hom.h1, euler: hom.euler, manifoldConsistent: hom.euler === 0, note,
+  };
 }

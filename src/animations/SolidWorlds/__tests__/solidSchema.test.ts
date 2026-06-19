@@ -64,6 +64,26 @@ describe('solidSchema — loop holonomy (the chirality acceptance test)', () => 
   });
 });
 
+describe('homology — H₁ computed from the chain complex matches the catalog', () => {
+  const expected: Record<string, string> = {
+    '3-torus': 'ℤ³',
+    'half-turn': 'ℤ ⊕ ℤ/2 ⊕ ℤ/2',
+    'quarter-turn': 'ℤ ⊕ ℤ/2',
+    'amphicosm': 'ℤ² ⊕ ℤ/2',
+  };
+  for (const w of SOLID_WORLDS) {
+    it(`${w.id}: computed H₁ = curated catalog value (${w.h1})`, () => {
+      const a = analyzeSolid(w);
+      expect(a.h1).toBe(expected[w.id]);
+      expect(a.h1).toBe(w.h1);          // computed agrees with the curated spec
+    });
+  }
+
+  it('every world has χ = 0 (closed-3-manifold sanity check)', () => {
+    for (const w of SOLID_WORLDS) expect(analyzeSolid(w).euler).toBe(0);
+  });
+});
+
 describe('solidSchema — matrix helpers', () => {
   it('rot is a proper rotation; reflect is an improper one', () => {
     expect(detM3(rot('z', 90))).toBeCloseTo(1);

@@ -34,6 +34,36 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟡 milestone · 03:22 — Solid Worlds Tier 2: H₁ computed from the chain complex (Smith normal form), cross-checked
+**Why:** The plan's central schema deliverable — turn the catalog's H₁ from
+asserted facts into *computed, verified* invariants ("validate invariants, never
+claim a classification that doesn't exist").
+
+- **`lib/homology.ts`** — builds the cube quotient's integer cellular chain
+  complex: vertex/edge/face identifications via the pairing isometries
+  (union-find; **signed** union-find for edges, since gluings can reverse
+  orientation), the boundary maps ∂₂ (faces → edges) and ∂₁ (edges → vertices),
+  and **Smith normal form** to read `rank H₁ = #E − rank ∂₁ − rank ∂₂` and the
+  torsion = invariant factors > 1 of ∂₂. Also returns χ = V − E + F − 1.
+- **`analyzeSolid`** now reports the **computed** H₁ + χ (+ a manifold-consistency
+  flag χ = 0); the World panel shows "H₁ = … · χ = 0 ✓ (computed from the gluing)".
+- **Tests (14 total, +5)**: computed H₁ equals the curated catalog value for all
+  four worlds — **ℤ³, ℤ⊕ℤ/2⊕ℤ/2, ℤ⊕ℤ/2, ℤ²⊕ℤ/2** — and χ = 0 throughout. The
+  agreement across four independent values is strong evidence the cell-
+  identification machinery (the hard part, and the foundation for the future
+  vertex-link S² test) is correct.
+- EXPLAINER + CLAUDE tree updated (H₁ is now the world's fingerprint). Build ✓,
+  14/14 tests ✓, lint clean.
+
+![World panel showing computed H₁ = ℤ³ · χ = 0](assets/2026-06-18-S01-solid-worlds-homology.png)
+
+> [!NOTE]
+> **Still open in Tier 2:** the full **vertex-link = S²** manifold certificate
+> (χ = 0 is implemented as the necessary check; the sufficient link test is the
+> next schema step), the **Schlegel mini-map**, the platycosms needing a non-cube
+> domain (third/sixth-turn, Hantzsche–Wendt), and a **headless walk-the-loop**
+> chirality test for the engine (the pure-math half is now tested).
+
 ### 🟢 code · 03:13 — Solid Worlds Tier 2: turn-spaces, rotation-vs-reflection HUD, schema tests; + an avatar bug fix
 **Why:** Continue the plan into Tier 2 (richer catalog + matured schema), and fix
 a real bug Dan spotted: the third-person avatar's chirality colors were reversed

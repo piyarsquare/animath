@@ -15,7 +15,8 @@ through a face and you see the next copy, and the next, receding away.
 In Polygon Worlds, the Euler characteristic χ chose the geometry. **In 3D that's
 gone** — every closed 3-manifold has χ = 0, so χ says nothing. (Geometry is forced
 *locally* instead, by the angles around each glued edge; the curved worlds that
-needs are a later chapter. These first two are flat.)
+needs are a later chapter — these worlds are all flat.) What names a world here is
+its **first homology** H₁, computed from the gluing and shown in the World panel.
 
 What survives, and becomes the star, is **orientation** — and the worlds sort into
 a telling ladder of what a loop can do to you:
