@@ -34,12 +34,11 @@ function mat4From(m: M3, tx: number, ty: number, tz: number): THREE.Matrix4 {
   );
 }
 
-const TRAIL_CAP = 420;
-const VPER = 12; // 4 triangles per 3D arrow stamp
+const TRAIL_CAP = 360;
+const VPER = 24; // 8 triangles per 3D arrowhead stamp (top + bottom + 3 side walls)
 
 const CY: [number, number, number] = [0.2, 0.84, 1];   // cyan — the print's left
 const MG: [number, number, number] = [1, 0.31, 0.64];  // magenta — its right
-const DK: [number, number, number] = [0.12, 0.13, 0.18]; // back & underside
 
 export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: Opts): SolidEngine {
   const { scene, camera, renderer } = deps;
@@ -68,10 +67,10 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     const L = findLook(id);
     const R = (depth + 0.55) * size; // matches the cover render radius
     scene.background = new THREE.Color(L.sky);
-    // Light fog: keep the hall-of-mirrors clear most of the way, fading only the
-    // outermost shell so the hard cull boundary doesn't pop. (near must be well
-    // beyond one room, or the first neighbor hazes over.)
-    scene.fog = new THREE.Fog(L.sky, R * 0.8, R * 1.08);
+    // Very light fog: every rendered ring stays crisp (the hall-of-mirrors), and
+    // only the cull boundary itself feathers into the sky. near sits past the
+    // farthest drawn room, so nothing inside the cover hazes over.
+    scene.fog = new THREE.Fog(L.sky, R * 0.95, R * 1.2);
     renderer.toneMappingExposure = L.exposure;
     ambient.intensity = L.ambient;
     hemi.color.setHex(L.hemiSky); hemi.groundColor.setHex(L.hemiGround); hemi.intensity = L.hemi;
@@ -113,28 +112,37 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       trailCol.copyWithin(0, VPER * 3, trailN * VPER * 3);
       trailN--;
     }
-    const aTip = size * 0.1, aBack = -size * 0.06, hw = size * 0.055, th = size * 0.06;
-    // corner points in the (forward, left, normal) frame
+    // A flat-lying arrowhead with thickness: a solid prism (top + bottom faces +
+    // 3 side walls) pointing along travel, colored by its LEFT coordinate
+    // (cyan-left → magenta-right) so the print's chirality reads from any angle.
+    const aTip = size * 0.13, aBack = -size * 0.08, hw = size * 0.08, th = size * 0.022;
     const P = (along: number, lt: number, up: number): [number, number, number] => [
       p.x + along * fwd.x + lt * left.x + up * nrm.x,
       p.y + along * fwd.y + lt * left.y + up * nrm.y,
       p.z + along * fwd.z + lt * left.z + up * nrm.z,
     ];
-    const tip = P(aTip, 0, 0), bl = P(aBack, hw, 0), br = P(aBack, -hw, 0), pk = P((aTip + aBack) / 2, 0, th);
-    // 4 faces: left (cyan), right (magenta), back & bottom (dark)
-    const tris: [[number, number, number], [number, number, number], [number, number, number], [number, number, number]][] = [
-      [tip, bl, pk, CY],
-      [tip, pk, br, MG],
-      [bl, br, pk, DK],
-      [tip, br, bl, DK],
+    const col = (lt: number): [number, number, number] => {
+      const t = Math.max(0, Math.min(1, lt / hw * 0.5 + 0.5)); // +hw → cyan, −hw → magenta
+      return [MG[0] + (CY[0] - MG[0]) * t, MG[1] + (CY[1] - MG[1]) * t, MG[2] + (CY[2] - MG[2]) * t];
+    };
+    // the three corners (tip, back-left, back-right), each at top (+th) and bottom (−th)
+    const aT = P(aTip, 0, th), bT = P(aBack, hw, th), cT = P(aBack, -hw, th);
+    const aB = P(aTip, 0, -th), bB = P(aBack, hw, -th), cB = P(aBack, -hw, -th);
+    const lA = 0, lB = hw, lC = -hw; // left coords for coloring
+    type Vert = [[number, number, number], number];
+    const tris: [Vert, Vert, Vert][] = [
+      [[aT, lA], [bT, lB], [cT, lC]],          // top
+      [[aB, lA], [cB, lC], [bB, lB]],          // bottom
+      [[aT, lA], [aB, lA], [bB, lB]], [[aT, lA], [bB, lB], [bT, lB]], // tip→back-left wall
+      [[bT, lB], [bB, lB], [cB, lC]], [[bT, lB], [cB, lC], [cT, lC]], // back wall
+      [[cT, lC], [cB, lC], [aB, lA]], [[cT, lC], [aB, lA], [aT, lA]], // back-right→tip wall
     ];
     let o = trailN * VPER * 3;
-    for (const [a, b, c, col] of tris) {
-      for (const v of [a, b, c]) {
-        trailPos[o] = v[0]; trailPos[o + 1] = v[1]; trailPos[o + 2] = v[2];
-        trailCol[o] = col[0]; trailCol[o + 1] = col[1]; trailCol[o + 2] = col[2];
-        o += 3;
-      }
+    for (const tri of tris) for (const [v, lt] of tri) {
+      const c = col(lt);
+      trailPos[o] = v[0]; trailPos[o + 1] = v[1]; trailPos[o + 2] = v[2];
+      trailCol[o] = c[0]; trailCol[o + 1] = c[1]; trailCol[o + 2] = c[2];
+      o += 3;
     }
     trailN++;
     (trailGeo.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
@@ -165,9 +173,20 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     roomDisposables.push(frameMat);
     room.add(new THREE.LineSegments(edges, frameMat));
 
-    // floor grid (a landmark, not a constraint — there is no global "down")
-    const grid = new THREE.GridHelper(size, 6, 0x4a6a8a, 0x2c3e52);
-    grid.position.y = -h + 0.01;
+    // floor: a clear horizontal reference plane (a landmark for moving in 3D —
+    // there is no global "down", but a plane keeps you oriented). A faint solid
+    // slab you can see through, topped by a bright grid.
+    const floorGeo = new THREE.PlaneGeometry(size, size);
+    roomDisposables.push(floorGeo);
+    const floorMat = new THREE.MeshBasicMaterial({
+      color: 0x2a3c54, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false,
+    });
+    roomDisposables.push(floorMat);
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2; floor.position.y = -h;
+    room.add(floor);
+    const grid = new THREE.GridHelper(size, 8, 0x9fc4ec, 0x53708f);
+    grid.position.y = -h + 0.02;
     roomDisposables.push(grid.geometry, grid.material as THREE.Material);
     room.add(grid);
 
@@ -340,13 +359,19 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     }
     if (wrapped) { recompFrame(); hasStamp = false; }  // re-index; don't smear across the seam
 
-    // drop a footprint at a steady spacing (skip the wrap jump)
+    // drop a footprint at a steady spacing (skip the wrap jump). The stamp lies
+    // FLAT on the body's horizontal plane (normal = body up, not the pitched
+    // camera up), so the trail reads as a clean ribbon however you are looking.
     if (!hasStamp) { lastStamp.copy(pos); hasStamp = true; }
     else {
       const d = pos.distanceTo(lastStamp);
-      if (d > size * 0.16 && d < size * 0.9) {
-        const left = right.clone().negate();
-        writeStamp(pos, fwd, left, up);
+      if (d > size * 0.3 && d < size * 0.95) {
+        const upS = new THREE.Vector3(0, 1, 0).applyMatrix4(bodyLinear).normalize();
+        const fwdS = fwd.clone().addScaledVector(upS, -fwd.dot(upS));
+        if (fwdS.lengthSq() < 1e-4) fwdS.copy(right); // looking straight up/down
+        fwdS.normalize();
+        const leftS = new THREE.Vector3().crossVectors(upS, fwdS).normalize();
+        writeStamp(pos, fwdS, leftS, upS);
         lastStamp.copy(pos);
       }
     }

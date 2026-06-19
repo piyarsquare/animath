@@ -29,7 +29,9 @@ export default function SolidWorlds() {
   const [moveSpeed, setMoveSpeed] = usePersistentState(pk('moveSpeed'), 5);
   const [thirdPerson, setThirdPerson] = useState(true);
   const [camDistance, setCamDistance] = useState(6);
-  const [coverDepth, setCoverDepth] = usePersistentState(pk('coverDepth'), DEFAULT_COVER_DEPTH);
+  // Session-only (not persisted): a quality/perf knob whose default should always
+  // win on load — otherwise a stale stored value hides the hall-of-mirrors depth.
+  const [coverDepth, setCoverDepth] = useState(DEFAULT_COVER_DEPTH);
   const [roomSize, setRoomSize] = usePersistentState(pk('roomSize'), DEFAULT_ROOM_SIZE);
   const [look, setLook] = usePersistentState(pk('look'), 'daytime');
 

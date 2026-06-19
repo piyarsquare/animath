@@ -34,6 +34,27 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟢 code · 04:01 — Solid Worlds: lighter fog, a floor plane, redesigned footsteps, depth always-on
+**Why:** Dan: fog still too thick, footsteps "not good", and 3D space needs a
+reference plane.
+
+- **Fog much lighter** (`near = R·0.95`, `far = R·1.2`) so *every* rendered ring
+  stays crisp and only the cull boundary feathers into the sky.
+- **Root cause of "still thick":** cover depth was **persisted**, so the default
+  bump never reached an existing session. Made cover depth **session-only**
+  (always starts at 3) — the hall-of-mirrors now shows on load.
+- **Floor plane:** each cell gets a clear horizontal reference — a faint
+  see-through slab + a brighter grid — so you stay oriented while moving in 3D
+  (it's a landmark, not gravity; there's still no global "down").
+- **Footsteps redesigned:** the flat decal → tetra was "not good"; now a
+  **flat-lying solid arrowhead** (top + bottom + 3 side walls, real thickness)
+  that lies on the body's horizontal plane (normal = body up, not the pitched
+  camera) and is colored by a **cyan-left → magenta-right gradient** so the
+  chirality reads from any angle. Spaced out (`> 0.3·size`) so each arrow is
+  distinct. Verified by driving the headless browser to walk forward.
+
+![lighter fog, floor plane, and the redesigned footstep trail](assets/2026-06-18-S01-solid-worlds-floor-trail.png)
+
 ### 🟢 code · 03:45 — Solid Worlds: the infinite-mirror effect + 3D footprint arrows
 **Why:** Dan: fog too thick (couldn't see into neighbors — the hall-of-mirrors
 was lost), and the footprints needed thickness in a 3D world.
