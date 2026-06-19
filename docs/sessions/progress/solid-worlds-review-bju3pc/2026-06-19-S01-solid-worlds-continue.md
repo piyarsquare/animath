@@ -35,6 +35,49 @@ That branch's Solid Worlds code is **already present on this branch** (engine,
 
 ## Working notes
 
+### 🟡 milestone · 22:45 — Verified classifier: 8 of 10 platycosms are cube-expressible; Γᵃᵇ corrects the cell engine
+**Why:** Dan: "proceed with the Γᵃᵇ cross-check… correct the classifier premise first
+(H₁ is NOT pairwise-distinct: c2 and +a2 both ℤ⊕(ℤ/2)²)."
+
+- **Built an independent Γᵃᵇ** (Bieberbach abelianization) in `lib/freeness.ts`:
+  point group + Reidemeister–Schreier lattice with word-tracking → integer
+  relation matrix → Smith form. Validated: matches all four golden worlds.
+- **Cross-check vs the cell engine: 610 of 1030 free specs disagree — and Γᵃᵇ is
+  right every time** (cell reports e.g. `ℤ⊕ℤ/8` for a quarter-turn+screw that is
+  plainly the tetracosm `ℤ⊕ℤ/2`). So **`computeHomology` has a genuine
+  orientation-sign bug for rotated/reflected staggered gluings** (it's correct on
+  the screw-free catalog; wrong for screws). Γᵃᵇ is the trustworthy invariant.
+- **Completed Γᵃᵇ** (added the consistency relations: a lattice element's
+  Reidemeister–Schreier word must equal its basis decomposition — the
+  multi-rotation commutator relators). It now yields **Hantzsche–Wendt = ℤ/4⊕ℤ/4**
+  (the famous value), confirming correctness.
+- **Definitive classification** by the trustworthy key (orientability, holonomy
+  order, Γᵃᵇ): exactly **8 classes = the 8 cube-expressible platycosms** (the
+  tricosm/hexacosm need hexagonal domains, correctly absent). 4 are already in the
+  catalog; **4 are new**:
+
+  | platycosm | invariants | status |
+  |---|---|---|
+  | second amphicosm (−a1) | nonor, hol2, ℤ² | NEW |
+  | first amphidicosm (+a2) | nonor, hol4, ℤ⊕(ℤ/2)² | NEW |
+  | second amphidicosm (−a2) | nonor, hol4, ℤ⊕ℤ/4 | NEW |
+  | didicosm / Hantzsche–Wendt | or, hol4, ℤ/4⊕ℤ/4 | NEW |
+
+> [!IMPORTANT]
+> **Correction to the 21:33 note:** Hantzsche–Wendt **is** expressible in the
+> opposite-face cube schema after all — with two coordinate half-turns and a
+> perpendicular screw (no half-axial step needed). The earlier "not expressible"
+> claim was based on an invalid axial-offset spec and the buggy cell engine.
+
+> [!NOTE]
+> **Next:** make Γᵃᵇ + freeness authoritative in `analyzeSolid` (the cell engine
+> stays for χ but its screw H₁ bug must be fixed or quarantined), then add the 4
+> new worlds — keeping the 4-world catalog stable and marking the new ones
+> experimental until the cell H₁ also agrees (Dan's gate). Confirm −a2 = ℤ⊕ℤ/4
+> against Conway–Rossetti Table 6.
+
+`lib/freeness.ts` now exports `isFreeAction` and `abelianizationH1`; both verified.
+
 ### 🔴 blocker · 22:00 — Adding screw worlds is blocked: the engine has false positives on rotation/reflection+screw cases
 **Why:** Dan: "add the screw manifolds consistent with the schema." Began the
 enumeration; it surfaced correctness gaps that must be fixed before any world is
