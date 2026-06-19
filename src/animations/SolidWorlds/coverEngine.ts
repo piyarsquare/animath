@@ -250,7 +250,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     head.position.y = size * 0.18;
     const noseGeo = track(new THREE.ConeGeometry(size * 0.022, size * 0.08, 10));
     const nose = new THREE.Mesh(noseGeo, track(new THREE.MeshStandardMaterial({ color: 0xfff0c0, side: THREE.DoubleSide })));
-    nose.rotation.x = Math.PI / 2;       // cone +y → −z (points forward)
+    nose.rotation.x = -Math.PI / 2;      // cone +y → −z (points forward)
     nose.position.set(0, size * 0.18, -size * 0.07);
     const sideGeo = track(new THREE.SphereGeometry(size * 0.026, 10, 8));
     const leftBall = new THREE.Mesh(sideGeo, track(new THREE.MeshStandardMaterial({ color: 0x33d6ff })));
