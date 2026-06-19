@@ -324,7 +324,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     // ball plus the balls of every cell joined there — so the colors clustered
     // at a vertex read off exactly which corners the gluing identifies.
     if (showCorners && cornerGeo && cornerMat) {
-      const inset = U * 0.45;             // fixed inward offset from the corner
+      const inset = U * 0.06;             // practically touching the walls, just inside the corner
       const inst = new THREE.InstancedMesh(cornerGeo, cornerMat, N * 8);
       inst.frustumCulled = false;
       const col = new THREE.Color();
