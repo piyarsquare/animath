@@ -104,7 +104,8 @@ animath/
     │   ├── AgenticSorting/      # concurrent agent-based sorting (CSS/DOM)
     │   ├── StableMatching/      # rebuilt Gale–Shapley lab: matrix · welfare · lattice (CSS/DOM)
     │   ├── PolygonWorlds/       # walk every closed surface from one glued polygon; selectable scene "looks" (looks.ts, distilled from Topology Walk's themes)
-    │   └── TreesAndNets/        # M̄₀,ₙ(ℝ) explorer: associahedron tiles + the gluing mosaic; lib/{associahedron,mosaic}.ts
+    │   ├── TreesAndNets/        # M̄₀,ₙ(ℝ) explorer: associahedron tiles + the gluing mosaic; lib/{associahedron,mosaic}.ts
+    │   └── TheBelt/             # quaternion double cover as a twisting belt; belt.ts (pure θ→readout math) + ribbon.ts (mutate-in-place mesh)
     │
     ├── components/             # shared app-side UI
     │   ├── ParticleViewerShell.tsx  # turnkey workspace assembly for particle (4D) viewers
@@ -169,6 +170,7 @@ visible app catalog comes from `src/apps.ts` (+ `src/chrome/catalog.ts`).
 | `#/stable-matching`  | `StableMatching` | Rebuilt Gale–Shapley lab (matrix · welfare surface · lattice via layouts) |
 | `#/polygon-worlds`   | `PolygonWorlds`  | Walk every closed surface from one glued polygon |
 | `#/trees-and-nets`   | `TreesAndNets`   | Tree-space as a polytope: the associahedron of an n-gon's triangulations (port of the private `quantum-tree`) |
+| `#/the-belt`         | `TheBelt`        | The quaternion double cover you can feel: turn a block, a ribbon twists; 360° won't untwist, 720° does (`belt.ts` pure math + `ribbon.ts` mutate-in-place mesh) |
 | `#/embed/complex-particles` | `EmbedComplexParticles` | Chrome-less applet for iframe embedding, URL-configured (docs/EMBEDS.md); demo host: `/embed-demo.html` |
 | `#/embed/plane-transform` | `EmbedPlaneTransform` | Chrome-less two-pane plane applet for iframe embedding (docs/EMBEDS.md) |
 

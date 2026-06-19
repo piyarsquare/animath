@@ -37,6 +37,7 @@ const META: Record<string, { cat: Category; kind: PreviewKind; hue?: number }> =
   '/stable-matching': { cat: 'Algorithm', kind: 'matrix' },
   '/polygon-worlds': { cat: 'Dynamics', kind: 'polygon' },
   '/trees-and-nets': { cat: 'Algorithm', kind: 'treenet' },
+  '/the-belt': { cat: 'Complex', kind: 'belt' },
 };
 
 export const CARDS: AppCard[] = apps

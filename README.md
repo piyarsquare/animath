@@ -20,6 +20,7 @@ reachable directly by hash route.
 9. **[Stable Matching](https://piyarsquare.github.io/animath/#/stable-matching)** – a rebuilt Gale–Shapley lab: tune each side's consensus, watch the proposer advantage, sweep the whole consensus plane, and browse the lattice of stable matchings.
 10. **[Polygon Worlds](https://piyarsquare.github.io/animath/#/polygon-worlds)** – one decorated square, four worlds: glue its edges and walk a torus, Klein bottle, projective plane or sphere in first person.
 11. **[Trees and Nets](https://piyarsquare.github.io/animath/#/trees-and-nets)** – tree-space as a polytope: every triangulation of an n-gon is a tree and every flip an edge, so the whole associahedron becomes a 3D (or 4D) shape you can orbit, colored by energy.
+12. **[The Belt](https://piyarsquare.github.io/animath/#/the-belt)** – the quaternion double cover you can feel: turn a block and a ribbon twists; one full turn stays stubbornly twisted, but a second turn sets it free.
 
 ---
 
@@ -148,7 +149,8 @@ src/
 │   ├── AgenticSorting/     # concurrent agent-based sorting
 │   ├── StableMatching/     # rebuilt Gale–Shapley lab (matrix · welfare · lattice)
 │   ├── TrinaryStars/       # three-body sandbox (Observatory) + ensemble Lab
-│   └── PolygonWorlds/      # walk every closed surface from one glued polygon
+│   ├── PolygonWorlds/      # walk every closed surface from one glued polygon
+│   └── TheBelt/            # quaternion double cover as a twisting belt (belt.ts + ribbon.ts)
 │
 ├── components/             # shared app-side UI
 │   ├── ParticleViewerShell # turnkey workspace assembly for the particle viewers

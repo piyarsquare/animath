@@ -78,4 +78,10 @@ export const apps: AppDescriptor[] = [
     icon: '∞',
     blurb: 'Walk a closed surface in first person — twisting corridor or flat torus / Klein bottle — and read the topology off your own footprints.',
   },
+  {
+    hash: '/the-belt',
+    name: 'The Belt',
+    icon: '∮',
+    blurb: 'Turn a block and a ribbon twists with it: one full turn leaves the belt stubbornly twisted, but a second turn sets it free — the quaternion double cover you can feel in your hand.',
+  },
 ];

@@ -13,7 +13,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
  */
 export type PreviewKind =
   | 'particles' | 'plane' | 'fractal' | 'julia' | 'corridor'
-  | 'trinary' | 'marriage' | 'sorting' | 'matrix' | 'polygon' | 'treenet';
+  | 'trinary' | 'marriage' | 'sorting' | 'matrix' | 'polygon' | 'treenet' | 'belt';
 
 type DrawFn = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
 
@@ -361,6 +361,47 @@ function JuliaPreview({ light }: { light: boolean }) {
 }
 
 /* ---- Topology walk: first-person flight down a twisting corridor ---------- */
+function BeltPreview({ light }: { light: boolean }) {
+  const bg = light ? '#f4f3ef' : '#04060c';
+  const ref = useCanvas((ctx, W, H, t) => {
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    // A vertical ribbon whose total twist eases between one and two full turns —
+    // the belt-trick image: more twists never untwist by themselves.
+    const turns = 1.5 + Math.sin(t * 0.8) * 0.5;     // sweeps 1 → 2 turns
+    const theta = turns * Math.PI * 2;
+    const cx = W / 2;
+    const top = H * 0.16, bot = H * 0.84, L = bot - top;
+    const halfW = Math.min(W, H) * 0.13;
+    const N = 60;
+    const front = light ? '#caa23a' : '#e3b23c';
+    const back = light ? '#7a5a22' : '#5e4519';
+    for (let i = 0; i < N; i++) {
+      const s0 = i / N, s1 = (i + 1) / N;
+      const seg = (s: number) => {
+        const y = top + s * L;
+        const tw = theta * s;
+        const dx = Math.cos(tw) * halfW; // foreshortened width (project onto x)
+        return { y, lx: cx - dx, rx: cx + dx, facing: Math.cos(tw) >= 0 };
+      };
+      const a = seg(s0), b = seg(s1);
+      ctx.fillStyle = a.facing ? front : back;
+      ctx.beginPath();
+      ctx.moveTo(a.lx, a.y); ctx.lineTo(a.rx, a.y);
+      ctx.lineTo(b.rx, b.y); ctx.lineTo(b.lx, b.y);
+      ctx.closePath(); ctx.fill();
+    }
+    // center stripe
+    ctx.strokeStyle = light ? '#2a2a2a' : '#f5f5f5';
+    ctx.lineWidth = Math.max(1, W * 0.006);
+    ctx.beginPath(); ctx.moveTo(cx, top); ctx.lineTo(cx, bot); ctx.stroke();
+    // clamp + block caps
+    ctx.fillStyle = light ? '#3a3a3a' : '#cfcfcf';
+    ctx.fillRect(cx - halfW * 1.3, top - H * 0.05, halfW * 2.6, H * 0.045);
+    ctx.fillRect(cx - halfW * 1.3, bot + H * 0.01, halfW * 2.6, H * 0.045);
+  }, [light]);
+  return <canvas ref={ref} style={canvasStyle} />;
+}
+
 function CorridorPreview({ light }: { light: boolean }) {
   const bg = light ? '#f4f3ef' : '#04060c';
   const ref = useCanvas((ctx, W, H, t) => {
@@ -855,6 +896,7 @@ export function Preview({ kind, skin }: { kind: PreviewKind; skin: string; hue?:
     case 'matrix': return <MatrixPreview light={light} />;
     case 'polygon': return <PolygonPreview light={light} />;
     case 'treenet': return <TreeNetPreview light={light} />;
+    case 'belt': return <BeltPreview light={light} />;
     default: return <ParticlePreview light={light} />;
   }
 }

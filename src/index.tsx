@@ -20,6 +20,7 @@ const StableMatching = React.lazy(() => import('./animations/StableMatching/Stab
 const AgenticSorting = React.lazy(() => import('./animations/AgenticSorting/AgenticSorting'));
 const PolygonWorlds = React.lazy(() => import('./animations/PolygonWorlds/PolygonWorlds'));
 const TreesAndNets = React.lazy(() => import('./animations/TreesAndNets/TreesAndNets'));
+const TheBelt = React.lazy(() => import('./animations/TheBelt/TheBelt'));
 const EmbedComplexParticles = React.lazy(() => import('./embed/EmbedComplexParticles'));
 const EmbedPlaneTransform = React.lazy(() => import('./embed/EmbedPlaneTransform'));
 
@@ -41,6 +42,7 @@ const routes: Record<string, React.ComponentType> = {
   '/agentic-sorting': AgenticSorting,
   '/polygon-worlds': PolygonWorlds,
   '/trees-and-nets': TreesAndNets,
+  '/the-belt': TheBelt,
   // Chrome-less applet routes for embedding in web pages (docs/EMBEDS.md).
   '/embed/complex-particles': EmbedComplexParticles,
   '/embed/plane-transform': EmbedPlaneTransform,
