@@ -320,21 +320,30 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     trailInst.instanceMatrix.needsUpdate = true;
     coverRoot.add(trailInst);
 
-    // corner markers — one ball per cube corner, colored by its sign bits (the
-    // RGB-cube scheme), so you can read orientation + mirroring at a glance
+    // corner markers — at each of the 8 cube corners, just inside the room, a
+    // little cluster of 4 colored balls in a chiral tetrahedron (R·G·B·white).
+    // A 4-color tetrad has no mirror symmetry, so when you cross a wall the
+    // gluing's rotation OR reflection is read straight off how the colors land.
     if (showCorners && cornerGeo && cornerMat) {
-      const corners: [number, number, number][] = [];
-      for (let b = 0; b < 8; b++) corners.push([(b & 1) ? 1 : -1, (b & 2) ? 1 : -1, (b & 4) ? 1 : -1]);
-      const hh = size / 2;
-      const inst = new THREE.InstancedMesh(cornerGeo, cornerMat, N * 8);
+      const TETRA: [number, number, number][] = [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]];
+      const TCOL: [number, number, number][] = [[1, 0.25, 0.25], [0.3, 1, 0.35], [0.4, 0.55, 1], [1, 1, 1]];
+      const hh = (size / 2) * 0.82;        // cluster centers, just inside the walls
+      const r = U * 0.16 / Math.sqrt(3);   // tetrad radius (fixed, furniture-scaled)
+      const inst = new THREE.InstancedMesh(cornerGeo, cornerMat, N * 8 * 4);
       inst.frustumCulled = false;
       const col = new THREE.Color();
+      const off = new THREE.Matrix4();
       let idx = 0;
-      for (let i = 0; i < N; i++) for (const cc of corners) {
-        tmp.copy(cells[i]).multiply(new THREE.Matrix4().setPosition(cc[0] * hh, cc[1] * hh, cc[2] * hh));
-        inst.setMatrixAt(idx, tmp);
-        inst.setColorAt(idx, col.setRGB(cc[0] > 0 ? 1 : 0.22, cc[1] > 0 ? 1 : 0.22, cc[2] > 0 ? 1 : 0.22));
-        idx++;
+      for (let i = 0; i < N; i++) {
+        for (let b = 0; b < 8; b++) {
+          const cx = ((b & 1) ? 1 : -1) * hh, cy = ((b & 2) ? 1 : -1) * hh, cz = ((b & 4) ? 1 : -1) * hh;
+          for (let k = 0; k < 4; k++) {
+            off.setPosition(cx + TETRA[k][0] * r, cy + TETRA[k][1] * r, cz + TETRA[k][2] * r);
+            inst.setMatrixAt(idx, tmp.multiplyMatrices(cells[i], off));
+            inst.setColorAt(idx, col.setRGB(TCOL[k][0], TCOL[k][1], TCOL[k][2]));
+            idx++;
+          }
+        }
       }
       inst.instanceMatrix.needsUpdate = true;
       if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
