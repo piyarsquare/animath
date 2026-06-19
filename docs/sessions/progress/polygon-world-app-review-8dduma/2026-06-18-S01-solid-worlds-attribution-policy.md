@@ -34,6 +34,13 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟢 code · 12:55 — Solid Worlds: "Show seams" toggle (hide the grid framework)
+**Why:** Dan wanted to drop the cube-edge wireframe so the tiling reads as a
+continuous world. New **Show seams (cell edges)** checkbox (default on); off
+hides the cube-edge `LineSegments` (the non-floor line parts), tracked in a
+`seamObjs` list like the floor toggle. Also fixed `floorObjs`/`seamObjs` to reset
+on each `buildCover` so the toggles never hold stale refs after a rebuild.
+
 ### 🟢 code · 12:48 — Solid Worlds: lighting now rides the developing frame
 **Why:** Dan: "the shadows change as you move." Root cause — the directional key/
 fill lights were fixed in **world** space, but the camera's frame carries the

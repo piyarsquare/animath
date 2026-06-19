@@ -39,6 +39,7 @@ export default function SolidWorlds() {
   const [showFloor, setShowFloor] = usePersistentState(pk('floor'), true);
   const [showLabels, setShowLabels] = usePersistentState(pk('labels'), false);
   const [showCorners, setShowCorners] = usePersistentState(pk('corners'), false);
+  const [showSeams, setShowSeams] = usePersistentState(pk('seams'), true);
   const [look, setLook] = usePersistentState(pk('look'), 'daytime');
 
   const spec = worldById(worldId);
@@ -65,6 +66,7 @@ export default function SolidWorlds() {
   const floorRef = useRef(showFloor);
   const labelsRef = useRef(showLabels);
   const cornersRef = useRef(showCorners);
+  const seamsRef = useRef(showSeams);
   const lookRef = useRef(look);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
@@ -79,6 +81,7 @@ export default function SolidWorlds() {
       cameraDistance: camDistRef.current, lookId: lookRef.current,
       fogAmount: fogRef.current, showFloor: floorRef.current,
       showLabels: labelsRef.current, showCorners: cornersRef.current,
+      showSeams: seamsRef.current,
     });
     engineRef.current.setTrailEnabled(trailRef.current);
     clockRef.current.start();
@@ -113,6 +116,7 @@ export default function SolidWorlds() {
       cameraDistance: camDistRef.current, lookId: lookRef.current,
       fogAmount: fogRef.current, showFloor: floorRef.current,
       showLabels: labelsRef.current, showCorners: cornersRef.current,
+      showSeams: seamsRef.current,
     });
     engineRef.current.setTrailEnabled(trailRef.current);
   }, [spec]);
@@ -128,6 +132,7 @@ export default function SolidWorlds() {
   useEffect(() => { floorRef.current = showFloor; engineRef.current?.setFloor(showFloor); }, [showFloor]);
   useEffect(() => { labelsRef.current = showLabels; engineRef.current?.setLabels(showLabels); }, [showLabels]);
   useEffect(() => { cornersRef.current = showCorners; engineRef.current?.setCorners(showCorners); }, [showCorners]);
+  useEffect(() => { seamsRef.current = showSeams; engineRef.current?.setSeams(showSeams); }, [showSeams]);
   useEffect(() => { lookRef.current = look; engineRef.current?.setLook(look); }, [look]);
 
   useEffect(() => {
@@ -256,6 +261,7 @@ export default function SolidWorlds() {
       <Slider label="Cover depth" value={coverDepth} min={0} max={10} step={1} onChange={(v) => setCoverDepth(Math.round(v))} format={(v) => `${Math.round(v)} ${Math.round(v) === 1 ? 'ring' : 'rings'}`} />
       <Slider label="Room size" value={roomSize} min={6} max={30} step={1} onChange={setRoomSize} format={(v) => `${Math.round(v)} m`} />
       <Slider label="Fog" value={fog} min={0} max={1} step={0.05} onChange={setFog} format={(v) => (v <= 0.001 ? 'off' : `${Math.round(v * 100)}%`)} />
+      <Checkbox label="Show seams (cell edges)" checked={showSeams} onChange={setShowSeams} />
       <Checkbox label="Floor plane" checked={showFloor} onChange={setShowFloor} />
       <Checkbox label="Face labels" checked={showLabels} onChange={setShowLabels} />
       <Checkbox label="Corner markers" checked={showCorners} onChange={setShowCorners} />

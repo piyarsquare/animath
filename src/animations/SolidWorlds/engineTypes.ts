@@ -75,6 +75,8 @@ export interface SolidEngine {
   setLabels(on: boolean): void;
   /** Show/hide the cube-corner markers. */
   setCorners(on: boolean): void;
+  /** Show/hide the cube-edge seams (the grid framework). */
+  setSeams(on: boolean): void;
   /** Return the walker to the cube center, frame upright, holonomy cleared. */
   recenter(): void;
   getChirality(): ChiralityState | null;

@@ -23,7 +23,7 @@ import { footprintTexture, signTexture, faceLabelTexture } from './textures';
 
 interface Gen { g: THREE.Matrix4; gInv: THREE.Matrix4; gLin: THREE.Matrix4; gLinInv: THREE.Matrix4; }
 
-interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; fogAmount: number; showFloor: boolean; showLabels: boolean; showCorners: boolean; }
+interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; fogAmount: number; showFloor: boolean; showLabels: boolean; showCorners: boolean; showSeams: boolean; }
 
 /** Furniture reference scale — the sign, props, footprints, avatars and eye
  *  height are sized from this CONSTANT, not from the room size, so growing the
@@ -53,6 +53,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   let showFloor = opts.showFloor;
   let showLabels = opts.showLabels;
   let showCorners = opts.showCorners;
+  let showSeams = opts.showSeams;
 
   // ── pose (developing map) ──────────────────────────────────────────────
   const pos = new THREE.Vector3();
@@ -246,9 +247,11 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   scene.add(coverRoot);
   const coverDisposables: THREE.BufferGeometry[] = []; // merged line geos, per rebuild
   let floorObjs: THREE.Object3D[] = [];                 // floor plane + grid, for the toggle
+  let seamObjs: THREE.Object3D[] = [];                  // cube-edge framework (the cell seams)
   function buildCover() {
     while (coverRoot.children.length) coverRoot.remove(coverRoot.children[0]);
     coverDisposables.forEach((g) => g.dispose()); coverDisposables.length = 0;
+    floorObjs = []; seamObjs = [];
 
     // BFS the deck group out to a radius; dedupe by matrix key (works for the
     // non-abelian turn-space / amphicosm groups).
@@ -303,6 +306,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       coverDisposables.push(g);
       const ls = new THREE.LineSegments(g, part.mat); ls.frustumCulled = false;
       if (part.floor) { ls.visible = showFloor; floorObjs.push(ls); }
+      else { ls.visible = showSeams; seamObjs.push(ls); }  // the cube-edge seams
       coverRoot.add(ls);
     }
     // the footprint trail → one InstancedMesh; the shared geometry's drawRange
@@ -575,6 +579,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     setLook(id) { lookId = id; applyLook(id); },
     setFog(amount) { fogAmount = amount; applyLook(lookId); },
     setFloor(on) { showFloor = on; for (const o of floorObjs) o.visible = on; },
+    setSeams(on) { showSeams = on; for (const o of seamObjs) o.visible = on; },
     setLabels(on) { showLabels = on; buildCover(); },
     setCorners(on) { showCorners = on; buildCover(); },
     recenter() {
