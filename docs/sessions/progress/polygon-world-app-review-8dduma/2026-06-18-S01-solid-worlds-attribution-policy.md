@@ -34,6 +34,18 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟢 code · 12:48 — Solid Worlds: lighting now rides the developing frame
+**Why:** Dan: "the shadows change as you move." Root cause — the directional key/
+fill lights were fixed in **world** space, but the camera's frame carries the
+**holonomy**. Crossing a turn/glide rotates (or flips) your carried frame relative
+to the fixed lights, so the room's shading visibly jumped.
+
+**Fix:** rotate the two directional lights by `bodyLinear` (the carried body
+frame, holonomy only — no look yaw/pitch) every frame, so the light stays "above
+you" and the shading is invariant under the deck group. `transformDirection`
+handles glide reflections too. For the 3-torus `bodyLinear = I`, so it's exactly
+the old behavior; for the turn/glide worlds the shading no longer jumps.
+
 ### 🟢 code · 12:24 — Solid Worlds: face labels + corner markers (both toggles)
 **Why:** Dan picked both, as options that can be turned off.
 
