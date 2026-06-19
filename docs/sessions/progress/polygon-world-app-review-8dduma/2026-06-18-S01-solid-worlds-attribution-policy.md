@@ -9,9 +9,9 @@ status: in-progress
 build: passing
 followup: null
 pr: null
-app: docs, polygon-worlds
+app: docs, polygon-worlds, solid-worlds
 signals: needs-dan
-next: Tier 2 of Solid Worlds — full platycosm catalog, vertex-link manifold check + H₁, Schlegel mini-map, and an automated walk-the-loop chirality test.
+next: Rework Solid Worlds' homology.ts to a cellular method valid for screw gluings (2× cube subdivision, or Bieberbach abelianization) so Hantzsche–Wendt + the amphidicosms can be added with computed/cross-checked H₁; then the vertex-link manifold certifier and a 3D walk-the-loop chirality test.
 ---
 
 # Solid Worlds review + AI-collaboration attribution policy
@@ -503,3 +503,44 @@ Proposed implementation (the "best way to add it to the workflow"):
 
 **Open for the author:** exact placement (standalone `ATTRIBUTION.md` + CLAUDE.md
 pointer is the recommendation) before writing anything to disk.
+
+## Self-reflection
+
+1. **What would you do with another session?** The homology rework — move
+   `homology.ts` off the sign-fold vertex identification (which assumes clean
+   opposite-face pairing) to a cellular method that handles screws: a **2× cube
+   subdivision** (so half-edge offset gluings become cellular, then the existing
+   Smith-form code applies) or **abelianizing the Bieberbach group** (H₁ = Γᵃᵇ).
+   That unblocks Hantzsche–Wendt + the amphidicosms with *computed* invariants.
+   Then the vertex-link = S² manifold certifier and a 3D walk-the-loop chirality
+   harness (still the flagged gap).
+2. **What would you change about what you produced?** I told Dan the cube
+   platycosms were "pure data" before fully checking the schema's translation
+   model; HW actually needs the `offset` extension *and* a homology rework. I
+   caught it before shipping anything wrong, but the earlier estimate was too
+   confident — I should have read `homology.ts`'s gluing assumptions before
+   scoping the catalog as data.
+3. **What were you not asked that you think is important?** Whether the per-cell
+   "Floor plane" toggle should be reconciled with the (now-removed) glass world
+   floor — right now it's a lattice-grid decoration independent of any "ground,"
+   which may confuse. And whether the new lighting symmetrization should also feed
+   a small HUD note ("lighting symmetrized over the ℤ/2×ℤ/2 holonomy") as a
+   teaching moment.
+4. **What did we both overlook?** Early on, that world-fixed lights fundamentally
+   can't be consistent in a manifold with nontrivial holonomy — we arrived at the
+   point-group orbit-sum only after two partial fixes (bodyLinear rotation, then
+   the hemisphere). The orbit-sum was the right answer the whole time; naming the
+   invariance principle up front would have saved a round.
+5. **What did you find difficult?** Getting the Hantzsche–Wendt face-pairing data
+   right without fabricating it. I derived a torsion-free ℤ/2×ℤ/2 screw set and
+   used `computeHomology` as the oracle — which is exactly how the crash surfaced
+   the staggered-face problem. The honesty rule (don't claim a classification you
+   can't compute) did real work here.
+6. **What would have made this task easier?** A homology method that's agnostic
+   to the gluing's combinatorial niceness from the start (subdivision or
+   abelianization). The CW-on-8-vertices shortcut is elegant for clean pairings
+   but is the thing now blocking the screw catalog.
+7. **Follow-up value:** MEDIUM — everything shipped is correct and verified
+   (build/lint/tests green; lighting and UX checked headlessly), but the catalog
+   is incomplete by design: the `offset` plumbing has no catalog consumer until
+   the homology rework lands. That rework is the clear, high-value next step.
