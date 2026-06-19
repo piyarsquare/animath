@@ -11,7 +11,7 @@ import { analyzeSolid, AxisAnalysis } from './solidSchema';
 import { LOOKS } from './looks';
 import { makeCoverEngine } from './coverEngine';
 import {
-  EngineDeps3, SolidEngine, ChiralityState, SolidMapState,
+  EngineDeps3, SolidEngine, ChiralityState, SolidMapState, TravelMode,
   DEFAULT_ROOM_SIZE, DEFAULT_COVER_DEPTH,
 } from './engineTypes';
 import explainerText from './EXPLAINER.md?raw';
@@ -28,6 +28,7 @@ export default function SolidWorlds() {
   const [worldId, setWorldId] = useState(DEFAULT_WORLD_ID);
   const [moveSpeed, setMoveSpeed] = usePersistentState(pk('moveSpeed'), 5);
   const [thirdPerson, setThirdPerson] = useState(true);
+  const [mode, setMode] = usePersistentState<TravelMode>(pk('mode'), 'walk');
   const [camDistance, setCamDistance] = useState(6);
   // Session-only (not persisted): a quality/perf knob whose default should always
   // win on load — otherwise a stale stored value hides the hall-of-mirrors depth.
@@ -49,6 +50,7 @@ export default function SolidWorlds() {
   const keysRef = useRef<Record<MoveKey, boolean>>({ fwd: false, back: false, left: false, right: false, up: false, down: false });
   const speedRef = useRef(moveSpeed);
   const thirdRef = useRef(thirdPerson);
+  const modeRef = useRef(mode);
   const camDistRef = useRef(camDistance);
   const worldRef = useRef(spec);
   const depthRef = useRef(coverDepth);
@@ -79,6 +81,7 @@ export default function SolidWorlds() {
           rise: (k.up ? 1 : 0) - (k.down ? 1 : 0),
           yaw: yawRef.current, pitch: pitchRef.current,
           moveSpeed: speedRef.current, thirdPerson: thirdRef.current,
+          mode: modeRef.current,
         });
       }
       rafRef.current = requestAnimationFrame(animate);
@@ -100,6 +103,7 @@ export default function SolidWorlds() {
 
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
   useEffect(() => { thirdRef.current = thirdPerson; }, [thirdPerson]);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
   useEffect(() => { camDistRef.current = camDistance; engineRef.current?.setCameraDistance(camDistance); }, [camDistance]);
   useEffect(() => { depthRef.current = coverDepth; engineRef.current?.setCoverDepth(coverDepth); }, [coverDepth]);
   useEffect(() => { sizeRef.current = roomSize; engineRef.current?.setRoomSize(roomSize); }, [roomSize]);
@@ -235,9 +239,18 @@ export default function SolidWorlds() {
 
   const walkNode = (
     <>
-      <Slider label="Walk speed" value={moveSpeed} min={1} max={14} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
+      <Pills
+        label="Travel"
+        options={[{ value: 'walk', label: 'Walk' }, { value: 'drive', label: 'Drive' }, { value: 'fly', label: 'Fly' }]}
+        value={mode}
+        onChange={(v) => setMode(v as TravelMode)}
+      />
+      <Slider label="Speed" value={moveSpeed} min={1} max={14} step={0.5} onChange={setMoveSpeed} format={(v) => v.toFixed(1)} />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim)', lineHeight: 1.5 }}>
-        WASD / arrows or the pad fly; <strong>E / Q</strong> rise & sink; drag to look; pinch / scroll to zoom.
+        WASD / arrows or the pad move; <strong>E / Q</strong> {mode === 'fly' ? 'fly up & down' : 'jump up / drop to the floor below'}; drag to look; pinch / scroll to zoom.
+        {mode === 'fly'
+          ? ' The airplane roams freely in 3D.'
+          : ' On the floor, the x-loop in Klein × Circle brings you back mirrored.'}
       </div>
     </>
   );

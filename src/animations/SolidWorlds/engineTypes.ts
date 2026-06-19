@@ -7,15 +7,20 @@ export interface EngineDeps3 {
   renderer: THREE.WebGLRenderer;
 }
 
+/** How you get around: an airplane (free 6DOF) or a gravity-bound person / car
+ *  that moves on the floor plane and settles back to it. */
+export type TravelMode = 'fly' | 'walk' | 'drive';
+
 export interface FrameInput3 {
   dt: number;
-  fwd: number;     // −1..1 forward intent (fly along look)
+  fwd: number;     // −1..1 forward intent
   strafe: number;  // −1..1
-  rise: number;    // −1..1 (Q/E) vertical fly
+  rise: number;    // −1..1 (E/Q) — free vertical when flying; jump/sink when grounded
   yaw: number;     // look azimuth (radians)
   pitch: number;   // look elevation (radians)
   moveSpeed: number;
   thirdPerson: boolean;
+  mode: TravelMode;
 }
 
 /** The walker's chirality state — the headline readout. `loopSign` is the

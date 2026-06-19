@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {
-  EngineDeps3, FrameInput3, SolidEngine, ChiralityState, SolidMapState,
+  EngineDeps3, FrameInput3, SolidEngine, ChiralityState, SolidMapState, TravelMode,
 } from './engineTypes';
 import { AXES, Axis, axisIndex, M3, SolidWorldSpec } from './solidSchema';
 import { findLook } from './looks';
@@ -278,40 +278,77 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     }
   }
 
-  // ── third-person avatar (fundamental cell only) ──────────────────────────
-  // A deliberately CHIRAL little figure so you can watch yourself become your
-  // own mirror image: a body + a nose-cone showing facing, with cyan on its
-  // LEFT and magenta on its RIGHT — matching the footprint convention exactly
-  // (forward = −z, up = +y ⇒ the walker's left is −x).
-  const avatar = new THREE.Group();
-  avatar.matrixAutoUpdate = false;
-  {
-    const bodyGeo = track(new THREE.CylinderGeometry(size * 0.045, size * 0.06, size * 0.26, 14));
-    const body = new THREE.Mesh(bodyGeo, track(new THREE.MeshStandardMaterial({ color: 0xffe08a, side: THREE.DoubleSide })));
-    const headGeo = track(new THREE.SphereGeometry(size * 0.05, 14, 10));
-    const head = new THREE.Mesh(headGeo, track(new THREE.MeshStandardMaterial({ color: 0xffd27a, side: THREE.DoubleSide })));
-    head.position.y = size * 0.18;
-    const noseGeo = track(new THREE.ConeGeometry(size * 0.022, size * 0.08, 10));
-    const nose = new THREE.Mesh(noseGeo, track(new THREE.MeshStandardMaterial({ color: 0xfff0c0, side: THREE.DoubleSide })));
-    nose.rotation.x = -Math.PI / 2;      // cone +y → −z (points forward)
-    nose.position.set(0, size * 0.18, -size * 0.07);
-    const sideGeo = track(new THREE.SphereGeometry(size * 0.026, 10, 8));
-    const leftBall = new THREE.Mesh(sideGeo, track(new THREE.MeshStandardMaterial({ color: 0x33d6ff })));
-    leftBall.position.set(-size * 0.075, size * 0.02, 0);  // cyan on the LEFT (−x)
-    const rightBall = new THREE.Mesh(sideGeo, track(new THREE.MeshStandardMaterial({ color: 0xff4fa3 })));
-    rightBall.position.set(size * 0.075, size * 0.02, 0);  // magenta on the RIGHT (+x)
-    avatar.add(body, head, nose, leftBall, rightBall);
+  // ── third-person avatars (fundamental cell only), one per travel mode ─────
+  // All deliberately CHIRAL — cyan on the LEFT, magenta on the RIGHT, nose toward
+  // −z (forward) — so you can watch yourself become your own mirror image.
+  const mat = (color: number) => track(new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.1, side: THREE.DoubleSide }));
+  const CYAN = 0x33d6ff, MAGENTA = 0xff4fa3;
+
+  function buildPerson(): THREE.Group {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(track(new THREE.CylinderGeometry(size * 0.045, size * 0.06, size * 0.26, 14)), mat(0xffe08a));
+    const head = new THREE.Mesh(track(new THREE.SphereGeometry(size * 0.05, 14, 10)), mat(0xffd27a)); head.position.y = size * 0.18;
+    const nose = new THREE.Mesh(track(new THREE.ConeGeometry(size * 0.022, size * 0.08, 10)), mat(0xfff0c0));
+    nose.rotation.x = -Math.PI / 2; nose.position.set(0, size * 0.18, -size * 0.07);
+    const sg = track(new THREE.SphereGeometry(size * 0.026, 10, 8));
+    const l = new THREE.Mesh(sg, mat(CYAN)); l.position.set(-size * 0.075, size * 0.02, 0);
+    const r = new THREE.Mesh(sg, mat(MAGENTA)); r.position.set(size * 0.075, size * 0.02, 0);
+    g.add(body, head, nose, l, r);
+    return g;
   }
-  scene.add(avatar);
+
+  function buildAirplane(): THREE.Group {
+    const g = new THREE.Group();
+    const fuse = new THREE.Mesh(track(new THREE.CylinderGeometry(size * 0.05, size * 0.035, size * 0.5, 14)), mat(0xe6ecf5));
+    fuse.rotation.x = Math.PI / 2; // length along z
+    const nose = new THREE.Mesh(track(new THREE.ConeGeometry(size * 0.05, size * 0.14, 14)), mat(0xcdd7e6));
+    nose.rotation.x = -Math.PI / 2; nose.position.z = -size * 0.32;
+    const wing = new THREE.Mesh(track(new THREE.BoxGeometry(size * 0.62, size * 0.02, size * 0.14)), mat(0xb9c6da));
+    const tailFin = new THREE.Mesh(track(new THREE.BoxGeometry(size * 0.02, size * 0.12, size * 0.1)), mat(0xb9c6da));
+    tailFin.position.set(0, size * 0.06, size * 0.22);
+    const tailWing = new THREE.Mesh(track(new THREE.BoxGeometry(size * 0.24, size * 0.02, size * 0.08)), mat(0xb9c6da));
+    tailWing.position.z = size * 0.22;
+    const tipGeo = track(new THREE.BoxGeometry(size * 0.06, size * 0.03, size * 0.14));
+    const lTip = new THREE.Mesh(tipGeo, mat(CYAN)); lTip.position.set(-size * 0.31, 0, 0);    // left wingtip cyan
+    const rTip = new THREE.Mesh(tipGeo, mat(MAGENTA)); rTip.position.set(size * 0.31, 0, 0);   // right wingtip magenta
+    g.add(fuse, nose, wing, tailFin, tailWing, lTip, rTip);
+    return g;
+  }
+
+  function buildCar(): THREE.Group {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(track(new THREE.BoxGeometry(size * 0.3, size * 0.1, size * 0.5)), mat(0xe06a4a));
+    body.position.y = size * 0.06;
+    const cabin = new THREE.Mesh(track(new THREE.BoxGeometry(size * 0.24, size * 0.1, size * 0.24)), mat(0xf0e6d0));
+    cabin.position.set(0, size * 0.15, size * 0.02);
+    const wheelGeo = track(new THREE.CylinderGeometry(size * 0.05, size * 0.05, size * 0.04, 12));
+    for (const [x, z] of [[-0.16, -0.16], [0.16, -0.16], [-0.16, 0.16], [0.16, 0.16]] as const) {
+      const w = new THREE.Mesh(wheelGeo, mat(0x222228)); w.rotation.z = Math.PI / 2;
+      w.position.set(x * size, size * 0.02, z * size); g.add(w);
+    }
+    const stripeGeo = track(new THREE.BoxGeometry(size * 0.02, size * 0.06, size * 0.4));
+    const l = new THREE.Mesh(stripeGeo, mat(CYAN)); l.position.set(-size * 0.155, size * 0.06, 0);   // left flank cyan
+    const r = new THREE.Mesh(stripeGeo, mat(MAGENTA)); r.position.set(size * 0.155, size * 0.06, 0);  // right flank magenta
+    g.add(body, cabin, l, r);
+    return g;
+  }
+
+  const avatars: Record<TravelMode, THREE.Group> = { walk: buildPerson(), fly: buildAirplane(), drive: buildCar() };
+  for (const m of Object.keys(avatars) as TravelMode[]) {
+    avatars[m].matrixAutoUpdate = false; avatars[m].visible = false; scene.add(avatars[m]);
+  }
 
   // ── helpers ──────────────────────────────────────────────────────────────
   const Rview = new THREE.Matrix4();
   const camLinear = new THREE.Matrix4();
   const fwd = new THREE.Vector3(), right = new THREE.Vector3(), up = new THREE.Vector3();
+  const fwdFlat = new THREE.Vector3(), rightFlat = new THREE.Vector3();
   const disp = new THREE.Vector3();
   const camWorld = new THREE.Matrix4();
-  const camPos = new THREE.Vector3();
+  const avatarLinear = new THREE.Matrix4(), yawMat = new THREE.Matrix4();
+  const camPos = new THREE.Vector3(), stampPos = new THREE.Vector3();
   const h = () => size / 2;
+  const floorEye = () => -h() + size * 0.16; // eye height above the floor when grounded
 
   function recompFrame() {
     Rview.makeRotationY(yaw).multiply(new THREE.Matrix4().makeRotationX(pitch));
@@ -333,13 +370,31 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     yaw = input.yaw; pitch = input.pitch;
     recompFrame();
 
-    // move (free flight along the look frame)
-    disp.set(0, 0, 0)
-      .addScaledVector(fwd, input.fwd)
-      .addScaledVector(right, input.strafe)
-      .addScaledVector(up, input.rise);
-    if (disp.lengthSq() > 1) disp.normalize();
-    pos.addScaledVector(disp, input.moveSpeed * dt);
+    // move: an airplane flies along the look frame (6DOF); a person/car is
+    // gravity-bound — it moves on the horizontal floor plane and settles back to
+    // floor height when you're not actively rising.
+    const grounded = input.mode !== 'fly';
+    if (!grounded) {
+      disp.set(0, 0, 0)
+        .addScaledVector(fwd, input.fwd)
+        .addScaledVector(right, input.strafe)
+        .addScaledVector(up, input.rise);
+      if (disp.lengthSq() > 1) disp.normalize();
+      pos.addScaledVector(disp, input.moveSpeed * dt);
+    } else {
+      // horizontal forward/right (project the look onto the floor plane, ⊥ +y)
+      fwdFlat.copy(fwd); fwdFlat.y = 0;
+      if (fwdFlat.lengthSq() < 1e-4) { fwdFlat.copy(right); fwdFlat.y = 0; }
+      fwdFlat.normalize();
+      rightFlat.copy(right); rightFlat.y = 0; rightFlat.normalize();
+      disp.set(0, 0, 0).addScaledVector(fwdFlat, input.fwd).addScaledVector(rightFlat, input.strafe);
+      if (disp.lengthSq() > 1) disp.normalize();
+      pos.addScaledVector(disp, input.moveSpeed * dt);
+      // vertical: rise input lets you jump/fly between floors; otherwise gravity
+      // eases you down to the floor walk-height of the current cell.
+      if (input.rise !== 0) pos.y += input.rise * input.moveSpeed * dt;
+      else pos.y += (floorEye() - pos.y) * Math.min(1, dt * 6);
+    }
 
     // wrap each axis back into the fundamental cube via the deck generators,
     // accumulating the holonomy into bodyLinear
@@ -371,7 +426,9 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
         if (fwdS.lengthSq() < 1e-4) fwdS.copy(right); // looking straight up/down
         fwdS.normalize();
         const leftS = new THREE.Vector3().crossVectors(upS, fwdS).normalize();
-        writeStamp(pos, fwdS, leftS, upS);
+        // grounded: lay the print on the floor under your feet; flying: at the craft
+        const sp = grounded ? stampPos.set(pos.x, -h() + size * 0.014, pos.z) : pos;
+        writeStamp(sp, fwdS, leftS, upS);
         lastStamp.copy(pos);
       }
     }
@@ -388,11 +445,16 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     camera.matrix.copy(camWorld);
     camera.matrixWorldNeedsUpdate = true;
 
-    avatar.visible = input.thirdPerson;
+    // show only the active travel mode's vehicle (third person), facing the way
+    // you're heading (yaw, upright), carrying the holonomy so it mirrors with you
+    for (const m of Object.keys(avatars) as TravelMode[]) avatars[m].visible = false;
     if (input.thirdPerson) {
-      camWorld.copy(bodyLinear).setPosition(pos);
-      avatar.matrix.copy(camWorld);
-      avatar.matrixWorldNeedsUpdate = true;
+      const av = avatars[input.mode];
+      av.visible = true;
+      avatarLinear.copy(bodyLinear).multiply(yawMat.makeRotationY(yaw));
+      avatarLinear.setPosition(pos);
+      av.matrix.copy(avatarLinear);
+      av.matrixWorldNeedsUpdate = true;
     }
 
     renderer.render(scene, camera);
@@ -429,7 +491,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       };
     },
     dispose() {
-      scene.remove(coverRoot, avatar, ambient, hemi, keyLight, fillLight);
+      scene.remove(coverRoot, avatars.fly, avatars.walk, avatars.drive, ambient, hemi, keyLight, fillLight);
       while (coverRoot.children.length) coverRoot.remove(coverRoot.children[0]);
       roomDisposables.forEach((d) => d.dispose());
       disposables.forEach((d) => d.dispose());

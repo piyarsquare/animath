@@ -34,6 +34,29 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟢 code · 04:09 — Solid Worlds: travel modes — airplane (fly) · person (walk) · car (drive)
+**Why:** Dan meant an *airplane* for free exploration and a *person or car* for a
+gravity-bound version (I'd read "plane" as a 2D floor — which luckily became the
+ground these modes walk on).
+
+- **`TravelMode = 'fly' | 'walk' | 'drive'`** (FrameInput3). A **Travel** pill in
+  the Walk panel switches them; persisted.
+- **Fly** = the airplane: free 6DOF along the look frame (E/Q for vertical).
+- **Walk / Drive** = gravity-bound: move on the **horizontal floor plane**
+  (look projected ⊥ up), and when you're not rising, ease back down to floor
+  eye-height — so you stand/drive on the floor and E/Space jumps you up to the
+  room above (then settle on its floor). Footsteps now land **on the floor**
+  under your feet in these modes.
+- **Three chiral vehicles** (airplane · person · car), each cyan-left /
+  magenta-right with a nose toward −z, shown per mode in third person and
+  oriented to your heading (`bodyLinear · Ry(yaw)`, upright) so they still mirror
+  with you across a glide loop. (Fixes a latent bug: the old avatar always faced
+  −z regardless of where you walked.)
+
+![walk mode — grounded at eye level facing the sign](assets/2026-06-18-S01-solid-worlds-walk-mode.png)
+
+![fly mode — the airplane roaming the lattice](assets/2026-06-18-S01-solid-worlds-fly-airplane.png)
+
 ### 🟢 code · 04:01 — Solid Worlds: lighter fog, a floor plane, redesigned footsteps, depth always-on
 **Why:** Dan: fog still too thick, footsteps "not good", and 3D space needs a
 reference plane.
