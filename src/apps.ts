@@ -78,4 +78,10 @@ export const apps: AppDescriptor[] = [
     icon: '∞',
     blurb: 'Walk a closed surface in first person — twisting corridor or flat torus / Klein bottle — and read the topology off your own footprints.',
   },
+  {
+    hash: '/solid-worlds',
+    name: 'Solid Worlds',
+    icon: '⬢',
+    blurb: 'Walk inside a closed 3-manifold built from one glued cube — a room that repeats forever — and watch an orientation-reversing loop bring you back mirrored.',
+  },
 ];

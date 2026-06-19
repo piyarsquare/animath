@@ -104,7 +104,8 @@ animath/
     │   ├── AgenticSorting/      # concurrent agent-based sorting (CSS/DOM)
     │   ├── StableMatching/      # rebuilt Gale–Shapley lab: matrix · welfare · lattice (CSS/DOM)
     │   ├── PolygonWorlds/       # walk every closed surface from one glued polygon; selectable scene "looks" (looks.ts, distilled from Topology Walk's themes)
-    │   └── TreesAndNets/        # M̄₀,ₙ(ℝ) explorer: associahedron tiles + the gluing mosaic; lib/{associahedron,mosaic}.ts
+    │   ├── TreesAndNets/        # M̄₀,ₙ(ℝ) explorer: associahedron tiles + the gluing mosaic; lib/{associahedron,mosaic}.ts
+    │   └── SolidWorlds/         # walk inside a closed 3-manifold from one glued cube (3D successor to Polygon Worlds); flat worlds (3-torus, half/quarter-turn spaces, amphicosm), developing-map cover engine (coverEngine.ts), chirality HUD (original · rotated · mirrored), H₁ computed from the chain complex (lib/homology.ts, Smith normal form)
     │
     ├── components/             # shared app-side UI
     │   ├── ParticleViewerShell.tsx  # turnkey workspace assembly for particle (4D) viewers
@@ -169,6 +170,7 @@ visible app catalog comes from `src/apps.ts` (+ `src/chrome/catalog.ts`).
 | `#/stable-matching`  | `StableMatching` | Rebuilt Gale–Shapley lab (matrix · welfare surface · lattice via layouts) |
 | `#/polygon-worlds`   | `PolygonWorlds`  | Walk every closed surface from one glued polygon |
 | `#/trees-and-nets`   | `TreesAndNets`   | Tree-space as a polytope: the associahedron of an n-gon's triangulations (port of the private `quantum-tree`) |
+| `#/solid-worlds`     | `SolidWorlds`    | Walk inside a closed 3-manifold built from one glued cube (3D successor to Polygon Worlds); Tier 1 flat worlds + chirality HUD |
 | `#/embed/complex-particles` | `EmbedComplexParticles` | Chrome-less applet for iframe embedding, URL-configured (docs/EMBEDS.md); demo host: `/embed-demo.html` |
 | `#/embed/plane-transform` | `EmbedPlaneTransform` | Chrome-less two-pane plane applet for iframe embedding (docs/EMBEDS.md) |
 
@@ -361,6 +363,26 @@ named axis) remains on the 4D Rotation panel.
   defaults already used in code (CSS `color:`, `justify-content: center`; JS
   `normalize()`), so code and prose stay uniform. When merging a branch that
   introduced British prose, normalize it back to American.
+
+## Attribution & AI collaboration
+
+These apps are built in collaboration with AI collaborators (see
+[`ATTRIBUTION.md`](ATTRIBUTION.md) for the full policy). Ideas are often reached by
+independent reasoning, but few are new to the world — and the collaborators are
+trained on a vast, largely uncredited corpus. So **identifying an app's possible
+sources is a standing part of building it**, even when none were in mind while the
+idea was worked out:
+
+- Each app's `EXPLAINER.md` (or guide page) ends with a short **"Possible sources
+  & where to go further"** block — annotated pointers to prior work and analogues,
+  framed as a reader's next step, **not** a priority claim. This is wayfinding as
+  much as credit.
+- **Name what you can stand behind; flag uncertainty — never fabricate** a
+  citation, DOI, or date. A vaguer-but-true pointer beats a crisp fabricated one.
+- Record both provenances honestly: how an idea was *reached* and what it *lands
+  near* (with a name) are different questions; keep both.
+- Sessions note possible sources surfaced during the work in their handoff, so
+  attributions are captured while fresh.
 
 ## Known Issues and Technical Debt
 

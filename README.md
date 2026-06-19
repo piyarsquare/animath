@@ -20,6 +20,7 @@ reachable directly by hash route.
 9. **[Stable Matching](https://piyarsquare.github.io/animath/#/stable-matching)** – a rebuilt Gale–Shapley lab: tune each side's consensus, watch the proposer advantage, sweep the whole consensus plane, and browse the lattice of stable matchings.
 10. **[Polygon Worlds](https://piyarsquare.github.io/animath/#/polygon-worlds)** – one decorated square, four worlds: glue its edges and walk a torus, Klein bottle, projective plane or sphere in first person.
 11. **[Trees and Nets](https://piyarsquare.github.io/animath/#/trees-and-nets)** – tree-space as a polytope: every triangulation of an n-gon is a tree and every flip an edge, so the whole associahedron becomes a 3D (or 4D) shape you can orbit, colored by energy.
+12. **[Solid Worlds](https://piyarsquare.github.io/animath/#/solid-worlds)** – walk *inside* a closed 3-manifold built from one glued cube — a single room that repeats forever. Walk an orientation-reversing loop in the Klein-bottle × circle world and the whole world, sign and your own footprints come back mirror-reversed (the 3D successor to Polygon Worlds).
 
 ---
 

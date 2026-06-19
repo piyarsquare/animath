@@ -117,3 +117,20 @@ plane has). Each tile is one more copy of the fundamental polygon; the mini-map
 shows that polygon with its edge identifications. On the non-orientable cross-cap
 worlds the glide tiles wear the **other face's** skin — columns and Roman plates,
 upright; the reversed numbers are underneath, through the glass.
+
+### Possible sources & where to go further
+
+This world was reasoned out from the fundamental-polygon picture, but it sits
+among well-trodden ideas — pointers if you want to go deeper (these are paths to
+follow, not claims about who got there first):
+
+- **Jeff Weeks, *Torus Games*** — the direct ancestor of *this* app: play and walk
+  on the flat torus and Klein bottle, first-person, in 2D.
+- **Jeff Weeks, *The Shape of Space*** — the canonical, gentle book on closed
+  surfaces and 3-manifolds as glued polygons/polyhedra, orientability, and the
+  "no outside, walk it from within" point of view.
+- **The classification of surfaces by edge words** (fundamental polygon ↦ a 2n-gon
+  with edges glued in pairs) and **Gauss–Bonnet** (∫K dA = 2πχ) — the standard
+  topology/geometry behind the "one knob forces the curvature" claim.
+- **The Steiner *Roman surface*** — the classical immersion of ℝP² in 3-space shown
+  in the embedding inset.
