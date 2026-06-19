@@ -34,6 +34,30 @@ this session is generalizing into a standing policy). Latest handoff overall is
 
 ## Working notes
 
+### 🟢 code · 12:19 — Solid Worlds: the "ground floor" for walk/drive
+**Why:** Dan's design call — grounded modes get a solid floor; Fly stays free.
+Refined: the floor is about *how you pass through space*, not the topology —
+the vertical y-copies still exist and you **look up** at the rooms stacked above;
+you just can't **pass through** the floor by walking (vertical travel is the
+plane's job). Since the y-gluing here doesn't interact with x/z, the vertical
+direction is "look at, don't traverse."
+
+- **Grounded cover** (walk/drive): the BFS keeps the start level + every room
+  **above** it, but drops cells **below** (`c.y < −0.4·size`), and a single big
+  opaque **ground slab** sits just under the start level. So you look down and
+  see a floor, up and see the hall of mirrors climbing away.
+- **Grounded movement**: horizontal only — the up-coordinate is locked to floor
+  eye-height each frame (in the *carried* frame, so the amphicosm's flip is
+  handled), so you never sink through the floor.
+- **Fly** rebuilds the **full** cover (rooms below included) for free 6DOF — the
+  engine rebuilds the cover whenever you switch between grounded and fly.
+
+![walk mode looking down: a solid ground floor, no rooms below](assets/2026-06-18-S01-solid-worlds-ground-floor.png)
+
+> [!NOTE]
+> Still to build (Dan approved): **face labels** (per-face gluing, pairing-colored)
+> and **corner markers**, both as toggles.
+
 ### 🟢 code · 12:01 — Solid Worlds tuning: furniture-size decoupled, fog control, floor toggle, depth→10, sparser trail
 **Why:** Dan's tuning batch.
 

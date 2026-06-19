@@ -51,6 +51,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   let lookId = opts.lookId;
   let fogAmount = opts.fogAmount;
   let showFloor = opts.showFloor;
+  let groundedState = false; // walk/drive get a solid ground floor; fly gets the full cover
 
   // ── pose (developing map) ──────────────────────────────────────────────
   const pos = new THREE.Vector3();
@@ -90,6 +91,8 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   // ── disposal bookkeeping ─────────────────────────────────────────────────
   const disposables: { dispose: () => void }[] = [];
   const track = <T extends { dispose: () => void }>(o: T): T => { disposables.push(o); return o; };
+  // solid ground slab for the grounded modes (one big opaque plane below the start level)
+  const groundMat = track(new THREE.MeshStandardMaterial({ color: 0x1b2535, roughness: 0.92, metalness: 0, side: THREE.DoubleSide }));
 
   // ── the footprint trail (stored once, in fundamental coordinates) ────────
   // The classic flat orientation decal: an arrow with an F, cyan on its LEFT and
@@ -239,6 +242,9 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       const cur = queue.shift()!;
       c.setFromMatrixPosition(cur);
       if (c.length() > R) continue;
+      // ground floor: keep the start level + the rooms stacked ABOVE it (you look
+      // up at them), but no rooms below — the floor is solid, you don't pass down.
+      if (groundedState && c.y < -size * 0.4) continue;
       cells.push(cur);
       for (const gen of genList) {
         const cand = cur.clone().multiply(gen);
@@ -287,6 +293,16 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     for (let i = 0; i < N; i++) trailInst.setMatrixAt(i, cells[i]);
     trailInst.instanceMatrix.needsUpdate = true;
     coverRoot.add(trailInst);
+
+    // the solid ground slab under the start level (grounded modes only)
+    if (groundedState) {
+      const gGeo = new THREE.PlaneGeometry(R * 2.4, R * 2.4);
+      coverDisposables.push(gGeo);
+      const ground = new THREE.Mesh(gGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2; ground.position.y = -size / 2 - 0.05;
+      ground.frustumCulled = false;
+      coverRoot.add(ground);
+    }
   }
 
   // ── third-person avatars (fundamental cell only), one per travel mode ─────
@@ -385,6 +401,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     // gravity-bound — it moves on the horizontal floor plane and settles back to
     // floor height when you're not actively rising.
     const grounded = input.mode !== 'fly';
+    if (grounded !== groundedState) { groundedState = grounded; buildCover(); } // clip below + add/remove the ground slab
     if (!grounded) {
       disp.set(0, 0, 0)
         .addScaledVector(fwd, input.fwd)
@@ -405,11 +422,11 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       disp.set(0, 0, 0).addScaledVector(fwdFlat, input.fwd).addScaledVector(rightFlat, input.strafe);
       if (disp.lengthSq() > 1) disp.normalize();
       pos.addScaledVector(disp, input.moveSpeed * dt);
-      if (input.rise !== 0) pos.addScaledVector(upDir, input.rise * input.moveSpeed * dt);
-      else {
-        const along = pos.dot(upDir);          // height along up; floor is the −up face
-        pos.addScaledVector(upDir, (floorEye() - along) * Math.min(1, dt * 6));
-      }
+      // Ground floor: you pass through space only horizontally; the vertical
+      // direction is "looked at, not passed through" (the y-copies stack above
+      // you in view). Lock the up-coordinate to floor eye-height so you never
+      // sink through the floor — vertical travel is the airplane's job.
+      pos.addScaledVector(upDir, floorEye() - pos.dot(upDir));
     }
 
     // wrap each axis back into the fundamental cube via the deck generators,
