@@ -118,10 +118,13 @@ export interface SolidAnalysis {
   manifold: string;
   /** H₁ computed from the cellular chain complex (lib/homology.ts). */
   h1: string;
-  /** Euler characteristic V − E + F − 1; 0 for a closed 3-manifold. */
+  /** Euler characteristic V − E + F − C; 0 for a closed 3-manifold. */
   euler: number;
   /** True when χ = 0 (a necessary manifold sanity check). */
   manifoldConsistent: boolean;
+  /** True when every vertex link is a 2-sphere — the genuine manifold certificate
+   *  (distinguishes a real manifold from a same-homology pseudomanifold). */
+  isManifold: boolean;
   note: string;
 }
 
@@ -144,6 +147,7 @@ export function analyzeSolid(w: SolidWorldSpec): SolidAnalysis {
     : `Crossing the ${reversingAxes.join('/')}-pairing reverses orientation (det −1): walk that loop once and you return mirror-reversed.`;
   return {
     orientable, perAxis, reversingAxes, manifold: w.manifold,
-    h1: hom.h1, euler: hom.euler, manifoldConsistent: hom.euler === 0, note,
+    h1: hom.h1, euler: hom.euler, manifoldConsistent: hom.euler === 0,
+    isManifold: hom.manifold, note,
   };
 }

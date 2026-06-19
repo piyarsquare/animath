@@ -237,9 +237,9 @@ export default function SolidWorlds() {
           {analysis.orientable ? 'orientable' : 'non-orientable'}
         </div>
         <div style={{ marginTop: 2 }}>
-          H₁ = {analysis.h1} · χ = {analysis.euler}
-          {analysis.manifoldConsistent ? ' ✓' : ' (!)'}{' '}
-          <span style={{ opacity: 0.7 }}>(computed from the gluing)</span>
+          H₁ = {analysis.h1} · χ = {analysis.euler} ·{' '}
+          {analysis.isManifold ? 'manifold ✓' : 'pseudomanifold (!)'}{' '}
+          <span style={{ opacity: 0.7 }}>(computed from the gluing; links = S²)</span>
         </div>
         <div style={{ marginTop: 4, opacity: 0.9 }}>{analysis.note}</div>
         <div style={{ marginTop: 4, opacity: 0.8 }}>

@@ -5,7 +5,7 @@ date: 2026-06-19
 title: "Plan: Solid Worlds — gluing-agnostic H₁ (screw-valid homology rework)"
 branch: claude/solid-worlds-review-bju3pc
 slug: solid-worlds-review-bju3pc
-status: proposed
+status: executed
 build: passing
 followup: null
 pr: null
@@ -14,6 +14,19 @@ next: Implement the N-subdivided cubical chain complex in lib/homology.ts (per-p
 ---
 
 # Plan: Solid Worlds — gluing-agnostic H₁ (screw-valid homology rework)
+
+> [!NOTE]
+> **Executed (S01, 2026-06-19).** Shipped: subdivided cubical complex, BFS
+> deck-group reduction (greedy was unreliable for screws), the vertex-link = S²
+> certifier (assembled in the cover), and a Smith-normal-form infinite-loop fix.
+> Build/lint/test green; N=1↔N=2 invariance + ∂∂=0 + the catalog values all hold.
+> **Plan correction:** the *free* Hantzsche–Wendt is **not** expressible in the
+> current opposite-face `Pairing` schema — its half-turn screws need a half-edge
+> **axial** component (a face gluing to the cube's mid-plane), so what the schema
+> can build is the HW *pseudomanifold* (right homology (ℤ/4)², but the certifier
+> correctly flags it non-manifold). HW is kept as a test fixture; the genuine
+> catalog extension now needs a schema change (non-opposite-face gluings), not
+> just this homology rework. See the session progress report's 21:33 note.
 
 ## Context
 

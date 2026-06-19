@@ -11,7 +11,7 @@ followup: null
 pr: null
 app: solid-worlds
 signals: needs-dan
-next: Rework homology.ts to a gluing-agnostic method (2× cube subdivision or Bieberbach abelianization) so screw worlds (Hantzsche–Wendt + amphidicosms) can join the catalog with computed, cross-checked H₁.
+next: Homology rework shipped (subdivided complex + BFS reduction + manifold certifier + Smith-loop fix; green). Next: a Pairing schema extension for half-edge *axial* screws (non-opposite-face gluings) to express the free Hantzsche–Wendt + amphidicosms, then add the genuine screw manifolds to the catalog.
 ---
 
 # Solid Worlds — review state & plan the next push
@@ -34,6 +34,52 @@ That branch's Solid Worlds code is **already present on this branch** (engine,
 4-world flat catalog, chiral HUD, computed H₁, `Pairing.offset` plumbing).
 
 ## Working notes
+
+### 🟡 milestone · 21:33 — Homology rework implemented, validated, shipped (build/lint/test green)
+**Why:** Dan: "please complete the plan." Executed the homology-rework plan.
+
+`lib/homology.ts` rebuilt as the gluing-agnostic engine; full project is green
+(`npm test` 40/40, `npm run lint` 0 errors / 60 baseline warnings, `npm run
+build` passing), and the app renders headless.
+
+What landed:
+- **Subdivided cubical chain complex** (default N≥2) replacing the fixed
+  8-vertex/12-edge/3-face complex. Cells keyed by `(axes, minCorner)`; ∂₁/∂₂
+  built over class representatives; H₁ from `smith`, χ = nV−nE+nF−nC.
+- **Breadth-first deck-group reduction** identifies boundary cells (greedy
+  face-crossing was unreliable for screws — it mis-identified staggered faces).
+- **Vertex-link = S² manifold certifier**, assembled around each vertex
+  *instance in the cover* (the domain-local version was wrong once a screw
+  scatters the cubes — it false-negatived the offset-3-torus).
+- **Smith-normal-form infinite-loop fix**: the old `smith` kept a stale pivot
+  when a reduction left a residue smaller than it (round→0), looping forever.
+  Latent for the ±1 golden matrices; a screw's ∂₂ triggered it. Now re-selects
+  the smallest pivot each round.
+- `SolidAnalysis.isManifold` surfaced; the app HUD now reads "manifold ✓ / links
+  = S²" (stronger than the old χ=0 check).
+
+Validation (tests in `__tests__/solidSchema.test.ts`):
+- Golden H₁ unchanged; **N=1 ↔ N=2 invariance** proven (new general path
+  reproduces the old fixed-CW values exactly).
+- All four catalog worlds certify as manifolds; the offset-3-torus certifies too.
+- The **∂₂∘∂₁ = 0** self-check guards every run.
+
+> [!IMPORTANT]
+> **Key finding — the free Hantzsche–Wendt is *not* expressible in the current
+> schema** (this corrects the prior session's "cyclic −1 offsets" assumption).
+> A broad search (4228 consistent specs) confirmed: three coordinate half-turns
+> with perpendicular half-edge screws give the HW *homology* H₁ = (ℤ/4)², but the
+> action keeps fixed points, so the quotient is a **pseudomanifold** — the
+> certifier correctly rejects it (`isManifold=false`). The genuine free HW needs
+> **half-edge *axial* screws**, where a face glues to the cube's *mid-plane*, not
+> its opposite face — i.e. a `Pairing` schema extension (non-opposite-face
+> gluings), a real follow-up, not part of this rework. The HW pseudomanifold is
+> kept as a **test fixture**: it exercises the screw + BFS + Smith-fix path *and*
+> the certifier's manifold-vs-pseudomanifold discrimination in one case.
+
+> [!NOTE]
+> The engine *does* find genuine new screw manifolds within the schema (e.g.
+> H₁ = ℤ⊕ℤ/2⊕ℤ/4, certified). None added to the catalog this pass (per scope).
 
 ### 🟡 milestone · 20:18 — Homology-rework plan written (`…-homology-rework-plan.md`)
 **Why:** Dan: "develop a plan for the homology rework." Researched the failure,
