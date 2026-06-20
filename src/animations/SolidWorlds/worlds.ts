@@ -67,9 +67,13 @@ export const SOLID_WORLDS: SolidWorldSpec[] = [
 
   // ── the screw / mirror platycosms (S02): the cube's remaining flat worlds ───
   // Found by enumerating the schema and certifying free action; H₁ from the deck
-  // group's abelianization, cross-checked against the cube cell complex. (Of the
-  // ten platycosms only the tricosm and hexacosm are missing — they need a
-  // hexagonal prism, not a cube.)
+  // group's abelianization, dual-verified against the cube cell complex (the
+  // 2026-06-20 screw fix, see lib/homology.ts + SCREW_BUG.md). (Of the ten
+  // platycosms only the tricosm and hexacosm are missing — they need a hexagonal
+  // prism, not a cube.) The two amphidicosms (Bieberbach B₃/B₄, first Betti
+  // number 1, holonomy ℤ₂²) are uniquely pinned by homology in the literature —
+  // H₁ = ℤ⊕(ℤ/2)² and ℤ⊕ℤ/4 — so the −a2 = ℤ⊕ℤ/4 pairing below is the genuine
+  // name↔invariant match (Conway–Rossetti, *Describing the Platycosms*).
   {
     id: 'second-amphicosm',
     label: 'Second amphicosm',
