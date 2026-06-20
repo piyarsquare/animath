@@ -61,18 +61,28 @@ informs future rounds. Delete or check off items as they land.
   `#/fractals-cpu`). If it's truly dead, follow up by deleting the folder, the route
   in `index.tsx`, the `apps.ts` entry, and the now-unused `marriage` `PreviewKind`.
 
-- [ ] [engine] !high Solid Worlds — fix the cell-engine screw bug to graduate the 2 experimental worlds.
-  `lib/homology.ts` has an orientation-sign / vertex-link error on rotated/reflected
-  staggered (screw) gluings: the didicosm (Hantzsche–Wendt) matches H₁=ℤ/4⊕ℤ/4 and
-  χ=0 but its link cert returns false; the second amphidicosm gets χ=1. Both ship
-  *experimental* (Γᵃᵇ-only, correct via `lib/freeness.ts`). Fixing the cell bug
-  makes `analyzeSolid(...).verified` true for both → dual-verified, drops the HUD
-  "experimental" badge. Cross-check harness pattern is in `__tests__/gab.test.ts`.
+- [x] [engine] Solid Worlds — fix the cell-engine screw bug to graduate the 2 experimental worlds.
+  DONE 2026-06-20 (branch `claude/3d-manifold-worlds-imwmal`). Was two distinct
+  bugs: (A) the boundary gluing reduced a screwed face's straddling image to the
+  *first* in-cube cell — the inverse-of-the-pairing bounce back to the source — a
+  no-op self-gluing that left 4 faces unglued (χ=1 on the second amphidicosm);
+  (B) the N=2 vertex link is too coarse and folds onto itself on screw worlds
+  (pure subdivision artifact, fine at N=4). Fixed by gluing each cell to its whole
+  in-cube deck orbit (`orbitInCube`) + a finer subdivision for screw worlds
+  (`chooseN`), plus a guard rejecting fractional axial offsets. All 8 worlds now
+  dual-verified; `analyzeSolid(...).verified` true throughout. Full write-up in
+  `src/animations/SolidWorlds/SCREW_BUG.md`.
 
-- [ ] [engine] !med Solid Worlds — confirm second amphidicosm (−a2) = ℤ⊕ℤ/4 vs Conway–Rossetti.
-  Derived by elimination (Γᵃᵇ + cell agree on the value); confirm the name↔invariant
-  pairing against *Describing the Platycosms* (arXiv:math/0311476), Table 6. Also an
-  open naming question for the app itself ("Solid Worlds" vs *Manifold Walk*).
+- [x] [engine] Solid Worlds — confirm second amphidicosm (−a2) = ℤ⊕ℤ/4 vs Conway–Rossetti.
+  CONFIRMED 2026-06-20. The two amphidicosms (β₁=1, holonomy ℤ₂²; Bieberbach
+  B₃/B₄) are uniquely fixed by their homology — H₁(B₃)=ℤ⊕(ℤ/2)² and H₁(B₄)=ℤ⊕ℤ/4
+  in the literature — so −a2 (= second amphidicosm = B₄) = ℤ⊕ℤ/4 is the genuine
+  name↔invariant pairing, not just elimination. Our app computes exactly these two
+  values via *both* Γᵃᵇ and the (now dual-verified) cell complex. Caveat: the
+  primary PDFs (arXiv math/0311476 Table 6, nLab) were unreachable this session
+  (network 403); confirmation rests on search summaries quoting the literature's
+  homology values + the two in-app computations agreeing with them. Still open: the
+  app-naming question ("Solid Worlds" vs *Manifold Walk*) — a product call for Dan.
 
 - [x] [chrome] App-map view in the control center — per-app rollup (latest · risk · open · next).
 

@@ -10,8 +10,8 @@ build: passing
 followup: null
 pr: null
 app: solid-worlds
-signals: visual-unverified
-next: Optional — confirm −a2 = ℤ⊕ℤ/4 naming against Conway–Rossetti Table 6 (the remaining backlog item), and visually confirm a screw world's HUD now reads "cross-checked".
+signals: needs-dan
+next: Both Solid Worlds backlog items are done (screw fix + −a2 confirmed). Open product call for Dan: rename the app ("Solid Worlds" vs "Manifold Walk")?
 ---
 
 # Solid Worlds — resume (graduate screw worlds / confirm −a2 naming)
@@ -35,6 +35,30 @@ present in `worlds.ts`).
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 18:35 — Confirmed −a2 (second amphidicosm) = ℤ⊕ℤ/4 against the literature
+**Why:** Close the remaining backlog item; the value was previously only "by elimination."
+
+Cross-checked the name↔invariant pairing. The four non-orientable platycosms
+split by first Betti number: the **amphicosms** (β₁=2, holonomy ℤ/2) and the
+**amphidicosms** (β₁=1, holonomy ℤ₂², = Bieberbach B₃/B₄). The literature pins
+the two amphidicosms *uniquely* by homology — **H₁(B₃)=ℤ⊕(ℤ/2)²** and
+**H₁(B₄)=ℤ⊕ℤ/4** — so −a2 (second amphidicosm = B₄) = **ℤ⊕ℤ/4** is the genuine
+pairing, not just elimination. Our app computes exactly these two values via
+*both* Γᵃᵇ and the now-dual-verified cell complex.
+
+> [!NOTE]
+> **Honesty caveat (per ATTRIBUTION):** the primary PDFs were unreachable this
+> session — arXiv (math/0311476 Table 6), nLab, Wikipedia, ResearchGate all
+> returned HTTP 403 to the fetch tool (network policy). The confirmation rests on
+> WebSearch summaries quoting the literature's homology values plus the two
+> independent in-app computations agreeing with them. Strong, but not a direct
+> read of Conway–Rossetti's Table 6. Recorded the value, the source, and this
+> limitation in `TODO.md` and the worlds.ts comment.
+
+Updated `TODO.md` (both Solid Worlds items checked off; app-rename question left
+open as a product call) and the `worlds.ts` screw-worlds comment. The
+**"Solid Worlds" vs *Manifold Walk*** naming remains open for Dan.
 
 ### 🟡 milestone · 18:12 — All 8 worlds dual-verified; screw bug fixed + documented
 **Why:** Both defects fixed, the two experimental worlds graduate, gates green.
