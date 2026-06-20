@@ -7,14 +7,18 @@ function rgba(hex: string, a: number): string {
 }
 
 /**
- * A **painted face** for the Rooms decor: a faint colored tint + a bold border
- * and a grid, plus one **chiral up-arrow** motif (a flag jutting off one side, so
- * it is asymmetric under both rotation and reflection). Each glued face-pair
- * shares a color (X red · Y green · Z blue, the corner-marker convention), so the
- * room reads as an oriented box: you always know which way you face, you
- * recognize the wall you came through, and you watch it return rotated or
- * mirrored after a loop. Tint baked into the texture's alpha so one unlit
- * material can be semi-transparent (see-through) yet draw a crisp motif.
+ * A **painted face** for the Rooms decor: a bold colored border + grid and one
+ * **chiral up-arrow** motif (a flag jutting off one side, so it is asymmetric
+ * under both rotation and reflection). Each glued face-pair shares a color (X red
+ * · Y green · Z blue, the corner-marker convention), so the room reads as an
+ * oriented box: you always know which way you face, you recognize the wall you
+ * came through, and you watch it return rotated or mirrored after a loop.
+ *
+ * Every drawn pixel is **fully opaque**; everything else is **fully transparent**.
+ * The material renders this with alpha *testing* (a hard cutout), not alpha
+ * blending — so the faces draw in the opaque pass, depth-tested like the rest of
+ * the scene, and never flicker the way tiled semi-transparent panes would. The
+ * "see-through" is the genuinely open area between the markings.
  */
 export function faceMotifTexture(hex: string): THREE.CanvasTexture {
   const S = 320;
@@ -23,34 +27,24 @@ export function faceMotifTexture(hex: string): THREE.CanvasTexture {
   const ctx = cvs.getContext('2d')!;
   ctx.clearRect(0, 0, S, S);
 
-  // faint tint fill + bold border
-  ctx.fillStyle = rgba(hex, 0.16);
-  ctx.fillRect(0, 0, S, S);
-  ctx.strokeStyle = rgba(hex, 0.9);
-  ctx.lineWidth = 18;
-  ctx.strokeRect(9, 9, S - 18, S - 18);
+  // bold border (the wall's color) — a wide frame so each face is unmistakably
+  // colored without filling it in (which would block the view + flicker)
+  ctx.strokeStyle = rgba(hex, 1);
+  ctx.lineWidth = 40;
+  ctx.strokeRect(20, 20, S - 40, S - 40);
 
-  // subtle grid (thirds)
-  ctx.strokeStyle = rgba(hex, 0.22);
-  ctx.lineWidth = 3;
-  for (let i = 1; i <= 2; i++) {
-    const p = (S * i) / 3;
-    ctx.beginPath(); ctx.moveTo(p, 12); ctx.lineTo(p, S - 12); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(12, p); ctx.lineTo(S - 12, p); ctx.stroke();
-  }
-
-  // chiral up-arrow: spine + head + a flag on the RIGHT (so a mirror moves the
-  // flag to the left, a quarter-turn rotates the whole mark)
-  ctx.fillStyle = 'rgba(245,247,250,0.96)';
-  ctx.strokeStyle = 'rgba(245,247,250,0.96)';
-  ctx.lineWidth = 26; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(S * 0.4, S * 0.76); ctx.lineTo(S * 0.4, S * 0.34); ctx.stroke();
+  // chiral up-arrow (white, for contrast): spine + head + a flag on the RIGHT (so
+  // a mirror moves the flag to the left, a quarter-turn rotates the whole mark)
+  ctx.fillStyle = 'rgb(245,247,250)';
+  ctx.strokeStyle = 'rgb(245,247,250)';
+  ctx.lineWidth = 36; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(S * 0.42, S * 0.74); ctx.lineTo(S * 0.42, S * 0.36); ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(S * 0.4, S * 0.18);
-  ctx.lineTo(S * 0.27, S * 0.4);
-  ctx.lineTo(S * 0.53, S * 0.4);
+  ctx.moveTo(S * 0.42, S * 0.18);
+  ctx.lineTo(S * 0.26, S * 0.42);
+  ctx.lineTo(S * 0.58, S * 0.42);
   ctx.closePath(); ctx.fill();
-  ctx.fillRect(S * 0.4, S * 0.42, S * 0.22, S * 0.12);
+  ctx.fillRect(S * 0.42, S * 0.44, S * 0.26, S * 0.14);
 
   const t = new THREE.CanvasTexture(cvs);
   t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;

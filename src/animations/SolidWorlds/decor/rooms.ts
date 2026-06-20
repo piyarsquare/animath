@@ -11,8 +11,10 @@ import { faceMotifTexture } from '../textures';
  * know which way you face, you recognize the wall you just came through (it
  * matches the one ahead), and — built once and instanced across the cover — you
  * watch a face come back **rotated** in a turn world or **mirrored** in a glide
- * world, with no clutter. The faces are semi-transparent, so the hall-of-copies
- * still shows through.
+ * world, with no clutter. Only the markings (border · grid · arrow) are drawn —
+ * the rest of each face is genuinely open — and they use an alpha-test cutout
+ * (not blending), so the faces draw in the opaque pass and the view stays rock
+ * stable as you move (tiled semi-transparent panes flicker; these don't).
  *
  * That's all there is: no furniture, no walls inside the domain. Orientation
  * first.
@@ -44,9 +46,11 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
   for (const { axis, hex } of AXIS_COLORS) {
     const tex = faceMotifTexture(hex);
     addDisposable(tex);
-    // Unlit + depthWrite so the tiled tint never stacks into murk; the same
-    // material on both faces of the pair makes the gluing legible.
-    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
+    // Unlit, alpha-TESTED (hard cutout, not blended): the markings draw in the
+    // opaque pass, depth-tested like everything else, so the view never flickers
+    // the way tiled transparent panes do. The same material on both faces of the
+    // pair makes the gluing legible.
+    const mat = new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide });
     addDisposable(mat);
     for (const s of [-1, 1]) {
       const geo = new THREE.PlaneGeometry(face, face);

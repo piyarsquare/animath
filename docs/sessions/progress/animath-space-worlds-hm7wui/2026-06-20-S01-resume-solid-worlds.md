@@ -51,6 +51,19 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🔴 blocker → 🟢 fix · 23:45 — Transparent faces flickered ("view unstable"); switch to alpha-test cutout
+**Why:** Dan: the view is completely unstable. Semi-transparent faces tiled across
+the cover have no stable draw order (per-object transparent sort flips with camera
+motion) + z-fight where copies nearly coincide → flicker.
+
+Fix: drop alpha **blending**, use alpha **testing** (hard cutout). The faces now
+draw **only** their colored border + chiral arrow (fully opaque); the rest is
+genuinely open. With `alphaTest: 0.5` they render in the opaque pass, depth-tested
+like all other geometry — rock stable, still see-through (the open area). Also
+**dropped the grid** I'd added (clutter; Dan picked color + motif, not a grid),
+leaving a bold colored frame + white arrow per face. Re-verified headless: calm,
+oriented, no blending. Build + lint(0) + 53 tests green.
+
 ### 🟡 milestone · 23:25 — Pivot to painted faces (orientation-first); replaces architecture
 **Why:** Dan: the interior architecture was too complicated / hard to orient.
 Chose (via AskUserQuestion) see-through tinted faces + a directional motif.
