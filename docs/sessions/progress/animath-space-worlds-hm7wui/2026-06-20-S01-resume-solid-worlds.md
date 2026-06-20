@@ -11,7 +11,7 @@ followup: null
 pr: null
 app: solid-worlds
 signals: null
-next: Dan review of glass-walled rooms; possible follow-ups: wall collision, a clearly seam-centered room, real cut ceiling.
+next: Dan review of painted-faces Rooms mode; tune colors/tint/motif if needed.
 ---
 
 # Resume Solid Worlds (space worlds) — Lived seams decor prototype
@@ -50,6 +50,19 @@ so it is the continuation, not a parallel re-do.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 23:25 — Pivot to painted faces (orientation-first); replaces architecture
+**Why:** Dan: the interior architecture was too complicated / hard to orient.
+Chose (via AskUserQuestion) see-through tinted faces + a directional motif.
+
+Ripped out all the walls/doorways/stairs/floor furniture. `decor/rooms.ts` is now
+~50 lines: it paints the cube's **six faces**, glued pairs sharing a color (X red ·
+Y green · Z blue, the corner-marker convention), each a semi-transparent tinted
+panel with a **chiral up-arrow** motif (`textures.ts:faceMotifTexture`). The room
+is otherwise empty. Built once + instanced, so a face returns **rotated** in a
+turn world / **mirrored** in a glide world automatically; transparency keeps the
+hall-of-copies visible. Headless captures (3-torus 1st/3rd, quarter-turn, amphicosm)
+confirm it's far calmer and instantly orientable. Build + lint(0) + 53 tests green.
 
 ### 🟡 milestone · 22:55 — Glass walls + floor + distinct hues shipped; verified
 **Why:** Closed Dan's three complaints (obstruction · no floor · walls alike).

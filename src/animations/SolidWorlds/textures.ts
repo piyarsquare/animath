@@ -1,5 +1,62 @@
 import * as THREE from 'three';
 
+/** `#rrggbb` → `rgba(r,g,b,a)`. */
+function rgba(hex: string, a: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+/**
+ * A **painted face** for the Rooms decor: a faint colored tint + a bold border
+ * and a grid, plus one **chiral up-arrow** motif (a flag jutting off one side, so
+ * it is asymmetric under both rotation and reflection). Each glued face-pair
+ * shares a color (X red · Y green · Z blue, the corner-marker convention), so the
+ * room reads as an oriented box: you always know which way you face, you
+ * recognize the wall you came through, and you watch it return rotated or
+ * mirrored after a loop. Tint baked into the texture's alpha so one unlit
+ * material can be semi-transparent (see-through) yet draw a crisp motif.
+ */
+export function faceMotifTexture(hex: string): THREE.CanvasTexture {
+  const S = 320;
+  const cvs = document.createElement('canvas');
+  cvs.width = cvs.height = S;
+  const ctx = cvs.getContext('2d')!;
+  ctx.clearRect(0, 0, S, S);
+
+  // faint tint fill + bold border
+  ctx.fillStyle = rgba(hex, 0.16);
+  ctx.fillRect(0, 0, S, S);
+  ctx.strokeStyle = rgba(hex, 0.9);
+  ctx.lineWidth = 18;
+  ctx.strokeRect(9, 9, S - 18, S - 18);
+
+  // subtle grid (thirds)
+  ctx.strokeStyle = rgba(hex, 0.22);
+  ctx.lineWidth = 3;
+  for (let i = 1; i <= 2; i++) {
+    const p = (S * i) / 3;
+    ctx.beginPath(); ctx.moveTo(p, 12); ctx.lineTo(p, S - 12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(12, p); ctx.lineTo(S - 12, p); ctx.stroke();
+  }
+
+  // chiral up-arrow: spine + head + a flag on the RIGHT (so a mirror moves the
+  // flag to the left, a quarter-turn rotates the whole mark)
+  ctx.fillStyle = 'rgba(245,247,250,0.96)';
+  ctx.strokeStyle = 'rgba(245,247,250,0.96)';
+  ctx.lineWidth = 26; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(S * 0.4, S * 0.76); ctx.lineTo(S * 0.4, S * 0.34); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(S * 0.4, S * 0.18);
+  ctx.lineTo(S * 0.27, S * 0.4);
+  ctx.lineTo(S * 0.53, S * 0.4);
+  ctx.closePath(); ctx.fill();
+  ctx.fillRect(S * 0.4, S * 0.42, S * 0.22, S * 0.12);
+
+  const t = new THREE.CanvasTexture(cvs);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
 /**
  * The footprint glyph — the classic orientation-test pair: an arrow with an
  * **F**, cyan on the print's left and magenta on its right (the same glyph
