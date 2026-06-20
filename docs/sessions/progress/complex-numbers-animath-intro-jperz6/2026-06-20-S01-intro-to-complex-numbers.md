@@ -39,6 +39,22 @@ topic: **plane/particles unification** ("which plane am I looking at" across vie
 
 <!-- Newest entry first. -->
 
+### 🔵 finding · 21:20 — Design note: the *arc* is the payload, the scrubber isn't
+**Why:** Dan's reaction to Phase 1 — "the slider is not particularly useful unless
+you are watching the equation changing. What is useful is showing the parametric
+**arc**. The actual scrubber does not help much."
+
+Reframes the value model for every later phase:
+- **The static parametric path (spiral / parallelogram) carries the lesson** — it's
+  always drawn regardless of `t`, and that's the part worth foregrounding.
+- **A bare position-scrubber is low-value.** It only earns its place when coupled to a
+  **live changing equation/readout** — i.e. scrubbing should show `a·bᵗ`'s value,
+  modulus and angle *updating*, so you watch the algebra move, not just a dot.
+- Implication: don't invest in scrub UX as a primary interaction; lean on the
+  always-on arc, and reserve the slider for where a changing readout makes it pay
+  (later chapters, the plane-morph). Dan signaled patience — **defer**, don't rebuild
+  now.
+
 ### 🟢 code · 21:00 — Phase 1 shipped: the Argand app (arithmetic chapter)
 **Why:** Dan said "begin." Built the hero slice — live, draggable complex
 arithmetic — as a fresh app.
