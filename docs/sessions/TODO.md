@@ -61,6 +61,19 @@ informs future rounds. Delete or check off items as they land.
   `#/fractals-cpu`). If it's truly dead, follow up by deleting the folder, the route
   in `index.tsx`, the `apps.ts` entry, and the now-unused `marriage` `PreviewKind`.
 
+- [ ] [engine] !high Solid Worlds — fix the cell-engine screw bug to graduate the 2 experimental worlds.
+  `lib/homology.ts` has an orientation-sign / vertex-link error on rotated/reflected
+  staggered (screw) gluings: the didicosm (Hantzsche–Wendt) matches H₁=ℤ/4⊕ℤ/4 and
+  χ=0 but its link cert returns false; the second amphidicosm gets χ=1. Both ship
+  *experimental* (Γᵃᵇ-only, correct via `lib/freeness.ts`). Fixing the cell bug
+  makes `analyzeSolid(...).verified` true for both → dual-verified, drops the HUD
+  "experimental" badge. Cross-check harness pattern is in `__tests__/gab.test.ts`.
+
+- [ ] [engine] !med Solid Worlds — confirm second amphidicosm (−a2) = ℤ⊕ℤ/4 vs Conway–Rossetti.
+  Derived by elimination (Γᵃᵇ + cell agree on the value); confirm the name↔invariant
+  pairing against *Describing the Platycosms* (arXiv:math/0311476), Table 6. Also an
+  open naming question for the app itself ("Solid Worlds" vs *Manifold Walk*).
+
 - [x] [chrome] App-map view in the control center — per-app rollup (latest · risk · open · next).
 
 - [x] [docs] Split the two heavy complex guides into Part 1 / Part 2; cut applet weight.
