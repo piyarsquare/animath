@@ -39,6 +39,23 @@ topic: **plane/particles unification** ("which plane am I looking at" across vie
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 18:30 — Four-hat review complete + synthesized
+**Why:** All four lenses returned; convergence is strong enough to plan against.
+
+Reports written under this folder (`-expert-{maintainer,consultant,pedagogy,
+gamedesigner,synthesis}.md`). Headline convergence: **animate everything, but every
+motion must trace a path the math distinguishes** — `a·b` *spirals* (`a·bᵗ`), `a+b`
+*slides*; the interpolant is per-chapter. The whole-plane morph is ~5 lines of shader
+(`mix(inputPos, fz, morphT)`); direct-manipulation draggable handles with live
+coupling are non-negotiable (Game hat's one blocking change); don't bloat the
+818-line file (extract hooks; copy `lib/particles`/spin-clock patterns); chapters =
+mode pills, not new routes; stay clear of the `!high` plane/particles-unification
+backlog. Recommended build leads with the **hero** (live multiplication overlay,
+zero new WebGL) as the MVP, then curve ops, then the morph climax, then
+scaffolding/juice, then chapters+guide. Three decisions await Dan (interpolant
+investment · autoplay default · MVP-first-slice). See
+[synthesis](2026-06-20-S01-expert-synthesis.md).
+
 ### 🟣 decision · 18:05 — Animation is the medium, not a mode; commission a 4-hat review
 **Why:** Dan confirmed the read and corrected one thing: **animation is a truth
 through *everything*** — even addition and multiplication are animated (this is
