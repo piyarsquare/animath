@@ -25,6 +25,15 @@ two descriptions. This app lets you **grab two numbers** and watch what arithmet
 > The straight-line "shortcut" would be a lie for multiplication — with `b = −1` it
 > would drag the point through the origin. The spiral is the honest path.
 
+## Shapes transform too (Number → Curve)
+
+Switch **Transform a** to **Curve**: now `a` *places* a whole shape (a flag, circle,
+square or segment) and `b` is the constant you combine it with. **Multiply** spins and
+scales the entire figure about the origin — the asymmetric flag makes the rotation (and
+its handedness) obvious; **Add** slides the whole shape by `b`. It's the same per-point
+spiral/slide as for a single number, applied to every point of the curve at once — the
+bridge from "one number" to "a function acts on the whole plane."
+
 ## Commutativity
 
 Turn on **Show both orders**. In Multiply you get two spirals — `a` rotated-and-scaled

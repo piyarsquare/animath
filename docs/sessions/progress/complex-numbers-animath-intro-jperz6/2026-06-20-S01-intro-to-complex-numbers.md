@@ -39,6 +39,19 @@ topic: **plane/particles unification** ("which plane am I looking at" across vie
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 21:25 — Phase 2 shipped: transform a whole curve by a constant
+**Why:** Dan said "continue." Next plan step — `c·curve` / `c+curve`.
+
+Added a **Number | Curve** subject toggle to the Argand app. In Curve mode `a` *places*
+a preset shape (`curves.ts`: flag · circle · square · segment) and `b` is the constant;
+the plane draws the original (dim) and its **image** (bright) under `b·q` (spiral) or
+`q+b` (slide) per point, with faint vertex connectors and the `b` vector. The
+asymmetric **flag** makes rotation/handedness legible. Same per-point spiral/slide
+engine as the number chapter — the bridge from "one number" to "a map on the whole
+plane." Build green; lint clean; headless screenshot (SEED_LS subject=curve) confirms
+the flag rotating 90° under ×i. Files: `curves.ts` (new), `ArgandPlane.tsx` (+curve
+branch), `Argand.tsx` (+subject/shape controls), EXPLAINER (+curve section).
+
 ### 🔵 finding · 21:20 — Design note: the *arc* is the payload, the scrubber isn't
 **Why:** Dan's reaction to Phase 1 — "the slider is not particularly useful unless
 you are watching the equation changing. What is useful is showing the parametric

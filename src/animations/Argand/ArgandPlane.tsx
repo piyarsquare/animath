@@ -5,6 +5,7 @@ import {
 } from './complexOps';
 
 export type Mode = 'multiply' | 'add';
+export type Subject = 'number' | 'curve';
 
 /** Handle / result colors — chosen to read on both light and dark viz-bg skins. */
 const A_COL = '#38bdf8';   // a — cyan
@@ -19,6 +20,10 @@ interface Props {
   a: Cx;
   b: Cx;
   mode: Mode;
+  /** number: combine two numbers a,b · curve: transform a placed shape by b. */
+  subject: Subject;
+  /** Base curve points (centered near origin) for the curve subject. */
+  curve: Cx[];
   /** Scrub parameter 0→1 along the chapter's path. */
   t: number;
   /** Show the second composition order (commutativity / parallelogram). */
@@ -50,8 +55,9 @@ function useSquareSize(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function ArgandPlane({
-  a, b, mode, t, showSecondRoute, snapping, showGrid, showUnitCircle, extent, onChange,
+  a, b, mode, subject, curve, t, showSecondRoute, snapping, showGrid, showUnitCircle, extent, onChange,
 }: Props) {
+  const isCurve = subject === 'curve';
   const wrapRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<'a' | 'b' | null>(null);
@@ -116,6 +122,17 @@ export default function ArgandPlane({
     }
     return d + ' Z';
   };
+
+  // Curve subject: the placed shape (base translated by a) and its image under
+  // the constant b at scrub param t (b·q spirals / q+b slides, per point).
+  const placed = curve.map(p => add(p, a));
+  const imageAt = (q: Cx, s: number): Cx =>
+    mode === 'multiply' ? mulPath(q, b, s) : addPath(q, b, s);
+  const vpoly = (pts: Cx[]): string =>
+    pts.map((p, i) => {
+      const [vx, vy] = toV(p);
+      return `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`;
+    }).join(' ');
 
   const gridLines: number[] = [];
   for (let i = Math.ceil(-extent); i <= Math.floor(extent); i++) gridLines.push(i);
@@ -182,45 +199,73 @@ export default function ArgandPlane({
           <text x={C + 10} y={28} fontSize={26} fill="currentColor" fillOpacity={0.5}>i</text>
           <text x={VIRT - 22} y={C - 12} fontSize={26} fill="currentColor" fillOpacity={0.5}>Re</text>
 
-          {/* angle wedges (multiply): arg a, then arg b stacked on top to show angles add */}
-          {mode === 'multiply' && (
+          {/* ---- NUMBER subject: a ∘ b with the construction routes ---- */}
+          {!isCurve && (
             <>
-              <path d={sector(extent * 0.32, 0, argA)} fill={A_COL} fillOpacity={0.16} />
-              <path d={sector(extent * 0.46, argA, argA + argB)} fill={B_COL} fillOpacity={0.18} />
+              {/* angle wedges (multiply): arg a, then arg b on top, to show angles add */}
+              {mode === 'multiply' && (
+                <>
+                  <path d={sector(extent * 0.32, 0, argA)} fill={A_COL} fillOpacity={0.16} />
+                  <path d={sector(extent * 0.46, argA, argA + argB)} fill={B_COL} fillOpacity={0.18} />
+                </>
+              )}
+
+              {/* construction routes */}
+              {showSecondRoute && (
+                <path d={sampleRoute(false)} fill="none" stroke={R_COL}
+                  strokeOpacity={0.4} strokeWidth={3} strokeDasharray="4 8" strokeLinecap="round" />
+              )}
+              <path d={sampleRoute(true)} fill="none" stroke={R_COL}
+                strokeOpacity={0.7} strokeWidth={3.5} strokeLinecap="round" />
+
+              {/* the scrubbing point(s) */}
+              {showSecondRoute && <circle cx={mover2[0]} cy={mover2[1]} r={9} fill={R_COL} fillOpacity={0.55} />}
+              <circle cx={mover1[0]} cy={mover1[1]} r={11} fill={R_COL} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
+
+              {/* vectors to a, b, result */}
+              <line x1={oVx} y1={oVy} x2={va[0]} y2={va[1]} stroke={A_COL} strokeWidth={4} markerEnd="url(#ah-a)" />
+              <line x1={oVx} y1={oVy} x2={vb[0]} y2={vb[1]} stroke={B_COL} strokeWidth={4} markerEnd="url(#ah-b)" />
+              <line x1={oVx} y1={oVy} x2={vr[0]} y2={vr[1]} stroke={R_COL} strokeWidth={2.5}
+                strokeOpacity={0.85} markerEnd="url(#ah-r)" />
+
+              {/* parallelogram closure for addition */}
+              {mode === 'add' && (
+                <g stroke="currentColor" strokeOpacity={0.25} strokeWidth={2} strokeDasharray="5 7" fill="none">
+                  <line x1={va[0]} y1={va[1]} x2={vr[0]} y2={vr[1]} />
+                  <line x1={vb[0]} y1={vb[1]} x2={vr[0]} y2={vr[1]} />
+                </g>
+              )}
+
+              {/* result label */}
+              <circle cx={vr[0]} cy={vr[1]} r={6} fill={R_COL} />
+              <text x={vr[0] + 12} y={vr[1] - 10} fontSize={24} fill={R_COL}>
+                {mode === 'multiply' ? 'a·b' : 'a+b'}
+              </text>
             </>
           )}
 
-          {/* construction routes */}
-          {showSecondRoute && (
-            <path d={sampleRoute(false)} fill="none" stroke={R_COL}
-              strokeOpacity={0.4} strokeWidth={3} strokeDasharray="4 8" strokeLinecap="round" />
+          {/* ---- CURVE subject: the placed shape and its image under b ---- */}
+          {isCurve && (
+            <>
+              {/* per-vertex connectors (original → image) */}
+              <g stroke="currentColor" strokeOpacity={0.12} strokeWidth={1.5}>
+                {placed.map((q, i) => {
+                  if (i % Math.max(1, Math.floor(placed.length / 18)) !== 0) return null;
+                  const [x1, y1] = toV(q);
+                  const [x2, y2] = toV(imageAt(q, t));
+                  return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />;
+                })}
+              </g>
+              {/* original shape (dim) */}
+              <path d={vpoly(placed)} fill="none" stroke={A_COL} strokeOpacity={0.4}
+                strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
+              {/* image shape at t (bright) */}
+              <path d={vpoly(placed.map(q => imageAt(q, t)))} fill="none" stroke={R_COL}
+                strokeWidth={3.5} strokeLinejoin="round" strokeLinecap="round" />
+              {/* the constant b */}
+              <line x1={oVx} y1={oVy} x2={vb[0]} y2={vb[1]} stroke={B_COL} strokeWidth={4} markerEnd="url(#ah-b)" />
+            </>
           )}
-          <path d={sampleRoute(true)} fill="none" stroke={R_COL}
-            strokeOpacity={0.7} strokeWidth={3.5} strokeLinecap="round" />
-
-          {/* the scrubbing point(s) */}
-          {showSecondRoute && <circle cx={mover2[0]} cy={mover2[1]} r={9} fill={R_COL} fillOpacity={0.55} />}
-          <circle cx={mover1[0]} cy={mover1[1]} r={11} fill={R_COL} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
-
-          {/* vectors to a, b, result */}
-          <line x1={oVx} y1={oVy} x2={va[0]} y2={va[1]} stroke={A_COL} strokeWidth={4} markerEnd="url(#ah-a)" />
-          <line x1={oVx} y1={oVy} x2={vb[0]} y2={vb[1]} stroke={B_COL} strokeWidth={4} markerEnd="url(#ah-b)" />
-          <line x1={oVx} y1={oVy} x2={vr[0]} y2={vr[1]} stroke={R_COL} strokeWidth={2.5}
-            strokeOpacity={0.85} markerEnd="url(#ah-r)" />
-
-          {/* parallelogram closure for addition */}
-          {mode === 'add' && (
-            <g stroke="currentColor" strokeOpacity={0.25} strokeWidth={2} strokeDasharray="5 7" fill="none">
-              <line x1={va[0]} y1={va[1]} x2={vr[0]} y2={vr[1]} />
-              <line x1={vb[0]} y1={vb[1]} x2={vr[0]} y2={vr[1]} />
-            </g>
-          )}
-
-          {/* result label */}
-          <circle cx={vr[0]} cy={vr[1]} r={6} fill={R_COL} />
-          <text x={vr[0] + 12} y={vr[1] - 10} fontSize={24} fill={R_COL}>
-            {mode === 'multiply' ? 'a·b' : 'a+b'}
-          </text>
 
           {/* draggable handles (large invisible hit area + visible dot) */}
           {([['a', va, A_COL, a], ['b', vb, B_COL, b]] as const).map(([id, v, col]) => (
