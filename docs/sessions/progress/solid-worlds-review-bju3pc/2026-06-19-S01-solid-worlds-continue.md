@@ -42,12 +42,16 @@ fixing the cell engine) — Γᵃᵇ is the rigorous H₁ and the cell screw-bug
 
 - **`analyzeSolid` rewired**: H₁ from `abelianizationH1` (deck-group, screw-safe),
   manifold from `isFreeAction`; χ from the free-action theorem (=0); a `verified`
-  flag = the cube cell complex independently agrees (h1 **and** χ=0).
+  flag = the cube cell complex *fully* agrees (h1 **and** χ=0 **and** its own
+  vertex-link manifold cert passes — i.e. the cell engine is trustworthy here).
 - **4 worlds added to `worlds.ts`** with clean, verified generators: second
   amphicosm (ℤ²), first amphidicosm (ℤ⊕(ℤ/2)²), second amphidicosm (ℤ⊕ℤ/4), and
-  **Hantzsche–Wendt** (ℤ/4⊕ℤ/4). Three are **dual-verified** (cell agrees);
-  the second amphidicosm is **Γᵃᵇ-only / experimental** (the cell engine gives it
-  χ=1 — its known screw bug), exactly per Dan's "experimental until both agree".
+  **Hantzsche–Wendt** (ℤ/4⊕ℤ/4). The two **screw-free** new worlds (second
+  amphicosm, first amphidicosm) are **dual-verified**; both **screw** worlds ship
+  **Γᵃᵇ-only / experimental** — the second amphidicosm because the cell engine
+  gives it χ=1, the didicosm because the cell link cert rejects it
+  (`cell.manifold === false`) even though its H₁/χ happen to match. Exactly per
+  Dan's "experimental until both agree".
 - HUD shows H₁ (from the deck group), the manifold certificate, and the
   cross-check/experimental status. EXPLAINER + CLAUDE.md updated; Conway–Rossetti
   + Hantzsche–Wendt added to "Possible sources". Build/lint/test green (28 tests).
@@ -58,11 +62,12 @@ fixing the cell engine) — Γᵃᵇ is the rigorous H₁ and the cell screw-bug
 > unchanged and stable.
 
 > [!CAUTION]
-> **Cell-homology screw bug still open** (`lib/homology.ts`): wrong H₁/χ for some
-> rotated/reflected staggered gluings. It does not affect the shipped catalog
-> (the screw-free worlds are exact; the new worlds use Γᵃᵇ and 3/4 are
-> cell-cross-checked). Fixing it would graduate the second amphidicosm to
-> dual-verified — the clean follow-up. Confirm −a2 = ℤ⊕ℤ/4 vs Conway–Rossetti
+> **Cell-homology screw bug still open** (`lib/homology.ts`): wrong H₁/χ/link-cert
+> for some rotated/reflected staggered gluings. It does not affect the shipped
+> catalog (the screw-free worlds are exact; the new worlds use Γᵃᵇ, and the two
+> screw-free new worlds are cell-cross-checked). Fixing it would graduate both
+> screw worlds (second amphidicosm, didicosm) to dual-verified — the clean
+> follow-up. Confirm −a2 = ℤ⊕ℤ/4 vs Conway–Rossetti
 > Table 6.
 
 ### 🟡 milestone · 22:45 — Verified classifier: 8 of 10 platycosms are cube-expressible; Γᵃᵇ corrects the cell engine

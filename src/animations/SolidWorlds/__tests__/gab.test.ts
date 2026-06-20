@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { abelianizationH1, isFreeAction } from '../lib/freeness';
+import { computeHomology } from '../lib/homology';
 import { analyzeSolid, M3, SolidWorldSpec } from '../solidSchema';
 import { SOLID_WORLDS, worldById } from '../worlds';
 
@@ -31,16 +32,17 @@ describe('Γᵃᵇ — group abelianization (independent of the cube cell comple
 });
 
 describe('catalog — the new screw/mirror platycosms', () => {
-  // each must be a genuine manifold (free), carry its curated H₁ (= Γᵃᵇ), and be
-  // dual-verified (the cube cell complex agrees with the group abelianization).
-  // `verified` = the cube cell complex independently agrees (h1 + χ=0). Three of
-  // the four are dual-verified; the second amphidicosm is Γᵃᵇ-only (the cell
-  // engine's known screw bug gives it χ=1), so it ships as experimental.
+  // each must be a genuine manifold (free) and carry its curated H₁ (= Γᵃᵇ).
+  // `verified` = the cube cell complex *fully* agrees: same H₁, χ=0, and its own
+  // vertex-link manifold cert passes. The two screw-free worlds are dual-verified;
+  // both screw worlds ship Γᵃᵇ-only/experimental — the second amphidicosm because
+  // the cell engine gives it χ=1, the didicosm because its link cert rejects the
+  // manifold (cell.manifold === false) even though its H₁/χ happen to match.
   const cases: Record<string, { h1: string; orientable: boolean; verified: boolean }> = {
     'second-amphicosm': { h1: 'ℤ²', orientable: false, verified: true },
     'first-amphidicosm': { h1: 'ℤ ⊕ ℤ/2 ⊕ ℤ/2', orientable: false, verified: true },
     'second-amphidicosm': { h1: 'ℤ ⊕ ℤ/4', orientable: false, verified: false },
-    'didicosm': { h1: 'ℤ/4 ⊕ ℤ/4', orientable: true, verified: true },
+    'didicosm': { h1: 'ℤ/4 ⊕ ℤ/4', orientable: true, verified: false },
   };
   for (const [id, want] of Object.entries(cases)) {
     it(`${id}: free, H₁ = ${want.h1}${want.verified ? ', dual-verified' : ' (Γᵃᵇ-only)'}`, () => {
@@ -56,4 +58,17 @@ describe('catalog — the new screw/mirror platycosms', () => {
       expect(a.verified).toBe(want.verified);
     });
   }
+
+  it('didicosm: a matching H₁/χ does NOT count as verified when the cell link cert fails', () => {
+    // regression: the cube cell complex agrees on H₁ = ℤ/4 ⊕ ℤ/4 and χ = 0, but
+    // its own vertex-link manifold certificate rejects this screw world. `verified`
+    // must fold that in, so the panel never claims "the cell complex agrees" while
+    // the same complex disagrees about being a manifold.
+    const w = worldById('didicosm');
+    const hom = computeHomology(w);
+    expect(hom.h1).toBe('ℤ/4 ⊕ ℤ/4');   // h1 matches Γᵃᵇ …
+    expect(hom.euler).toBe(0);           // … and χ matches …
+    expect(hom.manifold).toBe(false);    // … but the cell link cert fails, so
+    expect(analyzeSolid(w).verified).toBe(false); // it is not dual-verified.
+  });
 });

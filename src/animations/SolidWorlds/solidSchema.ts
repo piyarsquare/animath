@@ -126,8 +126,11 @@ export interface SolidAnalysis {
   /** True when the deck group acts freely — the genuine manifold certificate
    *  (a platycosm, not an orbifold). Computed group-theoretically (lib/freeness). */
   isManifold: boolean;
-  /** True when the independent Γᵃᵇ and the cube cell complex agree on H₁ — the
-   *  dual-verification gate. (The cell engine has a known screw-homology bug.) */
+  /** True when the cube cell complex *fully* agrees with the authoritative
+   *  Γᵃᵇ/free-action invariants — same H₁, χ = 0, *and* its own vertex-link
+   *  manifold certificate passes. This holds on the screw-free worlds; the cell
+   *  engine's known screw bug fails one of these on the screw worlds, which then
+   *  ship as experimental (Γᵃᵇ-only) until that bug is fixed. */
   verified: boolean;
   note: string;
 }
@@ -154,12 +157,15 @@ export function analyzeSolid(w: SolidWorldSpec): SolidAnalysis {
     ? 'Every face pairing is a proper motion (det +1) — orientation survives every loop.'
     : `Crossing the ${reversingAxes.join('/')}-pairing reverses orientation (det −1): walk that loop once and you return mirror-reversed.`;
   // a free closed flat 3-manifold has χ = 0 by Poincaré duality; the cube cell
-  // complex agrees on the screw-free worlds but its screw χ/H₁ can be off, so the
-  // dual-verification gate requires the cell engine to be internally consistent.
+  // complex agrees on the screw-free worlds but its screw χ/H₁/link cert can be
+  // off. The dual-verification gate therefore requires the cell engine to be
+  // internally consistent *in every respect* — H₁, χ = 0, and its own manifold
+  // certificate — so a screw world whose H₁ merely happens to match (but whose
+  // link cert fails, e.g. the Hantzsche–Wendt didicosm) is not called verified.
   const euler = free ? 0 : hom.euler;
   return {
     orientable, perAxis, reversingAxes, manifold: w.manifold,
     h1: ab.h1, euler, manifoldConsistent: euler === 0,
-    isManifold: free, verified: hom.h1 === ab.h1 && hom.euler === 0, note,
+    isManifold: free, verified: hom.h1 === ab.h1 && hom.euler === 0 && hom.manifold, note,
   };
 }
