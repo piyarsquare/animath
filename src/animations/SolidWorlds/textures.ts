@@ -69,10 +69,10 @@ export function faceLabelTexture(letter: string, glyph: string, color: string): 
 }
 
 /**
- * An opaque sign face: bold text on a solid plaque. Read from the front it says
- * what it says; viewed from the back (or by a mirror-reversed walker) it reads
- * laterally reversed — "HELLO" → its mirror image — purely by geometry, no baked
- * flip. The whole opaque-sign demonstration in one texture.
+ * One opaque sign face: bold text on a solid plaque. Used for the two faces of
+ * the FRONT/BACK slab. Read head-on it says what it says; seen by a
+ * mirror-reversed walker it reads laterally reversed — its mirror image — purely
+ * by geometry, no baked flip.
  */
 export function signTexture(text: string): THREE.CanvasTexture {
   const w = 512, h = 256;

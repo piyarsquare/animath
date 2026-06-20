@@ -257,12 +257,23 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     mesh(new THREE.BoxGeometry(U * 0.34, U * 0.06, U * 0.06), lMat, localM(-h * 0.5 + U * 0.14, -h + U * 0.03, -h * 0.4));
     mesh(new THREE.SphereGeometry(U * 0.09, 18, 14), std(0xff6aa0), localM(h * 0.22, -h + U * 0.09, -h * 0.62));
 
-    // the opaque "HELLO" sign — reads forwards here, mirror-reversed once you
-    // walk an orientation-reversing loop (the conversation's headline case)
+    // the two-sided sign — a solid slab with FRONT on one face and BACK on the
+    // other. The opaque slab between the two faces blocks any see-through, so
+    // neither side's letters are readable from the opposite side. Reads forwards
+    // here; after an orientation-reversing loop the face text comes back
+    // mirror-reversed (the conversation's headline case).
     mesh(new THREE.CylinderGeometry(U * 0.012, U * 0.012, U * 0.34, 10), std(0x9a9aa4), localM(0, -h + U * 0.17, -h * 0.5));
-    const signTex = signTexture('HELLO'); roomDisposables.push(signTex);
-    const plaqueMat = new THREE.MeshBasicMaterial({ map: signTex, side: THREE.DoubleSide }); roomDisposables.push(plaqueMat);
-    mesh(new THREE.PlaneGeometry(U * 0.34, U * 0.17), plaqueMat, localM(0, -h + U * 0.38, -h * 0.5));
+    const signY = -h + U * 0.38, signZ = -h * 0.5, signT = U * 0.025, eps = U * 0.002;
+    const signW = U * 0.34, signH = U * 0.17;
+    // the slab body (gives the sign its thickness and its opaque core)
+    mesh(new THREE.BoxGeometry(signW, signH, signT), std(0xcbbf9a), localM(0, signY, signZ));
+    const frontTex = signTexture('FRONT'); roomDisposables.push(frontTex);
+    const backTex = signTexture('BACK'); roomDisposables.push(backTex);
+    const frontMat = new THREE.MeshBasicMaterial({ map: frontTex, side: THREE.DoubleSide }); roomDisposables.push(frontMat);
+    const backMat = new THREE.MeshBasicMaterial({ map: backTex, side: THREE.DoubleSide }); roomDisposables.push(backMat);
+    // FRONT on the +z face (toward the room), BACK on the -z face (turned to face away)
+    mesh(new THREE.PlaneGeometry(signW, signH), frontMat, localM(0, signY, signZ + signT / 2 + eps));
+    mesh(new THREE.PlaneGeometry(signW, signH), backMat, localM(0, signY, signZ - signT / 2 - eps, 0, Math.PI, 0));
 
     // face-label resources: a letter per axis, colored + glyphed by what its
     // pairing does (↔ straight translation · ↻ turn · ⇋ flip).

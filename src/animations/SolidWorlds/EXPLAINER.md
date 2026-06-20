@@ -34,6 +34,16 @@ a telling ladder of what a loop can do to you:
   **mirror-reversed**. Walk it twice and you're restored. Walk the y- or z-loop and
   nothing flips.
 
+- **The fuller catalog** (*amphicosms*, *amphidicosms*, and the **Hantzsche–Wendt**
+  manifold). Beyond the headline worlds, the cube can be glued into most of the
+  **ten flat 3-manifolds** (the *platycosms*) — every one except the two that need
+  a hexagonal prism. The non-orientable amphi-worlds add mirror loops; the
+  orientable **Hantzsche–Wendt** world (two perpendicular half-turn screws) is the
+  rare one with **finite first homology** (H₁ = ℤ/4 ⊕ ℤ/4) — no direction is a
+  simple repeat. Each world's invariants are computed from its gluing: **H₁ from
+  the deck group's abelianization**, and a **free-action test** decides whether the
+  quotient is a genuine manifold rather than a cone-point orbifold.
+
 That contrast is the lesson: a **rotation you can undo** by reorienting; a
 **reflection you cannot**. Only the second is a real, un-fixable property of the
 loop — and even *which way* the mirror looks flipped is a matter of how you're
@@ -48,7 +58,10 @@ sheet* — but a 3-manifold has **no other side** (you're not on a surface, you'
 *inside* a space). So there is no normal to absorb the flip: it lands on **you**.
 After the x-loop, your old prints read backwards and **no turning of your head puts
 them right** — that is the difference between a mirror image and a rotation. The
-opaque **HELLO** sign tells the same story: after one lap it reads **ollɘH**.
+solid two-sided **FRONT / BACK** sign tells the same story: walk the mirror loop
+and its front face — still the front — comes back with its letters flipped
+left-for-right (its solid core keeps either side's letters from bleeding through
+to the other, so the only reversal you see is the real one).
 
 The **handedness** readout names it: *original* or *mirrored*. The honest subtlety
 is that **the flip has no location** — it's the loop's property (a global
@@ -67,6 +80,12 @@ priority claims):
 - **Jeff Weeks, *The Shape of Space*** — the canonical book on closed 3-manifolds
   as glued polyhedra, orientability, and the "there is no outside" point of view;
   its *Torus Games* is the 2D sibling that Polygon Worlds descends from.
+- **J.H. Conway & J.P. Rossetti, *Describing the Platycosms*** (and *Hearing the
+  Platycosms*) — the naming and classification of the ten closed flat 3-manifolds
+  used here (torocosm, dicosm, tetracosm, the amphi-worlds, the Hantzsche–Wendt
+  *didicosm*); the source to check the per-world first-homology values against.
+- **Hantzsche & Wendt (1935)** — the original construction of the orientable flat
+  manifold with finite first homology, the catalog's headline screw world.
 - **"Not Knot"** (Geometry Center) and **Segerman & Hart's non-Euclidean VR** —
   the curved-space (hyperbolic / spherical) renderings this app's later chapters
   aim toward.

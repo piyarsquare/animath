@@ -15,6 +15,7 @@
  */
 
 import { computeHomology } from './lib/homology';
+import { abelianizationH1, isFreeAction } from './lib/freeness';
 
 export type Axis = 'x' | 'y' | 'z';
 export const AXES: readonly Axis[] = ['x', 'y', 'z'];
@@ -118,10 +119,19 @@ export interface SolidAnalysis {
   manifold: string;
   /** H₁ computed from the cellular chain complex (lib/homology.ts). */
   h1: string;
-  /** Euler characteristic V − E + F − 1; 0 for a closed 3-manifold. */
+  /** Euler characteristic V − E + F − C; 0 for a closed 3-manifold. */
   euler: number;
   /** True when χ = 0 (a necessary manifold sanity check). */
   manifoldConsistent: boolean;
+  /** True when the deck group acts freely — the genuine manifold certificate
+   *  (a platycosm, not an orbifold). Computed group-theoretically (lib/freeness). */
+  isManifold: boolean;
+  /** True when the cube cell complex *fully* agrees with the authoritative
+   *  Γᵃᵇ/free-action invariants — same H₁, χ = 0, *and* its own vertex-link
+   *  manifold certificate passes. This holds on the screw-free worlds; the cell
+   *  engine's known screw bug fails one of these on the screw worlds, which then
+   *  ship as experimental (Γᵃᵇ-only) until that bug is fixed. */
+  verified: boolean;
   note: string;
 }
 
@@ -138,12 +148,24 @@ export function analyzeSolid(w: SolidWorldSpec): SolidAnalysis {
   });
   const reversingAxes = perAxis.filter((a) => a.reversing).map((a) => a.axis);
   const orientable = reversingAxes.length === 0;
+  // H₁ from the deck group's abelianization (the rigorous, screw-safe invariant);
+  // the cube cell complex is kept for χ and as a cross-check.
+  const ab = abelianizationH1(w);
   const hom = computeHomology(w);
+  const free = isFreeAction(w);
   const note = orientable
     ? 'Every face pairing is a proper motion (det +1) — orientation survives every loop.'
     : `Crossing the ${reversingAxes.join('/')}-pairing reverses orientation (det −1): walk that loop once and you return mirror-reversed.`;
+  // a free closed flat 3-manifold has χ = 0 by Poincaré duality; the cube cell
+  // complex agrees on the screw-free worlds but its screw χ/H₁/link cert can be
+  // off. The dual-verification gate therefore requires the cell engine to be
+  // internally consistent *in every respect* — H₁, χ = 0, and its own manifold
+  // certificate — so a screw world whose H₁ merely happens to match (but whose
+  // link cert fails, e.g. the Hantzsche–Wendt didicosm) is not called verified.
+  const euler = free ? 0 : hom.euler;
   return {
     orientable, perAxis, reversingAxes, manifold: w.manifold,
-    h1: hom.h1, euler: hom.euler, manifoldConsistent: hom.euler === 0, note,
+    h1: ab.h1, euler, manifoldConsistent: euler === 0,
+    isManifold: free, verified: hom.h1 === ab.h1 && hom.euler === 0 && hom.manifold, note,
   };
 }

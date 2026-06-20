@@ -237,9 +237,16 @@ export default function SolidWorlds() {
           {analysis.orientable ? 'orientable' : 'non-orientable'}
         </div>
         <div style={{ marginTop: 2 }}>
-          H₁ = {analysis.h1} · χ = {analysis.euler}
-          {analysis.manifoldConsistent ? ' ✓' : ' (!)'}{' '}
-          <span style={{ opacity: 0.7 }}>(computed from the gluing)</span>
+          H₁ = {analysis.h1} · χ = {analysis.euler} ·{' '}
+          {analysis.isManifold ? 'manifold ✓' : 'not a manifold (!)'}{' '}
+          <span style={{ opacity: 0.7 }}>
+            (H₁ from the deck group; free action ⇒ a flat manifold)
+          </span>
+        </div>
+        <div style={{ marginTop: 2, opacity: 0.7 }}>
+          {analysis.verified
+            ? 'cross-checked: the glued-cube cell complex agrees'
+            : 'experimental: cell-complex cross-check pending'}
         </div>
         <div style={{ marginTop: 4, opacity: 0.9 }}>{analysis.note}</div>
         <div style={{ marginTop: 4, opacity: 0.8 }}>
