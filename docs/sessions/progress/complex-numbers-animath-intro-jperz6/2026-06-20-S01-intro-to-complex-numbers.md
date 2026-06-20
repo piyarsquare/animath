@@ -39,6 +39,19 @@ topic: **plane/particles unification** ("which plane am I looking at" across vie
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 21:35 — Argand: pinch/wheel zoom + two-finger / shift-drag pan
+**Why:** Dan asked for pinch-to-zoom and two-finger pan on the plane.
+
+Added camera navigation to `ArgandPlane`: a `center` pan offset + multi-pointer
+bookkeeping. Pinch (or wheel) zooms via `onZoom` → parent scales `extent` (clamped
+1–16, mirroring Plane Transform's proven pinch math); two-finger drag (and desktop
+shift/right-drag) pans; double-click recenters. Handle-drag survives via
+`stopPropagation`, and a second pointer promotes to a gesture. Axes/grid/unit-circle
+now key off the panned origin `toV(0,0)`. Build + lint green; default render
+unchanged in screenshot. **Caveat:** touch gestures can't be exercised headlessly —
+code-verified only; first manual pass should confirm pinch/pan feel and that handle
+drag and gestures don't fight.
+
 ### 🟢 code · 21:25 — Phase 2 shipped: transform a whole curve by a constant
 **Why:** Dan said "continue." Next plan step — `c·curve` / `c+curve`.
 
