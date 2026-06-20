@@ -34,18 +34,16 @@ describe('Γᵃᵇ — group abelianization (independent of the cube cell comple
 describe('catalog — the new screw/mirror platycosms', () => {
   // each must be a genuine manifold (free) and carry its curated H₁ (= Γᵃᵇ).
   // `verified` = the cube cell complex *fully* agrees: same H₁, χ=0, and its own
-  // vertex-link manifold cert passes. The two screw-free worlds are dual-verified;
-  // both screw worlds ship Γᵃᵇ-only/experimental — the second amphidicosm because
-  // the cell engine gives it χ=1, the didicosm because its link cert rejects the
-  // manifold (cell.manifold === false) even though its H₁/χ happen to match.
-  const cases: Record<string, { h1: string; orientable: boolean; verified: boolean }> = {
-    'second-amphicosm': { h1: 'ℤ²', orientable: false, verified: true },
-    'first-amphidicosm': { h1: 'ℤ ⊕ ℤ/2 ⊕ ℤ/2', orientable: false, verified: true },
-    'second-amphidicosm': { h1: 'ℤ ⊕ ℤ/4', orientable: false, verified: false },
-    'didicosm': { h1: 'ℤ/4 ⊕ ℤ/4', orientable: true, verified: false },
+  // vertex-link manifold cert passes. Since the 2026-06-20 screw fix all four —
+  // including both screw worlds (second amphidicosm, didicosm) — are dual-verified.
+  const cases: Record<string, { h1: string; orientable: boolean }> = {
+    'second-amphicosm': { h1: 'ℤ²', orientable: false },
+    'first-amphidicosm': { h1: 'ℤ ⊕ ℤ/2 ⊕ ℤ/2', orientable: false },
+    'second-amphidicosm': { h1: 'ℤ ⊕ ℤ/4', orientable: false },
+    'didicosm': { h1: 'ℤ/4 ⊕ ℤ/4', orientable: true },
   };
   for (const [id, want] of Object.entries(cases)) {
-    it(`${id}: free, H₁ = ${want.h1}${want.verified ? ', dual-verified' : ' (Γᵃᵇ-only)'}`, () => {
+    it(`${id}: free, H₁ = ${want.h1}, dual-verified`, () => {
       const w = worldById(id);
       const a = analyzeSolid(w);
       expect(isFreeAction(w)).toBe(true);          // genuine flat manifold
@@ -55,20 +53,29 @@ describe('catalog — the new screw/mirror platycosms', () => {
       expect(a.orientable).toBe(want.orientable);
       expect(a.isManifold).toBe(true);
       expect(a.euler).toBe(0);
-      expect(a.verified).toBe(want.verified);
+      expect(a.verified).toBe(true);                // the cell engine now agrees too
     });
   }
 
-  it('didicosm: a matching H₁/χ does NOT count as verified when the cell link cert fails', () => {
-    // regression: the cube cell complex agrees on H₁ = ℤ/4 ⊕ ℤ/4 and χ = 0, but
-    // its own vertex-link manifold certificate rejects this screw world. `verified`
-    // must fold that in, so the panel never claims "the cell complex agrees" while
-    // the same complex disagrees about being a manifold.
+  it('didicosm (Hantzsche–Wendt): the cube cell complex now fully agrees', () => {
+    // regression for the screw fix: the cube cell complex must agree on every
+    // count — H₁ = ℤ/4 ⊕ ℤ/4, χ = 0, AND its own vertex-link manifold certificate
+    // (each link an S²). Before the fix the screwed faces were left unglued and
+    // the N=2 link was pinched, so this world shipped Γᵃᵇ-only/experimental.
     const w = worldById('didicosm');
     const hom = computeHomology(w);
-    expect(hom.h1).toBe('ℤ/4 ⊕ ℤ/4');   // h1 matches Γᵃᵇ …
-    expect(hom.euler).toBe(0);           // … and χ matches …
-    expect(hom.manifold).toBe(false);    // … but the cell link cert fails, so
-    expect(analyzeSolid(w).verified).toBe(false); // it is not dual-verified.
+    expect(hom.h1).toBe('ℤ/4 ⊕ ℤ/4');
+    expect(hom.euler).toBe(0);
+    expect(hom.manifold).toBe(true);
+    expect(analyzeSolid(w).verified).toBe(true);
+  });
+
+  it('the `verified` gate still requires the cell complex own its manifold cert', () => {
+    // the gate is `cell.h1 === Γᵃᵇ && cell.χ === 0 && cell.manifold`. Guard that
+    // it actually ANDs in cell.manifold — a matching H₁/χ alone must not verify.
+    const w = worldById('didicosm');
+    const hom = computeHomology(w);
+    const matchesValuesOnly = hom.h1 === abelianizationH1(w).h1 && hom.euler === 0;
+    expect(matchesValuesOnly && hom.manifold).toBe(analyzeSolid(w).verified);
   });
 });

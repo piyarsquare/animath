@@ -6,12 +6,12 @@ title: Solid Worlds — resume (graduate screw worlds / confirm −a2 naming)
 branch: claude/3d-manifold-worlds-imwmal
 slug: 3d-manifold-worlds-imwmal
 status: in-progress
-build: unknown
+build: passing
 followup: null
 pr: null
 app: solid-worlds
-signals: needs-dan
-next: Pick the target — fix the cell-engine screw bug (lib/homology.ts) to dual-verify the didicosm + second amphidicosm, or confirm −a2 = ℤ⊕ℤ/4 against Conway–Rossetti Table 6.
+signals: visual-unverified
+next: Optional — confirm −a2 = ℤ⊕ℤ/4 naming against Conway–Rossetti Table 6 (the remaining backlog item), and visually confirm a screw world's HUD now reads "cross-checked".
 ---
 
 # Solid Worlds — resume (graduate screw worlds / confirm −a2 naming)
@@ -35,6 +35,64 @@ present in `worlds.ts`).
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 18:12 — All 8 worlds dual-verified; screw bug fixed + documented
+**Why:** Both defects fixed, the two experimental worlds graduate, gates green.
+
+Implemented both fixes in `lib/homology.ts` and confirmed every catalog world is
+now dual-verified (cell engine agrees with Γᵃᵇ on H₁, χ=0, and the vertex-link
+S² cert passes — including the second amphidicosm and the Hantzsche–Wendt
+didicosm).
+
+- **Fix A — glue by the whole in-cube orbit.** Replaced the "apply pairing →
+  reduce to first in-cube cell → union" pass with `orbitInCube(cell)`, which
+  collects *all* in-cube orbit members (signs carried) so the bounce-to-source
+  can't hide the true partner. χ on the second amphidicosm → 0.
+- **Fix B — finer subdivision for screw worlds.** `chooseN` now returns 2×N₀ for
+  screw worlds (N=4 for the half-cube screws), separating the folded vertex link
+  into a clean sphere. H₁/χ are subdivision-invariant, so values are untouched.
+- **Bonus guard.** A stress input (`hw-pseudo`) turned out to use *axial*
+  offsets, making the cube a non-fundamental-domain (χ came out −48). The engine
+  now **throws** on a fractional axial offset rather than returning a wrong χ; the
+  old test's premise (it claimed that spec was non-free) was also wrong per the
+  freeness oracle, so I replaced it.
+
+Docs/tests updated: new **`SolidWorlds/SCREW_BUG.md`** (the requested deep +
+accessible write-up), homology.ts header, `solidSchema.ts` comments, CLAUDE.md.
+`gab.test.ts` + `solidSchema.test.ts` rewritten (screw worlds now dual-verified;
+cell-engine tests broadened to all 8; added the second-amphidicosm "no leftover
+boundary" regression and the axial-offset rejection). **Gates:** `npm run build`
+passing · full vitest **53/53** · lint **0 errors** (60-warning baseline). App
+renders headless without crashing.
+
+### 🔵 finding · 18:05 — Root-caused the screw bug: two independent defects, not one
+**Why:** The handoff called it "an orientation-sign / vertex-link error"; instrumenting the engine shows it is actually *two* separate bugs with different fixes.
+
+Instrumented `computeHomology` (cell counts, per-vertex link χ, face-class
+sizes) and ran all 8 worlds plus N-sweeps. Findings:
+
+- **Bug A — the gluing bounce (the χ error).** `second-amphidicosm` reports
+  **χ=1** (should be 0): 4 boundary faces in the screw region are left
+  **unglued** (face-class size 1 on the boundary). Cause: `reduceToCube` does a
+  BFS over the deck generators and returns the *first* in-cube cell it finds.
+  For a screwed face whose image lands outside the cube, the BFS tries the
+  *inverse of the gluing generator* (`inv_y`, which simply undoes the step we
+  just took) **before** the generator that would wrap it correctly (`inv_z`), so
+  it "reduces" the image back to its own **source** face → `union(c, c)` is a
+  no-op → the face never glues to its true partner. This is an **algorithmic bug,
+  present at every N** (confirmed: χ=1 at both N=2 and N=4).
+- **Bug B — the vertex-link is too coarse at N=2 (the manifold-cert error).**
+  Both screw worlds fail the vertex-link S² certificate at N=2 (link χ=5, not 2;
+  the link collapses to 5 vertices / 8 edges with incidence-4 edges — a pinched,
+  non-simplicial link). But at **N=4 the link is a clean sphere and the cert
+  passes** for both. So this half is pure **subdivision coarseness**, not a real
+  defect: the screw offset is exactly half the N=2 grid, folding the link onto
+  itself; doubling the subdivision separates it.
+
+**The fix is therefore two-part:** (1) correct the gluing so the screwed faces
+reach their true partners (fixes χ); (2) choose a finer subdivision for screw
+worlds so the link certificate is non-degenerate. H₁ is subdivision-invariant,
+so neither touches the (already-correct) homology values.
 
 ### 🔵 finding · 17:42 — Branch is fresh off main and already carries the 8-world catalog
 **Why:** Confirm the starting point so this session builds on the right base.
