@@ -39,6 +39,33 @@ topic: **plane/particles unification** ("which plane am I looking at" across vie
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 21:00 — Phase 1 shipped: the Argand app (arithmetic chapter)
+**Why:** Dan said "begin." Built the hero slice — live, draggable complex
+arithmetic — as a fresh app.
+
+New app `src/animations/Argand/` (route `#/argand`, gallery card "Argand Plane"):
+- `complexOps.ts` — pure ops + the honest paths: `mulPath = a·bᵗ` (spiral),
+  `addPath = a + t·b` (slide), polar form, dual formatting, soft `snap` (Gaussian
+  lattice · nice radii · π/6 angles).
+- `ArgandPlane.tsx` — SVG/DOM plane (zero WebGL): draggable `a`/`b` handles, vectors,
+  unit circle + grid, nested **angle wedges** (arg a + arg b, showing angles add), the
+  scrubbed route + moving dot, and the second route for **commutativity** (`a·b = b·a`
+  double spiral / addition parallelogram).
+- `Argand.tsx` — Workspace wiring: Multiply | Add **mode pills**, panels (Numbers ·
+  Plane · Combine · Scrub · Values · Detail), a **scrub slider + optional Play** clock,
+  Play/To-start action strip, dual-form Values readout.
+- Registered append-only in `index.tsx`, `apps.ts`, `catalog.ts` (preview kind reuses
+  `plane` for now); doc rows added to CLAUDE.md (routing + tree) and README.
+
+`npm run build` passes; `npm run lint` 0 errors (60-warning baseline unchanged);
+headless screenshot confirms the spiral, wedges, vectors, unit circle and dual
+readouts render. Defaults `a=1.6+0.6i`, `b=i` show multiplication as a quarter-turn.
+
+> [!NOTE]
+> Not yet verified by real pointer **drag** (headless can't); the drag/snap path is
+> code-reviewed only. First manual check should confirm handle dragging + snapping and
+> Add-mode parallelogram. Phone/touch (finger-occludes-handle) still unaddressed.
+
 ### 🟣 decision · 19:00 — Corrections: animation is *a* mode, not a mandate; add commutativity
 **Why:** Dan corrected my overstatement. Animation is "one of the major modes of
 exploration," **not** "everything must animate." He likes the **slider** and the

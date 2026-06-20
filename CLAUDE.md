@@ -106,6 +106,7 @@ animath/
     │   ├── PolygonWorlds/       # walk every closed surface from one glued polygon; selectable scene "looks" (looks.ts, distilled from Topology Walk's themes)
     │   ├── TreesAndNets/        # M̄₀,ₙ(ℝ) explorer: associahedron tiles + the gluing mosaic; lib/{associahedron,mosaic}.ts
     │   └── SolidWorlds/         # walk inside a closed flat 3-manifold from one glued cube (3D successor to Polygon Worlds); catalog now 8 of the 10 platycosms (3-torus, half/quarter-turn, both amphicosms, both amphidicosms, Hantzsche–Wendt); developing-map cover engine (coverEngine.ts), chirality HUD (original · rotated · mirrored). Invariants: H₁ from the deck group's abelianization (lib/freeness.ts: point group + Reidemeister–Schreier lattice → Smith form) — the authoritative, screw-safe H₁ — plus a free-action test certifying a genuine manifold (vs a cone-point orbifold); the cube cell complex (lib/homology.ts) is kept for χ and as a cross-check (known screw-homology bug, so trusted only on the screw-free worlds)
+    │   └── Argand/              # entry-point app for complex numbers: drag two numbers, watch add (tip-to-tail slide) vs multiply (spiral — angles add, lengths multiply) + commutativity; pure ops in complexOps.ts, SVG/DOM plane in ArgandPlane.tsx. Successor-in-progress to Plane Transform (Phase 1: arithmetic chapter)
     │
     ├── components/             # shared app-side UI
     │   ├── ParticleViewerShell.tsx  # turnkey workspace assembly for particle (4D) viewers
@@ -171,6 +172,7 @@ visible app catalog comes from `src/apps.ts` (+ `src/chrome/catalog.ts`).
 | `#/polygon-worlds`   | `PolygonWorlds`  | Walk every closed surface from one glued polygon |
 | `#/trees-and-nets`   | `TreesAndNets`   | Tree-space as a polytope: the associahedron of an n-gon's triangulations (port of the private `quantum-tree`) |
 | `#/solid-worlds`     | `SolidWorlds`    | Walk inside a closed 3-manifold built from one glued cube (3D successor to Polygon Worlds); Tier 1 flat worlds + chirality HUD |
+| `#/argand`           | `Argand`         | Drag two complex numbers; arithmetic as geometry (add slides, multiply spirals). Entry-point app for complex numbers; successor-in-progress to Plane Transform |
 | `#/embed/complex-particles` | `EmbedComplexParticles` | Chrome-less applet for iframe embedding, URL-configured (docs/EMBEDS.md); demo host: `/embed-demo.html` |
 | `#/embed/plane-transform` | `EmbedPlaneTransform` | Chrome-less two-pane plane applet for iframe embedding (docs/EMBEDS.md) |
 

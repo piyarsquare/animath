@@ -84,4 +84,10 @@ export const apps: AppDescriptor[] = [
     icon: '⬢',
     blurb: 'Walk inside a closed 3-manifold built from one glued cube — a room that repeats forever — and watch an orientation-reversing loop bring you back mirrored.',
   },
+  {
+    hash: '/argand',
+    name: 'Argand Plane',
+    icon: '∡',
+    blurb: 'Drag two complex numbers and watch arithmetic as geometry: addition slides tip-to-tail, multiplication spirals — angles add, lengths multiply.',
+  },
 ];
