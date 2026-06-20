@@ -58,7 +58,10 @@ sheet* — but a 3-manifold has **no other side** (you're not on a surface, you'
 *inside* a space). So there is no normal to absorb the flip: it lands on **you**.
 After the x-loop, your old prints read backwards and **no turning of your head puts
 them right** — that is the difference between a mirror image and a rotation. The
-opaque **HELLO** sign tells the same story: after one lap it reads **ollɘH**.
+solid two-sided **FRONT / BACK** sign tells the same story: walk the mirror loop
+and its front face — still the front — comes back with its letters flipped
+left-for-right (its solid core keeps either side's letters from bleeding through
+to the other, so the only reversal you see is the real one).
 
 The **handedness** readout names it: *original* or *mirrored*. The honest subtlety
 is that **the flip has no location** — it's the loop's property (a global
