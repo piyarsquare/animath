@@ -39,6 +39,40 @@ topic: **plane/particles unification** ("which plane am I looking at" across vie
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 17:58 — Scope shifted: enrich Plane Transform into the complex-numbers *entry point*
+**Why:** Dan redirected from "write a guide page" to "enrich the **app** so it can
+host these ideas," with the guide following. The deliverable is now app code, not
+just HTML.
+
+Dan's concrete asks for Plane Transform:
+1. Port the **grid / circle / domain** features from Complex Particles (sampling
+   patterns, rings/spokes, reference marks like the unit circle).
+2. **Add two numbers by dragging** their locations on the Argand plane (a+b).
+3. **Add or multiply a *curve*** by a complex number (z+c, c·z on a drawn shape).
+4. Build toward an **animation that morphs a chart of (x,y) into (u,v)** — the
+   function shown as a continuous deformation of the plane.
+
+The throughline: make Plane Transform *the* entry point for complex numbers **and**
+complex functions, so the explanatory pages can slice it at any rung.
+
+Read the full current `PlaneTransform.tsx` (818 lines): two-pane split view, shared
+point cloud, vertex shader runs f on the output pane; already has Cartesian/polar
+grid, log-polar plane, **drawable curves that map through f**, standard curves, and
+embed mode with URL params. Good bones for all four asks.
+
+### 🔵 finding · 17:55 — Complex Particles feature inventory (for porting)
+**Why:** Need to know exactly which domain/grid/circle features exist to port, vs.
+build fresh.
+
+Explore agent surveyed `lib/particles` + `ComplexParticles`. Portable into Plane
+Transform: 7 **sampling patterns** (Grid/Polar/Rings/Spokes/Web/Squares/Random),
+**radius-band masking** (|z| min/max), reciprocal (log|z|) sampling, **colored axis
+cross**, and the **Net** mode's polar fiber net (constant-|z| circles + constant-arg
+rays with toggles) — the closest thing to a "unit circle / rings" reference. Plane
+Transform currently has only Cartesian/polar grid + 3 color modes; the rich
+colormaps, ColorBy Domain/Range, shapes, projections, and 4D rotation are Complex
+Particles' deep end and mostly *not* wanted in the entry-point app.
+
 ### 🔵 finding · 17:47 — Orientation: the pieces already exist
 **Why:** Before proposing a build, mapped what's already available against the ask.
 
