@@ -11,7 +11,7 @@ followup: null
 pr: null
 app: solid-worlds
 signals: null
-next: Polish lived decor (first-person framing, more worlds) or hand off; Dan to review the two target worlds.
+next: Dan review of glass-walled rooms; possible follow-ups: wall collision, a clearly seam-centered room, real cut ceiling.
 ---
 
 # Resume Solid Worlds (space worlds) — Lived seams decor prototype
@@ -50,6 +50,39 @@ so it is the continuation, not a parallel re-do.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 22:55 — Glass walls + floor + distinct hues shipped; verified
+**Why:** Closed Dan's three complaints (obstruction · no floor · walls alike).
+
+- **Glass** wall panels (transparent, `depthWrite: true` so the tiled cover shows
+  through only the nearest pane instead of stacking into murk) on **opaque
+  colored base plinths** — the plinth carries each wall's bold hue, the glass
+  above is see-through. First-person now looks straight down a corridor of
+  doorways receding through the cover.
+- **Floor**: opaque slab tiled per cell, built as four boxes around a **hole cut
+  for the staircase** (wired to the Floor checkbox).
+- **Distinct walls**: amber / teal / violet glass × dark / white / black trim ×
+  tall · wide-corbel-arch · double-portal doorways.
+
+Verified headless (3-torus 3rd + 1st, amphicosm). Build + lint(0) + 53 tests
+green. Note: a faint frosted haze remains where many far panes overlap — the
+plinths + lower walls + depth-writing keep it readable; true fix would be
+near-cell culling (Dan's other suggestion), a bigger engine change.
+
+### 🟣 decision · 22:20 — Glass walls + real floor + distinct walls (Dan's 2nd round)
+**Why:** Dan: solid walls obstruct the view; there's no real floor; the walls are
+too indistinguishable.
+
+- **Glass walls**: wall panels become transparent (frosted glass, depthWrite off
+  so they never occlude) set in **opaque colored frames** (top rail + door
+  surrounds) so the architecture stays crisp through the glass. This is the
+  see-through fix (chose glass over near-cell clipping — robust with instancing).
+- **Real floor**: an opaque floor slab tiled per cell, built as four boxes around
+  a central **hole cut for the staircase** (the literal hole in the floor; stacks
+  into a shaft in the vertical cover). Tagged `floor` so the Floor checkbox owns it.
+- **Distinct walls**: three clearly different hues (amber / teal / violet glass) ×
+  contrasting trim (dark / white / black) × distinct doorway shapes (tall · wide
+  corbel arch · double portal).
 
 ### 🟡 milestone · 22:10 — Rooms decor built + verified; build/lint/test green
 **Why:** Delivered the new direction (solid walls + doorways + spiral stair) and

@@ -72,9 +72,11 @@ nothing *local* ever happened. You didn't flip *somewhere*; you came back mirror
 
 The **View** panel has a **Decor** switch. *Diagnostic* is the proof-of-the-math
 scene: neutral landmark props and the FRONT/BACK sign, sized so a copy and its
-mirror are obvious. *Rooms* instead builds solid architecture — thick walls (with
-real depth) carrying doorways of different shapes and colors, and a spiral
-staircase. The walls sit **inside** the cube, not on its faces, so when the world
+mirror are obvious. *Rooms* instead builds solid architecture — **glass** walls
+(real depth, on bold opaque colored bases) carrying doorways of different shapes,
+a **floor** with the stairwell cut through it, and a spiral staircase. The glass
+lets you see through the near walls into the rooms beyond. The walls sit
+**inside** the cube, not on its faces, so when the world
 tiles, the rooms they bound **straddle the seams**: the room you stand in is
 assembled from pieces of several copies of the world, and its far wall lives in
 the next domain. The spiral stair threads the **vertical** gluing — and because
