@@ -39,6 +39,50 @@ topic: **plane/particles unification** ("which plane am I looking at" across vie
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 19:00 — Corrections: animation is *a* mode, not a mandate; add commutativity
+**Why:** Dan corrected my overstatement. Animation is "one of the major modes of
+exploration," **not** "everything must animate." He likes the **slider** and the
+multiplication; plane deformations need not auto-animate.
+
+Locked the fork: **fresh successor app** + **Complex Particles positioning-only**.
+Wrote the [plan](2026-06-20-S01-plan-fresh-complex-app.md), then revised it for the
+animation correction: primary substrate is **direct manipulation + a parameter
+slider**; **animation is an optional lens** (a play button on the same slider), no
+autoplay by default; plane deformations are fine as static/draggable/scrubbed
+pictures. Also added **commutativity** (`a·b = b·a`, shown as two composition orders
+landing on the same point) to the Multiply chapter. The four hat reports stand as the
+review snapshot; their *substantive* findings (honest spiral-vs-slide path, direct
+manipulation) survive the correction — if anything it strengthens slider/drag over
+canned animation.
+
+### 🟣 decision · 18:45 — Pivot under consideration: fresh successor app, not in-place enrichment
+**Why:** Dan questioned whether this must live in Plane Transform, and proposed a
+**third side-along app** that could let us *retire* Plane Transform after switching.
+
+My read: this is likely the **cleaner** path, and it's the project's own established
+pattern (PolygonWorlds superseded TopologyWalk; StableMatching rebuilt + retired
+StableMarriage — soft retirement: drop the gallery card, keep the route, repoint
+guides, delete later). Crucially it is **parallel-branch safe** where the in-place
+"unification" is not: a new app is a self-contained folder touching only append-only
+shared files, so we never merge engines or churn Plane Transform.
+
+Re *why the hats fenced off the `!high` plane/particles-unification item*: that item
+is "two viewers both show 'a plane' (ComplexParticles linear/drop-axis = bare x,y;
+Plane Transform = z↦f(z)) — pick one mental model + which viewer owns which job." The
+*in-place* resolution means reconciling coordinate/sampler conventions across the
+shared `lib/particles` engine + both app folders = shared-code churn + scope balloon.
+The hats said avoid **that**. A fresh successor app **resolves the same item a
+different way** — by *clarifying roles* (new app = 2D animated pedagogical entry
+point; ComplexParticles = 4D/Riemann deep end; Plane Transform = the retired middle)
+rather than merging engines. So "don't litigate in place" and "build a clean
+successor" are compatible, not contradictory.
+
+Salvage from Plane Transform (fresh ≠ from zero): the GPU shader that runs f,
+`polarViews.ts` coord math, `standardCurves.ts`, the embed-param infra, the two-pane
+split as one optional chapter. Costs: two guide pages embed
+`#/embed/plane-transform` (repoint on switch); mild risk of a *third* plane-shower if
+roles aren't kept crisp. **Awaiting Dan's call on approach + name.**
+
 ### 🟡 milestone · 18:30 — Four-hat review complete + synthesized
 **Why:** All four lenses returned; convergence is strong enough to plan against.
 
