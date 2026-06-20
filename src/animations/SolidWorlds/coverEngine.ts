@@ -5,7 +5,7 @@ import {
 import { AXES, Axis, axisIndex, M3, SolidWorldSpec, detM3, I3 } from './solidSchema';
 import { findLook } from './looks';
 import { footprintTexture, signTexture, faceLabelTexture } from './textures';
-import { buildLivedSeamDecor } from './decor/livedSeams';
+import { buildRoomsDecor } from './decor/rooms';
 
 /**
  * Solid Worlds — the flat (κ = 0) cover engine. The 3D port of Topology Walk's
@@ -285,9 +285,9 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     lineParts.push({ geo: gridGeo, mat: gridMat, matrix: localM(0, -h + 0.02, 0), floor: true });
 
     // the interior decor — either the original diagnostic props (landmark shapes
-    // + FRONT/BACK sign) or the lived-seams furnishings that use the gluing.
+    // + FRONT/BACK sign) or the solid Rooms architecture that crosses the seams.
     if (decorMode === 'diagnostic') buildDiagnosticDecor(h, std, mesh);
-    else buildLivedSeamDecor({
+    else buildRoomsDecor({
       spec, size, U, h, mesh, std, localM,
       addDisposable: (d) => roomDisposables.push(d),
     });

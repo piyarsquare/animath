@@ -266,7 +266,7 @@ export default function SolidWorlds() {
       )}
       <Pills
         label="Decor"
-        options={[{ value: 'diagnostic', label: 'Diagnostic' }, { value: 'lived-seams', label: 'Lived seams' }]}
+        options={[{ value: 'diagnostic', label: 'Diagnostic' }, { value: 'rooms', label: 'Rooms' }]}
         value={decorMode}
         onChange={(v) => setDecorMode(v as DecorMode)}
       />

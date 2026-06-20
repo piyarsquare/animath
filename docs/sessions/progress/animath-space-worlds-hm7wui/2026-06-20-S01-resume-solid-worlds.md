@@ -51,6 +51,51 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 22:10 — Rooms decor built + verified; build/lint/test green
+**Why:** Delivered the new direction (solid walls + doorways + spiral stair) and
+confirmed it renders across worlds in headless WebGL.
+
+Replaced `decor/livedSeams.ts` with `decor/rooms.ts` (and removed
+`plaqueTexture` — no flat signs). The Rooms mode builds, world-agnostically:
+three interior walls (terracotta tall doorway · slate corbel-arched doorway ·
+sage double portal), each a thick box slab carrying real 3D openings, placed at
+fractional offsets (x −0.45h / +0.5h, z +0.4h) so the rooms straddle the seams;
+plus a one-turn spiral staircase (treads + newel + floor/ceiling collar) on the
+vertical gluing. Same-color boxes are merged into one geometry each (≈6 draw
+calls). Renamed `DecorMode` value `lived-seams` → `rooms` (label "Rooms").
+
+Headless captures (3-torus, amphicosm, quarter-turn, first-amphidicosm, 3rd +
+1st person) confirm: solid colored walls with doorways + the spiral stair render
+correctly; diagnostic mode untouched. The stair's chirality flip / rotation is
+**emergent** from the cover (no special-casing) — visible by traversing into a
+neighbor cell, not in a single central frame. Walls have no collision (you walk
+through). `npm run build` + lint(0) + 53 tests green.
+
+### 🟣 decision · 21:50 — Pivot: rip out flat signs, build real walls + doorways + spiral stairs
+**Why:** Dan: the lived-seams plaques/flat decor missed. New direction: solid 3D
+architecture only (no flat signs), walls *inside* the domain so rooms cross
+seams, spiral stairs through floor/ceiling holes (chirality differences are a
+feature).
+
+Plan:
+- **Remove** the lived-seams module + `plaqueTexture` (no flat signs). Keep the
+  Decor-mode plumbing; rename the second mode `'rooms'` (label "Rooms").
+- **Walls with depth**: thick box slabs (not planes) carrying doorway openings
+  (built as pillars + lintels, so the opening is a real 3D gap). Different
+  shapes (tall / wide / double or corbelled) and colors.
+- **Inside the domain**: place walls at interior fractional offsets (x≈−0.45h,
+  +0.5h; z≈+0.4h), full-span on the cross axis, open-topped. Because they tile,
+  the rooms they bound straddle the cube seams — a room is literally assembled
+  from pieces of adjacent fundamental domains.
+- **Spiral staircase** on the vertical (y) axis, full height, exactly 1 turn over
+  the cube so it threads the y-gluing continuously. Built once → the cover
+  reflects/rotates it per world, so the helix **chirality flips in mirrored cells
+  and rotates in turn worlds** automatically. Plus floor/ceiling collar rims to
+  read as the hole.
+- **World-agnostic**: same architecture for every world; the deck transforms make
+  each world look different. Merge boxes per color into one geometry to keep draw
+  calls low. No engine-math/movement changes (walls are visual; you fly the shaft).
+
 ### 🟡 milestone · 21:33 — Lived seams implemented + visually verified; build green
 **Why:** Feature complete for the two target worlds; confirmed in headless WebGL.
 

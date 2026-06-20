@@ -12,10 +12,11 @@ export interface EngineDeps3 {
 export type TravelMode = 'fly' | 'walk' | 'drive';
 
 /** The interior-decor style of the fundamental room. `diagnostic` is the
- *  original proof-of-the-math scene (landmark props + FRONT/BACK sign);
- *  `lived-seams` furnishes the room with infrastructure that *uses* the face
- *  identifications (wraparound pipes, floor↔ceiling service shafts, …). */
-export type DecorMode = 'diagnostic' | 'lived-seams';
+ *  original proof-of-the-math scene (landmark props + FRONT/BACK sign); `rooms`
+ *  furnishes it with solid architecture — thick walls with doorways placed
+ *  inside the domain (so rooms cross the seams) and a spiral stair threading the
+ *  vertical gluing (so its chirality flips/rotates per world). */
+export type DecorMode = 'diagnostic' | 'rooms';
 
 export interface FrameInput3 {
   dt: number;

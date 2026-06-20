@@ -72,16 +72,16 @@ nothing *local* ever happened. You didn't flip *somewhere*; you came back mirror
 
 The **View** panel has a **Decor** switch. *Diagnostic* is the proof-of-the-math
 scene: neutral landmark props and the FRONT/BACK sign, sized so a copy and its
-mirror are obvious. *Lived seams* instead furnishes the room as if a resident
-built around the gluing — infrastructure that only makes sense because of the
-identifications. In the **3-Torus**, opposite walls are just adjacent, so the
-plumbing is a level **wraparound pipe**, a **counter** and a **rug** that thread
-straight through the seams, and a **ladder** where climbing out the ceiling
-returns you through the floor. In **Klein × Circle**, the horizontal x-loop
-*reverses* up and down, so the resident's **pipe** leaves high on one wall and
-returns low on the other — a continuous floor↔ceiling zigzag — with a service
-shaft and explicit *local floor* / *ceiling side* panels. The other worlds get a
-sparse generic version for now; the two above are the worked examples.
+mirror are obvious. *Rooms* instead builds solid architecture — thick walls (with
+real depth) carrying doorways of different shapes and colors, and a spiral
+staircase. The walls sit **inside** the cube, not on its faces, so when the world
+tiles, the rooms they bound **straddle the seams**: the room you stand in is
+assembled from pieces of several copies of the world, and its far wall lives in
+the next domain. The spiral stair threads the **vertical** gluing — and because
+the cover applies each world's holonomy to the same staircase, its **handedness
+flips** in a mirror world and **rotates** in a turn world. The architecture is the
+same everywhere; the gluing rewrites it. (Walls have no collision yet — you walk
+through the doorways on foot and fly the shaft.)
 
 ### Possible sources & where to go further
 
