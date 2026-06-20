@@ -39,6 +39,19 @@ topic: **plane/particles unification** ("which plane am I looking at" across vie
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 18:05 — Animation is the medium, not a mode; commission a 4-hat review
+**Why:** Dan confirmed the read and corrected one thing: **animation is a truth
+through *everything*** — even addition and multiplication are animated (this is
+*ani*math). So "Animate" is not a third mode beside Arithmetic/Transform; motion is
+the substrate of every operation. Reframes the progression as *what* is being
+animated (a sum → a product → a curve under ×c → the whole plane under f), not
+*whether* it animates.
+
+Requested review: the standard **three hats** (framework maintainer · architecture
+consultant · math-viz & pedagogy) **plus a fourth — Game Designer**: experiences
+that engage mind and senses, feedback modes, the "prod, jiggle, push" tactile-learning
+loop. Running all four in parallel, then synthesizing.
+
 ### 🟣 decision · 17:58 — Scope shifted: enrich Plane Transform into the complex-numbers *entry point*
 **Why:** Dan redirected from "write a guide page" to "enrich the **app** so it can
 host these ideas," with the guide following. The deliverable is now app code, not
