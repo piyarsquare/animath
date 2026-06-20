@@ -34,6 +34,8 @@ interface Props {
   /** Half-extent of the visible plane in math units. */
   extent: number;
   onChange: (which: 'a' | 'b', z: Cx) => void;
+  /** Multiply the extent by `factor` (pinch / wheel zoom). */
+  onZoom?: (factor: number) => void;
 }
 
 /** Track the largest inscribed square of the view body (the SVG is square). */
@@ -55,7 +57,7 @@ function useSquareSize(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function ArgandPlane({
-  a, b, mode, subject, curve, t, showSecondRoute, snapping, showGrid, showUnitCircle, extent, onChange,
+  a, b, mode, subject, curve, t, showSecondRoute, snapping, showGrid, showUnitCircle, extent, onChange, onZoom,
 }: Props) {
   const isCurve = subject === 'curve';
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -63,8 +65,18 @@ export default function ArgandPlane({
   const dragRef = useRef<'a' | 'b' | null>(null);
   const side = useSquareSize(wrapRef);
 
+  // Pan offset: the math point shown at the middle of the view. Transient view
+  // state (like a camera) — never persisted.
+  const [center, setCenter] = useState<Cx>(cx(0, 0));
+
+  // Multi-pointer bookkeeping for pinch-zoom / two-finger (or shift/right-drag) pan.
+  const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const gesture = useRef<{ dist: number; mx: number; my: number } | null>(null);
+  const panning = useRef<{ x: number; y: number } | null>(null);
+
   const k = (C * MARGIN) / extent;                 // math → virtual scale
-  const toV = (z: Cx): [number, number] => [C + z.re * k, C - z.im * k];
+  const toV = (z: Cx): [number, number] =>
+    [C + (z.re - center.re) * k, C - (z.im - center.im) * k];
 
   /** Client pixel → math coordinate (inverting the square SVG mapping). */
   const toMath = (clientX: number, clientY: number): Cx => {
@@ -72,24 +84,79 @@ export default function ArgandPlane({
     const s = VIRT / (r.width || 1);
     const fx = (clientX - r.left) * s;
     const fy = (clientY - r.top) * s;
-    return cx((fx - C) / k, -(fy - C) / k);
+    return cx((fx - C) / k + center.re, -(fy - C) / k + center.im);
   };
 
-  const onPointerDown = (which: 'a' | 'b') => (e: React.PointerEvent) => {
+  /** Shift the view by a client-pixel delta, so content follows the fingers. */
+  const panByClient = (dxpx: number, dypx: number) => {
+    const r = svgRef.current?.getBoundingClientRect();
+    const s = VIRT / (r?.width || 1);
+    setCenter(c => cx(c.re - (dxpx * s) / k, c.im + (dypx * s) / k));
+  };
+
+  const startGesture = () => {
+    const pts = [...pointers.current.values()];
+    if (pts.length < 2) return;
+    gesture.current = {
+      dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y),
+      mx: (pts[0].x + pts[1].x) / 2,
+      my: (pts[0].y + pts[1].y) / 2,
+    };
+  };
+
+  // Handle drag begins here; stopPropagation keeps the root from treating it as
+  // a pan. A second pointer promotes to a pinch/pan gesture.
+  const onHandleDown = (which: 'a' | 'b') => (e: React.PointerEvent) => {
+    e.stopPropagation();
     e.preventDefault();
-    dragRef.current = which;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     svgRef.current?.setPointerCapture(e.pointerId);
+    if (pointers.current.size >= 2) { dragRef.current = null; startGesture(); return; }
+    dragRef.current = which;
   };
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragRef.current) return;
-    let z = toMath(e.clientX, e.clientY);
-    if (snapping) z = snap(z);
-    onChange(dragRef.current, z);
+
+  const onRootDown = (e: React.PointerEvent) => {
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    svgRef.current?.setPointerCapture(e.pointerId);
+    if (pointers.current.size >= 2) { dragRef.current = null; startGesture(); return; }
+    // desktop pan: right-button or shift+drag on empty plane.
+    if (e.button === 2 || e.shiftKey) panning.current = { x: e.clientX, y: e.clientY };
   };
-  const onPointerUp = (e: React.PointerEvent) => {
-    dragRef.current = null;
+
+  const onMove = (e: React.PointerEvent) => {
+    const rec = pointers.current.get(e.pointerId);
+    if (rec) { rec.x = e.clientX; rec.y = e.clientY; }
+
+    if (pointers.current.size >= 2 && gesture.current) {
+      const pts = [...pointers.current.values()];
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      const mx = (pts[0].x + pts[1].x) / 2;
+      const my = (pts[0].y + pts[1].y) / 2;
+      if (dist > 1e-3 && gesture.current.dist > 1e-3) onZoom?.(gesture.current.dist / dist);
+      panByClient(mx - gesture.current.mx, my - gesture.current.my);
+      gesture.current = { dist, mx, my };
+      return;
+    }
+    if (dragRef.current) {
+      let z = toMath(e.clientX, e.clientY);
+      if (snapping) z = snap(z);
+      onChange(dragRef.current, z);
+      return;
+    }
+    if (panning.current) {
+      panByClient(e.clientX - panning.current.x, e.clientY - panning.current.y);
+      panning.current = { x: e.clientX, y: e.clientY };
+    }
+  };
+
+  const onUp = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId);
     svgRef.current?.releasePointerCapture(e.pointerId);
+    if (pointers.current.size < 2) gesture.current = null;
+    if (pointers.current.size === 0) { dragRef.current = null; panning.current = null; }
   };
+
+  const onWheel = (e: React.WheelEvent) => onZoom?.(Math.exp(e.deltaY * 0.0015));
 
   // The result and the two construction routes.
   const result = mode === 'multiply' ? mul(a, b) : add(a, b);
@@ -134,8 +201,11 @@ export default function ArgandPlane({
       return `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`;
     }).join(' ');
 
-  const gridLines: number[] = [];
-  for (let i = Math.ceil(-extent); i <= Math.floor(extent); i++) gridLines.push(i);
+  // Integer grid lines spanning the visible window (which pans with center).
+  const xLines: number[] = [];
+  for (let i = Math.ceil(center.re - extent); i <= Math.floor(center.re + extent); i++) xLines.push(i);
+  const yLines: number[] = [];
+  for (let i = Math.ceil(center.im - extent); i <= Math.floor(center.im + extent); i++) yLines.push(i);
 
   const [oVx, oVy] = toV(cx(0, 0));
   const va = toV(a), vb = toV(b), vr = toV(result);
@@ -160,9 +230,13 @@ export default function ArgandPlane({
           height={side}
           viewBox={`0 0 ${VIRT} ${VIRT}`}
           style={{ display: 'block', color: 'var(--fg, #e8e8ee)', fontFamily: 'var(--font-mono, monospace)' }}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          onPointerDown={onRootDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
+          onWheel={onWheel}
+          onDoubleClick={() => setCenter(cx(0, 0))}
+          onContextMenu={e => e.preventDefault()}
         >
           <defs>
             {[['ah-a', A_COL], ['ah-b', B_COL], ['ah-r', R_COL]].map(([id, col]) => (
@@ -174,30 +248,32 @@ export default function ArgandPlane({
           </defs>
 
           {/* grid */}
-          {showGrid && gridLines.map(i => {
-            const [, vy] = toV(cx(0, i));
-            const [vx] = toV(cx(i, 0));
-            return (
-              <g key={`g${i}`} stroke="currentColor" strokeOpacity={i === 0 ? 0 : 0.08} strokeWidth={1.5}>
-                <line x1={0} y1={vy} x2={VIRT} y2={vy} />
-                <line x1={vx} y1={0} x2={vx} y2={VIRT} />
-              </g>
-            );
-          })}
+          {showGrid && (
+            <g stroke="currentColor" strokeOpacity={0.08} strokeWidth={1.5}>
+              {xLines.filter(i => i !== 0).map(i => {
+                const [vx] = toV(cx(i, 0));
+                return <line key={`x${i}`} x1={vx} y1={0} x2={vx} y2={VIRT} />;
+              })}
+              {yLines.filter(i => i !== 0).map(i => {
+                const [, vy] = toV(cx(0, i));
+                return <line key={`y${i}`} x1={0} y1={vy} x2={VIRT} y2={vy} />;
+              })}
+            </g>
+          )}
 
           {/* unit circle */}
           {showUnitCircle && (
-            <circle cx={C} cy={C} r={k} fill="none" stroke="currentColor"
+            <circle cx={oVx} cy={oVy} r={k} fill="none" stroke="currentColor"
               strokeOpacity={0.28} strokeWidth={2} strokeDasharray="6 8" />
           )}
 
           {/* axes */}
           <g stroke="currentColor" strokeOpacity={0.45} strokeWidth={2}>
-            <line x1={0} y1={C} x2={VIRT} y2={C} />
-            <line x1={C} y1={0} x2={C} y2={VIRT} />
+            <line x1={0} y1={oVy} x2={VIRT} y2={oVy} />
+            <line x1={oVx} y1={0} x2={oVx} y2={VIRT} />
           </g>
-          <text x={C + 10} y={28} fontSize={26} fill="currentColor" fillOpacity={0.5}>i</text>
-          <text x={VIRT - 22} y={C - 12} fontSize={26} fill="currentColor" fillOpacity={0.5}>Re</text>
+          <text x={oVx + 10} y={28} fontSize={26} fill="currentColor" fillOpacity={0.5}>i</text>
+          <text x={VIRT - 22} y={oVy - 12} fontSize={26} fill="currentColor" fillOpacity={0.5}>Re</text>
 
           {/* ---- NUMBER subject: a ∘ b with the construction routes ---- */}
           {!isCurve && (
@@ -269,7 +345,7 @@ export default function ArgandPlane({
 
           {/* draggable handles (large invisible hit area + visible dot) */}
           {([['a', va, A_COL, a], ['b', vb, B_COL, b]] as const).map(([id, v, col]) => (
-            <g key={id} style={{ cursor: 'grab' }} onPointerDown={onPointerDown(id)}>
+            <g key={id} style={{ cursor: 'grab' }} onPointerDown={onHandleDown(id)}>
               <circle cx={v[0]} cy={v[1]} r={30} fill="transparent" />
               <circle cx={v[0]} cy={v[1]} r={13} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={3} />
               <text x={v[0] + 16} y={v[1] - 14} fontSize={26} fill={col} fontWeight={700}

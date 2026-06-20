@@ -127,7 +127,7 @@ export default function Argand() {
 
   const planeNode = (
     <>
-      <Slider label="Extent (±)" value={extent} min={2} max={10} step={0.5}
+      <Slider label="Extent (±)" value={extent} min={1} max={16} step={0.5}
         onChange={setExtent} format={v => v.toFixed(1)} />
       <Checkbox label="Grid" checked={showGrid} onChange={setShowGrid} />
       <Checkbox label="Unit circle" checked={showUnitCircle} onChange={setShowUnitCircle} />
@@ -177,7 +177,7 @@ export default function Argand() {
       id: 'plane',
       title: 'Argand plane',
       defaultRect: { x: 320, y: 16, w: 660, h: 600 },
-      hint: 'drag a and b · scrub t to watch the path',
+      hint: 'drag a and b · pinch or scroll to zoom · two-finger or shift-drag to pan · double-click to recenter',
       node: (
         <ArgandPlane
           a={a} b={b} mode={mode} t={t}
@@ -188,6 +188,7 @@ export default function Argand() {
           showUnitCircle={showUnitCircle}
           extent={extent}
           onChange={(which, z) => (which === 'a' ? setA(z) : setB(z))}
+          onZoom={f => setExtent(e => Math.min(16, Math.max(1, e * f)))}
         />
       ),
     },
