@@ -74,6 +74,40 @@ export function faceLabelTexture(letter: string, glyph: string, color: string): 
  * mirror-reversed walker it reads laterally reversed — its mirror image — purely
  * by geometry, no baked flip.
  */
+/**
+ * A small industrial **plaque** — light text on a dark slate ground with a thin
+ * border — for the lived-seams decor (SAME PIPE, X LOOP, UP RETURNS BELOW, …).
+ * Wider and terser than `signTexture`; shrinks the type to fit one line. Like
+ * every flat label here, a mirror-reversed walker reads it backwards — which is
+ * exactly the point on a glide-reflection loop.
+ */
+export function plaqueTexture(text: string, accent = '#cfe8ff'): THREE.CanvasTexture {
+  const w = 512, h = 168;
+  const cvs = document.createElement('canvas');
+  cvs.width = w; cvs.height = h;
+  const ctx = cvs.getContext('2d')!;
+  ctx.fillStyle = '#10151d';
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 8;
+  ctx.strokeRect(8, 8, w - 16, h - 16);
+
+  const line = (text.trim() || '·').slice(0, 24);
+  let size = h * 0.46;
+  const font = (px: number) => `800 ${Math.round(px)}px "Segoe UI", system-ui, sans-serif`;
+  ctx.font = font(size);
+  const maxW = w * 0.84;
+  const measured = ctx.measureText(line).width;
+  if (measured > maxW) { size *= maxW / measured; ctx.font = font(size); }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = accent;
+  ctx.fillText(line, w / 2, h / 2 + 2);
+
+  const t = new THREE.CanvasTexture(cvs);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
 export function signTexture(text: string): THREE.CanvasTexture {
   const w = 512, h = 256;
   const cvs = document.createElement('canvas');
