@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import {
-  EngineDeps3, FrameInput3, SolidEngine, ChiralityState, SolidMapState, TravelMode,
+  EngineDeps3, FrameInput3, SolidEngine, ChiralityState, SolidMapState, TravelMode, DecorMode,
 } from './engineTypes';
 import { AXES, Axis, axisIndex, M3, SolidWorldSpec, detM3, I3 } from './solidSchema';
 import { findLook } from './looks';
 import { footprintTexture, signTexture, faceLabelTexture } from './textures';
+import { buildLivedSeamDecor } from './decor/livedSeams';
 
 /**
  * Solid Worlds — the flat (κ = 0) cover engine. The 3D port of Topology Walk's
@@ -23,7 +24,7 @@ import { footprintTexture, signTexture, faceLabelTexture } from './textures';
 
 interface Gen { g: THREE.Matrix4; gInv: THREE.Matrix4; gLin: THREE.Matrix4; gLinInv: THREE.Matrix4; }
 
-interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; fogAmount: number; showFloor: boolean; showLabels: boolean; showCorners: boolean; showSeams: boolean; }
+interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; fogAmount: number; showFloor: boolean; showLabels: boolean; showCorners: boolean; showSeams: boolean; decorMode: DecorMode; }
 
 /** Furniture reference scale — the sign, props, footprints, avatars and eye
  *  height are sized from this CONSTANT, not from the room size, so growing the
@@ -54,6 +55,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   let showLabels = opts.showLabels;
   let showCorners = opts.showCorners;
   let showSeams = opts.showSeams;
+  let decorMode = opts.decorMode;
 
   // ── pose (developing map) ──────────────────────────────────────────────
   const pos = new THREE.Vector3();
@@ -215,6 +217,39 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   const localM = (x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) =>
     new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rx, ry, rz)).setPosition(x, y, z);
 
+  type MeshFn = (geo: THREE.BufferGeometry, mat: THREE.Material, matrix: THREE.Matrix4, floor?: boolean) => void;
+  type StdFn = (color: number) => THREE.MeshStandardMaterial;
+
+  /** The original "diagnostic" decor: neutral asymmetric landmark props plus the
+   *  two-sided FRONT/BACK sign — the proof-of-the-math scene. */
+  function buildDiagnosticDecor(h: number, std: StdFn, mesh: MeshFn) {
+    // asymmetric landmark props (FIXED size — only their spread grows with the
+    // room); each sits on the floor so a copy is recognizable and its mirror obvious
+    mesh(new THREE.CylinderGeometry(U * 0.04, U * 0.05, U * 0.42, 14), std(0xffcf5a), localM(h * 0.55, -h + U * 0.21, h * 0.42));
+    const lMat = std(0x46c8b0);
+    mesh(new THREE.BoxGeometry(U * 0.06, U * 0.28, U * 0.06), lMat, localM(-h * 0.5, -h + U * 0.14, -h * 0.4));
+    mesh(new THREE.BoxGeometry(U * 0.34, U * 0.06, U * 0.06), lMat, localM(-h * 0.5 + U * 0.14, -h + U * 0.03, -h * 0.4));
+    mesh(new THREE.SphereGeometry(U * 0.09, 18, 14), std(0xff6aa0), localM(h * 0.22, -h + U * 0.09, -h * 0.62));
+
+    // the two-sided sign — a solid slab with FRONT on one face and BACK on the
+    // other. The opaque slab between the two faces blocks any see-through, so
+    // neither side's letters are readable from the opposite side. Reads forwards
+    // here; after an orientation-reversing loop the face text comes back
+    // mirror-reversed (the conversation's headline case).
+    mesh(new THREE.CylinderGeometry(U * 0.012, U * 0.012, U * 0.34, 10), std(0x9a9aa4), localM(0, -h + U * 0.17, -h * 0.5));
+    const signY = -h + U * 0.38, signZ = -h * 0.5, signT = U * 0.025, eps = U * 0.002;
+    const signW = U * 0.34, signH = U * 0.17;
+    // the slab body (gives the sign its thickness and its opaque core)
+    mesh(new THREE.BoxGeometry(signW, signH, signT), std(0xcbbf9a), localM(0, signY, signZ));
+    const frontTex = signTexture('FRONT'); roomDisposables.push(frontTex);
+    const backTex = signTexture('BACK'); roomDisposables.push(backTex);
+    const frontMat = new THREE.MeshBasicMaterial({ map: frontTex, side: THREE.DoubleSide }); roomDisposables.push(frontMat);
+    const backMat = new THREE.MeshBasicMaterial({ map: backTex, side: THREE.DoubleSide }); roomDisposables.push(backMat);
+    // FRONT on the +z face (toward the room), BACK on the -z face (turned to face away)
+    mesh(new THREE.PlaneGeometry(signW, signH), frontMat, localM(0, signY, signZ + signT / 2 + eps));
+    mesh(new THREE.PlaneGeometry(signW, signH), backMat, localM(0, signY, signZ - signT / 2 - eps, 0, Math.PI, 0));
+  }
+
   function buildRoom() {
     roomDisposables.forEach((d) => d.dispose());
     roomDisposables.length = 0;
@@ -249,31 +284,13 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     const gridMat = new THREE.LineBasicMaterial({ color: 0x6f93b8 }); roomDisposables.push(gridMat);
     lineParts.push({ geo: gridGeo, mat: gridMat, matrix: localM(0, -h + 0.02, 0), floor: true });
 
-    // asymmetric landmark props (FIXED size — only their spread grows with the
-    // room); each sits on the floor so a copy is recognizable and its mirror obvious
-    mesh(new THREE.CylinderGeometry(U * 0.04, U * 0.05, U * 0.42, 14), std(0xffcf5a), localM(h * 0.55, -h + U * 0.21, h * 0.42));
-    const lMat = std(0x46c8b0);
-    mesh(new THREE.BoxGeometry(U * 0.06, U * 0.28, U * 0.06), lMat, localM(-h * 0.5, -h + U * 0.14, -h * 0.4));
-    mesh(new THREE.BoxGeometry(U * 0.34, U * 0.06, U * 0.06), lMat, localM(-h * 0.5 + U * 0.14, -h + U * 0.03, -h * 0.4));
-    mesh(new THREE.SphereGeometry(U * 0.09, 18, 14), std(0xff6aa0), localM(h * 0.22, -h + U * 0.09, -h * 0.62));
-
-    // the two-sided sign — a solid slab with FRONT on one face and BACK on the
-    // other. The opaque slab between the two faces blocks any see-through, so
-    // neither side's letters are readable from the opposite side. Reads forwards
-    // here; after an orientation-reversing loop the face text comes back
-    // mirror-reversed (the conversation's headline case).
-    mesh(new THREE.CylinderGeometry(U * 0.012, U * 0.012, U * 0.34, 10), std(0x9a9aa4), localM(0, -h + U * 0.17, -h * 0.5));
-    const signY = -h + U * 0.38, signZ = -h * 0.5, signT = U * 0.025, eps = U * 0.002;
-    const signW = U * 0.34, signH = U * 0.17;
-    // the slab body (gives the sign its thickness and its opaque core)
-    mesh(new THREE.BoxGeometry(signW, signH, signT), std(0xcbbf9a), localM(0, signY, signZ));
-    const frontTex = signTexture('FRONT'); roomDisposables.push(frontTex);
-    const backTex = signTexture('BACK'); roomDisposables.push(backTex);
-    const frontMat = new THREE.MeshBasicMaterial({ map: frontTex, side: THREE.DoubleSide }); roomDisposables.push(frontMat);
-    const backMat = new THREE.MeshBasicMaterial({ map: backTex, side: THREE.DoubleSide }); roomDisposables.push(backMat);
-    // FRONT on the +z face (toward the room), BACK on the -z face (turned to face away)
-    mesh(new THREE.PlaneGeometry(signW, signH), frontMat, localM(0, signY, signZ + signT / 2 + eps));
-    mesh(new THREE.PlaneGeometry(signW, signH), backMat, localM(0, signY, signZ - signT / 2 - eps, 0, Math.PI, 0));
+    // the interior decor — either the original diagnostic props (landmark shapes
+    // + FRONT/BACK sign) or the lived-seams furnishings that use the gluing.
+    if (decorMode === 'diagnostic') buildDiagnosticDecor(h, std, mesh);
+    else buildLivedSeamDecor({
+      spec, size, U, h, mesh, std, localM,
+      addDisposable: (d) => roomDisposables.push(d),
+    });
 
     // face-label resources: a letter per axis, colored + glyphed by what its
     // pairing does (↔ straight translation · ↻ turn · ⇋ flip).
@@ -645,6 +662,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     setSeams(on) { showSeams = on; for (const o of seamObjs) o.visible = on; },
     setLabels(on) { showLabels = on; buildCover(); },
     setCorners(on) { showCorners = on; buildCover(); },
+    setDecorMode(mode) { decorMode = mode; buildRoom(); buildCover(); },
     recenter() {
       pos.set(0, 0, 0); bodyLinear.identity();
       cell.x = 0; cell.y = 0; cell.z = 0; hasStamp = false;

@@ -11,7 +11,7 @@ import { analyzeSolid, AxisAnalysis } from './solidSchema';
 import { LOOKS } from './looks';
 import { makeCoverEngine } from './coverEngine';
 import {
-  EngineDeps3, SolidEngine, ChiralityState, SolidMapState, TravelMode,
+  EngineDeps3, SolidEngine, ChiralityState, SolidMapState, TravelMode, DecorMode,
   DEFAULT_ROOM_SIZE, DEFAULT_COVER_DEPTH,
 } from './engineTypes';
 import explainerText from './EXPLAINER.md?raw';
@@ -35,7 +35,8 @@ export default function SolidWorlds() {
   // win on load — otherwise a stale stored value hides the hall-of-mirrors depth.
   const [coverDepth, setCoverDepth] = useState(DEFAULT_COVER_DEPTH);
   const [roomSize, setRoomSize] = usePersistentState(pk('roomSize'), DEFAULT_ROOM_SIZE);
-  const [fog, setFog] = usePersistentState(pk('fog'), 0.12);
+  const [fog, setFog] = usePersistentState(pk('fog'), 0.2);
+  const [decorMode, setDecorMode] = usePersistentState<DecorMode>(pk('decorMode'), 'diagnostic');
   const [showFloor, setShowFloor] = usePersistentState(pk('floor'), true);
   const [showLabels, setShowLabels] = usePersistentState(pk('labels'), false);
   const [showCorners, setShowCorners] = usePersistentState(pk('corners'), false);
@@ -68,6 +69,7 @@ export default function SolidWorlds() {
   const cornersRef = useRef(showCorners);
   const seamsRef = useRef(showSeams);
   const lookRef = useRef(look);
+  const decorRef = useRef(decorMode);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
 
@@ -81,7 +83,7 @@ export default function SolidWorlds() {
       cameraDistance: camDistRef.current, lookId: lookRef.current,
       fogAmount: fogRef.current, showFloor: floorRef.current,
       showLabels: labelsRef.current, showCorners: cornersRef.current,
-      showSeams: seamsRef.current,
+      showSeams: seamsRef.current, decorMode: decorRef.current,
     });
     engineRef.current.setTrailEnabled(trailRef.current);
     clockRef.current.start();
@@ -116,7 +118,7 @@ export default function SolidWorlds() {
       cameraDistance: camDistRef.current, lookId: lookRef.current,
       fogAmount: fogRef.current, showFloor: floorRef.current,
       showLabels: labelsRef.current, showCorners: cornersRef.current,
-      showSeams: seamsRef.current,
+      showSeams: seamsRef.current, decorMode: decorRef.current,
     });
     engineRef.current.setTrailEnabled(trailRef.current);
   }, [spec]);
@@ -134,6 +136,7 @@ export default function SolidWorlds() {
   useEffect(() => { cornersRef.current = showCorners; engineRef.current?.setCorners(showCorners); }, [showCorners]);
   useEffect(() => { seamsRef.current = showSeams; engineRef.current?.setSeams(showSeams); }, [showSeams]);
   useEffect(() => { lookRef.current = look; engineRef.current?.setLook(look); }, [look]);
+  useEffect(() => { decorRef.current = decorMode; engineRef.current?.setDecorMode(decorMode); }, [decorMode]);
 
   useEffect(() => {
     const map: Record<string, MoveKey> = {
@@ -261,6 +264,12 @@ export default function SolidWorlds() {
       {phone && (
         <Pills label="Perspective" options={[{ value: 'third', label: 'Third person' }, { value: 'first', label: 'First person' }]} value={thirdPerson ? 'third' : 'first'} onChange={(v) => setThirdPerson(v === 'third')} />
       )}
+      <Pills
+        label="Decor"
+        options={[{ value: 'diagnostic', label: 'Diagnostic' }, { value: 'lived-seams', label: 'Lived seams' }]}
+        value={decorMode}
+        onChange={(v) => setDecorMode(v as DecorMode)}
+      />
       <Select label="Look" options={LOOKS.map((l) => ({ value: l.id, label: l.label }))} value={look} onChange={setLook} />
       {thirdPerson && (
         <Slider label="Camera distance" value={camDistance} min={CAM_MIN} max={CAM_MAX} step={0.5} onChange={setCamDistance} format={(v) => v.toFixed(1)} />
