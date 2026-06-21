@@ -54,6 +54,20 @@ informs future rounds. Delete or check off items as they land.
   squash-merged and deleted its reports land on main and correctly flip to landed —
   confirm that on the next real merge.
 
+- [ ] [solid-worlds] !low Make the Rooms ceiling duct world-specific.
+  The steel ceiling duct (decor/rooms.ts) is drawn on every world; in plain
+  (non-inverting) worlds it's a redundant high vent leading to the same neighbor as
+  the arch. It earns its keep only where a gluing flips vertical↔horizontal (half-turn,
+  Hantzsche–Wendt, the amphi-worlds), carrying the duct down to floor level. Cut it
+  conditionally on the world's point group — would tie decor to `spec` (currently
+  spec-independent). Also worth a side-by-side screenshot proving the duct lands low in
+  a true top↔bottom-flip neighbor (argued by construction this session, not pinned).
+
+- [ ] [solid-worlds] !low Punch the engine floor plane through at the trapdoor.
+  The Rooms decor floor has a trapdoor hole + rim, but the engine's separate whole
+  floor plane still shows under it unless "Floor plane" is off. Make the trapdoor read
+  as a real hole.
+
 - [ ] [chrome] !low Decide Stable Marriage's final fate — keep as unlisted route or fully delete.
   Its gallery card was retired in favor of Stable Matching (PR #220): `META` entry
   dropped in `src/chrome/catalog.ts`, but `#/stable-marriage` still routes and the

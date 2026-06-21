@@ -1,5 +1,106 @@
 import * as THREE from 'three';
 
+/** `#rrggbb` → `rgba(r,g,b,a)`. */
+function rgba(hex: string, a: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+/**
+ * A **painted face** for the Rooms decor: a bold colored border + grid and one
+ * **chiral up-arrow** motif (a flag jutting off one side, so it is asymmetric
+ * under both rotation and reflection). Each glued face-pair shares a color (X red
+ * · Y green · Z blue, the corner-marker convention), so the room reads as an
+ * oriented box: you always know which way you face, you recognize the wall you
+ * came through, and you watch it return rotated or mirrored after a loop.
+ *
+ * Every drawn pixel is **fully opaque**; everything else is **fully transparent**.
+ * The material renders this with alpha *testing* (a hard cutout), not alpha
+ * blending — so the faces draw in the opaque pass, depth-tested like the rest of
+ * the scene, and never flicker the way tiled semi-transparent panes would. The
+ * "see-through" is the genuinely open area between the markings.
+ */
+export function faceMotifTexture(hex: string): THREE.CanvasTexture {
+  const S = 320;
+  const cvs = document.createElement('canvas');
+  cvs.width = cvs.height = S;
+  const ctx = cvs.getContext('2d')!;
+  ctx.clearRect(0, 0, S, S);
+
+  // thin, muted frame (the wall's color, kept dim so the tiled cover stays calm)
+  ctx.strokeStyle = rgba(hex, 1);
+  ctx.lineWidth = 8;
+  ctx.strokeRect(12, 12, S - 24, S - 24);
+
+  // small, faint chiral up-arrow (soft slate): spine + head + a flag on the RIGHT
+  // (so a mirror moves the flag to the left, a quarter-turn rotates the mark)
+  ctx.fillStyle = 'rgb(150,160,176)';
+  ctx.strokeStyle = 'rgb(150,160,176)';
+  ctx.lineWidth = 13; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(S * 0.5, S * 0.64); ctx.lineTo(S * 0.5, S * 0.42); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(S * 0.5, S * 0.34);
+  ctx.lineTo(S * 0.42, S * 0.46);
+  ctx.lineTo(S * 0.58, S * 0.46);
+  ctx.closePath(); ctx.fill();
+  ctx.fillRect(S * 0.5, S * 0.47, S * 0.12, S * 0.07);
+
+  const t = new THREE.CanvasTexture(cvs);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
+/**
+ * A patterned **rug** for the furnished Rooms decor — warm field, cream border,
+ * a row of diamonds. Just enough pattern that a copy seen through a doorway
+ * reads as the *same* rug, rotated or mirror-flipped by the gluing.
+ */
+export function rugTexture(): THREE.CanvasTexture {
+  const w = 384, h = 256;
+  const cvs = document.createElement('canvas');
+  cvs.width = w; cvs.height = h;
+  const ctx = cvs.getContext('2d')!;
+  ctx.fillStyle = '#7a2f2c'; ctx.fillRect(0, 0, w, h);          // field
+  ctx.strokeStyle = '#d9c39a'; ctx.lineWidth = 14;             // cream border
+  ctx.strokeRect(20, 20, w - 40, h - 40);
+  ctx.strokeStyle = '#b8412f'; ctx.lineWidth = 5;
+  ctx.strokeRect(40, 40, w - 80, h - 80);
+  ctx.fillStyle = '#d9c39a';                                    // diamond row
+  for (let i = 0; i < 5; i++) {
+    const cx = w * (0.18 + i * 0.16), cy = h / 2, r = 22;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy); ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r, cy);
+    ctx.closePath(); ctx.fill();
+  }
+  const t = new THREE.CanvasTexture(cvs);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
+/**
+ * A framed **picture** — a naive sunset landscape (sky gradient, sun, hills). The
+ * sun sits off-center so the scene is chiral: through a glide-world doorway the
+ * copy hangs as its mirror image.
+ */
+export function pictureTexture(): THREE.CanvasTexture {
+  const w = 256, h = 320;
+  const cvs = document.createElement('canvas');
+  cvs.width = w; cvs.height = h;
+  const ctx = cvs.getContext('2d')!;
+  const sky = ctx.createLinearGradient(0, 0, 0, h);
+  sky.addColorStop(0, '#2a3b6e'); sky.addColorStop(0.55, '#e08a4a'); sky.addColorStop(1, '#f2c25a');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#ffe7a8';                                    // sun (off-center → chiral)
+  ctx.beginPath(); ctx.arc(w * 0.7, h * 0.5, 34, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#3f6b4a';                                    // hills
+  ctx.beginPath(); ctx.moveTo(0, h);
+  ctx.lineTo(0, h * 0.72); ctx.quadraticCurveTo(w * 0.3, h * 0.6, w * 0.55, h * 0.74);
+  ctx.quadraticCurveTo(w * 0.8, h * 0.88, w, h * 0.72); ctx.lineTo(w, h); ctx.closePath(); ctx.fill();
+  const t = new THREE.CanvasTexture(cvs);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
 /**
  * The footprint glyph — the classic orientation-test pair: an arrow with an
  * **F**, cyan on the print's left and magenta on its right (the same glyph
