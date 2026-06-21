@@ -39,6 +39,22 @@ topic: **plane/particles unification** ("which plane am I looking at" across vie
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 22:05 — Unified two-factor multiply sweep (the real "reverse direction")
+**Why:** Dan clarified that "reverse direction" meant the two *factorizations*, not
+the same arc backward: "in one case we are multiplying the circle by the point, in the
+other we are multiplying the point by the circle." My earlier ping-pong only retraced
+one arc (un-multiplying), which was wrong.
+
+Chose the **unified loop** (asked via AskUserQuestion). New `cycleSweep(q,b,phase)` in
+complexOps plays a CLOSED loop: `q → q·b → b → q·b → q` — first quarter ramps b's
+exponent (point acts on shape, `q·bᵗ`), next ramps q's exponent (shape acts on point,
+`b·qᵗ`, collapsing the whole shape onto the single point b at the midpoint), then back.
+Both halves pass through the same product, so commutativity is the *motion*. Because the
+loop is closed (q at both ends) the existing ping-pong clock plays it seamlessly — no
+clock change. Wired into curve-multiply's moving sweep; number mode keeps its static
+commutativity overlay. Verified the midpoint collapse-onto-b via a temp `t=0.5`
+screenshot (reverted). Build + lint green. EXPLAINER curve section updated.
+
 ### 🟢 code · 21:45 — Full arc always shown at rest; ping-pong animation
 **Why:** Dan: "the arcs when stopped should always show the full arc. And if
 possible do the reverse path on the return, as the multiplication was in reverse
