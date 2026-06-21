@@ -26,6 +26,8 @@ interface Props {
   curve: Cx[];
   /** Scrub parameter 0→1 along the chapter's path. */
   t: number;
+  /** True while the path is being animated (ping-ponging). */
+  playing: boolean;
   /** Show the second composition order (commutativity / parallelogram). */
   showSecondRoute: boolean;
   snapping: boolean;
@@ -57,9 +59,13 @@ function useSquareSize(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function ArgandPlane({
-  a, b, mode, subject, curve, t, showSecondRoute, snapping, showGrid, showUnitCircle, extent, onChange, onZoom,
+  a, b, mode, subject, curve, t, playing, showSecondRoute, snapping, showGrid, showUnitCircle, extent, onChange, onZoom,
 }: Props) {
   const isCurve = subject === 'curve';
+  // The moving marker/sweep appears only while in motion (playing) or when the
+  // user has parked the scrub mid-path; at rest (t at an endpoint) only the full
+  // arc shows — the static "story" Dan asked to always be complete.
+  const showMover = playing || (t > 0.01 && t < 0.99);
   const wrapRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<'a' | 'b' | null>(null);
@@ -294,9 +300,10 @@ export default function ArgandPlane({
               <path d={sampleRoute(true)} fill="none" stroke={R_COL}
                 strokeOpacity={0.7} strokeWidth={3.5} strokeLinecap="round" />
 
-              {/* the scrubbing point(s) */}
-              {showSecondRoute && <circle cx={mover2[0]} cy={mover2[1]} r={9} fill={R_COL} fillOpacity={0.55} />}
-              <circle cx={mover1[0]} cy={mover1[1]} r={11} fill={R_COL} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
+              {/* the scrubbing point(s) — only while in motion, so a stopped
+                  state shows the full arc with no partial-looking marker */}
+              {showMover && showSecondRoute && <circle cx={mover2[0]} cy={mover2[1]} r={9} fill={R_COL} fillOpacity={0.55} />}
+              {showMover && <circle cx={mover1[0]} cy={mover1[1]} r={11} fill={R_COL} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />}
 
               {/* vectors to a, b, result */}
               <line x1={oVx} y1={oVy} x2={va[0]} y2={va[1]} stroke={A_COL} strokeWidth={4} markerEnd="url(#ah-a)" />
@@ -323,21 +330,26 @@ export default function ArgandPlane({
           {/* ---- CURVE subject: the placed shape and its image under b ---- */}
           {isCurve && (
             <>
-              {/* per-vertex connectors (original → image) */}
+              {/* per-vertex connectors (original → full image) */}
               <g stroke="currentColor" strokeOpacity={0.12} strokeWidth={1.5}>
                 {placed.map((q, i) => {
                   if (i % Math.max(1, Math.floor(placed.length / 18)) !== 0) return null;
                   const [x1, y1] = toV(q);
-                  const [x2, y2] = toV(imageAt(q, t));
+                  const [x2, y2] = toV(imageAt(q, 1));
                   return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />;
                 })}
               </g>
               {/* original shape (dim) */}
               <path d={vpoly(placed)} fill="none" stroke={A_COL} strokeOpacity={0.4}
                 strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
-              {/* image shape at t (bright) */}
-              <path d={vpoly(placed.map(q => imageAt(q, t)))} fill="none" stroke={R_COL}
+              {/* the FULL image — always shown, so a stopped state is the whole story */}
+              <path d={vpoly(placed.map(q => imageAt(q, 1)))} fill="none" stroke={R_COL}
                 strokeWidth={3.5} strokeLinejoin="round" strokeLinecap="round" />
+              {/* the moving in-between sweep — only while in motion */}
+              {showMover && (
+                <path d={vpoly(placed.map(q => imageAt(q, t)))} fill="none" stroke="#fde68a"
+                  strokeOpacity={0.9} strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
+              )}
               {/* the constant b */}
               <line x1={oVx} y1={oVy} x2={vb[0]} y2={vb[1]} stroke={B_COL} strokeWidth={4} markerEnd="url(#ah-b)" />
             </>

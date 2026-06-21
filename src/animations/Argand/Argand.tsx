@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef, WorkspaceMode } from '../../chrome/workspace/types';
 import { Slider, Pills, Select, Checkbox, ComplexInput } from '../../components/ControlPanel';
@@ -37,9 +37,12 @@ export default function Argand() {
   // Transient view state — never persisted.
   const [t, setT] = useState(1);
   const [playing, setPlaying] = useState(false);
+  const dirRef = useRef(1);
 
-  // Scrub clock: advance t while playing, looping 0→1. The SVG view is light
-  // enough that a per-frame setState is fine here.
+  // Scrub clock: advance t while playing, **ping-ponging** 0↔1. The return leg
+  // retraces the path backward — which for multiplication is the operation run
+  // in reverse (dividing) — so there is no jump-cut on the loop. The SVG view is
+  // light enough that a per-frame setState is fine here.
   useEffect(() => {
     if (!playing) return;
     let raf = 0;
@@ -48,14 +51,22 @@ export default function Argand() {
       const dt = (now - last) / 1000;
       last = now;
       setT(prev => {
-        const nx = prev + dt * speed;
-        return nx > 1 ? nx - 1 : nx;
+        let nx = prev + dirRef.current * dt * speed;
+        if (nx >= 1) { nx = 1; dirRef.current = -1; }
+        else if (nx <= 0) { nx = 0; dirRef.current = 1; }
+        return nx;
       });
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [playing, speed]);
+
+  // Start the ping-pong heading away from whichever endpoint we're parked on.
+  const togglePlay = () => setPlaying(p => {
+    if (!p) dirRef.current = t >= 0.999 ? -1 : t <= 0.001 ? 1 : dirRef.current;
+    return !p;
+  });
 
   const isCurve = subject === 'curve';
   const curve = useMemo(() => buildCurve(curveName), [curveName]);
@@ -99,7 +110,7 @@ export default function Argand() {
     <>
       <Slider label="Scrub  (t: a → result)" value={t} min={0} max={1} step={0.001}
         onChange={v => { setPlaying(false); setT(v); }} format={v => v.toFixed(2)} />
-      <button style={btn} onClick={() => setPlaying(p => !p)} aria-pressed={playing}>
+      <button style={btn} onClick={togglePlay} aria-pressed={playing}>
         {playing ? '❚❚ Pause' : '▶ Play'}
       </button>
       <Slider label="Speed" value={speed} min={0.1} max={1.5} step={0.05}
@@ -180,7 +191,7 @@ export default function Argand() {
       hint: 'drag a and b · pinch or scroll to zoom · two-finger or shift-drag to pan · double-click to recenter',
       node: (
         <ArgandPlane
-          a={a} b={b} mode={mode} t={t}
+          a={a} b={b} mode={mode} t={t} playing={playing}
           subject={subject} curve={curve}
           showSecondRoute={showSecondRoute}
           snapping={snapping}
@@ -209,11 +220,11 @@ export default function Argand() {
   const actions: ActionDef[] = [
     {
       id: 'play', icon: playing ? 'pause' : 'play', label: playing ? 'Pause' : 'Play',
-      onClick: () => setPlaying(p => !p), active: playing, primary: true, sectionId: 'scrub',
+      onClick: togglePlay, active: playing, primary: true, sectionId: 'scrub',
     },
     {
       id: 'reset', icon: 'reset', label: 'To start',
-      onClick: () => { setPlaying(false); setT(0); }, sectionId: 'scrub',
+      onClick: () => { setPlaying(false); dirRef.current = 1; setT(0); }, sectionId: 'scrub',
     },
   ];
 
