@@ -51,6 +51,21 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 01:25 — Cutaway anchored at the camera + fog decoupled from depth
+**Why:** Dan: move the cut plane closer to the camera; the fog is way too strong.
+
+Cutaway: re-anchored the clip plane to a short gap **in front of the camera**
+(`CUT_GAP = U*0.2`, clamped to the near half so it never reaches the character),
+instead of measuring back from the character. It now clips just the near wall the
+camera pokes through and leaves the character's surrounding room intact.
+
+Fog: the strength regression was a side effect of dropping cover depth to 1 — the
+fog near/far scaled with `(depth+0.55)*size`, so the small radius pulled the fog
+right in. Floored the fog **reference distance** at the depth-3 scale
+(`Math.max(depth,3)`), so a calm single room is crisp while the deep hall still
+fades. Fixes it regardless of the persisted fog value (no localStorage reset
+needed). Build + lint(0) green.
+
 ### 🟢 code · 01:05 — Third-person cutaway clip plane (avatar no longer buried)
 **Why:** Dan: avatar gets buried behind walls in third person; wants the cutaway
 we discussed — hide cells between camera and character.

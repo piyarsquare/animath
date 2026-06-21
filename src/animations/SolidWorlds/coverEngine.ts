@@ -132,7 +132,10 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
 
   function applyLook(id: string) {
     const L = findLook(id);
-    const R = (depth + 0.55) * size; // matches the cover render radius
+    // Fog reference distance — never let it collapse below the depth-3 scale, so
+    // dropping the cover depth (the calm single room) doesn't drag the fog in
+    // close. At higher depths it tracks the cover radius for the deep-hall fade.
+    const R = (Math.max(depth, 3) + 0.55) * size;
     scene.background = new THREE.Color(L.sky);
     // User-controlled fog: 0 = none (crisp to the cull boundary); 1 = thick
     // (closes in to a few rooms). Linear near→far scaled to the cover radius.
@@ -339,13 +342,16 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   let seamObjs: THREE.Object3D[] = [];                  // cube-edge framework (the cell seams)
 
   // ── third-person cutaway ──────────────────────────────────────────────────
-  // The avatar gets buried behind the room walls between it and the camera. We
-  // clip those away with one world plane sitting just in front of the character
+  // The avatar gets buried behind the room wall the camera is poking through. We
+  // clip that away with one world plane sitting a short gap in FRONT of the camera
   // (perpendicular to the camera→character line): every fragment nearer to the
-  // camera than that plane is discarded, so nothing is ever in the way. The plane
-  // is shared by reference with all cover materials EXCEPT the floor (which we
-  // keep whole so the ground stays continuous). Empty in first person.
-  const CUT_MARGIN = U * 0.45;          // just outside the avatar along the view axis
+  // camera than that plane is discarded, so the near wall vanishes while the
+  // character keeps its surrounding room. The plane is shared by reference with
+  // all cover materials EXCEPT the floor (kept whole so the ground stays
+  // continuous); avatars live outside coverRoot so are never clipped. Empty in
+  // first person. The gap is clamped to the near half so the plane never reaches
+  // the character.
+  const CUT_GAP = U * 0.2;              // how far in front of the camera the cut sits
   const cutPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 1e6);
   const cutPlanes: THREE.Plane[] = [];
   const _clipV = new THREE.Vector3(), _clipP = new THREE.Vector3();
@@ -671,10 +677,13 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       av.matrixWorldNeedsUpdate = true;
     }
 
-    // cutaway: clip the room walls sitting between the camera and the character
+    // cutaway: clip the near wall the camera is poking through
     if (input.thirdPerson) {
-      _clipV.subVectors(pos, camPos).normalize();           // camera → character
-      _clipP.copy(pos).addScaledVector(_clipV, -CUT_MARGIN); // just in front of the character
+      _clipV.subVectors(pos, camPos);                       // camera → character
+      const len = _clipV.length() || 1;
+      _clipV.divideScalar(len);                             // view direction
+      const gap = Math.min(CUT_GAP, len * 0.5);             // never reach the character
+      _clipP.copy(camPos).addScaledVector(_clipV, gap);     // a short gap in front of the camera
       cutPlane.setFromNormalAndCoplanarPoint(_clipV, _clipP);
       if (cutPlanes.length === 0) cutPlanes.push(cutPlane);
     } else if (cutPlanes.length) {
