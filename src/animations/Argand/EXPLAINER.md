@@ -53,6 +53,41 @@ and **add** is a rigid translation. This is the bridge to a *function* deforming
 plane — when the map stops being linear, those grid lines start to curve (the next
 tool's territory).
 
+## Multiplication as repeated addition (the Repeat view)
+
+In ordinary arithmetic `a·n` is `a + a + ⋯ + a`. Switch **View** to **Repeat** and drag
+`b` to a whole **`m + nj`**: the product is built as a staircase — **`m` copies of
+`a`** laid tip-to-tail, then **`n` copies of `j·a`** (the number `a` turned by the
+system's unit). It lands *exactly* on `a·(m+nj)`. So complex multiplication really is
+repeated addition — you just let the thing you add **turn** as you go.
+
+## Two notions of "the middle" (the Mean view)
+
+Switch **View** to **Mean**. Between `a` and `b` there are two honest midpoints:
+
+- the **arithmetic mean** `(a+b)/2` — the middle of the straight chord (the *addition*
+  path), and
+- the **geometric mean** `√(ab)` — the middle of the spiral arc (the *multiplication*
+  path).
+
+They are different points, and the picture shows why: addition interpolates by equal
+*differences*, multiplication by equal *ratios*. (Turn on **harmonic mean** for a third.)
+
+## Three number systems (the System panel)
+
+Slide **Number system** `p = j²` from **Complex** (`p<0`) through **Dual** (`p=0`) to
+**Split-complex** (`p>0`). Only the *sign* matters; the same multiply-by-`b` becomes:
+
+- a **rotation** about the origin (complex — orbits are circles),
+- a **shear** (dual — the degenerate knife-edge; orbits are lines), or
+- a **boost** along a hyperbola (split-complex — as in relativity's rapidity).
+
+The dashed **unit curve** is the level set `x² − p·y² = 1` (circle / two lines /
+hyperbola), and in the split case the red lines are the **null cone**, where
+multiplication degenerates. Every view above — Number, Curve, Plane, Repeat, Mean —
+re-renders in the chosen system, so you can watch the *same* operation in three
+geometries.
+
 ## Commutativity
 
 Turn on **Show both orders**. In Multiply you get two spirals — `a` rotated-and-scaled
@@ -65,7 +100,7 @@ something you can *see*. In Add it's the parallelogram.
   unit circle, and angles that are multiples of π/6 — so landing exactly on `i` is a
   click, not a pixel-hunt.
 - **Stops** jump straight to the meaningful waypoints — `a` and the result for two
-  numbers, or **Shape · Image · Point** for the curve loop. Press **Play** to animate
+  numbers, **Shape / Image** for a curve, **a / b** for means. Press **Play** to animate
   between them, or drag the **Fine scrub** slider by hand; animation is optional, every
   state is reachable from a stop.
 - **Speed** is the *pen* speed (math units per second), so a tight multiply spiral and a
@@ -85,3 +120,9 @@ something you can *see*. In Add it's the parallelogram.
 - This tool extends the same idea from two numbers to **whole curves** to the **entire
   coordinate plane** (the Plane chapter); the next step is a *nonlinear* function, where
   the grid lines finally bend — the territory of the Plane Transform tool.
+- The **dual** and **split-complex** numbers, and the `p = j²` trichotomy, are
+  **I. M. Yaglom**'s territory (*Complex Numbers in Geometry*; *A Simple Non-Euclidean
+  Geometry and Its Physical Basis*) — the elliptic / parabolic / hyperbolic
+  **Cayley–Klein** geometries. Split-complex numbers are the algebra of **Lorentz boosts
+  and rapidity** in 1+1 relativity; **dual numbers** underlie **automatic differentiation**
+  and screw theory. All are good next steps for the reader.

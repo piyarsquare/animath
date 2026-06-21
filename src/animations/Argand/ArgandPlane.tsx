@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  type Cx, cx, add, mul, argument, fromPolar,
-  mulPath, addPath, snap,
+  type Cx, cx, add, scale, argument, fromPolar,
+  addPath, snap,
+  mulG, mulPathG, turnG, lerpMulG, arithMean, geoMean, harmMean,
 } from './complexOps';
 
 export type Mode = 'multiply' | 'add';
-export type Subject = 'number' | 'curve' | 'plane';
+export type Subject = 'number' | 'curve' | 'plane' | 'repeat' | 'mean';
 
 /** Handle / result colors — chosen to read on both light and dark viz-bg skins. */
 const A_COL = '#38bdf8';   // a — cyan
@@ -22,6 +23,10 @@ interface Props {
   mode: Mode;
   /** number: combine two numbers a,b · curve: transform a placed shape by b. */
   subject: Subject;
+  /** Number-system parameter j² = p: p<0 complex, p=0 dual, p>0 split-complex. */
+  p: number;
+  /** Show the harmonic mean too (mean subject). */
+  showHarmonic: boolean;
   /** Base curve points (centered near origin) for the curve subject. */
   curve: Cx[];
   /** Scrub parameter 0→1 along the chapter's path. */
@@ -59,10 +64,12 @@ function useSquareSize(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function ArgandPlane({
-  a, b, mode, subject, curve, t, playing, showSecondRoute, snapping, showGrid, showUnitCircle, extent, onChange, onZoom,
+  a, b, mode, subject, p, showHarmonic, curve, t, playing, showSecondRoute, snapping, showGrid, showUnitCircle, extent, onChange, onZoom,
 }: Props) {
   const isCurve = subject === 'curve';
   const isPlane = subject === 'plane';
+  const isRepeat = subject === 'repeat';
+  const isMean = subject === 'mean';
   // The moving marker/sweep appears only while in motion (playing) or when the
   // user has parked the scrub mid-path; at rest (t at an endpoint) only the full
   // arc shows — the static "story" Dan asked to always be complete.
@@ -146,7 +153,10 @@ export default function ArgandPlane({
     }
     if (dragRef.current) {
       let z = toMath(e.clientX, e.clientY);
-      if (snapping) z = snap(z);
+      // Repeat needs an integer multiplier b = m + nj, so its handle snaps to
+      // the lattice; elsewhere snapping is the optional "nice values" pull.
+      if (isRepeat && dragRef.current === 'b') z = cx(Math.round(z.re), Math.round(z.im));
+      else if (snapping) z = snap(z);
       onChange(dragRef.current, z);
       return;
     }
@@ -166,10 +176,10 @@ export default function ArgandPlane({
   const onWheel = (e: React.WheelEvent) => onZoom?.(Math.exp(e.deltaY * 0.0015));
 
   // The result and the two construction routes.
-  const result = mode === 'multiply' ? mul(a, b) : add(a, b);
+  const result = mode === 'multiply' ? mulG(a, b, p) : add(a, b);
   const path = (s: number, primary: boolean): Cx =>
     mode === 'multiply'
-      ? (primary ? mulPath(a, b, s) : mulPath(b, a, s))
+      ? (primary ? mulPathG(a, b, p, s) : mulPathG(b, a, p, s))
       : (primary ? addPath(a, b, s) : addPath(b, a, s));
 
   const sampleRoute = (primary: boolean): string => {
@@ -199,9 +209,9 @@ export default function ArgandPlane({
 
   // Curve subject: the placed shape (base translated by a) and its image under
   // the constant b at scrub param t (q·b spirals / q+b slides, per point).
-  const placed = curve.map(p => add(p, a));
+  const placed = curve.map(pt => add(pt, a));
   const imageAt = (q: Cx, s: number): Cx =>
-    mode === 'multiply' ? mulPath(q, b, s) : addPath(q, b, s);
+    mode === 'multiply' ? mulPathG(q, b, p, s) : addPath(q, b, s);
   // The honest trajectory of one point q from original (s=0) to image (s=1):
   // a spiral arc for multiply, a straight slide for add. Drawn statically so the
   // whole journey is visible at rest — no looping animation needed.
@@ -245,6 +255,56 @@ export default function ArgandPlane({
 
   const argA = argument(a);
   const argB = argument(b);
+
+  // The system's "unit circle": the level set N(z)=re²−p·im²=1 — an ellipse
+  // (p<0), two lines (p=0), or a hyperbola with its null cone (p>0).
+  const unitCurveNode = (() => {
+    if (!showUnitCircle) return null;
+    const st = { fill: 'none', stroke: 'currentColor', strokeOpacity: 0.28, strokeWidth: 2, strokeDasharray: '6 8' } as const;
+    if (p < 0) return <ellipse cx={oVx} cy={oVy} rx={k} ry={k / Math.sqrt(-p)} {...st} />;
+    if (p === 0) {
+      const [xp] = toV(cx(1, 0)); const [xm] = toV(cx(-1, 0));
+      return <g {...st}><line x1={xp} y1={0} x2={xp} y2={VIRT} /><line x1={xm} y1={0} x2={xm} y2={VIRT} /></g>;
+    }
+    const w = Math.sqrt(p);
+    const branch = (sign: number): string => {
+      const pts: string[] = [];
+      for (let i = 0; i <= 40; i++) {
+        const s = -2.6 + (5.2 * i) / 40;
+        const [vx, vy] = toV(cx(sign * Math.cosh(s), Math.sinh(s) / w));
+        pts.push(`${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`);
+      }
+      return pts.join(' ');
+    };
+    const asym = (sign: number): string => {
+      const [x1, y1] = toV(cx(sign * w * extent * 1.4, extent * 1.4));
+      const [x2, y2] = toV(cx(-sign * w * extent * 1.4, -extent * 1.4));
+      return `M ${x1.toFixed(1)} ${y1.toFixed(1)} L ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+    };
+    return (
+      <g>
+        <path d={branch(1)} {...st} /><path d={branch(-1)} {...st} />
+        {/* the null cone — where multiplication is singular in this system */}
+        <path d={asym(1)} fill="none" stroke="#f87171" strokeOpacity={0.3} strokeWidth={1.5} strokeDasharray="2 9" />
+        <path d={asym(-1)} fill="none" stroke="#f87171" strokeOpacity={0.3} strokeWidth={1.5} strokeDasharray="2 9" />
+      </g>
+    );
+  })();
+
+  // ---- REPEAT subject: a·(m+nj) = m copies of a + n copies of (j·a) ----
+  const bm = Math.round(b.re), bn = Math.round(b.im);
+  const ja = turnG(a, p);
+  const repeatPts: Cx[] = [cx(0, 0)];        // the running staircase of partial sums
+  for (let i = 0; i < Math.abs(bm); i++) repeatPts.push(add(repeatPts[repeatPts.length - 1], scale(a, Math.sign(bm) || 1)));
+  for (let i = 0; i < Math.abs(bn); i++) repeatPts.push(add(repeatPts[repeatPts.length - 1], scale(ja, Math.sign(bn) || 1)));
+  const repeatEnd = repeatPts[repeatPts.length - 1];
+
+  // ---- MEAN subject: arithmetic vs geometric (and optional harmonic) ----
+  const meanArc: Cx[] = [];                    // the multiplicative path a→b
+  for (let i = 0; i <= 48; i++) meanArc.push(lerpMulG(a, b, p, i / 48));
+  const aMean = arithMean(a, b);
+  const gMean = geoMean(a, b, p);
+  const hMean = harmMean(a, b, p);
 
   return (
     <div
@@ -294,11 +354,8 @@ export default function ArgandPlane({
             </g>
           )}
 
-          {/* unit circle */}
-          {showUnitCircle && (
-            <circle cx={oVx} cy={oVy} r={k} fill="none" stroke="currentColor"
-              strokeOpacity={0.28} strokeWidth={2} strokeDasharray="6 8" />
-          )}
+          {/* the system's unit curve (circle / lines / hyperbola) */}
+          {unitCurveNode}
 
           {/* axes */}
           <g stroke="currentColor" strokeOpacity={0.45} strokeWidth={2}>
@@ -330,10 +387,11 @@ export default function ArgandPlane({
           )}
 
           {/* ---- NUMBER subject: a ∘ b with the construction routes ---- */}
-          {!isCurve && !isPlane && (
+          {!isCurve && !isPlane && !isRepeat && !isMean && (
             <>
-              {/* angle wedges (multiply): arg a, then arg b on top, to show angles add */}
-              {mode === 'multiply' && (
+              {/* angle wedges (multiply, complex only): arg a, then arg b on top,
+                  to show angles add. In other systems "angle" isn't Euclidean. */}
+              {mode === 'multiply' && p === -1 && (
                 <>
                   <path d={sector(extent * 0.32, 0, argA)} fill={A_COL} fillOpacity={0.16} />
                   <path d={sector(extent * 0.46, argA, argA + argB)} fill={B_COL} fillOpacity={0.18} />
@@ -403,6 +461,74 @@ export default function ArgandPlane({
               )}
               {/* the constant b */}
               <line x1={oVx} y1={oVy} x2={vb[0]} y2={vb[1]} stroke={B_COL} strokeWidth={4} markerEnd="url(#ah-b)" />
+            </>
+          )}
+
+          {/* ---- REPEAT subject: multiplication as repeated (vector) addition ---- */}
+          {isRepeat && (
+            <>
+              {/* the staircase: m copies of a, then n copies of j·a, tip-to-tail */}
+              <path
+                d={repeatPts.map((q, i) => { const [vx, vy] = toV(q); return `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`; }).join(' ')}
+                fill="none" stroke="#fde68a" strokeOpacity={0.85} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"
+              />
+              {/* each step's vector, colored by which generator it adds */}
+              {repeatPts.slice(0, -1).map((q, i) => {
+                const [x1, y1] = toV(q); const [x2, y2] = toV(repeatPts[i + 1]);
+                const isA = i < Math.abs(bm);
+                return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+                  stroke={isA ? A_COL : B_COL} strokeOpacity={0.9} strokeWidth={3}
+                  markerEnd={isA ? 'url(#ah-a)' : 'url(#ah-b)'} />;
+              })}
+              {/* a and the turned copy j·a as the two generators */}
+              <line x1={oVx} y1={oVy} x2={va[0]} y2={va[1]} stroke={A_COL} strokeWidth={4} markerEnd="url(#ah-a)" />
+              {(() => { const [jx, jy] = toV(ja); return <line x1={oVx} y1={oVy} x2={jx} y2={jy} stroke={B_COL} strokeWidth={3} strokeOpacity={0.7} strokeDasharray="5 5" markerEnd="url(#ah-b)" />; })()}
+              {(() => { const [jx, jy] = toV(ja); return <text x={jx + 10} y={jy - 8} fontSize={20} fill={B_COL} fillOpacity={0.85}>j·a</text>; })()}
+              {/* a marker walking the staircase while playing */}
+              {showMover && (() => {
+                const n = repeatPts.length - 1;
+                if (n < 1) return null;
+                const f = t * n, i = Math.min(n - 1, Math.floor(f)), fr = f - i;
+                const [vx, vy] = toV(add(scale(repeatPts[i], 1 - fr), scale(repeatPts[i + 1], fr)));
+                return <circle cx={vx} cy={vy} r={8} fill="#fde68a" stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />;
+              })()}
+              {/* the landing point a·(m+nj) */}
+              {(() => { const [ex, ey] = toV(repeatEnd); return <>
+                <circle cx={ex} cy={ey} r={7} fill={R_COL} />
+                <text x={ex + 12} y={ey - 10} fontSize={22} fill={R_COL}>a·({bm}{bn < 0 ? '−' : '+'}{Math.abs(bn)}j)</text>
+              </>; })()}
+            </>
+          )}
+
+          {/* ---- MEAN subject: arithmetic vs geometric (vs harmonic) means ---- */}
+          {isMean && (
+            <>
+              {/* arithmetic: the straight segment a—b, midpoint = (a+b)/2 */}
+              <line x1={va[0]} y1={va[1]} x2={vb[0]} y2={vb[1]} stroke={A_COL} strokeOpacity={0.5} strokeWidth={2.5} strokeDasharray="6 6" />
+              {/* geometric: the multiplicative arc a→b, midpoint = √(ab) */}
+              <path d={meanArc.map((q, i) => { const [vx, vy] = toV(q); return `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`; }).join(' ')}
+                fill="none" stroke={R_COL} strokeOpacity={0.7} strokeWidth={2.5} />
+              {/* vectors to a and b */}
+              <line x1={oVx} y1={oVy} x2={va[0]} y2={va[1]} stroke={A_COL} strokeWidth={3.5} markerEnd="url(#ah-a)" />
+              <line x1={oVx} y1={oVy} x2={vb[0]} y2={vb[1]} stroke={B_COL} strokeWidth={3.5} markerEnd="url(#ah-b)" />
+              {/* the means */}
+              {([[aMean, A_COL, 'arith'], [gMean, R_COL, 'geo'], ...(showHarmonic ? [[hMean, '#c084fc', 'harm'] as [Cx, string, string]] : [])] as [Cx, string, string][]).map(([m, col, lab]) => {
+                const [mx, my] = toV(m);
+                return <g key={lab}>
+                  <circle cx={mx} cy={my} r={7} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
+                  <text x={mx + 11} y={my - 9} fontSize={19} fill={col}>{lab}</text>
+                </g>;
+              })}
+              {/* twin markers tracing the two interpolations: straight (arithmetic
+                  pace) vs the multiplicative arc (geometric pace) */}
+              {showMover && (() => {
+                const [sx, sy] = toV(add(scale(a, 1 - t), scale(b, t)));
+                const [gx, gy] = toV(lerpMulG(a, b, p, t));
+                return <>
+                  <circle cx={sx} cy={sy} r={6} fill={A_COL} fillOpacity={0.7} />
+                  <circle cx={gx} cy={gy} r={6} fill={R_COL} />
+                </>;
+              })()}
             </>
           )}
 

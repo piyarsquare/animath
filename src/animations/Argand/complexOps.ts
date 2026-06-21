@@ -43,6 +43,81 @@ export const mulPath = (a: Cx, b: Cx, t: number): Cx => mul(a, powReal(b, t));
 export const addPath = (a: Cx, b: Cx, t: number): Cx => add(a, scale(b, t));
 
 /* ----------------------------------------------------------------- *
+ *  Generalized number systems — one parameter p = j² selects the    *
+ *  algebra: p<0 complex (elliptic), p=0 dual (parabolic), p>0        *
+ *  split-complex (hyperbolic). Only the SIGN of p is an invariant    *
+ *  (magnitude rescales away), so the app dials p over [-1, 0, 1].    *
+ * ----------------------------------------------------------------- */
+
+/** Generalized product (x₁+y₁j)(x₂+y₂j) with j² = p. p=-1 is ordinary complex. */
+export const mulG = (a: Cx, b: Cx, p: number): Cx => ({
+  re: a.re * b.re + p * a.im * b.im,
+  im: a.re * b.im + a.im * b.re,
+});
+
+/** a·j — the system's "unit turn": 90° rotation (p<0), shear (p=0), boost (p>0). */
+export const turnG = (a: Cx, p: number): Cx => ({ re: p * a.im, im: a.re });
+
+/** Conjugate (re, −im) and the quadratic form N(z) = re² − p·im² it preserves. */
+export const conjG = (z: Cx): Cx => ({ re: z.re, im: -z.im });
+export const normG = (z: Cx, p: number): number => z.re * z.re - p * z.im * z.im;
+export const invG = (z: Cx, p: number): Cx => {
+  const n = normG(z, p);
+  return Math.abs(n) < 1e-9 ? z : scale(conjG(z), 1 / n);
+};
+export const divG = (a: Cx, b: Cx, p: number): Cx => mulG(a, invG(b, p), p);
+
+// Generalized exp/log of the one-parameter "rotation" e^{jv} = C(v) + j·S(v),
+// where C''=p·C, C(0)=1, S(0)=0 → cos/1/cosh and sin/·/sinh as p crosses 0.
+const expG = (u: number, v: number, p: number): Cx => {
+  const e = Math.exp(u);
+  if (p < 0) { const w = Math.sqrt(-p); return { re: e * Math.cos(w * v), im: e * Math.sin(w * v) / w }; }
+  if (p > 0) { const w = Math.sqrt(p); return { re: e * Math.cosh(w * v), im: e * Math.sinh(w * v) / w }; }
+  return { re: e, im: e * v };
+};
+const logG = (b: Cx, p: number): { u: number; v: number } | null => {
+  const n = normG(b, p);
+  if (p < 0) {
+    const w = Math.sqrt(-p);
+    return { u: 0.5 * Math.log(n), v: Math.atan2(w * b.im, b.re) / w };
+  }
+  if (p === 0) {
+    if (b.re <= 1e-9) return null;            // dual log needs Re > 0
+    return { u: Math.log(b.re), v: b.im / b.re };
+  }
+  if (n <= 1e-9 || b.re <= 0) return null;     // split: inside the future cone only
+  const w = Math.sqrt(p);
+  return { u: 0.5 * Math.log(n), v: Math.atanh((w * b.im) / b.re) / w };
+};
+
+/**
+ * The generalized real power bᵗ = exp_p(t·Log_p b) — the one-parameter
+ * "spiral" from 1 (t=0) to b (t=1) in the chosen system. Falls back to a plain
+ * linear blend when b sits in a degenerate region (the null cone / Re≤0), so
+ * the picture stays finite instead of producing NaNs.
+ */
+export const powRealG = (b: Cx, p: number, t: number): Cx => {
+  if (p === -1) return powReal(b, t);          // exact ordinary-complex fast path
+  const L = logG(b, p);
+  if (!L) return { re: 1 + (b.re - 1) * t, im: b.im * t };
+  return expG(L.u * t, L.v * t, p);
+};
+
+/** Generalized multiplication path a·bᵗ (a at t=0, a·b at t=1), in system p. */
+export const mulPathG = (a: Cx, b: Cx, p: number, t: number): Cx => mulG(a, powRealG(b, p, t), p);
+
+/** The multiplicative interpolation a→b: a·(b/a)ᵗ. Its t=½ point is the
+ *  (system) geometric mean of a and b; the arithmetic mean is (a+b)/2. */
+export const lerpMulG = (a: Cx, b: Cx, p: number, t: number): Cx =>
+  mulG(a, powRealG(divG(b, a, p), p, t), p);
+
+/** The three classical means of a and b (geometric/harmonic in system p). */
+export const arithMean = (a: Cx, b: Cx): Cx => scale(add(a, b), 0.5);
+export const geoMean = (a: Cx, b: Cx, p: number): Cx => lerpMulG(a, b, p, 0.5);
+export const harmMean = (a: Cx, b: Cx, p: number): Cx =>
+  invG(scale(add(invG(a, p), invG(b, p)), 0.5), p);
+
+/* ----------------------------------------------------------------- *
  *  Arc-length pacing — so the pen moves at constant *geometric*      *
  *  speed instead of constant param speed.                           *
  * ----------------------------------------------------------------- */
