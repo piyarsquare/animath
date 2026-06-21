@@ -13,6 +13,10 @@ import {
 
 const STORAGE_KEY = 'argand';
 
+// Floor on how long one full sweep may take, so short paths don't ping-pong
+// frantically once the clock is paced by (small) arc length.
+const MIN_SWEEP_SEC = 1;
+
 const A_COL = '#38bdf8';
 const B_COL = '#fb923c';
 const R_COL = '#34d399';
@@ -88,7 +92,8 @@ export default function Argand() {
   // ponging 0↔length, and map back to the native param t. The return leg
   // retraces the path backward (for multiply, the operation run in reverse) so
   // there is no jump-cut on the loop. The SVG is light enough for per-frame
-  // setState.
+  // setState. A short path is slowed so one sweep never takes less than
+  // MIN_SWEEP_SEC — otherwise tiny linear moves ping-pong frantically.
   useEffect(() => {
     if (!playing) return;
     let raf = 0;
@@ -97,7 +102,8 @@ export default function Argand() {
       const dt = (now - last) / 1000;
       last = now;
       const L = lutRef.current.length;
-      let arc = arcRef.current + dirRef.current * dt * speed;
+      const v = L > 1e-6 ? Math.min(speed, L / MIN_SWEEP_SEC) : 0;
+      let arc = arcRef.current + dirRef.current * dt * v;
       if (arc >= L) { arc = L; dirRef.current = -1; }
       else if (arc <= 0) { arc = 0; dirRef.current = 1; }
       arcRef.current = arc;
