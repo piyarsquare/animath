@@ -267,7 +267,9 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     const boxGeo = new THREE.BoxGeometry(size, size, size);
     const edges = new THREE.EdgesGeometry(boxGeo); boxGeo.dispose();
     roomDisposables.push(edges);
-    const frameMat = new THREE.LineBasicMaterial({ color: 0x9fc0e0 }); roomDisposables.push(frameMat);
+    // In Rooms mode the painted faces define the walls, so the edge frame drops
+    // to a faint near-background tone (kept bright for the diagnostic scene).
+    const frameMat = new THREE.LineBasicMaterial({ color: decorMode === 'rooms' ? 0x33424f : 0x9fc0e0 }); roomDisposables.push(frameMat);
     lineParts.push({ geo: edges, mat: frameMat, matrix: new THREE.Matrix4() });
 
     // floor: a see-through reference plane (optional; scales with the room)
@@ -281,7 +283,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     const gridGeo = new THREE.BufferGeometry();
     gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3));
     roomDisposables.push(gridGeo);
-    const gridMat = new THREE.LineBasicMaterial({ color: 0x6f93b8 }); roomDisposables.push(gridMat);
+    const gridMat = new THREE.LineBasicMaterial({ color: decorMode === 'rooms' ? 0x2a3744 : 0x6f93b8 }); roomDisposables.push(gridMat);
     lineParts.push({ geo: gridGeo, mat: gridMat, matrix: localM(0, -h + 0.02, 0), floor: true });
 
     // the interior decor — either the original diagnostic props (landmark shapes

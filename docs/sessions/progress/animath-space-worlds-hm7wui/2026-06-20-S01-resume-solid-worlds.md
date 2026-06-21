@@ -51,6 +51,19 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 00:30 — "Too busy" → faint walls + calm default cover depth
+**Why:** Dan: everything far too busy; make the walls very faint.
+
+Three moves: (1) **faint walls** — thin muted frames (dim X/Y/Z hues) + a small
+soft-slate arrow, replacing the bold frame + white arrow. (2) In Rooms mode the
+shared **edge-frame + floor grid** drop to a near-background tone (they were the
+bright lattice fighting the faces). (3) Root cause of the busyness was **cover
+depth 3** — ~300+ tiled cells receding to infinity, so even faint marks pile into
+a dense lattice. Tested depth 1/2/3: depth 1 is the calm sweet spot and still
+reads in *both* modes (diagnostic keeps its FRONT-sign recession; rooms becomes a
+quiet single room). Set `DEFAULT_COVER_DEPTH = 1` (slider still →10 for the deep
+hall). Verified headless across 3-torus + amphicosm, both persons. Build green.
+
 ### 🔴 blocker → 🟢 fix · 23:45 — Transparent faces flickered ("view unstable"); switch to alpha-test cutout
 **Why:** Dan: the view is completely unstable. Semi-transparent faces tiled across
 the cover have no stable draw order (per-object transparent sort flips with camera

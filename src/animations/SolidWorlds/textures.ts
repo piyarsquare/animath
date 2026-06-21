@@ -27,24 +27,23 @@ export function faceMotifTexture(hex: string): THREE.CanvasTexture {
   const ctx = cvs.getContext('2d')!;
   ctx.clearRect(0, 0, S, S);
 
-  // bold border (the wall's color) — a wide frame so each face is unmistakably
-  // colored without filling it in (which would block the view + flicker)
+  // thin, muted frame (the wall's color, kept dim so the tiled cover stays calm)
   ctx.strokeStyle = rgba(hex, 1);
-  ctx.lineWidth = 40;
-  ctx.strokeRect(20, 20, S - 40, S - 40);
+  ctx.lineWidth = 8;
+  ctx.strokeRect(12, 12, S - 24, S - 24);
 
-  // chiral up-arrow (white, for contrast): spine + head + a flag on the RIGHT (so
-  // a mirror moves the flag to the left, a quarter-turn rotates the whole mark)
-  ctx.fillStyle = 'rgb(245,247,250)';
-  ctx.strokeStyle = 'rgb(245,247,250)';
-  ctx.lineWidth = 36; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.beginPath(); ctx.moveTo(S * 0.42, S * 0.74); ctx.lineTo(S * 0.42, S * 0.36); ctx.stroke();
+  // small, faint chiral up-arrow (soft slate): spine + head + a flag on the RIGHT
+  // (so a mirror moves the flag to the left, a quarter-turn rotates the mark)
+  ctx.fillStyle = 'rgb(150,160,176)';
+  ctx.strokeStyle = 'rgb(150,160,176)';
+  ctx.lineWidth = 13; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(S * 0.5, S * 0.64); ctx.lineTo(S * 0.5, S * 0.42); ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(S * 0.42, S * 0.18);
-  ctx.lineTo(S * 0.26, S * 0.42);
-  ctx.lineTo(S * 0.58, S * 0.42);
+  ctx.moveTo(S * 0.5, S * 0.34);
+  ctx.lineTo(S * 0.42, S * 0.46);
+  ctx.lineTo(S * 0.58, S * 0.46);
   ctx.closePath(); ctx.fill();
-  ctx.fillRect(S * 0.42, S * 0.44, S * 0.26, S * 0.14);
+  ctx.fillRect(S * 0.5, S * 0.47, S * 0.12, S * 0.07);
 
   const t = new THREE.CanvasTexture(cvs);
   t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;

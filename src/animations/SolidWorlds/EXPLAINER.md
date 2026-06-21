@@ -77,9 +77,10 @@ room empty. Glued opposite faces share a color (X red · Y green · Z blue), so 
 room reads as an oriented box — you always know which way you face, you recognize
 the wall you just came through (it matches the one ahead), and each face carries a
 chiral up-arrow so you can watch a wall come back **rotated** in a turn world or
-**mirrored** in a glide world. Only the colored frame and arrow are drawn — the
-rest of each face is open — so the hall-of-copies still shows through and the view
-stays steady as you move.
+**mirrored** in a glide world. Only a **faint** colored frame and a small arrow
+are drawn — the rest of each face is open — so the room stays calm and
+see-through, and the view stays steady as you move. (Keep **Cover depth** low for
+the quiet single room; raise it for the deep hall of copies.)
 
 ### Possible sources & where to go further
 

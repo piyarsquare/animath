@@ -97,4 +97,4 @@ export const DEFAULT_ROOM_SIZE = 11;
 // One ring of neighbors reads as "this cube + its topological neighbors" without
 // the hall-of-mirrors density that buried the decor at 4. The slider still goes
 // to 10 for the deep-tunnel look.
-export const DEFAULT_COVER_DEPTH = 3;
+export const DEFAULT_COVER_DEPTH = 1;

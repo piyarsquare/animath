@@ -31,11 +31,12 @@ export interface DecorBuildContext {
   addDisposable: (d: { dispose: () => void }) => void;
 }
 
-// X = red, Y = green, Z = blue (matches the RGB corner-marker scheme).
+// X = red, Y = green, Z = blue (the RGB corner-marker scheme), but muted/dim so
+// the walls stay very faint as the cover tiles them into the distance.
 const AXIS_COLORS: { axis: 'x' | 'y' | 'z'; hex: string }[] = [
-  { axis: 'x', hex: '#e0533f' },
-  { axis: 'y', hex: '#46b96a' },
-  { axis: 'z', hex: '#3f7fe0' },
+  { axis: 'x', hex: '#6e433d' },
+  { axis: 'y', hex: '#3e5c48' },
+  { axis: 'z', hex: '#3c4a66' },
 ];
 
 export function buildRoomsDecor(ctx: DecorBuildContext) {
