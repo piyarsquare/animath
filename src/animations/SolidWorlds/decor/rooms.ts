@@ -85,12 +85,23 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
     s.holes.push(o);
     return new THREE.ShapeGeometry(s);
   };
+  // Walls are mostly opaque (so the next room stays hidden until you reach the
+  // arch) but faintly translucent, so a hint of the surrounding copies glows
+  // through. depthWrite stays ON — the nearest wall occludes the ones behind it,
+  // so the tiled panels don't flicker the way fully transparent panes did.
+  const wallMat = (a: Axis) => {
+    const m = new THREE.MeshStandardMaterial({
+      color: WALL_TINT[a], roughness: 0.85, metalness: 0.05,
+      transparent: true, opacity: 0.84, depthWrite: true, side: THREE.DoubleSide,
+    });
+    addDisposable(m); return m;
+  };
   const buildFace = (a: Axis, geo: THREE.BufferGeometry) => {
     const ti = axisIndex(a);
     const uIdx = a === 'x' ? 2 : 0;              // horizontal transverse (z for x-wall, x otherwise)
     const vIdx = a === 'y' ? 2 : 1;              // vertical (z is the 2nd transverse on the floor)
     const M = new THREE.Matrix4().makeBasis(unit(uIdx), unit(vIdx), unit(ti)).setPosition(unit(ti, -h * 0.999));
-    mesh(geo, std(WALL_TINT[a]), M);
+    mesh(geo, wallMat(a), M);
   };
   buildFace('x', wallArchGeo(H * 0.42, H * 0.24, -H * 0.05));   // arch toward +z
   buildFace('z', wallArchGeo(H * 0.42, H * 0.24, -H * 0.05));   // arch toward +x

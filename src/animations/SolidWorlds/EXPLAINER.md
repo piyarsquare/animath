@@ -74,9 +74,10 @@ The **View** panel has a **Decor** switch. *Diagnostic* is the proof-of-the-math
 scene: neutral landmark props and the FRONT/BACK sign, sized so a copy and its
 mirror are obvious. *Rooms* instead furnishes the fundamental cube as a
 **recognizable room** — a rug, a desk with a lamp, a fireplace, a framed picture,
-a chandelier, a WELCOME sign — inside **solid walls**, where the connections
-between rooms happen at **archways**: each wall has one archway, the floor and
-ceiling a hole, all placed **off-center**. The room is built once and tiled across
+a chandelier, a WELCOME sign — inside **walls that are solid but faintly
+translucent** (a hint of the surrounding copies glows through), where the
+connections between rooms happen at **archways**: each wall has one archway, the
+floor and ceiling a hole, all placed **off-center**. The room is built once and tiled across
 the cover, so each opening on a far wall is your near opening carried through that
 pairing's gluing. Off-center is the point: a gluing fixes the center of the face
 it acts through, so a centered opening would hide the very turn or mirror you want

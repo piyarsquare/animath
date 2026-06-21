@@ -51,6 +51,16 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 02:55 — Walls solid-but-faintly-translucent (Dan's pick)
+**Why:** Asked how solid the walls should be; Dan chose solid-but-faintly-
+translucent (stage the surprise, but keep a hint of the copies).
+
+Wall material → `transparent`, opacity 0.84, **depthWrite ON** (nearest wall
+occludes the rest, so the tiled panels don't flicker like the old fully-transparent
+panes). Result: walls read solid, the next room is hidden until the arch, but a
+hint of the surrounding copies glows through — you can even see a WELCOME below
+through the floor. Build green.
+
 ### 🟢 code · 02:40 — Off-center archways + solid walls (connections at doorways)
 **Why:** Dan: connections between rooms should happen at archways (holes in
 ceiling/floor where a world tips vertical↔horizontal), off-center; and the wall
