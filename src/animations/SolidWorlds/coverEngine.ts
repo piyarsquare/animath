@@ -24,7 +24,7 @@ import { buildRoomsDecor } from './decor/rooms';
 
 interface Gen { g: THREE.Matrix4; gInv: THREE.Matrix4; gLin: THREE.Matrix4; gLinInv: THREE.Matrix4; }
 
-interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; fogAmount: number; showFloor: boolean; showLabels: boolean; showCorners: boolean; showSeams: boolean; decorMode: DecorMode; }
+interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; fogAmount: number; cutFrac: number; showFloor: boolean; showLabels: boolean; showCorners: boolean; showSeams: boolean; decorMode: DecorMode; }
 
 /** Furniture reference scale — the sign, props, footprints, avatars and eye
  *  height are sized from this CONSTANT, not from the room size, so growing the
@@ -52,6 +52,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   let camDist = opts.cameraDistance;
   let lookId = opts.lookId;
   let fogAmount = opts.fogAmount;
+  let cutFrac = opts.cutFrac;          // cutaway plane position as a fraction of camera→avatar
   let showFloor = opts.showFloor;
   let showLabels = opts.showLabels;
   let showCorners = opts.showCorners;
@@ -349,9 +350,9 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   // character keeps its surrounding room. The plane is shared by reference with
   // all cover materials EXCEPT the floor (kept whole so the ground stays
   // continuous); avatars live outside coverRoot so are never clipped. Empty in
-  // first person. The gap is clamped to the near half so the plane never reaches
-  // the character.
-  const CUT_GAP = U * 0.2;              // how far in front of the camera the cut sits
+  // first person. The gap is set by `cutFrac` (the Cutaway slider) as a fraction
+  // of the camera→character distance, and clamped just short of the character so
+  // the plane never reaches it.
   const cutPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 1e6);
   const cutPlanes: THREE.Plane[] = [];
   const _clipV = new THREE.Vector3(), _clipP = new THREE.Vector3();
@@ -682,7 +683,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       _clipV.subVectors(pos, camPos);                       // camera → character
       const len = _clipV.length() || 1;
       _clipV.divideScalar(len);                             // view direction
-      const gap = Math.min(CUT_GAP, len * 0.5);             // never reach the character
+      const gap = len * Math.min(cutFrac, 0.95);            // never reach the character
       _clipP.copy(camPos).addScaledVector(_clipV, gap);     // a short gap in front of the camera
       cutPlane.setFromNormalAndCoplanarPoint(_clipV, _clipP);
       if (cutPlanes.length === 0) cutPlanes.push(cutPlane);
@@ -702,6 +703,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     setCameraDistance(d) { camDist = d; },
     setLook(id) { lookId = id; applyLook(id); },
     setFog(amount) { fogAmount = amount; applyLook(lookId); },
+    setCutFrac(f) { cutFrac = f; },
     setFloor(on) { showFloor = on; for (const o of floorObjs) o.visible = on; },
     setSeams(on) { showSeams = on; for (const o of seamObjs) o.visible = on; },
     setLabels(on) { showLabels = on; buildCover(); },

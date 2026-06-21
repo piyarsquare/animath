@@ -51,6 +51,19 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 03:10 — Cutaway slider + arch moldings
+**Why:** Dan: put the cut plane on a slider (position = fraction of the
+camera→avatar distance), and add moldings to the arches.
+
+- **Cutaway slider** (View panel, third-person only): `cutFrac` opt + `setCutFrac`
+  on the engine; the clip plane now sits at `len * cutFrac` (clamped <0.95 so it
+  never reaches the walker), replacing the old fixed `U*0.2`. Persisted, default 0.3.
+- **Arch moldings:** an extruded casing band (jambs + arched header, `ExtrudeGeometry`)
+  hugs each wall arch, proud of the wall toward the interior; a low torus rim frames
+  the floor trapdoor. The openings now read as built architecture, not clean cuts.
+
+Build green.
+
 ### 🟢 code · 02:55 — Walls solid-but-faintly-translucent (Dan's pick)
 **Why:** Asked how solid the walls should be; Dan chose solid-but-faintly-
 translucent (stage the surprise, but keep a hint of the copies).

@@ -107,6 +107,39 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
   buildFace('z', wallArchGeo(H * 0.42, H * 0.24, -H * 0.05));   // arch toward +x
   buildFace('y', holeGeo(-H * 0.42, H * 0.42, H * 0.26));        // trapdoor, off in a corner
 
+  // ── arch moldings: a casing band hugging each opening, proud of the wall so the
+  // arch reads as built architecture (jambs + an arched header) rather than a clean
+  // cut. The band follows the opening (open at the floor) and extrudes inward.
+  const casing = std(0x7a5a3a);
+  const archCasingGeo = (u0: number, halfW: number, vTop: number, m: number, depth: number) => {
+    const s = new THREE.Shape();
+    s.moveTo(u0 - halfW - m, -H);
+    s.lineTo(u0 - halfW - m, vTop);
+    s.absarc(u0, vTop, halfW + m, Math.PI, 0, true);   // outer arch over the top
+    s.lineTo(u0 + halfW + m, -H);
+    s.lineTo(u0 + halfW, -H);
+    s.lineTo(u0 + halfW, vTop);
+    s.absarc(u0, vTop, halfW, 0, Math.PI, false);      // inner arch (back the other way)
+    s.lineTo(u0 - halfW, -H);
+    s.closePath();
+    const g = new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: false });
+    addDisposable(g); return g;
+  };
+  const buildCasing = (a: Axis) => {
+    const ti = axisIndex(a);
+    const uIdx = a === 'x' ? 2 : 0, vIdx = 1;
+    const M = new THREE.Matrix4().makeBasis(unit(uIdx), unit(vIdx), unit(ti)).setPosition(unit(ti, -h * 0.999));
+    mesh(archCasingGeo(H * 0.42, H * 0.24, -H * 0.05, H * 0.045, u * 0.06), casing, M);
+  };
+  buildCasing('x');
+  buildCasing('z');
+  // trapdoor rim: a low raised ring around the floor hole, the hatch's casing.
+  {
+    const rim = new THREE.TorusGeometry(H * 0.27, u * 0.02, 8, 28);
+    addDisposable(rim);
+    mesh(rim, casing, localM(-h * 0.42, F + u * 0.015, h * 0.42, -Math.PI / 2));
+  }
+
   const wood = std(0x6b4a2f), woodDark = std(0x4a3320);
   const stone = std(0x9a9088), darkBack = std(0x171210);
   const gold = std(0xb0904a), metal = std(0x8f8a7a);

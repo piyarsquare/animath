@@ -76,6 +76,8 @@ export interface SolidEngine {
   setLook(id: string): void;
   /** Fog amount, 0 (none) … 1 (thick). */
   setFog(amount: number): void;
+  /** Third-person cutaway plane position, as a fraction of the camera→walker distance. */
+  setCutFrac(f: number): void;
   /** Show/hide the floor plane + grid. */
   setFloor(on: boolean): void;
   /** Show/hide the per-face gluing labels. */
