@@ -10,7 +10,7 @@ import ArgandPlane, {
 import { buildCurve, CURVES, type CurveName } from './curves';
 import {
   type Cx, type ArcLengthMap, cx, modulus, add,
-  affine, affineAt, fixedPoint, arcLengthMap, formatRect, formatPolar,
+  affine, affineLoopAt, fixedPoint, arcLengthMap, formatRect, formatPolar,
 } from './complexOps';
 
 const STORAGE_KEY = 'argand';
@@ -50,9 +50,8 @@ export default function Argand() {
   const [speed, setSpeed] = usePersistentState(`${STORAGE_KEY}:speed`, 2);
 
   // Transient view state — never persisted.
-  const [t, setT] = useState(1);
+  const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const dirRef = useRef(1);
 
   const isPoint = feed === 'point';
   const isShape = feed === 'shape';
@@ -62,8 +61,9 @@ export default function Argand() {
   const fz = affine(z, alpha1, alpha0, system);
   const zStar = fixedPoint(alpha1, alpha0, system);
 
-  // Pace Play by the arc length of the representative input's two-leg path, so
-  // the pen moves at a constant geometric speed across the ×α₁ and +α₀ legs.
+  // Pace Play by the arc length of the representative input's *whole loop* (out
+  // by the two legs, back along the diagonal), so the pen moves at constant
+  // geometric speed all the way around.
   const lut: ArcLengthMap = useMemo(() => {
     let q = z;
     if (isShape) {
@@ -72,15 +72,16 @@ export default function Argand() {
     } else if (isGrid) {
       q = cx(extent, extent);
     }
-    return arcLengthMap(s => affineAt(q, alpha1, alpha0, system, s));
+    return arcLengthMap(s => affineLoopAt(q, alpha1, alpha0, system, s), 144);
   }, [isShape, isGrid, curve, z, alpha1, alpha0, system, extent]);
 
   const lutRef = useRef(lut);
   lutRef.current = lut;
   const arcRef = useRef(0);
 
-  // Play clock — integrate distance at `speed` u/s, ping-ponging 0↔length and
-  // mapping back to t; short paths are slowed to MIN_SWEEP_SEC.
+  // Play clock — integrate distance at `speed` u/s and wrap once around the
+  // closed loop (z→f(z) by the legs, back by the diagonal). Wrapping is seamless
+  // because the loop returns to z. Short loops are slowed to MIN_SWEEP_SEC.
   useEffect(() => {
     if (!playing) return;
     let raf = 0;
@@ -89,10 +90,9 @@ export default function Argand() {
       const dt = (now - last) / 1000;
       last = now;
       const L = lutRef.current.length;
-      const v = L > 1e-6 ? Math.min(speed, L / MIN_SWEEP_SEC) : 0;
-      let arc = arcRef.current + dirRef.current * dt * v;
-      if (arc >= L) { arc = L; dirRef.current = -1; }
-      else if (arc <= 0) { arc = 0; dirRef.current = 1; }
+      const v = L > 1e-6 ? Math.min(speed, L / (2 * MIN_SWEEP_SEC)) : 0;
+      let arc = arcRef.current + dt * v;
+      if (L > 1e-6) while (arc >= L) arc -= L;          // wrap, don't bounce
       arcRef.current = arc;
       setT(lutRef.current.sAt(arc));
       raf = requestAnimationFrame(loop);
@@ -102,27 +102,20 @@ export default function Argand() {
   }, [playing, speed]);
 
   const togglePlay = () => setPlaying(pl => {
-    if (!pl) {
-      const L = lutRef.current.length;
-      arcRef.current = lutRef.current.arcAt(t);
-      dirRef.current = arcRef.current >= L - 1e-6 ? -1 : arcRef.current <= 1e-6 ? 1 : dirRef.current;
-    }
+    if (!pl) arcRef.current = lutRef.current.arcAt(t);
     return !pl;
   });
 
-  const goToStop = (st: number) => {
-    setPlaying(false);
-    dirRef.current = st >= 0.999 ? -1 : 1;
-    setT(st);
-  };
+  const goToStop = (st: number) => { setPlaying(false); setT(st); };
 
-  // Three universal stops — the affine map's decomposition, labeled per feed.
+  // Three universal stops on the outgoing arc — the affine decomposition,
+  // labeled per feed. (Play continues past f(z) back along the diagonal.)
   const stopLabels = isPoint
     ? ['z', 'α₁z', 'f(z)']
     : isShape
       ? ['Shape', 'Spun', 'Image']
       : ['Identity', 'Linear', 'Affine'];
-  const stops = [{ label: stopLabels[0], t: 0 }, { label: stopLabels[1], t: 0.5 }, { label: stopLabels[2], t: 1 }];
+  const stops = [{ label: stopLabels[0], t: 0 }, { label: stopLabels[1], t: 0.25 }, { label: stopLabels[2], t: 0.5 }];
   const atStop = (st: number): boolean => Math.abs(t - st) < 0.02;
 
   const subtitle = `f(z) = ${formatRect(fz)}   ·   ${systemName(system)}`;
@@ -216,11 +209,12 @@ export default function Argand() {
       </button>
       <Slider label="Speed  (pen, units/sec)" value={speed} min={0.5} max={6} step={0.25}
         onChange={setSpeed} format={v => `${v.toFixed(2)} u/s`} />
-      <Slider label="Fine scrub  (z → f(z))" value={t} min={0} max={1} step={0.001}
+      <Slider label="Fine scrub  (around the loop)" value={t} min={0} max={1} step={0.001}
         onChange={v => { setPlaying(false); setT(v); }} format={v => v.toFixed(2)} />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 6 }}>
-        Two legs: first <b style={{ color: A1_COL }}>×α₁</b> (spin & scale, the spiral), then
-        <b style={{ color: A0_COL }}> +α₀</b> (the straight shift) — landing on <b style={{ color: F_COL }}>f(z)</b>.
+        Out by the two legs — first <b style={{ color: A1_COL }}>×α₁</b> (spin & scale), then
+        <b style={{ color: A0_COL }}> +α₀</b> (shift) — to <b style={{ color: F_COL }}>f(z)</b>; then back along the
+        <b style={{ color: '#2dd4bf' }}> diagonal</b>, spinning and shifting at once. A closed loop.
       </div>
     </>
   );
@@ -315,7 +309,7 @@ export default function Argand() {
     },
     {
       id: 'reset', icon: 'reset', label: 'To z',
-      onClick: () => { setPlaying(false); dirRef.current = 1; setT(0); }, sectionId: 'scrub',
+      onClick: () => { setPlaying(false); setT(0); }, sectionId: 'scrub',
     },
   ];
 

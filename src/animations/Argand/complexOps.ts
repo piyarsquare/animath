@@ -125,6 +125,26 @@ export const fixedPoint = (a1: Cx, a0: Cx, p: number): Cx | null => {
   return divG(a0, d, p);
 };
 
+/**
+ * The "all-at-once" affine homotopy: α₁ᵘ·z + u·α₀, ramping the spin/scale AND
+ * the shift together (u: 0→1 is z→f(z)). This is the *other* honest route from z
+ * to f(z) — the diagonal that the two separate legs cut a corner around.
+ */
+export const affineSimulAt = (z: Cx, a1: Cx, a0: Cx, p: number, u: number): Cx =>
+  add(mulG(powRealG(a1, p, u), z, p), scale(a0, u));
+
+/**
+ * One closed loop z → f(z) → z over φ∈[0,1]: the first half (φ≤½) is the honest
+ * two-leg construction (×α₁ then +α₀), the second half (φ>½) is the simultaneous
+ * homotopy run backward. Both halves share z (φ=0,1) and f(z) (φ=½), so the loop
+ * is seamless — out by the corners, back along the diagonal.
+ */
+export const affineLoopAt = (z: Cx, a1: Cx, a0: Cx, p: number, phi: number): Cx => {
+  const f = ((phi % 1) + 1) % 1;
+  if (f <= 0.5) return affineAt(z, a1, a0, p, f / 0.5);
+  return affineSimulAt(z, a1, a0, p, 1 - (f - 0.5) / 0.5);
+};
+
 /* ----------------------------------------------------------------- *
  *  Arc-length pacing — so the pen moves at constant *geometric*      *
  *  speed instead of constant param speed.                           *

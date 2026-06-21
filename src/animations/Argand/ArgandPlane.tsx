@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   type Cx, cx, add,
-  mulG, affine, affineAt, fixedPoint, snap,
+  mulG, affine, affineAt, affineSimulAt, affineLoopAt, fixedPoint, snap,
 } from './complexOps';
 
 export type Feed = 'point' | 'shape' | 'grid';
@@ -191,6 +191,16 @@ export default function ArgandPlane({
     }
     return pts.join(' ');
   };
+  // The return route: the "all-at-once" diagonal from f(z) back to z.
+  const simulArc = (q: Cx): string => {
+    const n = 32;
+    const pts: string[] = [];
+    for (let i = 0; i <= n; i++) {
+      const [vx, vy] = toV(affineSimulAt(q, alpha1, alpha0, p, i / n));
+      pts.push(`${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`);
+    }
+    return pts.join(' ');
+  };
   const vpoly = (pts: Cx[]): string =>
     pts.map((q, i) => { const [vx, vy] = toV(q); return `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`; }).join(' ');
 
@@ -208,11 +218,19 @@ export default function ArgandPlane({
   const GN = Math.ceil(extent) + 2;
   const gridIdx: number[] = [];
   for (let i = -GN; i <= GN; i++) gridIdx.push(i);
-  const gridLine = (i: number, horizontal: boolean, s: number): string => {
-    const p0 = horizontal ? cx(-GN, i) : cx(i, -GN);
-    const p1 = horizontal ? cx(GN, i) : cx(i, GN);
-    const [x1, y1] = toV(affineAt(p0, alpha1, alpha0, p, s));
-    const [x2, y2] = toV(affineAt(p1, alpha1, alpha0, p, s));
+  const gridEnds = (i: number, horizontal: boolean): [Cx, Cx] =>
+    horizontal ? [cx(-GN, i), cx(GN, i)] : [cx(i, -GN), cx(i, GN)];
+  // the full image grid f(grid) — always shown (the complete story)
+  const gridLineImage = (i: number, horizontal: boolean): string => {
+    const [p0, p1] = gridEnds(i, horizontal);
+    const [x1, y1] = toV(fOf(p0)); const [x2, y2] = toV(fOf(p1));
+    return `M ${x1.toFixed(1)} ${y1.toFixed(1)} L ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+  };
+  // the live grid travelling the loop — only while in motion
+  const gridLineLoop = (i: number, horizontal: boolean, phi: number): string => {
+    const [p0, p1] = gridEnds(i, horizontal);
+    const [x1, y1] = toV(affineLoopAt(p0, alpha1, alpha0, p, phi));
+    const [x2, y2] = toV(affineLoopAt(p1, alpha1, alpha0, p, phi));
     return `M ${x1.toFixed(1)} ${y1.toFixed(1)} L ${x2.toFixed(1)} ${y2.toFixed(1)}`;
   };
 
@@ -308,9 +326,9 @@ export default function ArgandPlane({
             ))}
           </defs>
 
-          {/* ghost identity grid */}
+          {/* ghost identity grid (the unchanged plane) */}
           {showGrid && (
-            <g stroke="currentColor" strokeOpacity={0.08} strokeWidth={1.5}>
+            <g stroke="currentColor" strokeOpacity={0.18} strokeWidth={1.5}>
               {xLines.filter(i => i !== 0).map(i => { const [vx] = toV(cx(i, 0)); return <line key={`x${i}`} x1={vx} y1={0} x2={vx} y2={VIRT} />; })}
               {yLines.filter(i => i !== 0).map(i => { const [, vy] = toV(cx(0, i)); return <line key={`y${i}`} x1={0} y1={vy} x2={VIRT} y2={vy} />; })}
             </g>
@@ -329,10 +347,20 @@ export default function ArgandPlane({
 
           {/* ---- GRID feed: the whole coordinate grid mapped by f ---- */}
           {isGrid && (
-            <g stroke={F_COL} strokeOpacity={0.5} strokeWidth={2} fill="none">
-              {gridIdx.map(i => <path key={`gv${i}`} d={gridLine(i, false, t)} />)}
-              {gridIdx.map(i => <path key={`gh${i}`} d={gridLine(i, true, t)} />)}
-            </g>
+            <>
+              {/* the full image grid f(grid) — always shown */}
+              <g stroke={F_COL} strokeOpacity={0.5} strokeWidth={2} fill="none">
+                {gridIdx.map(i => <path key={`gv${i}`} d={gridLineImage(i, false)} />)}
+                {gridIdx.map(i => <path key={`gh${i}`} d={gridLineImage(i, true)} />)}
+              </g>
+              {/* the live grid travelling the loop — only while in motion */}
+              {showMover && (
+                <g stroke="#fde68a" strokeOpacity={0.8} strokeWidth={2} fill="none">
+                  {gridIdx.map(i => <path key={`lv${i}`} d={gridLineLoop(i, false, t)} />)}
+                  {gridIdx.map(i => <path key={`lh${i}`} d={gridLineLoop(i, true, t)} />)}
+                </g>
+              )}
+            </>
           )}
 
           {/* ---- SHAPE feed: the placed shape and its image under f ---- */}
@@ -349,7 +377,7 @@ export default function ArgandPlane({
               <path d={vpoly(placed.map(fOf))} fill="none" stroke={F_COL}
                 strokeWidth={3.5} strokeLinejoin="round" strokeLinecap="round" />
               {showMover && (
-                <path d={vpoly(placed.map(q => affineAt(q, alpha1, alpha0, p, t)))}
+                <path d={vpoly(placed.map(q => affineLoopAt(q, alpha1, alpha0, p, t)))}
                   fill="none" stroke="#fde68a" strokeOpacity={0.9} strokeWidth={3}
                   strokeLinejoin="round" strokeLinecap="round" />
               )}
@@ -362,17 +390,20 @@ export default function ArgandPlane({
               strokeDasharray="5 5" markerEnd="url(#ah-a0)" />
           ); })()}
 
-          {/* ---- the probe point z → α₁z → f(z): the two colored legs ---- */}
+          {/* ---- the probe point z → α₁z → f(z), and the diagonal way back ---- */}
           {(isPoint || isGrid) && (
             <>
-              <path d={legPath(z, 0)} fill="none" stroke={A1_COL} strokeOpacity={0.8} strokeWidth={3} strokeLinecap="round" />
-              <path d={legPath(z, 1)} fill="none" stroke={A0_COL} strokeOpacity={0.8} strokeWidth={3} strokeDasharray="2 6" strokeLinecap="round" />
+              {/* the return route (f(z) → z), spin & shift interpolated together */}
+              <path d={simulArc(z)} fill="none" stroke="#2dd4bf" strokeOpacity={0.55} strokeWidth={2.5} strokeDasharray="7 6" strokeLinecap="round" />
+              {/* the two outgoing legs */}
+              <path d={legPath(z, 0)} fill="none" stroke={A1_COL} strokeOpacity={0.85} strokeWidth={3} strokeLinecap="round" />
+              <path d={legPath(z, 1)} fill="none" stroke={A0_COL} strokeOpacity={0.85} strokeWidth={3} strokeDasharray="2 6" strokeLinecap="round" />
               {/* the ×α₁ waypoint */}
               {(() => { const [wx, wy] = toV(mulG(alpha1, z, p)); return (
                 <circle cx={wx} cy={wy} r={6} fill={A1_COL} fillOpacity={0.8} />
               ); })()}
-              {/* the moving point */}
-              {showMover && (() => { const [mx, my] = toV(affineAt(z, alpha1, alpha0, p, t)); return (
+              {/* the moving point (around the closed loop) */}
+              {showMover && (() => { const [mx, my] = toV(affineLoopAt(z, alpha1, alpha0, p, t)); return (
                 <circle cx={mx} cy={my} r={9} fill={F_COL} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
               ); })()}
               {/* the output f(z) */}
