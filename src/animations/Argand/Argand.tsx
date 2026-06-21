@@ -46,6 +46,7 @@ export default function Argand() {
   const dirRef = useRef(1);
 
   const isCurve = subject === 'curve';
+  const isPlane = subject === 'plane';
   const curve = useMemo(() => buildCurve(curveName), [curveName]);
 
   // The path Play paces by — the primary mover (number) or a representative
@@ -53,6 +54,14 @@ export default function Argand() {
   // clock can advance at constant *geometric* speed instead of constant param
   // speed; that is what makes add and multiply feel like the same pen.
   const lut: ArcLengthMap = useMemo(() => {
+    if (isPlane) {
+      // Pace by a far grid corner — the part of the plane that sweeps farthest —
+      // so the whole-plane morph runs at the same pen speed as the other chapters.
+      const corner = cx(extent, extent);
+      return mode === 'multiply'
+        ? arcLengthMap(s => mulPath(corner, b, s))
+        : arcLengthMap(s => addPath(corner, b, s));
+    }
     if (isCurve) {
       // Pace by the placed point that travels farthest (largest |q|), so the
       // whole figure stays comfortably in view.
@@ -68,7 +77,7 @@ export default function Argand() {
     return mode === 'multiply'
       ? arcLengthMap(s => mulPath(a, b, s))
       : arcLengthMap(s => addPath(a, b, s));
-  }, [isCurve, curve, a, b, mode]);
+  }, [isPlane, isCurve, curve, a, b, mode, extent]);
 
   // Read the latest map from the rAF loop without re-subscribing each frame.
   const lutRef = useRef(lut);
@@ -119,18 +128,22 @@ export default function Argand() {
   const result = mode === 'multiply' ? mul(a, b) : add(a, b);
   const resultLabel = mode === 'multiply' ? 'a·b' : 'a+b';
   const op = mode === 'multiply' ? '×' : '+';
-  const subtitle = isCurve
-    ? `shape ${op} b,  b = ${formatRect(b)}`
-    : `${resultLabel} = ${formatRect(result)}`;
+  const subtitle = isPlane
+    ? `z ↦ z ${op} b,  b = ${formatRect(b)}`
+    : isCurve
+      ? `shape ${op} b,  b = ${formatRect(b)}`
+      : `${resultLabel} = ${formatRect(result)}`;
 
-  // The meaningful waypoints of the current path. The number path has two ends;
-  // the curve's unified multiply loop has three distinct pictures (shape · image
-  // · the collapse onto the point), with image revisited on the way back.
-  const stops: Array<{ label: string; t: number; also?: number }> = isCurve
-    ? mode === 'multiply'
-      ? [{ label: 'Shape', t: 0, also: 1 }, { label: 'Image', t: 0.25, also: 0.75 }, { label: 'Point', t: 0.5 }]
-      : [{ label: 'Shape', t: 0 }, { label: 'Image', t: 1 }]
-    : [{ label: 'a', t: 0 }, { label: resultLabel, t: 1 }];
+  // The meaningful waypoints of the current path. The number/plane path has two
+  // ends; the curve's unified multiply loop has three distinct pictures (shape ·
+  // image · the collapse onto the point), with image revisited on the way back.
+  const stops: Array<{ label: string; t: number; also?: number }> = isPlane
+    ? [{ label: 'Identity', t: 0 }, { label: 'Mapped', t: 1 }]
+    : isCurve
+      ? mode === 'multiply'
+        ? [{ label: 'Shape', t: 0, also: 1 }, { label: 'Image', t: 0.25, also: 0.75 }, { label: 'Point', t: 0.5 }]
+        : [{ label: 'Shape', t: 0 }, { label: 'Image', t: 1 }]
+      : [{ label: 'a', t: 0 }, { label: resultLabel, t: 1 }];
   const atStop = (s: { t: number; also?: number }): boolean =>
     Math.abs(t - s.t) < 0.02 || (s.also !== undefined && Math.abs(t - s.also) < 0.02);
 
@@ -140,7 +153,11 @@ export default function Argand() {
     <>
       <Pills<Subject>
         label="Transform a"
-        options={[{ value: 'number', label: 'Number' }, { value: 'curve', label: 'Curve' }]}
+        options={[
+          { value: 'number', label: 'Number' },
+          { value: 'curve', label: 'Curve' },
+          { value: 'plane', label: 'Plane' },
+        ]}
         value={subject}
         onChange={setSubject}
       />
@@ -152,12 +169,14 @@ export default function Argand() {
           onChange={setCurveName}
         />
       )}
-      <ComplexInput label={isCurve ? 'a (place)' : 'a'} value={[a.re, a.im]} onChange={([re, im]) => setA(cx(re, im))} />
-      <ComplexInput label={isCurve ? 'b (× or +)' : 'b'} value={[b.re, b.im]} onChange={([re, im]) => setB(cx(re, im))} />
+      <ComplexInput label={isPlane ? 'a (probe)' : isCurve ? 'a (place)' : 'a'} value={[a.re, a.im]} onChange={([re, im]) => setA(cx(re, im))} />
+      <ComplexInput label={isPlane ? 'b (the map)' : isCurve ? 'b (× or +)' : 'b'} value={[b.re, b.im]} onChange={([re, im]) => setB(cx(re, im))} />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 4 }}>
-        {isCurve
-          ? <>Drag <b style={{ color: A_COL }}>a</b> to place the shape, <b style={{ color: B_COL }}>b</b> to set the constant.</>
-          : <>Or just drag the <b style={{ color: A_COL }}>a</b> and <b style={{ color: B_COL }}>b</b> handles on the plane.</>}
+        {isPlane
+          ? <>Drag <b style={{ color: B_COL }}>b</b> to set the map <code>z ↦ z {op} b</code>; <b style={{ color: A_COL }}>a</b> is one number watched riding along.</>
+          : isCurve
+            ? <>Drag <b style={{ color: A_COL }}>a</b> to place the shape, <b style={{ color: B_COL }}>b</b> to set the constant.</>
+            : <>Or just drag the <b style={{ color: A_COL }}>a</b> and <b style={{ color: B_COL }}>b</b> handles on the plane.</>}
       </div>
     </>
   );
@@ -184,18 +203,22 @@ export default function Argand() {
         value={t} min={0} max={1} step={0.001}
         onChange={v => { setPlaying(false); setT(v); }} format={v => v.toFixed(2)} />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 6 }}>
-        {isCurve
-          ? 'Loop: shape → image → point (collapse) → image → shape. Play paces it by path length.'
-          : mode === 'multiply'
-            ? 'Multiplication spirals: angle swings by arg b, length scales by |b| — paced by arc length so it matches Add.'
-            : 'Addition slides: a moves tip-to-tail along b.'}
+        {isPlane
+          ? mode === 'multiply'
+            ? 'The whole grid rotates and scales by b about the origin — multiply is one similarity of the plane. The faint grid is the identity it came from.'
+            : 'The whole grid slides rigidly by b — addition is a translation of the plane.'
+          : isCurve
+            ? 'Loop: shape → image → point (collapse) → image → shape. Play paces it by path length.'
+            : mode === 'multiply'
+              ? 'Multiplication spirals: angle swings by arg b, length scales by |b| — paced by arc length so it matches Add.'
+              : 'Addition slides: a moves tip-to-tail along b.'}
       </div>
     </>
   );
 
   const combineNode = (
     <>
-      {!isCurve && (
+      {!isCurve && !isPlane && (
         <Checkbox
           label={mode === 'multiply' ? 'Show both orders (a·b = b·a)' : 'Show both orders (parallelogram)'}
           checked={showSecondRoute}

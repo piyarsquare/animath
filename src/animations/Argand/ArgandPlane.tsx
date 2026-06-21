@@ -5,7 +5,7 @@ import {
 } from './complexOps';
 
 export type Mode = 'multiply' | 'add';
-export type Subject = 'number' | 'curve';
+export type Subject = 'number' | 'curve' | 'plane';
 
 /** Handle / result colors — chosen to read on both light and dark viz-bg skins. */
 const A_COL = '#38bdf8';   // a — cyan
@@ -62,6 +62,7 @@ export default function ArgandPlane({
   a, b, mode, subject, curve, t, playing, showSecondRoute, snapping, showGrid, showUnitCircle, extent, onChange, onZoom,
 }: Props) {
   const isCurve = subject === 'curve';
+  const isPlane = subject === 'plane';
   // The moving marker/sweep appears only while in motion (playing) or when the
   // user has parked the scrub mid-path; at rest (t at an endpoint) only the full
   // arc shows — the static "story" Dan asked to always be complete.
@@ -213,6 +214,20 @@ export default function ArgandPlane({
   const yLines: number[] = [];
   for (let i = Math.ceil(center.im - extent); i <= Math.floor(center.im + extent); i++) yLines.push(i);
 
+  // Plane subject: a complete origin-centered lattice whose endpoints we map by
+  // the (linear) operation. Because z↦z·b and z↦z+b are linear, straight grid
+  // lines stay straight — so transforming the two endpoints is exact and cheap.
+  const GN = Math.ceil(extent) + 2;
+  const gridIdx: number[] = [];
+  for (let i = -GN; i <= GN; i++) gridIdx.push(i);
+  const gridLine = (i: number, horizontal: boolean, s: number): string => {
+    const p0 = horizontal ? cx(-GN, i) : cx(i, -GN);
+    const p1 = horizontal ? cx(GN, i) : cx(i, GN);
+    const [x1, y1] = toV(imageAt(p0, s));
+    const [x2, y2] = toV(imageAt(p1, s));
+    return `M ${x1.toFixed(1)} ${y1.toFixed(1)} L ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+  };
+
   const [oVx, oVy] = toV(cx(0, 0));
   const va = toV(a), vb = toV(b), vr = toV(result);
 
@@ -281,8 +296,29 @@ export default function ArgandPlane({
           <text x={oVx + 10} y={28} fontSize={26} fill="currentColor" fillOpacity={0.5}>i</text>
           <text x={VIRT - 22} y={oVy - 12} fontSize={26} fill="currentColor" fillOpacity={0.5}>Re</text>
 
+          {/* ---- PLANE subject: the whole coordinate grid morphs by the op ---- */}
+          {isPlane && (
+            <>
+              {/* the live morphed grid (z ↦ z·bᵗ spirals every line; z+t·b slides
+                  it rigidly). The faint identity grid above is the ghost it came
+                  from — so you see "multiply by b" rotate-and-scale the plane. */}
+              <g stroke={R_COL} strokeOpacity={0.5} strokeWidth={2} fill="none">
+                {gridIdx.map(i => <path key={`pv${i}`} d={gridLine(i, false, t)} />)}
+                {gridIdx.map(i => <path key={`ph${i}`} d={gridLine(i, true, t)} />)}
+              </g>
+              {/* the probe number a riding the morph: its honest route + marker */}
+              <path d={sampleRoute(true)} fill="none" stroke={A_COL}
+                strokeOpacity={0.7} strokeWidth={3} strokeDasharray="2 7" strokeLinecap="round" />
+              <line x1={oVx} y1={oVy} x2={vb[0]} y2={vb[1]} stroke={B_COL} strokeWidth={4} markerEnd="url(#ah-b)" />
+              <circle cx={mover1[0]} cy={mover1[1]} r={10} fill={A_COL} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
+              <text x={mover1[0] + 12} y={mover1[1] - 10} fontSize={22} fill={A_COL}>
+                {mode === 'multiply' ? 'a·bᵗ' : 'a+tb'}
+              </text>
+            </>
+          )}
+
           {/* ---- NUMBER subject: a ∘ b with the construction routes ---- */}
-          {!isCurve && (
+          {!isCurve && !isPlane && (
             <>
               {/* angle wedges (multiply): arg a, then arg b on top, to show angles add */}
               {mode === 'multiply' && (

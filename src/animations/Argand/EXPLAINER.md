@@ -39,6 +39,21 @@ the shape spirals to its image (the **point** acting on the **shape**, `q·bᵗ`
 entire shape **collapses onto the point `b`** and grows back out (the **shape** acting on
 the **point**, `b·qᵗ`) — two different motions, the same product `q·b = b·q`.
 
+## The whole plane moves (Curve → Plane)
+
+Switch **Transform a** to **Plane**: now the entire integer grid is the subject. Drag
+`b` and the whole grid morphs by the map `z ↦ z·b` (or `z + b`). The faint grid left
+behind is the **identity** — the plane before the map — so you can see exactly what
+moved. Your number `a` rides along as a labeled probe, tying this back to the first
+chapter: *what multiply-by-`b` does to `a` is the same thing it does to every point at
+once.*
+
+Because multiply and add are **linear**, straight grid lines stay straight: **multiply**
+is a single rotation-and-scaling (a *similarity*) of the whole plane about the origin,
+and **add** is a rigid translation. This is the bridge to a *function* deforming the
+plane — when the map stops being linear, those grid lines start to curve (the next
+tool's territory).
+
 ## Commutativity
 
 Turn on **Show both orders**. In Multiply you get two spirals — `a` rotated-and-scaled
@@ -68,5 +83,6 @@ something you can *see*. In Add it's the parallelogram.
   Analysis*) develops the spiral picture far further.
 - 3Blue1Brown's "What is Euler's formula" and "Imaginary numbers are real" video
   series are close visual analogues to this app's intent.
-- Next chapters of this tool extend the same idea from two numbers to **whole curves**
-  and then to a **function deforming the entire plane**.
+- This tool extends the same idea from two numbers to **whole curves** to the **entire
+  coordinate plane** (the Plane chapter); the next step is a *nonlinear* function, where
+  the grid lines finally bend — the territory of the Plane Transform tool.
