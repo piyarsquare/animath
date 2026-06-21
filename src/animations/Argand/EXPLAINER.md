@@ -50,10 +50,11 @@ fixed point flies off to infinity (shown as “—”).
   motion, over the faint **identity** grid it came from. (When `f` later becomes
   *non-linear*, those lines will bend — the runway to quadratics and beyond.)
 
-## Three number systems (the System panel)
+## Three number systems (top bar)
 
-Slide **`p = j²`** from **Complex** (`p<0`) through **Dual** (`p=0`) to **Split-complex**
-(`p>0`). Only the *sign* matters, and the same multiply-by-`α₁` becomes:
+Slide **`p = j²`** in the **top bar** (or tap **Complex / Dual / Split**) from **Complex**
+(`p<0`) through **Dual** (`p=0`) to **Split-complex** (`p>0`). Only the *sign* matters,
+and the same multiply-by-`α₁` becomes:
 
 - a **rotation** about the origin (complex — orbits are circles),
 - a **shear** (dual — the degenerate knife-edge; orbits are lines), or

@@ -14,8 +14,6 @@ export const A0_COL = '#c084fc';  // α₀ — shift / intercept (violet)
 export const F_COL = '#34d399';   // f(z) — output (emerald)
 export const FIX_COL = '#fbbf24'; // z* — fixed point (gold)
 
-const VIRT = 1000;         // virtual viewBox side
-const C = VIRT / 2;        // origin in virtual coords
 const MARGIN = 0.9;        // keep the extent inside the frame
 
 interface Props {
@@ -45,22 +43,22 @@ interface Props {
   onZoom?: (factor: number) => void;
 }
 
-/** Track the largest inscribed square of the view body (the SVG is square). */
-function useSquareSize(ref: React.RefObject<HTMLDivElement>) {
-  const [side, setSide] = useState(0);
+/** Track the pixel size of the view body so the SVG fills the whole rectangle. */
+function useSize(ref: React.RefObject<HTMLDivElement>) {
+  const [size, setSize] = useState({ w: 0, h: 0 });
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const update = () => {
       const r = el.getBoundingClientRect();
-      setSide(Math.max(0, Math.floor(Math.min(r.width, r.height))));
+      setSize({ w: Math.max(0, Math.floor(r.width)), h: Math.max(0, Math.floor(r.height)) });
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
   }, [ref]);
-  return side;
+  return size;
 }
 
 export default function ArgandPlane({
@@ -75,7 +73,7 @@ export default function ArgandPlane({
   const wrapRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<Handle | null>(null);
-  const side = useSquareSize(wrapRef);
+  const { w, h } = useSize(wrapRef);
 
   // Pan offset: the math point shown at the middle of the view. Transient.
   const [center, setCenter] = useState<Cx>(cx(0, 0));
@@ -85,22 +83,25 @@ export default function ArgandPlane({
   const gesture = useRef<{ dist: number; mx: number; my: number } | null>(null);
   const panning = useRef<{ x: number; y: number } | null>(null);
 
-  const k = (C * MARGIN) / extent;                 // math → virtual scale
+  // Equal x/y scale (circles stay circles) from the SHORTER side, so `extent`
+  // units fit there and the longer side simply shows more — the plot fills the
+  // whole rectangle instead of an inscribed square.
+  const k = ((Math.min(w, h) / 2) * MARGIN) / extent || 1;
   const toV = (q: Cx): [number, number] =>
-    [C + (q.re - center.re) * k, C - (q.im - center.im) * k];
+    [w / 2 + (q.re - center.re) * k, h / 2 - (q.im - center.im) * k];
 
   const toMath = (clientX: number, clientY: number): Cx => {
     const r = svgRef.current!.getBoundingClientRect();
-    const s = VIRT / (r.width || 1);
-    const fx = (clientX - r.left) * s;
-    const fy = (clientY - r.top) * s;
-    return cx((fx - C) / k + center.re, -(fy - C) / k + center.im);
+    const sx = w / (r.width || 1), sy = h / (r.height || 1);
+    const fx = (clientX - r.left) * sx;
+    const fy = (clientY - r.top) * sy;
+    return cx((fx - w / 2) / k + center.re, -(fy - h / 2) / k + center.im);
   };
 
   const panByClient = (dxpx: number, dypx: number) => {
     const r = svgRef.current?.getBoundingClientRect();
-    const s = VIRT / (r?.width || 1);
-    setCenter(c => cx(c.re - (dxpx * s) / k, c.im + (dypx * s) / k));
+    const sx = w / (r?.width || 1), sy = h / (r?.height || 1);
+    setCenter(c => cx(c.re - (dxpx * sx) / k, c.im + (dypx * sy) / k));
   };
 
   const startGesture = () => {
@@ -207,15 +208,21 @@ export default function ArgandPlane({
   // Shape feed: the base shape anchored at z, and its image under f.
   const placed = curve.map(pt => add(pt, z));
 
+  // Visible half-spans in math units (the rectangle can show more than `extent`
+  // along its longer side).
+  const halfX = w > 0 ? (w / 2) / k : extent;
+  const halfY = h > 0 ? (h / 2) / k : extent;
+
   // Integer grid lines (ghost identity grid, panning with center).
   const xLines: number[] = [];
-  for (let i = Math.ceil(center.re - extent); i <= Math.floor(center.re + extent); i++) xLines.push(i);
+  for (let i = Math.ceil(center.re - halfX); i <= Math.floor(center.re + halfX); i++) xLines.push(i);
   const yLines: number[] = [];
-  for (let i = Math.ceil(center.im - extent); i <= Math.floor(center.im + extent); i++) yLines.push(i);
+  for (let i = Math.ceil(center.im - halfY); i <= Math.floor(center.im + halfY); i++) yLines.push(i);
 
   // Grid feed: a complete origin-centered lattice mapped by f at param s. Affine
   // ⇒ straight lines stay straight, so mapping the two endpoints is exact.
-  const GN = Math.ceil(extent) + 2;
+  const reach = Math.max(halfX, halfY) + Math.abs(center.re) + Math.abs(center.im) + 2;
+  const GN = Math.ceil(reach);
   const gridIdx: number[] = [];
   for (let i = -GN; i <= GN; i++) gridIdx.push(i);
   const gridEnds = (i: number, horizontal: boolean): [Cx, Cx] =>
@@ -245,21 +252,22 @@ export default function ArgandPlane({
     if (p < 0) return <ellipse cx={oVx} cy={oVy} rx={k} ry={k / Math.sqrt(-p)} {...st} />;
     if (p === 0) {
       const [xp] = toV(cx(1, 0)); const [xm] = toV(cx(-1, 0));
-      return <g {...st}><line x1={xp} y1={0} x2={xp} y2={VIRT} /><line x1={xm} y1={0} x2={xm} y2={VIRT} /></g>;
+      return <g {...st}><line x1={xp} y1={0} x2={xp} y2={h} /><line x1={xm} y1={0} x2={xm} y2={h} /></g>;
     }
-    const w = Math.sqrt(p);
+    const wp = Math.sqrt(p);
+    const sMax = Math.asinh(reach * wp) + 0.5;
     const branch = (sign: number): string => {
       const pts: string[] = [];
-      for (let i = 0; i <= 40; i++) {
-        const s = -2.6 + (5.2 * i) / 40;
-        const [vx, vy] = toV(cx(sign * Math.cosh(s), Math.sinh(s) / w));
+      for (let i = 0; i <= 48; i++) {
+        const s = -sMax + (2 * sMax * i) / 48;
+        const [vx, vy] = toV(cx(sign * Math.cosh(s), Math.sinh(s) / wp));
         pts.push(`${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`);
       }
       return pts.join(' ');
     };
     const asym = (sign: number): string => {
-      const [x1, y1] = toV(cx(sign * w * extent * 1.4, extent * 1.4));
-      const [x2, y2] = toV(cx(-sign * w * extent * 1.4, -extent * 1.4));
+      const [x1, y1] = toV(cx(sign * wp * reach, reach));
+      const [x2, y2] = toV(cx(-sign * wp * reach, -reach));
       return `M ${x1.toFixed(1)} ${y1.toFixed(1)} L ${x2.toFixed(1)} ${y2.toFixed(1)}`;
     };
     return (
@@ -297,17 +305,16 @@ export default function ArgandPlane({
       ref={wrapRef}
       style={{
         position: 'absolute', inset: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: 'var(--viz-bg, #0c0c10)', overflow: 'hidden',
         touchAction: 'none',
       }}
     >
-      {side > 0 && (
+      {w > 0 && h > 0 && (
         <svg
           ref={svgRef}
-          width={side}
-          height={side}
-          viewBox={`0 0 ${VIRT} ${VIRT}`}
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
           style={{ display: 'block', color: 'var(--fg, #e8e8ee)', fontFamily: 'var(--font-mono, monospace)' }}
           onPointerDown={onRootDown}
           onPointerMove={onMove}
@@ -329,8 +336,8 @@ export default function ArgandPlane({
           {/* ghost identity grid (the unchanged plane) */}
           {showGrid && (
             <g stroke="currentColor" strokeOpacity={0.18} strokeWidth={1.5}>
-              {xLines.filter(i => i !== 0).map(i => { const [vx] = toV(cx(i, 0)); return <line key={`x${i}`} x1={vx} y1={0} x2={vx} y2={VIRT} />; })}
-              {yLines.filter(i => i !== 0).map(i => { const [, vy] = toV(cx(0, i)); return <line key={`y${i}`} x1={0} y1={vy} x2={VIRT} y2={vy} />; })}
+              {xLines.filter(i => i !== 0).map(i => { const [vx] = toV(cx(i, 0)); return <line key={`x${i}`} x1={vx} y1={0} x2={vx} y2={h} />; })}
+              {yLines.filter(i => i !== 0).map(i => { const [, vy] = toV(cx(0, i)); return <line key={`y${i}`} x1={0} y1={vy} x2={w} y2={vy} />; })}
             </g>
           )}
 
@@ -339,11 +346,11 @@ export default function ArgandPlane({
 
           {/* axes */}
           <g stroke="currentColor" strokeOpacity={0.45} strokeWidth={2}>
-            <line x1={0} y1={oVy} x2={VIRT} y2={oVy} />
-            <line x1={oVx} y1={0} x2={oVx} y2={VIRT} />
+            <line x1={0} y1={oVy} x2={w} y2={oVy} />
+            <line x1={oVx} y1={0} x2={oVx} y2={h} />
           </g>
           <text x={oVx + 10} y={28} fontSize={26} fill="currentColor" fillOpacity={0.5}>i</text>
-          <text x={VIRT - 22} y={oVy - 12} fontSize={26} fill="currentColor" fillOpacity={0.5}>Re</text>
+          <text x={w - 26} y={oVy - 12} fontSize={26} fill="currentColor" fillOpacity={0.5}>Re</text>
 
           {/* ---- GRID feed: the whole coordinate grid mapped by f ---- */}
           {isGrid && (

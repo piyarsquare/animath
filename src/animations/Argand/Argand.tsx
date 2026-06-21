@@ -295,6 +295,31 @@ export default function Argand() {
     },
   ];
 
+  // Always-on top-bar control: morph the number system complex ↔ split, with
+  // one-tap snaps to each — reachable without opening the System panel.
+  const sysSnap = (label: string, val: number) => (
+    <button
+      onClick={() => setSystem(val)}
+      style={{
+        padding: '3px 7px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+        border: '1px solid var(--cp-border, #3a3a44)',
+        background: Math.abs(system - val) < 0.001 ? 'var(--accent, #34d399)' : 'transparent',
+        color: Math.abs(system - val) < 0.001 ? '#0c0c10' : 'var(--fg, #e8e8ee)',
+      }}
+    >{label}</button>
+  );
+  const systemTopExtra = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }} title={systemName(system)}>
+      <span style={{ fontSize: 12, color: 'var(--fg-dim, #9b9ba3)', fontFamily: 'var(--font-mono, monospace)' }}>j²</span>
+      <input type="range" min={-1} max={1} step={0.05} value={system}
+        onChange={e => setSystem(parseFloat(e.target.value))}
+        style={{ width: 110, accentColor: 'var(--accent, #34d399)' }} />
+      <div style={{ display: 'flex', gap: 3 }}>
+        {sysSnap('Complex', -1)}{sysSnap('Dual', 0)}{sysSnap('Split', 1)}
+      </div>
+    </div>
+  );
+
   const layouts: LayoutDef[] = [
     {
       id: 'essentials', name: 'Essentials', sub: 'Function · Play · Values', icon: 'tune',
@@ -320,6 +345,8 @@ export default function Argand() {
       subtitle={subtitle}
       sections={sections}
       views={views}
+      immersive
+      topExtra={systemTopExtra}
       layouts={layouts}
       defaultLayoutId="essentials"
       explainer={explainerText || null}
