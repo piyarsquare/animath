@@ -282,19 +282,19 @@ export default function ArgandPlane({
   // Draggable handle glyph (a distinct shape per role; a ring marks a lock).
   const handleGlyph = (which: Handle, q: Cx, col: string, shape: 'circle' | 'diamond' | 'square', isLocked: boolean) => {
     const [vx, vy] = toV(q);
-    const r = 13;
+    const r = 10;
     const body = shape === 'circle'
-      ? <circle cx={vx} cy={vy} r={r} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={3} />
+      ? <circle cx={vx} cy={vy} r={r} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2.5} />
       : shape === 'diamond'
-        ? <rect x={vx - r} y={vy - r} width={r * 2} height={r * 2} transform={`rotate(45 ${vx} ${vy})`} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={3} />
-        : <rect x={vx - r} y={vy - r} width={r * 2} height={r * 2} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={3} />;
+        ? <rect x={vx - r} y={vy - r} width={r * 2} height={r * 2} transform={`rotate(45 ${vx} ${vy})`} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2.5} />
+        : <rect x={vx - r} y={vy - r} width={r * 2} height={r * 2} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2.5} />;
     const label = which === 'z' ? 'z' : which === 'alpha1' ? 'α₁' : 'α₀';
     return (
       <g key={which} style={{ cursor: isLocked ? 'default' : 'grab' }} onPointerDown={onHandleDown(which)}>
-        {!isLocked && <circle cx={vx} cy={vy} r={30} fill="transparent" />}
+        {!isLocked && <circle cx={vx} cy={vy} r={28} fill="transparent" />}
         {body}
-        {isLocked && <circle cx={vx} cy={vy} r={r + 5} fill="none" stroke={col} strokeOpacity={0.6} strokeWidth={2} strokeDasharray="3 3" />}
-        <text x={vx + 17} y={vy - 13} fontSize={24} fill={col} fontWeight={700}
+        {isLocked && <circle cx={vx} cy={vy} r={r + 4} fill="none" stroke={col} strokeOpacity={0.6} strokeWidth={2} strokeDasharray="3 3" />}
+        <text x={vx + 13} y={vy - 11} fontSize={19} fill={col} fontWeight={700}
           style={{ pointerEvents: 'none', userSelect: 'none' }}>{label}</text>
       </g>
     );
@@ -349,8 +349,8 @@ export default function ArgandPlane({
             <line x1={0} y1={oVy} x2={w} y2={oVy} />
             <line x1={oVx} y1={0} x2={oVx} y2={h} />
           </g>
-          <text x={oVx + 10} y={28} fontSize={26} fill="currentColor" fillOpacity={0.5}>i</text>
-          <text x={w - 26} y={oVy - 12} fontSize={26} fill="currentColor" fillOpacity={0.5}>Re</text>
+          <text x={oVx + 9} y={26} fontSize={21} fill="currentColor" fillOpacity={0.5}>i</text>
+          <text x={w - 24} y={oVy - 11} fontSize={21} fill="currentColor" fillOpacity={0.5}>Re</text>
 
           {/* ---- GRID feed: the whole coordinate grid mapped by f ---- */}
           {isGrid && (
@@ -407,16 +407,16 @@ export default function ArgandPlane({
               <path d={legPath(z, 1)} fill="none" stroke={A0_COL} strokeOpacity={0.85} strokeWidth={3} strokeDasharray="2 6" strokeLinecap="round" />
               {/* the ×α₁ waypoint */}
               {(() => { const [wx, wy] = toV(mulG(alpha1, z, p)); return (
-                <circle cx={wx} cy={wy} r={6} fill={A1_COL} fillOpacity={0.8} />
+                <circle cx={wx} cy={wy} r={5} fill={A1_COL} fillOpacity={0.8} />
               ); })()}
               {/* the moving point (around the closed loop) */}
               {showMover && (() => { const [mx, my] = toV(affineLoopAt(z, alpha1, alpha0, p, t)); return (
-                <circle cx={mx} cy={my} r={9} fill={F_COL} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
+                <circle cx={mx} cy={my} r={7} fill={F_COL} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
               ); })()}
               {/* the output f(z) */}
               {(() => { const [fx, fy] = toV(fOf(z)); return <>
-                <circle cx={fx} cy={fy} r={7} fill={F_COL} />
-                <text x={fx + 12} y={fy - 10} fontSize={22} fill={F_COL}>f(z)</text>
+                <circle cx={fx} cy={fy} r={6} fill={F_COL} />
+                <text x={fx + 10} y={fy - 9} fontSize={18} fill={F_COL}>f(z)</text>
               </>; })()}
             </>
           )}
@@ -424,9 +424,9 @@ export default function ArgandPlane({
           {/* ---- the fixed point z* (where f(z*) = z*) ---- */}
           {zStar && (() => { const [sx, sy] = toV(zStar); return (
             <g>
-              <circle cx={sx} cy={sy} r={8} fill="none" stroke={FIX_COL} strokeWidth={2.5} />
-              <circle cx={sx} cy={sy} r={2.5} fill={FIX_COL} />
-              <text x={sx + 11} y={sy + 24} fontSize={20} fill={FIX_COL}>z*</text>
+              <circle cx={sx} cy={sy} r={6.5} fill="none" stroke={FIX_COL} strokeWidth={2} />
+              <circle cx={sx} cy={sy} r={2} fill={FIX_COL} />
+              <text x={sx + 9} y={sy + 20} fontSize={16} fill={FIX_COL}>z*</text>
             </g>
           ); })()}
 

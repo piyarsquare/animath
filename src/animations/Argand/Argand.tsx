@@ -275,6 +275,40 @@ export default function Argand() {
     else setA0(q);
   };
 
+  // The number-system control lives as a floating pill pinned bottom-center of
+  // the plot (just above the Play action pill) — a persistent home that, unlike
+  // the top bar, never competes for space and survives fullscreen.
+  const sysSnap = (label: string, val: number) => (
+    <button
+      onClick={() => setSystem(val)}
+      style={{
+        padding: '3px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+        border: '1px solid var(--border, #3a3a44)',
+        background: Math.abs(system - val) < 0.001 ? 'var(--accent, #34d399)' : 'transparent',
+        color: Math.abs(system - val) < 0.001 ? 'var(--accent-fg, #0c0c10)' : 'var(--fg, #e8e8ee)',
+      }}
+    >{label}</button>
+  );
+  const systemControl = (
+    <div
+      style={{
+        position: 'absolute', left: '50%', bottom: 66, transform: 'translateX(-50%)',
+        display: 'flex', alignItems: 'center', gap: 8, zIndex: 6,
+        padding: '6px 12px', borderRadius: 999, whiteSpace: 'nowrap',
+        background: 'var(--panel, rgba(18,18,24,0.92))', border: '1px solid var(--border, #3a3a44)',
+        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: 'var(--shadow)',
+        fontFamily: 'var(--font-mono, monospace)',
+      }}
+      title={systemName(system)}
+    >
+      <span style={{ fontSize: 11, color: 'var(--dim, #9b9ba3)' }}>j²</span>
+      <input type="range" min={-1} max={1} step={0.05} value={system}
+        onChange={e => setSystem(parseFloat(e.target.value))}
+        style={{ width: 96, accentColor: 'var(--accent, #34d399)' }} />
+      {sysSnap('Complex', -1)}{sysSnap('Dual', 0)}{sysSnap('Split', 1)}
+    </div>
+  );
+
   const views: ViewDef[] = [
     {
       id: 'plane',
@@ -282,43 +316,21 @@ export default function Argand() {
       defaultRect: { x: 320, y: 16, w: 660, h: 600 },
       hint: 'drag z · α₁ · α₀ · pinch or scroll to zoom · two-finger or shift-drag to pan · double-click to recenter',
       node: (
-        <ArgandPlane
-          z={z} alpha1={alpha1} alpha0={alpha0} p={system}
-          feed={feed} curve={curve} t={t} playing={playing}
-          lockA1={lockA1} lockA0={lockA0}
-          snapping={snapping} showGrid={showGrid} showUnitCircle={showUnitCircle}
-          extent={extent}
-          onChange={onHandleChange}
-          onZoom={f => setExtent(e => Math.min(16, Math.max(1, e * f)))}
-        />
+        <div style={{ position: 'absolute', inset: 0 }}>
+          <ArgandPlane
+            z={z} alpha1={alpha1} alpha0={alpha0} p={system}
+            feed={feed} curve={curve} t={t} playing={playing}
+            lockA1={lockA1} lockA0={lockA0}
+            snapping={snapping} showGrid={showGrid} showUnitCircle={showUnitCircle}
+            extent={extent}
+            onChange={onHandleChange}
+            onZoom={f => setExtent(e => Math.min(16, Math.max(1, e * f)))}
+          />
+          {systemControl}
+        </div>
       ),
     },
   ];
-
-  // Always-on top-bar control: morph the number system complex ↔ split, with
-  // one-tap snaps to each — reachable without opening the System panel.
-  const sysSnap = (label: string, val: number) => (
-    <button
-      onClick={() => setSystem(val)}
-      style={{
-        padding: '3px 7px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-        border: '1px solid var(--cp-border, #3a3a44)',
-        background: Math.abs(system - val) < 0.001 ? 'var(--accent, #34d399)' : 'transparent',
-        color: Math.abs(system - val) < 0.001 ? '#0c0c10' : 'var(--fg, #e8e8ee)',
-      }}
-    >{label}</button>
-  );
-  const systemTopExtra = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }} title={systemName(system)}>
-      <span style={{ fontSize: 12, color: 'var(--fg-dim, #9b9ba3)', fontFamily: 'var(--font-mono, monospace)' }}>j²</span>
-      <input type="range" min={-1} max={1} step={0.05} value={system}
-        onChange={e => setSystem(parseFloat(e.target.value))}
-        style={{ width: 110, accentColor: 'var(--accent, #34d399)' }} />
-      <div style={{ display: 'flex', gap: 3 }}>
-        {sysSnap('Complex', -1)}{sysSnap('Dual', 0)}{sysSnap('Split', 1)}
-      </div>
-    </div>
-  );
 
   const layouts: LayoutDef[] = [
     {
@@ -346,7 +358,6 @@ export default function Argand() {
       sections={sections}
       views={views}
       immersive
-      topExtra={systemTopExtra}
       layouts={layouts}
       defaultLayoutId="essentials"
       explainer={explainerText || null}
