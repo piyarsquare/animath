@@ -73,8 +73,9 @@ nothing *local* ever happened. You didn't flip *somewhere*; you came back mirror
 The **View** panel has a **Decor** switch. *Diagnostic* is the proof-of-the-math
 scene: neutral landmark props and the FRONT/BACK sign, sized so a copy and its
 mirror are obvious. *Rooms* instead furnishes the fundamental cube as a
-**recognizable room** — a rug, a desk with a lamp, a fireplace, a bookshelf, a
-wardrobe, a framed picture, a chandelier, a Hello sign — inside **walls that are solid but faintly
+**recognizable room** — a rug, a desk with a lamp, a fireplace, a bookshelf
+(with a potted plant and a little glass Klein bottle), a wardrobe, a framed
+picture, a chandelier, a Hello sign — inside **walls that are solid but faintly
 translucent** (a hint of the surrounding copies glows through), where the
 connections between rooms happen at **archways**: each wall has one archway, the
 floor and ceiling a hole, all placed **off-center** — plus a steel-framed

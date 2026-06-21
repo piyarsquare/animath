@@ -47,6 +47,43 @@ export interface DecorBuildContext {
 // without the busy arrows.
 const WALL_TINT: Record<Axis, number> = { x: 0x6f5a54, y: 0x566b5d, z: 0x556071 };
 
+/**
+ * A small **Klein bottle** ornament — the classic immersed "bottle" (the neck
+ * dives through the wall and reopens into the base). Sampled from the standard
+ * figure-of-the-bottle immersion, then normalized to unit max-dimension and
+ * centered at the origin, so the caller just scales + places it.
+ */
+function kleinBottleGeometry(seg = 44): THREE.BufferGeometry {
+  const pos: number[] = [], idx: number[] = [];
+  const P = (u: number, v: number): [number, number, number] => {
+    const cu = Math.cos(u), su = Math.sin(u), cv = Math.cos(v), sv = Math.sin(v);
+    const x = -2 / 15 * cu * (3 * cv - 30 * su + 90 * cu ** 4 * su - 60 * cu ** 6 * su + 5 * cu * cv * su);
+    const y = -1 / 15 * su * (3 * cv - 3 * cv * cu ** 2 - 48 * cv * cu ** 4 + 48 * cv * cu ** 6
+      - 60 * su + 5 * cu * cv * su - 5 * cu ** 3 * cv * su - 80 * cu ** 5 * cv * su + 80 * cu ** 7 * cv * su);
+    const z = 2 / 15 * (3 + 5 * cu * su) * sv;
+    return [x, y, z];
+  };
+  for (let i = 0; i <= seg; i++) for (let j = 0; j <= seg; j++) {
+    const [x, y, z] = P(i / seg * 2 * Math.PI, j / seg * 2 * Math.PI); pos.push(x, y, z);
+  }
+  const row = seg + 1;
+  for (let i = 0; i < seg; i++) for (let j = 0; j < seg; j++) {
+    const a = i * row + j, b = (i + 1) * row + j, c = (i + 1) * row + j + 1, d = i * row + j + 1;
+    idx.push(a, b, d, b, c, d);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeBoundingBox();
+  const bb = g.boundingBox!;
+  const size = new THREE.Vector3(); bb.getSize(size);
+  const ctr = new THREE.Vector3(); bb.getCenter(ctr);
+  g.translate(-ctr.x, -ctr.y, -ctr.z);
+  g.scale(1 / Math.max(size.x, size.y, size.z), 1 / Math.max(size.x, size.y, size.z), 1 / Math.max(size.x, size.y, size.z));
+  g.computeVertexNormals();
+  return g;
+}
+
 export function buildRoomsDecor(ctx: DecorBuildContext) {
   const { U: u, h, mesh, std, localM, addDisposable, wallOpacity, onWallMaterial } = ctx;
   const H = h, F = -h;
@@ -249,22 +286,54 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
   }
 
   // ── bookshelf on the +z wall, toward −x (clear of the +x arch; tucked under the
-  // ceiling duct) — furnishes the back wall and doubles as a landmark ────────────
+  // ceiling duct). An OPEN case — back + sides + top/bottom + shelf boards — whose
+  // open front faces the room (−z), so the books, a plant, and a small glass Klein
+  // bottle on the shelves read from inside the room. ────────────────────────────
   {
-    const z0 = h - u * 0.08, bx = -u * 0.16, w = u * 0.5, d = u * 0.14;
-    box(w, u * 0.72, d, woodDark, bx, F + u * 0.36, z0);                       // case
-    for (let i = 0; i < 4; i++) box(w * 0.9, u * 0.015, d * 0.8, wood, bx, F + u * 0.08 + i * u * 0.19, z0); // shelves
+    const bx = -u * 0.16, z0 = h - u * 0.1;                 // center; back panel toward +z wall
+    const w = u * 0.5, dep = u * 0.18, ht = u * 0.8, baseY = F + u * 0.4, t = u * 0.02;
+    const zBack = z0 + dep / 2 - t / 2;                     // back panel, toward the wall
+    const zFront = z0 - dep / 2;                            // open mouth, toward the room
+    box(w, ht, t, woodDark, bx, baseY, zBack);                                   // back
+    box(t, ht, dep, woodDark, bx - w / 2 + t / 2, baseY, z0);                    // left side
+    box(t, ht, dep, woodDark, bx + w / 2 - t / 2, baseY, z0);                    // right side
+    box(w, t, dep, woodDark, bx, baseY + ht / 2 - t / 2, z0);                    // top
+    box(w, t, dep, woodDark, bx, baseY - ht / 2 + t / 2, z0);                    // bottom
+    const shelfY = (k: number) => F + t + k * u * 0.19;
+    for (let k = 1; k < 4; k++) box(w - 2 * t, t, dep - t, wood, bx, shelfY(k), z0); // boards (k=0 is the bottom panel)
+    // books — spines toward the open front; shelves 1 & 2 stop short on the right
+    // to make room for the plant and the Klein bottle.
     const bookMats = [0x9c3b34, 0x3a6ea5, 0x4f8a4f, 0xb0904a, 0x6b4a8a, 0x7a5a3a].map((c) => std(c));
     const bws = [0.030, 0.022, 0.034, 0.026, 0.030, 0.024, 0.032];
     const bhs = [0.150, 0.130, 0.160, 0.140, 0.155, 0.135, 0.145];
-    for (let i = 0; i < 4; i++) {
-      const shelfY = F + u * 0.08 + i * u * 0.19;
-      let x = bx - w * 0.42, j = i;
-      while (x < bx + w * 0.40) {
+    const bd = dep * 0.6, bookZ = zFront + bd / 2 + u * 0.012;
+    const xLeft = bx - w / 2 + t + u * 0.012;
+    for (let k = 0; k < 4; k++) {
+      const sy = shelfY(k), xEnd = (k === 1 || k === 2) ? bx + w * 0.04 : bx + w / 2 - t - u * 0.012;
+      let x = xLeft, j = k;
+      while (x < xEnd) {
         const bw = u * bws[j % bws.length], bh = u * bhs[j % bhs.length];
-        box(bw, bh, d * 0.62, bookMats[j % bookMats.length], x + bw / 2, shelfY + bh / 2 + u * 0.012, z0);
+        box(bw, bh, bd, bookMats[j % bookMats.length], x + bw / 2, sy + t / 2 + bh / 2, bookZ);
         x += bw + u * 0.004; j++;
       }
+    }
+    // potted plant on shelf 2 (right end)
+    {
+      const px = bx + w * 0.3, py = shelfY(2) + t / 2, pz = zFront + dep * 0.32;
+      cyl(u * 0.045, u * 0.032, u * 0.06, std(0x9a5a3e), px, py + u * 0.03, pz, 14);   // terracotta pot
+      const leaf = std(0x3f7d44);
+      for (const [dx, dy, dz, r] of [[0, 0.1, 0, 0.05], [-0.035, 0.07, 0.012, 0.036], [0.035, 0.075, -0.012, 0.036], [0, 0.145, 0, 0.032]] as const)
+        mesh(new THREE.SphereGeometry(u * r, 10, 8), leaf, localM(px + u * dx, py + u * dy, pz + u * dz));
+    }
+    // small glass Klein bottle on shelf 1 (right end)
+    {
+      const kx = bx + w * 0.3, ky = shelfY(1) + t / 2, kz = zFront + dep * 0.32, kScale = u * 0.17;
+      const kg = kleinBottleGeometry(); addDisposable(kg);
+      const km = new THREE.MeshStandardMaterial({ color: 0x9fd9e6, roughness: 0.2, metalness: 0.25, side: THREE.DoubleSide, emissive: 0x1b3640, emissiveIntensity: 0.5 });
+      addDisposable(km);
+      const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0.7, Math.PI / 2));
+      const M = new THREE.Matrix4().compose(new THREE.Vector3(kx, ky + kScale * 0.5, kz), q, new THREE.Vector3(kScale, kScale, kScale));
+      mesh(kg, km, M);
     }
   }
 

@@ -51,6 +51,20 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 04:20 — Bookshelf rebuilt (open front) + plant + Klein bottle
+**Why:** Dan's photo showed only the top row of books — the case was a solid
+block with shelves/books buried inside (only the top row overshot the lid), and
+it faced the wrong way. Asked for a plant and a Klein bottle on the shelf too.
+
+- Rebuilt as an **open case** (back + sides + top/bottom + shelf boards) whose
+  open mouth faces the room (−z); books sit on every shelf with spines toward the
+  front.
+- Added a **potted plant** (terracotta pot + foliage spheres) and a small **glass
+  Klein bottle** (`kleinBottleGeometry` — the classic immersion, normalized to
+  unit size) on the shelves, with the book rows stopping short to make room.
+
+Verified close-up: books on all shelves, plant, and a recognizable Klein bottle. Build green.
+
 ### 🟢 code · 03:55 — Duct to ceiling · back walls furnished · Hello sign
 **Why:** Dan: extend the duct to the ceiling; decorate the bare back walls; rename
 WELCOME → Hello.
