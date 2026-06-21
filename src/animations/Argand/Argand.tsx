@@ -41,7 +41,8 @@ export default function Argand() {
   const [lockA1, setLockA1] = usePersistentState(`${STORAGE_KEY}:lockA1`, false);
   const [lockA0, setLockA0] = usePersistentState(`${STORAGE_KEY}:lockA0`, false);
   const [snapping, setSnapping] = usePersistentState(`${STORAGE_KEY}:snap`, true);
-  const [showGrid, setShowGrid] = usePersistentState(`${STORAGE_KEY}:grid`, true);
+  const [gridOpacity, setGridOpacity] = usePersistentState(`${STORAGE_KEY}:gridOp`, 0.22);
+  const [imageOpacity, setImageOpacity] = usePersistentState(`${STORAGE_KEY}:imgOp`, 0.5);
   const [showUnitCircle, setShowUnitCircle] = usePersistentState(`${STORAGE_KEY}:unit`, true);
   const [extent, setExtent] = usePersistentState(`${STORAGE_KEY}:extent`, 4);
   // Number system: p = j². p<0 complex, p=0 dual, p>0 split-complex.
@@ -223,8 +224,11 @@ export default function Argand() {
     <>
       <Slider label="Extent (±)" value={extent} min={1} max={16} step={0.5}
         onChange={setExtent} format={v => v.toFixed(1)} />
-      <Checkbox label="Grid" checked={showGrid} onChange={setShowGrid} />
-      <Checkbox label="Unit circle" checked={showUnitCircle} onChange={setShowUnitCircle} />
+      <Slider label="Grid brightness" value={gridOpacity} min={0} max={0.6} step={0.02}
+        onChange={setGridOpacity} format={v => v === 0 ? 'off' : v.toFixed(2)} />
+      <Slider label="Image grid brightness" value={imageOpacity} min={0.1} max={1} step={0.05}
+        onChange={setImageOpacity} format={v => v.toFixed(2)} />
+      <Checkbox label="Unit curve" checked={showUnitCircle} onChange={setShowUnitCircle} />
       <Checkbox label="Snap to nice values (1, i, lattice, π/6…)" checked={snapping} onChange={setSnapping} />
     </>
   );
@@ -321,7 +325,7 @@ export default function Argand() {
             z={z} alpha1={alpha1} alpha0={alpha0} p={system}
             feed={feed} curve={curve} t={t} playing={playing}
             lockA1={lockA1} lockA0={lockA0}
-            snapping={snapping} showGrid={showGrid} showUnitCircle={showUnitCircle}
+            snapping={snapping} gridOpacity={gridOpacity} imageOpacity={imageOpacity} showUnitCircle={showUnitCircle}
             extent={extent}
             onChange={onHandleChange}
             onZoom={f => setExtent(e => Math.min(16, Math.max(1, e * f)))}
@@ -358,6 +362,9 @@ export default function Argand() {
       sections={sections}
       views={views}
       immersive
+      modes={[{ id: 'point', label: 'Point' }, { id: 'shape', label: 'Shape' }, { id: 'grid', label: 'Grid' }]}
+      activeMode={feed}
+      onModeChange={id => setFeed(id as Feed)}
       layouts={layouts}
       defaultLayoutId="essentials"
       explainer={explainerText || null}

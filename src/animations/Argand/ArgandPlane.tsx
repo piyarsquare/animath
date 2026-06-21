@@ -35,7 +35,10 @@ interface Props {
   lockA1: boolean;
   lockA0: boolean;
   snapping: boolean;
-  showGrid: boolean;
+  /** Ghost identity grid opacity (0 hides it). */
+  gridOpacity: number;
+  /** Mapped image-grid opacity (Grid feed). */
+  imageOpacity: number;
   showUnitCircle: boolean;
   /** Half-extent of the visible plane in math units. */
   extent: number;
@@ -62,7 +65,7 @@ function useSize(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function ArgandPlane({
-  z, alpha1, alpha0, p, feed, curve, t, playing, lockA1, lockA0, snapping, showGrid, showUnitCircle, extent, onChange, onZoom,
+  z, alpha1, alpha0, p, feed, curve, t, playing, lockA1, lockA0, snapping, gridOpacity, imageOpacity, showUnitCircle, extent, onChange, onZoom,
 }: Props) {
   const isPoint = feed === 'point';
   const isShape = feed === 'shape';
@@ -334,8 +337,8 @@ export default function ArgandPlane({
           </defs>
 
           {/* ghost identity grid (the unchanged plane) */}
-          {showGrid && (
-            <g stroke="currentColor" strokeOpacity={0.18} strokeWidth={1.5}>
+          {gridOpacity > 0.001 && (
+            <g stroke="currentColor" strokeOpacity={gridOpacity} strokeWidth={1.5}>
               {xLines.filter(i => i !== 0).map(i => { const [vx] = toV(cx(i, 0)); return <line key={`x${i}`} x1={vx} y1={0} x2={vx} y2={h} />; })}
               {yLines.filter(i => i !== 0).map(i => { const [, vy] = toV(cx(0, i)); return <line key={`y${i}`} x1={0} y1={vy} x2={w} y2={vy} />; })}
             </g>
@@ -356,7 +359,7 @@ export default function ArgandPlane({
           {isGrid && (
             <>
               {/* the full image grid f(grid) — always shown */}
-              <g stroke={F_COL} strokeOpacity={0.5} strokeWidth={2} fill="none">
+              <g stroke={F_COL} strokeOpacity={imageOpacity} strokeWidth={2} fill="none">
                 {gridIdx.map(i => <path key={`gv${i}`} d={gridLineImage(i, false)} />)}
                 {gridIdx.map(i => <path key={`gh${i}`} d={gridLineImage(i, true)} />)}
               </g>
