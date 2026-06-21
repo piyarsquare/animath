@@ -51,6 +51,23 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 02:00 — Furnished the Rooms decor (looks like a room)
+**Why:** Dan: the room doesn't look good — wants a rug, desk+lamp, fireplace,
+picture, chandelier, and words on a surface; make it look like a room so the
+gluing surprises you through the doorways.
+
+Furnished the fundamental cube (`decor/rooms.ts`): rug (patterned, `rugTexture`),
+desk + glowing lamp on the −x wall, fireplace with logs + ember glow on the −z
+wall, a **WELCOME** sign over the mantel (`signTexture`, on the inward-facing −z
+wall so it reads head-on), a framed sunset picture on the +x wall
+(`pictureTexture`), and a candle chandelier from the ceiling. Lights are
+emissive-only (no real point lights — they'd multiply across the cover and fight
+the symmetrized lighting). Walls stay as the faint color-coded frames (the open
+doorways). Built once and instanced, so each copy carries the cell's holonomy —
+walk a doorway and the fireplace is on another wall / WELCOME reads backwards.
+Verified headless (3-torus, amphicosm, quarter-turn); reads clearly as a room.
+Build green.
+
 ### 🟢 code · 01:25 — Cutaway anchored at the camera + fog decoupled from depth
 **Why:** Dan: move the cut plane closer to the camera; the fog is way too strong.
 

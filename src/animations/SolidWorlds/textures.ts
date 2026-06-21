@@ -51,6 +51,57 @@ export function faceMotifTexture(hex: string): THREE.CanvasTexture {
 }
 
 /**
+ * A patterned **rug** for the furnished Rooms decor — warm field, cream border,
+ * a row of diamonds. Just enough pattern that a copy seen through a doorway
+ * reads as the *same* rug, rotated or mirror-flipped by the gluing.
+ */
+export function rugTexture(): THREE.CanvasTexture {
+  const w = 384, h = 256;
+  const cvs = document.createElement('canvas');
+  cvs.width = w; cvs.height = h;
+  const ctx = cvs.getContext('2d')!;
+  ctx.fillStyle = '#7a2f2c'; ctx.fillRect(0, 0, w, h);          // field
+  ctx.strokeStyle = '#d9c39a'; ctx.lineWidth = 14;             // cream border
+  ctx.strokeRect(20, 20, w - 40, h - 40);
+  ctx.strokeStyle = '#b8412f'; ctx.lineWidth = 5;
+  ctx.strokeRect(40, 40, w - 80, h - 80);
+  ctx.fillStyle = '#d9c39a';                                    // diamond row
+  for (let i = 0; i < 5; i++) {
+    const cx = w * (0.18 + i * 0.16), cy = h / 2, r = 22;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy); ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r, cy);
+    ctx.closePath(); ctx.fill();
+  }
+  const t = new THREE.CanvasTexture(cvs);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
+/**
+ * A framed **picture** — a naive sunset landscape (sky gradient, sun, hills). The
+ * sun sits off-center so the scene is chiral: through a glide-world doorway the
+ * copy hangs as its mirror image.
+ */
+export function pictureTexture(): THREE.CanvasTexture {
+  const w = 256, h = 320;
+  const cvs = document.createElement('canvas');
+  cvs.width = w; cvs.height = h;
+  const ctx = cvs.getContext('2d')!;
+  const sky = ctx.createLinearGradient(0, 0, 0, h);
+  sky.addColorStop(0, '#2a3b6e'); sky.addColorStop(0.55, '#e08a4a'); sky.addColorStop(1, '#f2c25a');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#ffe7a8';                                    // sun (off-center → chiral)
+  ctx.beginPath(); ctx.arc(w * 0.7, h * 0.5, 34, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#3f6b4a';                                    // hills
+  ctx.beginPath(); ctx.moveTo(0, h);
+  ctx.lineTo(0, h * 0.72); ctx.quadraticCurveTo(w * 0.3, h * 0.6, w * 0.55, h * 0.74);
+  ctx.quadraticCurveTo(w * 0.8, h * 0.88, w, h * 0.72); ctx.lineTo(w, h); ctx.closePath(); ctx.fill();
+  const t = new THREE.CanvasTexture(cvs);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
+/**
  * The footprint glyph — the classic orientation-test pair: an arrow with an
  * **F**, cyan on the print's left and magenta on its right (the same glyph
  * Polygon Worlds stamps in 2D). Because the print is built from an explicit

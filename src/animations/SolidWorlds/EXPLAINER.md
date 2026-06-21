@@ -72,15 +72,16 @@ nothing *local* ever happened. You didn't flip *somewhere*; you came back mirror
 
 The **View** panel has a **Decor** switch. *Diagnostic* is the proof-of-the-math
 scene: neutral landmark props and the FRONT/BACK sign, sized so a copy and its
-mirror are obvious. *Rooms* instead **paints the cube's six faces** and leaves the
-room empty. Glued opposite faces share a color (X red · Y green · Z blue), so the
-room reads as an oriented box — you always know which way you face, you recognize
-the wall you just came through (it matches the one ahead), and each face carries a
-chiral up-arrow so you can watch a wall come back **rotated** in a turn world or
-**mirrored** in a glide world. Only a **faint** colored frame and a small arrow
-are drawn — the rest of each face is open — so the room stays calm and
-see-through, and the view stays steady as you move. (Keep **Cover depth** low for
-the quiet single room; raise it for the deep hall of copies.)
+mirror are obvious. *Rooms* instead furnishes the fundamental cube as a
+**recognizable room** — a rug, a desk with a lamp, a fireplace, a framed picture,
+a chandelier, and a WELCOME sign over the mantel — with the six faces left as
+faint color-coded frames (X red · Y green · Z blue), open in the middle: the
+doorways. The room is built once and tiled across the cover, so every copy carries
+that cell's gluing. Walk through a doorway and the room you thought you knew comes
+back **rotated** (turn worlds) or **mirror-flipped** (glide worlds): the fireplace
+is on a different wall, the WELCOME sign reads backwards. That surprise *is* the
+shape of the space. (Keep **Cover depth** low for the quiet single room; raise it
+for the deep hall of copies.)
 
 ### Possible sources & where to go further
 
