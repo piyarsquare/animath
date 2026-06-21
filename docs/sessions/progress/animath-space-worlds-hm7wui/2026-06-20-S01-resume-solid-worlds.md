@@ -51,6 +51,20 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 01:05 — Third-person cutaway clip plane (avatar no longer buried)
+**Why:** Dan: avatar gets buried behind walls in third person; wants the cutaway
+we discussed — hide cells between camera and character.
+
+Added one world **clip plane** just in front of the character, perpendicular to
+the camera→character line (`renderer.localClippingEnabled = true`; the plane is
+shared by reference with every cover material via `applyClipping()`, re-pointed
+after each `buildCover`). Everything nearer the camera than that plane is
+discarded, so intervening walls vanish. The **floor is exempt** (kept whole, so no
+gap in the ground) and the **avatars are exempt** (separate from `coverRoot`, so
+never clipped regardless of margin). Empty array in first person. Verified the
+wiring with a negative-margin test (pushed the plane past the avatar → all walls
+clipped, floor + avatar remained), then restored `CUT_MARGIN = U*0.45`. Build green.
+
 ### 🟢 code · 00:30 — "Too busy" → faint walls + calm default cover depth
 **Why:** Dan: everything far too busy; make the walls very faint.
 

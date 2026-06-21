@@ -46,6 +46,7 @@ const VPER = 6; // two triangles per flat footprint decal
 
 export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: Opts): SolidEngine {
   const { scene, camera, renderer } = deps;
+  renderer.localClippingEnabled = true; // for the third-person cutaway (below)
   let size = opts.roomSize;
   let depth = opts.coverDepth;
   let camDist = opts.cameraDistance;
@@ -336,6 +337,27 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   const coverDisposables: THREE.BufferGeometry[] = []; // merged line geos, per rebuild
   let floorObjs: THREE.Object3D[] = [];                 // floor plane + grid, for the toggle
   let seamObjs: THREE.Object3D[] = [];                  // cube-edge framework (the cell seams)
+
+  // ── third-person cutaway ──────────────────────────────────────────────────
+  // The avatar gets buried behind the room walls between it and the camera. We
+  // clip those away with one world plane sitting just in front of the character
+  // (perpendicular to the camera→character line): every fragment nearer to the
+  // camera than that plane is discarded, so nothing is ever in the way. The plane
+  // is shared by reference with all cover materials EXCEPT the floor (which we
+  // keep whole so the ground stays continuous). Empty in first person.
+  const CUT_MARGIN = U * 0.45;          // just outside the avatar along the view axis
+  const cutPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 1e6);
+  const cutPlanes: THREE.Plane[] = [];
+  const _clipV = new THREE.Vector3(), _clipP = new THREE.Vector3();
+  function applyClipping() {
+    const floorSet = new Set(floorObjs);
+    coverRoot.traverse((o) => {
+      const m = (o as THREE.Mesh).material;
+      if (!m || floorSet.has(o)) return; // keep the ground uncut
+      (Array.isArray(m) ? m : [m]).forEach((mm) => { mm.clippingPlanes = cutPlanes; });
+    });
+  }
+
   function buildCover() {
     while (coverRoot.children.length) coverRoot.remove(coverRoot.children[0]);
     coverDisposables.forEach((g) => g.dispose()); coverDisposables.length = 0;
@@ -452,6 +474,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       }
     }
 
+    applyClipping(); // re-point every new cover material at the shared cut plane
   }
 
   // ── third-person avatars (fundamental cell only), one per travel mode ─────
@@ -646,6 +669,16 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       avatarLinear.setPosition(pos);
       av.matrix.copy(avatarLinear);
       av.matrixWorldNeedsUpdate = true;
+    }
+
+    // cutaway: clip the room walls sitting between the camera and the character
+    if (input.thirdPerson) {
+      _clipV.subVectors(pos, camPos).normalize();           // camera → character
+      _clipP.copy(pos).addScaledVector(_clipV, -CUT_MARGIN); // just in front of the character
+      cutPlane.setFromNormalAndCoplanarPoint(_clipV, _clipP);
+      if (cutPlanes.length === 0) cutPlanes.push(cutPlane);
+    } else if (cutPlanes.length) {
+      cutPlanes.length = 0;
     }
 
     renderer.render(scene, camera);
