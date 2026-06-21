@@ -50,8 +50,13 @@ something you can *see*. In Add it's the parallelogram.
 - **Snap to nice values** pulls a handle onto the lattice (`1`, `i`, `1+i`, …), the
   unit circle, and angles that are multiples of π/6 — so landing exactly on `i` is a
   click, not a pixel-hunt.
-- **Scrub** by hand, or press **Play** to animate the path. Animation is optional —
-  every state is visible by dragging the slider.
+- **Stops** jump straight to the meaningful waypoints — `a` and the result for two
+  numbers, or **Shape · Image · Point** for the curve loop. Press **Play** to animate
+  between them, or drag the **Fine scrub** slider by hand; animation is optional, every
+  state is reachable from a stop.
+- **Speed** is the *pen* speed (math units per second), so a tight multiply spiral and a
+  short add slide move at the same pace instead of finishing in the same wall-clock time
+  — the picture, not the parameter, sets the tempo.
 
 ## Possible sources & where to go further
 

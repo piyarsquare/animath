@@ -61,6 +61,59 @@ export function cycleSweep(q: Cx, b: Cx, phase: number): Cx {
 }
 
 /* ----------------------------------------------------------------- *
+ *  Arc-length pacing — so the pen moves at constant *geometric*      *
+ *  speed instead of constant param speed.                           *
+ * ----------------------------------------------------------------- */
+
+export interface ArcLengthMap {
+  /** Total geometric length of the path, in math units. */
+  length: number;
+  /** Native parameter s∈[0,1] at a given distance traveled along the path. */
+  sAt: (arc: number) => number;
+  /** Distance traveled along the path at a given native parameter s∈[0,1]. */
+  arcAt: (s: number) => number;
+}
+
+/**
+ * Build a constant-speed (arc-length) reparameterization of a path
+ * `P : [0,1] → ℂ`. Samples the path, accumulates chord lengths, and exposes
+ * `sAt(arc)` / `arcAt(s)` mapping between native param and distance traveled.
+ *
+ * This lets a clock advance at constant *geometric* speed (units/sec): a tight
+ * multiplication spiral and a short straight addition slide then feel like the
+ * same pen moving, instead of both finishing in the same wall-clock time no
+ * matter how far they travel — the "completely different scales" problem.
+ */
+export function arcLengthMap(P: (s: number) => Cx, samples = 96): ArcLengthMap {
+  const cum: number[] = [0];
+  let prev = P(0);
+  for (let i = 1; i <= samples; i++) {
+    const p = P(i / samples);
+    cum.push(cum[i - 1] + Math.hypot(p.re - prev.re, p.im - prev.im));
+    prev = p;
+  }
+  const length = cum[samples];
+
+  const sAt = (arc: number): number => {
+    if (length < 1e-9) return 0;
+    const a = Math.min(length, Math.max(0, arc));
+    let i = 1;
+    while (i < samples && cum[i] < a) i++;
+    const seg = cum[i] - cum[i - 1] || 1;
+    return (i - 1 + (a - cum[i - 1]) / seg) / samples;
+  };
+
+  const arcAt = (s: number): number => {
+    if (length < 1e-9) return 0;
+    const f = Math.min(1, Math.max(0, s)) * samples;
+    const i0 = Math.min(samples - 1, Math.floor(f));
+    return cum[i0] + (cum[i0 + 1] - cum[i0]) * (f - i0);
+  };
+
+  return { length, sAt, arcAt };
+}
+
+/* ----------------------------------------------------------------- *
  *  Formatting — both rectangular (x+iy) and polar (r·e^{iθ}) forms.  *
  * ----------------------------------------------------------------- */
 
