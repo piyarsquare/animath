@@ -51,6 +51,23 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 02:40 — Off-center archways + solid walls (connections at doorways)
+**Why:** Dan: connections between rooms should happen at archways (holes in
+ceiling/floor where a world tips vertical↔horizontal), off-center; and the wall
+arrows aren't helpful.
+
+Replaced the faint open frames with **solid walls** (faint axis tint), each −axis
+face a `ShapeGeometry` panel with one **off-center archway** (floor/ceiling: an
+off-center hole). Key simplification: build only the three −axis faces — the cover
+instancing draws each cell's +axis wall as its neighbor's −axis panel *transported
+by the gluing*, so a far wall's opening is automatically the near opening after
+the deck transform (no g-math in the decor). Off-center is what makes the turn/
+mirror visible (a gluing fixes the face center). Verified the payoff headless:
+quarter-turn throws the **chandelier onto a side wall** (up→sideways), the
+amphicosm mirror-flips the neighbor, and you peer through the arch into the next
+room. Removed the wall arrows. Furniture repositioned to clear the openings.
+Build + lint(0) + 53 tests green.
+
 ### 🟢 code · 02:00 — Furnished the Rooms decor (looks like a room)
 **Why:** Dan: the room doesn't look good — wants a rug, desk+lamp, fireplace,
 picture, chandelier, and words on a surface; make it look like a room so the

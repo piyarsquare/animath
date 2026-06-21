@@ -74,14 +74,19 @@ The **View** panel has a **Decor** switch. *Diagnostic* is the proof-of-the-math
 scene: neutral landmark props and the FRONT/BACK sign, sized so a copy and its
 mirror are obvious. *Rooms* instead furnishes the fundamental cube as a
 **recognizable room** — a rug, a desk with a lamp, a fireplace, a framed picture,
-a chandelier, and a WELCOME sign over the mantel — with the six faces left as
-faint color-coded frames (X red · Y green · Z blue), open in the middle: the
-doorways. The room is built once and tiled across the cover, so every copy carries
-that cell's gluing. Walk through a doorway and the room you thought you knew comes
-back **rotated** (turn worlds) or **mirror-flipped** (glide worlds): the fireplace
-is on a different wall, the WELCOME sign reads backwards. That surprise *is* the
-shape of the space. (Keep **Cover depth** low for the quiet single room; raise it
-for the deep hall of copies.)
+a chandelier, a WELCOME sign — inside **solid walls**, where the connections
+between rooms happen at **archways**: each wall has one archway, the floor and
+ceiling a hole, all placed **off-center**. The room is built once and tiled across
+the cover, so each opening on a far wall is your near opening carried through that
+pairing's gluing. Off-center is the point: a gluing fixes the center of the face
+it acts through, so a centered opening would hide the very turn or mirror you want
+to see — placed off-center, the archway visibly jumps to a new corner (turn
+worlds) or flips side (glide worlds), and in worlds whose gluing tips vertical to
+horizontal the ceiling hole lands where a wall arch was (the chandelier ends up on
+a wall). Solid walls also stage the surprise: you don't see how the next room is
+arranged until you step through the arch — and it isn't how you thought. That
+mismatch *is* the shape of the space. (Keep **Cover depth** low for the quiet
+single room; raise it for the deep hall of copies.)
 
 ### Possible sources & where to go further
 
