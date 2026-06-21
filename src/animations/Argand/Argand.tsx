@@ -9,8 +9,8 @@ import ArgandPlane, {
 } from './ArgandPlane';
 import { buildCurve, CURVES, type CurveName } from './curves';
 import {
-  type Cx, type ArcLengthMap, cx, modulus, add,
-  affine, affineLoopAt, fixedPoint, arcLengthMap, formatRect, formatPolar,
+  type Cx, type ArcLengthMap, cx, modulus, add, sub, scale,
+  mulG, powRealG, affine, affineLoopAt, fixedPoint, arcLengthMap, formatRect, formatPolar,
 } from './complexOps';
 
 const STORAGE_KEY = 'argand';
@@ -49,6 +49,9 @@ export default function Argand() {
   const [system, setSystem] = usePersistentState(`${STORAGE_KEY}:system`, -1);
   // Pen speed in math units / second (the same for every leg and feed).
   const [speed, setSpeed] = usePersistentState(`${STORAGE_KEY}:speed`, 2);
+  const [viewFromFixed, setViewFromFixed] = usePersistentState(`${STORAGE_KEY}:vFix`, false);
+  const [iterate, setIterate] = usePersistentState(`${STORAGE_KEY}:iter`, false);
+  const [iterN, setIterN] = usePersistentState(`${STORAGE_KEY}:iterN`, 12);
 
   // Transient view state — never persisted.
   const [t, setT] = useState(0);
@@ -66,6 +69,13 @@ export default function Argand() {
   // by the two legs, back along the diagonal), so the pen moves at constant
   // geometric speed all the way around.
   const lut: ArcLengthMap = useMemo(() => {
+    // Iteration: pace along the orbit spiral z* + α₁^(s·N)·(z−z*).
+    if (iterate && isPoint) {
+      return arcLengthMap(s => {
+        const u = s * iterN;
+        return zStar ? add(zStar, mulG(powRealG(alpha1, system, u), sub(z, zStar), system)) : add(z, scale(alpha0, u));
+      }, 160);
+    }
     let q = z;
     if (isShape) {
       q = curve[0] ? add(curve[0], z) : z;
@@ -74,7 +84,7 @@ export default function Argand() {
       q = cx(extent, extent);
     }
     return arcLengthMap(s => affineLoopAt(q, alpha1, alpha0, system, s), 144);
-  }, [isShape, isGrid, curve, z, alpha1, alpha0, system, extent]);
+  }, [iterate, isPoint, iterN, zStar, isShape, isGrid, curve, z, alpha1, alpha0, system, extent]);
 
   const lutRef = useRef(lut);
   lutRef.current = lut;
@@ -146,10 +156,11 @@ export default function Argand() {
       <div style={{ marginTop: 8, fontSize: 12, fontFamily: 'var(--font-mono, monospace)', color: FIX_COL }}>
         fixed z* = {zStar ? formatRect(zStar) : '— (pure shift)'}
       </div>
+      <Checkbox label="View from z* (recenter)" checked={viewFromFixed} onChange={setViewFromFixed} />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 6 }}>
         Drag the <b style={{ color: A1_COL }}>α₁</b> (diamond) and <b style={{ color: A0_COL }}>α₀</b> (square) handles,
         or lock them to drag only <b style={{ color: Z_COL }}>z</b>. <b style={{ color: FIX_COL }}>z*</b> is where the map
-        stands still: <code>f(z*) = z*</code>.
+        stands still: <code>f(z*) = z*</code> — viewed from there, <code>f</code> is a pure spiral.
       </div>
     </>
   );
@@ -217,6 +228,20 @@ export default function Argand() {
         <b style={{ color: A0_COL }}> +α₀</b> (shift) — to <b style={{ color: F_COL }}>f(z)</b>; then back along the
         <b style={{ color: '#2dd4bf' }}> diagonal</b>, spinning and shifting at once. A closed loop.
       </div>
+      {isPoint && (
+        <div style={{ marginTop: 10, borderTop: '1px solid var(--cp-border, #3a3a44)', paddingTop: 8 }}>
+          <Checkbox label="Iterate  z → f(z) → f(f(z)) → …" checked={iterate} onChange={setIterate} />
+          {iterate && (
+            <>
+              <Slider label="Steps" value={iterN} min={1} max={40} step={1} onChange={v => setIterN(Math.round(v))} format={v => `${Math.round(v)}`} />
+              <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 4 }}>
+                The orbit spirals <b>into</b> <b style={{ color: FIX_COL }}>z*</b> when <code>|α₁| &lt; 1</code>, <b>out</b> when
+                <code> &gt; 1</code>, and circles it forever when <code>|α₁| = 1</code>. Play traces it.
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </>
   );
 
@@ -326,6 +351,7 @@ export default function Argand() {
             feed={feed} curve={curve} t={t} playing={playing}
             lockA1={lockA1} lockA0={lockA0}
             snapping={snapping} gridOpacity={gridOpacity} imageOpacity={imageOpacity} showUnitCircle={showUnitCircle}
+            viewFromFixed={viewFromFixed} iterate={iterate} iterN={iterN}
             extent={extent}
             onChange={onHandleChange}
             onZoom={f => setExtent(e => Math.min(16, Math.max(1, e * f)))}

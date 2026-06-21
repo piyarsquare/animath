@@ -40,6 +40,15 @@ solves to **`z* = α₀ / (1 − α₁)`** — the complex echo of where `y = mx
 `y = x`. It's drawn in gold in every view. When `α₁ → 1` the map is a pure shift and the
 fixed point flies off to infinity (shown as “—”).
 
+**View from z\*** recenters the plane on it — and the map's disguise drops: about `z*`,
+`f` is *nothing but* a spiral-similarity (a pure `×α₁`), because `f(z) − z* = α₁·(z − z*)`.
+
+**Iterate** (Point feed) draws the orbit `z → f(z) → f²(z) → …`. Since
+`fⁿ(z) − z* = α₁ⁿ·(z − z*)`, the iterates lie on a logarithmic spiral about `z*`: it
+spirals **in** when `|α₁| < 1` (an attractor), **out** when `|α₁| > 1`, and circles
+forever when `|α₁| = 1`. This is fixed-point dynamics in miniature — the same engine
+that, with a `z²` term, makes the Mandelbrot set.
+
 ## Feed the function a point, a shape, or the grid
 
 - **Point** — one `z` and its image `f(z)`, with the two-leg path.

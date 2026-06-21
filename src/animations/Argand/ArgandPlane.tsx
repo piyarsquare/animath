@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  type Cx, cx, add,
-  mulG, affine, affineAt, affineSimulAt, affineLoopAt, fixedPoint, snap,
+  type Cx, cx, add, sub, scale,
+  mulG, powRealG, affine, affineAt, affineSimulAt, affineLoopAt, fixedPoint, snap,
 } from './complexOps';
 
 export type Feed = 'point' | 'shape' | 'grid';
@@ -40,6 +40,12 @@ interface Props {
   /** Mapped image-grid opacity (Grid feed). */
   imageOpacity: number;
   showUnitCircle: boolean;
+  /** Recenter the plane on the fixed point z* (the map becomes a pure spiral). */
+  viewFromFixed: boolean;
+  /** Point feed: draw the orbit z → f(z) → f²(z) … toward/away from z*. */
+  iterate: boolean;
+  /** How many iterates to draw. */
+  iterN: number;
   /** Half-extent of the visible plane in math units. */
   extent: number;
   onChange: (which: Handle, z: Cx) => void;
@@ -65,7 +71,7 @@ function useSize(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function ArgandPlane({
-  z, alpha1, alpha0, p, feed, curve, t, playing, lockA1, lockA0, snapping, gridOpacity, imageOpacity, showUnitCircle, extent, onChange, onZoom,
+  z, alpha1, alpha0, p, feed, curve, t, playing, lockA1, lockA0, snapping, gridOpacity, imageOpacity, showUnitCircle, viewFromFixed, iterate, iterN, extent, onChange, onZoom,
 }: Props) {
   const isPoint = feed === 'point';
   const isShape = feed === 'shape';
@@ -86,22 +92,28 @@ export default function ArgandPlane({
   const gesture = useRef<{ dist: number; mx: number; my: number } | null>(null);
   const panning = useRef<{ x: number; y: number } | null>(null);
 
+  // The fixed point f(z*) = z*. "View from z*" recenters the plane on it, so the
+  // map becomes a pure spiral-similarity about the middle of the screen.
+  const zStar = fixedPoint(alpha1, alpha0, p);
+  const ctr = viewFromFixed && zStar ? zStar : center;
+
   // Equal x/y scale (circles stay circles) from the SHORTER side, so `extent`
   // units fit there and the longer side simply shows more — the plot fills the
   // whole rectangle instead of an inscribed square.
   const k = ((Math.min(w, h) / 2) * MARGIN) / extent || 1;
   const toV = (q: Cx): [number, number] =>
-    [w / 2 + (q.re - center.re) * k, h / 2 - (q.im - center.im) * k];
+    [w / 2 + (q.re - ctr.re) * k, h / 2 - (q.im - ctr.im) * k];
 
   const toMath = (clientX: number, clientY: number): Cx => {
     const r = svgRef.current!.getBoundingClientRect();
     const sx = w / (r.width || 1), sy = h / (r.height || 1);
     const fx = (clientX - r.left) * sx;
     const fy = (clientY - r.top) * sy;
-    return cx((fx - w / 2) / k + center.re, -(fy - h / 2) / k + center.im);
+    return cx((fx - w / 2) / k + ctr.re, -(fy - h / 2) / k + ctr.im);
   };
 
   const panByClient = (dxpx: number, dypx: number) => {
+    if (viewFromFixed && zStar) return;            // view is locked to z*
     const r = svgRef.current?.getBoundingClientRect();
     const sx = w / (r?.width || 1), sy = h / (r?.height || 1);
     setCenter(c => cx(c.re - (dxpx * sx) / k, c.im + (dypx * sy) / k));
@@ -216,15 +228,15 @@ export default function ArgandPlane({
   const halfX = w > 0 ? (w / 2) / k : extent;
   const halfY = h > 0 ? (h / 2) / k : extent;
 
-  // Integer grid lines (ghost identity grid, panning with center).
+  // Integer grid lines (ghost identity grid, panning with the view center).
   const xLines: number[] = [];
-  for (let i = Math.ceil(center.re - halfX); i <= Math.floor(center.re + halfX); i++) xLines.push(i);
+  for (let i = Math.ceil(ctr.re - halfX); i <= Math.floor(ctr.re + halfX); i++) xLines.push(i);
   const yLines: number[] = [];
-  for (let i = Math.ceil(center.im - halfY); i <= Math.floor(center.im + halfY); i++) yLines.push(i);
+  for (let i = Math.ceil(ctr.im - halfY); i <= Math.floor(ctr.im + halfY); i++) yLines.push(i);
 
   // Grid feed: a complete origin-centered lattice mapped by f at param s. Affine
   // ⇒ straight lines stay straight, so mapping the two endpoints is exact.
-  const reach = Math.max(halfX, halfY) + Math.abs(center.re) + Math.abs(center.im) + 2;
+  const reach = Math.max(halfX, halfY) + Math.abs(ctr.re) + Math.abs(ctr.im) + 2;
   const GN = Math.ceil(reach);
   const gridIdx: number[] = [];
   for (let i = -GN; i <= GN; i++) gridIdx.push(i);
@@ -245,7 +257,19 @@ export default function ArgandPlane({
   };
 
   const [oVx, oVy] = toV(cx(0, 0));
-  const zStar = fixedPoint(alpha1, alpha0, p);
+
+  // Iteration orbit: zₖ = fᵏ(z) = z* + α₁ᵏ·(z − z*) — a log spiral about z*
+  // (into it if |α₁|<1, out if >1), or z + k·α₀ in the pure-translation case.
+  const orbitAt = (s: number): Cx =>
+    zStar ? add(zStar, mulG(powRealG(alpha1, p, s), sub(z, zStar), p)) : add(z, scale(alpha0, s));
+  const orbitDots: Cx[] = [];
+  for (let kk = 0; kk <= iterN; kk++) orbitDots.push(orbitAt(kk));
+  const orbitPathD = (() => {
+    const n = Math.max(64, iterN * 10);
+    const pts: string[] = [];
+    for (let i = 0; i <= n; i++) { const [vx, vy] = toV(orbitAt((iterN * i) / n)); pts.push(`${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`); }
+    return pts.join(' ');
+  })();
 
   // The system's "unit circle": the level set N(z)=re²−p·im²=1 — an ellipse
   // (p<0), two lines (p=0), or a hyperbola with its null cone (p>0).
@@ -400,8 +424,25 @@ export default function ArgandPlane({
               strokeDasharray="5 5" markerEnd="url(#ah-a0)" />
           ); })()}
 
+          {/* ---- ITERATION: the orbit z → f(z) → f²(z) … spiraling about z* ---- */}
+          {isPoint && iterate && (
+            <>
+              <path d={orbitPathD} fill="none" stroke={F_COL} strokeOpacity={0.6} strokeWidth={2} strokeLinecap="round" />
+              {orbitDots.map((q, kk) => {
+                const [vx, vy] = toV(q);
+                const op = Math.max(0.25, 0.95 - 0.6 * (kk / Math.max(1, iterN)));
+                return <circle key={kk} cx={vx} cy={vy} r={kk === 0 ? 6 : 4}
+                  fill={kk === 0 ? Z_COL : F_COL} fillOpacity={kk === 0 ? 1 : op} />;
+              })}
+              {(() => { const [fx, fy] = toV(orbitDots[1] ?? fOf(z)); return <text x={fx + 9} y={fy - 8} fontSize={16} fill={F_COL}>f(z)</text>; })()}
+              {showMover && (() => { const [mx, my] = toV(orbitAt(t * iterN)); return (
+                <circle cx={mx} cy={my} r={7} fill="#fde68a" stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
+              ); })()}
+            </>
+          )}
+
           {/* ---- the probe point z → α₁z → f(z), and the diagonal way back ---- */}
-          {(isPoint || isGrid) && (
+          {(isPoint || isGrid) && !(isPoint && iterate) && (
             <>
               {/* the return route (f(z) → z), spin & shift interpolated together */}
               <path d={simulArc(z)} fill="none" stroke="#2dd4bf" strokeOpacity={0.55} strokeWidth={2.5} strokeDasharray="7 6" strokeLinecap="round" />
