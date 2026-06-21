@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   type Cx, cx, add, mul, argument, fromPolar,
-  mulPath, addPath, snap,
+  mulPath, addPath, cycleSweep, snap,
 } from './complexOps';
 
 export type Mode = 'multiply' | 'add';
@@ -345,9 +345,15 @@ export default function ArgandPlane({
               {/* the FULL image — always shown, so a stopped state is the whole story */}
               <path d={vpoly(placed.map(q => imageAt(q, 1)))} fill="none" stroke={R_COL}
                 strokeWidth={3.5} strokeLinejoin="round" strokeLinecap="round" />
-              {/* the moving in-between sweep — only while in motion */}
+              {/* the moving in-between sweep — only while in motion. For
+                  multiply this is the unified two-factor loop (q → q·b → b →
+                  q·b → q): the shape spirals to its image, then the WHOLE shape
+                  collapses onto the point b and back, showing both
+                  "shape × point" and "point × shape". */}
               {showMover && (
-                <path d={vpoly(placed.map(q => imageAt(q, t)))} fill="none" stroke="#fde68a"
+                <path
+                  d={vpoly(placed.map(q => mode === 'multiply' ? cycleSweep(q, b, t) : addPath(q, b, t)))}
+                  fill="none" stroke="#fde68a"
                   strokeOpacity={0.9} strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
               )}
               {/* the constant b */}

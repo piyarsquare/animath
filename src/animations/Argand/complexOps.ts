@@ -42,6 +42,24 @@ export const mulPath = (a: Cx, b: Cx, t: number): Cx => mul(a, powReal(b, t));
 /** The addition path a + t·b: a straight tip-to-tail slide from a to a+b. */
 export const addPath = (a: Cx, b: Cx, t: number): Cx => add(a, scale(b, t));
 
+/**
+ * The unified two-factor multiplication sweep for a shape point q and the
+ * constant b, as a CLOSED loop over phase∈[0,1]:
+ *   q (the shape) → q·b (the image) → b (the point) → q·b → q.
+ * The first quarter ramps b's exponent — the POINT acting on the SHAPE (q·bˢ);
+ * the next ramps q's exponent — the SHAPE acting on the POINT (b·qˢ), which
+ * collapses the whole shape onto the single point b at the midpoint; then back.
+ * Both halves pass through the same product q·b — commutativity, animated. The
+ * loop is closed (q at both ends), so it plays seamlessly forward or reversed.
+ */
+export function cycleSweep(q: Cx, b: Cx, phase: number): Cx {
+  const p = ((phase % 1) + 1) % 1;
+  if (p < 0.25) return mul(q, powReal(b, p / 0.25));                 // q → q·b
+  if (p < 0.5)  return mul(b, powReal(q, 1 - (p - 0.25) / 0.25));    // q·b → b
+  if (p < 0.75) return mul(b, powReal(q, (p - 0.5) / 0.25));         // b → q·b
+  return mul(q, powReal(b, 1 - (p - 0.75) / 0.25));                  // q·b → q
+}
+
 /* ----------------------------------------------------------------- *
  *  Formatting — both rectangular (x+iy) and polar (r·e^{iθ}) forms.  *
  * ----------------------------------------------------------------- */
