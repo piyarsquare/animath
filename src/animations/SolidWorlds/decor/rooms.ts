@@ -69,6 +69,23 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
 
   // ── the room shell: three solid faces, each with one off-center opening ─────
   // (the +x/+y/+z faces are supplied by the neighbors, gluing-transported)
+  //
+  // Besides the floor-standing arch (the doorway), each wall carries a square
+  // **duct** opening high in the opposite corner. In worlds that flip the room
+  // top↔bottom, the gluing carries the ceiling duct DOWN to floor level in the
+  // next copy — so there's a visible, foot-level opening exactly where you cross,
+  // instead of clipping through a blank wall while the arch hangs from the ceiling.
+  // It's deliberately square (and steel-framed) so it never reads as a doorway.
+  const DUCT = { u: -H * 0.42, v: H * 0.6, s: H * 0.13 };
+  const ductHole = () => {
+    const p = new THREE.Path();
+    p.moveTo(DUCT.u - DUCT.s, DUCT.v - DUCT.s);
+    p.lineTo(DUCT.u - DUCT.s, DUCT.v + DUCT.s);
+    p.lineTo(DUCT.u + DUCT.s, DUCT.v + DUCT.s);
+    p.lineTo(DUCT.u + DUCT.s, DUCT.v - DUCT.s);
+    p.closePath();
+    return p;
+  };
   const wallArchGeo = (u0: number, halfW: number, vTop: number) => {
     const s = new THREE.Shape();
     s.moveTo(-H, -H); s.lineTo(H, -H); s.lineTo(H, H); s.lineTo(-H, H); s.closePath();
@@ -79,6 +96,7 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
     a.lineTo(u0 + halfW, -H);
     a.closePath();
     s.holes.push(a);
+    s.holes.push(ductHole());                       // square ceiling duct
     return new THREE.ShapeGeometry(s);
   };
   const holeGeo = (u0: number, v0: number, r: number) => {
@@ -144,6 +162,31 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
     addDisposable(rim);
     mesh(rim, casing, localM(-h * 0.42, F + u * 0.015, h * 0.42, -Math.PI / 2));
   }
+
+  // ── duct frames: a steel square casing around each ceiling duct, so it reads as
+  // industrial ductwork (not a doorway). Same basis as the arch casing.
+  const steel = new THREE.MeshStandardMaterial({ color: 0x767c84, roughness: 0.5, metalness: 0.6 });
+  addDisposable(steel);
+  const ductCasingGeo = (m: number, depth: number) => {
+    const s = new THREE.Shape();
+    const o = DUCT.s + m;
+    s.moveTo(DUCT.u - o, DUCT.v - o); s.lineTo(DUCT.u + o, DUCT.v - o);
+    s.lineTo(DUCT.u + o, DUCT.v + o); s.lineTo(DUCT.u - o, DUCT.v + o); s.closePath();
+    const hole = new THREE.Path();
+    hole.moveTo(DUCT.u - DUCT.s, DUCT.v - DUCT.s); hole.lineTo(DUCT.u - DUCT.s, DUCT.v + DUCT.s);
+    hole.lineTo(DUCT.u + DUCT.s, DUCT.v + DUCT.s); hole.lineTo(DUCT.u + DUCT.s, DUCT.v - DUCT.s); hole.closePath();
+    s.holes.push(hole);
+    const g = new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: false });
+    addDisposable(g); return g;
+  };
+  const buildDuctCasing = (a: Axis) => {
+    const ti = axisIndex(a);
+    const uIdx = a === 'x' ? 2 : 0, vIdx = 1;
+    const M = new THREE.Matrix4().makeBasis(unit(uIdx), unit(vIdx), unit(ti)).setPosition(unit(ti, -h * 0.999));
+    mesh(ductCasingGeo(H * 0.03, u * 0.07), steel, M);
+  };
+  buildDuctCasing('x');
+  buildDuctCasing('z');
 
   const wood = std(0x6b4a2f), woodDark = std(0x4a3320);
   const stone = std(0x9a9088), darkBack = std(0x171210);

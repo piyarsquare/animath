@@ -51,6 +51,19 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 03:40 — Ceiling duct openings (Dan's pick for inverting worlds)
+**Why:** For worlds that flip the room top↔bottom, Dan wanted distinct "duct"
+openings near the ceiling (square holes, not doorways) that still allow transit.
+
+Each wall now carries, besides the floor arch, a square **ceiling duct** high in
+the opposite corner (`ductHole` second hole in `wallArchGeo`) with a steel square
+casing (`ductCasingGeo`). Since the duct rides the same cover transport as the
+arch (verified chirality), in a top↔bottom-flipping world the gluing carries the
+ceiling duct DOWN to floor level in the next copy — so you cross through a visible
+foot-level opening instead of clipping blank wall while the arch hangs from the
+ceiling. Square + steel keeps it visually distinct from the arched doorways.
+Verified the duct renders (3-torus) and the neighbor inverts (half-turn). Build green.
+
 ### 🟢 code · 03:25 — Wall opacity slider; furnishings are world-agnostic
 **Why:** Dan asked to put wall opacity on a slider, and whether furnishings are
 world-specific.
