@@ -24,7 +24,7 @@ import { buildRoomsDecor } from './decor/rooms';
 
 interface Gen { g: THREE.Matrix4; gInv: THREE.Matrix4; gLin: THREE.Matrix4; gLinInv: THREE.Matrix4; }
 
-interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; fogAmount: number; cutFrac: number; showFloor: boolean; showLabels: boolean; showCorners: boolean; showSeams: boolean; decorMode: DecorMode; }
+interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; fogAmount: number; cutFrac: number; wallOpacity: number; showFloor: boolean; showLabels: boolean; showCorners: boolean; showSeams: boolean; decorMode: DecorMode; }
 
 /** Furniture reference scale — the sign, props, footprints, avatars and eye
  *  height are sized from this CONSTANT, not from the room size, so growing the
@@ -53,6 +53,8 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   let lookId = opts.lookId;
   let fogAmount = opts.fogAmount;
   let cutFrac = opts.cutFrac;          // cutaway plane position as a fraction of camera→avatar
+  let wallOpacity = opts.wallOpacity;  // Rooms-decor wall translucency (1 = opaque)
+  let wallMats: THREE.MeshStandardMaterial[] = [];  // live refs for the opacity slider
   let showFloor = opts.showFloor;
   let showLabels = opts.showLabels;
   let showCorners = opts.showCorners;
@@ -293,10 +295,12 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
 
     // the interior decor — either the original diagnostic props (landmark shapes
     // + FRONT/BACK sign) or the solid Rooms architecture that crosses the seams.
+    wallMats = [];
     if (decorMode === 'diagnostic') buildDiagnosticDecor(h, std, mesh);
     else buildRoomsDecor({
       spec, size, U, h, mesh, std, localM,
       addDisposable: (d) => roomDisposables.push(d),
+      wallOpacity, onWallMaterial: (m) => wallMats.push(m),
     });
 
     // face-label resources: a letter per axis, colored + glyphed by what its
@@ -704,6 +708,10 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     setLook(id) { lookId = id; applyLook(id); },
     setFog(amount) { fogAmount = amount; applyLook(lookId); },
     setCutFrac(f) { cutFrac = f; },
+    setWallOpacity(o) {
+      wallOpacity = o;
+      for (const m of wallMats) { m.opacity = o; m.transparent = o < 0.999; m.needsUpdate = true; }
+    },
     setFloor(on) { showFloor = on; for (const o of floorObjs) o.visible = on; },
     setSeams(on) { showSeams = on; for (const o of seamObjs) o.visible = on; },
     setLabels(on) { showLabels = on; buildCover(); },

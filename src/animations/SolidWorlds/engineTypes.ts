@@ -78,6 +78,8 @@ export interface SolidEngine {
   setFog(amount: number): void;
   /** Third-person cutaway plane position, as a fraction of the camera→walker distance. */
   setCutFrac(f: number): void;
+  /** Rooms-decor wall opacity, 0.3 (faint) … 1 (opaque). */
+  setWallOpacity(o: number): void;
   /** Show/hide the floor plane + grid. */
   setFloor(on: boolean): void;
   /** Show/hide the per-face gluing labels. */

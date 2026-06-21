@@ -37,6 +37,7 @@ export default function SolidWorlds() {
   const [roomSize, setRoomSize] = usePersistentState(pk('roomSize'), DEFAULT_ROOM_SIZE);
   const [fog, setFog] = usePersistentState(pk('fog'), 0.2);
   const [cutGap, setCutGap] = usePersistentState(pk('cutGap'), 0.3);
+  const [wallOpacity, setWallOpacity] = usePersistentState(pk('wallOpacity'), 0.84);
   const [decorMode, setDecorMode] = usePersistentState<DecorMode>(pk('decorMode'), 'diagnostic');
   const [showFloor, setShowFloor] = usePersistentState(pk('floor'), true);
   const [showLabels, setShowLabels] = usePersistentState(pk('labels'), false);
@@ -66,6 +67,7 @@ export default function SolidWorlds() {
   const sizeRef = useRef(roomSize);
   const fogRef = useRef(fog);
   const cutGapRef = useRef(cutGap);
+  const wallOpacityRef = useRef(wallOpacity);
   const floorRef = useRef(showFloor);
   const labelsRef = useRef(showLabels);
   const cornersRef = useRef(showCorners);
@@ -83,7 +85,7 @@ export default function SolidWorlds() {
     engineRef.current = makeCoverEngine(deps, worldRef.current, {
       roomSize: sizeRef.current, coverDepth: depthRef.current,
       cameraDistance: camDistRef.current, lookId: lookRef.current,
-      fogAmount: fogRef.current, cutFrac: cutGapRef.current, showFloor: floorRef.current,
+      fogAmount: fogRef.current, cutFrac: cutGapRef.current, wallOpacity: wallOpacityRef.current, showFloor: floorRef.current,
       showLabels: labelsRef.current, showCorners: cornersRef.current,
       showSeams: seamsRef.current, decorMode: decorRef.current,
     });
@@ -118,7 +120,7 @@ export default function SolidWorlds() {
     engineRef.current = makeCoverEngine(deps, spec, {
       roomSize: sizeRef.current, coverDepth: depthRef.current,
       cameraDistance: camDistRef.current, lookId: lookRef.current,
-      fogAmount: fogRef.current, cutFrac: cutGapRef.current, showFloor: floorRef.current,
+      fogAmount: fogRef.current, cutFrac: cutGapRef.current, wallOpacity: wallOpacityRef.current, showFloor: floorRef.current,
       showLabels: labelsRef.current, showCorners: cornersRef.current,
       showSeams: seamsRef.current, decorMode: decorRef.current,
     });
@@ -134,6 +136,7 @@ export default function SolidWorlds() {
   useEffect(() => { sizeRef.current = roomSize; engineRef.current?.setRoomSize(roomSize); }, [roomSize]);
   useEffect(() => { fogRef.current = fog; engineRef.current?.setFog(fog); }, [fog]);
   useEffect(() => { cutGapRef.current = cutGap; engineRef.current?.setCutFrac(cutGap); }, [cutGap]);
+  useEffect(() => { wallOpacityRef.current = wallOpacity; engineRef.current?.setWallOpacity(wallOpacity); }, [wallOpacity]);
   useEffect(() => { floorRef.current = showFloor; engineRef.current?.setFloor(showFloor); }, [showFloor]);
   useEffect(() => { labelsRef.current = showLabels; engineRef.current?.setLabels(showLabels); }, [showLabels]);
   useEffect(() => { cornersRef.current = showCorners; engineRef.current?.setCorners(showCorners); }, [showCorners]);
@@ -283,6 +286,9 @@ export default function SolidWorlds() {
       <Slider label="Cover depth" value={coverDepth} min={0} max={10} step={1} onChange={(v) => setCoverDepth(Math.round(v))} format={(v) => `${Math.round(v)} ${Math.round(v) === 1 ? 'ring' : 'rings'}`} />
       <Slider label="Room size" value={roomSize} min={6} max={30} step={1} onChange={setRoomSize} format={(v) => `${Math.round(v)} m`} />
       <Slider label="Fog" value={fog} min={0} max={1} step={0.05} onChange={setFog} format={(v) => (v <= 0.001 ? 'off' : `${Math.round(v * 100)}%`)} />
+      {decorMode === 'rooms' && (
+        <Slider label="Wall opacity" value={wallOpacity} min={0.3} max={1} step={0.02} onChange={setWallOpacity} format={(v) => `${Math.round(v * 100)}%`} />
+      )}
       <Checkbox label="Show seams (cell edges)" checked={showSeams} onChange={setShowSeams} />
       <Checkbox label="Floor plane" checked={showFloor} onChange={setShowFloor} />
       <Checkbox label="Face labels" checked={showLabels} onChange={setShowLabels} />

@@ -51,6 +51,19 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 03:25 — Wall opacity slider; furnishings are world-agnostic
+**Why:** Dan asked to put wall opacity on a slider, and whether furnishings are
+world-specific.
+
+- **Wall opacity slider** (View panel, Rooms decor only): `wallOpacity` opt +
+  `setWallOpacity`. The engine keeps live refs to the wall materials (`wallMats`,
+  re-collected each `buildRoom`) so the slider updates opacity/transparent without
+  rebuilding the cover. Persisted, default 0.84; range 0.3–1.
+- **Furnishings are NOT world-specific** — confirmed `buildRoomsDecor` receives
+  `spec` but never reads it. Same upright room everywhere; only the gluing differs,
+  so inverting worlds show the same furniture rotated/mirrored in the cover copies.
+  (Open design question raised re: ceiling doorways for inverting worlds.)
+
 ### 🟢 code · 03:10 — Cutaway slider + arch moldings
 **Why:** Dan: put the cut plane on a slider (position = fraction of the
 camera→avatar distance), and add moldings to the arches.

@@ -37,6 +37,10 @@ export interface DecorBuildContext {
   std: (color: number) => THREE.MeshStandardMaterial;
   localM: (x: number, y: number, z: number, rx?: number, ry?: number, rz?: number) => THREE.Matrix4;
   addDisposable: (d: { dispose: () => void }) => void;
+  /** Current wall opacity (the Wall opacity slider); 1 = fully opaque. */
+  wallOpacity: number;
+  /** Engine sink for the wall materials, so the slider can update them live. */
+  onWallMaterial: (m: THREE.MeshStandardMaterial) => void;
 }
 
 // Faint axis tint on the solid walls (X warm · Y green · Z blue) — orientation
@@ -44,7 +48,7 @@ export interface DecorBuildContext {
 const WALL_TINT: Record<Axis, number> = { x: 0x6f5a54, y: 0x566b5d, z: 0x556071 };
 
 export function buildRoomsDecor(ctx: DecorBuildContext) {
-  const { U: u, h, mesh, std, localM, addDisposable } = ctx;
+  const { U: u, h, mesh, std, localM, addDisposable, wallOpacity, onWallMaterial } = ctx;
   const H = h, F = -h;
 
   // ── helpers ──────────────────────────────────────────────────────────────
@@ -86,15 +90,16 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
     return new THREE.ShapeGeometry(s);
   };
   // Walls are mostly opaque (so the next room stays hidden until you reach the
-  // arch) but faintly translucent, so a hint of the surrounding copies glows
-  // through. depthWrite stays ON — the nearest wall occludes the ones behind it,
-  // so the tiled panels don't flicker the way fully transparent panes did.
+  // arch) but can be made faintly translucent with the Wall opacity slider, so a
+  // hint of the surrounding copies glows through. depthWrite stays ON — the
+  // nearest wall occludes the ones behind it, so the tiled panels don't flicker
+  // the way fully transparent panes did.
   const wallMat = (a: Axis) => {
     const m = new THREE.MeshStandardMaterial({
       color: WALL_TINT[a], roughness: 0.85, metalness: 0.05,
-      transparent: true, opacity: 0.84, depthWrite: true, side: THREE.DoubleSide,
+      transparent: wallOpacity < 0.999, opacity: wallOpacity, depthWrite: true, side: THREE.DoubleSide,
     });
-    addDisposable(m); return m;
+    addDisposable(m); onWallMaterial(m); return m;
   };
   const buildFace = (a: Axis, geo: THREE.BufferGeometry) => {
     const ti = axisIndex(a);
