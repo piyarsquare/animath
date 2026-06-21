@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Workspace from '../../chrome/workspace/Workspace';
-import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { Slider, Pills, Select, Checkbox, ComplexInput } from '../../components/ControlPanel';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
@@ -56,6 +56,27 @@ export default function Argand() {
   // Transient view state — never persisted.
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
+  // The j² morph has its own Play: ping-pong p between −1 and +1.
+  const [sysPlaying, setSysPlaying] = useState(false);
+  const sysDir = useRef(1);
+  useEffect(() => {
+    if (!sysPlaying) return;
+    let raf = 0;
+    let last = performance.now();
+    const loop = (now: number) => {
+      const dt = (now - last) / 1000;
+      last = now;
+      setSystem(v => {
+        let n = v + sysDir.current * dt * 0.4;
+        if (n >= 1) { n = 1; sysDir.current = -1; }
+        else if (n <= -1) { n = -1; sysDir.current = 1; }
+        return n;
+      });
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [sysPlaying, setSystem]);
 
   const isPoint = feed === 'point';
   const isShape = feed === 'shape';
@@ -304,37 +325,67 @@ export default function Argand() {
     else setA0(q);
   };
 
-  // The number-system control lives as a floating pill pinned bottom-center of
-  // the plot (just above the Play action pill) — a persistent home that, unlike
-  // the top bar, never competes for space and survives fullscreen.
-  const sysSnap = (label: string, val: number) => (
-    <button
-      onClick={() => setSystem(val)}
-      style={{
-        padding: '3px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-        border: '1px solid var(--border, #3a3a44)',
-        background: Math.abs(system - val) < 0.001 ? 'var(--accent, #34d399)' : 'transparent',
-        color: Math.abs(system - val) < 0.001 ? 'var(--accent-fg, #0c0c10)' : 'var(--fg, #e8e8ee)',
-      }}
-    >{label}</button>
-  );
-  const systemControl = (
+  // A self-contained control HUD pinned to the bottom of the plot. Because it
+  // lives INSIDE the view node it survives fullscreen (where the chrome's top bar
+  // and action strip are gone) and never overlaps them. It carries the feed
+  // switcher (Shape reveals its presets), and a scrubber + Play for BOTH the
+  // path parameter t and the number-system morph j².
+  const pill = (active: boolean): React.CSSProperties => ({
+    padding: '4px 9px', borderRadius: 999, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+    border: '1px solid var(--border, #3a3a44)', whiteSpace: 'nowrap',
+    background: active ? 'var(--accent, #34d399)' : 'rgba(255,255,255,0.04)',
+    color: active ? 'var(--accent-fg, #0c0c10)' : 'var(--fg, #e8e8ee)',
+  });
+  const iconBtn: React.CSSProperties = {
+    flex: '0 0 auto', width: 30, height: 26, borderRadius: 7, cursor: 'pointer',
+    border: '1px solid var(--border, #3a3a44)', background: 'rgba(255,255,255,0.06)',
+    color: 'var(--fg, #e8e8ee)', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  };
+  const hudLabel: React.CSSProperties = { width: 18, fontSize: 11, color: 'var(--dim, #9b9ba3)', flex: '0 0 auto' };
+  const hudRow: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' };
+  const controlHud = (
     <div
       style={{
-        position: 'absolute', left: '50%', bottom: 66, transform: 'translateX(-50%)',
-        display: 'flex', alignItems: 'center', gap: 8, zIndex: 6,
-        padding: '6px 12px', borderRadius: 999, whiteSpace: 'nowrap',
+        position: 'absolute', left: '50%', bottom: 12, transform: 'translateX(-50%)', zIndex: 6,
+        display: 'flex', flexDirection: 'column', gap: 7, width: 'min(94%, 540px)',
+        padding: '9px 11px', borderRadius: 16,
         background: 'var(--panel, rgba(18,18,24,0.92))', border: '1px solid var(--border, #3a3a44)',
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: 'var(--shadow)',
         fontFamily: 'var(--font-mono, monospace)',
       }}
-      title={systemName(system)}
     >
-      <span style={{ fontSize: 11, color: 'var(--dim, #9b9ba3)' }}>j²</span>
-      <input type="range" min={-1} max={1} step={0.05} value={system}
-        onChange={e => setSystem(parseFloat(e.target.value))}
-        style={{ width: 96, accentColor: 'var(--accent, #34d399)' }} />
-      {sysSnap('Complex', -1)}{sysSnap('Dual', 0)}{sysSnap('Split', 1)}
+      {/* feed switcher — pressing Shape reveals its presets */}
+      <div style={hudRow}>
+        {(['point', 'shape', 'grid'] as Feed[]).map(fd => (
+          <button key={fd} style={pill(feed === fd)} onClick={() => setFeed(fd)}>
+            {fd[0].toUpperCase() + fd.slice(1)}
+          </button>
+        ))}
+        {isShape && <div style={{ width: 1, height: 18, background: 'var(--border, #3a3a44)', margin: '0 2px' }} />}
+        {isShape && CURVES.map(c => (
+          <button key={c.id} style={pill(curveName === c.id)} onClick={() => setCurveName(c.id)}>{c.label}</button>
+        ))}
+      </div>
+      {/* path parameter t */}
+      <div style={hudRow}>
+        <span style={hudLabel}>t</span>
+        <input type="range" min={0} max={1} step={0.001} value={t}
+          onChange={e => { setPlaying(false); setT(parseFloat(e.target.value)); }}
+          style={{ flex: 1, minWidth: 90, accentColor: 'var(--accent, #34d399)' }} />
+        <button style={iconBtn} onClick={togglePlay} aria-pressed={playing} title={playing ? 'Pause' : 'Play'}>{playing ? '❚❚' : '▶'}</button>
+        <button style={iconBtn} onClick={() => { setPlaying(false); setT(0); }} title="To z">↺</button>
+      </div>
+      {/* number system j² (morphs complex ↔ split) */}
+      <div style={hudRow} title={systemName(system)}>
+        <span style={hudLabel}>j²</span>
+        <input type="range" min={-1} max={1} step={0.02} value={system}
+          onChange={e => { setSysPlaying(false); setSystem(parseFloat(e.target.value)); }}
+          style={{ flex: 1, minWidth: 90, accentColor: 'var(--accent, #34d399)' }} />
+        <button style={iconBtn} onClick={() => setSysPlaying(s => !s)} aria-pressed={sysPlaying} title={sysPlaying ? 'Pause morph' : 'Play morph'}>{sysPlaying ? '❚❚' : '▶'}</button>
+        {([['Cx', -1], ['Du', 0], ['Sp', 1]] as [string, number][]).map(([l, v]) => (
+          <button key={l} style={pill(Math.abs(system - v) < 0.02)} onClick={() => { setSysPlaying(false); setSystem(v); }}>{l}</button>
+        ))}
+      </div>
     </div>
   );
 
@@ -356,7 +407,7 @@ export default function Argand() {
             onChange={onHandleChange}
             onZoom={f => setExtent(e => Math.min(16, Math.max(1, e * f)))}
           />
-          {systemControl}
+          {controlHud}
         </div>
       ),
     },
@@ -366,17 +417,6 @@ export default function Argand() {
     {
       id: 'essentials', name: 'Essentials', sub: 'Function · Play · Values', icon: 'tune',
       open: { function: { x: 24, y: 18 }, scrub: { x: 24, y: 320 }, values: { x: 24, y: 580 } },
-    },
-  ];
-
-  const actions: ActionDef[] = [
-    {
-      id: 'play', icon: playing ? 'pause' : 'play', label: playing ? 'Pause' : 'Play',
-      onClick: togglePlay, active: playing, primary: true, sectionId: 'scrub',
-    },
-    {
-      id: 'reset', icon: 'reset', label: 'To z',
-      onClick: () => { setPlaying(false); setT(0); }, sectionId: 'scrub',
     },
   ];
 
@@ -394,7 +434,6 @@ export default function Argand() {
       layouts={layouts}
       defaultLayoutId="essentials"
       explainer={explainerText || null}
-      actions={actions}
     />
   );
 }
