@@ -276,11 +276,4 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
     for (const sz of [-1, 1]) mesh(new THREE.SphereGeometry(u * 0.018, 10, 8), gold, localM(x0 - dep / 2 - u * 0.012, bodyY, cz + sz * u * 0.03)); // knobs
     box(dep * 1.15, u * 0.04, dw * 1.06, woodDark, x0, F + u * 0.745, cz);     // cornice
   }
-
-  // ── framed picture high on the +x wall (faces −x), toward +z ──────────────────
-  {
-    const x0 = h - u * 0.02, y0 = F + u * 0.6, z0 = u * 0.24;
-    box(u * 0.03, u * 0.3, u * 0.22, gold, x0, y0, z0);
-    mesh(new THREE.PlaneGeometry(u * 0.16, u * 0.24), texMat(pictureTexture()), localM(x0 - u * 0.025, y0, z0, 0, -Math.PI / 2, 0));
-  }
 }
