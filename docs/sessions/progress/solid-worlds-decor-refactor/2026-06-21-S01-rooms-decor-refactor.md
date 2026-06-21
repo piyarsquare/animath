@@ -2,32 +2,45 @@
 kind: progress
 session: 2026-06-21-S01
 date: 2026-06-21
-title: Solid Worlds — split rooms.ts decor per-piece + revisit object scale
+title: Per-app developer/agent guides — a living architectural doc per app (PIVOTED from decor refactor)
 branch: claude/solid-worlds-decor-refactor-16tusv
 slug: solid-worlds-decor-refactor
 status: in-progress
 build: unknown
 followup: null
 pr: null
-app: solid-worlds
-signals: visual-unverified
-next: Read rooms.ts (~351 lines) and map the single builder into walls / openings / furniture pieces before touching scale.
+app: docs
+signals: null
+next: Phase 1 — inventory what durable, structural per-app information already exists (and where the gaps are) before designing the guide template.
 ---
 
-# Solid Worlds — split rooms.ts decor per-piece + revisit object scale
+# Per-app developer/agent guides — a living architectural doc per app
 
 ## Session purpose
 
-Address the self-reflection follow-up on the Solid Worlds **Rooms** decor:
+**Pivoted** mid-session. The branch began as a Solid Worlds decor refactor (split
+`rooms.ts`, fix object scale — that orientation work is preserved in the timeline
+below and remains valid for later). The new focus:
 
-1. `decor/rooms.ts` is now a long single function (~351 lines); it would read
-   better split per-piece (**walls / openings / furniture**).
-2. Absolute sizes are large (a book is ~1.6 units in an 11-unit room) — consistent,
-   but it's why objects loom up close. Revisit the scale.
+Build a **per-app developer/agent guide** doc type for every app in the repo — a
+**living document** for an app's development, distinct from the session-specific
+handoffs. Each guide should carry:
 
-This is a **visual/design refactor of the decor layer only** — no engine-math
-change (the cover/deck instancing transports the −axis faces; decor must stay
-spec-independent, as CLAUDE.md notes).
+- **Status registry** — what's *active* (in-progress / planned) vs *resolved*.
+- **Feature information** — what the app does and offers.
+- **How the code works** — architecture, key files, data flow (the app-scoped
+  equivalent of `CLAUDE.md`).
+- An **app-specific "control center"** — the per-app rollup that the global
+  control center does across all apps.
+
+Scope: all apps — Solid Worlds, Complex Particles, the agent apps, Topology,
+Fractals, etc. **Explicitly NOT** the complex-particles `public/*-guide.html`
+pages: those are *teaching* material (what-am-I-looking-at, math pedagogy), not an
+architectural/use manual for developers.
+
+**Phase 1 (this step): information gathering** — survey what long-term, structural
+information about each app already exists in the repo, and where it lives, so the
+guide template is grounded in (and can absorb) what's already written.
 
 ## Previous session
 
@@ -43,6 +56,67 @@ duct world-specific (!low), and punch the engine floor plane through at the trap
 ## Working notes
 
 <!-- Newest entry first. One ### per state transition. -->
+
+### 🔵 finding · 11:10 — Phase 1 inventory: where durable per-app info lives today
+**Why:** Map the existing long-term structural info per app before designing the
+guide, so the template absorbs what's written rather than duplicating it.
+
+**Eleven source types carry durable per-app info, across three layers:**
+
+*Layer A — the cramped canonical descriptions (architecture + lore):*
+1. **`CLAUDE.md` Repository Layout tree** — per-app prose, one-liner (Fractals) to
+   a ~70-line wall of dense text (SolidWorlds). The single richest "what + how
+   built" source, but unstructured, hard to maintain, mixes architecture/feature/
+   history.
+2. **`CLAUDE.md` Routing table** — per-app route + one-liner.
+3. **`src/apps.ts`** — canonical registry (hash/name/icon/blurb), 12 listed apps.
+
+*Layer B — per-app docs in the app folder (the closest existing analogues):*
+4. **`EXPLAINER.md`** — every app but legacy Fractals has one; teaching / "what am
+   I looking at" + "Possible sources." Pedagogy, not architecture.
+5. **`README.md`** — optional "About"; substantive in ~8 apps, stub/absent in the
+   rest (SolidWorlds, PolygonWorlds, TreesAndNets, Trinary, TopologyWalk have none).
+6. **Ad-hoc deep design docs — the gems:** `SolidWorlds/SCREW_BUG.md` (308 lines),
+   `StableMarriage/EXTENSIONS.md` (383 lines). Exactly the "how the code works /
+   why it's built this way" content the new doc wants — but no convention, only two
+   apps have one.
+
+*Layer C — the session stream + backlog (development narrative + active/resolved):*
+7. **`docs/sessions/{handoff,progress}/<branch>/`** — session-specific, mapped to
+   apps via `app:` frontmatter / slug inference. The raw material the living doc
+   distills. Wildly uneven coverage (see below).
+8. **`docs/sessions/TODO.md`** — curated backlog tagged `[category] !priority`; the
+   closest thing to an active/resolved registry, but **cross-app**, not per-app.
+9. **Control center App-map view** (`build-sessions.mjs` → `renderAppMap`) — already
+   a per-app rollup (latest · risk · open · next), computed client-side from cards +
+   TODO. The cross-app "control center"; Dan wants a per-app dedicated twin.
+   `categories.mjs` holds the canonical app↔category taxonomy + the `signals:` vocab.
+
+*Context (framework-level, not per-app):* `ARCHITECTURE.md` (historical),
+`docs/BUILDING_AN_APP.md`, `docs/redesign/*`, project `README.md`; plus code header
+comments + per-app `__tests__` (encode invariants — SolidWorlds has them).
+
+**Coverage is wildly uneven** (doc-richness, not code size):
+- **Rich:** PolygonWorlds (~26 reports, 136-line EXPLAINER, 5677 LOC), Complex
+  Particles (~21 reports + teaching guides), Solid Worlds (~10 reports, SCREW_BUG.md).
+- **Moderate:** Agentic Sorting (8 reports, README+EXPLAINER), Stable
+  Matching/Marriage (EXTENSIONS.md), Trinary (4219 LOC but thin docs).
+- **Thin (≈ EXPLAINER + one CLAUDE.md line only):** Fractals, Mandelbrot↔Julia
+  (Correspondence), Plane Transform, Topology Walk (retiring).
+
+**Punchline:** no existing source is a clean match. The target content is split
+across A (cramped/unstructured), B (great but ad-hoc, 2 apps), and C (cross-app,
+session-scoped). The new per-app guide should be the **home that consolidates A's
+architecture prose + B's deep docs + a per-app slice of C's active/resolved
+registry** — co-located in the app folder, structured, and maintained as the living
+dev doc.
+
+### 🟣 decision · 10:40 — Pivot the branch to a per-app developer/agent guide doc type
+**Why:** Dan wants a living architectural/status document per app — the app-scoped
+twin of `CLAUDE.md` + a per-app control center — separate from session handoffs.
+The decor refactor is shelved (its findings preserved above). Phase 1 = inventory
+existing durable per-app info. The complex-particles teaching guides are out of
+scope (pedagogy, not architecture).
 
 ### 🔵 finding · 10:25 — Read the app; mapped the scale issue and the guide situation
 **Why:** User asked to learn the app fully and whether an app-specific guide stays in sync with code.
