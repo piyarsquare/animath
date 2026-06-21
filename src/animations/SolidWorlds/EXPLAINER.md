@@ -73,15 +73,16 @@ nothing *local* ever happened. You didn't flip *somewhere*; you came back mirror
 The **View** panel has a **Decor** switch. *Diagnostic* is the proof-of-the-math
 scene: neutral landmark props and the FRONT/BACK sign, sized so a copy and its
 mirror are obvious. *Rooms* instead furnishes the fundamental cube as a
-**recognizable room** — a rug, a desk with a lamp, a fireplace, a framed picture,
-a chandelier, a WELCOME sign — inside **walls that are solid but faintly
+**recognizable room** — a rug, a desk with a lamp, a fireplace, a bookshelf, a
+wardrobe, framed pictures, a chandelier, a Hello sign — inside **walls that are solid but faintly
 translucent** (a hint of the surrounding copies glows through), where the
 connections between rooms happen at **archways**: each wall has one archway, the
-floor and ceiling a hole, all placed **off-center** — plus a square, steel-framed
-**ceiling duct** high in the opposite corner. In worlds that flip the room top
-to bottom, the gluing carries that ceiling duct down to floor level in the next
-copy, so there's always a foot-level opening where you actually cross (you walk
-through the duct, not through blank wall while the doorway hangs from the ceiling).
+floor and ceiling a hole, all placed **off-center** — plus a steel-framed
+**duct** that runs up to the ceiling in the opposite corner. In worlds that flip
+the room top to bottom, the gluing carries that ceiling duct down to floor level
+in the next copy, so there's always a foot-level opening where you actually cross
+(you walk through the duct, not through blank wall while the doorway hangs from
+the ceiling).
 The room is built once and tiled across
 the cover, so each opening on a far wall is your near opening carried through that
 pairing's gluing. Off-center is the point: a gluing fixes the center of the face

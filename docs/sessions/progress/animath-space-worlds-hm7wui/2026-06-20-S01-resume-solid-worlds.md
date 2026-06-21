@@ -51,6 +51,21 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 03:55 — Duct to ceiling · back walls furnished · Hello sign
+**Why:** Dan: extend the duct to the ceiling; decorate the bare back walls; rename
+WELCOME → Hello.
+
+- **Duct → ceiling:** the duct is now a slot open at the top edge (+H), mirroring
+  how the arch is open at the floor (−H); casing is a U open at the ceiling. In a
+  top↔bottom flip it maps to a floor-touching slot — even cleaner transit.
+- **Back walls furnished:** the +x/+z walls were bare. Added a bookshelf (colored
+  spines, shared materials) on the +z wall toward −x (under the duct, clear of the
+  arch), a wardrobe on the +x wall, and a second framed picture. Each decor mesh is
+  one InstancedMesh over the cover, so the book count is cheap regardless of depth.
+- **Hello sign:** `signTexture('WELCOME')` → `signTexture('Hello')`.
+
+Build green. Verified: bookshelf/painting/wardrobe render, Hello shows, duct reaches ceiling.
+
 ### 🟢 code · 03:40 — Ceiling duct openings (Dan's pick for inverting worlds)
 **Why:** For worlds that flip the room top↔bottom, Dan wanted distinct "duct"
 openings near the ceiling (square holes, not doorways) that still allow transit.

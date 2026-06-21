@@ -70,19 +70,20 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
   // ── the room shell: three solid faces, each with one off-center opening ─────
   // (the +x/+y/+z faces are supplied by the neighbors, gluing-transported)
   //
-  // Besides the floor-standing arch (the doorway), each wall carries a square
-  // **duct** opening high in the opposite corner. In worlds that flip the room
-  // top↔bottom, the gluing carries the ceiling duct DOWN to floor level in the
+  // Besides the floor-standing arch (the doorway), each wall carries a **duct**
+  // opening that runs UP to the ceiling in the opposite corner (open at the top
+  // edge, just as the arch is open at the floor). In worlds that flip the room
+  // top↔bottom, the gluing carries that ceiling duct DOWN to floor level in the
   // next copy — so there's a visible, foot-level opening exactly where you cross,
   // instead of clipping through a blank wall while the arch hangs from the ceiling.
-  // It's deliberately square (and steel-framed) so it never reads as a doorway.
-  const DUCT = { u: -H * 0.42, v: H * 0.6, s: H * 0.13 };
+  // It's a steel-framed rectangle so it never reads as a doorway.
+  const DUCT = { u: -H * 0.42, halfW: H * 0.13, vBot: H * 0.42 };  // open at the ceiling (top = +H)
   const ductHole = () => {
     const p = new THREE.Path();
-    p.moveTo(DUCT.u - DUCT.s, DUCT.v - DUCT.s);
-    p.lineTo(DUCT.u - DUCT.s, DUCT.v + DUCT.s);
-    p.lineTo(DUCT.u + DUCT.s, DUCT.v + DUCT.s);
-    p.lineTo(DUCT.u + DUCT.s, DUCT.v - DUCT.s);
+    p.moveTo(DUCT.u - DUCT.halfW, H);
+    p.lineTo(DUCT.u - DUCT.halfW, DUCT.vBot);
+    p.lineTo(DUCT.u + DUCT.halfW, DUCT.vBot);
+    p.lineTo(DUCT.u + DUCT.halfW, H);
     p.closePath();
     return p;
   };
@@ -167,15 +168,20 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
   // industrial ductwork (not a doorway). Same basis as the arch casing.
   const steel = new THREE.MeshStandardMaterial({ color: 0x767c84, roughness: 0.5, metalness: 0.6 });
   addDisposable(steel);
+  // Casing follows the duct: jambs + a bottom sill, open at the ceiling (the duct's
+  // top), mirroring how the arch casing is open at the floor.
   const ductCasingGeo = (m: number, depth: number) => {
+    const { u, halfW, vBot } = DUCT;
     const s = new THREE.Shape();
-    const o = DUCT.s + m;
-    s.moveTo(DUCT.u - o, DUCT.v - o); s.lineTo(DUCT.u + o, DUCT.v - o);
-    s.lineTo(DUCT.u + o, DUCT.v + o); s.lineTo(DUCT.u - o, DUCT.v + o); s.closePath();
-    const hole = new THREE.Path();
-    hole.moveTo(DUCT.u - DUCT.s, DUCT.v - DUCT.s); hole.lineTo(DUCT.u - DUCT.s, DUCT.v + DUCT.s);
-    hole.lineTo(DUCT.u + DUCT.s, DUCT.v + DUCT.s); hole.lineTo(DUCT.u + DUCT.s, DUCT.v - DUCT.s); hole.closePath();
-    s.holes.push(hole);
+    s.moveTo(u - halfW - m, H);
+    s.lineTo(u - halfW - m, vBot - m);
+    s.lineTo(u + halfW + m, vBot - m);
+    s.lineTo(u + halfW + m, H);
+    s.lineTo(u + halfW, H);
+    s.lineTo(u + halfW, vBot);
+    s.lineTo(u - halfW, vBot);
+    s.lineTo(u - halfW, H);
+    s.closePath();
     const g = new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: false });
     addDisposable(g); return g;
   };
@@ -225,7 +231,7 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
     box(u * 0.3, u * 0.11, u * 0.07, emis(0xff6a1a, 1.2), cx, F + u * 0.08, z0 - u * 0.02); // embers
     for (const sx of [-1, 1]) cyl(u * 0.02, u * 0.02, u * 0.22, woodDark, cx + sx * u * 0.05, F + u * 0.1, z0 - u * 0.01, 8, 0, 0, Math.PI / 2 + sx * 0.2);
     box(u * 0.46, u * 0.15, u * 0.025, wood, cx, F + u * 0.64, z0 + u * 0.01);            // sign frame
-    mesh(new THREE.PlaneGeometry(u * 0.42, u * 0.12), texMat(signTexture('WELCOME')), localM(cx, F + u * 0.64, z0 + u * 0.026));
+    mesh(new THREE.PlaneGeometry(u * 0.42, u * 0.12), texMat(signTexture('Hello')), localM(cx, F + u * 0.64, z0 + u * 0.026));
   }
 
   // ── chandelier from the ceiling ─────────────────────────────────────────────
@@ -240,5 +246,41 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
       mesh(new THREE.SphereGeometry(u * 0.022, 10, 8), bulb, localM(Math.cos(ang) * r, cy + u * 0.09, Math.sin(ang) * r));
     }
     mesh(new THREE.SphereGeometry(u * 0.03, 12, 10), metal, localM(0, cy - u * 0.02, 0));
+  }
+
+  // ── bookshelf on the +z wall, toward −x (clear of the +x arch; tucked under the
+  // ceiling duct) — furnishes the back wall and doubles as a landmark ────────────
+  {
+    const z0 = h - u * 0.08, bx = -u * 0.16, w = u * 0.5, d = u * 0.14;
+    box(w, u * 0.72, d, woodDark, bx, F + u * 0.36, z0);                       // case
+    for (let i = 0; i < 4; i++) box(w * 0.9, u * 0.015, d * 0.8, wood, bx, F + u * 0.08 + i * u * 0.19, z0); // shelves
+    const bookMats = [0x9c3b34, 0x3a6ea5, 0x4f8a4f, 0xb0904a, 0x6b4a8a, 0x7a5a3a].map((c) => std(c));
+    const bws = [0.030, 0.022, 0.034, 0.026, 0.030, 0.024, 0.032];
+    const bhs = [0.150, 0.130, 0.160, 0.140, 0.155, 0.135, 0.145];
+    for (let i = 0; i < 4; i++) {
+      const shelfY = F + u * 0.08 + i * u * 0.19;
+      let x = bx - w * 0.42, j = i;
+      while (x < bx + w * 0.40) {
+        const bw = u * bws[j % bws.length], bh = u * bhs[j % bhs.length];
+        box(bw, bh, d * 0.62, bookMats[j % bookMats.length], x + bw / 2, shelfY + bh / 2 + u * 0.012, z0);
+        x += bw + u * 0.004; j++;
+      }
+    }
+  }
+
+  // ── wardrobe on the +x wall, toward the center (clear of the +z arch) ─────────
+  {
+    const x0 = h - u * 0.09, cz = -u * 0.05, dw = u * 0.42, dep = u * 0.16, bodyY = F + u * 0.37;
+    box(dep, u * 0.72, dw, wood, x0, bodyY, cz);                               // body
+    for (const sz of [-1, 1]) box(u * 0.012, u * 0.64, dw * 0.46, woodDark, x0 - dep / 2 - u * 0.006, bodyY, cz + sz * dw * 0.24); // doors
+    for (const sz of [-1, 1]) mesh(new THREE.SphereGeometry(u * 0.018, 10, 8), gold, localM(x0 - dep / 2 - u * 0.012, bodyY, cz + sz * u * 0.03)); // knobs
+    box(dep * 1.15, u * 0.04, dw * 1.06, woodDark, x0, F + u * 0.745, cz);     // cornice
+  }
+
+  // ── framed picture high on the +x wall (faces −x), toward +z ──────────────────
+  {
+    const x0 = h - u * 0.02, y0 = F + u * 0.6, z0 = u * 0.24;
+    box(u * 0.03, u * 0.3, u * 0.22, gold, x0, y0, z0);
+    mesh(new THREE.PlaneGeometry(u * 0.16, u * 0.24), texMat(pictureTexture()), localM(x0 - u * 0.025, y0, z0, 0, -Math.PI / 2, 0));
   }
 }
