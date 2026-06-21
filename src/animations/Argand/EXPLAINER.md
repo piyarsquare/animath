@@ -34,10 +34,9 @@ its handedness) obvious; **Add** slides the whole shape by `b`. It's the same pe
 spiral/slide as for a single number, applied to every point of the curve at once — the
 bridge from "one number" to "a function acts on the whole plane."
 
-**Press Play** and the multiply sweep tells the whole commutativity story in one loop:
-the shape spirals to its image (the **point** acting on the **shape**, `q·bᵗ`), then the
-entire shape **collapses onto the point `b`** and grows back out (the **shape** acting on
-the **point**, `b·qᵗ`) — two different motions, the same product `q·b = b·q`.
+The faint **arcs** are each point's honest path to its image — a spiral for **multiply**,
+a straight slide for **add** — so the whole journey is visible standing still. **Press
+Play** (or scrub) to sweep the entire shape along those arcs from original to image.
 
 ## The whole plane moves (Curve → Plane)
 

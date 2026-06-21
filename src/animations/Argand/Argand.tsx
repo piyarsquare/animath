@@ -8,7 +8,7 @@ import ArgandPlane, { type Mode, type Subject } from './ArgandPlane';
 import { buildCurve, CURVES, type CurveName } from './curves';
 import {
   type Cx, type ArcLengthMap, cx, add, mul, modulus,
-  mulPath, addPath, cycleSweep, arcLengthMap, formatRect, formatPolar,
+  mulPath, addPath, arcLengthMap, formatRect, formatPolar,
 } from './complexOps';
 
 const STORAGE_KEY = 'argand';
@@ -71,7 +71,7 @@ export default function Argand() {
         if (modulus(cand) > modulus(q)) q = cand;
       }
       return mode === 'multiply'
-        ? arcLengthMap(s => cycleSweep(q, b, s))
+        ? arcLengthMap(s => mulPath(q, b, s))
         : arcLengthMap(s => addPath(q, b, s));
     }
     return mode === 'multiply'
@@ -134,15 +134,12 @@ export default function Argand() {
       ? `shape ${op} b,  b = ${formatRect(b)}`
       : `${resultLabel} = ${formatRect(result)}`;
 
-  // The meaningful waypoints of the current path. The number/plane path has two
-  // ends; the curve's unified multiply loop has three distinct pictures (shape ·
-  // image · the collapse onto the point), with image revisited on the way back.
+  // The meaningful waypoints of the current path — each one a two-ended sweep
+  // (original → image), so two stops everywhere.
   const stops: Array<{ label: string; t: number; also?: number }> = isPlane
     ? [{ label: 'Identity', t: 0 }, { label: 'Mapped', t: 1 }]
     : isCurve
-      ? mode === 'multiply'
-        ? [{ label: 'Shape', t: 0, also: 1 }, { label: 'Image', t: 0.25, also: 0.75 }, { label: 'Point', t: 0.5 }]
-        : [{ label: 'Shape', t: 0 }, { label: 'Image', t: 1 }]
+      ? [{ label: 'Shape', t: 0 }, { label: 'Image', t: 1 }]
       : [{ label: 'a', t: 0 }, { label: resultLabel, t: 1 }];
   const atStop = (s: { t: number; also?: number }): boolean =>
     Math.abs(t - s.t) < 0.02 || (s.also !== undefined && Math.abs(t - s.also) < 0.02);
@@ -199,7 +196,7 @@ export default function Argand() {
       </button>
       <Slider label="Speed  (pen, units/sec)" value={speed} min={0.5} max={6} step={0.25}
         onChange={setSpeed} format={v => `${v.toFixed(2)} u/s`} />
-      <Slider label={isCurve ? 'Fine scrub  (loop phase)' : 'Fine scrub  (a → result)'}
+      <Slider label={isCurve ? 'Fine scrub  (shape → image)' : 'Fine scrub  (a → result)'}
         value={t} min={0} max={1} step={0.001}
         onChange={v => { setPlaying(false); setT(v); }} format={v => v.toFixed(2)} />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 6 }}>
@@ -208,7 +205,7 @@ export default function Argand() {
             ? 'The whole grid rotates and scales by b about the origin — multiply is one similarity of the plane. The faint grid is the identity it came from.'
             : 'The whole grid slides rigidly by b — addition is a translation of the plane.'
           : isCurve
-            ? 'Loop: shape → image → point (collapse) → image → shape. Play paces it by path length.'
+            ? 'The arcs are each point’s path to its image (spirals for ×, slides for +). Play sweeps the shape along them.'
             : mode === 'multiply'
               ? 'Multiplication spirals: angle swings by arg b, length scales by |b| — paced by arc length so it matches Add.'
               : 'Addition slides: a moves tip-to-tail along b.'}

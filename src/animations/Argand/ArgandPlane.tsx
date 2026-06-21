@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   type Cx, cx, add, mul, argument, fromPolar,
-  mulPath, addPath, cycleSweep, snap,
+  mulPath, addPath, snap,
 } from './complexOps';
 
 export type Mode = 'multiply' | 'add';
@@ -198,10 +198,22 @@ export default function ArgandPlane({
   };
 
   // Curve subject: the placed shape (base translated by a) and its image under
-  // the constant b at scrub param t (b·q spirals / q+b slides, per point).
+  // the constant b at scrub param t (q·b spirals / q+b slides, per point).
   const placed = curve.map(p => add(p, a));
   const imageAt = (q: Cx, s: number): Cx =>
     mode === 'multiply' ? mulPath(q, b, s) : addPath(q, b, s);
+  // The honest trajectory of one point q from original (s=0) to image (s=1):
+  // a spiral arc for multiply, a straight slide for add. Drawn statically so the
+  // whole journey is visible at rest — no looping animation needed.
+  const trajectory = (q: Cx): string => {
+    const n = mode === 'multiply' ? 32 : 1;
+    let d = '';
+    for (let i = 0; i <= n; i++) {
+      const [vx, vy] = toV(imageAt(q, i / n));
+      d += `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`;
+    }
+    return d;
+  };
   const vpoly = (pts: Cx[]): string =>
     pts.map((p, i) => {
       const [vx, vy] = toV(p);
@@ -366,13 +378,13 @@ export default function ArgandPlane({
           {/* ---- CURVE subject: the placed shape and its image under b ---- */}
           {isCurve && (
             <>
-              {/* per-vertex connectors (original → full image) */}
-              <g stroke="currentColor" strokeOpacity={0.12} strokeWidth={1.5}>
+              {/* per-vertex trajectory arcs (original → image): the honest
+                  spiral each point travels under multiply (a straight slide
+                  under add). Always shown, so the whole journey reads at rest. */}
+              <g stroke="#fde68a" strokeOpacity={0.3} strokeWidth={1.5} fill="none">
                 {placed.map((q, i) => {
                   if (i % Math.max(1, Math.floor(placed.length / 18)) !== 0) return null;
-                  const [x1, y1] = toV(q);
-                  const [x2, y2] = toV(imageAt(q, 1));
-                  return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />;
+                  return <path key={i} d={trajectory(q)} />;
                 })}
               </g>
               {/* original shape (dim) */}
@@ -381,14 +393,11 @@ export default function ArgandPlane({
               {/* the FULL image — always shown, so a stopped state is the whole story */}
               <path d={vpoly(placed.map(q => imageAt(q, 1)))} fill="none" stroke={R_COL}
                 strokeWidth={3.5} strokeLinejoin="round" strokeLinecap="round" />
-              {/* the moving in-between sweep — only while in motion. For
-                  multiply this is the unified two-factor loop (q → q·b → b →
-                  q·b → q): the shape spirals to its image, then the WHOLE shape
-                  collapses onto the point b and back, showing both
-                  "shape × point" and "point × shape". */}
+              {/* the intermediate shape — only while scrubbing/playing: a simple
+                  one-way sweep of the whole figure from original to image. */}
               {showMover && (
                 <path
-                  d={vpoly(placed.map(q => mode === 'multiply' ? cycleSweep(q, b, t) : addPath(q, b, t)))}
+                  d={vpoly(placed.map(q => imageAt(q, t)))}
                   fill="none" stroke="#fde68a"
                   strokeOpacity={0.9} strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
               )}
