@@ -39,6 +39,21 @@ topic: **plane/particles unification** ("which plane am I looking at" across vie
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 21:45 — Full arc always shown at rest; ping-pong animation
+**Why:** Dan: "the arcs when stopped should always show the full arc. And if
+possible do the reverse path on the return, as the multiplication was in reverse
+direction. That, or leave the movement out of the story."
+
+- The full path is now **always drawn**: number mode's spiral route already was;
+  curve mode now draws the **full image** (t=1), not a partial one. The moving
+  marker (number) / yellow in-between sweep (curve) shows **only while in motion**
+  (`showMover = playing || t∈(0,1)`), so a stopped state at t=1 is the complete
+  static story with no partial-looking marker.
+- The Play clock now **ping-pongs** 0↔1 (a `dirRef`): the return leg retraces the
+  path backward — for multiplication, the operation in reverse (dividing) — so
+  there's no jump-cut on loop. `togglePlay` starts away from whichever endpoint
+  you're parked on. Verified both modes at rest via screenshot. Build + lint green.
+
 ### 🟢 code · 21:35 — Argand: pinch/wheel zoom + two-finger / shift-drag pan
 **Why:** Dan asked for pinch-to-zoom and two-finger pan on the plane.
 
