@@ -285,64 +285,67 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
     mesh(new THREE.SphereGeometry(u * 0.03, 12, 10), metal, localM(0, cy - u * 0.02, 0));
   }
 
-  // ── bookshelf on the +z wall, toward −x (clear of the +x arch; tucked under the
+  // ── bookshelf on the +x side wall, toward −z (clear of the +z arch; under the
   // ceiling duct). An OPEN case — back + sides + top/bottom + shelf boards — whose
-  // open front faces the room (−z), so the books, a plant, and a small glass Klein
-  // bottle on the shelves read from inside the room. ────────────────────────────
+  // open front faces the room (−x), so the books, a plant, and a small glass Klein
+  // bottle on the shelves read from inside. On a side wall it shows at a nice angle
+  // and stays clear of the default third-person camera (which sits behind the
+  // walker, near the +z wall). ──────────────────────────────────────────────────
   {
-    const bx = -u * 0.16, z0 = h - u * 0.1;                 // center; back panel toward +z wall
+    const x0 = h - u * 0.1, bz = -u * 0.16;                 // center; back panel toward +x wall
     const w = u * 0.5, dep = u * 0.18, ht = u * 0.8, baseY = F + u * 0.4, t = u * 0.02;
-    const zBack = z0 + dep / 2 - t / 2;                     // back panel, toward the wall
-    const zFront = z0 - dep / 2;                            // open mouth, toward the room
-    box(w, ht, t, woodDark, bx, baseY, zBack);                                   // back
-    box(t, ht, dep, woodDark, bx - w / 2 + t / 2, baseY, z0);                    // left side
-    box(t, ht, dep, woodDark, bx + w / 2 - t / 2, baseY, z0);                    // right side
-    box(w, t, dep, woodDark, bx, baseY + ht / 2 - t / 2, z0);                    // top
-    box(w, t, dep, woodDark, bx, baseY - ht / 2 + t / 2, z0);                    // bottom
+    const xBack = x0 + dep / 2 - t / 2;                     // back panel, toward the wall
+    const xFront = x0 - dep / 2;                            // open mouth, toward the room
+    box(t, ht, w, woodDark, xBack, baseY, bz);                                   // back
+    box(dep, ht, t, woodDark, x0, baseY, bz - w / 2 + t / 2);                    // −z side
+    box(dep, ht, t, woodDark, x0, baseY, bz + w / 2 - t / 2);                    // +z side
+    box(dep, t, w, woodDark, x0, baseY + ht / 2 - t / 2, bz);                    // top
+    box(dep, t, w, woodDark, x0, baseY - ht / 2 + t / 2, bz);                    // bottom
     const shelfY = (k: number) => F + t + k * u * 0.19;
-    for (let k = 1; k < 4; k++) box(w - 2 * t, t, dep - t, wood, bx, shelfY(k), z0); // boards (k=0 is the bottom panel)
-    // books — spines toward the open front; shelves 1 & 2 stop short on the right
+    for (let k = 1; k < 4; k++) box(dep - t, t, w - 2 * t, wood, x0, shelfY(k), bz); // boards (k=0 is the bottom panel)
+    // books — spines toward the open front; shelves 1 & 2 stop short on the +z end
     // to make room for the plant and the Klein bottle.
     const bookMats = [0x9c3b34, 0x3a6ea5, 0x4f8a4f, 0xb0904a, 0x6b4a8a, 0x7a5a3a].map((c) => std(c));
     const bws = [0.030, 0.022, 0.034, 0.026, 0.030, 0.024, 0.032];
     const bhs = [0.150, 0.130, 0.160, 0.140, 0.155, 0.135, 0.145];
-    const bd = dep * 0.6, bookZ = zFront + bd / 2 + u * 0.012;
-    const xLeft = bx - w / 2 + t + u * 0.012;
+    const bd = dep * 0.6, bookX = xFront + bd / 2 + u * 0.012;
+    const zLeft = bz - w / 2 + t + u * 0.012;
     for (let k = 0; k < 4; k++) {
-      const sy = shelfY(k), xEnd = (k === 1 || k === 2) ? bx + w * 0.04 : bx + w / 2 - t - u * 0.012;
-      let x = xLeft, j = k;
-      while (x < xEnd) {
+      const sy = shelfY(k), zEnd = (k === 1 || k === 2) ? bz + w * 0.04 : bz + w / 2 - t - u * 0.012;
+      let z = zLeft, j = k;
+      while (z < zEnd) {
         const bw = u * bws[j % bws.length], bh = u * bhs[j % bhs.length];
-        box(bw, bh, bd, bookMats[j % bookMats.length], x + bw / 2, sy + t / 2 + bh / 2, bookZ);
-        x += bw + u * 0.004; j++;
+        box(bd, bh, bw, bookMats[j % bookMats.length], bookX, sy + t / 2 + bh / 2, z + bw / 2);
+        z += bw + u * 0.004; j++;
       }
     }
-    // potted plant on shelf 2 (right end)
+    // potted plant on shelf 2 (+z end)
     {
-      const px = bx + w * 0.3, py = shelfY(2) + t / 2, pz = zFront + dep * 0.32;
+      const pz = bz + w * 0.3, py = shelfY(2) + t / 2, px = xFront + dep * 0.32;
       cyl(u * 0.045, u * 0.032, u * 0.06, std(0x9a5a3e), px, py + u * 0.03, pz, 14);   // terracotta pot
       const leaf = std(0x3f7d44);
-      for (const [dx, dy, dz, r] of [[0, 0.1, 0, 0.05], [-0.035, 0.07, 0.012, 0.036], [0.035, 0.075, -0.012, 0.036], [0, 0.145, 0, 0.032]] as const)
+      for (const [dx, dy, dz, r] of [[0, 0.1, 0, 0.05], [-0.012, 0.07, 0.035, 0.036], [0.012, 0.075, -0.035, 0.036], [0, 0.145, 0, 0.032]] as const)
         mesh(new THREE.SphereGeometry(u * r, 10, 8), leaf, localM(px + u * dx, py + u * dy, pz + u * dz));
     }
-    // small glass Klein bottle on shelf 1 (right end)
+    // small glass Klein bottle on shelf 1 (+z end)
     {
-      const kx = bx + w * 0.3, ky = shelfY(1) + t / 2, kz = zFront + dep * 0.32, kScale = u * 0.17;
+      const pz = bz + w * 0.3, ky = shelfY(1) + t / 2, kx = xFront + dep * 0.32, kScale = u * 0.17;
       const kg = kleinBottleGeometry(); addDisposable(kg);
       const km = new THREE.MeshStandardMaterial({ color: 0x9fd9e6, roughness: 0.2, metalness: 0.25, side: THREE.DoubleSide, emissive: 0x1b3640, emissiveIntensity: 0.5 });
       addDisposable(km);
       const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0.7, Math.PI / 2));
-      const M = new THREE.Matrix4().compose(new THREE.Vector3(kx, ky + kScale * 0.5, kz), q, new THREE.Vector3(kScale, kScale, kScale));
+      const M = new THREE.Matrix4().compose(new THREE.Vector3(kx, ky + kScale * 0.5, pz), q, new THREE.Vector3(kScale, kScale, kScale));
       mesh(kg, km, M);
     }
   }
 
-  // ── wardrobe on the +x wall, toward the center (clear of the +z arch) ─────────
+  // ── wardrobe on the +z wall, toward the center (clear of the +x arch); a flat
+  // front so it barely peeks past the cutaway behind the default camera ──────────
   {
-    const x0 = h - u * 0.09, cz = -u * 0.05, dw = u * 0.42, dep = u * 0.16, bodyY = F + u * 0.37;
-    box(dep, u * 0.72, dw, wood, x0, bodyY, cz);                               // body
-    for (const sz of [-1, 1]) box(u * 0.012, u * 0.64, dw * 0.46, woodDark, x0 - dep / 2 - u * 0.006, bodyY, cz + sz * dw * 0.24); // doors
-    for (const sz of [-1, 1]) mesh(new THREE.SphereGeometry(u * 0.018, 10, 8), gold, localM(x0 - dep / 2 - u * 0.012, bodyY, cz + sz * u * 0.03)); // knobs
-    box(dep * 1.15, u * 0.04, dw * 1.06, woodDark, x0, F + u * 0.745, cz);     // cornice
+    const z0 = h - u * 0.09, cx2 = -u * 0.05, dw = u * 0.42, depz = u * 0.16, bodyY = F + u * 0.37;
+    box(dw, u * 0.72, depz, wood, cx2, bodyY, z0);                              // body
+    for (const sx of [-1, 1]) box(dw * 0.46, u * 0.64, u * 0.012, woodDark, cx2 + sx * dw * 0.24, bodyY, z0 - depz / 2 - u * 0.006); // doors
+    for (const sx of [-1, 1]) mesh(new THREE.SphereGeometry(u * 0.018, 10, 8), gold, localM(cx2 + sx * u * 0.03, bodyY, z0 - depz / 2 - u * 0.012)); // knobs
+    box(dw * 1.06, u * 0.04, depz * 1.15, woodDark, cx2, F + u * 0.745, z0);    // cornice
   }
 }

@@ -51,6 +51,18 @@ so it is the continuation, not a parallel re-do.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 04:35 — Final verify; swap bookshelf→+x to fix default-cam looming
+**Why:** Final look-over: the default *third-person* camera spawns behind the
+walker, near the +z wall — so the +z bookshelf's glass Klein bottle loomed huge in
+the foreground (poking just past the cutaway plane). First-person was clean.
+
+Swapped the two pieces: **bookshelf → +x side wall** (shows at a nice angle, clear
+of the default camera), **wardrobe → +z wall** (flat front, mostly clipped behind
+the camera). Default third-person is now clean; bookshelf reads well head-on.
+
+Full verify: build ✓, lint 0 errors, **53/53 tests** ✓, **CI green** (Cloudflare
+Pages + trigger-deploy both success after the re-trigger).
+
 ### 🟢 code · 04:20 — Bookshelf rebuilt (open front) + plant + Klein bottle
 **Why:** Dan's photo showed only the top row of books — the case was a solid
 block with shelves/books buried inside (only the top row overshot the lid), and
