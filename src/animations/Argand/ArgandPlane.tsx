@@ -1,47 +1,47 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  type Cx, cx, add, scale, argument, fromPolar,
-  addPath, snap,
-  mulG, mulPathG, turnG, lerpMulG, arithMean, geoMean, harmMean,
+  type Cx, cx, add,
+  mulG, affine, affineAt, fixedPoint, snap,
 } from './complexOps';
 
-export type Mode = 'multiply' | 'add';
-export type Subject = 'number' | 'curve' | 'plane' | 'repeat' | 'mean';
+export type Feed = 'point' | 'shape' | 'grid';
+export type Handle = 'z' | 'alpha1' | 'alpha0';
 
-/** Handle / result colors — chosen to read on both light and dark viz-bg skins. */
-const A_COL = '#38bdf8';   // a — cyan
-const B_COL = '#fb923c';   // b — orange
-const R_COL = '#34d399';   // result — emerald
+/** Shared palette — handles and the equation readout use the same colors. */
+export const Z_COL = '#38bdf8';   // z  — input (cyan)
+export const A1_COL = '#fb923c';  // α₁ — slope / multiplier (orange)
+export const A0_COL = '#c084fc';  // α₀ — shift / intercept (violet)
+export const F_COL = '#34d399';   // f(z) — output (emerald)
+export const FIX_COL = '#fbbf24'; // z* — fixed point (gold)
 
 const VIRT = 1000;         // virtual viewBox side
 const C = VIRT / 2;        // origin in virtual coords
 const MARGIN = 0.9;        // keep the extent inside the frame
 
 interface Props {
-  a: Cx;
-  b: Cx;
-  mode: Mode;
-  /** number: combine two numbers a,b · curve: transform a placed shape by b. */
-  subject: Subject;
+  /** The input locus: the point (Point), the shape's anchor (Shape), a probe (Grid). */
+  z: Cx;
+  /** Coefficients of f(z) = α₁·z + α₀. */
+  alpha1: Cx;
+  alpha0: Cx;
   /** Number-system parameter j² = p: p<0 complex, p=0 dual, p>0 split-complex. */
   p: number;
-  /** Show the harmonic mean too (mean subject). */
-  showHarmonic: boolean;
-  /** Base curve points (centered near origin) for the curve subject. */
+  /** What we feed f. */
+  feed: Feed;
+  /** Base shape points (centered near origin) for the shape feed. */
   curve: Cx[];
-  /** Scrub parameter 0→1 along the chapter's path. */
+  /** Scrub 0→1 along the two-leg affine path (½ = after ×α₁). */
   t: number;
-  /** True while the path is being animated (ping-ponging). */
   playing: boolean;
-  /** Show the second composition order (commutativity / parallelogram). */
-  showSecondRoute: boolean;
+  /** Locked coefficients can't be dragged. */
+  lockA1: boolean;
+  lockA0: boolean;
   snapping: boolean;
   showGrid: boolean;
   showUnitCircle: boolean;
   /** Half-extent of the visible plane in math units. */
   extent: number;
-  onChange: (which: 'a' | 'b', z: Cx) => void;
-  /** Multiply the extent by `factor` (pinch / wheel zoom). */
+  onChange: (which: Handle, z: Cx) => void;
   onZoom?: (factor: number) => void;
 }
 
@@ -64,23 +64,20 @@ function useSquareSize(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function ArgandPlane({
-  a, b, mode, subject, p, showHarmonic, curve, t, playing, showSecondRoute, snapping, showGrid, showUnitCircle, extent, onChange, onZoom,
+  z, alpha1, alpha0, p, feed, curve, t, playing, lockA1, lockA0, snapping, showGrid, showUnitCircle, extent, onChange, onZoom,
 }: Props) {
-  const isCurve = subject === 'curve';
-  const isPlane = subject === 'plane';
-  const isRepeat = subject === 'repeat';
-  const isMean = subject === 'mean';
-  // The moving marker/sweep appears only while in motion (playing) or when the
-  // user has parked the scrub mid-path; at rest (t at an endpoint) only the full
-  // arc shows — the static "story" Dan asked to always be complete.
+  const isPoint = feed === 'point';
+  const isShape = feed === 'shape';
+  const isGrid = feed === 'grid';
+  // The moving marker/sweep appears only in motion (playing) or parked mid-path;
+  // at rest only the full static story shows.
   const showMover = playing || (t > 0.01 && t < 0.99);
   const wrapRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const dragRef = useRef<'a' | 'b' | null>(null);
+  const dragRef = useRef<Handle | null>(null);
   const side = useSquareSize(wrapRef);
 
-  // Pan offset: the math point shown at the middle of the view. Transient view
-  // state (like a camera) — never persisted.
+  // Pan offset: the math point shown at the middle of the view. Transient.
   const [center, setCenter] = useState<Cx>(cx(0, 0));
 
   // Multi-pointer bookkeeping for pinch-zoom / two-finger (or shift/right-drag) pan.
@@ -89,10 +86,9 @@ export default function ArgandPlane({
   const panning = useRef<{ x: number; y: number } | null>(null);
 
   const k = (C * MARGIN) / extent;                 // math → virtual scale
-  const toV = (z: Cx): [number, number] =>
-    [C + (z.re - center.re) * k, C - (z.im - center.im) * k];
+  const toV = (q: Cx): [number, number] =>
+    [C + (q.re - center.re) * k, C - (q.im - center.im) * k];
 
-  /** Client pixel → math coordinate (inverting the square SVG mapping). */
   const toMath = (clientX: number, clientY: number): Cx => {
     const r = svgRef.current!.getBoundingClientRect();
     const s = VIRT / (r.width || 1);
@@ -101,7 +97,6 @@ export default function ArgandPlane({
     return cx((fx - C) / k + center.re, -(fy - C) / k + center.im);
   };
 
-  /** Shift the view by a client-pixel delta, so content follows the fingers. */
   const panByClient = (dxpx: number, dypx: number) => {
     const r = svgRef.current?.getBoundingClientRect();
     const s = VIRT / (r?.width || 1);
@@ -118,9 +113,11 @@ export default function ArgandPlane({
     };
   };
 
-  // Handle drag begins here; stopPropagation keeps the root from treating it as
-  // a pan. A second pointer promotes to a pinch/pan gesture.
-  const onHandleDown = (which: 'a' | 'b') => (e: React.PointerEvent) => {
+  const locked = (which: Handle): boolean =>
+    (which === 'alpha1' && lockA1) || (which === 'alpha0' && lockA0);
+
+  const onHandleDown = (which: Handle) => (e: React.PointerEvent) => {
+    if (locked(which)) return;                      // a locked coefficient won't grab
     e.stopPropagation();
     e.preventDefault();
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -133,7 +130,6 @@ export default function ArgandPlane({
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     svgRef.current?.setPointerCapture(e.pointerId);
     if (pointers.current.size >= 2) { dragRef.current = null; startGesture(); return; }
-    // desktop pan: right-button or shift+drag on empty plane.
     if (e.button === 2 || e.shiftKey) panning.current = { x: e.clientX, y: e.clientY };
   };
 
@@ -152,12 +148,9 @@ export default function ArgandPlane({
       return;
     }
     if (dragRef.current) {
-      let z = toMath(e.clientX, e.clientY);
-      // Repeat needs an integer multiplier b = m + nj, so its handle snaps to
-      // the lattice; elsewhere snapping is the optional "nice values" pull.
-      if (isRepeat && dragRef.current === 'b') z = cx(Math.round(z.re), Math.round(z.im));
-      else if (snapping) z = snap(z);
-      onChange(dragRef.current, z);
+      let q = toMath(e.clientX, e.clientY);
+      if (snapping) q = snap(q);
+      onChange(dragRef.current, q);
       return;
     }
     if (panning.current) {
@@ -175,86 +168,56 @@ export default function ArgandPlane({
 
   const onWheel = (e: React.WheelEvent) => onZoom?.(Math.exp(e.deltaY * 0.0015));
 
-  // The result and the two construction routes.
-  const result = mode === 'multiply' ? mulG(a, b, p) : add(a, b);
-  const path = (s: number, primary: boolean): Cx =>
-    mode === 'multiply'
-      ? (primary ? mulPathG(a, b, p, s) : mulPathG(b, a, p, s))
-      : (primary ? addPath(a, b, s) : addPath(b, a, s));
+  /* ---- the affine map applied to the current feed ---- */
 
-  const sampleRoute = (primary: boolean): string => {
-    const n = mode === 'multiply' ? 48 : 1;
+  const fOf = (q: Cx): Cx => affine(q, alpha1, alpha0, p);
+  // The two-leg path of one input point, split so each leg gets its color.
+  const legPath = (q: Cx, leg: 0 | 1): string => {
+    const lo = leg === 0 ? 0 : 0.5, hi = leg === 0 ? 0.5 : 1;
+    const n = 24;
     const pts: string[] = [];
     for (let i = 0; i <= n; i++) {
-      const [vx, vy] = toV(path(i / n, primary));
+      const [vx, vy] = toV(affineAt(q, alpha1, alpha0, p, lo + (hi - lo) * (i / n)));
       pts.push(`${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`);
     }
     return pts.join(' ');
   };
-
-  const mover1 = toV(path(t, true));
-  const mover2 = toV(path(t, false));
-
-  // Sector path for an angle wedge (math angles → virtual sector).
-  const sector = (rho: number, p0: number, p1: number): string => {
-    const n = 28;
-    let d = `M ${C} ${C}`;
+  const fullPath = (q: Cx): string => {
+    const n = 40;
+    const pts: string[] = [];
     for (let i = 0; i <= n; i++) {
-      const phi = p0 + (p1 - p0) * (i / n);
-      const [vx, vy] = toV(fromPolar(rho, phi));
-      d += ` L ${vx.toFixed(1)} ${vy.toFixed(1)}`;
+      const [vx, vy] = toV(affineAt(q, alpha1, alpha0, p, i / n));
+      pts.push(`${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`);
     }
-    return d + ' Z';
-  };
-
-  // Curve subject: the placed shape (base translated by a) and its image under
-  // the constant b at scrub param t (q·b spirals / q+b slides, per point).
-  const placed = curve.map(pt => add(pt, a));
-  const imageAt = (q: Cx, s: number): Cx =>
-    mode === 'multiply' ? mulPathG(q, b, p, s) : addPath(q, b, s);
-  // The honest trajectory of one point q from original (s=0) to image (s=1):
-  // a spiral arc for multiply, a straight slide for add. Drawn statically so the
-  // whole journey is visible at rest — no looping animation needed.
-  const trajectory = (q: Cx): string => {
-    const n = mode === 'multiply' ? 32 : 1;
-    let d = '';
-    for (let i = 0; i <= n; i++) {
-      const [vx, vy] = toV(imageAt(q, i / n));
-      d += `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`;
-    }
-    return d;
+    return pts.join(' ');
   };
   const vpoly = (pts: Cx[]): string =>
-    pts.map((p, i) => {
-      const [vx, vy] = toV(p);
-      return `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`;
-    }).join(' ');
+    pts.map((q, i) => { const [vx, vy] = toV(q); return `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`; }).join(' ');
 
-  // Integer grid lines spanning the visible window (which pans with center).
+  // Shape feed: the base shape anchored at z, and its image under f.
+  const placed = curve.map(pt => add(pt, z));
+
+  // Integer grid lines (ghost identity grid, panning with center).
   const xLines: number[] = [];
   for (let i = Math.ceil(center.re - extent); i <= Math.floor(center.re + extent); i++) xLines.push(i);
   const yLines: number[] = [];
   for (let i = Math.ceil(center.im - extent); i <= Math.floor(center.im + extent); i++) yLines.push(i);
 
-  // Plane subject: a complete origin-centered lattice whose endpoints we map by
-  // the (linear) operation. Because z↦z·b and z↦z+b are linear, straight grid
-  // lines stay straight — so transforming the two endpoints is exact and cheap.
+  // Grid feed: a complete origin-centered lattice mapped by f at param s. Affine
+  // ⇒ straight lines stay straight, so mapping the two endpoints is exact.
   const GN = Math.ceil(extent) + 2;
   const gridIdx: number[] = [];
   for (let i = -GN; i <= GN; i++) gridIdx.push(i);
   const gridLine = (i: number, horizontal: boolean, s: number): string => {
     const p0 = horizontal ? cx(-GN, i) : cx(i, -GN);
     const p1 = horizontal ? cx(GN, i) : cx(i, GN);
-    const [x1, y1] = toV(imageAt(p0, s));
-    const [x2, y2] = toV(imageAt(p1, s));
+    const [x1, y1] = toV(affineAt(p0, alpha1, alpha0, p, s));
+    const [x2, y2] = toV(affineAt(p1, alpha1, alpha0, p, s));
     return `M ${x1.toFixed(1)} ${y1.toFixed(1)} L ${x2.toFixed(1)} ${y2.toFixed(1)}`;
   };
 
   const [oVx, oVy] = toV(cx(0, 0));
-  const va = toV(a), vb = toV(b), vr = toV(result);
-
-  const argA = argument(a);
-  const argB = argument(b);
+  const zStar = fixedPoint(alpha1, alpha0, p);
 
   // The system's "unit circle": the level set N(z)=re²−p·im²=1 — an ellipse
   // (p<0), two lines (p=0), or a hyperbola with its null cone (p>0).
@@ -284,27 +247,32 @@ export default function ArgandPlane({
     return (
       <g>
         <path d={branch(1)} {...st} /><path d={branch(-1)} {...st} />
-        {/* the null cone — where multiplication is singular in this system */}
         <path d={asym(1)} fill="none" stroke="#f87171" strokeOpacity={0.3} strokeWidth={1.5} strokeDasharray="2 9" />
         <path d={asym(-1)} fill="none" stroke="#f87171" strokeOpacity={0.3} strokeWidth={1.5} strokeDasharray="2 9" />
       </g>
     );
   })();
 
-  // ---- REPEAT subject: a·(m+nj) = m copies of a + n copies of (j·a) ----
-  const bm = Math.round(b.re), bn = Math.round(b.im);
-  const ja = turnG(a, p);
-  const repeatPts: Cx[] = [cx(0, 0)];        // the running staircase of partial sums
-  for (let i = 0; i < Math.abs(bm); i++) repeatPts.push(add(repeatPts[repeatPts.length - 1], scale(a, Math.sign(bm) || 1)));
-  for (let i = 0; i < Math.abs(bn); i++) repeatPts.push(add(repeatPts[repeatPts.length - 1], scale(ja, Math.sign(bn) || 1)));
-  const repeatEnd = repeatPts[repeatPts.length - 1];
-
-  // ---- MEAN subject: arithmetic vs geometric (and optional harmonic) ----
-  const meanArc: Cx[] = [];                    // the multiplicative path a→b
-  for (let i = 0; i <= 48; i++) meanArc.push(lerpMulG(a, b, p, i / 48));
-  const aMean = arithMean(a, b);
-  const gMean = geoMean(a, b, p);
-  const hMean = harmMean(a, b, p);
+  // Draggable handle glyph (a distinct shape per role; a ring marks a lock).
+  const handleGlyph = (which: Handle, q: Cx, col: string, shape: 'circle' | 'diamond' | 'square', isLocked: boolean) => {
+    const [vx, vy] = toV(q);
+    const r = 13;
+    const body = shape === 'circle'
+      ? <circle cx={vx} cy={vy} r={r} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={3} />
+      : shape === 'diamond'
+        ? <rect x={vx - r} y={vy - r} width={r * 2} height={r * 2} transform={`rotate(45 ${vx} ${vy})`} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={3} />
+        : <rect x={vx - r} y={vy - r} width={r * 2} height={r * 2} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={3} />;
+    const label = which === 'z' ? 'z' : which === 'alpha1' ? 'α₁' : 'α₀';
+    return (
+      <g key={which} style={{ cursor: isLocked ? 'default' : 'grab' }} onPointerDown={onHandleDown(which)}>
+        {!isLocked && <circle cx={vx} cy={vy} r={30} fill="transparent" />}
+        {body}
+        {isLocked && <circle cx={vx} cy={vy} r={r + 5} fill="none" stroke={col} strokeOpacity={0.6} strokeWidth={2} strokeDasharray="3 3" />}
+        <text x={vx + 17} y={vy - 13} fontSize={24} fill={col} fontWeight={700}
+          style={{ pointerEvents: 'none', userSelect: 'none' }}>{label}</text>
+      </g>
+    );
+  };
 
   return (
     <div
@@ -332,7 +300,7 @@ export default function ArgandPlane({
           onContextMenu={e => e.preventDefault()}
         >
           <defs>
-            {[['ah-a', A_COL], ['ah-b', B_COL], ['ah-r', R_COL]].map(([id, col]) => (
+            {[['ah-z', Z_COL], ['ah-a1', A1_COL], ['ah-a0', A0_COL], ['ah-f', F_COL]].map(([id, col]) => (
               <marker key={id} id={id} markerWidth="10" markerHeight="10" refX="7" refY="3"
                 orient="auto" markerUnits="strokeWidth">
                 <path d="M0,0 L7,3 L0,6 Z" fill={col} />
@@ -340,21 +308,15 @@ export default function ArgandPlane({
             ))}
           </defs>
 
-          {/* grid */}
+          {/* ghost identity grid */}
           {showGrid && (
             <g stroke="currentColor" strokeOpacity={0.08} strokeWidth={1.5}>
-              {xLines.filter(i => i !== 0).map(i => {
-                const [vx] = toV(cx(i, 0));
-                return <line key={`x${i}`} x1={vx} y1={0} x2={vx} y2={VIRT} />;
-              })}
-              {yLines.filter(i => i !== 0).map(i => {
-                const [, vy] = toV(cx(0, i));
-                return <line key={`y${i}`} x1={0} y1={vy} x2={VIRT} y2={vy} />;
-              })}
+              {xLines.filter(i => i !== 0).map(i => { const [vx] = toV(cx(i, 0)); return <line key={`x${i}`} x1={vx} y1={0} x2={vx} y2={VIRT} />; })}
+              {yLines.filter(i => i !== 0).map(i => { const [, vy] = toV(cx(0, i)); return <line key={`y${i}`} x1={0} y1={vy} x2={VIRT} y2={vy} />; })}
             </g>
           )}
 
-          {/* the system's unit curve (circle / lines / hyperbola) */}
+          {/* the system's unit curve */}
           {unitCurveNode}
 
           {/* axes */}
@@ -365,182 +327,75 @@ export default function ArgandPlane({
           <text x={oVx + 10} y={28} fontSize={26} fill="currentColor" fillOpacity={0.5}>i</text>
           <text x={VIRT - 22} y={oVy - 12} fontSize={26} fill="currentColor" fillOpacity={0.5}>Re</text>
 
-          {/* ---- PLANE subject: the whole coordinate grid morphs by the op ---- */}
-          {isPlane && (
-            <>
-              {/* the live morphed grid (z ↦ z·bᵗ spirals every line; z+t·b slides
-                  it rigidly). The faint identity grid above is the ghost it came
-                  from — so you see "multiply by b" rotate-and-scale the plane. */}
-              <g stroke={R_COL} strokeOpacity={0.5} strokeWidth={2} fill="none">
-                {gridIdx.map(i => <path key={`pv${i}`} d={gridLine(i, false, t)} />)}
-                {gridIdx.map(i => <path key={`ph${i}`} d={gridLine(i, true, t)} />)}
-              </g>
-              {/* the probe number a riding the morph: its honest route + marker */}
-              <path d={sampleRoute(true)} fill="none" stroke={A_COL}
-                strokeOpacity={0.7} strokeWidth={3} strokeDasharray="2 7" strokeLinecap="round" />
-              <line x1={oVx} y1={oVy} x2={vb[0]} y2={vb[1]} stroke={B_COL} strokeWidth={4} markerEnd="url(#ah-b)" />
-              <circle cx={mover1[0]} cy={mover1[1]} r={10} fill={A_COL} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
-              <text x={mover1[0] + 12} y={mover1[1] - 10} fontSize={22} fill={A_COL}>
-                {mode === 'multiply' ? 'a·bᵗ' : 'a+tb'}
-              </text>
-            </>
+          {/* ---- GRID feed: the whole coordinate grid mapped by f ---- */}
+          {isGrid && (
+            <g stroke={F_COL} strokeOpacity={0.5} strokeWidth={2} fill="none">
+              {gridIdx.map(i => <path key={`gv${i}`} d={gridLine(i, false, t)} />)}
+              {gridIdx.map(i => <path key={`gh${i}`} d={gridLine(i, true, t)} />)}
+            </g>
           )}
 
-          {/* ---- NUMBER subject: a ∘ b with the construction routes ---- */}
-          {!isCurve && !isPlane && !isRepeat && !isMean && (
+          {/* ---- SHAPE feed: the placed shape and its image under f ---- */}
+          {isShape && (
             <>
-              {/* angle wedges (multiply, complex only): arg a, then arg b on top,
-                  to show angles add. In other systems "angle" isn't Euclidean. */}
-              {mode === 'multiply' && p === -1 && (
-                <>
-                  <path d={sector(extent * 0.32, 0, argA)} fill={A_COL} fillOpacity={0.16} />
-                  <path d={sector(extent * 0.46, argA, argA + argB)} fill={B_COL} fillOpacity={0.18} />
-                </>
-              )}
-
-              {/* construction routes */}
-              {showSecondRoute && (
-                <path d={sampleRoute(false)} fill="none" stroke={R_COL}
-                  strokeOpacity={0.4} strokeWidth={3} strokeDasharray="4 8" strokeLinecap="round" />
-              )}
-              <path d={sampleRoute(true)} fill="none" stroke={R_COL}
-                strokeOpacity={0.7} strokeWidth={3.5} strokeLinecap="round" />
-
-              {/* the scrubbing point(s) — only while in motion, so a stopped
-                  state shows the full arc with no partial-looking marker */}
-              {showMover && showSecondRoute && <circle cx={mover2[0]} cy={mover2[1]} r={9} fill={R_COL} fillOpacity={0.55} />}
-              {showMover && <circle cx={mover1[0]} cy={mover1[1]} r={11} fill={R_COL} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />}
-
-              {/* vectors to a, b, result */}
-              <line x1={oVx} y1={oVy} x2={va[0]} y2={va[1]} stroke={A_COL} strokeWidth={4} markerEnd="url(#ah-a)" />
-              <line x1={oVx} y1={oVy} x2={vb[0]} y2={vb[1]} stroke={B_COL} strokeWidth={4} markerEnd="url(#ah-b)" />
-              <line x1={oVx} y1={oVy} x2={vr[0]} y2={vr[1]} stroke={R_COL} strokeWidth={2.5}
-                strokeOpacity={0.85} markerEnd="url(#ah-r)" />
-
-              {/* parallelogram closure for addition */}
-              {mode === 'add' && (
-                <g stroke="currentColor" strokeOpacity={0.25} strokeWidth={2} strokeDasharray="5 7" fill="none">
-                  <line x1={va[0]} y1={va[1]} x2={vr[0]} y2={vr[1]} />
-                  <line x1={vb[0]} y1={vb[1]} x2={vr[0]} y2={vr[1]} />
-                </g>
-              )}
-
-              {/* result label */}
-              <circle cx={vr[0]} cy={vr[1]} r={6} fill={R_COL} />
-              <text x={vr[0] + 12} y={vr[1] - 10} fontSize={24} fill={R_COL}>
-                {mode === 'multiply' ? 'a·b' : 'a+b'}
-              </text>
-            </>
-          )}
-
-          {/* ---- CURVE subject: the placed shape and its image under b ---- */}
-          {isCurve && (
-            <>
-              {/* per-vertex trajectory arcs (original → image): the honest
-                  spiral each point travels under multiply (a straight slide
-                  under add). Always shown, so the whole journey reads at rest. */}
-              <g stroke="#fde68a" strokeOpacity={0.3} strokeWidth={1.5} fill="none">
+              <g stroke="#fde68a" strokeOpacity={0.28} strokeWidth={1.5} fill="none">
                 {placed.map((q, i) => {
                   if (i % Math.max(1, Math.floor(placed.length / 18)) !== 0) return null;
-                  return <path key={i} d={trajectory(q)} />;
+                  return <path key={i} d={fullPath(q)} />;
                 })}
               </g>
-              {/* original shape (dim) */}
-              <path d={vpoly(placed)} fill="none" stroke={A_COL} strokeOpacity={0.4}
+              <path d={vpoly(placed)} fill="none" stroke={Z_COL} strokeOpacity={0.45}
                 strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
-              {/* the FULL image — always shown, so a stopped state is the whole story */}
-              <path d={vpoly(placed.map(q => imageAt(q, 1)))} fill="none" stroke={R_COL}
+              <path d={vpoly(placed.map(fOf))} fill="none" stroke={F_COL}
                 strokeWidth={3.5} strokeLinejoin="round" strokeLinecap="round" />
-              {/* the intermediate shape — only while scrubbing/playing: a simple
-                  one-way sweep of the whole figure from original to image. */}
               {showMover && (
-                <path
-                  d={vpoly(placed.map(q => imageAt(q, t)))}
-                  fill="none" stroke="#fde68a"
-                  strokeOpacity={0.9} strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
+                <path d={vpoly(placed.map(q => affineAt(q, alpha1, alpha0, p, t)))}
+                  fill="none" stroke="#fde68a" strokeOpacity={0.9} strokeWidth={3}
+                  strokeLinejoin="round" strokeLinecap="round" />
               )}
-              {/* the constant b */}
-              <line x1={oVx} y1={oVy} x2={vb[0]} y2={vb[1]} stroke={B_COL} strokeWidth={4} markerEnd="url(#ah-b)" />
             </>
           )}
 
-          {/* ---- REPEAT subject: multiplication as repeated (vector) addition ---- */}
-          {isRepeat && (
+          {/* α₀ as a translation vector from the origin (the "shift") */}
+          {(() => { const [ax, ay] = toV(alpha0); return (
+            <line x1={oVx} y1={oVy} x2={ax} y2={ay} stroke={A0_COL} strokeOpacity={0.55} strokeWidth={2.5}
+              strokeDasharray="5 5" markerEnd="url(#ah-a0)" />
+          ); })()}
+
+          {/* ---- the probe point z → α₁z → f(z): the two colored legs ---- */}
+          {(isPoint || isGrid) && (
             <>
-              {/* the staircase: m copies of a, then n copies of j·a, tip-to-tail */}
-              <path
-                d={repeatPts.map((q, i) => { const [vx, vy] = toV(q); return `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`; }).join(' ')}
-                fill="none" stroke="#fde68a" strokeOpacity={0.85} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"
-              />
-              {/* each step's vector, colored by which generator it adds */}
-              {repeatPts.slice(0, -1).map((q, i) => {
-                const [x1, y1] = toV(q); const [x2, y2] = toV(repeatPts[i + 1]);
-                const isA = i < Math.abs(bm);
-                return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
-                  stroke={isA ? A_COL : B_COL} strokeOpacity={0.9} strokeWidth={3}
-                  markerEnd={isA ? 'url(#ah-a)' : 'url(#ah-b)'} />;
-              })}
-              {/* a and the turned copy j·a as the two generators */}
-              <line x1={oVx} y1={oVy} x2={va[0]} y2={va[1]} stroke={A_COL} strokeWidth={4} markerEnd="url(#ah-a)" />
-              {(() => { const [jx, jy] = toV(ja); return <line x1={oVx} y1={oVy} x2={jx} y2={jy} stroke={B_COL} strokeWidth={3} strokeOpacity={0.7} strokeDasharray="5 5" markerEnd="url(#ah-b)" />; })()}
-              {(() => { const [jx, jy] = toV(ja); return <text x={jx + 10} y={jy - 8} fontSize={20} fill={B_COL} fillOpacity={0.85}>j·a</text>; })()}
-              {/* a marker walking the staircase while playing */}
-              {showMover && (() => {
-                const n = repeatPts.length - 1;
-                if (n < 1) return null;
-                const f = t * n, i = Math.min(n - 1, Math.floor(f)), fr = f - i;
-                const [vx, vy] = toV(add(scale(repeatPts[i], 1 - fr), scale(repeatPts[i + 1], fr)));
-                return <circle cx={vx} cy={vy} r={8} fill="#fde68a" stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />;
-              })()}
-              {/* the landing point a·(m+nj) */}
-              {(() => { const [ex, ey] = toV(repeatEnd); return <>
-                <circle cx={ex} cy={ey} r={7} fill={R_COL} />
-                <text x={ex + 12} y={ey - 10} fontSize={22} fill={R_COL}>a·({bm}{bn < 0 ? '−' : '+'}{Math.abs(bn)}j)</text>
+              <path d={legPath(z, 0)} fill="none" stroke={A1_COL} strokeOpacity={0.8} strokeWidth={3} strokeLinecap="round" />
+              <path d={legPath(z, 1)} fill="none" stroke={A0_COL} strokeOpacity={0.8} strokeWidth={3} strokeDasharray="2 6" strokeLinecap="round" />
+              {/* the ×α₁ waypoint */}
+              {(() => { const [wx, wy] = toV(mulG(alpha1, z, p)); return (
+                <circle cx={wx} cy={wy} r={6} fill={A1_COL} fillOpacity={0.8} />
+              ); })()}
+              {/* the moving point */}
+              {showMover && (() => { const [mx, my] = toV(affineAt(z, alpha1, alpha0, p, t)); return (
+                <circle cx={mx} cy={my} r={9} fill={F_COL} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
+              ); })()}
+              {/* the output f(z) */}
+              {(() => { const [fx, fy] = toV(fOf(z)); return <>
+                <circle cx={fx} cy={fy} r={7} fill={F_COL} />
+                <text x={fx + 12} y={fy - 10} fontSize={22} fill={F_COL}>f(z)</text>
               </>; })()}
             </>
           )}
 
-          {/* ---- MEAN subject: arithmetic vs geometric (vs harmonic) means ---- */}
-          {isMean && (
-            <>
-              {/* arithmetic: the straight segment a—b, midpoint = (a+b)/2 */}
-              <line x1={va[0]} y1={va[1]} x2={vb[0]} y2={vb[1]} stroke={A_COL} strokeOpacity={0.5} strokeWidth={2.5} strokeDasharray="6 6" />
-              {/* geometric: the multiplicative arc a→b, midpoint = √(ab) */}
-              <path d={meanArc.map((q, i) => { const [vx, vy] = toV(q); return `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`; }).join(' ')}
-                fill="none" stroke={R_COL} strokeOpacity={0.7} strokeWidth={2.5} />
-              {/* vectors to a and b */}
-              <line x1={oVx} y1={oVy} x2={va[0]} y2={va[1]} stroke={A_COL} strokeWidth={3.5} markerEnd="url(#ah-a)" />
-              <line x1={oVx} y1={oVy} x2={vb[0]} y2={vb[1]} stroke={B_COL} strokeWidth={3.5} markerEnd="url(#ah-b)" />
-              {/* the means */}
-              {([[aMean, A_COL, 'arith'], [gMean, R_COL, 'geo'], ...(showHarmonic ? [[hMean, '#c084fc', 'harm'] as [Cx, string, string]] : [])] as [Cx, string, string][]).map(([m, col, lab]) => {
-                const [mx, my] = toV(m);
-                return <g key={lab}>
-                  <circle cx={mx} cy={my} r={7} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
-                  <text x={mx + 11} y={my - 9} fontSize={19} fill={col}>{lab}</text>
-                </g>;
-              })}
-              {/* twin markers tracing the two interpolations: straight (arithmetic
-                  pace) vs the multiplicative arc (geometric pace) */}
-              {showMover && (() => {
-                const [sx, sy] = toV(add(scale(a, 1 - t), scale(b, t)));
-                const [gx, gy] = toV(lerpMulG(a, b, p, t));
-                return <>
-                  <circle cx={sx} cy={sy} r={6} fill={A_COL} fillOpacity={0.7} />
-                  <circle cx={gx} cy={gy} r={6} fill={R_COL} />
-                </>;
-              })()}
-            </>
-          )}
-
-          {/* draggable handles (large invisible hit area + visible dot) */}
-          {([['a', va, A_COL, a], ['b', vb, B_COL, b]] as const).map(([id, v, col]) => (
-            <g key={id} style={{ cursor: 'grab' }} onPointerDown={onHandleDown(id)}>
-              <circle cx={v[0]} cy={v[1]} r={30} fill="transparent" />
-              <circle cx={v[0]} cy={v[1]} r={13} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={3} />
-              <text x={v[0] + 16} y={v[1] - 14} fontSize={26} fill={col} fontWeight={700}
-                style={{ pointerEvents: 'none', userSelect: 'none' }}>{id}</text>
+          {/* ---- the fixed point z* (where f(z*) = z*) ---- */}
+          {zStar && (() => { const [sx, sy] = toV(zStar); return (
+            <g>
+              <circle cx={sx} cy={sy} r={8} fill="none" stroke={FIX_COL} strokeWidth={2.5} />
+              <circle cx={sx} cy={sy} r={2.5} fill={FIX_COL} />
+              <text x={sx + 11} y={sy + 24} fontSize={20} fill={FIX_COL}>z*</text>
             </g>
-          ))}
+          ); })()}
+
+          {/* draggable handles: z (input), α₁ (slope), α₀ (shift) */}
+          {handleGlyph('z', z, Z_COL, 'circle', false)}
+          {handleGlyph('alpha1', alpha1, A1_COL, 'diamond', lockA1)}
+          {handleGlyph('alpha0', alpha0, A0_COL, 'square', lockA0)}
         </svg>
       )}
     </div>

@@ -32,15 +32,11 @@ export const fromPolar = (r: number, theta: number): Cx => ({
 export const powReal = (b: Cx, t: number): Cx =>
   fromPolar(Math.pow(modulus(b), t), argument(b) * t);
 
-/**
- * The multiplication path a·bᵗ: starts at a (t=0), ends at a·b (t=1), spiraling.
- * This is why a·b "adds angles and multiplies lengths" — you watch a swing
- * through arg b while its length grows by the factor |b|.
- */
-export const mulPath = (a: Cx, b: Cx, t: number): Cx => mul(a, powReal(b, t));
-
 /** The addition path a + t·b: a straight tip-to-tail slide from a to a+b. */
 export const addPath = (a: Cx, b: Cx, t: number): Cx => add(a, scale(b, t));
+
+/** Subtraction a − b. */
+export const sub = (a: Cx, b: Cx): Cx => ({ re: a.re - b.re, im: a.im - b.im });
 
 /* ----------------------------------------------------------------- *
  *  Generalized number systems — one parameter p = j² selects the    *
@@ -54,9 +50,6 @@ export const mulG = (a: Cx, b: Cx, p: number): Cx => ({
   re: a.re * b.re + p * a.im * b.im,
   im: a.re * b.im + a.im * b.re,
 });
-
-/** a·j — the system's "unit turn": 90° rotation (p<0), shear (p=0), boost (p>0). */
-export const turnG = (a: Cx, p: number): Cx => ({ re: p * a.im, im: a.re });
 
 /** Conjugate (re, −im) and the quadratic form N(z) = re² − p·im² it preserves. */
 export const conjG = (z: Cx): Cx => ({ re: z.re, im: -z.im });
@@ -103,19 +96,34 @@ export const powRealG = (b: Cx, p: number, t: number): Cx => {
   return expG(L.u * t, L.v * t, p);
 };
 
-/** Generalized multiplication path a·bᵗ (a at t=0, a·b at t=1), in system p. */
-export const mulPathG = (a: Cx, b: Cx, p: number, t: number): Cx => mulG(a, powRealG(b, p, t), p);
+/* ----------------------------------------------------------------- *
+ *  The affine map f(z) = α₁·z + α₀ — "multiply by the slope, then    *
+ *  shift" — the complex cousin of y = m·x + b, in any system p.      *
+ * ----------------------------------------------------------------- */
 
-/** The multiplicative interpolation a→b: a·(b/a)ᵗ. Its t=½ point is the
- *  (system) geometric mean of a and b; the arithmetic mean is (a+b)/2. */
-export const lerpMulG = (a: Cx, b: Cx, p: number, t: number): Cx =>
-  mulG(a, powRealG(divG(b, a, p), p, t), p);
+/** Evaluate f(z) = α₁·z + α₀ in system p. */
+export const affine = (z: Cx, a1: Cx, a0: Cx, p: number): Cx => add(mulG(a1, z, p), a0);
 
-/** The three classical means of a and b (geometric/harmonic in system p). */
-export const arithMean = (a: Cx, b: Cx): Cx => scale(add(a, b), 0.5);
-export const geoMean = (a: Cx, b: Cx, p: number): Cx => lerpMulG(a, b, p, 0.5);
-export const harmMean = (a: Cx, b: Cx, p: number): Cx =>
-  invG(scale(add(invG(a, p), invG(b, p)), 0.5), p);
+/**
+ * The honest two-leg path from z to f(z): first the multiply leg (z spirals to
+ * α₁·z as the exponent of α₁ ramps 0→1), then the add leg (a straight slide by
+ * α₀). s∈[0,½] is "×α₁", s∈[½,1] is "+α₀"; the waypoint at s=½ is α₁·z.
+ */
+export const affineAt = (z: Cx, a1: Cx, a0: Cx, p: number, s: number): Cx => {
+  if (s <= 0.5) return mulG(powRealG(a1, p, s / 0.5), z, p);
+  return add(mulG(a1, z, p), scale(a0, (s - 0.5) / 0.5));
+};
+
+/**
+ * The fixed point z* with f(z*) = z*, i.e. z* = α₀/(1−α₁) — the one point the
+ * line leaves put (the complex analog of where y=mx+b meets y=x). Returns null
+ * when α₁→1 (a pure translation: the fixed point runs off to infinity).
+ */
+export const fixedPoint = (a1: Cx, a0: Cx, p: number): Cx | null => {
+  const d = sub({ re: 1, im: 0 }, a1);
+  if (Math.abs(normG(d, p)) < 1e-6) return null;
+  return divG(a0, d, p);
+};
 
 /* ----------------------------------------------------------------- *
  *  Arc-length pacing — so the pen moves at constant *geometric*      *

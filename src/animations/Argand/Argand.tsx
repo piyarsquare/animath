@@ -1,27 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Workspace from '../../chrome/workspace/Workspace';
-import type { ActionDef, LayoutDef, SectionDef, ViewDef, WorkspaceMode } from '../../chrome/workspace/types';
+import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { Slider, Pills, Select, Checkbox, ComplexInput } from '../../components/ControlPanel';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
-import ArgandPlane, { type Mode, type Subject } from './ArgandPlane';
+import ArgandPlane, {
+  type Feed, type Handle, Z_COL, A1_COL, A0_COL, F_COL, FIX_COL,
+} from './ArgandPlane';
 import { buildCurve, CURVES, type CurveName } from './curves';
 import {
-  type Cx, type ArcLengthMap, cx, add, modulus,
-  mulG, mulPathG, addPath, lerpMulG, arithMean, geoMean, harmMean,
-  arcLengthMap, formatRect, formatPolar,
+  type Cx, type ArcLengthMap, cx, modulus, add,
+  affine, affineAt, fixedPoint, arcLengthMap, formatRect, formatPolar,
 } from './complexOps';
-
-/** A trivial constant-speed map for paths we pace by total length only. */
-const linLut = (length: number): ArcLengthMap => ({
-  length,
-  sAt: arc => (length < 1e-9 ? 0 : Math.min(1, Math.max(0, arc / length))),
-  arcAt: s => s * length,
-});
-
-/** Friendly name for the number system at parameter p = j². */
-const systemName = (p: number): string =>
-  p < -0.001 ? 'Complex (j² < 0)' : p > 0.001 ? 'Split-complex (j² > 0)' : 'Dual (j² = 0)';
 
 const STORAGE_KEY = 'argand';
 
@@ -29,34 +19,34 @@ const STORAGE_KEY = 'argand';
 // frantically once the clock is paced by (small) arc length.
 const MIN_SWEEP_SEC = 1;
 
-const A_COL = '#38bdf8';
-const B_COL = '#fb923c';
-const R_COL = '#34d399';
+/** Friendly name for the number system at parameter p = j². */
+const systemName = (p: number): string =>
+  p < -0.001 ? 'Complex (j² < 0)' : p > 0.001 ? 'Split-complex (j² > 0)' : 'Dual (j² = 0)';
 
 /**
- * Argand — an entry-point app for complex numbers: drag two numbers on the
- * plane and watch how they add (tip-to-tail) and multiply (angles add, lengths
- * multiply). Labeled **stops** mark the meaningful waypoints and Play animates
- * between them at constant *geometric* speed (paced by path length, so a spiral
- * and a slide feel like the same pen, not two different scales). The successor to
- * Plane Transform; this first chapter is the arithmetic foundation.
+ * Argand — an entry-point app for complex numbers, reframed around the **affine
+ * map** `f(z) = α₁·z + α₀` (the complex cousin of `y = m·x + b`): set the slope
+ * `α₁` and shift `α₀`, feed the map a point, a shape, or the whole grid, and
+ * watch the transformation. `f` decomposes into "spin/scale by α₁, then slide by
+ * α₀", and the fixed point `z*` (where `f(z*) = z*`) is drawn throughout. A
+ * System slider `p = j²` runs the same line through complex, dual, and
+ * split-complex numbers. Successor-in-progress to Plane Transform.
  */
 export default function Argand() {
-  const [a, setA] = usePersistentState<Cx>(`${STORAGE_KEY}:a`, cx(1.6, 0.6));
-  const [b, setB] = usePersistentState<Cx>(`${STORAGE_KEY}:b`, cx(0, 1));
-  const [mode, setMode] = usePersistentState<Mode>(`${STORAGE_KEY}:mode`, 'multiply');
-  const [subject, setSubject] = usePersistentState<Subject>(`${STORAGE_KEY}:subject`, 'number');
+  const [z, setZ] = usePersistentState<Cx>(`${STORAGE_KEY}:z`, cx(1.5, 1));
+  const [alpha1, setA1] = usePersistentState<Cx>(`${STORAGE_KEY}:a1`, cx(0.4, 0.8));
+  const [alpha0, setA0] = usePersistentState<Cx>(`${STORAGE_KEY}:a0`, cx(1, 0));
+  const [feed, setFeed] = usePersistentState<Feed>(`${STORAGE_KEY}:feed`, 'point');
   const [curveName, setCurveName] = usePersistentState<CurveName>(`${STORAGE_KEY}:curve`, 'flag');
-  const [showSecondRoute, setShowSecondRoute] = usePersistentState(`${STORAGE_KEY}:second`, false);
+  const [lockA1, setLockA1] = usePersistentState(`${STORAGE_KEY}:lockA1`, false);
+  const [lockA0, setLockA0] = usePersistentState(`${STORAGE_KEY}:lockA0`, false);
   const [snapping, setSnapping] = usePersistentState(`${STORAGE_KEY}:snap`, true);
   const [showGrid, setShowGrid] = usePersistentState(`${STORAGE_KEY}:grid`, true);
   const [showUnitCircle, setShowUnitCircle] = usePersistentState(`${STORAGE_KEY}:unit`, true);
   const [extent, setExtent] = usePersistentState(`${STORAGE_KEY}:extent`, 4);
   // Number system: p = j². p<0 complex, p=0 dual, p>0 split-complex.
   const [system, setSystem] = usePersistentState(`${STORAGE_KEY}:system`, -1);
-  const [showHarmonic, setShowHarmonic] = usePersistentState(`${STORAGE_KEY}:harm`, false);
-  // Speed is now in **math units / second** (geometric speed of the pen), so it
-  // reads the same for a tight multiply spiral and a short add slide.
+  // Pen speed in math units / second (the same for every leg and feed).
   const [speed, setSpeed] = usePersistentState(`${STORAGE_KEY}:speed`, 2);
 
   // Transient view state — never persisted.
@@ -64,58 +54,33 @@ export default function Argand() {
   const [playing, setPlaying] = useState(false);
   const dirRef = useRef(1);
 
-  const isCurve = subject === 'curve';
-  const isPlane = subject === 'plane';
-  const isRepeat = subject === 'repeat';
-  const isMean = subject === 'mean';
+  const isPoint = feed === 'point';
+  const isShape = feed === 'shape';
+  const isGrid = feed === 'grid';
   const curve = useMemo(() => buildCurve(curveName), [curveName]);
 
-  // The path Play paces by — the primary mover (number) or a representative
-  // shape point's unified loop (curve). We arc-length-reparameterize it so the
-  // clock can advance at constant *geometric* speed instead of constant param
-  // speed; that is what makes add and multiply feel like the same pen.
-  const lut: ArcLengthMap = useMemo(() => {
-    if (isMean) return arcLengthMap(s => lerpMulG(a, b, system, s));
-    if (isRepeat) {
-      const m = Math.abs(Math.round(b.re)), n = Math.abs(Math.round(b.im));
-      return linLut(modulus(a) * (m + n) || 1);   // pace by the staircase length
-    }
-    if (isPlane) {
-      // Pace by a far grid corner — the part of the plane that sweeps farthest —
-      // so the whole-plane morph runs at the same pen speed as the other chapters.
-      const corner = cx(extent, extent);
-      return mode === 'multiply'
-        ? arcLengthMap(s => mulPathG(corner, b, system, s))
-        : arcLengthMap(s => addPath(corner, b, s));
-    }
-    if (isCurve) {
-      // Pace by the placed point that travels farthest (largest |q|), so the
-      // whole figure stays comfortably in view.
-      let q = curve[0] ? add(curve[0], a) : a;
-      for (const pt of curve) {
-        const cand = add(pt, a);
-        if (modulus(cand) > modulus(q)) q = cand;
-      }
-      return mode === 'multiply'
-        ? arcLengthMap(s => mulPathG(q, b, system, s))
-        : arcLengthMap(s => addPath(q, b, s));
-    }
-    return mode === 'multiply'
-      ? arcLengthMap(s => mulPathG(a, b, system, s))
-      : arcLengthMap(s => addPath(a, b, s));
-  }, [isMean, isRepeat, isPlane, isCurve, curve, a, b, mode, extent, system]);
+  const fz = affine(z, alpha1, alpha0, system);
+  const zStar = fixedPoint(alpha1, alpha0, system);
 
-  // Read the latest map from the rAF loop without re-subscribing each frame.
+  // Pace Play by the arc length of the representative input's two-leg path, so
+  // the pen moves at a constant geometric speed across the ×α₁ and +α₀ legs.
+  const lut: ArcLengthMap = useMemo(() => {
+    let q = z;
+    if (isShape) {
+      q = curve[0] ? add(curve[0], z) : z;
+      for (const pt of curve) { const c = add(pt, z); if (modulus(c) > modulus(q)) q = c; }
+    } else if (isGrid) {
+      q = cx(extent, extent);
+    }
+    return arcLengthMap(s => affineAt(q, alpha1, alpha0, system, s));
+  }, [isShape, isGrid, curve, z, alpha1, alpha0, system, extent]);
+
   const lutRef = useRef(lut);
   lutRef.current = lut;
   const arcRef = useRef(0);
 
-  // Play clock: integrate distance traveled (arc) at `speed` units/sec, ping-
-  // ponging 0↔length, and map back to the native param t. The return leg
-  // retraces the path backward (for multiply, the operation run in reverse) so
-  // there is no jump-cut on the loop. The SVG is light enough for per-frame
-  // setState. A short path is slowed so one sweep never takes less than
-  // MIN_SWEEP_SEC — otherwise tiny linear moves ping-pong frantically.
+  // Play clock — integrate distance at `speed` u/s, ping-ponging 0↔length and
+  // mapping back to t; short paths are slowed to MIN_SWEEP_SEC.
   useEffect(() => {
     if (!playing) return;
     let raf = 0;
@@ -136,87 +101,61 @@ export default function Argand() {
     return () => cancelAnimationFrame(raf);
   }, [playing, speed]);
 
-  // Sync the arc accumulator from the current t and head away from any endpoint.
-  const togglePlay = () => setPlaying(p => {
-    if (!p) {
+  const togglePlay = () => setPlaying(pl => {
+    if (!pl) {
       const L = lutRef.current.length;
       arcRef.current = lutRef.current.arcAt(t);
       dirRef.current = arcRef.current >= L - 1e-6 ? -1 : arcRef.current <= 1e-6 ? 1 : dirRef.current;
     }
-    return !p;
+    return !pl;
   });
 
-  // Jump to a labeled stop (and stop playing); Play then resumes from here.
   const goToStop = (st: number) => {
     setPlaying(false);
     dirRef.current = st >= 0.999 ? -1 : 1;
     setT(st);
   };
 
-  const result = mode === 'multiply' ? mulG(a, b, system) : add(a, b);
-  const resultLabel = mode === 'multiply' ? 'a·b' : 'a+b';
-  const op = mode === 'multiply' ? '×' : '+';
-  const bm = Math.round(b.re), bn = Math.round(b.im);
-  const subtitle = isMean
-    ? `means of a, b   ·   ${systemName(system)}`
-    : isRepeat
-      ? `a·(${bm} ${bn < 0 ? '−' : '+'} ${Math.abs(bn)}j) as repeated addition`
-      : isPlane
-        ? `z ↦ z ${op} b,  b = ${formatRect(b)}`
-        : isCurve
-          ? `shape ${op} b,  b = ${formatRect(b)}`
-          : `${resultLabel} = ${formatRect(result)}`;
+  // Three universal stops — the affine map's decomposition, labeled per feed.
+  const stopLabels = isPoint
+    ? ['z', 'α₁z', 'f(z)']
+    : isShape
+      ? ['Shape', 'Spun', 'Image']
+      : ['Identity', 'Linear', 'Affine'];
+  const stops = [{ label: stopLabels[0], t: 0 }, { label: stopLabels[1], t: 0.5 }, { label: stopLabels[2], t: 1 }];
+  const atStop = (st: number): boolean => Math.abs(t - st) < 0.02;
 
-  // The meaningful waypoints of the current path — each one a two-ended sweep,
-  // so two stops everywhere.
-  const stops: Array<{ label: string; t: number; also?: number }> = isMean
-    ? [{ label: 'a', t: 0 }, { label: 'b', t: 1 }]
-    : isRepeat
-      ? [{ label: 'Origin', t: 0 }, { label: 'a·b', t: 1 }]
-      : isPlane
-        ? [{ label: 'Identity', t: 0 }, { label: 'Mapped', t: 1 }]
-        : isCurve
-          ? [{ label: 'Shape', t: 0 }, { label: 'Image', t: 1 }]
-          : [{ label: 'a', t: 0 }, { label: resultLabel, t: 1 }];
-  const atStop = (s: { t: number; also?: number }): boolean =>
-    Math.abs(t - s.t) < 0.02 || (s.also !== undefined && Math.abs(t - s.also) < 0.02);
+  const subtitle = `f(z) = ${formatRect(fz)}   ·   ${systemName(system)}`;
+
+  /* ---- the colored equation, shared by panel + readouts ---- */
+  const Eqn = (
+    <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 15, fontWeight: 700, marginTop: 2 }}>
+      <span style={{ color: F_COL }}>f(z)</span> ={' '}
+      <span style={{ color: A1_COL }}>α₁</span>·<span style={{ color: Z_COL }}>z</span> +{' '}
+      <span style={{ color: A0_COL }}>α₀</span>
+    </div>
+  );
 
   /* ---- panels ---- */
 
-  const numbersNode = (
+  const functionNode = (
     <>
-      <Pills<Subject>
-        label="View"
-        options={[
-          { value: 'number', label: 'Number' },
-          { value: 'curve', label: 'Curve' },
-          { value: 'plane', label: 'Plane' },
-          { value: 'repeat', label: 'Repeat' },
-          { value: 'mean', label: 'Mean' },
-        ]}
-        value={subject}
-        onChange={setSubject}
-      />
-      {isCurve && (
-        <Select<CurveName>
-          label="Shape"
-          options={CURVES.map(c => ({ value: c.id, label: c.label }))}
-          value={curveName}
-          onChange={setCurveName}
-        />
-      )}
-      <ComplexInput label={isPlane ? 'a (probe)' : isCurve ? 'a (place)' : 'a'} value={[a.re, a.im]} onChange={([re, im]) => setA(cx(re, im))} />
-      <ComplexInput label={isRepeat ? 'b = m + nj (integer)' : isPlane ? 'b (the map)' : isCurve ? 'b (× or +)' : 'b'} value={[b.re, b.im]} onChange={([re, im]) => setB(isRepeat ? cx(Math.round(re), Math.round(im)) : cx(re, im))} />
-      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 4 }}>
-        {isMean
-          ? <>Drag <b style={{ color: A_COL }}>a</b>, <b style={{ color: B_COL }}>b</b>: the straight chord’s middle is the <b>arithmetic</b> mean, the arc’s middle the <b>geometric</b> mean.</>
-          : isRepeat
-            ? <>Drag <b style={{ color: B_COL }}>b</b> to integer <code>m + nj</code>: the product is <b>m</b> copies of <b style={{ color: A_COL }}>a</b> plus <b>n</b> copies of <b style={{ color: B_COL }}>j·a</b>.</>
-            : isPlane
-              ? <>Drag <b style={{ color: B_COL }}>b</b> to set the map <code>z ↦ z {op} b</code>; <b style={{ color: A_COL }}>a</b> is one number watched riding along.</>
-              : isCurve
-                ? <>Drag <b style={{ color: A_COL }}>a</b> to place the shape, <b style={{ color: B_COL }}>b</b> to set the constant.</>
-                : <>Or just drag the <b style={{ color: A_COL }}>a</b> and <b style={{ color: B_COL }}>b</b> handles on the plane.</>}
+      {Eqn}
+      <div style={{ marginTop: 8 }}>
+        <ComplexInput label="α₁  (slope · spin & scale)" value={[alpha1.re, alpha1.im]} onChange={([re, im]) => setA1(cx(re, im))} />
+        <Checkbox label="Lock α₁" checked={lockA1} onChange={setLockA1} />
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <ComplexInput label="α₀  (shift · intercept)" value={[alpha0.re, alpha0.im]} onChange={([re, im]) => setA0(cx(re, im))} />
+        <Checkbox label="Lock α₀" checked={lockA0} onChange={setLockA0} />
+      </div>
+      <div style={{ marginTop: 8, fontSize: 12, fontFamily: 'var(--font-mono, monospace)', color: FIX_COL }}>
+        fixed z* = {zStar ? formatRect(zStar) : '— (pure shift)'}
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 6 }}>
+        Drag the <b style={{ color: A1_COL }}>α₁</b> (diamond) and <b style={{ color: A0_COL }}>α₀</b> (square) handles,
+        or lock them to drag only <b style={{ color: Z_COL }}>z</b>. <b style={{ color: FIX_COL }}>z*</b> is where the map
+        stands still: <code>f(z*) = z*</code>.
       </div>
     </>
   );
@@ -227,23 +166,47 @@ export default function Argand() {
         onChange={setSystem} format={() => systemName(system)}
         stops={[{ value: -1, label: 'Complex' }, { value: 0, label: 'Dual' }, { value: 1, label: 'Split' }]} />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 4 }}>
-        Multiply-by-b is a <b>rotation</b> (complex), a <b>shear</b> (dual), or a <b>boost</b> along the
-        hyperbola (split). The dashed unit curve is the level set <code>x² − p·y² = 1</code>; the red lines
-        (split) are the null cone where multiplication degenerates.
+        Multiply-by-α₁ is a <b>rotation</b> (complex), a <b>shear</b> (dual), or a <b>boost</b> (split-complex). The
+        dashed unit curve is <code>x² − p·y² = 1</code>; the red lines (split) are the null cone where multiplication
+        degenerates.
       </div>
-      {isMean && <Checkbox label="Show harmonic mean too" checked={showHarmonic} onChange={setShowHarmonic} />}
+    </>
+  );
+
+  const inputNode = (
+    <>
+      <Pills<Feed>
+        label="Feed f"
+        options={[{ value: 'point', label: 'Point' }, { value: 'shape', label: 'Shape' }, { value: 'grid', label: 'Grid' }]}
+        value={feed}
+        onChange={setFeed}
+      />
+      {isShape && (
+        <Select<CurveName>
+          label="Shape"
+          options={CURVES.map(c => ({ value: c.id, label: c.label }))}
+          value={curveName}
+          onChange={setCurveName}
+        />
+      )}
+      <ComplexInput label={isShape ? 'z  (anchor)' : isGrid ? 'z  (probe)' : 'z  (input)'} value={[z.re, z.im]} onChange={([re, im]) => setZ(cx(re, im))} />
+      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 4 }}>
+        {isShape
+          ? <>Drag <b style={{ color: Z_COL }}>z</b> to place the shape; <b style={{ color: F_COL }}>f</b> spins, scales and shifts the whole figure.</>
+          : isGrid
+            ? <>The whole grid maps by <b style={{ color: F_COL }}>f</b>; <b style={{ color: Z_COL }}>z</b> is one point watched riding along.</>
+            : <>Drag <b style={{ color: Z_COL }}>z</b> and watch <b style={{ color: F_COL }}>f(z)</b> = α₁·z + α₀.</>}
+      </div>
     </>
   );
 
   const scrubNode = (
     <>
-      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginBottom: 5 }}>
-        {isCurve || isMean || isRepeat ? 'Jump to a stop' : 'Endpoints'}
-      </div>
+      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginBottom: 5 }}>Jump to a stop</div>
       <div style={{ display: 'flex', gap: 6 }}>
         {stops.map(s => (
-          <button key={s.label} onClick={() => goToStop(s.t)} aria-pressed={atStop(s)}
-            style={{ ...stopBtn, ...(atStop(s) ? stopBtnActive : null) }}>
+          <button key={s.label} onClick={() => goToStop(s.t)} aria-pressed={atStop(s.t)}
+            style={{ ...stopBtn, ...(atStop(s.t) ? stopBtnActive : null) }}>
             {s.label}
           </button>
         ))}
@@ -253,37 +216,12 @@ export default function Argand() {
       </button>
       <Slider label="Speed  (pen, units/sec)" value={speed} min={0.5} max={6} step={0.25}
         onChange={setSpeed} format={v => `${v.toFixed(2)} u/s`} />
-      <Slider label={isCurve ? 'Fine scrub  (shape → image)' : 'Fine scrub  (a → result)'}
-        value={t} min={0} max={1} step={0.001}
+      <Slider label="Fine scrub  (z → f(z))" value={t} min={0} max={1} step={0.001}
         onChange={v => { setPlaying(false); setT(v); }} format={v => v.toFixed(2)} />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 6 }}>
-        {isMean
-          ? 'Two markers race a→b: one along the straight chord (arithmetic), one along the multiplicative arc (geometric). Their midpoints are the two means.'
-          : isRepeat
-            ? 'Play walks the staircase: m steps of a, then n steps of j·a, landing exactly on a·(m+nj).'
-            : isPlane
-              ? mode === 'multiply'
-                ? 'The whole grid rotates and scales by b about the origin — multiply is one similarity of the plane. The faint grid is the identity it came from.'
-                : 'The whole grid slides rigidly by b — addition is a translation of the plane.'
-              : isCurve
-                ? 'The arcs are each point’s path to its image (spirals for ×, slides for +). Play sweeps the shape along them.'
-                : mode === 'multiply'
-                  ? 'Multiplication spirals: angle swings by arg b, length scales by |b| — paced by arc length so it matches Add.'
-                  : 'Addition slides: a moves tip-to-tail along b.'}
+        Two legs: first <b style={{ color: A1_COL }}>×α₁</b> (spin & scale, the spiral), then
+        <b style={{ color: A0_COL }}> +α₀</b> (the straight shift) — landing on <b style={{ color: F_COL }}>f(z)</b>.
       </div>
-    </>
-  );
-
-  const combineNode = (
-    <>
-      {!isCurve && !isPlane && !isRepeat && !isMean && (
-        <Checkbox
-          label={mode === 'multiply' ? 'Show both orders (a·b = b·a)' : 'Show both orders (parallelogram)'}
-          checked={showSecondRoute}
-          onChange={setShowSecondRoute}
-        />
-      )}
-      <Checkbox label="Snap to nice values (1, i, lattice, π/6…)" checked={snapping} onChange={setSnapping} />
     </>
   );
 
@@ -293,29 +231,24 @@ export default function Argand() {
         onChange={setExtent} format={v => v.toFixed(1)} />
       <Checkbox label="Grid" checked={showGrid} onChange={setShowGrid} />
       <Checkbox label="Unit circle" checked={showUnitCircle} onChange={setShowUnitCircle} />
+      <Checkbox label="Snap to nice values (1, i, lattice, π/6…)" checked={snapping} onChange={setSnapping} />
     </>
   );
 
-  const valueRows: Array<[string, Cx, string]> = isMean
-    ? [['a', a, A_COL], ['b', b, B_COL],
-       ['arith', arithMean(a, b), A_COL],
-       ['geo', geoMean(a, b, system), R_COL],
-       ...(showHarmonic ? [['harm', harmMean(a, b, system), '#c084fc'] as [string, Cx, string]] : [])]
-    : isCurve
-      ? [['a (place)', a, A_COL], ['b', b, B_COL]]
-      : isRepeat
-        ? [['a', a, A_COL], ['b = m+nj', b, B_COL], ['a·b', result, R_COL]]
-        : [['a', a, A_COL], ['b', b, B_COL], [resultLabel, result, R_COL]];
+  const valueRows: Array<[string, Cx, string]> = [
+    ['z', z, Z_COL], ['α₁', alpha1, A1_COL], ['α₀', alpha0, A0_COL], ['f(z)', fz, F_COL],
+    ...(zStar ? [['z*', zStar, FIX_COL] as [string, Cx, string]] : []),
+  ];
 
   const valuesNode = (
     <div style={{ display: 'grid', gap: 8 }}>
-      {valueRows.map(([lab, z, col]) => (
+      {valueRows.map(([lab, q, col]) => (
         <div key={lab} style={{ display: 'grid', gap: 1 }}>
           <div style={{ fontWeight: 700, color: col, fontFamily: 'var(--font-mono, monospace)' }}>
-            {lab} = {formatRect(z)}
+            {lab} = {formatRect(q)}
           </div>
           <div style={{ fontSize: 12, color: 'var(--cp-fg-dim, #9b9ba3)', fontFamily: 'var(--font-mono, monospace)' }}>
-            {formatPolar(z)}
+            {formatPolar(q)}
           </div>
         </div>
       ))}
@@ -333,31 +266,35 @@ export default function Argand() {
   );
 
   const sections: SectionDef[] = [
-    { id: 'numbers', title: 'Numbers', arch: 'subject', node: numbersNode, estHeight: 210 },
+    { id: 'function', title: 'Function', arch: 'subject', node: functionNode, estHeight: 280 },
     { id: 'system', title: 'System', arch: 'domain', node: systemNode, estHeight: 170 },
-    { id: 'plane', title: 'Plane', arch: 'domain', node: planeNode, estHeight: 170 },
-    { id: 'combine', title: 'Combine', arch: 'drive', node: combineNode, estHeight: 140 },
-    { id: 'scrub', title: 'Play', arch: 'playback', node: scrubNode, estHeight: 290 },
-    { id: 'values', title: 'Values', arch: 'readout', node: valuesNode, estHeight: 200 },
+    { id: 'input', title: 'Input', arch: 'subject', node: inputNode, estHeight: 180 },
+    { id: 'plane', title: 'Plane', arch: 'domain', node: planeNode, estHeight: 180 },
+    { id: 'scrub', title: 'Play', arch: 'playback', node: scrubNode, estHeight: 250 },
+    { id: 'values', title: 'Values', arch: 'readout', node: valuesNode, estHeight: 220 },
     { id: 'detail', title: 'Detail', arch: 'quality', node: detailNode, estHeight: 90 },
   ];
+
+  const onHandleChange = (which: Handle, q: Cx) => {
+    if (which === 'z') setZ(q);
+    else if (which === 'alpha1') setA1(q);
+    else setA0(q);
+  };
 
   const views: ViewDef[] = [
     {
       id: 'plane',
       title: 'Argand plane',
       defaultRect: { x: 320, y: 16, w: 660, h: 600 },
-      hint: 'drag a and b · pinch or scroll to zoom · two-finger or shift-drag to pan · double-click to recenter',
+      hint: 'drag z · α₁ · α₀ · pinch or scroll to zoom · two-finger or shift-drag to pan · double-click to recenter',
       node: (
         <ArgandPlane
-          a={a} b={b} mode={mode} t={t} playing={playing}
-          subject={subject} p={system} showHarmonic={showHarmonic} curve={curve}
-          showSecondRoute={showSecondRoute}
-          snapping={snapping}
-          showGrid={showGrid}
-          showUnitCircle={showUnitCircle}
+          z={z} alpha1={alpha1} alpha0={alpha0} p={system}
+          feed={feed} curve={curve} t={t} playing={playing}
+          lockA1={lockA1} lockA0={lockA0}
+          snapping={snapping} showGrid={showGrid} showUnitCircle={showUnitCircle}
           extent={extent}
-          onChange={(which, z) => (which === 'a' ? setA(z) : setB(z))}
+          onChange={onHandleChange}
           onZoom={f => setExtent(e => Math.min(16, Math.max(1, e * f)))}
         />
       ),
@@ -366,14 +303,9 @@ export default function Argand() {
 
   const layouts: LayoutDef[] = [
     {
-      id: 'essentials', name: 'Essentials', sub: 'Numbers · Play · Values', icon: 'tune',
-      open: { numbers: { x: 24, y: 18 }, scrub: { x: 24, y: 220 }, values: { x: 24, y: 470 } },
+      id: 'essentials', name: 'Essentials', sub: 'Function · Play · Values', icon: 'tune',
+      open: { function: { x: 24, y: 18 }, scrub: { x: 24, y: 320 }, values: { x: 24, y: 580 } },
     },
-  ];
-
-  const modes: WorkspaceMode[] = [
-    { id: 'multiply', label: 'Multiply' },
-    { id: 'add', label: 'Add' },
   ];
 
   const actions: ActionDef[] = [
@@ -382,7 +314,7 @@ export default function Argand() {
       onClick: togglePlay, active: playing, primary: true, sectionId: 'scrub',
     },
     {
-      id: 'reset', icon: 'reset', label: 'To start',
+      id: 'reset', icon: 'reset', label: 'To z',
       onClick: () => { setPlaying(false); dirRef.current = 1; setT(0); }, sectionId: 'scrub',
     },
   ];
@@ -397,9 +329,6 @@ export default function Argand() {
       layouts={layouts}
       defaultLayoutId="essentials"
       explainer={explainerText || null}
-      modes={modes}
-      activeMode={mode}
-      onModeChange={id => setMode(id as Mode)}
       actions={actions}
     />
   );
