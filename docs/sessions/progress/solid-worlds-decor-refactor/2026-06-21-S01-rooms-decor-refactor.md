@@ -44,6 +44,31 @@ duct world-specific (!low), and punch the engine floor plane through at the trap
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🔵 finding · 10:25 — Read the app; mapped the scale issue and the guide situation
+**Why:** User asked to learn the app fully and whether an app-specific guide stays in sync with code.
+
+Read `decor/rooms.ts`, `textures.ts`, `coverEngine.ts` (the decor build call),
+`SolidWorlds.tsx`, and `EXPLAINER.md`.
+
+**`buildRoomsDecor` shape.** One 264-line function (lines 87–351) after a
+`kleinBottleGeometry` helper. It receives a `DecorBuildContext` with primitive
+helpers (`mesh`, `std`, `localM`, `box`/`cyl` defined inline) plus `U`, `h`,
+`wallOpacity`, `onWallMaterial`. Natural seams already exist as comment-banner
+blocks: **(1)** room shell — 3 −axis faces, each an arch + a ceiling duct hole
+(`wallArchGeo`/`holeGeo`/`buildFace`); **(2)** arch moldings + trapdoor rim;
+**(3)** duct steel frames; **(4)** furniture — rug, desk+lamp, picture, fireplace,
+chandelier, bookshelf (books/plant/Klein bottle), wardrobe.
+
+**The scale finding.** Two different size bases are in play. The room *shell*
+scales off `h = size/2` (so `H` tracks the actual room, default `size = 11` →
+`h = 5.5`). But the *furniture* scales off the fixed constant `U = 9` (passed as
+`u`), independent of room size. So a book is `u * ~0.15 ≈ 1.35` tall and the desk
+top is `u*0.26 × u*0.46 ≈ 2.3 × 4.1` — large absolute objects placed against
+`h = 5.5` walls. That decoupling (furniture pinned to `U=9`, walls to `size`) is
+why objects loom, and why a bigger Room-size slider doesn't shrink them
+relatively. Candidate fix directions: (a) scale furniture off `h` not `U`, and/or
+(b) cut the absolute multipliers.
+
 ### 🟡 milestone · 10:00 — Session initialized
 **Why:** /start-session — orient on a fresh branch before any implementation.
 
