@@ -5,13 +5,12 @@ date: 2026-06-18
 title: Solid Worlds review + AI-collaboration attribution policy
 branch: claude/polygon-world-app-review-8dduma
 slug: polygon-world-app-review-8dduma
-status: in-progress
+status: completed
 build: passing
 followup: null
 pr: null
 app: docs, polygon-worlds, solid-worlds
-signals: needs-dan
-next: Rework Solid Worlds' homology.ts to a cellular method valid for screw gluings (2× cube subdivision, or Bieberbach abelianization) so Hantzsche–Wendt + the amphidicosms can be added with computed/cross-checked H₁; then the vertex-link manifold certifier and a 3D walk-the-loop chirality test.
+next: Done — Solid Worlds homology rework + screw fix shipped (PR #225/#227) and the attribution policy is adopted + back-propagated (2026-06-22). Closed out during the control-center triage.
 ---
 
 # Solid Worlds review + AI-collaboration attribution policy

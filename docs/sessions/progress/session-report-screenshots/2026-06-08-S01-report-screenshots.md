@@ -5,7 +5,7 @@ date: 2026-06-08
 title: Session reports — embedded screenshots + control-center thumbnails
 branch: claude/session-report-screenshots
 slug: session-report-screenshots
-status: in-progress
+status: completed
 build: passed
 followup: low
 pr: null

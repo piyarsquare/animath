@@ -28,3 +28,26 @@ Through every point run two fibers, shown as embedded graphs:
 
 Your position glides as a marker in each. The **neighborhood radius** controls how
 far out from where you stand the fiber is drawn.
+
+## Possible sources & where to go further
+
+Pointers for going deeper, not priority claims.
+
+- **The associahedron** — the polytope whose vertices are triangulations of an
+  n-gon and whose edges are flips — is **Stasheff's** associahedron (originally
+  from homotopy theory, 1963); the polytope realization on triangulations is
+  classical, and **Loday's** explicit coordinates are one well-known realization.
+- **The secondary polytope** (the symmetric realization used here) is due to
+  **Gelfand, Kapranov & Zelevinsky** (the *GKZ* secondary polytope of a point
+  configuration); the associahedron is the secondary polytope of a convex polygon.
+- **Trees ↔ triangulations duality** and **flip graphs** are standard combinatorics
+  (see e.g. Devadoss & O'Rourke, *Discrete and Computational Geometry*).
+- **The mosaic / cyclic-order structure** — gluing associahedron tiles into the
+  real moduli space M̄₀,ₙ(ℝ) — follows **Satyan Devadoss's** *mosaic operad* work
+  on the real points of the moduli space of marked curves.
+- **Where the "Nets" half is headed** — distance matrices to split networks
+  (NeighborNet, neighbor-joining) is phylogenetics: **Bryant & Moulton** (NeighborNet),
+  **Saitou & Nei** (neighbor-joining), and the split-network framework of
+  **Bandelt & Dress**.
+- This app ports the classical core of a private `quantum-tree` project; the
+  attribution/license for that port is still being settled.

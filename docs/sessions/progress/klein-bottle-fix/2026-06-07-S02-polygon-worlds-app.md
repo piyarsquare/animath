@@ -5,7 +5,7 @@ date: 2026-06-07
 title: Polygon Worlds — unified fundamental-polygon app (Phase 1)
 branch: claude/klein-bottle-fix
 slug: klein-bottle-fix
-status: in-progress
+status: completed
 build: passing
 followup: null
 pr: 186

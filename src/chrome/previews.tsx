@@ -13,7 +13,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
  */
 export type PreviewKind =
   | 'particles' | 'plane' | 'fractal' | 'julia' | 'corridor'
-  | 'trinary' | 'marriage' | 'sorting' | 'matrix' | 'polygon' | 'treenet' | 'solid' | 'skellam';
+  | 'trinary' | 'sorting' | 'matrix' | 'polygon' | 'treenet' | 'solid' | 'skellam';
 
 type DrawFn = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
 
@@ -441,88 +441,6 @@ function TrinaryPreview({ light }: { light: boolean }) {
     });
     ctx.fillStyle = light ? '#222' : '#fff';
     ctx.beginPath(); ctx.arc(px, py, Math.max(1.5, W * 0.004), 0, 7); ctx.fill();
-  }, [light]);
-  return <canvas ref={ref} style={canvasStyle} />;
-}
-
-/* ---- Stable marriage: an animated Gale–Shapley proposal round ------------- */
-const GS = (() => {
-  const n = 5, rnd = mulberry32(20260610);
-  const shuffle = () => {
-    const a = [0, 1, 2, 3, 4];
-    for (let i = n - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-    return a;
-  };
-  const prefP = Array.from({ length: n }, shuffle);
-  const rankR = Array.from({ length: n }, () => {
-    const order = shuffle(), rank = new Array(n).fill(0);
-    order.forEach((p, i) => { rank[p] = i; });
-    return rank;
-  });
-  const match = new Array<number>(n).fill(-1); // reviewer → proposer
-  const next = new Array(n).fill(0);
-  const free = [0, 1, 2, 3, 4];
-  const events: { p: number; r: number; kind: 'accept' | 'bump' | 'reject'; m: number[] }[] = [];
-  while (free.length) {
-    const p = free.shift()!;
-    const r = prefP[p][next[p]++];
-    if (match[r] === -1) {
-      match[r] = p;
-      events.push({ p, r, kind: 'accept', m: match.slice() });
-    } else if (rankR[r][p] < rankR[r][match[r]]) {
-      free.push(match[r]);
-      match[r] = p;
-      events.push({ p, r, kind: 'bump', m: match.slice() });
-    } else {
-      free.unshift(p);
-      events.push({ p, r, kind: 'reject', m: match.slice() });
-    }
-  }
-  return { n, events };
-})();
-
-function MarriagePreview({ light }: { light: boolean }) {
-  const bg = light ? '#f4f3ef' : '#05060d';
-  const ref = useCanvas((ctx, W, H, t) => {
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    const { n, events } = GS;
-    const STEP = 0.85, HOLD = 2.2;
-    const total = events.length * STEP + HOLD;
-    const tt = t % total;
-    const idx = Math.min(Math.floor(tt / STEP), events.length - 1);
-    const inHold = tt >= events.length * STEP;
-    const lx = W * 0.16, rx = W * 0.84;
-    const yAt = (i: number) => H * (0.16 + (i / (n - 1)) * 0.68);
-    const gold = light ? '#b67d10' : '#ffd400';
-    const cyan = light ? '#1d8a78' : '#5ad1ff';
-    // committed matching = state after the previous event (final during hold)
-    const m = inHold ? events[events.length - 1].m : (idx > 0 ? events[idx - 1].m : new Array(n).fill(-1));
-    ctx.lineWidth = Math.max(1.2, W * 0.004);
-    for (let r = 0; r < n; r++) {
-      if (m[r] === -1) continue;
-      ctx.strokeStyle = light ? 'rgba(182,125,16,0.75)' : 'rgba(255,212,0,0.7)';
-      ctx.beginPath(); ctx.moveTo(lx, yAt(m[r])); ctx.lineTo(rx, yAt(r)); ctx.stroke();
-    }
-    // the live proposal: line grows, then flashes its verdict
-    if (!inHold) {
-      const e = events[idx];
-      const prog = (tt - idx * STEP) / STEP;
-      const grow = Math.min(1, prog / 0.4);
-      const x2 = lx + (rx - lx) * grow, y2 = yAt(e.p) + (yAt(e.r) - yAt(e.p)) * grow;
-      const verdict = prog > 0.55;
-      ctx.strokeStyle = !verdict
-        ? (light ? 'rgba(60,60,70,0.8)' : 'rgba(255,255,255,0.8)')
-        : e.kind === 'reject'
-          ? `rgba(235,80,80,${1 - (prog - 0.55) / 0.45})`
-          : (light ? 'rgba(29,138,120,0.95)' : 'rgba(90,209,255,0.95)');
-      ctx.beginPath(); ctx.moveTo(lx, yAt(e.p)); ctx.lineTo(x2, y2); ctx.stroke();
-    }
-    for (let i = 0; i < n; i++) {
-      ctx.fillStyle = gold;
-      ctx.beginPath(); ctx.arc(lx, yAt(i), Math.max(3, W * 0.013), 0, 7); ctx.fill();
-      ctx.fillStyle = cyan;
-      ctx.beginPath(); ctx.arc(rx, yAt(i), Math.max(3, W * 0.013), 0, 7); ctx.fill();
-    }
   }, [light]);
   return <canvas ref={ref} style={canvasStyle} />;
 }
@@ -973,7 +891,6 @@ export function Preview({ kind, skin }: { kind: PreviewKind; skin: string; hue?:
     case 'julia': return <JuliaPreview light={light} />;
     case 'corridor': return <CorridorPreview light={light} />;
     case 'trinary': return <TrinaryPreview light={light} />;
-    case 'marriage': return <MarriagePreview light={light} />;
     case 'sorting': return <SortingPreview light={light} />;
     case 'matrix': return <MatrixPreview light={light} />;
     case 'polygon': return <PolygonPreview light={light} />;

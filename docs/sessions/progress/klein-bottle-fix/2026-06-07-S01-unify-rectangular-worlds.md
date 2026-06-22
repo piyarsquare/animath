@@ -5,7 +5,7 @@ date: 2026-06-07
 title: Unify the two rectangular worlds (flat ⇄ spherical)
 branch: claude/klein-bottle-fix
 slug: klein-bottle-fix
-status: in-progress
+status: completed
 build: passing
 followup: null
 pr: 186

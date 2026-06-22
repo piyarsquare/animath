@@ -5,7 +5,7 @@ date: 2026-06-10
 title: Control center — app categories, group/sort, global timeline
 branch: claude/session-control-center
 slug: session-control-center
-status: in-progress
+status: completed
 build: unknown
 followup: low
 pr: null

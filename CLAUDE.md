@@ -100,7 +100,6 @@ animath/
     │   ├── TopologyWalk/        # UNLISTED / being retired (Polygon Worlds supersedes it; absorbed its scene looks). Möbius corridor + flat torus / Klein bottle
     │   ├── TrinaryStars/        # three-body planet sandbox (Observatory) + ensemble Lab
     │   │                        #   (Trinary.tsx hosts both as tabs; engine in lib/nbody)
-    │   ├── StableMarriage/      # Gale–Shapley visualizer + heatmap lab (CSS/DOM)
     │   ├── AgenticSorting/      # concurrent agent-based sorting (CSS/DOM)
     │   ├── StableMatching/      # rebuilt Gale–Shapley lab: matrix · welfare · lattice (CSS/DOM)
     │   ├── PolygonWorlds/       # walk every closed surface from one glued polygon; selectable scene "looks" (looks.ts, distilled from Topology Walk's themes)
@@ -167,7 +166,6 @@ visible app catalog comes from `src/apps.ts` (+ `src/chrome/catalog.ts`).
 | `#/correspondence`   | `Correspondence` | Mandelbrot ↔ Julia, two linked view windows |
 | `#/topology-walk`    | `TopologyWalk`   | **Unlisted** (being retired; superseded by Polygon Worlds, which absorbed its scene looks). First-person walk on a closed surface (twisting Möbius corridor / flat torus / Klein); still URL-reachable, `#/mobius` and `#/wrap-world` redirect here |
 | `#/trinary`          | `Trinary`        | Three-star system: Observatory + Lab as top-bar modes (`#/trinary-lab` opens the Lab) |
-| `#/stable-marriage`  | `StableMarriage` | Gale–Shapley algorithm + heatmap lab        |
 | `#/agentic-sorting`  | `AgenticSorting` | Concurrent agent-based sorting              |
 | `#/stable-matching`  | `StableMatching` | Rebuilt Gale–Shapley lab (matrix · welfare surface · lattice via layouts) |
 | `#/polygon-worlds`   | `PolygonWorlds`  | Walk every closed surface from one glued polygon |
@@ -292,7 +290,7 @@ two linked windows are the two-view reference.
 
 ### CSS/DOM apps
 
-StableMarriage, StableMatching and AgenticSorting render plain DOM with
+StableMatching and AgenticSorting render plain DOM with
 `lucide-react` icons and their own CSS inside view windows; their controls live
 in workspace panels like everyone else's. StableMatching shows how in-app tabs
 become **layouts** (`views[id].open`).

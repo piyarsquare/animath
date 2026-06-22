@@ -5,7 +5,7 @@ date: 2026-06-07
 title: Headless software-WebGL tooling for cloud sessions
 branch: claude/headless-webgl-cloud-PxPGu
 slug: headless-webgl-cloud
-status: in-progress
+status: completed
 build: passed
 followup: low
 pr: 187
