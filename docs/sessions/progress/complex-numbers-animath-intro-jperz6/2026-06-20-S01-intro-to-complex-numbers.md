@@ -2,27 +2,26 @@
 kind: progress
 session: 2026-06-20-S01
 date: 2026-06-20
-title: Introduction to complex numbers — explanatory page (scoping)
+title: Argand — an entry-point app for complex numbers (affine map → quadratics)
 branch: claude/complex-numbers-animath-intro-jperz6
 slug: complex-numbers-animath-intro-jperz6
 status: in-progress
-build: unknown
+build: passing
 followup: null
 pr: null
-app: docs, complex-particles, general
-signals: needs-dan
-next: Decide the deliverable shape — new guide page reusing PlaneTransform vs. a small new Argand applet — before building.
+app: argand
+signals: phone-needed
+next: Consolidate the accumulated Argand features (refactor ArgandPlane's render branches; smooth degree-2 Play into a real loop) before adding more.
 ---
 
-# Introduction to complex numbers — explanatory page (scoping)
+# Argand — an entry-point app for complex numbers (affine map → quadratics)
 
 ## Session purpose
 
-Continue the goal of building **explanatory pages that use animath slices** to show
-ideas. Specifically: an **introduction to complex numbers** that carries the basic
-intuitions from `x + iy` to `R·exp(iθ)`, and shows the effect of **scalar
-multiplication by z** (rotation + scaling). Open questions from Dan: is this a new
-app? Can we explore it with what we already have? Is the complex-plane app adequate?
+Continue the goal of building **explanatory pages / apps that use animath slices**.
+This branch became a **new app, Argand** (`#/argand`): an entry-point for complex
+numbers built around the **affine map `f(z) = α₁·z + α₀`** (the complex cousin of
+`y = mx + b`), generalized to dual/split-complex numbers and extended to quadratics.
 
 ## Previous session
 
@@ -30,14 +29,67 @@ First tracked session on this branch. The directly-relevant prior work is the
 **complex guide series** from `claude/complex-particles-guide-tdlhk0`
 ([handoff](../../handoff/complex-particles-guide-tdlhk0/2026-06-14-S01-math-code-guide.md)):
 eight cross-linked `public/*-guide.html` pages that embed live viewers via
-`#/embed/...` iframes — the established pattern for "explanatory pages that use
-animath slices." That session ended flagging a `!high` backlog item directly on this
-topic: **plane/particles unification** ("which plane am I looking at" across viewers
-+ guides).
+`#/embed/...` iframes. The scoping question ("new app or reuse?") was answered by
+building Argand fresh.
 
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 04:34 — Merged main; gallery placement; fullscreen HUD polish
+**Why:** Ready to push this version to main; Dan flagged a fullscreen control gap.
+
+Merged `origin/main` (SolidWorlds updates + session docs; one CLAUDE.md conflict
+resolved keeping both the updated SolidWorlds line and the Argand line). No new app came
+from main — the only folder delta was our own `Argand/`. Moved the Argand card to **just
+after Complex Particles** in `apps.ts` (gallery order follows it) and refreshed its
+blurb. Moved the bottom control-HUD positioning into `Argand.css` so the fullscreen
+ancestor class (`.am-ws-full`) drops it flush at the bottom — it had been floating 84px
+up (the phone dock-clearance offset) where fullscreen has no dock.
+
+### 🟢 code · 03:30 — Grid options (polar / size / domain coloring), on-screen equation, p-connection fix
+**Why:** Dan's four asks: polar grid + size, complex-particle-style coloring, p-value
+behavior bugs, show the equation on screen.
+
+Grid is now a list of identity polylines mapped per-point: **Cartesian | Polar** (circles
++ rays), a **Grid-size** slider, and **domain coloring** (per-segment hue by source angle)
+on both ghost and image grids. **On-screen equation** overlay (top-right, persists in
+fullscreen). **Fixed paths not connecting under alternative p**: in the degenerate domain
+(split outside the cone, dual Re<0) `powRealG` falls back to a linear blend that disagrees
+with the true `mulG` power, so the iteration's smooth spiral diverged from its iterates —
+now gated on `powReliable`, where the orbit connects the literal iterates instead.
+
+### 🟢 code · 02:30 — α₂: quadratics + term-sum decomposition
+**Why:** "add a_2" — extend f to a quadratic; animate the forward path as quadratic →
+linear → additive terms, returning all-at-once (Dan's chosen path).
+
+Degree pill (Linear/Quadratic) + pink α₂ handle. New poly layer in `complexOps.ts`
+(`polyEval`/`polyFixedPoints`/`criticalPoint`/`polyTerms`/`polyTermLoopAt`/`polyRampAt`),
+verified against direct eval and `f(z*)=z*`. Degree-2: grid/shape **bend** (sampled),
+**two fixed points** + a **critical point**, Iterate becomes literal `fᵏ(z)` orbits. Point
+feed builds f(z) as the **tip-to-tail sum of its terms** (each ⅙ of a closed loop; return
+collapses all three at once). Superseded the earlier Horner-chain animation.
+
+### 🟢 code · 01:30 — Iteration + "View from z*"
+**Why:** Dan liked both from the "interesting cases" discussion.
+
+`Iterate` draws the orbit `z→f(z)→f²(z)…` (log spiral about z* for a line, genuine
+nonlinear dynamics for a quadratic). **View from z*** recenters so the affine map reads as
+a pure spiral-similarity about screen center.
+
+### 🟣 decision · 00:30 — Reframe the whole app around f(z) = α₁z + α₀
+**Why:** Dan: "open up the app" around the affine map; the two-numbers / ×-+ mode model
+and the Means/Repeat views were retired. Much code simplified.
+
+Rebuilt around one function: drag the slope α₁ and shift α₀ (lockable, color-coded into
+the equation), feed a **Point / Shape / Grid**, watch the two honest legs (×α₁ spiral, +α₀
+slide) closed into a loop (back via the all-at-once diagonal), and the fixed point
+`z* = α₀/(1−α₁)`. **System slider p = j²** runs the line through complex / dual /
+split-complex (rotation / shear / boost; unit curve + null cone). **Immersive**
+fill-the-screen plot; Play paces by arc length with a min-sweep floor. A bottom control
+HUD carries the feed switcher + t and j² scrubbers/play. Net **−200 lines** despite new
+features. (Earlier this session: the generalized number systems + Repeat/Mean views,
+which were then retired; arc-length pacing; the closed loop / diagonal return.)
 
 ### 🟢 code · 22:05 — Unified two-factor multiply sweep (the real "reverse direction")
 **Why:** Dan clarified that "reverse direction" meant the two *factorizations*, not
