@@ -99,7 +99,7 @@ moved plane-unification to `general`/`!low`). Dispositions:
 | Argand: make the scrubber pay its way (or drop it) | complex-particles · med | Revisit during Argand play. |
 | Make the App-map richer (chip-open, link backlog, trends) | chrome · med | Polish backlog; base App-map already ships. |
 | Slim per-app prose blocks in CLAUDE.md to pointers | docs · med | Own pass (append-only CLAUDE.md). |
-| agentic-sorting EXPLAINER/README names a removed Replicate panel | agentic-sorting · med | **Quick user-facing fix** — good easy win. |
+| agentic-sorting EXPLAINER/README names a removed Replicate panel | agentic-sorting · med | ✅ **Done** — removed the Replicate copy from EXPLAINER + README. |
 | Real-device mobile pass on the guide pages | docs · med | Keep. |
 | Add last 2 platycosms (hexagonal-prism solid) | solid-worlds · med | **NEW** — separate hex-prism build; paper saved. |
 | Argand explainer + tools (complex / dual / split-complex) | complex-particles · med | **NEW** — after Argand "gets played." |
@@ -109,7 +109,7 @@ moved plane-unification to `general`/`!low`). Dispositions:
 | Revisit `not-live` precision after squash-merge | engine · low | Keep — confirm on next real merge. |
 | Rooms ceiling duct world-specific | solid-worlds · low | Keep (decor polish). |
 | Punch engine floor plane through at the trapdoor | solid-worlds · low | Keep (decor polish). |
-| Decide Stable Marriage's final fate | chrome · low | Keep — a delete-or-keep decision. |
+| Decide Stable Marriage's final fate | chrome · low | ✅ **Done** — Dan: eliminate. Folder/route/registry/preview + docs removed; build green. |
 | Plane / particles unification | general · low | **Recategorized + demoted** (Dan: not pressing; resolves via Argand play). |
 
 ## Sub-agent findings
@@ -144,6 +144,18 @@ the generic `layoutCaptions` chrome feature.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟢 code · 13:40 — Closed #222; eliminated Stable Marriage; fixed the agentic-sorting Replicate docs
+**Why:** Dan: close #222, take the easy win, and retire Stable Marriage outright.
+
+(1) **Closed PR #222** with a comment pointing at #230. (2) **Eliminated Stable
+Marriage** — deleted `src/animations/StableMarriage/`, its `index.tsx` route + lazy
+import, the `apps.ts` entry, and the `marriage` `PreviewKind` + `MarriagePreview`
+(and `GS` helper) in `chrome/previews.tsx`; cleaned the README/CLAUDE/catalog
+references and renumbered the README app list. (3) **Agentic-sorting docs fix** —
+removed the stale **Replicate** panel copy from EXPLAINER + README. Gates green:
+**build ✓ · lint 0 errors · 53 tests pass.** (`docs/apps/stable-marriage.md` + older
+design docs left as historical record.)
 
 ### 🟢 code · 13:05 — Bucket C resolved + Bucket D filled out; paper saved; PR sub-agent dispatched
 **Why:** Dan's calls on C/D + the platycosm-solid fact let me close the Solid Worlds

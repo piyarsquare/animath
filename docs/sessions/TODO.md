@@ -111,12 +111,13 @@ informs future rounds. Delete or check off items as they land.
   floor plane still shows under it unless "Floor plane" is off. Make the trapdoor read
   as a real hole.
 
-- [ ] [chrome] !low Decide Stable Marriage's final fate — keep as unlisted route or fully delete.
-  Its gallery card was retired in favor of Stable Matching (PR #220): `META` entry
-  dropped in `src/chrome/catalog.ts`, but `#/stable-marriage` still routes and the
-  `src/animations/StableMarriage/` folder + `apps.ts` entry remain (reversible, like
-  `#/fractals-cpu`). If it's truly dead, follow up by deleting the folder, the route
-  in `index.tsx`, the `apps.ts` entry, and the now-unused `marriage` `PreviewKind`.
+- [x] [chrome] Decide Stable Marriage's final fate — DONE: fully eliminated.
+  Dan 2026-06-22: retired in favor of Stable Matching. Deleted the
+  `src/animations/StableMarriage/` folder, the `#/stable-marriage` route + lazy
+  import in `index.tsx`, the `apps.ts` entry, and the now-unused `marriage`
+  `PreviewKind` + `MarriagePreview` in `chrome/previews.tsx`; cleaned the stale
+  README/CLAUDE/catalog references. (The `docs/apps/stable-marriage.md` guide and
+  older design docs are left as historical record.)
 
 - [ ] [solid-worlds] !med Add the last two platycosms (the two needing a hexagonal-prism fundamental solid).
   The cube-based catalog is complete at 8 of the 10 platycosms; the remaining two
