@@ -7,8 +7,7 @@ import type { PreviewKind } from './previews';
  * the gallery-only metadata here: category and preview kind. The card order
  * follows src/apps.ts. An app is shown only if it has a META entry below, so
  * dropping an entry retires its card while keeping the route live:
- * `#/fractals-cpu` (legacy) and `#/stable-marriage` (retired in favor of
- * `#/stable-matching`) are intentionally absent.
+ * `#/fractals-cpu` (legacy) is intentionally absent.
  */
 export type Category = 'Complex' | 'Fractal' | 'Dynamics' | 'Algorithm';
 

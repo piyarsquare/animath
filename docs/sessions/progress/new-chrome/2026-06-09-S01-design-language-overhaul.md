@@ -5,7 +5,7 @@ date: 2026-06-09
 title: Design language overhaul — tokens, gallery, workspace
 branch: claude/new-chrome
 slug: new-chrome
-status: in-progress
+status: completed
 build: passing
 followup: null
 pr: null

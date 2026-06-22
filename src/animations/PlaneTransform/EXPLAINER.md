@@ -59,3 +59,22 @@ chosen angle jumps by `2π`; you'll see a color discontinuity along it.
 Stepping the branch index walks you onto the next *sheet* of the function's
 Riemann surface — the multi-story surface on which the function finally
 becomes single-valued.
+
+## Possible sources & where to go further
+
+Pointers for going deeper, not priority claims.
+
+- **Conformal maps as "transformations of the plane"** is the classic geometric
+  view of complex functions; **Tristan Needham's *Visual Complex Analysis*** is the
+  canonical modern visual treatment, and **Felix Klein**'s Erlangen-program lineage
+  frames `f` as a motion that preserves angles.
+- **Domain coloring** — hue = argument, brightness/tiling = magnitude — is a
+  standard visualization; **Elias Wegert's *Visual Complex Functions*** (phase
+  portraits) and **Frank Farris's** writing develop it carefully.
+- **The log-polar plane** (plotting at `(arg, log|·|)`) turns multiplication into
+  translation and `zⁿ` into a shear; this is the **complex logarithm / exponential
+  map** as a change of coordinates, standard in any complex-analysis course.
+- **Branches and Riemann surfaces** — picking a consistent `θ` to make `√z` or
+  `ln z` single-valued, and stepping `k` onto the next sheet, is the elementary
+  theory of multivalued functions; the surface idea goes back to **Riemann**, and
+  any text (e.g. Ahlfors's *Complex Analysis*) covers the branch cut and sheets.

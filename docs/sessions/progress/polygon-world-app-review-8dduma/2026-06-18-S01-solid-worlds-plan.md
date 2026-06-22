@@ -5,7 +5,7 @@ date: 2026-06-18
 title: "Plan: Solid Worlds — walking closed 3-manifolds (successor to Polygon Worlds)"
 branch: claude/polygon-world-app-review-8dduma
 slug: polygon-world-app-review-8dduma
-status: in-progress
+status: executed
 build: passing
 followup: null
 pr: null

@@ -58,8 +58,7 @@ The top-bar pills switch between two modes:
 
 - **Sandbox** — the live simulation, with the arena, the all-agent **Trajectories**
   plot (every agent's distance-to-home over time, warm = backtracked = delayed
-  gratification), the single-agent tracker, and a **Replicate** panel that re-runs
-  the current settings on many fresh instances and shows the outcome distribution.
+  gratification), and the single-agent tracker.
 - **Lab** — batch experiments over headless runs:
   - **Compare** — each pure algotype (and the current mix) head-to-head; the
     source of head-to-head numbers like "Blind Date ≈ 545 swaps."

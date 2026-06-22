@@ -79,3 +79,26 @@ world in such a system can have a genuinely **unpredictable climate** — its
 distance from each sun, and so its seasons, never settle into a pattern you
 could forecast far ahead. That predicament, lifted straight from this math, is
 the premise of Liu Cixin's *The Three-Body Problem*.
+
+## Possible sources & where to go further
+
+Pointers for going deeper, not priority claims.
+
+- **No closed-form solution** — that the general three-body problem has no tidy
+  formula is **Henri Poincaré**'s work (around 1890, on the restricted three-body
+  problem and the King Oscar prize); the deeper diagnosis is **sensitive
+  dependence on initial conditions**, the foundation of *deterministic chaos*
+  (Poincaré, later **Edward Lorenz**), measured by the **Lyapunov exponent**.
+- **The Figure-Eight** orbit is a choreography found numerically by **Cris Moore**
+  (1993) and proven to exist by **Alain Chenciner & Richard Montgomery** (2000);
+  the **Moth** and the broader family of choreographies are from **Milovan Šuvakov
+  & Veljko Dmitrašinović** (2013).
+- **The Pythagorean problem** (three masses 3-4-5 released from rest) is **Burrau's
+  problem** (Carl Burrau, 1913), famously integrated by **Szebehely & Peters**
+  (1967) — the textbook chaotic-scattering case.
+- **Test particles and softened gravity** — treating the planet as a massless
+  particle in a given star field, and **Plummer softening** to keep close passes
+  finite, are standard numerical-celestial-mechanics techniques; the integrator
+  here is **velocity-Verlet / leapfrog**.
+- **The cultural premise** — an unpredictable climate on a world in a multi-star
+  system — is the premise of **Liu Cixin**'s *The Three-Body Problem*.

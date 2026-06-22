@@ -25,11 +25,14 @@ informs future rounds. Delete or check off items as they land.
 
 # Backlog · animath
 
-- [ ] [complex-particles] !high Plane / particles unification — one "which plane am I looking at" convention across the viewers and their guides.
+- [ ] [general] !low Plane / particles unification — one "which plane am I looking at" convention across the viewers and their guides.
   Surfaced while splitting the complex guides: we show the bare x,y plane with a
   linear Complex Particles plot, but Plane Transform also shows "a plane." Decide a
   single mental model (and which viewer owns which job) so the guides stop being
   ambiguous. Affects functions guide §1 and the Plane Transform guide.
+  Dan 2026-06-22: not a pressing issue — likely resolves on its own as we play
+  through the complex/dual/split-complex variants in Argand. Recategorized to
+  general (not particular to any single app) and demoted from !high.
 
 - [ ] [docs] !high Productionize the signals/to-do system — teach agents to author it.
   Update REPORT_STYLE.md, the progress/handoff templates, and the handoff +
@@ -44,11 +47,14 @@ informs future rounds. Delete or check off items as they land.
   de-emphasize the slider and foreground the always-on arc. Revisit alongside the
   plane-morph chapter, where a changing readout makes scrubbing genuinely useful.
 
-- [ ] [chrome] !med Make the App-map richer — open it from a chip, link "N backlog" to the filtered To-do, maybe roll trends over time.
-  The base App-map view now ships (per-app latest · risk · open · next, sorted
-  worst-risk-first), and as of 2026-06-22 it also consumes the per-app guides
-  (`docs/apps/*.md`): each card shows the guide's lifecycle status, a `guide ›`
-  link, and its Active-registry count. These are the remaining polish follow-ups.
+- [ ] [chrome] !med Make the App-map richer — open it from a chip, maybe roll trends over time.
+  The base App-map view ships (per-app latest · risk · open · next, sorted
+  worst-risk-first) and consumes the per-app guides (`docs/apps/*.md`: lifecycle
+  status, `guide ›` link, Active-registry count). 2026-06-22: added a **registry
+  self-audit** — the build now reads `src/apps.ts` and reconciles registry ↔ guides,
+  flagging drift on each card (⚠ no guide / ⚠ retired) with a top "registry drift"
+  callout; and the "N backlog" count now links to the filtered To-do (`#cat=`).
+  Remaining polish: open the map from an app chip, and trend lines over time.
 
 - [ ] [docs] !med Slim the per-app prose blocks in CLAUDE.md to pointers.
   Every app now has a living guide under `docs/apps/<slug>.md` (PR #229). The long
@@ -56,16 +62,19 @@ informs future rounds. Delete or check off items as they land.
   docs/apps/<slug>.md" so there's a single architecture home. Touches the shared
   append-only CLAUDE.md — do it as its own pass to avoid parallel-branch conflicts.
 
-- [ ] [agentic-sorting] !med EXPLAINER/README still describe the removed Replicate panel.
-  Surfaced while writing `docs/apps/agentic-sorting.md`: the in-app help text
-  documents a Replicate control that the legibility-pass handoff says was removed.
-  User-facing and wrong today — reconcile the docs with the shipped UI.
+- [x] [agentic-sorting] EXPLAINER/README no longer describe the removed Replicate panel.
+  DONE 2026-06-22. Removed the stale Replicate-panel copy from both the AgenticSorting
+  EXPLAINER and README so the in-app help matches the shipped UI.
 
-- [ ] [docs] !low Add the "Possible sources" attribution block to the EXPLAINERs that lack it.
-  Several EXPLAINERs (the complex family — complex-particles/plane-transform/
-  correspondence — and trees-and-nets) have no "Possible sources & where to go
-  further" block, contrary to the attribution policy. The guides name real
-  analogues to seed these without fabricating citations.
+- [x] [docs] Add the "Possible sources" attribution block to the EXPLAINERs that lack it.
+  DONE 2026-06-22 (scope B). Appended a tailored "Possible sources & where to go
+  further" block to **9 EXPLAINERs**: ComplexParticles, PlaneTransform, Correspondence,
+  TreesAndNets, AgenticSorting, FractalsGPU, StableMatching, TopologyWalk, TrinaryStars.
+  Sourced from each app's `docs/apps/*.md` guide; the obscurer citations were
+  web-verified (Tricorn = Crowe–Hasson–Rippon–Strain-Clark, *Nonlinearity* 1989;
+  Burning Ship = Michelitsch & Rössler 1992; Teo–Sethuraman 1998; Irving–Leather–
+  Gusfield 1987). Argand/PolygonWorlds/SolidWorlds already had blocks; legacy
+  Fractals has no EXPLAINER (deferred).
 
 - [ ] [docs] !low Consistency editing pass over the 10 agent-written app guides.
   Written by four parallel agents grouped by family (PR #229); depth and voice vary
@@ -101,12 +110,33 @@ informs future rounds. Delete or check off items as they land.
   floor plane still shows under it unless "Floor plane" is off. Make the trapdoor read
   as a real hole.
 
-- [ ] [chrome] !low Decide Stable Marriage's final fate — keep as unlisted route or fully delete.
-  Its gallery card was retired in favor of Stable Matching (PR #220): `META` entry
-  dropped in `src/chrome/catalog.ts`, but `#/stable-marriage` still routes and the
-  `src/animations/StableMarriage/` folder + `apps.ts` entry remain (reversible, like
-  `#/fractals-cpu`). If it's truly dead, follow up by deleting the folder, the route
-  in `index.tsx`, the `apps.ts` entry, and the now-unused `marriage` `PreviewKind`.
+- [x] [chrome] Decide Stable Marriage's final fate — DONE: fully eliminated.
+  Dan 2026-06-22: retired in favor of Stable Matching. Deleted the
+  `src/animations/StableMarriage/` folder, the `#/stable-marriage` route + lazy
+  import in `index.tsx`, the `apps.ts` entry, and the now-unused `marriage`
+  `PreviewKind` + `MarriagePreview` in `chrome/previews.tsx`; cleaned the stale
+  README/CLAUDE/catalog references, and the now-stale `docs/apps/stable-marriage.md`
+  guide itself (older design docs are left as historical record). Going forward, the
+  `build-sessions.mjs` registry self-audit flags any guide for a non-registered app as
+  drift, so a stale guide can't quietly resurface as a "live" App-map card.
+
+- [ ] [solid-worlds] !med Add the last two platycosms (the two needing a hexagonal-prism fundamental solid).
+  The cube-based catalog is complete at 8 of the 10 platycosms; the remaining two
+  require a *different* fundamental solid — a **hexagonal prism**, not a cube — so they
+  are a separate build (a new gluing-presenter for the hex prism), not another entry
+  in the existing cube engine. Reference saved locally: Conway–Rossetti, "Describing
+  the Platycosms" → `docs/papers/describing-the-platycosms.pdf`.
+
+- [ ] [complex-particles] !med Argand: an explainer + tools for complex / dual / split-complex numbers.
+  The app already runs the affine line through all three systems via the System
+  slider p=j² (Complex p<0 · Dual p=0 · Split-complex p>0). Add an explainer that
+  teaches what each space *does* — how multiplication acts (rotation / shear / boost),
+  how polynomials behave — plus basic tools for thinking it through. Argand needs time
+  to "get played" first. Naming note: "Argand plane" properly names only the complex
+  case (p=−1); the dual plane is the **Galilean plane** (Yaglom; parabolic numbers)
+  and the split-complex plane is the **Minkowski / pseudo-Euclidean plane** (a.k.a.
+  Lorentzian; hyperbolic/perplex numbers). A neutral umbrella for the morphing object
+  is the "generalized complex plane."
 
 - [x] [engine] Solid Worlds — fix the cell-engine screw bug to graduate the 2 experimental worlds.
   DONE 2026-06-20 (branch `claude/3d-manifold-worlds-imwmal`). Was two distinct
@@ -125,11 +155,11 @@ informs future rounds. Delete or check off items as they land.
   B₃/B₄) are uniquely fixed by their homology — H₁(B₃)=ℤ⊕(ℤ/2)² and H₁(B₄)=ℤ⊕ℤ/4
   in the literature — so −a2 (= second amphidicosm = B₄) = ℤ⊕ℤ/4 is the genuine
   name↔invariant pairing, not just elimination. Our app computes exactly these two
-  values via *both* Γᵃᵇ and the (now dual-verified) cell complex. Caveat: the
-  primary PDFs (arXiv math/0311476 Table 6, nLab) were unreachable this session
-  (network 403); confirmation rests on search summaries quoting the literature's
-  homology values + the two in-app computations agreeing with them. Still open: the
-  app-naming question ("Solid Worlds" vs *Manifold Walk*) — a product call for Dan.
+  values via *both* Γᵃᵇ and the (now dual-verified) cell complex. Caveat (now
+  resolvable): the primary PDF (arXiv math/0311476 Table 6) was unreachable that
+  session (network 403); it is now saved locally at
+  `docs/papers/describing-the-platycosms.pdf`, so the Table-6 read can be confirmed
+  directly. Naming question closed 2026-06-22 — Dan: leave "Solid Worlds" as-is.
 
 - [x] [chrome] App-map view in the control center — per-app rollup (latest · risk · open · next).
 

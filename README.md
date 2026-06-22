@@ -15,13 +15,12 @@ reachable directly by hash route.
 4. **[Correspondence](https://piyarsquare.github.io/animath/#/correspondence)** – side-by-side Mandelbrot–Julia explorer; pick or draw paths through `c`.
 5. **[Topology Walk](https://piyarsquare.github.io/animath/#/topology-walk)** – first-person walk on a closed surface: a twisting / knotted corridor or a flat torus / Klein bottle, with shared footprints, avatar and third-person view.
 6. **[Trinary System](https://piyarsquare.github.io/animath/#/trinary)** – drop a planet into a chaotic three-star system and watch its future diverge; an in-app **Lab** tab runs thousands of worlds and maps their fates into fractal "destiny" portraits and statistics.
-7. **[Stable Marriage](https://piyarsquare.github.io/animath/#/stable-marriage)** – step through the Gale–Shapley algorithm with bias and consensus controls.
-8. **[Agentic Sorting](https://piyarsquare.github.io/animath/#/agentic-sorting)** – concurrent sorting simulation where autonomous agents with distinct strategies produce emergent order.
-9. **[Stable Matching](https://piyarsquare.github.io/animath/#/stable-matching)** – a rebuilt Gale–Shapley lab: tune each side's consensus, watch the proposer advantage, sweep the whole consensus plane, and browse the lattice of stable matchings.
-10. **[Polygon Worlds](https://piyarsquare.github.io/animath/#/polygon-worlds)** – one decorated square, four worlds: glue its edges and walk a torus, Klein bottle, projective plane or sphere in first person.
-11. **[Trees and Nets](https://piyarsquare.github.io/animath/#/trees-and-nets)** – tree-space as a polytope: every triangulation of an n-gon is a tree and every flip an edge, so the whole associahedron becomes a 3D (or 4D) shape you can orbit, colored by energy.
-12. **[Solid Worlds](https://piyarsquare.github.io/animath/#/solid-worlds)** – walk *inside* a closed 3-manifold built from one glued cube — a single room that repeats forever. Walk an orientation-reversing loop in the Klein-bottle × circle world and the whole world, sign and your own footprints come back mirror-reversed (the 3D successor to Polygon Worlds).
-13. **[Argand Plane](https://piyarsquare.github.io/animath/#/argand)** – drag two complex numbers and watch arithmetic *become* geometry: addition slides tip-to-tail, multiplication spirals (angles add, lengths multiply), and `a·b = b·a` falls out of the picture. An entry-point app for complex numbers; the successor-in-progress to Plane Transform.
+7. **[Agentic Sorting](https://piyarsquare.github.io/animath/#/agentic-sorting)** – concurrent sorting simulation where autonomous agents with distinct strategies produce emergent order.
+8. **[Stable Matching](https://piyarsquare.github.io/animath/#/stable-matching)** – a rebuilt Gale–Shapley lab: tune each side's consensus, watch the proposer advantage, sweep the whole consensus plane, and browse the lattice of stable matchings.
+9. **[Polygon Worlds](https://piyarsquare.github.io/animath/#/polygon-worlds)** – one decorated square, four worlds: glue its edges and walk a torus, Klein bottle, projective plane or sphere in first person.
+10. **[Trees and Nets](https://piyarsquare.github.io/animath/#/trees-and-nets)** – tree-space as a polytope: every triangulation of an n-gon is a tree and every flip an edge, so the whole associahedron becomes a 3D (or 4D) shape you can orbit, colored by energy.
+11. **[Solid Worlds](https://piyarsquare.github.io/animath/#/solid-worlds)** – walk *inside* a closed 3-manifold built from one glued cube — a single room that repeats forever. Walk an orientation-reversing loop in the Klein-bottle × circle world and the whole world, sign and your own footprints come back mirror-reversed (the 3D successor to Polygon Worlds).
+12. **[Argand Plane](https://piyarsquare.github.io/animath/#/argand)** – drag two complex numbers and watch arithmetic *become* geometry: addition slides tip-to-tail, multiplication spirals (angles add, lengths multiply), and `a·b = b·a` falls out of the picture. An entry-point app for complex numbers; the successor-in-progress to Plane Transform.
 
 ---
 
@@ -146,7 +145,6 @@ src/
 │   ├── Correspondence/     # Mandelbrot ↔ Julia split view
 │   ├── Fractals/           # legacy CPU fractal renderer (routed at #/fractals-cpu)
 │   ├── TopologyWalk/       # first-person walk: corridor + flat torus / Klein bottle
-│   ├── StableMarriage/     # Gale–Shapley visualizer + heatmap lab
 │   ├── AgenticSorting/     # concurrent agent-based sorting
 │   ├── StableMatching/     # rebuilt Gale–Shapley lab (matrix · welfare · lattice)
 │   ├── TrinaryStars/       # three-body sandbox (Observatory) + ensemble Lab
@@ -279,4 +277,4 @@ axis) lives on the 4D Rotation panel.
 
 * Three.js — rendering engine
 * React + Vite — UI and build tooling
-* lucide-react — icon set used by Stable Marriage and Agentic Sorting
+* lucide-react — icon set used by Agentic Sorting and Stable Matching

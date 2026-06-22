@@ -85,3 +85,27 @@ surfaces can be flipped to show the **std-dev surface** itself, so you can see
 the mean, median, range and the location of the extremes, plus the typical
 within-cell noise — and **Copy CSV / Download** export the whole grid
 (consensus, mean, SD, SEM, 95% CI, n) for analysis elsewhere.
+
+## Possible sources & where to go further
+
+Pointers for going deeper, not priority claims.
+
+- **The algorithm** — deferred acceptance and the stable-matching theorem are
+  **David Gale & Lloyd Shapley**, "College Admissions and the Stability of
+  Marriage" (*American Mathematical Monthly*, 1962). Proposer-optimality is theirs.
+- **The lattice of stable matchings** — that the stable matchings form a
+  **distributive lattice**, with rotations as the elementary moves — is classically
+  attributed to **John Conway** (reported by **Knuth**, *Mariages stables*, 1976);
+  the rotation theory is developed in **Gusfield & Irving**, *The Stable Marriage
+  Problem: Structure and Algorithms* (1989), the standard reference for the lattice
+  and enumeration used here.
+- **The median / fair solutions** — the *median* (generalized median) stable
+  matching is a result of **Teo & Sethuraman** (1998); the *egalitarian* (minimum
+  total rank) matching is **Irving, Leather & Gusfield** (1987). Sex-equal stable
+  matching is known to be NP-hard in general (**Kato**, **McDermid–Irving**).
+- **Stabilize (the random path to stability)** — repeatedly satisfying a blocking
+  pair provably reaches a stable matching: **Roth & Vande Vate**, "Random Paths to
+  Stability in Two-Sided Matching" (*Econometrica*, 1990).
+- **Real-world use** — deferred acceptance underlies the **National Resident
+  Matching Program** and many school-choice systems; **Alvin Roth**'s market-design
+  work (Nobel 2012, with Shapley) is the place to read on.

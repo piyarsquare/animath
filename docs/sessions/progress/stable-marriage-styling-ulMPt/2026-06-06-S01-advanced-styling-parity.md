@@ -5,7 +5,7 @@ date: 2026-06-06
 title: Stable Marriage advanced styling parity
 branch: claude/stable-marriage-styling-ulMPt
 slug: stable-marriage-styling-ulMPt
-status: in-progress
+status: completed
 build: passed
 followup: medium
 pr: https://github.com/piyarsquare/animath/pull/189

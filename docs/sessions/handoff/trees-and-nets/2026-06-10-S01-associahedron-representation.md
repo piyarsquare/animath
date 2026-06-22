@@ -5,7 +5,7 @@ date: 2026-06-10
 title: Trees and Nets — local fibers explorer (associahedron × cube)
 branch: claude/trees-and-nets
 slug: trees-and-nets
-status: in-progress
+status: completed
 build: passing
 followup: MEDIUM
 pr: 211

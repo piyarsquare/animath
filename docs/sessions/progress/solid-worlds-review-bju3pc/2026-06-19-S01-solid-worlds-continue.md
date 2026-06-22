@@ -5,12 +5,11 @@ date: 2026-06-19
 title: Solid Worlds — review state & plan the next push
 branch: claude/solid-worlds-review-bju3pc
 slug: solid-worlds-review-bju3pc
-status: in-progress
+status: completed
 build: passing
 followup: null
 pr: null
 app: solid-worlds
-signals: needs-dan
 next: Homology rework shipped (subdivided complex + BFS reduction + manifold certifier + Smith-loop fix; green). Next: a Pairing schema extension for half-edge *axial* screws (non-opposite-face gluings) to express the free Hantzsche–Wendt + amphidicosms, then add the genuine screw manifolds to the catalog.
 ---
 

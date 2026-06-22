@@ -5,7 +5,7 @@ date: 2026-06-09
 title: Polygon Worlds — footsteps + markers two-sided-sheet polish
 branch: claude/polygon-worlds-spherical-p2-qgExR
 slug: polygon-worlds-spherical-p2-qgExR
-status: in-progress
+status: completed
 build: unknown
 followup: null
 pr: null
