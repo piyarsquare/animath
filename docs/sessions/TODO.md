@@ -62,10 +62,9 @@ informs future rounds. Delete or check off items as they land.
   docs/apps/<slug>.md" so there's a single architecture home. Touches the shared
   append-only CLAUDE.md — do it as its own pass to avoid parallel-branch conflicts.
 
-- [ ] [agentic-sorting] !med EXPLAINER/README still describe the removed Replicate panel.
-  Surfaced while writing `docs/apps/agentic-sorting.md`: the in-app help text
-  documents a Replicate control that the legibility-pass handoff says was removed.
-  User-facing and wrong today — reconcile the docs with the shipped UI.
+- [x] [agentic-sorting] EXPLAINER/README no longer describe the removed Replicate panel.
+  DONE 2026-06-22. Removed the stale Replicate-panel copy from both the AgenticSorting
+  EXPLAINER and README so the in-app help matches the shipped UI.
 
 - [x] [docs] Add the "Possible sources" attribution block to the EXPLAINERs that lack it.
   DONE 2026-06-22 (scope B). Appended a tailored "Possible sources & where to go
@@ -116,8 +115,10 @@ informs future rounds. Delete or check off items as they land.
   `src/animations/StableMarriage/` folder, the `#/stable-marriage` route + lazy
   import in `index.tsx`, the `apps.ts` entry, and the now-unused `marriage`
   `PreviewKind` + `MarriagePreview` in `chrome/previews.tsx`; cleaned the stale
-  README/CLAUDE/catalog references. (The `docs/apps/stable-marriage.md` guide and
-  older design docs are left as historical record.)
+  README/CLAUDE/catalog references, and the now-stale `docs/apps/stable-marriage.md`
+  guide itself (older design docs are left as historical record). Going forward, the
+  `build-sessions.mjs` registry self-audit flags any guide for a non-registered app as
+  drift, so a stale guide can't quietly resurface as a "live" App-map card.
 
 - [ ] [solid-worlds] !med Add the last two platycosms (the two needing a hexagonal-prism fundamental solid).
   The cube-based catalog is complete at 8 of the 10 platycosms; the remaining two
