@@ -92,6 +92,23 @@ diagonal-sum picture is the candidate central visual.
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟢 code · 21:10 — Tutorial polish: caption stays in its box; Play builds the whole distribution
+**Why:** Dan: the tutorial text sometimes escaped its box, and Play should fill the
+*whole* Skellam distribution, not just one difference value.
+
+- **Caption fix.** The narration is now its own flex child (`.ctw-tut-text`,
+  `flex:1; min-width:0`) inside `.ctw-tutorial` (no more `flex-wrap`/`baseline`),
+  so long text wraps inside the bordered box instead of spilling out.
+- **Sweep the whole distribution.** The Explain tutorial's final stage changed from
+  summing the one selected diagonal to **sweeping every diagonal, k = −span → +span**
+  (bottom to top). The highlighted lattice diagonal, the factored formula, and the
+  conditional readout all track the swept `k` (`activeK`), and each Skellam bar fills
+  as its diagonal is summed — so the whole distribution builds up bar by bar. Stages
+  are now margins → fill → sweep (3 steps); `Next step` rests on each.
+
+Verified green (build · lint 0/60 · tsc) and by screenshots: caption inside the box,
+and the strip filling left-to-right (paused at k=−3, bars ≤ −3 filled, rest empty).
+
 ### 🟡 milestone · 20:40 — Reworked into an explainer: Play-tutorial, length law, cataloged Lab
 **Why:** Dan reviewed the live app and asked for a more explainer-like build —
 fold in the rate law, make Play build the whole matrix with narration, and turn

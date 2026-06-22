@@ -269,7 +269,6 @@ export default function CountingTheWays() {
   const kClamped = clamp(k, -N, N);
   const rungCount = useMemo(() => Math.max(1, Math.min(significantRungs(mu1, mu2, kClamped), N - Math.abs(kClamped) + 1)), [mu1, mu2, kClamped, N]);
   const fullPmf = useMemo(() => skellamPmf(mu1, mu2, kClamped), [mu1, mu2, kClamped]);
-  const cond = useMemo(() => conditionalRungs(mu1, mu2, kClamped), [mu1, mu2, kClamped]);
 
   /* ── Explain: the staged tutorial that builds the whole matrix on Play ──
      One monotone `frame` drives four stages: margins → fill every cell →
@@ -279,18 +278,26 @@ export default function CountingTheWays() {
   const [playing, setPlaying] = useState(false);
   const playTimer = useRef<number | null>(null);
 
-  const Nm = N + 1;            // reveal each Poisson margin
-  const Nf = 2 * N + 1;        // anti-diagonal wipe that fills the grid
-  const Hh = 5;                // hold while the diagonal lights up
-  const Ns = rungCount;        // sum the diagonal, rung by rung
-  const total = Nm + Nf + Hh + Ns;
+  const stripSpan = Math.min(N, 14);
+  const strip = useMemo(() => skellamRange(mu1, mu2, -stripSpan, stripSpan), [mu1, mu2, stripSpan]);
+  const stripMax = Math.max(...strip, 1e-9);
+  const rungCountOf = useCallback(
+    (kk: number) => Math.max(1, Math.min(significantRungs(mu1, mu2, kk), N - Math.abs(kk) + 1)),
+    [mu1, mu2, N],
+  );
+
+  const Nm = N + 1;                        // reveal each Poisson margin
+  const Nf = 2 * N + 1;                    // anti-diagonal wipe that fills the grid
+  const FPK = 2;                           // frames per diagonal while sweeping
+  const Nsw = (2 * stripSpan + 1) * FPK;   // sweep every diagonal into its Skellam bar
+  const total = Nm + Nf + Nsw;
 
   // a fresh instance rewinds to the full static picture
   useEffect(() => { setFrame(0); setPlaying(false); }, [mu1, mu2, kClamped, N]);
 
   useEffect(() => {
     if (!playing) { if (playTimer.current) { clearInterval(playTimer.current); playTimer.current = null; } return; }
-    const ms = Math.max(45, 320 - speed * 2.7);
+    const ms = Math.max(40, 280 - speed * 2.4);
     playTimer.current = window.setInterval(() => {
       setFrame(f => { if (f >= total) { setPlaying(false); return total; } return f + 1; });
     }, ms);
@@ -299,33 +306,43 @@ export default function CountingTheWays() {
 
   const inTut = playing || (frame > 0 && frame < total);
   const tut = useMemo(() => {
-    if (!inTut) return { stage: 'static' as const, marginsShown: INF, cellThreshold: INF, diagActive: true, sumN: rungCount, step: 0 };
+    if (!inTut) return { stage: 'static' as const, marginsShown: INF, cellThreshold: INF, diagActive: true, sweepK: kClamped, sumN: rungCountOf(kClamped), step: 0 };
     let f = frame;
-    if (f < Nm) return { stage: 'margins' as const, marginsShown: f + 1, cellThreshold: -1, diagActive: false, sumN: 0, step: 1 };
+    if (f < Nm) return { stage: 'margins' as const, marginsShown: f + 1, cellThreshold: -1, diagActive: false, sweepK: kClamped, sumN: 0, step: 1 };
     f -= Nm;
-    if (f < Nf) return { stage: 'fill' as const, marginsShown: INF, cellThreshold: f, diagActive: false, sumN: 0, step: 2 };
+    if (f < Nf) return { stage: 'fill' as const, marginsShown: INF, cellThreshold: f, diagActive: false, sweepK: kClamped, sumN: 0, step: 2 };
     f -= Nf;
-    if (f < Hh) return { stage: 'highlight' as const, marginsShown: INF, cellThreshold: INF, diagActive: true, sumN: 0, step: 3 };
-    f -= Hh;
-    return { stage: 'sum' as const, marginsShown: INF, cellThreshold: INF, diagActive: true, sumN: Math.min(rungCount, f + 1), step: 4 };
-  }, [inTut, frame, Nm, Nf, Hh, rungCount]);
+    // sweep k from −span to +span, summing each diagonal into its bar — the whole distribution, bottom to top
+    const i = Math.min(2 * stripSpan, Math.floor(f / FPK));
+    const frac = (f % FPK + 1) / FPK;
+    const sweepK = -stripSpan + i;
+    return { stage: 'sweep' as const, marginsShown: INF, cellThreshold: INF, diagActive: true, sweepK, sumN: Math.max(1, Math.round(frac * rungCountOf(sweepK))), step: 3 };
+  }, [inTut, frame, Nm, Nf, FPK, stripSpan, kClamped, rungCountOf]);
 
+  const activeK = tut.sweepK;   // the diagonal currently highlighted (the user's k, or the swept one)
   const accN = tut.sumN;
   const partialSum = useMemo(() => {
     let s = 0;
-    for (let n = 0; n < accN; n++) s += diagTerm(mu1, mu2, kClamped, n);
+    for (let n = 0; n < accN; n++) s += diagTerm(mu1, mu2, activeK, n);
     return s;
-  }, [mu1, mu2, kClamped, accN]);
+  }, [mu1, mu2, activeK, accN]);
   const partialBessel = useMemo(() => {
     const z = 2 * Math.sqrt(mu1 * mu2);
     let s = 0;
-    for (let n = 0; n < accN; n++) s += besselTerm(n, kClamped, z);
+    for (let n = 0; n < accN; n++) s += besselTerm(n, activeK, z);
     return s;
-  }, [mu1, mu2, kClamped, accN]);
+  }, [mu1, mu2, activeK, accN]);
+  const cond = useMemo(() => conditionalRungs(mu1, mu2, activeK), [mu1, mu2, activeK]);
 
-  const stripSpan = Math.min(N, 14);
-  const strip = useMemo(() => skellamRange(mu1, mu2, -stripSpan, stripSpan), [mu1, mu2, stripSpan]);
-  const stripMax = Math.max(...strip, 1e-9);
+  // each Skellam bar's displayed value as the distribution builds bottom-to-top
+  const barValue = useCallback((idx: number) => {
+    const kk = idx - stripSpan;
+    if (tut.stage === 'static') return strip[idx];
+    if (tut.stage !== 'sweep') return 0;
+    if (kk < tut.sweepK) return strip[idx];
+    if (kk === tut.sweepK) return partialSum;
+    return 0;
+  }, [tut.stage, tut.sweepK, strip, stripSpan, partialSum]);
 
   const playPause = useCallback(() => {
     if (!playing && frame >= total) setFrame(0);
@@ -333,16 +350,15 @@ export default function CountingTheWays() {
   }, [playing, frame, total]);
   const stepStage = useCallback(() => {
     setPlaying(false);
-    // rest on each of the four stages: margins done · grid full · diagonal lit · summed
-    setFrame(f => [Nm - 1, Nm + Nf - 1, Nm + Nf, total - 1, total].find(t => t > f) ?? total);
+    // rest on each stage: margins done · grid full · whole distribution built
+    setFrame(f => [Nm - 1, Nm + Nf - 1, total - 1, total].find(t => t > f) ?? total);
   }, [Nm, Nf, total]);
   const resetTut = useCallback(() => { setPlaying(false); setFrame(0); }, []);
 
   const narration = ({
     margins: `Two independent Poisson counts. The bars on top are P(${lab.xShort} = x); down the left, P(${lab.yShort} = y) — each a Poisson with its own rate.`,
     fill: `Now fill every cell: the chance of that exact pair is the product P(${lab.xShort} = x)·P(${lab.yShort} = y). Independence means multiply.`,
-    highlight: `Fix the difference at k = ${kClamped}: only the cells where ${lab.xShort} − ${lab.yShort} = ${kClamped} qualify — that single diagonal.`,
-    sum: `Add the diagonal rung by rung. The running total is P(K = ${kClamped}) = ${fmt(partialSum, 4)} → it lands on ${fmt(fullPmf, 4)}.`,
+    sweep: `Sum each diagonal, low k to high: diagonal k = ${activeK} totals ${fmt(partialSum, 4)}. Every diagonal's sum is one bar — together they build the whole Skellam distribution.`,
     static: '',
   } as Record<string, string>)[tut.stage];
 
@@ -423,7 +439,7 @@ export default function CountingTheWays() {
 
   const tutorNode = (
     <div className="ctw-actions">
-      <div className="ctw-progress">{tut.stage === 'static' ? 'Full picture' : `Step ${tut.step} / 4 · ${tut.stage}`}</div>
+      <div className="ctw-progress">{tut.stage === 'static' ? 'Full picture' : `Step ${tut.step} / 3 · ${tut.stage}`}</div>
       <button className="ctw-btn primary" onClick={playPause}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? 'Pause' : frame > 0 && frame < total ? 'Resume' : 'Play tutorial'}</button>
       <button className="ctw-btn" onClick={stepStage} disabled={playing}><SkipForward size={16} />Next step</button>
       <button className="ctw-btn" onClick={resetTut} disabled={frame === 0 && !playing}><RotateCcw size={16} />Reset</button>
@@ -449,34 +465,35 @@ export default function CountingTheWays() {
             Two independent Poisson counts — <strong>{lab.x}</strong> at rate μ₁={mu1.toFixed(2)} and <strong>{lab.y}</strong> at rate μ₂={mu2.toFixed(2)} —
             and we only ever see their difference. Press <strong>Play tutorial</strong> to build the whole grid and watch the Bessel function appear as one diagonal's sum.
           </p>
-        : <div className="ctw-tutorial"><span className="ctw-step">Step {tut.step} / 4</span>{narration}</div>}
-      <Lattice mu1={mu1} mu2={mu2} k={kClamped} N={N} accN={accN} showMarginals={showMarginals} lab={lab}
+        : <div className="ctw-tutorial"><span className="ctw-step">Step {tut.step} / 3</span><span className="ctw-tut-text">{narration}</span></div>}
+      <Lattice mu1={mu1} mu2={mu2} k={activeK} N={N} accN={accN} showMarginals={showMarginals} lab={lab}
         marginsShown={tut.marginsShown} cellThreshold={tut.cellThreshold} diagActive={tut.diagActive}
         onPickK={v => setK(clamp(v, -N, N))} />
-      <FormulaBand mu1={mu1} mu2={mu2} k={kClamped} partialBessel={partialBessel} partialSum={partialSum} />
+      <FormulaBand mu1={mu1} mu2={mu2} k={activeK} partialBessel={partialBessel} partialSum={partialSum} />
       <div className="ctw-strip">
         <Kicker>Skellam P(K=k) — the difference distribution</Kicker>
         <div className="ctw-strip-bars">
           {strip.map((p, i) => {
             const kk = i - stripSpan;
-            const active = kk === kClamped;
-            const h = (active ? partialSum : p) / stripMax;
+            const active = kk === activeK;
+            const h = barValue(i) / stripMax;
+            const hpct = h > 0 ? Math.max(2, h * 100) : 0;
             return (
               <button key={kk} className={`ctw-strip-bar${active ? ' active' : ''}`} title={`P(K=${kk}) = ${fmt(p, 4)}`} onClick={() => setK(kk)}>
-                <span className="ctw-strip-fill" style={{ height: `${Math.max(2, h * 100)}%` }} />
+                <span className="ctw-strip-fill" style={{ height: `${hpct}%` }} />
                 {(stripSpan <= 10 || kk % 2 === 0) && <span className="ctw-strip-lbl">{kk}</span>}
               </button>
             );
           })}
         </div>
-        <p className="ctw-hint">The bar at k={kClamped} fills as the diagonal is summed — landing at P = {fmt(fullPmf, 4)}.</p>
+        <p className="ctw-hint">Play sums every diagonal in turn, building the whole distribution from k=−{stripSpan} up to +{stripSpan}; click a bar to inspect that difference.</p>
       </div>
       {showConditional && (
         <div className="ctw-cond">
-          <Kicker>Conditional given the difference is {kClamped} — P(rung n | K={kClamped})</Kicker>
+          <Kicker>Conditional given the difference is {activeK} — P(rung n | K={activeK})</Kicker>
           <div className="ctw-cond-bars">
             {cond.slice(0, 10).map((p, n) => {
-              const c = diagCell(kClamped, n);
+              const c = diagCell(activeK, n);
               return (
                 <div key={n} className="ctw-cond-bar" title={`n=${n}: ${c.x} ${lab.xShort}, ${c.y} ${lab.yShort} — P = ${fmt(p, 3)}`}>
                   <span className="ctw-cond-fill" style={{ height: `${Math.max(2, (p / Math.max(...cond, 1e-9)) * 100)}%` }} />

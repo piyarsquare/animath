@@ -188,11 +188,10 @@
   line-height: 1.5;
   color: var(--fg);
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  align-items: flex-start;
   gap: 8px;
-  min-height: 44px;
 }
+.ctw-tut-text { flex: 1; min-width: 0; }
 .ctw-step {
   font-family: var(--font-mono);
   font-size: 10.5px;
