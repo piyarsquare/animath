@@ -5,7 +5,7 @@ date: 2026-06-08
 title: Stable Matching — solution-space build (Tiers 0–4)
 branch: claude/great-thompson-ko30di
 slug: stable-marriage-styling-ulMPt
-status: in-progress
+status: completed
 build: passed
 followup: Tier 5 (preference falsification) pending a product decision; otherwise polish.
 pr: https://github.com/piyarsquare/animath/pull/189

@@ -5,7 +5,7 @@ date: 2026-06-08
 title: Stable Matching rebuild + Markdown session reporting
 branch: claude/stable-marriage-styling-ulMPt
 slug: stable-marriage-styling-ulMPt
-status: in-progress
+status: completed
 build: passed
 followup: medium
 pr: https://github.com/piyarsquare/animath/pull/189

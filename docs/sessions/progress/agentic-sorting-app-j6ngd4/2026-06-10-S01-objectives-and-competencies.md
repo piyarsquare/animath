@@ -5,7 +5,7 @@ date: 2026-06-10
 title: Agentic Sorting — divergent objectives + Levin competencies
 branch: claude/agentic-sorting-app-j6ngd4
 slug: agentic-sorting-app-j6ngd4
-status: in-progress
+status: completed
 build: unknown
 followup: null
 pr: null

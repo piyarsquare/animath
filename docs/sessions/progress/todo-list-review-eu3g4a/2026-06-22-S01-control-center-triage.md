@@ -85,6 +85,19 @@ status/signal cleanup above.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 12:10 — Bucket A cleared: flipped 21 reports in-progress → completed
+**Why:** Dan read through Bucket A and confirmed all of it is finished, so the
+stale `in-progress` statuses were pure dashboard noise.
+
+Flipped the frontmatter `status` on every in-progress report in the 12 Bucket A
+slug folders (progress + handoff): klein-bottle-fix, stable-marriage-styling,
+headless-webgl-cloud, new-chrome, agent-invokable-skills, session-control-center,
+session-report-screenshots, trees-and-nets, polygon-worlds-spherical-p2
+(footsteps-markers-polish), polygon-walk-continue, topology-world-review,
+agentic-sorting-app. Only the frontmatter line was touched; no in-progress
+status remains in those folders. Bucket C (Argand, the Solid Worlds branches)
+deliberately left untouched.
+
 ### 🟣 decision · 11:50 — Triage into four buckets, present easiest-first
 **Why:** Dan's ask is dashboard-wide cleanup, not one app. Sorting the loose
 ends by *how hard the question is* (status flip < product call) lets us clear
