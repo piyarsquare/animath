@@ -57,6 +57,26 @@ duct world-specific (!low), and punch the engine floor plane through at the trap
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟢 code · 12:30 — Upgraded the doc type to the session YAML+Markdown conventions
+**Why:** Dan asked to use the session files' format and add organized structure +
+build/update rules.
+
+- Added `docs/apps/GUIDE_STYLE.md` — the style spec (mirrors `REPORT_STYLE.md`;
+  itself written in the style). Defines the frontmatter schema (`kind: app-guide` +
+  controlled `status`/`build`/`signals` vocabularies reused from
+  `categories.mjs`), the fixed 8-section order, status badges, callouts, the
+  Active/Resolved registry format (TODO-aligned task lists, `- [x] date (branch)`
+  resolved entries), and **§4 Building / §5 Updating** rules.
+- Renamed `_TEMPLATE.md` → `_template-app-guide.md` (session `_template-<kind>.md`
+  convention) with the full frontmatter schema.
+- Brought both pilots into the format: richer frontmatter (kind/title/build/signals/
+  next, `route` without `#`), ✅ status badges, standardized Resolved entries, and a
+  demonstrative `> [!CAUTION]` callout in Solid Worlds' invariants.
+- Updated `README.md` to point at `GUIDE_STYLE.md` for the rules and list the
+  folder's files.
+
+PR #229 updates on push.
+
 ### 🟡 milestone · 11:55 — Phase 2 draft: doc type + two pilot guides written
 **Why:** Prove the template on a doc-rich and a doc-thin app before scaling.
 

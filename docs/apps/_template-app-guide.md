@@ -1,47 +1,52 @@
 ---
-app: [slug — the route key, e.g. solid-worlds]
-route: [#/slug]
+kind: app-guide
+app: [slug — route hash without "/", matching src/apps.ts + categories.mjs]
+route: [/slug]
 name: [Display Name]
+title: [Display Name] — developer guide
 status: [active | stable | retiring | unlisted]
+build: [passed | failed | unknown]
 entry: [src/animations/<App>/<App>.tsx]
 updated: [YYYY-MM-DD]
+signals: [null | needs-dan, visual-unverified, … — SIGNALS vocab in categories.mjs]
+next: [null | one-line most-useful next action]
 ---
 
-# [Name] — developer guide
+# [Display Name] — developer guide
 
 > [one-line description — reuse the blurb from `src/apps.ts`]
 
-The living architecture + status doc for this app. See
-[`docs/apps/README.md`](README.md) for what this doc type is. Teaching/math lives
-in [`EXPLAINER.md`](../../src/animations/<App>/EXPLAINER.md), not here.
+The living architecture + status doc for this app. Conventions:
+[`GUIDE_STYLE.md`](GUIDE_STYLE.md). What this doc type is: [`README.md`](README.md).
+Teaching/math lives in
+[`EXPLAINER.md`](../../src/animations/<App>/EXPLAINER.md), not here.
 
 ## Status
 
 - **Route:** `#/slug` ([`src/index.tsx`](../../src/index.tsx) route map)
-- **Stability:** [active / stable / retiring / unlisted — one line on where it sits]
+- **Stability:** [✅ active / 🟢 stable / 🟡 retiring / ⚪ unlisted — one line on where it sits]
 - **Entry:** [main file] · [N ts/tsx files, ~LOC]
-- **Build/tests:** [e.g. covered by `npm run build`; unit tests under `__tests__/` — or "no app-specific tests"]
+- **Build/tests:** [covered by `npm run build`; tests under `__tests__/` — or "no app-specific tests"]
 
 ## Active / Resolved
 
-The per-app control center — **hand-maintained**. Move items from Active to
-Resolved (with date + branch) as they land. Mirror priority tags from
-`docs/sessions/TODO.md`.
+The per-app control center — **hand-maintained** ([`GUIDE_STYLE.md`](GUIDE_STYLE.md) §3c).
 
 ### Active
 
-<!-- - [ ] !priority Title — short note (link the TODO item / session if any). -->
+<!-- - [ ] !priority Title. — short note (link the TODO item / session if any). -->
 - _(none yet)_
 
 ### Resolved
 
-<!-- - YYYY-MM-DD (branch) — what landed. Link the handoff. -->
+<!-- newest first -->
+<!-- - [x] YYYY-MM-DD (branch) — what landed. (link the handoff) -->
 - _(none yet)_
 
 ## What it does
 
 [Feature inventory — modes, the panels (with archetypes), the view window(s), the
-key controls and what they do. This is the durable feature list.]
+key controls and what they do.]
 
 ## How the code works
 
@@ -57,7 +62,7 @@ loop, state ownership. How a change propagates from a control to the screen.]
 ## Invariants & gotchas
 
 [The "don't break this" list: contracts an edit must preserve, subtle constraints,
-traps that have bitten before. Cross-link any deep design docs.]
+traps that have bitten before. Use `> [!CAUTION]` for the sharpest ones.]
 
 ## Testing & verification
 

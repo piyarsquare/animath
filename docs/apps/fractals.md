@@ -1,26 +1,32 @@
 ---
+kind: app-guide
 app: fractals
-route: #/fractals
+route: /fractals
 name: Fractals
+title: Fractals — developer guide
 status: active
+build: passed
 entry: src/animations/FractalsGPU/FractalsGPU.tsx
 updated: 2026-06-21
+signals: null
+next: null
 ---
 
 # Fractals — developer guide
 
 > Explore the Mandelbrot, Julia, Burning Ship and Tricorn sets, rendered on the GPU.
 
-The living architecture + status doc for this app. See
-[`docs/apps/README.md`](README.md) for what this doc type is. The teaching/math
-lives in [`EXPLAINER.md`](../../src/animations/FractalsGPU/EXPLAINER.md).
+The living architecture + status doc for this app. Conventions:
+[`GUIDE_STYLE.md`](GUIDE_STYLE.md). What this doc type is: [`README.md`](README.md).
+The teaching/math lives in
+[`EXPLAINER.md`](../../src/animations/FractalsGPU/EXPLAINER.md).
 
 ## Status
 
 - **Route:** `#/fractals` → `FractalsGPU`. The legacy CPU viewer is unlisted at
   `#/fractals-cpu` → `Fractals2D` (`src/animations/Fractals/`).
-- **Stability:** **active**, stable, doc-thin. A single-file GPU viewer; little
-  churn. The two-pane Mandelbrot↔Julia explorer is a separate app
+- **Stability:** ✅ **active**, doc-thin. A single-file GPU viewer; little churn.
+  The two-pane Mandelbrot↔Julia explorer is a separate app
   ([Correspondence](../../src/animations/Correspondence/), `#/correspondence`).
 - **Entry:** `FractalsGPU.tsx` · 1 ts/tsx file, ~540 LOC (shaders are inline
   template strings).
@@ -36,9 +42,9 @@ The per-app control center — hand-maintained.
 
 ### Resolved
 
-- The GPU viewer (`FractalsGPU`) is the current `#/fractals`; the older CPU
-  implementation was demoted to the unlisted `#/fractals-cpu` (kept reversible,
-  like other legacy routes).
+- [x] (pre-dates this tracking) — The GPU viewer (`FractalsGPU`) became the current
+  `#/fractals`; the older CPU implementation was demoted to the unlisted
+  `#/fractals-cpu` (kept reversible, like other legacy routes).
 
 ## What it does
 

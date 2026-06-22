@@ -11,6 +11,13 @@ This is the **architecture + status home** for an app — the document a program
 or an agent reads first before working on it, and updates when they're done. It is
 the app-scoped twin of the repo-wide `CLAUDE.md`, plus a per-app control center.
 
+The format and the build/update rules are specified in
+**[`GUIDE_STYLE.md`](GUIDE_STYLE.md)** (the style spec, mirroring the session
+system's [`REPORT_STYLE.md`](../sessions/REPORT_STYLE.md)). Guides reuse the
+session conventions — YAML frontmatter, GitHub-alert callouts, emoji status
+badges, and the `app`/`signals` controlled vocabularies in
+[`categories.mjs`](../sessions/categories.mjs) — so the two doc families read as one.
+
 It deliberately overlaps with **none** of the existing docs, because each of those
 answers a different question:
 
@@ -42,15 +49,18 @@ answers a different question:
 8. **History & sources** — pointers to the session reports that built it and to the
    EXPLAINER's "Possible sources" (linked, not duplicated).
 
-Copy `_TEMPLATE.md` to start a new guide; fill what applies, mark the rest
-"(none yet)". A thin app should produce a short guide — that's expected.
+Copy [`_template-app-guide.md`](_template-app-guide.md) to start a new guide; fill
+what applies, mark the rest `_(none yet)_`. A thin app should produce a short
+guide — that's expected. Full rules: [`GUIDE_STYLE.md`](GUIDE_STYLE.md) §4.
 
 ## How to keep it current
+
+See [`GUIDE_STYLE.md`](GUIDE_STYLE.md) §5 for the full rules. In short:
 
 - **Update the guide in the same change that alters the app's behavior or
   structure** — like updating `EXPLAINER.md`. The registry is hand-edited: move an
   item from Active to Resolved (with the date + branch) when it lands.
-- Set `updated:` in the frontmatter when you touch it.
+- Set `updated:` (and keep `status` / `build`) accurate when you touch it.
 - Keep teaching content *out* — link to `EXPLAINER.md`, don't restate it.
 
 > [!TIP]
@@ -58,6 +68,12 @@ Copy `_TEMPLATE.md` to start a new guide; fill what applies, mark the rest
 > long prose block in `CLAUDE.md` can shrink to a one-line pointer here, so there's
 > a single home for the architecture. Until then the two coexist; this guide is the
 > richer source.
+
+## Files in this folder
+
+- [`GUIDE_STYLE.md`](GUIDE_STYLE.md) — the style spec + build/update rules.
+- [`_template-app-guide.md`](_template-app-guide.md) — the skeleton to copy.
+- `<slug>.md` — one living guide per app (see the index below).
 
 ## Index
 

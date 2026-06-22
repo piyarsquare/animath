@@ -1,10 +1,15 @@
 ---
+kind: app-guide
 app: solid-worlds
-route: #/solid-worlds
+route: /solid-worlds
 name: Solid Worlds
+title: Solid Worlds — developer guide
 status: active
+build: passed
 entry: src/animations/SolidWorlds/SolidWorlds.tsx
 updated: 2026-06-21
+signals: null
+next: Replicate this guide format across the remaining apps; then decide whether to wire docs/apps into the control center.
 ---
 
 # Solid Worlds — developer guide
@@ -12,17 +17,17 @@ updated: 2026-06-21
 > Walk inside a closed 3-manifold built from one glued cube — a room that repeats
 > forever — and watch an orientation-reversing loop bring you back mirrored.
 
-The living architecture + status doc for this app. See
-[`docs/apps/README.md`](README.md) for what this doc type is. The teaching/math
-("what am I looking at") lives in
+The living architecture + status doc for this app. Conventions:
+[`GUIDE_STYLE.md`](GUIDE_STYLE.md). What this doc type is: [`README.md`](README.md).
+The teaching/math ("what am I looking at") lives in
 [`EXPLAINER.md`](../../src/animations/SolidWorlds/EXPLAINER.md); the deep bug
 write-up in [`SCREW_BUG.md`](../../src/animations/SolidWorlds/SCREW_BUG.md).
 
 ## Status
 
 - **Route:** `#/solid-worlds` (no redirects). Listed in the gallery.
-- **Stability:** **active** — the 3D successor to Polygon Worlds. The 8-world flat
-  catalog is complete and **dual-verified**; recent work is the math engine
+- **Stability:** ✅ **active** — the 3D successor to Polygon Worlds. The 8-world
+  flat catalog is complete and **dual-verified**; recent work is the math engine
   (screw-bug fix, 2026-06-20) and the **Rooms** decor layer.
 - **Entry:** `SolidWorlds.tsx` · 12 ts/tsx files, ~3.4k LOC, subdirs `lib/`,
   `decor/`, `__tests__/`.
@@ -55,17 +60,17 @@ The per-app control center — hand-maintained.
 
 ### Resolved
 
-- **2026-06-20** (`3d-manifold-worlds-imwmal`) — **Screw bug fixed; all 8
-  platycosms dual-verified.** Two distinct bugs: (A) the boundary gluing "bounced"
+- [x] **2026-06-20** (`3d-manifold-worlds-imwmal`) — Screw bug fixed; all 8
+  platycosms **dual-verified**. Two distinct bugs: (A) the boundary gluing "bounced"
   a screwed face back to its source (χ = 1) — fixed with `orbitInCube`; (B) the
   N = 2 vertex link folds on screw worlds (subdivision artifact) — fixed with a
   finer `chooseN`. Added a guard that throws on fractional axial offsets. Full
   write-up: `SCREW_BUG.md`.
   [Handoff.](../sessions/handoff/3d-manifold-worlds-imwmal/2026-06-20-S01-solid-worlds-continue.md)
-- **2026-06-20** — Confirmed the second amphidicosm (−a2) = ℤ ⊕ ℤ/4 against the
-  literature (caveat: primary PDFs were network-blocked; rests on search summaries
-  + both in-app computations agreeing).
-- **earlier** — Rooms decor mode (furnished cube, off-center archways, ceiling
+- [x] **2026-06-20** (`3d-manifold-worlds-imwmal`) — Confirmed the second
+  amphidicosm (−a2) = ℤ ⊕ ℤ/4 against the literature (caveat: primary PDFs were
+  network-blocked; rests on search summaries + both in-app computations agreeing).
+- [x] **earlier** — Rooms decor mode (furnished cube, off-center archways, ceiling
   ducts, solid translucent walls); chirality HUD (original · rotated · mirrored);
   third-person cutaway clip plane; selectable scene "looks".
 
@@ -148,6 +153,12 @@ The shell reads back live state for the HUD/mini-map via `getChirality()` /
 | [`SCREW_BUG.md`](../../src/animations/SolidWorlds/SCREW_BUG.md) | Deep write-up of the 2026-06-20 screw-bug fix |
 
 ## Invariants & gotchas
+
+> [!CAUTION]
+> **Gotcha** — a world is `verified` only when **both** homology engines agree
+> (`lib/freeness.ts` is authoritative; the cell complex cross-checks). Never mark a
+> world verified from the cell complex alone, and never treat the vertex-link sphere
+> test as a manifold-vs-orbifold detector — that's the free-action test's job.
 
 - **Decor is spec-independent.** The Rooms/diagnostic decor draws **only the three
   −axis faces**; the deck instancing transports them to neighbors' +axis walls. Put
