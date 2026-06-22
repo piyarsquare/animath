@@ -11,7 +11,7 @@ followup: null
 pr: null
 app: general
 signals: not-live
-next: Show Dan the three modes for review; optional polish (bespoke gallery preview); then /handoff.
+next: Dan testing the reworked app; optional polish (bespoke gallery preview, persist the Lab catalog); then /handoff.
 ---
 
 # New app — why a Bessel function gives the Skellam (Poisson-difference) conditionals
@@ -91,6 +91,33 @@ diagonal-sum picture is the candidate central visual.
 ## Working notes
 
 <!-- Newest entry first. One ### per state transition. -->
+
+### 🟡 milestone · 20:40 — Reworked into an explainer: Play-tutorial, length law, cataloged Lab
+**Why:** Dan reviewed the live app and asked for a more explainer-like build —
+fold in the rate law, make Play build the whole matrix with narration, and turn
+the weak Sample/Fit into a useful cataloged simulator.
+
+Three changes, all verified green (build · lint 0 errors · **7/7 tests**, +softplus/law):
+
+- **Softplus length-law rate source.** `skellam.ts` gains `softplus` + `lawRate`;
+  the model panel adds a *Rates from: Direct μ | Length law* switch. In law mode,
+  `μ₁,μ₂` are read off `f(L)=softplus(a+bL)` for two arms at a chosen length `L`,
+  with a live mini-curve plot of both arms and the current `L` marked.
+- **Play builds the whole matrix, narrated.** The Explain mode is now a four-stage
+  tutorial driven by one `frame`: (1) reveal the two Poisson margins, (2) fill
+  every cell as a product (anti-diagonal wipe), (3) light the k-diagonal, (4) sum
+  it rung by rung onto P(K=k). A caption box narrates each step; *Next step* rests
+  on each stage; frame 0 / done show the complete static picture so the app is
+  useful before pressing Play.
+- **Sample + Fit → one cataloged Lab.** Each *Run & log* draws a fresh sample,
+  recovers μ̂ by method-of-moments, and appends a row to a results table
+  (rates · N · mean · var · μ̂₁ · μ̂₂ · |μ̂−μ|); click a row to see its histogram
+  with the fitted + true Skellam overlaid. Auto-increments the seed so repeated
+  runs show the recovery wobble. Modes are now just **Explain · Lab**.
+
+Headless screenshots confirm all four: static full picture, law mode (curve +
+a/b/L sliders), the tutorial highlight stage (narrated, diagonal lit), and the
+Lab catalog with the selected run's histogram.
 
 ### 🟡 milestone · 19:05 — App built, verified across all three modes; build + tests green
 **Why:** The new app is complete and conforms to the framework; this is the

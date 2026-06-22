@@ -177,3 +177,84 @@
 .ctw-seedrow > label { flex: 1; }
 .ctw-legend { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; }
 .ctw-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+
+/* ── Tutorial caption (Explain, while Play runs) ── */
+.ctw-tutorial {
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--fg);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 44px;
+}
+.ctw-step {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 1px 8px;
+  flex-shrink: 0;
+}
+
+/* ── Softplus law curve (model panel) ── */
+.ctw-law {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+  margin-bottom: 4px;
+}
+.ctw-lawP { fill: none; stroke: var(--accent); stroke-width: 2; }
+.ctw-lawM { fill: none; stroke: var(--accent-2); stroke-width: 2; }
+.ctw-lawL { stroke: var(--dim); stroke-width: 1; stroke-dasharray: 3 3; }
+.ctw-lawdotP { fill: var(--accent); }
+.ctw-lawdotM { fill: var(--accent-2); }
+
+/* ── Lab catalog ── */
+.ctw-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 36px 12px;
+  color: var(--dim);
+  text-align: center;
+}
+.ctw-empty svg { color: var(--dim-2); }
+.ctw-cat { display: flex; flex-direction: column; gap: 4px; }
+.ctw-cat-scroll { max-height: 220px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.ctw-cat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.ctw-cat-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--panel-solid);
+  color: var(--dim);
+  font-weight: 600;
+  text-align: right;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.ctw-cat-table th:nth-child(2), .ctw-cat-table td:nth-child(2),
+.ctw-cat-table th:nth-child(3), .ctw-cat-table td:nth-child(3) { text-align: left; }
+.ctw-cat-table tbody td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--border); color: var(--fg); }
+.ctw-cat-table tbody tr { cursor: pointer; }
+.ctw-cat-table tbody tr:hover { background: var(--panel-2); }
+.ctw-cat-table tbody tr.sel { background: var(--accent-soft); }
+.ctw-cat-table tbody tr.sel td { color: var(--fg); }
+.ctw-cat-table td.hi { color: var(--accent); }

@@ -45,6 +45,23 @@ export function poissonRange(mu: number, nMax: number): number[] {
   return out;
 }
 
+/* ── Length-dependent rate law ────────────────────────────────────────────── */
+
+/** Numerically stable softplus, log(1 + eᶻ). */
+export function softplus(z: number): number {
+  return z > 30 ? z : z < -30 ? Math.exp(z) : Math.log1p(Math.exp(z));
+}
+
+/**
+ * A length-dependent Poisson rate, f(L) = softplus(a + b·L) — the shift-model
+ * "law". The argument a + b·L crosses zero at the hinge L* = −a/b; below it the
+ * rate is ~eᵃ⁺ᵇᴸ (exponentially small), above it ~a + b·L (linear, slope b per
+ * repeat). Expansion and contraction each carry their own (a, b).
+ */
+export function lawRate(a: number, b: number, L: number): number {
+  return softplus(a + b * L);
+}
+
 /**
  * The n-th term of the modified-Bessel series for I_{|k|}(z):
  *     (z/2)^{2n+|k|} / ( n! · (n+|k|)! ).

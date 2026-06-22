@@ -23,22 +23,30 @@ the leftover sum is exactly the Bessel series
 I_k(z) = Σ  (z/2)^(2n+k) / ( n! (n+k)! ),   z = 2·√(μ₁·μ₂)
 ```
 
-so **the Bessel function is the diagonal sum**. Press *Walk* and watch the sum
-build rung by rung until it lands on the value in the formula.
+so **the Bessel function is the diagonal sum**.
 
-## The three modes
+## Rates, and where they come from
 
-- **Explain** — the lattice, the diagonal, the accumulating sum, and the
-  color-linked formula. The conditional bars at the bottom answer the title
-  question directly: given the difference is `k`, the probability that it came
+You can set the two rates `μ₁, μ₂` directly, or switch *Rates from* to a
+**length law** `f(L) = softplus(a + b·L)`: the rate of gains and of losses each
+grow with the allele length `L`, and the app reads `μ₁, μ₂` off the two curves at
+the length you choose. (Below the hinge `L* = −a/b` the rate is tiny; above it it
+rises with slope `b` per repeat.)
+
+## The two modes
+
+- **Explain** — the lattice, the diagonal, and the color-linked formula. Press
+  **Play tutorial** to build the whole grid step by step: the two Poisson margins,
+  then every cell as a product `P(gained=x)·P(lost=y)`, then the diagonal summed
+  rung by rung onto `P(K = k)`. The conditional bars at the bottom answer the
+  title question directly: given the difference is `k`, the probability it came
   from a particular `(gained, lost)` pair is one Bessel term divided by the
   Bessel sum.
-- **Sample** — draw the two counts at random and keep only the difference. The
-  histogram converges to the same Skellam curve; the sample mean tracks `μ₁−μ₂`
-  and the variance tracks `μ₁+μ₂`.
-- **Fit** — generate synthetic differences and recover the two rates from just
-  the sample mean and variance (`μ̂₁=(s²+m̄)/2`, `μ̂₂=(s²−m̄)/2`). The fitted
-  Skellam — Bessel and all — lands on the data, with no scary words required.
+- **Lab** — a cataloged simulator. Each run draws a sample from the current rates,
+  recovers `μ̂₁, μ̂₂` from just the sample mean and variance
+  (`μ̂₁=(s²+m̄)/2`, `μ̂₂=(s²−m̄)/2`), and logs a row. Re-run to watch the recovery
+  wobble with the seed; change the rates to compare. The fitted Skellam — Bessel
+  and all — lands on each logged run's histogram.
 
 ## Possible sources & where to go further
 

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   poissonRange, skellamPmf, skellamRange, besselI, besselBreakdown,
   conditionalRungs, diagTerm, fitMoments, mulberry32, sampleSkellam,
+  softplus, lawRate,
 } from '../skellam';
 
 describe('skellam engine', () => {
@@ -44,6 +45,13 @@ describe('skellam engine', () => {
     for (let i = 0; i < ks.length; i++) { const k = i - half; mean += k * ks[i]; ex2 += k * k * ks[i]; }
     expect(mean).toBeCloseTo(m1 - m2, 5);
     expect(ex2 - mean * mean).toBeCloseTo(m1 + m2, 5);
+  });
+
+  it('softplus and the length law', () => {
+    expect(softplus(0)).toBeCloseTo(Math.log(2), 10);
+    expect(softplus(40)).toBeCloseTo(40, 6);   // ~linear above the hinge
+    expect(softplus(-40)).toBeCloseTo(0, 6);    // ~0 well below it
+    expect(lawRate(-0.5, 0.3, 15)).toBeCloseTo(Math.log1p(Math.exp(4)), 10);
   });
 
   it('method-of-moments recovers the rates on a large sample', () => {
