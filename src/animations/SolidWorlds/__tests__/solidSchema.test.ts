@@ -87,31 +87,38 @@ describe('homology — analyzeSolid reports the catalog H₁ (via Γᵃᵇ)', ()
   });
 });
 
-// the four original worlds are screw-free, where the cube cell complex is valid.
-const SCREW_FREE = ['3-torus', 'half-turn', 'quarter-turn', 'amphicosm'];
+describe('homology — the gluing-agnostic cell engine (all catalog worlds)', () => {
+  // since the 2026-06-20 screw fix the cube cell complex is valid on every catalog
+  // world, including the two screw worlds (perpendicular screws keep the cube a
+  // fundamental domain). H₁ here must match the curated/Γᵃᵇ value.
+  const expectedH1: Record<string, string> = {
+    '3-torus': 'ℤ³', 'half-turn': 'ℤ ⊕ ℤ/2 ⊕ ℤ/2', 'quarter-turn': 'ℤ ⊕ ℤ/2',
+    'amphicosm': 'ℤ² ⊕ ℤ/2', 'second-amphicosm': 'ℤ²', 'first-amphidicosm': 'ℤ ⊕ ℤ/2 ⊕ ℤ/2',
+    'second-amphidicosm': 'ℤ ⊕ ℤ/4', 'didicosm': 'ℤ/4 ⊕ ℤ/4',
+  };
 
-describe('homology — the gluing-agnostic cell engine (screw-free worlds)', () => {
-  it('H₁ is subdivision-invariant: N=1 reproduces the old fixed-CW values exactly', () => {
-    const expected: Record<string, string> = {
-      '3-torus': 'ℤ³', 'half-turn': 'ℤ ⊕ ℤ/2 ⊕ ℤ/2',
-      'quarter-turn': 'ℤ ⊕ ℤ/2', 'amphicosm': 'ℤ² ⊕ ℤ/2',
-    };
-    for (const w of SOLID_WORLDS.filter((s) => SCREW_FREE.includes(s.id))) {
-      const a = computeHomology(w, 1), b = computeHomology(w, 2);
-      expect(a.h1).toBe(expected[w.id]);
-      expect(b.h1).toBe(a.h1);            // subdivision invariance is a theorem
-      expect(a.euler).toBe(0);
-      expect(b.euler).toBe(0);
+  it('every world: cell H₁ matches the catalog, χ = 0, and the vertex link is S²', () => {
+    for (const w of SOLID_WORLDS) {
+      const h = computeHomology(w);
+      expect(h.h1).toBe(expectedH1[w.id]);
+      expect(h.euler).toBe(0);            // a closed 3-manifold has χ = 0
+      expect(h.manifold).toBe(true);      // every vertex link certifies as an S²
     }
   });
 
-  it('every screw-free world certifies as a manifold (all vertex links are S²)', () => {
-    for (const w of SOLID_WORLDS.filter((s) => SCREW_FREE.includes(s.id))) expect(analyzeSolid(w).isManifold).toBe(true);
+  it('H₁ is subdivision-invariant: a finer grid gives the same homology', () => {
+    // a theorem — exercised here so a regression in the gluing/sign logic trips it.
+    for (const w of SOLID_WORLDS) {
+      const coarse = computeHomology(w, 2), fine = computeHomology(w, 4);
+      expect(fine.h1).toBe(coarse.h1);
+      expect(coarse.euler).toBe(0);
+      expect(fine.euler).toBe(0);
+    }
   });
 
   it('a full-lattice perpendicular offset is absorbed: it is still the 3-torus', () => {
-    // exercises the screw code path + the breadth-first gluing reduction; the
-    // +x face is shifted a whole lattice step in y, which reduces away.
+    // exercises the screw code path + the orbit gluing; the +x face is shifted a
+    // whole lattice step in y, which reduces away.
     const spec: SolidWorldSpec = {
       id: 't', label: '', short: '', blurb: '', manifold: '', h1: '',
       pairings: [{ axis: 'x', linear: I3, offset: [0, 1, 0] }, { axis: 'y', linear: I3 }, { axis: 'z', linear: I3 }],
@@ -122,25 +129,25 @@ describe('homology — the gluing-agnostic cell engine (screw-free worlds)', () 
     expect(h.manifold).toBe(true);
   });
 
-  it('a half-edge screw is computed correctly and told apart from a manifold', () => {
-    // Three coordinate half-turns made into half-edge perpendicular screws give
-    // the Hantzsche–Wendt *homology* H₁ = (ℤ/4)² — a nontrivial result that only
-    // comes out right if the staggered half-offset faces are identified
-    // correctly (and that would hang the old Smith-normal-form routine). But the
-    // action is NOT fixed-point-free in this opposite-face cube model, so the
-    // quotient is a pseudomanifold, not the genuine HW manifold: the vertex-link
-    // certificate correctly rejects it. (The free HW needs half-edge *axial*
-    // screws — gluings that aren't opposite-face — i.e. a schema extension.)
-    const off = { x: [-0.5, -0.5, 0], y: [0, -0.5, 0.5], z: [-0.5, 0, -0.5] } as const;
-    const half = (a: 'x' | 'y' | 'z') => rot(a, 180);
-    const spec: SolidWorldSpec = {
-      id: 'hw-pseudo', label: '', short: '', blurb: '', manifold: '', h1: '',
-      pairings: (['x', 'y', 'z'] as const).map((a) => ({ axis: a, linear: half(a), offset: off[a] as [number, number, number] })),
-    };
-    const h = computeHomology(spec);
-    expect(h.h1).toBe('ℤ/4 ⊕ ℤ/4');   // the HW homology fingerprint
+  it('the second amphidicosm: a perpendicular half-screw glues without leaving a boundary', () => {
+    // the regression target. The screwed −y faces wrap a half-period in z; before
+    // the fix four of them were left unglued (χ = 1, a spurious boundary). They
+    // must now reach their true partners → a closed manifold, χ = 0.
+    const h = computeHomology(worldById('second-amphidicosm'));
+    expect(h.h1).toBe('ℤ ⊕ ℤ/4');
     expect(h.euler).toBe(0);
-    expect(h.manifold).toBe(false);    // pseudomanifold: a vertex link is not S²
+    expect(h.manifold).toBe(true);
+  });
+
+  it('a fractional axial offset is rejected (the cube is not a fundamental domain)', () => {
+    // an offset *along* the pairing axis shrinks the net translation below one
+    // cube edge, so the cube is a multi-fold cover and the cell counts are
+    // meaningless. The engine must refuse rather than report a wrong χ.
+    const spec: SolidWorldSpec = {
+      id: 'bad', label: '', short: '', blurb: '', manifold: '', h1: '',
+      pairings: [{ axis: 'x', linear: rot('x', 180), offset: [0.5, 0, 0] }, { axis: 'y', linear: I3 }, { axis: 'z', linear: I3 }],
+    };
+    expect(() => computeHomology(spec)).toThrow(/fundamental domain/);
   });
 });
 

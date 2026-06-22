@@ -11,6 +11,13 @@ export interface EngineDeps3 {
  *  that moves on the floor plane and settles back to it. */
 export type TravelMode = 'fly' | 'walk' | 'drive';
 
+/** The interior-decor style of the fundamental room. `diagnostic` is the
+ *  original proof-of-the-math scene (landmark props + FRONT/BACK sign); `rooms`
+ *  furnishes it with solid architecture — thick walls with doorways placed
+ *  inside the domain (so rooms cross the seams) and a spiral stair threading the
+ *  vertical gluing (so its chirality flips/rotates per world). */
+export type DecorMode = 'diagnostic' | 'rooms';
+
 export interface FrameInput3 {
   dt: number;
   fwd: number;     // −1..1 forward intent
@@ -69,6 +76,10 @@ export interface SolidEngine {
   setLook(id: string): void;
   /** Fog amount, 0 (none) … 1 (thick). */
   setFog(amount: number): void;
+  /** Third-person cutaway plane position, as a fraction of the camera→walker distance. */
+  setCutFrac(f: number): void;
+  /** Rooms-decor wall opacity, 0.3 (faint) … 1 (opaque). */
+  setWallOpacity(o: number): void;
   /** Show/hide the floor plane + grid. */
   setFloor(on: boolean): void;
   /** Show/hide the per-face gluing labels. */
@@ -77,6 +88,8 @@ export interface SolidEngine {
   setCorners(on: boolean): void;
   /** Show/hide the cube-edge seams (the grid framework). */
   setSeams(on: boolean): void;
+  /** Switch the interior-decor style (diagnostic ↔ lived-seams). */
+  setDecorMode(mode: DecorMode): void;
   /** Return the walker to the cube center, frame upright, holonomy cleared. */
   recenter(): void;
   getChirality(): ChiralityState | null;
@@ -85,4 +98,7 @@ export interface SolidEngine {
 }
 
 export const DEFAULT_ROOM_SIZE = 11;
-export const DEFAULT_COVER_DEPTH = 4;
+// One ring of neighbors reads as "this cube + its topological neighbors" without
+// the hall-of-mirrors density that buried the decor at 4. The slider still goes
+// to 10 for the deep-tunnel look.
+export const DEFAULT_COVER_DEPTH = 1;

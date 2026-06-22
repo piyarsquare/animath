@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import {
-  EngineDeps3, FrameInput3, SolidEngine, ChiralityState, SolidMapState, TravelMode,
+  EngineDeps3, FrameInput3, SolidEngine, ChiralityState, SolidMapState, TravelMode, DecorMode,
 } from './engineTypes';
 import { AXES, Axis, axisIndex, M3, SolidWorldSpec, detM3, I3 } from './solidSchema';
 import { findLook } from './looks';
 import { footprintTexture, signTexture, faceLabelTexture } from './textures';
+import { buildRoomsDecor } from './decor/rooms';
 
 /**
  * Solid Worlds — the flat (κ = 0) cover engine. The 3D port of Topology Walk's
@@ -23,7 +24,7 @@ import { footprintTexture, signTexture, faceLabelTexture } from './textures';
 
 interface Gen { g: THREE.Matrix4; gInv: THREE.Matrix4; gLin: THREE.Matrix4; gLinInv: THREE.Matrix4; }
 
-interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; fogAmount: number; showFloor: boolean; showLabels: boolean; showCorners: boolean; showSeams: boolean; }
+interface Opts { roomSize: number; coverDepth: number; cameraDistance: number; lookId: string; fogAmount: number; cutFrac: number; wallOpacity: number; showFloor: boolean; showLabels: boolean; showCorners: boolean; showSeams: boolean; decorMode: DecorMode; }
 
 /** Furniture reference scale — the sign, props, footprints, avatars and eye
  *  height are sized from this CONSTANT, not from the room size, so growing the
@@ -45,15 +46,20 @@ const VPER = 6; // two triangles per flat footprint decal
 
 export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: Opts): SolidEngine {
   const { scene, camera, renderer } = deps;
+  renderer.localClippingEnabled = true; // for the third-person cutaway (below)
   let size = opts.roomSize;
   let depth = opts.coverDepth;
   let camDist = opts.cameraDistance;
   let lookId = opts.lookId;
   let fogAmount = opts.fogAmount;
+  let cutFrac = opts.cutFrac;          // cutaway plane position as a fraction of camera→avatar
+  let wallOpacity = opts.wallOpacity;  // Rooms-decor wall translucency (1 = opaque)
+  let wallMats: THREE.MeshStandardMaterial[] = [];  // live refs for the opacity slider
   let showFloor = opts.showFloor;
   let showLabels = opts.showLabels;
   let showCorners = opts.showCorners;
   let showSeams = opts.showSeams;
+  let decorMode = opts.decorMode;
 
   // ── pose (developing map) ──────────────────────────────────────────────
   const pos = new THREE.Vector3();
@@ -129,7 +135,10 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
 
   function applyLook(id: string) {
     const L = findLook(id);
-    const R = (depth + 0.55) * size; // matches the cover render radius
+    // Fog reference distance — never let it collapse below the depth-3 scale, so
+    // dropping the cover depth (the calm single room) doesn't drag the fog in
+    // close. At higher depths it tracks the cover radius for the deep-hall fade.
+    const R = (Math.max(depth, 3) + 0.55) * size;
     scene.background = new THREE.Color(L.sky);
     // User-controlled fog: 0 = none (crisp to the cull boundary); 1 = thick
     // (closes in to a few rooms). Linear near→far scaled to the cover radius.
@@ -215,40 +224,12 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   const localM = (x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) =>
     new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rx, ry, rz)).setPosition(x, y, z);
 
-  function buildRoom() {
-    roomDisposables.forEach((d) => d.dispose());
-    roomDisposables.length = 0;
-    meshParts = []; lineParts = [];
-    const h = size / 2;
-    const std = (color: number) => {
-      const m = new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.1, side: THREE.DoubleSide });
-      roomDisposables.push(m); return m;
-    };
-    const mesh = (geo: THREE.BufferGeometry, mat: THREE.Material, matrix: THREE.Matrix4, floor = false) => {
-      roomDisposables.push(geo); meshParts.push({ geo, mat, matrix, floor });
-    };
+  type MeshFn = (geo: THREE.BufferGeometry, mat: THREE.Material, matrix: THREE.Matrix4, floor?: boolean) => void;
+  type StdFn = (color: number) => THREE.MeshStandardMaterial;
 
-    // cube edge frame (lines) — scales with the room
-    const boxGeo = new THREE.BoxGeometry(size, size, size);
-    const edges = new THREE.EdgesGeometry(boxGeo); boxGeo.dispose();
-    roomDisposables.push(edges);
-    const frameMat = new THREE.LineBasicMaterial({ color: 0x9fc0e0 }); roomDisposables.push(frameMat);
-    lineParts.push({ geo: edges, mat: frameMat, matrix: new THREE.Matrix4() });
-
-    // floor: a see-through reference plane (optional; scales with the room)
-    const floorMat = new THREE.MeshBasicMaterial({ color: 0x2a3c54, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
-    roomDisposables.push(floorMat);
-    mesh(new THREE.PlaneGeometry(size, size), floorMat, localM(0, -h, 0, -Math.PI / 2), true);
-
-    // floor grid (lines), fixed cell size so a bigger room just has more cells
-    const gp: number[] = []; const n = Math.max(4, Math.round(size / (U * 0.5))), step = size / n;
-    for (let i = 0; i <= n; i++) { const t = -h + i * step; gp.push(-h, 0, t, h, 0, t, t, 0, -h, t, 0, h); }
-    const gridGeo = new THREE.BufferGeometry();
-    gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3));
-    roomDisposables.push(gridGeo);
-    const gridMat = new THREE.LineBasicMaterial({ color: 0x6f93b8 }); roomDisposables.push(gridMat);
-    lineParts.push({ geo: gridGeo, mat: gridMat, matrix: localM(0, -h + 0.02, 0), floor: true });
-
+  /** The original "diagnostic" decor: neutral asymmetric landmark props plus the
+   *  two-sided FRONT/BACK sign — the proof-of-the-math scene. */
+  function buildDiagnosticDecor(h: number, std: StdFn, mesh: MeshFn) {
     // asymmetric landmark props (FIXED size — only their spread grows with the
     // room); each sits on the floor so a copy is recognizable and its mirror obvious
     mesh(new THREE.CylinderGeometry(U * 0.04, U * 0.05, U * 0.42, 14), std(0xffcf5a), localM(h * 0.55, -h + U * 0.21, h * 0.42));
@@ -274,6 +255,53 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     // FRONT on the +z face (toward the room), BACK on the -z face (turned to face away)
     mesh(new THREE.PlaneGeometry(signW, signH), frontMat, localM(0, signY, signZ + signT / 2 + eps));
     mesh(new THREE.PlaneGeometry(signW, signH), backMat, localM(0, signY, signZ - signT / 2 - eps, 0, Math.PI, 0));
+  }
+
+  function buildRoom() {
+    roomDisposables.forEach((d) => d.dispose());
+    roomDisposables.length = 0;
+    meshParts = []; lineParts = [];
+    const h = size / 2;
+    const std = (color: number) => {
+      const m = new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.1, side: THREE.DoubleSide });
+      roomDisposables.push(m); return m;
+    };
+    const mesh = (geo: THREE.BufferGeometry, mat: THREE.Material, matrix: THREE.Matrix4, floor = false) => {
+      roomDisposables.push(geo); meshParts.push({ geo, mat, matrix, floor });
+    };
+
+    // cube edge frame (lines) — scales with the room
+    const boxGeo = new THREE.BoxGeometry(size, size, size);
+    const edges = new THREE.EdgesGeometry(boxGeo); boxGeo.dispose();
+    roomDisposables.push(edges);
+    // In Rooms mode the painted faces define the walls, so the edge frame drops
+    // to a faint near-background tone (kept bright for the diagnostic scene).
+    const frameMat = new THREE.LineBasicMaterial({ color: decorMode === 'rooms' ? 0x33424f : 0x9fc0e0 }); roomDisposables.push(frameMat);
+    lineParts.push({ geo: edges, mat: frameMat, matrix: new THREE.Matrix4() });
+
+    // floor: a see-through reference plane (optional; scales with the room)
+    const floorMat = new THREE.MeshBasicMaterial({ color: 0x2a3c54, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
+    roomDisposables.push(floorMat);
+    mesh(new THREE.PlaneGeometry(size, size), floorMat, localM(0, -h, 0, -Math.PI / 2), true);
+
+    // floor grid (lines), fixed cell size so a bigger room just has more cells
+    const gp: number[] = []; const n = Math.max(4, Math.round(size / (U * 0.5))), step = size / n;
+    for (let i = 0; i <= n; i++) { const t = -h + i * step; gp.push(-h, 0, t, h, 0, t, t, 0, -h, t, 0, h); }
+    const gridGeo = new THREE.BufferGeometry();
+    gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3));
+    roomDisposables.push(gridGeo);
+    const gridMat = new THREE.LineBasicMaterial({ color: decorMode === 'rooms' ? 0x2a3744 : 0x6f93b8 }); roomDisposables.push(gridMat);
+    lineParts.push({ geo: gridGeo, mat: gridMat, matrix: localM(0, -h + 0.02, 0), floor: true });
+
+    // the interior decor — either the original diagnostic props (landmark shapes
+    // + FRONT/BACK sign) or the solid Rooms architecture that crosses the seams.
+    wallMats = [];
+    if (decorMode === 'diagnostic') buildDiagnosticDecor(h, std, mesh);
+    else buildRoomsDecor({
+      spec, size, U, h, mesh, std, localM,
+      addDisposable: (d) => roomDisposables.push(d),
+      wallOpacity, onWallMaterial: (m) => wallMats.push(m),
+    });
 
     // face-label resources: a letter per axis, colored + glyphed by what its
     // pairing does (↔ straight translation · ↻ turn · ⇋ flip).
@@ -317,6 +345,30 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   const coverDisposables: THREE.BufferGeometry[] = []; // merged line geos, per rebuild
   let floorObjs: THREE.Object3D[] = [];                 // floor plane + grid, for the toggle
   let seamObjs: THREE.Object3D[] = [];                  // cube-edge framework (the cell seams)
+
+  // ── third-person cutaway ──────────────────────────────────────────────────
+  // The avatar gets buried behind the room wall the camera is poking through. We
+  // clip that away with one world plane sitting a short gap in FRONT of the camera
+  // (perpendicular to the camera→character line): every fragment nearer to the
+  // camera than that plane is discarded, so the near wall vanishes while the
+  // character keeps its surrounding room. The plane is shared by reference with
+  // all cover materials EXCEPT the floor (kept whole so the ground stays
+  // continuous); avatars live outside coverRoot so are never clipped. Empty in
+  // first person. The gap is set by `cutFrac` (the Cutaway slider) as a fraction
+  // of the camera→character distance, and clamped just short of the character so
+  // the plane never reaches it.
+  const cutPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 1e6);
+  const cutPlanes: THREE.Plane[] = [];
+  const _clipV = new THREE.Vector3(), _clipP = new THREE.Vector3();
+  function applyClipping() {
+    const floorSet = new Set(floorObjs);
+    coverRoot.traverse((o) => {
+      const m = (o as THREE.Mesh).material;
+      if (!m || floorSet.has(o)) return; // keep the ground uncut
+      (Array.isArray(m) ? m : [m]).forEach((mm) => { mm.clippingPlanes = cutPlanes; });
+    });
+  }
+
   function buildCover() {
     while (coverRoot.children.length) coverRoot.remove(coverRoot.children[0]);
     coverDisposables.forEach((g) => g.dispose()); coverDisposables.length = 0;
@@ -433,6 +485,7 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       }
     }
 
+    applyClipping(); // re-point every new cover material at the shared cut plane
   }
 
   // ── third-person avatars (fundamental cell only), one per travel mode ─────
@@ -629,6 +682,19 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       av.matrixWorldNeedsUpdate = true;
     }
 
+    // cutaway: clip the near wall the camera is poking through
+    if (input.thirdPerson) {
+      _clipV.subVectors(pos, camPos);                       // camera → character
+      const len = _clipV.length() || 1;
+      _clipV.divideScalar(len);                             // view direction
+      const gap = len * Math.min(cutFrac, 0.95);            // never reach the character
+      _clipP.copy(camPos).addScaledVector(_clipV, gap);     // a short gap in front of the camera
+      cutPlane.setFromNormalAndCoplanarPoint(_clipV, _clipP);
+      if (cutPlanes.length === 0) cutPlanes.push(cutPlane);
+    } else if (cutPlanes.length) {
+      cutPlanes.length = 0;
+    }
+
     renderer.render(scene, camera);
   }
 
@@ -641,10 +707,16 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     setCameraDistance(d) { camDist = d; },
     setLook(id) { lookId = id; applyLook(id); },
     setFog(amount) { fogAmount = amount; applyLook(lookId); },
+    setCutFrac(f) { cutFrac = f; },
+    setWallOpacity(o) {
+      wallOpacity = o;
+      for (const m of wallMats) { m.opacity = o; m.transparent = o < 0.999; m.needsUpdate = true; }
+    },
     setFloor(on) { showFloor = on; for (const o of floorObjs) o.visible = on; },
     setSeams(on) { showSeams = on; for (const o of seamObjs) o.visible = on; },
     setLabels(on) { showLabels = on; buildCover(); },
     setCorners(on) { showCorners = on; buildCover(); },
+    setDecorMode(mode) { decorMode = mode; buildRoom(); buildCover(); },
     recenter() {
       pos.set(0, 0, 0); bodyLinear.identity();
       cell.x = 0; cell.y = 0; cell.z = 0; hasStamp = false;
