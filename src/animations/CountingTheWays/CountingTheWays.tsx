@@ -10,7 +10,7 @@ import explainerText from './EXPLAINER.md?raw';
 import readmeText from './README.md?raw';
 import {
   poissonRange, skellamPmf, skellamRange, besselBreakdown, besselTerm,
-  diagTerm, diagCell, conditionalRungs, significantRungs, lawRate,
+  diagTerm, conditionalRungs, significantRungs, lawRate,
   mulberry32, sampleSkellam, fitMoments, histogram,
 } from './skellam';
 
@@ -235,6 +235,43 @@ function FormulaBand({ mu1, mu2, k, partialBessel, partialSum }: {
   );
 }
 
+/* ── A small bar chart with a single clean baseline (Skellam / Bessel) ─────── */
+
+interface Bar { full: number; shown: number; label: string | null; active: boolean; }
+function MiniDist({ bars, color, title, sub, onPick }: {
+  bars: Bar[]; color: 'gold' | 'teal'; title: string; sub: string; onPick?: (i: number) => void;
+}) {
+  const W = 320, H = 126, padX = 6, padTop = 8, padBot = 18;
+  const n = bars.length;
+  const max = Math.max(...bars.map(b => b.full), 1e-9);
+  const bw = (W - 2 * padX) / n;
+  const baseY = H - padBot, area = baseY - padTop;
+  const main = color === 'teal' ? 'var(--accent-2)' : 'var(--accent)';
+  return (
+    <div className="ctw-mini">
+      <div className="ctw-mini-head"><strong>{title}</strong><span>{sub}</span></div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="ctw-mini-svg" preserveAspectRatio="xMidYMid meet">
+        {bars.map((b, i) => {
+          const x = padX + i * bw, w = Math.max(1, bw * 0.74);
+          const fh = (b.full / max) * area, sh = (b.shown / max) * area;
+          return (
+            <g key={i} onClick={onPick ? () => onPick(i) : undefined} style={{ cursor: onPick ? 'pointer' : 'default' }}>
+              {onPick && <rect x={x} y={padTop} width={bw} height={baseY - padTop} fill="transparent" />}
+              <rect x={x + bw * 0.13} y={baseY - fh} width={w} height={fh} fill={main} opacity={0.15} />
+              {b.shown > 0 && (
+                <rect x={x + bw * 0.13} y={baseY - sh} width={w} height={sh} fill={main}
+                  opacity={b.active ? 1 : 0.85} stroke={b.active ? 'var(--fg)' : 'none'} strokeWidth={b.active ? 1.2 : 0} />
+              )}
+              {b.label != null && <text x={x + bw / 2} y={H - 5} textAnchor="middle" className="ctw-mini-lbl">{b.label}</text>}
+            </g>
+          );
+        })}
+        <line x1={padX} y1={baseY + 0.5} x2={W - padX} y2={baseY + 0.5} className="ctw-axis" />
+      </svg>
+    </div>
+  );
+}
+
 /* ── The app ──────────────────────────────────────────────────────────────── */
 
 interface Run {
@@ -257,7 +294,6 @@ export default function CountingTheWays() {
   const [k, setK] = usePersistentState(`${NS}:k`, 2);
   const [gridCap, setGridCap] = usePersistentState(`${NS}:gridCap`, 16);
   const [showMarginals, setShowMarginals] = usePersistentState(`${NS}:marg`, true);
-  const [showConditional, setShowConditional] = usePersistentState(`${NS}:cond`, true);
   const [speed, setSpeed] = usePersistentState(`${NS}:speed`, 55);
 
   // rates are either set directly or read off the softplus law at length L
@@ -280,7 +316,6 @@ export default function CountingTheWays() {
 
   const stripSpan = Math.min(N, 14);
   const strip = useMemo(() => skellamRange(mu1, mu2, -stripSpan, stripSpan), [mu1, mu2, stripSpan]);
-  const stripMax = Math.max(...strip, 1e-9);
   const rungCountOf = useCallback(
     (kk: number) => Math.max(1, Math.min(significantRungs(mu1, mu2, kk), N - Math.abs(kk) + 1)),
     [mu1, mu2, N],
@@ -432,7 +467,6 @@ export default function CountingTheWays() {
   const displayNode = (
     <>
       <Checkbox label="Show the two Poisson margins" checked={showMarginals} onChange={setShowMarginals} />
-      <Checkbox label="Show the conditional over rungs" checked={showConditional} onChange={setShowConditional} />
       <Slider label="Grid size cap" value={gridCap} min={10} max={24} step={1} onChange={v => setGridCap(Math.round(v))} format={v => `${v}×${v}`} />
     </>
   );
@@ -470,41 +504,26 @@ export default function CountingTheWays() {
         marginsShown={tut.marginsShown} cellThreshold={tut.cellThreshold} diagActive={tut.diagActive}
         onPickK={v => setK(clamp(v, -N, N))} />
       <FormulaBand mu1={mu1} mu2={mu2} k={activeK} partialBessel={partialBessel} partialSum={partialSum} />
-      <div className="ctw-strip">
-        <Kicker>Skellam P(K=k) — the difference distribution</Kicker>
-        <div className="ctw-strip-bars">
-          {strip.map((p, i) => {
-            const kk = i - stripSpan;
-            const active = kk === activeK;
-            const h = barValue(i) / stripMax;
-            const hpct = h > 0 ? Math.max(2, h * 100) : 0;
-            return (
-              <button key={kk} className={`ctw-strip-bar${active ? ' active' : ''}`} title={`P(K=${kk}) = ${fmt(p, 4)}`} onClick={() => setK(kk)}>
-                <span className="ctw-strip-fill" style={{ height: `${hpct}%` }} />
-                {(stripSpan <= 10 || kk % 2 === 0) && <span className="ctw-strip-lbl">{kk}</span>}
-              </button>
-            );
-          })}
-        </div>
-        <p className="ctw-hint">Play sums every diagonal in turn, building the whole distribution from k=−{stripSpan} up to +{stripSpan}; click a bar to inspect that difference.</p>
+      <div className="ctw-dists">
+        <MiniDist
+          title="Skellam — the difference K"
+          sub="marginal · sum a diagonal"
+          color="gold"
+          bars={strip.map((p, i) => ({ full: p, shown: barValue(i), label: (i - stripSpan) % 5 === 0 ? `${i - stripSpan}` : null, active: i - stripSpan === activeK }))}
+          onPick={(i) => setK(i - stripSpan)}
+        />
+        <MiniDist
+          title={`Bessel — given K = ${activeK}`}
+          sub="conditional · rung n on that diagonal"
+          color="teal"
+          bars={cond.slice(0, 10).map((p, n) => ({ full: p, shown: p, label: `${n}`, active: false }))}
+        />
       </div>
-      {showConditional && (
-        <div className="ctw-cond">
-          <Kicker>Conditional given the difference is {activeK} — P(rung n | K={activeK})</Kicker>
-          <div className="ctw-cond-bars">
-            {cond.slice(0, 10).map((p, n) => {
-              const c = diagCell(activeK, n);
-              return (
-                <div key={n} className="ctw-cond-bar" title={`n=${n}: ${c.x} ${lab.xShort}, ${c.y} ${lab.yShort} — P = ${fmt(p, 3)}`}>
-                  <span className="ctw-cond-fill" style={{ height: `${Math.max(2, (p / Math.max(...cond, 1e-9)) * 100)}%` }} />
-                  <span className="ctw-cond-lbl">{c.x},{c.y}</span>
-                </div>
-              );
-            })}
-          </div>
-          <p className="ctw-hint">Each underlying ({lab.xShort}, {lab.yShort}) pair, given the net change — exactly one Bessel-series term ÷ the Bessel sum.</p>
-        </div>
-      )}
+      <p className="ctw-hint">
+        Two distributions, not one: <strong>Skellam</strong> is the difference itself — <em>sum</em> a diagonal.
+        The <strong>Bessel</strong> distribution is where you land on a diagonal — <em>normalize</em> it.
+        Same terms; the Bessel function Iₖ is their shared diagonal sum.
+      </p>
     </div>
   );
 

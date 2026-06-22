@@ -92,6 +92,25 @@ diagonal-sum picture is the candidate central visual.
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟢 code · 21:45 — Phone-friendly distributions; Skellam (marginal) vs Bessel (conditional) to the fore
+**Why:** Dan's phone screenshot — the lattice ate the screen, you couldn't see both
+distributions at once, and the bar x-labels staggered across multiple rows. He also
+wanted the marginal/conditional distinction we'd worked out brought forward.
+
+- Replaced the two stacked DOM bar strips with one `MiniDist` SVG chart used twice,
+  shown **side by side** (auto-fit grid, so they sit together on phone and desktop):
+  **Skellam — the difference K** (marginal · sum a diagonal) and
+  **Bessel — given K=k** (conditional · rung n). A caption states plainly they're two
+  distributions sharing the same diagonal sum (`Iₖ`).
+- **Single clean baseline** for x-labels (sparse: every 5 on the Skellam axis, each n
+  on the Bessel) — no more multi-level staggering.
+- Capped the lattice at `min(420px, 42vh)` so it shares the screen with the formula
+  and the distributions instead of dominating on phone.
+- Dropped the now-redundant "show conditional" toggle (both always shown).
+
+Verified on a 390px phone viewport and desktop: both distributions visible together,
+labels on one line, lattice compact. Build green · lint 0/60.
+
 ### 🟢 code · 21:10 — Tutorial polish: caption stays in its box; Play builds the whole distribution
 **Why:** Dan: the tutorial text sometimes escaped its box, and Play should fill the
 *whole* Skellam distribution, not just one difference value.

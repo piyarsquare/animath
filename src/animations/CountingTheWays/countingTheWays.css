@@ -32,7 +32,7 @@
 .ctw-lattice-wrap { display: flex; flex-direction: column; gap: 4px; }
 .ctw-lattice {
   width: 100%;
-  max-height: 460px;
+  max-height: min(420px, 42vh);
   display: block;
 }
 .ctw-cell {
@@ -51,6 +51,19 @@
 .ctw-hovermark rect { fill: none; stroke: var(--fg); stroke-width: 1.5; }
 .ctw-lattice-cap { font-size: 12px; color: var(--dim); line-height: 1.4; }
 .ctw-lattice-cap strong { color: var(--accent); font-family: var(--font-mono); }
+
+/* ── The two distributions, side by side (Skellam · Bessel) ── */
+.ctw-dists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px 14px;
+}
+.ctw-mini { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ctw-mini-head { display: flex; flex-direction: column; line-height: 1.2; }
+.ctw-mini-head strong { font-size: 12px; color: var(--fg); font-weight: 600; }
+.ctw-mini-head span { font-size: 10.5px; color: var(--dim); }
+.ctw-mini-svg { width: 100%; height: auto; display: block; max-height: 132px; }
+.ctw-mini-lbl { fill: var(--dim-2); font-size: 9px; font-family: var(--font-mono); }
 
 /* ── Formula band ── */
 .ctw-formula {
