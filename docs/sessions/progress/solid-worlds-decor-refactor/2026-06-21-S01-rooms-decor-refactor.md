@@ -57,6 +57,39 @@ duct world-specific (!low), and punch the engine floor plane through at the trap
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟡 milestone · 11:55 — Phase 2 draft: doc type + two pilot guides written
+**Why:** Prove the template on a doc-rich and a doc-thin app before scaling.
+
+Created the new doc type under `docs/apps/`:
+- `README.md` — the convention: what this doc type is (vs EXPLAINER / sessions /
+  CLAUDE.md, in a table), the 8 sections each guide carries, how to keep it current
+  (hand-maintained registry, update with behavior changes), and the app index.
+- `_TEMPLATE.md` — the skeleton (frontmatter + 8 sections with guidance comments).
+- `solid-worlds.md` — **rich pilot.** Full Active/Resolved registry (the 2 TODO
+  items + shelved decor refactor + deferred naming; resolved = screw fix + −a2 +
+  Rooms/HUD), feature inventory, shell↔engine architecture, key-files table,
+  invariants (decor spec-independence, emissive-only lights, dual homology engines,
+  cutaway-by-reference, session-only coverDepth), testing notes.
+- `fractals.md` — **thin pilot.** Single-file GPU viewer; the template scaled down
+  cleanly (Active = none tracked; gotchas = shader caps, the dual GPU/JS iteration
+  paths, aspect normalization, mount-as-state, DPR cap).
+
+Eight-section template held at both extremes. Awaiting sign-off before replicating.
+
+### 🟣 decision · 11:25 — Phase 2 plan locked (location · registry · rollout)
+**Why:** Dan answered the three design questions.
+
+- **Location:** `docs/apps/<slug>.md` — centralized, cross-linkable like the session
+  hub (not co-located in the app folder).
+- **Registry:** the per-app control center is a **hand-maintained Active / Resolved
+  section** inside the doc (no new tooling; sessions edit it at handoff, like TODO.md).
+- **Rollout:** **pilot two contrasting apps** before scaling. Chosen pair:
+  **Solid Worlds** (doc-rich, multi-file engine) + **Fractals/GPU** (gallery
+  headline but doc-thin, single file) — stress-tests the template at both extremes.
+
+Deliverable this session: `docs/apps/_TEMPLATE.md` + `docs/apps/README.md`
+(the convention) + the two pilot guides, for sign-off before replicating.
+
 ### 🔵 finding · 11:10 — Phase 1 inventory: where durable per-app info lives today
 **Why:** Map the existing long-term structural info per app before designing the
 guide, so the template absorbs what's written rather than duplicating it.
