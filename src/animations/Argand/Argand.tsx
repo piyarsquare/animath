@@ -48,6 +48,9 @@ export default function Argand() {
   const [snapping, setSnapping] = usePersistentState(`${STORAGE_KEY}:snap`, true);
   const [gridOpacity, setGridOpacity] = usePersistentState(`${STORAGE_KEY}:gridOp`, 0.22);
   const [imageOpacity, setImageOpacity] = usePersistentState(`${STORAGE_KEY}:imgOp`, 0.5);
+  const [gridType, setGridType] = usePersistentState<'cartesian' | 'polar'>(`${STORAGE_KEY}:gridType`, 'cartesian');
+  const [gridStep, setGridStep] = usePersistentState(`${STORAGE_KEY}:gridStep`, 1);
+  const [gridColor, setGridColor] = usePersistentState(`${STORAGE_KEY}:gridColor`, false);
   const [showUnitCircle, setShowUnitCircle] = usePersistentState(`${STORAGE_KEY}:unit`, true);
   const [extent, setExtent] = usePersistentState(`${STORAGE_KEY}:extent`, 4);
   // Number system: p = j². p<0 complex, p=0 dual, p>0 split-complex.
@@ -305,6 +308,15 @@ export default function Argand() {
     <>
       <Slider label="Extent (±)" value={extent} min={1} max={16} step={0.5}
         onChange={setExtent} format={v => v.toFixed(1)} />
+      <Pills<'cartesian' | 'polar'>
+        label="Grid"
+        options={[{ value: 'cartesian', label: 'Cartesian' }, { value: 'polar', label: 'Polar' }]}
+        value={gridType}
+        onChange={setGridType}
+      />
+      <Slider label="Grid size" value={gridStep} min={0.25} max={5} step={0.25}
+        onChange={setGridStep} format={v => v.toFixed(2)} />
+      <Checkbox label="Color grid by angle (domain coloring)" checked={gridColor} onChange={setGridColor} />
       <Slider label="Grid brightness" value={gridOpacity} min={0} max={0.6} step={0.02}
         onChange={setGridOpacity} format={v => v === 0 ? 'off' : v.toFixed(2)} />
       <Slider label="Image grid brightness" value={imageOpacity} min={0.1} max={1} step={0.05}
@@ -438,11 +450,30 @@ export default function Argand() {
             feed={feed} curve={curve} t={t} playing={playing}
             lockA1={lockA1} lockA0={lockA0} lockA2={lockA2}
             snapping={snapping} gridOpacity={gridOpacity} imageOpacity={imageOpacity} showUnitCircle={showUnitCircle}
+            gridType={gridType} gridStep={gridStep} gridColor={gridColor}
             viewFromFixed={viewFromFixed} iterate={iterate} iterN={iterN}
             extent={extent}
             onChange={onHandleChange}
             onZoom={f => setExtent(e => Math.min(16, Math.max(1, e * f)))}
           />
+          {/* on-screen equation (top-right, clear of the left panels; persists in
+              fullscreen where the panels are gone) */}
+          <div style={{
+            position: 'absolute', right: 12, top: 12, zIndex: 6, pointerEvents: 'none', textAlign: 'right',
+            padding: '5px 10px', borderRadius: 10, fontFamily: 'var(--font-mono, monospace)',
+            background: 'var(--panel, rgba(18,18,24,0.82))', border: '1px solid var(--border, #3a3a44)',
+            backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+          }}>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>
+              <span style={{ color: F_COL }}>f(z)</span> ={' '}
+              {quad && <><span style={{ color: A2_COL }}>α₂</span>·z² + </>}
+              <span style={{ color: A1_COL }}>α₁</span>·z + <span style={{ color: A0_COL }}>α₀</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--dim, #9b9ba3)', marginTop: 1 }}>
+              {quad && <><span style={{ color: A2_COL }}>{formatRect(alpha2)}</span> · z² + </>}
+              <span style={{ color: A1_COL }}>{formatRect(alpha1)}</span> · z + <span style={{ color: A0_COL }}>{formatRect(alpha0)}</span>
+            </div>
+          </div>
           {controlHud}
         </div>
       ),

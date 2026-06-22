@@ -95,6 +95,9 @@ degenerates. Every feed re-renders in the chosen system.
 
 ## Tips
 
+- The **Plane** panel switches the grid between **Cartesian** and **Polar** (circles +
+  rays), sets its **size**, and can **color it by angle** — domain coloring like the
+  Complex Particles charts, so you watch the colors flow as `f` deforms the plane.
 - **Snap to nice values** pulls a handle onto the lattice (`1`, `i`, `1+i`, …), the unit
   curve, and angles that are multiples of π/6.
 - Pinch / scroll to **zoom**, two-finger or shift-drag to **pan**, double-click to

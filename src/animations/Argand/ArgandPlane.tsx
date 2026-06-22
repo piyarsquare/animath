@@ -46,6 +46,12 @@ interface Props {
   gridOpacity: number;
   /** Mapped image-grid opacity (Grid feed). */
   imageOpacity: number;
+  /** Cartesian lattice or polar (circles + rays). */
+  gridType: 'cartesian' | 'polar';
+  /** Grid spacing in math units. */
+  gridStep: number;
+  /** Color grid lines by their domain position's angle (like domain coloring). */
+  gridColor: boolean;
   showUnitCircle: boolean;
   /** Recenter the plane on the fixed point z* (the map becomes a pure spiral). */
   viewFromFixed: boolean;
@@ -78,7 +84,7 @@ function useSize(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function ArgandPlane({
-  z, alpha1, alpha0, alpha2, degree, p, feed, curve, t, playing, lockA1, lockA0, lockA2, snapping, gridOpacity, imageOpacity, showUnitCircle, viewFromFixed, iterate, iterN, extent, onChange, onZoom,
+  z, alpha1, alpha0, alpha2, degree, p, feed, curve, t, playing, lockA1, lockA0, lockA2, snapping, gridOpacity, imageOpacity, gridType, gridStep, gridColor, showUnitCircle, viewFromFixed, iterate, iterN, extent, onChange, onZoom,
 }: Props) {
   const quad = degree >= 2;
   const coeffs: Cx[] = quad ? [alpha0, alpha1, alpha2] : [alpha0, alpha1];
@@ -245,40 +251,71 @@ export default function ArgandPlane({
   // along its longer side).
   const halfX = w > 0 ? (w / 2) / k : extent;
   const halfY = h > 0 ? (h / 2) / k : extent;
-
-  // Integer grid lines (ghost identity grid, panning with the view center).
-  const xLines: number[] = [];
-  for (let i = Math.ceil(ctr.re - halfX); i <= Math.floor(ctr.re + halfX); i++) xLines.push(i);
-  const yLines: number[] = [];
-  for (let i = Math.ceil(ctr.im - halfY); i <= Math.floor(ctr.im + halfY); i++) yLines.push(i);
-
-  // Grid feed: a complete origin-centered lattice mapped by f at param s. Affine
-  // ⇒ straight lines stay straight, so mapping the two endpoints is exact.
-  const reach = Math.max(halfX, halfY) + Math.abs(ctr.re) + Math.abs(ctr.im) + 2;
-  const GN = Math.ceil(reach);
-  const gridIdx: number[] = [];
-  for (let i = -GN; i <= GN; i++) gridIdx.push(i);
-  const gridEnds = (i: number, horizontal: boolean): [Cx, Cx] =>
-    horizontal ? [cx(-GN, i), cx(GN, i)] : [cx(i, -GN), cx(i, GN)];
-  // Map a grid line through an arbitrary per-point map. A quadratic bends lines,
-  // so we sample; the affine map keeps them straight (two endpoints suffice).
-  const sampleLine = (i: number, horizontal: boolean, mapFn: (q: Cx) => Cx): string => {
-    const [p0, p1] = gridEnds(i, horizontal);
-    const n = quad ? 24 : 1;
-    const pts: string[] = [];
-    for (let j = 0; j <= n; j++) {
-      const q = add(scale(p0, 1 - j / n), scale(p1, j / n));
-      const [vx, vy] = toV(mapFn(q));
-      pts.push(`${j === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`);
-    }
-    return pts.join(' ');
-  };
-  // the full image grid f(grid) — always shown (the complete story)
-  const gridLineImage = (i: number, horizontal: boolean): string => sampleLine(i, horizontal, fOf);
-  // the live grid in motion — degree-ramp morph (quad) or the affine loop (line)
+  const reach = Math.max(halfX, halfY) + Math.abs(ctr.re) + Math.abs(ctr.im) + gridStep;
   const triS = t < 0.5 ? t * 2 : 2 - 2 * t;   // 0→1→0 over t, seamless on wrap
-  const gridLineLoop = (i: number, horizontal: boolean): string =>
-    sampleLine(i, horizontal, q => quad ? polyRampAt(coeffs, q, p, triS) : affineLoopAt(q, alpha1, alpha0, p, t));
+
+  // The grid as a list of identity polylines (math coords) — a Cartesian lattice
+  // or a polar net of circles + rays, spaced by gridStep. Mapping happens per
+  // point, so the same curves render the ghost (identity) and the f-image.
+  const gridCurves: Cx[][] = (() => {
+    const out: Cx[][] = [];
+    const TAU = Math.PI * 2;
+    if (gridType === 'polar') {
+      const R = reach;
+      for (let r = gridStep; r <= R + 1e-9; r += gridStep) {
+        const circ: Cx[] = [];
+        for (let a = 0; a <= 72; a++) circ.push(cx(r * Math.cos((a / 72) * TAU), r * Math.sin((a / 72) * TAU)));
+        out.push(circ);
+      }
+      const rays = 12;
+      for (let j = 0; j < rays; j++) {
+        const th = (j / rays) * TAU;
+        const ray: Cx[] = [];
+        for (let i = 0; i <= 24; i++) { const r = (R * i) / 24; ray.push(cx(r * Math.cos(th), r * Math.sin(th))); }
+        out.push(ray);
+      }
+    } else {
+      const GN = Math.ceil(reach / gridStep) * gridStep;
+      const n = quad || gridColor ? 24 : 1;
+      for (let x = -GN; x <= GN + 1e-9; x += gridStep) {
+        const ln: Cx[] = [];
+        for (let j = 0; j <= n; j++) ln.push(cx(x, -GN + (2 * GN * j) / n));
+        out.push(ln);
+      }
+      for (let y = -GN; y <= GN + 1e-9; y += gridStep) {
+        const ln: Cx[] = [];
+        for (let j = 0; j <= n; j++) ln.push(cx(-GN + (2 * GN * j) / n, y));
+        out.push(ln);
+      }
+    }
+    return out;
+  })();
+
+  /** Domain-coloring hue (like the particle charts): hue from the angle. */
+  const domainHue = (q: Cx): string => `hsl(${((Math.atan2(q.im, q.re) * 180) / Math.PI + 360) % 360}, 68%, 62%)`;
+
+  /** Draw the grid curves through a per-point map, mono or domain-colored. */
+  const drawGrid = (mapFn: (q: Cx) => Cx, opacity: number, mono: string, key: string) => {
+    if (!gridColor) {
+      return (
+        <g stroke={mono} strokeOpacity={opacity} strokeWidth={1.5} fill="none">
+          {gridCurves.map((cur, ci) => (
+            <path key={`${key}${ci}`} d={cur.map((q, i) => { const [vx, vy] = toV(mapFn(q)); return `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`; }).join(' ')} />
+          ))}
+        </g>
+      );
+    }
+    // domain-colored: each segment hued by its SOURCE midpoint angle, so the
+    // colors flow with the map (the signature complex-particle look).
+    return (
+      <g strokeWidth={2} fill="none" strokeLinecap="round" strokeOpacity={Math.min(1, opacity * 2)}>
+        {gridCurves.flatMap((cur, ci) => cur.slice(0, -1).map((q, i) => {
+          const [x1, y1] = toV(mapFn(q)); const [x2, y2] = toV(mapFn(cur[i + 1]));
+          return <line key={`${key}${ci}_${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke={domainHue(scale(add(q, cur[i + 1]), 0.5))} />;
+        }))}
+      </g>
+    );
+  };
 
   const [oVx, oVy] = toV(cx(0, 0));
 
@@ -295,7 +332,13 @@ export default function ArgandPlane({
     if (!isFinite(nx.re) || !isFinite(nx.im) || modulus(nx) > 1e4) break;
     orbitDots.push(nx);
   }
-  const orbitSpiral = !quad && zStars[0];   // smooth log spiral only for a line
+  // The continuous real-power α₁^s is only well-defined where the generalized
+  // log exists (p<0 always; dual needs Re>0; split needs the future cone). Where
+  // it isn't, the smooth spiral would diverge from the true iterates — so there
+  // we connect the literal iterates with straight segments instead.
+  const powReliable = p < 0
+    || (p === 0 ? alpha1.re > 1e-9 : alpha1.re > 0 && alpha1.re * alpha1.re - p * alpha1.im * alpha1.im > 1e-9);
+  const orbitSpiral = !quad && !!zStars[0] && powReliable;
   const orbitAt = (s: number): Cx => {
     if (orbitSpiral) return add(zStars[0], mulG(powRealG(alpha1, p, s), sub(z, zStars[0]), p));
     const i0 = Math.min(orbitDots.length - 2, Math.max(0, Math.floor(s)));
@@ -405,12 +448,7 @@ export default function ArgandPlane({
           </defs>
 
           {/* ghost identity grid (the unchanged plane) */}
-          {gridOpacity > 0.001 && (
-            <g stroke="currentColor" strokeOpacity={gridOpacity} strokeWidth={1.5}>
-              {xLines.filter(i => i !== 0).map(i => { const [vx] = toV(cx(i, 0)); return <line key={`x${i}`} x1={vx} y1={0} x2={vx} y2={h} />; })}
-              {yLines.filter(i => i !== 0).map(i => { const [, vy] = toV(cx(0, i)); return <line key={`y${i}`} x1={0} y1={vy} x2={w} y2={vy} />; })}
-            </g>
-          )}
+          {gridOpacity > 0.001 && drawGrid(q => q, gridOpacity, 'currentColor', 'gh')}
 
           {/* the system's unit curve */}
           {unitCurveNode}
@@ -427,15 +465,13 @@ export default function ArgandPlane({
           {isGrid && (
             <>
               {/* the full image grid f(grid) — always shown */}
-              <g stroke={F_COL} strokeOpacity={imageOpacity} strokeWidth={2} fill="none">
-                {gridIdx.map(i => <path key={`gv${i}`} d={gridLineImage(i, false)} />)}
-                {gridIdx.map(i => <path key={`gh${i}`} d={gridLineImage(i, true)} />)}
-              </g>
-              {/* the live grid travelling the loop — only while in motion */}
-              {showMover && (
+              {drawGrid(fOf, imageOpacity, F_COL, 'gi')}
+              {/* the live grid in motion (degree-ramp / affine loop) */}
+              {showMover && !gridColor && (
                 <g stroke="#fde68a" strokeOpacity={0.8} strokeWidth={2} fill="none">
-                  {gridIdx.map(i => <path key={`lv${i}`} d={gridLineLoop(i, false)} />)}
-                  {gridIdx.map(i => <path key={`lh${i}`} d={gridLineLoop(i, true)} />)}
+                  {gridCurves.map((cur, ci) => (
+                    <path key={`lm${ci}`} d={cur.map((q, i) => { const m = quad ? polyRampAt(coeffs, q, p, triS) : affineLoopAt(q, alpha1, alpha0, p, t); const [vx, vy] = toV(m); return `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`; }).join(' ')} />
+                  ))}
                 </g>
               )}
             </>
