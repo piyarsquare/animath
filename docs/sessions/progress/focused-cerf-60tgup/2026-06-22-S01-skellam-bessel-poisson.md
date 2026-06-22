@@ -92,6 +92,24 @@ diagonal-sum picture is the candidate central visual.
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟢 code · 22:20 — P2 fix: sum the whole diagonal; synced main (Stable Marriage retired upstream)
+**Why:** A review flagged that the walk clamps to the visible grid, so high rates /
+large |k| stopped the sum early while the formula showed the full pmf. Dan also
+flagged merge conflicts with main.
+
+- **Diagonal-sum fix:** dropped the `N − |k| + 1` (grid-fit) clamp in `rungCount`
+  and `rungCountOf` — the sum now runs over all significant rungs (the real,
+  possibly-infinite tail). Verified the worst case (μ₁=μ₂=14, k=10): the running
+  total now lands on `P(K=10)=0.0125` instead of ~34% of it. Added a small
+  "diagonal runs past the grid edge →" arrow + caption when mass extends beyond the
+  visible window, so off-grid accumulation reads honestly.
+- **Merged `origin/main` (#231):** conflicts in `README.md` (app list) and
+  `previews.tsx` (the `PreviewKind` union). Main fully **retired Stable Marriage**
+  (route, lazy import, `apps.ts` descriptor, the `'marriage'` preview + component,
+  README line); resolved by honoring that retirement and keeping our additions
+  (Counting the Ways → list item 13; `'skellam'` preview kind). Build green · lint
+  0/60 · 7/7 tests after the merge; PR #233 now conflict-free with main.
+
 ### 🟢 code · 21:45 — Phone-friendly distributions; Skellam (marginal) vs Bessel (conditional) to the fore
 **Why:** Dan's phone screenshot — the lattice ate the screen, you couldn't see both
 distributions at once, and the bar x-labels staggered across multiple rows. He also
