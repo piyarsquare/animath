@@ -136,6 +136,13 @@ docs pass to backfill it. As additive edits (same append rule):
 - **`CLAUDE.md`** — add one row to the **Routing** table and one line to the
   repository-layout tree under `src/animations/`.
 - **`README.md`** — add your app to the app list and the repo tree.
+- **`EXPLAINER.md`** (or your guide page) — end it with a short **"Possible
+  sources & where to go further"** block: annotated pointers to the prior work and
+  analogues your app draws near, framed as a reader's next step, not a priority
+  claim. Name what you can stand behind and flag uncertainty — never fabricate a
+  citation. This is the per-app half of the project's attribution policy
+  ([`ATTRIBUTION.md`](../ATTRIBUTION.md); `CLAUDE.md` → *Attribution & AI
+  collaboration*).
 
 Keep it to *your* app's lines only; leave everyone else's untouched.
 

@@ -13,7 +13,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
  */
 export type PreviewKind =
   | 'particles' | 'plane' | 'fractal' | 'julia' | 'corridor'
-  | 'trinary' | 'marriage' | 'sorting' | 'matrix' | 'polygon' | 'treenet';
+  | 'trinary' | 'marriage' | 'sorting' | 'matrix' | 'polygon' | 'treenet' | 'solid';
 
 type DrawFn = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
 
@@ -842,6 +842,55 @@ function TreeNetPreview({ light }: { light: boolean }) {
   return <canvas ref={ref} style={canvasStyle} />;
 }
 
+function SolidPreview({ light }: { light: boolean }) {
+  const ref = useCanvas((ctx, W, H, t) => {
+    ctx.fillStyle = light ? '#eef0f2' : '#070a14';
+    ctx.fillRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2, s = Math.min(W, H) * 0.2;
+    const ay = t * 0.5, ax = 0.5;
+    const ca = Math.cos(ay), sa = Math.sin(ay), cp = Math.cos(ax), sp = Math.sin(ax);
+    // project a 3D point with a slow turntable + fixed tilt
+    const proj = (x: number, y: number, z: number): [number, number] => {
+      const X = x * ca + z * sa, Z0 = -x * sa + z * ca;
+      const Y = y * cp - Z0 * sp;
+      const Z = y * sp + Z0 * cp;
+      const f = 3.2 / (3.2 + Z * 0.18);
+      return [cx + X * s * f, cy + Y * s * f];
+    };
+    const corners: [number, number, number][] = [
+      [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+      [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1],
+    ];
+    const edges = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];
+    const accent = light ? '#1d6fb8' : '#5ad1ff';
+    // a 3×1×1 strip of cubes — one room repeating along x
+    for (let c = -1; c <= 1; c++) {
+      const fade = c === 0 ? 1 : 0.4;
+      ctx.strokeStyle = c === 0 ? accent : (light ? `rgba(80,90,110,${fade})` : `rgba(150,180,220,${fade})`);
+      ctx.lineWidth = Math.max(1, W * (c === 0 ? 0.006 : 0.003));
+      for (const [a, b] of edges) {
+        const p = proj(corners[a][0] + c * 2.05, corners[a][1], corners[a][2]);
+        const q = proj(corners[b][0] + c * 2.05, corners[b][1], corners[b][2]);
+        ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
+      }
+    }
+    // a small chiral "F" pair: upright in the center cube, mirrored in the next —
+    // the orientation-reversal hint
+    const drawF = (px: number, py: number, mir: number, col: string) => {
+      const u = Math.max(2.4, W * 0.012);
+      ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.5, W * 0.007); ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(px, py - 1.5 * u); ctx.lineTo(px, py + 1.5 * u);
+      ctx.moveTo(px, py - 1.5 * u); ctx.lineTo(px + mir * 1.4 * u, py - 1.5 * u);
+      ctx.moveTo(px, py); ctx.lineTo(px + mir * u, py);
+      ctx.stroke();
+    };
+    const c0 = proj(0, 0, 0); drawF(c0[0], c0[1], 1, accent);
+    const c1 = proj(2.05, 0, 0); drawF(c1[0], c1[1], -1, light ? '#b3457a' : '#ff5aa6');
+  }, [light]);
+  return <canvas ref={ref} style={canvasStyle} />;
+}
+
 export function Preview({ kind, skin }: { kind: PreviewKind; skin: string; hue?: number }) {
   const light = skin === 'light';
   switch (kind) {
@@ -855,6 +904,7 @@ export function Preview({ kind, skin }: { kind: PreviewKind; skin: string; hue?:
     case 'matrix': return <MatrixPreview light={light} />;
     case 'polygon': return <PolygonPreview light={light} />;
     case 'treenet': return <TreeNetPreview light={light} />;
+    case 'solid': return <SolidPreview light={light} />;
     default: return <ParticlePreview light={light} />;
   }
 }
