@@ -5,12 +5,12 @@ date: 2026-06-22
 title: Control-center triage — clear stale statuses, signals, and the to-do backlog
 branch: claude/todo-list-review-eu3g4a
 slug: todo-list-review-eu3g4a
-status: in-progress
-build: unknown
+status: completed
+build: passed
 followup: null
 pr: null
 app: docs
-next: Triage complete — Buckets A–D cleared, attribution (B) landed, Stable Marriage retired, PR #230 open. Remaining backlog items are tracked in TODO.md; /handoff when ready.
+next: Triage complete; App-map now self-audits registry↔guides. Remaining backlog in TODO.md (top lever: productionize the signals/to-do system). Report-style improvements are owned by a separate thread — don't duplicate.
 ---
 
 # Control-center triage — clear stale statuses, signals, and the to-do backlog
