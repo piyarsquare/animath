@@ -12,7 +12,7 @@ import { buildCurve, CURVES, type CurveName } from './curves';
 import {
   type Cx, type ArcLengthMap, cx, modulus, add, sub, scale,
   mulG, powRealG, affineLoopAt, arcLengthMap, formatRect, formatPolar,
-  polyEval, polyFixedPoints, hornerAt, polyRampAt,
+  polyEval, polyFixedPoints, polyTermLoopAt, polyRampAt,
 } from './complexOps';
 
 const STORAGE_KEY = 'argand';
@@ -118,7 +118,7 @@ export default function Argand() {
     // Quadratic: Point traces the Horner chain; Shape/Grid morph the α₂ term in
     // and out (triangle), so both are paced by their own path.
     if (quad) {
-      if (isPoint) return arcLengthMap(s => hornerAt(coeffs, z, system, s), 160);
+      if (isPoint) return arcLengthMap(s => polyTermLoopAt(coeffs, z, system, s), 180);
       return arcLengthMap(s => polyRampAt(coeffs, q, system, s < 0.5 ? s * 2 : 2 - 2 * s), 160);
     }
     return arcLengthMap(s => affineLoopAt(q, alpha1, alpha0, system, s), 144);
@@ -165,7 +165,7 @@ export default function Argand() {
       : ['Identity', 'Linear', 'Affine'];
   const stops = quad
     ? (isPoint
-        ? [{ label: 'α₂', t: 0 }, { label: 'mid', t: 0.5 }, { label: 'f(z)', t: 1 }]
+        ? [{ label: 'α₂z²', t: 1 / 6 }, { label: '+α₁z', t: 2 / 6 }, { label: 'f(z)', t: 3 / 6 }]
         : [{ label: 'Linear', t: 0 }, { label: 'Quad', t: 0.5 }, { label: 'Linear', t: 1 }])
     : [{ label: stopLabels[0], t: 0 }, { label: stopLabels[1], t: 0.25 }, { label: stopLabels[2], t: 0.5 }];
   const atStop = (st: number): boolean => Math.abs(t - st) < 0.02;

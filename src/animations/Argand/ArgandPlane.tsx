@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   type Cx, cx, add, sub, scale, modulus,
   mulG, powRealG, affineAt, affineSimulAt, affineLoopAt,
-  polyEval, polyFixedPoints, criticalPoint, hornerAt, hornerWaypoints, polyRampAt, snap,
+  polyEval, polyFixedPoints, criticalPoint, polyTermCumulative, polyTermLoopAt, polyRampAt, snap,
 } from './complexOps';
 
 export type Feed = 'point' | 'shape' | 'grid';
@@ -282,15 +282,9 @@ export default function ArgandPlane({
 
   const [oVx, oVy] = toV(cx(0, 0));
 
-  // Horner chain (quadratic Point feed): the accumulator's spiral+slide path
-  // α₂ → α₂z → α₂z+α₁ → … → f(z), plus its integer waypoints.
-  const hornerPts = hornerWaypoints(coeffs, z, p);
-  const hornerPathD = (() => {
-    const n = 100;
-    const pts: string[] = [];
-    for (let i = 0; i <= n; i++) { const [vx, vy] = toV(hornerAt(coeffs, z, p, i / n)); pts.push(`${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`); }
-    return pts.join(' ');
-  })();
+  // Quadratic Point feed: f(z) built as the tip-to-tail sum of its terms.
+  const termCum = polyTermCumulative(coeffs, z, p);   // [0, +α₂z², +α₁z, f(z)]
+  const termCols = [A2_COL, A1_COL, A0_COL];          // term colors, high→low
 
   // Iteration orbit: the literal iterates zₖ = fᵏ(z) (stopping if they escape).
   // For a line this is the log spiral z* + α₁ᵏ·(z−z*); for a quadratic it's
@@ -514,18 +508,27 @@ export default function ArgandPlane({
             </>
           )}
 
-          {/* ---- DEGREE 2: Horner evaluation as a chain of ×z spirals + slides ---- */}
+          {/* ---- DEGREE 2: f(z) as the tip-to-tail sum of its terms ---- */}
           {(isPoint || isGrid) && quad && !(isPoint && iterate) && (
             <>
-              {isPoint && <path d={hornerPathD} fill="none" stroke={F_COL} strokeOpacity={0.55} strokeWidth={2.5} strokeLinecap="round" />}
-              {isPoint && hornerPts.map((q, i) => {
-                const [vx, vy] = toV(q);
-                // even index = a coefficient/start node; odd = an ×z product
-                const col = i === 0 ? A2_COL : i % 2 === 1 ? A1_COL : A0_COL;
-                return <circle key={i} cx={vx} cy={vy} r={i === 0 ? 6 : 4} fill={col} fillOpacity={0.85} />;
-              })}
+              {isPoint && (
+                <>
+                  {/* the return route: collapse all terms at once (f(z) → 0) */}
+                  {(() => { const [fx, fy] = toV(termCum[termCum.length - 1]); return (
+                    <line x1={fx} y1={fy} x2={oVx} y2={oVy} stroke="#2dd4bf" strokeOpacity={0.5} strokeWidth={2.5} strokeDasharray="7 6" strokeLinecap="round" />
+                  ); })()}
+                  {/* the term vectors, tip-to-tail (quadratic, linear, additive) */}
+                  {termCum.slice(0, -1).map((a, i) => {
+                    const [x1, y1] = toV(a); const [x2, y2] = toV(termCum[i + 1]);
+                    return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={termCols[i] ?? F_COL} strokeOpacity={0.85} strokeWidth={3} strokeLinecap="round" />;
+                  })}
+                  {termCum.map((q, i) => { const [vx, vy] = toV(q); return (
+                    <circle key={i} cx={vx} cy={vy} r={3.5} fill={i === 0 ? CRIT_COL : (termCols[i - 1] ?? F_COL)} />
+                  ); })}
+                </>
+              )}
               {showMover && (() => {
-                const [mx, my] = toV(isPoint ? hornerAt(coeffs, z, p, t) : polyRampAt(coeffs, z, p, triS));
+                const [mx, my] = toV(isPoint ? polyTermLoopAt(coeffs, z, p, t) : polyRampAt(coeffs, z, p, triS));
                 return <circle cx={mx} cy={my} r={7} fill="#fde68a" stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />;
               })()}
               {(() => { const [fx, fy] = toV(fOf(z)); return <>

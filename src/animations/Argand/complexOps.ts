@@ -226,6 +226,49 @@ export const hornerWaypoints = (c: Cx[], z: Cx, p: number): Cx[] => {
 export const polyRampAt = (c: Cx[], z: Cx, p: number, s: number): Cx =>
   polyEval([...c.slice(0, -1), scale(c[c.length - 1], s)], z, p);
 
+/** z raised to an integer power in system p (z⁰=1, z¹=z, z²=z·z, …). */
+const powIntG = (z: Cx, k: number, p: number): Cx => {
+  let r: Cx = { re: 1, im: 0 };
+  for (let i = 0; i < k; i++) r = mulG(r, z, p);
+  return r;
+};
+
+/** The individual terms αₖ·zᵏ, highest degree first: [α_n zⁿ, …, α₁z, α₀]. */
+export const polyTerms = (c: Cx[], z: Cx, p: number): Cx[] => {
+  const out: Cx[] = [];
+  for (let k = c.length - 1; k >= 0; k--) out.push(mulG(c[k], powIntG(z, k, p), p));
+  return out;
+};
+
+/** Running tip-to-tail sum of the terms: [0, α_nzⁿ, α_nzⁿ+α_{n-1}zⁿ⁻¹, …, f(z)]. */
+export const polyTermCumulative = (c: Cx[], z: Cx, p: number): Cx[] => {
+  const terms = polyTerms(c, z, p);
+  const cum: Cx[] = [{ re: 0, im: 0 }];
+  for (const tm of terms) cum.push(add(cum[cum.length - 1], tm));
+  return cum;
+};
+
+/**
+ * A closed loop that builds f(z) as the tip-to-tail sum of its terms. The
+ * forward half (φ≤½) lays the terms down one at a time, highest degree first
+ * (quadratic → linear → additive), each taking an equal slice; the return half
+ * collapses *all* of them at once (a straight slide f(z)→0). Closed at the
+ * origin, so it wraps seamlessly.
+ */
+export const polyTermLoopAt = (c: Cx[], z: Cx, p: number, phi: number): Cx => {
+  const cum = polyTermCumulative(c, z, p);
+  const nT = cum.length - 1;
+  const f = ((phi % 1) + 1) % 1;
+  if (f <= 0.5) {
+    const x = f * 2 * nT;
+    const idx = Math.min(nT - 1, Math.floor(x));
+    const s = x - idx;
+    return add(scale(cum[idx], 1 - s), scale(cum[idx + 1], s));
+  }
+  const u = (f - 0.5) * 2;
+  return scale(cum[nT], 1 - u);
+};
+
 /* ----------------------------------------------------------------- *
  *  Arc-length pacing — so the pen moves at constant *geometric*      *
  *  speed instead of constant param speed.                           *

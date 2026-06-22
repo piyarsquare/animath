@@ -69,10 +69,11 @@ Switch **Degree** to **Quadratic** and a third coefficient appears:
 - **Two fixed points.** `f(z) = z` is now quadratic, so there are **two** gold `z*`'s
   (or a repeated one), plus a **critical point** `z = −α₁/2α₂` (the slate ⊕) where the
   map folds two inputs onto one.
-- **The Point feed shows Horner's method** as a chain of *scaled effects*: start at the
-  leading coefficient `α₂`, then repeat **×z** (a spiral, modulated by `p`) and **+ the
-  next coefficient** (a slide): `α₂ → α₂z → α₂z+α₁ → (…)·z → f(z)`. Multiplication *is*
-  the scaled effect; addition is the shift; the polynomial is just the sequence of them.
+- **The Point feed shows f(z) as a sum of its terms.** The forward path lays them down
+  tip-to-tail, highest degree first — **α₂z²**, then **α₁z**, then **α₀** (each one-sixth
+  of the loop) — arriving at `f(z)`; the return half collapses all three *at once* along
+  the diagonal. So a polynomial value is just a chain of vector contributions, one per
+  term.
 
 Iterating a quadratic (the **Iterate** toggle) is genuine non-linear dynamics — the orbit
 can converge, cycle, or escape. That is exactly the engine behind the Mandelbrot/Julia
