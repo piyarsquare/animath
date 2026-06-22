@@ -39,6 +39,7 @@ const META: Record<string, { cat: Category; kind: PreviewKind; hue?: number }> =
   '/trees-and-nets': { cat: 'Algorithm', kind: 'treenet' },
   '/solid-worlds': { cat: 'Dynamics', kind: 'solid' },
   '/argand': { cat: 'Complex', kind: 'plane', hue: 180 },
+  '/counting-the-ways': { cat: 'Algorithm', kind: 'matrix' },
 };
 
 export const CARDS: AppCard[] = apps

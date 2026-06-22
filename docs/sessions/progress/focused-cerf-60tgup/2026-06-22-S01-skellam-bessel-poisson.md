@@ -6,12 +6,12 @@ title: New app — why a Bessel function gives the Skellam (Poisson-difference) 
 branch: claude/focused-cerf-60tgup
 slug: focused-cerf-60tgup
 status: in-progress
-build: unknown
+build: passed
 followup: null
 pr: null
 app: general
-signals: needs-dan
-next: Agree the app's central picture (the (X,Y) lattice diagonal ↔ Bessel series) and scope before any code.
+signals: not-live
+next: Show Dan the three modes for review; optional polish (bespoke gallery preview); then /handoff.
 ---
 
 # New app — why a Bessel function gives the Skellam (Poisson-difference) conditionals
@@ -91,6 +91,104 @@ diagonal-sum picture is the candidate central visual.
 ## Working notes
 
 <!-- Newest entry first. One ### per state transition. -->
+
+### 🟡 milestone · 19:05 — App built, verified across all three modes; build + tests green
+**Why:** The new app is complete and conforms to the framework; this is the
+session's deliverable, captured before handoff.
+
+Built `src/animations/CountingTheWays/` (`skellam.ts` engine, `CountingTheWays.tsx`,
+`countingTheWays.css`, `EXPLAINER.md`, `README.md`, `__tests__/skellam.test.ts`)
+and registered it in the five append-only files. **`npm run build` passes**,
+**`npm run lint` is 0 errors / 60 warnings** (the documented baseline — none from
+the new files), and **6/6 unit tests pass** (the core identity *diagonal sum =
+`e^{−(μ₁+μ₂)}·(μ₁/μ₂)^{k/2}·I_{|k|}`*, normalization, the conditional law, and
+the moment-fit recovery).
+
+Headless screenshots verified all three modes render correctly
+(`scripts/shoot.mjs` + a click-through):
+
+- **Explain** — joint heatmap (bright at μ₁=4, μ₂=2.5), teal Poisson margins, the
+  dashed k=+2 diagonal; scrolled down: the color-linked factored formula with the
+  partial walk (`Σ joint 0.1496 → 0.1545`, `Bessel part 62.176 of 64.236`, 5/11
+  rungs), the Skellam strip with k=2 lit, and the conditional bars peaking at the
+  (4 gained, 2 lost) rung.
+- **Sample** — 4,000 draws converging to the Skellam curve; sample mean 1.50
+  (≈μ₁−μ₂=1.5), variance 6.47 (≈μ₁+μ₂=6.5).
+- **Fit** — 600 synthetic points; recovered μ̂₁=4.34, μ̂₂=2.62 (true 4.0, 2.5),
+  fitted and true curves overlapping.
+
+One cosmetic fix applied during review: the formula's tiny normalizer was rounding
+to `0.002`, so the product didn't read true — now shown to 4 decimals / scientific.
+
+> [!NOTE]
+> The titular question is answered directly on screen: the **conditional bars** in
+> Explain are `P(rung n | K=k)` = one Bessel-series term ÷ the Bessel sum — i.e.
+> "the Bessel function gives the conditional probabilities."
+
+### 🟢 code · 18:55 — Read the framework; building the app
+**Why:** Confirmed the exact wiring before writing, so the new app conforms on the
+first pass (no rework against the chrome contract).
+
+Read `BUILDING_AN_APP.md`, `workspace/types.ts`, `ControlPanel.tsx`,
+`readouts.tsx`, `archetypes.ts`, `apps.ts` / `index.tsx` / `catalog.ts`, the theme
+tokens, and **`StableMatching.tsx` in full** as the canonical DOM-app template
+(modes/layouts, `SectionDef`/`ViewDef`/`LayoutDef`/`ActionDef`, the `<Workspace>`
+assembly, action-strip projection). Plan:
+
+- **`skellam.ts`** — Poisson pmf (log-space), modified Bessel `I_k` (series, with a
+  per-term accessor for the live accumulation), the Skellam pmf as the **honest
+  diagonal sum** (cross-checked against the `e^{−(μ₁+μ₂)}·(μ₁/μ₂)^{k/2}·I_{|k|}`
+  form), the conditional-over-rungs law, a seeded Poisson sampler, and a
+  method-of-moments fit (`μ̂₁=(s²+m)/2`, `μ̂₂=(s²−m)/2` — the interpretable estimator).
+- **`CountingTheWays.tsx`** — top-bar **modes** *Explain · Sample · Fit* (app holds
+  `mode`; each builds its own sections/view/actions, `μ₁,μ₂` shared). Explain = the
+  joint lattice + swept k-diagonal + rung-by-rung accumulation landing on the Bessel
+  value + color-linked formula + conditional readout. Sample = Monte-Carlo
+  difference histogram converging to the Skellam curve. Fit = synthetic data →
+  recover μ̂ → overlay fitted Skellam.
+- `countingTheWays.css`, `EXPLAINER.md`, `README.md`; register in the five
+  append-only files (+ CLAUDE.md/README tree).
+
+### 🟣 decision · 18:40 — Design locked: "Counting the Ways," explainer + sampler + fit
+**Why:** Dan answered the three scoping questions; the app shape is fixed, so I can
+scaffold and build.
+
+- **Name / route:** *Counting the Ways* → `#/counting-the-ways`.
+- **Model:** stepwise-mutation framing — up-mutations (gains) `~ Poisson(μ₁)`,
+  down-mutations (losses) `~ Poisson(μ₂)`, net change `K = gains − losses` — with a
+  **toggle to a generic `X, Y`** labeling. One engine, two label sets.
+- **Scope (v1 = all three, layered):**
+  1. **Explainer** — the joint (gains, losses) lattice, the swept `k`-diagonal, the
+     rung-by-rung accumulating sum that lands on the Bessel value, and the
+     color-linked Skellam formula.
+  2. **Sampler** — Monte-Carlo draws of (gains, losses); the difference histogram
+     converges to the Skellam curve.
+  3. **Fit** — generate *synthetic* difference data (explicitly **not** Dan's real
+     data) from chosen μ's, recover `μ₁, μ₂` by MLE, overlay the fitted Skellam —
+     shows the fit working end to end.
+- Maps to workspace tiers: Explainer = Define/View; Sampler + Fit = Analyze/lab,
+  presented as layouts.
+
+### 🔵 finding · 18:30 — The real "why": demystify a scary fit, not teach a formula
+**Why:** Dan shared the motivation, which reframes the whole app from "explain a
+distribution" to "make a scary word feel understandable" — the design must serve
+the emotional goal.
+
+**Context (from Dan):** They have code modeling **microsatellites as the
+difference of two Poisson distributions**. Fitting it surfaces **Bessel functions**,
+and the unfamiliar words feel intimidating. The app's job: *visualize what is
+actually happening* so the Bessel function stops being scary and becomes
+understandable — so they trust what they're computing.
+
+**Design consequence:** Lead with the demystifying reveal, not the formula. The
+modified Bessel function `I_{|k|}` is literally **the running total of every way
+the two Poisson processes can produce the same net difference `k`** — i.e. the
+sum down one diagonal of the joint `(X, Y)` lattice. The hero interaction is
+*watch that sum accumulate, rung by rung, until it equals the Bessel value*, with
+the "scary formula" on screen, each piece color-linked to what it counts. The
+microsatellite vocabulary should be visible (it's *their* problem), with the
+abstract Poisson view alongside. This makes the lattice-diagonal picture (Open
+question 2) the confirmed hero — pending only the exact model framing + scope.
 
 ### 🟡 milestone · 18:20 — Session started; oriented for a new stats app
 **Why:** First session on a fresh branch with a brand-new topic; capture the

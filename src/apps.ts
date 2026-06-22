@@ -90,4 +90,10 @@ export const apps: AppDescriptor[] = [
     icon: '⬢',
     blurb: 'Walk inside a closed 3-manifold built from one glued cube — a room that repeats forever — and watch an orientation-reversing loop bring you back mirrored.',
   },
+  {
+    hash: '/counting-the-ways',
+    name: 'Counting the Ways',
+    icon: '◫',
+    blurb: 'Why does a Bessel function show up when you take the difference of two Poisson counts? Walk the diagonal of the (gains, losses) lattice and watch the scary function become a simple sum — the Skellam distribution, demystified.',
+  },
 ];
