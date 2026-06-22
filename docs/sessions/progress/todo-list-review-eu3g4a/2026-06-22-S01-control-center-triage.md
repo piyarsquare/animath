@@ -145,6 +145,17 @@ the generic `layoutCaptions` chrome feature.
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 13:50 — Attribution scope: Dan chose B (all priority apps); sub-agent drafting
+**Why:** B fully closes the policy gap and the guides already seed the sources, so
+it's bounded.
+
+Dispatched a background sub-agent to append a tailored "Possible sources & where to
+go further" block to **9 EXPLAINERs** (the original 10 minus the now-deleted Stable
+Marriage; legacy Fractals deferred — no EXPLAINER): ComplexParticles, PlaneTransform,
+Correspondence, TreesAndNets, AgenticSorting, FractalsGPU, StableMatching,
+TopologyWalk, TrinaryStars. Sourced from each app's `docs/apps/*.md` guide, no
+fabrication, drafts left for review before commit.
+
 ### 🟢 code · 13:40 — Closed #222; eliminated Stable Marriage; fixed the agentic-sorting Replicate docs
 **Why:** Dan: close #222, take the easy win, and retire Stable Marriage outright.
 
