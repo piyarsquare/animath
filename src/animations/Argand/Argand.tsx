@@ -3,7 +3,7 @@ import Workspace from '../../chrome/workspace/Workspace';
 import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { Slider, Pills, Select, Checkbox, ComplexInput } from '../../components/ControlPanel';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
-import { usePhone } from '../../chrome/usePhone';
+import './Argand.css';
 import explainerText from './EXPLAINER.md?raw';
 import ArgandPlane, {
   type Feed, type Handle, Z_COL, A1_COL, A0_COL, A2_COL, F_COL, FIX_COL,
@@ -89,9 +89,6 @@ export default function Argand() {
   const isPoint = feed === 'point';
   const isShape = feed === 'shape';
   const isGrid = feed === 'grid';
-  // On phone a floating dock overlays the bottom of the immersive view; lift the
-  // HUD above it (in fullscreen the dock is gone, so a small gap is harmless).
-  const phone = usePhone();
   const curve = useMemo(() => buildCurve(curveName), [curveName]);
 
   const quad = degree >= 2;
@@ -393,8 +390,8 @@ export default function Argand() {
   const hudRow: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' };
   const controlHud = (
     <div
+      className="argand-hud"
       style={{
-        position: 'absolute', left: '50%', bottom: phone ? 84 : 12, transform: 'translateX(-50%)', zIndex: 6,
         display: 'flex', flexDirection: 'column', gap: 7, width: 'min(94%, 540px)',
         padding: '9px 11px', borderRadius: 16,
         background: 'var(--panel, rgba(18,18,24,0.92))', border: '1px solid var(--border, #3a3a44)',
