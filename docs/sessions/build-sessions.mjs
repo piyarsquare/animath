@@ -42,6 +42,18 @@ function extractReflection(md) {
   return { md: body, html: marked.parse(body), level: lv ? lv[1].toUpperCase() : null };
 }
 
+// Count the open items in a guide's "### Active" registry (unchecked `- [ ]`
+// lines between that heading and the next ## / ### heading). Drives the App-map's
+// per-app open-item count alongside the session signals + backlog.
+function countActive(md) {
+  const m = /^###\s+Active\s*$/im.exec(md);
+  if (!m) return 0;
+  const rest = md.slice(m.index + m[0].length);
+  const next = rest.search(/^#{2,3}\s+/m);
+  const body = next === -1 ? rest : rest.slice(0, next);
+  return (body.match(/^[-*]\s+\[ \]/gm) || []).length;
+}
+
 const ROOT = dirname(fileURLToPath(import.meta.url));
 
 // Parse the hand-edited backlog (docs/sessions/TODO.md) into todo items. Format:
@@ -113,9 +125,19 @@ const isReport = (p) =>
   /^docs\/sessions\/(progress|handoff)\//.test(p) && /\.(html|md)$/.test(p) &&
   !/\/_/.test(p) && !/\/index\.html$/.test(p) && !/\.preview\.html$/.test(p);
 
+// A per-app guide: docs/apps/<slug>.md, excluding the meta files (README, the
+// style spec, the _template). The basename is the app slug.
+const isGuide = (p) =>
+  /^docs\/apps\/[^/]+\.md$/.test(p) && !/\/_/.test(p) && !/\/(README|GUIDE_STYLE)\.md$/.test(p);
+
+// Every origin branch tip (read-only): the hub reads reports AND app guides from
+// these without ever checking a branch out, deduping each to its newest copy.
+const BRANCHES = git(["for-each-ref", "--format=%(refname:short)", "refs/remotes/origin"])
+  .split("\n").map(s => s.trim()).filter(b => b && b !== "origin/HEAD");
+
 // 1 · dedupe each report path to its most-recently-updated copy across branches
 const byKey = new Map();   // "<slug>/<basename-no-ext>" -> {key, slug, base, winner:{ref,date,path}}
-for (const ref of git(["for-each-ref", "--format=%(refname:short)", "refs/remotes/origin"]).split("\n").map(s => s.trim()).filter(b => b && b !== "origin/HEAD")) {
+for (const ref of BRANCHES) {
   for (const path of git(["ls-tree", "-r", "--name-only", ref, "--", "docs/sessions"]).split("\n").map(s => s.trim()).filter(isReport)) {
     const date = git(["log", "-1", "--format=%cI", ref, "--", path]).trim();
     const parts = path.split("/");                         // docs/sessions/<kind>/<slug>/<file>
@@ -234,6 +256,43 @@ for (const s of sessions.values()) {
   s.signals = SIGNAL_KEYS.filter((k) => sig.has(k));
   s.inferred = s.signals.filter((k) => !explicit.has(k));   // for the build readout
   s.next = p.next || (s.reports.find(r => r.next) || {}).next || null;
+}
+
+// 3b · app guides (docs/apps/<slug>.md) — the per-app living developer guides.
+// Same read-only cross-branch dedupe as reports (newest copy wins), rendered to
+// converted/apps/<slug>/ and fed into the App-map view as each app's curated
+// status + open-items + guide link.
+const guideBySlug = new Map();
+for (const ref of BRANCHES) {
+  for (const path of git(["ls-tree", "-r", "--name-only", ref, "--", "docs/apps"]).split("\n").map(s => s.trim()).filter(isGuide)) {
+    const date = git(["log", "-1", "--format=%cI", ref, "--", path]).trim();
+    const slug = basename(path).replace(/\.md$/, "");
+    const rec = guideBySlug.get(slug) || { slug, winner: null };
+    if (!rec.winner || date > rec.winner.date) rec.winner = { ref, date, path };
+    guideBySlug.set(slug, rec);
+  }
+}
+const guides = {};
+for (const rec of guideBySlug.values()) {
+  const { ref, date, path } = rec.winner;
+  const md = git(["show", `${ref}:${path}`]);
+  const fm = {};
+  const fmBlock = md.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (fmBlock) for (const ln of fmBlock[1].split(/\r?\n/)) { const k = ln.match(/^(\w+):\s*(.*)$/); if (k) fm[k[1]] = k[2] === "null" ? null : k[2].replace(/^["']|["']$/g, ""); }
+  if (fm.kind && fm.kind !== "app-guide") continue;           // only guides
+  const slug = rec.slug;
+  const dir = join(OUT, "apps", slug);
+  mkdirSync(dir, { recursive: true });
+  const mdPath = join(dir, slug + ".md");
+  writeFileSync(mdPath, md);
+  execFileSync("node", [join(ROOT, "render-report.mjs"), mdPath], { stdio: "ignore" });
+  guides[slug] = {
+    slug, name: fm.name || slug, route: fm.route || "",
+    status: fm.status || "", build: fm.build || "",
+    updated: fm.updated || (date || "").slice(0, 10), next: fm.next || "",
+    active: countActive(md), onMain: existsOnMain(path),
+    href: `converted/apps/${slug}/${slug}.preview.html`,
+  };
 }
 
 const branchSet = new Set([...sessions.values()].map(s => s.short));
@@ -420,10 +479,12 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
   .cc-aplatest a:hover{color:var(--accent)}
   .cc-apnext{color:var(--muted)}
   .cc-apbacklog{font-size:.72rem;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:.02rem .45rem;white-space:nowrap}
+  .cc-apguide{margin-left:auto;font-size:.74rem;color:var(--accent);text-decoration:none;border:1px solid var(--accent-soft);border-radius:999px;padding:.02rem .55rem;white-space:nowrap}
+  .cc-apguide:hover{background:var(--accent-soft);text-decoration:none}
 </style></head>
 <body><main class="report"><header><p class="kicker"><a class="cc-home" href="../embed-demo.html" title="Seeing e^z — live embedded applets in a host article">↗ embed demo</a> · cross-branch session hub</p>
 <h1>Session control center</h1>
-<dl class="meta"><div><dt>Scope</dt><dd>${sessions.size} sessions · ${reports.length} reports · ${branchSet.size} branches · ${catSet.size} categories</dd></div>
+<dl class="meta"><div><dt>Scope</dt><dd>${sessions.size} sessions · ${reports.length} reports · ${Object.keys(guides).length} app guides · ${branchSet.size} branches · ${catSet.size} categories</dd></div>
 <div><dt>Generated</dt><dd>${new Date().toISOString().slice(0, 16).replace("T", " ")} · <code>build-sessions.mjs</code></dd></div></dl>
 <p class="lineage">Filter to a category with the buttons (or click any chip); group by app / branch / status / month, sort, or switch to a global timeline. The active filter lives in the URL (<code>#cat=…</code>), so it's shareable. Cards list every app a session touched. Provenance = slug folder.</p></header>
 <div class="body"><div class="content">
@@ -437,7 +498,7 @@ ${todoHtml}${startHere}<div class="cc-tools">
     <option value="date-desc">newest</option><option value="date-asc">oldest</option>
     <option value="app">app</option><option value="title">title</option>
   </select></label>
-  <span class="cc-seg"><button id="view-cards" class="active" type="button">Cards</button><button id="view-map" type="button" title="Per-app rollup: latest · risk · open · next">App map</button><button id="view-timeline" type="button">Timeline</button><button id="view-refl" type="button" title="Aggregated end-of-session self-reflections (exit interviews)">Reflections${reflCount ? ` (${reflCount})` : ""}</button></span>
+  <span class="cc-seg"><button id="view-cards" class="active" type="button">Cards</button><button id="view-map" type="button" title="Per-app rollup: guide · status · latest · risk · open · next">App map</button><button id="view-timeline" type="button">Timeline</button><button id="view-refl" type="button" title="Aggregated end-of-session self-reflections (exit interviews)">Reflections${reflCount ? ` (${reflCount})` : ""}</button></span>
 </div>
 <div class="cc-fbar" id="cc-fbar">${catBar}</div>
 <div id="cc-list">
@@ -447,6 +508,7 @@ ${cardsHtml}</div>
   var CAT = ${JSON.stringify(CAT_LABELS)};
   var HUE = ${JSON.stringify(Object.fromEntries(Object.entries(CATEGORIES).map(([k, v]) => [k, v.hue ?? 215])))};
   var SIG = ${JSON.stringify(SIGNALS)};
+  var GUIDES = ${JSON.stringify(guides)};
   var listEl = document.getElementById("cc-list");
   var ALL = Array.prototype.slice.call(listEl.querySelectorAll(".cc-session"));
   var q = document.getElementById("q"), gb = document.getElementById("groupby"), sb = document.getElementById("sortby");
@@ -462,6 +524,7 @@ ${cardsHtml}</div>
   function catChip(key, hue){ return '<a class="cat" style="--c:'+hue+'" href="#cat='+encodeURIComponent(key)+'">'+esc(CAT[key]||key)+'</a>'; }
   function sigChip(k){ var s = SIG[k]; return s ? '<span class="sig" style="--c:'+s.hue+'">'+esc(s.label)+'</span>' : ""; }
   function statusBadge(s){ var cls = s==="completed"?"badge-ok":s==="in-progress"?"badge-warn":"badge"; return '<span class="badge '+cls+'">'+esc(s)+'</span>'; }
+  function guideBadge(st){ if(!st) return ""; var cls = st==="active"?"badge-ok":st==="retiring"?"badge-warn":"badge"; return '<span class="badge '+cls+'">'+esc(st)+'</span>'; }
   function cmp(a, b){
     var k = sb.value, d = a.dataset, e = b.dataset;
     if (k === "date-asc") return d.date.localeCompare(e.date) || d.title.localeCompare(e.title);
@@ -552,33 +615,52 @@ ${cardsHtml}</div>
   }
   function renderAppMap(cards){
     // Per-app project map: roll the (filtered) sessions up by every app they touch,
-    // then show each app's latest activity, risk (worst follow-up), open items
-    // (session signals + backlog count), and next action. Sorted worst-risk first,
-    // then most-recently-active.
+    // then merge in each app's living guide (docs/apps/<slug>.md). Shows lifecycle
+    // status + guide link, latest session, risk (worst follow-up), open items
+    // (session signals + backlog + guide's Active count), and next action. Apps that
+    // have a guide but no sessions in the current selection still appear (guide-only).
+    // Sorted worst-risk first, then most-recently-active.
     var groups = {};
     cards.forEach(function(c){ (c.dataset.apps||"").split(" ").filter(Boolean).forEach(function(a){ (groups[a]=groups[a]||[]).push(c); }); });
+    // Merge in documented apps with no sessions in this selection, honoring the
+    // active category + search filter so the map stays consistent with the rest.
+    var cat = activeCat(), t = q.value.trim().toLowerCase();
+    Object.keys(GUIDES).forEach(function(slug){
+      if (groups[slug]) return;
+      if (cat && cat !== slug) return;
+      var g = GUIDES[slug];
+      if (t && (slug+" "+(g.name||"")+" guide").toLowerCase().indexOf(t) === -1) return;
+      groups[slug] = [];
+    });
     var apps = Object.keys(groups);
     if (!apps.length){ listEl.innerHTML = '<p class="cc-empty">No apps match.</p>'; return; }
     var todos = Array.prototype.slice.call(document.querySelectorAll(".cc-tli:not(.cc-done)"));
     function todoCount(app){ return todos.filter(function(li){ return (" "+(li.dataset.apps||"")+" ").indexOf(" "+app+" ")!==-1; }).length; }
     function latestDate(list){ return list.reduce(function(m,c){ return c.dataset.date>m?c.dataset.date:m; }, ""); }
+    function appDate(app,list){ var d=latestDate(list); var g=GUIDES[app]; return (g&&g.updated>d)?g.updated:d; }
     function risk(list){ var best="", br=9; list.forEach(function(c){ var r=REFL_RANK[c.dataset.level||""]; if(r<br){br=r;best=c.dataset.level||"";} }); return best; }
-    apps.sort(function(a,b){ return (REFL_RANK[risk(groups[a])||""]-REFL_RANK[risk(groups[b])||""]) || latestDate(groups[b]).localeCompare(latestDate(groups[a])); });
+    apps.sort(function(a,b){ return (REFL_RANK[risk(groups[a])||""]-REFL_RANK[risk(groups[b])||""]) || appDate(b,groups[b]).localeCompare(appDate(a,groups[a])); });
     var wrap = document.createElement("div"); wrap.className = "cc-appmap";
     apps.forEach(function(app){
       var list = groups[app].slice().sort(function(a,b){ return b.dataset.date.localeCompare(a.dataset.date); });
-      var latest = list[0], hue = HUE[app]!=null?HUE[app]:215;
+      var g = GUIDES[app], latest = list[0], hue = HUE[app]!=null?HUE[app]:215;
       var sset = {}; list.forEach(function(c){ (c.dataset.signals||"").split(" ").filter(Boolean).forEach(function(s){ sset[s]=1; }); });
       var sigs = Object.keys(sset).map(sigChip).join(" ");
       var tc = todoCount(app), rlv = risk(list);
-      var nx = latest.dataset.next || (list.filter(function(c){return c.dataset.next;})[0]||{dataset:{}}).dataset.next || "";
-      var open = []; if (sigs) open.push(sigs); if (tc) open.push('<span class="cc-apbacklog">'+tc+' backlog</span>');
+      var nx = (latest&&latest.dataset.next) || (list.filter(function(c){return c.dataset.next;})[0]||{dataset:{}}).dataset.next || (g&&g.next) || "";
+      var open = []; if (sigs) open.push(sigs);
+      if (tc) open.push('<span class="cc-apbacklog">'+tc+' backlog</span>');
+      if (g&&g.active) open.push('<span class="cc-apbacklog">'+g.active+' guide</span>');
+      var meta = list.length ? (list.length+(list.length>1?" sessions":" session")+' · '+esc(appDate(app,list).slice(0,10)))
+                             : (g ? 'guide · '+esc((g.updated||"").slice(0,10)) : '');
       var art = document.createElement("article"); art.className = "cc-appcard"; art.style.setProperty("--dot", hue);
       art.innerHTML =
         '<div class="cc-aphead">'+catChip(app,hue)
-          +'<span class="cc-apmeta">'+list.length+(list.length>1?" sessions":" session")+' · '+esc(latestDate(list).slice(0,10))+'</span>'
-          +((rlv==="HIGH"||rlv==="CRITICAL")?(' '+reflBadge(rlv)):'')+'</div>'
-        +'<div class="cc-aplatest"><span class="cc-aplabel">latest</span> <a href="'+esc(latest.dataset.href)+'">'+esc(latest.dataset.title)+'</a></div>'
+          +(g?(' '+guideBadge(g.status)):'')
+          +'<span class="cc-apmeta">'+meta+'</span>'
+          +((rlv==="HIGH"||rlv==="CRITICAL")?(' '+reflBadge(rlv)):'')
+          +(g?(' <a class="cc-apguide" href="'+esc(g.href)+'">guide ›</a>'):'')+'</div>'
+        +(latest?('<div class="cc-aplatest"><span class="cc-aplabel">latest</span> <a href="'+esc(latest.dataset.href)+'">'+esc(latest.dataset.title)+'</a></div>'):'')
         +(open.length?'<div class="cc-apopen"><span class="cc-aplabel">open</span> '+open.join(" ")+'</div>':'')
         +(nx?'<div class="cc-apnext"><span class="cc-aplabel">next</span> '+esc(nx)+'</div>':'');
       wrap.appendChild(art);
