@@ -68,28 +68,49 @@ since. Each is a one-question confirm → flip to `completed`:
 | 4 | **Complex Particles multi-function plan** (`three-hats-particle-app`) | Sub-agent investigated `claude/sleepy-bardeen-uk0cal` / PR #222 (below). That branch is **complementary to**, not an implementation of, the multi-function plan. |
 | 5 | **Explainer-page series** (`complex-particles-guide`) | Genuinely needs review — **medium signal, not a brief decision.** Left flagged as a future review. |
 
-### Bucket C — "in flight" branches (the talk-through)
+### Bucket C — "in flight" branches (RESOLVED 2026-06-22)
 
-What's actually open, and whether each is live work or really done-but-unmarked:
+- **Argand** — app **live** (`#/argand`); plan `executed`. Future work (an explainer +
+  basic tools for complex/dual/split-complex numbers) parked to a TODO; Dan: it
+  "needs time to get played" first.
+- **Solid Worlds cluster** — the cube-based app is **shipped/complete** (8 of 10
+  platycosms). Flipped the four lingering reports to `completed`/`executed`
+  (`solid-worlds-review-bju3pc`, `3d-manifold-worlds-imwmal`,
+  `animath-space-worlds-hm7wui`, the `polygon-world-app-review` Solid Worlds plan).
+  **The last 2 platycosms need a *hexagonal-prism* fundamental solid** (a separate
+  build, not the cube engine) → logged as a new `[solid-worlds] !med` TODO.
+  Conway–Rossetti's *Describing the Platycosms* now saved at
+  `docs/papers/describing-the-platycosms.pdf` (also closes the −a2 verification
+  caveat — the arXiv PDF was 403-blocked when −a2 was confirmed).
+- **`claude/sleepy-bardeen-uk0cal` / PR #222** — Dan: **bring it in.** Done:
+  re-homed onto **`claude/complex-particles-postures`**, merged `main` (only
+  `TODO.md` conflicted → union-resolved; CLAUDE.md/README.md auto-merged; no source
+  conflicts), build/lint/test green (60/60), and opened **PR #230** (supersedes #222,
+  which is left open for Dan to close).
 
-- **Argand** (`complex-numbers-animath-intro`, `phone-needed`) — app is **live**
-  (`#/argand`); plan now `executed`. Only loose end: mobile verification.
-- **Solid Worlds cluster** — three in-progress branches that each *resumed* the same
-  app, which is now **live** (`#/solid-worlds`, 8 platycosms per CLAUDE.md):
-  - `solid-worlds-review-bju3pc` (06-19) — homology rework; superseded by →
-  - `3d-manifold-worlds-imwmal` (06-20) — finished the screw fix + −a2; naming parked.
-  - `animath-space-worlds-hm7wui` (06-20) — "resume / orient on a fresh branch."
-  - `solid-worlds-decor-refactor` (06-21, **completed**) — Rooms decor, the latest.
-  Likely all done-but-unmarked — a Bucket-A-style confirm-and-flip, pending Dan.
-- **`claude/sleepy-bardeen-uk0cal`** (PR #222, **open, not merged**) — a real,
-  not-in-main Complex Particles UX improvement; see finding below. A bring-it-in call.
+### Bucket D — the `TODO.md` backlog (filled out)
 
-### Bucket D — the `TODO.md` backlog (the durable list)
+16 open items after this session (added the hexagon-worlds + Argand-explainer items;
+moved plane-unification to `general`/`!low`). Dispositions:
 
-14 open items (2 `!high`, ~7 `!med`, ~5 `!low`). Several are quick doc reconciles
-(e.g. agentic-sorting EXPLAINER still names a removed Replicate panel; the missing
-"Possible sources" blocks = item #1). Hand-curated; separate from the status/signal
-cleanup above. To talk through with Dan.
+| Item | Cat · Prio | Disposition |
+|---|---|---|
+| Productionize the signals/to-do system (teach agents to author it) | docs · **high** | Keep — meta-infrastructure that keeps this dashboard rich. |
+| Argand: make the scrubber pay its way (or drop it) | complex-particles · med | Revisit during Argand play. |
+| Make the App-map richer (chip-open, link backlog, trends) | chrome · med | Polish backlog; base App-map already ships. |
+| Slim per-app prose blocks in CLAUDE.md to pointers | docs · med | Own pass (append-only CLAUDE.md). |
+| agentic-sorting EXPLAINER/README names a removed Replicate panel | agentic-sorting · med | **Quick user-facing fix** — good easy win. |
+| Real-device mobile pass on the guide pages | docs · med | Keep. |
+| Add last 2 platycosms (hexagonal-prism solid) | solid-worlds · med | **NEW** — separate hex-prism build; paper saved. |
+| Argand explainer + tools (complex / dual / split-complex) | complex-particles · med | **NEW** — after Argand "gets played." |
+| Add "Possible sources" attribution blocks | docs · low | **Scoped** (item #1): 11 apps, options A/B/C. Decision pending. |
+| Consistency edit over the 10 app guides | docs · low | Keep; pairs with the slim-CLAUDE.md pass. |
+| Split the rendering guide 2+2 | complex-particles · low | Keep. |
+| Revisit `not-live` precision after squash-merge | engine · low | Keep — confirm on next real merge. |
+| Rooms ceiling duct world-specific | solid-worlds · low | Keep (decor polish). |
+| Punch engine floor plane through at the trapdoor | solid-worlds · low | Keep (decor polish). |
+| Decide Stable Marriage's final fate | chrome · low | Keep — a delete-or-keep decision. |
+| Plane / particles unification | general · low | **Recategorized + demoted** (Dan: not pressing; resolves via Argand play). |
 
 ## Sub-agent findings
 
@@ -123,6 +144,21 @@ the generic `layoutCaptions` chrome feature.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟢 code · 13:05 — Bucket C resolved + Bucket D filled out; paper saved; PR sub-agent dispatched
+**Why:** Dan's calls on C/D + the platycosm-solid fact let me close the Solid Worlds
+cluster and act on the remaining decisions.
+
+(1) Saved Conway–Rossetti *Describing the Platycosms* →
+`docs/papers/describing-the-platycosms.pdf` (closes the −a2 arXiv-403 caveat).
+(2) The last 2 platycosms need a **hexagonal-prism** solid → the cube app is
+complete; flipped the four lingering Solid Worlds reports to `completed`/`executed`
+and logged a new `[solid-worlds] !med` TODO for the hex worlds. (3) Dispatched a
+background sub-agent to re-home `sleepy-bardeen` → `claude/complex-particles-postures`,
+merge main, and open a fresh PR (supersedes #222). (4) Recategorized the
+plane-unification TODO to `general`/`!low` (Dan: resolves via Argand play); added an
+Argand-explainer TODO with the dual=Galilean / split=Minkowski naming note; filled
+out the Bucket D table.
 
 ### 🔵 finding · 12:40 — Sub-agents returned: attribution gap scoped; PR #222 is live, valuable, not-in-main
 **Why:** Items #1 and #4 each needed investigation beyond a glance.

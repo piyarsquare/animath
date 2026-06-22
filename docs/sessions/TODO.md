@@ -25,11 +25,14 @@ informs future rounds. Delete or check off items as they land.
 
 # Backlog · animath
 
-- [ ] [complex-particles] !high Plane / particles unification — one "which plane am I looking at" convention across the viewers and their guides.
+- [ ] [general] !low Plane / particles unification — one "which plane am I looking at" convention across the viewers and their guides.
   Surfaced while splitting the complex guides: we show the bare x,y plane with a
   linear Complex Particles plot, but Plane Transform also shows "a plane." Decide a
   single mental model (and which viewer owns which job) so the guides stop being
   ambiguous. Affects functions guide §1 and the Plane Transform guide.
+  Dan 2026-06-22: not a pressing issue — likely resolves on its own as we play
+  through the complex/dual/split-complex variants in Argand. Recategorized to
+  general (not particular to any single app) and demoted from !high.
 
 - [ ] [docs] !high Productionize the signals/to-do system — teach agents to author it.
   Update REPORT_STYLE.md, the progress/handoff templates, and the handoff +
@@ -66,6 +69,13 @@ informs future rounds. Delete or check off items as they land.
   correspondence — and trees-and-nets) have no "Possible sources & where to go
   further" block, contrary to the attribution policy. The guides name real
   analogues to seed these without fabricating citations.
+  Scoped 2026-06-22: only 3 apps are complete (Argand, PolygonWorlds, SolidWorlds);
+  **11 EXPLAINERs lack the block** — the 4 above + AgenticSorting, FractalsGPU,
+  StableMarriage, StableMatching, TopologyWalk, TrinaryStars, and legacy Fractals
+  (no EXPLAINER at all). Every missing app has a `docs/apps/*.md` guide whose named
+  sources seed the block, so it's copy-down-and-tighten, not fresh research (~2–3 h
+  for 10 priority apps). Options: A = the 4 already listed (~45 min) · B = all 10 ·
+  C = A now, B as a follow-up docs pass.
 
 - [ ] [docs] !low Consistency editing pass over the 10 agent-written app guides.
   Written by four parallel agents grouped by family (PR #229); depth and voice vary
@@ -108,6 +118,24 @@ informs future rounds. Delete or check off items as they land.
   `#/fractals-cpu`). If it's truly dead, follow up by deleting the folder, the route
   in `index.tsx`, the `apps.ts` entry, and the now-unused `marriage` `PreviewKind`.
 
+- [ ] [solid-worlds] !med Add the last two platycosms (the two needing a hexagonal-prism fundamental solid).
+  The cube-based catalog is complete at 8 of the 10 platycosms; the remaining two
+  require a *different* fundamental solid — a **hexagonal prism**, not a cube — so they
+  are a separate build (a new gluing-presenter for the hex prism), not another entry
+  in the existing cube engine. Reference saved locally: Conway–Rossetti, "Describing
+  the Platycosms" → `docs/papers/describing-the-platycosms.pdf`.
+
+- [ ] [complex-particles] !med Argand: an explainer + tools for complex / dual / split-complex numbers.
+  The app already runs the affine line through all three systems via the System
+  slider p=j² (Complex p<0 · Dual p=0 · Split-complex p>0). Add an explainer that
+  teaches what each space *does* — how multiplication acts (rotation / shear / boost),
+  how polynomials behave — plus basic tools for thinking it through. Argand needs time
+  to "get played" first. Naming note: "Argand plane" properly names only the complex
+  case (p=−1); the dual plane is the **Galilean plane** (Yaglom; parabolic numbers)
+  and the split-complex plane is the **Minkowski / pseudo-Euclidean plane** (a.k.a.
+  Lorentzian; hyperbolic/perplex numbers). A neutral umbrella for the morphing object
+  is the "generalized complex plane."
+
 - [x] [engine] Solid Worlds — fix the cell-engine screw bug to graduate the 2 experimental worlds.
   DONE 2026-06-20 (branch `claude/3d-manifold-worlds-imwmal`). Was two distinct
   bugs: (A) the boundary gluing reduced a screwed face's straddling image to the
@@ -125,11 +153,11 @@ informs future rounds. Delete or check off items as they land.
   B₃/B₄) are uniquely fixed by their homology — H₁(B₃)=ℤ⊕(ℤ/2)² and H₁(B₄)=ℤ⊕ℤ/4
   in the literature — so −a2 (= second amphidicosm = B₄) = ℤ⊕ℤ/4 is the genuine
   name↔invariant pairing, not just elimination. Our app computes exactly these two
-  values via *both* Γᵃᵇ and the (now dual-verified) cell complex. Caveat: the
-  primary PDFs (arXiv math/0311476 Table 6, nLab) were unreachable this session
-  (network 403); confirmation rests on search summaries quoting the literature's
-  homology values + the two in-app computations agreeing with them. Still open: the
-  app-naming question ("Solid Worlds" vs *Manifold Walk*) — a product call for Dan.
+  values via *both* Γᵃᵇ and the (now dual-verified) cell complex. Caveat (now
+  resolvable): the primary PDF (arXiv math/0311476 Table 6) was unreachable that
+  session (network 403); it is now saved locally at
+  `docs/papers/describing-the-platycosms.pdf`, so the Table-6 read can be confirmed
+  directly. Naming question closed 2026-06-22 — Dan: leave "Solid Worlds" as-is.
 
 - [x] [chrome] App-map view in the control center — per-app rollup (latest · risk · open · next).
 

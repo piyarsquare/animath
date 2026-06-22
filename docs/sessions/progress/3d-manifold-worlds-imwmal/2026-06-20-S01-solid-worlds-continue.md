@@ -5,7 +5,7 @@ date: 2026-06-20
 title: Solid Worlds — resume (graduate screw worlds / confirm −a2 naming)
 branch: claude/3d-manifold-worlds-imwmal
 slug: 3d-manifold-worlds-imwmal
-status: in-progress
+status: completed
 build: passing
 followup: null
 pr: null

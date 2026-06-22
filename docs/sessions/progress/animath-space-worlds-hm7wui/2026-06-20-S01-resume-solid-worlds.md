@@ -5,7 +5,7 @@ date: 2026-06-20
 title: Resume Solid Worlds (space worlds) — orient on a fresh branch
 branch: claude/animath-space-worlds-hm7wui
 slug: animath-space-worlds-hm7wui
-status: in-progress
+status: completed
 build: passing
 followup: null
 pr: null
