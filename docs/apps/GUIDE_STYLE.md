@@ -28,7 +28,7 @@ Every guide opens with a YAML frontmatter block. Keep values **flat**
 ---
 kind: app-guide            # always app-guide (app-guide-style for this spec)
 app: solid-worlds          # route slug — matches src/apps.ts + categories.mjs (provenance)
-route: /solid-worlds       # hash route
+route: "#/solid-worlds"    # hash route — MUST be quoted (a bare # starts a YAML comment)
 name: Solid Worlds         # display name, from src/apps.ts
 title: Solid Worlds — developer guide   # the H1
 status: active             # active | stable | retiring | unlisted
@@ -44,7 +44,7 @@ next: null                 # optional — one-line most-useful next action
 |---|:--:|---|
 | `kind` | ✓ | always `app-guide` |
 | `app` | ✓ | the route slug (hash without `/`); **must** match `src/apps.ts` and `categories.mjs` — this is provenance and the join key for any future indexing |
-| `route` | ✓ | the hash route (`/slug`) |
+| `route` | ✓ | the hash route, e.g. `"#/solid-worlds"`. **Quote it** — a bare `#` starts a YAML comment, so `route: #/x` parses as an empty/`null` value and any tooling reading `route` loses the hash |
 | `name` / `title` | ✓ | `name` from `src/apps.ts`; `title` is the H1 (`Name — developer guide`) |
 | `status` | ✓ | app lifecycle — see §3a |
 | `build` | ✓ | `passed` / `failed` / `unknown` (latest known on the working branch) |

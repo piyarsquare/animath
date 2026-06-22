@@ -57,6 +57,18 @@ duct world-specific (!low), and punch the engine floor plane through at the trap
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🔵 finding · 12:50 — PR note: quote the `#` route in YAML frontmatter
+**Why:** Reviewer flagged that a bare `#` in `route:` starts a YAML comment, so any
+tooling reading `route` would parse it as null/empty.
+
+The format-upgrade commit had already dropped the `#` (`route: /solid-worlds`),
+which sidestepped the comment bug but made the value unfaithful to the real hash
+route and inconsistent with the body/README (`#/solid-worlds`). Fixed properly:
+**quote the real hash route** — `route: "#/solid-worlds"` — in both pilots, the
+template, and the `GUIDE_STYLE.md` schema, plus an explicit "quote it" note in the
+spec (schema comment + field-table row). Verified both pilots parse `route` with
+the hash intact. PR #229 updates on push.
+
 ### 🟢 code · 12:30 — Upgraded the doc type to the session YAML+Markdown conventions
 **Why:** Dan asked to use the session files' format and add organized structure +
 build/update rules.

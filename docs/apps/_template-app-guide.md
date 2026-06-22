@@ -1,7 +1,7 @@
 ---
 kind: app-guide
 app: [slug — route hash without "/", matching src/apps.ts + categories.mjs]
-route: [/slug]
+route: "[#/slug]"          # quote it — a bare # starts a YAML comment
 name: [Display Name]
 title: [Display Name] — developer guide
 status: [active | stable | retiring | unlisted]

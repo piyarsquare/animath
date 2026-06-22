@@ -1,7 +1,7 @@
 ---
 kind: app-guide
 app: fractals
-route: /fractals
+route: "#/fractals"
 name: Fractals
 title: Fractals — developer guide
 status: active

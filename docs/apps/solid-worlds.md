@@ -1,7 +1,7 @@
 ---
 kind: app-guide
 app: solid-worlds
-route: /solid-worlds
+route: "#/solid-worlds"
 name: Solid Worlds
 title: Solid Worlds — developer guide
 status: active
