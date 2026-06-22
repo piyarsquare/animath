@@ -47,11 +47,14 @@ informs future rounds. Delete or check off items as they land.
   de-emphasize the slider and foreground the always-on arc. Revisit alongside the
   plane-morph chapter, where a changing readout makes scrubbing genuinely useful.
 
-- [ ] [chrome] !med Make the App-map richer — open it from a chip, link "N backlog" to the filtered To-do, maybe roll trends over time.
-  The base App-map view now ships (per-app latest · risk · open · next, sorted
-  worst-risk-first), and as of 2026-06-22 it also consumes the per-app guides
-  (`docs/apps/*.md`): each card shows the guide's lifecycle status, a `guide ›`
-  link, and its Active-registry count. These are the remaining polish follow-ups.
+- [ ] [chrome] !med Make the App-map richer — open it from a chip, maybe roll trends over time.
+  The base App-map view ships (per-app latest · risk · open · next, sorted
+  worst-risk-first) and consumes the per-app guides (`docs/apps/*.md`: lifecycle
+  status, `guide ›` link, Active-registry count). 2026-06-22: added a **registry
+  self-audit** — the build now reads `src/apps.ts` and reconciles registry ↔ guides,
+  flagging drift on each card (⚠ no guide / ⚠ retired) with a top "registry drift"
+  callout; and the "N backlog" count now links to the filtered To-do (`#cat=`).
+  Remaining polish: open the map from an app chip, and trend lines over time.
 
 - [ ] [docs] !med Slim the per-app prose blocks in CLAUDE.md to pointers.
   Every app now has a living guide under `docs/apps/<slug>.md` (PR #229). The long

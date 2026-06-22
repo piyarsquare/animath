@@ -295,6 +295,26 @@ for (const rec of guideBySlug.values()) {
   };
 }
 
+// 3c · the live app registry (src/apps.ts on main) — the source of truth for which
+// apps actually ship. Reconciling it against the guides lets the App-map flag drift:
+// a registered app with no guide (Argand), or a guide for an app no longer in the
+// registry (Stable Marriage, retired). Meta categories (chrome/docs/engine/general)
+// have neither a registry entry nor a guide, so they are never flagged.
+const registry = {};
+if (MAIN_REF) {
+  let appsSrc = "";
+  try { appsSrc = git(["show", `${MAIN_REF}:src/apps.ts`]); } catch { appsSrc = ""; }
+  const reApp = /hash:\s*'\/([a-z0-9-]+)'[\s\S]*?name:\s*'([^']+)'/g;
+  let m; while ((m = reApp.exec(appsSrc))) registry[m[1]] = m[2];
+}
+const drift = [];
+for (const slug of new Set([...Object.keys(registry), ...Object.keys(guides)])) {
+  if (registry[slug] && !guides[slug]) drift.push({ slug, name: registry[slug], kind: "no-guide" });
+  else if (!registry[slug] && guides[slug]) drift.push({ slug, name: guides[slug].name || slug, kind: "retired" });
+}
+drift.sort((a, b) => a.slug.localeCompare(b.slug));
+console.log(`registry: ${Object.keys(registry).length} apps · drift: ${drift.length ? drift.map(d => `${d.slug}(${d.kind})`).join(", ") : "none"}`);
+
 const branchSet = new Set([...sessions.values()].map(s => s.short));
 const catSet = new Set([].concat(...[...sessions.values()].map(s => s.apps)));
 const sessionList = [...sessions.values()].sort((a, b) => byRecency(a.date, b.date));
@@ -481,6 +501,14 @@ writeFileSync(join(ROOT, "control-center.html"), `<!DOCTYPE html>
   .cc-apbacklog{font-size:.72rem;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:.02rem .45rem;white-space:nowrap}
   .cc-apguide{margin-left:auto;font-size:.74rem;color:var(--accent);text-decoration:none;border:1px solid var(--accent-soft);border-radius:999px;padding:.02rem .55rem;white-space:nowrap}
   .cc-apguide:hover{background:var(--accent-soft);text-decoration:none}
+  .cc-apdrift{font-size:.7rem;border-radius:999px;padding:.02rem .45rem;white-space:nowrap;font-weight:600}
+  .cc-apdrift-no-guide{color:hsl(38 92% 42%);background:hsl(38 92% 50% / .14);border:1px solid hsl(38 92% 50% / .4)}
+  .cc-apdrift-retired{color:hsl(0 72% 55%);background:hsl(0 72% 55% / .12);border:1px solid hsl(0 72% 55% / .4)}
+  a.cc-apbacklog{text-decoration:none}
+  a.cc-apbacklog:hover{filter:brightness(1.1);text-decoration:underline}
+  .cc-driftcallout{margin-top:1rem;border:1px solid hsl(38 92% 50% / .4);border-left:3px solid hsl(38 92% 50%);background:hsl(38 92% 50% / .08);border-radius:8px;padding:.5rem .7rem;font-size:.84rem;line-height:1.5}
+  .cc-driftcallout strong{color:hsl(38 92% 42%);margin-right:.4rem}
+  .cc-driftitem{display:inline-block}
 </style></head>
 <body><main class="report"><header><p class="kicker"><a class="cc-home" href="../embed-demo.html" title="Seeing e^z — live embedded applets in a host article">↗ embed demo</a> · cross-branch session hub</p>
 <h1>Session control center</h1>
@@ -509,6 +537,8 @@ ${cardsHtml}</div>
   var HUE = ${JSON.stringify(Object.fromEntries(Object.entries(CATEGORIES).map(([k, v]) => [k, v.hue ?? 215])))};
   var SIG = ${JSON.stringify(SIGNALS)};
   var GUIDES = ${JSON.stringify(guides)};
+  var REGISTRY = ${JSON.stringify(registry)};
+  var DRIFT = ${JSON.stringify(drift)};
   var listEl = document.getElementById("cc-list");
   var ALL = Array.prototype.slice.call(listEl.querySelectorAll(".cc-session"));
   var q = document.getElementById("q"), gb = document.getElementById("groupby"), sb = document.getElementById("sortby");
@@ -632,6 +662,14 @@ ${cardsHtml}</div>
       if (t && (slug+" "+(g.name||"")+" guide").toLowerCase().indexOf(t) === -1) return;
       groups[slug] = [];
     });
+    // …and every registered app (src/apps.ts), so a shipped-but-undocumented app
+    // (registered, no guide) still shows up — that's the drift we want visible.
+    Object.keys(REGISTRY).forEach(function(slug){
+      if (groups[slug]) return;
+      if (cat && cat !== slug) return;
+      if (t && (slug+" "+REGISTRY[slug]+" app").toLowerCase().indexOf(t) === -1) return;
+      groups[slug] = [];
+    });
     var apps = Object.keys(groups);
     if (!apps.length){ listEl.innerHTML = '<p class="cc-empty">No apps match.</p>'; return; }
     var todos = Array.prototype.slice.call(document.querySelectorAll(".cc-tli:not(.cc-done)"));
@@ -640,16 +678,29 @@ ${cardsHtml}</div>
     function appDate(app,list){ var d=latestDate(list); var g=GUIDES[app]; return (g&&g.updated>d)?g.updated:d; }
     function risk(list){ var best="", br=9; list.forEach(function(c){ var r=REFL_RANK[c.dataset.level||""]; if(r<br){br=r;best=c.dataset.level||"";} }); return best; }
     apps.sort(function(a,b){ return (REFL_RANK[risk(groups[a])||""]-REFL_RANK[risk(groups[b])||""]) || appDate(b,groups[b]).localeCompare(appDate(a,groups[a])); });
+    // Drift callout (honoring the active category filter) — the self-audit banner.
+    var dr = DRIFT.filter(function(d){ return !cat || cat === d.slug; });
+    if (dr.length){
+      var cal = document.createElement("div"); cal.className = "cc-driftcallout";
+      cal.innerHTML = '<strong>⚠ registry drift</strong>' + dr.map(function(d){
+        return ' <span class="cc-driftitem"><b>'+esc(d.name)+'</b> — '+(d.kind==="no-guide"?"registered, no guide":"guide, not in registry (retired?)")+'</span>';
+      }).join(" · ");
+      listEl.appendChild(cal);
+    }
     var wrap = document.createElement("div"); wrap.className = "cc-appmap";
     apps.forEach(function(app){
       var list = groups[app].slice().sort(function(a,b){ return b.dataset.date.localeCompare(a.dataset.date); });
       var g = GUIDES[app], latest = list[0], hue = HUE[app]!=null?HUE[app]:215;
+      // registry ↔ guide reconciliation: registered+guide = healthy; registered, no
+      // guide = "no-guide"; guide but not registered = "retired"; neither = a meta
+      // category (chrome/docs/…), left unflagged.
+      var reg = REGISTRY[app], regdrift = reg ? (g ? "" : "no-guide") : (g ? "retired" : "");
       var sset = {}; list.forEach(function(c){ (c.dataset.signals||"").split(" ").filter(Boolean).forEach(function(s){ sset[s]=1; }); });
       var sigs = Object.keys(sset).map(sigChip).join(" ");
       var tc = todoCount(app), rlv = risk(list);
       var nx = (latest&&latest.dataset.next) || (list.filter(function(c){return c.dataset.next;})[0]||{dataset:{}}).dataset.next || (g&&g.next) || "";
       var open = []; if (sigs) open.push(sigs);
-      if (tc) open.push('<span class="cc-apbacklog">'+tc+' backlog</span>');
+      if (tc) open.push('<a class="cc-apbacklog" href="#cat='+encodeURIComponent(app)+'">'+tc+' backlog</a>');
       if (g&&g.active) open.push('<span class="cc-apbacklog">'+g.active+' guide</span>');
       var meta = list.length ? (list.length+(list.length>1?" sessions":" session")+' · '+esc(appDate(app,list).slice(0,10)))
                              : (g ? 'guide · '+esc((g.updated||"").slice(0,10)) : '');
@@ -657,6 +708,7 @@ ${cardsHtml}</div>
       art.innerHTML =
         '<div class="cc-aphead">'+catChip(app,hue)
           +(g?(' '+guideBadge(g.status)):'')
+          +(regdrift?(' <span class="cc-apdrift cc-apdrift-'+regdrift+'">'+(regdrift==="no-guide"?"⚠ no guide":"⚠ retired")+'</span>'):'')
           +'<span class="cc-apmeta">'+meta+'</span>'
           +((rlv==="HIGH"||rlv==="CRITICAL")?(' '+reflBadge(rlv)):'')
           +(g?(' <a class="cc-apguide" href="'+esc(g.href)+'">guide ›</a>'):'')+'</div>'

@@ -144,6 +144,20 @@ the generic `layoutCaptions` chrome feature.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 15:10 — Made the App-map self-auditing (registry ↔ guides) + fixed the guide drift
+**Why:** Dan asked how to make the control center more useful / better connect the
+pieces. The App-map grouped sessions + guides but never read the registry, so it
+couldn't notice a retired app keeping its guide or a shipped app with no guide.
+
+`build-sessions.mjs` now parses `src/apps.ts` (from main) into a registry and
+reconciles it against the guides: each App-map card gets a drift badge (⚠ no guide /
+⚠ retired), a top "registry drift" callout summarizes mismatches, and the "N backlog"
+count links to the filtered To-do (`#cat=`). Proven live — the build logs
+`drift: argand(no-guide)` (the deployed site has Argand registered with no guide).
+Fixed today's drift: wrote `docs/apps/argand.md` (sub-agent, `status: active`,
+mirrors the other guides) and removed the retired `docs/apps/stable-marriage.md`.
+This is the check that would have caught both automatically.
+
 ### 🔴 blocker · 14:35 — Dead-branch review: 6 lingering branches found; remote deletion blocked (403)
 **Why:** Dan asked whether superseded/dead branches need cleanup.
 
