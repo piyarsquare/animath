@@ -76,9 +76,9 @@ interface LatticeProps {
   showMarginals: boolean; lab: Labels; onPickK: (k: number) => void;
   /** Tutorial reveal: only margins index < marginsShown, cells with x+y ≤ cellThreshold,
    *  and the diagonal highlight when diagActive. All Infinity/true ⇒ the full picture. */
-  marginsShown?: number; cellThreshold?: number; diagActive?: boolean;
+  marginsShown?: number; cellThreshold?: number; diagActive?: boolean; diagBeyond?: boolean;
 }
-function Lattice({ mu1, mu2, k, N, accN, showMarginals, lab, onPickK, marginsShown = INF, cellThreshold = INF, diagActive = true }: LatticeProps) {
+function Lattice({ mu1, mu2, k, N, accN, showMarginals, lab, onPickK, marginsShown = INF, cellThreshold = INF, diagActive = true, diagBeyond = false }: LatticeProps) {
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const pX = useMemo(() => poissonRange(mu1, N), [mu1, N]);
   const pY = useMemo(() => poissonRange(mu2, N), [mu2, N]);
@@ -146,6 +146,17 @@ function Lattice({ mu1, mu2, k, N, accN, showMarginals, lab, onPickK, marginsSho
             x2={gx(Math.max(0, k) + N - Math.abs(k)) + cs / 2} y2={gy(Math.max(0, -k) + N - Math.abs(k)) + cs / 2}
           />
         )}
+        {diagActive && diagBeyond && (() => {
+          const ex = gx(Math.max(0, k) + N - Math.abs(k)) + cs / 2;
+          const ey = gy(Math.max(0, -k) + N - Math.abs(k)) + cs / 2;
+          const tx = ex + cs * 0.85, ty = ey + cs * 0.85;
+          return (
+            <g className="ctw-diagmore" pointerEvents="none">
+              <line x1={ex} y1={ey} x2={tx} y2={ty} strokeDasharray="2 2" />
+              <polygon points={`${tx},${ty} ${tx - 7.6},${ty - 2.4} ${tx - 2.4},${ty - 7.6}`} />
+            </g>
+          );
+        })()}
         {hoverInfo && (
           <g className="ctw-hovermark" pointerEvents="none">
             <rect x={gx(hoverInfo.x)} y={gy(hoverInfo.y)} width={cs} height={cs} />
@@ -155,7 +166,7 @@ function Lattice({ mu1, mu2, k, N, accN, showMarginals, lab, onPickK, marginsSho
       <div className="ctw-lattice-cap">
         {hoverInfo
           ? <>cell ({hoverInfo.x} {lab.xShort}, {hoverInfo.y} {lab.yShort}) · difference {hoverInfo.x - hoverInfo.y} · P = {fmt(hoverInfo.jp, 4)} <span className="dim">— click to follow that diagonal</span></>
-          : <>each cell ({lab.xShort}, {lab.yShort}) is shaded by P(X={lab.xShort})·P(Y={lab.yShort}); the highlighted diagonal holds every way to net <strong>{k >= 0 ? `+${k}` : k}</strong>. Click any cell to pick its diagonal.</>}
+          : <>each cell ({lab.xShort}, {lab.yShort}) is shaded by P(X={lab.xShort})·P(Y={lab.yShort}); the highlighted diagonal holds every way to net <strong>{k >= 0 ? `+${k}` : k}</strong>{diagBeyond ? ' — and runs past the grid edge →' : ''}. Click any cell to pick its diagonal.</>}
       </div>
     </div>
   );
@@ -303,7 +314,9 @@ export default function CountingTheWays() {
   const lab = labelsFor(framing);
   const N = useMemo(() => gridSize(mu1, mu2, k, gridCap), [mu1, mu2, k, gridCap]);
   const kClamped = clamp(k, -N, N);
-  const rungCount = useMemo(() => Math.max(1, Math.min(significantRungs(mu1, mu2, kClamped), N - Math.abs(kClamped) + 1)), [mu1, mu2, kClamped, N]);
+  // count ALL the rungs that carry the mass — the diagonal is infinite and may
+  // run past the visible grid; the walk must sum the real tail, not just what fits.
+  const rungCount = useMemo(() => Math.max(1, significantRungs(mu1, mu2, kClamped)), [mu1, mu2, kClamped]);
   const fullPmf = useMemo(() => skellamPmf(mu1, mu2, kClamped), [mu1, mu2, kClamped]);
 
   /* ── Explain: the staged tutorial that builds the whole matrix on Play ──
@@ -317,8 +330,8 @@ export default function CountingTheWays() {
   const stripSpan = Math.min(N, 14);
   const strip = useMemo(() => skellamRange(mu1, mu2, -stripSpan, stripSpan), [mu1, mu2, stripSpan]);
   const rungCountOf = useCallback(
-    (kk: number) => Math.max(1, Math.min(significantRungs(mu1, mu2, kk), N - Math.abs(kk) + 1)),
-    [mu1, mu2, N],
+    (kk: number) => Math.max(1, significantRungs(mu1, mu2, kk)),
+    [mu1, mu2],
   );
 
   const Nm = N + 1;                        // reveal each Poisson margin
@@ -368,6 +381,8 @@ export default function CountingTheWays() {
     return s;
   }, [mu1, mu2, activeK, accN]);
   const cond = useMemo(() => conditionalRungs(mu1, mu2, activeK), [mu1, mu2, activeK]);
+  // does the active diagonal carry mass past the visible grid edge?
+  const diagBeyond = rungCountOf(activeK) > N - Math.abs(activeK) + 1;
 
   // each Skellam bar's displayed value as the distribution builds bottom-to-top
   const barValue = useCallback((idx: number) => {
@@ -501,7 +516,7 @@ export default function CountingTheWays() {
           </p>
         : <div className="ctw-tutorial"><span className="ctw-step">Step {tut.step} / 3</span><span className="ctw-tut-text">{narration}</span></div>}
       <Lattice mu1={mu1} mu2={mu2} k={activeK} N={N} accN={accN} showMarginals={showMarginals} lab={lab}
-        marginsShown={tut.marginsShown} cellThreshold={tut.cellThreshold} diagActive={tut.diagActive}
+        marginsShown={tut.marginsShown} cellThreshold={tut.cellThreshold} diagActive={tut.diagActive} diagBeyond={diagBeyond}
         onPickK={v => setK(clamp(v, -N, N))} />
       <FormulaBand mu1={mu1} mu2={mu2} k={activeK} partialBessel={partialBessel} partialSum={partialSum} />
       <div className="ctw-dists">
