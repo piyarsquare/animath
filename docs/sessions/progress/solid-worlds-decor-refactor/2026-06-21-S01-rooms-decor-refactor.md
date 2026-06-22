@@ -5,13 +5,13 @@ date: 2026-06-21
 title: Per-app developer/agent guides — a living architectural doc per app (PIVOTED from decor refactor)
 branch: claude/solid-worlds-decor-refactor-16tusv
 slug: solid-worlds-decor-refactor
-status: in-progress
-build: unknown
+status: completed
+build: passed
 followup: null
-pr: null
+pr: https://github.com/piyarsquare/animath/pull/229
 app: docs
-signals: null
-next: Phase 1 — inventory what durable, structural per-app information already exists (and where the gaps are) before designing the guide template.
+signals: not-live
+next: Merge PR #229 to main (then the App-map drops the not-live flag on all 12 guides).
 ---
 
 # Per-app developer/agent guides — a living architectural doc per app

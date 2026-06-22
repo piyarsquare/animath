@@ -38,7 +38,32 @@ informs future rounds. Delete or check off items as they land.
 
 - [ ] [chrome] !med Make the App-map richer — open it from a chip, link "N backlog" to the filtered To-do, maybe roll trends over time.
   The base App-map view now ships (per-app latest · risk · open · next, sorted
-  worst-risk-first); these are the polish follow-ups.
+  worst-risk-first), and as of 2026-06-22 it also consumes the per-app guides
+  (`docs/apps/*.md`): each card shows the guide's lifecycle status, a `guide ›`
+  link, and its Active-registry count. These are the remaining polish follow-ups.
+
+- [ ] [docs] !med Slim the per-app prose blocks in CLAUDE.md to pointers.
+  Every app now has a living guide under `docs/apps/<slug>.md` (PR #229). The long
+  paragraphs in CLAUDE.md's Repository Layout can shrink to a one-line "see
+  docs/apps/<slug>.md" so there's a single architecture home. Touches the shared
+  append-only CLAUDE.md — do it as its own pass to avoid parallel-branch conflicts.
+
+- [ ] [agentic-sorting] !med EXPLAINER/README still describe the removed Replicate panel.
+  Surfaced while writing `docs/apps/agentic-sorting.md`: the in-app help text
+  documents a Replicate control that the legibility-pass handoff says was removed.
+  User-facing and wrong today — reconcile the docs with the shipped UI.
+
+- [ ] [docs] !low Add the "Possible sources" attribution block to the EXPLAINERs that lack it.
+  Several EXPLAINERs (the complex family — complex-particles/plane-transform/
+  correspondence — and trees-and-nets) have no "Possible sources & where to go
+  further" block, contrary to the attribution policy. The guides name real
+  analogues to seed these without fabricating citations.
+
+- [ ] [docs] !low Consistency editing pass over the 10 agent-written app guides.
+  Written by four parallel agents grouped by family (PR #229); depth and voice vary
+  slightly between families. A light copy-edit would even them out. Optionally add a
+  snapshot/assert test for the new `build-sessions.mjs` guide path (today it's
+  verified by running, not asserted).
 
 - [ ] [complex-particles] !low Split the rendering guide 2+2 for consistency.
   It is the only guide page still at 4 live applets (Points/Sheet/Tiles/Net).
