@@ -1,0 +1,20 @@
+/* Bottom control HUD positioning. Lives in CSS so the fullscreen ancestor class
+   (.am-ws-full, applied by the chrome on both desktop and phone) can override
+   the phone dock-clearance gap and sit the controls flush at the bottom. */
+.argand-hud {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 6;
+}
+
+/* Phone: a floating dock overlays the bottom of the immersive view — lift the
+   HUD above it (matches the chrome's 76px dock clearance). */
+@media (max-width: 740px) {
+  .argand-hud { bottom: 84px; }
+}
+
+/* Fullscreen: the dock is gone, so drop the HUD flush to the bottom again.
+   Two-class selector outranks the single-class media rule above. */
+.am-ws-full .argand-hud { bottom: 12px; }

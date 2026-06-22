@@ -19,6 +19,12 @@ export const apps: AppDescriptor[] = [
     blurb: 'Visualize z → f(z) as a cloud of particles living in 4D, projected down to 3D.',
   },
   {
+    hash: '/argand',
+    name: 'Argand Plane',
+    icon: '∡',
+    blurb: 'Build the complex line f(z) = α₁·z + α₀ (and quadratics): drag the coefficients, feed it a point, a shape or the whole grid, and watch multiply spiral while add slides — through complex, dual and split-complex numbers.',
+  },
+  {
     hash: '/fractals',
     name: 'Fractals',
     icon: '◯',

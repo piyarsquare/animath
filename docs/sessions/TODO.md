@@ -36,6 +36,14 @@ informs future rounds. Delete or check off items as they land.
   start-session skills so every session declares `signals:`/`next:` and consults +
   appends this backlog. Without that, the dashboard only stays rich by inference.
 
+- [ ] [complex-particles] !med Argand: make the scrubber pay its way (or drop it) — the *arc* is the payload, not the slider.
+  Dan on Phase 1: the position-scrubber adds little on its own; the static parametric
+  path (spiral / parallelogram) is what teaches. A bare `t`-slider only earns its place
+  when coupled to a **live changing equation/readout** (scrub → `a·bᵗ`'s value, modulus
+  and angle update so you watch the algebra move). Either wire that live readout, or
+  de-emphasize the slider and foreground the always-on arc. Revisit alongside the
+  plane-morph chapter, where a changing readout makes scrubbing genuinely useful.
+
 - [ ] [chrome] !med Make the App-map richer — open it from a chip, link "N backlog" to the filtered To-do, maybe roll trends over time.
   The base App-map view now ships (per-app latest · risk · open · next, sorted
   worst-risk-first); these are the polish follow-ups.
