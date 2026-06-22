@@ -79,15 +79,15 @@ See [`GUIDE_STYLE.md`](GUIDE_STYLE.md) §5 for the full rules. In short:
 
 | App | Route | Guide |
 |---|---|---|
-| Solid Worlds | `#/solid-worlds` | [`solid-worlds.md`](solid-worlds.md) ✅ pilot |
-| Fractals | `#/fractals` | [`fractals.md`](fractals.md) ✅ pilot |
-| Complex Particles | `#/complex-particles` | _pending_ |
-| Plane Transform | `#/plane-transform` | _pending_ |
-| Mandelbrot ↔ Julia | `#/correspondence` | _pending_ |
-| Trinary System | `#/trinary` | _pending_ |
-| Stable Marriage | `#/stable-marriage` | _pending_ |
-| Agentic Sorting | `#/agentic-sorting` | _pending_ |
-| Stable Matching | `#/stable-matching` | _pending_ |
-| Polygon Worlds | `#/polygon-worlds` | _pending_ |
-| Trees and Nets | `#/trees-and-nets` | _pending_ |
-| Topology Walk | `#/topology-walk` | _pending_ (retiring) |
+| Solid Worlds | `#/solid-worlds` | [`solid-worlds.md`](solid-worlds.md) |
+| Fractals | `#/fractals` | [`fractals.md`](fractals.md) |
+| Complex Particles | `#/complex-particles` | [`complex-particles.md`](complex-particles.md) |
+| Plane Transform | `#/plane-transform` | [`plane-transform.md`](plane-transform.md) |
+| Mandelbrot ↔ Julia | `#/correspondence` | [`correspondence.md`](correspondence.md) |
+| Trinary System | `#/trinary` | [`trinary.md`](trinary.md) |
+| Stable Marriage | `#/stable-marriage` | [`stable-marriage.md`](stable-marriage.md) |
+| Agentic Sorting | `#/agentic-sorting` | [`agentic-sorting.md`](agentic-sorting.md) |
+| Stable Matching | `#/stable-matching` | [`stable-matching.md`](stable-matching.md) |
+| Polygon Worlds | `#/polygon-worlds` | [`polygon-worlds.md`](polygon-worlds.md) |
+| Trees and Nets | `#/trees-and-nets` | [`trees-and-nets.md`](trees-and-nets.md) |
+| Topology Walk | `#/topology-walk` | [`topology-walk.md`](topology-walk.md) (retiring) |

@@ -57,6 +57,26 @@ duct world-specific (!low), and punch the engine floor plane through at the trap
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟡 milestone · 13:40 — All 12 app guides written + control center consumes them
+**Why:** Dan: "deploy parallel agents to complete all the apps; update the session
+manager to consume them."
+
+- **Four parallel background agents** (grouped by family) wrote the 10 remaining
+  guides: complex-particles/plane-transform/correspondence · stable-marriage/
+  stable-matching/agentic-sorting · polygon-worlds/topology-walk/trees-and-nets ·
+  trinary. All 12 guides now pass a frontmatter lint (kind=app-guide, quoted route
+  matching slug, app=slug, required fields). README index flipped to links.
+- **build-sessions.mjs now consumes `docs/apps/*.md`** the same read-only
+  cross-branch way it reads reports: dedupe newest per slug (`isGuide`, hoisted
+  `BRANCHES`), render each via `render-report.mjs` to `converted/apps/<slug>/`, and
+  feed a `GUIDES` registry into the **App map** view — each app card gains its
+  lifecycle status badge, a `guide ›` link, and its Active-registry count in the
+  open-items line. Apps with a guide but no sessions now appear (guide-only),
+  honoring the category + search filter. Scope counter shows "N app guides".
+- Agents flagged real doc-lag/gaps honestly (Agentic Sorting EXPLAINER still
+  mentions a removed Replicate panel; Trees and Nets is ~half-built; several
+  EXPLAINERs lack the "Possible sources" block).
+
 ### 🔵 finding · 12:50 — PR note: quote the `#` route in YAML frontmatter
 **Why:** Reviewer flagged that a bare `#` in `route:` starts a YAML comment, so any
 tooling reading `route` would parse it as null/empty.
