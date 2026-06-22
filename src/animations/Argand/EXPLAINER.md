@@ -59,6 +59,25 @@ that, with a `z²` term, makes the Mandelbrot set.
   motion, over the faint **identity** grid it came from. (When `f` later becomes
   *non-linear*, those lines will bend — the runway to quadratics and beyond.)
 
+## Quadratics (Degree → 2)
+
+Switch **Degree** to **Quadratic** and a third coefficient appears:
+**`f(z) = α₂·z² + α₁·z + α₀`**. Now the map is *non-linear*, and three things change:
+
+- **The grid bends.** Straight lines map to curves (the Grid feed shows it best) — the
+  moment a "line" becomes a genuine deformation of the plane.
+- **Two fixed points.** `f(z) = z` is now quadratic, so there are **two** gold `z*`'s
+  (or a repeated one), plus a **critical point** `z = −α₁/2α₂` (the slate ⊕) where the
+  map folds two inputs onto one.
+- **The Point feed shows Horner's method** as a chain of *scaled effects*: start at the
+  leading coefficient `α₂`, then repeat **×z** (a spiral, modulated by `p`) and **+ the
+  next coefficient** (a slide): `α₂ → α₂z → α₂z+α₁ → (…)·z → f(z)`. Multiplication *is*
+  the scaled effect; addition is the shift; the polynomial is just the sequence of them.
+
+Iterating a quadratic (the **Iterate** toggle) is genuine non-linear dynamics — the orbit
+can converge, cycle, or escape. That is exactly the engine behind the Mandelbrot/Julia
+fractals.
+
 ## Three number systems (top bar)
 
 Slide **`p = j²`** in the **top bar** (or tap **Complex / Dual / Split**) from **Complex**

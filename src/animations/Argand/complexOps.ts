@@ -146,6 +146,87 @@ export const affineLoopAt = (z: Cx, a1: Cx, a0: Cx, p: number, phi: number): Cx 
 };
 
 /* ----------------------------------------------------------------- *
+ *  Polynomials f(z) = Σ αₖ·zᵏ — the affine map is just degree 1.     *
+ *  Coefficients are low-to-high: c = [α₀, α₁, α₂, …].                *
+ * ----------------------------------------------------------------- */
+
+/** Evaluate the polynomial by Horner's method (every product carries system p). */
+export const polyEval = (c: Cx[], z: Cx, p: number): Cx => {
+  let acc = c[c.length - 1];
+  for (let kk = c.length - 2; kk >= 0; kk--) acc = add(mulG(acc, z, p), c[kk]);
+  return acc;
+};
+
+/** A square root in system p (principal branch in the complex case). */
+export const sqrtG = (w: Cx, p: number): Cx => powRealG(w, p, 0.5);
+
+/**
+ * The fixed points f(z*) = z*. Degree 1 → one point α₀/(1−α₁); degree 2 → the
+ * two roots of α₂z² + (α₁−1)z + α₀ = 0 via the (system-p) quadratic formula.
+ */
+export const polyFixedPoints = (c: Cx[], p: number): Cx[] => {
+  const one: Cx = { re: 1, im: 0 };
+  if (c.length >= 3 && modulus(c[2]) > 1e-9) {
+    const A = c[2], B = sub(c[1], one), C = c[0];
+    const disc = sub(mulG(B, B, p), scale(mulG(A, C, p), 4));
+    const sq = sqrtG(disc, p), twoA = scale(A, 2), negB = scale(B, -1);
+    return [divG(sub(negB, sq), twoA, p), divG(add(negB, sq), twoA, p)];
+  }
+  const z = fixedPoint(c[1] ?? one, c[0] ?? one, p);
+  return z ? [z] : [];
+};
+
+/** The critical point f′(z)=0 of a quadratic: z = −α₁/(2α₂) (the fold). */
+export const criticalPoint = (c: Cx[], p: number): Cx | null => {
+  if (c.length < 3 || modulus(c[2]) < 1e-9) return null;
+  return divG(scale(c[1], -1), scale(c[2], 2), p);
+};
+
+/**
+ * Horner evaluation as an animated chain of "scaled effects modulated by p":
+ * start at the leading coefficient, then repeatedly **×z** (a spiral) and **+
+ * next coefficient** (a slide). φ∈[0,1] runs the whole 2·deg-leg chain; the
+ * even legs are the multiplies, the odd legs the adds. Degree 1 is the familiar
+ * α₁ → α₁z → f(z).
+ */
+export const hornerAt = (c: Cx[], z: Cx, p: number, phi: number): Cx => {
+  const n = c.length - 1;
+  if (n <= 0) return c[0];
+  const legs = 2 * n;
+  const f = Math.min(1, Math.max(0, phi)) * legs;
+  const leg = Math.min(legs - 1, Math.floor(f));
+  const s = f - leg;
+  let acc = c[n];
+  for (let li = 0; li < leg; li++) {
+    if (li % 2 === 0) acc = mulG(acc, z, p);
+    else acc = add(acc, c[n - 1 - ((li - 1) >> 1)]);
+  }
+  if (leg % 2 === 0) return mulG(acc, powRealG(z, p, s), p);   // spiral acc → acc·z
+  return add(acc, scale(c[n - 1 - ((leg - 1) >> 1)], s));      // slide +coeff
+};
+
+/** The integer waypoints of the Horner chain (start, each ×z, each +coeff). */
+export const hornerWaypoints = (c: Cx[], z: Cx, p: number): Cx[] => {
+  const n = c.length - 1;
+  const pts: Cx[] = [c[n]];
+  let acc = c[n];
+  for (let li = 0; li < 2 * n; li++) {
+    if (li % 2 === 0) acc = mulG(acc, z, p);
+    else acc = add(acc, c[n - 1 - ((li - 1) >> 1)]);
+    pts.push(acc);
+  }
+  return pts;
+};
+
+/**
+ * Degree-ramp homotopy: scale the leading coefficient by s∈[0,1], morphing the
+ * lower-degree image (s=0) into the full one (s=1). Used to watch the α₂ term
+ * *bend* a shape or the grid into curves.
+ */
+export const polyRampAt = (c: Cx[], z: Cx, p: number, s: number): Cx =>
+  polyEval([...c.slice(0, -1), scale(c[c.length - 1], s)], z, p);
+
+/* ----------------------------------------------------------------- *
  *  Arc-length pacing — so the pen moves at constant *geometric*      *
  *  speed instead of constant param speed.                           *
  * ----------------------------------------------------------------- */

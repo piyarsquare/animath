@@ -6,12 +6,13 @@ import { usePersistentState, clearPersistedState } from '../../lib/usePersistent
 import { usePhone } from '../../chrome/usePhone';
 import explainerText from './EXPLAINER.md?raw';
 import ArgandPlane, {
-  type Feed, type Handle, Z_COL, A1_COL, A0_COL, F_COL, FIX_COL,
+  type Feed, type Handle, Z_COL, A1_COL, A0_COL, A2_COL, F_COL, FIX_COL,
 } from './ArgandPlane';
 import { buildCurve, CURVES, type CurveName } from './curves';
 import {
   type Cx, type ArcLengthMap, cx, modulus, add, sub, scale,
-  mulG, powRealG, affine, affineLoopAt, fixedPoint, arcLengthMap, formatRect, formatPolar,
+  mulG, powRealG, affineLoopAt, arcLengthMap, formatRect, formatPolar,
+  polyEval, polyFixedPoints, hornerAt, polyRampAt,
 } from './complexOps';
 
 const STORAGE_KEY = 'argand';
@@ -37,6 +38,9 @@ export default function Argand() {
   const [z, setZ] = usePersistentState<Cx>(`${STORAGE_KEY}:z`, cx(1.5, 1));
   const [alpha1, setA1] = usePersistentState<Cx>(`${STORAGE_KEY}:a1`, cx(0.4, 0.8));
   const [alpha0, setA0] = usePersistentState<Cx>(`${STORAGE_KEY}:a0`, cx(1, 0));
+  const [alpha2, setA2] = usePersistentState<Cx>(`${STORAGE_KEY}:a2`, cx(0.3, -0.2));
+  const [degree, setDegree] = usePersistentState(`${STORAGE_KEY}:deg`, 1);
+  const [lockA2, setLockA2] = usePersistentState(`${STORAGE_KEY}:lockA2`, false);
   const [feed, setFeed] = usePersistentState<Feed>(`${STORAGE_KEY}:feed`, 'point');
   const [curveName, setCurveName] = usePersistentState<CurveName>(`${STORAGE_KEY}:curve`, 'flag');
   const [lockA1, setLockA1] = usePersistentState(`${STORAGE_KEY}:lockA1`, false);
@@ -87,8 +91,11 @@ export default function Argand() {
   const phone = usePhone();
   const curve = useMemo(() => buildCurve(curveName), [curveName]);
 
-  const fz = affine(z, alpha1, alpha0, system);
-  const zStar = fixedPoint(alpha1, alpha0, system);
+  const quad = degree >= 2;
+  const coeffs = useMemo(() => (quad ? [alpha0, alpha1, alpha2] : [alpha0, alpha1]), [quad, alpha0, alpha1, alpha2]);
+  const fz = polyEval(coeffs, z, system);
+  const zStars = polyFixedPoints(coeffs, system);
+  const zStar = zStars[0] ?? null;
 
   // Pace Play by the arc length of the representative input's *whole loop* (out
   // by the two legs, back along the diagonal), so the pen moves at constant
@@ -108,8 +115,14 @@ export default function Argand() {
     } else if (isGrid) {
       q = cx(extent, extent);
     }
+    // Quadratic: Point traces the Horner chain; Shape/Grid morph the α₂ term in
+    // and out (triangle), so both are paced by their own path.
+    if (quad) {
+      if (isPoint) return arcLengthMap(s => hornerAt(coeffs, z, system, s), 160);
+      return arcLengthMap(s => polyRampAt(coeffs, q, system, s < 0.5 ? s * 2 : 2 - 2 * s), 160);
+    }
     return arcLengthMap(s => affineLoopAt(q, alpha1, alpha0, system, s), 144);
-  }, [iterate, isPoint, iterN, zStar, isShape, isGrid, curve, z, alpha1, alpha0, system, extent]);
+  }, [iterate, isPoint, iterN, zStar, isShape, isGrid, curve, z, alpha1, alpha0, system, extent, quad, coeffs]);
 
   const lutRef = useRef(lut);
   lutRef.current = lut;
@@ -144,14 +157,17 @@ export default function Argand() {
 
   const goToStop = (st: number) => { setPlaying(false); setT(st); };
 
-  // Three universal stops on the outgoing arc — the affine decomposition,
-  // labeled per feed. (Play continues past f(z) back along the diagonal.)
+  // Stops mark the meaningful waypoints, labeled per feed and degree.
   const stopLabels = isPoint
     ? ['z', 'α₁z', 'f(z)']
     : isShape
       ? ['Shape', 'Spun', 'Image']
       : ['Identity', 'Linear', 'Affine'];
-  const stops = [{ label: stopLabels[0], t: 0 }, { label: stopLabels[1], t: 0.25 }, { label: stopLabels[2], t: 0.5 }];
+  const stops = quad
+    ? (isPoint
+        ? [{ label: 'α₂', t: 0 }, { label: 'mid', t: 0.5 }, { label: 'f(z)', t: 1 }]
+        : [{ label: 'Linear', t: 0 }, { label: 'Quad', t: 0.5 }, { label: 'Linear', t: 1 }])
+    : [{ label: stopLabels[0], t: 0 }, { label: stopLabels[1], t: 0.25 }, { label: stopLabels[2], t: 0.5 }];
   const atStop = (st: number): boolean => Math.abs(t - st) < 0.02;
 
   const subtitle = `f(z) = ${formatRect(fz)}   ·   ${systemName(system)}`;
@@ -160,6 +176,7 @@ export default function Argand() {
   const Eqn = (
     <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 15, fontWeight: 700, marginTop: 2 }}>
       <span style={{ color: F_COL }}>f(z)</span> ={' '}
+      {quad && <><span style={{ color: A2_COL }}>α₂</span>·<span style={{ color: Z_COL }}>z²</span> + </>}
       <span style={{ color: A1_COL }}>α₁</span>·<span style={{ color: Z_COL }}>z</span> +{' '}
       <span style={{ color: A0_COL }}>α₀</span>
     </div>
@@ -169,7 +186,19 @@ export default function Argand() {
 
   const functionNode = (
     <>
+      <Pills<number>
+        label="Degree"
+        options={[{ value: 1, label: 'Linear' }, { value: 2, label: 'Quadratic' }]}
+        value={degree}
+        onChange={setDegree}
+      />
       {Eqn}
+      {quad && (
+        <div style={{ marginTop: 8 }}>
+          <ComplexInput label="α₂  (quadratic term)" value={[alpha2.re, alpha2.im]} onChange={([re, im]) => setA2(cx(re, im))} />
+          <Checkbox label="Lock α₂" checked={lockA2} onChange={setLockA2} />
+        </div>
+      )}
       <div style={{ marginTop: 8 }}>
         <ComplexInput label="α₁  (slope · spin & scale)" value={[alpha1.re, alpha1.im]} onChange={([re, im]) => setA1(cx(re, im))} />
         <Checkbox label="Lock α₁" checked={lockA1} onChange={setLockA1} />
@@ -179,7 +208,9 @@ export default function Argand() {
         <Checkbox label="Lock α₀" checked={lockA0} onChange={setLockA0} />
       </div>
       <div style={{ marginTop: 8, fontSize: 12, fontFamily: 'var(--font-mono, monospace)', color: FIX_COL }}>
-        fixed z* = {zStar ? formatRect(zStar) : '— (pure shift)'}
+        {zStars.length === 0
+          ? 'fixed z* = — (pure shift)'
+          : zStars.map((zs, i) => <div key={i}>fixed z*{zStars.length > 1 ? i + 1 : ''} = {formatRect(zs)}</div>)}
       </div>
       <Checkbox label="View from z* (recenter)" checked={viewFromFixed} onChange={setViewFromFixed} />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 6 }}>
@@ -326,6 +357,7 @@ export default function Argand() {
   const onHandleChange = (which: Handle, q: Cx) => {
     if (which === 'z') setZ(q);
     else if (which === 'alpha1') setA1(q);
+    else if (which === 'alpha2') setA2(q);
     else setA0(q);
   };
 
@@ -402,9 +434,9 @@ export default function Argand() {
       node: (
         <div style={{ position: 'absolute', inset: 0 }}>
           <ArgandPlane
-            z={z} alpha1={alpha1} alpha0={alpha0} p={system}
+            z={z} alpha1={alpha1} alpha0={alpha0} alpha2={alpha2} degree={degree} p={system}
             feed={feed} curve={curve} t={t} playing={playing}
-            lockA1={lockA1} lockA0={lockA0}
+            lockA1={lockA1} lockA0={lockA0} lockA2={lockA2}
             snapping={snapping} gridOpacity={gridOpacity} imageOpacity={imageOpacity} showUnitCircle={showUnitCircle}
             viewFromFixed={viewFromFixed} iterate={iterate} iterN={iterN}
             extent={extent}

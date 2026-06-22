@@ -1,27 +1,33 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  type Cx, cx, add, sub, scale,
-  mulG, powRealG, affine, affineAt, affineSimulAt, affineLoopAt, fixedPoint, snap,
+  type Cx, cx, add, sub, scale, modulus,
+  mulG, powRealG, affineAt, affineSimulAt, affineLoopAt,
+  polyEval, polyFixedPoints, criticalPoint, hornerAt, hornerWaypoints, polyRampAt, snap,
 } from './complexOps';
 
 export type Feed = 'point' | 'shape' | 'grid';
-export type Handle = 'z' | 'alpha1' | 'alpha0';
+export type Handle = 'z' | 'alpha1' | 'alpha0' | 'alpha2';
 
 /** Shared palette — handles and the equation readout use the same colors. */
 export const Z_COL = '#38bdf8';   // z  — input (cyan)
 export const A1_COL = '#fb923c';  // α₁ — slope / multiplier (orange)
 export const A0_COL = '#c084fc';  // α₀ — shift / intercept (violet)
+export const A2_COL = '#f472b6';  // α₂ — quadratic term (pink)
 export const F_COL = '#34d399';   // f(z) — output (emerald)
 export const FIX_COL = '#fbbf24'; // z* — fixed point (gold)
+export const CRIT_COL = '#94a3b8'; // critical point (slate)
 
 const MARGIN = 0.9;        // keep the extent inside the frame
 
 interface Props {
   /** The input locus: the point (Point), the shape's anchor (Shape), a probe (Grid). */
   z: Cx;
-  /** Coefficients of f(z) = α₁·z + α₀. */
+  /** Coefficients of f(z) = α₂·z² + α₁·z + α₀. */
   alpha1: Cx;
   alpha0: Cx;
+  alpha2: Cx;
+  /** Polynomial degree (1 = affine line, 2 = quadratic). */
+  degree: number;
   /** Number-system parameter j² = p: p<0 complex, p=0 dual, p>0 split-complex. */
   p: number;
   /** What we feed f. */
@@ -34,6 +40,7 @@ interface Props {
   /** Locked coefficients can't be dragged. */
   lockA1: boolean;
   lockA0: boolean;
+  lockA2: boolean;
   snapping: boolean;
   /** Ghost identity grid opacity (0 hides it). */
   gridOpacity: number;
@@ -71,8 +78,10 @@ function useSize(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function ArgandPlane({
-  z, alpha1, alpha0, p, feed, curve, t, playing, lockA1, lockA0, snapping, gridOpacity, imageOpacity, showUnitCircle, viewFromFixed, iterate, iterN, extent, onChange, onZoom,
+  z, alpha1, alpha0, alpha2, degree, p, feed, curve, t, playing, lockA1, lockA0, lockA2, snapping, gridOpacity, imageOpacity, showUnitCircle, viewFromFixed, iterate, iterN, extent, onChange, onZoom,
 }: Props) {
+  const quad = degree >= 2;
+  const coeffs: Cx[] = quad ? [alpha0, alpha1, alpha2] : [alpha0, alpha1];
   const isPoint = feed === 'point';
   const isShape = feed === 'shape';
   const isGrid = feed === 'grid';
@@ -92,10 +101,11 @@ export default function ArgandPlane({
   const gesture = useRef<{ dist: number; mx: number; my: number } | null>(null);
   const panning = useRef<{ x: number; y: number } | null>(null);
 
-  // The fixed point f(z*) = z*. "View from z*" recenters the plane on it, so the
-  // map becomes a pure spiral-similarity about the middle of the screen.
-  const zStar = fixedPoint(alpha1, alpha0, p);
-  const ctr = viewFromFixed && zStar ? zStar : center;
+  // The fixed points f(z*) = z* (one for a line, two for a quadratic). "View
+  // from z*" recenters on the first so the map reads as a pure spiral.
+  const zStars = polyFixedPoints(coeffs, p);
+  const zCrit = criticalPoint(coeffs, p);
+  const ctr = viewFromFixed && zStars[0] ? zStars[0] : center;
 
   // Equal x/y scale (circles stay circles) from the SHORTER side, so `extent`
   // units fit there and the longer side simply shows more — the plot fills the
@@ -113,7 +123,7 @@ export default function ArgandPlane({
   };
 
   const panByClient = (dxpx: number, dypx: number) => {
-    if (viewFromFixed && zStar) return;            // view is locked to z*
+    if (viewFromFixed && zStars[0]) return;        // view is locked to z*
     const r = svgRef.current?.getBoundingClientRect();
     const sx = w / (r?.width || 1), sy = h / (r?.height || 1);
     setCenter(c => cx(c.re - (dxpx * sx) / k, c.im + (dypx * sy) / k));
@@ -130,7 +140,7 @@ export default function ArgandPlane({
   };
 
   const locked = (which: Handle): boolean =>
-    (which === 'alpha1' && lockA1) || (which === 'alpha0' && lockA0);
+    (which === 'alpha1' && lockA1) || (which === 'alpha0' && lockA0) || (which === 'alpha2' && lockA2);
 
   const onHandleDown = (which: Handle) => (e: React.PointerEvent) => {
     if (locked(which)) return;                      // a locked coefficient won't grab
@@ -186,7 +196,7 @@ export default function ArgandPlane({
 
   /* ---- the affine map applied to the current feed ---- */
 
-  const fOf = (q: Cx): Cx => affine(q, alpha1, alpha0, p);
+  const fOf = (q: Cx): Cx => polyEval(coeffs, q, p);
   // The two-leg path of one input point, split so each leg gets its color.
   const legPath = (q: Cx, leg: 0 | 1): string => {
     const lo = leg === 0 ? 0 : 0.5, hi = leg === 0 ? 0.5 : 1;
@@ -220,8 +230,16 @@ export default function ArgandPlane({
   const vpoly = (pts: Cx[]): string =>
     pts.map((q, i) => { const [vx, vy] = toV(q); return `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`; }).join(' ');
 
-  // Shape feed: the base shape anchored at z, and its image under f.
+  // Shape feed: the base shape anchored at z, and its image under f. A quadratic
+  // bends straight edges, so we densify the polyline before mapping it.
   const placed = curve.map(pt => add(pt, z));
+  const shapePts = quad
+    ? placed.flatMap((q, i) => {
+        if (i === placed.length - 1) return [q];
+        const r = placed[i + 1];
+        return Array.from({ length: 6 }, (_, j) => add(scale(q, 1 - j / 6), scale(r, j / 6)));
+      })
+    : placed;
 
   // Visible half-spans in math units (the rectangle can show more than `extent`
   // along its longer side).
@@ -242,33 +260,63 @@ export default function ArgandPlane({
   for (let i = -GN; i <= GN; i++) gridIdx.push(i);
   const gridEnds = (i: number, horizontal: boolean): [Cx, Cx] =>
     horizontal ? [cx(-GN, i), cx(GN, i)] : [cx(i, -GN), cx(i, GN)];
+  // Map a grid line through an arbitrary per-point map. A quadratic bends lines,
+  // so we sample; the affine map keeps them straight (two endpoints suffice).
+  const sampleLine = (i: number, horizontal: boolean, mapFn: (q: Cx) => Cx): string => {
+    const [p0, p1] = gridEnds(i, horizontal);
+    const n = quad ? 24 : 1;
+    const pts: string[] = [];
+    for (let j = 0; j <= n; j++) {
+      const q = add(scale(p0, 1 - j / n), scale(p1, j / n));
+      const [vx, vy] = toV(mapFn(q));
+      pts.push(`${j === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`);
+    }
+    return pts.join(' ');
+  };
   // the full image grid f(grid) — always shown (the complete story)
-  const gridLineImage = (i: number, horizontal: boolean): string => {
-    const [p0, p1] = gridEnds(i, horizontal);
-    const [x1, y1] = toV(fOf(p0)); const [x2, y2] = toV(fOf(p1));
-    return `M ${x1.toFixed(1)} ${y1.toFixed(1)} L ${x2.toFixed(1)} ${y2.toFixed(1)}`;
-  };
-  // the live grid travelling the loop — only while in motion
-  const gridLineLoop = (i: number, horizontal: boolean, phi: number): string => {
-    const [p0, p1] = gridEnds(i, horizontal);
-    const [x1, y1] = toV(affineLoopAt(p0, alpha1, alpha0, p, phi));
-    const [x2, y2] = toV(affineLoopAt(p1, alpha1, alpha0, p, phi));
-    return `M ${x1.toFixed(1)} ${y1.toFixed(1)} L ${x2.toFixed(1)} ${y2.toFixed(1)}`;
-  };
+  const gridLineImage = (i: number, horizontal: boolean): string => sampleLine(i, horizontal, fOf);
+  // the live grid in motion — degree-ramp morph (quad) or the affine loop (line)
+  const triS = t < 0.5 ? t * 2 : 2 - 2 * t;   // 0→1→0 over t, seamless on wrap
+  const gridLineLoop = (i: number, horizontal: boolean): string =>
+    sampleLine(i, horizontal, q => quad ? polyRampAt(coeffs, q, p, triS) : affineLoopAt(q, alpha1, alpha0, p, t));
 
   const [oVx, oVy] = toV(cx(0, 0));
 
-  // Iteration orbit: zₖ = fᵏ(z) = z* + α₁ᵏ·(z − z*) — a log spiral about z*
-  // (into it if |α₁|<1, out if >1), or z + k·α₀ in the pure-translation case.
-  const orbitAt = (s: number): Cx =>
-    zStar ? add(zStar, mulG(powRealG(alpha1, p, s), sub(z, zStar), p)) : add(z, scale(alpha0, s));
-  const orbitDots: Cx[] = [];
-  for (let kk = 0; kk <= iterN; kk++) orbitDots.push(orbitAt(kk));
-  const orbitPathD = (() => {
-    const n = Math.max(64, iterN * 10);
+  // Horner chain (quadratic Point feed): the accumulator's spiral+slide path
+  // α₂ → α₂z → α₂z+α₁ → … → f(z), plus its integer waypoints.
+  const hornerPts = hornerWaypoints(coeffs, z, p);
+  const hornerPathD = (() => {
+    const n = 100;
     const pts: string[] = [];
-    for (let i = 0; i <= n; i++) { const [vx, vy] = toV(orbitAt((iterN * i) / n)); pts.push(`${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`); }
+    for (let i = 0; i <= n; i++) { const [vx, vy] = toV(hornerAt(coeffs, z, p, i / n)); pts.push(`${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`); }
     return pts.join(' ');
+  })();
+
+  // Iteration orbit: the literal iterates zₖ = fᵏ(z) (stopping if they escape).
+  // For a line this is the log spiral z* + α₁ᵏ·(z−z*); for a quadratic it's
+  // genuine nonlinear dynamics (the Mandelbrot/Julia orbit).
+  const orbitDots: Cx[] = [z];
+  for (let kk = 0; kk < iterN; kk++) {
+    const nx = fOf(orbitDots[orbitDots.length - 1]);
+    if (!isFinite(nx.re) || !isFinite(nx.im) || modulus(nx) > 1e4) break;
+    orbitDots.push(nx);
+  }
+  const orbitSpiral = !quad && zStars[0];   // smooth log spiral only for a line
+  const orbitAt = (s: number): Cx => {
+    if (orbitSpiral) return add(zStars[0], mulG(powRealG(alpha1, p, s), sub(z, zStars[0]), p));
+    const i0 = Math.min(orbitDots.length - 2, Math.max(0, Math.floor(s)));
+    if (i0 < 0) return z;
+    const fr = Math.min(1, Math.max(0, s - i0));
+    return add(scale(orbitDots[i0], 1 - fr), scale(orbitDots[i0 + 1], fr));
+  };
+  const orbitPathD = (() => {
+    if (orbitSpiral) {
+      const n = Math.max(64, iterN * 10);
+      const pts: string[] = [];
+      for (let i = 0; i <= n; i++) { const [vx, vy] = toV(orbitAt((iterN * i) / n)); pts.push(`${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`); }
+      return pts.join(' ');
+    }
+    return orbitDots.map((q, i) => { const [vx, vy] = toV(q); return `${i === 0 ? 'M' : 'L'} ${vx.toFixed(1)} ${vy.toFixed(1)}`; }).join(' ');
   })();
 
   // The system's "unit circle": the level set N(z)=re²−p·im²=1 — an ellipse
@@ -307,15 +355,17 @@ export default function ArgandPlane({
   })();
 
   // Draggable handle glyph (a distinct shape per role; a ring marks a lock).
-  const handleGlyph = (which: Handle, q: Cx, col: string, shape: 'circle' | 'diamond' | 'square', isLocked: boolean) => {
+  const handleGlyph = (which: Handle, q: Cx, col: string, shape: 'circle' | 'diamond' | 'square' | 'triangle', isLocked: boolean) => {
     const [vx, vy] = toV(q);
     const r = 10;
     const body = shape === 'circle'
       ? <circle cx={vx} cy={vy} r={r} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2.5} />
       : shape === 'diamond'
         ? <rect x={vx - r} y={vy - r} width={r * 2} height={r * 2} transform={`rotate(45 ${vx} ${vy})`} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2.5} />
-        : <rect x={vx - r} y={vy - r} width={r * 2} height={r * 2} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2.5} />;
-    const label = which === 'z' ? 'z' : which === 'alpha1' ? 'α₁' : 'α₀';
+        : shape === 'triangle'
+          ? <path d={`M ${vx} ${vy - r * 1.2} L ${vx + r * 1.1} ${vy + r * 0.8} L ${vx - r * 1.1} ${vy + r * 0.8} Z`} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2.5} />
+          : <rect x={vx - r} y={vy - r} width={r * 2} height={r * 2} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2.5} />;
+    const label = which === 'z' ? 'z' : which === 'alpha1' ? 'α₁' : which === 'alpha2' ? 'α₂' : 'α₀';
     return (
       <g key={which} style={{ cursor: isLocked ? 'default' : 'grab' }} onPointerDown={onHandleDown(which)}>
         {!isLocked && <circle cx={vx} cy={vy} r={28} fill="transparent" />}
@@ -390,8 +440,8 @@ export default function ArgandPlane({
               {/* the live grid travelling the loop — only while in motion */}
               {showMover && (
                 <g stroke="#fde68a" strokeOpacity={0.8} strokeWidth={2} fill="none">
-                  {gridIdx.map(i => <path key={`lv${i}`} d={gridLineLoop(i, false, t)} />)}
-                  {gridIdx.map(i => <path key={`lh${i}`} d={gridLineLoop(i, true, t)} />)}
+                  {gridIdx.map(i => <path key={`lv${i}`} d={gridLineLoop(i, false)} />)}
+                  {gridIdx.map(i => <path key={`lh${i}`} d={gridLineLoop(i, true)} />)}
                 </g>
               )}
             </>
@@ -400,18 +450,20 @@ export default function ArgandPlane({
           {/* ---- SHAPE feed: the placed shape and its image under f ---- */}
           {isShape && (
             <>
-              <g stroke="#fde68a" strokeOpacity={0.28} strokeWidth={1.5} fill="none">
-                {placed.map((q, i) => {
-                  if (i % Math.max(1, Math.floor(placed.length / 18)) !== 0) return null;
-                  return <path key={i} d={fullPath(q)} />;
-                })}
-              </g>
+              {!quad && (
+                <g stroke="#fde68a" strokeOpacity={0.28} strokeWidth={1.5} fill="none">
+                  {placed.map((q, i) => {
+                    if (i % Math.max(1, Math.floor(placed.length / 18)) !== 0) return null;
+                    return <path key={i} d={fullPath(q)} />;
+                  })}
+                </g>
+              )}
               <path d={vpoly(placed)} fill="none" stroke={Z_COL} strokeOpacity={0.45}
                 strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" />
-              <path d={vpoly(placed.map(fOf))} fill="none" stroke={F_COL}
+              <path d={vpoly(shapePts.map(fOf))} fill="none" stroke={F_COL}
                 strokeWidth={3.5} strokeLinejoin="round" strokeLinecap="round" />
               {showMover && (
-                <path d={vpoly(placed.map(q => affineLoopAt(q, alpha1, alpha0, p, t)))}
+                <path d={vpoly(shapePts.map(q => quad ? polyRampAt(coeffs, q, p, triS) : affineLoopAt(q, alpha1, alpha0, p, t)))}
                   fill="none" stroke="#fde68a" strokeOpacity={0.9} strokeWidth={3}
                   strokeLinejoin="round" strokeLinecap="round" />
               )}
@@ -441,23 +493,20 @@ export default function ArgandPlane({
             </>
           )}
 
-          {/* ---- the probe point z → α₁z → f(z), and the diagonal way back ---- */}
-          {(isPoint || isGrid) && !(isPoint && iterate) && (
+          {/* ---- DEGREE 1: the probe z → α₁z → f(z), and the diagonal way back ---- */}
+          {(isPoint || isGrid) && !quad && !(isPoint && iterate) && (
             <>
               {/* the return route (f(z) → z), spin & shift interpolated together */}
               <path d={simulArc(z)} fill="none" stroke="#2dd4bf" strokeOpacity={0.55} strokeWidth={2.5} strokeDasharray="7 6" strokeLinecap="round" />
               {/* the two outgoing legs */}
               <path d={legPath(z, 0)} fill="none" stroke={A1_COL} strokeOpacity={0.85} strokeWidth={3} strokeLinecap="round" />
               <path d={legPath(z, 1)} fill="none" stroke={A0_COL} strokeOpacity={0.85} strokeWidth={3} strokeDasharray="2 6" strokeLinecap="round" />
-              {/* the ×α₁ waypoint */}
               {(() => { const [wx, wy] = toV(mulG(alpha1, z, p)); return (
                 <circle cx={wx} cy={wy} r={5} fill={A1_COL} fillOpacity={0.8} />
               ); })()}
-              {/* the moving point (around the closed loop) */}
               {showMover && (() => { const [mx, my] = toV(affineLoopAt(z, alpha1, alpha0, p, t)); return (
                 <circle cx={mx} cy={my} r={7} fill={F_COL} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
               ); })()}
-              {/* the output f(z) */}
               {(() => { const [fx, fy] = toV(fOf(z)); return <>
                 <circle cx={fx} cy={fy} r={6} fill={F_COL} />
                 <text x={fx + 10} y={fy - 9} fontSize={18} fill={F_COL}>f(z)</text>
@@ -465,19 +514,50 @@ export default function ArgandPlane({
             </>
           )}
 
-          {/* ---- the fixed point z* (where f(z*) = z*) ---- */}
-          {zStar && (() => { const [sx, sy] = toV(zStar); return (
-            <g>
-              <circle cx={sx} cy={sy} r={6.5} fill="none" stroke={FIX_COL} strokeWidth={2} />
-              <circle cx={sx} cy={sy} r={2} fill={FIX_COL} />
-              <text x={sx + 9} y={sy + 20} fontSize={16} fill={FIX_COL}>z*</text>
+          {/* ---- DEGREE 2: Horner evaluation as a chain of ×z spirals + slides ---- */}
+          {(isPoint || isGrid) && quad && !(isPoint && iterate) && (
+            <>
+              {isPoint && <path d={hornerPathD} fill="none" stroke={F_COL} strokeOpacity={0.55} strokeWidth={2.5} strokeLinecap="round" />}
+              {isPoint && hornerPts.map((q, i) => {
+                const [vx, vy] = toV(q);
+                // even index = a coefficient/start node; odd = an ×z product
+                const col = i === 0 ? A2_COL : i % 2 === 1 ? A1_COL : A0_COL;
+                return <circle key={i} cx={vx} cy={vy} r={i === 0 ? 6 : 4} fill={col} fillOpacity={0.85} />;
+              })}
+              {showMover && (() => {
+                const [mx, my] = toV(isPoint ? hornerAt(coeffs, z, p, t) : polyRampAt(coeffs, z, p, triS));
+                return <circle cx={mx} cy={my} r={7} fill="#fde68a" stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />;
+              })()}
+              {(() => { const [fx, fy] = toV(fOf(z)); return <>
+                <circle cx={fx} cy={fy} r={6} fill={F_COL} />
+                <text x={fx + 10} y={fy - 9} fontSize={18} fill={F_COL}>f(z)</text>
+              </>; })()}
+            </>
+          )}
+
+          {/* ---- the critical point z = −α₁/2α₂ (the quadratic's fold) ---- */}
+          {zCrit && (() => { const [cxp, cyp] = toV(zCrit); return (
+            <g stroke={CRIT_COL} strokeWidth={1.5} fill="none">
+              <circle cx={cxp} cy={cyp} r={5} />
+              <line x1={cxp - 7} y1={cyp} x2={cxp + 7} y2={cyp} />
+              <line x1={cxp} y1={cyp - 7} x2={cxp} y2={cyp + 7} />
             </g>
           ); })()}
 
-          {/* draggable handles: z (input), α₁ (slope), α₀ (shift) */}
+          {/* ---- the fixed point(s) z* (where f(z*) = z*) ---- */}
+          {zStars.map((zs, i) => { const [sx, sy] = toV(zs); return (
+            <g key={i}>
+              <circle cx={sx} cy={sy} r={6.5} fill="none" stroke={FIX_COL} strokeWidth={2} />
+              <circle cx={sx} cy={sy} r={2} fill={FIX_COL} />
+              <text x={sx + 9} y={sy + 20} fontSize={16} fill={FIX_COL}>z*{zStars.length > 1 ? <tspan baselineShift="sub" fontSize={11}>{i + 1}</tspan> : null}</text>
+            </g>
+          ); })}
+
+          {/* draggable handles: z (input), α₁ (slope), α₀ (shift), α₂ (quadratic) */}
           {handleGlyph('z', z, Z_COL, 'circle', false)}
           {handleGlyph('alpha1', alpha1, A1_COL, 'diamond', lockA1)}
           {handleGlyph('alpha0', alpha0, A0_COL, 'square', lockA0)}
+          {quad && handleGlyph('alpha2', alpha2, A2_COL, 'triangle', lockA2)}
         </svg>
       )}
     </div>
