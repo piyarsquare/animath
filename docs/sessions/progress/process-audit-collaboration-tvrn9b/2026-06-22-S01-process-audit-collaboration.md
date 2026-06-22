@@ -35,6 +35,39 @@ tracked session on this branch (`process-audit-collaboration-tvrn9b`).
 
 ## Working notes
 
+### 🔵 finding · 18:10 — Merged main; reviewed the control-center self-audit; it confirms the meta-finding
+**Why:** Dan asked to pull main, review the latest control-center changes, and see how the recent control-center sessions intersect with this audit.
+
+Merged `origin/main` (clean — Stable Marriage deleted, 9 EXPLAINER source
+blocks, the self-auditing App-map). `npm run build` and `npm run sessions` both
+green; 132 reports now (my two audit docs included). The newest control-center
+work is the **registry↔guides self-audit** (`build-sessions.mjs`): it parses
+`src/apps.ts` from main and badges App-map cards `⚠ no guide` / `⚠ retired`,
+with a drift callout. **The intersection is exact:**
+
+- The triage session (`todo-list-review-eu3g4a`) built the *structural* half of
+  my **meta-finding** — a CI-style check that promotes a recurring drift class
+  into an automated detector — and its own #1 next step is the **same** as my
+  Tier-3 recs: *"productionize the signals/to-do system… nothing yet enforces
+  that a new app ships with a guide or that a session declares its signals."*
+  Detection without enforcement = surfaced-but-not-enacted.
+- The category-filter session's "Open / not done" **named my Tier-3 #6 (lint the
+  reports) verbatim** — *"Making the regex tolerant would stop the problem
+  recurring. Left as a judgment call"* — then the same format drift recurred
+  (off-spec entry types in `polygon-walk-continue`). A lesson written twice,
+  enacted zero times: the precise failure my audit names.
+- Live proof of the gap: the drift check currently fires `stable-marriage
+  (retired)` because the 6 dead branches the triage flagged for deletion (403-
+  blocked) still carry the retired guide at their tips. The detector works; the
+  enforcement/cleanup it implies is stuck on a human/permission step.
+
+> [!IMPORTANT]
+> **Coordination constraint discovered:** the triage handoff says report-style /
+> template / reflection-protocol changes are *owned by a separate thread Dan is
+> running* — do not edit `REPORT_STYLE.md`, `_template-*.md`, or
+> `self-reflection.md` here. My Tier-3 recommendations are **input to that
+> thread**, not work for this branch. This branch stays findings-only.
+
 ### 🟡 milestone · 17:05 — Findings report written and committed
 **Why:** All four audit agents returned and converged; synthesized into the deliverable Dan asked for (findings + recommendations, no process edits this round).
 
