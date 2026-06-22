@@ -144,6 +144,22 @@ the generic `layoutCaptions` chrome feature.
 
 <!-- Newest entry first. -->
 
+### 🔴 blocker · 14:35 — Dead-branch review: 6 lingering branches found; remote deletion blocked (403)
+**Why:** Dan asked whether superseded/dead branches need cleanup.
+
+Cross-referenced the 10 live remote branches against PR state + report-safety.
+**6 are dead** (PR merged/closed, branch never deleted) and safe to remove — all
+their reports are preserved on main or on the active successor:
+`sleepy-bardeen-uk0cal` (#222 closed → superseded by #230; reports carried into
+`complex-particles-postures`), `polygon-world-mobile-layout-ipup3u` (#221),
+`mobile-fullscreen-panel-height-7014r5` (#215), `review-todo-prioritize-g66uqj`
+(#212), `future-apps-scoping` (#210), `session-control-center-categories` (#202).
+**This environment blocks branch deletion (HTTP 403 on `git push --delete`)** and the
+GitHub MCP exposes no delete-branch tool — so Dan must delete them from the GitHub
+UI or a local clone. Also flipped the stale `polygon-world-app-review-8dduma`
+attribution-policy report (#224 merged) to `completed`. The session-report system
+itself is self-healing (dedup + landed detection) — no reports were orphaned.
+
 ### 🟡 milestone · 14:05 — Attribution (B) landed: 9 EXPLAINERs got source blocks, citations verified
 **Why:** Close the last open triage decision; keep the policy honest (no fabricated
 citations).
