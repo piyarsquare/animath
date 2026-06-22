@@ -5,7 +5,7 @@ date: 2026-06-08
 title: Stable Matching — solution-space wishlist & tiered plan
 branch: claude/great-thompson-ko30di
 slug: stable-marriage-styling-ulMPt
-status: in-progress
+status: completed
 build: passed
 followup: Roadmap/reference — drives the next several build sessions.
 pr: https://github.com/piyarsquare/animath/pull/189

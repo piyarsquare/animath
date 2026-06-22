@@ -5,7 +5,7 @@ date: 2026-06-14
 title: Continue the Polygon Worlds walk
 branch: claude/polygon-walk-continue-4tyht3
 slug: polygon-walk-continue-4tyht3
-status: in-progress
+status: completed
 build: passed
 followup: null
 pr: null

@@ -35,3 +35,23 @@ iteration cap — is drawn solid.
 - **Coloring mode** — escape velocity, limit magnitude, or a blend of both.
 - **Click the fractal** to trace an **orbit**: the path
   `z₀ → z₁ → z₂ → …` for the point you clicked.
+
+## Possible sources & where to go further
+
+Pointers for going deeper, not priority claims.
+
+- **The families** — the **Mandelbrot set** is named for and popularized by
+  **Benoît Mandelbrot** (late 1970s–80s); the **Julia / Fatou** theory of
+  iteration is **Gaston Julia** and **Pierre Fatou** (around 1918). The
+  **Tricorn** ("mandelbar," the conjugate map `z̄² + c`) was studied by
+  **Crowe, Hasson, Rippon & Strain-Clark** and by **Milnor**; the **Burning Ship**
+  (absolute-value variant) was introduced by **Michael Michelitsch & Otto Rössler**
+  (early 1990s).
+- **Smooth (continuous) escape-time coloring** via the `log|z|` renormalized
+  iteration count is a well-known technique often credited to **Linas Vepstas** and
+  to the **Fractint** community; it removes the visible iteration bands.
+- **Higher powers `zᵏ + c`** giving `(k−1)`-fold symmetry are the
+  *multibrot* sets, a standard generalization.
+- **To go further:** Peitgen, Jürgens & Saupe, *Chaos and Fractals*, and Milnor's
+  *Dynamics in One Complex Variable* are the standard references; the linked
+  **Mandelbrot ↔ Julia** app here shows the parameter-space correspondence directly.

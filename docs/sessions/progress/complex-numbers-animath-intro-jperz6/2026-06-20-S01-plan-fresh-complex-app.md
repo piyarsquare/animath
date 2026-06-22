@@ -5,11 +5,10 @@ date: 2026-06-20
 title: "Plan — a fresh complex-numbers entry-point app (successor to Plane Transform)"
 branch: claude/complex-numbers-animath-intro-jperz6
 slug: complex-numbers-animath-intro-jperz6
-status: proposed
+status: executed
 build: n/a
 app: general, plane-transform, complex-particles, docs
-signals: needs-dan
-next: Build Phase 1 — the live multiplication/addition overlay (the hero slice).
+next: Executed — shipped as the Argand app (live #/argand). Dan 2026-06-22: keep the name and keep it where it is (successor-in-progress to Plane Transform).
 ---
 
 # Plan — a fresh complex-numbers entry-point app

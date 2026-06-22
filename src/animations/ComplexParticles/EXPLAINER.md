@@ -188,3 +188,27 @@ exactly the places a complex-analysis eye goes first:
   here.
 - Positions **between the projection-slider stops** are linear cross-fades
   (animations), not projections.
+
+## Possible sources & where to go further
+
+These are pointers for going deeper, not claims about who got there first.
+
+- **Domain coloring** — encoding a complex value's argument as hue (and magnitude
+  as brightness) is a standard technique; Frank Farris's *Creating Symmetry* and
+  Hans Lundmark's and Elias Wegert's writing (*Visual Complex Functions*) develop
+  it carefully. Tristan Needham's *Visual Complex Analysis* is the classic visual
+  treatment of `f : ℂ → ℂ`.
+- **The 4-D graph and projecting it** — a complex function's graph naturally lives
+  in ℝ⁴; the idea of viewing it by stereographic and other projections is folklore
+  in complex-analysis visualization, and **Niles Johnson's** Hopf-fibration videos
+  are a vivid public reference for the sphere view.
+- **The Hopf fibration** S³ → S² (the "Sphere" projection) is classical (Heinz
+  Hopf, 1931); the **Clifford torus** decomposition behind the "Torus" stack of
+  nested donuts is standard S³ geometry.
+- **Riemann surfaces** — the branch/sheet machinery for `√z`, `ln z`, `z^(p/q)`
+  and the inverse trig family is the theory of multivalued functions becoming
+  single-valued on a covering surface; any complex-analysis text (e.g. Ahlfors)
+  covers it, and the gluing picture goes back to **Riemann**.
+- **The Lanczos approximation** for Γ(z) (Cornelius Lanczos, 1964) is the method
+  used for the gamma function here; the reflection formula making its poles exact
+  is **Euler's**.

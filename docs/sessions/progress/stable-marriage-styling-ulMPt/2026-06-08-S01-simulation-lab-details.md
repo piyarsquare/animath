@@ -5,7 +5,7 @@ date: 2026-06-08
 title: Stable Matching — iron out simulation & Lab details
 branch: claude/great-thompson-ko30di
 slug: stable-marriage-styling-ulMPt
-status: in-progress
+status: completed
 build: passed
 followup: Tiers 0–4 of the solution-space plan shipped; Tier 5 (preference falsification) pending a product decision.
 pr: https://github.com/piyarsquare/animath/pull/189

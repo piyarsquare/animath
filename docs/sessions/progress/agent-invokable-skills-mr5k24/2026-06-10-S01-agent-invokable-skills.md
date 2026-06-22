@@ -5,7 +5,7 @@ date: 2026-06-10
 title: Make session skills agent-invokable
 branch: claude/agent-invokable-skills-mr5k24
 slug: agent-invokable-skills-mr5k24
-status: in-progress
+status: completed
 build: not-run
 followup: null
 pr: 206

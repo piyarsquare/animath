@@ -5,7 +5,7 @@ date: 2026-06-06
 title: Stable Marriage — Status & Roadmap
 branch: claude/stable-marriage-styling-ulMPt
 slug: stable-marriage-styling-ulMPt
-status: in-progress
+status: completed
 build: unknown
 followup: Implementation not yet started — planning/roadmap only.
 pr: null

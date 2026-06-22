@@ -36,3 +36,22 @@ Tap anywhere on the Mandelbrot to choose `c`. Or draw a
 **c-path** and play it back: the Julia set morphs continuously as `c` traces
 your curve. The scrubber on the side of the playback panel seeks along the
 path.
+
+## Possible sources & where to go further
+
+Pointers for going deeper, not priority claims.
+
+- **The sets themselves** — the **Julia / Fatou** dichotomy of the plane under
+  iteration goes back to **Gaston Julia** and **Pierre Fatou** (around 1918); the
+  **Mandelbrot set** was named for and popularized by **Benoît Mandelbrot** (late
+  1970s–80s), building on work by **Brooks and Matelski**.
+- **The Fundamental Dichotomy** — "the Julia set is connected exactly when `c` is
+  in the Mandelbrot set" — is a theorem of **Adrien Douady and John Hubbard**
+  (their *Orsay notes* / "Étude dynamique des polynômes complexes," 1980s); the
+  Mandelbrot set as a *parameter-space map of every Julia set* is their viewpoint.
+- **Local similarity** of the Mandelbrot set and its matching Julia set near
+  **Misiurewicz points** is **Tan Lei's** result (1990); the named points are after
+  **Michał Misiurewicz**.
+- **To go further:** Milnor's *Dynamics in One Complex Variable* is the standard
+  text; the Douady–Hubbard *Orsay notes* are the source for the dichotomy and the
+  combinatorial structure (external rays, the "Mandelbrot is connected" proof).

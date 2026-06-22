@@ -5,7 +5,7 @@ date: 2026-06-05
 title: Klein Bottle Fix
 branch: claude/klein-bottle-fix
 slug: klein-bottle-fix
-status: in-progress
+status: completed
 build: passed
 followup: high
 pr: null

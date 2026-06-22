@@ -55,12 +55,6 @@ export const apps: AppDescriptor[] = [
     blurb: 'Drop a planet into a three-star system and watch sensitive dependence erase its future — then open the Lab to run thousands of worlds and tally how often chaos ends happily.',
   },
   {
-    hash: '/stable-marriage',
-    name: 'Stable Marriage',
-    icon: '♥',
-    blurb: 'Step through the Gale–Shapley algorithm and probe the stability of its matchings.',
-  },
-  {
     hash: '/agentic-sorting',
     name: 'Agentic Sorting',
     icon: '⇅',

@@ -5,7 +5,7 @@ date: 2026-06-14
 title: Tighten the app and enrich the visuals
 branch: claude/topology-world-review-m9p5as
 slug: topology-world-review-m9p5as
-status: in-progress
+status: completed
 build: unknown
 followup: null
 pr: null
