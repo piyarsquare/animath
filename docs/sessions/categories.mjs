@@ -23,7 +23,9 @@ export const CATEGORIES = {
   "agentic-sorting":   { label: "Agentic Sorting",   hue: 95  },
   "stable-matching":   { label: "Stable Matching",   hue: 355 },
   "polygon-worlds":    { label: "Polygon Worlds",    hue: 175 },
+  "solid-worlds":      { label: "Solid Worlds",      hue: 190 },
   "trees-and-nets":    { label: "Trees and Nets",    hue: 115 },
+  "argand":            { label: "Argand",            hue: 250 },
   "chrome":            { label: "Chrome / Shell",    hue: 220 },
   "engine":            { label: "Engine / lib",      hue: 285 },
   "docs":              { label: "Docs / Guides",     hue: 130 },
@@ -71,6 +73,9 @@ const SLUG_OVERRIDES = {
   "complex-sheet": ["polygon-worlds"],
   "particle-viewer-ideas-priority": ["complex-particles"],
   "gale-shapley-strategy": ["stable-marriage", "stable-matching"],
+  "complex-numbers-animath-intro": ["argand"],
+  "3d-manifold-worlds": ["solid-worlds"],
+  "animath-space-worlds": ["solid-worlds"],
 };
 
 /** Infer categories from a (short) branch slug when no `app:` is declared. */

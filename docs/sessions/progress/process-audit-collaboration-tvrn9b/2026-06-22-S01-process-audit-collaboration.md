@@ -5,8 +5,8 @@ date: 2026-06-22
 title: Process audit — collaboration patterns across the project
 branch: claude/process-audit-collaboration-tvrn9b
 slug: process-audit-collaboration-tvrn9b
-status: completed
-build: n/a
+status: in-progress
+build: passed
 followup: null
 pr: null
 app: docs, general
@@ -34,6 +34,45 @@ This audit is a **new, cross-cutting topic**, not a pickup of that work. First
 tracked session on this branch (`process-audit-collaboration-tvrn9b`).
 
 ## Working notes
+
+### 🟢 code · 19:20 — Phase 1 shipped: report linter + scraper hardening recovers 13 dropped reflections
+**Why:** Build the validator that makes digest-breaking drift visible, and enact the "scraper hardening" lesson the category-filter session named and deferred — closing a twice-written, never-acted loop.
+
+New `docs/sessions/lint-sessions.mjs` (+ `npm run sessions:lint`, advisory by
+default / `--strict` for CI) validates every report against the contract:
+frontmatter enums, `slug==folder`, resolvable `app`/`signals` tokens, a
+scraper-parseable Self-reflection level, and closed-vocab timeline types. First
+run found **31 errors / 118 warnings** — all matching audit findings (24
+headless-no-signal = W1; 19 off-spec timeline types = the polygon-walk drift; 13
+bold-wrapped Follow-up levels silently dropping from the digest).
+
+Root-cause fixes (single-file, no cross-branch report rewriting):
+- **Hardened the scraper** (`build-sessions.mjs:41`) to tolerate non-ASCII
+  hyphens + bold/italic-wrapped levels → **13 reflections recovered** (70→83 of
+  83 parse; digest 44 entries). Unit-tested.
+- **Taxonomy drift fixed** — `argand` + `solid-worlds` were shipped apps missing
+  from `categories.mjs` (12 reports' chips misresolved); added them + slug
+  overrides. The linter caught a registry↔taxonomy gap the App-map's guide-drift
+  check doesn't cover.
+- Accepted `executed` as a real plan status (badge greens it); `complete` is now
+  a soft nudge. Backfilled 2 genuine errors on dead branches (Stable Marriage
+  deleted, agentic-sorting merged) → **0 errors, `--strict` passes**.
+
+140 advisory warnings remain (legacy `build: passing`, off-spec types,
+headless-no-signal) — surfaced for going-forward discipline, deliberately **not**
+mass-fixed across other branches (preserving append-only discipline).
+
+### 🟣 decision · 18:30 — Productionize the loop: Phases 1–4 on this branch
+**Why:** Dan declared the report-style/template/reflection files in-scope (now merged into this branch) and approved Phases 1–4; this is the `[docs] !high` "productionize the signals/to-do system" backlog item, the audit's own top lever.
+
+Sequence (my call): **Phase 1** report linter (`npm run sessions:lint`,
+`lint-sessions.mjs`) → **Phase 2** make `signals:` trustworthy → **Phase 3**
+recurring-lessons ledger + cadence (the write→enact mechanism) → **Phase 4**
+promote W2/W3/W4 into `BUILDING_AN_APP.md` + the self-reflection protocol. Phase 5
+(debug-pose harness, mobile smoke, append-only `package.json`) is specced as
+TODOs, not built here (it touches app/scripts/CI — own branches). Linter runs
+**advisory** first (warns on the historical corpus; never rewrites other
+branches' reports), CI-gating deferred until the corpus is clean.
 
 ### 🔵 finding · 18:10 — Merged main; reviewed the control-center self-audit; it confirms the meta-finding
 **Why:** Dan asked to pull main, review the latest control-center changes, and see how the recent control-center sessions intersect with this audit.

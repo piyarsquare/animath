@@ -6,8 +6,8 @@ title: Agentic Sorting — legibility pass (presets, on-ramp layout, relabels, d
 branch: claude/agentic-sorting-app-j6ngd4
 slug: agentic-sorting-app-j6ngd4
 status: completed
-build: pass
-followup: MEDIUM
+build: passed
+followup: medium
 pr: null
 app: agentic-sorting
 ---
