@@ -11,7 +11,7 @@ followup: null
 pr: null
 app: docs
 signals: needs-dan
-next: Walk Dan through the gathered buckets easiest-first; flip confirmed "probably done" statuses, then resolve the needs-dan decisions.
+next: Talk through Bucket C (the Solid Worlds in-flight cluster — likely done-but-unmarked) and Bucket D (TODO backlog); decide attribution scope (A/B/C) and whether to bring in PR #222.
 ---
 
 # Control-center triage — clear stale statuses, signals, and the to-do backlog
@@ -58,32 +58,89 @@ since. Each is a one-question confirm → flip to `completed`:
 | `polygon-walk-continue-4tyht3`, `topology-world-review-m9p5as` | Polygon Worlds shipped (Topology Walk retired into it). |
 | `agentic-sorting-app-j6ngd4` (objectives-and-competencies) | Legibility pass shipped (per TODO note about removed Replicate panel). |
 
-### Bucket B — needs-dan decisions (medium: a product call, some half-answered)
+### Bucket B — needs-dan decisions (Dan's dispositions, 2026-06-22)
 
-| Report | The parked decision |
-|---|---|
-| `complex-numbers-animath-intro-jperz6` — plan-fresh-complex-app (proposed) + Argand (in-progress) | Argand was **built** (live `#/argand`). Open call: naming/positioning vs Plane Transform; mark plan executed? |
-| `three-hats-particle-app-rill2c` — plan-multi-function (proposed) | Render layers / function overlay / pair mode for Complex Particles — approve, defer, or drop? |
-| `complex-particles-guide-tdlhk0` — explainer-series-plan (proposed, not-live) | Explainer-page series roadmap beyond the complex trilogy — green-light? |
-| `polygon-world-app-review-8dduma` — solid-worlds-attribution-policy (needs-dan) | Attribution policy looks adopted (ATTRIBUTION.md exists); confirm + close. |
-| `solid-worlds-review-bju3pc` / `3d-manifold-worlds-imwmal` (needs-dan) | Screw bug fixed + −a2 naming confirmed (both TODO items checked off). Remaining: app name "Solid Worlds" vs "Manifold Walk". |
+| # | Report | Disposition |
+|---|---|---|
+| 1 | **Attribution policy** (`polygon-world-app-review-8dduma`) | Adopted but never **back-propagated**. Sub-agent scoped the gap (below): 11 EXPLAINERs lack the "Possible sources" block. Scope decision (A/B/C) pending. |
+| 2 | **Solid Worlds name** (`solid-worlds-review`, `3d-manifold-worlds`) | **Leave the name** — "not a real problem." Dropped the naming `needs-dan` signal; status deferred to the Bucket C talk-through. |
+| 3 | **Argand / fresh-complex-app plan** (`complex-numbers-animath-intro`) | **Keep the name, keep its position** (successor-in-progress to Plane Transform). Flipped the plan `proposed → executed`. |
+| 4 | **Complex Particles multi-function plan** (`three-hats-particle-app`) | Sub-agent investigated `claude/sleepy-bardeen-uk0cal` / PR #222 (below). That branch is **complementary to**, not an implementation of, the multi-function plan. |
+| 5 | **Explainer-page series** (`complex-particles-guide`) | Genuinely needs review — **medium signal, not a brief decision.** Left flagged as a future review. |
 
-### Bucket C — genuinely in flight (leave as-is)
+### Bucket C — "in flight" branches (the talk-through)
 
-Recent, actively-developed: Argand (`complex-numbers-animath-intro`, phone-needed),
-the Solid Worlds branches (`solid-worlds-review`, `3d-manifold-worlds`,
-`animath-space-worlds`). Not stale — no action.
+What's actually open, and whether each is live work or really done-but-unmarked:
+
+- **Argand** (`complex-numbers-animath-intro`, `phone-needed`) — app is **live**
+  (`#/argand`); plan now `executed`. Only loose end: mobile verification.
+- **Solid Worlds cluster** — three in-progress branches that each *resumed* the same
+  app, which is now **live** (`#/solid-worlds`, 8 platycosms per CLAUDE.md):
+  - `solid-worlds-review-bju3pc` (06-19) — homology rework; superseded by →
+  - `3d-manifold-worlds-imwmal` (06-20) — finished the screw fix + −a2; naming parked.
+  - `animath-space-worlds-hm7wui` (06-20) — "resume / orient on a fresh branch."
+  - `solid-worlds-decor-refactor` (06-21, **completed**) — Rooms decor, the latest.
+  Likely all done-but-unmarked — a Bucket-A-style confirm-and-flip, pending Dan.
+- **`claude/sleepy-bardeen-uk0cal`** (PR #222, **open, not merged**) — a real,
+  not-in-main Complex Particles UX improvement; see finding below. A bring-it-in call.
 
 ### Bucket D — the `TODO.md` backlog (the durable list)
 
 14 open items (2 `!high`, ~7 `!med`, ~5 `!low`). Several are quick doc reconciles
-(e.g. agentic-sorting EXPLAINER still names a removed Replicate panel; missing
-"Possible sources" blocks). These are hand-curated and separate from the
-status/signal cleanup above.
+(e.g. agentic-sorting EXPLAINER still names a removed Replicate panel; the missing
+"Possible sources" blocks = item #1). Hand-curated; separate from the status/signal
+cleanup above. To talk through with Dan.
+
+## Sub-agent findings
+
+### Attribution back-propagation (item #1)
+
+The "Possible sources & where to go further" block is required at the end of each
+app's EXPLAINER (or guide). **3 apps complete** (Argand, PolygonWorlds, SolidWorlds);
+**11 EXPLAINERs missing it** — 4 already in TODO (ComplexParticles, PlaneTransform,
+Correspondence, TreesAndNets) + 7 more (AgenticSorting, FractalsGPU, StableMarriage,
+StableMatching, TopologyWalk, TrinaryStars, legacy Fractals [no EXPLAINER at all]).
+Every missing app already has a `docs/apps/*.md` guide whose named sources **seed**
+the block, so it's a copy-down-and-tighten job, not fresh research. Effort ≈ 2–3 h
+for 10 priority apps. Options: **A** (4 TODO apps, ~45 min) · **B** (all 10) ·
+**C** (A now, B as a follow-up docs pass).
+
+### `claude/sleepy-bardeen-uk0cal` / PR #222 (item #4)
+
+**Open, not merged; `mergeable_state: dirty`** — conflicts only on the append-only
+docs (CLAUDE.md/README.md/TODO.md), trivially keep-both. 16 commits ahead / 6 behind;
+merge-base 2026-06-16. **Genuinely not in main** by content (new
+`src/lib/functionHandoff.ts`, `layoutCaptions`, `posture` absent from main). A
+conservative, additive UX pass on **Complex Particles + Plane Transform**: a calm
+default + five "posture" layouts (default stops parking the 4D-rotation rig over the
+plot); per-function recommended-view presets; opt-in layout captions; and a pure URL
+codec handing a function across the two apps (+ vitest). High-value, low-risk.
+**Not** the multi-function plan — it's the *control-surface* taming that plan's pair
+mode would later plug into as a sixth posture. Verdict: worth bringing in (re-sync,
+keep both doc entries, re-run build); at minimum keep the `functionHandoff` codec +
+the generic `layoutCaptions` chrome feature.
 
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🔵 finding · 12:40 — Sub-agents returned: attribution gap scoped; PR #222 is live, valuable, not-in-main
+**Why:** Items #1 and #4 each needed investigation beyond a glance.
+
+Attribution: 11 EXPLAINERs miss the sources block, all seedable from the existing
+per-app guides (~2–3 h, phased A/B/C). sleepy-bardeen / PR #222: open + conflicting
+only on append-only docs, genuinely not in main, a clean additive Complex Particles
++ Plane Transform UX improvement (postures + per-function presets + opt-in captions +
+a cross-app function codec); complementary to — not an implementation of — the
+multi-function plan. Full detail under "Sub-agent findings".
+
+### 🟢 code · 12:25 — Logged Dan's Bucket B dispositions (#1–#5); two bookkeeping edits
+**Why:** Five parked decisions answered; record them and clear the resolved signals.
+
+#3 Argand: plan → `executed` (keep name + position). #2 Solid Worlds: leave the name;
+dropped the naming `needs-dan` on `3d-manifold-worlds-imwmal`. #1 attribution + #4
+sleepy-bardeen → dispatched sub-agents (results above). #5 explainer-series: left
+flagged as a medium review. Next: talk through Bucket C + D.
 
 ### 🟢 code · 12:10 — Bucket A cleared: flipped 21 reports in-progress → completed
 **Why:** Dan read through Bucket A and confirmed all of it is finished, so the

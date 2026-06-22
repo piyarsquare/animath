@@ -10,8 +10,7 @@ build: passing
 followup: null
 pr: null
 app: solid-worlds
-signals: needs-dan
-next: Both Solid Worlds backlog items are done (screw fix + −a2 confirmed). Open product call for Dan: rename the app ("Solid Worlds" vs "Manifold Walk")?
+next: Both Solid Worlds backlog items done (screw fix + −a2 confirmed). Naming call resolved — Dan 2026-06-22: leave the name as-is ("not a real problem").
 ---
 
 # Solid Worlds — resume (graduate screw worlds / confirm −a2 naming)
