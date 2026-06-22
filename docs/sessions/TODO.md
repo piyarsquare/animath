@@ -64,18 +64,15 @@ informs future rounds. Delete or check off items as they land.
   documents a Replicate control that the legibility-pass handoff says was removed.
   User-facing and wrong today — reconcile the docs with the shipped UI.
 
-- [ ] [docs] !low Add the "Possible sources" attribution block to the EXPLAINERs that lack it.
-  Several EXPLAINERs (the complex family — complex-particles/plane-transform/
-  correspondence — and trees-and-nets) have no "Possible sources & where to go
-  further" block, contrary to the attribution policy. The guides name real
-  analogues to seed these without fabricating citations.
-  Scoped 2026-06-22: only 3 apps are complete (Argand, PolygonWorlds, SolidWorlds);
-  **11 EXPLAINERs lack the block** — the 4 above + AgenticSorting, FractalsGPU,
-  StableMarriage, StableMatching, TopologyWalk, TrinaryStars, and legacy Fractals
-  (no EXPLAINER at all). Every missing app has a `docs/apps/*.md` guide whose named
-  sources seed the block, so it's copy-down-and-tighten, not fresh research (~2–3 h
-  for 10 priority apps). Options: A = the 4 already listed (~45 min) · B = all 10 ·
-  C = A now, B as a follow-up docs pass.
+- [x] [docs] Add the "Possible sources" attribution block to the EXPLAINERs that lack it.
+  DONE 2026-06-22 (scope B). Appended a tailored "Possible sources & where to go
+  further" block to **9 EXPLAINERs**: ComplexParticles, PlaneTransform, Correspondence,
+  TreesAndNets, AgenticSorting, FractalsGPU, StableMatching, TopologyWalk, TrinaryStars.
+  Sourced from each app's `docs/apps/*.md` guide; the obscurer citations were
+  web-verified (Tricorn = Crowe–Hasson–Rippon–Strain-Clark, *Nonlinearity* 1989;
+  Burning Ship = Michelitsch & Rössler 1992; Teo–Sethuraman 1998; Irving–Leather–
+  Gusfield 1987). Argand/PolygonWorlds/SolidWorlds already had blocks; legacy
+  Fractals has no EXPLAINER (deferred).
 
 - [ ] [docs] !low Consistency editing pass over the 10 agent-written app guides.
   Written by four parallel agents grouped by family (PR #229); depth and voice vary

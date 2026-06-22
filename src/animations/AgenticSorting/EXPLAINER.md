@@ -74,3 +74,27 @@ Because each agent rule is a pure function, thousands of trials run in a moment.
 - **Objective** — one shared goal (selfish ascending) vs mixed (phase separation).
 - **Frozen / defective** — share of immovable obstacle cells.
 - **Step interval** — milliseconds between cycles.
+
+## Possible sources & where to go further
+
+Pointers for going deeper, not priority claims.
+
+- **The direct source** — the cell-view framing, the clustering-of-like-agents
+  result, and "competencies no rule encodes" are from **Taining Zhang, Adam
+  Goldstein & Michael Levin**, *Classical Sorting Algorithms as a Model of
+  Morphogenesis: self-sorting arrays reveal unexpected competencies in a minimal
+  model of basal intelligence* (*Adaptive Behavior*, 2025;
+  [arXiv:2401.05375](https://arxiv.org/abs/2401.05375)).
+- **Levin's broader program** — diverse intelligence and "basal cognition" in
+  unconventional substrates — is the context that motivates *measuring* the
+  competencies rather than just watching them; see Michael Levin's work on
+  collective/agential behavior in non-neural systems.
+- **The classic sorts** the algotypes echo — bubble, insertion, selection,
+  cocktail-shaker — are textbook material (Knuth, *The Art of Computer
+  Programming*, Vol. 3); the app only claims the *honest* analogies.
+- **Emergent order from local rules** sits near the wider tradition of
+  self-organization and cellular automata (von Neumann, Wolfram) and the
+  statistical-physics reading of the **Phase separation** mode (coarsening into
+  monotone domains resembles spinodal decomposition / Ising-like domain growth).
+- The **divergent-objectives / Phase separation** mode is an animath-original
+  extension, not part of the Levin paper.

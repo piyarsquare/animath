@@ -10,8 +10,7 @@ build: unknown
 followup: null
 pr: null
 app: docs
-signals: needs-dan
-next: Talk through Bucket C (the Solid Worlds in-flight cluster — likely done-but-unmarked) and Bucket D (TODO backlog); decide attribution scope (A/B/C) and whether to bring in PR #222.
+next: Triage complete — Buckets A–D cleared, attribution (B) landed, Stable Marriage retired, PR #230 open. Remaining backlog items are tracked in TODO.md; /handoff when ready.
 ---
 
 # Control-center triage — clear stale statuses, signals, and the to-do backlog
@@ -103,7 +102,7 @@ moved plane-unification to `general`/`!low`). Dispositions:
 | Real-device mobile pass on the guide pages | docs · med | Keep. |
 | Add last 2 platycosms (hexagonal-prism solid) | solid-worlds · med | **NEW** — separate hex-prism build; paper saved. |
 | Argand explainer + tools (complex / dual / split-complex) | complex-particles · med | **NEW** — after Argand "gets played." |
-| Add "Possible sources" attribution blocks | docs · low | **Scoped** (item #1): 11 apps, options A/B/C. Decision pending. |
+| Add "Possible sources" attribution blocks | docs · low | ✅ **Done (B)** — 9 EXPLAINERs got tailored blocks; obscurer citations web-verified. |
 | Consistency edit over the 10 app guides | docs · low | Keep; pairs with the slim-CLAUDE.md pass. |
 | Split the rendering guide 2+2 | complex-particles · low | Keep. |
 | Revisit `not-live` precision after squash-merge | engine · low | Keep — confirm on next real merge. |
@@ -144,6 +143,18 @@ the generic `layoutCaptions` chrome feature.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 14:05 — Attribution (B) landed: 9 EXPLAINERs got source blocks, citations verified
+**Why:** Close the last open triage decision; keep the policy honest (no fabricated
+citations).
+
+Sub-agent appended a tailored "Possible sources & where to go further" block to all
+9 EXPLAINERs (build green, only those files touched). It honestly flagged ~12
+crisp author-list/date citations written from memory; I web-verified the four
+obscurest (Tricorn = Crowe–Hasson–Rippon–Strain-Clark *Nonlinearity* 1989; Burning
+Ship = Michelitsch & Rössler 1992; Teo–Sethuraman 1998; Irving–Leather–Gusfield
+1987) — all correct — and confirmed the rest against standard literature. The genuinely
+fuzzy ones were already hedged ("around 1918", "early 1990s"). Committing.
 
 ### 🟣 decision · 13:50 — Attribution scope: Dan chose B (all priority apps); sub-agent drafting
 **Why:** B fully closes the policy gap and the guides already seed the sources, so

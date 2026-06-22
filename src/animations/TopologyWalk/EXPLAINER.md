@@ -133,6 +133,27 @@ re-rendered:
 A plain arrow would look the same mirrored; the **F can't hide a reflection**,
 so it's the clearest possible signature of an orientation flip.
 
+## Possible sources & where to go further
+
+Pointers for going deeper, not priority claims.
+
+- **Jeff Weeks, *The Shape of Space*** — the canonical gentle book on closed
+  surfaces (and 3-manifolds) as glued shapes, orientability, and the "walk it from
+  the inside, there is no outside" point of view that this app is built on. His
+  **Torus Games** (free software) are the direct ancestor of the first-person
+  flat-torus / Klein-bottle walk.
+- **The classics** — the **Möbius strip** (Möbius and Listing, 1858), the **Klein
+  bottle** (Felix Klein, 1882), and the **real projective plane** ℝP² are the
+  standard non-orientable surfaces; that ℝP² cannot embed in 3-space without
+  self-intersection is classical, and the **cross-cap**, **Steiner Roman surface**,
+  and **Boy's surface** (Werner Boy, 1901) are the three classic immersions.
+- **Euler characteristic and curvature** — that χ = 0 surfaces can be flat while
+  χ > 0 forces a curved (spherical) world is **Gauss–Bonnet** (∫K dA = 2πχ),
+  standard differential geometry.
+- **Where it's going** — this app is being superseded by **Polygon Worlds**, which
+  generalizes the walk to the full fundamental-polygon classification of surfaces;
+  see its explainer for the edge-word / Gauss–Bonnet treatment.
+
 ## Walking it
 
 Drag to look, use **WASD / arrow keys** (or the on-screen pad) to move, and
