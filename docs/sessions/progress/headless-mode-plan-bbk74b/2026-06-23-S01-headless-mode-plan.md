@@ -41,6 +41,44 @@ from two prior threads:
 
 ## Working notes
 
+### 🔵 finding · 14:40 — Pre-Phase-2 experiment: measured the two reasoned-from-code uncertainties
+**Why:** the synthesis flagged determinism + `readPixels` as the highest-stakes unknowns; a single `shoot.mjs`-style run settles both before building on them.
+
+Ran a headless probe at **390×844** over `#/solid-worlds`, `#/polygon-worlds`,
+`#/complex-particles` (double-sampled each frame ~600 ms apart, via both a composited
+`drawImage→getImageData` path and live `gl.readPixels`). Eyeballed the PNGs — all three
+render genuine scenes (SolidWorlds 3-Torus with the avatar + FRONT sign + ChiralityHUD
+"ORIGINAL"; ComplexParticles' vivid phase cloud). Results **revise three plan
+assumptions**:
+
+1. **Determinism gap did NOT manifest at idle.** All three routes — including
+   ComplexParticles — produced **byte-identical** frames A vs B (0/128 grid cells
+   changed; mean+variance identical to 2 dp). With no input the walkers' rAF is
+   effectively static. → **Downgrade `freeze`/`t=` from a precondition to insurance**
+   for *animated* states (continuous spin, n-body Trinary). The "same view twice"
+   acceptance criterion already holds for static poses. (Still keep `frozenTime()` —
+   cheap, and needed the moment a spin is on.)
+2. **`gl.readPixels` is unreliable; the composited/screenshot path is not.** readPixels
+   returned real data for the two walkers but **all-black** for ComplexParticles
+   (preserveDrawingBuffer:false), while `drawImage→getImageData` (and the puppeteer
+   screenshot) captured all three correctly. → **The smoke dead-frame detector must
+   read the screenshot, not `gl.readPixels`.** (Confirms the consultant's suspicion
+   concretely.)
+3. **Variance, not brightness.** ComplexParticles is *dark but alive* — mean luma
+   **23**, 83% black pixels, yet **variance 3086**. A brightness/black-fraction
+   threshold would false-flag it dead; variance cleanly separates it from a blank
+   frame. → **Dead-frame check = low variance, not low brightness.**
+
+Plus a **new** finding the plan didn't anticipate:
+
+4. **Every clean route logs baseline `console.error`s** (a 404 + an `ERR_CERT_AUTHORITY_INVALID`
+   resource-load failure), but `pageerror` count was **0** and no `webglcontextlost`
+   fired anywhere. → A naive "fail on any console.error" smoke gate would false-positive
+   on **all** routes. **Key the detector on `pageerror` (JS exceptions) + `webglcontextlost`
+   as load-bearing; treat `console.error` as advisory with a resource-load allowlist
+   (`net::ERR_*`, HTTP 4xx).** Net baseline-green result: the walkers + particles throw
+   no JS exceptions and lose no context at mobile viewport.
+
 ### 🟢 code · 13:42 — Phase 1 scaffolding landed (build + tests + lint green)
 **Why:** Dan approved starting Phase 1 — the pure additive scaffolding, no app behavior change.
 

@@ -308,19 +308,30 @@ Phases 2–4** (most are *narrowing*, not new work):
    probe already reads — the SolidWorlds engine already computes one
    (`coverEngine.ts:639`); PolygonWorlds has a geometric `debugProbe`. The headline
    teleport bug was a *continuity* failure the determinant alone would not catch.
-3. **Determinism is now a precondition, not a nicety** (the one real blind spot): the
-   walkers run a wall-clock `getDelta()` rAF, so a pose-only deep link is *not*
-   reproducible frame-to-frame. Add a `freeze`/`t=` param (or settle-on-idle) — the
-   acceptance criterion "lands the same view twice" depends on it.
+3. **Determinism — insurance, not a precondition** (revised by the 2026-06-23
+   experiment). *Original concern:* the wall-clock `getDelta()` rAF makes a pose-only
+   link non-reproducible. *Measured result:* at idle, all three probed routes (incl.
+   ComplexParticles) produced **byte-identical** frames 600 ms apart — the walkers don't
+   visibly animate without input, so "same view twice" already holds for static poses.
+   The `freeze`/`t=` param (parsed by `frozenTime()` since Phase 1) is retained as
+   **insurance** for *animated* states (continuous spin, n-body Trinary), not a gate.
 4. **Unify the debug-query convention** (PolygonWorlds' `polydebug` reads
    `location.search`; the new helper reads the hash-query) and **add a "copy
    deep-link" round-trip** so the HUD *emits* the reproducible URL (closes the loop;
    makes it a shareable teaching artifact).
 5. **Narrow Deliverable B's claim** to *boot / blank / context-loss* failures —
    SwiftShader *tolerates* the exact #216 NaN, so "catches #216" is overstated.
-   **Console + `webglcontextlost` are the load-bearing detectors;** replace the
-   brightness-threshold dead-frame check with **variance** (or force a bright look via
-   `SEED_LS` before `readPixels`).
+   **Detector design (refined by the 2026-06-23 experiment):**
+   - **`pageerror` (JS exceptions) + `webglcontextlost` are load-bearing** — both were
+     clean (0) across the probed routes, so a real failure stands out.
+   - **`console.error` is advisory with a resource-load allowlist** — every clean route
+     already logs baseline resource errors (a 404 + a cert failure), so a naive
+     "fail on any console.error" gate false-positives on all routes; filter
+     `net::ERR_*` / HTTP 4xx.
+   - **Dead-frame check = low *variance* of the composited screenshot, NOT
+     `gl.readPixels`** — readPixels returned all-black for ComplexParticles
+     (preserveDrawingBuffer:false) while the screenshot captured it; and a dark-but-alive
+     frame (mean 23, variance 3086) proves brightness/black-fraction is the wrong signal.
 6. **CI: a separate PR-triggered smoke workflow, NOT the Pages-deploy job** — §4.4's
    `deploy.yml` placement is wrong (deploy sets `PUPPETEER_SKIP_DOWNLOAD` and the
    runner lacks SwiftShader libs). Advisory-now/gate-later still holds, in its own
@@ -330,9 +341,11 @@ Phases 2–4** (most are *narrowing*, not new work):
 8. *Deferred v2:* `loop=`/`seam=` path encoding + a round-trip-walk unit test (the
    holonomy-after-a-loop a topology teacher actually wants).
 
-> [!TIP]
-> Run **one `shoot.mjs` experiment first** (before revising/implementing): double-shoot
-> a single URL to confirm/deny the determinism gap, and verify `gl.readPixels` returns
-> usable data on a SwiftShader framebuffer at all. Both are currently
-> reasoned-from-code, not measured.
+> [!NOTE]
+> **Experiment done (2026-06-23).** The two flagged uncertainties are now *measured*,
+> not reasoned-from-code: determinism holds at idle (revision #3 downgraded to
+> insurance); `gl.readPixels` is unreliable so the dead-frame check reads the composited
+> screenshot with a *variance* threshold; and clean routes carry baseline resource
+> `console.error`s, so the smoke gate keys on `pageerror` + `webglcontextlost` (revision
+> #5). See the 2026-06-23 finding in the session log.
 </content>
