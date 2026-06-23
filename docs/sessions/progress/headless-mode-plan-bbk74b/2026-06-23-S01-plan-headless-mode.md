@@ -5,13 +5,13 @@ date: 2026-06-23
 title: Headless mode build-out — deep-link debug-pose harness + mobile smoke
 branch: claude/headless-mode-plan-bbk74b
 slug: headless-mode-plan-bbk74b
-status: proposed
-build: unknown
+status: completed
+build: passed
 followup: null
 pr: null
 app: docs, engine
-signals: needs-dan
-next: Implement Phase 1 (shared URL-pose + HUD scaffolding) on a fresh branch
+signals: null
+next: Optional — give Solid Worlds a genuine independent witness (filed in TODO)
 ---
 
 # Headless mode build-out — deep-link debug-pose harness + mobile smoke

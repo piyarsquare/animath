@@ -41,6 +41,26 @@ from two prior threads:
 
 ## Working notes
 
+### 🟡 milestone · 16:18 — Phase 5: docs + ledger close-out; harness shipped end-to-end
+**Why:** the L1 positive check is built and verified across all 5 phases — close the loop so it stops being re-discovered.
+
+- **`docs/HEADLESS_WEBGL.md`** — added the *Debug-pose deep links* vocabulary (with
+  the cross-process byte-vs-visual caveat) and the *Mobile smoke* section (the
+  three detectors + the no-real-device caveat).
+- **`RECURRING_LESSONS.md`** — **L1 flipped 🟡 → 🟢 (rule + check)** with pointers to
+  the harness + smoke + `smoke.yml`; "Still to enact" updated (L1 built; `package.json`
+  protected-list done); the SolidWorlds-witness follow-up noted.
+- **`RECIPES.md` R1** — now points at the debug-pose deep link (`?…&hud`) and
+  `npm run smoke` for the mobile-crash class.
+- **`TODO.md`** — checked off the L1 harness line and the `package.json` protected-file
+  line; the SolidWorlds independent-witness + RGBELoader items remain open.
+- **`package.json` on the append-only protected list** — added to CLAUDE.md's
+  Parallel-branches callout + BUILDING_AN_APP.md §8 (Tier-4 rec 10).
+
+Session deliverable complete: the L1 positive check exists, is verified
+(walkers reproduce exact frames; smoke PASS 17/17), documented, and enacted in the
+ledger + recipes. Build ✓ · 64/64 tests ✓ · lint 0 errors.
+
 ### 🟢 code · 15:45 — Phase 4: mobile smoke harness (PASS 17/17) + CI wiring + TODOs
 **Why:** the second deliverable — the 390×844 runtime-crash check that escapes `tsc && vite build`; built on the *measured* detector design, not guesswork.
 

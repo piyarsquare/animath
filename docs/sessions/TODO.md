@@ -45,23 +45,23 @@ informs future rounds. Delete or check off items as they land.
   signal). Still open: requiring `signals:`/`next:` at handoff (templates + skills)
   and gating the linter in CI once the corpus is clean (140 advisory warnings remain).
 
-- [ ] [docs] !high Build the deep-link debug-pose harness + headless mobile smoke (L1 in RECURRING_LESSONS.md).
-  The highest tool-ROI item from the process audit, requested independently three
-  times across the topology sessions. (a) A URL param that sets camera/world/pose so
-  `scripts/shoot.mjs` can reproduce an exact frame, plus an opt-in dev HUD (player
-  determinant, current tile, nearest-marker distance) — turns "verified headless"
-  from a blind hypothesis into a reproducible visual diff and would have caught the
-  teleporting-world / spoofed-probe cases. (b) A `shoot.mjs` pass at 390×844 across
-  all routes asserting no console error / no NaN-in-shader — the only defect class
-  that escapes the desktop `tsc && vite build` gate (#216 Torus crash, #215 height).
-  This is the "+ check" that moves L1/L3 from rule-only to rule+check. Touches
-  app/scripts/CI, so its own branch (was Phase 5, not built in the audit branch).
+- [x] [docs] Build the deep-link debug-pose harness + headless mobile smoke (L1 in RECURRING_LESSONS.md).
+  DONE 2026-06-23 (`headless-mode-plan` branch). (a) The debug-pose deep link +
+  opt-in dev HUD: `src/lib/debugPose.ts` (URL → world/look/camera/pose) +
+  `src/components/DebugPoseHUD.tsx` (determinant · cell · nearest-marker · an
+  independent ink witness on Polygon Worlds), adopted by **Polygon Worlds** and
+  **Solid Worlds** (`setPose` added to each engine). (b) `npm run smoke`
+  (`scripts/smoke.mjs`): all routes at 390×844 — `pageerror`/`webglcontextlost`
+  load-bearing, `console.error` advisory, dead-frame = low screenshot variance;
+  PASS 17/17, non-blocking CI in `.github/workflows/smoke.yml`. L1 → 🟢; documented
+  in `docs/HEADLESS_WEBGL.md`. Remaining follow-up (filed separately): a genuine
+  independent witness for Solid Worlds.
 
-- [ ] [docs] !low Add `package.json` to the append-only protected-file list.
-  The one real conflict-marker near-miss in 50 PRs landed in `package.json`, which
-  isn't on the protected list (CLAUDE.md/apps.ts/index.tsx/README.md). Add it to the
-  append-only note in CLAUDE.md + BUILDING_AN_APP.md §8 so new scripts/deps are
-  appended, not reordered. Cheap; from the process audit (Tier-4 rec 10).
+- [x] [docs] Add `package.json` to the append-only protected-file list.
+  DONE 2026-06-23. Added `package.json` (scripts/deps appended, not reordered) to the
+  append-only note in CLAUDE.md's Parallel-branches callout and BUILDING_AN_APP.md §8.
+  From the process audit (Tier-4 rec 10); the one real conflict-marker near-miss in
+  50 PRs had landed there.
 
 - [ ] [docs] !low One "sandbox gotchas" doc for the remote-execution environment.
   Wrong default branch on clone, container reset to an old commit mid-session, 403s
