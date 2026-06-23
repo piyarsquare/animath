@@ -11,7 +11,7 @@ followup: null
 pr: null
 app: general
 signals: not-live
-next: Dan testing the reworked app; optional polish (bespoke gallery preview, persist the Lab catalog); then /handoff.
+next: Dan testing the reworked app (smaller grid, fullscreen fill, skin-neutral colors); optional polish (persist the Lab catalog); then /handoff.
 ---
 
 # New app — why a Bessel function gives the Skellam (Poisson-difference) conditionals
@@ -91,6 +91,28 @@ diagonal-sum picture is the candidate central visual.
 ## Working notes
 
 <!-- Newest entry first. One ### per state transition. -->
+
+### 🟢 code · 2026-06-23 09:30 — Smaller grid, fullscreen fill, skin-neutral channel labels
+**Why:** Dan: (1) shrink the joint grid another 15–20%; (2) in full screen the Play
+buttons end up stranded at the bottom of the screen below a tall empty gap; (3) stop
+using the words "gold"/"teal" in the UI/code — those colors change with the skin.
+
+- **Grid −~17%:** windowed lattice `max-height` `min(300px,34vh)` → `min(250px,28vh)`,
+  so the two distributions sit higher in the frame.
+- **Fullscreen fill:** added `.am-ws-full .ctw-stage { justify-content: safe center;
+  padding-bottom: 64px }` plus larger fullscreen sizes (lattice `min(440px,50vh)`,
+  bars 200px). The content now centers and grows to meet the action strip (which is
+  `position:absolute; bottom:14px`), so Play/Next/Reset read as attached instead of
+  floating below a void. Verified with a click-through headless shot of the
+  fullscreened view.
+- **Skin-neutral naming:** dropped "gold ="/"teal =" from the legend and the words
+  "gold"/"teal" from the CSS classes (`.ctw-key.accent`/`.accent2`), the `MiniDist`
+  `color` prop (`'accent' | 'accent2'`) and the code comments. The two channels are
+  now named by **role** — distribution = `--accent`, selection = `--accent-2` — since
+  the hues swap per skin. Re-verified on Phosphor: the distribution renders green and
+  the selection amber, both tracking the theme.
+
+Build green · lint 0/60. Screenshots: windowed (default + Phosphor) and fullscreen.
 
 ### 🟢 code · 23:10 — Formula out of the frame; three distributions connected + theme-color TODO
 **Why:** Dan: the center formula box overflowed for negative k and broke the visual
