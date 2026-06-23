@@ -63,6 +63,13 @@ informs future rounds. Delete or check off items as they land.
   append-only note in CLAUDE.md + BUILDING_AN_APP.md §8 so new scripts/deps are
   appended, not reordered. Cheap; from the process audit (Tier-4 rec 10).
 
+- [ ] [docs] !low One "sandbox gotchas" doc for the remote-execution environment.
+  Wrong default branch on clone, container reset to an old commit mid-session, 403s
+  on deploy-trigger / branch-delete / primary-source PDF fetch, `npm ci` cold-start
+  failure — each rediscovered per session. Some live in CLAUDE.md; the
+  branch-checkout one doesn't. Process audit Tier-4 rec 9 (the one recommendation
+  not yet filed anywhere — caught by this session's own self-reflection).
+
 - [ ] [complex-particles] !med Argand: make the scrubber pay its way (or drop it) — the *arc* is the payload, not the slider.
   Dan on Phase 1: the position-scrubber adds little on its own; the static parametric
   path (spiral / parallelogram) is what teaches. A bare `t`-slider only earns its place
