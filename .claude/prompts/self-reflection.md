@@ -8,7 +8,15 @@ answer is "nothing," say so — an empty answer is more valuable than a forced o
 The exact `## Self-reflection` heading and the final `**Follow-up value:** <LEVEL> — …`
 line matter: the cross-branch control center (`npm run sessions`) scrapes them to
 build its **Reflections** view (the exit-interview digest), reading `<LEVEL>` to color
-each entry's follow-up badge. Keep `<LEVEL>` one of CRITICAL / HIGH / MEDIUM / LOW / NONE.
+each entry's follow-up badge. Keep `<LEVEL>` one of CRITICAL / HIGH / MEDIUM / LOW / NONE,
+written canonically (ASCII hyphen, level unwrapped). Run `npm run sessions:lint` on your
+report to confirm the digest will read it.
+
+If a lesson you're reflecting on is already in the
+[recurring-lessons ledger](../../docs/sessions/RECURRING_LESSONS.md) (the write→enact
+loop for lessons seen ≥3×), check whether it's marked Promoted — a promoted lesson
+recurring is a signal the rule isn't landing; name that, so the next process audit
+reopens it instead of just re-logging.
 
 ```markdown
 ## Self-reflection
@@ -27,12 +35,6 @@ each entry's follow-up badge. Keep `<LEVEL>` one of CRITICAL / HIGH / MEDIUM / L
    `phone-needed`) so it isn't under-reported. …
 8. **Follow-up value:** LOW — [one-line justification]
 ```
-
-If a lesson here is one already promoted in
-[`docs/sessions/RECURRING_LESSONS.md`](../../docs/sessions/RECURRING_LESSONS.md)
-(e.g. L1 "verified headless", L2 "build then ask", L4 "untested pure logic"), say so
-plainly — a promoted lesson recurring means the rule isn't landing and the ledger
-entry should be reopened, not just re-logged.
 
 Follow-up value scale:
 
