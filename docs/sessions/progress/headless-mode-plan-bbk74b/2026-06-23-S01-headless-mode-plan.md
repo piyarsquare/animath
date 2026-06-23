@@ -66,6 +66,28 @@ Why it matters (the defects it would have caught, per the audit): the
 visually-wrong render), and the **#216 Torus crash / #215 height** runtime defects
 that escape the `tsc && vite build` gate.
 
+### 🔵 finding · 13:10 — Walker pose surface mapped; precedents already exist
+**Why:** deliverable (a) needs the exact state, engine seams, and URL/HUD precedents to be a real plan.
+
+- **URL parse precedent already in-repo:** `TrinaryLab.tsx` uses
+  `new URLSearchParams(window.location.hash.split('?')[1] ?? '')`; the router
+  (`index.tsx:65`) already splits `?query` off the path; PolygonWorlds already
+  reads `location.search.includes('polydebug')` to expose `window.__poly`.
+- **Diagnostics already computed:** SolidWorlds `getChirality()` (determinant ±1,
+  rotation angle) + `getMapState()` (u,v,w, cell) in `coverEngine.ts:724-741`;
+  PolygonWorlds `mapState.flipped` + u,v + `getPose()` exposed on the engine.
+  **Nearest-marker distance is the one quantity not yet computed** (needs a
+  landmark scan).
+- **HUD templates exist:** `ChiralityHUD` (SolidWorlds) and `SquareMiniMap`
+  (PolygonWorlds) are both rAF-loop overlays reading a getter — copy them for a
+  shared `DebugPoseHUD`.
+- **The seam to add:** PolygonWorlds engine exposes `getPose()` but **neither
+  walker exposes a pose *setter***; SolidWorlds engine only has `recenter()`. So
+  the harness must add a `setPose(...)` to each engine interface.
+- **Why URL params (not just `SEED_LS`):** `worldId`/`thirdPerson`/`camDistance`
+  are **session-only `useState`** (not persisted), so `SEED_LS` can't reach them —
+  a deep-link param is the only way to pin world + camera for a shot.
+
 ### 🔵 finding · 13:05 — Smoke-pass surface mapped (routes + how the crash class shows up)
 **Why:** the plan's deliverable (b) needs the exact route enumeration and a real detection mechanism, not a hand-wave.
 
