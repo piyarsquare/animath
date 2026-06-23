@@ -67,6 +67,19 @@ informs future rounds. Delete or check off items as they land.
   This is the "+ check" that moves L1/L3 from rule-only to rule+check. Touches
   app/scripts/CI, so its own branch (was Phase 5, not built in the audit branch).
 
+- [ ] [general] !low Screenshot tour — wire into CI as a regression aid (baseline + visual diff).
+  `scripts/tour.mjs` (`npm run tour`; docs/SCREENSHOTS.md) ships `workflow_dispatch`-only
+  today. Next: commit a baseline set and post a visual diff (or the contact sheet) on PRs
+  that touch `src/chrome` or an app, so chrome/app regressions get caught. Complements the
+  deep-link / headless-mobile-smoke harness item above (shares the headless-WebGL setup).
+
+- [ ] [general] !low Screenshot tour — capture transient/interaction + theme states.
+  The tour captures settled *default* frames only. Add the "?" explainer modal, a
+  fullscreen view, and mid-animation / fractal-trace states; consider switching skins via
+  a live `SkinPicker` click (faster than the current reload-per-skin) for non-gallery
+  routes. Caveat to keep in mind: rendering is software WebGL (SwiftShader), not a real
+  GPU — colors/AA differ subtly from production, so shots aren't pixel-true.
+
 - [ ] [docs] !low Add `package.json` to the append-only protected-file list.
   The one real conflict-marker near-miss in 50 PRs landed in `package.json`, which
   isn't on the protected list (CLAUDE.md/apps.ts/index.tsx/README.md). Add it to the
