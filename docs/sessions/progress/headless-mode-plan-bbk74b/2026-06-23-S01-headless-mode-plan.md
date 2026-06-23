@@ -41,6 +41,29 @@ from two prior threads:
 
 ## Working notes
 
+### 🟢 code · 13:42 — Phase 1 scaffolding landed (build + tests + lint green)
+**Why:** Dan approved starting Phase 1 — the pure additive scaffolding, no app behavior change.
+
+Added three app-agnostic modules + a unit test:
+- **`src/lib/debugPose.ts`** — hash-query pose parser: `poseParams()`,
+  `pNum/pBool/pStr`, `hudEnabled()`, and `frozenTime()` (the determinism param from
+  synthesis revision #3, parseable from day one). Also exports the shared
+  **`DebugState`** interface — including the independent **`jump`** witness field
+  (revision #2), so engines can import the type without pulling React.
+- **`src/lib/nearestMarker.ts`** — the one diagnostic not already computed; pure,
+  dimension-agnostic (`distance`, `nearestMarker`, `nearestMarkerDistance`).
+- **`src/lib/__tests__/nearestMarker.test.ts`** — 11 cases (2D/3D, empty, ties,
+  Infinity) honoring L4 (test pure logic on write).
+- **`src/components/DebugPoseHUD.tsx`** — shared opt-in HUD modeled on
+  `ChiralityHUD`: a `pointer-events:none` corner overlay polling a `get()` →
+  `DebugState` in a rAF loop, rendering whichever fields are present. Never mounts
+  unless `?hud`/`?debug` — zero impact on the shipped UI.
+
+Verified: `npm run build` ✓ (tsc + vite), `vitest` 11/11 ✓, `eslint` 0 errors on the
+new files. No shared registry files touched (parallel-branch safe). Next:
+Phase 2 — PolygonWorlds adoption (it already exposes `getPose()`), preceded by the
+one `shoot.mjs` determinism/`readPixels` experiment the synthesis flagged.
+
 ### 🔵 finding · 12:50 — Reviewed all headless documentation; the task is L1's two named checks
 **Why:** the focus said "review all the documentation on this problem in reports and todo" before planning.
 
