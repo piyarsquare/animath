@@ -29,6 +29,15 @@ example** of the whole pattern.
 > interpretation, how far should this go, and is there a reference image to match?*
 > The corpus proved the up-front questionnaire measurably cuts the thrash — make it
 > a reflex, not a lesson re-learned each session.
+>
+> **But distinguish guessing from exploring** (recipe
+> [R2](sessions/RECIPES.md#r2--separate-exploring-from-guessing)). Sometimes
+> neither side yet knows what the result should look like and *building is the
+> thinking* — that iteration is legitimate and lots of up-front planning can get
+> nowhere. The habit to kill is guessing at a **knowable** target; the remedy is a
+> sharper input (a reference in any modality — image, sketch, an app to point at),
+> not more planning. When the target is genuinely undiscovered, build a **small,
+> reversible probe** and say it's one.
 
 ---
 

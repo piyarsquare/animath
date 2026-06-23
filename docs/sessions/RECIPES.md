@@ -50,20 +50,33 @@ headless only" in self-reflection Q7 — never let a visual claim ship as if che
 
 ---
 
-## R2 — Pin scope *before* building &nbsp;<sub>(from [L2](RECURRING_LESSONS.md))</sub>
+## R2 — Separate exploring from guessing &nbsp;<sub>(from [L2](RECURRING_LESSONS.md))</sub>
 
-**WHEN** the request is visual or multi-mode, **and** it has a "how far / which
-reading?" fork, **and** building the full version costs more than a few minutes.
+**WHEN** the request is visual or multi-mode and building the full version costs
+more than a few minutes. First tell the two cases apart:
 
-**THEN** *before writing code*: state my reading plus the maximal and minimal
-interpretations in one line, then either pick the obvious default and say so, or
-ask **one** disambiguating `AskUserQuestion` — and ask for a reference image to
-match.
+- **Exploratory** — neither of us yet knows what the result should look like;
+  building *is* the thinking. This is legitimate and often the fastest path —
+  don't suppress it with up-front planning that "gets us nowhere." Build a small,
+  cheap, *reversible* probe and show it.
+- **Avoidable thrash** — the target *was* knowable (there's a reading I could have
+  asked about, or a reference I could have matched) and I'm about to build the
+  maximal or a guessed interpretation anyway.
 
-**DONE WHEN** scope is pinned in writing before the first feature/geometry commit.
-(This is the single costliest recurring habit in the repo's history — the maximal
-or wrong-reading version finished before a cheap "which meaning?" check, costing
-3–5 build/revert cycles.)
+**THEN** for the avoidable case, *before writing code*: state my reading plus the
+maximal/minimal interpretations in one line, and either pick the obvious default
+and say so, or ask **one** disambiguating `AskUserQuestion` — and ask for a
+**reference in any modality** (image, sketch, an existing app to point at, a
+gesture at a comparable), since a picture sharpens a request that prose can't.
+For the exploratory case, keep the first build *small and reversible* so iterating
+is cheap, and say plainly it's a probe to react to.
+
+**DONE WHEN** I've either pinned a knowable target before committing, or shipped a
+deliberately small probe and named it as one. The failure to avoid is the
+*third* build/revert cycle on something a cheap reference would have settled —
+not the honest first exploration. (Caveat from Dan, 2026-06-23: lots of planning
+can get us nowhere, and the target is often only discoverable by building; the
+lever is sharper inputs — other modalities — not more planning.)
 
 ---
 

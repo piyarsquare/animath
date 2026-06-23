@@ -5,19 +5,37 @@ date: 2026-06-22
 title: "Process audit — how we work together on animath: findings & recommendations"
 branch: claude/process-audit-collaboration-tvrn9b
 slug: process-audit-collaboration-tvrn9b
-status: proposed
+status: executed
 build: n/a
 followup: medium
 pr: null
 app: docs, general
 signals: needs-dan
-next: Dan to pick which recommendations to adopt; implementing them is a separate pass (this doc is findings-only).
+next: Remaining open recs are the L1 debug-pose harness + mobile smoke (rec 2/3, own branch) and Dan's catalog/identity decisions (rec 8). See the adoption banner below.
 ---
 
 # Process audit — how we work together on animath
 
 *Findings & recommendations. Read-only audit; no process artifacts were changed this
 session — adopting any recommendation below is a deliberate follow-up.*
+
+> [!IMPORTANT]
+> **Adoption update (2026-06-23).** The recommendations were taken up on this same
+> branch; this doc is no longer findings-only. Status of each:
+>
+> - **Meta-finding (write→enact loop): DONE** — [`RECURRING_LESSONS.md`](../../RECURRING_LESSONS.md) ledger + quarterly cadence.
+> - **Rec 1 (scope/reference gate, W2/W7): DONE** — `BUILDING_AN_APP.md` callout + recipe [R2](../../RECIPES.md). *Refined per Dan:* separate exploratory iteration (legitimate) from avoidable guessing; the lever is sharper inputs (other modalities), not more planning.
+> - **Rec 4 (is-the-check-real, W3): DONE** — self-reflection Q7 + recipe R3.
+> - **Rec 5 (test-on-write rule, W4): DONE (rule)** — `BUILDING_AN_APP.md` §6/§7 + recipe R4. *Open:* back-fill `complexOps.ts` tests.
+> - **Rec 6 (lint the reports): DONE + CI** — `npm run sessions:lint`; now a **blocking** `--strict` step in `deploy.yml`. Scraper hardened (recovered 13 dropped reflections).
+> - **Rec 7 (signals under-count): PARTIAL** — linter warns "says headless, no signal"; requiring/auto-deriving still open.
+> - **Recs 2 & 3 (debug-pose harness + mobile smoke): OPEN** — highest tool-ROI; filed `!high` in `TODO.md` (own branch — touches app/scripts/CI).
+> - **Rec 8 (catalog/identity decisions): NEEDS DAN** — the human-only class; still open.
+> - **Rec 10 (`package.json` append-only): OPEN** — filed `!low` in `TODO.md`. **Rec 9 (sandbox-gotchas doc): not filed.**
+>
+> Beyond the plan: the **recipes cookbook** ([`RECIPES.md`](../../RECIPES.md)) turns
+> the promoted rules into if-this-then-that form (Dan: *rules get ignored, recipes
+> get followed*), wired into `/start-session`.
 
 **Corpus.** 90 progress reports + 38 handoffs across ~33 branch folders
 (`docs/sessions/`), plus 50 squash-merged PRs of git history (#172→#229,

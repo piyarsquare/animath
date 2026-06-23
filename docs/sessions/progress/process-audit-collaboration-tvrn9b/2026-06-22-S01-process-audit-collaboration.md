@@ -5,13 +5,13 @@ date: 2026-06-22
 title: Process audit — collaboration patterns across the project
 branch: claude/process-audit-collaboration-tvrn9b
 slug: process-audit-collaboration-tvrn9b
-status: in-progress
+status: completed
 build: passed
 followup: null
 pr: null
 app: docs, general
 signals: needs-dan
-next: Build the L1 deep-link debug-pose harness + headless mobile smoke (the one rule→check still open; see RECURRING_LESSONS.md + TODO.md) and decide whether to CI-gate `npm run sessions:lint --strict` now that the corpus is at 0 errors.
+next: Build the L1 deep-link debug-pose harness + headless mobile smoke (the highest-ROI rule→check still open; see RECURRING_LESSONS.md + TODO.md), and have Dan close the standing catalog/identity decisions (Argand↔Plane Transform, Stable Marriage, Solid Worlds rename) — the one class only he can move.
 ---
 
 # Process audit — collaboration patterns across the project
@@ -34,6 +34,29 @@ This audit is a **new, cross-cutting topic**, not a pickup of that work. First
 tracked session on this branch (`process-audit-collaboration-tvrn9b`).
 
 ## Working notes
+
+### 🟢 code · 06-23 — Recipes cookbook + CI gate live; W2 refined with Dan's exploring-vs-guessing distinction
+**Why:** Dan's framing — *"rules are sometimes ignored but recipes tend to be followed"* — is the missing delivery mechanism for the promoted lessons; and his pushback on W2 (you often can't know the target until you build; lots of planning gets nowhere) is a real correction the rule needed.
+
+- **New [`docs/sessions/RECIPES.md`](../../RECIPES.md)** — the four promoted lessons
+  (L1–L4) recast as if-this-then-that recipes (WHEN / THEN / DONE-WHEN), each
+  back-linked to the ledger. Wired into the **`/start-session`** skill (step 6) so
+  agents read it at session start; cross-linked from the ledger.
+- **CI gate flipped to blocking** — `deploy.yml` now runs `npm run sessions:lint
+  -- --strict` as a hard step (no `continue-on-error`). `--strict` exits non-zero
+  *only on errors* (`process.exit(strict && totalErr ? 1 : 0)`), and the corpus is
+  at 0 errors, so the 140 advisory warnings don't trip it — a future digest-breaking
+  report now fails the deploy loudly instead of silently dropping from the digest.
+- **W2/L2 refined (Dan, 06-23):** the cost is **avoidable thrash** (guessing at a
+  *knowable* target), not **exploratory iteration** (the target is only discoverable
+  by building — legitimate, and over-planning can stall it). The lever is **sharper
+  inputs in other modalities** (a reference image / sketch / app to point at), not
+  more up-front planning. Folded into recipe R2 ("separate exploring from guessing"),
+  the ledger L2 row, and the `BUILDING_AN_APP.md` callout.
+
+Verify: `npm run build` green (7.4s); `npm run sessions:lint -- --strict` exit 0
+(0 errors / 140 advisory). Docs/process only — no app code (L1-honest: not run in a
+WebGL context, none needed).
 
 ### 🟡 milestone · 06-23 — Phases 3–4 shipped: the write→enact loop is now real
 **Why:** Phase 1 built the *detector* (linter); the audit's meta-finding was that the system records lessons but never enacts them. Phases 3–4 close that — promote the dominant recurring lessons into durable rules and stand up the ledger that retires them.

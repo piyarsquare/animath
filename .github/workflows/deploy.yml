@@ -34,9 +34,8 @@ jobs:
           # ~150MB Chrome download (the cloud session installs it explicitly).
           PUPPETEER_SKIP_DOWNLOAD: 'true'
       - run: npm run build
-      - name: Lint session reports (non-blocking)
-        run: npm run sessions:lint -- --strict   # warns on off-spec reports that would break the Reflections digest; not yet a gate
-        continue-on-error: true
+      - name: Lint session reports
+        run: npm run sessions:lint -- --strict   # fail the deploy on any error that would silently break the Reflections digest (corpus is at 0 errors; --strict ignores advisory warnings)
       - run: npm run sessions          # cross-branch control center → docs/sessions/{control-center.html,converted/}
       - run: node docs/sessions/copy-sessions-to-dist.mjs   # → dist/sessions/ (noindex, off to the side)
       - uses: actions/configure-pages@v4
