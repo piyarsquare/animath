@@ -833,10 +833,13 @@ const SKELLAM = (() => {
 })();
 
 function SkellamPreview({ light }: { light: boolean }) {
-  const bg = light ? '#f4f3ef' : '#05060d';
-  const gold = light ? '#b67d10' : '#ffd400';
-  const teal = light ? '#1d8a78' : '#5ad1ff';
   const ref = useCanvas((ctx, W, H, t) => {
+    // pull the live theme tokens so the card matches the active skin, not just light/dark
+    const cs = getComputedStyle(document.documentElement);
+    const pick = (name: string, fb: string) => cs.getPropertyValue(name).trim() || fb;
+    const bg = pick('--bg', light ? '#f4f3ef' : '#05060d');
+    const gold = pick('--accent', light ? '#b67d10' : '#ffce47');
+    const teal = pick('--accent-2', light ? '#1d8a78' : '#5fe3cd');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     const { G, K, pX, pY, jmax, sk, skmax } = SKELLAM;
     const gs = Math.min(W * 0.72, H * 0.6);

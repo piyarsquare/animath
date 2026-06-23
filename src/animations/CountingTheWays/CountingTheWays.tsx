@@ -119,8 +119,8 @@ function Lattice({ mu1, mu2, k, N, accN, showMarginals, lab, onPickK, marginsSho
           key={`${x}-${y}`}
           className={cls}
           x={gx(x)} y={gy(y)} width={cs} height={cs}
-          fill={onDiag ? 'var(--accent-2)' : 'var(--dim)'}
-          fillOpacity={onDiag ? Math.max(0.05, tint * 0.9) : op * 0.5}
+          fill={onDiag ? 'var(--accent-2)' : 'var(--accent)'}
+          fillOpacity={onDiag ? Math.max(0.06, tint * 0.92) : op * 0.85}
           onMouseEnter={() => setHover({ x, y })}
           onMouseLeave={() => setHover(h => (h && h.x === x && h.y === y ? null : h))}
           onClick={() => onPickK(x - y)}
@@ -174,7 +174,7 @@ function Lattice({ mu1, mu2, k, N, accN, showMarginals, lab, onPickK, marginsSho
       <div className="ctw-lattice-cap">
         {hoverInfo
           ? <>cell ({hoverInfo.x} {lab.xShort}, {hoverInfo.y} {lab.yShort}) · k = {hoverInfo.x - hoverInfo.y} · rung n = {Math.min(hoverInfo.x, hoverInfo.y)} · P = {fmt(hoverInfo.jp, 4)}</>
-          : <><span className="ctw-key gold">◆</span> diagonal = your Skellam spot (one integer k){diagBeyond ? ' · runs past the edge →' : ''} &nbsp;·&nbsp; <span className="ctw-key teal">◆</span> teal = the Bessel along it (the rung n)</>}
+          : <><span className="ctw-key gold">◆</span> gold = the distribution (→ Skellam){diagBeyond ? ' · runs past the edge →' : ''} &nbsp;·&nbsp; <span className="ctw-key teal">◆</span> teal = your diagonal (→ Bessel, rung n)</>}
       </div>
     </div>
   );
@@ -277,8 +277,8 @@ function MiniDist({ bars, color, title, sub, onPick }: {
               {onPick && <rect x={x} y={padTop} width={bw} height={baseY - padTop} fill="transparent" />}
               <rect x={x + bw * 0.13} y={baseY - fh} width={w} height={fh} fill={main} opacity={0.15} />
               {b.shown > 0 && (
-                <rect x={x + bw * 0.13} y={baseY - sh} width={w} height={sh} fill={main}
-                  opacity={b.active ? 1 : 0.85} stroke={b.active ? 'var(--fg)' : 'none'} strokeWidth={b.active ? 1.2 : 0} />
+                <rect x={x + bw * 0.13} y={baseY - sh} width={w} height={sh}
+                  fill={b.active ? 'var(--accent-2)' : main} opacity={b.active ? 1 : 0.85} />
               )}
               {b.label != null && <text x={x + bw / 2} y={H - 5} textAnchor="middle" className="ctw-mini-lbl">{b.label}</text>}
             </g>
