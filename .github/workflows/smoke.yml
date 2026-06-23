@@ -1,0 +1,35 @@
+name: Mobile smoke
+
+# Headless mobile-viewport smoke check (scripts/smoke.mjs): loads every route at
+# 390x844 in software WebGL and fails on a runtime crash / blank frame — the
+# defect class that escapes `tsc && vite build` (e.g. the #216 Torus crash). It
+# is deliberately a SEPARATE workflow from deploy.yml (which skips puppeteer's
+# Chrome download); here we DO download Chrome to run it.
+#
+# Advisory for now: the smoke step is `continue-on-error`, so it surfaces in the
+# PR's checks/logs without blocking merges. Promote to a hard gate (drop
+# continue-on-error) once it's proven quiet — the same graduation path the
+# sessions:lint --strict step took.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci            # installs puppeteer's Chrome-for-Testing (NOT skipped here)
+      - run: npm run build
+      - name: Serve the production build
+        run: npm run preview &
+      - name: Wait for the server
+        run: npx --yes wait-on http://localhost:4173/animath/ --timeout 60000
+      - name: Mobile smoke (390x844, all routes)
+        continue-on-error: true   # advisory for now; drop this to make it a hard gate
+        run: npm run smoke

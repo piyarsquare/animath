@@ -173,6 +173,7 @@ export function makeFundamentalSquareEngine(deps: EngineDeps, spec: WorldSpec, o
     setFloorThickness: (t) => { cover.setFloorThickness?.(t); applyAtmosphere(); },
     setLook: (id) => applyLook(findLook(id)),
     setCameraDistance: (d) => cover.setCameraDistance?.(d),
+    setPose: (p) => { if (p.u != null && p.v != null) cover.setPose?.(p.u, p.v); },
     getMapState: () => mapState,
     getPose: () => poseState,
     debugProbe: () => cover.debugProbe?.(),

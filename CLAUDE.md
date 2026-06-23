@@ -437,7 +437,8 @@ Follow **docs/BUILDING_AN_APP.md**. In short:
 > **Parallel branches.** Several app branches are often in flight at once
 > (frequently in separate agent threads). The framework keeps that conflict-free
 > because each app is a self-contained folder; the only shared files a new app
-> edits — `index.tsx`, `apps.ts`, `CLAUDE.md`, `README.md` — are all **append-only**.
+> edits — `index.tsx`, `apps.ts`, `CLAUDE.md`, `README.md` (and `package.json` when
+> adding a script/dep) — are all **append-only**.
 > Add new entries at the **end** of each list/table, never reorder existing ones,
 > and touch only your own app's lines. Before opening/finalizing a PR,
 > `git fetch && git merge origin/main`, resolve any shared-file overlap by

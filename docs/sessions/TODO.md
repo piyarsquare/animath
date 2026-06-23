@@ -55,23 +55,23 @@ informs future rounds. Delete or check off items as they land.
   signal). Still open: requiring `signals:`/`next:` at handoff (templates + skills)
   and gating the linter in CI once the corpus is clean (140 advisory warnings remain).
 
-- [ ] [docs] !high Build the deep-link debug-pose harness + headless mobile smoke (L1 in RECURRING_LESSONS.md).
-  The highest tool-ROI item from the process audit, requested independently three
-  times across the topology sessions. (a) A URL param that sets camera/world/pose so
-  `scripts/shoot.mjs` can reproduce an exact frame, plus an opt-in dev HUD (player
-  determinant, current tile, nearest-marker distance) — turns "verified headless"
-  from a blind hypothesis into a reproducible visual diff and would have caught the
-  teleporting-world / spoofed-probe cases. (b) A `shoot.mjs` pass at 390×844 across
-  all routes asserting no console error / no NaN-in-shader — the only defect class
-  that escapes the desktop `tsc && vite build` gate (#216 Torus crash, #215 height).
-  This is the "+ check" that moves L1/L3 from rule-only to rule+check. Touches
-  app/scripts/CI, so its own branch (was Phase 5, not built in the audit branch).
+- [x] [docs] Build the deep-link debug-pose harness + headless mobile smoke (L1 in RECURRING_LESSONS.md).
+  DONE 2026-06-23 (`headless-mode-plan` branch). (a) The debug-pose deep link +
+  opt-in dev HUD: `src/lib/debugPose.ts` (URL → world/look/camera/pose) +
+  `src/components/DebugPoseHUD.tsx` (determinant · cell · nearest-marker · an
+  independent ink witness on Polygon Worlds), adopted by **Polygon Worlds** and
+  **Solid Worlds** (`setPose` added to each engine). (b) `npm run smoke`
+  (`scripts/smoke.mjs`): all routes at 390×844 — `pageerror`/`webglcontextlost`
+  load-bearing, `console.error` advisory, dead-frame = low screenshot variance;
+  PASS 17/17, non-blocking CI in `.github/workflows/smoke.yml`. L1 → 🟢; documented
+  in `docs/HEADLESS_WEBGL.md`. Remaining follow-up (filed separately): a genuine
+  independent witness for Solid Worlds.
 
-- [ ] [docs] !low Add `package.json` to the append-only protected-file list.
-  The one real conflict-marker near-miss in 50 PRs landed in `package.json`, which
-  isn't on the protected list (CLAUDE.md/apps.ts/index.tsx/README.md). Add it to the
-  append-only note in CLAUDE.md + BUILDING_AN_APP.md §8 so new scripts/deps are
-  appended, not reordered. Cheap; from the process audit (Tier-4 rec 10).
+- [x] [docs] Add `package.json` to the append-only protected-file list.
+  DONE 2026-06-23. Added `package.json` (scripts/deps appended, not reordered) to the
+  append-only note in CLAUDE.md's Parallel-branches callout and BUILDING_AN_APP.md §8.
+  From the process audit (Tier-4 rec 10); the one real conflict-marker near-miss in
+  50 PRs had landed there.
 
 - [ ] [docs] !low One "sandbox gotchas" doc for the remote-execution environment.
   Wrong default branch on clone, container reset to an old commit mid-session, 403s
@@ -177,6 +177,33 @@ informs future rounds. Delete or check off items as they land.
   are a separate build (a new gluing-presenter for the hex prism), not another entry
   in the existing cube engine. Reference saved locally: Conway–Rossetti, "Describing
   the Platycosms" → `docs/papers/describing-the-platycosms.pdf`.
+
+- [ ] [solid-worlds] !med Give Solid Worlds a genuine independent debug witness (like PolygonWorlds' ink probe).
+  The debug-pose HUD (`?hud`, from the headless-mode harness) shows SolidWorlds'
+  determinant/cell/pos, but — unlike PolygonWorlds, which carries an *independent*
+  geometric witness (`debugProbe`: the rendered ink's handedness, a different code path
+  that cross-checks the chart's flip bookkeeping) — SolidWorlds has **no independent
+  witness yet**. That was the three-hats pedagogy lens's revision #2 (a HUD reading the
+  same state the probe reads is an echo, not a check). Deferred in Phase 3 rather than
+  faked, because building it right is its own task and risks the exact L3
+  "green-check-that-wasn't": e.g. the per-step developing determinant is legitimately
+  −1 on a glide-reflection wrap, not +1 (an L7 handedness subtlety). SolidWorlds'
+  determinant is already the dual-verified, screw-safe invariant, so the echo risk is
+  milder than the ink case — but a real independent witness (a geometric probe measured
+  off the *rendered* scene, or a wrap-aware per-frame continuity/jump value) would make
+  the headless verification honest end-to-end and is what would catch a teleporting-world
+  regression. Plumb it into the existing `DebugState.witness` field
+  (`src/lib/debugPose.ts`) the HUD already renders.
+
+- [ ] [complex-particles] !low HDR env map fails to load — `THREE.RGBELoader: Unsupported type: 1009`.
+  Surfaced by the new mobile-smoke pass (`npm run smoke`) as an advisory warning on
+  `#/complex-particles` and `#/embed/complex-particles`: the RGBELoader is called with
+  `.setDataType(THREE.UnsignedByteType)` (= 1009), which the current three@0.163
+  RGBELoader rejects, so the HDR environment map silently fails and the viewer falls
+  back to procedural/white lighting. Benign (no crash; the fallback works) but real —
+  drop the `setDataType(UnsignedByteType)` call (or switch to `HalfFloatType`) in
+  `src/lib/textures.ts` so the HDR actually loads. Verify headless with
+  `node scripts/shoot.mjs '#/complex-particles' out.png`.
 
 - [ ] [complex-particles] !med Argand: an explainer + tools for complex / dual / split-complex numbers.
   The app already runs the affine line through all three systems via the System

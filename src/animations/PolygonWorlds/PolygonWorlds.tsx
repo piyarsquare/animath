@@ -22,6 +22,9 @@ import { parseWord } from './surfaceSchema';
 import { realize } from './lib/realize';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { EmbeddingInset } from './instruments/embeddingInset';
+import DebugPoseHUD from '../../components/DebugPoseHUD';
+import { poseParams, pNum, pStr, hudEnabled, type DebugState } from '../../lib/debugPose';
+import { nearestMarkerDistance } from '../../lib/nearestMarker';
 import explainerText from './EXPLAINER.md?raw';
 
 const LOOK_SENS = 0.0035;
@@ -39,10 +42,21 @@ export default function PolygonWorlds() {
   // third-person toggle and the camera distance (transient view, per the
   // "don't persist camera" convention).
   const pk = (f: string) => `polygon-worlds:${f}`;
-  const [worldId, setWorldId] = useState('klein');
+  // Debug-pose deep link (docs/HEADLESS_WEBGL.md): a hash query can pin the world,
+  // camera and pose so a headless shot reproduces an exact frame. Parsed once;
+  // an explicit URL param wins over the session default. Absent params → today's
+  // behavior exactly.
+  const bootRef = useRef(poseParams());
+  const boot = bootRef.current;
+  const bootWorld = pStr(boot, 'world', '');
+  const [worldId, setWorldId] = useState(() =>
+    WORLDS.some((w) => w.id === bootWorld) ? bootWorld : 'klein');
   const [moveSpeed, setMoveSpeed] = usePersistentState(pk('moveSpeed'), 6);
-  const [thirdPerson, setThirdPerson] = useState(true);
-  const [camDistance, setCamDistance] = useState(3.2);
+  const [thirdPerson, setThirdPerson] = useState(() => pStr(boot, 'cam', 'third') !== 'first');
+  const [camDistance, setCamDistance] = useState(() => {
+    const c = pNum(boot, 'camd', NaN);
+    return Number.isFinite(c) ? clampCam(c) : 3.2;
+  });
   // Start as clear-but-present glass: see-through enough to read the underside
   // (other face + columns + footprints), but tinted enough to know the floor is
   // there. The same value reads the same in every world (shared POLYGON_GLASS).
@@ -99,6 +113,18 @@ export default function PolygonWorlds() {
     engineRef.current.setRadius(radiusRef.current);
     engineRef.current.setCameraDistance(camDistRef.current);
     engineRef.current.setLook(lookRef.current);
+    // Debug-pose deep link: ?look= overrides the view (engine-level, so the user's
+    // persisted look isn't clobbered); seed the look orientation; drop the player at
+    // the requested chart position (euclidean worlds — heading is the look yaw, so
+    // this is position only). Read via the ref so onMount stays dependency-free.
+    const bp = bootRef.current;
+    const bootLook = pStr(bp, 'look', '');
+    if (bootLook) { lookRef.current = bootLook; engineRef.current.setLook(bootLook); }
+    yawRef.current = pNum(bp, 'yaw', yawRef.current);
+    pitchRef.current = pNum(bp, 'pitch', pitchRef.current);
+    if (bp.has('u') && bp.has('v')) {
+      engineRef.current.setPose({ u: pNum(bp, 'u', 0.5), v: pNum(bp, 'v', 0.5) });
+    }
     // Test seam (opt-in via ?polydebug): exposes the live minimap chart so a headless
     // harness can tell which side of the sheet the character is on. No effect on the
     // shipped app — the bridge is only attached when the query flag is present.
@@ -158,12 +184,17 @@ export default function PolygonWorlds() {
   }, []);
 
   // Rebuild the engine when the world changes (different cover/gluing) or when the
-  // landmark set changes (count/arrangement → the decor is rebuilt).
+  // landmark set changes (count/arrangement → the decor is rebuilt). The FIRST run
+  // is skipped: it fires on mount, right after Canvas3D's onMount already built the
+  // engine (children-first effect order) with the boot pose applied — rebuilding
+  // here would be redundant work AND would discard a debug-pose deep link's position.
+  const skipFirstRebuild = useRef(true);
   useEffect(() => {
     worldRef.current = spec;
     propsRef.current = props;
     const deps = depsRef.current;
     if (!deps || !engineRef.current) return;
+    if (skipFirstRebuild.current) { skipFirstRebuild.current = false; return; }
     engineRef.current.dispose();
     engineRef.current = makeFundamentalSquareEngine(deps, spec, {
       squareSize: sizeRef.current, floorThickness: thickRef.current, props,
@@ -273,6 +304,32 @@ export default function PolygonWorlds() {
   }, [zoomBy]);
 
   const getMapState = useCallback(() => engineRef.current?.getMapState() ?? null, []);
+  // Opt-in debug HUD (?hud / ?debug=1): snapshots the live pose diagnostics so a
+  // headless shot records what the engine thinks the frame is. `determinant` (from
+  // the chart's flip bookkeeping) is cross-checked by the independent `witness` —
+  // the ink's geometric handedness (debugProbe), computed by a different path.
+  const showHud = useRef(hudEnabled(boot)).current;
+  const getDebug = useCallback((): DebugState | null => {
+    const eng = engineRef.current;
+    if (!eng) return null;
+    const ms = eng.getMapState();
+    const probe = eng.debugProbe();
+    const nm = ms
+      ? nearestMarkerDistance({ x: ms.u, y: ms.v }, propsRef.current.map((p) => ({ x: p.u, y: p.v })))
+      : undefined;
+    return {
+      world: worldRef.current.id,
+      look: lookRef.current,
+      pos: ms ? { x: ms.u, y: ms.v } : undefined,
+      yaw: yawRef.current,
+      pitch: pitchRef.current,
+      determinant: ms ? (ms.flipped ? -1 : 1) : undefined,
+      nearestMarker: nm,
+      // The independent ink-handedness check is only meaningful once a print
+      // exists (setPose clears the trail), so omit it until the player walks.
+      witness: Number.isFinite(probe) ? { label: 'ink', value: probe as number } : undefined,
+    };
+  }, []);
   // Player's unit surface-normal direction (pose up). For the spherical worlds this
   // is the point on the unit sphere the player occupies, which the embedding inset's
   // sphere/Roman marker rides; flat/hyperbolic immersions ignore it.
@@ -420,6 +477,7 @@ export default function PolygonWorlds() {
           <MovePad onSet={setKey} phone={phone} />
           <SquareMiniMap getState={getMapState} spec={spec} phone={phone} />
           <EmbeddingInset key={`embed-${spec.id}`} worldId={spec.id} getState={getMapState} getDir={getDir} phone={phone} />
+          {showHud && <DebugPoseHUD get={getDebug} phone={phone} />}
 
           {!phone && (
             <div style={{
