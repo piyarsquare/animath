@@ -26,6 +26,7 @@ npm run build       # TypeScript check + Vite production build → dist/
 npm run preview     # preview production build locally
 npm test            # vitest unit tests (chrome workspace pure logic)
 npm run lint        # eslint over src/ (keep it at 0 errors)
+npm run tour        # screenshot every app (desktop + phone, all layouts/modes) → screenshots/ (docs/SCREENSHOTS.md)
 ```
 
 Node >= 20, npm >= 10 required. The only CI check is `npm run build` (which runs
