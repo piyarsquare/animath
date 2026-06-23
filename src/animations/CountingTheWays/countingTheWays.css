@@ -32,7 +32,7 @@
 .ctw-lattice-wrap { display: flex; flex-direction: column; gap: 4px; }
 .ctw-lattice {
   width: 100%;
-  max-height: min(420px, 42vh);
+  max-height: min(300px, 34vh);
   display: block;
 }
 .ctw-cell {
@@ -41,11 +41,11 @@
   cursor: pointer;
   transition: fill-opacity 0.12s;
 }
-.ctw-cell.diag { stroke: var(--accent-2); stroke-width: 1.2; stroke-dasharray: 2.5 2.5; }
+.ctw-cell.diag { stroke: var(--accent); stroke-width: 1.3; stroke-dasharray: none; }
 .ctw-cell.acc { stroke: var(--accent); stroke-width: 1.7; stroke-dasharray: none; }
 .ctw-cell.cur { stroke: var(--fg); stroke-width: 2; animation: ctw-pulse 0.9s ease-in-out infinite; }
 @keyframes ctw-pulse { 0%, 100% { stroke-opacity: 1; } 50% { stroke-opacity: 0.35; } }
-.ctw-marg { fill: var(--accent-2); opacity: 0.5; }
+.ctw-marg { fill: var(--dim); opacity: 0.45; }
 .ctw-diagline { stroke: var(--accent); stroke-width: 2; opacity: 0.3; pointer-events: none; }
 .ctw-diagmore line { stroke: var(--accent); stroke-width: 2; opacity: 0.7; }
 .ctw-diagmore polygon { fill: var(--accent); opacity: 0.7; }
@@ -53,6 +53,9 @@
 .ctw-hovermark rect { fill: none; stroke: var(--fg); stroke-width: 1.5; }
 .ctw-lattice-cap { font-size: 12px; color: var(--dim); line-height: 1.4; }
 .ctw-lattice-cap strong { color: var(--accent); font-family: var(--font-mono); }
+.ctw-key { font-weight: 700; }
+.ctw-key.gold { color: var(--accent); }
+.ctw-key.teal { color: var(--accent-2); }
 
 /* ── The two distributions, side by side (Skellam · Bessel) ── */
 .ctw-dists {

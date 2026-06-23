@@ -77,14 +77,19 @@ interface LatticeProps {
   /** Tutorial reveal: only margins index < marginsShown, cells with x+y ≤ cellThreshold,
    *  and the diagonal highlight when diagActive. All Infinity/true ⇒ the full picture. */
   marginsShown?: number; cellThreshold?: number; diagActive?: boolean; diagBeyond?: boolean;
+  /** Bessel conditional P(rung | k) for the active diagonal — paints the teal tint. */
+  cond?: number[];
+  /** Mark the current rung (the moving position), e.g. during the sweep. */
+  marking?: boolean;
 }
-function Lattice({ mu1, mu2, k, N, accN, showMarginals, lab, onPickK, marginsShown = INF, cellThreshold = INF, diagActive = true, diagBeyond = false }: LatticeProps) {
+function Lattice({ mu1, mu2, k, N, accN, showMarginals, lab, onPickK, marginsShown = INF, cellThreshold = INF, diagActive = true, diagBeyond = false, cond = [], marking = false }: LatticeProps) {
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const pX = useMemo(() => poissonRange(mu1, N), [mu1, N]);
   const pY = useMemo(() => poissonRange(mu2, N), [mu2, N]);
   const pXmax = Math.max(...pX, 1e-9);
   const pYmax = Math.max(...pY, 1e-9);
   const jointMax = pXmax * pYmax;
+  const condMax = Math.max(...cond, 1e-9);
 
   const cs = 22;
   const marg = showMarginals ? 48 : 14;
@@ -95,6 +100,9 @@ function Lattice({ mu1, mu2, k, N, accN, showMarginals, lab, onPickK, marginsSho
   const gx = (x: number) => marg + x * cs;
   const gy = (y: number) => marg + y * cs;
 
+  // Two color channels: off-diagonal cells carry the joint blob in a NEUTRAL tint
+  // (context); the active diagonal is the gold Skellam highlight (k), painted with
+  // a TEAL tint ∝ the Bessel conditional P(rung n | k) — your spot in each.
   const cells: React.ReactNode[] = [];
   for (let y = 0; y <= N; y++) {
     for (let x = 0; x <= N; x++) {
@@ -102,17 +110,17 @@ function Lattice({ mu1, mu2, k, N, accN, showMarginals, lab, onPickK, marginsSho
       const joint = pX[x] * pY[y];
       const onDiag = diagActive && x - y === k;
       const n = onDiag ? x - Math.max(0, k) : -1;
-      const acc = onDiag && n < accN;
-      const cur = onDiag && n === accN - 1;
+      const cur = onDiag && marking && n === accN - 1;
       const op = revealed && jointMax > 0 ? joint / jointMax : 0;
-      const cls = `ctw-cell${onDiag ? ' diag' : ''}${acc ? ' acc' : ''}${cur ? ' cur' : ''}`;
+      const tint = onDiag && revealed ? (cond[n] ?? 0) / condMax : 0;
+      const cls = `ctw-cell${onDiag ? ' diag' : ''}${cur ? ' cur' : ''}`;
       cells.push(
         <rect
           key={`${x}-${y}`}
           className={cls}
           x={gx(x)} y={gy(y)} width={cs} height={cs}
-          fill="var(--accent)"
-          fillOpacity={acc ? Math.max(0.22, op) : op}
+          fill={onDiag ? 'var(--accent-2)' : 'var(--dim)'}
+          fillOpacity={onDiag ? Math.max(0.05, tint * 0.9) : op * 0.5}
           onMouseEnter={() => setHover({ x, y })}
           onMouseLeave={() => setHover(h => (h && h.x === x && h.y === y ? null : h))}
           onClick={() => onPickK(x - y)}
@@ -165,8 +173,8 @@ function Lattice({ mu1, mu2, k, N, accN, showMarginals, lab, onPickK, marginsSho
       </svg>
       <div className="ctw-lattice-cap">
         {hoverInfo
-          ? <>cell ({hoverInfo.x} {lab.xShort}, {hoverInfo.y} {lab.yShort}) · difference {hoverInfo.x - hoverInfo.y} · P = {fmt(hoverInfo.jp, 4)} <span className="dim">— click to follow that diagonal</span></>
-          : <>each cell ({lab.xShort}, {lab.yShort}) is shaded by P(X={lab.xShort})·P(Y={lab.yShort}); the highlighted diagonal holds every way to net <strong>{k >= 0 ? `+${k}` : k}</strong>{diagBeyond ? ' — and runs past the grid edge →' : ''}. Click any cell to pick its diagonal.</>}
+          ? <>cell ({hoverInfo.x} {lab.xShort}, {hoverInfo.y} {lab.yShort}) · k = {hoverInfo.x - hoverInfo.y} · rung n = {Math.min(hoverInfo.x, hoverInfo.y)} · P = {fmt(hoverInfo.jp, 4)}</>
+          : <><span className="ctw-key gold">◆</span> diagonal = your Skellam spot (one integer k){diagBeyond ? ' · runs past the edge →' : ''} &nbsp;·&nbsp; <span className="ctw-key teal">◆</span> teal = the Bessel along it (the rung n)</>}
       </div>
     </div>
   );
@@ -211,8 +219,8 @@ function DiffHistogram({ bins, kMin, total, overlays, lab }: HistProps) {
 
 /* ── The factored Skellam formula, each piece color-linked ────────────────── */
 
-function FormulaBand({ mu1, mu2, k, partialBessel, partialSum }: {
-  mu1: number; mu2: number; k: number; partialBessel: number; partialSum: number;
+function FormulaBand({ mu1, mu2, k, partialBessel, partialSum, notes }: {
+  mu1: number; mu2: number; k: number; partialBessel: number; partialSum: number; notes: boolean;
 }) {
   const bd = besselBreakdown(mu1, mu2, k);
   const ak = Math.abs(k);
@@ -238,9 +246,8 @@ function FormulaBand({ mu1, mu2, k, partialBessel, partialSum }: {
         <span className="ctw-val total">{fmt(bd.pmf, 4)}</span>
       </div>
       <p className="ctw-formula-note">
-        The scary piece <span className="ctw-chip bessel sm">I<sub>{ak}</sub></span> is just the diagonal sum with the constants pulled out.
-        Sum so far: <strong>Σ joint = {fmt(partialSum, 4)}</strong> &nbsp;→&nbsp; Bessel part <strong>{fmt(partialBessel, 3)}</strong>
-        {bd.defined && <> &nbsp;(of {fmt(bd.bessel, 3)})</>}.
+        {notes && <>The scary <span className="ctw-chip bessel sm">I<sub>{ak}</sub></span> is just the diagonal sum, constants pulled out. </>}
+        <strong>Σ = {fmt(partialSum, 4)}</strong> → I<sub>{ak}</sub> <strong>{fmt(partialBessel, 3)}</strong>{bd.defined && <> of {fmt(bd.bessel, 3)}</>}.
       </p>
     </div>
   );
@@ -260,7 +267,7 @@ function MiniDist({ bars, color, title, sub, onPick }: {
   const main = color === 'teal' ? 'var(--accent-2)' : 'var(--accent)';
   return (
     <div className="ctw-mini">
-      <div className="ctw-mini-head"><strong>{title}</strong><span>{sub}</span></div>
+      <div className="ctw-mini-head"><strong>{title}</strong>{sub && <span>{sub}</span>}</div>
       <svg viewBox={`0 0 ${W} ${H}`} className="ctw-mini-svg" preserveAspectRatio="xMidYMid meet">
         {bars.map((b, i) => {
           const x = padX + i * bw, w = Math.max(1, bw * 0.74);
@@ -305,6 +312,7 @@ export default function CountingTheWays() {
   const [k, setK] = usePersistentState(`${NS}:k`, 2);
   const [gridCap, setGridCap] = usePersistentState(`${NS}:gridCap`, 16);
   const [showMarginals, setShowMarginals] = usePersistentState(`${NS}:marg`, true);
+  const [showNotes, setShowNotes] = usePersistentState(`${NS}:notes`, true);
   const [speed, setSpeed] = usePersistentState(`${NS}:speed`, 55);
 
   // rates are either set directly or read off the softplus law at length L
@@ -482,6 +490,7 @@ export default function CountingTheWays() {
   const displayNode = (
     <>
       <Checkbox label="Show the two Poisson margins" checked={showMarginals} onChange={setShowMarginals} />
+      <Checkbox label="Explanatory notes" checked={showNotes} onChange={setShowNotes} />
       <Slider label="Grid size cap" value={gridCap} min={10} max={24} step={1} onChange={v => setGridCap(Math.round(v))} format={v => `${v}×${v}`} />
     </>
   );
@@ -510,35 +519,38 @@ export default function CountingTheWays() {
   const explainView = (
     <div className="ctw-stage">
       {tut.stage === 'static'
-        ? <p className="ctw-story">
-            Two independent Poisson counts — <strong>{lab.x}</strong> at rate μ₁={mu1.toFixed(2)} and <strong>{lab.y}</strong> at rate μ₂={mu2.toFixed(2)} —
-            and we only ever see their difference. Press <strong>Play tutorial</strong> to build the whole grid and watch the Bessel function appear as one diagonal's sum.
-          </p>
+        ? (showNotes && (
+            <p className="ctw-story">
+              Two independent Poisson counts — we see only their difference. Press <strong>Play tutorial</strong> to build the grid; the Bessel function is one diagonal's sum.
+            </p>
+          ))
         : <div className="ctw-tutorial"><span className="ctw-step">Step {tut.step} / 3</span><span className="ctw-tut-text">{narration}</span></div>}
       <Lattice mu1={mu1} mu2={mu2} k={activeK} N={N} accN={accN} showMarginals={showMarginals} lab={lab}
         marginsShown={tut.marginsShown} cellThreshold={tut.cellThreshold} diagActive={tut.diagActive} diagBeyond={diagBeyond}
+        cond={cond} marking={tut.stage === 'sweep'}
         onPickK={v => setK(clamp(v, -N, N))} />
-      <FormulaBand mu1={mu1} mu2={mu2} k={activeK} partialBessel={partialBessel} partialSum={partialSum} />
+      <FormulaBand mu1={mu1} mu2={mu2} k={activeK} partialBessel={partialBessel} partialSum={partialSum} notes={showNotes} />
       <div className="ctw-dists">
         <MiniDist
           title="Skellam — the difference K"
-          sub="marginal · sum a diagonal"
+          sub={showNotes ? 'marginal · sum a diagonal' : ''}
           color="gold"
           bars={strip.map((p, i) => ({ full: p, shown: barValue(i), label: (i - stripSpan) % 5 === 0 ? `${i - stripSpan}` : null, active: i - stripSpan === activeK }))}
           onPick={(i) => setK(i - stripSpan)}
         />
         <MiniDist
           title={`Bessel — given K = ${activeK}`}
-          sub="conditional · rung n on that diagonal"
+          sub={showNotes ? 'conditional · rung n on that diagonal' : ''}
           color="teal"
           bars={cond.slice(0, 10).map((p, n) => ({ full: p, shown: p, label: `${n}`, active: false }))}
         />
       </div>
-      <p className="ctw-hint">
-        Two distributions, not one: <strong>Skellam</strong> is the difference itself — <em>sum</em> a diagonal.
-        The <strong>Bessel</strong> distribution is where you land on a diagonal — <em>normalize</em> it.
-        Same terms; the Bessel function Iₖ is their shared diagonal sum.
-      </p>
+      {showNotes && (
+        <p className="ctw-hint">
+          Two distributions, not one: <strong>Skellam</strong> (gold) is the difference — <em>sum</em> a diagonal.
+          The <strong>Bessel</strong> (teal) is where you land on it — <em>normalize</em> that diagonal. Iₖ is their shared sum.
+        </p>
+      )}
     </div>
   );
 
