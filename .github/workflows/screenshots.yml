@@ -12,17 +12,23 @@ on:
   workflow_dispatch:
     inputs:
       only:
-        description: 'Limit to routes matching these (comma list of hash/slug fragments, e.g. "trinary,fractals"). Blank = every app.'
+        description: 'Target — limit to routes matching these (comma list of hash/slug fragments, e.g. "trinary,fractals", or "gallery"). Blank = every app.'
         required: false
         default: ''
+      detail:
+        description: 'Level of detail (overview → everything)'
+        required: false
+        default: 'everything'
+        type: choice
+        options: ['everything', 'standard', 'overview']
       viewports:
         description: 'Form factors to capture'
         required: false
         default: 'desktop,mobile'
         type: choice
         options: ['desktop,mobile', 'desktop', 'mobile']
-      skin:
-        description: 'Skin to seed (blank = default). e.g. phosphor, blueprint, parchment, noir'
+      skins:
+        description: 'Skins (blank = default only). "all", or a comma list of ids: dark, light, neon, blueprint, phosphor'
         required: false
         default: ''
 
@@ -65,13 +71,14 @@ jobs:
         env:
           BASE_URL: http://localhost:4173/animath/
           ONLY: ${{ inputs.only }}
+          DETAIL: ${{ inputs.detail }}
           VIEWPORTS: ${{ inputs.viewports }}
-          SKIN: ${{ inputs.skin }}
+          SKINS: ${{ inputs.skins }}
         run: node scripts/tour.mjs
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: animath-screenshots${{ inputs.skin && format('-{0}', inputs.skin) || '' }}
+          name: animath-screenshots-${{ inputs.detail }}${{ inputs.skins && format('-{0}', inputs.skins) || '' }}
           path: screenshots/
           if-no-files-found: warn
