@@ -92,6 +92,25 @@ diagonal-sum picture is the candidate central visual.
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟢 code · 22:50 — Compact grid, hideable notes, two-channel Skellam/Bessel color
+**Why:** Dan asked to (1) shrink the joint grid for space, (2) hide a lot of the
+text, and (3) encode the cell's two coordinates as two color channels — gold for
+the diagonal (Skellam `k`, one integer), a teal tint for the rung (Bessel `n`).
+
+- **Smaller grid:** lattice capped at `min(300px, 34vh)`; the whole Explain view
+  (grid + legend + formula + both charts) now fits without scrolling on desktop and
+  nearly so on phone.
+- **Hideable text:** a *Show explanatory notes* toggle (Display panel) hides the
+  story, the formula prose, the chart sub-labels and the summary caption; remaining
+  copy trimmed. A one-line color key stays.
+- **Two-channel color:** the joint blob is neutral gray (context); the active
+  diagonal is the **gold** Skellam highlight (`k`) painted with a **teal tint ∝ the
+  Bessel conditional P(rung n | k)** — the "distribution of tint" along the
+  diagonal. Charts match (Skellam gold · Bessel teal); hover reads both coordinates
+  (`k` and rung `n`). Margins recolored neutral so the two channels read.
+
+Verified desktop (notes on/off) + phone. Build green · lint 0/60.
+
 ### 🟢 code · 22:20 — P2 fix: sum the whole diagonal; synced main (Stable Marriage retired upstream)
 **Why:** A review flagged that the walk clamps to the visible grid, so high rates /
 large |k| stopped the sum early while the formula showed the full pmf. Dan also
