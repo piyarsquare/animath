@@ -92,6 +92,28 @@ diagonal-sum picture is the candidate central visual.
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟢 code · 2026-06-23 10:10 — Fullscreen keeps the grid compact; pin the walkthrough caption
+**Why:** Dan tested the previous round: (1) the joint grid "gets large again in full
+screen" — the fullscreen rule that enlarged the lattice undid the deliberate shrink;
+(2) "when not in full screen, the text for the walkthrough is hiding under the header
+options" — in a shortened window the stage scrolls and the step caption slides up
+under the window header.
+
+- **Fullscreen grid stays compact.** Dropped `.am-ws-full .ctw-lattice { max-height
+  … }`; the lattice now keeps its windowed `min(250px,28vh)` in full screen too. The
+  extra space is filled by the *distributions* (`.ctw-mini-svg` to 200px) + the
+  existing `justify-content: safe center`, so going fullscreen enlarges the Skellam /
+  Bessel charts, not the grid. Reproduced via a click-through fullscreen shot.
+- **Sticky walkthrough caption.** `.ctw-tutorial` is now `position: sticky; top: 0`
+  with a layered opaque background (`linear-gradient(--accent-soft,--accent-soft),
+  --viz-bg`) so the running step narration stays pinned below the header and scrolled
+  grid content can't bleed through. Reproduced the bug first (short window + scroll →
+  caption top −92, `overlap: true`), then confirmed the fix (caption pinned at top
+  128, `overlap: false`); the normal full-size case is visually unchanged.
+
+Build green. Verified: fullscreen (compact grid + larger bars), short-window scroll
+(caption pinned), normal walkthrough (no regression).
+
 ### 🟢 code · 2026-06-23 09:30 — Smaller grid, fullscreen fill, skin-neutral channel labels
 **Why:** Dan: (1) shrink the joint grid another 15–20%; (2) in full screen the Play
 buttons end up stranded at the bottom of the screen below a tall empty gap; (3) stop
