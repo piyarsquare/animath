@@ -343,34 +343,47 @@ async function captureVariants(page, route, vp, skin, hasCanvas, results) {
   }
 }
 
-async function captureRouteViewport(context, route, vp, results) {
+async function captureRouteViewport(browser, route, vp, results) {
   for (const skin of skins) {
-    const page = await context.newPage();
-    await page.setViewport({ width: vp.width, height: vp.height, deviceScaleFactor: vp.dsf, isMobile: vp.mobile, hasTouch: vp.mobile });
-    // Skins are read from localStorage as a RAW id (not JSON) by skins.tsx;
-    // seed it before boot so applyPersistedSkin() + useSkin() both pick it up
-    // (and the gallery's skin-aware previews render in that skin).
-    if (skin) {
-      await page.evaluateOnNewDocument((id) => {
-        try { localStorage.setItem('animath:v1:chrome:skin', id); } catch {}
-      }, skin);
-    }
-    if (DEBUG) {
-      page.on('pageerror', (e) => console.log(`      [pageerror] ${e.message}`));
-      page.on('console', (m) => m.type() === 'error' && console.log(`      [page:err] ${m.text()}`));
-    }
+    // Fresh, isolated storage per (route, viewport, skin) so every capture
+    // starts from the app's true defaults — the workspace persists its layout
+    // to localStorage, so without a clean context the layout swept in one skin
+    // would bleed into the next skin's pristine-default reads (overview, and the
+    // standard modes pass). One context per skin keeps each one honest.
+    const context = await browser.createBrowserContext();
     try {
-      await page.goto(baseUrl + '#' + route.hash, { waitUntil: 'networkidle0', timeout: 60000 });
-    } catch (e) {
-      console.log(`    ! nav failed — ${e.message}`);
-      await page.close();
-      continue;
+      const page = await context.newPage();
+      await page.setViewport({ width: vp.width, height: vp.height, deviceScaleFactor: vp.dsf, isMobile: vp.mobile, hasTouch: vp.mobile });
+      // Skins are read from localStorage as a RAW id (not JSON) by skins.tsx;
+      // seed it before boot so applyPersistedSkin() + useSkin() both pick it up
+      // (and the gallery's skin-aware previews render in that skin).
+      if (skin) {
+        await page.evaluateOnNewDocument((id) => {
+          try { localStorage.setItem('animath:v1:chrome:skin', id); } catch {}
+        }, skin);
+      }
+      if (DEBUG) {
+        page.on('pageerror', (e) => console.log(`      [pageerror] ${e.message}`));
+        page.on('console', (m) => m.type() === 'error' && console.log(`      [page:err] ${m.text()}`));
+      }
+      try {
+        await page.goto(baseUrl + '#' + route.hash, { waitUntil: 'networkidle0', timeout: 60000 });
+      } catch (e) {
+        // Record nav failures as failed shots so they show in the manifest /
+        // contact sheet AND count toward badN — a route that never loads must
+        // make the tour exit non-zero, not silently vanish from the results.
+        const label = `${vp.id}${skin ? `__${skin}` : ''}__nav-failed`;
+        console.log(`      ✗ ${slug(route.hash)}/${label} — nav: ${e.message}`);
+        results.push({ route: route.hash, name: route.name, viewport: vp.id, detail, ...(skin ? { skin } : {}), file: `${slug(route.hash)}/${label}`, ok: false, error: `nav failed: ${e.message}` });
+        continue;
+      }
+      const hasCanvas = await page.waitForSelector('canvas', { timeout: 6000 }).then(() => true).catch(() => false);
+      await sleep(hasCanvas ? WAIT_MS : Math.min(WAIT_MS, 1000));
+      if (skin) console.log(`    · skin: ${skin}`);
+      await captureVariants(page, route, vp, skin, hasCanvas, results);
+    } finally {
+      await context.close();
     }
-    const hasCanvas = await page.waitForSelector('canvas', { timeout: 6000 }).then(() => true).catch(() => false);
-    await sleep(hasCanvas ? WAIT_MS : Math.min(WAIT_MS, 1000));
-    if (skin) console.log(`    · skin: ${skin}`);
-    await captureVariants(page, route, vp, skin, hasCanvas, results);
-    await page.close();
   }
 }
 
@@ -490,16 +503,10 @@ async function main() {
   try {
     for (const route of routes) {
       console.log(`\n▸ ${route.name}  (${route.hash})`);
-      // Fresh, isolated storage per route so each app starts from its true
-      // defaults (no persisted layout bleeding across the tour).
-      const context = await browser.createBrowserContext();
-      try {
-        for (const vp of VIEWPORTS) {
-          console.log(`  · ${vp.id}`);
-          await captureRouteViewport(context, route, vp, results);
-        }
-      } finally {
-        await context.close();
+      for (const vp of VIEWPORTS) {
+        console.log(`  · ${vp.id}`);
+        // captureRouteViewport opens a fresh isolated context per skin.
+        await captureRouteViewport(browser, route, vp, results);
       }
     }
   } finally {
