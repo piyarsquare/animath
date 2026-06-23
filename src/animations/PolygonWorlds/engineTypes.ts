@@ -48,6 +48,9 @@ export interface PolygonEngine {
   setCameraDistance(d: number): void;
   /** Switch the scene atmosphere (sky/fog tint, exposure, light rig). See looks.ts. */
   setLook(id: string): void;
+  /** Debug-pose harness only: place the player at chart position (u, v ∈ 0..1) on
+   *  the canonical face. No-op on covers that don't support it (spherical/hyperbolic). */
+  setPose(p: { u?: number; v?: number }): void;
   getMapState(): SquareMapState | null;
   /** Latest player pose in world space (foot position + surface normal + heading),
    *  for the extrinsic embedding inset's marker. null before the first frame. */

@@ -456,6 +456,16 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
       return ink.chirality(stamps.length - 1, M, forward, UP);
     },
     clearTrail: () => { stamps.length = 0; lastFrozen = null; ink.setCount(0); },
+    // Debug-pose harness: drop the player at chart (u,v) in the home cell, on the
+    // canonical face (flipAcc=0). The inverse of chart()'s home-cell branch:
+    // square worlds chart u = bx/side + 0.5; polygon worlds u = (bx/scale + 1)/2.
+    setPose: (u: number, v: number) => {
+      if (squareChart) { px = (u - 0.5) * side; pz = (v - 0.5) * side; }
+      else { px = (2 * u - 1) * scale; pz = (2 * v - 1) * scale; }
+      flipAcc = 0;
+      pos.set(px, 0, pz);
+      stamps.length = 0; lastFrozen = null; ink.setCount(0);   // no streak from the old spot
+    },
     plantSign: (front: string, back: string) => {
       if (signs.length >= MAX_SIGNS) signs.shift()!.builder.dispose();
       signs.push({

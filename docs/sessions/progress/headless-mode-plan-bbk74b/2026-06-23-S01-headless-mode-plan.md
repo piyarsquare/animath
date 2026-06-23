@@ -41,6 +41,43 @@ from two prior threads:
 
 ## Working notes
 
+### 🟢 code · 15:01 — Phase 2: PolygonWorlds adopts the harness (verified headless)
+**Why:** the cheaper first integration (it already exposes `getPose`/`getMapState`/`debugProbe`); proves the convention end-to-end.
+
+Wired the debug-pose deep link + HUD into PolygonWorlds (euclidean χ=0 worlds):
+- **Engine seam (`setPose`, position+heading-only per revision #1):** added
+  `setPose?(u,v)` to `CoverModel` + implemented in the **euclidean** presenter
+  (inverse of `chart()`'s home-cell branch; resets `flipAcc=0`, clears the trail so
+  there's no streak). Threaded `setPose({u,v})` through `PolygonEngine`. Spherical/
+  hyperbolic no-op for now (optional). Heading stays the host's look-yaw — flipped
+  sheets are reached by *walking* across a seam, not seeded.
+- **Boot params** (`PolygonWorlds.tsx`): `world`/`cam`/`camd` via lazy `useState`
+  initializers (URL wins over the session default; `world` validated against
+  `WORLDS`); `yaw`/`pitch` → refs; `look` overridden **engine-level** (doesn't
+  clobber the user's persisted look); `u,v` → `engine.setPose` — all read via a ref
+  so `onMount` stays dependency-free (no new `exhaustive-deps` warning).
+- **HUD** (`?hud`/`?debug`): mounts the shared `DebugPoseHUD` showing world·look,
+  pos (u,v), yaw/pitch, **determinant** (chart flip bookkeeping) cross-checked by the
+  independent **`witness`** = ink handedness (`debugProbe`, a *different* code path),
+  plus `nearestMarker` (chart-space, via the Phase-1 helper). Guarded the witness to
+  show only when finite (empty trail after `setPose` → omit).
+- Refined `DebugState`: `jump` → a labeled `witness {label,value}` that fits both
+  walkers' independent checks.
+
+**Verified headless** at 390×844 (eyeballed PNGs): `?world=klein&u=…&v=…&yaw=…&
+look=dusk&cam=third&hud` lands the Klein bottle in third person with the HUD
+readout; `?world=torus&look=moonlit&cam=first` flips to a cool first-person torus —
+every param takes. Build ✓ · **64/64 tests** ✓ · lint 0 errors (no new warnings).
+
+> [!NOTE]
+> **Reproducibility nuance (refines revision #3 again).** Two shots of the *same*
+> deep link from *separate* Chromium processes differ by ~96 B / 336 KB — visually
+> identical, a handful of sub-pixel SwiftShader differences (cross-process float
+> nondeterminism), **not** an app pose difference. So a future visual-diff/smoke
+> gate must compare with a **pixel tolerance** (coarse hash / per-pixel threshold),
+> never `cmp`. Within a single page load the frame is byte-stable (the 14:40
+> experiment).
+
 ### 🔵 finding · 14:40 — Pre-Phase-2 experiment: measured the two reasoned-from-code uncertainties
 **Why:** the synthesis flagged determinism + `readPixels` as the highest-stakes unknowns; a single `shoot.mjs`-style run settles both before building on them.
 

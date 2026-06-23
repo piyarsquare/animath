@@ -32,7 +32,7 @@ function lines(s: DebugState): string[] {
   }
   if (s.cell) out.push(`cell   ${s.cell.x} ${s.cell.y} ${s.cell.z}`);
   if (s.nearestMarker != null) out.push(`marker ${fmt(s.nearestMarker)}`);
-  if (s.jump != null) out.push(`jump   ${fmt(s.jump, 4)}`);
+  if (s.witness) out.push(`${s.witness.label.padEnd(6).slice(0, 6)} ${fmt(s.witness.value, 4)}`);
   return out;
 }
 
@@ -64,8 +64,9 @@ export default function DebugPoseHUD({
     <div
       style={{
         position: 'absolute',
-        bottom: 12,
+        top: phone ? 190 : 180,
         right: 12,
+        zIndex: 30,
         pointerEvents: 'none',
         padding: '8px 12px',
         borderRadius: 8,

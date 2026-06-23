@@ -75,9 +75,10 @@ export function frozenTime(p: URLSearchParams = poseParams()): number | null {
  *
  * `determinant` and `cell` echo state the app's own probe reads — so they alone
  * can't certify a frame (a HUD reading the same possibly-wrong state is an echo,
- * not a check). `jump` is the independent witness: a per-frame discontinuity of
- * the body frame across a gluing, which a wrong-sheet placement reveals even when
- * the determinant looks right.
+ * not a check). `witness` is the *independent* cross-check: a quantity computed by
+ * a different path than the chart's bookkeeping — PolygonWorlds' geometric ink
+ * handedness (`debugProbe`), SolidWorlds' per-frame body-frame continuity jump —
+ * that a wrong-sheet placement reveals even when the determinant looks right.
  */
 export interface DebugState {
   /** Selected world / spec id. */
@@ -95,6 +96,7 @@ export interface DebugState {
   cell?: { x: number; y: number; z: number };
   /** Distance to the nearest landmark/marker (see nearestMarker.ts). */
   nearestMarker?: number;
-  /** Independent continuity witness: body-frame jump magnitude this frame. */
-  jump?: number;
+  /** An independent cross-check, computed by a different path than `determinant`
+   *  (e.g. ink handedness, a frame-continuity jump) — labeled so the HUD names it. */
+  witness?: { label: string; value: number };
 }
