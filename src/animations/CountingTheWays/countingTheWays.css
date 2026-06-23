@@ -57,14 +57,14 @@
 .ctw-key.accent { color: var(--accent); }
 .ctw-key.accent2 { color: var(--accent-2); }
 
-/* ── Fullscreen: center the compact content and grow it so the action strip
-   (absolute, pinned bottom) stays visually attached instead of stranded below
-   a tall empty gap. ── */
+/* ── Fullscreen: keep the joint grid compact (it deliberately stays small) and
+   instead center the content, letting the two distributions grow into the extra
+   space. The action strip is absolute/bottom-pinned, so centering + bottom
+   padding keep it attached instead of stranded below a tall empty gap. ── */
 .am-ws-full .ctw-stage {
   justify-content: safe center;
   padding-bottom: 64px;
 }
-.am-ws-full .ctw-lattice { max-height: min(440px, 50vh); }
 .am-ws-full .ctw-mini-svg { max-height: 200px; }
 
 /* ── The two distributions, side by side (Skellam · Bessel) ── */
@@ -202,10 +202,17 @@
 .ctw-legend { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; }
 .ctw-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
 
-/* ── Tutorial caption (Explain, while Play runs) ── */
+/* ── Tutorial caption (Explain, while Play runs) ──
+   Sticks to the top of the (scrollable) stage so the step narration stays
+   visible even in a short window — never scrolls up under the window header.
+   The background layers the soft accent over the opaque view bg so scrolled
+   content can't bleed through the translucent tint. */
 .ctw-tutorial {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   border: 1px solid var(--accent);
-  background: var(--accent-soft);
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--viz-bg);
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 13.5px;
