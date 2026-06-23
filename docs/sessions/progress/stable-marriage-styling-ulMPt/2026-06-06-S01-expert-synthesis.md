@@ -81,3 +81,5 @@ Synthesis of the three lenses into a correctness-first sequence. Styling is not 
 **Bias to flag.** This synthesis actively reframes the user's stated goal (styling) toward correctness. That is the honest reading of the evidence, but the user may have sound reasons to want a styling-only pass (e.g. a quick visual win) — I've surfaced the tension rather than silently overriding it, and left Steps 2 and 4 as explicit user decisions.
 
 **Not verified.** No build run; no runtime observation; line citations not re-checked against the file; performance/a11y/mobile blind spots remain open.
+
+**Follow-up value:** MEDIUM — the convergent findings are high-confidence (three independent lenses), but the line citations are approximate and nothing was build- or runtime-verified.

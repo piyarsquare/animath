@@ -8,6 +8,7 @@
     "preview": "vite preview",
     "shoot": "node scripts/shoot.mjs",
     "sessions": "node docs/sessions/build-sessions.mjs",
+    "sessions:lint": "node docs/sessions/lint-sessions.mjs",
     "sessions:prune": "node docs/sessions/prune-assets.mjs",
     "verify:schemas": "npx --yes tsx scripts/verify-schemas.ts",
     "verify:geometry": "npx --yes tsx scripts/verify-geometry.ts",

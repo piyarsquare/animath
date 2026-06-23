@@ -8,7 +8,15 @@ answer is "nothing," say so — an empty answer is more valuable than a forced o
 The exact `## Self-reflection` heading and the final `**Follow-up value:** <LEVEL> — …`
 line matter: the cross-branch control center (`npm run sessions`) scrapes them to
 build its **Reflections** view (the exit-interview digest), reading `<LEVEL>` to color
-each entry's follow-up badge. Keep `<LEVEL>` one of CRITICAL / HIGH / MEDIUM / LOW / NONE.
+each entry's follow-up badge. Keep `<LEVEL>` one of CRITICAL / HIGH / MEDIUM / LOW / NONE,
+written canonically (ASCII hyphen, level unwrapped). Run `npm run sessions:lint` on your
+report to confirm the digest will read it.
+
+If a lesson you're reflecting on is already in the
+[recurring-lessons ledger](../../docs/sessions/RECURRING_LESSONS.md) (the write→enact
+loop for lessons seen ≥3×), check whether it's marked Promoted — a promoted lesson
+recurring is a signal the rule isn't landing; name that, so the next process audit
+reopens it instead of just re-logging.
 
 ```markdown
 ## Self-reflection
@@ -19,7 +27,13 @@ each entry's follow-up badge. Keep `<LEVEL>` one of CRITICAL / HIGH / MEDIUM / L
 4. **What did we both overlook?** …
 5. **What did you find difficult?** …
 6. **What would have made this task easier?** …
-7. **Follow-up value:** LOW — [one-line justification]
+7. **How did you verify this, and does each passing check test the user-visible
+   claim?** State the method (automated tests / headless screenshot / real device /
+   reasoning only / not verified) and call out any green check that only tests a
+   proxy. If a visual or device-specific result was checked headless or by
+   reasoning, say so — and set the matching `signals:` (`visual-unverified` /
+   `phone-needed`) so it isn't under-reported. …
+8. **Follow-up value:** LOW — [one-line justification]
 ```
 
 Follow-up value scale:

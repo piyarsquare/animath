@@ -18,6 +18,27 @@ example** of the whole pattern.
 > skins, phone mode) and `README.md` (user-facing tour). `ARCHITECTURE.md` is
 > historical only.
 
+> [!IMPORTANT]
+> **Before you build a visual or multi-mode feature, pin scope and get a
+> reference.** The single costliest recurring habit in this repo's history
+> (`docs/sessions/RECURRING_LESSONS.md`, L2) is *building the full feature, then
+> asking* — the maximal version, or the wrong reading of an ambiguous request,
+> finished before a cheap "how far / which meaning?" check. It shows up as 3–5
+> build/revert cycles per session. So before coding **geometry, an animation, or
+> any feature with >2 modes**, ask one disambiguating question: *which
+> interpretation, how far should this go, and is there a reference image to match?*
+> The corpus proved the up-front questionnaire measurably cuts the thrash — make it
+> a reflex, not a lesson re-learned each session.
+>
+> **But distinguish guessing from exploring** (recipe
+> [R2](sessions/RECIPES.md#r2--separate-exploring-from-guessing)). Sometimes
+> neither side yet knows what the result should look like and *building is the
+> thinking* — that iteration is legitimate and lots of up-front planning can get
+> nowhere. The habit to kill is guessing at a **knowable** target; the remedy is a
+> sharper input (a reference in any modality — image, sketch, an app to point at),
+> not more planning. When the target is genuinely undiscovered, build a **small,
+> reversible probe** and say it's one.
+
 ---
 
 ## 1. Pick a rendering pattern
@@ -472,6 +493,13 @@ re-implementing.
   behavior, gray, analyze, -ize endings (matches CSS/JS language defaults).
 - **Imports.** `@/` maps to `src/`; relative `../../` also works. Match the file
   you're editing.
+- **Test pure logic on write.** If your app pulls simulation/algorithm/math into a
+  helper `.ts` module (`physics.ts`, `complexOps.ts`, `associahedron.ts`, an
+  engine), ship a committed `__tests__/*.test.ts` with it. The vitest harness
+  already exists (`npm test`); the recurring miss
+  (`docs/sessions/RECURRING_LESSONS.md`, L4) is verifying pure logic with throwaway
+  `/tmp` scripts that never land — so the next session can't re-run the check.
+  Don't unit-test the React/Three view; **do** test the extractable math.
 
 ---
 
@@ -481,6 +509,7 @@ re-implementing.
 npm run dev      # open http://localhost:5173/animath/#/my-app
 npm run build    # MUST pass — tsc + vite build, the only CI gate
 npm run lint     # keep at 0 errors (and don't add new warnings)
+npm test         # vitest — and add a test for any pure logic you extracted (§6)
 ```
 
 Manual checklist before opening a PR:
@@ -495,6 +524,7 @@ Manual checklist before opening a PR:
       and after collapse → expand (no 0/0-aspect smear).
 - [ ] Works at phone width (≤740px): stacked cards, dock, sheets; panel bodies fit the sheet.
 - [ ] No console errors; rAF loops and listeners are cleaned up on navigation away.
+- [ ] Pure logic you extracted ships a committed vitest file (`npm test` green) — [§6](#6-conventions--gotchas).
 - [ ] Docs updated for your app (`CLAUDE.md` route table + tree, `README.md`) — [§3d](#3d-docs--your-apps-own-paragraph).
 - [ ] Latest `main` merged in and `npm run build` re-run (green) — [§8](#8-working-on-several-apps-at-once).
 

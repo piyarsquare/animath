@@ -38,7 +38,12 @@ function extractReflection(md) {
   const next = rest.search(/^##\s+/m);
   const body = (next === -1 ? rest : rest.slice(0, next)).trim();
   if (!body) return null;
-  const lv = body.match(/follow[-\s]?up\s+value:?\s*\**\s*(CRITICAL|HIGH|MEDIUM|LOW|NONE)/i);
+  // Tolerant of formatting drift the corpus actually produced: a non-ASCII hyphen
+  // in "Follow-up" (U+2010-U+2015), and a level wrapped in its own bold/italic
+  // (`**MEDIUM**`) after the label's closing `**`. Was the "scraper hardening"
+  // deferred by control-center-category-filter (2026-06-10); enacting it here so
+  // these reflections stop silently dropping out of the digest.
+  const lv = body.match(/follow[\s‐-―-]?up\s+value:?\s*(?:[*_]+\s*)*(CRITICAL|HIGH|MEDIUM|LOW|NONE)/i);
   return { md: body, html: marked.parse(body), level: lv ? lv[1].toUpperCase() : null };
 }
 
@@ -321,7 +326,7 @@ const sessionList = [...sessions.values()].sort((a, b) => byRecency(a.date, b.da
 
 // 4 · control center page — flat data-rich cards; the inline script does the rest
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const statusBadge = (s) => `<span class="badge ${({ completed: "badge-ok", "in-progress": "badge-warn" })[s] || "badge"}">${esc(s)}</span>`;
+const statusBadge = (s) => `<span class="badge ${({ completed: "badge-ok", executed: "badge-ok", "in-progress": "badge-warn" })[s] || "badge"}">${esc(s)}</span>`;
 
 let cardsHtml = "";
 for (const s of sessionList) {
@@ -553,7 +558,7 @@ ${cardsHtml}</div>
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
   function catChip(key, hue){ return '<a class="cat" style="--c:'+hue+'" href="#cat='+encodeURIComponent(key)+'">'+esc(CAT[key]||key)+'</a>'; }
   function sigChip(k){ var s = SIG[k]; return s ? '<span class="sig" style="--c:'+s.hue+'">'+esc(s.label)+'</span>' : ""; }
-  function statusBadge(s){ var cls = s==="completed"?"badge-ok":s==="in-progress"?"badge-warn":"badge"; return '<span class="badge '+cls+'">'+esc(s)+'</span>'; }
+  function statusBadge(s){ var cls = (s==="completed"||s==="executed")?"badge-ok":s==="in-progress"?"badge-warn":"badge"; return '<span class="badge '+cls+'">'+esc(s)+'</span>'; }
   function guideBadge(st){ if(!st) return ""; var cls = st==="active"?"badge-ok":st==="retiring"?"badge-warn":"badge"; return '<span class="badge '+cls+'">'+esc(st)+'</span>'; }
   function cmp(a, b){
     var k = sb.value, d = a.dataset, e = b.dataset;
