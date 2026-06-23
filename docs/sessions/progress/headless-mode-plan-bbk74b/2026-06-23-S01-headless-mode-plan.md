@@ -66,6 +66,26 @@ Why it matters (the defects it would have caught, per the audit): the
 visually-wrong render), and the **#216 Torus crash / #215 height** runtime defects
 that escape the `tsc && vite build` gate.
 
+### 🟡 milestone · 13:40 — Three-hats review complete; plan revised
+**Why:** Dan asked me to run the multi-lens review; it surfaced concrete revisions worth folding into the plan before any implementation.
+
+Ran `/three-hats` (maintainer · consultant · pedagogy + synthesis, all committed in
+this folder). Unanimous: **direction + Deliverable A endorsed**; **Deliverable B
+rescoped**. Key outcomes folded into the plan as §9:
+- **`setPose` = position + heading only** — the maintainer's "under-costed" and the
+  pedagogy's "det-validates-itself is circular" objections *cancel*: walk/place
+  across a seam, let the engine derive the frame.
+- **Determinism is the real blind spot** (consultant): walkers run wall-clock
+  `getDelta()` rAF; a pose-only link isn't reproducible without a `freeze`/`t=`
+  param. Promoted to a precondition for "same view twice."
+- **HUD needs an *independent* continuity/jump witness** (engine already computes one,
+  `coverEngine.ts:639`), not just the determinant the probe reads.
+- **Smoke: narrow to boot/blank/context-loss** (SwiftShader tolerates the #216 NaN);
+  console + `webglcontextlost` are load-bearing; CI goes in a **separate PR workflow,
+  not deploy.yml**.
+- One cheap `shoot.mjs` experiment (double-shoot + `readPixels` probe) settles the two
+  reasoned-from-code uncertainties before implementation.
+
 ### 🔵 finding · 13:10 — Walker pose surface mapped; precedents already exist
 **Why:** deliverable (a) needs the exact state, engine seams, and URL/HUD precedents to be a real plan.
 

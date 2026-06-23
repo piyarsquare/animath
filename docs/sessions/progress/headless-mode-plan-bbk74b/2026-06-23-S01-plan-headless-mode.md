@@ -287,4 +287,52 @@ Optionally run **`/three-hats`** on this plan (framework-maintainer lens will ha
 opinions on the shared-helper vs per-app split and the CI wiring) before Phase 1.
 Otherwise, start Phase 1 on a fresh implementation branch — it's pure additive
 scaffolding with a unit test and no user-visible change.
+
+## 9. Three-hats review revisions (2026-06-23)
+
+The plan was reviewed by three experts; see the
+[synthesis](2026-06-23-S01-expert-synthesis.md) (and the
+[maintainer](2026-06-23-S01-expert-maintainer.md) /
+[consultant](2026-06-23-S01-expert-consultant.md) /
+[pedagogy](2026-06-23-S01-expert-pedagogy.md) reports). Direction and
+Deliverable A endorsed unanimously; Deliverable B rescoped. **Apply these before
+Phases 2–4** (most are *narrowing*, not new work):
+
+1. **`setPose` = position + heading only.** Reach flipped/screw sheets by walking or
+   placing across a seam and letting the *engine* derive the frame — not by seeding a
+   non-identity developing frame. This cancels two objections at once: the
+   maintainer's "setPose is under-costed" (no frame-seeding) and the pedagogy's
+   "det-validates-itself is circular" (you observe the engine's derived frame, not an
+   asserted one). The `x/y/z/yaw/pitch` param table is unchanged.
+2. **HUD adds an *independent* continuity/jump witness**, not just the determinant the
+   probe already reads — the SolidWorlds engine already computes one
+   (`coverEngine.ts:639`); PolygonWorlds has a geometric `debugProbe`. The headline
+   teleport bug was a *continuity* failure the determinant alone would not catch.
+3. **Determinism is now a precondition, not a nicety** (the one real blind spot): the
+   walkers run a wall-clock `getDelta()` rAF, so a pose-only deep link is *not*
+   reproducible frame-to-frame. Add a `freeze`/`t=` param (or settle-on-idle) — the
+   acceptance criterion "lands the same view twice" depends on it.
+4. **Unify the debug-query convention** (PolygonWorlds' `polydebug` reads
+   `location.search`; the new helper reads the hash-query) and **add a "copy
+   deep-link" round-trip** so the HUD *emits* the reproducible URL (closes the loop;
+   makes it a shareable teaching artifact).
+5. **Narrow Deliverable B's claim** to *boot / blank / context-loss* failures —
+   SwiftShader *tolerates* the exact #216 NaN, so "catches #216" is overstated.
+   **Console + `webglcontextlost` are the load-bearing detectors;** replace the
+   brightness-threshold dead-frame check with **variance** (or force a bright look via
+   `SEED_LS` before `readPixels`).
+6. **CI: a separate PR-triggered smoke workflow, NOT the Pages-deploy job** — §4.4's
+   `deploy.yml` placement is wrong (deploy sets `PUPPETEER_SKIP_DOWNLOAD` and the
+   runner lacks SwiftShader libs). Advisory-now/gate-later still holds, in its own
+   workflow.
+7. **"URL wins over persisted" must short-circuit `usePersistentState`'s load**, not
+   merely supply its initial value.
+8. *Deferred v2:* `loop=`/`seam=` path encoding + a round-trip-walk unit test (the
+   holonomy-after-a-loop a topology teacher actually wants).
+
+> [!TIP]
+> Run **one `shoot.mjs` experiment first** (before revising/implementing): double-shoot
+> a single URL to confirm/deny the determinism gap, and verify `gl.readPixels` returns
+> usable data on a SwiftShader framebuffer at all. Both are currently
+> reasoned-from-code, not measured.
 </content>
