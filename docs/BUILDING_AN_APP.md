@@ -510,7 +510,13 @@ npm run dev      # open http://localhost:5173/animath/#/my-app
 npm run build    # MUST pass — tsc + vite build, the only CI gate
 npm run lint     # keep at 0 errors (and don't add new warnings)
 npm test         # vitest — and add a test for any pure logic you extracted (§6)
+npm run tour -- my-app   # screenshot your app (desktop+phone · every layout) → screenshots/ (docs/SCREENSHOTS.md)
 ```
+
+> The tour auto-discovers your app from `src/apps.ts`, so once it's registered
+> (§3) `npm run tour -- my-app` captures it in both form factors across all its
+> layouts/modes (no GPU needed — software WebGL). Add `--skins all` to check
+> every theme, or `--detail overview` for a quick single thumbnail.
 
 Manual checklist before opening a PR:
 
@@ -523,6 +529,7 @@ Manual checklist before opening a PR:
 - [ ] The view window drags/resizes; the canvas keeps rendering after a resize
       and after collapse → expand (no 0/0-aspect smear).
 - [ ] Works at phone width (≤740px): stacked cards, dock, sheets; panel bodies fit the sheet.
+- [ ] Eyeballed headless across layouts/form factors: `npm run tour -- my-app` renders cleanly (a fast proxy for opening every layout by hand) — [docs/SCREENSHOTS.md](SCREENSHOTS.md).
 - [ ] No console errors; rAF loops and listeners are cleaned up on navigation away.
 - [ ] Pure logic you extracted ships a committed vitest file (`npm test` green) — [§6](#6-conventions--gotchas).
 - [ ] Docs updated for your app (`CLAUDE.md` route table + tree, `README.md`) — [§3d](#3d-docs--your-apps-own-paragraph).

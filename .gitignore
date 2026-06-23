@@ -1,6 +1,13 @@
 node_modules/
 dist/
 
+# Generated screenshot tour (rebuilt by `npm run tour` / CI; uploaded as a
+# workflow artifact, never committed — large generated binaries)
+screenshots/
+
+# Local scratch (smoke tests)
+scratch-smoke/
+
 # Generated session site (rebuilt by `npm run sessions` / CI; never committed)
 docs/sessions/converted/
 docs/sessions/control-center.html

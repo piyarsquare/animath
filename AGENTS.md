@@ -27,6 +27,7 @@ npm run build   # tsc && vite build → dist/   (the ONLY CI check)
 npm test        # vitest unit tests (chrome workspace pure logic)
 npm run lint    # eslint over src/ (keep it green)
 npm run preview # preview the production build
+npm run tour    # screenshot the site (desktop+phone, layouts/modes/skins) → screenshots/ (docs/SCREENSHOTS.md)
 ```
 
 ## Creating a new app (summary)
