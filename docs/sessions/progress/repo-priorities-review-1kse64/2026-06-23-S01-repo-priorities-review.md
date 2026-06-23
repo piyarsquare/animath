@@ -32,6 +32,27 @@ the **screenshot tour** (#235, `gracious-ptolemy`). The last triage pass was
 
 ## Working notes
 
+### 🟢 code · 23:40 — Shelved #223 (quaternion / The Belt) as stopped; app code dropped
+**Why:** Dan: "223 was not a successful app — shelf as stopped, but all quaternion
+app code can go away entirely; commit skills only as provisional."
+
+Decision (Dan-picked): **land the record on `main`, close #223.** The Belt app code
+(`src/animations/TheBelt/` + registry edits to `apps.ts`/`catalog.ts`/`previews.tsx`/
+`index.tsx`/`CLAUDE.md`/`README.md`) was never on `main` and is **not** brought over —
+it dies with the branch. Onto this branch I checked out **only** the exploration
+reports (the full record incl. the hard-fail reflection) and the `/explore-concept`
+skill. Then:
+- Handoff S08 → `status: stopped`, `followup: null`, new SHELVED `[!CAUTION]` banner;
+  `next:` rewritten to "shelved, do not resume by extending."
+- 15 live reports (4 `in-progress` + 11 `proposed` plans) → `status: stopped` so the
+  dashboard shows no active/awaiting-Dan quaternion work; 18 genuinely-`complete`
+  artifacts left as-is.
+- `/explore-concept` skill marked **provisional**: `status: provisional` +
+  `PROVISIONAL/EXPERIMENTAL` description prefix + a `[!CAUTION]` banner pointing at the
+  hard-fail diagnosis. (Per Dan's standing rule: commit skills only as provisional.)
+- Build unaffected (docs/skill only; nothing under `src/` changed).
+Next: close PR #223 pointing at this shelving.
+
 ### 🔵 finding · 23:19 — Synthesized the prioritized next-items list
 **Why:** The session focus is to identify, not implement; this is the deliverable.
 
