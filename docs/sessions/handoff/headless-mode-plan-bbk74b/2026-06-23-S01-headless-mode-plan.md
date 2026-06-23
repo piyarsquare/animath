@@ -8,7 +8,7 @@ slug: headless-mode-plan-bbk74b
 status: completed
 build: passed
 followup: low
-pr: null
+pr: 234
 app: docs, engine
 signals: phone-needed
 next: Give Solid Worlds a genuine independent witness (filed in TODO), or fix the RGBELoader HDR finding

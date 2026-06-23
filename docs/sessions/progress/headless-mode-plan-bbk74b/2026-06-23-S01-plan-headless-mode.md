@@ -8,7 +8,7 @@ slug: headless-mode-plan-bbk74b
 status: completed
 build: passed
 followup: null
-pr: null
+pr: 234
 app: docs, engine
 signals: null
 next: Optional — give Solid Worlds a genuine independent witness (filed in TODO)

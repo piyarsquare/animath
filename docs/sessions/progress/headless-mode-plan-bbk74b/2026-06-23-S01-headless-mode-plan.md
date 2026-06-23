@@ -5,13 +5,13 @@ date: 2026-06-23
 title: Plan the headless mode build-out (debug-pose harness + mobile smoke)
 branch: claude/headless-mode-plan-bbk74b
 slug: headless-mode-plan-bbk74b
-status: in-progress
-build: unknown
-followup: null
-pr: null
+status: completed
+build: passed
+followup: low
+pr: 234
 app: docs, engine
-signals: needs-dan
-next: Confirm scope/priorities, then write the kind:plan report for the L1 harness + mobile smoke
+signals: phone-needed
+next: Give Solid Worlds a genuine independent witness (filed in TODO), or fix the RGBELoader HDR finding
 ---
 
 # Plan the headless mode build-out (debug-pose harness + mobile smoke)
