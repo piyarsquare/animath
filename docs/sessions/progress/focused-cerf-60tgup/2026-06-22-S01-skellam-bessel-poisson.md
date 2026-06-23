@@ -92,6 +92,24 @@ diagonal-sum picture is the candidate central visual.
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟢 code · 23:10 — Formula out of the frame; three distributions connected + theme-color TODO
+**Why:** Dan: the center formula box overflowed for negative k and broke the visual
+connection between the distributions; give the distributions clear labels and leave
+the text-heavy stuff out of the frame. Also: note the theme-driven-graphics idea in
+the global TODO rather than applying it everywhere now.
+
+- Moved `FormulaBand` into its own **Formula (Analyze/readout) panel** in the rail
+  (closed by default) — out of the view frame. The Explain view now flows as three
+  labeled distributions with nothing between them: **Joint — gains × losses** (grid)
+  → **Skellam — the difference K** → **Bessel — given K=k**. Dropped the prose caption.
+- `fmt()` uses scientific notation for |v| ≥ 1e6 so big Bessel values stay compact.
+- Confirmed the in-app graphics use **only theme tokens** (no hardcoded hex); the
+  gallery preview was the lone exception and now reads the live theme (verified on
+  Phosphor). Logged a `[chrome] !med` TODO to roll that pattern across all previews /
+  app canvases later (SkellamPreview as the model) — Dan: not urgent.
+
+Verified clean view (k=2 and k=−3) + the Formula panel renders. Build green · lint 0/60.
+
 ### 🟢 code · 22:50 — Compact grid, hideable notes, two-channel Skellam/Bessel color
 **Why:** Dan asked to (1) shrink the joint grid for space, (2) hide a lot of the
 text, and (3) encode the cell's two coordinates as two color channels — gold for
