@@ -147,10 +147,14 @@ smoke), `RECURRING_LESSONS.md` L1→🟢, `RECIPES.md` R1, TODO check-offs,
    vocabulary should also drive the *non-walker* WebGL apps (fractals center/zoom,
    particle camera) — they'd benefit from reproducible frames too, but it was
    deliberately out of scope ("walkers first").
-4. **What did we both overlook?** Initially, that cross-process renders aren't
-   byte-identical — the determinism concern was framed as within-frame, but the real
-   subtlety is process-to-process. Caught it during Phase 2 verification and
-   documented the pixel-tolerance rule.
+4. **What did we both overlook?** Two things. (a) Cross-process renders aren't
+   byte-identical — caught during Phase 2 and documented (pixel-tolerance rule).
+   (b) **The pose-survival bug** (Codex P2): a debug-pose deep link's *position* was
+   silently discarded by the mount-time engine rebuild. My verification read the HUD
+   for world/cam/look but never compared the HUD's `pos` to the URL's `u,v`/`x,y,z` —
+   so the one check the HUD was built to enable is exactly the one I skipped. A
+   reviewer bot caught it; fixed + re-verified by reading `pos` against the params.
+   This is a live instance of L1/L3 ("verified headless ≠ tested the specific claim").
 5. **What did you find difficult?** Deciding the Solid Worlds witness honestly. The
    pull to surface *something* labeled "independent witness" was strong, but every
    cheap candidate was either an echo of the determinant or an L7 trap (per-step det
@@ -160,15 +164,18 @@ smoke), `RECURRING_LESSONS.md` L1→🟢, `RECIPES.md` R1, TODO check-offs,
    the workspace chrome (a designated, collision-free HUD region) would have removed
    the per-app position tuning.
 7. **How did you verify this, and does each passing check test the user-visible
-   claim?** Mixed, and mostly real: `nearestMarker` by committed vitest (11 cases);
-   the harness by **headless screenshots I actually read** (PolygonWorlds klein/torus,
-   SolidWorlds half-turn — every param visibly took); the smoke pass by running it to
-   PASS 17/17 *and* watching it correctly FAIL (trinary-lab dead-frame, the RGBELoader
-   warning) before calibration; reproducibility by a real two-shot `cmp` that revealed
-   the byte-vs-visual nuance. The one **proxy**: the smoke's dead-frame variance is a
-   blank-detector, not a correctness check — SwiftShader tolerates the NaN real mobile
-   GPUs crash on, so a green smoke ≠ correct mobile render. That's documented, and
-   `phone-needed` stays a standing signal (set in frontmatter).
-8. **Follow-up value:** LOW — the deliverables are complete and verified; the two
-   open TODO items (SolidWorlds witness, RGBELoader fix) are enhancements/cleanup, not
+   claim?** Mixed, mostly real — but with one **caught miss**. Solid: `nearestMarker`
+   by committed vitest (11 cases); the smoke pass by running it to PASS 17/17 *and*
+   watching it correctly FAIL (trinary-lab dead-frame, RGBELoader) before calibration;
+   reproducibility by a real two-shot `cmp` revealing the byte-vs-visual nuance. The
+   **miss**: I verified the harness by reading screenshots for world/cam/look, but
+   *not* the `pos` value against the exact URL params — so a real correctness bug (pose
+   not surviving startup) shipped to the PR and was caught in review, then fixed and
+   re-verified by reading `pos` (`u=0.2,v=0.85` → HUD `pos 0.20 0.85`). The standing
+   **proxy**: the smoke's dead-frame variance is a blank-detector, not a correctness
+   check — SwiftShader tolerates the NaN real mobile GPUs crash on, so green smoke ≠
+   correct mobile render. Documented; `phone-needed` stays a standing signal.
+8. **Follow-up value:** LOW — the deliverables are complete and verified (incl. the
+   reviewer-caught pose-survival fix, re-verified against the HUD); the two open TODO
+   items (SolidWorlds witness, RGBELoader fix) are enhancements/cleanup, not
    corrections to what shipped.
