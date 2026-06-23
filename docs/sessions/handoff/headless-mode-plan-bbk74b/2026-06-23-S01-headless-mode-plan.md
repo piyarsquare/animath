@@ -89,6 +89,16 @@ smoke), `RECURRING_LESSONS.md` L1→🟢, `RECIPES.md` R1, TODO check-offs,
 
 ## Open / not done
 
+> [!NOTE]
+> **Post-merge review fix (Codex P2):** a debug-pose deep link's *position* didn't
+> survive startup — the parent `useEffect([spec])` runs right after `Canvas3D`'s
+> `onMount` (children-first effect order), disposed the freshly-built engine, and
+> rebuilt it without the pose, so `?u=…&v=…` / `?x=…` settled back to default spawn
+> (world/cam/look survived as React state). Fixed by skipping that first redundant
+> rebuild in both walkers. Confirmed by reading the HUD `pos` against the URL
+> (`u=0.2,v=0.85` → HUD `pos 0.20 0.85`). The lesson: the HUD exists to make exactly
+> this visible, and the original verification didn't read it against the params.
+
 - **Solid Worlds independent witness** (`[solid-worlds] !med` in TODO) — the one
   intentional gap. PolygonWorlds cross-checks its chart bookkeeping with an
   independent geometric probe; SolidWorlds shows only the (dual-verified)

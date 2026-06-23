@@ -140,11 +140,16 @@ export default function SolidWorlds() {
     rafRef.current = requestAnimationFrame(animate);
   }, []);
 
-  // Rebuild the engine when the world changes (different gluing / cover).
+  // Rebuild the engine when the world changes (different gluing / cover). The FIRST
+  // run is skipped: it fires on mount, right after Canvas3D's onMount already built
+  // the engine (children-first effect order) with the boot pose applied — rebuilding
+  // here would be redundant AND would discard a debug-pose deep link's x/y/z position.
+  const skipFirstRebuild = useRef(true);
   useEffect(() => {
     worldRef.current = spec;
     const deps = depsRef.current;
     if (!deps || !engineRef.current) return;
+    if (skipFirstRebuild.current) { skipFirstRebuild.current = false; return; }
     engineRef.current.dispose();
     engineRef.current = makeCoverEngine(deps, spec, {
       roomSize: sizeRef.current, coverDepth: depthRef.current,

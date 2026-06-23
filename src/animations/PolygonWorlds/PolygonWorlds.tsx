@@ -184,12 +184,17 @@ export default function PolygonWorlds() {
   }, []);
 
   // Rebuild the engine when the world changes (different cover/gluing) or when the
-  // landmark set changes (count/arrangement → the decor is rebuilt).
+  // landmark set changes (count/arrangement → the decor is rebuilt). The FIRST run
+  // is skipped: it fires on mount, right after Canvas3D's onMount already built the
+  // engine (children-first effect order) with the boot pose applied — rebuilding
+  // here would be redundant work AND would discard a debug-pose deep link's position.
+  const skipFirstRebuild = useRef(true);
   useEffect(() => {
     worldRef.current = spec;
     propsRef.current = props;
     const deps = depsRef.current;
     if (!deps || !engineRef.current) return;
+    if (skipFirstRebuild.current) { skipFirstRebuild.current = false; return; }
     engineRef.current.dispose();
     engineRef.current = makeFundamentalSquareEngine(deps, spec, {
       squareSize: sizeRef.current, floorThickness: thickRef.current, props,
