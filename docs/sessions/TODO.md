@@ -38,6 +38,30 @@ informs future rounds. Delete or check off items as they land.
   Update REPORT_STYLE.md, the progress/handoff templates, and the handoff +
   start-session skills so every session declares `signals:`/`next:` and consults +
   appends this backlog. Without that, the dashboard only stays rich by inference.
+  2026-06-22 (process-audit): partly enacted. `npm run sessions:lint` now validates
+  the contract (signals/app tokens, scraped level, timeline types) and warns when a
+  "headless" handoff declares no `visual-unverified`/`phone-needed` signal; the
+  self-reflection protocol gained Q7 (declare verification method + set the matching
+  signal). Still open: requiring `signals:`/`next:` at handoff (templates + skills)
+  and gating the linter in CI once the corpus is clean (140 advisory warnings remain).
+
+- [ ] [docs] !high Build the deep-link debug-pose harness + headless mobile smoke (L1 in RECURRING_LESSONS.md).
+  The highest tool-ROI item from the process audit, requested independently three
+  times across the topology sessions. (a) A URL param that sets camera/world/pose so
+  `scripts/shoot.mjs` can reproduce an exact frame, plus an opt-in dev HUD (player
+  determinant, current tile, nearest-marker distance) — turns "verified headless"
+  from a blind hypothesis into a reproducible visual diff and would have caught the
+  teleporting-world / spoofed-probe cases. (b) A `shoot.mjs` pass at 390×844 across
+  all routes asserting no console error / no NaN-in-shader — the only defect class
+  that escapes the desktop `tsc && vite build` gate (#216 Torus crash, #215 height).
+  This is the "+ check" that moves L1/L3 from rule-only to rule+check. Touches
+  app/scripts/CI, so its own branch (was Phase 5, not built in the audit branch).
+
+- [ ] [docs] !low Add `package.json` to the append-only protected-file list.
+  The one real conflict-marker near-miss in 50 PRs landed in `package.json`, which
+  isn't on the protected list (CLAUDE.md/apps.ts/index.tsx/README.md). Add it to the
+  append-only note in CLAUDE.md + BUILDING_AN_APP.md §8 so new scripts/deps are
+  appended, not reordered. Cheap; from the process audit (Tier-4 rec 10).
 
 - [ ] [complex-particles] !med Argand: make the scrubber pay its way (or drop it) — the *arc* is the payload, not the slider.
   Dan on Phase 1: the position-scrubber adds little on its own; the static parametric

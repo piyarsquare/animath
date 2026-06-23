@@ -11,7 +11,7 @@ followup: null
 pr: null
 app: docs, general
 signals: needs-dan
-next: Audit the 90 progress reports + 38 handoffs + git history for recurring strengths, weaknesses, and repeated errors; assess whether the report patterns are working.
+next: Build the L1 deep-link debug-pose harness + headless mobile smoke (the one rule→check still open; see RECURRING_LESSONS.md + TODO.md) and decide whether to CI-gate `npm run sessions:lint --strict` now that the corpus is at 0 errors.
 ---
 
 # Process audit — collaboration patterns across the project
@@ -34,6 +34,36 @@ This audit is a **new, cross-cutting topic**, not a pickup of that work. First
 tracked session on this branch (`process-audit-collaboration-tvrn9b`).
 
 ## Working notes
+
+### 🟡 milestone · 06-23 — Phases 3–4 shipped: the write→enact loop is now real
+**Why:** Phase 1 built the *detector* (linter); the audit's meta-finding was that the system records lessons but never enacts them. Phases 3–4 close that — promote the dominant recurring lessons into durable rules and stand up the ledger that retires them.
+
+- **Phase 4 (promote W2/W3/W4 into the rules):**
+  - W2 "build then ask" → a `[!IMPORTANT]` scope/reference gate at the top of
+    `BUILDING_AN_APP.md` (ask the disambiguating question before coding geometry /
+    >2-mode features).
+  - W4 "untested pure logic" → a §6 "Test pure logic on write" convention + a §7
+    checklist line + `npm test` in the Verify block.
+  - W3 "green check that isn't real" → self-reflection **Q7** (already in flight):
+    name the verification method and whether each passing check tests the
+    user-visible claim; set the matching `signals:`.
+- **Phase 3 (the write→enact mechanism):** new
+  [`docs/sessions/RECURRING_LESSONS.md`](../../RECURRING_LESSONS.md) — a ledger of
+  the seven ≥3-recurrence lessons (L1–L7) with a Status (Open → Promoted rule →
+  Promoted rule+check → Intrinsic), where each rule + check lives, and a documented
+  **cadence** (re-run an audit of this shape ~quarterly / when the digest's top
+  cluster isn't yet in the ledger). Wired into `REPORT_STYLE.md` and the
+  self-reflection protocol so a recurring promoted lesson gets *reopened*, not
+  re-logged. The report-format fragility class is recorded as the one already at 🟢
+  rule+check (REPORT_STYLE + `sessions:lint`) — the template for the rest.
+- **Backlog:** noted partial progress on the `[docs] !high` signals item; filed the
+  two speced-but-unbuilt checks (L1 deep-link debug-pose harness + headless mobile
+  smoke; `package.json` → append-only list) as their own TODO items (former Phase 5).
+
+Verify: `npm run sessions:lint` still 0 errors / 140 advisory warnings; `npm run
+sessions` green, `registry drift: none`. **Self-disclosure (L1, honestly):** all of
+this is docs/process — verified by the linter + sessions build, *not* in a running
+WebGL context; no app code changed, so no device check applies.
 
 ### 🟢 code · 19:20 — Phase 1 shipped: report linter + scraper hardening recovers 13 dropped reflections
 **Why:** Build the validator that makes digest-breaking drift visible, and enact the "scraper hardening" lesson the category-filter session named and deferred — closing a twice-written, never-acted loop.

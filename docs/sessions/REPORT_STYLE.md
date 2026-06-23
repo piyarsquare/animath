@@ -125,7 +125,16 @@ The closing **`## Self-reflection`** section (verbatim from
 **Reflections** view scrapes that heading and the final
 `**Follow-up value:** <LEVEL> — …` line (LEVEL ∈ CRITICAL/HIGH/MEDIUM/LOW/NONE) to
 build its exit-interview digest, severity-sorted with a color-coded badge. Keep the
-heading and that line exact so the digest picks the report up.
+heading and that line exact so the digest picks the report up. (Run
+`npm run sessions:lint` to confirm your report parses — it validates the frontmatter
+enums, the scraped level, and the timeline against this guide.)
+
+The Reflections digest only *surfaces* recurring lessons; the
+**[recurring-lessons ledger](RECURRING_LESSONS.md)** is where a lesson seen in ≥3
+reflections gets *enacted* — promoted to a durable rule + check and retired from the
+recurring list. If your self-reflection repeats a lesson already in that ledger as
+🟡/🟢 Promoted, the rule isn't landing — say so (it's a sign to reopen the entry),
+don't just re-log it.
 
 ## 3 · Elements
 
