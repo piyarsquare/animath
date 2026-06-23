@@ -11,7 +11,7 @@ followup: null
 pr: null
 app: general
 signals: not-live
-next: Dan testing the reworked app (smaller grid, fullscreen fill, skin-neutral colors); optional polish (persist the Lab catalog); then /handoff.
+next: The Lab should show cumulative results — pooled/running μ̂ that tightens as runs accumulate, a convergence trace, and the spread of μ̂ across runs (logged to TODO.md).
 ---
 
 # New app — why a Bessel function gives the Skellam (Poisson-difference) conditionals
@@ -91,6 +91,24 @@ diagonal-sum picture is the candidate central visual.
 ## Working notes
 
 <!-- Newest entry first. One ### per state transition. -->
+
+### 🟢 code · 2026-06-23 10:30 — Good stopping point; next: the Lab should show cumulative results
+**Why:** Dan reviewed the visual-polish round and called it "very good" — a clean
+stopping point. One named follow-up for next time: **the Lab needs work — it should
+show cumulative results.**
+
+- The Explain mode (the Bessel/Skellam explainer) is in good shape: compact joint
+  grid, two-channel skin-neutral color, three connected distributions, pinned
+  walkthrough caption, fullscreen that grows the distributions (not the grid).
+- **Lab follow-up (next session).** Today each *Run & log* appends one independent
+  row (its own sample → method-of-moments μ̂). It does **not** accumulate: there's no
+  pooled/running estimate, no convergence-as-runs-grow view, no aggregate recovery
+  spread. Make the catalog show **cumulative results** — e.g. a running/pooled μ̂ that
+  tightens as runs accumulate, a convergence trace, and the spread of μ̂ across runs
+  (does the estimator concentrate on the truth?). Logged to `TODO.md`
+  (`[counting-the-ways] !med`).
+
+Build green throughout. Branch pushed to PR #233; handing off here.
 
 ### 🟢 code · 2026-06-23 10:10 — Fullscreen keeps the grid compact; pin the walkthrough caption
 **Why:** Dan tested the previous round: (1) the joint grid "gets large again in full

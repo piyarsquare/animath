@@ -25,6 +25,16 @@ informs future rounds. Delete or check off items as they land.
 
 # Backlog · animath
 
+- [ ] [counting-the-ways] !med The Lab should show cumulative results, not one-off rows.
+  Today each *Run & log* draws an independent sample and appends a row with its own
+  method-of-moments μ̂ — no accumulation. Make the catalog **cumulative**: a pooled /
+  running μ̂ that tightens as runs accumulate, a convergence trace (estimate vs. total
+  samples), and the spread of μ̂ across runs (does the estimator concentrate on the
+  truth?). The point of the Lab is to *feel* the estimator converge, which one-off
+  rows don't convey. Engine is `skellam.ts` (sampler + `momentFit`); UI is the Lab
+  view/sections in `CountingTheWays.tsx`. Dan 2026-06-23: "the lab needs work, showing
+  cumulative results."
+
 - [ ] [general] !low Plane / particles unification — one "which plane am I looking at" convention across the viewers and their guides.
   Surfaced while splitting the complex guides: we show the bare x,y plane with a
   linear Complex Particles plot, but Plane Transform also shows "a plane." Decide a
