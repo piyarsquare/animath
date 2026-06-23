@@ -721,6 +721,14 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
       pos.set(0, 0, 0); bodyLinear.identity();
       cell.x = 0; cell.y = 0; cell.z = 0; hasStamp = false;
     },
+    setPose(p: { u?: number; v?: number; w?: number }) {
+      // u,v,w ∈ −1..1 are cube coordinates (pos / half-size); map back to world.
+      if (p.u != null) pos.x = p.u * h();
+      if (p.v != null) pos.y = p.v * h();
+      if (p.w != null) pos.z = p.w * h();
+      bodyLinear.identity();
+      cell.x = 0; cell.y = 0; cell.z = 0; hasStamp = false;
+    },
     getChirality(): ChiralityState {
       const e = bodyLinear.elements; // column-major; diagonal at 0, 5, 10
       const trace = e[0] + e[5] + e[10];

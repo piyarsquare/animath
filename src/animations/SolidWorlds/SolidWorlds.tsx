@@ -14,6 +14,9 @@ import {
   EngineDeps3, SolidEngine, ChiralityState, SolidMapState, TravelMode, DecorMode,
   DEFAULT_ROOM_SIZE, DEFAULT_COVER_DEPTH,
 } from './engineTypes';
+import DebugPoseHUD from '../../components/DebugPoseHUD';
+import { poseParams, pNum, pStr, hudEnabled, type DebugState } from '../../lib/debugPose';
+import { nearestMarkerDistance } from '../../lib/nearestMarker';
 import explainerText from './EXPLAINER.md?raw';
 
 const LOOK_SENS = 0.0035;
@@ -25,12 +28,22 @@ type MoveKey = 'fwd' | 'back' | 'left' | 'right' | 'up' | 'down';
 
 export default function SolidWorlds() {
   const pk = (f: string) => `solid-worlds:${f}`;
-  const [worldId, setWorldId] = useState(DEFAULT_WORLD_ID);
+  // Debug-pose deep link (docs/HEADLESS_WEBGL.md): a hash query can pin the world,
+  // camera and pose so a headless shot reproduces an exact frame. Parsed once; an
+  // explicit URL param wins over the session default. Absent params → today's behavior.
+  const bootRef = useRef(poseParams());
+  const boot = bootRef.current;
+  const bootWorld = pStr(boot, 'world', '');
+  const [worldId, setWorldId] = useState(() =>
+    SOLID_WORLDS.some((w) => w.id === bootWorld) ? bootWorld : DEFAULT_WORLD_ID);
   const [moveSpeed, setMoveSpeed] = usePersistentState(pk('moveSpeed'), 5);
-  const [thirdPerson, setThirdPerson] = useState(true);
+  const [thirdPerson, setThirdPerson] = useState(() => pStr(boot, 'cam', 'third') !== 'first');
   const [mode, setMode] = usePersistentState<TravelMode>(pk('mode'), 'walk');
   const [trailEnabled, setTrailEnabled] = useState(false); // off by default
-  const [camDistance, setCamDistance] = useState(6);
+  const [camDistance, setCamDistance] = useState(() => {
+    const c = pNum(boot, 'camd', NaN);
+    return Number.isFinite(c) ? clampCam(c) : 6;
+  });
   // Session-only (not persisted): a quality/perf knob whose default should always
   // win on load — otherwise a stale stored value hides the hall-of-mirrors depth.
   const [coverDepth, setCoverDepth] = useState(DEFAULT_COVER_DEPTH);
@@ -90,6 +103,22 @@ export default function SolidWorlds() {
       showSeams: seamsRef.current, decorMode: decorRef.current,
     });
     engineRef.current.setTrailEnabled(trailRef.current);
+    // Debug-pose deep link: ?look= overrides the view engine-level (doesn't clobber
+    // the persisted look); seed the look orientation; drop the walker at the
+    // requested cube position (x,y,z ∈ −1..1 → setPose u,v,w). Read via the ref so
+    // onMount stays dependency-free.
+    const bp = bootRef.current;
+    const bootLook = pStr(bp, 'look', '');
+    if (bootLook) { lookRef.current = bootLook; engineRef.current.setLook(bootLook); }
+    yawRef.current = pNum(bp, 'yaw', yawRef.current);
+    pitchRef.current = pNum(bp, 'pitch', pitchRef.current);
+    if (bp.has('x') || bp.has('y') || bp.has('z')) {
+      engineRef.current.setPose({
+        u: bp.has('x') ? pNum(bp, 'x', 0) : undefined,
+        v: bp.has('y') ? pNum(bp, 'y', 0) : undefined,
+        w: bp.has('z') ? pNum(bp, 'z', 0) : undefined,
+      });
+    }
     clockRef.current.start();
     const animate = () => {
       const eng = engineRef.current;
@@ -224,6 +253,29 @@ export default function SolidWorlds() {
   }, []);
   const getChirality = useCallback(() => engineRef.current?.getChirality() ?? null, []);
   const getMap = useCallback(() => engineRef.current?.getMapState() ?? null, []);
+  // Opt-in debug HUD (?hud / ?debug=1): snapshots the live pose so a headless shot
+  // records what the engine thinks the frame is — the dual-verified determinant
+  // (loop handedness), the cell, the cube position, and distance to the nearest
+  // cube vertex. (SolidWorlds has no geometric ink-probe analog, so it carries no
+  // independent `witness` yet — deferred; its determinant is the authoritative,
+  // screw-safe invariant. See the session log.)
+  const showHud = useRef(hudEnabled(boot)).current;
+  const getDebug = useCallback((): DebugState | null => {
+    const eng = engineRef.current;
+    if (!eng) return null;
+    const ms = eng.getMapState();
+    if (!ms) return null;
+    return {
+      world: worldRef.current.id,
+      look: lookRef.current,
+      pos: { x: ms.u, y: ms.v, z: ms.w },
+      yaw: yawRef.current,
+      pitch: pitchRef.current,
+      determinant: ms.mirrored ? -1 : 1,
+      cell: ms.cell,
+      nearestMarker: nearestMarkerDistance({ x: ms.u, y: ms.v, z: ms.w }, CUBE_VERTS),
+    };
+  }, []);
 
   const actions: ActionDef[] = [
     { id: 'recenter', icon: 'move', label: 'Recenter', primary: true, onClick: recenter },
@@ -350,6 +402,7 @@ export default function SolidWorlds() {
           </div>
           <ChiralityHUD get={getChirality} phone={phone} />
           <SolidMiniMap get={getMap} perAxis={analysis.perAxis} phone={phone} />
+          {showHud && <DebugPoseHUD get={getDebug} phone={phone} />}
           <MovePad onSet={setKey} phone={phone} />
           {!phone && (
             <div style={{
@@ -466,6 +519,9 @@ const CUBE_CORNERS: [number, number, number][] = [
 const CUBE_EDGES: [number, number][] = [
   [0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7],
 ];
+// The cube corners as {x,y,z} points (same u,v,w ∈ −1..1 frame the map reports) —
+// the markers for the debug HUD's nearest-vertex readout.
+const CUBE_VERTS = CUBE_CORNERS.map(([x, y, z]) => ({ x, y, z }));
 const AXIS_COLOR: Record<string, string> = {
   translation: '#7fa8d8', rotation: '#ffcf5a', 'glide-reflection': '#ff5aa6',
 };

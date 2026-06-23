@@ -41,6 +41,39 @@ from two prior threads:
 
 ## Working notes
 
+### 🟢 code · 15:24 — Phase 3: SolidWorlds adopts the harness (verified headless)
+**Why:** the 3-manifold walker — where the teleporting-world / spoofed-probe bugs lived; completes the "walkers first" scope.
+
+Wired the deep-link + HUD into SolidWorlds, mirroring Phase 2:
+- **Engine seam:** generalized `recenter()` into `setPose({u,v,w})` on `SolidEngine`
+  + `coverEngine` (cube coords −1..1 → world `pos`, frame upright, cell/holonomy
+  cleared). Position only; heading is the host yaw (grounded modes re-lock `v` to
+  floor height next frame — use `fly`/`x,z` for an exact drop).
+- **Boot params** (`world`/`cam`/`camd`/`yaw`/`pitch`/`look`/`x,y,z`): lazy
+  `useState` initializers (URL wins; `world` validated against `SOLID_WORLDS`),
+  `look` overridden engine-level, `x,y,z` → `setPose`, all read via the bootRef so
+  `onMount` stays dependency-free.
+- **HUD** (`?hud`): world·look, pos (u,v,w), yaw/pitch, **determinant** (from
+  `mapState.mirrored` — the dual-verified screw-safe invariant), `cell`, and
+  `nearestMarker` = distance to the nearest cube vertex (reusing the existing
+  `CUBE_CORNERS` as markers via the Phase-1 helper).
+
+**Verified headless** at 390×844: `?world=half-turn&x=0.4&z=-0.3&yaw=0.8&look=dusk&
+cam=third&camd=8&hud` drops the walker off-center in the half-turn dicosm, third
+person, with the HUD + the existing ChiralityHUD ("ORIGINAL") both reading. Build ✓
+· **64/64 tests** ✓ · lint 0 errors.
+
+> [!NOTE]
+> **Honest scope on the independent witness (revision #2).** PolygonWorlds got a
+> genuine independent `witness` (ink handedness via `debugProbe` — a different code
+> path than the chart). **SolidWorlds carries none yet** — it has no geometric
+> ink-probe analog, and inventing one correctly is its own task (and risks the very
+> L3 "green check that wasn't" the harness exists to prevent: e.g. measuring the
+> per-step developing determinant is subtle — it's legitimately −1 on a
+> glide-reflection wrap, not +1, an L7 trap). Its determinant is already the
+> authoritative, dual-verified, screw-safe invariant, so the echo risk is milder
+> than PolygonWorlds' ink case. **Deferred** as a follow-up, not faked.
+
 ### 🟢 code · 15:01 — Phase 2: PolygonWorlds adopts the harness (verified headless)
 **Why:** the cheaper first integration (it already exposes `getPose`/`getMapState`/`debugProbe`); proves the convention end-to-end.
 
