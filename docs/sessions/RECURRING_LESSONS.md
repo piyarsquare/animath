@@ -39,6 +39,11 @@ The promote-and-retire loop that closes the report system. Background: the
 them**"). Each entry is a lesson that recurred across **≥3** session reflections;
 **Status** tracks how far it's been turned into a rule + an automated check.
 
+Promoted lessons that have a clean trigger are also enacted as **if-this-then-that
+recipes** in [`RECIPES.md`](RECIPES.md) — the cookbook agents read at session start
+(L1–L4 → R1–R4). Norms get skimmed past; recipes get followed, so prefer adding a
+recipe there when you promote an entry below.
+
 Status legend:
 
 - 🔴 **Open** — recurs; not yet promoted to a durable rule.
@@ -65,8 +70,10 @@ The report *format* breaking the digests silently (off-spec timeline types,
 non-ASCII hyphens, bold-wrapped `Follow-up value`, non-enum `followup:`/`signals:`)
 recurred and forced a full hand-backfill once. That class is now **🟢 Promoted
 (rule + check)**: the contract is documented in `REPORT_STYLE.md` and validated by
-`npm run sessions:lint` (`docs/sessions/lint-sessions.mjs`; `--strict` for a future
-CI gate). The scraper was also hardened to tolerate the historical variants. This
+`npm run sessions:lint` (`docs/sessions/lint-sessions.mjs`). The deploy workflow now
+runs `sessions:lint -- --strict` as a **non-blocking** step (`continue-on-error`), so
+off-spec reports surface in CI logs; promote it to a hard gate once it's proven quiet.
+The scraper was also hardened to tolerate the historical variants. This
 is the template for every other entry: a written contract **plus** a detector that
 makes the next drift loud instead of silent.
 

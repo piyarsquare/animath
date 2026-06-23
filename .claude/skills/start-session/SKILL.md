@@ -49,7 +49,10 @@ short and topical** so the folders stay tidy.
    (one sentence).
 6. **Orient in the repo** — note which **app** (`src/animations/<Name>/`) the focus
    names, if any. Skim `CLAUDE.md` / `AGENTS.md` for any conventions relevant to the
-   focus. Remember the parallel-branch rule: shared files (`src/index.tsx`,
+   focus, and read **`docs/sessions/RECIPES.md`** — the if-this-then-that cookbook of
+   habits worth making reflexive (verify visual changes, pin scope before building,
+   real checks, test pure logic); keep its **WHEN** triggers in mind as you work.
+   Remember the parallel-branch rule: shared files (`src/index.tsx`,
    `src/apps.ts`, `CLAUDE.md`, `README.md`) are **append-only** — never reorder
    existing entries. **Do not `git pull` / `merge origin/main` to start** — the
    fresh clone is already current, and this branch may be stacked on another
