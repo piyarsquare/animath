@@ -72,10 +72,6 @@
 
 /* ── Formula band ── */
 .ctw-formula {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--panel-2);
-  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;

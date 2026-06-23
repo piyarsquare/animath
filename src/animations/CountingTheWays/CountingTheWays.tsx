@@ -21,7 +21,11 @@ type RateSource = 'direct' | 'law';
 
 const INF = Number.POSITIVE_INFINITY;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-const fmt = (v: number, d = 3) => (v === 0 ? '0' : v < 1e-3 ? v.toExponential(1) : v.toFixed(d));
+const fmt = (v: number, d = 3) => {
+  if (v === 0) return '0';
+  const a = Math.abs(v);
+  return a >= 1e6 || a < 1e-3 ? v.toExponential(1) : v.toFixed(d);
+};
 
 /** Words for the two counts and their difference, per framing. */
 interface Labels { x: string; y: string; xShort: string; yShort: string; diff: string; mu1: string; mu2: string; }
@@ -505,6 +509,11 @@ export default function CountingTheWays() {
     </div>
   );
 
+  // the text-heavy formula lives in its own panel (out of the view frame)
+  const formulaNode = (
+    <FormulaBand mu1={mu1} mu2={mu2} k={activeK} partialBessel={partialBessel} partialSum={partialSum} notes={showNotes} />
+  );
+
   const labNode = (
     <div className="ctw-actions">
       <div className="ctw-progress">{runs.length} run{runs.length === 1 ? '' : 's'} logged · next seed {labSeed}</div>
@@ -525,11 +534,11 @@ export default function CountingTheWays() {
             </p>
           ))
         : <div className="ctw-tutorial"><span className="ctw-step">Step {tut.step} / 3</span><span className="ctw-tut-text">{narration}</span></div>}
+      <div className="ctw-mini-head"><strong>Joint — {lab.xShort} × {lab.yShort}</strong>{showNotes && <span>each cell = P({lab.xShort})·P({lab.yShort})</span>}</div>
       <Lattice mu1={mu1} mu2={mu2} k={activeK} N={N} accN={accN} showMarginals={showMarginals} lab={lab}
         marginsShown={tut.marginsShown} cellThreshold={tut.cellThreshold} diagActive={tut.diagActive} diagBeyond={diagBeyond}
         cond={cond} marking={tut.stage === 'sweep'}
         onPickK={v => setK(clamp(v, -N, N))} />
-      <FormulaBand mu1={mu1} mu2={mu2} k={activeK} partialBessel={partialBessel} partialSum={partialSum} notes={showNotes} />
       <div className="ctw-dists">
         <MiniDist
           title="Skellam — the difference K"
@@ -545,12 +554,6 @@ export default function CountingTheWays() {
           bars={cond.slice(0, 10).map((p, n) => ({ full: p, shown: p, label: `${n}`, active: false }))}
         />
       </div>
-      {showNotes && (
-        <p className="ctw-hint">
-          Two distributions, not one: <strong>Skellam</strong> (gold) is the difference — <em>sum</em> a diagonal.
-          The <strong>Bessel</strong> (teal) is where you land on it — <em>normalize</em> that diagonal. Iₖ is their shared sum.
-        </p>
-      )}
     </div>
   );
 
@@ -617,7 +620,8 @@ export default function CountingTheWays() {
     ? [
       { id: 'model', title: 'The two counts', arch: 'subject', node: modelNode, estHeight: modelH },
       { id: 'select', title: 'Difference', arch: 'domain', node: selectNode, estHeight: 150 },
-      { id: 'display', title: 'Display', arch: 'marks', node: displayNode, estHeight: 190 },
+      { id: 'display', title: 'Display', arch: 'marks', node: displayNode, estHeight: 220 },
+      { id: 'formula', title: 'Formula', arch: 'readout', node: formulaNode, estHeight: 210 },
       { id: 'tutor', title: 'Build it', arch: 'playback', node: tutorNode, estHeight: 280 },
     ]
     : [
