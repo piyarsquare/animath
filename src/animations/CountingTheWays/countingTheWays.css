@@ -1,0 +1,290 @@
+/* Counting the Ways — Skellam / Bessel explainer. Token-styled so all skins work. */
+
+.ctw-stage {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 18px;
+  color: var(--fg);
+}
+
+.ctw-story {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--fg);
+  margin: 0;
+}
+.ctw-story strong { color: var(--accent); font-weight: 600; }
+
+.ctw-hint {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--dim);
+  margin: 2px 0 0;
+}
+.ctw-hint strong { color: var(--fg); font-family: var(--font-mono); }
+.ctw-stage .dim { color: var(--dim-2); }
+
+/* ── Lattice ── */
+.ctw-lattice-wrap { display: flex; flex-direction: column; gap: 4px; }
+.ctw-lattice {
+  width: 100%;
+  max-height: min(250px, 28vh);
+  display: block;
+}
+.ctw-cell {
+  stroke: var(--border);
+  stroke-width: 0.5;
+  cursor: pointer;
+  transition: fill-opacity 0.12s;
+}
+.ctw-cell.diag { stroke: var(--accent-2); stroke-width: 1.3; stroke-dasharray: none; }
+.ctw-cell.acc { stroke: var(--accent); stroke-width: 1.7; stroke-dasharray: none; }
+.ctw-cell.cur { stroke: var(--fg); stroke-width: 2; animation: ctw-pulse 0.9s ease-in-out infinite; }
+@keyframes ctw-pulse { 0%, 100% { stroke-opacity: 1; } 50% { stroke-opacity: 0.35; } }
+.ctw-marg { fill: var(--accent); opacity: 0.4; }
+.ctw-diagline { stroke: var(--accent-2); stroke-width: 2; opacity: 0.35; pointer-events: none; }
+.ctw-diagmore line { stroke: var(--accent-2); stroke-width: 2; opacity: 0.8; }
+.ctw-diagmore polygon { fill: var(--accent-2); opacity: 0.8; }
+.ctw-axlbl { fill: var(--dim); font-size: 11px; font-family: var(--font-mono); }
+.ctw-hovermark rect { fill: none; stroke: var(--fg); stroke-width: 1.5; }
+.ctw-lattice-cap { font-size: 12px; color: var(--dim); line-height: 1.4; }
+.ctw-lattice-cap strong { color: var(--accent); font-family: var(--font-mono); }
+.ctw-key { font-weight: 700; }
+.ctw-key.accent { color: var(--accent); }
+.ctw-key.accent2 { color: var(--accent-2); }
+
+/* ── Fullscreen: keep the joint grid compact (it deliberately stays small) and
+   instead center the content, letting the two distributions grow into the extra
+   space. The action strip is absolute/bottom-pinned, so centering + bottom
+   padding keep it attached instead of stranded below a tall empty gap. ── */
+.am-ws-full .ctw-stage {
+  justify-content: safe center;
+  padding-bottom: 64px;
+}
+.am-ws-full .ctw-mini-svg { max-height: 200px; }
+
+/* ── The two distributions, side by side (Skellam · Bessel) ── */
+.ctw-dists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px 14px;
+}
+.ctw-mini { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ctw-mini-head { display: flex; flex-direction: column; line-height: 1.2; }
+.ctw-mini-head strong { font-size: 12px; color: var(--fg); font-weight: 600; }
+.ctw-mini-head span { font-size: 10.5px; color: var(--dim); }
+.ctw-mini-svg { width: 100%; height: auto; display: block; max-height: 132px; }
+.ctw-mini-lbl { fill: var(--dim-2); font-size: 9px; font-family: var(--font-mono); }
+
+/* ── Formula band ── */
+.ctw-formula {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ctw-eq, .ctw-eqvals {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-family: var(--font-mono);
+}
+.ctw-eq { font-size: 15px; }
+.ctw-eqvals { font-size: 13px; }
+.ctw-lhs { font-weight: 700; }
+.ctw-op { color: var(--dim-2); }
+.ctw-chip {
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid;
+  font-size: 13px;
+}
+.ctw-chip.sm { font-size: 12px; padding: 1px 5px; }
+.ctw-chip.norm { color: var(--dim); border-color: var(--border-strong); background: var(--panel-2); }
+.ctw-chip.ratio { color: var(--accent-2); border-color: var(--accent-2); background: transparent; }
+.ctw-chip.bessel { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.ctw-val { font-weight: 600; }
+.ctw-val.norm { color: var(--dim); }
+.ctw-val.ratio { color: var(--accent-2); }
+.ctw-val.bessel { color: var(--accent); }
+.ctw-val.total { color: var(--fg); font-weight: 700; }
+.ctw-formula-note { font-size: 12px; color: var(--dim); margin: 2px 0 0; line-height: 1.45; }
+.ctw-formula-note strong { color: var(--fg); font-family: var(--font-mono); }
+
+/* ── Skellam strip + conditional bars ── */
+.ctw-strip, .ctw-cond { display: flex; flex-direction: column; gap: 2px; }
+.ctw-strip-bars, .ctw-cond-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 104px;
+  overflow: hidden;
+}
+.ctw-strip-bar {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.ctw-strip-fill {
+  width: 70%;
+  min-height: 2px;
+  background: var(--accent);
+  opacity: 0.42;
+  border-radius: 2px 2px 0 0;
+  transition: height 0.12s, opacity 0.12s;
+}
+.ctw-strip-bar:hover .ctw-strip-fill { opacity: 0.7; }
+.ctw-strip-bar.active .ctw-strip-fill { opacity: 1; }
+.ctw-strip-lbl, .ctw-cond-lbl {
+  font-size: 9px;
+  line-height: 11px;
+  height: 11px;
+  color: var(--dim-2);
+  font-family: var(--font-mono);
+}
+.ctw-cond-bar {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+}
+.ctw-cond-fill {
+  width: 76%;
+  min-height: 2px;
+  background: var(--accent-2);
+  border-radius: 2px 2px 0 0;
+}
+.ctw-cond-lbl { font-size: 9px; }
+
+/* ── Histogram ── */
+.ctw-hist { width: 100%; max-height: 320px; display: block; }
+.ctw-axis { stroke: var(--border-strong); stroke-width: 1; }
+.ctw-bar { fill: var(--accent); opacity: 0.5; }
+.ctw-overlay { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+
+/* ── Controls ── */
+.ctw-actions { display: flex; flex-direction: column; gap: 9px; }
+.ctw-progress { font-family: var(--font-mono); font-size: 12px; color: var(--dim); }
+.ctw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--fg);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.ctw-btn:hover:not(:disabled) { background: var(--track); }
+.ctw-btn.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; font-weight: 600; }
+.ctw-btn:disabled { opacity: 0.45; cursor: default; }
+.ctw-seedrow { display: flex; gap: 8px; align-items: flex-end; }
+.ctw-seedrow > label { flex: 1; }
+.ctw-legend { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; }
+.ctw-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+
+/* ── Tutorial caption (Explain, while Play runs) ──
+   Sticks to the top of the (scrollable) stage so the step narration stays
+   visible even in a short window — never scrolls up under the window header.
+   The background layers the soft accent over the opaque view bg so scrolled
+   content can't bleed through the translucent tint. */
+.ctw-tutorial {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border: 1px solid var(--accent);
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--viz-bg);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--fg);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.ctw-tut-text { flex: 1; min-width: 0; }
+.ctw-step {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 1px 8px;
+  flex-shrink: 0;
+}
+
+/* ── Softplus law curve (model panel) ── */
+.ctw-law {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+  margin-bottom: 4px;
+}
+.ctw-lawP { fill: none; stroke: var(--accent); stroke-width: 2; }
+.ctw-lawM { fill: none; stroke: var(--accent-2); stroke-width: 2; }
+.ctw-lawL { stroke: var(--dim); stroke-width: 1; stroke-dasharray: 3 3; }
+.ctw-lawdotP { fill: var(--accent); }
+.ctw-lawdotM { fill: var(--accent-2); }
+
+/* ── Lab catalog ── */
+.ctw-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 36px 12px;
+  color: var(--dim);
+  text-align: center;
+}
+.ctw-empty svg { color: var(--dim-2); }
+.ctw-cat { display: flex; flex-direction: column; gap: 4px; }
+.ctw-cat-scroll { max-height: 220px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.ctw-cat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.ctw-cat-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--panel-solid);
+  color: var(--dim);
+  font-weight: 600;
+  text-align: right;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.ctw-cat-table th:nth-child(2), .ctw-cat-table td:nth-child(2),
+.ctw-cat-table th:nth-child(3), .ctw-cat-table td:nth-child(3) { text-align: left; }
+.ctw-cat-table tbody td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--border); color: var(--fg); }
+.ctw-cat-table tbody tr { cursor: pointer; }
+.ctw-cat-table tbody tr:hover { background: var(--panel-2); }
+.ctw-cat-table tbody tr.sel { background: var(--accent-soft); }
+.ctw-cat-table tbody tr.sel td { color: var(--fg); }
+.ctw-cat-table td.hi { color: var(--accent); }

@@ -13,7 +13,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
  */
 export type PreviewKind =
   | 'particles' | 'plane' | 'fractal' | 'julia' | 'corridor'
-  | 'trinary' | 'sorting' | 'matrix' | 'polygon' | 'treenet' | 'solid';
+  | 'trinary' | 'sorting' | 'matrix' | 'polygon' | 'treenet' | 'solid' | 'skellam';
 
 type DrawFn = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
 
@@ -809,6 +809,83 @@ function SolidPreview({ light }: { light: boolean }) {
   return <canvas ref={ref} style={canvasStyle} />;
 }
 
+/* ---- Counting the Ways: the (gains,lost) lattice + the Skellam it builds ---- */
+/* Mirrors the app: a diagonal sweeps the joint-Poisson grid (gains − lost = k)
+   while the Skellam distribution below fills in bar by bar, bottom to top. */
+const SKELLAM = (() => {
+  const G = 8;                      // grid cells 0..G on each axis
+  const mu1 = 3.4, mu2 = 2.0;       // tuned so the joint blob sits inside the grid
+  const logf = [0, 0];
+  for (let i = 2; i <= G + 1; i++) logf[i] = logf[i - 1] + Math.log(i);
+  const pois = (mu: number, k: number) => Math.exp(-mu + k * Math.log(mu) - logf[k]);
+  const pX = Array.from({ length: G + 1 }, (_, x) => pois(mu1, x));
+  const pY = Array.from({ length: G + 1 }, (_, y) => pois(mu2, y));
+  const jmax = Math.max(...pX) * Math.max(...pY);
+  const K = G;                      // Skellam support shown: k ∈ [−K, K]
+  const sk: number[] = [];
+  for (let k = -K; k <= K; k++) {
+    let s = 0;
+    for (let y = 0; y <= G; y++) { const x = k + y; if (x >= 0 && x <= G) s += pX[x] * pY[y]; }
+    sk.push(s);
+  }
+  const skmax = Math.max(...sk);
+  return { G, K, pX, pY, jmax, sk, skmax };
+})();
+
+function SkellamPreview({ light }: { light: boolean }) {
+  const ref = useCanvas((ctx, W, H, t) => {
+    // pull the live theme tokens so the card matches the active skin, not just light/dark
+    const cs = getComputedStyle(document.documentElement);
+    const pick = (name: string, fb: string) => cs.getPropertyValue(name).trim() || fb;
+    const bg = pick('--bg', light ? '#f4f3ef' : '#05060d');
+    const gold = pick('--accent', light ? '#b67d10' : '#ffce47');
+    const teal = pick('--accent-2', light ? '#1d8a78' : '#5fe3cd');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const { G, K, pX, pY, jmax, sk, skmax } = SKELLAM;
+    const gs = Math.min(W * 0.72, H * 0.6);
+    const cell = gs / (G + 1);
+    const gx0 = (W - gs) / 2, gy0 = H * 0.05;
+    // sweep k from −K to +K, then hold briefly, then loop
+    const period = 6.5;
+    const tt = t % period;
+    const sweepK = Math.round(-K + Math.min(1, tt / (period * 0.82)) * 2 * K);
+
+    // joint-Poisson grid, with the active diagonal (gains − lost = sweepK) lit
+    for (let y = 0; y <= G; y++) for (let x = 0; x <= G; x++) {
+      const op = (pX[x] * pY[y]) / jmax;
+      const onDiag = x - y === sweepK;
+      const px = gx0 + x * cell, py = gy0 + y * cell;
+      ctx.fillStyle = gold;
+      ctx.globalAlpha = onDiag ? Math.max(0.5, op) : op * 0.8;
+      ctx.fillRect(px + cell * 0.07, py + cell * 0.07, cell * 0.86, cell * 0.86);
+      if (onDiag) {
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = teal; ctx.lineWidth = Math.max(1, W * 0.004);
+        ctx.strokeRect(px + cell * 0.07, py + cell * 0.07, cell * 0.86, cell * 0.86);
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = light ? 'rgba(60,60,70,0.16)' : 'rgba(150,180,220,0.16)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(gx0, gy0, gs, gs);
+
+    // the Skellam distribution below — bars fill bottom-to-top as the sweep passes
+    const bx0 = W * 0.07, bw = (W - 2 * bx0) / sk.length;
+    const baseY = H * 0.95, barsH = H * 0.27;
+    for (let i = 0; i < sk.length; i++) {
+      const kk = i - K, h = (sk[i] / skmax) * barsH, filled = kk <= sweepK;
+      ctx.fillStyle = kk === sweepK ? teal : gold;
+      ctx.globalAlpha = filled ? (kk === sweepK ? 1 : 0.85) : 0.13;
+      ctx.fillRect(bx0 + i * bw + bw * 0.13, baseY - h, bw * 0.74, h);
+    }
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = light ? 'rgba(60,60,70,0.3)' : 'rgba(150,180,220,0.22)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(bx0, baseY + 0.5); ctx.lineTo(W - bx0, baseY + 0.5); ctx.stroke();
+  }, [light]);
+  return <canvas ref={ref} style={canvasStyle} />;
+}
+
 export function Preview({ kind, skin }: { kind: PreviewKind; skin: string; hue?: number }) {
   const light = skin === 'light';
   switch (kind) {
@@ -822,6 +899,7 @@ export function Preview({ kind, skin }: { kind: PreviewKind; skin: string; hue?:
     case 'polygon': return <PolygonPreview light={light} />;
     case 'treenet': return <TreeNetPreview light={light} />;
     case 'solid': return <SolidPreview light={light} />;
+    case 'skellam': return <SkellamPreview light={light} />;
     default: return <ParticlePreview light={light} />;
   }
 }

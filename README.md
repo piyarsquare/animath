@@ -21,6 +21,7 @@ reachable directly by hash route.
 10. **[Trees and Nets](https://piyarsquare.github.io/animath/#/trees-and-nets)** – tree-space as a polytope: every triangulation of an n-gon is a tree and every flip an edge, so the whole associahedron becomes a 3D (or 4D) shape you can orbit, colored by energy.
 11. **[Solid Worlds](https://piyarsquare.github.io/animath/#/solid-worlds)** – walk *inside* a closed 3-manifold built from one glued cube — a single room that repeats forever. Walk an orientation-reversing loop in the Klein-bottle × circle world and the whole world, sign and your own footprints come back mirror-reversed (the 3D successor to Polygon Worlds).
 12. **[Argand Plane](https://piyarsquare.github.io/animath/#/argand)** – drag two complex numbers and watch arithmetic *become* geometry: addition slides tip-to-tail, multiplication spirals (angles add, lengths multiply), and `a·b = b·a` falls out of the picture. An entry-point app for complex numbers; the successor-in-progress to Plane Transform.
+13. **[Counting the Ways](https://piyarsquare.github.io/animath/#/counting-the-ways)** – why does a Bessel function show up when you take the difference of two Poisson counts? A narrated *Play* tutorial builds the whole (gains, losses) grid and sums one diagonal to reveal the scary `I_{|k|}` as a plain sum — the Skellam distribution demystified — with rates you can set directly or from a length law, plus a cataloged Lab that recovers the rates from synthetic samples.
 
 ---
 
@@ -148,7 +149,8 @@ src/
 │   ├── AgenticSorting/     # concurrent agent-based sorting
 │   ├── StableMatching/     # rebuilt Gale–Shapley lab (matrix · welfare · lattice)
 │   ├── TrinaryStars/       # three-body sandbox (Observatory) + ensemble Lab
-│   └── PolygonWorlds/      # walk every closed surface from one glued polygon
+│   ├── PolygonWorlds/      # walk every closed surface from one glued polygon
+│   └── CountingTheWays/    # Skellam = difference of two Poissons; the Bessel function as a diagonal sum (skellam.ts)
 │
 ├── components/             # shared app-side UI
 │   ├── ParticleViewerShell # turnkey workspace assembly for the particle viewers

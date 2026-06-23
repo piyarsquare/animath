@@ -25,6 +25,16 @@ informs future rounds. Delete or check off items as they land.
 
 # Backlog · animath
 
+- [ ] [counting-the-ways] !med The Lab should show cumulative results, not one-off rows.
+  Today each *Run & log* draws an independent sample and appends a row with its own
+  method-of-moments μ̂ — no accumulation. Make the catalog **cumulative**: a pooled /
+  running μ̂ that tightens as runs accumulate, a convergence trace (estimate vs. total
+  samples), and the spread of μ̂ across runs (does the estimator concentrate on the
+  truth?). The point of the Lab is to *feel* the estimator converge, which one-off
+  rows don't convey. Engine is `skellam.ts` (sampler + `momentFit`); UI is the Lab
+  view/sections in `CountingTheWays.tsx`. Dan 2026-06-23: "the lab needs work, showing
+  cumulative results."
+
 - [ ] [general] !low Plane / particles unification — one "which plane am I looking at" convention across the viewers and their guides.
   Surfaced while splitting the complex guides: we show the bare x,y plane with a
   linear Complex Particles plot, but Plane Transform also shows "a plane." Decide a
@@ -92,6 +102,16 @@ informs future rounds. Delete or check off items as they land.
   paragraphs in CLAUDE.md's Repository Layout can shrink to a one-line "see
   docs/apps/<slug>.md" so there's a single architecture home. Touches the shared
   append-only CLAUDE.md — do it as its own pass to avoid parallel-branch conflicts.
+
+- [ ] [chrome] !med Make graphics consistently theme-driven — gallery previews + per-app canvases.
+  Counting the Ways' gallery preview now reads the live theme tokens (`--accent` /
+  `--accent-2` / `--bg` via `getComputedStyle(document.documentElement)`) so the card
+  tracks the active skin, not just light/dark — `SkellamPreview` in
+  `chrome/previews.tsx` is the **model**. The other previews still hardcode a
+  light/dark pair, and apps don't all respect the theme the same way. Future pass:
+  roll the getComputedStyle pattern across `previews.tsx` and audit in-app canvases so
+  every skin renders faithfully. Dan 2026-06-23: neat idea, not urgent — work toward it
+  once each app's theming is known to be consistent.
 
 - [x] [agentic-sorting] EXPLAINER/README no longer describe the removed Replicate panel.
   DONE 2026-06-22. Removed the stale Replicate-panel copy from both the AgenticSorting
