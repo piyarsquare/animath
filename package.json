@@ -7,6 +7,7 @@
     "dev": "vite",
     "preview": "vite preview",
     "shoot": "node scripts/shoot.mjs",
+    "smoke": "node scripts/smoke.mjs",
     "sessions": "node docs/sessions/build-sessions.mjs",
     "sessions:lint": "node docs/sessions/lint-sessions.mjs",
     "sessions:prune": "node docs/sessions/prune-assets.mjs",

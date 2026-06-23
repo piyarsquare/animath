@@ -158,6 +158,33 @@ informs future rounds. Delete or check off items as they land.
   in the existing cube engine. Reference saved locally: Conway–Rossetti, "Describing
   the Platycosms" → `docs/papers/describing-the-platycosms.pdf`.
 
+- [ ] [solid-worlds] !med Give Solid Worlds a genuine independent debug witness (like PolygonWorlds' ink probe).
+  The debug-pose HUD (`?hud`, from the headless-mode harness) shows SolidWorlds'
+  determinant/cell/pos, but — unlike PolygonWorlds, which carries an *independent*
+  geometric witness (`debugProbe`: the rendered ink's handedness, a different code path
+  that cross-checks the chart's flip bookkeeping) — SolidWorlds has **no independent
+  witness yet**. That was the three-hats pedagogy lens's revision #2 (a HUD reading the
+  same state the probe reads is an echo, not a check). Deferred in Phase 3 rather than
+  faked, because building it right is its own task and risks the exact L3
+  "green-check-that-wasn't": e.g. the per-step developing determinant is legitimately
+  −1 on a glide-reflection wrap, not +1 (an L7 handedness subtlety). SolidWorlds'
+  determinant is already the dual-verified, screw-safe invariant, so the echo risk is
+  milder than the ink case — but a real independent witness (a geometric probe measured
+  off the *rendered* scene, or a wrap-aware per-frame continuity/jump value) would make
+  the headless verification honest end-to-end and is what would catch a teleporting-world
+  regression. Plumb it into the existing `DebugState.witness` field
+  (`src/lib/debugPose.ts`) the HUD already renders.
+
+- [ ] [complex-particles] !low HDR env map fails to load — `THREE.RGBELoader: Unsupported type: 1009`.
+  Surfaced by the new mobile-smoke pass (`npm run smoke`) as an advisory warning on
+  `#/complex-particles` and `#/embed/complex-particles`: the RGBELoader is called with
+  `.setDataType(THREE.UnsignedByteType)` (= 1009), which the current three@0.163
+  RGBELoader rejects, so the HDR environment map silently fails and the viewer falls
+  back to procedural/white lighting. Benign (no crash; the fallback works) but real —
+  drop the `setDataType(UnsignedByteType)` call (or switch to `HalfFloatType`) in
+  `src/lib/textures.ts` so the HDR actually loads. Verify headless with
+  `node scripts/shoot.mjs '#/complex-particles' out.png`.
+
 - [ ] [complex-particles] !med Argand: an explainer + tools for complex / dual / split-complex numbers.
   The app already runs the affine line through all three systems via the System
   slider p=j² (Complex p<0 · Dual p=0 · Split-complex p>0). Add an explainer that

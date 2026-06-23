@@ -41,6 +41,34 @@ from two prior threads:
 
 ## Working notes
 
+### 🟢 code · 15:45 — Phase 4: mobile smoke harness (PASS 17/17) + CI wiring + TODOs
+**Why:** the second deliverable — the 390×844 runtime-crash check that escapes `tsc && vite build`; built on the *measured* detector design, not guesswork.
+
+Added `scripts/smoke.mjs` + `npm run smoke` + a separate non-blocking CI workflow:
+- **Detectors (grounded in the 14:40 experiment):** `pageerror` + `webglcontextlost`
+  are **load-bearing** (fail); `console.error` is **advisory** (warn) with a
+  resource-load allowlist; **dead-frame = low luma variance**.
+- **Two calibration fixes from running it against real routes** (this is why the
+  detector design had to be tested, not assumed):
+  1. In-page `drawImage(canvas)` reads **blank on the on-demand-render apps**
+     (fractals / plane-transform / correspondence don't run a continuous rAF, so
+     their buffer is already cleared) — false "dead frame." **Fix:** measure
+     variance over the **canvas-clipped puppeteer screenshot** (the true composited
+     frame), round-tripped through an `<img>` (no new deps). Now fractals reads
+     var≈3369, not 0.
+  2. `#/trinary-lab` is a **DOM/readout Lab** (its first `<canvas>` is a mini-sim),
+     not a full WebGL scene → reclassified `webgl:false` (the WebGL Observatory is
+     `#/trinary`, var≈1108).
+- **Result: PASS 17/17, exit 0**, 2 advisory warnings — a **real benign finding**
+  the smoke surfaced: `THREE.RGBELoader: Unsupported type: 1009` (the HDR env map
+  fails to load on ComplexParticles, falls back to white). Filed `!low` in TODO.
+- **CI:** `.github/workflows/smoke.yml` — PR-triggered, **separate** from
+  `deploy.yml` (which skips puppeteer's Chrome), `continue-on-error` (advisory-now /
+  gate-later, the `sessions:lint --strict` graduation path). Revision #6.
+
+Per Dan's request, filed the **SolidWorlds independent-witness** follow-up in TODO
+(revision #2, deferred from Phase 3).
+
 ### 🟢 code · 15:24 — Phase 3: SolidWorlds adopts the harness (verified headless)
 **Why:** the 3-manifold walker — where the teleporting-world / spoofed-probe bugs lived; completes the "walkers first" scope.
 
