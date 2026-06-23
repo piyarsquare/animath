@@ -92,6 +92,11 @@ export interface SolidEngine {
   setDecorMode(mode: DecorMode): void;
   /** Return the walker to the cube center, frame upright, holonomy cleared. */
   recenter(): void;
+  /** Debug-pose harness only: place the walker at cube position (u,v,w ∈ −1..1),
+   *  frame upright, holonomy/cell cleared (like recenter, but off-center). Heading
+   *  is the host's look yaw, so this sets position only. In grounded modes the
+   *  vertical (v) is re-locked to floor height next frame — use fly for an exact w. */
+  setPose(p: { u?: number; v?: number; w?: number }): void;
   getChirality(): ChiralityState | null;
   getMapState(): SolidMapState | null;
   dispose(): void;

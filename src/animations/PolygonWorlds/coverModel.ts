@@ -60,6 +60,12 @@ export interface CoverModel {
   chart(): SquareMapState;
   clearTrail(): void;
 
+  /** Debug-pose harness only: place the player at chart position (u, v ∈ 0..1) in
+   *  the home cell, on the canonical face. Heading is the host's look yaw, so this
+   *  sets position only; flipped sheets are reached by walking across a seam, not
+   *  by seeding a frame. Optional — covers that don't support it are skipped. */
+  setPose?(u: number, v: number): void;
+
   /** Test/diagnostic only: signed handedness of the freshest print's rendered
    *  image in the character's own frame (>0 ⇒ a print laid on the player's
    *  current face reads right-handed under them). Must settle to the same

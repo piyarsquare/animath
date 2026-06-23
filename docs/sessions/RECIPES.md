@@ -41,7 +41,12 @@ npm run build && (npm run preview &) && sleep 3
 node scripts/shoot.mjs '#/<route>' shot.png
 ```
 
-…then **Read `shot.png`** and confirm the pixels match the intent.
+…then **Read `shot.png`** and confirm the pixels match the intent. For the
+**first-person walkers**, reproduce the *exact* frame with a debug-pose deep link
+instead of the default view, and add `?hud` to record the engine's own diagnostics:
+`node scripts/shoot.mjs '#/solid-worlds?world=half-turn&x=0.4&z=-0.3&yaw=0.8&cam=third&hud' shot.png`
+(vocabulary in `docs/HEADLESS_WEBGL.md`). If the change could crash/blank a route at
+a mobile viewport, also run **`npm run smoke`** (390×844, all routes).
 
 **DONE WHEN** I've actually looked at the image. If the claim is about touch,
 "feel", or real-device behavior that a headless shot can't show, set

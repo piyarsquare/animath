@@ -56,7 +56,7 @@ Status legend:
 
 | # | Recurring lesson | ~Freq | Status | Rule lives in | Check |
 |---|------------------|-------|--------|---------------|-------|
-| **L1** | Verified headless, never on a real device — visual/touch/"feel" claims ship as hypotheses; the one defect class that escapes CI is mobile/runtime | ~14 | 🟡 Promoted (rule) | self-reflection Q7 (declare the method + set `visual-unverified`/`phone-needed`); `signals:` in REPORT_STYLE §1.2 | Linter heuristic warns when a handoff says "headless/unverified" but declares no signal (`lint-sessions.mjs`). **Missing the positive check:** the deep-link debug-pose harness + headless mobile-viewport smoke (Tier-1 recs 2–3) — see TODO.md |
+| **L1** | Verified headless, never on a real device — visual/touch/"feel" claims ship as hypotheses; the one defect class that escapes CI is mobile/runtime | ~14 | 🟢 Promoted (rule + check) | self-reflection Q7 + recipe **R1** (declare the method + set `visual-unverified`/`phone-needed`); `signals:` in REPORT_STYLE §1.2 | **Positive check now built** (`headless-mode-plan` branch): the deep-link debug-pose harness + dev HUD (`src/lib/debugPose.ts`; reproduce an exact walker frame for `shoot.mjs`) **and** the 390×844 mobile smoke (`npm run smoke` → `scripts/smoke.mjs`, non-blocking CI in `smoke.yml`). Plus the lint heuristic in `lint-sessions.mjs`. See `docs/HEADLESS_WEBGL.md` |
 | **L2** | Build the full feature, then ask — the maximal/wrong-reading version finished before a cheap "how far / which meaning?" check; 3–5 build-revert cycles. *Refined 2026-06-23:* the cost is **avoidable thrash** (a knowable target guessed at), not **exploratory iteration** (the target is only discoverable by building) — the lever is sharper inputs (a reference in any modality), not more up-front planning | ~9 | 🟡 Promoted (rule) | `BUILDING_AN_APP.md` top callout + recipe **R2** ("separate exploring from guessing") | Not automatable; relies on the build-flow reflex + three-hats reviews |
 | **L3** | A green check that wasn't a real check — an invariant/probe passed while the user-visible result was wrong (matching H₁/χ on a broken complex; chirality probe green on a teleporting world) | ~6 | 🟡 Promoted (rule) | self-reflection Q7 ("does each passing check test the user-visible claim?") | No generic detector possible; the harness in L1 would have caught the specific topology cases |
 | **L4** | Missing committed unit tests for testable pure logic — pure math/engine verified with throwaway `/tmp` scripts that never land, despite the vitest harness existing | ~6 | 🟡 Promoted (rule) | `BUILDING_AN_APP.md` §6 ("Test pure logic on write") + §7 checklist | No detector yet (can't tell a "should-be-tested" module from a view); could later assert per-app `__tests__/` coverage of `lib/`-style helpers |
@@ -79,12 +79,12 @@ makes the next drift loud instead of silent.
 
 ## Still to enact (tracked in `TODO.md`)
 
-The two highest-ROI checks named by the audit are speced but not built — they live
-in the backlog so this ledger stays honest about what is rule-only vs rule+check:
-
-- **L1 positive check** — deep-link debug-pose harness (URL → camera/world/pose for
-  `shoot.mjs`) + an opt-in dev HUD, and a headless mobile-viewport smoke pass
-  (390×844, assert no console error / no NaN-in-shader across routes). Requested
-  independently three times across the topology sessions.
-- Add **`package.json`** to the append-only protected-file list (the one real
-  conflict-marker near-miss landed there, not in CLAUDE.md/apps.ts/index.tsx).
+- **L1 positive check — BUILT** (2026-06-23, `headless-mode-plan` branch). The
+  deep-link debug-pose harness + dev HUD (`src/lib/debugPose.ts`,
+  `src/components/DebugPoseHUD.tsx`; adopted by Polygon Worlds + Solid Worlds) and
+  the 390×844 mobile smoke (`npm run smoke`, `scripts/smoke.mjs`, non-blocking CI in
+  `.github/workflows/smoke.yml`) now exist; L1 is 🟢. Documented in
+  `docs/HEADLESS_WEBGL.md`. *Remaining follow-up:* Solid Worlds still lacks a genuine
+  *independent* witness (Polygon Worlds has one — its ink probe); filed in `TODO.md`.
+- **`package.json` on the append-only protected-file list — DONE** (2026-06-23):
+  added to CLAUDE.md's Parallel-branches callout + BUILDING_AN_APP.md §8.

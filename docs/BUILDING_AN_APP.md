@@ -547,6 +547,8 @@ files two app branches both touch are the shared coordination points:
 - `src/index.tsx` (route map), `src/apps.ts` (catalog) and
   `src/chrome/catalog.ts` (gallery META)
 - `CLAUDE.md` and `README.md` (the route table + repo tree)
+- `package.json` when adding a script or dependency (append to the `scripts` /
+  `devDependencies` block — the one real conflict-marker near-miss landed here)
 
 All of them are edited **additively** (§3a–3d). Git auto-merges additive edits
 in different regions, so independent app branches normally merge with **no
