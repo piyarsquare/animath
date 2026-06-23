@@ -81,7 +81,7 @@ interface LatticeProps {
   /** Tutorial reveal: only margins index < marginsShown, cells with x+y ≤ cellThreshold,
    *  and the diagonal highlight when diagActive. All Infinity/true ⇒ the full picture. */
   marginsShown?: number; cellThreshold?: number; diagActive?: boolean; diagBeyond?: boolean;
-  /** Bessel conditional P(rung | k) for the active diagonal — paints the teal tint. */
+  /** Bessel conditional P(rung | k) for the active diagonal — sets the selection-channel tint. */
   cond?: number[];
   /** Mark the current rung (the moving position), e.g. during the sweep. */
   marking?: boolean;
@@ -104,9 +104,10 @@ function Lattice({ mu1, mu2, k, N, accN, showMarginals, lab, onPickK, marginsSho
   const gx = (x: number) => marg + x * cs;
   const gy = (y: number) => marg + y * cs;
 
-  // Two color channels: off-diagonal cells carry the joint blob in a NEUTRAL tint
-  // (context); the active diagonal is the gold Skellam highlight (k), painted with
-  // a TEAL tint ∝ the Bessel conditional P(rung n | k) — your spot in each.
+  // Two color channels (both theme tokens, so every skin works):
+  //   • off-diagonal cells carry the joint blob in the DISTRIBUTION channel (--accent)
+  //   • the active diagonal is the SELECTION channel (--accent-2), tinted ∝ the
+  //     Bessel conditional P(rung n | k) — your spot in the Skellam and on its rung.
   const cells: React.ReactNode[] = [];
   for (let y = 0; y <= N; y++) {
     for (let x = 0; x <= N; x++) {
@@ -178,7 +179,7 @@ function Lattice({ mu1, mu2, k, N, accN, showMarginals, lab, onPickK, marginsSho
       <div className="ctw-lattice-cap">
         {hoverInfo
           ? <>cell ({hoverInfo.x} {lab.xShort}, {hoverInfo.y} {lab.yShort}) · k = {hoverInfo.x - hoverInfo.y} · rung n = {Math.min(hoverInfo.x, hoverInfo.y)} · P = {fmt(hoverInfo.jp, 4)}</>
-          : <><span className="ctw-key gold">◆</span> gold = the distribution (→ Skellam){diagBeyond ? ' · runs past the edge →' : ''} &nbsp;·&nbsp; <span className="ctw-key teal">◆</span> teal = your diagonal (→ Bessel, rung n)</>}
+          : <><span className="ctw-key accent">◆</span> the distribution (→ Skellam){diagBeyond ? ' · runs past the edge →' : ''} &nbsp;·&nbsp; <span className="ctw-key accent2">◆</span> your diagonal (→ Bessel, rung n)</>}
       </div>
     </div>
   );
@@ -261,14 +262,14 @@ function FormulaBand({ mu1, mu2, k, partialBessel, partialSum, notes }: {
 
 interface Bar { full: number; shown: number; label: string | null; active: boolean; }
 function MiniDist({ bars, color, title, sub, onPick }: {
-  bars: Bar[]; color: 'gold' | 'teal'; title: string; sub: string; onPick?: (i: number) => void;
+  bars: Bar[]; color: 'accent' | 'accent2'; title: string; sub: string; onPick?: (i: number) => void;
 }) {
   const W = 320, H = 126, padX = 6, padTop = 8, padBot = 18;
   const n = bars.length;
   const max = Math.max(...bars.map(b => b.full), 1e-9);
   const bw = (W - 2 * padX) / n;
   const baseY = H - padBot, area = baseY - padTop;
-  const main = color === 'teal' ? 'var(--accent-2)' : 'var(--accent)';
+  const main = color === 'accent2' ? 'var(--accent-2)' : 'var(--accent)';
   return (
     <div className="ctw-mini">
       <div className="ctw-mini-head"><strong>{title}</strong>{sub && <span>{sub}</span>}</div>
@@ -543,14 +544,14 @@ export default function CountingTheWays() {
         <MiniDist
           title="Skellam — the difference K"
           sub={showNotes ? 'marginal · sum a diagonal' : ''}
-          color="gold"
+          color="accent"
           bars={strip.map((p, i) => ({ full: p, shown: barValue(i), label: (i - stripSpan) % 5 === 0 ? `${i - stripSpan}` : null, active: i - stripSpan === activeK }))}
           onPick={(i) => setK(i - stripSpan)}
         />
         <MiniDist
           title={`Bessel — given K = ${activeK}`}
           sub={showNotes ? 'conditional · rung n on that diagonal' : ''}
-          color="teal"
+          color="accent2"
           bars={cond.slice(0, 10).map((p, n) => ({ full: p, shown: p, label: `${n}`, active: false }))}
         />
       </div>

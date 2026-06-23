@@ -32,7 +32,7 @@
 .ctw-lattice-wrap { display: flex; flex-direction: column; gap: 4px; }
 .ctw-lattice {
   width: 100%;
-  max-height: min(300px, 34vh);
+  max-height: min(250px, 28vh);
   display: block;
 }
 .ctw-cell {
@@ -54,8 +54,18 @@
 .ctw-lattice-cap { font-size: 12px; color: var(--dim); line-height: 1.4; }
 .ctw-lattice-cap strong { color: var(--accent); font-family: var(--font-mono); }
 .ctw-key { font-weight: 700; }
-.ctw-key.gold { color: var(--accent); }
-.ctw-key.teal { color: var(--accent-2); }
+.ctw-key.accent { color: var(--accent); }
+.ctw-key.accent2 { color: var(--accent-2); }
+
+/* ── Fullscreen: center the compact content and grow it so the action strip
+   (absolute, pinned bottom) stays visually attached instead of stranded below
+   a tall empty gap. ── */
+.am-ws-full .ctw-stage {
+  justify-content: safe center;
+  padding-bottom: 64px;
+}
+.am-ws-full .ctw-lattice { max-height: min(440px, 50vh); }
+.am-ws-full .ctw-mini-svg { max-height: 200px; }
 
 /* ── The two distributions, side by side (Skellam · Bessel) ── */
 .ctw-dists {
