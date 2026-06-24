@@ -32,6 +32,24 @@ the **screenshot tour** (#235, `gracious-ptolemy`). The last triage pass was
 
 ## Working notes
 
+### 🟢 code · 01:30 — Cleared stale dashboard signals (not-live + resolved needs-dan)
+**Why:** Dan asked what's still flagged needs-dan/to-do and whether loose signals
+can be cleared.
+
+Found `not-live` is **derived** (build-sessions.mjs:260 — session not-live iff no
+report on main) yet also honored when *declared*; six declared `not-live` were stale
+(all on main) → cleared. Cleared `needs-dan` on sessions with documented resolution:
+solid-worlds naming (closed — keep "Solid Worlds"), the screw-bug/−a2 work (done
+06-20), and the headless plan's two expert reviews (determinism + setPose answered by
+the shipped #234). Cleared moot signals on the shelved quaternion reports. Rebuilt:
+drift unchanged (`stable-marriage(retired)` only), build clean.
+
+**Left intact (deliberately):** the genuinely-open `needs-dan` — process-audit rec 8,
+the explainer-series **proposed plan**, and the signals/to-do productionization (the
+`!high`); all `phone-needed` (real-device — *not* honestly headless-clearable per the
+L1/L3 lesson); and the screenshot-tour's inherent software-WebGL caveat
+(`visual-unverified`). These need either a Dan decision or a real device.
+
 ### 🟡 milestone · 01:05 — Wrote the Counting the Ways app guide; App-map drift cleared
 **Why:** CountingTheWays shipped (#233) without a `docs/apps/` guide — the one
 remaining no-guide drift flagged by the App-map self-audit.
