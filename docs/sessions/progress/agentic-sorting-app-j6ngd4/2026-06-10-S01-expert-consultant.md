@@ -5,7 +5,7 @@ date: 2026-06-10
 title: "Hat 2 — Architecture & Quality Consultant: expanding Agentic Sorting"
 branch: claude/agentic-sorting-app-j6ngd4
 slug: agentic-sorting-app-j6ngd4
-status: complete
+status: completed
 build: unknown
 followup: medium
 pr: null

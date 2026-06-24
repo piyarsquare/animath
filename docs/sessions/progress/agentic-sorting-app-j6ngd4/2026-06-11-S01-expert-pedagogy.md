@@ -5,7 +5,7 @@ date: 2026-06-11
 title: "Role 3 — Math-Viz & Pedagogy: Agentic Sorting legibility"
 branch: claude/agentic-sorting-app-j6ngd4
 slug: agentic-sorting-app-j6ngd4
-status: complete
+status: completed
 build: unknown
 followup: null
 pr: null

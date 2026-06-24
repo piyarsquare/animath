@@ -10,8 +10,8 @@ build: unknown
 followup: null
 pr: null
 app: [app slug(s), comma-separated — e.g. stable-marriage; or chrome / engine / docs / general; null ⇒ inferred]
-signals: [optional — needs-dan / phone-needed / visual-unverified / not-live; omit if none]
-next: [optional — one short line: the single most useful next action]
+signals: [REQUIRED at handoff — closed vocab: needs-dan / phone-needed / visual-unverified / not-live; write `null` if none]
+next: [REQUIRED at handoff — one short line: the single most useful next action]
 ---
 
 # [Description]

@@ -5,7 +5,7 @@ date: 2026-06-16
 title: "Three Hats — Synthesis: how to realize Phase-2 'Rays (X→Y)'"
 branch: claude/sleepy-bardeen-uk0cal
 slug: sleepy-bardeen-uk0cal
-status: review
+status: completed
 build: passing
 followup: null
 pr: 222

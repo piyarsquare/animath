@@ -5,7 +5,7 @@ date: 2026-06-10
 title: Convergence synthesis — Agentic Sorting expansion
 branch: claude/agentic-sorting-app-j6ngd4
 slug: agentic-sorting-app-j6ngd4
-status: complete
+status: completed
 build: unknown
 ---
 

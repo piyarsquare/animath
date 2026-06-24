@@ -10,7 +10,7 @@ build: passed
 followup: null
 pr: null
 app: docs, complex-particles, chrome
-signals: needs-dan, phone-needed, not-live
+signals: phone-needed
 next: Decide the plane/particles unification (backlog !high), then a real-device mobile pass on the guides.
 ---
 

@@ -5,7 +5,7 @@ date: 2026-06-20
 title: Argand — an entry-point app for complex numbers (affine map → quadratics)
 branch: claude/complex-numbers-animath-intro-jperz6
 slug: complex-numbers-animath-intro-jperz6
-status: in-progress
+status: completed
 build: passing
 followup: null
 pr: null

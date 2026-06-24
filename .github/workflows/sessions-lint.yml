@@ -1,0 +1,29 @@
+name: Session reports lint
+
+# Validates session reports against the contract (REPORT_STYLE.md, enforced by
+# docs/sessions/lint-sessions.mjs) so a drifted report can't silently break the
+# control center's scraped digests (frontmatter, the Reflections Follow-up line,
+# the timeline rail).
+#
+# deploy.yml already runs `sessions:lint --strict` as a HARD GATE on main; this
+# PR-level check shifts it left so an error is caught before merge, not after it
+# has landed and broken the deploy. The linter is pure Node (no deps, no build),
+# so this is fast — no `npm ci`.
+
+on:
+  pull_request:
+    paths:
+      - 'docs/sessions/**'
+      - 'docs/apps/**'
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Lint session reports (strict — fail on any contract error)
+        run: node docs/sessions/lint-sessions.mjs --strict

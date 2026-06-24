@@ -34,7 +34,7 @@ const REPO = join(ROOT, "..", "..");
 // ── the contract enums (kept in sync with REPORT_STYLE.md) ──────────────────
 const KINDS = new Set(["progress", "handoff", "three-hats", "plan"]);
 const STATUSES = new Set([
-  "in-progress", "completed", "design-only", "investigation-only", "proposed", "executed",
+  "in-progress", "completed", "design-only", "investigation-only", "proposed", "executed", "stopped",
 ]);
 // near-miss status spellings the builder renders as a neutral (not "done") badge.
 const STATUS_SOFT = new Set(["complete", "done", "in progress"]);
@@ -102,13 +102,21 @@ function lintFile(absPath) {
     if (!fm[k]) err(`frontmatter missing required key \`${k}\``);
   }
 
-  // kind
-  if (fm.kind && !KINDS.has(fm.kind)) err(`kind: \`${fm.kind}\` not in {${[...KINDS].join(", ")}}`);
-
   // slug must match the folder (provenance — drives dedup)
   if (fm.slug && fm.slug !== folderSlug) {
     err(`slug \`${fm.slug}\` ≠ folder \`${folderSlug}\` (breaks provenance/dedup)`);
   }
+
+  // Frozen records: a shelved (status: stopped) report is a historical artifact of
+  // a stopped line of work. It may carry a kind/build value from a since-retired or
+  // experimental workflow (e.g. the provisional explore-concept skill's lens/dialogue
+  // reports), so it is exempt from the evolving enum/section contract. Structure and
+  // provenance — frontmatter parses, required keys, slug — are still checked above;
+  // the builder still scrapes it (kind falls back to a generic template).
+  if (fm.status === "stopped") { finish(); return; }
+
+  // kind
+  if (fm.kind && !KINDS.has(fm.kind)) err(`kind: \`${fm.kind}\` not in {${[...KINDS].join(", ")}}`);
 
   // session format
   if (fm.session && !/^\d{4}-\d{2}-\d{2}-S\d{2,}/.test(fm.session)) {

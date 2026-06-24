@@ -5,7 +5,7 @@ date: 2026-06-20
 title: "Convergence — Plane Transform as the complex-numbers entry point (4-hat review)"
 branch: claude/complex-numbers-animath-intro-jperz6
 slug: complex-numbers-animath-intro-jperz6
-status: complete
+status: completed
 build: n/a
 ---
 

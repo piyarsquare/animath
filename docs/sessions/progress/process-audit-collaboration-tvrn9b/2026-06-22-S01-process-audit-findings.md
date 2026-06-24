@@ -10,7 +10,7 @@ build: n/a
 followup: medium
 pr: null
 app: docs, general
-signals: needs-dan
+signals:
 next: Remaining open recs are the L1 debug-pose harness + mobile smoke (rec 2/3, own branch) and Dan's catalog/identity decisions (rec 8). See the adoption banner below.
 ---
 

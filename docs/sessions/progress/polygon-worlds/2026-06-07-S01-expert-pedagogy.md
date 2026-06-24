@@ -5,7 +5,7 @@ date: 2026-06-07
 title: Polygon Worlds plan — mathematician-educator review
 branch: claude/polygon-worlds
 slug: polygon-worlds
-status: in-progress
+status: completed
 build: n/a
 followup: HIGH
 pr: null

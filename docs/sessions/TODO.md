@@ -44,16 +44,18 @@ informs future rounds. Delete or check off items as they land.
   through the complex/dual/split-complex variants in Argand. Recategorized to
   general (not particular to any single app) and demoted from !high.
 
-- [ ] [docs] !high Productionize the signals/to-do system — teach agents to author it.
-  Update REPORT_STYLE.md, the progress/handoff templates, and the handoff +
-  start-session skills so every session declares `signals:`/`next:` and consults +
-  appends this backlog. Without that, the dashboard only stays rich by inference.
-  2026-06-22 (process-audit): partly enacted. `npm run sessions:lint` now validates
-  the contract (signals/app tokens, scraped level, timeline types) and warns when a
-  "headless" handoff declares no `visual-unverified`/`phone-needed` signal; the
-  self-reflection protocol gained Q7 (declare verification method + set the matching
-  signal). Still open: requiring `signals:`/`next:` at handoff (templates + skills)
-  and gating the linter in CI once the corpus is clean (140 advisory warnings remain).
+- [x] [docs] !high Productionize the signals/to-do system — teach agents to author it.
+  DONE 2026-06-24 (repo-priorities-review). The authoring discipline is now enforced
+  end-to-end: REPORT_STYLE.md + `_template-handoff.md` mark `signals:`/`next:`
+  **required at handoff** (write `null` if none); the handoff skill requires them,
+  tells agents to consult + append this backlog, and to run `sessions:lint` before
+  finishing; start-session already reads TODO.md. The linter gained `stopped` as a
+  status and a **frozen-record** rule (shelved `status: stopped` reports are exempt
+  from the evolving kind/build/section contract), which cleared the corpus to **0
+  errors**. CI gating is live: `deploy.yml` runs `sessions:lint --strict` as a hard
+  gate on main, and a new `sessions-lint.yml` shifts it left to PR time. Remaining
+  polish (separate, low): drive the ~130 advisory warnings down (mostly
+  `build: passing`/`complete` wording and non-canonical Follow-up lines).
 
 - [x] [docs] Build the deep-link debug-pose harness + headless mobile smoke (L1 in RECURRING_LESSONS.md).
   DONE 2026-06-23 (`headless-mode-plan` branch). (a) The debug-pose deep link +
@@ -275,3 +277,17 @@ informs future rounds. Delete or check off items as they land.
 - [x] [docs] Split the two heavy complex guides into Part 1 / Part 2; cut applet weight.
 
 - [x] [docs] Add a `docs` category + `trees-and-nets` to the session taxonomy.
+
+- [ ] [general] !med Real-device mobile pass using `docs/MOBILE_CHECKLIST.md`.
+  Discharges the 5 standing `phone-needed` signals (Argand ×2, complex-particles
+  guides, headless ×2). The 2026-06-24 smoke is PASS 17/17 @ 390×844 but that's a
+  crash/blank baseline in software WebGL, not a device check — layout, touch gestures,
+  dock/sheet behavior and real-GPU rendering still need a phone. Work the checklist,
+  tick boxes, and clear each app's `phone-needed` signal as its section passes.
+
+- [ ] [docs] !low Drive the ~130 advisory `sessions:lint` warnings toward zero.
+  Mostly `build: passing`/`status: complete` legacy wording and non-canonical
+  `**Follow-up value:**` lines (non-ASCII hyphen / bold-wrapped level). The corpus is
+  at 0 *errors* (CI-gated via `deploy.yml` + the new `sessions-lint.yml`); this is the
+  warning cleanup. Once quiet, consider promoting the PR `sessions-lint` check and the
+  mobile smoke from advisory to hard gates (drop `continue-on-error`).

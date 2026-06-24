@@ -5,7 +5,7 @@ date: 2026-06-11
 title: Framework Maintainer — Agentic Sorting legibility
 branch: claude/agentic-sorting-app-j6ngd4
 slug: agentic-sorting-app-j6ngd4
-status: complete
+status: completed
 build: unknown
 followup: medium
 pr: null

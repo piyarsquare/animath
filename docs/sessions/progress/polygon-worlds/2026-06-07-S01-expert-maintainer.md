@@ -5,7 +5,7 @@ date: 2026-06-07
 title: Polygon Worlds — full geometry + skins + exploration layer (plan review)
 branch: claude/polygon-worlds
 slug: polygon-worlds
-status: in-progress
+status: completed
 build: unknown
 followup: medium
 pr: 190
