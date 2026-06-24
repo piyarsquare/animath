@@ -32,6 +32,20 @@ the **screenshot tour** (#235, `gracious-ptolemy`). The last triage pass was
 
 ## Working notes
 
+### 🟡 milestone · 01:05 — Wrote the Counting the Ways app guide; App-map drift cleared
+**Why:** CountingTheWays shipped (#233) without a `docs/apps/` guide — the one
+remaining no-guide drift flagged by the App-map self-audit.
+
+Wrote `docs/apps/counting-the-ways.md` (modeled on `argand.md`, per
+`GUIDE_STYLE.md`): both modes (Explain/Lab), the shell↔pure-engine split, the
+`skellam.ts` API + its `__tests__`, the **honest diagonal-sum invariant** (don't
+swap `skellamPmf` for the closed form — the sum *is* the lesson), the skin-neutral
+color + sticky-caption gotchas, and the open Lab cumulative-results follow-up.
+Committed + pushed; rebuilt the sessions site: drift went from
+`counting-the-ways(no-guide), stable-marriage(retired)` → just
+`stable-marriage(retired)` (a separate pre-existing item — a stale guide on other
+branch tips, resolves as they merge/drop).
+
 ### 🟢 code · 00:45 — Normalized `complete`→`completed`; registered Counting the Ways category
 **Why:** Dan: sweep the status normalization and add the counting-the-ways app
 to the taxonomy.
