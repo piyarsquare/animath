@@ -1,5 +1,5 @@
 ---
-kind: research
+kind: progress
 session: 2026-06-24-S01
 date: 2026-06-24
 title: Argand / Number Planes — attribution & sources scout
