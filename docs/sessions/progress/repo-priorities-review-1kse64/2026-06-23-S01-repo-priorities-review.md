@@ -32,6 +32,21 @@ the **screenshot tour** (#235, `gracious-ptolemy`). The last triage pass was
 
 ## Working notes
 
+### 🟡 milestone · 02:00 — Mobile smoke PASS 17/17; wrote the mobile review checklist
+**Why:** Dan: run the smoke test, then make a checklist of what needs eyes on mobile.
+
+`npm run smoke` @ 390×844: **PASS 17/17**, 2 warnings (both the known RGBELoader HDR
+fallback on complex-particles + embed; no crashes/blank frames). Wrote
+`docs/MOBILE_CHECKLIST.md` — a standing manual-QA checklist (global phone chrome +
+per-app, `phone-needed` apps first: Argand, the particle viewers, the complex guide
+pages), seeded with the smoke baseline and the explicit "headless ≠ device" rationale
+so the `phone-needed` signals have a concrete discharge path. Also marked the
+explainer-series plan **on hold / medium priority** (Dan) with a rescope note (per-app
+guides already shipped #229). Confirmed all 6 named dead branches are already gone from
+origin (Dan deleted them); decoded process-audit **rec 8** = three catalog/identity
+calls, two already closed (Solid Worlds name, Stable Marriage), only Argand↔Plane
+Transform lingering.
+
 ### 🟢 code · 01:30 — Cleared stale dashboard signals (not-live + resolved needs-dan)
 **Why:** Dan asked what's still flagged needs-dan/to-do and whether loose signals
 can be cleared.

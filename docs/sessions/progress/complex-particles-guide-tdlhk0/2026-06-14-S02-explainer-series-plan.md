@@ -12,10 +12,16 @@ thumbnail: assets/2026-06-14-S02-net-inverse.png
 pr: null
 app: docs, complex-particles
 signals: needs-dan
-next: Decide whether to fund the embed-route work (B0) that unlocks app-specific guides.
+next: ON HOLD (Dan 2026-06-24) — medium priority. Decide whether to fund the embed-route work (B0). Note the per-app developer guides already shipped via docs/apps/ (#229), so this roadmap is partly overtaken and should be rescoped before funding.
 ---
 
 # An explainer-page series for animath — roadmap beyond the complex trilogy
+
+> [!NOTE]
+> **On hold (Dan 2026-06-24) — medium priority.** Parked, not dropped: it stays a
+> `needs-dan` proposed plan. Before any funding, rescope — the per-app developer
+> guides (`docs/apps/`) shipped separately (#229), so the "embed-route work unlocks
+> app-specific guides" premise below is partly overtaken.
 
 ## What exists now
 
