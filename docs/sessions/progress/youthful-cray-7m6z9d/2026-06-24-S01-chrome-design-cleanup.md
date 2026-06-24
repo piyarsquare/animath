@@ -54,6 +54,29 @@ The two `reference/*.html` files (Control Contract, Stable Matching reference) a
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 14:25 — Phase 3 done: Stable Matching, the reference compliance fix (verified)
+**Why:** The doc's worked example the other apps copy — so it must be done by
+hand and screenshot-verified to calibrate the pattern.
+
+Applied all relevant checks end-to-end:
+- **C1 transport dedup:** removed Play/Step/Finish/Reset (and the RVV Back-to-run)
+  from the Playback panel — they now live only in the always-on action strip. The
+  panel keeps the round readout + *params* (Speed, one-shot Stabilize, jump-to).
+- **Colormap adoption:** replaced the hard-coded `BURD` array with the registry
+  (divergent family, default RdBu) via a `<ColormapPicker>` in a new **Color**
+  panel. The legend swatch is driven by the active map (`--sm-scale`) and its text
+  made color-agnostic ("best #1 → worst"), so it stays honest on any divergent map.
+- **CSS tokenized:** stage/card backgrounds, borders, body+dim text, buttons,
+  tooltip/inspect surfaces → theme tokens (the matrix pane was hard-dark `#0c0c10`
+  and broke on light skins). Semantic state markers (gold/purple/green/teal/red)
+  deliberately kept — they're meaningful encodings, like 3D scene color.
+- **Shared infra:** added `useThemeId()` to `skins.tsx` (reactive current-skin via
+  MutationObserver) so the picker re-curates when the skin changes.
+
+**Verified by screenshot** (daylight + dark): matrix pane now follows the skin,
+transport is strip-only, Color panel in the rail, matrix renders, dark unregressed.
+Build/lint/test green (88 tests, 0 lint errors). This is the template the fan-out copies.
+
 ### 🟢 code · 14:10 — Phase 2 done: typed per-theme colormap registry + `<ColormapPicker>` + tests
 **Why:** DOM/2D apps each hard-code their own ramp because `lib/colormaps.ts` is
 GLSL-only (uncallable from JS). This is the shared resource that lets them stop.
