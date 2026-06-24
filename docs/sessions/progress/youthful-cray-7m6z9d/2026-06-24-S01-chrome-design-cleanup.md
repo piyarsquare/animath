@@ -54,6 +54,29 @@ The two `reference/*.html` files (Control Contract, Stable Matching reference) a
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 14:10 — Phase 2 done: typed per-theme colormap registry + `<ColormapPicker>` + tests
+**Why:** DOM/2D apps each hard-code their own ramp because `lib/colormaps.ts` is
+GLSL-only (uncallable from JS). This is the shared resource that lets them stop.
+
+- **`src/lib/colormapRegistry.ts`** (new): colormaps typed by *family* — sequential /
+  divergent / discrete / cyclic — where **discrete = the skin's `--data-1…7` tokens**,
+  read live via `discreteStops()`. `THEME_MAPS` gives per-skin recommendations (all 8
+  skins keyed); `themeMapsFor` falls back to the whole family for an unknown skin;
+  `mapStops`/`gradientCss`/`sampleStops` (the last buckets a ramp into N classes —
+  what the DOM adopters need). Shader apps stay on `lib/colormaps.ts`; the shared
+  names (Viridis/Magma/…) match on both sides.
+- **`<ColormapPicker>`** added to `components/ControlPanel.tsx` (the `color`-tier
+  control): family header + recommended-swatch grid + "Other families (advanced)"
+  disclosure (incl. Discrete = theme palette) + optional Reverse; re-curates when
+  `themeId` changes. Styled with new `cp-cmap-*` classes on the `--cp-*` tokens.
+- **Tests:** `src/lib/__tests__/colormapRegistry.test.ts` — 10 cases covering the
+  `themeMapsFor` fallback and `discreteStops` parsing (stubbed `getComputedStyle`),
+  per R4 (test extractable pure logic on write).
+- Recorded the registry decision in `docs/redesign/IN-PROGRESS.md` (additive).
+
+No app consumes it yet (that's Phase 3+). **Checks:** build ✓, `npm test` ✓ 88/88
+(+10), lint ✓ 0 errors.
+
 ### 🟢 code · 14:05 — Phase 1 done: semantic/data tokens on all skins + 3 new skins, verified
 **Why:** Pure-addition foundation that unblocks every color task; ship and eyeball
 it before building on it (R1 — verify visual changes with my eyes).
