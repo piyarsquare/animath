@@ -24,7 +24,6 @@ const Argand = React.lazy(() => import('./animations/Argand/Argand'));
 const EmbedComplexParticles = React.lazy(() => import('./embed/EmbedComplexParticles'));
 const EmbedPlaneTransform = React.lazy(() => import('./embed/EmbedPlaneTransform'));
 const CountingTheWays = React.lazy(() => import('./animations/CountingTheWays/CountingTheWays'));
-const LineTransform = React.lazy(() => import('./animations/LineTransform/LineTransform'));
 
 const routes: Record<string, React.ComponentType> = {
   '/complex-particles': App,
@@ -45,7 +44,6 @@ const routes: Record<string, React.ComponentType> = {
   '/trees-and-nets': TreesAndNets,
   '/solid-worlds': SolidWorlds,
   '/argand': Argand,
-  '/line-transform': LineTransform,   // minimal 1-D linear transformations (y = m·x + b)
   // Chrome-less applet routes for embedding in web pages (docs/EMBEDS.md).
   '/embed/complex-particles': EmbedComplexParticles,
   '/embed/plane-transform': EmbedPlaneTransform,

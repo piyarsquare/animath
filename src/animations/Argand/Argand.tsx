@@ -6,11 +6,9 @@ import { usePersistentState, clearPersistedState } from '../../lib/usePersistent
 import './Argand.css';
 import explainerText from './EXPLAINER.md?raw';
 import ArgandPlane, {
-  type Feed, type Handle, type PlaneShow, SHOW_ALL,
-  Z_COL, A1_COL, A0_COL, A2_COL, F_COL, FIX_COL,
+  type Feed, type Handle, Z_COL, A1_COL, A0_COL, A2_COL, F_COL, FIX_COL,
 } from './ArgandPlane';
 import { buildCurve, CURVES, type CurveName } from './curves';
-import { TOUR } from './tour';
 import {
   type Cx, type ArcLengthMap, cx, modulus, add, sub, scale,
   mulG, powRealG, affineLoopAt, arcLengthMap, formatRect, formatPolar,
@@ -61,28 +59,6 @@ export default function Argand() {
   const [gridStep, setGridStep] = usePersistentState(`${STORAGE_KEY}:gridStep`, 1);
   const [gridColor, setGridColor] = usePersistentState(`${STORAGE_KEY}:gridColor`, false);
   const [showUnitCircle, setShowUnitCircle] = usePersistentState(`${STORAGE_KEY}:unit`, true);
-  // Dimension: 'line' (ℝ — number line, no imaginary axis) or 'plane' (ℂ, today's view).
-  const [dimension, setDimension] = usePersistentState<'line' | 'plane'>(`${STORAGE_KEY}:dimension`, 'plane');
-  // Animated 0→1 "plane fill": 0 = bare line (x-axis ticks only), 1 = full plane.
-  // Switching dimension tweens it, so the ticks grow into the vertical grid lines.
-  const [fill, setFill] = useState(dimension === 'line' ? 0 : 1);
-  const fillRef = useRef(fill);
-  fillRef.current = fill;
-  useEffect(() => {
-    const target = dimension === 'line' ? 0 : 1;
-    let raf = 0;
-    let last = performance.now();
-    const tick = (now: number) => {
-      const dt = (now - last) / 1000; last = now;
-      const d = target - fillRef.current;
-      const step = dt / 0.4;                       // full sweep in ~0.4s
-      if (Math.abs(d) <= step) { setFill(target); return; }
-      setFill(fillRef.current + Math.sign(d) * step);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [dimension]);
   const [extent, setExtent] = usePersistentState(`${STORAGE_KEY}:extent`, 4);
   // Number system: p = j². p<0 complex, p=0 dual, p>0 split-complex.
   const [system, setSystem] = usePersistentState(`${STORAGE_KEY}:system`, -1);
@@ -91,21 +67,10 @@ export default function Argand() {
   const [viewFromFixed, setViewFromFixed] = usePersistentState(`${STORAGE_KEY}:vFix`, false);
   const [iterate, setIterate] = usePersistentState(`${STORAGE_KEY}:iter`, false);
   const [iterN, setIterN] = usePersistentState(`${STORAGE_KEY}:iterN`, 12);
-  // Whether the first-visit walkthrough has been offered yet (persisted).
-  const [seenTour, setSeenTour] = usePersistentState(`${STORAGE_KEY}:seenTour`, false);
 
   // Transient view state — never persisted.
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
-  // Walkthrough: current step index, or null when not touring.
-  const [tourStep, setTourStep] = useState<number | null>(null);
-  // Which actors are visible (progressive disclosure during the walkthrough).
-  const [show, setShow] = useState<PlaneShow>(SHOW_ALL);
-
-  // On the line we speak school algebra (y = m·x + b); on the plane, α·z + α₀.
-  const names = dimension === 'line'
-    ? { z: 'x', a1: 'm', a0: 'b', a2: 'α₂', f: 'y' }
-    : { z: 'z', a1: 'α₁', a0: 'α₀', a2: 'α₂', f: 'f(z)' };
   // The j² morph has its own Play: ping-pong p between −1 and +1.
   const [sysPlaying, setSysPlaying] = useState(false);
   const sysDir = useRef(1);
@@ -199,37 +164,6 @@ export default function Argand() {
 
   const goToStop = (st: number) => { setPlaying(false); setT(st); };
 
-  /* ---- guided walkthrough (steps in tour.ts) ---- */
-  const applyStep = (i: number) => {
-    const s = TOUR[i].state;
-    if (s.feed !== undefined) setFeed(s.feed);
-    if (s.degree !== undefined) setDegree(s.degree);
-    if (s.z) setZ(s.z);
-    if (s.alpha1) setA1(s.alpha1);
-    if (s.alpha0) setA0(s.alpha0);
-    if (s.alpha2) setA2(s.alpha2);
-    if (s.system !== undefined) setSystem(s.system);
-    if (s.viewFromFixed !== undefined) setViewFromFixed(s.viewFromFixed);
-    if (s.iterate !== undefined) setIterate(s.iterate);
-    if (s.extent !== undefined) setExtent(s.extent);
-    if (s.gridType !== undefined) setGridType(s.gridType);
-    if (s.gridColor !== undefined) setGridColor(s.gridColor);
-    if (s.showUnitCircle !== undefined) setShowUnitCircle(s.showUnitCircle);
-    if (s.dimension !== undefined) setDimension(s.dimension);
-    // Progressive disclosure: a step lists exactly what's visible (omit ⇒ show all).
-    setShow(s.show ? { point: false, slope: false, shift: false, output: false, unitSet: false, ...s.show } : SHOW_ALL);
-    setPlaying(false);
-    setSysPlaying(false);
-  };
-  const startTour = () => { setSeenTour(true); setTourStep(0); applyStep(0); };
-  const exitTour = () => { setTourStep(null); setShow(SHOW_ALL); };
-  const goStep = (n: number) => {
-    if (n < 0) return;
-    if (n >= TOUR.length) { exitTour(); return; }
-    setTourStep(n);
-    applyStep(n);
-  };
-
   // Stops mark the meaningful waypoints, labeled per feed and degree.
   const stopLabels = isPoint
     ? ['z', 'α₁z', 'f(z)']
@@ -243,15 +177,15 @@ export default function Argand() {
     : [{ label: stopLabels[0], t: 0 }, { label: stopLabels[1], t: 0.25 }, { label: stopLabels[2], t: 0.5 }];
   const atStop = (st: number): boolean => Math.abs(t - st) < 0.02;
 
-  const subtitle = `${names.f} = ${formatRect(fz)}   ·   ${systemName(system)}`;
+  const subtitle = `f(z) = ${formatRect(fz)}   ·   ${systemName(system)}`;
 
   /* ---- the colored equation, shared by panel + readouts ---- */
   const Eqn = (
     <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 15, fontWeight: 700, marginTop: 2 }}>
-      <span style={{ color: F_COL }}>{names.f}</span> ={' '}
-      {quad && <><span style={{ color: A2_COL }}>{names.a2}</span>·<span style={{ color: Z_COL }}>{names.z}²</span> + </>}
-      <span style={{ color: A1_COL }}>{names.a1}</span>·<span style={{ color: Z_COL }}>{names.z}</span> +{' '}
-      <span style={{ color: A0_COL }}>{names.a0}</span>
+      <span style={{ color: F_COL }}>f(z)</span> ={' '}
+      {quad && <><span style={{ color: A2_COL }}>α₂</span>·<span style={{ color: Z_COL }}>z²</span> + </>}
+      <span style={{ color: A1_COL }}>α₁</span>·<span style={{ color: Z_COL }}>z</span> +{' '}
+      <span style={{ color: A0_COL }}>α₀</span>
     </div>
   );
 
@@ -268,17 +202,17 @@ export default function Argand() {
       {Eqn}
       {quad && (
         <div style={{ marginTop: 8 }}>
-          <ComplexInput label={`${names.a2}  (quadratic term)`} value={[alpha2.re, alpha2.im]} onChange={([re, im]) => setA2(cx(re, im))} />
-          <Checkbox label={`Lock ${names.a2}`} checked={lockA2} onChange={setLockA2} />
+          <ComplexInput label="α₂  (quadratic term)" value={[alpha2.re, alpha2.im]} onChange={([re, im]) => setA2(cx(re, im))} />
+          <Checkbox label="Lock α₂" checked={lockA2} onChange={setLockA2} />
         </div>
       )}
       <div style={{ marginTop: 8 }}>
-        <ComplexInput label={`${names.a1}  (slope · spin & scale)`} value={[alpha1.re, alpha1.im]} onChange={([re, im]) => setA1(cx(re, im))} />
-        <Checkbox label={`Lock ${names.a1}`} checked={lockA1} onChange={setLockA1} />
+        <ComplexInput label="α₁  (slope · spin & scale)" value={[alpha1.re, alpha1.im]} onChange={([re, im]) => setA1(cx(re, im))} />
+        <Checkbox label="Lock α₁" checked={lockA1} onChange={setLockA1} />
       </div>
       <div style={{ marginTop: 8 }}>
-        <ComplexInput label={`${names.a0}  (shift · intercept)`} value={[alpha0.re, alpha0.im]} onChange={([re, im]) => setA0(cx(re, im))} />
-        <Checkbox label={`Lock ${names.a0}`} checked={lockA0} onChange={setLockA0} />
+        <ComplexInput label="α₀  (shift · intercept)" value={[alpha0.re, alpha0.im]} onChange={([re, im]) => setA0(cx(re, im))} />
+        <Checkbox label="Lock α₀" checked={lockA0} onChange={setLockA0} />
       </div>
       <div style={{ marginTop: 8, fontSize: 12, fontFamily: 'var(--font-mono, monospace)', color: FIX_COL }}>
         {zStars.length === 0
@@ -316,7 +250,7 @@ export default function Argand() {
           onChange={setCurveName}
         />
       )}
-      <ComplexInput label={`${names.z}  ${isShape ? '(anchor)' : isGrid ? '(probe)' : '(input)'}`} value={[z.re, z.im]} onChange={([re, im]) => setZ(cx(re, im))} />
+      <ComplexInput label={isShape ? 'z  (anchor)' : isGrid ? 'z  (probe)' : 'z  (input)'} value={[z.re, z.im]} onChange={([re, im]) => setZ(cx(re, im))} />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 4 }}>
         {isShape
           ? <>Drag <b style={{ color: Z_COL }}>z</b> to place the shape; <b style={{ color: F_COL }}>f</b> spins, scales and shifts the whole figure.</>
@@ -370,15 +304,6 @@ export default function Argand() {
 
   const planeNode = (
     <>
-      <Pills<'line' | 'plane'>
-        label="Dimension"
-        options={[{ value: 'line', label: 'Line  ℝ' }, { value: 'plane', label: 'Plane  ℂ' }]}
-        value={dimension}
-        onChange={setDimension}
-      />
-      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', margin: '2px 0 8px' }}>
-        <b>Line</b> hides the imaginary axis and the vertical grid — a bare number line.
-      </div>
       <Slider label="Extent (±)" value={extent} min={1} max={16} step={0.5}
         onChange={setExtent} format={v => v.toFixed(1)} />
       <Pills<'cartesian' | 'polar'>
@@ -489,7 +414,6 @@ export default function Argand() {
         {isShape && CURVES.map(c => (
           <button key={c.id} style={pill(curveName === c.id)} onClick={() => setCurveName(c.id)}>{c.label}</button>
         ))}
-        <button style={{ ...pill(tourStep !== null), marginLeft: 'auto' }} onClick={startTour} title="Replay the walkthrough">↻ Tour</button>
       </div>
       {/* path parameter t */}
       <div style={hudRow}>
@@ -514,57 +438,12 @@ export default function Argand() {
     </div>
   );
 
-  /* ---- walkthrough overlays (first-visit intro + step caption) ---- */
-  const tourBtn = (primary: boolean): React.CSSProperties => ({
-    padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
-    border: '1px solid var(--border, #3a3a44)',
-    background: primary ? 'var(--accent, #34d399)' : 'rgba(255,255,255,0.06)',
-    color: primary ? 'var(--accent-fg, #0c0c10)' : 'var(--fg, #e8e8ee)',
-  });
-  const card: React.CSSProperties = {
-    position: 'absolute', zIndex: 8, width: 'min(92%, 460px)', padding: '12px 14px', borderRadius: 14,
-    background: 'var(--panel, rgba(18,18,24,0.94))', border: '1px solid var(--border, #3a3a44)',
-    backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: 'var(--shadow)',
-  };
-  const tourOverlay = (
-    <>
-      {!seenTour && tourStep === null && (
-        <div style={{ ...card, top: '20%', left: '50%', transform: 'translateX(-50%)', textAlign: 'center' }}>
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>New here?</div>
-          <div style={{ fontSize: 13, color: 'var(--dim, #9b9ba3)', marginBottom: 12 }}>
-            Take the quick walkthrough — from a number line to the whole plane in about a minute.
-          </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-            <button style={tourBtn(true)} onClick={startTour}>Start tour</button>
-            <button style={tourBtn(false)} onClick={() => setSeenTour(true)}>Explore freely</button>
-          </div>
-        </div>
-      )}
-      {tourStep !== null && (
-        <div style={{ ...card, top: 14, left: '50%', transform: 'translateX(-50%)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, flex: 1 }}>{TOUR[tourStep].title}</div>
-            <button style={iconBtn} onClick={exitTour} title="Exit walkthrough">✕</button>
-          </div>
-          <div style={{ fontSize: 12.5, color: 'var(--dim, #9b9ba3)', margin: '6px 0 10px', lineHeight: 1.45 }}>
-            {TOUR[tourStep].body}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button style={{ ...tourBtn(false), opacity: tourStep === 0 ? 0.4 : 1 }} disabled={tourStep === 0} onClick={() => goStep(tourStep - 1)}>‹ Back</button>
-            <div style={{ flex: 1, textAlign: 'center', fontSize: 11, color: 'var(--dim, #9b9ba3)' }}>{tourStep + 1} / {TOUR.length}</div>
-            <button style={tourBtn(true)} onClick={() => goStep(tourStep + 1)}>{tourStep === TOUR.length - 1 ? 'Done' : 'Next ›'}</button>
-          </div>
-        </div>
-      )}
-    </>
-  );
-
   const views: ViewDef[] = [
     {
       id: 'plane',
       title: 'Argand plane',
       defaultRect: { x: 320, y: 16, w: 660, h: 600 },
-      hint: tourStep !== null ? undefined : 'drag z · α₁ · α₀ · pinch or scroll to zoom · two-finger or shift-drag to pan · double-click to recenter',
+      hint: 'drag z · α₁ · α₀ · pinch or scroll to zoom · two-finger or shift-drag to pan · double-click to recenter',
       node: (
         <div style={{ position: 'absolute', inset: 0 }}>
           <ArgandPlane
@@ -574,7 +453,7 @@ export default function Argand() {
             snapping={snapping} gridOpacity={gridOpacity} imageOpacity={imageOpacity} showUnitCircle={showUnitCircle}
             gridType={gridType} gridStep={gridStep} gridColor={gridColor}
             viewFromFixed={viewFromFixed} iterate={iterate} iterN={iterN}
-            extent={extent} fill={fill} names={names} show={show}
+            extent={extent}
             onChange={onHandleChange}
             onZoom={f => setExtent(e => Math.min(16, Math.max(1, e * f)))}
           />
@@ -587,17 +466,16 @@ export default function Argand() {
             backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
           }}>
             <div style={{ fontSize: 14, fontWeight: 700 }}>
-              <span style={{ color: F_COL }}>{names.f}</span> ={' '}
-              {quad && <><span style={{ color: A2_COL }}>{names.a2}</span>·{names.z}² + </>}
-              <span style={{ color: A1_COL }}>{names.a1}</span>·{names.z} + <span style={{ color: A0_COL }}>{names.a0}</span>
+              <span style={{ color: F_COL }}>f(z)</span> ={' '}
+              {quad && <><span style={{ color: A2_COL }}>α₂</span>·z² + </>}
+              <span style={{ color: A1_COL }}>α₁</span>·z + <span style={{ color: A0_COL }}>α₀</span>
             </div>
             <div style={{ fontSize: 11, color: 'var(--dim, #9b9ba3)', marginTop: 1 }}>
-              {quad && <><span style={{ color: A2_COL }}>{formatRect(alpha2)}</span> · {names.z}² + </>}
-              <span style={{ color: A1_COL }}>{formatRect(alpha1)}</span> · {names.z} + <span style={{ color: A0_COL }}>{formatRect(alpha0)}</span>
+              {quad && <><span style={{ color: A2_COL }}>{formatRect(alpha2)}</span> · z² + </>}
+              <span style={{ color: A1_COL }}>{formatRect(alpha1)}</span> · z + <span style={{ color: A0_COL }}>{formatRect(alpha0)}</span>
             </div>
           </div>
           {controlHud}
-          {tourOverlay}
         </div>
       ),
     },

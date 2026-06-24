@@ -394,3 +394,23 @@ x · m · b" hint. Drag x/m/b → y moves (m stretches/flips, b slides). No pane
 plane, no Workspace chrome. ~160 lines. build ✓ · eslint 0 · screenshot
 `assets/2026-06-24-S01-line-transform.png`. The 1-D ground floor; graduate to the
 plane deliberately later. (Not added to the gallery/apps.ts yet — iterating first.)
+
+### 🟣 decision · 21:00 — Pull back: shelve the number-line + tour work; stay in the plane
+**Why:** Dan: "this is not useful… I don't think we have the correct formulation…
+shelve all the number-line stuff, stay in the plane, drop the tour. Pull back to the
+changes before we went to the number line." Re-think the narrative first.
+
+Reverted Argand to its **pre-tour, pre-line** state (commit bc404f7 — the controls
+cleanup, which is *after* the framing scrub):
+- `git checkout bc404f7 -- Argand.tsx ArgandPlane.tsx` (drops tour wiring, Line mode,
+  fill/ticks/±1, mxb naming, show flags, progressive disclosure).
+- Removed `tour.ts` and the whole `LineTransform/` view + its `#/line-transform`
+  route.
+- **Kept**: the controls cleanup (precision, de-dup feed, overlap fix), the framing
+  scrub, and `numberPlanes.ts` + its tests (dormant — predates the number-line work,
+  not wired into the UI; easy to shelve too if wanted).
+
+Net: the app is the **plane** app as it stood before the walkthrough experiment.
+build ✓ · tests 128/128 ✓ · eslint 0 · screenshot
+`assets/2026-06-24-S01-pullback-plane.png`. Next: rework the *narrative* before any
+more UI.
