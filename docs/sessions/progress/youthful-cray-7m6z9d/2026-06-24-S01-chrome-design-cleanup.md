@@ -54,6 +54,61 @@ The two `reference/*.html` files (Control Contract, Stable Matching reference) a
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 14:05 — Phase 1 done: semantic/data tokens on all skins + 3 new skins, verified
+**Why:** Pure-addition foundation that unblocks every color task; ship and eyeball
+it before building on it (R1 — verify visual changes with my eyes).
+
+Additive edits to `theme.css` + `skins.tsx` (+ a `previews.tsx` source fix):
+- **Semantic/elevation/data/font tokens on all 5 existing skins:** `--danger(-soft)`,
+  `--success(-soft)`, `--shadow-1/2/3`, `--data-1…7`, `--font-scale` — values
+  tuned per skin from the doc. Counts verified: 8× each across skins, `--font-scale`
+  9× (8 skins + `:root` default).
+- **3 new skins** appended: **Daylight** (cool white · blue), **Primary** (Bauhaus
+  primaries), **Mirage** (plum dusk · peach + lavender). Registered in `skins.tsx`
+  (doc comment "five"→"eight").
+- **`--font-scale` consumer = Option A** (doc's recommendation): a scoped
+  `[data-theme="phosphor"] .am-app/.am-gallery-app { zoom: var(--font-scale) }`.
+  **Verified by screenshot** the zoom does NOT create a layout gap at gallery or
+  app level (the worry with `zoom` on a full-bleed root) — Phosphor type now sits
+  right-sized.
+- **New light-skin fix (from the audit):** the *only* hard-coded `skin === 'light'`
+  test lived at `previews.tsx:890` — it rendered Daylight/Primary gallery cards as
+  dark. Fixed at the source: added a `light?` flag to the `Skin` descriptor +
+  `isLightSkin(id)` helper in `skins.tsx`; `previews.tsx` now calls it. Re-shot the
+  Daylight gallery — preview cards now render light. (No app engine has this test;
+  it was isolated to that one chrome file.)
+- Docs: DESIGN-SPEC §5 token list + skin table + the light/dark note updated (additive).
+
+**Checks:** `npm run build` ✓, `npm run lint` ✓ 0 errors (60 baseline warnings),
+`npm test` ✓ 78/78. Visual: gallery in daylight/primary/mirage/phosphor + Stable
+Matching in phosphor & daylight all render cleanly (screenshots in scratch).
+
+### 🟣 decision · 13:50 — Execution plan locked; both flags resolved by Dan
+**Why:** Dan approved both flagged calls and directed: execute the package, fan
+out subagents per app to apply the rules, but have one coherent single pass do
+the compliance checking.
+
+- **Flag 1 (retired):** Stable Marriage stays retired — its `02-COLORMAPS.md` row
+  redirects to **Stable Matching**; the deleted app is not resurrected.
+- **Flag 2 (rename):** Resolve the Trinary "Observatory" skin/mode clash by
+  renaming the **mode** (not the skin). Going with **Sandbox ⇄ Lab** to match
+  Agentic Sorting's existing single-instance⇄batch naming (doc 03 §B suggestion).
+
+Plan:
+1. **Phase 1 (me, serial):** additive tokens on all 5 skins + 3 new skins
+   (Daylight/Primary/Mirage) + `--font-scale` (Option A: Phosphor `zoom`). Shared
+   files `theme.css`/`skins.tsx` — must be exact, not delegated.
+2. **Phase 2 (me, serial):** `colormapRegistry.ts` + `<ColormapPicker>` + vitest;
+   doc notes in DESIGN-SPEC/IN-PROGRESS. Net-new shared infra.
+3. **Compliance audit (single read-only agent, launched now, background):** the
+   "someone goes through singly" pass — confirm doc-03 hypotheses against source
+   for all apps, produce the authoritative per-app task list. Concurrent with
+   Phase 1/2 (read-only → safe).
+4. **Per-app fixes:** Stable Matching first (the reference others copy), then fan
+   out subagents for the remaining offenders, each scoped to its own
+   `src/animations/<App>/` folder (disjoint → conflict-free).
+5. **Final single compliance re-check + skin tour;** build/lint/test; update report.
+
 ### 🟡 milestone · 13:42 — Session oriented; design package reviewed and premises verified
 **Why:** Start-session requires reading the latest handoff, the backlog, and the
 session focus before any work — and the package itself asks that its premises be

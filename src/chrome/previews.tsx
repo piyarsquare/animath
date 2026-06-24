@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
+import { isLightSkin } from './skins';
 
 /**
  * Lightweight, authentic preview animations for the gallery cards. One flavor
@@ -887,7 +888,7 @@ function SkellamPreview({ light }: { light: boolean }) {
 }
 
 export function Preview({ kind, skin }: { kind: PreviewKind; skin: string; hue?: number }) {
-  const light = skin === 'light';
+  const light = isLightSkin(skin);
   switch (kind) {
     case 'plane': return <PlanePreview light={light} />;
     case 'fractal': return <FractalPreview light={light} />;
