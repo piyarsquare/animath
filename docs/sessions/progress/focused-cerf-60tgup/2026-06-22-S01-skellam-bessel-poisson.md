@@ -5,12 +5,12 @@ date: 2026-06-22
 title: New app — why a Bessel function gives the Skellam (Poisson-difference) conditionals
 branch: claude/focused-cerf-60tgup
 slug: focused-cerf-60tgup
-status: in-progress
+status: completed
 build: passed
 followup: null
 pr: null
 app: general
-signals: not-live
+signals:
 next: The Lab should show cumulative results — pooled/running μ̂ that tightens as runs accumulate, a convergence trace, and the spread of μ̂ across runs (logged to TODO.md).
 ---
 

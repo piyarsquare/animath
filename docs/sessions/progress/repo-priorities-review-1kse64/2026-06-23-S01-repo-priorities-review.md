@@ -32,6 +32,23 @@ the **screenshot tour** (#235, `gracious-ptolemy`). The last triage pass was
 
 ## Working notes
 
+### 🟢 code · 00:30 — Swept stale `in-progress` reports → completed
+**Why:** Dan asked what's still marked in-progress and whether it needs correction.
+
+6 reports were `in-progress`; 1 is this session's (legitimately active). The other
+5 were stale — their apps are live in the registry on `main` (argand,
+counting-the-ways, polygon-worlds) and both branch sessions have terminal handoffs:
+- `complex-numbers-animath-intro/…-intro-to-complex-numbers.md` (Argand) → completed
+- `focused-cerf/…-skellam-bessel-poisson.md` (CountingTheWays, shipped #233) → completed
+- 3× `polygon-worlds/2026-06-07-S01-expert-{consultant,maintainer,pedagogy}.md`
+  (three-hats plan reviews) → completed. These were the *only* 3 `in-progress`
+  among 41 three-hats reports (rest are `complete`/`completed`) — outliers prior
+  triage missed.
+Also cleared focused-cerf's now-false `signals: not-live` (the app is live). Verified
+no new `sessions:lint` errors on the edited files. **Observations (not swept):** 31
+reports use `status: complete` vs the canonical `completed` (advisory — renders
+neutral not green); focused-cerf's `app: general` could be `counting-the-ways`.
+
 ### 🟡 milestone · 00:12 — Fixed #230's P2, verified, merged; closed #222
 **Why:** Dan picked "fix P2 first, then merge." The handoff clobbered the saved
 function; fix it honestly, prove the user-visible behavior, then land.

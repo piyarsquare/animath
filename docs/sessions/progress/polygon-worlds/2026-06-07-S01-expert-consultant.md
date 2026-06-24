@@ -5,7 +5,7 @@ date: 2026-06-07
 title: Polygon Worlds plan — Architecture & Quality consultant review
 branch: claude/polygon-worlds
 slug: polygon-worlds
-status: in-progress
+status: completed
 build: unknown
 followup: null
 pr: null
