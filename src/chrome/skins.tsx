@@ -66,6 +66,27 @@ export function useSkin(): [string, (id: string) => void] {
   return [skin, setSkinState];
 }
 
+/**
+ * Read-only, reactive current skin id — tracks `data-theme` on the root element,
+ * so it updates when the skin changes anywhere (e.g. the top-bar SkinPicker),
+ * without the caller threading skin state. Use this to feed theme-aware controls
+ * like `<ColormapPicker themeId={…}>`.
+ */
+export function useThemeId(): string {
+  const read = () => (typeof document !== 'undefined'
+    ? document.documentElement.getAttribute('data-theme') ?? DEFAULT_SKIN
+    : DEFAULT_SKIN);
+  const [id, setId] = useState(read);
+  useEffect(() => {
+    const el = document.documentElement;
+    const obs = new MutationObserver(() => setId(el.getAttribute('data-theme') ?? DEFAULT_SKIN));
+    obs.observe(el, { attributes: true, attributeFilter: ['data-theme'] });
+    setId(read()); // sync in case it changed between first render and effect
+    return () => obs.disconnect();
+  }, []);
+  return id;
+}
+
 /** Pill button (swatch dots + name) opening the skins dropdown. */
 export function SkinPicker({ skin, onSetSkin, compact }: {
   skin: string;

@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  Activity, AlertTriangle, Check, Copy, Download, FastForward, FlaskConical, Layers, Pause, Play,
-  RotateCcw, Shuffle, SkipForward, ShieldCheck,
+  Activity, AlertTriangle, Check, Copy, Download, FlaskConical, Layers, Pause,
+  Shuffle, ShieldCheck,
 } from 'lucide-react';
 import './stableMatching.css';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
-import { Slider, Pills, Select, NumberInput, Checkbox } from '../../components/ControlPanel';
+import { Slider, Pills, Select, NumberInput, Checkbox, ColormapPicker } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
 import readmeText from './README.md?raw';
@@ -17,6 +17,8 @@ import {
 } from './galeShapley';
 import { allStableMatchings, stablePairs, namedSolutions, score, layoutLattice, NAMED_LABELS, type NamedKey } from './rotations';
 import { rothVandeVate, replaySteps, type ResolveResult } from './resolver';
+import { mapStops, gradientCss } from '../../lib/colormapRegistry';
+import { useThemeId } from '../../chrome/skins';
 
 const FOOT_CAP = 1000; // cap the (worst-case exponential) stable-matching enumeration
 type Jump = 'live' | NamedKey;
@@ -45,12 +47,26 @@ const ENUM_CAP = 300;    // stable-matching enumeration cap for the "# stable" s
 const EMPTY_MARKERS = new Map<string, 'active' | 'reject' | 'stolen'>();
 const EMPTY_TRAIL = new Map<string, number>();
 
-// shared BuRd diverging scale (blue = best rank → white → red = worst)
-const BURD = [[33, 102, 172], [103, 169, 207], [247, 247, 247], [239, 138, 98], [178, 24, 43]];
+// The rank color scale comes from the shared colormap registry (a divergent-family
+// map) instead of a hard-coded array. RANK_RAMP holds the active map's anchors as
+// rgb triples, low→high; setRankRamp() refreshes it from the Color panel's choice
+// (called once per render, before the cell renderers below read burd()/rankBurd()).
+// Default = RdBu reversed, so rank #1 reads cool/blue and the worst reads warm/red.
+function hexToRgb(h: string): [number, number, number] {
+  const s = h.replace('#', '');
+  const n = s.length === 3 ? s.split('').map(c => c + c).join('') : s;
+  return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
+}
+let RANK_RAMP: number[][] = mapStops('rdbu').slice().reverse().map(hexToRgb);
+function setRankRamp(id: string, reverse: boolean): void {
+  const hex = mapStops(id);
+  RANK_RAMP = (reverse ? hex.slice().reverse() : hex.slice()).map(hexToRgb);
+}
 function burd(u: number): string {
+  const R = RANK_RAMP;
   const x = Math.max(0, Math.min(1, u));
-  const seg = x * (BURD.length - 1), i = Math.min(BURD.length - 2, Math.floor(seg)), f = seg - i;
-  const c = BURD[i].map((v, k) => Math.round(v + (BURD[i + 1][k] - v) * f));
+  const seg = x * (R.length - 1), i = Math.min(R.length - 2, Math.floor(seg)), f = seg - i;
+  const c = R[i].map((v, k) => Math.round(v + (R[i + 1][k] - v) * f));
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 const rankBurd = (r: number, maxRank: number) => burd(maxRank > 1 ? (r - 1) / (maxRank - 1) : 0);
@@ -269,6 +285,14 @@ export default function StableMatching() {
   const [tight, setTight] = usePersistentState(`${NS}:tight`, true);
   const [liveSort, setLiveSort] = usePersistentState(`${NS}:liveSort`, false);
   const [showFootprint, setShowFootprint] = usePersistentState(`${NS}:footprint`, true);
+  // Matrix/heatmap rank coloring — a divergent-family colormap from the shared
+  // registry (replaces the old hard-coded BuRd). Default RdBu reversed = blue #1.
+  const [matrixMap, setMatrixMap] = usePersistentState(`${NS}:matrixMap`, 'rdbu');
+  const [matrixReverse, setMatrixReverse] = usePersistentState(`${NS}:matrixRev`, true);
+  const themeId = useThemeId();
+  // Refresh the module-level rank ramp before the Matrix/Heatmap renderers (which
+  // call burd()/rankBurd()) run this render. Cheap + deterministic; single-instance.
+  setRankRamp(matrixMap, matrixReverse);
 
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -682,25 +706,17 @@ export default function StableMatching() {
     </>
   );
 
+  // Transport (Play/Step/Finish/Reset · the RVV Back-to-run) lives once, in the
+  // always-on action strip (`actions` below) — never duplicated here. This panel
+  // keeps only the round readout and the *parameters*: speed, the one-shot
+  // Stabilize repair, and the jump-to-solution navigator.
   const playbackNode = (
     <div className="sm2-actions">
       <div className="sm2-progress">Round {safeStep} / {total}{done ? ' · complete' : ''}</div>
-      {resolve ? (
+      <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
+      {!resolve && (
         <>
-          <button className="sm2-btn primary" onClick={() => setRPlaying(p => !p)} disabled={rStep >= resolve.steps.length && !rPlaying}>{rPlaying ? <Pause size={16} /> : <Play size={16} />}{rPlaying ? 'Pause' : 'Play'}</button>
-          <button className="sm2-btn" onClick={() => setRStep(s => Math.min(resolve.steps.length, s + 1))} disabled={rPlaying || rStep >= resolve.steps.length}><SkipForward size={16} />Step</button>
-          <button className="sm2-btn" onClick={() => setRStep(resolve.steps.length)} disabled={rStep >= resolve.steps.length}><FastForward size={16} />Finish</button>
-          <button className="sm2-btn" onClick={endResolve}><RotateCcw size={16} />Back to run</button>
-          <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
-        </>
-      ) : (
-        <>
-          <button className="sm2-btn primary" onClick={() => { goLive(); setPlaying(p => !p); }} disabled={jump === 'live' && !pickedMatching && done && !playing}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? 'Pause' : 'Play'}</button>
-          <button className="sm2-btn" onClick={() => { goLive(); setStep(s => Math.min(total, s + 1)); }} disabled={playing || (jump === 'live' && !pickedMatching && done)}><SkipForward size={16} />Step</button>
-          <button className="sm2-btn" onClick={() => { goLive(); setStep(total); }} disabled={jump === 'live' && !pickedMatching && done}><FastForward size={16} />Finish</button>
-          <button className="sm2-btn" onClick={reset}><RotateCcw size={16} />Reset</button>
           <button className="sm2-btn stabilize" onClick={stabilize} disabled={!finalUnstable} title={finalUnstable ? 'Repair the unstable result to a stable matching' : 'Already stable — nothing to repair'}><ShieldCheck size={16} />Stabilize</button>
-          <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
           <Select label="Jump to a stable solution" value={pickedMatching ? 'live' : jump} onChange={(v) => { setPickedNode(null); setJump(v); }}
             options={(['live', 'aOptimal', 'bOptimal', 'egalitarian', 'median', 'minRegret', 'sexEqual', 'balanced'] as Jump[])
               .map(k => ({ value: k, label: JUMP_LABELS[k] }))} />
@@ -738,14 +754,17 @@ export default function StableMatching() {
     return `${n} A's and ${n} B's; ${cons}. Each round the whole proposing side asks at once and every receiver keeps its single best offer (bumping if better), rejecting the rest; ${sched}. ${tail}`;
   })();
 
+  // The rank-scale legend swatch is driven by the active colormap (--sm-scale), so
+  // it always matches the matrix; the text stays color-agnostic (direction, not
+  // hue) so it reads correctly whatever divergent map is chosen.
   const legend = (
-    <p className="sm2-legend">
+    <p className="sm2-legend" style={{ '--sm-scale': gradientCss(matrixMap, matrixReverse) } as React.CSSProperties}>
       {cellView === 'both' && <><span className="k sq">square = A→B rank</span><span className="k disc">circle = B→A rank</span></>}
       {cellView === 'a' && <span className="k sq">color = A's rank of B</span>}
       {cellView === 'b' && <span className="k sq">color = B's rank of A</span>}
       {cellView === 'diff'
-        ? <span className="k scale diverge">blue = A keener · red = B keener</span>
-        : <span className="k scale">blue #1 → red last</span>}
+        ? <span className="k scale diverge">A keener ←→ B keener</span>
+        : <span className="k scale">best #1 → worst</span>}
       <span className="k matched">held / matched</span><span className="k active">proposing</span><span className="k blocking">blocking</span>
       {showFootprint && <span className="k footprint">stable elsewhere</span>}
     </p>
@@ -835,9 +854,21 @@ export default function StableMatching() {
 
   /* ── workspace assembly: panels, view windows, built-in layouts ── */
 
+  const colorNode = (
+    <ColormapPicker
+      family="divergent"
+      value={matrixMap}
+      onChange={setMatrixMap}
+      themeId={themeId}
+      reverse={matrixReverse}
+      onReverse={setMatrixReverse}
+    />
+  );
+
   const sections: SectionDef[] = [
     { id: 'algorithm', title: 'Algorithm', arch: 'subject', node: algorithmNode, estHeight: 170 },
     { id: 'instance', title: 'Instance', arch: 'domain', node: instanceNode, estHeight: 300 },
+    { id: 'color', title: 'Color', arch: 'color', node: colorNode, estHeight: 300 },
     { id: 'display', title: 'Display', arch: 'marks', node: displayNode, estHeight: 360 },
     { id: 'playback', title: 'Playback', arch: 'playback', node: playbackNode, estHeight: 470 },
     { id: 'lab', title: 'Lab', arch: 'lab', node: labNode, estHeight: 540 },
