@@ -8,7 +8,7 @@ slug: argand-plane-review
 status: completed
 build: passed
 followup: null
-pr: null
+pr: https://github.com/piyarsquare/animath/pull/237
 app: argand
 signals: visual-unverified
 next: Land Tier 0 (complexOps tests) + Tier 1 fixes (Essentials overlap, fabricated dual/split z*, collapse the triple feed-switcher, hint pill, phone hero) per the synthesis; first answer the 3 identity questions for Tier 3.
