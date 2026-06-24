@@ -377,6 +377,182 @@ row.
 
 ---
 
+## Augmentation (2026-06-24) — the complex–dual–split slider as a cross-app "unitary spaces" lens
+
+Dan's framing: ℂ is the most *familiar* entry point but should be treated as **one setting
+of `p` on the elliptic/parabolic/hyperbolic (Cayley–Klein) continuum**, not a privileged
+home — "a foreigner we need to understand." The invariant that makes this coherent is
+already in `complexOps.ts`: `normG(z) = x² − p·y²`, the quadratic form each algebra
+preserves. "Unitary spaces" = the family of planes that each preserve their own `normG`.
+
+I find the *idea* strong and the *engine* already built. My entire job here is to keep an
+appealing cross-app idea from quietly dissolving the property that lets this repo run many
+parallel app branches without merge pain. So I'll answer each sub-question, then draw the
+boundary I'd actually defend.
+
+> [!CAUTION]
+> This is the single most framework-destabilizing proposal I've reviewed for this repo. Not
+> because it's wrong — because a "suite-wide `p`" by construction touches a **shared lib +
+> multiple app folders + per-app GLSL** at once. That is the exact shape the "self-contained
+> folder, append-only shared files" rule exists to forbid. The whole value of my analysis is
+> in the *sequencing* that defuses that, so I lead with the tension and treat the mechanics
+> as subordinate to it.
+
+### Q1 — Promote `complexOps.ts`'s generalized algebra to a shared `lib/` module?
+
+**Yes — but as an additive extraction, not a move, and only when the second consumer is
+real.** Today `mulG`/`conjG`/`normG`/`invG`/`divG`/`powRealG`/`sqrtG`/`expG`/`logG` are the
+cleanest, best-commented code in the app and are genuinely app-agnostic (no React, no DOM,
+pure number-in/number-out over `p`). They are a natural sibling to `lib/complexMath.ts`.
+
+Migration shape that keeps Argand safe:
+
+| Approach | What happens | Risk to Argand | Verdict |
+|----------|--------------|----------------|---------|
+| **Move** the generalized fns to `lib/generalizedAlgebra.ts`, delete from `complexOps.ts` | Argand imports flip; `complexOps.ts` keeps only the Argand-specific path/format/snap helpers | Churns Argand imports; any in-flight Argand branch (this one) conflicts | Reject for now |
+| **Extract a copy** to `lib/`, re-export from `complexOps.ts` | New shared module; Argand keeps importing from `complexOps` (which now re-exports) | ~zero — Argand's import surface is unchanged | **Recommended** |
+| Leave in place; second app imports `from '../Argand/complexOps'` | No new file | Cross-app import into an app folder — forbidden coupling, breaks self-containment | Reject |
+
+> [!IMPORTANT]
+> Do **not** promote speculatively. The trigger is "a second app honestly needs `mulG`/
+> `normG`." Until that app exists, promotion is pure churn with no payoff and it collides
+> with the very Argand branch doing the round-1 fixes. When the trigger fires: create
+> `lib/generalizedAlgebra.ts` as a **new** file (append-only-friendly — no existing shared
+> file is edited), move the pure generalized fns there, and have `complexOps.ts`
+> `export * from '@/lib/generalizedAlgebra'` so Argand's imports never move. That makes the
+> promotion a one-file *addition* plus a one-line re-export, not a repo-wide rename.
+
+One correctness caveat the promotion must carry forward: `complexOps.ts` itself warns that
+`powRealG`/`logG` are **only well-defined in part of the plane** (dual needs `Re>0`, split
+needs the future cone) and *fall back to a linear blend* in degenerate regions. A shared
+module that other apps trust must keep that contract loud — ideally with the unit tests I
+already asked for in round 1 (item 5), which become *more* important once the code is shared.
+
+### Q2 — Extend `functionHandoff.ts` to carry `p`?
+
+**Yes, and it's the cheapest, safest piece of the whole program — do it first if anything.**
+`FunctionState` is `{ index, p?, q?, quad? }`. Note the trap: it **already has a `p`**, and
+it means the `p` of `z^(p/q)`, *not* the number system. Reusing that key would be a silent
+semantic collision.
+
+> [!WARNING]
+> Naming. The handoff's existing `p` is the exponent numerator of `z^(p/q)`. The number
+> system is also conventionally `p = j²`. Do **not** overload. Add a distinct key —
+> `sys` (or `jsq`) — for the algebra: `FunctionState = { index, p?, q?, quad?, sys? }`.
+
+Backward-compat is clean by design: the codec already returns `{}` for anything unparseable
+and only emits keys that are present. Adding `if (s.sys !== undefined) parts.push(...)` to
+`encodeFunction` and a guarded `num('sys')` read to `decodeFunction` is **purely additive** —
+old links (no `sys`) decode exactly as before (target keeps its own / defaults to ℂ), and a
+target app that doesn't understand `sys` simply ignores the extra key. This edits one shared
+file (`lib/functionHandoff.ts`) but the edit is append-only within the function bodies and
+non-breaking, so it is the lowest-risk shared-file touch in the suite.
+
+The honest limit: a handoff is only meaningful between apps that *can act on* `sys`. Carrying
+`sys` from Argand to Complex Particles only helps once Complex Particles can render a
+non-complex `p` — so Q2's wire is necessary-but-not-sufficient; it's plumbing laid ahead of
+the consumer. That's fine (cheap, reversible) as long as nobody mistakes laid pipe for a
+shipped feature.
+
+### Q3 — The framework tension, and how to sequence it
+
+The rule (CLAUDE.md, parallel-branches): *each app is a self-contained folder; the shared
+files it edits are append-only.* A suite-wide `p` violates this three ways at once — it needs
+a **shared algebra lib**, **edits inside ≥4 app folders**, and **per-app GLSL rewrites**
+(FractalsGPU/Correspondence multiply in the shader, not in `complexOps`). Done as one change
+it's a repo-wide refactor that conflicts with every in-flight app branch.
+
+The defusing move is to recognize this is **not one change** — it's a fan-out of
+independent, app-local changes sharing one additive lib. Sequenced:
+
+**Phase 0 — shared substrate (one new file + one additive shared edit).**
+`lib/generalizedAlgebra.ts` (Q1, copy-and-re-export) and the `sys` key in
+`functionHandoff.ts` (Q2). Both additive; neither breaks an existing consumer. This is the
+*only* phase that touches shared files, and it touches them additively. Land it once,
+quietly, on its own small branch.
+
+**Phase 1 — Argand consolidates (in-folder).** Argand is already the reference consumer;
+once Phase 0 lands, Argand flips to importing the shared lib (no-op if we re-export) and
+becomes the canonical `p`-aware app. No other folder touched.
+
+**Phase 2..N — one app at a time, each in its own folder branch.** Each app that *can*
+honestly take the dial adds it independently, reading the shared lib and the `sys` handoff
+key. Because each app is its own folder, these branches **do not conflict with each other** —
+they only ever conflict if two of them re-edit Phase 0's shared files, which they shouldn't
+need to (the substrate is already there). The merge-order-independence the repo relies on is
+preserved *as long as Phase 0 is complete before any Phase-2 branch opens.*
+
+**Which apps can honestly take the dial:**
+
+| App | Engine | Can take `p` honestly? | Why |
+|-----|--------|------------------------|-----|
+| **Argand** | `complexOps` (JS) | ✅ already does | affine/poly are `mulG`-native |
+| **Plane Transform** | plane map (JS, `f:ℂ→ℂ`) | ✅ *iff* `f` is affine/poly/rational | same `mulG`/`divG` substrate; transcendentals don't generalize |
+| **Complex Particles** | 4D particle graph (JS sampling) | ⚠️ partial | the graph is sampled in JS, so affine/poly variants can use `mulG`; but its zoo (exp/sin/Γ/…) has **no dual/split analogue** |
+| **FractalsGPU** | GLSL | ⚠️ rewrite | multiply lives in the shader; needs a `mulG` GLSL port + the iteration recast — real work, per-app |
+| **Correspondence** | GLSL (Mandelbrot↔Julia) | ⚠️ rewrite | same as FractalsGPU; `z²+c` over `p` is meaningful (it's literally Dan's "with a z² term" remark) but it's a shader change |
+
+> [!CAUTION]
+> The transcendental zoo is the hard boundary. `complexMath.functionNames` (~23 fns:
+> exp/sin/Γ/ζ-likes) is **ℂ-specific** — there is no clean dual or split-complex `exp`/`Γ`.
+> Any `p`-aware app must therefore expose the dial **only for the maps that generalize**
+> (affine, polynomial, rational) and either hide it or hard-pin `p=−1` for the rest. A global
+> `p` slider that silently does nothing (or NaNs) on `sin z` is worse than no slider. This is
+> a per-app gating decision, not something the shared lib can enforce.
+
+### Q4 — One app's feature, a shared widget, or a multi-app program?
+
+**A multi-app *program*, delivered as a shared *substrate* + per-app *opt-in*, that should
+not begin life as a shared *widget*.**
+
+- **Not one app's feature** — Dan's whole point is that ℂ-as-foreigner is a *suite* stance;
+  confining it to Argand contradicts the framing.
+- **Not (yet) a shared widget** — a "drop-in `<UnitarySpaceSlider>`" sounds tidy but is a
+  trap: the framework's shared UI is the **archetype-typed panel**, and `p` is cleanly a
+  `domain`-tier control (it's "which input space"). The slider is three lines of `Slider`
+  with three stops; standardizing it as a component before two apps even use it is premature
+  abstraction. If a *third* app adopts it, *then* extract a `SystemSlider` panel body to
+  `components/`. (Same discipline as Q1: extract on the second/third real consumer, not on
+  spec.)
+- **It is a program** — substrate (Phase 0) + a documented contract ("apps may read `sys`;
+  apps must gate it to generalizable maps") + incremental per-app adoption.
+
+Recommended boundary, stated plainly: **the shared thing is the math (`lib/
+generalizedAlgebra.ts`) and the wire (`functionHandoff` `sys` key). The per-app thing is the
+UI dial and the decision of whether the dial is honest for that app's maps.** The framework
+already names that boundary — `domain`-tier panel per app, shared `lib/` for the engine —
+so the program fits the existing seams without inventing a new sharing mechanism.
+
+### Augmented verdict (delta)
+
+**Green-light first (lowest risk, real value):**
+1. **Phase 0 substrate** — `lib/generalizedAlgebra.ts` as an additive extraction with a
+   re-export from `complexOps.ts` (zero churn to Argand), **plus** the `sys` (not `p`!) key
+   in `functionHandoff.ts` (purely additive, backward-compatible). Pair it with the
+   round-1 unit tests, which are now load-bearing for shared correctness.
+2. **Plane Transform** as the second consumer — it shares Argand's JS substrate and its
+   affine/poly maps generalize cleanly; it's the cheapest honest second app and validates
+   the substrate before any GLSL work.
+
+**Resist / sequence carefully:**
+- **A single global `p` slider across all apps in one PR** — it's the repo-churn bomb; it
+  conflicts with every in-flight branch and forces GLSL rewrites under one diff. Fan it out
+  per app folder, strictly after Phase 0.
+- **Exposing the dial on the transcendental zoo** — gate it to generalizable maps or pin
+  `p=−1`; never ship a slider that NaNs on `sin z`.
+- **Promoting the algebra before a second consumer exists** — premature; pure churn that
+  collides with the active Argand fix branch. Trigger on the second real need.
+- **A standardized `<UnitarySpaceSlider>` component before app #3** — premature
+  abstraction; keep it a `domain` panel per app until adoption proves the shape.
+
+Net: I endorse the *idea* and most of the *engine reuse*, and I'm comfortable green-lighting
+the additive substrate immediately — **provided the program is sequenced so that exactly one
+small branch ever touches shared files, and every subsequent app adopts `p` inside its own
+folder.** That preserves the parallel-branch property that makes this repo cheap to work in,
+which is the one thing I will not trade for elegance.
+
+---
+
 ## Self-reflection
 
 1. **What would you do with another session?** Open `DesktopWorkspace.tsx` and trace the
@@ -411,4 +587,9 @@ row.
    behavior specifically (checked by screenshot/reasoning, not by interacting).
 8. **Follow-up value:** MEDIUM — the must-fix diagnoses are correct and actionable as
    written, but the hint root-cause (chrome vs. app) and the exact panel-height numbers
-   need one verification pass before someone implements the layout fix.
+   need one verification pass before someone implements the layout fix. *(Augmentation
+   delta: the cross-app "unitary spaces" program is a design recommendation, not yet
+   verified against the GLSL apps' shader structure — the FractalsGPU/Correspondence
+   "rewrite" cost is estimated from the architecture, not from reading their shaders; a
+   follow-up should confirm the `mulG` GLSL-port effort before committing a phase plan.
+   Follow-up value stays MEDIUM.)*

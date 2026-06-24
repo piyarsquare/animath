@@ -428,6 +428,147 @@ becomes something with a reason to come back.
 
 ---
 
+## Augmentation (2026-06-24) — the complex–dual–split slider as a cross-app "unitary spaces" lens
+
+Dan wants to take Argand's `p = j²` dial (rotation → shear → boost) and treat it
+not as an Argand quirk but as a **suite-wide lens**: complex numbers are the
+*familiar* door, but even ℂ is "a foreigner we need to understand" — one stop on a
+continuum, not the privileged home. From a game/UX seat this is a fantastic
+**curiosity engine** and a dangerous **consistency/affordance hazard** at the same
+time. The deciding factor is staging.
+
+### 1. The cross-app interaction contract (so it's one meta-dial, not five toggles)
+
+A control that appears in several apps only builds a transferable mental model if
+**the same gesture means the same thing, in the same place, with the same
+feedback, everywhere it appears.** If app A puts it bottom-center as a slider with
+Cx/Du/Sp pills and app B puts it in a panel as a dropdown, players learn *two*
+controls and trust neither. Concretely, the contract I'd lock:
+
+| Contract clause | Rule | Why (game-feel) |
+|---|---|---|
+| **Identity** | One named thing across the suite — call it the **Space dial** (`p = j²`), never "number system" in one app and "geometry" in another | A control needs *one* name to become a verb players say to themselves |
+| **Placement** | Always the same anchored slot — Argand's bottom-HUD row is the reference; replicate that position (or the framework `actions`-strip equivalent) in every app that has it | Muscle memory: "the dial is *there*" must hold across apps |
+| **Range & stops** | Always −1…+1, always three labeled stops **Complex / Dual / Split** with the same `Cx/Du/Sp` jump pills and the same continuous morph between | Identical scale = identical mental model; a different range reads as a different control |
+| **In-world feedback** | The **unit curve is the shared truth-teller** — ellipse → two lines → hyperbola+null-cone — and must render the same way in every app that shows a plane | This is the single best "the rules just changed" signal Argand already has; it's the dial's *face*. Reuse it verbatim. |
+| **Color/motion grammar** | The same gesture (×α₁) reads as spin / shear / boost with the same coloring and the same handle behavior | If the *feel* of multiply differs cosmetically per app, transfer breaks |
+| **Persistence** | The dial's value should **not** silently travel between apps via persistence; each app opens at ℂ unless a deliberate handoff carries `p` | A returning/linked user must not land in Split-space wondering why "multiply" feels wrong (this is my round-1 §4 "weird-state-greets-new-user" trap, amplified across apps) |
+
+> [!CAUTION]
+> **The function-handoff link is the place this contract gets tested.** Complex
+> Particles ↔ Plane Transform already hand off *function identity* via URL. If both
+> grow a Space dial, the handoff must decide explicitly whether `p` rides along.
+> My call: **carry `p` only when both endpoints support it for that function, and
+> show a one-beat "carried over: Split-space" confirmation on arrival** — never a
+> silent inheritance. A handoff that silently changes what "multiply" means is the
+> cross-app version of the round-1 "View-from-z\* locks pan silently" trap.
+
+### 2. Defamiliarization as a hook — staging the "wait, the rules changed" moment
+
+"Treat ℂ as a foreigner" is, in game terms, a **subverted-expectation beat** — the
+best kind of hook, and the easiest to fumble into disorientation. The craft is to
+make the foreignness a *reveal the player triggers*, not a state they wake up in.
+
+- **Earn it; don't open with it.** A beginner must first build the ℂ intuition
+  (multiply = spin-and-scale) so there's an expectation *to* subvert. The dial
+  should be **dimmed/absent until the player has done at least one rotation**, then
+  appear with a tiny "there's more than one kind of multiply" nudge. Surprise
+  requires a baseline.
+- **The reveal is a slide, not a jump.** Argand's continuous morph is the right
+  instinct: drag `p` off −1 and watch the circle *open into a hyperbola* and the
+  spiral *peel into a boost* in real time. The continuity is what makes it "whoa"
+  instead of "huh — broken." Default-snapping to Cx/Du/Sp would kill the reveal;
+  keep the continuum draggable.
+- **Name the foreignness in-world.** When the dial leaves ℂ, flash the regime at
+  the locus the way I proposed flashing leg labels in round 1: "rotation" →
+  "shear" → "boost (rapidity)". One word, at the moment of change, turns confusion
+  into a lesson.
+
+> [!NOTE]
+> **Which app earns the dial first: Argand — keep it the home.** Argand is the
+> entry-point app, it already has the dial, and its single draggable point makes
+> "the same gesture, three feels" maximally legible (the round-1 "Shear, don't
+> spin" and "Break multiplication" presets are exactly this beat). The journey:
+> **learn multiply-as-rotation in Argand → meet the foreigner via the dial in
+> Argand → carry the foreigner into Plane Transform** (where you watch a whole
+> *plane* boost, not just a point) **→ and only much later, if ever, into the
+> fractal apps.** The dial graduates outward from the toy where it's clearest, not
+> the spectacle where it's prettiest.
+
+### 3. The inert-dial trap (the affordance must never lie)
+
+A prominent control that does nothing — or emits garbage — in an app where the
+math doesn't generalize is a **broken promise**, and players punish broken
+promises harder than missing features. The honesty constraint (only
+affine/polynomial/rational maps generalize over `p`; exp/sin/Γ don't) means the
+dial is *legitimately* meaningless for much of Complex Particles' function zoo.
+
+Decision rule, by how meaningful the dial is *for the current function*:
+
+| Situation | UI behavior | Rationale |
+|---|---|---|
+| App + current function fully generalize (affine/poly/rational) | **Show, live** — full slider + Cx/Du/Sp pills, unit-curve feedback | The real feature |
+| App supports the dial, but the *current function* doesn't (e.g. you picked `exp` in Plane Transform) | **Show, but locked with a why** — dial greyed, Cx pinned, a one-line "Only affine/polynomial maps live in other spaces — pick one to explore" | Teaches the constraint instead of hiding it; the lock *itself* is a lesson about what generalizes |
+| App fundamentally can't carry it (e.g. a transcendental-only viewer) | **Hide entirely** | A control you can't ever use is clutter; absence is honest |
+
+> [!WARNING]
+> **Never the fourth option: present a live dial that silently produces nonsense.**
+> A boost applied to a map where the power isn't well-defined is the cross-app
+> version of Argand's null-cone degeneracy — and Argand *already* handles its own
+> case well (the `powReliable` fallback). The cross-app rule is the same:
+> **detect, then either lock-with-reason or fall back visibly — never emit a
+> garbage picture under a confident-looking control.** "Lock with a why" is
+> strictly better than "hide" wherever the function is the only blocker, because it
+> converts a dead end into a discoverable rule ("oh — *these* functions travel,
+> those don't").
+
+### 4. A light cross-app progression carrying the idea
+
+This is where the "unitary spaces" thesis becomes a *loop* instead of a slider.
+Extend the round-1 "Try this" preset shelf into a small **cross-app quest line** —
+each step states a goal, sets state, and *hands you to the next app* when you clear
+it:
+
+| Step | App | Goal | Hands off → |
+|---|---|---|---|
+| 1 | Argand | "Make `f` a pure rotation — keep \|α₁\|=1." | unlocks the dial |
+| 2 | Argand | "Slide the Space dial to Split. Same gesture — now it's a **boost**. Find the null cone." | — |
+| 3 | Plane Transform | "You rotated a point; now **boost a whole plane**." (carries `p`=Split + the function) | Complex Particles |
+| 4 | Complex Particles | "See the boost as a 4D graph — and notice this only works for the maps that *travel*." | (curated function subset only) |
+
+> [!TIP]
+> **Frame it as "passport stamps," not a tutorial.** "You made a rotation in
+> Argand — now boost it in Plane Transform" is a *carried verb*, the explorable-
+> explanations move at suite scale. It also quietly solves discoverability and the
+> inert-dial trap at once: the quest only ever routes you into apps/functions where
+> the dial is meaningful, so a player following the thread never meets a locked or
+> dead control. The shelf stays optional (a "Try this" rail, not a gate) — but for
+> the player who pulls the thread, the foreigner becomes a *place you travel
+> through the whole suite*, which is exactly Dan's hook turned into a loop.
+
+### Augmented verdict (delta)
+
+- **Endorse the cross-app dial — but only under a hard interaction contract**
+  (same name, slot, range, pills, and the unit-curve as its shared face). Without
+  that contract it's five inconsistent toggles and erodes trust; with it, it's the
+  suite's signature transferable verb.
+- **Argand keeps the dial as home and earns it first.** Graduate it outward
+  (Plane Transform next, fractals last/never), gated behind one learned rotation so
+  the defamiliarization *subverts* an expectation instead of bewildering a cold
+  user. Keep the morph continuous — the slide *is* the reveal.
+- **Resolve the inert-dial trap with "show-live / lock-with-a-why / hide," and
+  never the silent-garbage fourth option.** Lock-with-reason is the default when
+  the function (not the app) is the blocker — it teaches what generalizes.
+- **The biggest upside is the cross-app quest line**: it converts the "unitary
+  spaces" thesis from a clever slider into a passport-stamp loop that *only* routes
+  players where the dial is honest — extending round-1's preset shelf to suite
+  scale and giving the whole complex-function family the "pull" Argand alone lacks.
+- **New risk flagged:** persistence/handoff carrying `p` silently between apps is a
+  cross-app re-run of the round-1 silent-state traps; require an explicit "carried
+  over" confirmation on every handoff that changes what *multiply* means.
+
+---
+
 ## Self-reflection
 
 1. **What would you do with another session?** Prototype the "Try this" preset
@@ -464,3 +605,6 @@ becomes something with a reason to come back.
 8. **Follow-up value:** MEDIUM — conclusions are sound and actionable, but the
    feel-specific claims (snap jank, Play reward, phone touch) deserve a live
    playtest before any are treated as settled, and accessibility was out of scope.
+   The 2026-06-24 augmentation (cross-app Space dial) is a *design proposal*, not a
+   review of built behavior — its contract and quest-line ideas are untested and
+   would need a real cross-app prototype to validate the handoff/persistence claims.

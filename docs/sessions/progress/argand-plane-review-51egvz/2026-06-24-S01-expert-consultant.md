@@ -284,6 +284,130 @@ Net: a well-built app with a clean math core, one genuinely risky performance pa
 
 ---
 
+## Augmentation (2026-06-24) — the complex–dual–split slider as a cross-app "unitary spaces" lens
+
+Dan's question: should Argand's `p = j²` slider (the elliptic/parabolic/hyperbolic Cayley–Klein continuum) become a *shared* lens across the complex-function apps — Complex Particles (4D graph), Plane Transform (plane map), Correspondence, FractalsGPU — so that ℂ is "a foreigner we need to understand," one setting of `p`, not a privileged home?
+
+I'll answer this strictly through my lens (architecture & quality). I find the *idea* compelling and well-motivated mathematically, but as a software-engineering proposal it is **a large, leaky, multi-substrate generalization with a sharp correctness trap**, and I'd resist the full version while endorsing a small, honest first slice. Below, the four concrete questions.
+
+### Cross-app reality check (verified from source)
+
+I re-read the actual code before reasoning about it, because the cost of this proposal lives in the details:
+
+| Surface | Substrate | ℂ-hardcoding observed | `p`-generalization cost |
+|---|---|---|---|
+| `complexOps.ts` (Argand) | TS, pure | none — already over `p` (`mulG`, `normG=x²−p·y²`, `powRealG`, `logG`) | done; this is the *only* generalized algebra that exists |
+| `lib/complexMath.ts` (shared zoo) | TS, pure | `functionNames` + per-fn TS evaluators, ℂ-specific | n/a for transcendentals (see honesty risk) |
+| Complex Particles | Three.js + GLSL | per-point complex eval in shader, ℂ math | per-shader GLSL rewrite |
+| Plane Transform | WebGL fragment/vertex (`shaders/index.ts`) | **36-case `applyComplex` dispatch**, all built on `complexMul/complexExp/complexLn` | per-shader GLSL rewrite |
+| FractalsGPU | GLSL | iteration `z² + c` in shader | per-shader GLSL rewrite |
+| `lib/functionHandoff.ts` | TS URL codec | carries function **identity only** (`fn` name + `p,q` + quad coeffs); **no number system** | one additive field |
+
+The asymmetry is the whole story: **one app has the generalized algebra; four apps have none of it, three of them in GLSL, and the handoff that links them carries no `p` at all.** Plane Transform's `shaders/index.ts` is the canonical evidence — its `complexExp`, `complexLn`, `complexSin`, `complexGamma` (a 9-term Lanczos!) are all written in ℂ-only `vec2` arithmetic. There is no `p` anywhere in that file.
+
+### 1. The right abstraction for a shared generalized algebra
+
+The pattern is **the Strategy pattern as a value-level capability record, not an OO interface hierarchy** — and `complexOps.ts` has already *accidentally built it*. The functions there (`mulG(a,b,p)`, `normG(z,p)`, `powRealG(b,p,t)`, `logG(b,p)`) are a strategy parameterized by a single scalar `p`. The clean move is to promote that scalar into a named **`Algebra` record** so consumers depend on the capability, not on a magic number:
+
+```ts
+// lib/generalizedAlgebra.ts  (promote, do not rebuild)
+export interface Algebra {
+  readonly p: number;                 // j²: <0 elliptic, =0 parabolic, >0 hyperbolic
+  readonly kind: 'complex' | 'dual' | 'split';
+  mul(a: Cx, b: Cx): Cx;              // = mulG(a,b,p)
+  norm(z: Cx): number;               // = x² − p·y²
+  powReal(b: Cx, t: number): Cx;     // = powRealG(b,p,t)
+  log(b: Cx): { u: number; v: number } | null;  // null = outside the domain
+}
+export const algebraOf = (p: number): Algebra => /* thin wrapper over complexOps */;
+export const COMPLEX = algebraOf(-1);   // the "foreigner we already know"
+```
+
+> [!NOTE]
+> This is *not new code* — it is a façade over the functions Argand already ships, costing ~30 lines. Its only job is to give every other app a name (`Algebra`) to depend on, so "which number system" stops being an untyped `number` threaded by convention and becomes a typed object whose `log()` can *return null* (the honesty hook — see §3).
+
+**Where does `p` live?** Three scopes, three different answers, and conflating them is the trap:
+
+| Scope | Mechanism | Verdict |
+|---|---|---|
+| *Within one app* | a prop threaded from the app's `useState` to its renderer (exactly what Argand does today: `p={system}` into `ArgandPlane`) | **correct.** Keep it a prop. |
+| *Cross-app deep link* | extend `functionHandoff` with one optional `j2` field | **endorse — smallest correct step.** Additive, ignorable, no crash on absence (the codec already decodes unknown to `{}`). |
+| *Global "current system"* | a React context / global store | **resist.** It violates the repo's stated rule ("no global store/context; state is local `useState`/`useRef`"). It also implies every app *has* a system, which is false for the ℂ-only zoo. |
+
+So: **prop within an app, URL field across apps, never a context.** The `functionHandoff` extension is literally:
+
+```ts
+export interface FunctionState { index: number; p?: number; q?: number; quad?: …; j2?: number; }
+// encode: if (s.j2 !== undefined && s.j2 !== -1) parts.push(`j2=${s.j2}`);
+// decode: const j2 = num('j2'); if (j2 !== undefined) out.j2 = j2;
+```
+
+One field, default-ℂ when absent, fully backward-compatible. This is the *only* part of the whole proposal I would ship without further debate.
+
+### 2. Composition across four render pipelines
+
+This is where the proposal's cost is concentrated and routinely under-estimated. The substrates do not share an implementation language:
+
+- **Argand (SVG/TS):** already generalized. Zero cost — it *is* the prototype.
+- **The three WebGL apps (Complex Particles, Plane Transform, FractalsGPU):** the algebra lives in **GLSL**, which cannot import `complexOps.ts`. Generalizing means **re-deriving `mulG`/`expG`/`logG`/`powRealG` as `vec2` GLSL functions parameterized by a `uniform float p`** and rewriting every dispatch case to route through them. There is no shared-source path; TS and GLSL are different worlds, and the only guard today is `checkGlslDispatch` (a string-scan that the dispatch *exists*, not that it's *correct*).
+
+> [!WARNING]
+> **Honest surface estimate.** A `uniform float p` plus generalized `gmul/gexp/glog` in GLSL is tractable *per shader* (maybe 40–80 lines of GLSL each, plus a uniform wire-up). The real cost is **(a) ×3 shaders, (b) no shared source so the same math is hand-ported three times and can drift from the TS, and (c) the transcendental cases simply have no generalization** (next section). The conditional branches `expG` does on the sign of `p` (`cos`/linear/`cosh`) become GLSL `if(p<0)…else if(p>0)…` inside the hot per-point loop — correct but a measurable shader cost on a particle cloud. I would budget this as **multi-session, per-app work**, not a single change, and I would *not* attempt all three at once. Plane Transform (one vertex shader, the cleanest dispatch) is the pilot; Complex Particles and FractalsGPU follow only if the pilot proves the value.
+
+The composition risk that matters to me: **three independent GLSL re-implementations of an algebra that already has one TS source of truth = three places to drift.** The mitigation is the contract test in §4, not a clever abstraction (there is no way to share GLSL and TS source).
+
+### 3. The leaky-abstraction / honesty risk — make it *refuse*
+
+This is the architectural crux, and it's where an "algebra-as-parameter" design is actively *dangerous* if done naively. Most of the function zoo has **no honest dual/split analogue**: `exp`, `sin`, `cos`, `tan`, `Γ`, the inverse-trig family, `z^(p/q)` for irrational exponents — these are *defined through `exp`/`log`*, and `logG` already returns `null` outside its domain (dual needs Re>0; split needs the future cone). A design that lets the user dial `p` for `exp` under split would either crash, NaN, or — worst — **silently produce a plausible-looking wrong picture.** Mathematically, "ℂ is just one `p`" is true for the *algebra*; it is **false for the transcendental function library**, and an abstraction that hides that distinction is lying.
+
+The fix is to make the abstraction **refuse where it cannot generalize**, by lifting the capability into the type, not leaving it to runtime luck:
+
+```ts
+// A function declares the p-domain it is honest over.
+export interface GeneralizedFn {
+  name: string;
+  evalC: (z: Cx) => Cx;                          // the ℂ evaluator (always present)
+  /** Which systems this f is mathematically honest in. */
+  validSystems: ReadonlyArray<Algebra['kind']>;  // e.g. ['complex'] for exp/sin/Γ
+  /** Present only if it generalizes: the p-aware evaluator. */
+  evalG?: (z: Cx, alg: Algebra) => Cx;           // affine/poly/rational only
+}
+```
+
+Then the rule is structural, not advisory: **affine, polynomial, rational** maps get an `evalG` and `validSystems: ['complex','dual','split']`; **every transcendental** gets `validSystems: ['complex']` and *no* `evalG`. The UI consumes the flag — when the selected `f` doesn't list the current system, the `p`-slider is **disabled with a reason** ("`exp` is defined only over ℂ"), exactly as Argand already disables `powRealG`'s smooth spiral where `logG` returns null (the `powReliable` predicate at `ArgandPlane.tsx:339`). That existing predicate is the *template* for how this should behave app-wide: the abstraction already knows how to say "I can't do this here" — generalize that habit, don't suppress it.
+
+> [!TIP]
+> The single most important architectural sentence in this augmentation: **the slider's range must be a function of the selected `f`, not a global control.** A global `p` slider over a zoo that's 90% ℂ-only is the leaky abstraction. A *capability-gated* `p` slider — live for affine/poly/rational, greyed-with-explanation for transcendentals — turns the leak into a teaching moment ("here is exactly why ℂ is special: most functions only live here"), which is *more* faithful to Dan's "ℂ as foreigner" thesis than a slider that pretends everything generalizes.
+
+### 4. Verification across apps with only `npm run build` + manual checks
+
+The cross-app correctness claim is: *the same `f`, under the same `p`, reads consistently as graph (Complex Particles) and map (Plane Transform/Argand).* With only build + manual checks, you cannot verify pictures — but you can verify the **math that produces them**, and that is enough to catch the drift that matters. Three contracts, in priority order:
+
+1. **A golden-vector table for the TS algebra** (`lib/__tests__/generalizedAlgebra.test.ts`): a fixed set of `(z, p)` inputs and their expected `mulG`/`normG`/`powRealG`/`logG` outputs, including the `null`-domain cases. This is the source of truth every GLSL port must match. (Pairs directly with the §5 `complexOps` tests I already proposed — same module, extended.)
+2. **A GLSL↔TS parity test** (the antidote to §2's three-way drift): a small headless harness that runs each generalized GLSL function over the golden vectors (via a tiny offscreen WebGL pass, or — cheaper and CI-safe — by *extracting the GLSL expressions and re-implementing the assertion as a string/AST diff against the TS*). Honestly, full GLSL execution in CI is heavy; the pragmatic version is a **shared spec file** both the TS `Algebra` and a GLSL-generating helper consume, so there is one declaration and the GLSL is *emitted*, not hand-written. That's a bigger lift — flag it as the eventual correct answer, not the first step.
+3. **A `validSystems` invariant test**: assert that every `GeneralizedFn` with `evalG` actually agrees with `evalC` at `p=-1` (the ℂ specialization must equal the ℂ evaluator), and that no transcendental ships an `evalG`. This is cheap, pure, and catches the honesty trap in CI.
+
+> [!NOTE]
+> "Reads consistently as graph and map" is, at bottom, "both apps call the same `evalG(z, algebraOf(p))`." The strongest guarantee is **a single shared TS evaluator that both non-GLSL consumers import** (Argand and any future TS-side map), and **one emitted GLSL** for the WebGL consumers. Two implementations (TS + emitted GLSL) from one spec beats four hand-maintained ones. The verification strategy and the abstraction strategy are the same decision: *reduce the number of independent implementations of the algebra to two (TS, GLSL), generated from one spec.*
+
+### Augmented verdict (delta)
+
+**Endorse (small, correct, ship-now):**
+- The `Algebra` façade over the existing `complexOps.ts` `*G` functions (~30 lines, no new math).
+- One optional `j2` field in `functionHandoff` (additive, default-ℂ, backward-compatible).
+- The `validSystems` capability flag + **capability-gated slider** (disabled-with-reason for transcendentals). This is the honesty mechanism and it's cheap.
+
+**Resist (until the cheap parts prove value):**
+- A global React-context "current number system" — violates the repo's no-global-state rule and falsely implies every app has a system.
+- Generalizing all three GLSL pipelines at once. It's multi-session, per-shader, hand-ported work with real drift risk and no shared-source path.
+- Any design that exposes `p` for the transcendental zoo. That's the correctness trap; the type must forbid it.
+
+**Smallest correct first step:** In **Argand only** (it's the one app that's already generalized), refactor `p`-as-number into the `Algebra` record + add the `validSystems` concept *retroactively* to its own affine/poly engine, and add the golden-vector tests from §5/§4.1. That proves the abstraction in the one place it's free, produces the spec the GLSL ports would later consume, and ships the `j2` handoff field so the *link* is ready before any second app is. No other app changes until that's landed and the tests are green. This sequences the risk: the expensive, drift-prone GLSL work is gated behind a proven, tested TS abstraction — exactly the order my main verdict (#1: tests first) already argues for.
+
+The thesis ("ℂ is one `p`, not home") is *better served* by an abstraction that honestly refuses to generalize `exp` than by one that silently fakes it — so the architecture and the pedagogy point the same way.
+
+---
+
 ## Self-reflection
 
 **What I'm confident about:** The performance analysis (§4) is grounded in the actual code paths — `n = quad || gridColor ? 24 : 1`, the per-`<line>` map at 312-315, and `reach` including the pan offset at 254 are all verbatim, and the grid-colored screenshot corroborates the visual density. The missing-tests finding (§5) is a fact (zero test files for Argand; two sibling apps ship math tests). The `coeffs`/`powReliable` duplication is verbatim from both files. I'm confident in these.
@@ -292,4 +416,4 @@ Net: a well-built app with a clean math core, one genuinely risky performance pa
 
 **What I'd verify before acting:** Profile the Grid+domain-coloring path on a wide viewport (React DevTools render count + a node count) to confirm the §4 ordering of fixes. Prototype `buildScene` against all 7 cells of the table to confirm the union closes cleanly before committing to it.
 
-**Follow-up value:** HIGH — the test suite (§5) and the grid clamp (§4) are concrete, independently shippable, and both unblock or de-risk later visual/UX work from the other hats. The factoring is valuable but should follow the tests, so the value is sequenced, not speculative.
+**Follow-up value:** HIGH — the test suite (§5) and the grid clamp (§4) are concrete, independently shippable, and both unblock or de-risk later visual/UX work from the other hats. The factoring is valuable but should follow the tests, so the value is sequenced, not speculative. The 2026-06-24 augmentation reinforces this: the cross-app "unitary spaces" lens is feasible but its cheap, correct first slice (the `Algebra` façade + `validSystems` capability gate + `j2` handoff field, all in Argand) is precisely the kind of small, tested, sequenced step that de-risks the expensive multi-shader GLSL work behind a proven TS abstraction.

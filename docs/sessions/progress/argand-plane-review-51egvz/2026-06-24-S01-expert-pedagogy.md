@@ -364,6 +364,167 @@ dots it shouldn't be confident about.
 
 ---
 
+## Augmentation (2026-06-24) — the complex–dual–split slider as a cross-app "unitary spaces" lens
+
+Dan's proposal: make Argand's `p = j²` slider a **suite-wide lens**, treating ℂ
+not as the privileged home but as *one foreigner among three* on the
+elliptic/parabolic/hyperbolic (Cayley–Klein / Yaglom) continuum — defamiliarizing
+ℂ as the pedagogical move. I verified the cross-app facts from source before
+answering: `functionHandoff.ts` carries **function identity only** (`fn`, plus
+`p/q` for `z^(p/q)` and the quadratic coefficients) — **no `j²`**; the generalized
+algebra (`mulG`, `normG=x²−p·y²`, `invG`, `powRealG`, `sqrtG`, `expG`/`logG`)
+already lives in `complexOps.ts` but is **Argand-local**; the domain-coloring hue
+everywhere is `atan2(im,re)` — a **ℂ-specific** `arg z`. So the facts hold. Here is
+my read as the pedagogy hat.
+
+### 1. Is "ℂ-as-foreigner" sound pedagogy — and is the trichotomy a spine or a capstone?
+
+**The idea is genuinely powerful and genuinely correct.** Placing ℂ on the
+Cayley–Klein continuum is one of the deepest defamiliarizations available in
+elementary complex analysis: it reveals that "rotation," "the unit circle," and
+"|z|" are *not* facts about number but facts about a *choice of quadratic form*
+`N(z)=x²−p·y²`. The norm-preserving idea — "multiply by a unit-norm element ⇒
+preserve N" — is exactly the right invariant to foreground, and Argand's
+`normG` already encodes it. Yaglom built a whole geometry on this; it is real
+mathematics, not a gimmick.
+
+**But it is a capstone, not a spine — and emphatically not the entry point.**
+
+> [!IMPORTANT]
+> Defamiliarization only teaches *after* familiarity exists. You cannot
+> defamiliarize ℂ for a learner who has not yet familiarized it. "ℂ is just one
+> setting of `p`" is a profound *second* thought; as a *first* thought it's
+> noise. The entry-point app's job (my round-1 finding) is already to get the
+> learner to "z, f(z), and the arrow between" — adding "...and also this is one
+> of three algebras" at that stage is precisely the over-teaching I flagged.
+
+So my round-1 recommendation (**demote j² out of Argand's always-on HUD**) and
+Dan's vision are *compatible, not opposed*: the dial should exist and be a
+first-class idea, but it belongs to the **last rung of the ladder**, surfaced
+once the affine/quadratic story has landed. The trichotomy is the **summit the
+suite climbs toward**, the thing that retroactively reframes everything below —
+which is exactly what a capstone does. Used as a spine (every app opens dialed to
+"pick your algebra") it would make every app harder and teach the foreigner
+before the native tongue.
+
+A clean way to honor both: ℂ is the **default and the teacher**; the dial is the
+**reveal**. "Here is the home you know — now watch me show you it was a choice."
+
+### 2. Where the generalization teaches vs. misleads
+
+This is the crux, and the answer is sharply uneven across apps. The generalization
+is **honest only for the maps built from `+` and `×`** (affine, polynomial,
+rational) and **breaks or changes meaning** for everything that secretly assumes
+`arg z`, the round metric, or transcendental structure.
+
+| Target | Generalizes honestly over `p`? | What it teaches / where it lies |
+|---|---|---|
+| **Plane Transform** (grid map `f:ℂ→ℂ`) | ✅ **for affine/poly/rational** | The strongest win in the suite. A shear (dual) or boost (split) deforming the colored grid is *visually striking and true*: the learner literally sees "multiply" stop being a rotation and become a shear/squeeze. This is the single best home for the dial. |
+| **Complex Particles** (4D graph) | ✅ **for affine/poly** | The 4D graph of `z²` under split-complex is honest and interesting (the height field is built from `mulG`). A real teaching frame: the *graph* changes shape as `p` crosses 0. |
+| **Argand** (affine/quadratic) | ✅ (already does) | Its existing home; correct except the §2 quadratic-`z*` bug. |
+| **FractalsGPU / Correspondence** (`z²+c` iteration) | ⚠️ **honest math, uncertain pedagogy** | A "split-complex Mandelbrot" *is* well-defined (iterate `mulG(z,z,p)+c`) and is a real object — hyperbolic/Lorentzian dynamics. But it is **research-flavored**, not entry-level, and the escape-time picture loses the familiar bulbs. Honest, but a capstone-of-the-capstone. |
+| **Domain coloring (hue = arg z)** | ❌ **changes meaning or breaks** | The signature look is the trap. Under **split**, the natural "angle" is **rapidity** (`atanh`), not `atan2` — coloring by `atan2` is then *false*: it's painting a Euclidean angle onto a Minkowski plane, and equal-hue bands no longer track the algebra's invariant. Under **dual**, the angle is **degenerate** (all directions share one "slope" coordinate) — `atan2` hue still renders but encodes nothing the algebra cares about. The colored grid would *keep working as pixels* while *silently lying about the geometry*. |
+| **Transcendentals / Γ / exp / sin / z^(p/q)** (most of the ~23-function zoo) | ❌ **no honest analogue** | `exp`, `sin`, `Γ` have no clean dual/split version — they're defined by ℂ-specific series/analytic structure. A `j²` slider sitting next to `exp` that produces *something* on the screen for `p≠−1` is **garbage with a confident face** — the same honesty failure as round-1's fabricated fixed point, scaled up. |
+
+> [!WARNING]
+> **Two must-not-ship honesty traps if the dial goes cross-app:**
+> 1. **The hue convention must change with `p`** (or be disabled off-ℂ).
+>    Phase→hue is `arg z`; under split it must become rapidity, under dual it is
+>    degenerate. Shipping `atan2` hue in all three systems paints a true-looking
+>    picture that lies about the invariant. *Either* recompute hue from the
+>    `p`-appropriate angle (rapidity via `atanh`, with the null cone as the hue
+>    singularity), *or* gray the coloring out off-ℂ and say why.
+> 2. **The dial must be inert/hidden for functions with no dual/split analogue.**
+>    A `j²` slider present-but-meaningless beside `exp`/`Γ`/`sin` is a lie of
+>    availability. Only affine/polynomial/rational maps may expose it.
+
+The honest wins (Plane Transform's grid; the 4D graph) are real and worth
+building. The traps are exactly where "make it a suite lens" tempts you to wire
+the slider into apps whose visual signature *assumes* ℂ.
+
+### 3. Terminology fidelity — is "unitary spaces" the right name?
+
+**No — "unitary" is the wrong word, and it's wrong in a way that will actively
+mislead the mathematically literate.** "Unitary" is heavily loaded: a unitary map
+preserves a **Hermitian inner product** (the U(n)/U(1) world), and ℂ's `U(1)` =
+the circle group is *precisely the structure that does NOT generalize* — the
+split case has `O(1,1)`-style boosts (non-compact), the dual case a degenerate
+shear group. Calling the continuum "unitary spaces" names it after the one
+feature only the complex point possesses. It re-privileges ℂ under the banner of
+de-privileging it — the opposite of the intent.
+
+| Candidate name | Verdict |
+|---|---|
+| **"Unitary spaces"** | ❌ Misleading. "Unitary" = inner-product/U(1)-preserving; that's the ℂ-only structure. Don't use as the umbrella. |
+| **"Generalized complex plane"** | ⚠️ OK-ish but still ℂ-centric ("complex" in the name) and collides with the unrelated *generalized complex geometry* (Hitchin) term. |
+| **"Cayley–Klein planes" / "the j²-continuum"** | ✅ **True and creditable.** Cayley–Klein is the established name for the elliptic/parabolic/hyperbolic trichotomy; `j²` is honest and human-editable. |
+| **"Yaglom planes" / per-plane proper names** | ✅ **Most honest at the leaves:** complex = **Argand/Gauss plane**, dual = **Galilean (Yaglom) plane**, split = **Minkowski plane**. This directly continues my round-1 note that "Argand plane" names *only* the complex case. |
+| **"Norm-preserving"/"isometry" framing** | ✅ If you want the *invariant* idea (which is what "unitary" was reaching for), name it after **`N(z)=x²−p·y²` and its symmetry group**, not "unitary." "The maps that preserve `N`" is the true, system-agnostic version of the unitary idea. |
+
+**Recommended naming:** umbrella = **"Cayley–Klein planes"** (or "the `j²`
+continuum"); the three leaves keep their proper names (Argand/Galilean/Minkowski);
+the invariant idea is framed as **norm `N`-preservation**, not "unitary." If Dan
+wants the word "unitary" for its inner-product resonance, scope it to the *complex*
+leaf only and say "the analogue of unitarity in each plane is preserving `N`."
+
+### 4. Learning order across the suite (if the dial becomes a lens)
+
+An honest sequence, native-tongue-first, foreigner-last:
+
+1. **Argand (pure ℂ default)** — *introduces the affine/quadratic story.* The dial
+   exists but **demoted to the System panel** (round-1 fix). This is where a
+   learner first meets `j²` *after* the basics, because Argand's objects (unit
+   curve, the rotation→shear→boost of "multiply") are the cleanest place to *see*
+   the trichotomy on a single point/shape. **Argand earns the dial; it should
+   not lead with it.**
+2. **Plane Transform** — *the strongest generalization home.* Once "multiply can
+   be a shear/boost" is known, watching it deform the **whole colored grid** is
+   the payoff frame. This app most deserves a `p` dial. **Caveat:** ship the hue
+   fix (item §2.1) or this app becomes the loudest place the coloring lies.
+3. **Complex Particles** — *the 4D graph under `p`.* Honest for affine/poly; the
+   graph-shape change as `p` crosses 0 is a genuine "whoa." Gate the dial to the
+   generalizable members of the zoo; **leave it off for exp/sin/Γ.**
+4. **FractalsGPU / Correspondence** — *capstone-of-capstone.* A split-complex
+   "Mandelbrot" is real and fascinating but research-flavored; offer it as an
+   explicit advanced toggle, not a default, never with the ℂ bulbs implied.
+
+**Stay pure ℂ (never get the dial):** any view whose teaching *depends on* `arg z`
+or analytic ℂ structure — the transcendental zoo members, Γ, the phase portrait
+demos. For those, ℂ is not "one setting"; it's the only setting where the object
+*exists*.
+
+**Cross-app plumbing note (for the framework hat, but pedagogically load-bearing):**
+`functionHandoff.ts` carries function identity but **not `p`**. If the dial becomes
+a lens, the honest handoff must carry `p` too — *and* refuse the handoff (or warn)
+when the receiving view can't honor it (e.g. handing `exp` at `p=1` to anything).
+A link that silently drops `p`, or carries it into a function that can't use it,
+re-creates the availability-lie at the suite level.
+
+### Augmented verdict (delta)
+
+- **Endorse the vision as a capstone, reject it as a spine.** "ℂ-as-foreigner /
+  Cayley–Klein continuum" is deep, true, and worth building — *after* the native
+  tongue, never as the opening frame. It reframes the suite from the top; it does
+  not floor it.
+- **Two new must-fixes if the dial goes cross-app** (both are the round-1
+  fabrication failure, generalized): (a) **the phase→hue convention must change
+  with `p` or be disabled off-ℂ** — `atan2` hue in split/dual paints a true-looking
+  lie; (b) **the dial must be hidden/inert for functions with no dual/split
+  analogue** (the transcendental zoo) — a live `j²` next to `exp` is garbage with
+  a confident face.
+- **Rename it.** Drop "unitary spaces" (it names the ℂ-only U(1) structure and
+  re-privileges ℂ). Use **Cayley–Klein planes** / **the `j²` continuum** as the
+  umbrella, **Argand / Galilean (Yaglom) / Minkowski** for the leaves, and frame
+  the invariant as **`N`-preservation**, not unitarity.
+- **Best single home:** **Plane Transform** (grid under shear/boost) for the
+  reveal; **Argand** (demoted dial) as where the idea is first met. Carry `p` in
+  the handoff or don't claim the suite is unified.
+- This does not change my round-1 must-fixes; it *reinforces* the decluttering
+  (the dial leaves Argand's HUD) and adds the hue-and-availability honesty bars
+  for any cross-app rollout.
+
+---
+
 ## Self-reflection
 
 1. **What would you do with another session?** Actually run the app and drag
@@ -404,4 +565,7 @@ dots it shouldn't be confident about.
    judgment-from-screenshots and should be confirmed against the running app.
 8. **Follow-up value:** MEDIUM — conclusions are sound and the must-fix bug is
    well-localized, but the wrong-`z*` claim and the declutter recommendation both
-   warrant a live-app confirmation pass before acting.
+   warrant a live-app confirmation pass before acting. (Augmentation 2026-06-24:
+   the cross-app "unitary spaces" analysis is reasoned from source-verified facts;
+   the two new honesty bars — `p`-dependent hue and dial-availability — are
+   design-prospective and untested since the cross-app dial does not yet exist.)

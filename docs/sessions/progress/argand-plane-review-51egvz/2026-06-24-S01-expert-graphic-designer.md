@@ -405,6 +405,187 @@ of the clearest views in the toolkit.
 
 ---
 
+## Augmentation (2026-06-24) — the complex–dual–split slider as a cross-app "unitary spaces" lens
+
+Dan's framing: complex numbers are the *familiar* entry, but even ℂ should be treated
+as one foreigner among many — a single setting of `p = j²` on the elliptic / parabolic /
+hyperbolic (Cayley–Klein) continuum. The design question for my lens is: **if the `p`
+dial spreads from Argand-only to the whole complex suite, what single visual grammar makes
+"which space am I in" instantly readable, and how do we keep the suite's signature
+domain-coloring honest as `p` moves off −1?**
+
+My round-1 thesis stands and *constrains* the answer: this suite already risks confetti,
+and the one thing that works everywhere is a **disciplined, role-stable color/shape key**.
+A cross-app dial is worth doing *only* if it rides the same discipline — one signifier,
+one palette law, progressive disclosure. Bolt three regime-specific color schemes onto
+four apps and you get exactly the plaid I warned about in §3.
+
+### 1. A shared signifier: the unit curve *is* the dial's face
+
+> [!TIP]
+> Make the **unit curve + null cone the single, universal "where am I" badge**, rendered
+> identically in every app: a faint dashed **circle (p<0) → two parallel lines (p=0) →
+> hyperbola + red null cone (p>0)**, level set `x²−p·y²=1`. It is already the honest
+> visual signature in Argand (`ArgandPlane.tsx:361-392`); promote it to a shared
+> primitive so the *same* glyph deforms the *same* way wherever you are. The eye learns
+> one shape-language once and reads it across Plane Transform, Complex Particles,
+> Correspondence.
+
+Why the unit curve and not, say, a label or a color swatch:
+
+- It is **the geometry of multiplication made visible** — the orbits of `×(unit α₁)` are
+  exactly that curve. A textual "Split-complex" pill tells you; the curve *shows* you.
+  That is the Bret-Victor move and it's already built.
+- It **survives the morph as one continuous object** (circle pinches to lines, lines
+  splay to a hyperbola). A continuous signifier reads as "the geometry is bending"; a
+  swapped icon reads as "mode changed." Continuity is the whole pedagogical payload of a
+  *slider* (vs three buttons), so the signifier must be continuous too.
+- It is **monochrome dashed**, so it never competes with the role colors (z/α₁/α₀/f). It
+  is scaffold, not actor — exactly the data-ink tier it belongs in.
+
+The single affordance that reads "you are dialing the geometry of multiplication" should
+be **the dial physically attached to that curve**: a small inline track whose thumb sits
+*on* a miniature of the morphing curve (circle↔lines↔hyperbola), with the three named
+stops Complex · Dual · Split. Argand's bottom-HUD `j²` row (`Argand.tsx:423-433`) is
+already 80% of this; the cross-app version is "lift that HUD row into a shared chrome
+primitive and draw the curve-thumb on it." One dial, one curve, everywhere.
+
+> [!CAUTION]
+> Do **not** signify the space with a global *background tint* or a *skin change* per
+> regime. It would fight the per-skin theming (already fragile here — see §4 hardcoded-hex
+> bug) and would re-color the whole stage three times, which is the confetti failure at
+> suite scale. The signifier must be a *local, monochrome, geometric* badge, not an
+> ambient wash.
+
+### 2. The domain-coloring problem: hue = `arg z` lies off ℂ
+
+This is the hard one and the place where a naïve "just spread `p` everywhere" actively
+*damages* clarity. Hue = `arg z` is the suite's signature (Complex Particles, Plane
+Transform's colored grids). But `arg` is a *complex* notion:
+
+| Regime | Natural "angle" | What hue=arg does today | Honest reading |
+|--------|-----------------|-------------------------|----------------|
+| Complex `p<0` | true angle `atan2(y,x)`, periodic 0–2π | correct, the signature look | **keep** |
+| Dual `p=0` | degenerate — "angle" collapses, no rotation | maps a meaningless quantity to a full hue wheel | **a lie; must not pretend** |
+| Split `p>0` | rapidity (hyperbolic angle), *unbounded*, sign-flips across the null cone | wraps a non-periodic quantity onto a periodic wheel → false banding | **a lie; must not pretend** |
+
+> [!WARNING]
+> A periodic hue wheel applied to a non-periodic (rapidity) or degenerate (dual) "angle"
+> is the textbook misleading-encoding: it manufactures bands and discontinuities that the
+> math doesn't have, and it implies a rotational symmetry that only ℂ possesses. Spreading
+> the current palette unchanged across `p` would make the *prettiest* app the *most
+> dishonest* one off −1.
+
+The honest visual move, kept to **one coherent palette law, not three regimes**:
+
+- **Make the encoding follow the level sets of the generalized norm `N(z)=x²−p·y²`, not
+  the angle.** That is the *one* quantity that stays meaningful across the whole
+  continuum (it's the very curve in §1). Encode **lightness/value by `|N|`** (iso-norm
+  shells — concentric circles, strips, or hyperbolae) and **hue by the generalized
+  argument** *only where it's well-defined*. This is a single rule (`color = f(N, argG)`)
+  whose *appearance* morphs because `N`'s level sets morph — exactly the continuity we
+  want. In ℂ it reduces to the familiar phase-by-angle look (because `N`-shells are
+  circles and `argG` is the angle), so we **don't lose the signature** at `p=−1`.
+- **Where the generalized argument is undefined or unbounded, desaturate toward neutral
+  rather than inventing hue.** In **dual** (`p=0`), angle is degenerate → render
+  near-grayscale shaded by `N` only (the picture *should* look flatter; that flatness is
+  the truth — multiplication is a shear, not a rotation). In **split**, hue can track
+  rapidity *sign and magnitude* but must **break at the null cone** — and the break should
+  read as a feature: see §3.
+- **One sequential ramp, reused.** To avoid a confetti of regimes, pick a *single*
+  perceptually-uniform ramp for `|N|` and a *single* diverging hue pair for the
+  generalized argument's sign, and let the *geometry* (shell shape) carry the regime, not
+  a new color set. The palette law is constant; only the shapes it paints onto change.
+
+This also resolves a quiet tension with my round-1 role-color key: the role colors
+(z/α₁/α₀/f) are **foreground actors** and must stay fixed across all `p`. The
+domain-coloring is **background field** and is allowed to morph. Keeping those two tiers
+strictly separate (saturated solid actors on top, low-contrast field below) is what stops
+the morph from swallowing the hero — the same figure/ground discipline from §2/§3, now
+load-bearing across the suite.
+
+### 3. Figure/ground & motion across the morph (including the null-cone discontinuity)
+
+When `p` animates complex→dual→split, the grid/loop/field deforms. To read as "the
+geometry is bending" rather than glitch:
+
+- **Move the field, freeze the actors' identity.** During the morph, dim the
+  domain-coloring field (drop its opacity, as I urged for the rainbow grid in §3) so the
+  *deformation of the iso-norm shells* is what the eye tracks, while z/α₁/α₀/f stay full
+  brightness and keep their colors/shapes. The lesson is "the *space* bends, the *players*
+  are the same players." That's a figure/ground choice, not an animation trick.
+- **Pace by the morph, not the clock.** Argand's `sysPlaying` ping-pongs `p` linearly at
+  0.4/s (`Argand.tsx:77-82`). Linear-in-`p` is fine, but the *visually* dramatic stretch
+  is near `p=0` where circles snap to lines — ease the dial to *slow down through the
+  parabolic knife-edge* so the eye can follow the pinch instead of seeing it flash past.
+- **The null cone is a real discontinuity — stage it, don't smooth it.** In split,
+  `×α₁` degenerates on the null lines (Argand draws them red, `:388-389`). As `p` crosses
+  into split, the red null cone should **fade in as a deliberate event**, and any hue that
+  would invert across it should visibly *break* at the red lines (a hard seam, not a smooth
+  ramp). The honest reading is "something genuinely different happens here"; a smooth blend
+  across the cone would erase the very phenomenon. So: keep the red cone monochrome and
+  constant (it's a hazard marker, like the unit curve is a compass), and let the field
+  *terminate* at it rather than bleed through.
+- **Avoid full-field reflow as noise.** The danger is the whole screen re-striping every
+  frame (the §3 plaid, now animated = strobing). Mitigation: animate **only the iso-norm
+  shells and a sparse set of guide curves**, not a dense colored lattice, during the
+  morph; restore detail only when `p` settles on a stop. Motion at low spatial density
+  reads as deformation; motion at high density reads as static/noise.
+
+### 4. Does a suite-wide dial help or hurt the "clean display" I argued for?
+
+**It helps — but only if it inherits the staging discipline, and it raises the stakes on
+every round-1 flaw.**
+
+- It **helps** the deepest pedagogical goal: a *continuous* dial with a *continuous*
+  signifier (the morphing unit curve) is a better teacher than three separate hardwired-ℂ
+  apps, and it reframes ℂ as "one chart among many" exactly as Dan wants. One learned
+  grammar, reused — that is *anti*-confetti when done right.
+- It **hurts** if added naïvely, in three specific ways my round-1 review already flagged:
+  1. **The hardcoded-hex/skin bug (§4) becomes systemic.** A field that recolors by `N`
+     across the continuum *must* be theme-aware, or it'll break on light/phosphor skins in
+     four apps instead of one. The dial cannot ship until the viz palette is tokenized or
+     the viz surface is forced dark. This is now a **blocking prerequisite**, not a polish
+     item.
+  2. **The clutter ceiling (§2) is suite-wide.** Adding a morphing field + null cone +
+     iso-shells to apps that *already* carry their own dense marks (Complex Particles'
+     4D cloud, Plane Transform's two grids) risks the 13-mark pileup everywhere. The dial
+     must arrive *with* a progressive-disclosure rule: the system signifier is
+     low-contrast scaffold by default; the field morph is only loud while the dial is
+     being dragged/played, then settles back.
+  3. **The role-color key (my favorite thing) must be declared sacred and global.** If the
+     dial spreads, the z/α₁/α₀/f/z* colors must be a shared constant across all apps, never
+     reused by the domain-coloring field. The whole scheme works *because* foreground roles
+     are fixed and only the background space morphs.
+
+So: a suite-wide `p` dial is a **good idea that amplifies whatever discipline is already
+there.** On today's Argand — overlapping panels, occluded hero, hardcoded palette — it
+would amplify the mess. Fix the round-1 staging first; *then* the dial becomes the
+suite's most elegant unifying gesture rather than its loudest source of noise.
+
+### Augmented verdict (delta)
+
+- **Endorse** promoting the unit curve + null cone to a **shared, monochrome, continuous
+  signifier** — it is the single best affordance for "which geometry of multiplication am
+  I in," and it already exists in Argand. One glyph, drawn the same everywhere.
+- **Endorse** re-basing domain-coloring on the **generalized norm's level sets** (`N=x²−p·y²`)
+  with a **single palette law** — hue+value where defined, desaturate-to-neutral where the
+  generalized argument is degenerate/undefined (dual, across the null cone). This keeps the
+  ℂ signature at `p=−1` while refusing to lie elsewhere. Reject spreading the raw
+  hue=`arg z` palette unchanged across `p`.
+- **New blocking prerequisite (promotes from round-1 "must-fix #3"):** the viz palette must
+  be **theme-tokenized** before any cross-app system dial ships, or the skin bug
+  metastasizes across four apps.
+- **Concern:** suite-wide deformation animation is a clutter/strobe risk; require the
+  morph to animate only sparse iso-shells + signifier (field dimmed), and to *break*
+  honestly at the null cone rather than smooth across it.
+- **Net:** the dial *helps* the clean-display goal **iff** it inherits round-1's staging
+  discipline (fixed role-color foreground, low-contrast morphing background, progressive
+  disclosure). It is an amplifier — worth building after, not before, the Argand staging
+  fixes.
+
+---
+
 ## Self-reflection
 
 1. **What would you do with another session?** Mock up the proposed clean default frame
@@ -440,6 +621,8 @@ of the clearest views in the toolkit.
    solid. The motion-legibility (§7) and light-skin-contrast (§4) claims are *reasoned,
    not observed* — I inferred the skin bug from token values, not by rendering the light
    skin. Signal: `visual-unverified` (motion and non-dark-skin rendering not captured).
+   The round-2 augmentation (cross-app `p` dial) is design proposal, not verified against
+   any built artifact — it reasons forward from the source facts and round-1 findings.
 8. **Follow-up value:** MEDIUM — the static/source-grounded findings (hierarchy, panel
    clipping, redundant marks, hardcoded palette) are correct and actionable now; a
    follow-up with a Play capture and a light-skin screenshot would confirm the two
