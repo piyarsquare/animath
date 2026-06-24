@@ -380,3 +380,17 @@ names switched. build ✓ · tests 128/128 ✓ · eslint 0.
 > Still open: the side panels stay open over the view during the tour (Dan had to
 > minimize them). Auto-hiding panels in tour mode needs a small chrome hook — filed
 > as the next follow-up.
+
+### 🟣 decision · 20:30 — Reset: a fresh minimal LineTransform view
+**Why:** Dan: "not communicating… this should be a very simple thing that shows
+linear transformations on a real line." The line work kept inheriting the plane
+app's chrome (panels/HUD/j²/fixed point). Stop bolting onto the plane app.
+
+Built **`src/animations/LineTransform/LineTransform.tsx`** — a fresh, self-contained
+component, route `#/line-transform` (unlisted for now). One number line; **x and y
+above** it (input + output, with values), **m and b below** it (slope + shift), the
+colored equation `y = m·x + b`, integer ticks, a faint arc x→y, a Home link, a "drag
+x · m · b" hint. Drag x/m/b → y moves (m stretches/flips, b slides). No panels, no
+plane, no Workspace chrome. ~160 lines. build ✓ · eslint 0 · screenshot
+`assets/2026-06-24-S01-line-transform.png`. The 1-D ground floor; graduate to the
+plane deliberately later. (Not added to the gallery/apps.ts yet — iterating first.)
