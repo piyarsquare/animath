@@ -31,6 +31,24 @@ import {
   functionNames, functionFormulas, functionCategories, POW_PQ_INDEX, QUADRATIC_INDEX,
   MULTIVALUED_INDICES, branchPeriod,
 } from '../../lib/complexMath';
+import { decodeFunction, encodeFunction, type FunctionState } from '../../lib/functionHandoff';
+import { useHandoffState } from '../../lib/useHandoffState';
+
+// ── Per-function "recommended view" presets (PR-1, 2026-06-16) ──────────────
+// Picking a *different* function auto-snaps the DOMAIN/PROJECTION to what that
+// function wants — never the user's appearance choices (color, size, render
+// mode, motion stay exactly as set). Anything a function doesn't list here falls
+// back to the shipped default — Perspective · ×π units (±2π) · one sheet — so
+// snapping back to an entire function restores the calm default framing, and z²
+// (the initial load, which is never a "change") is left byte-for-byte untouched.
+//
+// Poles & Möbius read best on the sphere (the Hopf projection): 1/z, 1/z², 1/z³,
+// (z²+1)/(z²−1), (z−1)/(z+1).
+const HOPF_PROJECTION_FUNCS = new Set<number>([8, 29, 10, 12, 17]);
+// Near-origin branch / essential structure frames tighter at ±2 (×1 units) than
+// at the ±2π default: the roots & logs, inverse trig, inverse hyperbolics,
+// e^{1/z}, and the Joukowski map.
+const UNIT_SCALE_FUNCS = new Set<number>([1, 16, 18, 3, 14, 20, 21, 25, 26, 27, 28, 33, 34, 35, 13, 11]);
 
 type Complex2 = [number, number];
 
@@ -75,9 +93,12 @@ export default function ComplexParticles({
     const idx = functionNames.indexOf(embed?.fn ?? selectedFunction);
     return idx >= 0 ? idx : 0;
   })();
-  const [functionIndex, setFunctionIndex] = usePersistentState(ek('functionIndex'), defaultFunctionIndex);
-  const [expP, setExpP] = usePersistentState(ek('expP'), embed?.p ?? p);
-  const [expQ, setExpQ] = usePersistentState(ek('expQ'), embed?.q ?? q);
+  // A cross-app function handoff (?fn=…) seeds these via the third "seed" setter,
+  // which overrides the live view for this session WITHOUT persisting — so the
+  // destination app's own saved function survives (see useHandoffState).
+  const [functionIndex, setFunctionIndex, seedFunctionIndex] = useHandoffState(ek('functionIndex'), defaultFunctionIndex);
+  const [expP, setExpP, seedExpP] = useHandoffState(ek('expP'), embed?.p ?? p);
+  const [expQ, setExpQ, seedExpQ] = useHandoffState(ek('expQ'), embed?.q ?? q);
   // Riemann-sheet range. The viewer draws one particle set per sheet, at branch
   // index branchMin..branchMax. Only multivalued functions get extra sheets:
   // for single-valued ones every sheet would be the same additive cloud drawn
@@ -106,9 +127,28 @@ export default function ComplexParticles({
   };
   // Coefficients for the generic quadratic a·z²+b·z+c (each [Re, Im]); default a=1
   // (so the out-of-the-box quadratic is z²).
-  const [quadA, setQuadA] = usePersistentState<Complex2>(ek('quadA'), [1, 0]);
-  const [quadB, setQuadB] = usePersistentState<Complex2>(ek('quadB'), [0, 0]);
-  const [quadC, setQuadC] = usePersistentState<Complex2>(ek('quadC'), [0, 0]);
+  const [quadA, setQuadA, seedQuadA] = useHandoffState<Complex2>(ek('quadA'), [1, 0]);
+  const [quadB, setQuadB, seedQuadB] = useHandoffState<Complex2>(ek('quadB'), [0, 0]);
+  const [quadC, setQuadC, seedQuadC] = useHandoffState<Complex2>(ek('quadC'), [0, 0]);
+
+  // One-time function handoff (Phase-2 "graph ↔ map"): arriving from Plane
+  // Transform's "↗ 4D graph" link carries the function in the URL (?fn=…). Apply
+  // it to this session's view only (the seed* setters don't persist), then strip
+  // the query — so a later plain reload still shows the user's own saved choice
+  // rather than the handed-off function. Embed mode parses its own params, so it
+  // is skipped here.
+  useEffect(() => {
+    if (embed) return;
+    const seed = decodeFunction(window.location.hash);
+    if (seed.index === undefined) return;
+    seedFunctionIndex(seed.index);
+    if (seed.p !== undefined) seedExpP(seed.p);
+    if (seed.q !== undefined) seedExpQ(seed.q === 0 ? 1 : seed.q);
+    if (seed.quad) { seedQuadA(seed.quad.a); seedQuadB(seed.quad.b); seedQuadC(seed.quad.c); }
+    window.history.replaceState(null, '', window.location.hash.split('?')[0] || '#/complex-particles');
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Domain region (Domain panel): restrict the sampled plane to a polar radius
   // band on |z| (max thumb = no limit), applied live in the shaders (no geometry
@@ -785,13 +825,40 @@ export default function ComplexParticles({
     options: cat.members.map(idx => ({ value: idx, label: functionNames[idx] })),
   }));
 
+  // Auto-snap the recommended domain/projection when the function actually
+  // changes (PR-1). Domain/projection only — color, size, render mode and motion
+  // are the user's and are left exactly as set. A same-function re-pick and the
+  // initial restore never call this, so the z² landing is preserved.
+  const applyFunctionPreset = (idx: number) => {
+    state.setAxisScale(UNIT_SCALE_FUNCS.has(idx) ? 1 : Math.PI);
+    // Projection: Sphere (Hopf) for poles & Möbius, else Perspective. Only morph
+    // when it differs, so switching among same-projection functions is calm.
+    const proj = HOPF_PROJECTION_FUNCS.has(idx) ? ProjectionMode.Hopf : ProjectionMode.Perspective;
+    if (state.viewType !== proj) controls.handleViewType(proj);
+    // Sheets: a multivalued function arrives showing its full Riemann-sheet set
+    // (capped, tinted by the default sheetTint); single-valued collapses to one.
+    if (MULTIVALUED_INDICES.has(idx)) {
+      const sheets = branchPeriod(idx, expQ === 0 ? 1 : expQ) ?? 3;
+      setBranchMin(0);
+      setBranchMax(Math.min(sheets, MAX_SHEETS) - 1);
+    } else {
+      setBranchMin(0);
+      setBranchMax(0);
+    }
+  };
+
+  const selectFunction = (idx: number) => {
+    if (idx !== functionIndex) applyFunctionPreset(idx);
+    setFunctionIndex(idx);
+  };
+
   const functionPicker = (
     <>
       <Select
         label="Function"
         groups={functionGroups}
         value={functionIndex}
-        onChange={setFunctionIndex}
+        onChange={selectFunction}
       />
       {isPowPQ && (
         <>
@@ -823,7 +890,7 @@ export default function ComplexParticles({
       aria-label="Function"
       title="Function"
       value={functionIndex}
-      onChange={e => setFunctionIndex(Number(e.target.value))}
+      onChange={e => selectFunction(Number(e.target.value))}
     >
       {functionGroups.map(g => (
         <optgroup key={g.label} label={g.label}>
@@ -833,6 +900,22 @@ export default function ComplexParticles({
         </optgroup>
       ))}
     </select>
+  );
+
+  // Cross-app handoff (Phase-2 "graph ↔ map"): open the same function as a plane
+  // map (domain → image) in Plane Transform. The link carries ONLY the function
+  // (name + p/q or quadratic coeffs), never the view — the two apps are two ways
+  // of seeing one function, not two persistence roots.
+  const fnState: FunctionState = { index: functionIndex, p: expP, q: expQ, quad: { a: quadA, b: quadB, c: quadC } };
+  const topBarExtra = (
+    <span className="am-bar-extra">
+      {functionTopSelect}
+      <a
+        className="am-bar-link"
+        href={`#/plane-transform?${encodeFunction(fnState)}`}
+        title="See this function as a plane map — the domain z-plane beside its image f(z)"
+      >↗ plane map</a>
+    </span>
   );
 
   // Riemann-sheet range (shown for multivalued functions only). Kept min ≤ max
@@ -895,7 +978,7 @@ export default function ComplexParticles({
       functionName={displayName}
       functionFormula={displayFormula}
       functionPicker={functionPicker}
-      topExtra={functionTopSelect}
+      topExtra={topBarExtra}
       domainExtras={<>{regionControls}{isMultivalued ? branchControls : null}</>}
       readme={readmeText}
       explainer={explainerText}

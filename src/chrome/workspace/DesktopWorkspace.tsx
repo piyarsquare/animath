@@ -25,7 +25,7 @@ type RefMap = React.MutableRefObject<Record<string, HTMLDivElement | null>>;
  * plus the left icon rail and named layouts, persisted per app.
  */
 export default function DesktopWorkspace(props: WorkspaceProps) {
-  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, actions, modes, activeMode, onModeChange, immersive } = props;
+  const { appId, title, subtitle, views, layouts: appLayouts, defaultLayoutId, explainer, titlePanel, topExtra, actions, modes, activeMode, onModeChange, immersive, layoutCaptions } = props;
   /* immersive desktop: a single view fills the stage (no frame), top bar + rail
    *  + floating panels + action strip stay live over it. Single-view only. */
   const soloImmersive = !!immersive && views.length === 1;
@@ -209,6 +209,14 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
 
   const openIds = Object.keys(state.open);
 
+  // The active posture's one-line caption (opt-in). Resolves the current layout
+  // id to its `sub`; once the user rearranges, state.layout is 'custom' (no
+  // match) and the caption disappears — the guided chapter ends when you start
+  // exploring on your own.
+  const captionSub = layoutCaptions
+    ? [...builtin, ...state.saved].find(l => l.id === state.layout)?.sub
+    : undefined;
+
   return (
     <div className="am-app">
       <TopBar
@@ -293,6 +301,11 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
         ))}
 
         {actions && <ActionBar actions={actions} sections={sections} />}
+        {captionSub && (
+          <div className={`am-caption${actions ? ' am-caption-raised' : ''}`} aria-hidden="true">
+            {captionSub}
+          </div>
+        )}
       </div>
       {fullHelp && explainer && (
         <ExplainerModal title={title} markdown={explainer} onClose={() => setFullHelp(false)} />
