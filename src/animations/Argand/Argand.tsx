@@ -6,7 +6,8 @@ import { usePersistentState, clearPersistedState } from '../../lib/usePersistent
 import './Argand.css';
 import explainerText from './EXPLAINER.md?raw';
 import ArgandPlane, {
-  type Feed, type Handle, Z_COL, A1_COL, A0_COL, A2_COL, F_COL, FIX_COL,
+  type Feed, type Handle, type PlaneShow, SHOW_ALL,
+  Z_COL, A1_COL, A0_COL, A2_COL, F_COL, FIX_COL,
 } from './ArgandPlane';
 import { buildCurve, CURVES, type CurveName } from './curves';
 import { TOUR } from './tour';
@@ -98,6 +99,13 @@ export default function Argand() {
   const [playing, setPlaying] = useState(false);
   // Walkthrough: current step index, or null when not touring.
   const [tourStep, setTourStep] = useState<number | null>(null);
+  // Which actors are visible (progressive disclosure during the walkthrough).
+  const [show, setShow] = useState<PlaneShow>(SHOW_ALL);
+
+  // On the line we speak school algebra (y = m·x + b); on the plane, α·z + α₀.
+  const names = dimension === 'line'
+    ? { z: 'x', a1: 'm', a0: 'b', a2: 'α₂', f: 'y' }
+    : { z: 'z', a1: 'α₁', a0: 'α₀', a2: 'α₂', f: 'f(z)' };
   // The j² morph has its own Play: ping-pong p between −1 and +1.
   const [sysPlaying, setSysPlaying] = useState(false);
   const sysDir = useRef(1);
@@ -208,11 +216,13 @@ export default function Argand() {
     if (s.gridColor !== undefined) setGridColor(s.gridColor);
     if (s.showUnitCircle !== undefined) setShowUnitCircle(s.showUnitCircle);
     if (s.dimension !== undefined) setDimension(s.dimension);
+    // Progressive disclosure: a step lists exactly what's visible (omit ⇒ show all).
+    setShow(s.show ? { point: false, slope: false, shift: false, output: false, unitSet: false, ...s.show } : SHOW_ALL);
     setPlaying(false);
     setSysPlaying(false);
   };
   const startTour = () => { setSeenTour(true); setTourStep(0); applyStep(0); };
-  const exitTour = () => setTourStep(null);
+  const exitTour = () => { setTourStep(null); setShow(SHOW_ALL); };
   const goStep = (n: number) => {
     if (n < 0) return;
     if (n >= TOUR.length) { exitTour(); return; }
@@ -233,15 +243,15 @@ export default function Argand() {
     : [{ label: stopLabels[0], t: 0 }, { label: stopLabels[1], t: 0.25 }, { label: stopLabels[2], t: 0.5 }];
   const atStop = (st: number): boolean => Math.abs(t - st) < 0.02;
 
-  const subtitle = `f(z) = ${formatRect(fz)}   ·   ${systemName(system)}`;
+  const subtitle = `${names.f} = ${formatRect(fz)}   ·   ${systemName(system)}`;
 
   /* ---- the colored equation, shared by panel + readouts ---- */
   const Eqn = (
     <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 15, fontWeight: 700, marginTop: 2 }}>
-      <span style={{ color: F_COL }}>f(z)</span> ={' '}
-      {quad && <><span style={{ color: A2_COL }}>α₂</span>·<span style={{ color: Z_COL }}>z²</span> + </>}
-      <span style={{ color: A1_COL }}>α₁</span>·<span style={{ color: Z_COL }}>z</span> +{' '}
-      <span style={{ color: A0_COL }}>α₀</span>
+      <span style={{ color: F_COL }}>{names.f}</span> ={' '}
+      {quad && <><span style={{ color: A2_COL }}>{names.a2}</span>·<span style={{ color: Z_COL }}>{names.z}²</span> + </>}
+      <span style={{ color: A1_COL }}>{names.a1}</span>·<span style={{ color: Z_COL }}>{names.z}</span> +{' '}
+      <span style={{ color: A0_COL }}>{names.a0}</span>
     </div>
   );
 
@@ -258,17 +268,17 @@ export default function Argand() {
       {Eqn}
       {quad && (
         <div style={{ marginTop: 8 }}>
-          <ComplexInput label="α₂  (quadratic term)" value={[alpha2.re, alpha2.im]} onChange={([re, im]) => setA2(cx(re, im))} />
-          <Checkbox label="Lock α₂" checked={lockA2} onChange={setLockA2} />
+          <ComplexInput label={`${names.a2}  (quadratic term)`} value={[alpha2.re, alpha2.im]} onChange={([re, im]) => setA2(cx(re, im))} />
+          <Checkbox label={`Lock ${names.a2}`} checked={lockA2} onChange={setLockA2} />
         </div>
       )}
       <div style={{ marginTop: 8 }}>
-        <ComplexInput label="α₁  (slope · spin & scale)" value={[alpha1.re, alpha1.im]} onChange={([re, im]) => setA1(cx(re, im))} />
-        <Checkbox label="Lock α₁" checked={lockA1} onChange={setLockA1} />
+        <ComplexInput label={`${names.a1}  (slope · spin & scale)`} value={[alpha1.re, alpha1.im]} onChange={([re, im]) => setA1(cx(re, im))} />
+        <Checkbox label={`Lock ${names.a1}`} checked={lockA1} onChange={setLockA1} />
       </div>
       <div style={{ marginTop: 8 }}>
-        <ComplexInput label="α₀  (shift · intercept)" value={[alpha0.re, alpha0.im]} onChange={([re, im]) => setA0(cx(re, im))} />
-        <Checkbox label="Lock α₀" checked={lockA0} onChange={setLockA0} />
+        <ComplexInput label={`${names.a0}  (shift · intercept)`} value={[alpha0.re, alpha0.im]} onChange={([re, im]) => setA0(cx(re, im))} />
+        <Checkbox label={`Lock ${names.a0}`} checked={lockA0} onChange={setLockA0} />
       </div>
       <div style={{ marginTop: 8, fontSize: 12, fontFamily: 'var(--font-mono, monospace)', color: FIX_COL }}>
         {zStars.length === 0
@@ -306,7 +316,7 @@ export default function Argand() {
           onChange={setCurveName}
         />
       )}
-      <ComplexInput label={isShape ? 'z  (anchor)' : isGrid ? 'z  (probe)' : 'z  (input)'} value={[z.re, z.im]} onChange={([re, im]) => setZ(cx(re, im))} />
+      <ComplexInput label={`${names.z}  ${isShape ? '(anchor)' : isGrid ? '(probe)' : '(input)'}`} value={[z.re, z.im]} onChange={([re, im]) => setZ(cx(re, im))} />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 4 }}>
         {isShape
           ? <>Drag <b style={{ color: Z_COL }}>z</b> to place the shape; <b style={{ color: F_COL }}>f</b> spins, scales and shifts the whole figure.</>
@@ -564,7 +574,7 @@ export default function Argand() {
             snapping={snapping} gridOpacity={gridOpacity} imageOpacity={imageOpacity} showUnitCircle={showUnitCircle}
             gridType={gridType} gridStep={gridStep} gridColor={gridColor}
             viewFromFixed={viewFromFixed} iterate={iterate} iterN={iterN}
-            extent={extent} fill={fill}
+            extent={extent} fill={fill} names={names} show={show}
             onChange={onHandleChange}
             onZoom={f => setExtent(e => Math.min(16, Math.max(1, e * f)))}
           />
@@ -577,13 +587,13 @@ export default function Argand() {
             backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
           }}>
             <div style={{ fontSize: 14, fontWeight: 700 }}>
-              <span style={{ color: F_COL }}>f(z)</span> ={' '}
-              {quad && <><span style={{ color: A2_COL }}>α₂</span>·z² + </>}
-              <span style={{ color: A1_COL }}>α₁</span>·z + <span style={{ color: A0_COL }}>α₀</span>
+              <span style={{ color: F_COL }}>{names.f}</span> ={' '}
+              {quad && <><span style={{ color: A2_COL }}>{names.a2}</span>·{names.z}² + </>}
+              <span style={{ color: A1_COL }}>{names.a1}</span>·{names.z} + <span style={{ color: A0_COL }}>{names.a0}</span>
             </div>
             <div style={{ fontSize: 11, color: 'var(--dim, #9b9ba3)', marginTop: 1 }}>
-              {quad && <><span style={{ color: A2_COL }}>{formatRect(alpha2)}</span> · z² + </>}
-              <span style={{ color: A1_COL }}>{formatRect(alpha1)}</span> · z + <span style={{ color: A0_COL }}>{formatRect(alpha0)}</span>
+              {quad && <><span style={{ color: A2_COL }}>{formatRect(alpha2)}</span> · {names.z}² + </>}
+              <span style={{ color: A1_COL }}>{formatRect(alpha1)}</span> · {names.z} + <span style={{ color: A0_COL }}>{formatRect(alpha0)}</span>
             </div>
           </div>
           {controlHud}

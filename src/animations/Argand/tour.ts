@@ -13,7 +13,7 @@
  * fields it wants changed (everything omitted is left as the learner left it).
  */
 import { cx, type Cx } from './complexOps';
-import type { Feed } from './ArgandPlane';
+import type { Feed, PlaneShow } from './ArgandPlane';
 
 /** The subset of app state a tour step may set. Omitted fields are untouched. */
 export interface TourState {
@@ -31,6 +31,8 @@ export interface TourState {
   gridColor?: boolean;
   showUnitCircle?: boolean;
   dimension?: 'line' | 'plane';
+  /** Which actors are visible this step (omit ⇒ show everything). */
+  show?: Partial<PlaneShow>;
 }
 
 export interface TourStep {
@@ -41,60 +43,79 @@ export interface TourStep {
   state: TourState;
 }
 
-/** The walkthrough. ~9 steps, real line → plane → number planes → explore. */
+/**
+ * The walkthrough. Builds up one idea at a time on the real line (just the line →
+ * b → x → x+b → the sign of b → m → m·x → a negative m flips), then grows a second
+ * axis into the plane (spin, the fixed point, the three number planes). Each step
+ * reveals only the actors it has introduced (`show`), so nothing is on screen
+ * before it is named. On the line we use school algebra: y = m·x + b.
+ */
 export const TOUR: TourStep[] = [
   {
     id: 'line',
-    title: 'Start on the line',
-    body: 'Forget the plane for a moment. Every number is a point on a line. Adding α₀ just slides the input along it — that is all addition ever does.',
+    title: 'Just the line',
+    body: 'This is the number line — every real number is one point on it, with 0 in the middle. That is the whole stage for now. Nothing else yet.',
     state: {
       feed: 'point', degree: 1, system: -1, dimension: 'line',
-      z: cx(1, 0), alpha1: cx(1, 0), alpha0: cx(1.5, 0),
+      z: cx(1, 0), alpha1: cx(1, 0), alpha0: cx(0, 0),
       viewFromFixed: false, iterate: false,
-      gridType: 'cartesian', gridColor: false, showUnitCircle: false, extent: 5,
+      gridType: 'cartesian', gridColor: false, showUnitCircle: false, extent: 6,
+      show: {},                                   // nothing — just the line + its ticks
     },
   },
   {
-    id: 'scale',
-    title: 'Multiplying stretches',
-    body: 'Multiplying by α₁ scales the line — by 2 it stretches, by ½ it shrinks. Make α₁ negative and it also flips through zero.',
-    state: { alpha1: cx(2, 0), alpha0: cx(0, 0) },
+    id: 'meet-b',
+    title: 'Meet b — a shift',
+    body: 'Pick a number and call it b. Here b = 2. On its own it is just a marked spot on the line (the violet square). In a moment it will do something.',
+    state: { alpha0: cx(2, 0), show: { shift: true } },
   },
   {
-    id: 'magnitude',
-    title: 'What keeps the magnitude?',
-    body: 'Which multipliers leave length unchanged? On the line, only ×(+1) and ×(−1). Just two numbers preserve magnitude — that is the whole "unit set" of the line.',
-    state: { alpha1: cx(-1, 0), showUnitCircle: false },
+    id: 'add',
+    title: 'x + b slides',
+    body: 'Now feed in an input x (cyan). Adding b slides x along the line by b: x + b. That is all addition ever does — a slide. Drag x and watch the answer y ride along.',
+    state: { z: cx(1, 0), alpha1: cx(1, 0), alpha0: cx(2, 0), show: { point: true, shift: true, output: true } },
+  },
+  {
+    id: 'sign-b',
+    title: 'When b is negative',
+    body: 'Make b negative and the slide reverses: x + (−2) lands two steps to the left. Positive b slides right, negative b slides left.',
+    state: { z: cx(1, 0), alpha1: cx(1, 0), alpha0: cx(-2, 0), show: { point: true, shift: true, output: true } },
+  },
+  {
+    id: 'meet-m',
+    title: 'Meet m — a multiplier',
+    body: 'Set b back to 0 and bring in a slope m (orange). Multiplying by m scales x: m·x. With m = 2 the line stretches to twice the distance from 0; with m = ½ it shrinks.',
+    state: { z: cx(1.5, 0), alpha1: cx(2, 0), alpha0: cx(0, 0), show: { point: true, slope: true, shift: true, output: true } },
+  },
+  {
+    id: 'neg-m',
+    title: 'A negative m flips',
+    body: 'Make m negative and x is scaled and flipped through 0 — a half-turn. On the line, flipping is the only "rotation" there is. (Soon we get the real thing.)',
+    state: { z: cx(1.5, 0), alpha1: cx(-1, 0), alpha0: cx(0, 0), show: { point: true, slope: true, shift: true, output: true } },
   },
   {
     id: 'newaxis',
     title: 'Add a second axis',
-    body: 'Now give the line a perpendicular i-axis. With room to move sideways, multiplying can turn instead of only flipping: ×i is a quarter-turn.',
-    state: { alpha1: cx(0, 1), alpha0: cx(0, 0), z: cx(1, 0), showUnitCircle: true, dimension: 'plane' },
+    body: 'Give the line a perpendicular axis — call its unit i. Now a multiplier can point sideways: ×i turns x a quarter-turn instead of flipping it. m can scale, rotate, or both.',
+    state: { z: cx(1.5, 0), alpha1: cx(0, 1), alpha0: cx(0, 0), dimension: 'plane', showUnitCircle: true, show: { point: true, slope: true, shift: true, output: true, unitSet: true } },
   },
   {
     id: 'spin',
-    title: 'A whole circle of them',
-    body: 'In the plane a whole circle of multipliers keeps magnitude — every point on the unit circle. Multiply by one and the plane spins. (Two points grew into a circle.)',
+    title: 'A whole circle keeps length',
+    body: 'On the line only ±1 kept length. In the plane a whole circle does — every multiplier on the unit circle just spins. Pick one and watch x turn without stretching.',
     state: { alpha1: cx(0.6, 0.8), system: -1, showUnitCircle: true },
-  },
-  {
-    id: 'add',
-    title: 'Addition still just slides',
-    body: 'Adding α₀ is the same slide it was on the line — now in two dimensions. Multiply spins or scales; add slides. That split never changes.',
-    state: { alpha0: cx(1, 0.5) },
   },
   {
     id: 'fixed',
     title: 'The point left alone',
-    body: 'Spin-and-slide always pins one point: the fixed point z*, where f(z*) = z*. Tick "View from z*" and the map becomes a pure spiral about it.',
+    body: 'Scale-rotate-and-slide always pins one point: the fixed point z*, where f(z*) = z*. (Back to the plane names: m and b are α₁ and α₀, x is z.)',
     state: { alpha1: cx(0.4, 0.8), alpha0: cx(1, 0), viewFromFixed: false },
   },
   {
     id: 'planes',
     title: 'Other ways to multiply',
-    body: 'The unit curve need not be a circle. Dial the number plane j²: Spin (complex), Shear (dual), Boost (split). Same line, three geometries of multiplication.',
-    state: { system: 0, viewFromFixed: false, showUnitCircle: true },
+    body: 'The unit curve need not be a circle. Dial the number plane j²: Spin (complex), Shear (dual), Boost (split) — three geometries of multiplication on the same plane.',
+    state: { system: 0, showUnitCircle: true },
   },
   {
     id: 'explore',

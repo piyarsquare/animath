@@ -353,3 +353,30 @@ plane when switching levels; and yes to ±1 markers.
 - No horizontal grid lines on the bare line (fill 0). Verified by screenshot
   `assets/2026-06-24-S01-line-ticks.png`. Build ✓ · eslint 0. (The expand *animation*
   itself is verified by construction; a live capture would confirm the tween.)
+
+### 🟢 code · 19:40 — Walkthrough rebuilt: progressive disclosure + y=mx+b naming
+**Why:** Dan: "not a good way to learn" — start with JUST the line, then introduce b,
+then x (x+b), the sign of b, then m (m·x); use school-algebra names on the line.
+
+- **Progressive disclosure.** `ArgandPlane` gained `show: {point,slope,shift,output,
+  unitSet}` flags; every marker/leg/fixed-point/±1 is gated, so a step reveals only
+  what it has named. Free play passes `SHOW_ALL` (unchanged).
+- **Contextual naming.** On the line the actors are **x · m · b · y** (school
+  `y = m·x + b`); on the plane they become **z · α₁ · α₀ · f(z)**. Threaded through
+  the on-canvas handle labels, the equation overlay, the panel equation + coefficient
+  labels, and the subtitle.
+- **Number line is a real ruler**: integer **tick labels** under the axis (fade out
+  as the plane fills in).
+- **Tour rewritten to Dan's sequence** (11 steps): just the line → meet b → x+b
+  slides → negative b → meet m (m·x scales) → negative m flips → add a second axis
+  (names switch to α/z, ×i quarter-turn) → a whole circle keeps length (Spin) → the
+  fixed point → other number planes → explore.
+
+Verified by clicking through headless (`assets/2026-06-24-S01-tour-step{1,3,7}.png`):
+step 1 = bare labeled line, step 3 = only x·b·y with the slide, step 7 = plane with
+names switched. build ✓ · tests 128/128 ✓ · eslint 0.
+
+> [!NOTE]
+> Still open: the side panels stay open over the view during the tour (Dan had to
+> minimize them). Auto-hiding panels in tour mode needs a small chrome hook — filed
+> as the next follow-up.

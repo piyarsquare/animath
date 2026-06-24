@@ -17,6 +17,12 @@ export const F_COL = '#34d399';   // f(z) — output (emerald)
 export const FIX_COL = '#fbbf24'; // z* — fixed point (gold)
 export const CRIT_COL = '#94a3b8'; // critical point (slate)
 
+/** Names for the actors — `mxb` on the real line, Greek on the plane. */
+export interface PlaneNames { z: string; a1: string; a0: string; a2: string; f: string }
+/** Which actors are visible — drives progressive disclosure in the walkthrough. */
+export interface PlaneShow { point: boolean; slope: boolean; shift: boolean; output: boolean; unitSet: boolean }
+export const SHOW_ALL: PlaneShow = { point: true, slope: true, shift: true, output: true, unitSet: true };
+
 const MARGIN = 0.9;        // keep the extent inside the frame
 
 interface Props {
@@ -66,6 +72,10 @@ interface Props {
    *  the ticks grow into the vertical grid lines and the imaginary axis/circle
    *  fade in. */
   fill: number;
+  /** Actor names (mxb on the line, Greek on the plane). */
+  names: PlaneNames;
+  /** Which actors are visible (walkthrough progressive disclosure). */
+  show: PlaneShow;
   onChange: (which: Handle, z: Cx) => void;
   onZoom?: (factor: number) => void;
 }
@@ -89,7 +99,7 @@ function useSize(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function ArgandPlane({
-  z, alpha1, alpha0, alpha2, degree, p, feed, curve, t, playing, lockA1, lockA0, lockA2, snapping, gridOpacity, imageOpacity, gridType, gridStep, gridColor, showUnitCircle, viewFromFixed, iterate, iterN, extent, fill, onChange, onZoom,
+  z, alpha1, alpha0, alpha2, degree, p, feed, curve, t, playing, lockA1, lockA0, lockA2, snapping, gridOpacity, imageOpacity, gridType, gridStep, gridColor, showUnitCircle, viewFromFixed, iterate, iterN, extent, fill, names, show, onChange, onZoom,
 }: Props) {
   const quad = degree >= 2;
   const coeffs: Cx[] = quad ? [alpha0, alpha1, alpha2] : [alpha0, alpha1];
@@ -354,13 +364,23 @@ export default function ArgandPlane({
             })}
           </g>
         )}
+        {fill < 0.99 && (() => {
+          const ay = toV(cx(0, 0))[1];
+          return (
+            <g fill="currentColor" stroke="none" fillOpacity={0.55 * (1 - fill)} fontSize={12} textAnchor="middle">
+              {verts.filter(x => Math.abs(x) > 1e-6).map((x, i) => (
+                <text key={`tl${i}`} x={toV(cx(x, 0))[0]} y={ay + 20}>{Number.isInteger(x) ? x : x.toFixed(1)}</text>
+              ))}
+            </g>
+          );
+        })()}
       </g>
     );
   };
 
   // The line's "unit set": ±1, the only magnitude-preservers in ℝ (S⁰). They fade
   // out as the plane fills in, where the whole unit circle (S¹) takes over.
-  const unitSetNode = fill < 0.99 ? (
+  const unitSetNode = (show.unitSet && fill < 0.99) ? (
     <g opacity={1 - fill}>
       {[1, -1].map(s => {
         const [ux, uy] = toV(cx(s, 0));
@@ -460,7 +480,7 @@ export default function ArgandPlane({
         : shape === 'triangle'
           ? <path d={`M ${vx} ${vy - r * 1.2} L ${vx + r * 1.1} ${vy + r * 0.8} L ${vx - r * 1.1} ${vy + r * 0.8} Z`} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2.5} />
           : <rect x={vx - r} y={vy - r} width={r * 2} height={r * 2} fill={col} stroke="var(--viz-bg,#0c0c10)" strokeWidth={2.5} />;
-    const label = which === 'z' ? 'z' : which === 'alpha1' ? 'α₁' : which === 'alpha2' ? 'α₂' : 'α₀';
+    const label = which === 'z' ? names.z : which === 'alpha1' ? names.a1 : which === 'alpha2' ? names.a2 : names.a0;
     return (
       <g key={which} style={{ cursor: isLocked ? 'default' : 'grab' }} onPointerDown={onHandleDown(which)}>
         {!isLocked && <circle cx={vx} cy={vy} r={28} fill="transparent" />}
@@ -561,14 +581,14 @@ export default function ArgandPlane({
             </>
           )}
 
-          {/* α₀ as a translation vector from the origin (the "shift") */}
-          {(() => { const [ax, ay] = toV(alpha0); return (
+          {/* shift as a translation vector from the origin */}
+          {show.shift && (() => { const [ax, ay] = toV(alpha0); return (
             <line x1={oVx} y1={oVy} x2={ax} y2={ay} stroke={A0_COL} strokeOpacity={0.55} strokeWidth={2.5}
               strokeDasharray="5 5" markerEnd="url(#ah-a0)" />
           ); })()}
 
           {/* ---- ITERATION: the orbit z → f(z) → f²(z) … spiraling about z* ---- */}
-          {isPoint && iterate && (
+          {show.output && isPoint && iterate && (
             <>
               <path d={orbitPathD} fill="none" stroke={F_COL} strokeOpacity={0.6} strokeWidth={2} strokeLinecap="round" />
               {orbitDots.map((q, kk) => {
@@ -577,7 +597,7 @@ export default function ArgandPlane({
                 return <circle key={kk} cx={vx} cy={vy} r={kk === 0 ? 6 : 4}
                   fill={kk === 0 ? Z_COL : F_COL} fillOpacity={kk === 0 ? 1 : op} />;
               })}
-              {(() => { const [fx, fy] = toV(orbitDots[1] ?? fOf(z)); return <text x={fx + 9} y={fy - 8} fontSize={16} fill={F_COL}>f(z)</text>; })()}
+              {(() => { const [fx, fy] = toV(orbitDots[1] ?? fOf(z)); return <text x={fx + 9} y={fy - 8} fontSize={16} fill={F_COL}>{names.f}</text>; })()}
               {showMover && (() => { const [mx, my] = toV(orbitAt(t * iterN)); return (
                 <circle cx={mx} cy={my} r={7} fill="#fde68a" stroke="var(--viz-bg,#0c0c10)" strokeWidth={2} />
               ); })()}
@@ -585,7 +605,7 @@ export default function ArgandPlane({
           )}
 
           {/* ---- DEGREE 1: the probe z → α₁z → f(z), and the diagonal way back ---- */}
-          {(isPoint || isGrid) && !quad && !(isPoint && iterate) && (
+          {show.output && (isPoint || isGrid) && !quad && !(isPoint && iterate) && (
             <>
               {/* the return route (f(z) → z), spin & shift interpolated together */}
               <path d={simulArc(z)} fill="none" stroke="#2dd4bf" strokeOpacity={0.55} strokeWidth={2.5} strokeDasharray="7 6" strokeLinecap="round" />
@@ -600,13 +620,13 @@ export default function ArgandPlane({
               ); })()}
               {(() => { const [fx, fy] = toV(fOf(z)); return <>
                 <circle cx={fx} cy={fy} r={6} fill={F_COL} />
-                <text x={fx + 10} y={fy - 9} fontSize={18} fill={F_COL}>f(z)</text>
+                <text x={fx + 10} y={fy - 9} fontSize={18} fill={F_COL}>{names.f}</text>
               </>; })()}
             </>
           )}
 
           {/* ---- DEGREE 2: f(z) as the tip-to-tail sum of its terms ---- */}
-          {(isPoint || isGrid) && quad && !(isPoint && iterate) && (
+          {show.output && (isPoint || isGrid) && quad && !(isPoint && iterate) && (
             <>
               {isPoint && (
                 <>
@@ -630,13 +650,13 @@ export default function ArgandPlane({
               })()}
               {(() => { const [fx, fy] = toV(fOf(z)); return <>
                 <circle cx={fx} cy={fy} r={6} fill={F_COL} />
-                <text x={fx + 10} y={fy - 9} fontSize={18} fill={F_COL}>f(z)</text>
+                <text x={fx + 10} y={fy - 9} fontSize={18} fill={F_COL}>{names.f}</text>
               </>; })()}
             </>
           )}
 
           {/* ---- the critical point z = −α₁/2α₂ (the quadratic's fold) ---- */}
-          {zCrit && (() => { const [cxp, cyp] = toV(zCrit); return (
+          {show.output && zCrit && (() => { const [cxp, cyp] = toV(zCrit); return (
             <g stroke={CRIT_COL} strokeWidth={1.5} fill="none">
               <circle cx={cxp} cy={cyp} r={5} />
               <line x1={cxp - 7} y1={cyp} x2={cxp + 7} y2={cyp} />
@@ -645,7 +665,7 @@ export default function ArgandPlane({
           ); })()}
 
           {/* ---- the fixed point(s) z* (where f(z*) = z*) ---- */}
-          {zStars.map((zs, i) => { const [sx, sy] = toV(zs); return (
+          {show.output && zStars.map((zs, i) => { const [sx, sy] = toV(zs); return (
             <g key={i}>
               <circle cx={sx} cy={sy} r={6.5} fill="none" stroke={FIX_COL} strokeWidth={2} />
               <circle cx={sx} cy={sy} r={2} fill={FIX_COL} />
@@ -653,11 +673,11 @@ export default function ArgandPlane({
             </g>
           ); })}
 
-          {/* draggable handles: z (input), α₁ (slope), α₀ (shift), α₂ (quadratic) */}
-          {handleGlyph('z', z, Z_COL, 'circle', false)}
-          {handleGlyph('alpha1', alpha1, A1_COL, 'diamond', lockA1)}
-          {handleGlyph('alpha0', alpha0, A0_COL, 'square', lockA0)}
-          {quad && handleGlyph('alpha2', alpha2, A2_COL, 'triangle', lockA2)}
+          {/* draggable handles: input (z/x), slope (α₁/m), shift (α₀/b), quadratic (α₂) */}
+          {show.point && handleGlyph('z', z, Z_COL, 'circle', false)}
+          {show.slope && handleGlyph('alpha1', alpha1, A1_COL, 'diamond', lockA1)}
+          {show.shift && handleGlyph('alpha0', alpha0, A0_COL, 'square', lockA0)}
+          {quad && show.slope && handleGlyph('alpha2', alpha2, A2_COL, 'triangle', lockA2)}
         </svg>
       )}
     </div>
