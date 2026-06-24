@@ -229,6 +229,24 @@ informs future rounds. Delete or check off items as they land.
   Lorentzian; hyperbolic/perplex numbers). A neutral umbrella for the morphing object
   is the "generalized complex plane."
 
+- [ ] [complex-particles] !med Mark inside/outside the unit circle (`|z| = 1`) in the 4D graph.
+  Dan (2026-06-17) has been "missing" a way to *see* `|z| < 1` vs `|z| ≥ 1` — the circle
+  is where Möbius/Blaschke maps swap inside↔outside, Joukowski folds it to a slit, and
+  roots of unity sit. A **shader/color change** (per-particle `|z|` is in the shader; no
+  DOM-overlay path for 80k points), deliberately kept out of #222. Design forks: (a) two
+  colormaps split at `|z|=1` (Dan's instinct); (b) a diverging palette centered on
+  `|z|=1` (circle as visible zero-crossing — most honest); (c) outside dimmed/desaturated;
+  (d) a literal drawn `|z|=1` ring. Open: domain `|z|` vs image `|f|`; new "Color by"
+  option vs a modifier on Domain/Range coloring. Honors hue-never-encodes-identity (colors
+  by a geometric region of `z`). See the plan's Phase-2 section. Pairs with the next item.
+
+- [ ] [complex-particles] !low Graph-native correspondence tie-line overlay (Step 2, Phase-2).
+  The "lift line" from the domain point `(x,y,0,0)` to its graph point `(x,y,Re f,Im f)`,
+  drawn through the same projection + 4D rotation (domain plane below, each point lifted
+  to its graph height). Engine-adjacent: new `LineSegments` geometry + projection plumbing,
+  plus undecided density/picking (sparse subset and/or tapped-point ray — never all 80k).
+  A domain-legibility twin of the unit-circle item above; could be one PR.
+
 - [x] [engine] Solid Worlds — fix the cell-engine screw bug to graduate the 2 experimental worlds.
   DONE 2026-06-20 (branch `claude/3d-manifold-worlds-imwmal`). Was two distinct
   bugs: (A) the boundary gluing reduced a screwed face's straddling image to the

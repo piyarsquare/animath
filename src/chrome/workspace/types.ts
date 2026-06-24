@@ -139,6 +139,13 @@ export interface WorkspaceProps {
   immersive?: boolean;
   /** App-specific built-in layouts; Compact + Everything are auto-appended. */
   layouts?: LayoutDef[];
+  /** Desktop-only: render the active layout's `sub` as a subtle, non-interactive
+   *  caption bottom-center of the stage — the "guided chapter" subtitle for
+   *  task-shaped postures (Complex Particles' Single Function / Representations /
+   *  …). Off by default so other apps are unaffected; it fades to nothing once
+   *  the user rearranges (the layout id becomes 'custom'). Phone hides the Layout
+   *  menu, so this has no effect there. */
+  layoutCaptions?: boolean;
   /** Initial layout; default: first app layout, else 'everything'. */
   defaultLayoutId?: string;
   /** Markdown for the top-bar "?" explainer. */

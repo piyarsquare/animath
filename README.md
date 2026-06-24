@@ -9,8 +9,8 @@
 The landing page (`#/`) is a gallery of every app; the cards below are also
 reachable directly by hash route.
 
-1. **[Complex Particles](https://piyarsquare.github.io/animath/#/complex-particles)** – 3D representation of four-dimensional complex functions. Includes the former *Complex Roots* (`z^(p/q)`) and *Complex Multibranch* (multi-sheeted maps for `sqrt`, `ln`, etc.) as built-in modes.
-2. **[Plane Transform](https://piyarsquare.github.io/animath/#/plane-transform)** – watch a complex function `f : ℂ → ℂ` warp a colored grid of the plane, input pane beside output pane.
+1. **[Complex Particles](https://piyarsquare.github.io/animath/#/complex-particles)** – 3D representation of four-dimensional complex functions. Includes the former *Complex Roots* (`z^(p/q)`) and *Complex Multibranch* (multi-sheeted maps for `sqrt`, `ln`, etc.) as built-in modes. A top-bar **↗ plane map** link opens the same function as a plane map in Plane Transform.
+2. **[Plane Transform](https://piyarsquare.github.io/animath/#/plane-transform)** – watch a complex function `f : ℂ → ℂ` warp a colored grid of the plane, input pane beside output pane. Its **↗ 4D graph** link opens the same function back in Complex Particles — the graph and the map are two views of one function.
 3. **[Fractals](https://piyarsquare.github.io/animath/#/fractals)** – GPU-accelerated Mandelbrot / Julia / Burning Ship / Tricorn viewer with optional orbit-tracing mode.
 4. **[Correspondence](https://piyarsquare.github.io/animath/#/correspondence)** – side-by-side Mandelbrot–Julia explorer; pick or draw paths through `c`.
 5. **[Topology Walk](https://piyarsquare.github.io/animath/#/topology-walk)** – first-person walk on a closed surface: a twisting / knotted corridor or a flat torus / Klein bottle, with shared footprints, avatar and third-person view.

@@ -13,6 +13,8 @@ import {
   applyComplexBranch, complexPowRational, complexQuadratic,
 } from '../../lib/complexMath';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
+import { decodeFunction, encodeFunction, type FunctionState } from '../../lib/functionHandoff';
+import { useHandoffState } from '../../lib/useHandoffState';
 import { vertexShader, fragmentShader } from './shaders';
 import {
   buildStandardCurve, STANDARD_CURVES,
@@ -61,17 +63,39 @@ export default function PlaneTransform({ embed }: {
 } = {}) {
   // Per-field persistence key; null in embed mode (ephemeral).
   const ek = (field: string) => (embed ? null : `${STORAGE_KEY}:${field}`);
-  const [functionIndex, setFunctionIndex] = usePersistentState(
+  // A cross-app function handoff (?fn=…) seeds these via the third "seed" setter,
+  // which overrides the live view for this session WITHOUT persisting — so the
+  // destination app's own saved function survives (see useHandoffState).
+  const [functionIndex, setFunctionIndex, seedFunctionIndex] = useHandoffState(
     ek('functionIndex'), Math.max(0, functionNames.indexOf(embed?.fn ?? 'sin')),
   );
-  const [expP, setExpP] = usePersistentState(ek('expP'), embed?.p ?? 1);
-  const [expQ, setExpQ] = usePersistentState(ek('expQ'), embed?.q ?? 2);
+  const [expP, setExpP, seedExpP] = useHandoffState(ek('expP'), embed?.p ?? 1);
+  const [expQ, setExpQ, seedExpQ] = useHandoffState(ek('expQ'), embed?.q ?? 2);
   const [branchIndex, setBranchIndex] = usePersistentState(ek('branchIndex'), 0);
   // Coefficients for the generic quadratic a·z²+b·z+c (each [Re, Im]); default
   // a=1 so the out-of-the-box quadratic is z². Mirrors ComplexParticles.
-  const [quadA, setQuadA] = usePersistentState<[number, number]>(ek('quadA'), [1, 0]);
-  const [quadB, setQuadB] = usePersistentState<[number, number]>(ek('quadB'), [0, 0]);
-  const [quadC, setQuadC] = usePersistentState<[number, number]>(ek('quadC'), [0, 0]);
+  const [quadA, setQuadA, seedQuadA] = useHandoffState<[number, number]>(ek('quadA'), [1, 0]);
+  const [quadB, setQuadB, seedQuadB] = useHandoffState<[number, number]>(ek('quadB'), [0, 0]);
+  const [quadC, setQuadC, seedQuadC] = useHandoffState<[number, number]>(ek('quadC'), [0, 0]);
+
+  // One-time function handoff (Phase-2 "graph ↔ map"): arriving from Complex
+  // Particles' "↗ plane map" link carries the function in the URL (?fn=…). Apply
+  // it to this session's view only (the seed* setters don't persist), then strip
+  // the query — so a later plain reload still shows the user's own saved choice
+  // rather than the handed-off function. Embed mode parses its own params, so it
+  // is skipped here.
+  useEffect(() => {
+    if (embed) return;
+    const seed = decodeFunction(window.location.hash);
+    if (seed.index === undefined) return;
+    seedFunctionIndex(seed.index);
+    if (seed.p !== undefined) seedExpP(seed.p);
+    if (seed.q !== undefined) seedExpQ(seed.q === 0 ? 1 : seed.q);
+    if (seed.quad) { seedQuadA(seed.quad.a); seedQuadB(seed.quad.b); seedQuadC(seed.quad.c); }
+    window.history.replaceState(null, '', window.location.hash.split('?')[0] || '#/plane-transform');
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [density, setDensity] = usePersistentState(ek('density'), 240);          // points per side
   const [pointSize, setPointSize] = usePersistentState(ek('pointSize'), 2.5);
   const [viewExtent, setViewExtent] = usePersistentState(ek('viewExtent'), embed?.extent ?? 3);   // half-side of visible square
@@ -557,6 +581,18 @@ export default function PlaneTransform({ embed }: {
   // so nothing from the old drawer's About section is lost.
   const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
 
+  // Cross-app handoff (Phase-2 "graph ↔ map"): open the same function as its 4D
+  // graph in Complex Particles. Carries ONLY the function (name + p/q or quadratic
+  // coeffs), never view/appearance state.
+  const handoffState: FunctionState = { index: functionIndex, p: expP, q: expQ, quad: { a: quadA, b: quadB, c: quadC } };
+  const topBarExtra = (
+    <a
+      className="am-bar-link"
+      href={`#/complex-particles?${encodeFunction(handoffState)}`}
+      title="See this function as its 4D graph — the particle cloud (z, f(z)) in ℂ²"
+    >↗ 4D graph</a>
+  );
+
   return (
     <Workspace
       appId="plane-transform"
@@ -568,6 +604,7 @@ export default function PlaneTransform({ embed }: {
       defaultLayoutId="essentials"
       explainer={help || null}
       titlePanel="function"
+      topExtra={topBarExtra}
     />
   );
 }
