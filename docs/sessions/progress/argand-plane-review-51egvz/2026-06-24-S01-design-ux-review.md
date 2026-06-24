@@ -161,3 +161,23 @@ round-1 palette-token bug to a blocking prerequisite**. Blind spot: nobody rende
 reveal (a Plane-Transform grid at p=0/p=+1 would de-risk cheaply). Recommended first move
 = **Phase 0** (≈ round-1's Tier-0 tests + a ~30-line façade + one URL key), which forces
 the naming decision and merges the two plans into one branch of work.
+
+### 🟣 decision · 14:40 — Dan's steer: name = "Number Planes", scope = lines→poly→rational
+**Why:** Resolves the two biggest cross-app (Round 2) tensions and shrinks the risk.
+
+- **Name.** Dan rejected *both* hat candidates — "unitary" (re-privileges ℂ) and
+  "Cayley–Klein / j²-continuum" (correct but scary for an entry-point app). Chosen
+  umbrella: **"Number Planes"** — "the complex plane is one of a family" — tagline
+  **"how do you do arithmetic on the plane?"**. Three leaves keep the app's verbs:
+  **Spin · Shear · Boost** (complex · dual · split). Proper nouns (Cayley–Klein,
+  Galilean, Minkowski) live **only in the sources block**, never front-of-house.
+- **Scope.** Lines → polynomials → (maybe) rational functions — *exactly the
+  honestly-`p`-generalizable set*. This **dissolves the transcendental honesty
+  trap** as a program concern (the `validSystems` gate shrinks to a per-app guard
+  for apps exposing the zoo). And **"explain the limits"** (z*→∞ as α₁→1; the null
+  cone / dual degeneracy; angle-isn't-angle off ℂ) becomes a first-class pedagogy
+  requirement — which **promotes the round-1 fabricated-fixed-point fix** from
+  bug-patch to *the worked example of a limit we teach*.
+
+Recorded in the synthesis as **R2.5**. Still open: Phase 0 now vs. north-star;
+the per-app GLSL reach (the real budget). PR #237 stays the live record.

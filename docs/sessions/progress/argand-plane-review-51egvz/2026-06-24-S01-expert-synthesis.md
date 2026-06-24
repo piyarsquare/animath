@@ -471,12 +471,78 @@ unit-curve face, three states) defined in Phase 0 and reused; **rename off
 "unitary"** unless Dan wants it as a codename only.
 
 ### Open questions for Dan (cross-app)
-1. **Name** — keep "unitary spaces," or adopt **Cayley–Klein / j²-continuum**
-   (the pedagogy hat's pushback)?
+1. ~~**Name** — keep "unitary spaces," or adopt **Cayley–Klein / j²-continuum**?~~
+   **RESOLVED → "Number Planes"** (see R2.5).
 2. **Near-term build or north-star?** — do we start Phase 0 now, or log it as a
-   direction and finish the round-1 Argand polish first?
+   direction and finish the round-1 Argand polish first? *(still open)*
 3. **How far out does the dial travel** — Argand-as-capstone only, or all the way
-   to Plane Transform / fractals (which is where the GLSL cost lives)?
+   to Plane Transform / fractals (which is where the GLSL cost lives)? *(function
+   scope resolved in R2.5; the per-app reach — i.e. the GLSL budget — is still
+   open.)*
+
+## R2.5 — Dan's steer (2026-06-24): name + scope resolved
+
+Two decisions from Dan that settle the biggest R2 tensions and **shrink the
+program's risk surface**.
+
+### Name: **"Number Planes"** — tagline *"how do you do arithmetic on the plane?"*
+Dan rejected **both** candidates the hats argued over: "unitary" (re-privileges
+ℂ — the pedagogy hat's objection stands) **and** "Cayley–Klein / j²-continuum"
+(correct but *scary* — two surnames, reads as gatekeeping for an entry-point
+app). The chosen umbrella is **Number Planes**: "the complex plane is one of a
+family." The three leaves keep the app's existing in-world verbs for what
+multiplication *does* — **Spin** (complex) · **Shear** (dual) · **Boost**
+(split) — not the proper-noun geometry names. So the naming layer is now:
+
+| Layer | Name |
+|---|---|
+| Umbrella idea / lens | **Number Planes** |
+| Tagline | *how do you do arithmetic on the plane?* |
+| The three leaves (dial states) | **Spin · Shear · Boost** (= complex · dual · split) |
+| The shared dial affordance | the **unit curve + null cone** badge (R2.1, unchanged) |
+| Proper-noun pointers (sources block only) | Argand / Galilean–Yaglom / Minkowski; Cayley–Klein |
+
+> [!IMPORTANT]
+> "Cayley–Klein," "Galilean," "Minkowski," "elliptic/parabolic/hyperbolic" survive
+> **only in the "Possible sources & where to go further" block** — wayfinding for
+> the curious, never in the front-of-house prose. Front-of-house is *arithmetic on
+> the plane* and *Spin/Shear/Boost*.
+
+### Scope: **lines → polynomials → (maybe) rational functions** — and *teach the limits*
+This is the decisive simplification. Dan scopes the program to **affine →
+polynomial → (later) rational maps** — which is **exactly the set that
+generalizes honestly over `p`** (R2 grounding fact). Consequences:
+
+- **The honesty-trap tension largely dissolves.** The hats' central worry — a dial
+  that NaNs/fakes on the transcendental zoo (`exp`, `sin`, `Γ`) — is now
+  **out of program scope**. The typed `validSystems` capability gate is still
+  worth building, but it shrinks from "a design crisis" to "a guard for the apps
+  that happen to expose the zoo (Plane Transform / Complex Particles)." The
+  program's own function ladder never trips it.
+- **"Explain the limits" becomes a first-class pedagogy requirement, not a
+  footnote.** Dan: *"we would want to explain what the limits are for things like
+  fixed points."* The limits ARE the lesson:
+  - the fixed point `z* = α₀/(1−α₁)` **flying to ∞** as `α₁ → 1` (pure shift) —
+    already shown as "—", now narrate *why*;
+  - multiplication **degenerating on the null cone** (split) and along the **flat
+    direction** (dual) — the very regions where round-1's **fabricated dual/split
+    fixed points** came from;
+  - the **"angle" ceasing to mean angle** off ℂ (the domain-coloring problem from
+    the graphic-designer augmentation).
+- This **promotes the round-1 fabricated-fixed-point fix** from "an honesty bug to
+  patch" to "the worked example of a limit we explicitly teach" — same code change,
+  bigger pedagogical payoff. It stays the lone true-correctness item (round-1 Tier
+  1 #3) but now anchors the Number Planes story.
+
+### What this changes in the phased plan (R2.4)
+- **Phase 0** name decision is **made** — `lib/` substrate, the `sys`/`j2`
+  handoff key, and the dial contract all carry the word **Number Planes** / Spin ·
+  Shear · Boost.
+- **Rational functions** are an explicit (later) rung on Argand's own ladder
+  (degree pill → Linear → Quadratic → … → Rational), all honest over `p`.
+- Still genuinely open: **Phase 0 now vs. north-star** (Open Q2), and **the
+  per-app GLSL reach** (Open Q3's second half) — the cost lives in porting
+  `gmul`/`gpow` into Plane Transform's shaders, unaffected by the name/scope calls.
 
 > [!TIP]
 > The cleanest first move is **Phase 0**, and it's almost free because it *is*
