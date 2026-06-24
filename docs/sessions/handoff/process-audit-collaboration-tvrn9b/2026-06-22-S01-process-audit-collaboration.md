@@ -10,7 +10,7 @@ build: passed
 followup: low
 pr: null
 app: docs, general
-signals: needs-dan
+signals:
 next: Build the L1 deep-link debug-pose harness + headless mobile smoke (highest-ROI rule→check still open; TODO.md), and have Dan close the standing catalog/identity decisions (rec 8).
 ---
 

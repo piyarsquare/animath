@@ -10,7 +10,7 @@ build: passing
 followup: null
 pr: null
 app: solid-worlds
-signals: visual-unverified
+signals:
 next: Confirm −a2 = ℤ⊕ℤ/4 against Conway–Rossetti Table 6; then fix the cell-engine screw bug (lib/homology.ts) to graduate the two screw worlds (didicosm, second amphidicosm) from experimental to dual-verified.
 ---
 

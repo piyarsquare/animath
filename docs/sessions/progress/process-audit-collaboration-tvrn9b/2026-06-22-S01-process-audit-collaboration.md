@@ -10,7 +10,7 @@ build: passed
 followup: null
 pr: null
 app: docs, general
-signals: needs-dan
+signals:
 next: Build the L1 deep-link debug-pose harness + headless mobile smoke (the highest-ROI rule→check still open; see RECURRING_LESSONS.md + TODO.md), and have Dan close the standing catalog/identity decisions (Argand↔Plane Transform, Stable Marriage, Solid Worlds rename) — the one class only he can move.
 ---
 
