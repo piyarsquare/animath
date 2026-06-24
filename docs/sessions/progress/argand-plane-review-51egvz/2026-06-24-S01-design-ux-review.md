@@ -414,3 +414,32 @@ Net: the app is the **plane** app as it stood before the walkthrough experiment.
 build ✓ · tests 128/128 ✓ · eslint 0 · screenshot
 `assets/2026-06-24-S01-pullback-plane.png`. Next: rework the *narrative* before any
 more UI.
+
+### 🟣 decision · 21:30 — Tidy + narrative-first pivot
+**Why:** Dan: tidy the branch; restart from a *document* that crafts the story, with
+interactivity layered on later. Story spine (drafting): real ×/+ → mx+b as a
+point→point map → ℝ²→ℝ² with addition element-wise → demand multiplication respect a
+magnitude → the j² trichotomy.
+
+Tidy: branch is green (plane app restored, build/tests/lint clean). **Kept**
+`numberPlanes.ts` — it is exactly the engine the new narrative needs (the `mulG` /
+`normG=x²−p·y²` / units machinery). PR body refreshed to reflect reality
+(review + plane polish kept; number-line/tour experiments explored & shelved;
+narrative rethink next). Git history left intact (no force-push) as the audit trail.
+
+**Narrative crux captured** (Dan's question — why addition element-wise, not ×):
+- Keep **+ element-wise** = the vector/translation structure; identical in all three
+  planes, so all the richness lives in ×.
+- Make **× bilinear** (distributes, has identity 1) ⇒ it's fixed by one number,
+  **j² = p**. So "every way to multiply the plane" is a single real dial.
+- Demand a **magnitude × respects** (`N(zw)=N(z)N(w)`, `N=x²−p·y²`) ⇒ the units
+  (N=1) are the unit curve; p<0 circle (ℂ/rotation), p=0 lines (dual/shear), p>0
+  hyperbola (split/boost).
+- **"Why not × element-wise too?"** You can — and it isn't a dead end: component-wise
+  product on ℝ² **is split-complex in its eigen (null) basis**. The trichotomy is
+  exactly *how much the two axes interact under ×*: fully entangled (ℂ — rotation has
+  no real eigenbasis), fully separable (split = element-wise), and the knife-edge
+  (dual). Complex is special precisely because it's the one you **can't** diagonalize
+  over ℝ.
+- Ladder (Hurwitz): magnitude-respecting multiplication exists only in dim **1, 2,
+  4, 8** (ℝ, ℂ, ℍ, 𝕆); units S⁰ ⊂ S¹ ⊂ S³ ⊂ S⁷ — the on-ramp to quaternions.
