@@ -32,6 +32,23 @@ the **screenshot tour** (#235, `gracious-ptolemy`). The last triage pass was
 
 ## Working notes
 
+### 🟡 milestone · 00:12 — Fixed #230's P2, verified, merged; closed #222
+**Why:** Dan picked "fix P2 first, then merge." The handoff clobbered the saved
+function; fix it honestly, prove the user-visible behavior, then land.
+
+Verified #230 still holds against current `main` (clean merge, build ✓, 78/78
+tests ✓, lint 0). Fixed review **P2** (cross-app handoff overwrote the destination
+app's *persisted* function) with a new `src/lib/useHandoffState.ts`: the URL seed
+overrides the session *view* via a third "seed" setter that never persists, while
+the normal setter still writes through — so a deliberate in-app change persists but
+a handoff is transient. Applied to both viewers (functionIndex + p/q + quad).
+**Verified headless** (Puppeteer, real document loads): handoff shows the seeded
+function, localStorage keeps the saved choice, a plain reload reverts to it, and
+in-app changes still persist (5/5). Caught + corrected a harness artifact first
+(same-route hash nav doesn't remount). Pushed to the PR branch (`c571957`), final
+merged-with-main build ✓, **squash-merged #230** (`b3bb1ca` → triggers Pages
+deploy), then **closed #222** as superseded.
+
 ### 🟢 code · 23:40 — Shelved #223 (quaternion / The Belt) as stopped; app code dropped
 **Why:** Dan: "223 was not a successful app — shelf as stopped, but all quaternion
 app code can go away entirely; commit skills only as provisional."
