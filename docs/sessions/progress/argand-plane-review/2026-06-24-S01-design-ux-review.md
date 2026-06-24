@@ -45,6 +45,27 @@ Relevant backlog items (`docs/sessions/TODO.md`):
 
 ## Working notes
 
+### 🟡 milestone · 13:05 — All 5 hats in; synthesis written
+**Why:** Convergence is the deliverable; record it and the one verification done.
+
+All five reports written ([synthesis](2026-06-24-S01-expert-synthesis.md)). The five
+independent lenses **converged on the same verdict**: keep the bones (honest math, the
+role-color system, the live-drag toy core), and **subtract** — the problem is *staging*,
+not conception. Nobody recommended a rebuild.
+
+Verified one disputed claim during synthesis: the graphic designer's "light skin will
+look broken" is **overstated** — a light-skin capture shows the saturated role colors
+hold on cream; only gold z*, the faint grid, and the pale-yellow Play mover lose
+contrast. Downgraded from must-fix correctness to polish.
+
+Synthesized prioritized plan: **Tier 0** add `complexOps` tests (safety net, do first) ·
+**Tier 1** fix Essentials overlap, the one real honesty bug (fabricated dual/split z*),
+collapse the triple feed-switcher, resolve the hint pill, rescue the phone hero · **Tier
+2** declutter default + make Play build trails + move verbs to the `actions` strip ·
+**Tier 3** preset shelf, light-skin palette, juice, the `Scene` refactor. Open questions
+for Dan: sandbox vs guided explorable; does Argand supersede Plane Transform; how hard to
+cut the transport.
+
 ### 🟡 milestone · 12:52 — First 3 hats returned (maintainer · consultant · pedagogy)
 **Why:** Capture convergences before the two added hats land.
 
