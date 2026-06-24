@@ -61,9 +61,11 @@ interface Props {
   iterN: number;
   /** Half-extent of the visible plane in math units. */
   extent: number;
-  /** Line mode (ℝ): hide the imaginary axis and the vertical grid lines so the
-   *  view reads as a bare number line. */
-  lineMode: boolean;
+  /** Plane "fill" 0→1: 0 = bare number line (x-axis with ticks, no imaginary
+   *  axis/vertical grid/unit circle); 1 = full plane. Fractions tween between, so
+   *  the ticks grow into the vertical grid lines and the imaginary axis/circle
+   *  fade in. */
+  fill: number;
   onChange: (which: Handle, z: Cx) => void;
   onZoom?: (factor: number) => void;
 }
@@ -87,7 +89,7 @@ function useSize(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function ArgandPlane({
-  z, alpha1, alpha0, alpha2, degree, p, feed, curve, t, playing, lockA1, lockA0, lockA2, snapping, gridOpacity, imageOpacity, gridType, gridStep, gridColor, showUnitCircle, viewFromFixed, iterate, iterN, extent, lineMode, onChange, onZoom,
+  z, alpha1, alpha0, alpha2, degree, p, feed, curve, t, playing, lockA1, lockA0, lockA2, snapping, gridOpacity, imageOpacity, gridType, gridStep, gridColor, showUnitCircle, viewFromFixed, iterate, iterN, extent, fill, onChange, onZoom,
 }: Props) {
   const quad = degree >= 2;
   const coeffs: Cx[] = quad ? [alpha0, alpha1, alpha2] : [alpha0, alpha1];
@@ -280,8 +282,7 @@ export default function ArgandPlane({
     } else {
       const GN = Math.ceil(reach / gridStep) * gridStep;
       const n = quad || gridColor ? 24 : 1;
-      // Vertical grid lines (x = const) are suppressed in Line mode.
-      if (!lineMode) for (let x = -GN; x <= GN + 1e-9; x += gridStep) {
+      for (let x = -GN; x <= GN + 1e-9; x += gridStep) {
         const ln: Cx[] = [];
         for (let j = 0; j <= n; j++) ln.push(cx(x, -GN + (2 * GN * j) / n));
         out.push(ln);
@@ -320,6 +321,59 @@ export default function ArgandPlane({
       </g>
     );
   };
+
+  const lerpN = (a: number, b: number, u: number) => a + (b - a) * u;
+  // The identity reference grid. Cartesian verticals are x-axis *ticks* that grow
+  // into full grid lines as `fill` 0→1; the horizontals fade in with `fill`. So a
+  // bare number line (fill 0) "expands to fill the plane" on the way to fill 1.
+  const identityGrid = () => {
+    if (gridOpacity <= 0.001) return null;
+    if (gridColor) return drawGrid(q => q, gridOpacity, 'currentColor', 'gh');
+    if (gridType === 'polar') return <g opacity={fill}>{drawGrid(q => q, gridOpacity, 'currentColor', 'gh')}</g>;
+    const GN = Math.ceil(reach / gridStep) * gridStep;
+    const vHalf = lerpN(0.16, GN, fill);
+    const verts: number[] = [];
+    for (let x = -GN; x <= GN + 1e-9; x += gridStep) verts.push(x);
+    const horis: number[] = [];
+    for (let y = -GN; y <= GN + 1e-9; y += gridStep) horis.push(y);
+    return (
+      <g stroke="currentColor" fill="none" strokeWidth={1.5}>
+        <g strokeOpacity={gridOpacity}>
+          {verts.map((x, i) => {
+            const [vx, vy0] = toV(cx(x, -vHalf));
+            const [, vy1] = toV(cx(x, vHalf));
+            return <line key={`v${i}`} x1={vx} y1={vy0} x2={vx} y2={vy1} />;
+          })}
+        </g>
+        {fill > 0.001 && (
+          <g strokeOpacity={gridOpacity * fill}>
+            {horis.map((y, i) => {
+              const [hx0, hy] = toV(cx(-GN, y));
+              const [hx1] = toV(cx(GN, y));
+              return <line key={`h${i}`} x1={hx0} y1={hy} x2={hx1} y2={hy} />;
+            })}
+          </g>
+        )}
+      </g>
+    );
+  };
+
+  // The line's "unit set": ±1, the only magnitude-preservers in ℝ (S⁰). They fade
+  // out as the plane fills in, where the whole unit circle (S¹) takes over.
+  const unitSetNode = fill < 0.99 ? (
+    <g opacity={1 - fill}>
+      {[1, -1].map(s => {
+        const [ux, uy] = toV(cx(s, 0));
+        return (
+          <g key={s}>
+            <circle cx={ux} cy={uy} r={5.5} fill="none" stroke="currentColor" strokeOpacity={0.85} strokeWidth={2} />
+            <circle cx={ux} cy={uy} r={2} fill="currentColor" />
+            <text x={ux} y={uy - 12} fontSize={13} textAnchor="middle" fill="currentColor" fillOpacity={0.85}>{s > 0 ? '+1' : '−1'}</text>
+          </g>
+        );
+      })}
+    </g>
+  ) : null;
 
   const [oVx, oVy] = toV(cx(0, 0));
 
@@ -363,8 +417,8 @@ export default function ArgandPlane({
   // The system's "unit circle": the level set N(z)=re²−p·im²=1 — an ellipse
   // (p<0), two lines (p=0), or a hyperbola with its null cone (p>0).
   const unitCurveNode = (() => {
-    if (!showUnitCircle || lineMode) return null;   // a 2D curve has no place on the line
-    const st = { fill: 'none', stroke: 'currentColor', strokeOpacity: 0.28, strokeWidth: 2, strokeDasharray: '6 8' } as const;
+    if (!showUnitCircle || fill < 0.01) return null;   // fades out as the plane collapses to the line
+    const st = { fill: 'none' as const, stroke: 'currentColor', strokeOpacity: 0.28 * fill, strokeWidth: 2, strokeDasharray: '6 8' };
     if (p < 0) return <ellipse cx={oVx} cy={oVy} rx={k} ry={k / Math.sqrt(-p)} {...st} />;
     if (p === 0) {
       const [xp] = toV(cx(1, 0)); const [xm] = toV(cx(-1, 0));
@@ -389,8 +443,8 @@ export default function ArgandPlane({
     return (
       <g>
         <path d={branch(1)} {...st} /><path d={branch(-1)} {...st} />
-        <path d={asym(1)} fill="none" stroke="#f87171" strokeOpacity={0.3} strokeWidth={1.5} strokeDasharray="2 9" />
-        <path d={asym(-1)} fill="none" stroke="#f87171" strokeOpacity={0.3} strokeWidth={1.5} strokeDasharray="2 9" />
+        <path d={asym(1)} fill="none" stroke="#f87171" strokeOpacity={0.3 * fill} strokeWidth={1.5} strokeDasharray="2 9" />
+        <path d={asym(-1)} fill="none" stroke="#f87171" strokeOpacity={0.3 * fill} strokeWidth={1.5} strokeDasharray="2 9" />
       </g>
     );
   })();
@@ -451,19 +505,22 @@ export default function ArgandPlane({
             ))}
           </defs>
 
-          {/* ghost identity grid (the unchanged plane) */}
-          {gridOpacity > 0.001 && drawGrid(q => q, gridOpacity, 'currentColor', 'gh')}
+          {/* identity reference grid — x-axis ticks that grow into the vertical grid as the line fills out */}
+          {identityGrid()}
 
           {/* the system's unit curve */}
           {unitCurveNode}
 
-          {/* axes — the imaginary (vertical) axis is hidden in Line mode */}
-          <g stroke="currentColor" strokeOpacity={0.45} strokeWidth={2}>
-            <line x1={0} y1={oVy} x2={w} y2={oVy} />
-            {!lineMode && <line x1={oVx} y1={0} x2={oVx} y2={h} />}
+          {/* axes — the imaginary (vertical) axis fades in as the line fills out to the plane */}
+          <g stroke="currentColor" strokeWidth={2}>
+            <line x1={0} y1={oVy} x2={w} y2={oVy} strokeOpacity={0.45} />
+            <line x1={oVx} y1={0} x2={oVx} y2={h} strokeOpacity={0.45 * fill} />
           </g>
-          {!lineMode && <text x={oVx + 9} y={26} fontSize={21} fill="currentColor" fillOpacity={0.5}>i</text>}
+          {fill > 0.01 && <text x={oVx + 9} y={26} fontSize={21} fill="currentColor" fillOpacity={0.5 * fill}>i</text>}
           <text x={w - 24} y={oVy - 11} fontSize={21} fill="currentColor" fillOpacity={0.5}>Re</text>
+
+          {/* ±1 — the line's magnitude-preservers */}
+          {unitSetNode}
 
           {/* ---- GRID feed: the whole coordinate grid mapped by f ---- */}
           {isGrid && (

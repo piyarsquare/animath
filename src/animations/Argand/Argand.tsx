@@ -62,6 +62,26 @@ export default function Argand() {
   const [showUnitCircle, setShowUnitCircle] = usePersistentState(`${STORAGE_KEY}:unit`, true);
   // Dimension: 'line' (ℝ — number line, no imaginary axis) or 'plane' (ℂ, today's view).
   const [dimension, setDimension] = usePersistentState<'line' | 'plane'>(`${STORAGE_KEY}:dimension`, 'plane');
+  // Animated 0→1 "plane fill": 0 = bare line (x-axis ticks only), 1 = full plane.
+  // Switching dimension tweens it, so the ticks grow into the vertical grid lines.
+  const [fill, setFill] = useState(dimension === 'line' ? 0 : 1);
+  const fillRef = useRef(fill);
+  fillRef.current = fill;
+  useEffect(() => {
+    const target = dimension === 'line' ? 0 : 1;
+    let raf = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = (now - last) / 1000; last = now;
+      const d = target - fillRef.current;
+      const step = dt / 0.4;                       // full sweep in ~0.4s
+      if (Math.abs(d) <= step) { setFill(target); return; }
+      setFill(fillRef.current + Math.sign(d) * step);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [dimension]);
   const [extent, setExtent] = usePersistentState(`${STORAGE_KEY}:extent`, 4);
   // Number system: p = j². p<0 complex, p=0 dual, p>0 split-complex.
   const [system, setSystem] = usePersistentState(`${STORAGE_KEY}:system`, -1);
@@ -544,7 +564,7 @@ export default function Argand() {
             snapping={snapping} gridOpacity={gridOpacity} imageOpacity={imageOpacity} showUnitCircle={showUnitCircle}
             gridType={gridType} gridStep={gridStep} gridColor={gridColor}
             viewFromFixed={viewFromFixed} iterate={iterate} iterN={iterN}
-            extent={extent} lineMode={dimension === 'line'}
+            extent={extent} fill={fill}
             onChange={onHandleChange}
             onZoom={f => setExtent(e => Math.min(16, Math.max(1, e * f)))}
           />

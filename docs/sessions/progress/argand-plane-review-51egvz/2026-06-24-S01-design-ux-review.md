@@ -336,3 +336,20 @@ vertical grid lines.
 
 Note: faint *horizontal* grid lines remain (only verticals were asked to go);
 trivial to drop in Line mode too if wanted. Build ✓ · eslint 0.
+
+### 🟢 code · 18:50 — Line mode v2: ticks that expand to fill the plane + ±1 markers
+**Why:** Dan: no horizontal grid lines either; x-axis ticks that expand to fill the
+plane when switching levels; and yes to ±1 markers.
+
+- Replaced the boolean `lineMode` with an animated **`fill` 0→1** (tweened ~0.4s in
+  `Argand.tsx` on dimension change). The identity grid now renders cartesian
+  **verticals as ticks whose half-height = lerp(0.16, GN, fill)** — short ticks on
+  the bare line that *grow into* the full vertical grid lines as fill→1; the
+  **horizontals + imaginary axis + "i" + unit circle all fade in with `fill`**. So
+  Line→Plane literally expands the ticks to fill the plane.
+- **±1 markers** (`unitSetNode`): the line's magnitude-preservers (S⁰), ringed +
+  labeled, fading out as the unit circle (S¹) grows in — the conceptual rung toward
+  quaternions.
+- No horizontal grid lines on the bare line (fill 0). Verified by screenshot
+  `assets/2026-06-24-S01-line-ticks.png`. Build ✓ · eslint 0. (The expand *animation*
+  itself is verified by construction; a live capture would confirm the tween.)
