@@ -48,9 +48,19 @@ function loadSkin(): string {
   return DEFAULT_SKIN;
 }
 
+/** Reflect a skin on the root element: `data-theme` drives the token blocks, and
+ *  `data-scheme` (light/dark, derived from isLightSkin) lets CSS pick light/dark
+ *  UA rendering — e.g. native `<select>` popups — for *every* light skin without
+ *  hardcoding which ids are light. */
+function applySkinAttrs(id: string): void {
+  const el = document.documentElement;
+  el.setAttribute('data-theme', id);
+  el.setAttribute('data-scheme', isLightSkin(id) ? 'light' : 'dark');
+}
+
 /** Apply the persisted skin to <html data-theme>. Call once at boot, before render. */
 export function applyPersistedSkin(): void {
-  document.documentElement.setAttribute('data-theme', loadSkin());
+  applySkinAttrs(loadSkin());
 }
 
 /**
@@ -60,7 +70,7 @@ export function applyPersistedSkin(): void {
 export function useSkin(): [string, (id: string) => void] {
   const [skin, setSkinState] = useState(loadSkin);
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', skin);
+    applySkinAttrs(skin);
     try { window.localStorage.setItem(SKIN_KEY, skin); } catch { /* ignore */ }
   }, [skin]);
   return [skin, setSkinState];

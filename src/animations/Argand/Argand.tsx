@@ -399,8 +399,17 @@ export default function Argand() {
         fontFamily: 'var(--font-mono, monospace)',
       }}
     >
-      {/* shape preset switcher — only in Shape feed (feed itself lives in the
-          top-bar mode pills) */}
+      {/* feed switcher — the single home for Point/Shape/Grid. It lives in the
+          HUD (inside the view node) so it stays reachable in fullscreen, where
+          the top bar and its mode pills are buried. */}
+      <div style={hudRow}>
+        {(['point', 'shape', 'grid'] as Feed[]).map(fd => (
+          <button key={fd} style={pill(feed === fd)} onClick={() => setFeed(fd)}>
+            {fd === 'point' ? 'Point' : fd === 'shape' ? 'Shape' : 'Grid'}
+          </button>
+        ))}
+      </div>
+      {/* shape preset switcher — only in Shape feed */}
       {isShape && (
         <div style={hudRow}>
           {CURVES.map(c => (
@@ -489,9 +498,6 @@ export default function Argand() {
       sections={sections}
       views={views}
       immersive
-      modes={[{ id: 'point', label: 'Point' }, { id: 'shape', label: 'Shape' }, { id: 'grid', label: 'Grid' }]}
-      activeMode={feed}
-      onModeChange={id => setFeed(id as Feed)}
       layouts={layouts}
       defaultLayoutId="essentials"
       explainer={explainerText || null}

@@ -121,7 +121,7 @@
 }
 /* Keep the OS-native dropdown popup readable on dark skins. */
 .cp-row select { color-scheme: dark; }
-[data-theme="light"] .cp-row select { color-scheme: light; }
+[data-scheme="light"] .cp-row select { color-scheme: light; }
 .cp-row select option {
   background: var(--panel-solid, #0c0c10);
   color: var(--cp-fg);
