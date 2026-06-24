@@ -211,3 +211,21 @@ one Phase-1 workstream.
 
 Also dispatched a background **attribution scout** (web research) for the
 Argand/Number Planes sources block — report pending as its own file.
+
+### 🟢 code · 15:45 — Attribution scout landed; lint fix; Dan defers the sources block
+**Why:** Close out the attribution thread and keep the PR green.
+
+- **Attribution report** committed (`…-attribution-sources.md`): existing EXPLAINER
+  block verified accurate (only missing years); best addition is **Harkin & Harkin,
+  "Geometry of Generalized Complex Numbers," *Math. Magazine* 77 (2004)** — the
+  citable survey of the `p=j²` dial + unified polar form. Also Needham 1997/2023,
+  Yaglom ×2 (separating the Galilean/Shear book), Wegert 2012, and real pedagogy
+  on-ramps (Welch Labs, 3Blue1Brown, BetterExplained). Could-not-verify items
+  (e.g. "planar numbers" as standard term, an exact explorable analogue) flagged,
+  not fabricated.
+- **`lint` CI failed** on 85ecbc2: my agent prompt used `kind: research`, outside the
+  closed set `{progress, handoff, three-hats, plan}`. Fixed → `kind: progress`
+  (45567a8); `sessions:lint --strict` back to **0 errors**; all four checks green.
+- **Dan's call:** *Hold, stage for reframe* — leave EXPLAINER.md untouched; the
+  verified sources block (in the report) gets folded in later as part of the Number
+  Planes reframe so voice + citations land together. No EXPLAINER edit this session.
