@@ -4,7 +4,7 @@ session: 2026-06-24-S01
 date: 2026-06-24
 title: Argand — design & UX review (graphic designer + game designer hats)
 branch: claude/argand-plane-review-51egvz
-slug: argand-plane-review
+slug: argand-plane-review-51egvz
 status: completed
 build: passed
 followup: null
@@ -116,3 +116,27 @@ Focus is a **design + UX review**, not yet implementation. Next action: run
 `/three-hats` on the Argand app with the two added lenses the user specified
 (graphic designer, game designer), then bring concrete recommendations back
 before changing code.
+
+### 🟣 decision · 14:10 — Reconvening the 5 hats: cross-app "unitary spaces" lens
+**Why:** Dan wants to discuss how Argand's complex–dual–split slider (`p=j²`)
+should interact with the *other* complex-function apps — the core idea being
+**"unitary spaces"**: complex numbers are the familiar entry point, but even ℂ is
+treated as a foreigner to be understood (one setting of `p` on the
+elliptic/parabolic/hyperbolic Cayley–Klein continuum).
+
+Cross-app facts gathered for the hats:
+- **`p=j²` is Argand-only.** `complexOps.ts` already holds a clean generalized
+  algebra over `p`: `mulG`, `conjG`, `normG = x²−p·y²` (the "unitary" invariant),
+  `invG`/`divG`, `powRealG`, `sqrtG`, `expG`/`logG`. This is the engine the suite
+  would share.
+- **Every other complex app is hardwired to ℂ:** Complex Particles ("f : ℂ→ℂ", 4D
+  graph), Plane Transform ("f : ℂ→ℂ", plane map), Correspondence, FractalsGPU
+  (GLSL).
+- **Cross-app linkage today** = `functionHandoff.ts` carrying function *identity*
+  only (index + p/q + quad coeffs), not a number system. Complex Particles ↔ Plane
+  Transform are explicitly "graph ↔ map of one object."
+- **The function zoo** (`complexMath.functionNames`, ~23 incl. exp/sin/Γ/z^(p/q))
+  is ℂ-specific — transcendentals have no clean dual/split analogue (honesty risk).
+
+Resuming the same 5 agents (SendMessage) so they keep their Argand analysis and
+**append** an augmentation section to their existing report; then re-synthesize.

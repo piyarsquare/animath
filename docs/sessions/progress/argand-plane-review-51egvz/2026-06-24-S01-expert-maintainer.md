@@ -4,7 +4,7 @@ session: 2026-06-24-S01
 date: 2026-06-24
 title: "Argand review — Hat 1: Framework Maintainer"
 branch: claude/argand-plane-review-51egvz
-slug: argand-plane-review
+slug: argand-plane-review-51egvz
 status: completed
 build: passed
 ---
