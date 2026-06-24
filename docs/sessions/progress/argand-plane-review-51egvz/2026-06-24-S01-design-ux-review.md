@@ -294,3 +294,28 @@ Verified: build ✓ · `npm test` 128/128 ✓ · eslint Argand.tsx 0. Coefficien
 notation (α vs m/b) raised with Dan — none of the reviewers objected to α; an m/b
 rename is offered as a cheap option, pending his call. Still open (separate review
 items): the center hint pill, the clipped "Re" label.
+
+### 🟢 code · 17:45 — Guided walkthrough (Increment 1): real-line Step 0 + first-visit intro
+**Why:** Dan: a Step-0 starting on the real line (addition/×/magnitude-preservation,
+also the on-ramp to quaternions), and a Next-click walkthrough that advances the app.
+Decisions: build the tour with a real-axis Step 0 now (Increment 1); invoke as a
+first-visit intro + replayable.
+
+- **`tour.ts`** — 9 steps as data (caption + a settings *patch*): real line (add =
+  slide) → ×= stretch/flip → magnitude-preservers are just ±1 (the line's "unit set")
+  → add a second axis (×i = quarter-turn) → a whole circle of preservers (Spin) → add
+  still slides → the fixed point z* → other number planes (Shear/Boost) → explore.
+  The "what preserves magnitude?" spine is the S⁰⊂S¹⊂S³ ladder ℝ→ℂ→ℍ, seeding the
+  later quaternion chapter.
+- **`Argand.tsx`** — `seenTour` (persisted) + `tourStep` (transient); `applyStep`
+  pushes a step's patch through the existing setters; first-visit **intro card**
+  ("Start tour / Explore freely"), a **caption card** (Back · n/N · Next/Done · ✕) at
+  top-center with the chrome hint suppressed during the tour, and a **↻ Tour** replay
+  pill in the HUD. All overlays live inside the view node (survive fullscreen), no
+  chrome-API change.
+
+Verified: build ✓ · tests 128/128 ✓ · eslint 0 · intro screenshot
+`assets/2026-06-24-S01-tour-intro.png`. (The step caption is verified by construction
++ the shared overlay machinery; a live click-through and phone pass are still owed —
+`visual-unverified` on those.) Increment 2 (dedicated Line stage + Dimension selector)
+and Increment 3 (quaternions) remain.

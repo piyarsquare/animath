@@ -9,6 +9,7 @@ import ArgandPlane, {
   type Feed, type Handle, Z_COL, A1_COL, A0_COL, A2_COL, F_COL, FIX_COL,
 } from './ArgandPlane';
 import { buildCurve, CURVES, type CurveName } from './curves';
+import { TOUR } from './tour';
 import {
   type Cx, type ArcLengthMap, cx, modulus, add, sub, scale,
   mulG, powRealG, affineLoopAt, arcLengthMap, formatRect, formatPolar,
@@ -67,10 +68,14 @@ export default function Argand() {
   const [viewFromFixed, setViewFromFixed] = usePersistentState(`${STORAGE_KEY}:vFix`, false);
   const [iterate, setIterate] = usePersistentState(`${STORAGE_KEY}:iter`, false);
   const [iterN, setIterN] = usePersistentState(`${STORAGE_KEY}:iterN`, 12);
+  // Whether the first-visit walkthrough has been offered yet (persisted).
+  const [seenTour, setSeenTour] = usePersistentState(`${STORAGE_KEY}:seenTour`, false);
 
   // Transient view state — never persisted.
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
+  // Walkthrough: current step index, or null when not touring.
+  const [tourStep, setTourStep] = useState<number | null>(null);
   // The j² morph has its own Play: ping-pong p between −1 and +1.
   const [sysPlaying, setSysPlaying] = useState(false);
   const sysDir = useRef(1);
@@ -163,6 +168,34 @@ export default function Argand() {
   });
 
   const goToStop = (st: number) => { setPlaying(false); setT(st); };
+
+  /* ---- guided walkthrough (steps in tour.ts) ---- */
+  const applyStep = (i: number) => {
+    const s = TOUR[i].state;
+    if (s.feed !== undefined) setFeed(s.feed);
+    if (s.degree !== undefined) setDegree(s.degree);
+    if (s.z) setZ(s.z);
+    if (s.alpha1) setA1(s.alpha1);
+    if (s.alpha0) setA0(s.alpha0);
+    if (s.alpha2) setA2(s.alpha2);
+    if (s.system !== undefined) setSystem(s.system);
+    if (s.viewFromFixed !== undefined) setViewFromFixed(s.viewFromFixed);
+    if (s.iterate !== undefined) setIterate(s.iterate);
+    if (s.extent !== undefined) setExtent(s.extent);
+    if (s.gridType !== undefined) setGridType(s.gridType);
+    if (s.gridColor !== undefined) setGridColor(s.gridColor);
+    if (s.showUnitCircle !== undefined) setShowUnitCircle(s.showUnitCircle);
+    setPlaying(false);
+    setSysPlaying(false);
+  };
+  const startTour = () => { setSeenTour(true); setTourStep(0); applyStep(0); };
+  const exitTour = () => setTourStep(null);
+  const goStep = (n: number) => {
+    if (n < 0) return;
+    if (n >= TOUR.length) { exitTour(); return; }
+    setTourStep(n);
+    applyStep(n);
+  };
 
   // Stops mark the meaningful waypoints, labeled per feed and degree.
   const stopLabels = isPoint
@@ -414,6 +447,7 @@ export default function Argand() {
         {isShape && CURVES.map(c => (
           <button key={c.id} style={pill(curveName === c.id)} onClick={() => setCurveName(c.id)}>{c.label}</button>
         ))}
+        <button style={{ ...pill(tourStep !== null), marginLeft: 'auto' }} onClick={startTour} title="Replay the walkthrough">↻ Tour</button>
       </div>
       {/* path parameter t */}
       <div style={hudRow}>
@@ -438,12 +472,57 @@ export default function Argand() {
     </div>
   );
 
+  /* ---- walkthrough overlays (first-visit intro + step caption) ---- */
+  const tourBtn = (primary: boolean): React.CSSProperties => ({
+    padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+    border: '1px solid var(--border, #3a3a44)',
+    background: primary ? 'var(--accent, #34d399)' : 'rgba(255,255,255,0.06)',
+    color: primary ? 'var(--accent-fg, #0c0c10)' : 'var(--fg, #e8e8ee)',
+  });
+  const card: React.CSSProperties = {
+    position: 'absolute', zIndex: 8, width: 'min(92%, 460px)', padding: '12px 14px', borderRadius: 14,
+    background: 'var(--panel, rgba(18,18,24,0.94))', border: '1px solid var(--border, #3a3a44)',
+    backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: 'var(--shadow)',
+  };
+  const tourOverlay = (
+    <>
+      {!seenTour && tourStep === null && (
+        <div style={{ ...card, top: '20%', left: '50%', transform: 'translateX(-50%)', textAlign: 'center' }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>New here?</div>
+          <div style={{ fontSize: 13, color: 'var(--dim, #9b9ba3)', marginBottom: 12 }}>
+            Take the quick walkthrough — from a number line to the whole plane in about a minute.
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+            <button style={tourBtn(true)} onClick={startTour}>Start tour</button>
+            <button style={tourBtn(false)} onClick={() => setSeenTour(true)}>Explore freely</button>
+          </div>
+        </div>
+      )}
+      {tourStep !== null && (
+        <div style={{ ...card, top: 14, left: '50%', transform: 'translateX(-50%)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, flex: 1 }}>{TOUR[tourStep].title}</div>
+            <button style={iconBtn} onClick={exitTour} title="Exit walkthrough">✕</button>
+          </div>
+          <div style={{ fontSize: 12.5, color: 'var(--dim, #9b9ba3)', margin: '6px 0 10px', lineHeight: 1.45 }}>
+            {TOUR[tourStep].body}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button style={{ ...tourBtn(false), opacity: tourStep === 0 ? 0.4 : 1 }} disabled={tourStep === 0} onClick={() => goStep(tourStep - 1)}>‹ Back</button>
+            <div style={{ flex: 1, textAlign: 'center', fontSize: 11, color: 'var(--dim, #9b9ba3)' }}>{tourStep + 1} / {TOUR.length}</div>
+            <button style={tourBtn(true)} onClick={() => goStep(tourStep + 1)}>{tourStep === TOUR.length - 1 ? 'Done' : 'Next ›'}</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
   const views: ViewDef[] = [
     {
       id: 'plane',
       title: 'Argand plane',
       defaultRect: { x: 320, y: 16, w: 660, h: 600 },
-      hint: 'drag z · α₁ · α₀ · pinch or scroll to zoom · two-finger or shift-drag to pan · double-click to recenter',
+      hint: tourStep !== null ? undefined : 'drag z · α₁ · α₀ · pinch or scroll to zoom · two-finger or shift-drag to pan · double-click to recenter',
       node: (
         <div style={{ position: 'absolute', inset: 0 }}>
           <ArgandPlane
@@ -476,6 +555,7 @@ export default function Argand() {
             </div>
           </div>
           {controlHud}
+          {tourOverlay}
         </div>
       ),
     },
