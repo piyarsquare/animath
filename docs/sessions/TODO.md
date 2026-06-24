@@ -118,15 +118,17 @@ informs future rounds. Delete or check off items as they land.
   docs/apps/<slug>.md" so there's a single architecture home. Touches the shared
   append-only CLAUDE.md — do it as its own pass to avoid parallel-branch conflicts.
 
-- [ ] [chrome] !med Make graphics consistently theme-driven — gallery previews + per-app canvases.
-  Counting the Ways' gallery preview now reads the live theme tokens (`--accent` /
-  `--accent-2` / `--bg` via `getComputedStyle(document.documentElement)`) so the card
-  tracks the active skin, not just light/dark — `SkellamPreview` in
-  `chrome/previews.tsx` is the **model**. The other previews still hardcode a
-  light/dark pair, and apps don't all respect the theme the same way. Future pass:
-  roll the getComputedStyle pattern across `previews.tsx` and audit in-app canvases so
-  every skin renders faithfully. Dan 2026-06-23: neat idea, not urgent — work toward it
-  once each app's theming is known to be consistent.
+- [ ] [chrome] !low Make in-app canvases consistently theme-driven (gallery previews DONE).
+  DONE 2026-06-24 (PR #238): rolled the `SkellamPreview` getComputedStyle pattern across
+  **all** gallery previews via a shared `themeInk(light)` helper in `chrome/previews.tsx` —
+  every card now reads `--viz-bg`/`--accent`/`--accent-2`/`--data-*` live, so it tracks the
+  *specific* skin (verified across Phosphor/Neon/Mirage/Daylight), keeping the rainbow hue
+  art on the complex-domain previews (Particles/Plane/Fractal/Julia) where hue encodes the
+  argument. Caveat: JuliaPreview's cached Mandelbrot inset captures the skin at first paint
+  and only re-tints on reload (the Julia pane + marker track live). Remaining (!low): a
+  systematic sweep of each app's in-app canvases/HUDs so every skin renders faithfully — many
+  were tokenized in the design-hardening pass, but deciding which 3D scene colors follow the
+  skin vs stay semantic is still open. Dan 2026-06-23: neat idea, not urgent.
 
 - [x] [agentic-sorting] EXPLAINER/README no longer describe the removed Replicate panel.
   DONE 2026-06-22. Removed the stale Replicate-panel copy from both the AgenticSorting

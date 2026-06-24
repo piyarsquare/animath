@@ -8,9 +8,9 @@ slug: youthful-cray-7m6z9d
 status: in-progress
 build: passed
 followup: null
-pr: null
+pr: 238
 app: chrome
-next: Optional Phase-5 polish (all tracked in TODO.md): adopt the discrete colormap in Agentic Sorting; tokenize residual DOM color on the compliant apps; Complex Particles hint occlusion; full 8-skin tour sweep.
+next: PR #238 is open + green; watching it. Remaining optional polish (TODO.md): discrete colormap in Agentic Sorting; in-app-canvas theme sweep (gallery previews now done); Complex Particles hint occlusion; full 8-skin tour.
 ---
 
 # Chrome design cleanup — execute the Claude Design hardening handoff
@@ -53,6 +53,31 @@ The two `reference/*.html` files (Control Contract, Stable Matching reference) a
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟢 code · 15:28 — PR #238 opened; review comments addressed; gallery previews themed
+**Why:** Dan asked to open the PR, follow CI, and (then) answer the review comments
+and make every gallery card theme to the skin like Counting the Ways.
+
+- **PR [#238](https://github.com/piyarsquare/animath/pull/238) opened.** CI green
+  (lint, smoke, Cloudflare Pages build, trigger-deploy). Cloudflare preview confirmed:
+  branch alias `claude-youthful-cray-7m6z9d.animath.pages.dev`. Subscribed to PR
+  activity + an hourly fallback check-in (session-scoped) for webhook-missed transitions.
+- **Two automated P2 review comments, both from this PR — fixed in `4f23b0a`:**
+  (1) Argand fullscreen — the view can go fullscreen (HUD lives in the view node to
+  survive it; top bar buried), so moving the feed to top-bar pills stranded fullscreen
+  users. Restored the Point/Shape/Grid switcher to the HUD as the single home, dropped
+  the top-bar `modes` props. (2) Native `<select>` on the new light skins kept dark
+  rendering (`ControlPanel.css` only un-forced `color-scheme` for `[data-theme=light]`).
+  Drove it from a new root `data-scheme=light|dark` attribute (from `isLightSkin`) so
+  every light skin works. Replied + resolved both threads.
+- **Gallery previews now theme to the *specific* skin** (was light/dark only; only
+  Skellam did it right). Shared `themeInk(light)` helper in `previews.tsx`; all 12
+  previews read `--viz-bg`/`--accent`/`--accent-2`/`--data-*` live. Rainbow hue art
+  kept on the complex-domain previews (hue = argument). **Verified by screenshot across
+  Phosphor/Neon/Mirage/Daylight** — each card tracks the skin. Caveat: JuliaPreview's
+  cached Mandelbrot inset re-tints only on reload (Julia pane + marker live).
+
+Build/lint/test green throughout (88 tests, 0 lint errors). Watch remains active.
 
 ### 🔵 finding · 14:55 — Phase 5 spot-check: the "compliant" apps hold on light skins
 **Why:** Before tokenizing the audit's "minor color" notes on the ✓ apps, verify
