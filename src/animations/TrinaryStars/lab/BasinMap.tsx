@@ -549,9 +549,9 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     setTimeout(render, mode === 'radspeed' ? 40 : 0);
   };
 
-  const panel: React.CSSProperties = { background: 'rgba(12,16,24,0.6)', border: '1px solid rgba(120,150,200,0.18)', borderRadius: 10, padding: 12 };
-  const h3: React.CSSProperties = { margin: '0 0 8px', font: '600 12px/1.2 ui-monospace, monospace', color: '#9ec7ff', letterSpacing: 0.4 };
-  const btn: React.CSSProperties = { padding: '6px 14px', borderRadius: 6, border: '1px solid var(--cp-border, #2a3550)', background: 'rgba(255,255,255,0.06)', color: '#e8edf6', cursor: 'pointer', fontSize: 13 };
+  const panel: React.CSSProperties = { background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 10, padding: 12 };
+  const h3: React.CSSProperties = { margin: '0 0 8px', font: '600 12px/1.2 ui-monospace, monospace', color: 'var(--dim)', letterSpacing: 0.4 };
+  const btn: React.CSSProperties = { padding: '6px 14px', borderRadius: 6, border: '1px solid var(--cp-border, #2a3550)', background: 'var(--panel-2)', color: 'var(--fg)', cursor: 'pointer', fontSize: 13 };
 
   return (
     <div style={{ ...panel, marginBottom: 12 }}>
@@ -620,12 +620,12 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             </div>
           )}
           {engine === 'gpu' && gpuSupportsMap(metric, lens) && (
-            <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 4 }}>
+            <div style={{ font: '11px/1.5 system-ui', color: 'var(--dim)', marginTop: 4 }}>
               ⚡ Experimental WebGPU: 32-bit precision, so fine fractal detail can differ slightly from Workers/CPU. Falls back automatically on error.
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button style={{ ...btn, background: busy ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }} onClick={busy ? stop : render}>{busy ? '❚❚ Stop' : '▦ Render map'}</button>
+            <button style={{ ...btn, background: busy ? 'var(--accent-soft)' : 'var(--success-soft)' }} onClick={busy ? stop : render}>{busy ? '❚❚ Stop' : '▦ Render map'}</button>
             <button style={btn} onClick={() => {
               if (mode === 'radspeed' && system?.onBox) {
                 const d = DEFAULT_DOMAIN.radspeed;
@@ -646,18 +646,18 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
                   <DimPlot dim={dim} />
                   <div style={{ font: '11px/1.45 ui-monospace, monospace', whiteSpace: 'nowrap' }}>
                     <div>boundary&nbsp;<b style={{ color: '#ffd27f' }}>D ≈ {dim.D.toFixed(3)}</b></div>
-                    <div>uncertainty&nbsp;<b style={{ color: '#66f0ff' }}>α ≈ {dim.alpha.toFixed(3)}</b></div>
-                    <div style={{ color: '#9aa7bd' }}>boundary {(dim.boundary * 100).toFixed(0)}%</div>
+                    <div>uncertainty&nbsp;<b style={{ color: 'var(--accent-2)' }}>α ≈ {dim.alpha.toFixed(3)}</b></div>
+                    <div style={{ color: 'var(--dim)' }}>boundary {(dim.boundary * 100).toFixed(0)}%</div>
                   </div>
                 </div>
               ) : (
-                <div style={{ font: '11px/1.5 system-ui', color: '#4a566b' }}>The boundary’s box-counting dimension appears here after a render.</div>
+                <div style={{ font: '11px/1.5 system-ui', color: 'var(--dim-2)' }}>The boundary’s box-counting dimension appears here after a render.</div>
               )}
             </div>
           )}
 
           {lens === 'stat' ? (
-            <div style={{ marginTop: 10, font: '11px ui-monospace, monospace', color: '#9aa7bd' }}>
+            <div style={{ marginTop: 10, font: '11px ui-monospace, monospace', color: 'var(--dim)' }}>
               <div style={{
                 height: 10, borderRadius: 3, marginBottom: 2,
                 background: `linear-gradient(90deg, rgb(${statRamp(0).join(',')}), rgb(${statRamp(0.5).join(',')}), rgb(${statRamp(1).join(',')}))`,
@@ -676,7 +676,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
               ))}
             </div>
           ) : (
-            <div style={{ marginTop: 10, font: '11px ui-monospace, monospace', color: '#9aa7bd' }}>
+            <div style={{ marginTop: 10, font: '11px ui-monospace, monospace', color: 'var(--dim)' }}>
               <div style={{
                 height: 10, borderRadius: 3, marginBottom: 2,
                 background: `linear-gradient(90deg, rgb(${chaosRamp(0).join(',')}), rgb(${chaosRamp(0.33).join(',')}), rgb(${chaosRamp(0.66).join(',')}), rgb(${chaosRamp(1).join(',')}))`,
@@ -687,7 +687,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
               </div>
             </div>
           )}
-          <div style={{ font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 8 }}>
+          <div style={{ font: '11px/1.5 system-ui', color: 'var(--dim)', marginTop: 8 }}>
             {lens === 'stat'
               ? `Each pixel is a mini-census: ${statRuns} worlds that share these axes but randomise the other launch dimensions, colored by ${STAT_LABEL[statMetric]}. The Exact lens shows one world per pixel — switch to it to see the fractal final-state boundaries underneath these smooth statistics.`
               : metric === 'fate'
@@ -695,7 +695,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
                 : 'One pixel = one exact starting condition. Color = the planet’s Lyapunov exponent λ — how fast its future becomes unpredictable (blue = regular orbits, red = strongly chaotic). Drag a box to zoom. D is the box-counting dimension of the regular/chaotic frontier.'}
           </div>
           {mode === 'pos' && frame !== 'bary' && (
-            <div style={{ font: '11px/1.5 system-ui', color: '#8aa0c8', marginTop: 6 }}>
+            <div style={{ font: '11px/1.5 system-ui', color: 'var(--dim)', marginTop: 6 }}>
               Frame co-moving with <b>{frame === 's0' ? 'Star A' : frame === 's1' ? 'Star B' : 'Star C'}</b>: each pixel is a start offset from that star, launched with the star’s own velocity, so destinies are read relative to a moving star (⌖ marks it, pinned at the origin while the others orbit).
             </div>
           )}
@@ -709,23 +709,23 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
               onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={() => setHover('')} />
             <canvas ref={starCanvasRef} width={600} height={600}
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: 6, pointerEvents: 'none' }} />
-            <div ref={overlayRef} style={{ position: 'absolute', display: 'none', border: '1px solid #66f0ff', background: 'rgba(102,240,255,0.12)', pointerEvents: 'none' }} />
+            <div ref={overlayRef} style={{ position: 'absolute', display: 'none', border: '1px solid var(--accent-2)', background: 'var(--accent-soft)', pointerEvents: 'none' }} />
             {busy && (
               <div style={{ position: 'absolute', left: 8, right: 8, bottom: 8, pointerEvents: 'none' }}>
-                <div style={{ font: '10px ui-monospace, monospace', color: '#dfeaff', textShadow: '0 1px 3px #000', marginBottom: 3 }}>
+                <div style={{ font: '10px ui-monospace, monospace', color: 'var(--fg)', textShadow: '0 1px 3px #000', marginBottom: 3 }}>
                   rendering… {Math.round(progress * 100)}%
                 </div>
                 <div style={{ height: 5, borderRadius: 3, background: 'rgba(0,0,0,0.55)', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${progress * 100}%`, background: '#46d98a', borderRadius: 3 }} />
+                  <div style={{ height: '100%', width: `${progress * 100}%`, background: 'var(--success)', borderRadius: 3 }} />
                 </div>
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', font: '10px ui-monospace, monospace', color: '#6f7f99', marginTop: 3 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', font: '10px ui-monospace, monospace', color: 'var(--dim)', marginTop: 3 }}>
             <span>{AXIS_LABELS[mode][0]} {effDomain.a0.toFixed(2)}…{effDomain.a1.toFixed(2)}</span>
             <span>{AXIS_LABELS[mode][1]} {effDomain.b0.toFixed(2)}…{effDomain.b1.toFixed(2)}</span>
           </div>
-          <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', marginTop: 4, minHeight: 16 }}>{hover || 'Hover the map to inspect a starting condition.'}</div>
+          <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', marginTop: 4, minHeight: 16 }}>{hover || 'Hover the map to inspect a starting condition.'}</div>
         </div>
       </div>
     </div>

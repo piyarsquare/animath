@@ -16,7 +16,7 @@ function statusText(s: Snapshot): { text: string; color: string } {
   if (s.planetFate === 'destroyed') return { text: '☄ Planet destroyed', color: '#ff7043' };
   if (s.planetFate === 'ejected') return { text: '❄ Planet ejected — frozen wanderer', color: '#5a9be8' };
   if (s.ejectedStar >= 0) return { text: `⊘ Star ${s.ejectedStar + 1} ejected → binary`, color: '#46d98a' };
-  return { text: s.bound ? '☉☉☉ three stars · planet bound' : '⚠ planet unbound', color: '#cfe0f5' };
+  return { text: s.bound ? '☉☉☉ three stars · planet bound' : '⚠ planet unbound', color: 'var(--fg)' };
 }
 
 /** Maps insolation to a 0..1 position on a log scale spanning the habitable band. */
@@ -69,9 +69,9 @@ export default function Observatory({ snapshot }: { snapshot: Snapshot | null })
   return (
     <div style={{
       position: 'absolute', left: 0, right: 0, bottom: 0,
-      padding: '8px 12px 10px', background: 'rgba(6,9,14,0.78)',
-      borderTop: '1px solid rgba(120,150,200,0.25)', backdropFilter: 'blur(5px)',
-      color: '#cfe0f5', font: '12px/1.4 ui-monospace, monospace', pointerEvents: 'none',
+      padding: '8px 12px 10px', background: 'var(--panel)',
+      borderTop: '1px solid var(--border)', backdropFilter: 'blur(5px)',
+      color: 'var(--fg)', font: '12px/1.4 ui-monospace, monospace', pointerEvents: 'none',
     }}>
       {/* Stats row */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 18px', marginBottom: 6 }}>
@@ -80,17 +80,17 @@ export default function Observatory({ snapshot }: { snapshot: Snapshot | null })
           <span style={{ width: 9, height: 9, borderRadius: 9, background: CLIMATE_COLOR[snapshot.climate] }} />
           {snapshot.climate.toUpperCase()}
         </span>
-        <span style={chip}>habitable&nbsp;<b style={{ color: '#46d98a' }}>{pct(snapshot.habitableFraction)}</b></span>
-        <span style={chip}>paradise&nbsp;<b style={{ color: '#46d98a' }}>{pct(snapshot.bothFraction)}</b></span>
-        <span style={chip}>longest stable&nbsp;<b style={{ color: '#9ec7ff' }}>{snapshot.longestHabitable.toFixed(1)}</b></span>
+        <span style={chip}>habitable&nbsp;<b style={{ color: 'var(--success)' }}>{pct(snapshot.habitableFraction)}</b></span>
+        <span style={chip}>paradise&nbsp;<b style={{ color: 'var(--success)' }}>{pct(snapshot.bothFraction)}</b></span>
+        <span style={chip}>longest stable&nbsp;<b style={{ color: 'var(--accent)' }}>{snapshot.longestHabitable.toFixed(1)}</b></span>
       </div>
 
       {/* Insolation bar with habitable band highlighted */}
-      <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.08)', marginBottom: 6 }}>
+      <div style={{ position: 'relative', height: 8, borderRadius: 4, background: 'var(--track)', marginBottom: 6 }}>
         <div style={{
           position: 'absolute', top: 0, bottom: 0, borderRadius: 4,
           left: `${bar.loPos * 100}%`, width: `${(bar.hiPos - bar.loPos) * 100}%`,
-          background: 'rgba(70,217,138,0.35)',
+          background: 'var(--success-soft)',
         }} />
         <div style={{
           position: 'absolute', top: -2, width: 3, height: 12, borderRadius: 2,

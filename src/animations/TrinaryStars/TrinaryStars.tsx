@@ -752,12 +752,12 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
 
   const btnStyle: React.CSSProperties = {
     padding: '10px 14px', borderRadius: 6, border: '1px solid var(--cp-border, #2a3550)',
-    background: 'rgba(255,255,255,0.06)', color: 'var(--cp-fg, #e8edf6)', cursor: 'pointer', fontSize: 14, flex: 1,
+    background: 'var(--panel-2)', color: 'var(--cp-fg, #e8edf6)', cursor: 'pointer', fontSize: 14, flex: 1,
   };
   const placeBtnStyle: React.CSSProperties = {
     ...btnStyle,
-    background: placeMode ? 'rgba(255, 212, 0, 0.18)' : 'rgba(255,255,255,0.06)',
-    borderColor: placeMode ? 'rgba(255,212,0,0.5)' : 'var(--cp-border, #2a3550)',
+    background: placeMode ? 'var(--accent-soft)' : 'var(--panel-2)',
+    borderColor: placeMode ? 'var(--accent)' : 'var(--cp-border, #2a3550)',
   };
 
   const note: React.CSSProperties = {

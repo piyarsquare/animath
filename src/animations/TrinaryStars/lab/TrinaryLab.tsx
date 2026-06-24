@@ -381,9 +381,9 @@ export default function TrinaryLab() {
   const happyPct = n ? (agg!.counts.happy / n) : 0;
   const btn: React.CSSProperties = {
     padding: '8px 16px', borderRadius: 6, border: '1px solid var(--cp-border, #2a3550)',
-    background: 'rgba(255,255,255,0.06)', color: '#e8edf6', cursor: 'pointer', fontSize: 14,
+    background: 'var(--panel-2)', color: 'var(--fg)', cursor: 'pointer', fontSize: 14,
   };
-  const note: React.CSSProperties = { font: '11px/1.5 system-ui', color: '#6f7f99', marginTop: 4 };
+  const note: React.CSSProperties = { font: '11px/1.5 system-ui', color: 'var(--dim)', marginTop: 4 };
 
   const targetOptions: { value: TargetId; label: string }[] = [
     { value: 'bary', label: 'Barycenter' }, { value: 's0', label: 'Star 1' },
@@ -425,7 +425,7 @@ export default function TrinaryLab() {
         </div>
       )}
       <div style={note}>
-        How long each world is integrated, and the insolation band counted as habitable — used by <b style={{ color: '#9aa7bd' }}>both</b> the Destiny Map and the Census. Changing any setting clears the tally.
+        How long each world is integrated, and the insolation band counted as habitable — used by <b style={{ color: 'var(--fg)' }}>both</b> the Destiny Map and the Census. Changing any setting clears the tally.
       </div>
     </>
   );
@@ -444,7 +444,7 @@ export default function TrinaryLab() {
       </div>
       <div style={note}>
         Each dot is a candidate world: a launch radius and a speed (as a multiple of the local circular speed). The cyan box is what you’re sampling now — move the sliders to reshape it, or drag a box on the Destiny Map’s radius×speed plane. Below the amber line orbits tend to be bound; above the red √2 line they tend to escape.
-        <span style={{ color: '#9aa7bd' }}> Changing any setting clears the tally.</span>
+        <span style={{ color: 'var(--dim)' }}> Changing any setting clears the tally.</span>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
         <button style={btn} title="New random ensemble seed" onClick={() => setBaseSeed((Math.random() * 4294967296) >>> 0)}>🎲 Reseed</button>
@@ -461,12 +461,12 @@ export default function TrinaryLab() {
   const transportNode = (
     <>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        <button style={{ ...btn, background: running ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }}
+        <button style={{ ...btn, background: running ? 'var(--accent-soft)' : 'var(--success-soft)' }}
           onClick={running ? pause : start}>{running ? '❚❚ Pause' : (n > 0 && n < targetN ? '▶ Resume' : '▶ Run census')}</button>
         <button style={btn} onClick={reset}>↺ Reset</button>
       </div>
       <div style={{ height: 8, borderRadius: 4, background: 'var(--track)', marginTop: 10, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${Math.min(100, n / Math.max(1, targetN) * 100)}%`, background: '#46d98a', transition: 'width 0.1s' }} />
+        <div style={{ height: '100%', width: `${Math.min(100, n / Math.max(1, targetN) * 100)}%`, background: 'var(--success)', transition: 'width 0.1s' }} />
       </div>
       <div style={{ font: '12px ui-monospace, monospace', color: 'var(--dim-2)', marginTop: 6 }}>
         {n.toLocaleString()} / {targetN.toLocaleString()} worlds{rate > 0 ? ` · ${rate.toFixed(0)} worlds/s` : ''}
@@ -476,8 +476,8 @@ export default function TrinaryLab() {
 
   const outcomesNode = (
     <>
-      <div style={{ font: '12px ui-monospace, monospace', color: '#9aa7bd', margin: '4px 0 8px' }}>
-        <b style={{ color: '#fff' }}>{n.toLocaleString()}</b> / {targetN.toLocaleString()} worlds ·{' '}
+      <div style={{ font: '12px ui-monospace, monospace', color: 'var(--dim)', margin: '4px 0 8px' }}>
+        <b style={{ color: 'var(--fg)' }}>{n.toLocaleString()}</b> / {targetN.toLocaleString()} worlds ·{' '}
         <b style={{ color: '#46d98a' }}>{pct(happyPct)}</b> happy endings
       </div>
       {OUTCOMES.map(o => {
@@ -487,9 +487,9 @@ export default function TrinaryLab() {
           <div key={o} style={{ marginBottom: 7 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', font: '11px ui-monospace, monospace' }}>
               <span style={{ color: OUTCOME_META[o].color }}>{OUTCOME_META[o].label}</span>
-              <span style={{ color: '#9aa7bd' }}>{pct(frac)}</span>
+              <span style={{ color: 'var(--dim)' }}>{pct(frac)}</span>
             </div>
-            <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)', marginTop: 2 }}>
+            <div style={{ height: 6, borderRadius: 3, background: 'var(--track)', marginTop: 2 }}>
               <div style={{ height: '100%', width: `${frac * 100}%`, background: OUTCOME_META[o].color, borderRadius: 3 }} />
             </div>
           </div>
@@ -497,7 +497,7 @@ export default function TrinaryLab() {
       })}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 10, font: '12px ui-monospace, monospace' }}>
         <span>mean habitable&nbsp;<b style={{ color: '#46d98a' }}>{agg ? pct(agg.habMean) : '—'}</b>
-          {agg && agg.n > 1 ? <span style={{ color: '#6f7f99' }}> ±{(agg.habStderr * 100).toFixed(2)}</span> : null}</span>
+          {agg && agg.n > 1 ? <span style={{ color: 'var(--dim-2)' }}> ±{(agg.habStderr * 100).toFixed(2)}</span> : null}</span>
         <span>mean stable era&nbsp;<b style={{ color: '#9ec7ff' }}>{agg ? agg.longMean.toFixed(1) : '—'}</b></span>
         <span>longest ever&nbsp;<b style={{ color: '#ffd27f' }}>{agg ? agg.longMax.toFixed(1) : '—'}</b></span>
       </div>
@@ -506,11 +506,11 @@ export default function TrinaryLab() {
 
   const distNode = (
     <>
-      <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', margin: '2px 0' }}>habitable fraction of lifetime</div>
+      <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', margin: '2px 0' }}>habitable fraction of lifetime</div>
       <Histogram data={agg?.histHab ?? []} max={agg?.histMax.hab ?? 1} color="#46d98a" domain={['0%', '100%']} />
-      <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', margin: '8px 0 2px' }}>longest stable era</div>
+      <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', margin: '8px 0 2px' }}>longest stable era</div>
       <Histogram data={agg?.histLong ?? []} max={agg?.histMax.long ?? 1} color="#9ec7ff" domain={['0', tMax.toFixed(0)]} />
-      <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', margin: '8px 0 2px' }}>time to star ejection (happy runs)</div>
+      <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', margin: '8px 0 2px' }}>time to star ejection (happy runs)</div>
       <Histogram data={agg?.histEject ?? []} max={agg?.histMax.eject ?? 1} color="#ffd27f" domain={['0', tMax.toFixed(0)]} />
       <div style={note}>Distributions sharpen as N grows.</div>
     </>
@@ -518,17 +518,17 @@ export default function TrinaryLab() {
 
   const recordsNode = (
     <>
-      <div style={{ font: '11px ui-monospace, monospace', color: '#9aa7bd', margin: '2px 0 6px' }}>longest stable eras</div>
+      <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', margin: '2px 0 6px' }}>longest stable eras</div>
       <table style={{ width: '100%', borderCollapse: 'collapse', font: '11px ui-monospace, monospace' }}>
         <thead>
-          <tr style={{ color: '#6f7f99', textAlign: 'right' }}>
+          <tr style={{ color: 'var(--dim-2)', textAlign: 'right' }}>
             <th style={{ textAlign: 'left' }}>#</th><th>stable</th><th>hab%</th><th>r</th><th>v</th><th>dir</th><th>outcome</th>
           </tr>
         </thead>
         <tbody>
           {(agg?.records ?? []).map((r, i) => (
-            <tr key={i} style={{ textAlign: 'right', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-              <td style={{ textAlign: 'left', color: '#6f7f99' }}>{i + 1}</td>
+            <tr key={i} style={{ textAlign: 'right', borderTop: '1px solid var(--border)' }}>
+              <td style={{ textAlign: 'left', color: 'var(--dim-2)' }}>{i + 1}</td>
               <td style={{ color: '#ffd27f' }}>{r.longestHabitable.toFixed(1)}</td>
               <td>{(r.habitableFraction * 100).toFixed(0)}</td>
               <td>{r.radius.toFixed(2)}</td>
@@ -537,7 +537,7 @@ export default function TrinaryLab() {
               <td style={{ color: OUTCOME_META[r.outcome].color }}>{r.outcome}</td>
             </tr>
           ))}
-          {!agg?.records.length && <tr><td colSpan={7} style={{ color: '#6f7f99', padding: '8px 0' }}>Run the census to populate…</td></tr>}
+          {!agg?.records.length && <tr><td colSpan={7} style={{ color: 'var(--dim-2)', padding: '8px 0' }}>Run the census to populate…</td></tr>}
         </tbody>
       </table>
     </>
@@ -598,7 +598,7 @@ export default function TrinaryLab() {
               <span style={{ color: 'var(--dim-2)' }}>happy endings</span>
             </div>
             <div style={{ height: 8, borderRadius: 4, background: 'var(--track)', marginTop: 8, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${Math.min(100, (n / targetN) * 100)}%`, background: '#46d98a', transition: 'width 0.1s' }} />
+              <div style={{ height: '100%', width: `${Math.min(100, (n / targetN) * 100)}%`, background: 'var(--success)', transition: 'width 0.1s' }} />
             </div>
           </div>
           <div style={panel}>
