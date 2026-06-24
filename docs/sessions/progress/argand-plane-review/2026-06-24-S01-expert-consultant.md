@@ -5,8 +5,8 @@ date: 2026-06-24
 title: "Argand — Architecture & Quality Consultant review (Hat 2 of 5)"
 branch: claude/argand-plane-review-51egvz
 slug: argand-plane-review
-status: complete
-build: passing
+status: completed
+build: passed
 ---
 
 # Argand — Architecture & Quality Consultant review (Hat 2 of 5)

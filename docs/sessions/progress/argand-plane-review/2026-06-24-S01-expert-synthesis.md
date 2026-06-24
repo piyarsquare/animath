@@ -5,8 +5,8 @@ date: 2026-06-24
 title: Argand design & UX review — five-hat convergence synthesis
 branch: claude/argand-plane-review-51egvz
 slug: argand-plane-review
-status: complete
-build: passing
+status: completed
+build: passed
 ---
 
 # Argand design & UX review — five-hat convergence synthesis

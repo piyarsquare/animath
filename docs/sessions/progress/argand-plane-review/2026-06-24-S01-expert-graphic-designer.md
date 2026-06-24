@@ -5,8 +5,8 @@ date: 2026-06-24
 title: "Argand visual-design review — Hat 4, the Graphic Designer"
 branch: claude/argand-plane-review-51egvz
 slug: argand-plane-review
-status: complete
-build: passing
+status: completed
+build: passed
 ---
 
 # Argand visual-design review — Hat 4, the Graphic Designer

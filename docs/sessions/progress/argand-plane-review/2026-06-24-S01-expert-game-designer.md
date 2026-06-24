@@ -5,8 +5,8 @@ date: 2026-06-24
 title: "Argand review — Hat 5: Video Game Designer (UX & interaction feel)"
 branch: claude/argand-plane-review-51egvz
 slug: argand-plane-review
-status: complete
-build: passing
+status: completed
+build: passed
 signals:
   - visual-unverified
 ---

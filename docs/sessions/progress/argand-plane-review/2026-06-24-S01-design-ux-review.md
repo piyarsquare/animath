@@ -5,13 +5,13 @@ date: 2026-06-24
 title: Argand — design & UX review (graphic designer + game designer hats)
 branch: claude/argand-plane-review-51egvz
 slug: argand-plane-review
-status: in-progress
-build: unknown
+status: completed
+build: passed
 followup: null
 pr: null
 app: argand
-signals: null
-next: Run the three-hats review on Argand with the two added lenses (graphic designer · game designer), then synthesize into concrete UX/visual changes.
+signals: visual-unverified
+next: Land Tier 0 (complexOps tests) + Tier 1 fixes (Essentials overlap, fabricated dual/split z*, collapse the triple feed-switcher, hint pill, phone hero) per the synthesis; first answer the 3 identity questions for Tier 3.
 ---
 
 # Argand — design & UX review (graphic designer + game designer hats)

@@ -5,9 +5,9 @@ date: 2026-06-24
 title: "Argand review — Hat 3: Math-Visualization & Pedagogy"
 branch: claude/argand-plane-review-51egvz
 slug: argand-plane-review
-status: complete
-build: passing
-signals: [visual-unverified]
+status: completed
+build: passed
+signals: visual-unverified
 ---
 
 # Argand review — Hat 3: Math-Visualization & Pedagogy Expert
