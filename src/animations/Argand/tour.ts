@@ -30,6 +30,7 @@ export interface TourState {
   gridType?: 'cartesian' | 'polar';
   gridColor?: boolean;
   showUnitCircle?: boolean;
+  dimension?: 'line' | 'plane';
 }
 
 export interface TourStep {
@@ -47,7 +48,7 @@ export const TOUR: TourStep[] = [
     title: 'Start on the line',
     body: 'Forget the plane for a moment. Every number is a point on a line. Adding α₀ just slides the input along it — that is all addition ever does.',
     state: {
-      feed: 'point', degree: 1, system: -1,
+      feed: 'point', degree: 1, system: -1, dimension: 'line',
       z: cx(1, 0), alpha1: cx(1, 0), alpha0: cx(1.5, 0),
       viewFromFixed: false, iterate: false,
       gridType: 'cartesian', gridColor: false, showUnitCircle: false, extent: 5,
@@ -63,13 +64,13 @@ export const TOUR: TourStep[] = [
     id: 'magnitude',
     title: 'What keeps the magnitude?',
     body: 'Which multipliers leave length unchanged? On the line, only ×(+1) and ×(−1). Just two numbers preserve magnitude — that is the whole "unit set" of the line.',
-    state: { alpha1: cx(-1, 0), showUnitCircle: true },
+    state: { alpha1: cx(-1, 0), showUnitCircle: false },
   },
   {
     id: 'newaxis',
     title: 'Add a second axis',
     body: 'Now give the line a perpendicular i-axis. With room to move sideways, multiplying can turn instead of only flipping: ×i is a quarter-turn.',
-    state: { alpha1: cx(0, 1), alpha0: cx(0, 0), z: cx(1, 0), showUnitCircle: true },
+    state: { alpha1: cx(0, 1), alpha0: cx(0, 0), z: cx(1, 0), showUnitCircle: true, dimension: 'plane' },
   },
   {
     id: 'spin',

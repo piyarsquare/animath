@@ -319,3 +319,20 @@ Verified: build ✓ · tests 128/128 ✓ · eslint 0 · intro screenshot
 + the shared overlay machinery; a live click-through and phone pass are still owed —
 `visual-unverified` on those.) Increment 2 (dedicated Line stage + Dimension selector)
 and Increment 3 (quaternions) remain.
+
+### 🟢 code · 18:20 — Line mode (Increment 2 start): a real number-line view
+**Why:** Dan: a real mode for the real line that does not show the y-axis or the
+vertical grid lines.
+
+- **`ArgandPlane.tsx`** gains a `lineMode` prop: hides the imaginary (vertical)
+  axis + its "i" label, skips the vertical (x=const) grid lines, and suppresses
+  the unit *curve* (a 2D object has no place on the line). Horizontal axis (Re),
+  horizontal grid lines, handles and the affine path stay.
+- **`Argand.tsx`**: a **Dimension** pill (Line ℝ · Plane ℂ) in the Plane panel →
+  `dimension` (persisted), passed as `lineMode`; added to `applyStep`.
+- **Tour tie-in**: `TourState.dimension` — steps 1–3 (real line) now render in Line
+  mode and "Add a second axis" (step 4) flips to Plane, so the walkthrough literally
+  grows the i-axis. Verified by screenshot `assets/2026-06-24-S01-line-mode.png`.
+
+Note: faint *horizontal* grid lines remain (only verticals were asked to go);
+trivial to drop in Line mode too if wanted. Build ✓ · eslint 0.

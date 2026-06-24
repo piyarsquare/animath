@@ -60,6 +60,8 @@ export default function Argand() {
   const [gridStep, setGridStep] = usePersistentState(`${STORAGE_KEY}:gridStep`, 1);
   const [gridColor, setGridColor] = usePersistentState(`${STORAGE_KEY}:gridColor`, false);
   const [showUnitCircle, setShowUnitCircle] = usePersistentState(`${STORAGE_KEY}:unit`, true);
+  // Dimension: 'line' (ℝ — number line, no imaginary axis) or 'plane' (ℂ, today's view).
+  const [dimension, setDimension] = usePersistentState<'line' | 'plane'>(`${STORAGE_KEY}:dimension`, 'plane');
   const [extent, setExtent] = usePersistentState(`${STORAGE_KEY}:extent`, 4);
   // Number system: p = j². p<0 complex, p=0 dual, p>0 split-complex.
   const [system, setSystem] = usePersistentState(`${STORAGE_KEY}:system`, -1);
@@ -185,6 +187,7 @@ export default function Argand() {
     if (s.gridType !== undefined) setGridType(s.gridType);
     if (s.gridColor !== undefined) setGridColor(s.gridColor);
     if (s.showUnitCircle !== undefined) setShowUnitCircle(s.showUnitCircle);
+    if (s.dimension !== undefined) setDimension(s.dimension);
     setPlaying(false);
     setSysPlaying(false);
   };
@@ -337,6 +340,15 @@ export default function Argand() {
 
   const planeNode = (
     <>
+      <Pills<'line' | 'plane'>
+        label="Dimension"
+        options={[{ value: 'line', label: 'Line  ℝ' }, { value: 'plane', label: 'Plane  ℂ' }]}
+        value={dimension}
+        onChange={setDimension}
+      />
+      <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', margin: '2px 0 8px' }}>
+        <b>Line</b> hides the imaginary axis and the vertical grid — a bare number line.
+      </div>
       <Slider label="Extent (±)" value={extent} min={1} max={16} step={0.5}
         onChange={setExtent} format={v => v.toFixed(1)} />
       <Pills<'cartesian' | 'polar'>
@@ -532,7 +544,7 @@ export default function Argand() {
             snapping={snapping} gridOpacity={gridOpacity} imageOpacity={imageOpacity} showUnitCircle={showUnitCircle}
             gridType={gridType} gridStep={gridStep} gridColor={gridColor}
             viewFromFixed={viewFromFixed} iterate={iterate} iterN={iterN}
-            extent={extent}
+            extent={extent} lineMode={dimension === 'line'}
             onChange={onHandleChange}
             onZoom={f => setExtent(e => Math.min(16, Math.max(1, e * f)))}
           />

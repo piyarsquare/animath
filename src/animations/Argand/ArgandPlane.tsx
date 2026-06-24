@@ -61,6 +61,9 @@ interface Props {
   iterN: number;
   /** Half-extent of the visible plane in math units. */
   extent: number;
+  /** Line mode (ℝ): hide the imaginary axis and the vertical grid lines so the
+   *  view reads as a bare number line. */
+  lineMode: boolean;
   onChange: (which: Handle, z: Cx) => void;
   onZoom?: (factor: number) => void;
 }
@@ -84,7 +87,7 @@ function useSize(ref: React.RefObject<HTMLDivElement>) {
 }
 
 export default function ArgandPlane({
-  z, alpha1, alpha0, alpha2, degree, p, feed, curve, t, playing, lockA1, lockA0, lockA2, snapping, gridOpacity, imageOpacity, gridType, gridStep, gridColor, showUnitCircle, viewFromFixed, iterate, iterN, extent, onChange, onZoom,
+  z, alpha1, alpha0, alpha2, degree, p, feed, curve, t, playing, lockA1, lockA0, lockA2, snapping, gridOpacity, imageOpacity, gridType, gridStep, gridColor, showUnitCircle, viewFromFixed, iterate, iterN, extent, lineMode, onChange, onZoom,
 }: Props) {
   const quad = degree >= 2;
   const coeffs: Cx[] = quad ? [alpha0, alpha1, alpha2] : [alpha0, alpha1];
@@ -277,7 +280,8 @@ export default function ArgandPlane({
     } else {
       const GN = Math.ceil(reach / gridStep) * gridStep;
       const n = quad || gridColor ? 24 : 1;
-      for (let x = -GN; x <= GN + 1e-9; x += gridStep) {
+      // Vertical grid lines (x = const) are suppressed in Line mode.
+      if (!lineMode) for (let x = -GN; x <= GN + 1e-9; x += gridStep) {
         const ln: Cx[] = [];
         for (let j = 0; j <= n; j++) ln.push(cx(x, -GN + (2 * GN * j) / n));
         out.push(ln);
@@ -359,7 +363,7 @@ export default function ArgandPlane({
   // The system's "unit circle": the level set N(z)=re²−p·im²=1 — an ellipse
   // (p<0), two lines (p=0), or a hyperbola with its null cone (p>0).
   const unitCurveNode = (() => {
-    if (!showUnitCircle) return null;
+    if (!showUnitCircle || lineMode) return null;   // a 2D curve has no place on the line
     const st = { fill: 'none', stroke: 'currentColor', strokeOpacity: 0.28, strokeWidth: 2, strokeDasharray: '6 8' } as const;
     if (p < 0) return <ellipse cx={oVx} cy={oVy} rx={k} ry={k / Math.sqrt(-p)} {...st} />;
     if (p === 0) {
@@ -453,12 +457,12 @@ export default function ArgandPlane({
           {/* the system's unit curve */}
           {unitCurveNode}
 
-          {/* axes */}
+          {/* axes — the imaginary (vertical) axis is hidden in Line mode */}
           <g stroke="currentColor" strokeOpacity={0.45} strokeWidth={2}>
             <line x1={0} y1={oVy} x2={w} y2={oVy} />
-            <line x1={oVx} y1={0} x2={oVx} y2={h} />
+            {!lineMode && <line x1={oVx} y1={0} x2={oVx} y2={h} />}
           </g>
-          <text x={oVx + 9} y={26} fontSize={21} fill="currentColor" fillOpacity={0.5}>i</text>
+          {!lineMode && <text x={oVx + 9} y={26} fontSize={21} fill="currentColor" fillOpacity={0.5}>i</text>}
           <text x={w - 24} y={oVy - 11} fontSize={21} fill="currentColor" fillOpacity={0.5}>Re</text>
 
           {/* ---- GRID feed: the whole coordinate grid mapped by f ---- */}
