@@ -5,7 +5,7 @@ date: 2026-06-20
 title: "Math-Viz & Pedagogy hat — animating complex numbers in Plane Transform"
 branch: claude/complex-numbers-animath-intro-jperz6
 slug: complex-numbers-animath-intro-jperz6
-status: complete
+status: completed
 build: n/a
 followup: medium
 pr: null

@@ -9,7 +9,7 @@ status: completed
 build: passed
 followup: null
 pr: null
-app: general
+app: counting-the-ways
 signals:
 next: The Lab should show cumulative results — pooled/running μ̂ that tightens as runs accumulate, a convergence trace, and the spread of μ̂ across runs (logged to TODO.md).
 ---

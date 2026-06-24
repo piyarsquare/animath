@@ -5,7 +5,7 @@ date: 2026-06-18
 title: "Quaternions — design lens: Illustrator"
 branch: claude/quaternion-exploration-app-ig4jmy
 slug: quaternion-exploration-app-ig4jmy
-status: complete
+status: completed
 build: n/a
 app: general
 ---

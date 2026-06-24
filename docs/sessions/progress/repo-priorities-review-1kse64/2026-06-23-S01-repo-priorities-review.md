@@ -32,6 +32,21 @@ the **screenshot tour** (#235, `gracious-ptolemy`). The last triage pass was
 
 ## Working notes
 
+### 🟢 code · 00:45 — Normalized `complete`→`completed`; registered Counting the Ways category
+**Why:** Dan: sweep the status normalization and add the counting-the-ways app
+to the taxonomy.
+
+- Swept **31 reports** `status: complete` → `completed` (the builder only greens
+  `completed`/`executed`, so `complete` rendered neutral). 0 remain.
+- Added **`counting-the-ways`** to `categories.mjs` (label "Counting the Ways",
+  hue 70) + a `focused-cerf` → `counting-the-ways` slug override, and set the
+  focused-cerf progress report's `app:` to `counting-the-ways`.
+- Validated: `sessions:lint` warnings **171 → 139** (32 cleared; errors unchanged
+  at the 34 pre-existing baseline), full `npm run sessions` build succeeds (15
+  categories). **Observed (pre-existing, not mine):** the build now logs
+  `drift: counting-the-ways(no-guide)` — CountingTheWays shipped (#233) without a
+  `docs/apps/counting-the-ways.md` guide; a separate follow-up.
+
 ### 🟢 code · 00:30 — Swept stale `in-progress` reports → completed
 **Why:** Dan asked what's still marked in-progress and whether it needs correction.
 

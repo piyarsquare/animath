@@ -26,6 +26,7 @@ export const CATEGORIES = {
   "solid-worlds":      { label: "Solid Worlds",      hue: 190 },
   "trees-and-nets":    { label: "Trees and Nets",    hue: 115 },
   "argand":            { label: "Argand",            hue: 250 },
+  "counting-the-ways": { label: "Counting the Ways", hue: 70  },
   "chrome":            { label: "Chrome / Shell",    hue: 220 },
   "engine":            { label: "Engine / lib",      hue: 285 },
   "docs":              { label: "Docs / Guides",     hue: 130 },
@@ -74,6 +75,7 @@ const SLUG_OVERRIDES = {
   "particle-viewer-ideas-priority": ["complex-particles"],
   "gale-shapley-strategy": ["stable-marriage", "stable-matching"],
   "complex-numbers-animath-intro": ["argand"],
+  "focused-cerf": ["counting-the-ways"],
   "3d-manifold-worlds": ["solid-worlds"],
   "animath-space-worlds": ["solid-worlds"],
 };

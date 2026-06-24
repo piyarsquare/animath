@@ -5,7 +5,7 @@ date: 2026-06-18
 title: Quaternions — the room (a carried-out dialogue)
 branch: claude/quaternion-exploration-app-ig4jmy
 slug: quaternion-exploration-app-ig4jmy
-status: complete
+status: completed
 build: n/a
 ---
 

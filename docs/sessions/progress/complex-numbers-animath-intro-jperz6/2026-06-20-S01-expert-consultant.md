@@ -5,7 +5,7 @@ date: 2026-06-20
 title: "Architecture & Quality Consultant — animating Plane Transform into the complex-numbers intro instrument"
 branch: claude/complex-numbers-animath-intro-jperz6
 slug: complex-numbers-animath-intro-jperz6
-status: complete
+status: completed
 build: n/a
 followup: medium
 pr: null

@@ -5,7 +5,7 @@ date: 2026-06-10
 title: "Framework Maintainer review — Agentic Sorting: divergent objectives + Levin competencies"
 branch: claude/agentic-sorting-app-j6ngd4
 slug: agentic-sorting-app-j6ngd4
-status: complete
+status: completed
 build: unknown
 followup: low
 pr: null
