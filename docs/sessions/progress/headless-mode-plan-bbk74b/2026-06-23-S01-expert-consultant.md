@@ -10,7 +10,7 @@ build: n/a
 followup: high
 pr: null
 app: docs, engine
-signals: needs-dan
+signals:
 next: Resolve the determinism gap (freeze time / settle-on-idle) before Phase 4 is treated as a real gate
 ---
 

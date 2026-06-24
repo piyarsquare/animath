@@ -10,7 +10,7 @@ build: passed
 followup: null
 pr: https://github.com/piyarsquare/animath/pull/229
 app: docs
-signals: not-live
+signals:
 next: Merge PR #229 to main (then the App-map drops the not-live flag on all 12 guides).
 ---
 

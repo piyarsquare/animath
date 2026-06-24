@@ -10,7 +10,7 @@ build: passing
 followup: null
 pr: null
 app: solid-worlds
-signals: needs-dan
+signals:
 next: Rework homology.ts to a cellular method valid for screw gluings (2× cube subdivision or Bieberbach abelianization) so Hantzsche–Wendt + the amphidicosms can be added with computed, cross-checked H₁.
 ---
 

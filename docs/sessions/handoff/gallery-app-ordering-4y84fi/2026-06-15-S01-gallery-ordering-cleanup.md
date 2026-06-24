@@ -10,7 +10,7 @@ build: passed
 followup: low
 pr: 220
 app: chrome
-signals: not-live
+signals:
 next: At merge keep every app's apps.ts entry and apply this curated order (apps.ts was reordered, not appended).
 ---
 

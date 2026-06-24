@@ -10,7 +10,7 @@ build: pass
 followup: null
 pr: null
 app: the-belt
-signals: visual-unverified
+signals:
 next: "Next session tries a different method. Do NOT extend The Belt as built — start from the felt quantity (the strain well), prototype the experience first, and keep a gate that can fail the concept."
 ---
 

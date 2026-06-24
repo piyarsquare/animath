@@ -10,7 +10,7 @@ build: passing
 followup: null
 pr: null
 app: solid-worlds
-signals: needs-dan
+signals:
 next: Product call only — rename the app "Solid Worlds" → "Manifold Walk"? (Dan said leave it this session.) No engine work outstanding.
 ---
 

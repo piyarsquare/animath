@@ -11,7 +11,7 @@ followup: null
 thumbnail: assets/2026-06-14-S02-net-inverse.png
 pr: null
 app: docs, complex-particles
-signals: needs-dan, not-live
+signals: needs-dan
 next: Decide whether to fund the embed-route work (B0) that unlocks app-specific guides.
 ---
 

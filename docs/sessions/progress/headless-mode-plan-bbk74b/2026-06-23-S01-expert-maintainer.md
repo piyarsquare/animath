@@ -10,7 +10,7 @@ build: n/a
 followup: null
 pr: null
 app: docs, engine
-signals: needs-dan
+signals:
 next: Confirm the setPose-per-cover cost estimate with Dan before Phase 2/3 sizing
 ---
 
