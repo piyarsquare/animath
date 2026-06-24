@@ -314,6 +314,179 @@ except where noted.
 
 ---
 
+# Round 2 — the complex–dual–split slider as a cross-app lens ("unitary spaces")
+
+<details>
+<summary>Second request (2026-06-24)</summary>
+
+> I want to discuss interactions between the complex-dual-split slider and the other complex function apps. I think the core idea is "unitary spaces" where the most "familiar" entry point is complex numbers but even those are treated as foreigners we need to understand.
+
+</details>
+
+The same five hats were resumed (keeping their round-1 analysis) and each
+appended an augmentation. The grounding facts given to all five: `p=j²` is
+**Argand-only** today; `complexOps.ts` already holds the generalized algebra
+(`mulG`, `conjG`, `normG = x²−p·y²`, `invG`/`divG`, `powRealG`, `sqrtG`,
+`expG`/`logG`); every other complex app is hardwired to ℂ; the cross-app link
+(`functionHandoff.ts`) carries function identity only; and **only
+affine/polynomial/rational maps generalize honestly over `p`** — the
+transcendental zoo (exp/sin/Γ) does not.
+
+## R2.1 — Points of agreement (high confidence)
+
+### The idea is real and worth doing — `normG` *is* the "unitary" invariant
+All five endorse the vision. The norm `N(z)=x²−p·y²` is the genuine organizing
+quantity: multiplication by a unit-norm element preserves it, and its level set
+is the unit curve (circle → two parallel lines → hyperbola). "Treat ℂ as a
+foreigner" has a precise meaning — ℂ is just the `p<0` member of the Cayley–Klein
+family where the preserved norm happens to be the familiar circle. Nobody argued
+it's a gimmick.
+
+### Capability-gate the dial — refuse where the math doesn't generalize (unanimous)
+This is the round-2 headline, and it is **the round-1 fabricated-fixed-point bug
+generalized to the whole suite.** A `p`-slider sitting live next to `sin z` or
+`Γ` produces "garbage with a confident face" (pedagogy). All five converged on:
+
+| Hat | The gate |
+|---|---|
+| Maintainer | gate the dial or pin `p=−1`; "never ship a slider that NaNs on `sin z`" |
+| Consultant | a typed `validSystems` / `evalG?` **capability flag**; slider gated by the selected `f` (Argand's existing `powReliable` predicate is the template) |
+| Pedagogy | hide/inert for functions with no dual/split analogue — a true-looking lie otherwise |
+| Game designer | **three states, never a silent-garbage fourth**: show-live · lock-with-a-why · hide |
+
+> [!IMPORTANT]
+> The gate is not a limitation bolted on — it is *more* faithful to "ℂ as
+> foreigner" than a universal slider. The lock itself teaches **what travels
+> between spaces and what is ℂ-only.**
+
+### Domain coloring (hue = `arg z`) silently lies once `p ≠ −1`
+Pedagogy and the graphic designer independently flagged the suite's signature
+look as the subtlest trap. `arg z` is a ℂ notion; under **split** the natural
+"angle" is unbounded rapidity (a periodic hue wheel banishes it into false
+bands), under **dual** it's degenerate. Convergent fix: **re-base the palette on
+the generalized norm's level sets under one palette law** — hue/value where the
+generalized argument is defined, **desaturate to neutral where it isn't** (dual,
+across the null cone). This reduces to the familiar look exactly at `p=−1`, so
+the signature isn't lost.
+
+### Phasing: additive substrate first, then per-app fan-out (unanimous)
+The framework tension — a global `p` would touch a shared lib + ≥4 app folders +
+per-app GLSL at once, breaking the self-contained-folder / append-only property —
+is defused the same way by maintainer and consultant:
+
+1. **Phase 0 (one small branch, parallel-safe):** extract a *new*
+   `lib/generalizedAlgebra.ts` from `complexOps.ts` (which re-exports it → **zero
+   Argand churn**); add a typed `Algebra`/`validSystems` capability layer; add a
+   **distinct** `sys`/`j2` key to `functionHandoff.ts` (additive,
+   backward-compatible — **must not** reuse the existing `p`, which is the
+   `z^(p/q)` exponent); land golden-vector tests (folds into round-1's Tier-0
+   `complexOps` test debt).
+2. **Then each app adopts `p` inside its own folder, strictly after Phase 0**, so
+   per-app branches never conflict.
+
+### It's a capstone, not a spine — and the honest order is fixed
+Pedagogy: you can't defamiliarize ℂ before familiarizing it, so the dial belongs
+to the *last rung* — which **reinforces round-1's call to demote `j²` out of
+Argand's always-on HUD** (the dial and the vision are compatible, not opposed).
+Game designer: defamiliarization must be *earned, not woken into* — dim the dial
+until the player has done one rotation, then reveal it as a continuous morph (the
+slide itself is the "the rules just changed" moment). Convergent sequence:
+
+> **Argand** (where the idea is *met*, dial demoted/earned) → **Plane Transform**
+> (the best *reveal* — a whole grid under shear/boost) → **Complex Particles**
+> (gated to generalizable functions) → **Fractals / Correspondence** (advanced,
+> last or never).
+
+### One shared visual signifier + one cross-app interaction contract
+Graphic designer and game designer independently landed on the **unit curve +
+null cone as the dial's shared face**: a monochrome, scaffold-tier, *continuous*
+badge drawn identically in every app, with the slider thumb riding a miniature of
+the morphing curve — it *shows* the geometry of multiplication and survives the
+morph as one object. The game designer's contract makes it concrete: one name
+("Space dial"), one anchored slot, identical `−1…+1` range + Cx/Du/Sp pills, same
+in-world feedback — so it builds one transferable mental model, not five
+inconsistent toggles.
+
+## R2.2 — Points of tension (need Dan's call)
+
+### "Unitary" is the wrong name (pedagogy pushes back on the framing itself)
+The one place a hat challenged Dan's own words. "Unitary" names the ℂ-only
+U(1)/inner-product structure — it **re-privileges ℂ**, the opposite of "ℂ as
+foreigner." Pedagogy's recommendation: **Cayley–Klein planes / the j²-continuum**
+(umbrella) with **Argand / Galilean / Minkowski** (the three leaves), framing the
+invariant as **N-preservation**. Worth deciding early because it names everything
+downstream. (The term "unitary spaces" is evocative as a *project codename*; the
+question is whether it survives into user-facing prose.)
+
+### The GLSL cost is the real budget, and it's lumpy
+Argand (SVG) is already generalized and free. The cost is concentrated in **three
+GLSL apps** — Plane Transform's 36-case `applyComplex`, plus FractalsGPU and
+Correspondence — which hardcode complex `mul/exp/log` in `vec2` with **no shared
+TS↔GLSL source**. Consultant: budget this as multi-session, per-shader,
+drift-prone work; **Plane Transform as the sole pilot**, and ultimately **emit
+GLSL from one spec** so there are two implementations, not four. This is the main
+feasibility caveat — the vision is cheap in TS and expensive in shaders.
+
+### A scope-dependent reprioritization of a round-1 item
+The graphic designer promotes round-1's **hardcoded-hex / skin-token palette
+bug** from "polish" to a **blocking prerequisite** *if* the cross-app program
+proceeds — an un-tokenized viz palette that's merely degraded in one app would
+break across four. So the cross-app decision feeds back into the round-1 plan:
+greenlighting the program promotes that palette fix into Phase 0.
+
+### Silent cross-app state carry-over (new trap)
+Game designer: persistence/handoff silently carrying `p` between apps is a
+cross-app rerun of round-1's silent-state traps (the pan-lock, the snapping).
+Require an explicit "carried over: **Split-space**" confirmation on any handoff
+that changes what *multiply* means.
+
+## R2.3 — Blind spots (none of the five closed)
+
+- **Is the reveal actually compelling?** Everyone *assumes* a grid under
+  shear/boost and a split-complex fractal are striking. Nobody rendered one. A
+  one-off prototype screenshot (Plane Transform's grid at `p=0` and `p=+1`) would
+  de-risk the entire program cheaply — the same "verify the picture" gap as
+  round-1's unbuilt Play capture.
+- **Correspondence / iteration semantics** in dual/split were barely touched —
+  does a "Mandelbrot" even mean anything off ℂ? (Split-complex Julia sets are
+  studied; dual is murkier.)
+- **GLSL performance** of per-fragment generalized `exp`/`log` is unmeasured.
+- **Near-term build vs. north-star** — only Dan can say whether to start Phase 0
+  now or hold this as a direction.
+
+## R2.4 — Recommended action (cross-app)
+
+A phased program that **merges with the round-1 Argand plan rather than competing
+with it**:
+
+| Phase | What | Parallel-safe? |
+|---|---|---|
+| **0 — Substrate** | New `lib/generalizedAlgebra.ts` (re-exported by `complexOps`, zero Argand churn) + typed `validSystems` capability + distinct `sys`/`j2` key in `functionHandoff` + golden-vector tests (folds into Tier-0). **Decide the name here.** | ✅ one small branch |
+| **1 — Argand (capstone home)** | Round-1 Tier-2 *and* this converge: demote the dial, **capability-gate it by `f`**, re-base domain coloring on the generalized norm (desaturate where undefined). Promote the **palette-tokenization** fix here (graphic designer's prerequisite). | ✅ in-folder |
+| **2 — Plane Transform (pilot reveal)** | First GLSL port of `gmul/gexp/glog`, gated to generalizable functions; carry the system across the handoff **with an explicit confirmation**. Render the prototype *before* committing — closes the blind spot. | per-app branch, after Phase 0 |
+| **3 — Complex Particles (gated) → later/never (Fractals, Correspondence)** | Adopt only where honest; fractals are the capstone-of-the-capstone. | per-app, sequenced |
+
+**Cross-cutting:** one "Space dial" contract (name, slot, range, pills,
+unit-curve face, three states) defined in Phase 0 and reused; **rename off
+"unitary"** unless Dan wants it as a codename only.
+
+### Open questions for Dan (cross-app)
+1. **Name** — keep "unitary spaces," or adopt **Cayley–Klein / j²-continuum**
+   (the pedagogy hat's pushback)?
+2. **Near-term build or north-star?** — do we start Phase 0 now, or log it as a
+   direction and finish the round-1 Argand polish first?
+3. **How far out does the dial travel** — Argand-as-capstone only, or all the way
+   to Plane Transform / fractals (which is where the GLSL cost lives)?
+
+> [!TIP]
+> The cleanest first move is **Phase 0**, and it's almost free because it *is*
+> round-1's Tier-0 (the `complexOps` tests) plus a ~30-line façade and one
+> additive URL key. It commits to nothing downstream, makes the idea real and
+> tested, and forces the naming decision — after which Argand's round-1 polish
+> and this program are the same branch of work.
+
+---
+
 ## Self-reflection
 
 1. **What would you do with another session?** Execute Tier 0 + Tier 1 — they're

@@ -140,3 +140,24 @@ Cross-app facts gathered for the hats:
 
 Resuming the same 5 agents (SendMessage) so they keep their Argand analysis and
 **append** an augmentation section to their existing report; then re-synthesize.
+
+### 🟡 milestone · 14:35 — Round-2 augmentations in; cross-app synthesis written
+**Why:** Five lenses converged on the "unitary spaces" cross-app question.
+
+All five hats appended a cross-app augmentation; synthesis got a **Round 2** section.
+Convergences (high confidence): (1) the idea is real — `normG = x²−p·y²` is the genuine
+invariant; (2) **capability-gate the dial** — refuse where exp/sin/Γ have no dual/split
+analogue (unanimous; it's the round-1 fabricated-z* bug generalized); (3) **domain
+coloring (hue=arg z) lies off-ℂ** — re-base on the generalized norm, desaturate where
+undefined; (4) **additive substrate first, then per-app fan-out** (zero Argand churn;
+distinct `sys`/`j2` handoff key); (5) it's a **capstone not a spine** — Argand → Plane
+Transform → Complex Particles → fractals; (6) one shared **unit-curve "Space dial"** face
++ interaction contract.
+
+Tensions for Dan: **"unitary" is likely the wrong name** (re-privileges ℂ; pedagogy
+recommends Cayley–Klein / j²-continuum, leaves Argand/Galilean/Minkowski); the **GLSL
+cost** (3 shader apps) is the real budget; and greenlighting the program **promotes the
+round-1 palette-token bug to a blocking prerequisite**. Blind spot: nobody rendered the
+reveal (a Plane-Transform grid at p=0/p=+1 would de-risk cheaply). Recommended first move
+= **Phase 0** (≈ round-1's Tier-0 tests + a ~30-line façade + one URL key), which forces
+the naming decision and merges the two plans into one branch of work.
