@@ -238,10 +238,13 @@ function LatticeView({ inst, set, capped, named, picked, onPick }: {
   const W = 760, H = 480, padX = 40, padY = 36;
   const X = (x: number) => padX + x * (W - 2 * padX);
   const Y = (y: number) => padY + y * (H - 2 * padY);
-  const NAMED_RING: Partial<Record<NamedKey, string>> = { egalitarian: '#5eead4', median: '#a78bfa', minRegret: '#fbbf24', sexEqual: '#f472b6', balanced: '#60a5fa' };
+  // Legible per-skin label colors: the --data ramp stays readable on every skin's
+  // lattice panel — fixed light hues (the old #7dd3fc/#fca5a5/#fff) vanished on the
+  // light skins. Applied via `style` since SVG fill/stroke attributes don't resolve var().
+  const NAMED_RING: Partial<Record<NamedKey, string>> = { egalitarian: 'var(--data-2)', median: 'var(--data-7)', minRegret: 'var(--data-4)', sexEqual: 'var(--data-5)', balanced: 'var(--data-3)' };
   const labelFor = (i: number): { text: string; color: string } | null => {
     for (const k of ['aOptimal', 'bOptimal', 'egalitarian', 'median', 'minRegret', 'sexEqual', 'balanced'] as NamedKey[])
-      if (namedAt[k] === i) return { text: NAMED_LABELS[k], color: k === 'aOptimal' ? '#7dd3fc' : k === 'bOptimal' ? '#fca5a5' : (NAMED_RING[k] ?? '#fff') };
+      if (namedAt[k] === i) return { text: NAMED_LABELS[k], color: k === 'aOptimal' ? 'var(--data-1)' : k === 'bOptimal' ? 'var(--data-6)' : (NAMED_RING[k] ?? 'var(--fg)') };
     return null;
   };
 
@@ -257,14 +260,14 @@ function LatticeView({ inst, set, capped, named, picked, onPick }: {
           const sel = picked === i;
           return (
             <g key={i} className="sm2-lnode" onClick={() => onPick(i)} style={{ cursor: 'pointer' }}>
-              <circle cx={X(p.x)} cy={Y(p.y)} r={sel ? 9 : 6} fill={fill} stroke={sel ? '#fff' : lab ? lab.color : '#14141b'} strokeWidth={sel ? 2.5 : lab ? 2 : 1} />
-              {lab && <text x={X(p.x)} y={Y(p.y) - 11} textAnchor="middle" fontSize={11} fill={lab.color}>{lab.text}</text>}
+              <circle cx={X(p.x)} cy={Y(p.y)} r={sel ? 9 : 6} fill={fill} style={{ stroke: sel ? 'var(--fg)' : lab ? lab.color : 'var(--border-strong)' }} strokeWidth={sel ? 2.5 : lab ? 2 : 1} />
+              {lab && <text x={X(p.x)} y={Y(p.y) - 11} textAnchor="middle" fontSize={11} style={{ fill: lab.color }}>{lab.text}</text>}
               <title>{`${lab ? lab.text + ' · ' : ''}Σrank ${s.total} (A ${s.aTot} + B ${s.bTot})`}</title>
             </g>
           );
         })}
       </svg>
-      <p className="sm2-lattice-cap">{capped ? '≥' : ''}{N} stable matchings · <span style={{ color: '#7dd3fc' }}>A-optimal</span> top → <span style={{ color: '#fca5a5' }}>B-optimal</span> bottom · each edge is one rotation · click a node to view it. Node color = how good for A (blue) → for B (red).</p>
+      <p className="sm2-lattice-cap">{capped ? '≥' : ''}{N} stable matchings · <span style={{ color: 'var(--data-1)' }}>A-optimal</span> top → <span style={{ color: 'var(--data-6)' }}>B-optimal</span> bottom · each edge is one rotation · click a node to view it. Node color = how good for A (blue) → for B (red).</p>
     </div>
   );
 }

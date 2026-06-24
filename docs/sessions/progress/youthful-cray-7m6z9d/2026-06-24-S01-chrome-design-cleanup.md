@@ -54,6 +54,25 @@ The two `reference/*.html` files (Control Contract, Stable Matching reference) a
 
 <!-- Newest entry first. -->
 
+### 🔴 blocker · 15:45 — Light-on-light in Stable Matching on light skins (Dan caught it in Daylight); fixed
+**Why:** Tokenizing SM's stage/cards to follow the skin (Phase 3) was right, but I
+left several **semantic text colors as fixed light hues** — fine on the old hard-dark
+panels, invisible once the panel is white. A latent regression I introduced.
+
+Found (all light text now on a light panel): the big SOLUTION-SPACE metric (`#7fe3a6`),
+the stability strong text, the narrate jump/resolve strong (`#5eead4`/`#d8b4fe`), the
+Stabilize button text, and — worst — the **lattice node labels** (`#7dd3fc`/`#fca5a5`
+and a `#fff` fallback) as SVG text on the now-white lattice panel. Fix: route them all
+through the **per-skin tokens** that stay legible on every skin — `--success`/`--danger`
+for the good/bad metrics, `--data-1/2/6/7` for the named-solution labels (preserving the
+blue↔pink A/B semantic). SVG labels needed `style={{fill}}` (presentation attributes
+don't resolve `var()`). **Verified by screenshot:** the metric reads clearly in Daylight
+*and* dark (no regression). Lattice labels legible by construction (the `--data` ramp is
+tuned per skin). Swept the other apps in Daylight — text is readable everywhere else
+(some plots still render dark on light skins — the separate "canvas theme sweep" TODO,
+not a contrast bug). Lesson: when a background starts following the skin, the text on it
+must too — fixed light hues that worked on a fixed-dark surface become invisible.
+
 ### 🟢 code · 15:28 — PR #238 opened; review comments addressed; gallery previews themed
 **Why:** Dan asked to open the PR, follow CI, and (then) answer the review comments
 and make every gallery card theme to the skin like Counting the Ways.
