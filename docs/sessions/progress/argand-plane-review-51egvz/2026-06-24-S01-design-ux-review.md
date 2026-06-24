@@ -443,3 +443,25 @@ narrative rethink next). Git history left intact (no force-push) as the audit tr
   over ℝ.
 - Ladder (Hurwitz): magnitude-respecting multiplication exists only in dim **1, 2,
   4, 8** (ℝ, ℂ, ℍ, 𝕆); units S⁰ ⊂ S¹ ⊂ S³ ⊂ S⁷ — the on-ramp to quaternions.
+
+### 🔵 finding · 22:10 — Narrative co-design: eigen-rails, the circle of planes, |·|_p
+**Why:** Live narrative work with Dan (no code). Key framings to bake into the document.
+
+- **Ellipse fix:** sign of p = motion type (rotate/shear/boost); |p| = shape of the
+  invariant conic (ellipse, circle only at p=−1; hyperbola, rectangular at p=+1).
+- **Stay in 2-D**; quaternions are at most a closing teaser.
+- **Separable vs entangled, felt via eigen-"rails":** an eigenvector = a direction
+  `×α` doesn't turn, only slides along (eigenvalue = slide factor). Split = 2 real
+  rails (null lines `x=±√p·y`, coords `u=x+√p y`, `v=x−√p y`, `N=uv`) → two 1-D
+  slides → saddle/hyperbola. Complex = 0 real rails → must spiral. Dual = 1 repeated
+  rail → shear. "Diagonalize = find the rails = separate the dimensions"; complex
+  can't be diagonalized over ℝ ⇒ irreducibly 2-D. Iteration makes it visceral
+  (geometric march on a rail vs spiral).
+- **The dial is a circle (ℝP¹):** p=0 and p=∞ are TWO dual points (degenerate
+  direction rotates y-axis → x-axis); complex arc (p<0) and split arc (p>0) join
+  them; the x↔y swap is `p↦1/p` (fixes ±1, swaps 0↔∞). As p→±∞ you reach dual "from
+  the other side." (Algebra caveat: literal ε²=0 at ∞ needs rescaling ε=j/p.)
+- **`|·|` is always `|·|_p = √|x²−p·y²|`** (elliptical / |x| / Minkowski). For p≥0 it's
+  indefinite (0 on the null cone). It's multiplicative, but it measures **net/area**
+  scaling `√|λ₊λ₋|`, not per-rail: "|α|<1 ⇒ attractor" is a complex-only fact (split
+  can be a saddle with |α|_p<1). Surface the subscript once, then drop it per-section.
