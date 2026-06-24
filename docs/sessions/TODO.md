@@ -25,6 +25,22 @@ informs future rounds. Delete or check off items as they land.
 
 # Backlog · animath
 
+- [ ] [chrome] !high Theming v2 — light/dark-paired themes (decouple identity from mode).
+  Full spec: `docs/sessions/progress/youthful-cray-7m6z9d/2026-06-24-S02-plan-light-dark-theming.md`
+  (status: proposed; execute next session). Every theme gets a light AND dark palette under
+  shared token names (via CSS `light-dark()`); a feature that *requires* a mode (glowing-particle
+  / star scenes → dark; printout → light) forces it on its own subtree, so scene objects use the
+  normal tokens at the theme's dark values — no bespoke per-app scene palette. The `data-scheme`
+  attribute (PR #238) is the switch; dark variants are theme-tinted (Observatory blue-black,
+  Mirage plum), so a forced-dark star field keeps the theme's character. Folds in the per-app viz
+  unification (Trinary scene/data, Complex Particles, Plane Transform, Fractals, Correspondence,
+  Trees, Argand), Agentic Sorting's deferred discrete-colormap adoption, and the Worlds' **day/
+  night skies** (mode = time of day). Decisions locked (in the plan): outcomes → divergent
+  colormap sampled by goodness; stars → discrete `--data` identity; planet → neutral; `--accent`
+  is UI-only; Phosphor's light analog = the 1980s beige case. Prereq is the shared engine
+  (Phase 0); most DOM/SVG apps then "just work," the WebGL apps need a force-mode wrapper +
+  token-reading. Dan 2026-06-24: "the correct move gives every theme a light/dark palette."
+
 - [ ] [counting-the-ways] !med The Lab should show cumulative results, not one-off rows.
   Today each *Run & log* draws an independent sample and appends a row with its own
   method-of-moments μ̂ — no accumulation. Make the catalog **cumulative**: a pooled /
