@@ -17,6 +17,12 @@ import {
 
 const STORAGE_KEY = 'argand';
 
+/** Round a dragged coordinate to 2 decimals so coefficients stay tidy. */
+const tidy = (n: number): number => {
+  const r = Math.round(n * 100) / 100;
+  return Object.is(r, -0) ? 0 : r;
+};
+
 // Floor on how long one full sweep may take, so short paths don't ping-pong
 // frantically once the clock is paced by (small) arc length.
 const MIN_SWEEP_SEC = 1;
@@ -215,9 +221,8 @@ export default function Argand() {
       </div>
       <Checkbox label="View from z* (recenter)" checked={viewFromFixed} onChange={setViewFromFixed} />
       <div style={{ fontSize: 11, color: 'var(--cp-fg-dim, #9b9ba3)', marginTop: 6 }}>
-        Drag the <b style={{ color: A1_COL }}>α₁</b> (diamond) and <b style={{ color: A0_COL }}>α₀</b> (square) handles,
-        or lock them to drag only <b style={{ color: Z_COL }}>z</b>. <b style={{ color: FIX_COL }}>z*</b> is where the map
-        stands still: <code>f(z*) = z*</code> — viewed from there, <code>f</code> is a pure spiral.
+        Drag the colored handles on the plane, or lock a coefficient to drag only{' '}
+        <b style={{ color: Z_COL }}>z</b>. <b style={{ color: FIX_COL }}>z*</b> is the point f leaves put.
       </div>
     </>
   );
@@ -237,12 +242,6 @@ export default function Argand() {
 
   const inputNode = (
     <>
-      <Pills<Feed>
-        label="Feed f"
-        options={[{ value: 'point', label: 'Point' }, { value: 'shape', label: 'Shape' }, { value: 'grid', label: 'Grid' }]}
-        value={feed}
-        onChange={setFeed}
-      />
       {isShape && (
         <Select<CurveName>
           label="Shape"
@@ -257,7 +256,8 @@ export default function Argand() {
           ? <>Drag <b style={{ color: Z_COL }}>z</b> to place the shape; <b style={{ color: F_COL }}>f</b> spins, scales and shifts the whole figure.</>
           : isGrid
             ? <>The whole grid maps by <b style={{ color: F_COL }}>f</b>; <b style={{ color: Z_COL }}>z</b> is one point watched riding along.</>
-            : <>Drag <b style={{ color: Z_COL }}>z</b> and watch <b style={{ color: F_COL }}>f(z)</b> = α₁·z + α₀.</>}
+            : <>Drag <b style={{ color: Z_COL }}>z</b> and watch <b style={{ color: F_COL }}>f(z)</b>.</>}
+        {' '}Switch Point / Shape / Grid in the top bar.
       </div>
     </>
   );
@@ -355,20 +355,23 @@ export default function Argand() {
   );
 
   const sections: SectionDef[] = [
-    { id: 'function', title: 'Function', arch: 'subject', node: functionNode, estHeight: 280 },
-    { id: 'system', title: 'System', arch: 'domain', node: systemNode, estHeight: 170 },
-    { id: 'input', title: 'Input', arch: 'subject', node: inputNode, estHeight: 180 },
-    { id: 'plane', title: 'Plane', arch: 'domain', node: planeNode, estHeight: 180 },
-    { id: 'scrub', title: 'Play', arch: 'playback', node: scrubNode, estHeight: 250 },
+    { id: 'function', title: 'Function', arch: 'subject', node: functionNode, estHeight: 360 },
+    { id: 'system', title: 'Number plane', arch: 'domain', node: systemNode, estHeight: 170 },
+    { id: 'input', title: 'Input', arch: 'subject', node: inputNode, estHeight: 130 },
+    { id: 'plane', title: 'Plane', arch: 'domain', node: planeNode, estHeight: 300 },
+    { id: 'scrub', title: 'Play', arch: 'playback', node: scrubNode, estHeight: 280 },
     { id: 'values', title: 'Values', arch: 'readout', node: valuesNode, estHeight: 220 },
     { id: 'detail', title: 'Detail', arch: 'quality', node: detailNode, estHeight: 90 },
   ];
 
   const onHandleChange = (which: Handle, q: Cx) => {
-    if (which === 'z') setZ(q);
-    else if (which === 'alpha1') setA1(q);
-    else if (which === 'alpha2') setA2(q);
-    else setA0(q);
+    // Tidy the dragged value to 2 decimals so coefficients never read as long
+    // floats (1.5333…); snapping still lands exact lattice/nice values.
+    const r = cx(tidy(q.re), tidy(q.im));
+    if (which === 'z') setZ(r);
+    else if (which === 'alpha1') setA1(r);
+    else if (which === 'alpha2') setA2(r);
+    else setA0(r);
   };
 
   // A self-contained control HUD pinned to the bottom of the plot. Because it
@@ -481,7 +484,7 @@ export default function Argand() {
   const layouts: LayoutDef[] = [
     {
       id: 'essentials', name: 'Essentials', sub: 'Function · Play · Values', icon: 'tune',
-      open: { function: { x: 24, y: 18 }, scrub: { x: 24, y: 320 }, values: { x: 24, y: 580 } },
+      open: { function: { x: 24, y: 16 }, scrub: { x: 24, y: 404 }, values: { x: 24, y: 712 } },
     },
   ];
 

@@ -274,3 +274,23 @@ not wired in yet):
 
 Verified: `npm run build` ✓ · `npm test` 128/128 ✓ · `npm run sessions:lint --strict`
 0 errors ✓ · eslint on new files 0 ✓.
+
+### 🟢 code · 17:05 — Controls cleanup pass: coefficient precision + reorg + overlap fix
+**Why:** Dan: coefficients are "very messy"; reorganize the controls to make better sense.
+
+- **Coefficient precision.** Dragged handles now round to 2 decimals (`tidy()` in
+  `onHandleChange`) so coefficient fields/equation/readouts never show `1.5333…`;
+  snapping still lands exact lattice/nice values.
+- **De-duplicated the feed switcher.** Removed the redundant Point/Shape/Grid pills
+  from the Input panel (kept the top-bar mode pills + the bottom HUD); added a
+  one-line "switch in the top bar" hint.
+- **Fixed the Essentials-layout overlap** (the review's clear bug): honest
+  `estHeight`s + spread the panel y-offsets (function 16 / play 404 / values 712) +
+  trimmed the long Function help paragraph → panels no longer clip each other
+  (verified by screenshot `assets/2026-06-24-S01-controls-v2.png`).
+- **Renamed** the "System" panel → **"Number plane"** (matches the framing).
+
+Verified: build ✓ · `npm test` 128/128 ✓ · eslint Argand.tsx 0. Coefficient
+notation (α vs m/b) raised with Dan — none of the reviewers objected to α; an m/b
+rename is offered as a cheap option, pending his call. Still open (separate review
+items): the center hint pill, the clipped "Re" label.
