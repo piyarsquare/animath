@@ -181,3 +181,33 @@ the naming decision and merges the two plans into one branch of work.
 
 Recorded in the synthesis as **R2.5**. Still open: Phase 0 now vs. north-star;
 the per-app GLSL reach (the real budget). PR #237 stays the live record.
+
+### 🟣 decision · 15:00 — Raised polar-coordinates sub-question to the group
+**Why:** Dan asks whether polar coords are meaningful in dual/split and how to handle them.
+
+Key framing surfaced: **polar grid and domain coloring are the same question** — hue=arg z
+and polar rays both *are* the generalized angle θ; circles *are* the unit curve. Generalized
+polar `z=ρ·e^{jθ}`, `ρ=√|N|`, multiply adds θ & scales ρ in all three; θ = angle (ℂ) /
+rapidity (split, per-sector) / slope (dual). The engine's `powReliable` predicate already
+marks the legal domain. Reconvened: pedagogy + graphic LEAD (teach-the-limit; morphing grid
+visuals), maintainer/consultant/game brief (engine `modulusG/argG`, a domain-declaring
+`toPolarG` contract + tests, the inert-dial/limit-reveal UX). Each appends a short note;
+will fold into the synthesis.
+
+### 🟡 milestone · 15:20 — Polar sub-question answered by all 5 hats; synthesis R2.6 written
+**Why:** Fold the converged polar findings into the deliverable.
+
+All five appended polar notes; pedagogy (lead) verified the math. Convergence:
+**polar is genuinely meaningful in all three planes** (multiply adds θ, scales ρ —
+θ adapted to each norm), but only ℂ has a *global* angle (split = rapidity, per
+sector; dual = slope, x≠0) — and the breakdown is the lesson. The big unification:
+**the polar grid IS the domain coloring** (rays=θ, circles=unit curve), so they
+morph together by the one `N=x²−p·y²` law and share one honesty domain
+(`powReliable`). Engine = thin additive `fromPolarG`/`argG`/`modulusG`, null-
+returning, in-folder. UX = render honest partial coverage (the "angle ran out"
+reveal) not a hidden/locked toggle. Naming: modulus / rapidity / parabolic-angle —
+never "angle" unqualified. Recorded as **R2.6**; treat polar + domain-coloring as
+one Phase-1 workstream.
+
+Also dispatched a background **attribution scout** (web research) for the
+Argand/Number Planes sources block — report pending as its own file.

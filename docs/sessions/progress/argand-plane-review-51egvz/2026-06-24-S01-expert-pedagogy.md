@@ -500,6 +500,96 @@ when the receiving view can't honor it (e.g. handing `exp` at `p=1` to anything)
 A link that silently drops `p`, or carries it into a function that can't use it,
 re-creates the availability-lie at the suite level.
 
+### Polar coordinates across Number Planes (2026-06-24)
+
+Dan's sub-question (I lead this one): is polar `z = ρ·e^{jθ}` genuinely meaningful
+in dual/split, or a stretch — and how do you *teach* the limit? I verified the
+grounding against `complexOps.ts`: `expG` is exactly `cosh/cos/1 + j·(sinh/sin/·)`
+by the sign of `p` (with the `1/w` normalization so the `p→0` limit is the dual),
+`logG` returns null precisely where the generalized angle is undefined, and the
+`powReliable` predicate (`ArgandPlane.tsx:339`) is exactly that domain. So the
+shared grounding is **correct as stated.** My refinements and the teaching:
+
+**The unifying fact is real and it is the whole point.** "Multiplication **adds
+θ and scales ρ**" holds in all three planes because `mulG` is the symmetry group
+of the norm `N=x²−p·y²`, and `e^{jθ}` is by construction the unit-`N` orbit. This
+is the same root as "×= add angles" in ℂ, and it is the single most teachable
+through-line of the entire Number Planes project. **Lead with it.** Everything
+else (sectors, slopes, the null set) is the *texture* of how that one fact
+specializes.
+
+| Plane | "angle" θ | "modulus" ρ | Unit-orbit | Where defined | Honest name |
+|---|---|---|---|---|---|
+| **ℂ (Spin)** | ordinary angle `atan2` | `√N = |z|` | circle | everywhere but `0` | **angle / argument** |
+| **Split (Boost)** | **rapidity** `atanh(y/x)/√p` | `√|N| = √|x²−y²|` | hyperbola (per branch) | **inside each of 4 sectors**; undefined on null cone | **rapidity** |
+| **Dual (Shear)** | **parabolic angle** = slope `y/x` | `|x|` (the real part) | the line `x=1` (a "degenerate circle") | `x≠0` | **parabolic angle / slope** |
+
+**Meaningful, not a stretch — but with honestly different domains.** Polar is not
+a forced analogy here; it's the *natural* coordinate adapted to each norm. The
+catch (and the lesson) is that **only ℂ has a global angle.** That's not a defect
+to paper over — it *is* the content:
+
+> [!IMPORTANT]
+> **How to teach the limit — make the breakdown the lesson, not an error.**
+> - **Rapidity vs angle (split).** Show the same `×α₁` as a *rotation* (ℂ) morph
+>   into a *boost* (split) on the dial. The "angle" you're adding stops being a
+>   compact circle-angle and becomes **rapidity** — unbounded, additive (this is
+>   literally how velocities compose in special relativity). The aha: "the thing
+>   multiplication adds is always θ; what *kind* of θ depends on the plane."
+>   Rapidity is the honest name and it carries real physics credit (Yaglom /
+>   Minkowski).
+> - **Why split has sectors and no global angle.** The null cone `y=±x` (`N=0`)
+>   cuts the plane into **four sectors**; `e^{jθ}` traces one hyperbola branch and
+>   **cannot cross the cone** (rapidity → ±∞ there). So there is no single θ
+>   coordinate covering the plane — teach this as "the unit curve is a hyperbola,
+>   and a hyperbola has disconnected branches, so the angle is only *local*."
+>   The `powReliable`/`logG`-null region is exactly that boundary; the app should
+>   *show* the cone as the place the polar grid tears, not silently linearize
+>   across it (the same honesty bar as the round-1 spiral-fallback).
+> - **Why dual's "angle" is a slope.** The dual unit orbit is degenerate: `e^{εθ}
+>   = 1+εθ` is a *straight line*, not a curve. The "radius" is just `|x|` (the
+>   real part) and the "angle" is the **slope** `y/x` — a *parabolic* angle that
+>   adds under multiplication (a shear shears slopes additively). Teach it as
+>   "the circle has flattened into a line; the angle has become a slope; the
+>   modulus has become the x-coordinate." This is the knife-edge limit between
+>   the circle and the hyperbola, and seeing it as the *degenerate* case is the
+>   payoff of the dial.
+> - **What happens at the null set.** Dual `x=0` and split `N=0` are where ρ→0 or
+>   θ→±∞ and the polar frame genuinely **does not exist**. Don't fake it. Draw the
+>   null cone / the dual axis as the singular locus and label it: "no polar
+>   coordinates here — multiplication degenerates." Honesty about the hole is more
+>   instructive than a smooth lie over it.
+
+**Should Argand's polar-grid mode morph with the dial, or stay ℂ-only?** It should
+**morph — but only within the defined domain, and it must *show its own tearing***.
+This is the most teachable possible use of the existing polar grid: the circles
+(ℂ) flattening into parallel lines (dual) then opening into hyperbolae (split) is
+a gorgeous, *true* animation of the trichotomy, and Argand already owns the
+`expG`/`logG` machinery to draw it. Conditions:
+
+1. The polar net must be drawn from the **`p`-appropriate orbit** (circle / line /
+   hyperbola via `expG`), **not** ℂ circles recolored. Drawing ℂ circles in the
+   split plane would be the same lie as `atan2` hue off-ℂ (Augmentation §2.1).
+2. **The null cone (split) and the `x=0` axis (dual) must render as singular
+   loci** where the grid stops — visibly torn, labeled, not interpolated across.
+   `powReliable` already marks this boundary; reuse it.
+3. The polar **rays** become **rapidity lines** (split) / **slope lines** (dual);
+   relabel the readout accordingly when the dial moves off ℂ.
+
+If those three hold, polar-morphing-with-the-dial is arguably the **best single
+demonstration in the whole suite** — it makes "×= add θ, scale ρ" visible as one
+fact wearing three faces. If they can't be met (e.g. the team won't draw the
+torn cone), then **keep polar ℂ-only** rather than ship a polar grid that lies
+about the geometry off ℂ.
+
+**Naming (stays true):** modulus → **modulus** (`√|N|`, fine in all three);
+angle → **angle** (ℂ), **rapidity** (split), **parabolic angle / slope** (dual);
+umbrella for all three = **"the generalized angle θ"** with a per-plane gloss.
+Avoid calling the split or dual θ an "angle" unqualified — a learner who reads
+"angle" pictures a circle, which is exactly the familiarity the dial is meant to
+break. *Rapidity* and *parabolic angle* are the established, honest terms
+(Yaglom); use them.
+
 ### Augmented verdict (delta)
 
 - **Endorse the vision as a capstone, reject it as a spine.** "ℂ-as-foreigner /

@@ -569,6 +569,39 @@ it:
 
 ---
 
+### Polar (UX note, 2026-06-24)
+
+Dan asks whether a **polar-grid toggle** that's clean in ℂ but degenerate in
+dual/split repeats the inert/broken-affordance trap from R2. Short answer: **yes,
+if the degeneracy is silent — but polar is the *best* candidate to turn the trap
+into the hook**, because here the breakdown is *visible and local*, not a dead
+control. R2's rule was "never a live control that emits garbage." Polar fits the
+better path: don't lock or hide it — **draw it honestly and let the limit show**.
+
+- **ℂ:** full polar net (circles + rays). The familiar baseline.
+- **Split:** the rays only fill the timelike/spacelike **sectors**; let them
+  *crowd toward the null cone and stop there*, leaving the cone visibly bare. The
+  "angle" (rapidity) literally **runs out** of plane to cover — that empty wedge
+  along the red null lines is the lesson, not a bug. This is the round-2
+  defamiliarization beat made geometric: "whoa, the angle ran out."
+- **Dual:** the "angle" is a slope undefined on one line — so the rays fan from
+  the origin but the degenerate line carries **no ray**; show it as a single
+  highlighted axis where polar coordinates give up.
+
+> [!TIP]
+> **Make the gap legible, then name it.** The trap is only sprung if a user reads
+> the missing wedge/line as "the renderer broke." Two cheap guards: (1) keep the
+> **Cartesian grid faintly underneath** the polar net so there's never truly empty
+> space — the plane is still there, only its *polar description* fails; (2) when
+> the dial is off ℂ and polar is on, flash the same in-world regime word I proposed
+> for the legs/Space-dial: a small label on the bare region — "no angle here (null
+> cone)" / "slope undefined on this line." One phrase converts a glitch-read into a
+> taught limit. So: **don't lock polar in dual/split — render its honest partial
+> coverage and caption the hole.** A degeneracy you can *see* is the payload; a
+> degeneracy you must infer from a frozen toggle is the broken affordance.
+
+---
+
 ## Self-reflection
 
 1. **What would you do with another session?** Prototype the "Try this" preset

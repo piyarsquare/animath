@@ -406,6 +406,10 @@ The cross-app correctness claim is: *the same `f`, under the same `p`, reads con
 
 The thesis ("ℂ is one `p`, not home") is *better served* by an abstraction that honestly refuses to generalize `exp` than by one that silently fakes it — so the architecture and the pedagogy point the same way.
 
+### Polar (contract note, 2026-06-24)
+
+Generalized polar belongs on the same `Algebra` façade as a **partial, null-returning pair**, not a total function: `toPolarG(z, alg): { rho: number; theta: number } | null` (null exactly where the generalized angle is undefined — the dual `x=0` axis, the split null cone and the non-future sectors) and `fromPolarG(rho, theta, alg): Cx` (total: every `(ρ,θ)` names a point). The null *is* the contract — and it is the **same predicate** as `logG`/`powReliable` (θ is `logG(z).v` rescaled, `ρ=√|N(z)|`), so polar must not re-derive the domain by hand; it should *delegate* to `logG` (or the `Algebra.log` capability) so the polar HUD, the smooth-spiral path, and the unit-curve renderer all refuse on identically the same set — one domain predicate, no drift. This composes cleanly with the unit-curve node from the augmentation above: `ρ=1` (`N(z)=±1`) is exactly that dashed curve (ellipse / two lines / hyperbola), and a θ-grid is its rays, so "polar grid" and "unit curve" become one renderer reading `toPolarG`, with the null set being precisely the cone the renderer already paints red. **Test contract:** (1) round-trip `fromPolarG(toPolarG(z)) ≈ z` for all `z` on the legal domain across `p∈{-1,0,1}`; (2) the homomorphism `arg(mulG(z,w)) ≡ arg(z) + arg(w)` modulo the period (2π/√|p| for `p<0`; no wrap / additive rapidity for `p≥0`) on points where both args exist; (3) **refusal** — `toPolarG` returns `null` on a sampling of the null set (dual `re=0`; split `|re|=|im|·√p` and `re≤0`), asserting `null`, never a finite-but-wrong θ. That third test is the one that keeps the abstraction from lying.
+
 ---
 
 ## Self-reflection

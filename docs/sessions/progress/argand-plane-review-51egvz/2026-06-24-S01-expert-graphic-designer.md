@@ -563,6 +563,87 @@ there.** On today's Argand — overlapping panels, occluded hero, hardcoded pale
 would amplify the mess. Fix the round-1 staging first; *then* the dial becomes the
 suite's most elegant unifying gesture rather than its loudest source of noise.
 
+### Polar coordinates across Number Planes (2026-06-24)
+
+The unlock here is that **the polar grid and the domain coloring are the same picture
+drawn two ways.** In ℂ: the polar **rays** *are* the angle `θ = arg z` — the exact quantity
+hue encodes; the polar **circles** *are* the unit-curve family `|z| = const` — the exact
+shape the §1 signifier draws. So they cannot be designed separately. When the `p` dial
+leaves ℂ, the polar net, the unit-curve signifier, and the domain-coloring field are **one
+coordinate system** and must morph as one, or they'll disagree on screen and read as broken.
+
+Generalized polar `z = ρ·e^{jθ}`, `ρ = √|N|`, `N = x²−p·y²`:
+
+| Regime | Circles (ρ = const) → | Rays (θ = const) → | Honest behavior |
+|--------|------------------------|--------------------|-----------------|
+| Complex `p<0` | the familiar circles | rays at true angle | the signature look — **keep** |
+| Dual `p=0` | **parallel lines** `x = const` (the unit-curve pair) | rays = constant slope `θ = y/x` fanning from origin; **the `x=0` axis is degenerate** | flat, shear-like — *should* look flatter |
+| Split `p>0` | nested **hyperbolae** sharing the null asymptotes | rays = constant **rapidity**, crowding toward the null lines `y=±x`, never crossing them | four sectors, hard seam at the cone |
+
+> [!TIP]
+> **Render circles and rays as one deforming net, not two toggles.** Argand today treats
+> "Polar" as a grid *type* (`gridType`, `ArgandPlane.tsx:263`) separate from the unit curve
+> and from domain-coloring. Under Number Planes they should be **the same family of curves
+> at different densities**: the unit-curve signifier is the `ρ=1` member; the polar circles
+> are its `ρ=2,3,…` siblings; the rays are the orthogonal `θ`-level-sets. Draw them with the
+> **same monochrome scaffold law** so the whole net pinches (circles→lines) and fans
+> (rays→rapidity rays) continuously as the dial moves. One net, one deformation, one
+> learned grammar — this is the anti-confetti choice.
+
+**How the deformation teaches rather than glitches** (carrying §3's discipline):
+
+- **The circles morph by the unit-curve family you already accepted in §1**, so there is
+  no new shape vocabulary — the polar grid *is* the signifier, thickened. Circle pinches to
+  two vertical lines at `p=0`, then splays to hyperbolae. Ease slow through `p≈0` so the
+  pinch is followed, not flashed.
+- **Rays fan continuously by the generalized angle.** In ℂ they sweep a full 2π; toward
+  split they crowd toward the null lines and *stop* — there is no ray "beyond" rapidity ∞.
+  Show that as rays **bunching and thinning** toward the cone, not as rays vanishing
+  abruptly. The crowding *is* the teaching: "angle runs out of room here."
+
+**The sectors / null set / degenerate line — render as honest structure, not a broken
+grid:**
+
+> [!WARNING]
+> The instinct will be to fill the whole plane with grid everywhere, including where the
+> coordinates don't exist. That's the lie. The engine already knows the legal domain
+> (`powReliable`, `ArgandPlane.tsx:339-340`). Use it as a **rendering mask**, not just a
+> math guard.
+
+- **Split: four sectors split by the null cone `y=±x`.** Draw the cone as the **same red,
+  monochrome, constant hazard line** from §3 — a deliberate boundary, not a missing grid
+  line. Inside each sector the net is full strength; *at* the cone it terminates with a hard
+  seam (rays bunch into it, circles' asymptotes ride along it). The four-sector structure
+  should read as "the plane has genuine walls here," which is exactly true.
+- **Dual: the `x=0` line is degenerate.** Rays (slope `y/x`) blow up there. Render the
+  `x=0` axis as a **single dimmed/dashed degenerate line** (same hazard styling, calmer),
+  with the ray fan visibly *thinning to nothing* approaching it — the picture says "the
+  angle coordinate dies on this line," which is the parabolic knife-edge made visible.
+- **Everywhere the coordinate is undefined, the net fades to the background** rather than
+  drawing a fake curve. Honest absence reads as structure; a drawn-anyway grid reads as a
+  bug.
+
+**Unification with the domain-coloring recommendation (one grammar):** this *is* my §2
+proposal seen from the dual side. There I said: encode value by `|N|` (iso-norm shells) and
+hue by the generalized argument, desaturating where undefined. The polar grid is **the same
+two families made into discrete scaffold lines**: the `|N|` shells *are* the polar circles;
+the `θ`-level-sets *are* the polar rays; the desaturate-where-undefined rule *is* the
+fade/sector/degenerate-line treatment above. So:
+
+> [!NOTE]
+> **Polar grid and domain coloring share one rule** — `(ρ,θ)` from `N=x²−p·y²` — rendered at
+> two opacities: the **field** (continuous hue/value, low contrast, background tier) and the
+> **net** (discrete monochrome scaffold lines, the unit-curve family + θ-rays). The null
+> cone and the dual degenerate line are drawn **once**, in the shared red/dim hazard style,
+> and *both* layers respect them identically. That guarantees the colored field and the
+> drawn grid never disagree about where the geometry exists — the single biggest cleanliness
+> win, and it kills the confetti risk because there is only one coordinate law to learn.
+
+So polar coordinates are not merely "meaningful" in dual/split — they are the *clearest*
+way to **see** the difference between rotation, shear, and boost, *provided* the circles,
+rays, hue, and unit-curve signifier are all driven by the one `N`-based law and all honor
+the same legal-domain mask. Build them as one object, not four modes.
+
 ### Augmented verdict (delta)
 
 - **Endorse** promoting the unit curve + null cone to a **shared, monochrome, continuous

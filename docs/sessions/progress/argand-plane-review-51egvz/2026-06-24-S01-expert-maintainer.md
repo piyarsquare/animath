@@ -553,6 +553,30 @@ which is the one thing I will not trade for elegance.
 
 ---
 
+### Polar (engine note, 2026-06-24)
+
+Generalized polar belongs in the same additive substrate, not as a new sharing mechanism:
+add `modulusG(z,p) = √|normG|`, `argG(z,p)` (the generalized angle — rapidity for split,
+slope for dual), and `fromPolarG(ρ,θ,p)` to `lib/generalizedAlgebra.ts` alongside `normG`/
+`expG`/`logG` (`fromPolarG` is essentially `ρ·expG(0,θ,p)`, and `argG` is the `v` component
+of `logG` — so this is a thin, three-function extension of code that already exists, with
+**no new shared file beyond the one Phase-0 module I already proposed** and zero edit to any
+other shared file). The honesty gate comes for free: the existing `powReliable` predicate
+already marks exactly where the generalized log/angle is defined (ℂ everywhere, dual `Re>0`,
+split future cone), so `argG`/`fromPolarG` should return `null`/fall back in the degenerate
+regions just as `powRealG` does, and any UI must dim the polar readout there rather than
+print a lie. Argand's existing polar-grid render mode (`ArgandPlane.tsx`, the `gridType ===
+'polar'` branch) is currently hardwired to **Euclidean** circles+rays (`r·cos/sin`) — it
+should reuse `fromPolarG` so that "polar" means *the chosen space's* level curves (ellipses
+for ℂ, the dual/split nets) instead of always-Euclidean circles; that is a pure in-folder
+change to `ArgandPlane.tsx` with **no shared-file touch**, and it's exactly the kind of
+special-case the substrate is meant to absorb. Net: green-light as part of Phase 0 (the
+three functions) + a small in-folder follow-up in Argand to consume them; no append-only
+violation, the only shared file affected is the new `generalizedAlgebra.ts` already on the
+Phase-0 plan.
+
+---
+
 ## Self-reflection
 
 1. **What would you do with another session?** Open `DesktopWorkspace.tsx` and trace the

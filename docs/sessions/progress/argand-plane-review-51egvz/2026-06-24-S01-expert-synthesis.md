@@ -544,6 +544,80 @@ generalizes honestly over `p`** (R2 grounding fact). Consequences:
   per-app GLSL reach** (Open Q3's second half) — the cost lives in porting
   `gmul`/`gpow` into Plane Transform's shaders, unaffected by the name/scope calls.
 
+## R2.6 — Polar coordinates across Number Planes (Dan's sub-question, 2026-06-24)
+
+Dan asked whether polar coordinates are meaningful in the other spaces and how to
+handle them. All five hats answered; they converge unusually tightly.
+
+### The one fact to lead with (pedagogy, math-verified)
+**Polar is genuinely meaningful in all three planes — not a stretch.** Every Number
+Plane has `z = ρ·e^{jθ}` where `e^{jθ}` rides the **unit curve**, `ρ = √|N|`
+(`N = x²−p·y²`), and **multiplication adds θ and scales ρ in all three** — because
+each θ is the angle *adapted to that plane's norm*. That single unifying fact is
+the lesson; sectors, slopes, and the null set are its texture.
+
+### The catch — teach the breakdown *as* the lesson (Dan's "explain the limits")
+Only **ℂ has a global angle**. Off ℂ the angle is real but local:
+
+| Plane | θ is… | ρ is… | Defined where |
+|---|---|---|---|
+| **Spin** (ℂ) | ordinary angle | `√(x²+y²)` | everywhere but `0` |
+| **Boost** (split) | **rapidity** (additive, unbounded — real SR physics) | `√|x²−y²|` | per sector; the null cone `y=±x` **tears** the plane into 4 |
+| **Shear** (dual) | **slope `y/x`** (parabolic angle) | `|x|` | `x ≠ 0` |
+
+> [!IMPORTANT]
+> **Naming (pedagogy, firm):** modulus stays "modulus"; the angle is **rapidity**
+> (split) / **parabolic angle or slope** (dual) — **never "angle" unqualified**,
+> which silently re-imports the circle the dial exists to defamiliarize. This is
+> the same honesty boundary as the `hue = arg z` domain-coloring flag.
+
+### The unification — polar grid *is* the domain coloring (graphic + consultant)
+The hats independently collapsed three things into one object:
+- **rays = θ** (the very quantity hue encodes), **circles = the unit-curve family**
+  (the shared dial signifier). So polar isn't a separate "grid type" — it's the
+  domain-color field drawn as a discrete monochrome scaffold, and the two **can
+  never disagree about where the geometry exists** because they share the one
+  `(ρ,θ)` law.
+- Under the dial both deform by the same `N` law: circles pinch (ℂ circle → dual
+  parallel lines → split hyperbolae); rays fan by the generalized angle, crowding
+  and thinning toward the null lines.
+- **Render undefined regions as honest structure, not broken grid:** the split
+  null cone is a shared red hazard seam splitting four full-strength sectors; the
+  dual `x=0` is a single dimmed degenerate line the ray-fan thins into; elsewhere
+  fades to background. This is the best single demo of Spin vs Shear vs Boost in
+  the whole suite.
+
+### The engine — thin, additive, honesty-gated for free (maintainer + consultant)
+- Add `modulusG` / `argG` / `fromPolarG` (`toPolarG`) to the planned Phase-0
+  `lib/generalizedAlgebra.ts`, derived from the existing `normG`/`expG`/`logG`.
+  The pair is **partial / null-returning** and **delegates its valid domain to the
+  existing `powReliable`/`logG` predicate** — it must never return a finite-but-
+  wrong angle on the null set.
+- Argand's existing polar-grid mode (`ArgandPlane.tsx`, the Plane panel) should
+  **consume `fromPolarG`** instead of hardwired Euclidean `r·cos/sin`, so "polar"
+  means the *chosen* space's level curves. Pure in-folder change; no new shared-
+  file touch beyond the already-planned Phase-0 module.
+- **Test contract:** round-trip `fromPolarG(toPolarG(z)) ≈ z` on the legal domain;
+  the angle-addition homomorphism `arg(z·w) = arg z + arg w` modulo the
+  `p`-dependent period; and an explicit **refusal test** on the null set (assert
+  null, never a finite angle).
+
+### The UX — polar turns the "inert dial" trap into the defamiliarization hook (game)
+A polar toggle *would* risk the broken-affordance trap in dual/split — **but only
+if the degeneracy is silent.** Polar is actually the best case to convert that
+trap into the hook, because the breakdown is visible and local. Render the honest
+partial coverage (split rays crowd toward the null cone and stop; the dual line
+carries no ray) plus two cheap guards so it reads as "the angle ran out," not a
+glitch: a **faint Cartesian grid underneath** (space is never truly empty) and a
+**one-phrase in-world caption** on the bare region ("no angle here — null cone").
+
+### Net recommendation
+Polar is in-scope and cheap, and it *is* the domain-coloring question — so treat
+them as one workstream. When Phase-1 re-bases domain coloring on the generalized
+norm, make the polar grid dial-aware in the same pass (`fromPolarG` + the shared
+hazard markers + qualified naming). It's a small in-folder change that doubles as
+the clearest demonstration of the whole Number Planes idea.
+
 > [!TIP]
 > The cleanest first move is **Phase 0**, and it's almost free because it *is*
 > round-1's Tier-0 (the `complexOps` tests) plus a ~30-line façade and one
