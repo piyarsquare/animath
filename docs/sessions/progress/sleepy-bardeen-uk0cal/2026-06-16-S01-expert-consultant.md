@@ -5,7 +5,7 @@ date: 2026-06-16
 title: "Three Hats — Architecture Consultant: Rays split-view realization"
 branch: claude/sleepy-bardeen-uk0cal
 slug: sleepy-bardeen-uk0cal
-status: review
+status: completed
 build: passing
 ---
 
