@@ -10,7 +10,8 @@ build: passed
 followup: null
 pr: 238
 app: chrome
-next: PR #238 is open + green; watching it. Remaining optional polish (TODO.md): discrete colormap in Agentic Sorting; in-app-canvas theme sweep (gallery previews now done); Complex Particles hint occlusion; full 8-skin tour.
+signals: needs-dan, visual-unverified
+next: Merge #238 (chrome contract + foundations, CI green) when ready; then execute the theming-v2 plan (docs/sessions/progress/youthful-cray-7m6z9d/2026-06-24-S02-plan-light-dark-theming.md) next session — light/dark-paired themes so every app's viz tracks the skin.
 ---
 
 # Chrome design cleanup — execute the Claude Design hardening handoff
@@ -53,6 +54,30 @@ The two `reference/*.html` files (Control Contract, Stable Matching reference) a
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 18:30 — Trinary viz-unification reference + theming-v2 plan; #238 wrapped, merge-ready
+**Why:** Dan steered the session from "fix the chrome" into the deeper cross-app
+question (apps still wear their own color schemes), and we converged on the next
+initiative and closed out this pass.
+
+- **Trinary = the viz-unification reference** (one app first, Dan's "then roll out").
+  Tokenized the bespoke in-viz UI/HUD to skin tokens (the cyan Tour accent → `--accent`,
+  HUD panels/progress → tokens); kept the dark star stage + the semantic temperature/fate
+  colors. Verified across dark/daylight/phosphor/mirage — the UI tracks each skin's accent
+  while the scene stays dark. In #238 as the partial reference.
+- **Design discussion → the real architecture.** Walked the full Trinary color inventory
+  (app-specific vs theme; what each encodes; nearest Observatory analogs). Key outcomes:
+  `--accent` is **UI-voice** (never data); ordered/polar data → **sample a registry
+  colormap**; identity → discrete `--data`; and the linchpin — the scene is *permanently
+  dark*, so the clean answer is **light/dark-paired themes** (force the scene to the
+  theme's dark mode; scene objects then use the normal tokens at dark values). Worlds get
+  day/night skies by mode. Written up as a `kind: plan`:
+  [`2026-06-24-S02-plan-light-dark-theming.md`](2026-06-24-S02-plan-light-dark-theming.md)
+  (status proposed; execute next session).
+- **#238 wrapped.** Refreshed the PR description to the full delivered scope; verified the
+  **Primary** skin (light-on-light clean) and the `Explore` mode label. The transient
+  `trigger-deploy` CI red is a GitHub-API 504 (main-deploy dispatch) — harmless, clears on
+  next push. PR is the "chrome contract + foundations"; **merge-ready**, theming-v2 follows.
 
 ### 🔴 blocker · 16:10 — Skin switch didn't re-theme the gallery live (needed a refresh); fixed `useSkin` at the root
 **Why:** Dan: "the fix requires a page refresh to activate." `useSkin()` returned a
