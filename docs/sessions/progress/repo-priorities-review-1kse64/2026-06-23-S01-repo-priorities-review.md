@@ -32,6 +32,24 @@ the **screenshot tour** (#235, `gracious-ptolemy`). The last triage pass was
 
 ## Working notes
 
+### 🟡 milestone · 03:00 — Productionized the signals/to-do system (the `!high`)
+**Why:** Dan cleared me to proceed (no other thread active).
+
+Closed the `[docs] !high` end-to-end:
+- **Linter** (`lint-sessions.mjs`): added `stopped` to the status vocab + a
+  **frozen-record rule** — a `status: stopped` report is exempt from the evolving
+  kind/build/section contract (shelved experimental-skill reports don't block the
+  gate). Marked the whole quaternion exploration `stopped` → corpus **34 → 0 errors**.
+- **Authoring discipline:** `REPORT_STYLE.md` + `_template-handoff.md` now mark
+  `signals:`/`next:` **required at handoff** (write `null` if none); the **handoff
+  skill** requires them, says to consult + append `TODO.md`, and adds a
+  `sessions:lint` step; start-session already reads TODO.md.
+- **CI gating:** `deploy.yml` already runs `sessions:lint --strict` as a hard gate on
+  main (its "corpus at 0 errors" invariant is what the quaternion import had broken);
+  added `sessions-lint.yml` to shift the same check left to PR time.
+- Verified: `--strict` PASS, 0 errors, site builds, workflow parses. Marked the TODO
+  item **done**. (Remaining: ~130 advisory warnings — separate low-priority polish.)
+
 ### 🔵 finding · 02:30 — signals/to-do path: the lint blocker is entirely the shelved quaternion import
 **Why:** Dan asked what's needed to move forward on the `!high` signals/to-do item.
 

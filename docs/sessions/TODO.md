@@ -44,16 +44,18 @@ informs future rounds. Delete or check off items as they land.
   through the complex/dual/split-complex variants in Argand. Recategorized to
   general (not particular to any single app) and demoted from !high.
 
-- [ ] [docs] !high Productionize the signals/to-do system — teach agents to author it.
-  Update REPORT_STYLE.md, the progress/handoff templates, and the handoff +
-  start-session skills so every session declares `signals:`/`next:` and consults +
-  appends this backlog. Without that, the dashboard only stays rich by inference.
-  2026-06-22 (process-audit): partly enacted. `npm run sessions:lint` now validates
-  the contract (signals/app tokens, scraped level, timeline types) and warns when a
-  "headless" handoff declares no `visual-unverified`/`phone-needed` signal; the
-  self-reflection protocol gained Q7 (declare verification method + set the matching
-  signal). Still open: requiring `signals:`/`next:` at handoff (templates + skills)
-  and gating the linter in CI once the corpus is clean (140 advisory warnings remain).
+- [x] [docs] !high Productionize the signals/to-do system — teach agents to author it.
+  DONE 2026-06-24 (repo-priorities-review). The authoring discipline is now enforced
+  end-to-end: REPORT_STYLE.md + `_template-handoff.md` mark `signals:`/`next:`
+  **required at handoff** (write `null` if none); the handoff skill requires them,
+  tells agents to consult + append this backlog, and to run `sessions:lint` before
+  finishing; start-session already reads TODO.md. The linter gained `stopped` as a
+  status and a **frozen-record** rule (shelved `status: stopped` reports are exempt
+  from the evolving kind/build/section contract), which cleared the corpus to **0
+  errors**. CI gating is live: `deploy.yml` runs `sessions:lint --strict` as a hard
+  gate on main, and a new `sessions-lint.yml` shifts it left to PR time. Remaining
+  polish (separate, low): drive the ~130 advisory warnings down (mostly
+  `build: passing`/`complete` wording and non-canonical Follow-up lines).
 
 - [x] [docs] Build the deep-link debug-pose harness + headless mobile smoke (L1 in RECURRING_LESSONS.md).
   DONE 2026-06-23 (`headless-mode-plan` branch). (a) The debug-pose deep link +

@@ -42,13 +42,13 @@ date: 2026-06-07
 title: Short human title
 branch: claude/<branch>
 slug: <branch-slug>       # provenance — must match the folder name
-status: in-progress       # in-progress | completed | design-only | investigation-only | proposed (plans)
+status: in-progress       # in-progress | completed | design-only | investigation-only | proposed (plans) | stopped (shelved)
 build: unknown            # passed | failed | unknown
 followup: null            # null | low | medium | high
 pr: null                  # null | a PR URL
 app: stable-marriage      # category label(s) — see below; null ⇒ inferred from slug
-signals: phone-needed, not-live   # optional — dashboard "Start here" signals (see below)
-next: Real-device pass on the new controls.  # optional — one-line next action
+signals: phone-needed, not-live   # dashboard "Start here" signals — REQUIRED at handoff (see below)
+next: Real-device pass on the new controls.  # one-line next action — REQUIRED at handoff
 thumbnail: assets/foo.png # optional — lead screenshot for the control-center card
 ---
 ```
@@ -58,7 +58,8 @@ thumbnail: assets/foo.png # optional — lead screenshot for the control-center 
 | `kind` | ✓ | drives the icon/section template. `plan` = a forward-looking, app-specific implementation plan (stored in the branch's `progress/` folder; `status: proposed` until a session executes it, which flips status and fills `pr`) |
 | `session` | ✓ | the unit the control center groups by |
 | `slug` | ✓ | **provenance**; must equal the folder name |
-| `status` / `build` | ✓ | drive the status badges |
+| `status` / `build` | ✓ | drive the status badges. `stopped` = a **shelved** line of work kept as a record; the badge renders neutral and the report becomes a **frozen record** — `lint-sessions.mjs` exempts it from the evolving kind/build/section contract (so a shelved exploration's experimental-skill reports don't block the lint gate) |
+| `signals` / `next` | ✓ at handoff | every **handoff** must declare its dashboard `signals` (closed vocab — `null` if none) and a one-line `next`; this is what keeps the "Start here" digest rich by construction. Optional on interim progress reports |
 | `title` | ✓ | shown in the index and as the `#` H1 |
 | `app` | – | category label(s) — drives the control-center chips, grouping, and timeline color (see below) |
 | `followup` / `pr` | – | optional; `null` when absent |

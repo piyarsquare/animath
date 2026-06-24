@@ -19,8 +19,12 @@ fix, investigate, or run any code (except `npm run build` for build status).
    CI check), unless it was already run recently in this session. Note the result
    (pass / fail + first error).
 5. Write the handoff to `docs/sessions/handoff/<branch-slug>/` with the **same
-   filename** as the progress report (create the folder if needed).
-6. Regenerate the cross-branch control center: run `npm run sessions`
+   filename** as the progress report (create the folder if needed). Declare
+   `signals:` and `next:` (required — see Document Structure).
+6. Run `npm run sessions:lint -- docs/sessions/handoff/<branch-slug>/<file>.md` (or
+   the whole corpus) and fix any **errors** it reports on your files — this is the
+   contract the control center scrapes; CI runs `--strict`.
+7. Regenerate the cross-branch control center: run `npm run sessions`
    (`docs/sessions/build-sessions.mjs` — converts every branch's reports to
    Markdown, renders the rich HTML, and rebuilds `control-center.html`).
 
@@ -40,13 +44,21 @@ center indexes it). Always includes: **Summary**; **What changed** (or "What we
 found" / "The problem"); **Key files**; **Open / not done**; **Context**;
 **Self-reflection**.
 
-Also set the **dashboard signals** in the frontmatter when they apply — `signals:`
-(any of `needs-dan` / `phone-needed` / `visual-unverified` / `not-live`) and `next:`
-(one line, the single most useful next action). These feed the control center's
-"Start here" digest; declare only what's genuinely true. Then **append any
-carry-over work to `docs/sessions/TODO.md`** — the durable backlog — each item with a
-`[category]`, a `!priority`, and a note that will inform the next round (see that
-file's header for the format, and `REPORT_STYLE.md` §1.2).
+**Required at every handoff:** declare the **dashboard signals** in the frontmatter —
+`signals:` (closed vocab: `needs-dan` / `phone-needed` / `visual-unverified` /
+`not-live`; write `null` if genuinely none) and `next:` (one line, the single most
+useful next action). These feed the control center's "Start here" digest, so they are
+not optional — write `signals: null` rather than omitting it, and declare only what's
+genuinely true. Then **consult `docs/sessions/TODO.md` and append any carry-over work
+to it** — the durable backlog — each item with a `[category]`, a `!priority`, and a
+note that will inform the next round (see that file's header for the format, and
+`REPORT_STYLE.md` §1.2). For shelved/abandoned work, set `status: stopped` (a frozen
+record exempt from the lint contract) rather than leaving it `in-progress`.
+
+> [!NOTE]
+> `npm run sessions:lint` validates this contract (signals/app tokens, status/kind/
+> build enums, the Self-reflection Follow-up line). Run it before finishing; a clean
+> `--strict` pass is the bar the control center relies on.
 
 - **Key files** in a Markdown table. Make each `file:line` a real link pinned to the
   commit `<SHA>` so it doesn't rot:

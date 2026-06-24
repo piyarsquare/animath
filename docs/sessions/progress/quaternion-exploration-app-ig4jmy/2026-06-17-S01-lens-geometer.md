@@ -5,7 +5,7 @@ date: 2026-06-17
 title: "Quaternions — lens: The Geometer"
 branch: claude/quaternion-exploration-app-ig4jmy
 slug: quaternion-exploration-app-ig4jmy
-status: completed
+status: stopped
 build: n/a
 ---
 
