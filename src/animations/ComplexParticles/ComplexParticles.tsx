@@ -32,6 +32,7 @@ import {
   MULTIVALUED_INDICES, branchPeriod,
 } from '../../lib/complexMath';
 import { decodeFunction, encodeFunction, type FunctionState } from '../../lib/functionHandoff';
+import { useHandoffState } from '../../lib/useHandoffState';
 
 // ── Per-function "recommended view" presets (PR-1, 2026-06-16) ──────────────
 // Picking a *different* function auto-snaps the DOMAIN/PROJECTION to what that
@@ -92,9 +93,12 @@ export default function ComplexParticles({
     const idx = functionNames.indexOf(embed?.fn ?? selectedFunction);
     return idx >= 0 ? idx : 0;
   })();
-  const [functionIndex, setFunctionIndex] = usePersistentState(ek('functionIndex'), defaultFunctionIndex);
-  const [expP, setExpP] = usePersistentState(ek('expP'), embed?.p ?? p);
-  const [expQ, setExpQ] = usePersistentState(ek('expQ'), embed?.q ?? q);
+  // A cross-app function handoff (?fn=…) seeds these via the third "seed" setter,
+  // which overrides the live view for this session WITHOUT persisting — so the
+  // destination app's own saved function survives (see useHandoffState).
+  const [functionIndex, setFunctionIndex, seedFunctionIndex] = useHandoffState(ek('functionIndex'), defaultFunctionIndex);
+  const [expP, setExpP, seedExpP] = useHandoffState(ek('expP'), embed?.p ?? p);
+  const [expQ, setExpQ, seedExpQ] = useHandoffState(ek('expQ'), embed?.q ?? q);
   // Riemann-sheet range. The viewer draws one particle set per sheet, at branch
   // index branchMin..branchMax. Only multivalued functions get extra sheets:
   // for single-valued ones every sheet would be the same additive cloud drawn
@@ -123,22 +127,24 @@ export default function ComplexParticles({
   };
   // Coefficients for the generic quadratic a·z²+b·z+c (each [Re, Im]); default a=1
   // (so the out-of-the-box quadratic is z²).
-  const [quadA, setQuadA] = usePersistentState<Complex2>(ek('quadA'), [1, 0]);
-  const [quadB, setQuadB] = usePersistentState<Complex2>(ek('quadB'), [0, 0]);
-  const [quadC, setQuadC] = usePersistentState<Complex2>(ek('quadC'), [0, 0]);
+  const [quadA, setQuadA, seedQuadA] = useHandoffState<Complex2>(ek('quadA'), [1, 0]);
+  const [quadB, setQuadB, seedQuadB] = useHandoffState<Complex2>(ek('quadB'), [0, 0]);
+  const [quadC, setQuadC, seedQuadC] = useHandoffState<Complex2>(ek('quadC'), [0, 0]);
 
   // One-time function handoff (Phase-2 "graph ↔ map"): arriving from Plane
-  // Transform's "↗ 4D graph" link carries the function in the URL (?fn=…). Adopt
-  // it once, then strip the query so a later reload uses the user's own saved
-  // choice. Embed mode parses its own params, so it is skipped here.
+  // Transform's "↗ 4D graph" link carries the function in the URL (?fn=…). Apply
+  // it to this session's view only (the seed* setters don't persist), then strip
+  // the query — so a later plain reload still shows the user's own saved choice
+  // rather than the handed-off function. Embed mode parses its own params, so it
+  // is skipped here.
   useEffect(() => {
     if (embed) return;
     const seed = decodeFunction(window.location.hash);
     if (seed.index === undefined) return;
-    setFunctionIndex(seed.index);
-    if (seed.p !== undefined) setExpP(seed.p);
-    if (seed.q !== undefined) setExpQ(seed.q === 0 ? 1 : seed.q);
-    if (seed.quad) { setQuadA(seed.quad.a); setQuadB(seed.quad.b); setQuadC(seed.quad.c); }
+    seedFunctionIndex(seed.index);
+    if (seed.p !== undefined) seedExpP(seed.p);
+    if (seed.q !== undefined) seedExpQ(seed.q === 0 ? 1 : seed.q);
+    if (seed.quad) { seedQuadA(seed.quad.a); seedQuadB(seed.quad.b); seedQuadC(seed.quad.c); }
     window.history.replaceState(null, '', window.location.hash.split('?')[0] || '#/complex-particles');
     // run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
