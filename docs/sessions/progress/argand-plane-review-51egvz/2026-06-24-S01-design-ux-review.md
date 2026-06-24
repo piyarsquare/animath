@@ -229,3 +229,48 @@ Argand/Number Planes sources block — report pending as its own file.
 - **Dan's call:** *Hold, stage for reframe* — leave EXPLAINER.md untouched; the
   verified sources block (in the report) gets folded in later as part of the Number
   Planes reframe so voice + citations land together. No EXPLAINER edit this session.
+
+### 🟣 decision · 16:10 — Pivot to build: math-first foundation + scrub "replacement" framing
+**Why:** Dan: start a fresh build from the math designed to span the three classes;
+make clear the app is NOT a replacement for Plane Transform / the complex plane;
+include tests that check the math.
+
+Plan for this build increment (keeps the working app + build green — new module is
+not wired in yet):
+1. **Scrub the "successor-in-progress to Plane Transform" framing** in all 5 spots
+   (Argand.tsx docstring, CLAUDE.md ×2, README.md, docs/apps/argand.md ×2) →
+   "stands on its own; complements, does not replace." Leave the unrelated
+   TopologyWalk/SolidWorlds "successor" lines (those are correct, other apps).
+2. **`numberPlanes.ts`** — fresh foundation designed from the three-class idea: the
+   generic algebra over `p=j²` is *primary* (Spin/Shear/Boost = p<0/0/>0), complex
+   is just one member. Ports the verified `expG`/`logG` `p→0` limits + adds the
+   **polar layer** (modulus / generalized arg / fromPolar) with honest domains
+   (the `argDefined` predicate = the engine's existing `powReliable` boundary),
+   plus a `plane(p)` Algebra-strategy factory (the consultant's pattern).
+3. **`__tests__/numberPlanes.test.ts`** — correctness suite (norm-multiplicativity
+   across all three classes; complex-specialization at p=−1; exp/log round-trip;
+   powReal; polar round-trip + angle-addition homomorphism + refusal on the null
+   set; affine fixed point + its α₁→1 limit). Run `npm test` + `npm run build`.
+
+### 🟢 code · 16:35 — Math-first foundation `numberPlanes.ts` + 50 tests; framing scrubbed
+**Why:** Execute the build pivot; everything verified green.
+
+- **`src/animations/Argand/numberPlanes.ts`** — fresh foundation designed from the
+  three classes: generic algebra over `p=j²` (Spin/Shear/Boost) is primary, complex
+  is just `p<0`. `mul`/`conj`/`norm`(=x²−p·y²)/`inv`/`div`, `exp`/`log` (verified
+  `p→0` limits, null on the honest domain), `powReal`/`sqrt`, the **polar layer**
+  (`unit`/`fromPolar`/`arg`/`argDefined`/`toPolar` — angle = angle/slope/rapidity,
+  null on the null cone & dual line), affine + poly fixed points / critical point,
+  and a **`plane(p)` Algebra-strategy** object. Not yet wired into the UI (app still
+  runs on complexOps.ts; build stays green).
+- **`__tests__/numberPlanes.test.ts`** — **50 assertions**: complex-specialization
+  at p=−1, the algebra laws in all 3 classes, **norm-multiplicativity** N(zw)=N(z)N(w),
+  inv/div incl. null cone, exp/log round-trip + null domain, real powers, **polar
+  round-trip + the angle-addition law arg(zw)=arg z+arg w + refusal on the null set**,
+  the affine fixed point and its α₁→1 escape, polyEval/fixed-points/critical.
+- **Framing scrubbed** ("successor-in-progress to Plane Transform" → "standalone
+  entry point; complements, not a replacement"): Argand.tsx docstring, CLAUDE.md ×2,
+  README.md, docs/apps/argand.md ×2. (Other apps' "successor" lines left intact.)
+
+Verified: `npm run build` ✓ · `npm test` 128/128 ✓ · `npm run sessions:lint --strict`
+0 errors ✓ · eslint on new files 0 ✓.

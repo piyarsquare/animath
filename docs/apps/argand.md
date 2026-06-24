@@ -27,11 +27,13 @@ The teaching/math ("what am I looking at") lives in
 
 - **Route:** `#/argand` → `Argand` ([`src/index.tsx`](../../src/index.tsx) route
   map). Listed in the gallery. No embed twin yet.
-- **Stability:** ✅ **active** — the **entry-point app for complex numbers** and
-  the **successor-in-progress to Plane Transform**. Where Plane Transform shows an
-  arbitrary `f : ℂ → ℂ` warping a grid, Argand narrows to the *affine* line
-  `α₁·z + α₀` (then quadratics), built around honest, scrubable motion and
-  draggable, color-coded coefficients.
+- **Stability:** ✅ **active** — a **standalone entry point to "arithmetic on the
+  plane"** (the *Number Planes* idea: the complex plane as one of a family —
+  Spin / Shear / Boost). It is **NOT a replacement for Plane Transform or for the
+  complex plane**; it complements them. Where Plane Transform shows an arbitrary
+  `f : ℂ → ℂ` warping a grid, Argand narrows to the *affine* line `α₁·z + α₀`
+  (then quadratics), built around honest, scrubable motion and draggable,
+  color-coded coefficients — and run through all three number planes.
 - **Entry:** `Argand.tsx` (~520 LOC — the React shell, panels, bottom HUD) + the
   SVG plane `ArgandPlane.tsx` (~600 LOC) + pure engine `complexOps.ts` + presets
   `curves.ts` + `Argand.css`. 4 ts/tsx files.
@@ -204,7 +206,7 @@ morph) `system`.
 ## History & sources
 
 - **Built/iterated by:** the Argand app branch(es) under
-  [`docs/sessions/`](../sessions/) (the successor-to-Plane-Transform line).
+  [`docs/sessions/`](../sessions/) (the "arithmetic on the plane" / *Number Planes* line).
 - **Possible sources:** see the EXPLAINER's "Possible sources & where to go
   further" — the **Argand diagram** (Argand 1806; Wessel 1799), **de Moivre** /
   Euler's `e^{iθ}` and Needham's *Visual Complex Analysis*, the affine fixed point

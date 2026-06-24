@@ -32,7 +32,8 @@ const systemName = (p: number): string =>
  * watch the transformation. `f` decomposes into "spin/scale by α₁, then slide by
  * α₀", and the fixed point `z*` (where `f(z*) = z*`) is drawn throughout. A
  * System slider `p = j²` runs the same line through complex, dual, and
- * split-complex numbers. Successor-in-progress to Plane Transform.
+ * split-complex numbers. It is its own entry point into arithmetic on the plane —
+ * not a replacement for Plane Transform or for the complex plane itself.
  */
 export default function Argand() {
   const [z, setZ] = usePersistentState<Cx>(`${STORAGE_KEY}:z`, cx(1.5, 1));
