@@ -399,18 +399,15 @@ export default function Argand() {
         fontFamily: 'var(--font-mono, monospace)',
       }}
     >
-      {/* feed switcher — pressing Shape reveals its presets */}
-      <div style={hudRow}>
-        {(['point', 'shape', 'grid'] as Feed[]).map(fd => (
-          <button key={fd} style={pill(feed === fd)} onClick={() => setFeed(fd)}>
-            {fd[0].toUpperCase() + fd.slice(1)}
-          </button>
-        ))}
-        {isShape && <div style={{ width: 1, height: 18, background: 'var(--border, #3a3a44)', margin: '0 2px' }} />}
-        {isShape && CURVES.map(c => (
-          <button key={c.id} style={pill(curveName === c.id)} onClick={() => setCurveName(c.id)}>{c.label}</button>
-        ))}
-      </div>
+      {/* shape preset switcher — only in Shape feed (feed itself lives in the
+          top-bar mode pills) */}
+      {isShape && (
+        <div style={hudRow}>
+          {CURVES.map(c => (
+            <button key={c.id} style={pill(curveName === c.id)} onClick={() => setCurveName(c.id)}>{c.label}</button>
+          ))}
+        </div>
+      )}
       {/* path parameter t */}
       <div style={hudRow}>
         <span style={hudLabel}>t</span>

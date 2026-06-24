@@ -138,10 +138,15 @@ const FRAME_PRESETS: { label: string; c: string; a: string }[] = [
   { label: '⟨2,3⟩ on x', c: 'bary', a: 'c12' },
 ];
 
-/** Top-bar mode pills: the Observatory ↔ Lab switch (replaces the old tab bar).
- *  Switching sets the hash, which Trinary.tsx observes. */
+/** Top-bar mode pills: the Explore ↔ Lab switch (replaces the old tab bar).
+ *  The id stays 'observatory' (persisted + read by Trinary.tsx); only the
+ *  user-facing label changed to "Explore" — the old "Observatory" collided with
+ *  the dark skin's display name, and "Sandbox" would collide with this view's
+ *  "Sandbox" layout, so "Explore" is the clash-free choice. Keep it in sync with
+ *  the Lab's copy (lab/TrinaryLab.tsx). Switching sets the hash, which Trinary.tsx
+ *  observes. */
 const MODES: WorkspaceMode[] = [
-  { id: 'observatory', label: 'Observatory' },
+  { id: 'observatory', label: 'Explore' },
   { id: 'lab', label: 'Lab' },
 ];
 
@@ -657,7 +662,7 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
           lyapElRef.current.textContent = sim.t > 2
             ? `${lyap.toFixed(3)}  (τ≈${(1 / Math.max(lyap, 1e-6)).toFixed(1)})  ${chaotic ? 'chaotic' : 'regular'}`
             : '…';
-          lyapElRef.current.style.color = sim.t > 2 ? (chaotic ? '#ff7043' : '#46d98a') : '#9ec7ff';
+          lyapElRef.current.style.color = sim.t > 2 ? (chaotic ? 'var(--danger)' : 'var(--success)') : 'var(--dim)';
         }
         if (analyzer) setLabSnap(analyzer.snapshot());
       }
@@ -922,12 +927,11 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
     </>
   );
 
+  // Play/Pause + Reset live once, in the always-on action strip (`actions`
+  // below) — never duplicated here. This panel keeps the Speed knob and the
+  // one-shot tour launch.
   const simNode = (
     <>
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <button style={btnStyle} onClick={() => setPaused(p => !p)}>{paused ? '▶ Play' : '❚❚ Pause'}</button>
-        <button style={btnStyle} onClick={() => api.current?.reset()}>↺ Reset</button>
-      </div>
       <Slider label="Speed" value={speed} min={0.1} max={4} step={0.1}
         onChange={setSpeed} format={v => `${v.toFixed(1)}×`} />
       {onTour && (
@@ -969,20 +973,20 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
       title: 'Orbit',
       defaultRect: { x: 372, y: 16, w: 712, h: 600 },
       node: (
-        <div style={{ position: 'absolute', inset: 0, background: '#05060a' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'var(--viz-bg)' }}>
           <Canvas3D onMount={onMount} />
 
           {/* Live divergence readout. */}
           <div style={{
             position: 'absolute', top: 10, left: 10, padding: '8px 12px',
-            background: 'rgba(8,12,20,0.62)', border: '1px solid rgba(120,150,200,0.25)',
-            borderRadius: 8, color: '#cfe0f5', font: '12px/1.5 ui-monospace, monospace',
+            background: 'var(--panel)', border: '1px solid var(--border)',
+            borderRadius: 8, color: 'var(--fg)', font: '12px/1.5 ui-monospace, monospace',
             pointerEvents: 'none', backdropFilter: 'blur(4px)',
           }}>
             <div>cloud spread&nbsp; <span ref={spreadElRef} style={{ color: GHOST_COLOR_HEX }}>0.00e+0</span></div>
-            <div>Lyapunov λ&nbsp;&nbsp; <span ref={lyapElRef} style={{ color: '#9ec7ff' }}>…</span></div>
-            <div>sim time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span ref={timeElRef} style={{ color: '#9ec7ff' }}>0.0</span></div>
-            {placeMode && <div style={{ color: '#ffd27f' }}>click + drag to launch</div>}
+            <div>Lyapunov λ&nbsp;&nbsp; <span ref={lyapElRef} style={{ color: 'var(--dim)' }}>…</span></div>
+            <div>sim time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span ref={timeElRef} style={{ color: 'var(--dim)' }}>0.0</span></div>
+            {placeMode && <div style={{ color: 'var(--accent)' }}>click + drag to launch</div>}
           </div>
 
           {skyOn && <SkyView dataRef={skyRef} dayLen={dayLen} tilt={tilt} />}

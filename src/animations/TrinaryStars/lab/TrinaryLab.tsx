@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Workspace from '../../../chrome/workspace/Workspace';
-import type { LayoutDef, SectionDef, ViewDef, WorkspaceMode } from '../../../chrome/workspace/types';
+import type { ActionDef, LayoutDef, SectionDef, ViewDef, WorkspaceMode } from '../../../chrome/workspace/types';
 import { Slider, Pills } from '../../../components/ControlPanel';
 import { SCENARIOS, getScenario, DEFAULT_CLASSIFY, type TargetId, type Outcome, type RunResult } from '@/lib/nbody';
 import { Aggregator, OUTCOMES, type AggSnapshot } from './ensemble';
@@ -16,10 +16,12 @@ const HAS_WORKERS = typeof Worker !== 'undefined';
 const HAS_GPU = gpuAvailable();
 type Engine = 'cpu' | 'workers' | 'gpu';
 
-/** Top-bar mode pills: the Observatory ↔ Lab switch (replaces the old tab bar).
- *  Switching sets the hash, which Trinary.tsx observes. */
+/** Top-bar mode pills: the Explore ↔ Lab switch (replaces the old tab bar).
+ *  Label "Explore" (not "Observatory", which collides with the dark skin name);
+ *  must match TrinaryStars.tsx's MODES. Switching sets the hash, which
+ *  Trinary.tsx observes. */
 const MODES: WorkspaceMode[] = [
-  { id: 'observatory', label: 'Observatory' },
+  { id: 'observatory', label: 'Explore' },
   { id: 'lab', label: 'Lab' },
 ];
 
@@ -57,10 +59,10 @@ const OUTCOME_META: Record<Outcome, { label: string; color: string }> = {
 };
 
 const panel: React.CSSProperties = {
-  background: 'rgba(12,16,24,0.6)', border: '1px solid rgba(120,150,200,0.18)',
+  background: 'var(--panel)', border: '1px solid var(--border)',
   borderRadius: 10, padding: 12,
 };
-const h3: React.CSSProperties = { margin: '0 0 8px', font: '600 12px/1.2 ui-monospace, monospace', color: '#9ec7ff', letterSpacing: 0.4 };
+const h3: React.CSSProperties = { margin: '0 0 8px', font: '600 12px/1.2 ui-monospace, monospace', color: 'var(--dim)', letterSpacing: 0.4 };
 
 function Histogram({ data, max, color, domain }: { data: number[]; max: number; color: string; domain: [string, string] }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -445,19 +447,30 @@ export default function TrinaryLab() {
         <span style={{ color: '#9aa7bd' }}> Changing any setting clears the tally.</span>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-        <button style={{ ...btn, background: running ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }}
-          onClick={running ? pause : start}>{running ? '❚❚ Pause' : (n > 0 && n < targetN ? '▶ Resume' : '▶ Run census')}</button>
-        <button style={btn} onClick={reset}>↺ Reset</button>
         <button style={btn} title="New random ensemble seed" onClick={() => setBaseSeed((Math.random() * 4294967296) >>> 0)}>🎲 Reseed</button>
         <button style={btn} onClick={copyLink}>{copied ? '✓ Copied' : '🔗 Copy link'}</button>
         <button style={btn} onClick={exportJSON} disabled={!agg}>⬇ JSON</button>
         <button style={btn} onClick={exportCSV} disabled={!agg}>⬇ CSV</button>
       </div>
-      {rate > 0 && (
-        <div style={{ font: '12px ui-monospace, monospace', color: '#6f7f99', marginTop: 6 }}>
-          {rate.toFixed(0)} worlds/s
-        </div>
-      )}
+    </>
+  );
+
+  // Transport for the census run. The same verbs (Run / Pause / Resume / Reset)
+  // project to the always-on action strip (`actions` below); reseed, exports and
+  // the sampling box stay in the Sampling panel.
+  const transportNode = (
+    <>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <button style={{ ...btn, background: running ? 'rgba(255,212,0,0.18)' : 'rgba(70,217,138,0.18)' }}
+          onClick={running ? pause : start}>{running ? '❚❚ Pause' : (n > 0 && n < targetN ? '▶ Resume' : '▶ Run census')}</button>
+        <button style={btn} onClick={reset}>↺ Reset</button>
+      </div>
+      <div style={{ height: 8, borderRadius: 4, background: 'var(--track)', marginTop: 10, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${Math.min(100, n / Math.max(1, targetN) * 100)}%`, background: '#46d98a', transition: 'width 0.1s' }} />
+      </div>
+      <div style={{ font: '12px ui-monospace, monospace', color: 'var(--dim-2)', marginTop: 6 }}>
+        {n.toLocaleString()} / {targetN.toLocaleString()} worlds{rate > 0 ? ` · ${rate.toFixed(0)} worlds/s` : ''}
+      </div>
     </>
   );
 
@@ -533,7 +546,8 @@ export default function TrinaryLab() {
   const sections: SectionDef[] = [
     { id: 'system', title: 'System', arch: 'subject', node: systemNode, estHeight: 540 },
     { id: 'sim', title: 'Simulation', arch: 'lab', node: simNode, estHeight: 380 },
-    { id: 'sampling', title: 'Sampling', arch: 'lab', node: samplingNode, estHeight: 620 },
+    { id: 'sampling', title: 'Sampling', arch: 'lab', node: samplingNode, estHeight: 520 },
+    { id: 'transport', title: 'Census run', arch: 'playback', node: transportNode, estHeight: 150 },
     { id: 'outcomes', title: 'Outcomes', arch: 'readout', node: outcomesNode, estHeight: 380 },
     { id: 'dist', title: 'Distributions', arch: 'readout', node: distNode, estHeight: 420 },
     { id: 'records', title: 'Records', arch: 'readout', node: recordsNode, estHeight: 340 },
@@ -542,8 +556,8 @@ export default function TrinaryLab() {
   /* ---- view windows: the two instruments ---- */
 
   const viewWrap: React.CSSProperties = {
-    position: 'absolute', inset: 0, overflow: 'auto', background: '#05060a',
-    color: '#cfe0f5', font: '13px/1.5 system-ui, sans-serif', padding: 12,
+    position: 'absolute', inset: 0, overflow: 'auto', background: 'var(--viz-bg)',
+    color: 'var(--fg)', font: '13px/1.5 system-ui, sans-serif', padding: 12,
   };
 
   const views: ViewDef[] = [
@@ -553,12 +567,12 @@ export default function TrinaryLab() {
       defaultRect: { x: 372, y: 16, w: 712, h: 640 },
       node: (
         <div style={viewWrap}>
-          <div style={{ ...panel, marginBottom: 12, font: '12px/1.6 system-ui', color: '#9aa7bd' }}>
-            Pick a slice of launch space (<b style={{ color: '#cfe8ff' }}>Plane</b>) and a way to color it. With the
-            <b style={{ color: '#cfe8ff' }}> Exact</b> lens each pixel is one precise world — its boundaries stay fractal at
-            every zoom. With the <b style={{ color: '#cfe8ff' }}>Statistical</b> lens each pixel is a mini-census of many
-            worlds, painting the odds of a happy ending. <b style={{ color: '#cfe8ff' }}>Drag a box</b> to zoom; <b style={{ color: '#cfe8ff' }}>click</b> a
-            point to open that world in the single-run Observatory (in a new tab, so your map stays put).
+          <div style={{ ...panel, marginBottom: 12, font: '12px/1.6 system-ui', color: 'var(--dim)' }}>
+            Pick a slice of launch space (<b style={{ color: 'var(--accent)' }}>Plane</b>) and a way to color it. With the
+            <b style={{ color: 'var(--accent)' }}> Exact</b> lens each pixel is one precise world — its boundaries stay fractal at
+            every zoom. With the <b style={{ color: 'var(--accent)' }}>Statistical</b> lens each pixel is a mini-census of many
+            worlds, painting the odds of a happy ending. <b style={{ color: 'var(--accent)' }}>Drag a box</b> to zoom; <b style={{ color: 'var(--accent)' }}>click</b> a
+            point to open that world in the single-run Explore view (in a new tab, so your map stays put).
           </div>
           <BasinMap ref={basinRef} cfg={cfg} system={{
             box: { rMin, rMax, fMin, fMax },
@@ -576,14 +590,14 @@ export default function TrinaryLab() {
         <div style={viewWrap}>
           <div style={{ ...panel, marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ font: '700 26px/1 ui-monospace, monospace', color: '#fff' }}>{n.toLocaleString()}</span>
-              <span style={{ color: '#6f7f99' }}>/ {targetN.toLocaleString()} worlds explored</span>
+              <span style={{ font: '700 26px/1 ui-monospace, monospace', color: 'var(--fg)' }}>{n.toLocaleString()}</span>
+              <span style={{ color: 'var(--dim-2)' }}>/ {targetN.toLocaleString()} worlds explored</span>
               <span style={{ flex: 1 }} />
-              {rate > 0 && <span style={{ font: '12px ui-monospace, monospace', color: '#6f7f99' }}>{rate.toFixed(0)} worlds/s</span>}
+              {rate > 0 && <span style={{ font: '12px ui-monospace, monospace', color: 'var(--dim-2)' }}>{rate.toFixed(0)} worlds/s</span>}
               <span style={{ font: '700 20px ui-monospace, monospace', color: '#46d98a' }}>{pct(happyPct)}</span>
-              <span style={{ color: '#6f7f99' }}>happy endings</span>
+              <span style={{ color: 'var(--dim-2)' }}>happy endings</span>
             </div>
-            <div style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.08)', marginTop: 8, overflow: 'hidden' }}>
+            <div style={{ height: 8, borderRadius: 4, background: 'var(--track)', marginTop: 8, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${Math.min(100, (n / targetN) * 100)}%`, background: '#46d98a', transition: 'width 0.1s' }} />
             </div>
           </div>
@@ -610,13 +624,28 @@ export default function TrinaryLab() {
     },
     {
       id: 'census', name: 'Census', sub: 'Thousands of worlds, tallied', icon: 'flask',
-      open: { sampling: { x: 84, y: 18 }, outcomes: { x: 366, y: 18 }, dist: { x: 366, y: 440 } },
+      open: { sampling: { x: 84, y: 18 }, transport: { x: 84, y: 548 }, outcomes: { x: 366, y: 18 }, dist: { x: 366, y: 440 } },
       views: { map: { open: false }, census: { x: 648, y: 16, w: 470, h: 470, open: true } },
     },
   ];
 
+  /* Always-on action strip — projection of the Drive-tier Census-run panel's
+     transport verbs (the sampling box, exports and reseed stay in the Sampling
+     panel). The primary button mirrors the panel's Run / Pause / Resume logic. */
+  const actions: ActionDef[] = [
+    {
+      id: 'run',
+      icon: running ? 'pause' : 'flask',
+      label: running ? 'Pause' : (n > 0 && n < targetN ? 'Resume' : 'Run census'),
+      primary: true, active: running, sectionId: 'transport',
+      onClick: running ? pause : start,
+    },
+    { id: 'reset', icon: 'reset', label: 'Reset', sectionId: 'transport', onClick: reset },
+  ];
+
   return (
     <Workspace
+      actions={actions}
       appId="trinary-lab"
       title="Trinary System · Lab"
       subtitle={preset.name}

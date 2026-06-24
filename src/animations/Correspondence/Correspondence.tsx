@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import FractalPane, { Complex, ViewBounds } from './FractalPane';
 import Workspace from '../../chrome/workspace/Workspace';
-import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
+import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { Slider, Select, NumberInput } from '../../components/ControlPanel';
 import { Kicker } from '../../chrome/readouts';
 import readmeText from './README.md?raw';
@@ -148,35 +148,16 @@ export default function Correspondence() {
     </div>
   );
 
+  // Transport (Draw c-path · Play/Pause · Clear path) lives once, in the
+  // always-on action strip (`actions` below) — never duplicated here. This
+  // panel keeps only the *parameters*: the playback Speed and the Progress
+  // scrubber (which pauses a running playback via seek() so the user stays in
+  // control).
   const pathNode = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <ActionButton
-        label={drawingPath ? 'Finish drawing path' : 'Draw c-path'}
-        active={drawingPath}
-        onClick={() => setDrawingPath(p => !p)}
-      />
-      <ActionButton
-        label="Clear path"
-        disabled={path.length === 0}
-        onClick={() => { stopPath(); setPath([]); progressRef.current = 0; setProgress(0); }}
-      />
-      <ActionButton
-        label={playing ? 'Stop playback' : 'Play path'}
-        primary
-        disabled={path.length < 2}
-        onClick={playing ? stopPath : playPath}
-      />
-      {playing && (
-        <ActionButton
-          label={paused ? 'Resume' : 'Pause'}
-          onClick={() => setPaused(p => !p)}
-        />
-      )}
       <Slider label="Speed" value={speed}
         min={0.005} max={0.5} step={0.005}
         onChange={setSpeed} format={v => v.toFixed(3)} />
-      {/* The old floater's vertical scrubber, rebuilt as a horizontal row.
-          seek() pauses a running playback so the user stays in control. */}
       <div style={path.length < 2 ? { opacity: 0.45, pointerEvents: 'none' } : undefined}>
         <Slider label="Progress" value={progress}
           min={0} max={1} step={0.001}
@@ -259,6 +240,40 @@ export default function Correspondence() {
   // so nothing from the old drawer's About section is lost.
   const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
 
+  /* Always-on action strip — the primary path transport, projected from the
+     Path (playback) panel. Play/Pause is one toggle that also serves as Resume
+     when a scrubbed playback is paused; Clear fully resets the path. The rich
+     params (Speed, Progress) stay in the panel. */
+  const advancing = playing && !paused;          // the orbit is actively stepping
+  const actions: ActionDef[] = [
+    {
+      id: 'draw',
+      icon: 'pin',
+      label: 'Draw path',
+      active: drawingPath,
+      sectionId: 'path',
+      onClick: () => setDrawingPath(p => !p),
+    },
+    {
+      id: 'play',
+      icon: advancing ? 'pause' : 'play',
+      label: advancing ? 'Pause' : 'Play',
+      primary: true,
+      active: advancing,
+      sectionId: 'path',
+      disabled: path.length < 2,
+      onClick: () => { if (!playingRef.current) playPath(); else setPaused(p => !p); },
+    },
+    {
+      id: 'clear',
+      icon: 'reset',
+      label: 'Clear path',
+      sectionId: 'path',
+      disabled: path.length === 0,
+      onClick: () => { stopPath(); setPath([]); progressRef.current = 0; setProgress(0); },
+    },
+  ];
+
   return (
     <Workspace
       appId="correspondence"
@@ -269,24 +284,7 @@ export default function Correspondence() {
       layouts={layouts}
       defaultLayoutId="explore"
       explainer={help || null}
+      actions={actions}
     />
   );
-}
-
-function ActionButton({ label, onClick, active, primary, disabled }: {
-  label: string; onClick: () => void;
-  active?: boolean; primary?: boolean; disabled?: boolean;
-}) {
-  const style: React.CSSProperties = {
-    padding: '12px 16px', borderRadius: 6,
-    border: active ? '1px solid var(--cp-accent)' : '1px solid var(--cp-border)',
-    background: primary && !disabled ? '#10b981'
-      : active ? 'rgba(255, 212, 0, 0.18)'
-      : 'rgba(255,255,255,0.06)',
-    color: primary && !disabled ? '#fff' : 'var(--cp-fg)',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    fontSize: 14, opacity: disabled ? 0.5 : 1, fontWeight: primary ? 700 : 500,
-    textAlign: 'left',
-  };
-  return <button style={style} onClick={onClick} disabled={disabled}>{label}</button>;
 }

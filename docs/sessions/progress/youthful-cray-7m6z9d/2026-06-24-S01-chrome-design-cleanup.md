@@ -54,6 +54,61 @@ The two `reference/*.html` files (Control Contract, Stable Matching reference) a
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 14:45 — Phase 4 complete: all 5 fan-out apps fixed, centrally verified
+**Why:** The orchestrator is the single verification pass — agents didn't build/commit,
+so I run one central build/lint/test and screenshot every app (R1) before committing.
+
+Central gate green: **build ✓, lint ✓ 0 errors, test ✓ 88/88**. Screenshot-verified
+each app (default skin):
+- **Agentic Sorting** — Run panel = Step-interval + Wake-rate only; Start/Reset strip-only. ✓
+- **Trinary** — mode pill now **"Explore | Lab"**, transport (Pause/Reset) strip-only. ✓
+- **Counting the Ways** — Build-it panel = Speed only; Play/Next/Reset strip-only. ✓
+- **Argand** — bottom HUD has only the t/j² scrubbers + System pills; feed mode lives
+  solely in the top-bar Point/Shape/Grid pills. ✓
+- **Correspondence** — Draw path / Play / Clear path now on the always-on strip
+  (it previously had none); Seed panel clean. ✓
+
+> [!WARNING]
+> **Caught two bugs by verifying (code + pixels, not just the agent's word).** The
+> Trinary agent renamed the mode to "Sandbox" — which (a) collided with Trinary's
+> *existing layout* named "Sandbox", and (b) it missed `TrinaryLab.tsx`'s mode pill
+> (still "Observatory") and the tour copy, so the two views disagreed. Fixed by
+> renaming the mode to **"Explore"** (clash-free with the skin *and* every layout
+> name) consistently across both views + the tour copy. Lesson: a rename's target
+> must be checked against *all* sibling namespaces (skins · layouts · modes), and
+> a fan-out agent's single-file edit needs a whole-app consistency sweep.
+
+**Deferred (tracked):** Agentic Sorting's Okabe-Ito agent palette → discrete registry
+(feeds 3 surfaces, needs an atomic cross-skin pass; already colorblind-safe).
+
+### 🟢 code · 14:40 — Phase 4: fanned out 5 per-app fixer subagents (4 returned, 1 running)
+**Why:** Dan asked to deploy subagents to apply the rules across apps; the apps are
+self-contained folders (disjoint → conflict-free), so one agent each, scoped to its
+folder, no git/build (I verify centrally), referencing the Stable Matching pattern.
+
+Results so far (each constrained to `src/animations/<App>/`, returns a change summary):
+- **Counting the Ways** ✓ — transport dedup only (Play tutorial/Next/Reset + Run&log/Clear
+  removed from panels; now strip-only). Confirmed zero color changes (already token-clean).
+- **Agentic Sorting** ✓ — transport dedup (sandbox START/PAUSE/Reset + lab Run removed from
+  panels) + dead-CSS-rule cleanup. **Deferred** the discrete-colormap swap with a clear
+  rationale (the Okabe-Ito palette feeds 3 independent surfaces — canvas, DOM swatches,
+  LabResults — that must convert atomically; it's already colorblind-safe; needs a focused
+  pass with cross-skin visual verification). Good conservative call → tracked as follow-up.
+- **Argand** ✓ — removed the duplicate Point/Shape/Grid switcher from the bottom HUD, kept the
+  framework-native top-bar mode pills (verified the immersive layout still shows them). Left
+  the semantic `_COL` mark constants. (Noted a 3rd feed surface — the Input panel Pills —
+  left as a tolerated panel-mirrors-mode pattern.)
+- **Trinary System** ✓ — Observatory transport dedup; **renamed the mode label "Observatory"
+  → "Sandbox"** (kept the persisted id) to clear the skin-name clash; **projected the Lab's
+  transport to a strip via a proper Drive-tier panel** (avoiding the Analyze-tier ActionBar
+  warning — careful, correct); tokenized HUD chrome colors, left scene/outcome semantics.
+- **Correspondence** ⏳ — projecting path transport (Draw/Play/Clear) to an `actions:` strip;
+  running.
+
+Pattern held across all: transport verbs land once (in `actions:`), params stay in panels,
+semantic/scene colors left alone, shared infra (registry/picker/useThemeId) reused. Next:
+central build+lint+test, screenshot-verify each, then commit.
+
 ### 🟢 code · 14:25 — Phase 3 done: Stable Matching, the reference compliance fix (verified)
 **Why:** The doc's worked example the other apps copy — so it must be done by
 hand and screenshot-verified to calibrate the pattern.
