@@ -6,11 +6,11 @@ title: Chrome design cleanup — execute the Claude Design hardening handoff
 branch: claude/youthful-cray-7m6z9d
 slug: youthful-cray-7m6z9d
 status: in-progress
-build: unknown
+build: passed
 followup: null
 pr: null
 app: chrome
-next: With Dan's go-ahead, start Phase 1 (additive tokens + 3 skins in theme.css/skins.tsx) — pure addition, unblocks everything; then the colormap registry.
+next: Optional Phase-5 polish (all tracked in TODO.md): adopt the discrete colormap in Agentic Sorting; tokenize residual DOM color on the compliant apps; Complex Particles hint occlusion; full 8-skin tour sweep.
 ---
 
 # Chrome design cleanup — execute the Claude Design hardening handoff
@@ -53,6 +53,23 @@ The two `reference/*.html` files (Control Contract, Stable Matching reference) a
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🔵 finding · 14:55 — Phase 5 spot-check: the "compliant" apps hold on light skins
+**Why:** Before tokenizing the audit's "minor color" notes on the ✓ apps, verify
+whether they actually break on a light skin (R1) — don't fix what isn't broken,
+and don't risk regressions on already-compliant apps for invisible gains.
+
+Screenshot-checked Trees and Nets + Plane Transform in **Daylight**: both render
+cleanly — light panels, light view windows, semantic mark colors legible. Neither
+has Stable Matching's old hard-dark-stage breakage (SM was the outlier — a fully
+hardcoded `#0c0c10` DOM stage). So the residual DOM-color tokenization on the
+compliant apps (Polygon/Solid HUDs, Trinary preset buttons, the SVG mark constants)
+is genuine **low-value polish** — no visible skin breakage — now captured in
+`TODO.md` rather than risked this session.
+
+**Status:** the package's core (the audit's needs-fix apps + the missing tokens,
+skins, and colormap registry) is complete and verified. Remaining items are
+optional polish, all tracked.
 
 ### 🟡 milestone · 14:45 — Phase 4 complete: all 5 fan-out apps fixed, centrally verified
 **Why:** The orchestrator is the single verification pass — agents didn't build/commit,

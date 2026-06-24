@@ -291,3 +291,37 @@ informs future rounds. Delete or check off items as they land.
   at 0 *errors* (CI-gated via `deploy.yml` + the new `sessions-lint.yml`); this is the
   warning cleanup. Once quiet, consider promoting the PR `sessions-lint` check and the
   mobile smoke from advisory to hard gates (drop `continue-on-error`).
+
+- [ ] [chrome] !low Adopt the discrete colormap registry in Agentic Sorting (theme --data palette for agent identity).
+  The 2026-06-24 design-hardening session shipped `src/lib/colormapRegistry.ts` +
+  `<ColormapPicker>` and adopted it in Stable Matching (divergent, default RdBu). Agentic
+  Sorting's Okabe-Ito agent palette (`arena.ts:13-25`) is the canonical *discrete* target but
+  was deferred: it feeds 3 surfaces (canvas `colorFor`, DOM swatches in `AgenticSorting.tsx`,
+  `LabResults` `barColor`) that must convert atomically, plus a `useThemeId()` subscription +
+  a per-frame ref refresh for the canvas; the existing palette is already colorblind-safe. Do
+  it as one pass with cross-skin visual verification. The same pattern fits Trinary Lab's
+  census outcome colors.
+
+- [ ] [chrome] !low Tokenize residual DOM color on the compliance-clean apps (polish, no visible break).
+  From the 2026-06-24 audit: Polygon/Solid Worlds HUD overlays (~12-14 hex each), Trinary's
+  preset/active buttons (hardcoded blue), PlaneTransform's split-pane bg `#0c0c10` + SVG
+  `stroke="#ffffff"`, TreesAndNets' `C_FLIP`/`C_CROSS`/`#ffd54a` SVG constants. NONE break on
+  light skins today (verified Trees + Plane in Daylight this session) — pure polish, so weigh
+  against regression risk on already-compliant apps. Leave 3D scene/material color + semantic
+  state markers alone (engine color, not chrome).
+
+- [ ] [chrome] !low Complex Particles: reflow/fade the pan-zoom hint when the 4D-Rotation panel covers it.
+  Design-doc 03 minor item; the hint lives on the shared view-overlay hint layer. Polish, not
+  a contract violation.
+
+- [ ] [chrome] !low Full 8-skin × all-apps tour sweep as a visual-regression baseline.
+  `npm run tour -- --skins all` now spans 8 skins (Daylight/Primary/Mirage added 2026-06-24).
+  The hardening session verified the changed apps in representative skins (dark/daylight/
+  phosphor) but not the full 8×14 matrix. Capture a baseline contact sheet; pairs with the
+  existing "wire the tour into CI" TODO above.
+
+- [ ] [chrome] !low Revisit --font-scale Option B (rem migration) if Phosphor still reads large.
+  2026-06-24 shipped Option A — a scoped `[data-theme="phosphor"] .am-app/.am-gallery-app
+  { zoom: var(--font-scale) }` (=0.9), screenshot-verified gap-free at gallery + app level.
+  Option B (migrate chrome px→rem + a type-root `calc()` multiplier) is the cleaner long-term
+  fix if A proves insufficient; bigger diff, deferred per the design doc.
