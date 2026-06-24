@@ -32,6 +32,30 @@ the **screenshot tour** (#235, `gracious-ptolemy`). The last triage pass was
 
 ## Working notes
 
+### 🔵 finding · 02:30 — signals/to-do path: the lint blocker is entirely the shelved quaternion import
+**Why:** Dan asked what's needed to move forward on the `!high` signals/to-do item.
+
+`sessions:lint`: 34 errors, **all in the quaternion-exploration folder** I imported
+while shelving — 12× `status: stopped` (not in the linter vocab yet), 18× non-standard
+`kind:` (lens/dialogue/atlas/research/design-* from the provisional explore-concept
+skill), 4× non-standard `build:`. The rest of the corpus is clean. So CI-gating
+`sessions:lint --strict` needs: (1) decide how `stopped` + shelved-exploration records
+are treated, (2) wire `signals:`/`next:` requirement into templates+skills, (3) add the
+CI step. Parts touching REPORT_STYLE/templates may belong to Dan's separate report-style
+thread — flagged for his call before editing.
+
+### 🟡 milestone · 02:10 — Discharged solid-worlds visual-unverified; cleared rec-8 needs-dan
+**Why:** Dan: yes to (a) headless discharge and (b) clearing rec-8.
+
+Headless `shoot.mjs` of `#/solid-worlds?world=half-turn&cam=third` rendered correctly —
+the half-turn room, avatar, **mirrored FRONT sign** (chirality), cube minimap, and
+DEBUG POSE HUD (`det +1 original`) — so the `visual-unverified` is honestly cleared.
+Cleared process-audit **rec-8** `needs-dan`: the three catalog/identity calls are
+settled (Solid Worlds name kept · Stable Marriage retired · Argand↔Plane Transform =
+"successor-in-progress" is the standing answer). Signals now: 5 phone-needed (checklist
+path), 3 needs-dan (the `!high`, the parked explainer plan, this session), 1
+visual-unverified (the tour's inherent software-WebGL caveat).
+
 ### 🟡 milestone · 02:00 — Mobile smoke PASS 17/17; wrote the mobile review checklist
 **Why:** Dan: run the smoke test, then make a checklist of what needs eyes on mobile.
 
