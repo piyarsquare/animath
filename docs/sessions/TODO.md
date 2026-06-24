@@ -259,3 +259,17 @@ informs future rounds. Delete or check off items as they land.
 - [x] [docs] Split the two heavy complex guides into Part 1 / Part 2; cut applet weight.
 
 - [x] [docs] Add a `docs` category + `trees-and-nets` to the session taxonomy.
+
+- [ ] [general] !med Real-device mobile pass using `docs/MOBILE_CHECKLIST.md`.
+  Discharges the 5 standing `phone-needed` signals (Argand ×2, complex-particles
+  guides, headless ×2). The 2026-06-24 smoke is PASS 17/17 @ 390×844 but that's a
+  crash/blank baseline in software WebGL, not a device check — layout, touch gestures,
+  dock/sheet behavior and real-GPU rendering still need a phone. Work the checklist,
+  tick boxes, and clear each app's `phone-needed` signal as its section passes.
+
+- [ ] [docs] !low Drive the ~130 advisory `sessions:lint` warnings toward zero.
+  Mostly `build: passing`/`status: complete` legacy wording and non-canonical
+  `**Follow-up value:**` lines (non-ASCII hyphen / bold-wrapped level). The corpus is
+  at 0 *errors* (CI-gated via `deploy.yml` + the new `sessions-lint.yml`); this is the
+  warning cleanup. Once quiet, consider promoting the PR `sessions-lint` check and the
+  mobile smoke from advisory to hard gates (drop `continue-on-error`).
