@@ -54,6 +54,24 @@ The two `reference/*.html` files (Control Contract, Stable Matching reference) a
 
 <!-- Newest entry first. -->
 
+### 🔴 blocker · 16:10 — Skin switch didn't re-theme the gallery live (needed a refresh); fixed `useSkin` at the root
+**Why:** Dan: "the fix requires a page refresh to activate." `useSkin()` returned a
+private `useState`, so each call site is an *independent* instance. The TopBar's
+SkinPicker (the writer) and the Gallery's `const [skin] = useSkin()` (a reader) were
+two different states — clicking a skin updated `data-theme` (CSS re-themes live) but
+NOT the Gallery's `skin`, so `<Preview skin={skin}>` stayed stale until a reload re-read
+localStorage. (That's also why message-1 said the cards themed "on refresh.")
+
+Fix at the root: `useSkin` now derives its value from the live `data-theme` via the
+reactive `useThemeId()` (MutationObserver) instead of a private `useState`; the setter
+applies the attrs + persists. Now **every** useSkin/useThemeId consumer stays in sync the
+instant any of them changes the skin — no stale readers, present or future. **Verified
+with a real live-switch test** (headless: load gallery on dark → click SkinPicker →
+Daylight, *no reload* → screenshot): the gallery + preview cards re-theme live, identical
+to a fresh Daylight load. Lesson: a `useState`-per-call hook is a footgun for shared
+global state — derive readers from the single source (the DOM attribute) so they observe
+writes from anywhere.
+
 ### 🔴 blocker · 15:45 — Light-on-light in Stable Matching on light skins (Dan caught it in Daylight); fixed
 **Why:** Tokenizing SM's stage/cards to follow the skin (Phase 3) was right, but I
 left several **semantic text colors as fixed light hues** — fine on the old hard-dark

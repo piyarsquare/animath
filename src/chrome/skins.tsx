@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Icon } from './icons';
 import { useEscLayer } from './useEscLayer';
 
@@ -64,16 +64,21 @@ export function applyPersistedSkin(): void {
 }
 
 /**
- * The current skin id + setter. Setting a skin updates `data-theme` on the
- * root element (restyling all chrome) and persists the choice.
+ * The current skin id + setter. The value is derived from the live `data-theme`
+ * attribute (via {@link useThemeId}), NOT a private `useState` — so every
+ * useSkin/useThemeId consumer (gallery, top bar, in-app controls) stays in sync
+ * the instant ANY of them, or boot, changes the skin. Without this, a second
+ * useSkin instance reading the skin would go stale until a page reload, because
+ * independent useState copies don't observe each other. Setting a skin applies
+ * the attrs immediately (restyling all chrome) and persists the choice.
  */
 export function useSkin(): [string, (id: string) => void] {
-  const [skin, setSkinState] = useState(loadSkin);
-  useEffect(() => {
-    applySkinAttrs(skin);
-    try { window.localStorage.setItem(SKIN_KEY, skin); } catch { /* ignore */ }
-  }, [skin]);
-  return [skin, setSkinState];
+  const skin = useThemeId();
+  const setSkin = useCallback((id: string) => {
+    applySkinAttrs(id);
+    try { window.localStorage.setItem(SKIN_KEY, id); } catch { /* ignore */ }
+  }, []);
+  return [skin, setSkin];
 }
 
 /**
