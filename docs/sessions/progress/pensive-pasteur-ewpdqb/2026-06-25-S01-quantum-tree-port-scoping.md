@@ -9,9 +9,9 @@ status: in-progress
 build: passing
 followup: null
 app: trees-and-nets
-thumbnail: assets/2026-06-25-S01-themeA-selected.png
+thumbnail: assets/2026-06-25-S01-run-nn.png
 signals: null
-next: Theme C — build a tree / CDM by edges (the metric builder: add splits with weights → metric)
+next: Theme C — build a tree / CDM by edges (the metric builder: add weighted splits → metric)
 ---
 
 # Trees and Nets — port the rest of quantum-tree (evidence engine first)
@@ -62,6 +62,28 @@ plane, and the quartet→split→ordering→tree assembly views.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 20:45 — Theme D: stepwise NJ + NeighborNet animation (the centerpiece)
+**Why:** Dan wants to watch the algorithms run, with the circular order locking in,
+and emphasized testing the math hard.
+
+Instrumented both algorithms to emit **faithful step traces**
+(`computeNeighborJoiningTrace`, `computeNeighborNetTrace` — one implementation
+each, so the trace describes the exact run) + `trace.test.ts` (faithfulness +
+step-structure). New **Run** top-bar mode with **Play / Step / Reset**:
+- **NeighborNet** puts the leaves on the final-order circle and **locks one
+  adjacency per merge** (solid = locked · dashed = undecided · gold = the splice
+  just made), then draws the split network once the order is complete.
+- **Neighbor-Joining** reveals the tree **join by join** on the final layout,
+  narrating the minimum-Q choice.
+
+Also added the **randomized recovery suite** Dan asked for: random tree → NJ
+recovers it; random CDM → split weights recover exactly (~500 seeded instances).
+Build green, lint clean, **70 TreesAndNets tests / 208 repo-wide**. Verified headless.
+
+![NeighborNet: the circular order locking in, one splice per merge](assets/2026-06-25-S01-run-nn.png)
+![NeighborNet complete: order locked → the split network](assets/2026-06-25-S01-run-net.png)
+![Neighbor-Joining: the tree growing join by join (min Q)](assets/2026-06-25-S01-run-nj.png)
 
 ### 🟡 milestone · 20:10 — Theme B: the SplitsTree split-network view
 **Why:** Dan wants the splits-tree view; the chord net was a stand-in.

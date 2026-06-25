@@ -318,26 +318,71 @@ function selectLevyPachterEndpointPair(
   return { left: best!.left, right: best!.right };
 }
 
+/** One agglomeration merge in the Levy–Pachter / NeighborNet ordering. */
+export interface NNStep {
+  /** Every component as its ordered leaf-index chain, BEFORE this merge. */
+  componentsBefore: number[][];
+  /** Index (into `componentsBefore`) of the first merged component. */
+  leftIndex: number;
+  /** Index (into `componentsBefore`) of the second merged component. */
+  rightIndex: number;
+  /** The two leaf indices spliced together (one endpoint from each side). */
+  endpoints: [number, number];
+  /** The ordered chain after splicing — the newly locked-in order fragment. */
+  mergedOrder: number[];
+}
+
+/** A full NeighborNet ordering run plus the per-merge trace that produced it. */
+export interface NNTrace {
+  /** The final canonical circular order (identical to `computeLevyPachterOrdering(m)`). */
+  order: number[];
+  /** Every merge, in order; n−1 of them, ending in a single component. */
+  steps: NNStep[];
+}
+
 /**
  * The Levy–Pachter circular ordering of the leaves: a neighbor-joining-style
  * agglomeration over path components, splicing endpoints, until one cycle
  * remains. Returns the canonical circular order as a leaf-index array. Faithful
  * port of map.js `computeLevyPachterOrdering`.
+ *
+ * Delegates to {@link computeNeighborNetTrace} and returns just the final order,
+ * so the recorded trace describes this exact run.
  */
 export function computeLevyPachterOrdering(m: DistanceMatrix): number[] {
+  return computeNeighborNetTrace(m).order;
+}
+
+/**
+ * Run the Levy–Pachter ordering and record every agglomeration merge: the
+ * ordered components present before the merge, which two were merged, the
+ * endpoints spliced, and the resulting ordered fragment (the order being locked
+ * in). The component-selection and endpoint-selection logic is unchanged, so
+ * `order` equals what {@link computeLevyPachterOrdering} historically returned.
+ */
+export function computeNeighborNetTrace(m: DistanceMatrix): NNTrace {
   const n = leafCount(m);
   let components: LPComponent[] = Array.from({ length: n }, (_, i) => ({ order: [i] }));
+  const steps: NNStep[] = [];
 
   while (components.length > 1) {
+    const componentsBefore = components.map((component) => component.order.slice());
     const pair = selectLevyPachterComponentPair(m, components);
     const endpoints = selectLevyPachterEndpointPair(m, components, pair.left, pair.right);
     const left = orientComponentAtEndpoint(components[pair.left].order, endpoints.left, 'end');
     const right = orientComponentAtEndpoint(components[pair.right].order, endpoints.right, 'start');
     const merged: LPComponent = { order: [...left, ...right] };
+    steps.push({
+      componentsBefore,
+      leftIndex: pair.left,
+      rightIndex: pair.right,
+      endpoints: [endpoints.left, endpoints.right],
+      mergedOrder: merged.order.slice(),
+    });
     components = components
       .filter((_, index) => index !== pair.left && index !== pair.right)
       .concat(merged);
   }
 
-  return canonicalCircularOrder(components[0].order);
+  return { order: canonicalCircularOrder(components[0].order), steps };
 }

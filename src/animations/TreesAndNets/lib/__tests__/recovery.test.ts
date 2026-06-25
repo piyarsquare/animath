@@ -12,7 +12,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { type DistanceMatrix, type WeightedSplit, defaultLeaves, metricFromSplits, starMetric } from '../metric';
-import { canonicalSplitKey, enumerateTrees, treeCompatibleWithOrder, type Tree } from '../trees';
+import { enumerateTrees, treeCompatibleWithOrder, type Tree } from '../trees';
 import { computeNeighborJoining } from '../neighborJoining';
 import {
   circularDisplayedSplits,

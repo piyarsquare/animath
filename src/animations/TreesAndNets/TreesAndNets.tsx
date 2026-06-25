@@ -2,18 +2,19 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
-import type { SectionDef, ViewDef, LayoutDef, WorkspaceMode } from '../../chrome/workspace/types';
+import type { SectionDef, ViewDef, LayoutDef, WorkspaceMode, ActionDef } from '../../chrome/workspace/types';
 import { Pills, Checkbox, Slider } from '../../components/ControlPanel';
 import { Kicker } from '../../chrome/readouts';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { buildAssociahedron, type Triangulation } from './lib/associahedron';
 import { neighborOrder, canonicalKey } from './lib/mosaic';
 import { preset, presetNames, type DistanceMatrix, type PresetName } from './lib/metric';
-import { computeNeighborJoining, njLeafPathInfo } from './lib/neighborJoining';
-import { solveSplitWeights, computeLevyPachterOrdering } from './lib/splitWeights';
+import { computeNeighborJoining, computeNeighborJoiningTrace, njLeafPathInfo } from './lib/neighborJoining';
+import { solveSplitWeights, computeLevyPachterOrdering, computeNeighborNetTrace } from './lib/splitWeights';
 import { buildSplitGraph } from './lib/splitGraph';
 import { MatrixEditor } from './views/MatrixEditor';
 import { NJTreeView, SplitNetworkView, SplitGraphView, SplitWeightsList, type Highlight } from './views/NetViews';
+import { NeighborNetRun, NeighborJoiningRun } from './views/AlgorithmView';
 import explainer from './EXPLAINER.md?raw';
 
 // Persistence namespace. Bumped (was 'trees-and-nets') when the app was
@@ -243,8 +244,26 @@ export default function TreesAndNets(): JSX.Element {
   const splitGraph = useMemo(() => buildSplitGraph(weightedSplits, lpOrder, n), [weightedSplits, lpOrder, n]);
 
   // ---- shared selection (links matrix ↔ tree ↔ net ↔ weights) + view mode ----
-  const [appMode, setAppMode] = usePersistentState<'nets' | 'fibers'>(`${APP_ID}:appmode`, 'nets');
+  const [appMode, setAppMode] = usePersistentState<'nets' | 'fibers' | 'run'>(`${APP_ID}:appmode`, 'nets');
   const [hl, setHl] = useState<Highlight>(null);
+
+  // ---- Run mode: stepwise algorithm traces + a Play/Step player ----
+  const [runAlgo, setRunAlgo] = usePersistentState<'nn' | 'nj'>(`${APP_ID}:runalgo`, 'nn');
+  const [runStep, setRunStep] = useState(0);
+  const [runPlaying, setRunPlaying] = useState(false);
+  const njTrace = useMemo(() => computeNeighborJoiningTrace(matrix), [matrix]);
+  const nnTrace = useMemo(() => computeNeighborNetTrace(matrix), [matrix]);
+  const runMax = runAlgo === 'nj' ? njTrace.steps.length : nnTrace.steps.length;
+  useEffect(() => { setRunStep(0); setRunPlaying(false); }, [matrix, runAlgo]);
+  useEffect(() => {
+    if (!runPlaying) return undefined;
+    if (runStep >= runMax) { setRunPlaying(false); return undefined; }
+    const t = setTimeout(() => setRunStep((s) => Math.min(s + 1, runMax)), 850);
+    return () => clearTimeout(t);
+  }, [runPlaying, runStep, runMax]);
+  const runStepFn = (): void => setRunStep((s) => Math.min(s + 1, runMax));
+  const runReset = (): void => { setRunStep(0); setRunPlaying(false); };
+  const runPlay = (): void => { if (runStep >= runMax) setRunStep(0); setRunPlaying((p) => !p); };
 
   // ---- fibers: the associahedron × cube explorer (now a secondary layout) ----
   const [mode, setMode] = usePersistentState<'flip' | 'cross'>(`${APP_ID}:mode`, 'flip');
@@ -421,22 +440,90 @@ export default function TreesAndNets(): JSX.Element {
     { id: 'cube', title: `(n−3)-cube fiber — orders | tree`, defaultRect: { x: 1156, y: 408, w: 360, h: 380 }, node: <Graph3D key={`q-${treeKey}-${n}`} positions={cube.positions} edges={cube.edges} adjacency={cube.adj} currentRef={cubeCurRef} radiusRef={radiusRef} accent={0xe08a3c} onPick={pickCube} spinRef={spinRef} /> },
   ];
 
-  const sections = appMode === 'nets' ? netsSections : fibersSections;
-  const views = appMode === 'nets' ? netsViews : fibersViews;
-  const layouts: LayoutDef[] = appMode === 'nets'
-    ? [{ id: 'essentials', name: 'Nets', open: { distances: { x: 84, y: 16 }, connect: { x: 84, y: 410 }, weights: { x: 84, y: 560 } }, views: { njtree: { open: true }, splitgraph: { open: true }, splitnet: { open: false } } }]
-    : [{ id: 'essentials', name: 'Fibers', open: { nav: { x: 84, y: 16 }, state: { x: 84, y: 210 }, view: { x: 84, y: 340 } }, views: { tree: { open: true }, polygon: { open: false }, overlay: { open: true }, assoc: { open: true }, cube: { open: true } } }];
+  // ---- Run mode: narration + panels + the animation view + the player actions ----
+  let runNarration: string;
+  if (runAlgo === 'nn') {
+    if (runStep >= nnTrace.steps.length) {
+      runNarration = `Order locked: (${nnTrace.order.map((l) => matrix.leaves[l]).join(' ')}). The net is its split decomposition.`;
+    } else if (runStep === 0) {
+      runNarration = 'Every leaf is its own component. Play to agglomerate — each merge locks one adjacency of the circular order.';
+    } else {
+      const s = nnTrace.steps[runStep - 1];
+      const chain = (idx: number): string => s.componentsBefore[idx].map((l) => matrix.leaves[l]).join('');
+      runNarration = `Merge ${chain(s.leftIndex)} + ${chain(s.rightIndex)} — splice ${matrix.leaves[s.endpoints[0]]}–${matrix.leaves[s.endpoints[1]]}.`;
+    }
+  } else if (runStep >= njTrace.steps.length) {
+    runNarration = 'Tree complete — every cluster joined.';
+  } else if (runStep === 0) {
+    runNarration = 'Every leaf is its own cluster. Play to join the closest pair (minimum Q) at each step.';
+  } else {
+    const s = njTrace.steps[runStep - 1];
+    runNarration = s.finalJoin
+      ? `Final join: connect ${s.joined[0]}–${s.joined[1]}.`
+      : `Join ${s.joined[0]}, ${s.joined[1]} → ${s.newNode} (Q ${Math.min(...s.qScores.map((x) => x.q)).toFixed(1)}).`;
+  }
+
+  const runSections: SectionDef[] = [
+    {
+      id: 'run', title: 'Algorithm', arch: 'drive', estHeight: 170,
+      node: (
+        <div style={{ display: 'grid', gap: 10 }}>
+          <Pills<'nn' | 'nj'> label="Animate" value={runAlgo} onChange={setRunAlgo} options={[{ value: 'nn', label: 'NeighborNet' }, { value: 'nj', label: 'Neighbor-Joining' }]} />
+          <Kicker>Play to watch the algorithm run on the current matrix. <b>NeighborNet</b> locks in the
+            circular order one adjacency per merge, then draws the net; <b>Neighbor-Joining</b> grows the
+            tree one join (minimum Q) at a time.</Kicker>
+        </div>
+      ),
+    },
+    {
+      id: 'runstate', title: 'Step', arch: 'readout', estHeight: 140,
+      node: (
+        <div style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12, lineHeight: 1.6 }}>
+          step {Math.min(runStep, runMax)} / {runMax}<br /><br />{runNarration}
+        </div>
+      ),
+    },
+  ];
+  const runViews: ViewDef[] = [
+    {
+      id: 'run', title: runAlgo === 'nn' ? 'NeighborNet — order locking in' : 'Neighbor-Joining — tree growing',
+      defaultRect: { x: 360, y: 16, w: 560, h: 560 },
+      node: runAlgo === 'nn'
+        ? <NeighborNetRun trace={nnTrace} matrix={matrix} splitGraph={splitGraph} step={runStep} />
+        : <NeighborJoiningRun trace={njTrace} matrix={matrix} step={runStep} />,
+    },
+  ];
+  const runActions: ActionDef[] = [
+    { id: 'play', icon: runPlaying ? 'pause' : 'play', label: runPlaying ? 'Pause' : 'Play', primary: true, active: runPlaying, sectionId: 'run', onClick: runPlay },
+    { id: 'step', icon: 'step', label: 'Step', sectionId: 'run', disabled: runPlaying || runStep >= runMax, onClick: runStepFn },
+    { id: 'reset', icon: 'reset', label: 'Reset', sectionId: 'run', disabled: runStep === 0 && !runPlaying, onClick: runReset },
+  ];
+
+  const sections = appMode === 'nets' ? netsSections : appMode === 'fibers' ? fibersSections : runSections;
+  const views = appMode === 'nets' ? netsViews : appMode === 'fibers' ? fibersViews : runViews;
+  const layouts: LayoutDef[] =
+    appMode === 'nets'
+      ? [{ id: 'essentials', name: 'Nets', open: { distances: { x: 84, y: 16 }, connect: { x: 84, y: 410 }, weights: { x: 84, y: 560 } }, views: { njtree: { open: true }, splitgraph: { open: true }, splitnet: { open: false } } }]
+      : appMode === 'fibers'
+        ? [{ id: 'essentials', name: 'Fibers', open: { nav: { x: 84, y: 16 }, state: { x: 84, y: 210 }, view: { x: 84, y: 340 } }, views: { tree: { open: true }, polygon: { open: false }, overlay: { open: true }, assoc: { open: true }, cube: { open: true } } }]
+        : [{ id: 'essentials', name: 'Run', open: { run: { x: 84, y: 16 }, runstate: { x: 84, y: 200 } }, views: { run: { open: true } } }];
 
   const modes: WorkspaceMode[] = [
     { id: 'nets', label: 'Nets' },
     { id: 'fibers', label: 'Fibers' },
+    { id: 'run', label: 'Run' },
   ];
+  const subtitle = appMode === 'nets'
+    ? `${n} leaves · metric → tree + net`
+    : appMode === 'fibers'
+      ? `${n} leaves · tree-space fibers`
+      : `${n} leaves · ${runAlgo === 'nn' ? 'NeighborNet' : 'Neighbor-Joining'} step by step`;
 
   return (
-    <Workspace appId={APP_ID} title="Trees and Nets"
-      subtitle={appMode === 'nets' ? `${n} leaves · metric → tree + net` : `${n} leaves · tree-space fibers`}
+    <Workspace appId={APP_ID} title="Trees and Nets" subtitle={subtitle}
       sections={sections} views={views} layouts={layouts} defaultLayoutId="essentials"
       explainer={explainer} modes={modes} activeMode={appMode}
-      onModeChange={(id) => setAppMode(id as 'nets' | 'fibers')} />
+      actions={appMode === 'run' ? runActions : undefined}
+      onModeChange={(id) => setAppMode(id as 'nets' | 'fibers' | 'run')} />
   );
 }

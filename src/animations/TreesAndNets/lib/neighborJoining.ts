@@ -33,11 +33,56 @@ export interface NJResult {
   splitKeys: string[];
 }
 
+/** One cluster-join the algorithm makes — enough to animate the tree growing. */
+export interface NJStep {
+  /** Cluster ids present before this join. */
+  clustersBefore: string[];
+  /** Q-criterion value for every candidate pair (the decision surface). Empty
+   *  for the terminal join, which connects the last two clusters with no Q. */
+  qScores: { pair: [string, string]; q: number }[];
+  /** The chosen pair (min Q, with the existing lexical tie-break). */
+  joined: [string, string];
+  /** The "u#" interior node created (the terminal join also creates one). */
+  newNode: string;
+  /** Branch length assigned to the `joined[0]` side. */
+  leftLength: number;
+  /** Branch length assigned to the `joined[1]` side. */
+  rightLength: number;
+  /** True for the terminal 2-cluster connection. */
+  finalJoin: boolean;
+}
+
+/** A full neighbor-joining run plus the per-join trace that produced it. */
+export interface NJTrace {
+  /** The final tree (identical to `computeNeighborJoining(m)`). */
+  result: NJResult;
+  /** Every cluster-join, in order; the last has `finalJoin: true`. */
+  steps: NJStep[];
+}
+
 /**
  * Run neighbor joining on `m`. Returns the tree (nodes + weighted edges) and the
  * canonical keys of its interior splits. Faithful port of map.js.
+ *
+ * This delegates to {@link computeNeighborJoiningTrace} and returns just the
+ * final tree, so the recorded trace is guaranteed to describe this exact run.
  */
 export function computeNeighborJoining(m: DistanceMatrix): NJResult {
+  return computeNeighborJoiningTrace(m).result;
+}
+
+/**
+ * Run neighbor joining and record every cluster-join: the clusters present, the
+ * Q-criterion value of every candidate pair (the decision surface), the chosen
+ * pair, the interior node created, and the two branch lengths. The terminal join
+ * (the final edge between the last two clusters) is recorded with `finalJoin:
+ * true` and an empty `qScores` (it is a direct connection, not a Q decision).
+ *
+ * Single implementation of the algorithm — `result` equals what
+ * {@link computeNeighborJoining} historically returned, and `steps` describes
+ * this very run.
+ */
+export function computeNeighborJoiningTrace(m: DistanceMatrix): NJTrace {
   const n = leafCount(m);
   const leaves = m.leaves.slice();
 
@@ -46,6 +91,7 @@ export function computeNeighborJoining(m: DistanceMatrix): NJResult {
   const distances = new Map<string, number>();
   const edges: NJEdge[] = [];
   const nodeOrder: string[] = [];
+  const steps: NJStep[] = [];
   let clusters: string[] = leaves.slice();
   let internalIndex = 0;
 
@@ -85,6 +131,8 @@ export function computeNeighborJoining(m: DistanceMatrix): NJResult {
       ]),
     );
 
+    const clustersBefore = clusters.slice();
+    const qScores: { pair: [string, string]; q: number }[] = [];
     let bestPair: [string, string] | null = null;
     let bestScore = Infinity;
     for (let i = 0; i < clusters.length; i += 1) {
@@ -92,6 +140,7 @@ export function computeNeighborJoining(m: DistanceMatrix): NJResult {
         const left = clusters[i];
         const right = clusters[j];
         const score = (size - 2) * getDistance(left, right) - totals.get(left)! - totals.get(right)!;
+        qScores.push({ pair: [left, right], q: score });
         const label = distanceKey(left, right);
         const bestLabel = bestPair ? distanceKey(bestPair[0], bestPair[1]) : '';
         if (score < bestScore - 1e-9 || (Math.abs(score - bestScore) < 1e-9 && label < bestLabel)) {
@@ -110,6 +159,15 @@ export function computeNeighborJoining(m: DistanceMatrix): NJResult {
     internalIndex += 1;
     addEdge(joined, left, leftLength);
     addEdge(joined, right, rightLength);
+    steps.push({
+      clustersBefore,
+      qScores,
+      joined: [left, right],
+      newNode: joined,
+      leftLength,
+      rightLength,
+      finalJoin: false,
+    });
 
     clusters
       .filter((id) => id !== left && id !== right)
@@ -125,7 +183,21 @@ export function computeNeighborJoining(m: DistanceMatrix): NJResult {
     clusters.push(joined);
   }
 
-  addEdge(clusters[0], clusters[1], getDistance(clusters[0], clusters[1]));
+  const finalLength = getDistance(clusters[0], clusters[1]);
+  addEdge(clusters[0], clusters[1], finalLength);
+  // The terminal join is a direct edge between the last two clusters — it does
+  // NOT create a new interior node (that would change the tree). `newNode` is
+  // therefore empty here; `leftLength`/`rightLength` both carry the single edge
+  // length so either reading reproduces the connecting branch.
+  steps.push({
+    clustersBefore: clusters.slice(),
+    qScores: [],
+    joined: [clusters[0], clusters[1]],
+    newNode: '',
+    leftLength: finalLength,
+    rightLength: finalLength,
+    finalJoin: true,
+  });
 
   const leafSet = new Set(leaves);
   const labelToIndex = new Map(leaves.map((l, i) => [l, i]));
@@ -134,7 +206,7 @@ export function computeNeighborJoining(m: DistanceMatrix): NJResult {
     .filter((side) => side.length >= 2 && side.length <= n - 2)
     .map((side) => canonicalSplitKey(m, side.map((l) => labelToIndex.get(l)!)));
 
-  return { nodes: nodeOrder, edges, splitKeys };
+  return { result: { nodes: nodeOrder, edges, splitKeys }, steps };
 }
 
 /**
