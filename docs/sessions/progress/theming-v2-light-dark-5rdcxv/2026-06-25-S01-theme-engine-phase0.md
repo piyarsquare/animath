@@ -11,7 +11,7 @@ followup: null
 pr: null
 app: chrome, trinary, polygon-worlds, solid-worlds
 signals: needs-dan, visual-unverified
-next: Phase 1 pilot — Trinary star scene (force-dark via <Scheme>; stars→discrete --data, planet→neutral, outcomes→divergent registry colormap; canvas reads tokens + redraws). Dan wants to eyeball the divergence map.
+next: Get Dan's read on the divergence ramp + cool-data stars; then the Worlds day/night sky pilot, and roll the contract out (Trinary Lab fate map, Complex Particles, Plane Transform, Fractals, Correspondence, Trees, Argand, Agentic).
 ---
 
 # Theming v2 — light/dark-paired theme engine (Phase 0) + pilots
@@ -70,6 +70,51 @@ attribute, reactive `useSkin`/`useThemeId`) shipped in
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 02:02 — Phase 1 pilot: Trinary star scene (force-dark + divergence map)
+**Why:** Prove the force-mode + canvas-token path end-to-end on the scene Dan
+flagged, and put the outcomes divergence map in front of him to evaluate.
+
+The Observatory star scene now tracks the theme. **Build green, lint 0 errors,
+88 tests pass.**
+
+- **Force-dark scene** — wrapped the Orbit view node in `<Scheme mode="dark">`, so
+  the WebGL scene resolves the theme's **dark companion** tokens regardless of the
+  user's global mode. Its objects use the normal tokens: **stars → discrete
+  `--data-1/2/3`** (three identities), **planet → `--fg`** (neutral calm subject),
+  **ghosts → `--dim`**, background → `--viz-bg`, grid from `--dim-2`. No bespoke
+  scene palette.
+- **Reactive recolor** — the engine reads the palette at build (from inside the
+  forced-dark subtree) and recolors **in place** on a skin change
+  (`Trail.setColor`, `applyPalette`, keyed on `useThemeId`) — orbits/camera/sim
+  untouched. (Live-switch is wired via the same reactive `useThemeId` path proven
+  in Phase 0; verified across themes *at load*, not yet by a headless click-switch.)
+- **Outcomes = divergence map** — the Observatory timeline/legend/status now ride a
+  **divergent ramp the theme owns**: `--danger` (bad) → neutral → `--success`
+  (good), sampled by each bin's goodness (`BIN_GOODNESS`). Paradise→success green,
+  Chaotic→danger red, the two half-goods in the gray middle. Climate/status colors
+  join the same voice. Added `lerpStops` + `sampleContinuous` to the registry.
+
+Verified headless — the scene theme-tints per identity and the ramp renders:
+
+![Observatory: --data stars + success→danger divergence timeline](assets/2026-06-25-S01-trinary-observatory.png)
+![Daylight (LIGHT chrome) with the forced-dark, charcoal-tinted scene](assets/2026-06-25-S01-trinary-daylight-forcedark.png)
+![Mirage tints the same scene plum-dark](assets/2026-06-25-S01-trinary-mirage.png)
+
+> [!NOTE]
+> **Deferred within Trinary (not in this pilot):** the **Lab** (`BasinMap`,
+> `MiniSim`, `basin.ts` fate/chaos/magma ramps) and `SkyView`'s first-person
+> insolation sky (a physical temperature color, arguably not a data encoding).
+> The Lab is a separate view/route (`#/trinary-lab`); rolling its fate map onto the
+> divergent registry + tokenizing its mini-canvases is the natural follow-up.
+
+> [!IMPORTANT]
+> **For Dan to eyeball:** (1) the divergence ramp — `--success↔--danger` through a
+> gray midpoint; the two middle bins read fairly desaturated (gray-green /
+> gray-red). Want punchier mids, or a registry divergent map (RdBu/RdYlBu) instead
+> of the success/danger custom? (2) The three stars are now cool data hues
+> (blue/cyan/green in Observatory) rather than the old warm/cool gold-orange-blue —
+> more "theme identity," less individual pop. Keep, or special-case star identity?
 
 ### 🟡 milestone · 01:47 — Phase 0 engine complete + verified (committed)
 **Why:** The theme engine is the prerequisite for both pilots; de-risk it (build
