@@ -40,6 +40,10 @@
   --z-sheet: 136;
   --z-modal: 150;
   --z-rail: 200;
+
+  /* type-size multiplier (default 1); consumed by the Phosphor zoom rule
+     below so a wider face can be scaled to match — see DESIGN-SPEC §5 */
+  --font-scale: 1;
 }
 
 /* ---------------- Observatory · dark (default) ----------------
@@ -64,6 +68,14 @@
   --active: rgba(150,175,220,0.12);
   --shadow: 0 14px 44px rgba(0,0,0,0.55);
   --track: rgba(150,175,220,0.16);
+  --danger: #f0746a;  --danger-soft: rgba(240,116,106,0.14);
+  --success: #4cc878; --success-soft: rgba(76,200,120,0.14);
+  --shadow-1: 0 2px 8px rgba(0,0,0,0.35);
+  --shadow-2: 0 8px 24px rgba(0,0,0,0.45);
+  --shadow-3: 0 18px 52px rgba(0,0,0,0.6);
+  --data-1: #5fa8ff; --data-2: #5fe3cd; --data-3: #9ee85f; --data-4: #ffce47;
+  --data-5: #ff9a5f; --data-6: #ff6f9c; --data-7: #c08bff;
+  --font-scale: 1;
 }
 
 /* ---------------- Paper · light ----------------
@@ -88,6 +100,14 @@
   --active: rgba(40,34,20,0.09);
   --shadow: 0 12px 34px rgba(60,50,30,0.16);
   --track: rgba(40,34,20,0.15);
+  --danger: #c0492f;  --danger-soft: rgba(192,73,47,0.12);
+  --success: #2e8d56; --success-soft: rgba(46,141,86,0.12);
+  --shadow-1: 0 1px 4px rgba(60,50,30,0.1);
+  --shadow-2: 0 6px 18px rgba(60,50,30,0.14);
+  --shadow-3: 0 16px 40px rgba(60,50,30,0.2);
+  --data-1: #2f6fd0; --data-2: #1d8a78; --data-3: #5a9e2e; --data-4: #b67d10;
+  --data-5: #c4682a; --data-6: #c23f6c; --data-7: #7a52c0;
+  --font-scale: 1;
 }
 
 /* ---------------- Blueprint · drafting board ----------------
@@ -113,6 +133,14 @@
   --shadow: 0 14px 40px rgba(2,10,30,0.55);
   --track: rgba(170,200,255,0.24);
   --dot-color: rgba(170,200,255,0.28);
+  --danger: #ff9d8f;  --danger-soft: rgba(255,157,143,0.16);
+  --success: #7fe0a8; --success-soft: rgba(127,224,168,0.16);
+  --shadow-1: 0 2px 8px rgba(2,10,30,0.4);
+  --shadow-2: 0 8px 22px rgba(2,10,30,0.5);
+  --shadow-3: 0 18px 48px rgba(2,10,30,0.6);
+  --data-1: #69a8ff; --data-2: #7fe0a8; --data-3: #cfe06a; --data-4: #ffd98a;
+  --data-5: #ffab7a; --data-6: #ff8fb0; --data-7: #c0a8ff;
+  --font-scale: 1;
 }
 
 /* ---------------- Phosphor · CRT terminal ----------------
@@ -140,6 +168,14 @@
   --dot-color: rgba(80,255,140,0.14);
   --font-display: "Space Mono", ui-monospace, monospace;
   --font-ui: "Space Mono", ui-monospace, monospace;
+  --danger: #ff8a6f;  --danger-soft: rgba(255,138,111,0.14);
+  --success: #3dff7a; --success-soft: rgba(61,255,122,0.14);
+  --shadow-1: 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-2: 0 8px 22px rgba(0,0,0,0.5);
+  --shadow-3: 0 18px 48px rgba(0,0,0,0.65);
+  --data-1: #5affc8; --data-2: #3dff7a; --data-3: #b5ff5a; --data-4: #ffd24d;
+  --data-5: #ffa05a; --data-6: #ff6f9c; --data-7: #9affd2;
+  --font-scale: 0.9;   /* mono display+UI runs wider — scale type down to match */
 }
 
 /* ---------------- Spectrum · neon ----------------
@@ -164,12 +200,78 @@
   --active: rgba(130,170,255,0.15);
   --shadow: 0 16px 46px rgba(0,0,0,0.62), 0 0 0 1px rgba(52,230,207,0.06);
   --track: rgba(130,170,255,0.2);
+  --danger: #ff6f9c;  --danger-soft: rgba(255,111,156,0.15);
+  --success: #5fe3a0; --success-soft: rgba(95,227,160,0.15);
+  --shadow-1: 0 2px 10px rgba(0,0,0,0.45);
+  --shadow-2: 0 8px 26px rgba(0,0,0,0.55);
+  --shadow-3: 0 18px 52px rgba(0,0,0,0.66);
+  --data-1: #5fa8ff; --data-2: #34e6cf; --data-3: #9ee85f; --data-4: #ffce47;
+  --data-5: #ff9a5f; --data-6: #ff5aa6; --data-7: #c08bff;
+  --font-scale: 1;
+}
+
+/* ---------------- Daylight · light (cool) ----------------
+   Clean cool white, clear editorial blue, warm orange counter. */
+[data-theme="daylight"] {
+  color-scheme: light;
+  --bg: #eef2f8; --viz-bg: #f7f9fc; --panel: rgba(255,255,255,0.9); --panel-solid: #ffffff;
+  --panel-2: rgba(30,50,90,0.04); --fg: #16202e; --dim: #5b6678; --dim-2: #93a0b4;
+  --accent: #2f6fe0; --accent-fg: #ffffff; --accent-soft: rgba(47,111,224,0.12); --accent-2: #e0683a;
+  --border: rgba(20,40,80,0.12); --border-strong: rgba(20,40,80,0.22);
+  --hover: rgba(20,40,80,0.05); --active: rgba(20,40,80,0.09);
+  --shadow: 0 12px 32px rgba(20,40,80,0.14); --track: rgba(20,40,80,0.15);
+  --danger: #cf3b3b; --danger-soft: rgba(207,59,59,0.1);
+  --success: #2e8d56; --success-soft: rgba(46,141,86,0.1);
+  --shadow-1: 0 1px 4px rgba(20,40,80,0.1); --shadow-2: 0 6px 18px rgba(20,40,80,0.13); --shadow-3: 0 16px 40px rgba(20,40,80,0.18);
+  --data-1: #2f6fe0; --data-2: #1d8a8a; --data-3: #5a9e2e; --data-4: #e0a82e; --data-5: #e0683a; --data-6: #cf3b6e; --data-7: #7a52c0;
+  --font-scale: 1;
+}
+
+/* ---------------- Primary · basic colors (Bauhaus / De Stijl) ----------------
+   Bone white, true-black ink, bold primaries. Flat, confident, geometric. */
+[data-theme="primary"] {
+  color-scheme: light;
+  --bg: #f0eee8; --viz-bg: #faf9f5; --panel: rgba(255,255,255,0.94); --panel-solid: #ffffff;
+  --panel-2: rgba(0,0,0,0.04); --fg: #14130f; --dim: #5a584f; --dim-2: #908d82;
+  --accent: #f5c518; --accent-fg: #14130f; --accent-soft: rgba(245,197,24,0.18); --accent-2: #1f4fd6;
+  --border: rgba(0,0,0,0.14); --border-strong: rgba(0,0,0,0.28);
+  --hover: rgba(0,0,0,0.05); --active: rgba(0,0,0,0.1);
+  --shadow: 0 10px 28px rgba(0,0,0,0.16); --track: rgba(0,0,0,0.16);
+  --danger: #e63327; --danger-soft: rgba(230,51,39,0.12);
+  --success: #149e57; --success-soft: rgba(20,158,87,0.12);
+  --shadow-1: 0 1px 4px rgba(0,0,0,0.14); --shadow-2: 0 6px 18px rgba(0,0,0,0.18); --shadow-3: 0 16px 40px rgba(0,0,0,0.24);
+  --data-1: #e63327; --data-2: #1f4fd6; --data-3: #f5c518; --data-4: #149e57; --data-5: #e6731f; --data-6: #7a2fd6; --data-7: #14130f;
+  --font-scale: 1;
+}
+
+/* ---------------- Mirage · surreal ----------------
+   Deep plum dusk, peach light, lavender structure. Dreamlike and soft. */
+[data-theme="mirage"] {
+  color-scheme: dark;
+  --bg: #1a1230; --viz-bg: #120c24; --panel: rgba(40,28,68,0.72); --panel-solid: #241638;
+  --panel-2: rgba(255,200,235,0.06); --fg: #fbeef6; --dim: #b59ec9; --dim-2: #7d6699;
+  --accent: #ffb37a; --accent-fg: #2a1640; --accent-soft: rgba(255,179,122,0.16); --accent-2: #b08cff;
+  --border: rgba(200,170,255,0.18); --border-strong: rgba(200,170,255,0.34);
+  --hover: rgba(200,170,255,0.09); --active: rgba(200,170,255,0.15);
+  --shadow: 0 18px 50px rgba(10,4,30,0.6); --track: rgba(200,170,255,0.22);
+  --dot-color: rgba(200,170,255,0.18);
+  --danger: #ff7a9c; --danger-soft: rgba(255,122,156,0.16);
+  --success: #7fe0c0; --success-soft: rgba(127,224,192,0.16);
+  --shadow-1: 0 2px 10px rgba(10,4,30,0.45); --shadow-2: 0 8px 26px rgba(10,4,30,0.55); --shadow-3: 0 18px 52px rgba(10,4,30,0.66);
+  --data-1: #b08cff; --data-2: #ffb37a; --data-3: #7fe0c0; --data-4: #ff9ed6; --data-5: #8cc0ff; --data-6: #ffd98a; --data-7: #d68cff;
+  --font-scale: 1;
 }
 
 body {
   background: var(--bg);
   color: var(--fg);
 }
+
+/* Phosphor's mono UI face renders wider than the sans skins; scale the whole app
+   root down by --font-scale so its type matches the others (Option A, DESIGN-SPEC
+   §5 — zoom scales layout+type together; revisit with a rem migration if needed). */
+[data-theme="phosphor"] .am-app,
+[data-theme="phosphor"] .am-gallery-app { zoom: var(--font-scale, 1); }
 
 /* ============ Display type — Space Grotesk on wordmarks, titles, headers ============ */
 .am-brand, .am-title, .am-gal-title, .am-gal-kicker, .am-modal h2,

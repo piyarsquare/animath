@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Play, Pause, SkipForward, RotateCcw, FlaskConical, Trash2 } from 'lucide-react';
+import { FlaskConical } from 'lucide-react';
 import './countingTheWays.css';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef, WorkspaceMode } from '../../chrome/workspace/types';
@@ -500,12 +500,10 @@ export default function CountingTheWays() {
     </>
   );
 
+  // transport (Play / Next step / Reset) lives in the action strip; this panel keeps the readout + Speed
   const tutorNode = (
     <div className="ctw-actions">
       <div className="ctw-progress">{tut.stage === 'static' ? 'Full picture' : `Step ${tut.step} / 3 · ${tut.stage}`}</div>
-      <button className="ctw-btn primary" onClick={playPause}>{playing ? <Pause size={16} /> : <Play size={16} />}{playing ? 'Pause' : frame > 0 && frame < total ? 'Resume' : 'Play tutorial'}</button>
-      <button className="ctw-btn" onClick={stepStage} disabled={playing}><SkipForward size={16} />Next step</button>
-      <button className="ctw-btn" onClick={resetTut} disabled={frame === 0 && !playing}><RotateCcw size={16} />Reset</button>
       <Slider label="Speed" value={speed} min={0} max={100} step={1} onChange={setSpeed} />
     </div>
   );
@@ -515,12 +513,11 @@ export default function CountingTheWays() {
     <FormulaBand mu1={mu1} mu2={mu2} k={activeK} partialBessel={partialBessel} partialSum={partialSum} notes={showNotes} />
   );
 
+  // transport (Run & log / Clear catalog) lives in the action strip; this panel keeps the readouts + sample size
   const labNode = (
     <div className="ctw-actions">
       <div className="ctw-progress">{runs.length} run{runs.length === 1 ? '' : 's'} logged · next seed {labSeed}</div>
       <NumberInput label="Sample size" value={labN} onChange={v => setLabN(clamp(Math.round(v), 20, 20000))} min={20} max={20000} integer />
-      <button className="ctw-btn primary" onClick={runLab}><FlaskConical size={16} />Run &amp; log</button>
-      <button className="ctw-btn" onClick={clearRuns} disabled={runs.length === 0}><Trash2 size={16} />Clear catalog</button>
       <p className="ctw-hint">Each run draws a fresh sample from the current rates, fits μ̂ from its mean &amp; variance, and adds a row. Run repeatedly to see the recovery wobble; change the rates to compare.</p>
     </div>
   );

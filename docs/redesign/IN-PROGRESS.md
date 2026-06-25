@@ -170,3 +170,25 @@ questions. The implementing agent should update this file as phases land.
   already gesture-disambiguated, so tapping the Mandelbrot just picks c (EXPLAINER updated).
   Probe: `scripts/probe-hints.mjs`. Follow-up idea (pedagogy): Plane Transform's hint could
   *arm* draw mode rather than name the Curves panel — deferred with P3.
+- 2026-06-24: **Design-contract hardening** (branch `claude/youthful-cray-7m6z9d`, from a
+  Claude Design work order). *Enforcement + four missing pieces, not a redesign.* **(1) Tokens:**
+  added `--danger(-soft)` / `--success(-soft)` (destructive vs. confirming signal),
+  `--shadow-1/2/3` (elevation scale), `--data-1…7` (categorical ramp = the *discrete* colormap),
+  and `--font-scale` to every skin (`theme.css`), all additive. **(2) Three new skins:** Daylight
+  & Primary (light), Mirage (dark) — `theme.css` blocks + `skins.tsx` entries; the `Skin`
+  descriptor gained a `light?` flag + `isLightSkin(id)` helper (single source of truth for
+  light/dark — the lone `skin === 'light'` test, in `previews.tsx`, now uses it so the new light
+  skins render light cards). `--font-scale` consumer = **Option A** (scoped Phosphor `zoom`),
+  screenshot-verified gap-free. **(3) Colormap registry:** new `src/lib/colormapRegistry.ts` — a
+  typed, per-theme JS/CSS colormap resource for **DOM/2D** apps, organized by *family*
+  (sequential / divergent / discrete / cyclic) where the discrete family = the skin's `--data-*`
+  tokens (`discreteStops()` reads them live). Shader apps stay on `lib/colormaps.ts` GLSL (names
+  kept in sync). `<ColormapPicker>` added to `ControlPanel.tsx` (the `color`-tier control). Pure
+  logic covered by `src/lib/__tests__/colormapRegistry.test.ts`. **(4) Per-app compliance:** a
+  single read-only audit confirmed the offenders against source (corrected several
+  screenshot-derived hypotheses — the Stable Matching matrix was already divergent BuRd, not a
+  rainbow; "Compact floats a panel" was false everywhere; Counting the Ways had zero hardcoded
+  color). Fixes: dedupe transport into `actions:` (Stable Matching, Agentic Sorting, Trinary
+  Observatory, Counting the Ways), project panel-only transport to a strip (Correspondence,
+  Trinary Lab), one home for Argand's feed mode, tokenize hardcoded DOM color, and rename the
+  Trinary mode (Observatory→Sandbox) off the skin-name collision.

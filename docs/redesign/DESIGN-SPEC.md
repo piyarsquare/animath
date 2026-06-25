@@ -161,7 +161,12 @@ Google Fonts import is in `theme.css`. The **Phosphor** skin overrides display+U
 One attribute — `data-theme` on the root — restyles everything. Each skin is a token block in
 `theme.css`. Tokens: `--bg --viz-bg --panel --panel-solid --panel-2 --fg --dim --dim-2 --accent
 --accent-fg --accent-soft --accent-2 --border --border-strong --hover --active --shadow --track
---dot-color` (+ optional font overrides).
+--dot-color` (+ optional font overrides). Semantic + scale tokens (every skin):
+`--danger --danger-soft --success --success-soft` (destructive vs. confirming
+signal), `--shadow-1 --shadow-2 --shadow-3` (elevation scale: panel · popover ·
+modal), `--data-1 … --data-7` (categorical ramp — also the *discrete* colormap,
+see §11 / `lib/colormapRegistry.ts`), and `--font-scale` (per-skin type-size
+multiplier; Phosphor = 0.9 via a scoped `zoom` so its wider mono face matches).
 
 | id | Name | Character | bg | accent |
 |---|---|---|---|---|
@@ -170,11 +175,16 @@ One attribute — `data-theme` on the root — restyles everything. Each skin is
 | `neon` | Spectrum | space black · cyan + magenta | `#05060f` | `#34e6cf` |
 | `blueprint` | Blueprint | drafting blue · chalk lines, brighter dots | `#0e2148` | `#f2f6ff` |
 | `phosphor` | Phosphor | CRT green, **all-mono type** | `#03100a` | `#3dff7a` |
+| `daylight` | Daylight | cool white · clear editorial blue (light) | `#eef2f8` | `#2f6fe0` |
+| `primary` | Primary | Bauhaus · bold primaries on bone (light) | `#f0eee8` | `#f5c518` |
+| `mirage` | Mirage | surreal plum dusk · peach + lavender (dark) | `#1a1230` | `#ffb37a` |
 
 Skin picker: pill button (3 swatch dots + name) in gallery and workspace bars; dropdown lists all
 skins with name + blurb + dots. Adding a skin = one token block + one registry entry.
 
-Canvas engines should read the skin too (the prototype's mocks treat any non-`light` skin as dark).
+Canvas engines should read the skin too. Light vs. dark is **not** `id === 'light'` —
+there are several light skins (`light`, `daylight`, `primary`); use `isLightSkin(id)`
+(or the per-skin `light` flag) from `skins.tsx`, the single source of truth.
 
 ## 6. Phone mode (≤ 740px)
 

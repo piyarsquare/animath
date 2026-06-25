@@ -12,7 +12,7 @@ import Tour, { type TourStep } from './Tour';
  * This wrapper hosts both behind one entry, swapping the active view while
  * preserving the existing hash routes so old deep-links keep working:
  * `#/trinary` → Observatory, `#/trinary-lab` → Lab. Each view renders its own
- * Workspace chrome with Observatory | Lab mode pills in the top bar (the old
+ * Workspace chrome with Explore | Lab mode pills in the top bar (the old
  * bottom tab bar's replacement); the pills switch views by setting the hash,
  * which this wrapper observes. Each view still manages its own URL query
  * (shareable configs).
@@ -74,6 +74,6 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Open the Lab',
-    body: 'Use the Observatory | Lab pills in the top bar to switch to the Lab — it runs thousands of these worlds headless and maps their fates into fractal “destiny” portraits and statistics. Enjoy exploring!',
+    body: 'Use the Explore | Lab pills in the top bar to switch to the Lab — it runs thousands of these worlds headless and maps their fates into fractal “destiny” portraits and statistics. Enjoy exploring!',
   },
 ];
