@@ -451,10 +451,16 @@ export default function SolidWorlds() {
           <MovePad onSet={setKey} phone={phone} />
           {!phone && (
             <div style={{
-              position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
-              color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
+              position: 'absolute', top: 12, left: 0, right: 0, display: 'flex', justifyContent: 'center',
+              pointerEvents: 'none',
             }}>
-              Drag to look · WASD / arrows fly · walk the x-loop in Klein × Circle to come back mirrored
+              <div style={{
+                background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 999,
+                padding: '4px 12px', color: 'var(--dim)', fontSize: 12, backdropFilter: 'blur(6px)',
+                boxShadow: 'var(--shadow-1)',
+              }}>
+                Drag to look · WASD / arrows fly · walk the x-loop in Klein × Circle to come back mirrored
+              </div>
             </div>
           )}
         </div>
@@ -675,11 +681,14 @@ function MovePad({ onSet, phone }: { onSet: (k: MoveKey, v: boolean) => void; ph
 }
 
 function padBtn(style: React.CSSProperties): React.CSSProperties {
+  // Floating walk-pad over the 3D scene: chrome tracks the theme like the other
+  // workspace panels (panel bg / border / fg), so a skin or mode switch restyles it.
   return {
     position: 'absolute', width: 46, height: 46, ...style,
-    borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)',
-    background: 'rgba(12,12,16,0.6)', color: '#f0f0f3', fontSize: 18,
+    borderRadius: 8, border: '1px solid var(--border)',
+    background: 'var(--panel)', color: 'var(--fg)', fontSize: 18,
     backdropFilter: 'blur(6px)', cursor: 'pointer', touchAction: 'none',
+    boxShadow: 'var(--shadow-1)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   };
 }

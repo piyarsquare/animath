@@ -8,6 +8,7 @@ import { useEscLayer } from '../../chrome/useEscLayer';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { usePhone } from '../../chrome/usePhone';
 import { useThemeId, useThemeModeId, resolveScheme } from '../../chrome/skins';
+import { useThemeTokens } from '../../chrome/useThemeTokens';
 import { Slider, Select, Pills } from '../../components/ControlPanel';
 import { WORLDS, worldById, WorldSpec, deriveGeometry, analyzeWorld } from './worldSpec';
 import { generateProps, ARRANGEMENTS, ArrangementId, setDecorPalette, type DecorPalette } from './decor';
@@ -533,10 +534,16 @@ export default function PolygonWorlds() {
 
           {!phone && (
             <div style={{
-              position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
-              color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
+              position: 'absolute', top: 12, left: 0, right: 0, display: 'flex', justifyContent: 'center',
+              pointerEvents: 'none',
             }}>
-              Drag to look · WASD / arrows or the pad to walk · the polygon's gluing decides the world
+              <div style={{
+                background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 999,
+                padding: '4px 12px', color: 'var(--dim)', fontSize: 12, backdropFilter: 'blur(6px)',
+                boxShadow: 'var(--shadow-1)',
+              }}>
+                Drag to look · WASD / arrows or the pad to walk · the polygon's gluing decides the world
+              </div>
             </div>
           )}
         </div>
@@ -661,27 +668,35 @@ function MovePad({ onSet, phone }: { onSet: (k: MoveKey, v: boolean) => void; ph
 }
 
 function padBtn(style: React.CSSProperties): React.CSSProperties {
+  // Floating walk-pad over the 3D scene: chrome tracks the theme like the other
+  // workspace panels (panel bg / border / fg), so a skin or mode switch restyles it.
   return {
     position: 'absolute', width: 46, height: 46, ...style,
-    borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)',
-    background: 'rgba(12,12,16,0.6)', color: '#f0f0f3', fontSize: 18,
+    borderRadius: 8, border: '1px solid var(--border)',
+    background: 'var(--panel)', color: 'var(--fg)', fontSize: 18,
     backdropFilter: 'blur(6px)', cursor: 'pointer', touchAction: 'none',
+    boxShadow: 'var(--shadow-1)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   };
 }
 
+/** Mini-map edge-pairing identities → discrete --data slots (theming v2), with the
+ *  former hardcoded hues as fallbacks. Distinct slots keep the four glue cases
+ *  (straight lr / straight tb / single flip / double flip) separable. */
 const MAP_RED = '#ff4060', MAP_BLUE = '#4080ff', MAP_TEAL = '#34d6c0', MAP_PURPLE = '#b070ff';
+interface MapPalette { red: string; blue: string; teal: string; purple: string; }
+const DEFAULT_MAP_PAL: MapPalette = { red: MAP_RED, blue: MAP_BLUE, teal: MAP_TEAL, purple: MAP_PURPLE };
 
 /** Build the square mini-map spec from the world's edge identifications + the
  *  player chart. (Opposite-edge worlds for now; the sphere's adjacent fold lands
  *  with the spherical cover.) */
-function squareSpec(spec: WorldSpec, st: SquareMapState | null): SquareMapSpec {
+function squareSpec(spec: WorldSpec, st: SquareMapState | null, pal: MapPalette): SquareMapSpec {
   // a = left/right pair, b = top/bottom pair (square worlds only — guarded by caller)
   const e = spec.edges!;
   const aFlip = e.left.orient === -1 || e.right.orient === -1;
   const bFlip = e.top.orient === -1 || e.bottom.orient === -1;
-  const lr: SquareEdgeSpec = { color: aFlip ? (bFlip ? MAP_PURPLE : MAP_RED) : MAP_TEAL, glue: aFlip ? 'flip' : 'straight', double: true };
-  const tb: SquareEdgeSpec = { color: bFlip ? MAP_RED : MAP_BLUE, glue: bFlip ? 'flip' : 'straight', double: false };
+  const lr: SquareEdgeSpec = { color: aFlip ? (bFlip ? pal.purple : pal.red) : pal.teal, glue: aFlip ? 'flip' : 'straight', double: true };
+  const tb: SquareEdgeSpec = { color: bFlip ? pal.red : pal.blue, glue: bFlip ? 'flip' : 'straight', double: false };
   const marker = st
     ? { sx: (st.u - 0.5) * 2, sy: (st.v - 0.5) * 2, angle: Math.atan2(-st.hz, st.hx), flipped: st.flipped }
     : null;
@@ -716,6 +731,16 @@ function SquareMiniMap({ getState, spec, phone }: { getState: () => SquareMapSta
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const specRef = useRef(spec);
   specRef.current = spec;
+  // Edge-pairing colors track the theme's discrete --data palette (read live; the
+  // rAF loop pulls them off a ref so a skin/mode switch recolors without a restart).
+  const tk = useThemeTokens(['--data-1', '--data-2', '--data-6', '--data-7']);
+  const palRef = useRef<MapPalette>(DEFAULT_MAP_PAL);
+  palRef.current = {
+    blue: tk['--data-1'] || MAP_BLUE,
+    teal: tk['--data-2'] || MAP_TEAL,
+    red: tk['--data-6'] || MAP_RED,
+    purple: tk['--data-7'] || MAP_PURPLE,
+  };
   useEffect(() => {
     const cvs = canvasRef.current; if (!cvs) return;
     const ctx = cvs.getContext('2d'); if (!ctx) return;
@@ -726,7 +751,7 @@ function SquareMiniMap({ getState, spec, phone }: { getState: () => SquareMapSta
     let raf = 0;
     const loop = () => {
       const s = specRef.current;
-      if (s.edges) drawSquareMap(ctx, SIZE, squareSpec(s, getState()));
+      if (s.edges) drawSquareMap(ctx, SIZE, squareSpec(s, getState(), palRef.current));
       else drawPolygonMap(ctx, SIZE, polygonSpec(s, getState()));
       raf = requestAnimationFrame(loop);
     };
@@ -738,13 +763,13 @@ function SquareMiniMap({ getState, spec, phone }: { getState: () => SquareMapSta
   return (
     <div style={{
       position: 'absolute', top: phone ? 52 : 12, right: phone ? 8 : 12, width: box, height: box,
-      pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.18)',
-      borderRadius: 8, boxShadow: '0 4px 14px rgba(0,0,0,0.45)', overflow: 'hidden',
+      pointerEvents: 'none', border: '1px solid var(--border)',
+      borderRadius: 8, boxShadow: 'var(--shadow-2)', overflow: 'hidden',
     }}>
       <canvas ref={canvasRef} style={{ width: box, height: box, display: 'block' }} />
       <div style={{
         position: 'absolute', top: 4, left: 8, fontSize: 10, letterSpacing: '0.08em',
-        color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase',
+        color: 'var(--dim)', textTransform: 'uppercase',
       }}>Map</div>
     </div>
   );
