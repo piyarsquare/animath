@@ -30,15 +30,42 @@ export const SKINS: Skin[] = [
   { id: 'mirage', name: 'Mirage', blurb: 'Surreal dusk · peach + lavender', dots: ['#1a1230', '#ffb37a', '#b08cff'] },
 ];
 
-/** Whether a skin id renders on a light viz background — the single source of
- *  truth for light/dark branching (e.g. gallery previews). Defaults to false
- *  for unknown ids. */
+/**
+ * The three theme modes (theming v2). A theme is an IDENTITY (`data-theme`) that
+ * exists in three modes (`data-scheme`):
+ *  - `native` — the theme's intrinsic look (the default; Observatory dark, Paper
+ *    light). CSS resolves every token to its `-n` family member.
+ *  - `light` / `dark` — force that mode; tokens resolve to the theme's `-lt`/`-dk`
+ *    companions, falling back to native for any companion the theme didn't author.
+ * Features that *require* a mode (a glowing star stage → dark; a printout → light)
+ * force it on their own subtree via {@link Scheme}; everything else inherits the
+ * user's choice.
+ */
+export type ThemeMode = 'native' | 'light' | 'dark';
+export const THEME_MODES: ThemeMode[] = ['native', 'light', 'dark'];
+
+/** Whether a skin id is intrinsically light in its NATIVE mode — the source of
+ *  truth for native light/dark branching. Defaults to false for unknown ids.
+ *  Mode-aware callers should use {@link resolveScheme} instead, which accounts
+ *  for a forced light/dark mode. */
 export function isLightSkin(id: string): boolean {
   return SKINS.find(s => s.id === id)?.light ?? false;
 }
 
+/** The concrete light/dark scheme a (theme, mode) pair actually renders as —
+ *  `native` collapses to the theme's intrinsic side. Use this anywhere code must
+ *  know "is the surface light or dark right now" (gallery previews, canvas
+ *  contrast choices) so the answer tracks both axes. */
+export function resolveScheme(id: string, mode: ThemeMode): 'light' | 'dark' {
+  if (mode === 'light') return 'light';
+  if (mode === 'dark') return 'dark';
+  return isLightSkin(id) ? 'light' : 'dark';
+}
+
 const SKIN_KEY = 'animath:v1:chrome:skin';
+const MODE_KEY = 'animath:v1:chrome:mode';
 const DEFAULT_SKIN = 'dark';
+const DEFAULT_MODE: ThemeMode = 'native';
 
 function loadSkin(): string {
   try {
@@ -48,19 +75,28 @@ function loadSkin(): string {
   return DEFAULT_SKIN;
 }
 
-/** Reflect a skin on the root element: `data-theme` drives the token blocks, and
- *  `data-scheme` (light/dark, derived from isLightSkin) lets CSS pick light/dark
- *  UA rendering — e.g. native `<select>` popups — for *every* light skin without
- *  hardcoding which ids are light. */
-function applySkinAttrs(id: string): void {
-  const el = document.documentElement;
-  el.setAttribute('data-theme', id);
-  el.setAttribute('data-scheme', isLightSkin(id) ? 'light' : 'dark');
+function loadMode(): ThemeMode {
+  try {
+    const raw = window.localStorage.getItem(MODE_KEY);
+    if (raw && (THEME_MODES as string[]).includes(raw)) return raw as ThemeMode;
+  } catch { /* private mode */ }
+  return DEFAULT_MODE;
 }
 
-/** Apply the persisted skin to <html data-theme>. Call once at boot, before render. */
+/** Reflect identity × mode on the root element: `data-theme` selects the token
+ *  blocks, `data-scheme` selects the mode (native/light/dark). The mode blocks
+ *  also set `color-scheme`, so native UA widgets (`<select>` popups) render on the
+ *  right side for forced modes; in native mode the theme block's intrinsic
+ *  `color-scheme` applies. */
+function applySkinAttrs(id: string, mode: ThemeMode): void {
+  const el = document.documentElement;
+  el.setAttribute('data-theme', id);
+  el.setAttribute('data-scheme', mode);
+}
+
+/** Apply the persisted identity + mode to <html>. Call once at boot, before render. */
 export function applyPersistedSkin(): void {
-  applySkinAttrs(loadSkin());
+  applySkinAttrs(loadSkin(), loadMode());
 }
 
 /**
@@ -70,15 +106,46 @@ export function applyPersistedSkin(): void {
  * the instant ANY of them, or boot, changes the skin. Without this, a second
  * useSkin instance reading the skin would go stale until a page reload, because
  * independent useState copies don't observe each other. Setting a skin applies
- * the attrs immediately (restyling all chrome) and persists the choice.
+ * the attrs immediately (restyling all chrome) and persists the choice; the
+ * current mode is preserved.
  */
 export function useSkin(): [string, (id: string) => void] {
   const skin = useThemeId();
   const setSkin = useCallback((id: string) => {
-    applySkinAttrs(id);
+    applySkinAttrs(id, loadMode());
     try { window.localStorage.setItem(SKIN_KEY, id); } catch { /* ignore */ }
   }, []);
   return [skin, setSkin];
+}
+
+/** The current theme mode + setter — reactive on `data-scheme`. Setting a mode
+ *  re-themes everything live (the shared mode blocks reselect every token) and
+ *  persists the choice; the current identity is preserved. */
+export function useThemeMode(): [ThemeMode, (mode: ThemeMode) => void] {
+  const mode = useThemeModeId();
+  const setMode = useCallback((m: ThemeMode) => {
+    applySkinAttrs(loadSkin(), m);
+    try { window.localStorage.setItem(MODE_KEY, m); } catch { /* ignore */ }
+  }, []);
+  return [mode, setMode];
+}
+
+/** Reactive reader for a single root attribute, defaulting when absent. Shared by
+ *  the theme-id and theme-mode hooks so both stay in sync with any writer. */
+function useRootAttr<T extends string>(attr: string, fallback: T): T {
+  const read = () => (typeof document !== 'undefined'
+    ? (document.documentElement.getAttribute(attr) as T | null) ?? fallback
+    : fallback);
+  const [val, setVal] = useState<T>(read);
+  useEffect(() => {
+    const el = document.documentElement;
+    const obs = new MutationObserver(() => setVal((el.getAttribute(attr) as T | null) ?? fallback));
+    obs.observe(el, { attributes: true, attributeFilter: [attr] });
+    setVal(read()); // sync in case it changed between first render and effect
+    return () => obs.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attr]);
+  return val;
 }
 
 /**
@@ -88,24 +155,25 @@ export function useSkin(): [string, (id: string) => void] {
  * like `<ColormapPicker themeId={…}>`.
  */
 export function useThemeId(): string {
-  const read = () => (typeof document !== 'undefined'
-    ? document.documentElement.getAttribute('data-theme') ?? DEFAULT_SKIN
-    : DEFAULT_SKIN);
-  const [id, setId] = useState(read);
-  useEffect(() => {
-    const el = document.documentElement;
-    const obs = new MutationObserver(() => setId(el.getAttribute('data-theme') ?? DEFAULT_SKIN));
-    obs.observe(el, { attributes: true, attributeFilter: ['data-theme'] });
-    setId(read()); // sync in case it changed between first render and effect
-    return () => obs.disconnect();
-  }, []);
-  return id;
+  return useRootAttr('data-theme', DEFAULT_SKIN);
 }
 
-/** Pill button (swatch dots + name) opening the skins dropdown. */
-export function SkinPicker({ skin, onSetSkin, compact }: {
+/** Read-only, reactive current theme mode — tracks `data-scheme` on the root. */
+export function useThemeModeId(): ThemeMode {
+  return useRootAttr<ThemeMode>('data-scheme', DEFAULT_MODE);
+}
+
+const MODE_LABELS: Record<ThemeMode, string> = { native: 'Native', light: 'Light', dark: 'Dark' };
+
+/** Pill button (swatch dots + name) opening the identity + mode picker. The menu
+ *  lists the color identities and carries a Native/Light/Dark mode toggle, so the
+ *  two theming axes (identity × mode) are chosen in one place. `mode`/`onSetMode`
+ *  are optional so legacy callers that only pick an identity still compile. */
+export function SkinPicker({ skin, onSetSkin, mode, onSetMode, compact }: {
   skin: string;
   onSetSkin: (id: string) => void;
+  mode?: ThemeMode;
+  onSetMode?: (mode: ThemeMode) => void;
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -113,7 +181,7 @@ export function SkinPicker({ skin, onSetSkin, compact }: {
   useEscLayer(open, () => setOpen(false));
   return (
     <div style={{ position: 'relative' }}>
-      <button className="am-skin-btn" title="Skin" aria-label={`Skin: ${cur.name}`} onClick={() => setOpen(m => !m)}>
+      <button className="am-skin-btn" title="Theme" aria-label={`Theme: ${cur.name}`} onClick={() => setOpen(m => !m)}>
         <span className="am-skin-dots">{cur.dots.map((d, i) => <i key={i} style={{ background: d }} />)}</span>
         {!compact && <span>{cur.name}</span>}
         <Icon name="chevrondown" size={12} style={{ opacity: 0.6 }} />
@@ -122,12 +190,28 @@ export function SkinPicker({ skin, onSetSkin, compact }: {
         <>
           <div className="am-menu-scrim" onPointerDown={() => setOpen(false)} />
           <div className="am-skin-menu">
-            <div className="am-lay-group">Skins</div>
+            {mode && onSetMode && (
+              <div className="am-skin-mode">
+                <div className="am-lay-group" style={{ padding: '10px 14px 5px' }}>Mode</div>
+                <div className="am-pills" role="tablist" aria-label="Theme mode">
+                  {THEME_MODES.map(m => (
+                    <button
+                      key={m}
+                      role="tab"
+                      aria-selected={m === mode}
+                      className={`am-pill ${m === mode ? 'am-on' : ''}`}
+                      onClick={() => onSetMode(m)}
+                    >{MODE_LABELS[m]}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="am-lay-group">Themes</div>
             {SKINS.map(s => (
               <button
                 key={s.id}
                 className={`am-skin-item ${s.id === skin ? 'am-on' : ''}`}
-                onClick={() => { onSetSkin(s.id); setOpen(false); }}
+                onClick={() => { onSetSkin(s.id); }}
               >
                 <span className="am-skin-dots">{s.dots.map((d, i) => <i key={i} style={{ background: d }} />)}</span>
                 <span className="am-skin-meta"><span>{s.name}</span><span className="am-skin-blurb">{s.blurb}</span></span>

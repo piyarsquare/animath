@@ -71,6 +71,64 @@ attribute, reactive `useSkin`/`useThemeId`) shipped in
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 00:18 — Adjusted model (Dan) + the CSS engine architecture
+**Why:** Dan refined the two-mode plan into **three** modes, and the three-mode
+requirement settles the long-open `light-dark()`-vs-paired-blocks question — and
+forces a specific variable structure to make it leak-proof under nesting.
+
+**Dan's adjusted model.** Each theme has its own **native** mode *plus* a **light**
+and a **dark** mode (three value-sets per element, often equal). **Default =
+native**; light and dark are **overrides**. Any element may draw from native,
+light, or dark. A theme may opt to set "dark = native for all elements" (e.g.
+Observatory) — that must be **free** (no re-authoring).
+
+> [!IMPORTANT]
+> **`light-dark()` is out** — it carries exactly two values; we need three
+> (native/light/dark). So the engine is **paired `[data-scheme]` blocks** keyed
+> on a three-valued mode attribute. (Resolves Phase-0 open question #1.)
+
+**The variable architecture (family vars + fallback).** The naive "sparse
+descendant-override" approach **leaks** under force-mode nesting: a force-dark
+subtree under a *light* root inherits the root's light deltas for any token the
+dark block doesn't restate — so "dark = native" can't be the empty block Dan
+wants. Fix: three namespaces.
+
+- **Consumed token** `--bg` — what all CSS/JS reads. Set *only* by the shared mode
+  blocks (never authored per-theme directly).
+- **Native source** `--bg-n` — the theme's native value (today's values, renamed).
+- **Companions** `--bg-lt` / `--bg-dk` — sparse light/dark overrides (omit ⇒ native).
+
+Shared, theme-independent blocks do the mode selection (with native fallback, so
+an omitted companion costs nothing):
+
+```css
+[data-theme]            { --bg: var(--bg-n); … }                  /* native default */
+[data-scheme="light"]   { color-scheme: light; --bg: var(--bg-lt, var(--bg-n)); … }
+[data-scheme="dark"]    { color-scheme: dark;  --bg: var(--bg-dk, var(--bg-n)); … }
+```
+
+Per-theme blocks shrink to **palette data only**: native sources `--bg-n…` (+ the
+intrinsic `color-scheme`) plus whatever sparse `-lt`/`-dk` companions that theme
+needs. The consumed-token plumbing lives once in the shared blocks. This is
+leak-proof (a forced subtree's `[data-scheme]` rule re-derives every consumed
+token from inherited family members) **and** makes "dark = native" free (omit the
+`-dk` companions → fallback to `-n`). Only the ~32 mode-varying color/shadow tokens
+get families; structural tokens (z-layers, radii, fonts, eases) stay plain.
+
+**Attribute semantics change.** `data-scheme` is repurposed from "derived
+light/dark (for `<select>` UA rendering)" to **the user's chosen mode**
+(`native` default · `light` · `dark`); the root carries identity (`data-theme`) ×
+mode (`data-scheme`), both persisted. `<Scheme mode>` sets `data-scheme` on a
+subtree. `color-scheme` (for native widgets) comes from the theme block in native
+and from the mode blocks when forced — `<select>` rendering stays correct.
+
+**Build order (de-risk the engine before 8× design authoring):** shared blocks +
+convention → convert all 8 themes to family vars (mechanical rename, dark=native
+free) → `<Scheme>` primitive + `useThemeMode`/`useThemeTokens` hooks + picker mode
+toggle → author the missing companions (light Phosphor/Neon/Mirage, dark Primary,
+theme-tinted darks) → verify every identity × 3 modes via screenshots. Then the
+Trinary divergence-map pilot (Dan wants to eyeball it).
+
 ### 🟡 milestone · 00:03 — Session started; plan read, branch oriented
 **Why:** New branch off `main`; need the durable record before any code.
 
