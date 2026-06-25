@@ -11,12 +11,42 @@ import {
 import Observatory from './Observatory';
 import SkyView, { type SkyData } from './SkyView';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
+import { Scheme } from '../../chrome/Scheme';
+import { useThemeId } from '../../chrome/skins';
+import { lerpStops } from '../../lib/colormapRegistry';
 import explainerText from './EXPLAINER.md?raw';
 
-const STAR_COLORS = [0xffd27f, 0xff7043, 0x9ec7ff];
-const REF_COLOR = 0x4df08a; // the planet: a vivid green, distinct from the gold/orange/blue stars
-const GHOST_COLOR = 0xff5fa2;
-const GHOST_COLOR_HEX = '#ff5fa2';
+/** The scene's colors, read live from the (forced-dark) theme tokens — theming v2:
+ *  the three stars are distinct IDENTITIES → discrete --data slots; the planet is
+ *  the calm subject → a neutral (--fg); its ghosts → a dimmer neutral (--dim).
+ *  Fallbacks are the pre-v2 literals, used only if a token can't be read. */
+interface ScenePalette {
+  bg: string; stars: [string, string, string]; planet: string; ghost: string;
+  gridMajor: string; gridMinor: string;
+}
+const SCENE_FALLBACK: ScenePalette = {
+  bg: '#04060c', stars: ['#5fa8ff', '#5fe3cd', '#9ee85f'], planet: '#eef1f7', ghost: '#8d96ab',
+  gridMajor: '#223047', gridMinor: '#141c2b',
+};
+function readScenePalette(el: Element): ScenePalette {
+  const cs = getComputedStyle(el);
+  const tok = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback;
+  const bg = tok('--viz-bg', SCENE_FALLBACK.bg);
+  const gridMajor = tok('--dim-2', SCENE_FALLBACK.gridMajor);
+  return {
+    bg,
+    stars: [
+      tok('--data-1', SCENE_FALLBACK.stars[0]),
+      tok('--data-2', SCENE_FALLBACK.stars[1]),
+      tok('--data-3', SCENE_FALLBACK.stars[2]),
+    ],
+    planet: tok('--fg', SCENE_FALLBACK.planet),
+    ghost: tok('--dim', SCENE_FALLBACK.ghost),
+    gridMajor,
+    // grid minor: a hair above the background (both are hex, so we can mix them)
+    gridMinor: lerpStops([bg, gridMajor], 0.5),
+  };
+}
 const TRAIL_MAX = 2000; // points stored per body; visible length is a live slider.
 const VEL_SCALE = 1;    // sim-units of drag → units of launch speed.
 const SAMPLE_DT = 0.05; // sim-time between classifier samples of the reference planet.
@@ -50,7 +80,7 @@ class Trail {
   private buf = new Float32Array(TRAIL_MAX * 3);
   private count = 0;
 
-  constructor(color: number, opacity: number) {
+  constructor(color: THREE.ColorRepresentation, opacity: number) {
     this.attr = new THREE.BufferAttribute(this.buf, 3);
     this.geom.setAttribute('position', this.attr);
     this.geom.setDrawRange(0, 0);
@@ -67,6 +97,11 @@ class Trail {
     const i = this.count * 3;
     this.buf[i] = x; this.buf[i + 1] = y; this.buf[i + 2] = z;
     this.count++;
+  }
+
+  /** Recolor the trail in place (theme/mode change) without losing its points. */
+  setColor(color: THREE.ColorRepresentation) {
+    (this.line.material as THREE.LineBasicMaterial).color.set(color);
   }
 
   /** Show only the most recent `visible` points. */
@@ -225,7 +260,13 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
   };
 
   // Imperative handles populated by onMount and called by control effects/buttons.
-  const api = useRef<{ reset: () => void; scatter: () => void } | null>(null);
+  const api = useRef<{ reset: () => void; scatter: () => void; applyPalette: (p: ScenePalette) => void } | null>(null);
+  // Live scene palette (theming v2): read from the forced-dark tokens; the canvas
+  // engine reads this ref so frame-built planets pick up the current colors.
+  const paletteRef = useRef<ScenePalette>(SCENE_FALLBACK);
+  // An element inside the forced-dark scene subtree, for reading resolved tokens.
+  const sceneElRef = useRef<HTMLDivElement>(null);
+  const themeId = useThemeId();
 
   const spreadElRef = useRef<HTMLSpanElement>(null);
   const timeElRef = useRef<HTMLSpanElement>(null);
@@ -234,10 +275,16 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
   const onMount = useCallback(({ scene, camera, renderer }: {
     scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer;
   }) => {
-    scene.background = new THREE.Color(0x05060a);
+    // Read the scene palette from the (forced-dark) theme tokens; the canvas lives
+    // inside a <Scheme mode="dark"> wrapper, so getComputedStyle here resolves the
+    // current theme's *dark* values. Cached so frame-built planets reuse it.
+    let pal = readScenePalette(renderer.domElement);
+    paletteRef.current = pal;
+
+    scene.background = new THREE.Color(pal.bg);
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
-    const grid = new THREE.GridHelper(24, 24, 0x223047, 0x141c2b);
+    let grid = new THREE.GridHelper(24, 24, new THREE.Color(pal.gridMajor), new THREE.Color(pal.gridMinor));
     (grid.material as THREE.Material).transparent = true;
     (grid.material as THREE.Material).opacity = 0.5;
     scene.add(grid);
@@ -249,7 +296,7 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
     const starGlows: THREE.Sprite[] = [];
     const starTrails: Trail[] = [];
     for (let i = 0; i < 3; i++) {
-      const color = STAR_COLORS[i];
+      const color = pal.stars[i];
       const mesh = new THREE.Mesh(
         new THREE.SphereGeometry(1, 24, 24),
         new THREE.MeshBasicMaterial({ color }),
@@ -356,7 +403,7 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
         const mesh = new THREE.Mesh(
           new THREE.SphereGeometry(isRef ? 0.085 : 0.06, 16, 16),
           new THREE.MeshBasicMaterial({
-            color: isRef ? REF_COLOR : GHOST_COLOR,
+            color: isRef ? pal.planet : pal.ghost,
             transparent: !isRef,
             opacity: isRef ? 1 : 0.6,
           }),
@@ -364,7 +411,7 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
         planetGroup.add(mesh);
         planetMeshes.push(mesh);
 
-        const trail = new Trail(isRef ? REF_COLOR : GHOST_COLOR, isRef ? 0.7 : 0.22);
+        const trail = new Trail(isRef ? pal.planet : pal.ghost, isRef ? 0.7 : 0.22);
         scene.add(trail.line);
         planetTrails.push(trail);
       }
@@ -423,7 +470,32 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
       for (const t of planetTrails) t.reset();
     }
 
-    api.current = { reset, scatter };
+    /** Recolor the whole scene from a freshly-read palette (theme/mode change),
+     *  in place — no rebuild, so orbits/camera and the running sim are untouched. */
+    function applyPalette(p: ScenePalette) {
+      pal = p;
+      (scene.background as THREE.Color).set(p.bg);
+      for (let i = 0; i < 3; i++) {
+        (starMeshes[i].material as THREE.MeshBasicMaterial).color.set(p.stars[i]);
+        (starGlows[i].material as THREE.SpriteMaterial).color.set(p.stars[i]);
+        starTrails[i].setColor(p.stars[i]);
+      }
+      for (let i = 0; i < planetMeshes.length; i++) {
+        const c = i === 0 ? p.planet : p.ghost;
+        (planetMeshes[i].material as THREE.MeshBasicMaterial).color.set(c);
+        planetTrails[i]?.setColor(c);
+      }
+      // GridHelper bakes colors into vertex colors, so swap it for a fresh one.
+      scene.remove(grid);
+      grid.geometry.dispose();
+      (grid.material as THREE.Material).dispose();
+      grid = new THREE.GridHelper(24, 24, new THREE.Color(p.gridMajor), new THREE.Color(p.gridMinor));
+      (grid.material as THREE.Material).transparent = true;
+      (grid.material as THREE.Material).opacity = 0.5;
+      scene.add(grid);
+    }
+
+    api.current = { reset, scatter, applyPalette };
     reset();
 
     // --- Orbit camera (drag to rotate, wheel to zoom) ---
@@ -682,6 +754,15 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
       api.current = null;
     };
   }, []);
+
+  // Theming v2 rule #3: recolor the live scene when the theme identity changes.
+  // (The scene is force-dark, so the global light/dark mode doesn't alter its
+  // resolved tokens — only the identity does.) onMount runs once and never
+  // re-reads, so this is the sole updater for skin switches.
+  useEffect(() => {
+    const el = sceneElRef.current;
+    if (el && api.current) api.current.applyPalette(readScenePalette(el));
+  }, [themeId]);
 
   // Re-seed whenever an initial-condition control changes. (Launch-defining
   // changes also clear any hand-placed launch via their wrapped setters.)
@@ -973,26 +1054,32 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
       title: 'Orbit',
       defaultRect: { x: 372, y: 16, w: 712, h: 600 },
       node: (
-        <div style={{ position: 'absolute', inset: 0, background: 'var(--viz-bg)' }}>
-          <Canvas3D onMount={onMount} />
+        // The star scene REQUIRES dark (additive glow, a star field) — force the
+        // theme's dark mode on this subtree (theming v2). Its objects then use the
+        // normal tokens at the theme's dark values: stars → --data, planet → --fg,
+        // ghosts → --dim, background → --viz-bg. No bespoke scene palette.
+        <Scheme mode="dark" style={{ position: 'absolute', inset: 0 }}>
+          <div ref={sceneElRef} style={{ position: 'absolute', inset: 0, background: 'var(--viz-bg)' }}>
+            <Canvas3D onMount={onMount} />
 
-          {/* Live divergence readout. */}
-          <div style={{
-            position: 'absolute', top: 10, left: 10, padding: '8px 12px',
-            background: 'var(--panel)', border: '1px solid var(--border)',
-            borderRadius: 8, color: 'var(--fg)', font: '12px/1.5 ui-monospace, monospace',
-            pointerEvents: 'none', backdropFilter: 'blur(4px)',
-          }}>
-            <div>cloud spread&nbsp; <span ref={spreadElRef} style={{ color: GHOST_COLOR_HEX }}>0.00e+0</span></div>
-            <div>Lyapunov λ&nbsp;&nbsp; <span ref={lyapElRef} style={{ color: 'var(--dim)' }}>…</span></div>
-            <div>sim time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span ref={timeElRef} style={{ color: 'var(--dim)' }}>0.0</span></div>
-            {placeMode && <div style={{ color: 'var(--accent)' }}>click + drag to launch</div>}
+            {/* Live divergence readout. */}
+            <div style={{
+              position: 'absolute', top: 10, left: 10, padding: '8px 12px',
+              background: 'var(--panel)', border: '1px solid var(--border)',
+              borderRadius: 8, color: 'var(--fg)', font: '12px/1.5 ui-monospace, monospace',
+              pointerEvents: 'none', backdropFilter: 'blur(4px)',
+            }}>
+              <div>cloud spread&nbsp; <span ref={spreadElRef} style={{ color: 'var(--dim)' }}>0.00e+0</span></div>
+              <div>Lyapunov λ&nbsp;&nbsp; <span ref={lyapElRef} style={{ color: 'var(--dim)' }}>…</span></div>
+              <div>sim time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span ref={timeElRef} style={{ color: 'var(--dim)' }}>0.0</span></div>
+              {placeMode && <div style={{ color: 'var(--accent)' }}>click + drag to launch</div>}
+            </div>
+
+            {skyOn && <SkyView dataRef={skyRef} dayLen={dayLen} tilt={tilt} />}
+
+            <Observatory snapshot={labSnap} />
           </div>
-
-          {skyOn && <SkyView dataRef={skyRef} dayLen={dayLen} tilt={tilt} />}
-
-          <Observatory snapshot={labSnap} />
-        </div>
+        </Scheme>
       ),
     },
   ];
