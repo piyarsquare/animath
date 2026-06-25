@@ -14,14 +14,8 @@ import { mulberry32, type EnsembleConfig, type RunParams } from './rng';
 import { useThemeId } from '../../../chrome/skins';
 import { useThemeTokens } from '../../../chrome/useThemeTokens';
 import { sampleContinuous, themeMapsFor, hexToRgb } from '../../../lib/colormapRegistry';
+import { OUTCOME_GOODNESS } from './themeColors';
 import type { Outcome } from '@/lib/nbody';
-
-/** Outcomes ordered by *goodness* for the divergent fate map (blowup = a
- *  numerical error, not an outcome → a neutral gray). Matches the Observatory
- *  timeline's success→danger reading: happy at the good pole, destroyed at the bad. */
-const OUTCOME_GOODNESS: Record<Outcome, number> = {
-  happy: 1, survived: 0.62, 'planet-ejected': 0.28, 'planet-destroyed': 0, blowup: -1,
-};
 
 /** Build the Destiny Map's themed ramps from the active theme (theming v2):
  *  fate → the theme's recommended DIVERGENT map sampled by goodness; chaos & stat
