@@ -2,14 +2,15 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import type { Bin, Snapshot } from '@/lib/nbody';
 import { useThemeId } from '../../chrome/skins';
 import { useThemeTokens } from '../../chrome/useThemeTokens';
-import { lerpStops } from '../../lib/colormapRegistry';
+import { sampleContinuous, themeMapsFor } from '../../lib/colormapRegistry';
 
 /** The outcome bins, ordered by *goodness* (paradise best → chaotic worst). The
  *  two middle bins are the orthogonal half-goods (good climate / good dynamics).
- *  Theming v2 decision: outcomes ride a DIVERGENT ramp sampled by goodness —
- *  here the theme's own --success (good end) ↔ --danger (bad end) through a
- *  neutral midpoint, so the color carries the ordering and tracks the skin. */
-const BIN_GOODNESS: Record<Bin, number> = { both: 1, climate: 0.62, dynamics: 0.38, neither: 0 };
+ *  Theming v2 decision: outcomes ride a DIVERGENT colormap sampled by goodness, so
+ *  the color carries the ordering. We use the theme's recommended divergent map
+ *  from the registry (rdbu/coolwarm/brbg/…), so each skin gets an apt map.
+ *  Spread across the full range so the two poles read saturated, not washed out. */
+const BIN_GOODNESS: Record<Bin, number> = { both: 1, climate: 0.66, dynamics: 0.34, neither: 0 };
 const BIN_LABEL: Record<Bin, string> = {
   both: 'Paradise', climate: 'Warm·precarious', dynamics: 'Calm·barren', neither: 'Chaotic',
 };
@@ -28,11 +29,14 @@ interface Palette {
   event: string; eventStar: string;
 }
 
-function buildPalette(tok: Record<string, string>): Palette {
+function buildPalette(tok: Record<string, string>, themeId: string): Palette {
   const g = (n: string) => tok[n] || FALLBACK[n];
-  // Divergent outcome ramp: danger (bad) → neutral → success (good).
-  const ramp = [g('danger'), g('dim'), g('success')];
-  const binColor = (b: Bin) => lerpStops(ramp, BIN_GOODNESS[b]);
+  // Outcome color = the theme's recommended DIVERGENT colormap, sampled by
+  // goodness. coolwarm runs cool→warm (opposite the colorbrewer good=high
+  // convention), so flip it; the others put their cool/positive pole at the top.
+  const mapId = themeMapsFor('divergent', themeId)[0] ?? 'rdbu';
+  const flip = mapId === 'coolwarm';
+  const binColor = (b: Bin) => sampleContinuous(mapId, flip ? 1 - BIN_GOODNESS[b] : BIN_GOODNESS[b]);
   return {
     bin: { both: binColor('both'), climate: binColor('climate'), dynamics: binColor('dynamics'), neither: binColor('neither') },
     // Physical temperature categories map onto the same voice: habitable = good,
@@ -66,7 +70,7 @@ export default function Observatory({ snapshot }: { snapshot: Snapshot | null })
   // the theme (and redraws on a skin switch — rule #3).
   const themeId = useThemeId();
   const tokens = useThemeTokens(TOKENS, rootRef);
-  const pal = useMemo(() => buildPalette(tokens), [tokens]);
+  const pal = useMemo(() => buildPalette(tokens, themeId), [tokens, themeId]);
 
   useEffect(() => {
     const cv = canvasRef.current;

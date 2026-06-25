@@ -25,7 +25,7 @@ interface ScenePalette {
   gridMajor: string; gridMinor: string;
 }
 const SCENE_FALLBACK: ScenePalette = {
-  bg: '#04060c', stars: ['#5fa8ff', '#5fe3cd', '#9ee85f'], planet: '#eef1f7', ghost: '#8d96ab',
+  bg: '#04060c', stars: ['#5fa8ff', '#ffce47', '#ff6f9c'], planet: '#eef1f7', ghost: '#8d96ab',
   gridMajor: '#223047', gridMinor: '#141c2b',
 };
 function readScenePalette(el: Element): ScenePalette {
@@ -35,10 +35,12 @@ function readScenePalette(el: Element): ScenePalette {
   const gridMajor = tok('--dim-2', SCENE_FALLBACK.gridMajor);
   return {
     bg,
+    // Three star identities → discrete --data slots, spread across the 7-slot
+    // palette (1·4·6, not adjacent 1·2·3) so the hues read maximally distinct.
     stars: [
       tok('--data-1', SCENE_FALLBACK.stars[0]),
-      tok('--data-2', SCENE_FALLBACK.stars[1]),
-      tok('--data-3', SCENE_FALLBACK.stars[2]),
+      tok('--data-4', SCENE_FALLBACK.stars[1]),
+      tok('--data-6', SCENE_FALLBACK.stars[2]),
     ],
     planet: tok('--fg', SCENE_FALLBACK.planet),
     ghost: tok('--dim', SCENE_FALLBACK.ghost),
