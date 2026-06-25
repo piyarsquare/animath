@@ -5,12 +5,12 @@ date: 2026-06-25
 title: Theming v2 — light/dark-paired theme engine (Phase 0) + pilots
 branch: claude/theming-v2-light-dark-5rdcxv
 slug: theming-v2-light-dark-5rdcxv
-status: in-progress
+status: completed
 build: passed
 followup: null
 pr: 239
-app: chrome, trinary, polygon-worlds, solid-worlds
-signals: needs-dan, visual-unverified
+app: chrome, trinary, polygon-worlds, solid-worlds, fractals, correspondence, plane-transform, complex-particles, trees-and-nets, agentic-sorting
+signals: needs-dan
 next: Argand (skipped — in development on another branch) is the only app left untouched; when its branch lands, run the same per-app color audit on it. Otherwise the rollout + audit + loose ends are complete — ready for Dan's review / merge.
 ---
 
