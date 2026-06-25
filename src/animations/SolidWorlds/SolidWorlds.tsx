@@ -4,6 +4,7 @@ import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { usePhone } from '../../chrome/usePhone';
+import { useThemeId, useThemeModeId, resolveScheme } from '../../chrome/skins';
 import { Slider, Select, Pills, Checkbox } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { SOLID_WORLDS, DEFAULT_WORLD_ID, worldById } from './worlds';
@@ -56,7 +57,15 @@ export default function SolidWorlds() {
   const [showLabels, setShowLabels] = usePersistentState(pk('labels'), false);
   const [showCorners, setShowCorners] = usePersistentState(pk('corners'), false);
   const [showSeams, setShowSeams] = usePersistentState(pk('seams'), true);
-  const [look, setLook] = usePersistentState(pk('look'), 'daytime');
+  // 'auto' ties the sky/lighting to the theme's light/dark mode (theming v2: the
+  // mode IS the time of day). Light → daytime, dark → moonlit; a specific look
+  // still overrides.
+  const [look, setLook] = usePersistentState(pk('look'), 'auto');
+  const themeId = useThemeId();
+  const themeMode = useThemeModeId();
+  const resolvedLook = look === 'auto'
+    ? (resolveScheme(themeId, themeMode) === 'light' ? 'daytime' : 'moonlit')
+    : look;
 
   const spec = worldById(worldId);
   const analysis = useMemo(() => analyzeSolid(spec), [spec]);
@@ -85,7 +94,7 @@ export default function SolidWorlds() {
   const labelsRef = useRef(showLabels);
   const cornersRef = useRef(showCorners);
   const seamsRef = useRef(showSeams);
-  const lookRef = useRef(look);
+  const lookRef = useRef(resolvedLook);
   const decorRef = useRef(decorMode);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
@@ -175,7 +184,7 @@ export default function SolidWorlds() {
   useEffect(() => { labelsRef.current = showLabels; engineRef.current?.setLabels(showLabels); }, [showLabels]);
   useEffect(() => { cornersRef.current = showCorners; engineRef.current?.setCorners(showCorners); }, [showCorners]);
   useEffect(() => { seamsRef.current = showSeams; engineRef.current?.setSeams(showSeams); }, [showSeams]);
-  useEffect(() => { lookRef.current = look; engineRef.current?.setLook(look); }, [look]);
+  useEffect(() => { lookRef.current = resolvedLook; engineRef.current?.setLook(resolvedLook); }, [resolvedLook]);
   useEffect(() => { decorRef.current = decorMode; engineRef.current?.setDecorMode(decorMode); }, [decorMode]);
 
   useEffect(() => {
@@ -333,7 +342,7 @@ export default function SolidWorlds() {
         value={decorMode}
         onChange={(v) => setDecorMode(v as DecorMode)}
       />
-      <Select label="Look" options={LOOKS.map((l) => ({ value: l.id, label: l.label }))} value={look} onChange={setLook} />
+      <Select label="Look" options={[{ value: 'auto', label: 'Auto (day / night by mode)' }, ...LOOKS.map((l) => ({ value: l.id, label: l.label }))]} value={look} onChange={setLook} />
       {thirdPerson && (
         <Slider label="Camera distance" value={camDistance} min={CAM_MIN} max={CAM_MAX} step={0.5} onChange={setCamDistance} format={(v) => v.toFixed(1)} />
       )}

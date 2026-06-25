@@ -7,6 +7,7 @@ import { Icon } from '../../chrome/icons';
 import { useEscLayer } from '../../chrome/useEscLayer';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { usePhone } from '../../chrome/usePhone';
+import { useThemeId, useThemeModeId, resolveScheme } from '../../chrome/skins';
 import { Slider, Select, Pills } from '../../components/ControlPanel';
 import { WORLDS, worldById, WorldSpec, deriveGeometry, analyzeWorld } from './worldSpec';
 import { generateProps, ARRANGEMENTS, ArrangementId } from './decor';
@@ -68,7 +69,15 @@ export default function PolygonWorlds() {
   const [arrangement, setArrangement] = usePersistentState<ArrangementId>(pk('arrangement'), 'scattered');
   const [signFront, setSignFront] = usePersistentState(pk('signFront'), 'FRONT');
   const [signBack, setSignBack] = usePersistentState(pk('signBack'), 'BACK');
-  const [look, setLook] = usePersistentState(pk('look'), 'daytime');
+  // Look defaults to 'auto' — the sky/lighting follow the theme's light/dark mode
+  // (theming v2: the mode IS the time of day). Light → daytime, dark → moonlit;
+  // the user can still pick a specific atmosphere to override.
+  const [look, setLook] = usePersistentState(pk('look'), 'auto');
+  const themeId = useThemeId();
+  const themeMode = useThemeModeId();
+  const resolvedLook = look === 'auto'
+    ? (resolveScheme(themeId, themeMode) === 'light' ? 'daytime' : 'moonlit')
+    : look;
 
   const spec = worldById(worldId);
   const analysis = useMemo(() => analyzeWorld(spec), [spec]);
@@ -96,7 +105,7 @@ export default function PolygonWorlds() {
   const thickRef = useRef(floorThickness);
   const opacityRef = useRef(floorOpacity);
   const radiusRef = useRef(planetRadius);
-  const lookRef = useRef(look);
+  const lookRef = useRef(resolvedLook);
   const propsRef = useRef(props);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
@@ -212,7 +221,7 @@ export default function PolygonWorlds() {
   useEffect(() => { thickRef.current = floorThickness; engineRef.current?.setFloorThickness(floorThickness); }, [floorThickness]);
   useEffect(() => { radiusRef.current = planetRadius; engineRef.current?.setRadius(planetRadius); }, [planetRadius]);
   useEffect(() => { camDistRef.current = camDistance; engineRef.current?.setCameraDistance(camDistance); }, [camDistance]);
-  useEffect(() => { lookRef.current = look; engineRef.current?.setLook(look); }, [look]);
+  useEffect(() => { lookRef.current = resolvedLook; engineRef.current?.setLook(resolvedLook); }, [resolvedLook]);
 
   useEffect(() => {
     const map: Record<string, MoveKey> = {
@@ -386,7 +395,7 @@ export default function PolygonWorlds() {
       {phone && (
         <Pills label="Perspective" options={[{ value: 'third', label: 'Third person' }, { value: 'first', label: 'First person' }]} value={thirdPerson ? 'third' : 'first'} onChange={(v) => setThirdPerson(v === 'third')} />
       )}
-      <Select label="Look" options={LOOKS.map((l) => ({ value: l.id, label: l.label }))} value={look} onChange={setLook} />
+      <Select label="Look" options={[{ value: 'auto', label: 'Auto (day / night by mode)' }, ...LOOKS.map((l) => ({ value: l.id, label: l.label }))]} value={look} onChange={setLook} />
       {thirdPerson && (
         <Slider label="Camera distance" value={camDistance} min={1.5} max={12} step={0.5} onChange={setCamDistance} format={(v) => `${v.toFixed(1)}`} />
       )}
