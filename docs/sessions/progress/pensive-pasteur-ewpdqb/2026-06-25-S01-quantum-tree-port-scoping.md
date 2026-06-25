@@ -9,8 +9,8 @@ status: in-progress
 build: unknown
 followup: null
 app: trees-and-nets
-signals: needs-dan
-next: Agree the port scope/order, then build the distance-matrix → evidence engine
+signals: null
+next: Review the ported engine (tests green), then build the Nets views (matrix · NJ tree · split network · split weights)
 ---
 
 # Trees and Nets — port the rest of quantum-tree (evidence engine first)
@@ -61,6 +61,54 @@ plane, and the quartet→split→ordering→tree assembly views.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟣 decision · 17:52 — Proceed: Nets first, drop the quantum framing, rebuild in place
+**Why:** Dan said "continue" on the recommended defaults (the AskUserQuestion prompt
+failed to render, then "continue" ×2).
+
+Going with: (1) **start with the Nets** — port the metric/evidence engine + the
+NJ-tree / split-network / split-weights views; (2) **drop the "quantum" framing**
+for animath (present distance → evidence → trees & nets; the paper itself calls it
+aspirational); (3) **one app, rebuilt in place** — the associahedron/fibers demote
+to one layout. Phased port:
+
+- **P1 (now) — engine + Nets.** Pure TS: tree enumeration, four-point support, tour
+  energy, **Neighbor-Joining**, **NNLS circular split weights**, **Levy–Pachter**
+  ordering, compatibility, soft-min energies (+ vitest). Then views: matrix editor,
+  NJ tree, split network, split graph, split weights.
+- **P2 — map + evidence.** Trees×orders correspondence map; energy coloring on the
+  fibers; quartet evidence plane; two-route tree-like/net-like readout.
+- **P3 — deep.** Fiber walks (greedy/anneal), metric builder, perturbation studies,
+  five-leaf composition.
+- **P4 — polish.** Higher-n rendering, attribution (honest source split), EXPLAINER.
+
+Dispatched a focused agent to port the engine faithfully from the real `map.js`
+with tests (P1a). Review + build the views after.
+
+### 🔵 finding · 17:38 — Three deep inventories back: quantum-tree is a metric/evidence engine
+**Why:** Ground the porting discussion in the real source, not the README.
+
+`map.js` (the deployment) is a full pipeline keyed off an **editable distance
+matrix**: four-point support, tour energy, **Neighbor-Joining** (Saitou–Nei),
+**non-negative-least-squares circular split weights** + a SplitsTree convex-hull
+**split graph**, **Levy–Pachter circular ordering**, tree enumeration,
+compatibility, soft-min energies, a **fiber explorer** (order fiber = associahedron
+flip graph, tree fiber = twist cube — *exactly what animath already has*), the
+**trees×orders correspondence map**, a metric builder, and perturbation/stability
+studies. The toys add the **quartet evidence plane**, the five-leaf **two-route**
+composition (S_quartet vs S_ordering = tree-like vs net-like), and a dormant
+Born/correspondence mode. Paper spine: distance → evidence/energies → *optional*
+probability (β is a display knob); the "quantum" layer is explicitly aspirational.
+**Attribution caveat:** the paper's bib is empty — it credits only Levy–Pachter,
+Devadoss×2, Carr–Devadoss, Semple–Steel, BHV; Stasheff/GKZ/Saitou–Nei/
+Bryant–Moulton/Buneman/Kalmanson are NOT cited and must be sourced by us.
+
+**Diagnosis:** the animath port kept only the fiber explorer (the *skeleton*) and
+dropped the entire data/evidence/nets *body* — the app literally has no "nets".
+Recommending we re-center on **matrix → Neighbor-Joining + split networks (the
+Nets) + the correspondence map**, with the associahedron/fibers demoted to one
+layout. Put the starting scope + the quantum-framing question to Dan
+(AskUserQuestion). Full mapping + phasing in the chat synthesis.
 
 ### 🔵 finding · 17:24 — Inventoried the quantum-tree deployment via GitHub
 **Why:** The port source was lost after last session (in-session `/tmp` only); this
