@@ -11,7 +11,7 @@ followup: null
 pr: 239
 app: chrome, trinary, polygon-worlds, solid-worlds
 signals: needs-dan, visual-unverified
-next: Get Dan's read on the divergence ramp + cool-data stars; then the Worlds day/night sky pilot, and roll the contract out (Trinary Lab fate map, Complex Particles, Plane Transform, Fractals, Correspondence, Trees, Argand, Agentic).
+next: Phase 2 rollout — the remaining WebGL/canvas apps (Complex Particles, Plane Transform, Fractals, Correspondence, Trees, Argand, Agentic) + the deferred Worlds HUD tokens / spherical sky-dome + the TrinaryLab console stat-text tokenization.
 ---
 
 # Theming v2 — light/dark-paired theme engine (Phase 0) + pilots
@@ -70,6 +70,29 @@ attribute, reactive `useSkin`/`useThemeId`) shipped in
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 15:13 — Phase 1 pilot 2: Worlds day/night sky by mode
+**Why:** The second locked pilot — prove "mode = time of day" — and Dan said
+continue.
+
+Both walkers (**Polygon Worlds** + **Solid Worlds**) now tie their sky + lighting
+to the theme mode. Both already had a live `looks` system (daytime/overcast/dusk/
+moonlit applied via `setLook`), so the change is small and clean: a new **default
+`auto` look** resolves time-of-day from `resolveScheme(themeId, mode)` — **light →
+daytime, dark → moonlit** — re-applied reactively on a mode/identity switch. The
+manual look picker still overrides (overcast/dusk). **Build green, lint 59 (no new),
+88 tests.** Verified headless — the scene *and* the chrome track the mode:
+
+![Polygon Worlds — light mode = daytime sky](assets/2026-06-25-S01-polygon-day.png)
+![Polygon Worlds — dark mode = moonlit sky](assets/2026-06-25-S01-polygon-night.png)
+![Solid Worlds — dark mode: moonlit scene + charcoal chrome (Daylight)](assets/2026-06-25-S01-solid-night.png)
+
+> [!NOTE]
+> Deferred for these apps (the headline day/night works without them): **HUD
+> tokenization** (the chirality HUD original·rotated·mirrored → `--data-1/4/6`, the
+> walk pad, mini-map, instruction text) and the **spherical sky-dome retint**
+> (Polygon Worlds paints the χ>0 dome once; `setSky` doesn't update it, so spherical
+> worlds keep their built dome until that's wired). Both are follow-ups.
 
 ### 🟡 milestone · 03:05 — Trinary Lab Destiny Map themed (fate · chaos · stat) + PR #239
 **Why:** Dan, reviewing the Cloudflare preview, flagged the **fate map** (then the
