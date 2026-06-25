@@ -227,27 +227,42 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   type MeshFn = (geo: THREE.BufferGeometry, mat: THREE.Material, matrix: THREE.Matrix4, floor?: boolean) => void;
   type StdFn = (color: number) => THREE.MeshStandardMaterial;
 
+  // Theming v2: the diagnostic decor + floor/grid/frame read the live theme tokens
+  // (read at build; the cover rebuilds on a skin change). Props → discrete --data,
+  // structure → neutrals.
+  interface DiagPalette { prop1: number; prop2: number; prop3: number; post: number; slab: number; floor: number; grid: number; frame: number; }
+  const readDiagPalette = (): DiagPalette => {
+    const cs = getComputedStyle(document.documentElement);
+    const c = (n: string, f: number) => { const v = cs.getPropertyValue(n).trim(); return v ? new THREE.Color(v).getHex() : f; };
+    return {
+      prop1: c('--data-4', 0xffcf5a), prop2: c('--data-2', 0x46c8b0), prop3: c('--data-6', 0xff6aa0),
+      post: c('--dim', 0x9a9aa4), slab: c('--panel-solid', 0xcbbf9a),
+      floor: c('--dim-2', 0x2a3c54), grid: c('--dim-2', 0x6f93b8), frame: c('--dim', 0x9fc0e0),
+    };
+  };
+
   /** The original "diagnostic" decor: neutral asymmetric landmark props plus the
    *  two-sided FRONT/BACK sign — the proof-of-the-math scene. */
-  function buildDiagnosticDecor(h: number, std: StdFn, mesh: MeshFn) {
+  function buildDiagnosticDecor(h: number, std: StdFn, mesh: MeshFn, dp: DiagPalette) {
     // asymmetric landmark props (FIXED size — only their spread grows with the
-    // room); each sits on the floor so a copy is recognizable and its mirror obvious
-    mesh(new THREE.CylinderGeometry(U * 0.04, U * 0.05, U * 0.42, 14), std(0xffcf5a), localM(h * 0.55, -h + U * 0.21, h * 0.42));
-    const lMat = std(0x46c8b0);
+    // room); each sits on the floor so a copy is recognizable and its mirror obvious.
+    // Three distinct shapes → three distinct --data identities (theming v2).
+    mesh(new THREE.CylinderGeometry(U * 0.04, U * 0.05, U * 0.42, 14), std(dp.prop1), localM(h * 0.55, -h + U * 0.21, h * 0.42));
+    const lMat = std(dp.prop2);
     mesh(new THREE.BoxGeometry(U * 0.06, U * 0.28, U * 0.06), lMat, localM(-h * 0.5, -h + U * 0.14, -h * 0.4));
     mesh(new THREE.BoxGeometry(U * 0.34, U * 0.06, U * 0.06), lMat, localM(-h * 0.5 + U * 0.14, -h + U * 0.03, -h * 0.4));
-    mesh(new THREE.SphereGeometry(U * 0.09, 18, 14), std(0xff6aa0), localM(h * 0.22, -h + U * 0.09, -h * 0.62));
+    mesh(new THREE.SphereGeometry(U * 0.09, 18, 14), std(dp.prop3), localM(h * 0.22, -h + U * 0.09, -h * 0.62));
 
     // the two-sided sign — a solid slab with FRONT on one face and BACK on the
     // other. The opaque slab between the two faces blocks any see-through, so
     // neither side's letters are readable from the opposite side. Reads forwards
     // here; after an orientation-reversing loop the face text comes back
     // mirror-reversed (the conversation's headline case).
-    mesh(new THREE.CylinderGeometry(U * 0.012, U * 0.012, U * 0.34, 10), std(0x9a9aa4), localM(0, -h + U * 0.17, -h * 0.5));
+    mesh(new THREE.CylinderGeometry(U * 0.012, U * 0.012, U * 0.34, 10), std(dp.post), localM(0, -h + U * 0.17, -h * 0.5));
     const signY = -h + U * 0.38, signZ = -h * 0.5, signT = U * 0.025, eps = U * 0.002;
     const signW = U * 0.34, signH = U * 0.17;
     // the slab body (gives the sign its thickness and its opaque core)
-    mesh(new THREE.BoxGeometry(signW, signH, signT), std(0xcbbf9a), localM(0, signY, signZ));
+    mesh(new THREE.BoxGeometry(signW, signH, signT), std(dp.slab), localM(0, signY, signZ));
     const frontTex = signTexture('FRONT'); roomDisposables.push(frontTex);
     const backTex = signTexture('BACK'); roomDisposables.push(backTex);
     const frontMat = new THREE.MeshBasicMaterial({ map: frontTex, side: THREE.DoubleSide }); roomDisposables.push(frontMat);
@@ -276,11 +291,12 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     roomDisposables.push(edges);
     // In Rooms mode the painted faces define the walls, so the edge frame drops
     // to a faint near-background tone (kept bright for the diagnostic scene).
-    const frameMat = new THREE.LineBasicMaterial({ color: decorMode === 'rooms' ? 0x33424f : 0x9fc0e0 }); roomDisposables.push(frameMat);
+    const dp = readDiagPalette();
+    const frameMat = new THREE.LineBasicMaterial({ color: decorMode === 'rooms' ? new THREE.Color(dp.floor).getHex() : dp.frame }); roomDisposables.push(frameMat);
     lineParts.push({ geo: edges, mat: frameMat, matrix: new THREE.Matrix4() });
 
     // floor: a see-through reference plane (optional; scales with the room)
-    const floorMat = new THREE.MeshBasicMaterial({ color: 0x2a3c54, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
+    const floorMat = new THREE.MeshBasicMaterial({ color: dp.floor, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false });
     roomDisposables.push(floorMat);
     mesh(new THREE.PlaneGeometry(size, size), floorMat, localM(0, -h, 0, -Math.PI / 2), true);
 
@@ -290,13 +306,13 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
     const gridGeo = new THREE.BufferGeometry();
     gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3));
     roomDisposables.push(gridGeo);
-    const gridMat = new THREE.LineBasicMaterial({ color: decorMode === 'rooms' ? 0x2a3744 : 0x6f93b8 }); roomDisposables.push(gridMat);
+    const gridMat = new THREE.LineBasicMaterial({ color: dp.grid }); roomDisposables.push(gridMat);
     lineParts.push({ geo: gridGeo, mat: gridMat, matrix: localM(0, -h + 0.02, 0), floor: true });
 
     // the interior decor — either the original diagnostic props (landmark shapes
     // + FRONT/BACK sign) or the solid Rooms architecture that crosses the seams.
     wallMats = [];
-    if (decorMode === 'diagnostic') buildDiagnosticDecor(h, std, mesh);
+    if (decorMode === 'diagnostic') buildDiagnosticDecor(h, std, mesh, dp);
     else buildRoomsDecor({
       spec, size, U, h, mesh, std, localM,
       addDisposable: (d) => roomDisposables.push(d),
