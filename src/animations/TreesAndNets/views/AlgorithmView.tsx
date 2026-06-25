@@ -11,7 +11,7 @@
 
 import React, { useMemo } from 'react';
 import type { DistanceMatrix } from '../lib/metric';
-import type { NJTrace } from '../lib/neighborJoining';
+import type { NJTrace, NJStep } from '../lib/neighborJoining';
 import { njEdgeId } from '../lib/neighborJoining';
 import type { NNTrace } from '../lib/splitWeights';
 import type { SplitGraph } from '../lib/splitGraph';
@@ -208,6 +208,53 @@ export function NeighborJoiningRun({
           );
         })}
       </svg>
+    </div>
+  );
+}
+
+// =========================================================================
+// The Q decision surface — the Q matrix over the current clusters at one step.
+// Lower Q (a cheaper forced adjacency) is warmer; the minimum (the pair NJ
+// joins) is outlined. This is the "why this pair" the join alone doesn't show.
+// =========================================================================
+export function QMatrix({ step }: { step: NJStep | null }): JSX.Element {
+  if (!step || step.qScores.length === 0) {
+    return <div style={{ fontSize: 12, color: 'var(--fg, #aab)', opacity: 0.7 }}>Terminal join — only two clusters remain; they connect directly (no Q choice).</div>;
+  }
+  const clusters = step.clustersBefore;
+  const key = (a: string, b: string): string => (a < b ? `${a}|${b}` : `${b}|${a}`);
+  const qOf = new Map<string, number>();
+  step.qScores.forEach((s) => qOf.set(key(s.pair[0], s.pair[1]), s.q));
+  const qs = step.qScores.map((s) => s.q);
+  const lo = Math.min(...qs);
+  const hi = Math.max(...qs);
+  const tint = (q: number): string => { const t = hi > lo ? 1 - (q - lo) / (hi - lo) : 1; return `rgba(205, 164, 52, ${0.1 + 0.55 * t})`; };
+  const chosen = key(step.joined[0], step.joined[1]);
+  const head: React.CSSProperties = { fontFamily: 'var(--mono, monospace)', fontSize: 10, color: 'var(--accent, #cda434)', padding: '1px 4px', textAlign: 'center' };
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ borderCollapse: 'collapse', fontFamily: 'var(--mono, monospace)', fontSize: 10 }}>
+        <thead>
+          <tr><th />{clusters.map((cl) => <th key={`h${cl}`} style={head}>{cl}</th>)}</tr>
+        </thead>
+        <tbody>
+          {clusters.map((ri, i) => (
+            <tr key={`r${ri}`}>
+              <th style={head}>{ri}</th>
+              {clusters.map((cj, j) => {
+                if (j >= i) return <td key={`c${i}-${j}`} style={{ textAlign: 'center', color: 'var(--fg, #667)', opacity: 0.3 }}>{i === j ? '·' : ''}</td>;
+                const q = qOf.get(key(ri, cj));
+                const isMin = key(ri, cj) === chosen;
+                return (
+                  <td key={`c${i}-${j}`} style={{ padding: '1px 5px', textAlign: 'right', color: 'var(--fg, #dde)', background: q !== undefined ? tint(q) : 'transparent', outline: isMin ? '1.6px solid #ffd54a' : 'none', outlineOffset: -1 }}>
+                    {q !== undefined ? q.toFixed(1) : ''}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

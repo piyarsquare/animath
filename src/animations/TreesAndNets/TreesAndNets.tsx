@@ -14,7 +14,7 @@ import { solveSplitWeights, computeLevyPachterOrdering, computeNeighborNetTrace 
 import { buildSplitGraph } from './lib/splitGraph';
 import { MatrixEditor } from './views/MatrixEditor';
 import { NJTreeView, SplitNetworkView, SplitGraphView, SplitWeightsList, type Highlight } from './views/NetViews';
-import { NeighborNetRun, NeighborJoiningRun } from './views/AlgorithmView';
+import { NeighborNetRun, NeighborJoiningRun, QMatrix } from './views/AlgorithmView';
 import explainer from './EXPLAINER.md?raw';
 
 // Persistence namespace. Bumped (was 'trees-and-nets') when the app was
@@ -455,13 +455,14 @@ export default function TreesAndNets(): JSX.Element {
   } else if (runStep >= njTrace.steps.length) {
     runNarration = 'Tree complete — every cluster joined.';
   } else if (runStep === 0) {
-    runNarration = 'Every leaf is its own cluster. Play to join the closest pair (minimum Q) at each step.';
+    runNarration = 'Star: every circular ordering is equally likely. The Q matrix scores each pair by how cheap it is to force them adjacent — Play joins the minimum-Q pair.';
   } else {
     const s = njTrace.steps[runStep - 1];
     runNarration = s.finalJoin
       ? `Final join: connect ${s.joined[0]}–${s.joined[1]}.`
-      : `Join ${s.joined[0]}, ${s.joined[1]} → ${s.newNode} (Q ${Math.min(...s.qScores.map((x) => x.q)).toFixed(1)}).`;
+      : `Join ${s.joined[0]}, ${s.joined[1]} → ${s.newNode}: the minimum of the Q matrix (Q ${Math.min(...s.qScores.map((x) => x.q)).toFixed(1)}).`;
   }
+  const njDecisionStep = njTrace.steps[Math.min(runStep > 0 ? runStep - 1 : 0, Math.max(0, njTrace.steps.length - 1))] ?? null;
 
   const runSections: SectionDef[] = [
     {
@@ -475,6 +476,18 @@ export default function TreesAndNets(): JSX.Element {
         </div>
       ),
     },
+    ...(runAlgo === 'nj'
+      ? ([{
+        id: 'qmatrix', title: 'Q matrix', arch: 'readout', estHeight: 230,
+        node: (
+          <div style={{ display: 'grid', gap: 8 }}>
+            <QMatrix step={njDecisionStep} />
+            <Kicker>Q(i,j) = how cheap it is to force i, j adjacent (lower is better). NJ joins the{' '}
+              <b style={{ color: '#ffd54a' }}>minimum</b> (outlined) — that is <i>why</i> this pair, not another.</Kicker>
+          </div>
+        ),
+      }] as SectionDef[])
+      : []),
     {
       id: 'runstate', title: 'Step', arch: 'readout', estHeight: 140,
       node: (
@@ -506,7 +519,7 @@ export default function TreesAndNets(): JSX.Element {
       ? [{ id: 'essentials', name: 'Nets', open: { distances: { x: 84, y: 16 }, connect: { x: 84, y: 410 }, weights: { x: 84, y: 560 } }, views: { njtree: { open: true }, splitgraph: { open: true }, splitnet: { open: false } } }]
       : appMode === 'fibers'
         ? [{ id: 'essentials', name: 'Fibers', open: { nav: { x: 84, y: 16 }, state: { x: 84, y: 210 }, view: { x: 84, y: 340 } }, views: { tree: { open: true, x: 360, y: 16 }, polygon: { open: false }, overlay: { open: true, x: 752, y: 16 }, assoc: { open: true, x: 360, y: 408 }, cube: { open: true, x: 752, y: 408 } } }]
-        : [{ id: 'essentials', name: 'Run', open: { run: { x: 84, y: 16 }, runstate: { x: 84, y: 200 } }, views: { run: { open: true } } }];
+        : [{ id: 'essentials', name: 'Run', open: { run: { x: 84, y: 16 }, qmatrix: { x: 84, y: 200 }, runstate: { x: 84, y: 446 } }, views: { run: { open: true } } }];
 
   const modes: WorkspaceMode[] = [
     { id: 'nets', label: 'Nets' },

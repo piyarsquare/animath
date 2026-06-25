@@ -11,7 +11,7 @@ followup: null
 app: trees-and-nets
 thumbnail: assets/2026-06-25-S01-run-nn.png
 signals: null
-next: Theme C — build a tree / CDM by edges (the metric builder: add weighted splits → metric)
+next: NeighborNet decision surface (record component-Q) + orientation-lock viz; then Theme C (build by edges)
 ---
 
 # Trees and Nets — port the rest of quantum-tree (evidence engine first)
@@ -62,6 +62,26 @@ plane, and the quartet→split→ordering→tree assembly views.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟢 code · 21:20 — Show the computation (NJ Q-decision surface) + fibers-on-screen fix
+**Why:** Dan: the animation showed the *result*, not *why* a pair joins; and the
+Fibers windows scrolled off-screen (lost the view).
+
+Two changes. (1) **Fibers fix** — the associahedron/cube windows were at x≈1156,
+off the right edge and unreachable (the stage can't scroll to them); now an
+on-screen 2×2 grid (Tree · Overlay / Associahedron · Cube). (2) **NJ "why"** — Run
+mode now shows the **Q matrix** over the current clusters at each step (lower =
+cheaper forced adjacency), with the **minimum outlined** = the pair NJ joins;
+narration reframed to Dan's model (star ≡ all orderings equally likely → the
+minimum-Q forced adjacency joins). Uses the `qScores` already in the trace. Build
+green, **70 tests**, lint clean.
+
+![NJ Run: the Q matrix decision surface — the minimum (outlined) is *why* that pair joins](assets/2026-06-25-S01-run-qmatrix.png)
+
+Still to do (Dan's model, NeighborNet side): record the **component-Q** in the NN
+trace to show its decision surface too, and make the **orientation lock** explicit
+(a joined block of size > 2 becomes a rigid oriented unit that flips only as a
+whole — the associahedron bridge).
 
 ### 🟡 milestone · 20:45 — Theme D: stepwise NJ + NeighborNet animation (the centerpiece)
 **Why:** Dan wants to watch the algorithms run, with the circular order locking in,
