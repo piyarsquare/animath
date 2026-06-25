@@ -20,6 +20,25 @@ tree), while **Conflict** is net-like (crossing chords). **Star** has no
 structure at all (every pair equidistant); **Cycle** places the leaves evenly
 around a circle.
 
+## Watch the algorithms run (the *Run* layout)
+
+**Run** plays Neighbor-Joining and NeighborNet **step by step** on the current
+matrix, so you can see *why* each pair is joined — not just the result. The **Q
+matrix** scores every pair by how cheap it is to join them, and the minimum
+(outlined) is the one chosen. NeighborNet locks in the circular order one
+adjacency per merge: once a block grows past size two its orientation is fixed,
+and from then on it can only flip **as a whole**.
+
+## Build your own (the *Build* layout)
+
+**Build** runs the app backwards. Instead of a matrix → tree/net, you weight the
+**edges** and the matrix is *generated* — each distance is the sum of the weights
+of the splits that separate that pair. Pick a **Tree** basis (its branches build
+an additive tree metric) or a **Circular order** basis (its chords build a net),
+then drag the weights and watch the tree, the net, and the distances all follow.
+**Fit to current** snaps the weights to whatever matrix is on screen, so you can
+start from a preset and sculpt.
+
 ## Trees, orders, and the associahedron (the *Fibers* layout)
 
 Switch the **Layout** menu to **Fibers** for the geometry of tree-space itself.

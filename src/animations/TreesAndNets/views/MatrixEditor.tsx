@@ -31,12 +31,16 @@ export function MatrixEditor({
   onCell,
   highlight,
   onSelect,
+  readOnly = false,
 }: {
   matrix: DistanceMatrix;
   /** Commit a new symmetric value for the pair (i, j). */
   onCell: (i: number, j: number, value: number) => void;
   highlight: Highlight;
   onSelect: SelectHandler;
+  /** Display-only (no inputs) — used in Build mode, where the matrix is the
+   *  generated *output* of the edge weights, not an editable input. */
+  readOnly?: boolean;
 }): JSX.Element {
   const col = useNetColors();
   const [lo, hi] = extent(matrix);
@@ -81,6 +85,14 @@ export function MatrixEditor({
                   return (
                     <td key={`c${i}-${j}`} onClick={() => pick(i, j)}
                       style={{ textAlign: 'center', padding: '2px 6px', color: 'var(--fg, #aab)', opacity: 0.4, background: tint, cursor: 'pointer', ...sel(i, j) }}>
+                      {value.toFixed(1)}
+                    </td>
+                  );
+                }
+                if (readOnly) {
+                  return (
+                    <td key={`c${i}-${j}`} onClick={() => pick(i, j)}
+                      style={{ textAlign: 'center', padding: '2px 6px', color: 'var(--fg, #dde)', background: tint, cursor: 'pointer', ...sel(i, j) }}>
                       {value.toFixed(1)}
                     </td>
                   );

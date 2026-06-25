@@ -13,9 +13,11 @@ import { preset, presetNames, type DistanceMatrix, type PresetName } from './lib
 import { computeNeighborJoining, computeNeighborJoiningTrace, njLeafPathInfo } from './lib/neighborJoining';
 import { solveSplitWeights, computeLevyPachterOrdering, computeNeighborNetTrace } from './lib/splitWeights';
 import { buildSplitGraph } from './lib/splitGraph';
+import { candidateSplits, fitWeights, metricFromItems, type BuildItem, type BuildSource } from './lib/buildMetric';
 import { MatrixEditor } from './views/MatrixEditor';
 import { NJTreeView, SplitNetworkView, SplitGraphView, SplitWeightsList, type Highlight } from './views/NetViews';
 import { NeighborNetRun, NeighborJoiningRun, QMatrix, NNQMatrix } from './views/AlgorithmView';
+import { BuildWeights } from './views/BuildPanel';
 import explainer from './EXPLAINER.md?raw';
 
 // Persistence namespace. Bumped (was 'trees-and-nets') when the app was
@@ -249,7 +251,16 @@ export default function TreesAndNets(): JSX.Element {
   const [n, setN] = usePersistentState<number>(`${APP_ID}:n`, 5);
   const [presetName, setPresetName] = usePersistentState<PresetName>(`${APP_ID}:preset`, 'tree');
   const [matrix, setMatrix] = useState<DistanceMatrix>(() => preset(n, presetName));
-  useEffect(() => { setMatrix(preset(n, presetName)); setHl(null); }, [n, presetName]);
+  // Changing n or the preset resets the matrix. In Build mode the matrix is the
+  // *output* of the edge weights, so reseed the builder from the new preset
+  // instead (seedBuild sets the matrix itself); otherwise just install it.
+  useEffect(() => {
+    const m = preset(n, presetName);
+    setHl(null);
+    if (appModeRef.current === 'build') seedBuild(m, buildSourceRef.current);
+    else setMatrix(m);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [n, presetName]);
   const setCell = useCallback((i: number, j: number, value: number) => {
     setMatrix((prev) => { const d = prev.d.map((row) => row.slice()); d[i][j] = value; d[j][i] = value; return { leaves: prev.leaves, d }; });
   }, []);
@@ -260,7 +271,7 @@ export default function TreesAndNets(): JSX.Element {
   const splitGraph = useMemo(() => buildSplitGraph(weightedSplits, lpOrder, n), [weightedSplits, lpOrder, n]);
 
   // ---- shared selection (links matrix ↔ tree ↔ net ↔ weights) + view mode ----
-  const [appMode, setAppMode] = usePersistentState<'nets' | 'fibers' | 'run'>(`${APP_ID}:appmode`, 'nets');
+  const [appMode, setAppMode] = usePersistentState<'nets' | 'fibers' | 'run' | 'build'>(`${APP_ID}:appmode`, 'nets');
   const [hl, setHl] = useState<Highlight>(null);
 
   // ---- Run mode: stepwise algorithm traces + a Play/Step player ----
@@ -280,6 +291,47 @@ export default function TreesAndNets(): JSX.Element {
   const runStepFn = (): void => setRunStep((s) => Math.min(s + 1, runMax));
   const runReset = (): void => { setRunStep(0); setRunPlaying(false); };
   const runPlay = (): void => { if (runStep >= runMax) setRunStep(0); setRunPlaying((p) => !p); };
+
+  // ---- Build mode: construct the metric "by edges" (the inverse of the app) ----
+  // Pick a source (a tree topology, or a circular order), get its candidate
+  // splits (the edges), set each one's weight, and the distance matrix is
+  // generated as the sum of separating weights. The basis (items) is FROZEN
+  // while you sculpt — only reseeded on enter / source change / n / preset / Fit —
+  // so the sliders don't reshuffle as the weights (and the implied topology) move.
+  const [buildSource, setBuildSource] = usePersistentState<BuildSource>(`${APP_ID}:buildsource`, 'tree');
+  const [buildItems, setBuildItems] = useState<BuildItem[]>([]);
+  const [buildWeights, setBuildWeights] = useState<number[]>([]);
+  const appModeRef = useRef(appMode); appModeRef.current = appMode;
+  const matrixRef = useRef(matrix); matrixRef.current = matrix;
+  const buildSourceRef = useRef(buildSource); buildSourceRef.current = buildSource;
+  const buildItemsRef = useRef(buildItems); buildItemsRef.current = buildItems;
+  const buildWeightsRef = useRef(buildWeights); buildWeightsRef.current = buildWeights;
+  // Fit a basis to a matrix and install the generated (re-projected) matrix, so
+  // the tree/net always match the weights shown — Build mode treats the matrix
+  // as generated, not edited.
+  const seedBuild = useCallback((m: DistanceMatrix, src: BuildSource) => {
+    const items = candidateSplits(m, src);
+    const w = fitWeights(m, items);
+    setBuildItems(items);
+    setBuildWeights(w);
+    setMatrix(metricFromItems(m.leaves.length, items, w, m.leaves));
+  }, []);
+  // Enter Build, or switch source → reseed from the matrix on screen.
+  useEffect(() => {
+    if (appMode === 'build') seedBuild(matrixRef.current, buildSource);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appMode, buildSource]);
+  // Drag/type one edge weight → regenerate the matrix from the frozen basis.
+  const setBuildWeight = useCallback((k: number, v: number) => {
+    const w = buildWeightsRef.current.slice();
+    w[k] = Math.max(0, v);
+    setBuildWeights(w);
+    const m = matrixRef.current;
+    setMatrix(metricFromItems(m.leaves.length, buildItemsRef.current, w, m.leaves));
+  }, []);
+  // Re-derive the basis from the current matrix (rebase onto the implied
+  // topology) and refit — the explicit "snap weights to what's on screen".
+  const fitToCurrent = useCallback(() => { seedBuild(matrixRef.current, buildSourceRef.current); }, [seedBuild]);
 
   // ---- fibers: the associahedron × cube explorer (now a secondary layout) ----
   const [mode, setMode] = usePersistentState<'flip' | 'cross'>(`${APP_ID}:mode`, 'flip');
@@ -528,17 +580,61 @@ export default function TreesAndNets(): JSX.Element {
     { id: 'reset', icon: 'reset', label: 'Reset', sectionId: 'run', disabled: runStep === 0 && !runPlaying, onClick: runReset },
   ];
 
-  const sections = appMode === 'nets' ? netsSections : appMode === 'fibers' ? fibersSections : runSections;
-  const views = appMode === 'nets' ? netsViews : appMode === 'fibers' ? fibersViews : runViews;
+  // ---- Build mode: source + editable edge weights + the generated structures ----
+  const buildSections: SectionDef[] = [
+    {
+      id: 'buildfrom', title: 'Build from', arch: 'subject', estHeight: 200,
+      node: (
+        <div style={{ display: 'grid', gap: 10 }}>
+          <Pills<BuildSource> label="Edges of a…" value={buildSource} onChange={setBuildSource}
+            options={[{ value: 'tree', label: 'Tree' }, { value: 'circular', label: 'Circular order' }]} />
+          <Pills<number> label="Leaves (n)" value={n} onChange={setN} options={[5, 6, 7, 8, 9].map((k) => ({ value: k, label: String(k) }))} />
+          <button type="button" onClick={fitToCurrent}
+            style={{ justifySelf: 'start', padding: '4px 12px', fontFamily: 'var(--mono, monospace)', fontSize: 12, color: 'var(--accent, #cda434)', background: 'transparent', border: '1px solid var(--accent, #cda434)', borderRadius: 6, cursor: 'pointer' }}>
+            Fit to current
+          </button>
+          <Kicker>The matrix is <b>generated</b> from the edge weights below (d = sum of separating weights). A{' '}
+            <b>Tree</b> basis builds an additive metric; a <b>Circular order</b> basis builds a net.{' '}
+            <b>Fit to current</b> snaps the weights to the matrix on screen.</Kicker>
+        </div>
+      ),
+    },
+    {
+      id: 'buildweights', title: 'Edge weights', arch: 'drive', estHeight: 320,
+      node: (
+        <BuildWeights items={buildItems} weights={buildWeights} treeSplitKeys={treeSplitKeys}
+          highlight={hl} onWeight={setBuildWeight} onSelect={setHl} />
+      ),
+    },
+    { id: 'connect', title: 'Selection', arch: 'readout', estHeight: 130, node: connectNode },
+  ];
+  const buildViews: ViewDef[] = [
+    {
+      id: 'genmatrix', title: 'Generated distances', defaultRect: { x: 360, y: 16, w: 360, h: 320 },
+      node: (
+        <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', overflow: 'auto', padding: 12 }}>
+          <MatrixEditor matrix={matrix} onCell={setCell} highlight={hl} onSelect={setHl} readOnly />
+        </div>
+      ),
+    },
+    { id: 'njtree', title: 'Neighbor-Joining tree', defaultRect: { x: 736, y: 16, w: 380, h: 360 }, node: <NJTreeView nj={nj} matrix={matrix} highlight={hl} onSelect={setHl} /> },
+    { id: 'splitgraph', title: 'Split network (SplitsTree)', defaultRect: { x: 360, y: 352, w: 440, h: 360 }, node: <SplitGraphView graph={splitGraph} matrix={matrix} highlight={hl} onSelect={setHl} /> },
+  ];
+
+  const sections = appMode === 'nets' ? netsSections : appMode === 'fibers' ? fibersSections : appMode === 'build' ? buildSections : runSections;
+  const views = appMode === 'nets' ? netsViews : appMode === 'fibers' ? fibersViews : appMode === 'build' ? buildViews : runViews;
   const layouts: LayoutDef[] =
     appMode === 'nets'
       ? [{ id: 'essentials', name: 'Nets', open: { distances: { x: 84, y: 16 }, connect: { x: 84, y: 410 }, weights: { x: 84, y: 560 } }, views: { njtree: { open: true }, splitgraph: { open: true }, splitnet: { open: false } } }]
       : appMode === 'fibers'
         ? [{ id: 'essentials', name: 'Fibers', open: { nav: { x: 84, y: 16 }, state: { x: 84, y: 210 }, view: { x: 84, y: 340 } }, views: { tree: { open: true, x: 360, y: 16 }, polygon: { open: false }, overlay: { open: true, x: 752, y: 16 }, assoc: { open: true, x: 360, y: 408 }, cube: { open: true, x: 752, y: 408 } } }]
-        : [{ id: 'essentials', name: 'Run', open: { run: { x: 84, y: 16 }, qmatrix: { x: 84, y: 200 }, runstate: { x: 84, y: 446 } }, views: { run: { open: true } } }];
+        : appMode === 'build'
+          ? [{ id: 'essentials', name: 'Build', open: { buildfrom: { x: 84, y: 16 }, buildweights: { x: 84, y: 288 } }, views: { genmatrix: { open: true }, njtree: { open: true }, splitgraph: { open: true } } }]
+          : [{ id: 'essentials', name: 'Run', open: { run: { x: 84, y: 16 }, qmatrix: { x: 84, y: 200 }, runstate: { x: 84, y: 446 } }, views: { run: { open: true } } }];
 
   const modes: WorkspaceMode[] = [
     { id: 'nets', label: 'Nets' },
+    { id: 'build', label: 'Build' },
     { id: 'fibers', label: 'Fibers' },
     { id: 'run', label: 'Run' },
   ];
@@ -546,13 +642,15 @@ export default function TreesAndNets(): JSX.Element {
     ? `${n} leaves · metric → tree + net`
     : appMode === 'fibers'
       ? `${n} leaves · tree-space fibers`
-      : `${n} leaves · ${runAlgo === 'nn' ? 'NeighborNet' : 'Neighbor-Joining'} step by step`;
+      : appMode === 'build'
+        ? `${n} leaves · ${buildSource === 'tree' ? 'tree' : 'circular'} edges → metric`
+        : `${n} leaves · ${runAlgo === 'nn' ? 'NeighborNet' : 'Neighbor-Joining'} step by step`;
 
   return (
     <Workspace appId={APP_ID} title="Trees and Nets" subtitle={subtitle}
       sections={sections} views={views} layouts={layouts} defaultLayoutId="essentials"
       explainer={explainer} modes={modes} activeMode={appMode}
       actions={appMode === 'run' ? runActions : undefined}
-      onModeChange={(id) => setAppMode(id as 'nets' | 'fibers' | 'run')} />
+      onModeChange={(id) => setAppMode(id as 'nets' | 'fibers' | 'run' | 'build')} />
   );
 }
