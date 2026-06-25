@@ -11,7 +11,7 @@ followup: null
 pr: 239
 app: chrome, trinary, polygon-worlds, solid-worlds, plane-transform
 signals: needs-dan, visual-unverified
-next: Finish the rollout — Argand (equation-identity colors → theme-dynamic), Trees & Nets, Agentic Sorting, TrinaryLab console, Worlds walk-pad/instruction HUD + spherical sky-dome retint.
+next: Finish the rollout — Complex Particles (force-dark the shell view + clear→--viz-bg), TrinaryLab console, Worlds walk-pad/instruction HUD + spherical sky-dome retint. (Argand is being developed on another branch — SKIP it.)
 ---
 
 # Theming v2 — identity × mode engine + Trinary/Worlds + suite rollout
@@ -54,9 +54,25 @@ sky) stays warm by design — it depicts light, not data.
 | Solid Worlds (sky + decor + diagnostic + rooms + HUDs + **avatars**) | ✅ |
 | Plane Transform (viewport/pane/stroke/pill) | ✅ |
 | Fractals GPU · Correspondence · Counting the Ways · Stable Matching | ✅ already clean |
-| **Argand** | ⏳ equation-identity colors |
-| **Trees & Nets** · **Agentic Sorting** | ⏳ |
+| Trees & Nets (flip/cross → --data; fibers theme-keyed) | ✅ |
+| Agentic Sorting (agents → --data; canvas reads tokens + redraws) | ✅ |
+| **Complex Particles** | ⏳ force-dark glow scene |
+| Argand | ⏭ SKIP — in development on another branch |
 | TrinaryLab console stat-text/histograms · Worlds walk-pad/instruction HUD · spherical sky-dome retint | ⏳ loose ends |
+
+### Complex Particles — the approach (not yet done)
+
+Glow scene → **force dark** like Trinary: wrap the shell's Canvas3D view node
+(`components/ParticleViewerShell.tsx`) in `<Scheme mode="dark">`, and change the
+two `setClearColor(objectMode ? 0xffffff : 0x000000)` sites
+(`ComplexParticles.tsx:657`, `lib/particles/useUniformSync.ts:91`) to use the
+theme's viz background for the particle modes — `new THREE.Color(getComputedStyle(
+renderer.domElement).getPropertyValue('--viz-bg'))` (resolves dark inside the
+forced subtree); keep `objectMode` white (deliberate studio bg). Keep the GLSL
+domain/rainbow palette (meaningful). The Hopf scaffold guide colors
+(`lib/particles/createHopfScaffold.ts`: 0x4488bb/0x66ccff/0xffcc44/0xff8866 +
+white labels) are a labeled diagram — either keep, or map axis guides to
+`--data`/`--dim`. Re-sync the clear on theme change (depend a sync on `useThemeId`).
 
 ## Decisions locked (with Dan, this session)
 

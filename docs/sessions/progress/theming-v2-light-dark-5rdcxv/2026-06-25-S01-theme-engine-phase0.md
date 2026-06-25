@@ -71,6 +71,26 @@ attribute, reactive `useSkin`/`useThemeId`) shipped in
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 18:40 — Trees & Nets + Agentic Sorting themed; Argand skipped
+**Why:** Continue the rollout; Dan said Argand is in development on another branch.
+
+- **Trees & Nets** — the two move-type identities (flip/cross) → `--data-2`/
+  `--data-5` (`C_FLIP`/`C_CROSS` as `var()` for the SVG net + legend; resolved to
+  hex for the 3D fibers, which re-key on `themeId` to rebuild); highlight →
+  `--accent`, fiber nodes/edges → neutrals. Verified under Mirage.
+- **Agentic Sorting** — agent type/objective identities → discrete `--data` slots
+  (`var()` for legend/lab/weight-bar; resolved hex passed to the canvas via
+  `DrawOpts`, re-read + redrawn on `themeId`); frozen → `--dim`. Okabe-Ito values
+  kept as fallbacks. Verified under Primary.
+- **Argand** — ⏭ **skipped** (Dan: in development on another branch; visible
+  branches `pensive-pasteur` / `amazing-mccarthy` have generated slugs).
+
+> [!IMPORTANT]
+> **Correction:** an earlier status omitted **Complex Particles** from the
+> remaining list. It still needs the force-dark glow treatment (wrap the shell
+> view in `<Scheme mode=dark>` + clear→`--viz-bg`) — approach written in the
+> handoff. Build green, lint 59, 88 tests.
+
 ### 🟡 milestone · 17:45 — Shader/DOM batch: Plane Transform + 3 apps confirmed clean
 **Why:** Work down the rollout list; verify which apps already comply vs need work.
 
