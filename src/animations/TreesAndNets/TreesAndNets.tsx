@@ -435,9 +435,9 @@ export default function TreesAndNets(): JSX.Element {
   const fibersViews: ViewDef[] = [
     { id: 'tree', title: 'Tree (circular order)', defaultRect: { x: 360, y: 16, w: 380, h: 380 }, node: <DiskView n={n} order={order} tri={tri} flash={flash} showTree showPolygon={false} onChord={onChord} /> },
     { id: 'polygon', title: 'Polygon + triangulation', defaultRect: { x: 360, y: 408, w: 380, h: 380 }, node: <DiskView n={n} order={order} tri={tri} flash={flash} showTree={false} showPolygon onChord={onChord} /> },
-    { id: 'overlay', title: 'Overlay (tree + triangulation)', defaultRect: { x: 756, y: 408, w: 380, h: 380 }, node: <DiskView n={n} order={order} tri={tri} flash={flash} showTree showPolygon={showPoly} onChord={onChord} /> },
-    { id: 'assoc', title: `Associahedron fiber — trees | order`, defaultRect: { x: 1156, y: 16, w: 360, h: 380 }, node: <Graph3D key={`a-${n}`} positions={assocPositions} edges={assoc.edges} adjacency={adjacency} currentRef={assocCurRef} radiusRef={radiusRef} accent={0x3fb6a6} onPick={pickTree} spinRef={spinRef} /> },
-    { id: 'cube', title: `(n−3)-cube fiber — orders | tree`, defaultRect: { x: 1156, y: 408, w: 360, h: 380 }, node: <Graph3D key={`q-${treeKey}-${n}`} positions={cube.positions} edges={cube.edges} adjacency={cube.adj} currentRef={cubeCurRef} radiusRef={radiusRef} accent={0xe08a3c} onPick={pickCube} spinRef={spinRef} /> },
+    { id: 'overlay', title: 'Overlay (tree + triangulation)', defaultRect: { x: 752, y: 16, w: 380, h: 372 }, node: <DiskView n={n} order={order} tri={tri} flash={flash} showTree showPolygon={showPoly} onChord={onChord} /> },
+    { id: 'assoc', title: `Associahedron fiber — trees | order`, defaultRect: { x: 360, y: 408, w: 384, h: 372 }, node: <Graph3D key={`a-${n}`} positions={assocPositions} edges={assoc.edges} adjacency={adjacency} currentRef={assocCurRef} radiusRef={radiusRef} accent={0x3fb6a6} onPick={pickTree} spinRef={spinRef} /> },
+    { id: 'cube', title: `(n−3)-cube fiber — orders | tree`, defaultRect: { x: 752, y: 408, w: 384, h: 372 }, node: <Graph3D key={`q-${treeKey}-${n}`} positions={cube.positions} edges={cube.edges} adjacency={cube.adj} currentRef={cubeCurRef} radiusRef={radiusRef} accent={0xe08a3c} onPick={pickCube} spinRef={spinRef} /> },
   ];
 
   // ---- Run mode: narration + panels + the animation view + the player actions ----
@@ -505,7 +505,7 @@ export default function TreesAndNets(): JSX.Element {
     appMode === 'nets'
       ? [{ id: 'essentials', name: 'Nets', open: { distances: { x: 84, y: 16 }, connect: { x: 84, y: 410 }, weights: { x: 84, y: 560 } }, views: { njtree: { open: true }, splitgraph: { open: true }, splitnet: { open: false } } }]
       : appMode === 'fibers'
-        ? [{ id: 'essentials', name: 'Fibers', open: { nav: { x: 84, y: 16 }, state: { x: 84, y: 210 }, view: { x: 84, y: 340 } }, views: { tree: { open: true }, polygon: { open: false }, overlay: { open: true }, assoc: { open: true }, cube: { open: true } } }]
+        ? [{ id: 'essentials', name: 'Fibers', open: { nav: { x: 84, y: 16 }, state: { x: 84, y: 210 }, view: { x: 84, y: 340 } }, views: { tree: { open: true, x: 360, y: 16 }, polygon: { open: false }, overlay: { open: true, x: 752, y: 16 }, assoc: { open: true, x: 360, y: 408 }, cube: { open: true, x: 752, y: 408 } } }]
         : [{ id: 'essentials', name: 'Run', open: { run: { x: 84, y: 16 }, runstate: { x: 84, y: 200 } }, views: { run: { open: true } } }];
 
   const modes: WorkspaceMode[] = [
