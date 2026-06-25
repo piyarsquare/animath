@@ -10,8 +10,8 @@ build: passing
 followup: null
 app: trees-and-nets
 thumbnail: assets/2026-06-25-S01-nets-conflict.png
-signals: null
-next: P2 — the trees×orders correspondence map + energies on the fibers + the quartet evidence plane (tree-like vs net-like)
+signals: needs-dan
+next: Confirm priority (rec: Theme A — connect matrix↔tree↔net↔weights + fix mobile), then build
 ---
 
 # Trees and Nets — port the rest of quantum-tree (evidence engine first)
@@ -62,6 +62,27 @@ plane, and the quartet→split→ordering→tree assembly views.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🔵 finding · 18:50 — Dan's feedback on the preview: "okay, not excellent"
+**Why:** Dan opened the Cloudflare preview (mobile) and gave directional feedback.
+
+Points: (1) the **matrix → solution connection doesn't read**; (2) **poor on
+mobile**; (3) **no sense of how the split weights connect to the trees** / sit in
+the path diagram; (4) wants **n > 7**; (5) wants the **SplitsTree split-graph
+view**; (6) wants to **build a tree / CDM by edges**. Mobile diagnosis (390×844
+shot): the Nets views stack fine as cards, but the bottom dock is cluttered with
+the fiber controls (Move/Display (fibers)) and the matrix is hidden in a sheet, so
+input and output never sit together.
+
+Plan (3 themes): **A — make it read + mobile** (link matrix↔tree↔net↔weights with
+hover/select highlighting; show weights *on* the tree edges + net chords; a
+pair→path highlight; layout-aware controls; usable mobile matrix) → 1,2,3.
+**B — the real net + scale** (port the SplitsTree convex-hull split-graph view;
+raise n with lazy/capped fiber compute) → 4,5. **C — build by edges** (metric
+builder: add tree edges / circular splits with weights → metric) → 6. Recommended
+order A→B→C; priority put to Dan. Codex review fixes already pushed (n=8 restored +
+verified at `tn-n8.png`; namespace bump so the new layout surfaces; both threads
+resolved).
 
 ### 🟡 milestone · 18:35 — P1 shipped: the app finally has nets (matrix → tree + net)
 **Why:** Bring the quantum-tree evidence engine to the front, per the decision.
