@@ -6,12 +6,32 @@ import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/wor
 import { StatGrid, Sparkline, Kicker } from '../../chrome/readouts';
 import { Slider, Pills, Select } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
+import { useThemeId } from '../../chrome/skins';
 import {
   generate, step, mulberry32,
-  AGENT_TYPE_LIST, type AgentType, type SimState, type Weights,
+  AGENT_TYPE_LIST, type AgentType, type Objective, type SimState, type Weights,
 } from './engine';
 import { measure, homeIndex, type MetricsView } from './metrics';
 import { drawArena, drawTrajectories, TYPE_COLORS } from './arena';
+
+// Agent identity → --data slot (theming v2; mirrors arena.ts's TYPE_COLORS).
+const TYPE_SLOT: Record<AgentType, number> = { standard: 1, blindDate: 5, nomadic: 3, patrolling: 7, perfectionist: 6 };
+const TYPE_FALLBACK: Record<AgentType, string> = { standard: '#0072B2', blindDate: '#E69F00', nomadic: '#009E73', patrolling: '#CC79A7', perfectionist: '#D55E00' };
+const OBJ_FALLBACK: Record<Objective, string> = { 1: '#0072B2', [-1]: '#D55E00' };
+/** Resolve the agent palettes + axis/mark from the theme tokens on `el`. */
+function readAgentPalette(el: Element) {
+  const cs = getComputedStyle(el);
+  const d = (k: number, f: string) => cs.getPropertyValue(`--data-${k}`).trim() || f;
+  const type = {} as Record<AgentType, string>;
+  (Object.keys(TYPE_SLOT) as AgentType[]).forEach((t) => { type[t] = d(TYPE_SLOT[t], TYPE_FALLBACK[t]); });
+  const obj: Record<Objective, string> = { 1: d(1, OBJ_FALLBACK[1]), [-1]: d(5, OBJ_FALLBACK[-1]) };
+  return {
+    type, obj,
+    frozen: cs.getPropertyValue('--dim').trim() || '#9aa0a6',
+    axis: cs.getPropertyValue('--dim').trim() || 'rgba(128,128,128,0.6)',
+    mark: cs.getPropertyValue('--accent').trim() || '#ffce47',
+  };
+}
 import {
   runExperiment, METRIC_LABELS,
   type MetricKey, type GroupResult, type ExperimentSpec, type SweepParam,
@@ -139,6 +159,11 @@ export default function AgenticSorting() {
   const displayRef = useRef(display);
   const colorByRef = useRef(colorBy);
   const axisRef = useRef('rgba(128,128,128,0.6)');
+  // Resolved (hex) agent palettes for the canvas, read from the theme --data
+  // tokens (var() doesn't resolve in canvas fillStyle). Refreshed on a skin change.
+  const typeColorsRef = useRef<Record<AgentType, string>>(TYPE_FALLBACK);
+  const objColorsRef = useRef<Record<Objective, string>>(OBJ_FALLBACK);
+  const frozenRef = useRef('#9aa0a6');
 
   // ---- canvas (arena) ----
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -189,6 +214,9 @@ export default function AgenticSorting() {
       colorBy: colorByRef.current,
       axis: axisRef.current,
       mark: markRef.current,
+      typeColors: typeColorsRef.current,
+      objColors: objColorsRef.current,
+      frozen: frozenRef.current,
       selectedId: selectedIdRef.current,
     });
   }, []);
@@ -278,12 +306,18 @@ export default function AgenticSorting() {
   useEffect(() => { colorByRef.current = colorBy; draw(); }, [colorBy, draw]);
 
   // DPR-aware canvas sizing (ignores zero-size when the window is collapsed)
-  useCanvas2D(canvasRef, sizeRef, (cvs) => {
-    const cs = getComputedStyle(cvs);
-    axisRef.current = cs.getPropertyValue('--dim').trim() || 'rgba(128,128,128,0.6)';
-    markRef.current = cs.getPropertyValue('--accent').trim() || '#ffce47';
-    draw();
-  }, [draw, mode]);
+  const applyPalette = useCallback((el: Element) => {
+    const p = readAgentPalette(el);
+    axisRef.current = p.axis; markRef.current = p.mark;
+    typeColorsRef.current = p.type; objColorsRef.current = p.obj; frozenRef.current = p.frozen;
+  }, []);
+  useCanvas2D(canvasRef, sizeRef, (cvs) => { applyPalette(cvs); draw(); }, [draw, mode, applyPalette]);
+  // Re-read the palette + redraw on a skin change (theming v2).
+  const themeId = useThemeId();
+  useEffect(() => {
+    if (canvasRef.current) { applyPalette(canvasRef.current); draw(); drawTraj(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themeId]);
 
   useCanvas2D(trajCanvasRef, trajSizeRef, () => drawTraj(), [drawTraj, mode]);
 

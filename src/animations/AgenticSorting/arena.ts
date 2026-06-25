@@ -9,20 +9,25 @@
 
 import type { Agent, AgentType, Objective } from './engine';
 
+// Agent identities → discrete --data slots (theming v2). Distinct slots chosen to
+// stay separable; the Okabe–Ito values (formerly hardcoded, chosen for
+// color-vision-deficiency safety) remain the fallbacks, so CVD-safety now rides
+// the theme's --data palette. CSS consumers (legend, lab, weight bar) use these
+// var() strings directly; the canvas resolves them to hex (passed via DrawOpts).
 export const TYPE_COLORS: Record<AgentType, string> = {
-  standard: '#0072B2',      // blue
-  blindDate: '#E69F00',     // orange
-  nomadic: '#009E73',       // bluish green
-  patrolling: '#CC79A7',    // reddish purple
-  perfectionist: '#D55E00', // vermillion
+  standard: 'var(--data-1, #0072B2)',      // blue
+  blindDate: 'var(--data-5, #E69F00)',     // orange
+  nomadic: 'var(--data-3, #009E73)',       // green
+  patrolling: 'var(--data-7, #CC79A7)',    // purple
+  perfectionist: 'var(--data-6, #D55E00)', // red/vermillion
 };
 
 export const OBJECTIVE_COLORS: Record<Objective, string> = {
-  1: '#0072B2',   // ascending → blue
-  [-1]: '#D55E00', // descending → vermillion
+  1: 'var(--data-1, #0072B2)',    // ascending → blue
+  [-1]: 'var(--data-5, #D55E00)', // descending → orange
 };
 
-export const FROZEN_COLOR = '#9aa0a6';
+export const FROZEN_COLOR = 'var(--dim, #9aa0a6)';
 
 export interface DrawOpts {
   display: 'bars' | 'dots';
@@ -31,13 +36,18 @@ export interface DrawOpts {
   axis: string;
   /** highlight color for the tracked agent (read from --accent). */
   mark: string;
+  /** Resolved (hex) agent palettes for the canvas — var() doesn't resolve in
+   *  canvas fillStyle, so the caller reads the --data tokens and passes them. */
+  typeColors: Record<AgentType, string>;
+  objColors: Record<Objective, string>;
+  frozen: string;
   /** id of the agent being click-tracked, if any. */
   selectedId?: number | null;
 }
 
-function colorFor(a: Agent, colorBy: DrawOpts['colorBy']): string {
-  if (a.frozen) return FROZEN_COLOR;
-  return colorBy === 'type' ? TYPE_COLORS[a.type] : OBJECTIVE_COLORS[a.objective];
+function colorFor(a: Agent, opts: DrawOpts): string {
+  if (a.frozen) return opts.frozen;
+  return opts.colorBy === 'type' ? opts.typeColors[a.type] : opts.objColors[a.objective];
 }
 
 /**
@@ -86,7 +96,7 @@ export function drawArena(
       const a = agents[i];
       const x = i * colW;
       const len = (Math.abs(a.value) / 100) * half;
-      ctx.fillStyle = colorFor(a, opts.colorBy);
+      ctx.fillStyle = colorFor(a, opts);
       ctx.globalAlpha = a.frozen ? 0.55 : 0.92;
       const bw = Math.max(1, colW - (colW > 4 ? 1 : 0));
       if (a.value >= 0) ctx.fillRect(x, midY - len, bw, len);
@@ -99,7 +109,7 @@ export function drawArena(
       const a = agents[i];
       const x = i * colW + colW / 2;
       const y = midY - (a.value / 100) * half;
-      ctx.fillStyle = colorFor(a, opts.colorBy);
+      ctx.fillStyle = colorFor(a, opts);
       ctx.globalAlpha = a.frozen ? 0.55 : 0.95;
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
