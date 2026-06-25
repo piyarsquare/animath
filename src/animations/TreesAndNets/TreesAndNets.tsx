@@ -15,7 +15,12 @@ import { MatrixEditor } from './views/MatrixEditor';
 import { NJTreeView, SplitNetworkView, SplitWeightsList } from './views/NetViews';
 import explainer from './EXPLAINER.md?raw';
 
-const APP_ID = 'trees-and-nets';
+// Persistence namespace. Bumped (was 'trees-and-nets') when the app was
+// re-centered on the distance matrix: the workspace persists window/layout state
+// under ws:<APP_ID> and keeps existing records over defaultLayoutId, so a new
+// namespace is what makes returning users land on the matrix-first 'nets' layout
+// instead of stale pre-re-centering workspace state.
+const APP_ID = 'trees-and-nets-2';
 const dkey = (d: [number, number]) => `${d[0]},${d[1]}`;
 const sameOrder = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
@@ -315,7 +320,7 @@ export default function TreesAndNets(): JSX.Element {
       id: 'distances', title: 'Distances', arch: 'subject', estHeight: 360,
       node: (
         <div style={{ display: 'grid', gap: 10 }}>
-          <Pills<number> label="Leaves (n)" value={n} onChange={setN} options={[5, 6, 7].map((k) => ({ value: k, label: String(k) }))} />
+          <Pills<number> label="Leaves (n)" value={n} onChange={setN} options={[5, 6, 7, 8].map((k) => ({ value: k, label: String(k) }))} />
           <Pills<PresetName> label="Preset metric" value={presetName} onChange={setPresetName} options={presetNames(n).map((p) => ({ value: p, label: p.charAt(0).toUpperCase() + p.slice(1) }))} />
           <MatrixEditor matrix={matrix} onCell={setCell} />
           <Kicker>Edit any distance — the <b>tree</b>, the <b>net</b>, and the split weights all recompute
