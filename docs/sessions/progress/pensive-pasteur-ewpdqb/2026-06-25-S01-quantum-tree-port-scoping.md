@@ -11,7 +11,7 @@ followup: null
 app: trees-and-nets
 thumbnail: assets/2026-06-25-S01-run-nn.png
 signals: null
-next: NeighborNet decision surface (record component-Q) + orientation-lock viz; then Theme C (build by edges)
+next: theming-v2 compliance for the new Nets/Run views (track skin × mode); then Theme C (build by edges)
 ---
 
 # Trees and Nets — port the rest of quantum-tree (evidence engine first)
@@ -62,6 +62,27 @@ plane, and the quartet→split→ordering→tree assembly views.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟢 code · 21:55 — NeighborNet decision surface + oriented-block lock; theming v2 merged in
+**Why:** Finish "show the computation" for NeighborNet (Dan's model); a maintainer
+merged theming v2 (#239) into the branch mid-session.
+
+NeighborNet Run now shows its **component-Q decision** (`NNStep.qScores`; minimum
+outlined = the merge chosen) **and** the **orientation lock**: each component of
+size ≥ 2 is drawn as a rigid **arc band** hugging the circle (gold for the
+just-merged block), narrated "Block cabe is now oriented — it flips only as a whole"
+— the bridge to the associahedron Dan pointed at. Both algorithms now show *why*.
+Also integrated the external **theming v2** merge (`cce2699`): clean auto-merge,
+build green, full suite **208 tests**, lint clean.
+
+![NeighborNet decision: component-Q matrix (min outlined) + the oriented rigid-block arc](assets/2026-06-25-S01-run-nnq.png)
+
+> [!WARNING]
+> The new **Nets/Run views use hardcoded colors** (teal/gold/accent) — they predate
+> the theming-v2 rollout (#239 adapted the old views/fibers, not these). They build
+> and read fine in dark themes but won't track light/dark mode. **Theming-v2
+> compliance for the new views (use `--data` tokens + `useThemeTokens` for the
+> SVG/canvas) is the next follow-up.**
 
 ### 🟢 code · 21:20 — Show the computation (NJ Q-decision surface) + fibers-on-screen fix
 **Why:** Dan: the animation showed the *result*, not *why* a pair joins; and the
