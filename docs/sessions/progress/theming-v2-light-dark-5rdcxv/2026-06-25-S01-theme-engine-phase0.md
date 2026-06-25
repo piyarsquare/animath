@@ -71,6 +71,35 @@ attribute, reactive `useSkin`/`useThemeId`) shipped in
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 17:30 — Solid Worlds: HUDs + decor themed
+**Why:** Bring Solid Worlds to the same "complete" bar as Polygon Worlds under the
+per-app color-audit rule.
+
+Routed Solid Worlds' visualization colors through theme tokens:
+- **Chirality HUD + cube minimap** → discrete `--data` (original=`--data-1` /
+  rotated=`--data-4` / mirrored=`--data-6`, matching the cube's
+  translation/rotation/glide edge legend); HUD chrome → `--panel`/`--border`/
+  `--dim`/`--font-ui`.
+- **Diagnostic decor** (the default scene): marker props → `--data` identities;
+  sign post/slab, floor, grid, frame → neutrals (`coverEngine` `DiagPalette`).
+- **Rooms decor** (`rooms.ts` `RoomPalette`): walls keep the X-warm/Y-green/Z-blue
+  cue in data hues blended toward a neutral; wood/stone/metal → neutrals; frame +
+  knobs → `--accent`; book spines → the data palette; Klein ornament → `--accent-2`.
+- Emissive **lamp/fire/chandelier** stay physically warm (light depicts light, like
+  the first-person sky).
+
+The cover rebuilds on a skin/mode change (added `themeId`/`themeMode` to the
+rebuild effect), so the decor recolors live. **Build green, lint 59 (no new), 88
+tests.** Verified the diagnostic props track the theme (Primary's bold data palette
+vs Daylight's teal/pink).
+
+![Solid Worlds (Primary): diagnostic props + cube map track the data palette](assets/2026-06-25-S01-solid-primary.png)
+
+> [!NOTE]
+> Remaining in Worlds: the **avatar** body colors + the handedness avatar tint
+> (`coverEngine` ~line 495), the **walk-pad/instruction** HUD chrome, and the
+> spherical sky-dome retint. Then the rest of the app suite.
+
 ### 🟣 decision · 15:55 — Standard adopted: per-app "audit every color → map to a token"
 **Why:** Dan: "for each app, list out every color it uses and every colormap and
 identify which ones are hardcoded and assign them to theme values" + "Complete
