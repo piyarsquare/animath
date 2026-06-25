@@ -43,9 +43,31 @@ export interface DecorBuildContext {
   onWallMaterial: (m: THREE.MeshStandardMaterial) => void;
 }
 
-// Faint axis tint on the solid walls (X warm · Y green · Z blue) — orientation
-// without the busy arrows.
-const WALL_TINT: Record<Axis, number> = { x: 0x6f5a54, y: 0x566b5d, z: 0x556071 };
+/**
+ * Theme palette for the room decor (theming v2). Every furniture / wall / book
+ * color resolves from the live theme tokens; SolidWorlds installs it from
+ * getComputedStyle before the cover (re)builds. The faint axis wall tints keep
+ * their X-warm · Y-green · Z-blue orientation cue but in the theme's data hues;
+ * structure (wood/stone/metal) uses neutrals; the picture frame + knobs use the
+ * accent; book spines cycle the data palette. Emissive light sources (lamp,
+ * fire, chandelier bulbs) stay physically warm — like the first-person sky, they
+ * depict light itself, not data. Fallback reproduces the pre-v2 look.
+ */
+export interface RoomPalette {
+  wallX: number; wallY: number; wallZ: number;
+  wood: number; woodDark: number; stone: number; darkBack: number;
+  gold: number; metal: number; candle: number; pot: number; leaf: number; klein: number;
+  books: number[];
+}
+const ROOM_FALLBACK: RoomPalette = {
+  wallX: 0x6f5a54, wallY: 0x566b5d, wallZ: 0x556071,
+  wood: 0x6b4a2f, woodDark: 0x4a3320, stone: 0x9a9088, darkBack: 0x171210,
+  gold: 0xb0904a, metal: 0x8f8a7a, candle: 0xeee3c0, pot: 0x9a5a3e, leaf: 0x3f7d44, klein: 0x9fd9e6,
+  books: [0x9c3b34, 0x3a6ea5, 0x4f8a4f, 0xb0904a, 0x6b4a8a, 0x7a5a3a],
+};
+let RPAL: RoomPalette = ROOM_FALLBACK;
+export function setRoomPalette(p: RoomPalette): void { RPAL = p; }
+const wallTint = (a: Axis): number => (a === 'x' ? RPAL.wallX : a === 'y' ? RPAL.wallY : RPAL.wallZ);
 
 /**
  * A small **Klein bottle** ornament — the classic immersed "bottle" (the neck
@@ -152,7 +174,7 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
   // the way fully transparent panes did.
   const wallMat = (a: Axis) => {
     const m = new THREE.MeshStandardMaterial({
-      color: WALL_TINT[a], roughness: 0.85, metalness: 0.05,
+      color: wallTint(a), roughness: 0.85, metalness: 0.05,
       transparent: wallOpacity < 0.999, opacity: wallOpacity, depthWrite: true, side: THREE.DoubleSide,
     });
     addDisposable(m); onWallMaterial(m); return m;
@@ -171,7 +193,7 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
   // ── arch moldings: a casing band hugging each opening, proud of the wall so the
   // arch reads as built architecture (jambs + an arched header) rather than a clean
   // cut. The band follows the opening (open at the floor) and extrudes inward.
-  const casing = std(0x7a5a3a);
+  const casing = std(RPAL.wood);
   const archCasingGeo = (u0: number, halfW: number, vTop: number, m: number, depth: number) => {
     const s = new THREE.Shape();
     s.moveTo(u0 - halfW - m, -H);
@@ -203,7 +225,7 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
 
   // ── duct frames: a steel square casing around each ceiling duct, so it reads as
   // industrial ductwork (not a doorway). Same basis as the arch casing.
-  const steel = new THREE.MeshStandardMaterial({ color: 0x767c84, roughness: 0.5, metalness: 0.6 });
+  const steel = new THREE.MeshStandardMaterial({ color: RPAL.metal, roughness: 0.5, metalness: 0.6 });
   addDisposable(steel);
   // Casing follows the duct: jambs + a bottom sill, open at the ceiling (the duct's
   // top), mirroring how the arch casing is open at the floor.
@@ -231,9 +253,9 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
   buildDuctCasing('x');
   buildDuctCasing('z');
 
-  const wood = std(0x6b4a2f), woodDark = std(0x4a3320);
-  const stone = std(0x9a9088), darkBack = std(0x171210);
-  const gold = std(0xb0904a), metal = std(0x8f8a7a);
+  const wood = std(RPAL.wood), woodDark = std(RPAL.woodDark);
+  const stone = std(RPAL.stone), darkBack = std(RPAL.darkBack);
+  const gold = std(RPAL.gold), metal = std(RPAL.metal);
 
   // ── rug (offset, clear of the floor hole) ───────────────────────────────────
   mesh(new THREE.PlaneGeometry(u * 0.66, u * 0.42), texMat(rugTexture()), localM(u * 0.06, F + 0.05, -u * 0.06, -Math.PI / 2));
@@ -279,7 +301,7 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
     const bulb = emis(0xffddaa, 1.1);
     for (let i = 0; i < 6; i++) {
       const ang = (i / 6) * Math.PI * 2, r = u * 0.16;
-      cyl(u * 0.014, u * 0.014, u * 0.07, std(0xeee3c0), Math.cos(ang) * r, cy + u * 0.04, Math.sin(ang) * r, 8);
+      cyl(u * 0.014, u * 0.014, u * 0.07, std(RPAL.candle), Math.cos(ang) * r, cy + u * 0.04, Math.sin(ang) * r, 8);
       mesh(new THREE.SphereGeometry(u * 0.022, 10, 8), bulb, localM(Math.cos(ang) * r, cy + u * 0.09, Math.sin(ang) * r));
     }
     mesh(new THREE.SphereGeometry(u * 0.03, 12, 10), metal, localM(0, cy - u * 0.02, 0));
@@ -305,7 +327,7 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
     for (let k = 1; k < 4; k++) box(dep - t, t, w - 2 * t, wood, x0, shelfY(k), bz); // boards (k=0 is the bottom panel)
     // books — spines toward the open front; shelves 1 & 2 stop short on the +z end
     // to make room for the plant and the Klein bottle.
-    const bookMats = [0x9c3b34, 0x3a6ea5, 0x4f8a4f, 0xb0904a, 0x6b4a8a, 0x7a5a3a].map((c) => std(c));
+    const bookMats = RPAL.books.map((c) => std(c));
     const bws = [0.030, 0.022, 0.034, 0.026, 0.030, 0.024, 0.032];
     const bhs = [0.150, 0.130, 0.160, 0.140, 0.155, 0.135, 0.145];
     const bd = dep * 0.6, bookX = xFront + bd / 2 + u * 0.012;
@@ -322,8 +344,8 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
     // potted plant on shelf 2 (+z end)
     {
       const pz = bz + w * 0.3, py = shelfY(2) + t / 2, px = xFront + dep * 0.32;
-      cyl(u * 0.045, u * 0.032, u * 0.06, std(0x9a5a3e), px, py + u * 0.03, pz, 14);   // terracotta pot
-      const leaf = std(0x3f7d44);
+      cyl(u * 0.045, u * 0.032, u * 0.06, std(RPAL.pot), px, py + u * 0.03, pz, 14);   // terracotta pot
+      const leaf = std(RPAL.leaf);
       for (const [dx, dy, dz, r] of [[0, 0.1, 0, 0.05], [-0.012, 0.07, 0.035, 0.036], [0.012, 0.075, -0.035, 0.036], [0, 0.145, 0, 0.032]] as const)
         mesh(new THREE.SphereGeometry(u * r, 10, 8), leaf, localM(px + u * dx, py + u * dy, pz + u * dz));
     }
@@ -331,7 +353,7 @@ export function buildRoomsDecor(ctx: DecorBuildContext) {
     {
       const pz = bz + w * 0.3, ky = shelfY(1) + t / 2, kx = xFront + dep * 0.32, kScale = u * 0.17;
       const kg = kleinBottleGeometry(); addDisposable(kg);
-      const km = new THREE.MeshStandardMaterial({ color: 0x9fd9e6, roughness: 0.2, metalness: 0.25, side: THREE.DoubleSide, emissive: 0x1b3640, emissiveIntensity: 0.5 });
+      const km = new THREE.MeshStandardMaterial({ color: RPAL.klein, roughness: 0.2, metalness: 0.25, side: THREE.DoubleSide, emissive: new THREE.Color(RPAL.klein).multiplyScalar(0.25).getHex(), emissiveIntensity: 0.5 });
       addDisposable(km);
       const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0.7, Math.PI / 2));
       const M = new THREE.Matrix4().compose(new THREE.Vector3(kx, ky + kScale * 0.5, pz), q, new THREE.Vector3(kScale, kScale, kScale));

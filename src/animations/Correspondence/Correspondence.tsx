@@ -6,7 +6,8 @@ import { Slider, Select, NumberInput } from '../../components/ControlPanel';
 import { Kicker } from '../../chrome/readouts';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
-import { PALETTE_OPTIONS } from '../../lib/colormaps';
+import { PALETTE_OPTIONS, PALETTE_THEME, resolvePalette } from '../../lib/colormaps';
+import { useThemeId } from '../../chrome/skins';
 
 export default function Correspondence() {
   const baseView: ViewBounds = { xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 };
@@ -14,9 +15,10 @@ export default function Correspondence() {
   const [juliaView, setJuliaView] = useState<ViewBounds>({ xMin: -2, xMax: 2, yMin: -2, yMax: 2 });
   const [c, setC] = useState<Complex>({ real: -0.7, imag: 0.27015 });
   const [iter, setIter] = useState(100);
-  const [paletteM, setPaletteM] = useState(0);
+  const themeId = useThemeId();
+  const [paletteM, setPaletteM] = useState(PALETTE_THEME);
   const [offsetM, setOffsetM] = useState(0);
-  const [paletteJ, setPaletteJ] = useState(0);
+  const [paletteJ, setPaletteJ] = useState(PALETTE_THEME);
   const [offsetJ, setOffsetJ] = useState(0);
   const [path, setPath] = useState<Complex[]>([]);
   const [drawingPath, setDrawingPath] = useState(false);
@@ -194,7 +196,7 @@ export default function Correspondence() {
             onViewChange={setMandelView}
             juliaC={c}
             iter={iter}
-            palette={paletteM}
+            palette={resolvePalette(paletteM, themeId)}
             offset={offsetM}
             markC={c}
             onPickC={handlePick}
@@ -217,7 +219,7 @@ export default function Correspondence() {
             onViewChange={setJuliaView}
             juliaC={c}
             iter={iter}
-            palette={paletteJ}
+            palette={resolvePalette(paletteJ, themeId)}
             offset={offsetJ}
           />
         </div>
