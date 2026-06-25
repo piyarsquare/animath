@@ -508,13 +508,18 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
   // All deliberately CHIRAL — cyan on the LEFT, magenta on the RIGHT, nose toward
   // −z (forward) — so you can watch yourself become your own mirror image.
   const mat = (color: number) => track(new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.1, side: THREE.DoubleSide }));
-  const CYAN = 0x33d6ff, MAGENTA = 0xff4fa3;
+  // Avatar palette from the theme (theming v2): the LEFT/RIGHT chirality cue →
+  // --data-1 / --data-6 (matching the Handedness HUD); the body → accent, panels →
+  // neutrals. Read at build; the cover rebuilds on a skin change.
+  const ac = (n: string, f: number) => { const v = getComputedStyle(document.documentElement).getPropertyValue(n).trim(); return v ? new THREE.Color(v).getHex() : f; };
+  const AV = { primary: ac('--accent', 0xffe08a), light: ac('--fg', 0xf0e6d0), neutral: ac('--dim', 0xb9c6da), dark: ac('--dim-2', 0x222228), alt: ac('--accent-2', 0xe06a4a) };
+  const CYAN = ac('--data-1', 0x33d6ff), MAGENTA = ac('--data-6', 0xff4fa3);
 
   function buildPerson(): THREE.Group {
     const g = new THREE.Group();
-    const body = new THREE.Mesh(track(new THREE.CylinderGeometry(U * 0.045, U * 0.06, U * 0.26, 14)), mat(0xffe08a));
-    const head = new THREE.Mesh(track(new THREE.SphereGeometry(U * 0.05, 14, 10)), mat(0xffd27a)); head.position.y = U * 0.18;
-    const nose = new THREE.Mesh(track(new THREE.ConeGeometry(U * 0.022, U * 0.08, 10)), mat(0xfff0c0));
+    const body = new THREE.Mesh(track(new THREE.CylinderGeometry(U * 0.045, U * 0.06, U * 0.26, 14)), mat(AV.primary));
+    const head = new THREE.Mesh(track(new THREE.SphereGeometry(U * 0.05, 14, 10)), mat(AV.primary)); head.position.y = U * 0.18;
+    const nose = new THREE.Mesh(track(new THREE.ConeGeometry(U * 0.022, U * 0.08, 10)), mat(AV.light));
     nose.rotation.x = -Math.PI / 2; nose.position.set(0, U * 0.18, -U * 0.07);
     const sg = track(new THREE.SphereGeometry(U * 0.026, 10, 8));
     const l = new THREE.Mesh(sg, mat(CYAN)); l.position.set(-U * 0.075, U * 0.02, 0);
@@ -525,14 +530,14 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
 
   function buildAirplane(): THREE.Group {
     const g = new THREE.Group();
-    const fuse = new THREE.Mesh(track(new THREE.CylinderGeometry(U * 0.05, U * 0.035, U * 0.5, 14)), mat(0xe6ecf5));
+    const fuse = new THREE.Mesh(track(new THREE.CylinderGeometry(U * 0.05, U * 0.035, U * 0.5, 14)), mat(AV.light));
     fuse.rotation.x = Math.PI / 2; // length along z
-    const nose = new THREE.Mesh(track(new THREE.ConeGeometry(U * 0.05, U * 0.14, 14)), mat(0xcdd7e6));
+    const nose = new THREE.Mesh(track(new THREE.ConeGeometry(U * 0.05, U * 0.14, 14)), mat(AV.neutral));
     nose.rotation.x = -Math.PI / 2; nose.position.z = -U * 0.32;
-    const wing = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.62, U * 0.02, U * 0.14)), mat(0xb9c6da));
-    const tailFin = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.02, U * 0.12, U * 0.1)), mat(0xb9c6da));
+    const wing = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.62, U * 0.02, U * 0.14)), mat(AV.neutral));
+    const tailFin = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.02, U * 0.12, U * 0.1)), mat(AV.neutral));
     tailFin.position.set(0, U * 0.06, U * 0.22);
-    const tailWing = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.24, U * 0.02, U * 0.08)), mat(0xb9c6da));
+    const tailWing = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.24, U * 0.02, U * 0.08)), mat(AV.neutral));
     tailWing.position.z = U * 0.22;
     const tipGeo = track(new THREE.BoxGeometry(U * 0.06, U * 0.03, U * 0.14));
     const lTip = new THREE.Mesh(tipGeo, mat(CYAN)); lTip.position.set(-U * 0.31, 0, 0);    // left wingtip cyan
@@ -543,13 +548,13 @@ export function makeCoverEngine(deps: EngineDeps3, spec: SolidWorldSpec, opts: O
 
   function buildCar(): THREE.Group {
     const g = new THREE.Group();
-    const body = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.3, U * 0.1, U * 0.5)), mat(0xe06a4a));
+    const body = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.3, U * 0.1, U * 0.5)), mat(AV.alt));
     body.position.y = U * 0.06;
-    const cabin = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.24, U * 0.1, U * 0.24)), mat(0xf0e6d0));
+    const cabin = new THREE.Mesh(track(new THREE.BoxGeometry(U * 0.24, U * 0.1, U * 0.24)), mat(AV.light));
     cabin.position.set(0, U * 0.15, U * 0.02);
     const wheelGeo = track(new THREE.CylinderGeometry(U * 0.05, U * 0.05, U * 0.04, 12));
     for (const [x, z] of [[-0.16, -0.16], [0.16, -0.16], [-0.16, 0.16], [0.16, 0.16]] as const) {
-      const w = new THREE.Mesh(wheelGeo, mat(0x222228)); w.rotation.z = Math.PI / 2;
+      const w = new THREE.Mesh(wheelGeo, mat(AV.dark)); w.rotation.z = Math.PI / 2;
       w.position.set(x * U, U * 0.02, z * U); g.add(w);
     }
     const stripeGeo = track(new THREE.BoxGeometry(U * 0.02, U * 0.06, U * 0.4));
