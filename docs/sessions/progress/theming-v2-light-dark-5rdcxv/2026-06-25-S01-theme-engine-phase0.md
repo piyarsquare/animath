@@ -71,6 +71,26 @@ attribute, reactive `useSkin`/`useThemeId`) shipped in
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 17:45 — Shader/DOM batch: Plane Transform + 3 apps confirmed clean
+**Why:** Work down the rollout list; verify which apps already comply vs need work.
+
+- **Plane Transform** — viewport clear + pane bg → `--viz-bg`, drawn-curve stroke →
+  `--fg`, draw-mode pill → `--accent-soft`/`--accent` (the rainbow domain field is
+  kept — it's the meaningful hue map).
+- **Fractals GPU · Correspondence · Counting the Ways** — audited, **already
+  token-clean** (palettes in `colormaps.ts` / the registry, backgrounds via CSS
+  tokens). No changes.
+
+**Rollout status** (per-app audit → tokens):
+- ✅ Chrome engine · Trinary (scene + timeline + Lab) · Polygon Worlds (sky +
+  decor) · Solid Worlds (sky + decor + HUDs) · Plane Transform · Fractals ·
+  Correspondence · Counting the Ways · Stable Matching (#238).
+- ⏳ **Remaining:** **Argand** (equation-identity colors `Z/A1/A0/A2/F/FIX/CRIT`
+  → `--data` slots — needs the exported consts made theme-dynamic across the plane
+  + panel labels), **Trees & Nets** (SVG, ~16), **Agentic Sorting** (agents →
+  discrete `--data` + canvas redraw), **TrinaryLab console** stat-text/histograms,
+  **Worlds avatars** + walk-pad/instruction HUD + spherical sky-dome retint.
+
 ### 🟡 milestone · 17:30 — Solid Worlds: HUDs + decor themed
 **Why:** Bring Solid Worlds to the same "complete" bar as Polygon Worlds under the
 per-app color-audit rule.
