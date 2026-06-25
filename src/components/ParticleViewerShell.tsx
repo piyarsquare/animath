@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Canvas3D from './Canvas3D';
+import { Scheme } from '../chrome/Scheme';
 import { Slider, Pills, Select, Checkbox, RangeSlider } from './ControlPanel';
 import { usePhone } from '../chrome/usePhone';
 import Workspace from '../chrome/workspace/Workspace';
@@ -628,9 +629,14 @@ export default function ParticleViewerShell({
       defaultRect: { x: 372, y: 16, w: 712, h: 628 },
       hint: 'drag to orbit · two fingers or Shift-drag to pan · scroll to zoom',
       node: (
-        <div style={{ position: 'absolute', inset: 0, touchAction: 'none' }} {...gestures}>
-          <Canvas3D onMount={onMount} />
-        </div>
+        // The particle cloud is an additive-glow stage → force dark (theming v2):
+        // its clear color resolves the theme's dark --viz-bg; the domain rainbow
+        // (the hue colormap) is kept.
+        <Scheme mode="dark" style={{ position: 'absolute', inset: 0 }}>
+          <div style={{ position: 'absolute', inset: 0, touchAction: 'none' }} {...gestures}>
+            <Canvas3D onMount={onMount} />
+          </div>
+        </Scheme>
       ),
     },
   ];
@@ -712,12 +718,14 @@ export default function ParticleViewerShell({
     return (
       <div className="am-embed">
         <div className="am-embed-view">
-          <div
-            style={{ position: 'absolute', inset: 0, touchAction: 'none' }}
-            {...(embed.controls ? gestures : {})}
-          >
-            <Canvas3D onMount={onMount} />
-          </div>
+          <Scheme mode="dark" style={{ position: 'absolute', inset: 0 }}>
+            <div
+              style={{ position: 'absolute', inset: 0, touchAction: 'none' }}
+              {...(embed.controls ? gestures : {})}
+            >
+              <Canvas3D onMount={onMount} />
+            </div>
+          </Scheme>
           {embed.buttons && embed.buttons.length > 0 && (
             <div className="am-embed-buttons">
               {embed.buttons.map(b => {

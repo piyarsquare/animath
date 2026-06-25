@@ -164,7 +164,8 @@ export default function PlaneTransform({ embed }: {
     function mount(target: HTMLDivElement, transform: 0 | 1, store: React.MutableRefObject<PaneRefs>) {
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // cap DPR — phones report 3
-      renderer.setClearColor(0x0c0c10);
+      // viewport clear = the theme's viz background (theming v2; read at mount)
+      renderer.setClearColor(new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--viz-bg').trim() || '#0c0c10'));
       target.appendChild(renderer.domElement);
       renderer.domElement.style.display = 'block';
       renderer.domElement.style.width = '100%';
@@ -399,8 +400,8 @@ export default function PlaneTransform({ embed }: {
         style={{
           ...curveButtonStyle,
           ...(drawMode ? {
-            background: 'rgba(120,180,255,0.18)',
-            borderColor: 'rgba(120,180,255,0.55)',
+            background: 'var(--accent-soft)',
+            borderColor: 'var(--accent)',
           } : {}),
         }}
         onClick={() => setDrawMode(d => !d)}
@@ -686,7 +687,7 @@ function CurveSvg({ box, viewExtent, planeMode, points }: {
       width={box.w} height={box.h}
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}
     >
-      <path d={d} stroke="#ffffff" strokeOpacity={0.9} strokeWidth={2}
+      <path d={d} stroke="var(--fg)" strokeOpacity={0.9} strokeWidth={2}
             fill="none" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
@@ -846,7 +847,7 @@ function OutputPane({
 const paneStyle: React.CSSProperties = {
   position: 'absolute',
   inset: 0,
-  background: '#0c0c10',
+  background: 'var(--viz-bg)',
   overflow: 'hidden',
   display: 'flex',
   alignItems: 'center',

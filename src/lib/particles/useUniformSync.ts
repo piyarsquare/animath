@@ -2,12 +2,15 @@ import { useEffect } from 'react';
 import * as THREE from 'three';
 import { AXIS_COLORS } from './types';
 import type { ParticleState } from './useParticleState';
+import { useThemeId } from '../../chrome/skins';
 
 export function useUniformSync(state: ParticleState): void {
   const {
     materialsRef, cameraRef, rendererRef, texturesRef,
     xAxisRef, yAxisRef, uAxisRef, vAxisRef,
   } = state;
+  // Re-sync the clear color when the skin changes (the stage is force-dark).
+  const themeId = useThemeId();
 
   useEffect(() => {
     materialsRef.current.forEach(m => { m.uniforms.saturation.value = state.saturation; });
@@ -87,8 +90,13 @@ export function useUniformSync(state: ParticleState): void {
   }, [state.cameraZ, state.camQuat, state.panX, state.panY, state.panZ]);
 
   useEffect(() => {
-    if (rendererRef.current) {
-      rendererRef.current.setClearColor(state.objectMode ? 0xffffff : 0x000000);
+    const r = rendererRef.current;
+    if (r) {
+      // The glow stage is force-dark (theming v2): its clear color is the theme's
+      // dark --viz-bg (read from the canvas, which lives inside the <Scheme dark>
+      // subtree); object mode keeps a white studio background.
+      const vb = getComputedStyle(r.domElement).getPropertyValue('--viz-bg').trim();
+      r.setClearColor(new THREE.Color(state.objectMode ? '#ffffff' : (vb || '#04060c')));
     }
     materialsRef.current.forEach(m => {
       // Sheet materials keep their own NormalBlending + no depth-write (true
@@ -97,7 +105,8 @@ export function useUniformSync(state: ParticleState): void {
       m.blending = state.objectMode ? THREE.NormalBlending : THREE.AdditiveBlending;
       m.depthWrite = state.objectMode;
     });
-  }, [state.objectMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.objectMode, themeId]);
 
   useEffect(() => {
     materialsRef.current.forEach(m => { m.uniforms.shapeType.value = state.shapeIndex; });

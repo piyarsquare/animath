@@ -2,17 +2,42 @@ import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, use
 import { Slider, Pills } from '../../../components/ControlPanel';
 import { starPaths } from './runner';
 
-/** Star-trajectory overlay colors (gold / orange / blue), matching the stars. */
-const STAR_RGB = ['255,210,127', '255,112,67', '158,199,255'];
 import {
-  computeBasinRange, basinPlanetAt, chaosRamp, CHAOS_LAMBDA_MAX, OUTCOME_RGB, OUTCOME_CODE,
-  statColor, statRamp, STAT_LABEL, STAT_ORDER, basinTargets, exactRunParams, statRunParams, statPixelSeed,
+  computeBasinRange, basinPlanetAt, CHAOS_LAMBDA_MAX, OUTCOME_RGB, OUTCOME_CODE,
+  statColor, STAT_LABEL, STAT_ORDER, basinTargets, exactRunParams, statRunParams, statPixelSeed,
   exactPosPlanet, statPosPlanet,
   type BasinConfig, type BasinMode, type BasinMetric, type BasinLens, type StatMetric, type Domain, type FrameId,
 } from './basin';
 import { BasinPool } from './basinPool';
 import { GpuRunner, gpuAvailable, type PlanetIC } from './gpu';
 import { mulberry32, type EnsembleConfig, type RunParams } from './rng';
+import { useThemeId } from '../../../chrome/skins';
+import { useThemeTokens } from '../../../chrome/useThemeTokens';
+import { sampleContinuous, themeMapsFor, hexToRgb } from '../../../lib/colormapRegistry';
+import { OUTCOME_GOODNESS } from './themeColors';
+import type { Outcome } from '@/lib/nbody';
+
+/** Build the Destiny Map's themed ramps from the active theme (theming v2):
+ *  fate → the theme's recommended DIVERGENT map sampled by goodness; chaos & stat
+ *  → registry SEQUENTIAL maps. Returns numeric [r,g,b] tuples for ImageData. */
+function buildRamps(themeId: string, dimHex: string) {
+  const div = themeMapsFor('divergent', themeId)[0] ?? 'rdbu';
+  const flip = div === 'coolwarm'; // coolwarm runs cool→warm; flip so good=cool
+  const seqStat = themeMapsFor('sequential', themeId)[0] ?? 'viridis';
+  const seqChaos = themeMapsFor('sequential', themeId)[1] ?? seqStat;
+  const gray = hexToRgb(dimHex || '#808080');
+  const outcomeRgb = {} as Record<Outcome, [number, number, number]>;
+  for (const o of OUTCOME_CODE) {
+    const g = OUTCOME_GOODNESS[o];
+    outcomeRgb[o] = g < 0 ? gray : hexToRgb(sampleContinuous(div, flip ? 1 - g : g));
+  }
+  const clamp = (x: number) => Math.min(1, Math.max(0, x));
+  return {
+    outcomeRgb,
+    stat: (x: number) => hexToRgb(sampleContinuous(seqStat, clamp(x))),
+    chaos: (x: number) => hexToRgb(sampleContinuous(seqChaos, clamp(x))),
+  };
+}
 
 /** The map's GPU lane covers every plane colored by fate (exact) or by the
  *  statistical lens — the position plane uploads raw ICs, the radius×speed and
@@ -46,19 +71,22 @@ interface DimResult { D: number; alpha: number; boundary: number; pts: [number, 
 
 function DimPlot({ dim, w = 104, h = 60 }: { dim: DimResult; w?: number; h?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const themeId = useThemeId();
   useEffect(() => {
     const cv = ref.current; const ctx = cv?.getContext('2d'); if (!cv || !ctx) return;
+    const cs = getComputedStyle(cv);
+    const tok = (n: string, f: string) => cs.getPropertyValue(n).trim() || f;
     const W = cv.width, H = cv.height, pad = 6;
-    ctx.fillStyle = '#0a0e16'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = tok('--viz-bg', '#0a0e16'); ctx.fillRect(0, 0, W, H);
     const xs = dim.pts.map(p => p[0]), ys = dim.pts.map(p => p[1]);
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     const X = (x: number) => pad + (W - 2 * pad) * (x1 === x0 ? 0.5 : (x - x0) / (x1 - x0));
     const Y = (y: number) => H - pad - (H - 2 * pad) * (y1 === y0 ? 0.5 : (y - y0) / (y1 - y0));
     // fitted line
-    ctx.strokeStyle = 'rgba(255,212,0,0.6)'; ctx.beginPath(); ctx.moveTo(X(x0), Y(y0)); ctx.lineTo(X(x1), Y(y1)); ctx.stroke();
-    ctx.fillStyle = '#66f0ff';
+    ctx.strokeStyle = tok('--accent', '#ffd400'); ctx.beginPath(); ctx.moveTo(X(x0), Y(y0)); ctx.lineTo(X(x1), Y(y1)); ctx.stroke();
+    ctx.fillStyle = tok('--accent-2', '#66f0ff');
     for (const [x, y] of dim.pts) { ctx.beginPath(); ctx.arc(X(x), Y(y), 2.5, 0, 7); ctx.fill(); }
-  }, [dim]);
+  }, [dim, themeId]);
   return <canvas ref={ref} width={w} height={h} style={{ width: w, height: h, borderRadius: 4, display: 'block', flex: 'none' }} />;
 }
 
@@ -121,6 +149,25 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   const boxRef = useRef(system?.box); boxRef.current = system?.box;
   const st = { mode, metric, lens, statMetric, statRuns, domain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro, frame, engine };
   const stateRef = useRef(st); stateRef.current = st;
+
+  // Theming v2: the map's colors track the theme. The fate map uses the theme's
+  // divergent map; chaos/stat use sequential maps; the star overlay uses the same
+  // spread --data slots as the Observatory scene (1·4·6). All recoloring happens
+  // on the main thread from the stored value grids (workers/GPU only compute), so
+  // a skin switch recolors without resimulating.
+  const themeId = useThemeId();
+  const tk = useThemeTokens(['dim', 'data-1', 'data-4', 'data-6', 'viz-bg', 'accent', 'accent-2']);
+  const ramps = useMemo(() => buildRamps(themeId, tk.dim), [themeId, tk.dim]);
+  const rampsRef = useRef(ramps); rampsRef.current = ramps;
+  const starRgb = useMemo(
+    () => [tk['data-1'], tk['data-4'], tk['data-6']].map(h => hexToRgb(h || '#888').join(',')),
+    [tk],
+  );
+  // Holds the latest applyColor so the theme-change effect can recolor without a
+  // stale closure (applyColor is redefined each render).
+  const applyColorRef = useRef<(() => void) | null>(null);
+  // Recolor the current map when the theme changes (no resimulation).
+  useEffect(() => { applyColorRef.current?.(); }, [themeId, tk]);
 
   // The stars' trajectories are identical for every run (the planet is a test
   // mass), so integrate them once and reuse — only their inputs matter.
@@ -336,10 +383,27 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       outGridRef.current = outGrid; tGridRef.current = tGrid; statGridRef.current = statGrid; paintedResRef.current = N;
       let painted = 0; const total = N * N;
 
-      const paint = (start: number, rgb: Uint8Array, out: Uint8Array, tt: Float32Array, stat: Float32Array, cnt: number) => {
+      // Color from the themed ramps (ignoring the worker/GPU's own rgb), so every
+      // engine and every progressive stage paints in theme colors from the start.
+      const isStat = bc.lens === 'stat';
+      const isChaos = bc.lens === 'exact' && bc.metric === 'chaos';
+      const tMax = cfgNow.tMax;
+      const paint = (start: number, _rgb: Uint8Array, out: Uint8Array, tt: Float32Array, stat: Float32Array, cnt: number) => {
+        const R = rampsRef.current;
+        const statIdx = STAT_ORDER.indexOf(statMetricRef.current);
         for (let k = 0; k < cnt; k++) {
           const p = start + k, o = p * 4;
-          img.data[o] = rgb[k * 3]; img.data[o + 1] = rgb[k * 3 + 1]; img.data[o + 2] = rgb[k * 3 + 2]; img.data[o + 3] = 255;
+          let cr: number, cg: number, cb: number;
+          if (isStat) {
+            [cr, cg, cb] = R.stat(Math.pow(Math.min(1, Math.max(0, stat[k * 4 + statIdx])), 0.6));
+          } else if (isChaos) {
+            [cr, cg, cb] = R.chaos(tt[k] / CHAOS_LAMBDA_MAX);
+          } else {
+            const base = R.outcomeRgb[OUTCOME_CODE[out[k]]] ?? [128, 128, 128];
+            const tb = 0.28 + 0.72 * Math.min(1, tt[k] / tMax);
+            cr = base[0] * tb; cg = base[1] * tb; cb = base[2] * tb;
+          }
+          img.data[o] = cr; img.data[o + 1] = cg; img.data[o + 2] = cb; img.data[o + 3] = 255;
           outGrid[p] = out[k]; tGrid[p] = tt[k];
           statGrid[p * 4] = stat[k * 4]; statGrid[p * 4 + 1] = stat[k * 4 + 1]; statGrid[p * 4 + 2] = stat[k * 4 + 2]; statGrid[p * 4 + 3] = stat[k * 4 + 3];
         }
@@ -411,8 +475,24 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     const cv = canvasRef.current; const ctx = cv?.getContext('2d');
     if (!cv || !ctx) return;
     const s = stateRef.current;
+    const R = rampsRef.current;
     const isStat = s.lens === 'stat';
     const isChaos = s.lens === 'exact' && s.metric === 'chaos';
+    // Fate is categorical (no auto-fit range): recolor straight from the outcome
+    // code + survival-time grids using the themed divergent palette.
+    if (s.lens === 'exact' && s.metric === 'fate') {
+      const out = outGridRef.current, tg = tGridRef.current;
+      if (out.length !== N * N) return;
+      const tMax = cfgRef.current.tMax;
+      const img = ctx.createImageData(N, N);
+      for (let p = 0; p < N * N; p++) {
+        const base = R.outcomeRgb[OUTCOME_CODE[out[p]]] ?? [128, 128, 128];
+        const tb = 0.28 + 0.72 * Math.min(1, tg[p] / tMax);
+        const o = p * 4;
+        img.data[o] = base[0] * tb; img.data[o + 1] = base[1] * tb; img.data[o + 2] = base[2] * tb; img.data[o + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0); setColorRange(null); return;
+    }
     if (!isStat && !isChaos) { setColorRange(null); return; }
     const sg = statGridRef.current, tg = tGridRef.current;
     if (isStat && sg.length !== N * N * 4) return;
@@ -434,13 +514,14 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     for (let p = 0; p < N * N; p++) {
       const v = valAt(p);
       const x = auto ? (v - lo) / span : (isStat ? Math.pow(v, 0.6) : v / CHAOS_LAMBDA_MAX);
-      const [r, g, b] = isStat ? statRamp(x) : chaosRamp(x);
+      const [r, g, b] = isStat ? R.stat(x) : R.chaos(x);
       const o = p * 4; img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b; img.data[o + 3] = 255;
       if (isStat) tg[p] = v; // keep hover reading the shown metric
     }
     ctx.putImageData(img, 0, 0);
     setColorRange([lo, hi]);
   };
+  applyColorRef.current = applyColor;
 
   // The radspeed plane derives its domain from the shared census box, so only
   // reset the internal domain for the other planes.
@@ -467,7 +548,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       if (path.length < 2) return;
       const ox = (i: number) => o ? path[i].x - o[Math.min(i, o.length - 1)].x : path[i].x;
       const oy = (i: number) => o ? path[i].y - o[Math.min(i, o.length - 1)].y : path[i].y;
-      const rgb = STAR_RGB[k % STAR_RGB.length];
+      const rgb = starRgb[k % starRgb.length];
       ctx.strokeStyle = `rgba(${rgb},0.55)`; ctx.lineWidth = 1.4;
       ctx.beginPath(); ctx.moveTo(X(ox(0)), Y(oy(0)));
       for (let i = 1; i < path.length; i++) ctx.lineTo(X(ox(i)), Y(oy(i)));
@@ -477,11 +558,11 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       ctx.beginPath(); ctx.arc(X(ox(0)), Y(oy(0)), 3.5, 0, 7); ctx.fill();
     });
     if (o) { // crosshair at the co-moving frame center
-      ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(128,128,128,0.7)'; ctx.lineWidth = 1;
       const cx = X(0), cy = Y(0);
       ctx.beginPath(); ctx.moveTo(cx - 6, cy); ctx.lineTo(cx + 6, cy); ctx.moveTo(cx, cy - 6); ctx.lineTo(cx, cy + 6); ctx.stroke();
     }
-  }, [starTracks, effDomain.a0, effDomain.a1, effDomain.b0, effDomain.b1, mode, showStars, renderedFrame]);
+  }, [starTracks, effDomain.a0, effDomain.a1, effDomain.b0, effDomain.b1, mode, showStars, renderedFrame, starRgb]);
 
   const switchMode = (m: BasinMode) => { stop(); setMode(m); };
 
@@ -615,7 +696,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             { value: 'cpu', label: 'CPU' },
           ]} onChange={(v) => setEngine(v as BasinEngine)} />}
           {engine === 'gpu' && !gpuSupportsMap(metric, lens) && (
-            <div style={{ font: '11px/1.5 system-ui', color: '#ffd27f', marginTop: 4 }}>
+            <div style={{ font: '11px/1.5 system-ui', color: 'var(--accent)', marginTop: 4 }}>
               ⚠ The GPU lane doesn’t compute the chaos/λ exponent — this view will render on Workers instead.
             </div>
           )}
@@ -645,7 +726,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                   <DimPlot dim={dim} />
                   <div style={{ font: '11px/1.45 ui-monospace, monospace', whiteSpace: 'nowrap' }}>
-                    <div>boundary&nbsp;<b style={{ color: '#ffd27f' }}>D ≈ {dim.D.toFixed(3)}</b></div>
+                    <div>boundary&nbsp;<b style={{ color: 'var(--accent)' }}>D ≈ {dim.D.toFixed(3)}</b></div>
                     <div>uncertainty&nbsp;<b style={{ color: 'var(--accent-2)' }}>α ≈ {dim.alpha.toFixed(3)}</b></div>
                     <div style={{ color: 'var(--dim)' }}>boundary {(dim.boundary * 100).toFixed(0)}%</div>
                   </div>
@@ -660,7 +741,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             <div style={{ marginTop: 10, font: '11px ui-monospace, monospace', color: 'var(--dim)' }}>
               <div style={{
                 height: 10, borderRadius: 3, marginBottom: 2,
-                background: `linear-gradient(90deg, rgb(${statRamp(0).join(',')}), rgb(${statRamp(0.5).join(',')}), rgb(${statRamp(1).join(',')}))`,
+                background: `linear-gradient(90deg, rgb(${ramps.stat(0).join(',')}), rgb(${ramps.stat(0.5).join(',')}), rgb(${ramps.stat(1).join(',')}))`,
               }} />
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>{STAT_LABEL[statMetric]} {colorRange ? `${(colorRange[0] * 100).toFixed(0)}%` : '0%'}</span>
@@ -671,7 +752,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px', marginTop: 10, font: '11px ui-monospace, monospace' }}>
               {OUTCOME_CODE.filter(o => o !== 'blowup').map(o => (
                 <span key={o} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 2, background: `rgb(${OUTCOME_RGB[o].join(',')})` }} />{o}
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: `rgb(${ramps.outcomeRgb[o].join(',')})` }} />{o}
                 </span>
               ))}
             </div>
@@ -679,7 +760,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             <div style={{ marginTop: 10, font: '11px ui-monospace, monospace', color: 'var(--dim)' }}>
               <div style={{
                 height: 10, borderRadius: 3, marginBottom: 2,
-                background: `linear-gradient(90deg, rgb(${chaosRamp(0).join(',')}), rgb(${chaosRamp(0.33).join(',')}), rgb(${chaosRamp(0.66).join(',')}), rgb(${chaosRamp(1).join(',')}))`,
+                background: `linear-gradient(90deg, rgb(${ramps.chaos(0).join(',')}), rgb(${ramps.chaos(0.33).join(',')}), rgb(${ramps.chaos(0.66).join(',')}), rgb(${ramps.chaos(1).join(',')}))`,
               }} />
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>regular  λ={colorRange ? colorRange[0].toFixed(2) : '0'}</span>
@@ -705,7 +786,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
         <div style={{ maxWidth: 460, width: '100%' }}>
           <div style={{ position: 'relative', width: '100%' }}>
             <canvas ref={canvasRef} width={res} height={res}
-              style={{ width: '100%', aspectRatio: '1', borderRadius: 6, display: 'block', cursor: 'crosshair', imageRendering: samples === 1 ? 'pixelated' : 'auto', touchAction: 'none', background: '#0a0e16' }}
+              style={{ width: '100%', aspectRatio: '1', borderRadius: 6, display: 'block', cursor: 'crosshair', imageRendering: samples === 1 ? 'pixelated' : 'auto', touchAction: 'none', background: 'var(--viz-bg)' }}
               onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={() => setHover('')} />
             <canvas ref={starCanvasRef} width={600} height={600}
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', borderRadius: 6, pointerEvents: 'none' }} />

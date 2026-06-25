@@ -1,9 +1,36 @@
 import { useEffect, useRef } from 'react';
 import { step, getScenario, buildStars, launchPlanet, orbitFrame, type SimState } from '@/lib/nbody';
 import type { EnsembleConfig } from './rng';
+import { useThemeId } from '../../../chrome/skins';
+import { outcomeHex } from './themeColors';
 
-const STAR_COLORS = ['#ffd27f', '#ff7043', '#9ec7ff'];
 const HALF_EXTENT = 8;
+
+interface MiniPalette {
+  bg: string; stars: [string, string, string]; planet: string; trail: string;
+  flash: { destroyed: string; ejected: string; happy: string; survived: string };
+}
+const MINI_FALLBACK: MiniPalette = {
+  bg: '#05060a', stars: ['#5fa8ff', '#ffce47', '#ff6f9c'], planet: '#eef1f7', trail: '#5fe3cd',
+  flash: { destroyed: '#ff7043', ejected: '#5a9be8', happy: '#46d98a', survived: '#9aa7bd' },
+};
+function buildMiniPalette(el: Element, themeId: string): MiniPalette {
+  const cs = getComputedStyle(el);
+  const t = (n: string, f: string) => cs.getPropertyValue(n).trim() || f;
+  const dim = t('--dim', '#9aa7bd');
+  return {
+    bg: t('--viz-bg', MINI_FALLBACK.bg),
+    stars: [t('--data-1', MINI_FALLBACK.stars[0]), t('--data-4', MINI_FALLBACK.stars[1]), t('--data-6', MINI_FALLBACK.stars[2])],
+    planet: t('--fg', MINI_FALLBACK.planet),
+    trail: t('--accent-2', MINI_FALLBACK.trail),
+    flash: {
+      destroyed: outcomeHex(themeId, 'planet-destroyed', dim),
+      ejected: outcomeHex(themeId, 'planet-ejected', dim),
+      happy: outcomeHex(themeId, 'happy', dim),
+      survived: outcomeHex(themeId, 'survived', dim),
+    },
+  };
+}
 
 /** A small, fast, decorative sim that cycles through randomly-sampled worlds —
  *  the live screens while the ensemble tallies headless. Flashes an outcome
@@ -15,11 +42,19 @@ export default function MiniSim({ cfg, running, size = 200, steps = 140 }: {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cfgRef = useRef(cfg); cfgRef.current = cfg;
   const runRef = useRef(running); runRef.current = running;
+  // Theme palette read live (theming v2): stars → spread --data, planet → --fg,
+  // outcome flashes → the divergent fate colors. Updated on a skin switch.
+  const themeId = useThemeId();
+  const palRef = useRef<MiniPalette>(MINI_FALLBACK);
+  useEffect(() => {
+    if (canvasRef.current) palRef.current = buildMiniPalette(canvasRef.current, themeId);
+  }, [themeId]);
 
   useEffect(() => {
     const cv = canvasRef.current;
     const ctx = cv?.getContext('2d');
     if (!cv || !ctx) return;
+    palRef.current = buildMiniPalette(cv, themeId);
 
     let raf = 0;
     let sim: SimState | null = null;
@@ -50,6 +85,7 @@ export default function MiniSim({ cfg, running, size = 200, steps = 140 }: {
       raf = requestAnimationFrame(frame);
       const c = cfgRef.current;
       const preset = getScenario(c.presetId);
+      const pal = palRef.current;
 
       if (runRef.current && sim) {
         for (let i = 0; i < steps; i++) step(sim, preset.system.dt);
@@ -63,28 +99,30 @@ export default function MiniSim({ cfg, running, size = 200, steps = 140 }: {
         const starEjected = sim.stars.some(s => Math.hypot(s.x, s.y) > 12);
 
         if (!Number.isFinite(p.x)) { reseed(); }
-        else if (dmin < 0.08) { flash = '#ff7043'; flashUntil = performance.now() + 450; reseed(); }
-        else if (dcom > 16) { flash = '#5a9be8'; flashUntil = performance.now() + 450; reseed(); }
-        else if (sim.t > c.tMax) { flash = starEjected ? '#46d98a' : '#9aa7bd'; flashUntil = performance.now() + 450; reseed(); }
+        else if (dmin < 0.08) { flash = pal.flash.destroyed; flashUntil = performance.now() + 450; reseed(); }
+        else if (dcom > 16) { flash = pal.flash.ejected; flashUntil = performance.now() + 450; reseed(); }
+        else if (sim.t > c.tMax) { flash = starEjected ? pal.flash.happy : pal.flash.survived; flashUntil = performance.now() + 450; reseed(); }
       }
 
-      ctx.fillStyle = '#05060a';
+      ctx.fillStyle = pal.bg;
       ctx.fillRect(0, 0, SIZE, SIZE);
       if (sim) {
-        ctx.strokeStyle = 'rgba(102,240,255,0.55)';
+        ctx.strokeStyle = pal.trail;
+        ctx.globalAlpha = 0.55;
         ctx.lineWidth = 1;
         ctx.beginPath();
         trail.forEach(([x, y], i) => { const [px, py] = toPx(x, y); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); });
         ctx.stroke();
+        ctx.globalAlpha = 1;
 
         const p = sim.planets[0];
         const [px, py] = toPx(p.x, p.y);
-        ctx.fillStyle = '#66f0ff';
+        ctx.fillStyle = pal.planet;
         ctx.beginPath(); ctx.arc(px, py, 2.6, 0, 7); ctx.fill();
 
         sim.stars.forEach((s, i) => {
           const [sx, sy] = toPx(s.x, s.y);
-          ctx.fillStyle = STAR_COLORS[i] ?? '#fff';
+          ctx.fillStyle = pal.stars[i] ?? pal.planet;
           ctx.beginPath(); ctx.arc(sx, sy, Math.max(2, 2.6 * Math.cbrt(s.mass)), 0, 7); ctx.fill();
         });
       }
@@ -96,8 +134,10 @@ export default function MiniSim({ cfg, running, size = 200, steps = 140 }: {
     };
     frame();
     return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return <canvas ref={canvasRef} width={SIZE} height={SIZE}
-    style={{ width: SIZE, height: SIZE, borderRadius: 8, display: 'block', background: '#05060a' }} />;
+    style={{ width: SIZE, height: SIZE, borderRadius: 8, display: 'block', background: 'var(--viz-bg)' }} />;
 }
+
