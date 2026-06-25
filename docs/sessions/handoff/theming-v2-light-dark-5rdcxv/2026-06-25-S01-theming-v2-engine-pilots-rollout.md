@@ -11,7 +11,7 @@ followup: null
 pr: 239
 app: chrome, trinary, polygon-worlds, solid-worlds, plane-transform
 signals: needs-dan, visual-unverified
-next: Finish the rollout — Complex Particles (force-dark the shell view + clear→--viz-bg), TrinaryLab console, Worlds walk-pad/instruction HUD + spherical sky-dome retint. (Argand is being developed on another branch — SKIP it.)
+next: Loose ends only — TrinaryLab console stat-text/histograms, Worlds walk-pad/instruction HUD chrome, spherical sky-dome retint. (Every app's viz is themed; Argand is on another branch — SKIP.)
 ---
 
 # Theming v2 — identity × mode engine + Trinary/Worlds + suite rollout
@@ -56,7 +56,8 @@ sky) stays warm by design — it depicts light, not data.
 | Fractals GPU · Correspondence · Counting the Ways · Stable Matching | ✅ already clean |
 | Trees & Nets (flip/cross → --data; fibers theme-keyed) | ✅ |
 | Agentic Sorting (agents → --data; canvas reads tokens + redraws) | ✅ |
-| **Complex Particles** | ⏳ force-dark glow scene |
+| Complex Particles (force-dark stage + clear→--viz-bg; rainbow kept) | ✅ |
+| Fractals + Correspondence "Theme" palette → skin's sequential map | ✅ |
 | Argand | ⏭ SKIP — in development on another branch |
 | TrinaryLab console stat-text/histograms · Worlds walk-pad/instruction HUD · spherical sky-dome retint | ⏳ loose ends |
 

@@ -71,6 +71,21 @@ attribute, reactive `useSkin`/`useThemeId`) shipped in
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 19:40 — Complex Particles force-dark stage (Dan picked option a)
+**Why:** Dan: "stick with A" — keep the rainbow domain coloring, theme the stage.
+
+Wrapped the particle view (+ embed view) in `<Scheme mode="dark">` (`ParticleViewerShell`)
+so the additive-glow scene resolves the theme's **dark** companion; the viewport
+clear color now reads `--viz-bg` from the canvas (theme-tinted dark) instead of flat
+black, kept in sync on objectMode/skin via `useUniformSync` (`useThemeId`). The
+iconic **rainbow** domain coloring (the hue colormap) is kept; object mode keeps its
+white studio bg. Verified: Daylight = light chrome + forced-dark charcoal stage;
+Mirage = plum-tinted stage. **Build green, lint 58, 88 tests.**
+
+With this, **every app's visualization is themed.** Remaining = loose ends only
+(TrinaryLab console stat-text/histograms, Worlds walk-pad/instruction HUD chrome,
+spherical sky-dome retint).
+
 ### 🟡 milestone · 19:10 — Fractals + Correspondence: "Theme" palette follows the skin
 **Why:** Dan: "fractals and Julia mandelbrot and complex use the hue colormaps for
 the theme."
