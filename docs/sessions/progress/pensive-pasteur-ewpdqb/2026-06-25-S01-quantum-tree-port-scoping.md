@@ -6,11 +6,12 @@ title: Trees and Nets — port the rest of quantum-tree (evidence engine first)
 branch: claude/pensive-pasteur-ewpdqb
 slug: pensive-pasteur-ewpdqb
 status: in-progress
-build: unknown
+build: passing
 followup: null
 app: trees-and-nets
+thumbnail: assets/2026-06-25-S01-nets-conflict.png
 signals: null
-next: Review the ported engine (tests green), then build the Nets views (matrix · NJ tree · split network · split weights)
+next: P2 — the trees×orders correspondence map + energies on the fibers + the quartet evidence plane (tree-like vs net-like)
 ---
 
 # Trees and Nets — port the rest of quantum-tree (evidence engine first)
@@ -61,6 +62,37 @@ plane, and the quartet→split→ordering→tree assembly views.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 18:35 — P1 shipped: the app finally has nets (matrix → tree + net)
+**Why:** Bring the quantum-tree evidence engine to the front, per the decision.
+
+Re-centered the app on an **editable distance matrix** (default **Nets** layout);
+the associahedron × cube explorer is demoted to a secondary **Fibers** layout.
+New views (`views/MatrixEditor.tsx`, `views/NetViews.tsx`): heatmapped matrix +
+presets, a radial **Neighbor-Joining tree**, the **circular split network** (the
+net), and a split-weights readout — all derived from the matrix via `useMemo`
+(NJ · Levy–Pachter order · NNLS split weights). Guarded the fiber index against
+n-changes (`curSafe`). `npm run build` green, **157/157 tests** pass, lint clean.
+
+Verified headless at `#/trees-and-nets`: the **Tree** preset gives a tree-like net
+(2 chords), the **Conflict** preset gives crossing chords (net-like) — the whole
+point — and the **Fibers** layout still renders the associahedron + cube canvases.
+
+![Conflict preset — a genuine net (crossing chords)](assets/2026-06-25-S01-nets-conflict.png)
+![Tree preset — NJ tree + a tree-like net](assets/2026-06-25-S01-nets-tree.png)
+![Fibers layout — the demoted associahedron × cube explorer](assets/2026-06-25-S01-fibers.png)
+
+### 🟢 code · 18:05 — P1a: metric/evidence engine ported + verified
+**Why:** Get the math right and tested before any UI (the foundation).
+
+Faithful TS port of quantum-tree `map.js` into `lib/{metric,trees,neighborJoining,
+splitWeights,orders}.ts`: four-point support, tour energy, soft-min energy, tree
+enumeration + splits, compatibility, Saitou–Nei **Neighbor-Joining**, **NNLS
+circular split weights**, **Levy–Pachter** ordering. 19 vitest cases assert real
+correctness (NJ recovers known additive trees; split weights reconstruct a tree
+with residual < 1e-6; four-point sign; Levy–Pachter compatibility). Reviewed the
+NJ + NNLS + Levy–Pachter modules by hand — clean and faithful (tolerances,
+tie-breaks, ridge preserved). Committed separately (`b05d3cb`).
 
 ### 🟣 decision · 17:52 — Proceed: Nets first, drop the quantum framing, rebuild in place
 **Why:** Dan said "continue" on the recommended defaults (the AskUserQuestion prompt
