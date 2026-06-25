@@ -6,7 +6,7 @@ import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/wor
 import { StatGrid, Sparkline, Kicker } from '../../chrome/readouts';
 import { Slider, Pills, Select } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
-import { useThemeId } from '../../chrome/skins';
+import { useThemeId, useThemeModeId } from '../../chrome/skins';
 import {
   generate, step, mulberry32,
   AGENT_TYPE_LIST, type AgentType, type Objective, type SimState, type Weights,
@@ -312,12 +312,14 @@ export default function AgenticSorting() {
     typeColorsRef.current = p.type; objColorsRef.current = p.obj; frozenRef.current = p.frozen;
   }, []);
   useCanvas2D(canvasRef, sizeRef, (cvs) => { applyPalette(cvs); draw(); }, [draw, mode, applyPalette]);
-  // Re-read the palette + redraw on a skin change (theming v2).
+  // Re-read the palette + redraw on a skin OR mode change (theming v2): this
+  // arena isn't force-dark, so --data differs between native/light/dark.
   const themeId = useThemeId();
+  const themeMode = useThemeModeId();
   useEffect(() => {
     if (canvasRef.current) { applyPalette(canvasRef.current); draw(); drawTraj(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [themeId]);
+  }, [themeId, themeMode]);
 
   useCanvas2D(trajCanvasRef, trajSizeRef, () => drawTraj(), [drawTraj, mode]);
 

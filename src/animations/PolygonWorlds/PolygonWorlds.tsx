@@ -11,6 +11,22 @@ import { useThemeId, useThemeModeId, resolveScheme } from '../../chrome/skins';
 import { Slider, Select, Pills } from '../../components/ControlPanel';
 import { WORLDS, worldById, WorldSpec, deriveGeometry, analyzeWorld } from './worldSpec';
 import { generateProps, ARRANGEMENTS, ArrangementId, setDecorPalette, type DecorPalette } from './decor';
+import { makeFundamentalSquareEngine } from './fundamentalSquareEngine';
+import { LOOKS } from './looks';
+import {
+  EngineDeps, PolygonEngine, SquareMapState,
+  DEFAULT_SQUARE_SIZE, DEFAULT_FLOOR_THICKNESS,
+} from './engineTypes';
+import { drawSquareMap, SquareMapSpec, SquareEdgeSpec } from './squareMap';
+import { drawPolygonMap, PolygonMapSpec } from './polygonMap';
+import { parseWord } from './surfaceSchema';
+import { realize } from './lib/realize';
+import { usePersistentState } from '../../lib/usePersistentState';
+import { EmbeddingInset } from './instruments/embeddingInset';
+import DebugPoseHUD from '../../components/DebugPoseHUD';
+import { poseParams, pNum, pStr, hudEnabled, type DebugState } from '../../lib/debugPose';
+import { nearestMarkerDistance } from '../../lib/nearestMarker';
+import explainerText from './EXPLAINER.md?raw';
 
 /** Read the decor's theme palette from the live tokens (theming v2): landmark /
  *  corner identities → the --data slots, structural pieces → neutrals, the center
@@ -35,22 +51,6 @@ function readDecorPalette(): DecorPalette {
     font: str('--font-ui', '"Segoe UI", system-ui, sans-serif'),
   };
 }
-import { makeFundamentalSquareEngine } from './fundamentalSquareEngine';
-import { LOOKS } from './looks';
-import {
-  EngineDeps, PolygonEngine, SquareMapState,
-  DEFAULT_SQUARE_SIZE, DEFAULT_FLOOR_THICKNESS,
-} from './engineTypes';
-import { drawSquareMap, SquareMapSpec, SquareEdgeSpec } from './squareMap';
-import { drawPolygonMap, PolygonMapSpec } from './polygonMap';
-import { parseWord } from './surfaceSchema';
-import { realize } from './lib/realize';
-import { usePersistentState } from '../../lib/usePersistentState';
-import { EmbeddingInset } from './instruments/embeddingInset';
-import DebugPoseHUD from '../../components/DebugPoseHUD';
-import { poseParams, pNum, pStr, hudEnabled, type DebugState } from '../../lib/debugPose';
-import { nearestMarkerDistance } from '../../lib/nearestMarker';
-import explainerText from './EXPLAINER.md?raw';
 
 const LOOK_SENS = 0.0035;
 const MAX_PITCH = 1.3;
@@ -231,12 +231,21 @@ export default function PolygonWorlds() {
   // engine (children-first effect order) with the boot pose applied — rebuilding
   // here would be redundant work AND would discard a debug-pose deep link's position.
   const skipFirstRebuild = useRef(true);
+  const prevSpecRef = useRef(spec);
   useEffect(() => {
+    const worldChanged = prevSpecRef.current !== spec;
+    prevSpecRef.current = spec;
     worldRef.current = spec;
     propsRef.current = props;
     const deps = depsRef.current;
     if (!deps || !engineRef.current) return;
     if (skipFirstRebuild.current) { skipFirstRebuild.current = false; return; }
+    // This effect also fires when `props` is regenerated for a theme/mode switch
+    // (same world, recolored decor). In that case keep the walker where it stands —
+    // capture the chart position before disposing and restore it after the rebuild —
+    // so changing skins doesn't teleport you to center. A genuine world change
+    // (different gluing) still drops the walker fresh at the default pose.
+    const keepPose = worldChanged ? null : engineRef.current.getMapState();
     engineRef.current.dispose();
     engineRef.current = makeFundamentalSquareEngine(deps, spec, {
       squareSize: sizeRef.current, floorThickness: thickRef.current, props,
@@ -245,6 +254,7 @@ export default function PolygonWorlds() {
     engineRef.current.setRadius(radiusRef.current);
     engineRef.current.setCameraDistance(camDistRef.current);
     engineRef.current.setLook(lookRef.current);
+    if (keepPose) engineRef.current.setPose({ u: keepPose.u, v: keepPose.v });
   }, [spec, props]);
 
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);

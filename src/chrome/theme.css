@@ -1,8 +1,10 @@
 /* theme.css — design tokens + shared chrome styles for the animath redesign.
    Ported from docs/redesign/prototype/theme.css (the design source of truth).
-   Five skins switch on a single [data-theme] attribute set on <html>:
-   Observatory (dark, default) · Paper (light) · Spectrum (neon) ·
-   Blueprint · Phosphor (CRT, all-mono type system).
+   Each skin is an IDENTITY selected by [data-theme] on <html>; theming v2 adds
+   a [data-scheme] MODE axis (native · light · dark) so every identity exists in
+   three modes under one set of token names. See the THEMING v2 block below for
+   the full variable convention; the JS side lives in src/chrome/skins.tsx
+   (identity × mode) + src/chrome/Scheme.tsx (force a mode on a subtree).
    Type system: Space Grotesk (display) · Hanken Grotesk (UI) · Space Mono
    (numeric/coordinate readouts). All chrome reads from these vars so one
    attribute flips the whole product. */

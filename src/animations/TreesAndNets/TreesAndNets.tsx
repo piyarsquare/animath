@@ -6,7 +6,7 @@ import type { SectionDef, ViewDef, LayoutDef } from '../../chrome/workspace/type
 import { Pills, Checkbox, Slider } from '../../components/ControlPanel';
 import { Kicker } from '../../chrome/readouts';
 import { usePersistentState } from '../../lib/usePersistentState';
-import { useThemeId } from '../../chrome/skins';
+import { useThemeId, useThemeModeId } from '../../chrome/skins';
 import { buildAssociahedron, type Triangulation } from './lib/associahedron';
 import { neighborOrder, canonicalKey } from './lib/mosaic';
 import explainer from './EXPLAINER.md?raw';
@@ -226,12 +226,13 @@ export default function TreesAndNets(): JSX.Element {
   // var()-valued C_FLIP/C_CROSS directly). Recomputed + re-keyed on a skin change
   // so the fibers rebuild in the new colors.
   const themeId = useThemeId();
+  const themeMode = useThemeModeId();   // SVG/3D aren't force-dark → track mode too
   const g3 = useMemo(() => {
     const cs = getComputedStyle(document.documentElement);
     const num = (name: string, f: number) => { const v = cs.getPropertyValue(name).trim(); return v ? new THREE.Color(v).getHex() : f; };
     return { flip: num('--data-2', 0x3fb6a6), cross: num('--data-5', 0xe08a3c), node: num('--dim-2', 0x6b7790), edge: num('--dim', 0x9aa3b6) };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [themeId]);
+  }, [themeId, themeMode]);
   const [n, setN] = usePersistentState<number>(`${APP_ID}:n`, 5);
   const [mode, setMode] = usePersistentState<'flip' | 'cross'>(`${APP_ID}:mode`, 'flip');
   const [showPoly, setShowPoly] = usePersistentState<boolean>(`${APP_ID}:poly`, true);
@@ -349,8 +350,8 @@ export default function TreesAndNets(): JSX.Element {
     { id: 'tree', title: 'Tree (circular order)', defaultRect: { x: 332, y: 16, w: 380, h: 380 }, node: <DiskView n={n} order={order} tri={tri} flash={flash} showTree showPolygon={false} onChord={onChord} /> },
     { id: 'polygon', title: 'Polygon + triangulation', defaultRect: { x: 332, y: 408, w: 380, h: 380 }, node: <DiskView n={n} order={order} tri={tri} flash={flash} showTree={false} showPolygon onChord={onChord} /> },
     { id: 'overlay', title: 'Overlay (tree + triangulation)', defaultRect: { x: 728, y: 408, w: 380, h: 380 }, node: <DiskView n={n} order={order} tri={tri} flash={flash} showTree showPolygon={showPoly} onChord={onChord} /> },
-    { id: 'assoc', title: `Associahedron fiber — trees | order`, defaultRect: { x: 728, y: 16, w: 360, h: 380 }, node: <Graph3D key={`a-${n}-${themeId}`} positions={assocPositions} edges={assoc.edges} adjacency={adjacency} currentRef={assocCurRef} radiusRef={radiusRef} accent={g3.flip} nodeColor={g3.node} edgeColor={g3.edge} onPick={pickTree} spinRef={spinRef} /> },
-    { id: 'cube', title: `(n−3)-cube fiber — orders | tree`, defaultRect: { x: 1104, y: 16, w: 360, h: 380 }, node: <Graph3D key={`q-${treeKey}-${n}-${themeId}`} positions={cube.positions} edges={cube.edges} adjacency={cube.adj} currentRef={cubeCurRef} radiusRef={radiusRef} accent={g3.cross} nodeColor={g3.node} edgeColor={g3.edge} onPick={pickCube} spinRef={spinRef} /> },
+    { id: 'assoc', title: `Associahedron fiber — trees | order`, defaultRect: { x: 728, y: 16, w: 360, h: 380 }, node: <Graph3D key={`a-${n}-${themeId}-${themeMode}`} positions={assocPositions} edges={assoc.edges} adjacency={adjacency} currentRef={assocCurRef} radiusRef={radiusRef} accent={g3.flip} nodeColor={g3.node} edgeColor={g3.edge} onPick={pickTree} spinRef={spinRef} /> },
+    { id: 'cube', title: `(n−3)-cube fiber — orders | tree`, defaultRect: { x: 1104, y: 16, w: 360, h: 380 }, node: <Graph3D key={`q-${treeKey}-${n}-${themeId}-${themeMode}`} positions={cube.positions} edges={cube.edges} adjacency={cube.adj} currentRef={cubeCurRef} radiusRef={radiusRef} accent={g3.cross} nodeColor={g3.node} edgeColor={g3.edge} onPick={pickCube} spinRef={spinRef} /> },
   ];
 
   const layouts: LayoutDef[] = [

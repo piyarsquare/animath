@@ -22,13 +22,6 @@ export const TYPE_COLORS: Record<AgentType, string> = {
   perfectionist: 'var(--data-6, #D55E00)', // red/vermillion
 };
 
-export const OBJECTIVE_COLORS: Record<Objective, string> = {
-  1: 'var(--data-1, #0072B2)',    // ascending → blue
-  [-1]: 'var(--data-5, #D55E00)', // descending → orange
-};
-
-export const FROZEN_COLOR = 'var(--dim, #9aa0a6)';
-
 export interface DrawOpts {
   display: 'bars' | 'dots';
   colorBy: 'type' | 'objective';

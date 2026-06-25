@@ -175,11 +175,19 @@ export default function SolidWorlds() {
   // the engine (children-first effect order) with the boot pose applied — rebuilding
   // here would be redundant AND would discard a debug-pose deep link's x/y/z position.
   const skipFirstRebuild = useRef(true);
+  const prevSpecRef = useRef(spec);
   useEffect(() => {
+    const worldChanged = prevSpecRef.current !== spec;
+    prevSpecRef.current = spec;
     worldRef.current = spec;
     const deps = depsRef.current;
     if (!deps || !engineRef.current) return;
     if (skipFirstRebuild.current) { skipFirstRebuild.current = false; return; }
+    // This effect also fires for a theme/mode switch (same world, recolored decor).
+    // In that case keep the walker where it stands — capture the cube position before
+    // disposing and restore it after the rebuild — so changing skins doesn't teleport
+    // you to center. A genuine world change still drops the walker fresh.
+    const keepPose = worldChanged ? null : engineRef.current.getMapState();
     engineRef.current.dispose();
     setRoomPalette(readRoomPalette());   // re-theme the decor on a world/skin change
     engineRef.current = makeCoverEngine(deps, spec, {
@@ -190,6 +198,7 @@ export default function SolidWorlds() {
       showSeams: seamsRef.current, decorMode: decorRef.current,
     });
     engineRef.current.setTrailEnabled(trailRef.current);
+    if (keepPose) engineRef.current.setPose({ u: keepPose.u, v: keepPose.v, w: keepPose.w });
   }, [spec, themeId, themeMode]);
 
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
@@ -580,8 +589,9 @@ function SolidMiniMap({ get, perAxis, phone }: { get: () => SolidMapState | null
   const perAxisRef = useRef(perAxis);
   perAxisRef.current = perAxis;
   // Edge/walker colors track the theme (pairing kinds → discrete --data, matching
-  // the Handedness HUD). Read off the root and refresh on a skin change.
+  // the Handedness HUD). The Worlds aren't force-dark, so track mode too.
   const themeId = useThemeId();
+  const themeMode = useThemeModeId();
   const palRef = useRef<Record<string, string>>({});
   useEffect(() => {
     const cs = getComputedStyle(document.documentElement);
@@ -590,7 +600,7 @@ function SolidMiniMap({ get, perAxis, phone }: { get: () => SolidMapState | null
       translation: g('--data-1', '#7fa8d8'), rotation: g('--data-4', '#ffcf5a'), 'glide-reflection': g('--data-6', '#ff5aa6'),
       fg: g('--fg', '#ffffff'), orig: g('--data-1', '#5ad1ff'), mirror: g('--data-6', '#ff5aa6'),
     };
-  }, [themeId]);
+  }, [themeId, themeMode]);
   useEffect(() => {
     const cvs = canvasRef.current; if (!cvs) return;
     const ctx = cvs.getContext('2d'); if (!ctx) return;

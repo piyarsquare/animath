@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { lerpStops } from '../../lib/colormapRegistry';
 
 /**
  * The decorated fundamental polygon, shared identically by all worlds. It carries a
@@ -83,8 +84,14 @@ const hue = (i: number) => PAL.data[(i % PAL.data.length + PAL.data.length) % PA
  *  corner reads as its own color. Shared by the 3D markers and the mini-map so the
  *  numbers + colors correspond. (`count` is kept for the call sites; the identity
  *  is by index into the theme's data palette.) */
-export const cornerColor = (i: number, _count: number): number =>
-  PAL.data[((i % PAL.data.length) + PAL.data.length) % PAL.data.length];
+export const cornerColor = (i: number, count: number): number => {
+  const n = PAL.data.length;
+  if (count <= n) return PAL.data[((i % n) + n) % n];
+  // More corners than palette slots (8-corner worlds: rp2oct, zipsphere8):
+  // interpolate within the data palette so every corner still reads distinct.
+  const hexes = PAL.data.map((c) => '#' + (c >>> 0).toString(16).padStart(6, '0'));
+  return new THREE.Color(lerpStops(hexes, i / Math.max(1, count - 1))).getHex();
+};
 
 /** Roman numeral for a small positive integer (corner markers go up to 8). */
 export function romanize(n: number): string {

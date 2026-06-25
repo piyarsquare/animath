@@ -110,7 +110,7 @@ function rgbToHex(r: number, g: number, b: number): string {
 export function lerpStops(stops: string[], t: number): string {
   if (stops.length === 0) return '#000000';
   if (stops.length === 1) return stops[0];
-  const x = Math.max(0, Math.min(1, t)) * (stops.length - 1);
+  const x = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0)) * (stops.length - 1);
   const i = Math.floor(x);
   const f = x - i;
   if (i >= stops.length - 1) return stops[stops.length - 1];
@@ -129,8 +129,8 @@ export function lerpStops(stops: string[], t: number): string {
 export function sampleContinuous(id: string, t: number): string {
   const s = mapStops(id);
   if (s.length === 0) return '#000000';
-  if (id === 'discrete') return s[Math.round(Math.max(0, Math.min(1, t)) * (s.length - 1))];
-  const x = Math.max(0, Math.min(1, t)) * (s.length - 1);
+  if (id === 'discrete') return s[Math.round(Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0)) * (s.length - 1))];
+  const x = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0)) * (s.length - 1);
   const i = Math.floor(x);
   const f = x - i;
   if (i >= s.length - 1) return s[s.length - 1];
