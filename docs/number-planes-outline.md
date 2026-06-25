@@ -209,8 +209,41 @@ CYOA earning its keep, not cosplaying it.
    early and carries, or do we walk all three in sequence? (CYOA vs. guided tour.)
 6. **Scope of Branch A.** Does nonlinear iteration (`z²+c`, Julia sets off ℂ) belong,
    or is that a second document?
-7. **Naming.** Keep **Number Planes** + **Spin / Shear / Boost**; proper nouns
+7. **Naming.** Keep **Number Planes**. Motions: **Spin / Shear / Squeeze** —
+   *Dan 2026-06-24 leans **Squeeze** over **Boost*** (neutral; "Boost" imports
+   special relativity). Still deciding. If Branch A keeps the relativity payoff,
+   introduce it as *"a squeeze — the boost that special relativity is built on,"* so
+   the neutral picture and the physics name arrive together. Proper nouns
    (Cayley–Klein, Minkowski, Galilean) in a sources aside only.
+
+---
+
+## Delivery & format
+
+**The artifact is an HTML educational page**, in the same family as the existing
+guides under [`public/`](../../public/) (`complex-functions-guide.html`,
+`complex-particles-guide.html`, …, indexed by `public/guides.html`):
+
+- a **single self-contained HTML file** (inline CSS), **serif prose**, with **live
+  embedded applets** (via the `#/embed/…` routes) and, where useful, **the exact
+  source lines** that compute the math;
+- deploys to the Pages root; no build step for the page itself.
+
+**The adaptation: choice-driven (choose-your-own) navigation** instead of the
+guides' linear scroll:
+
+- **Soft fork — "choose your `j²`":** a page-level state the reader sets early and
+  carries; the prose/figures respond to the chosen plane. (This is the one departure
+  from the current "no-JS" guides — it needs a *small* amount of JS for the carried
+  choice and the branch reveals. Flag and keep it minimal.)
+- **Hard fork — "where to end":** in-page branch sections (deeper-in-2-D vs
+  Hamilton → ℝ³ → quaternions), reached by choice links, each self-contained.
+- Keep everything else identical to the guide format so it reads as one family.
+
+**Dependencies:** at least one embeddable plane applet (the `j²` dial + an orbit
+with the rails / the change-of-basis morph) — likely a chrome-less
+`#/embed/number-planes` route later, built on the dormant `numberPlanes.ts` engine.
+Prose-first: the page must teach with the applets *off*; interactivity enriches.
 
 ---
 
