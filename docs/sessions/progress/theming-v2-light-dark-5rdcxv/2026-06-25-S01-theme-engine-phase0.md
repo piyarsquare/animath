@@ -71,6 +71,39 @@ attribute, reactive `useSkin`/`useThemeId`) shipped in
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 15:55 — Standard adopted: per-app "audit every color → map to a token"
+**Why:** Dan: "for each app, list out every color it uses and every colormap and
+identify which ones are hardcoded and assign them to theme values" + "Complete
+theming would be ideal." So theming isn't just chrome + sky — **every** color in
+each app's visualization must resolve to a theme value (or a registry colormap).
+
+This raises the bar from the original per-app blast radius: each app gets a full
+color inventory and a token assignment, including deep 3D **decor** (trees,
+columns, signs, footsteps, fonts), not just background/marks. Mapping rules:
+identity sets → `--data` slots; structure → neutrals (`--dim`/`--dim-2`/
+`--fg`); focal/UI → `--accent`/`--accent-2`; ordered/outcome data → registry
+colormaps; text → the theme fonts.
+
+### 🟡 milestone · 15:55 — Polygon Worlds: complete decor theming
+**Why:** First app taken to "complete" under the new standard (Dan flagged the
+trees/columns/signs/fonts weren't tracking the theme).
+
+Routed **all** Polygon Worlds decor color through a theme palette read from the
+live tokens (`decor.ts` `setDecorPalette`/`getDecorPalette`): landmark + corner
+identities → the `--data` slots (3D markers *and* mini-map together), tree trunk /
+structural stone / disc rim → neutrals, center beacon → `--accent`/`--accent-2`,
+euclidean floor → a neutral, badge backing + glyph font → `--panel-solid` /
+`--font-ui`. Props depend on theme id/mode, so a skin switch regenerates them and
+the engine's existing `[spec, props]` rebuild recolors the decor **live**. Build
+green, lint 59 (no new), 88 tests. Verified the decor changes per theme
+(Observatory daytime vs Primary Bauhaus).
+
+> [!NOTE]
+> Still hardcoded (next): **Solid Worlds** decor (room walls/furniture/signs in
+> `decor/rooms.ts`, avatars, the chirality HUD → `--data-1/4/6`), the Worlds
+> **mini-map/walk-pad/instruction** HUD chrome, the spherical sky-dome retint, and
+> the `numeralTexture` corner-plate fonts. Then the rest of the app suite.
+
 ### 🟡 milestone · 15:13 — Phase 1 pilot 2: Worlds day/night sky by mode
 **Why:** The second locked pilot — prove "mode = time of day" — and Dan said
 continue.
