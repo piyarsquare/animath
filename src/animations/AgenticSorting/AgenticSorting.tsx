@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Snowflake } from 'lucide-react';
+import { Snowflake } from 'lucide-react';
 import './agenticSorting.css';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
@@ -532,24 +532,10 @@ export default function AgenticSorting() {
     </div>
   );
 
+  // START/PAUSE + Reset are the always-on action strip (see `actions` below);
+  // this panel keeps only the pacing controls so the verbs aren't duplicated.
   const runNode = (
     <div className="as-panel">
-      <div className="as-controls-row">
-        <button
-          className={`as-button as-button-primary ${isRunning ? 'as-button-pause' : ''}`}
-          onClick={() => setIsRunning(r => !r)}
-        >
-          {isRunning ? <Pause size={18} /> : <Play size={18} />}
-          {isRunning ? 'PAUSE' : 'START'}
-        </button>
-        <button
-          className="as-button as-button-reset"
-          onClick={regenerate}
-          title="Regenerate the population with the current settings"
-        >
-          <RotateCcw size={18} />
-        </button>
-      </div>
       <Slider
         label="Step interval" value={stepInterval}
         min={1} max={200} step={1} onChange={setStepInterval} format={(v) => `${v} ms`}
@@ -725,13 +711,20 @@ export default function AgenticSorting() {
     </div>
   );
 
+  // "Run experiment" is the always-on action strip (see `actions` below); this
+  // panel keeps the live progress bar and the not-ready hint.
   const labRunNode = (
     <div className="as-panel">
-      <button className="as-button as-button-primary" disabled={labRunning || !labReady} onClick={runLab}>
-        {labRunning ? `Running… ${Math.round(labProgress * 100)}%` : 'Run experiment'}
-      </button>
-      {labRunning && <div className="as-progress"><div className="as-progress-fill" style={{ width: `${labProgress * 100}%` }} /></div>}
-      {!labReady && !labRunning && <p className="as-hint">Add at least two mixes to compare.</p>}
+      {labRunning
+        ? (
+          <>
+            <p className="as-hint">Running… {Math.round(labProgress * 100)}%</p>
+            <div className="as-progress"><div className="as-progress-fill" style={{ width: `${labProgress * 100}%` }} /></div>
+          </>
+        )
+        : !labReady
+          ? <p className="as-hint">Add at least two mixes to compare.</p>
+          : <p className="as-hint">Press <strong>Run experiment</strong> in the action bar to run this experiment.</p>}
     </div>
   );
 

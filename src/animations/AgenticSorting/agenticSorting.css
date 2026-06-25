@@ -57,12 +57,8 @@
   color: var(--dim);
 }
 
-/* ── Run buttons ── */
-.as-controls-row {
-  display: flex;
-  gap: 8px;
-}
-
+/* ── Buttons ── (transport verbs moved to the action strip; the only button
+   left in a panel is the Lab's "+ Add current mix") */
 .as-button {
   display: inline-flex;
   align-items: center;
@@ -78,20 +74,6 @@
 }
 
 .as-button:active { transform: scale(0.97); }
-
-.as-button-primary {
-  flex: 1;
-  padding: 12px;
-  background: var(--accent);
-  color: var(--accent-fg, #fff);
-}
-
-.as-button-primary:hover { filter: brightness(1.08); }
-
-.as-button-primary.as-button-pause {
-  background: var(--warn, #f59e0b);
-  color: #1a1205;
-}
 
 .as-button-reset {
   padding: 12px 16px;

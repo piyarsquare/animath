@@ -399,18 +399,24 @@ export default function Argand() {
         fontFamily: 'var(--font-mono, monospace)',
       }}
     >
-      {/* feed switcher — pressing Shape reveals its presets */}
+      {/* feed switcher — the single home for Point/Shape/Grid. It lives in the
+          HUD (inside the view node) so it stays reachable in fullscreen, where
+          the top bar and its mode pills are buried. */}
       <div style={hudRow}>
         {(['point', 'shape', 'grid'] as Feed[]).map(fd => (
           <button key={fd} style={pill(feed === fd)} onClick={() => setFeed(fd)}>
-            {fd[0].toUpperCase() + fd.slice(1)}
+            {fd === 'point' ? 'Point' : fd === 'shape' ? 'Shape' : 'Grid'}
           </button>
         ))}
-        {isShape && <div style={{ width: 1, height: 18, background: 'var(--border, #3a3a44)', margin: '0 2px' }} />}
-        {isShape && CURVES.map(c => (
-          <button key={c.id} style={pill(curveName === c.id)} onClick={() => setCurveName(c.id)}>{c.label}</button>
-        ))}
       </div>
+      {/* shape preset switcher — only in Shape feed */}
+      {isShape && (
+        <div style={hudRow}>
+          {CURVES.map(c => (
+            <button key={c.id} style={pill(curveName === c.id)} onClick={() => setCurveName(c.id)}>{c.label}</button>
+          ))}
+        </div>
+      )}
       {/* path parameter t */}
       <div style={hudRow}>
         <span style={hudLabel}>t</span>
@@ -492,9 +498,6 @@ export default function Argand() {
       sections={sections}
       views={views}
       immersive
-      modes={[{ id: 'point', label: 'Point' }, { id: 'shape', label: 'Shape' }, { id: 'grid', label: 'Grid' }]}
-      activeMode={feed}
-      onModeChange={id => setFeed(id as Feed)}
       layouts={layouts}
       defaultLayoutId="essentials"
       explainer={explainerText || null}

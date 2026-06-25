@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
+import { isLightSkin } from './skins';
 
 /**
  * Lightweight, authentic preview animations for the gallery cards. One flavor
@@ -64,6 +65,41 @@ function useCanvas(draw: DrawFn, deps: React.DependencyList) {
 
 const canvasStyle: React.CSSProperties = { display: 'block', width: '100%', height: '100%' };
 
+/** Live theme tokens for a preview, read fresh each draw so the card tracks the
+ *  active skin (not just light/dark). `light` supplies the fallback. */
+function themeInk(light: boolean) {
+  const cs = typeof document !== 'undefined' ? getComputedStyle(document.documentElement) : null;
+  const pick = (n: string, fb: string) => (cs?.getPropertyValue(n).trim() || fb);
+  return {
+    bg:      pick('--viz-bg', light ? '#f4f3ef' : '#04060c'),
+    fg:      pick('--fg',     light ? '#1d1c18' : '#eef1f7'),
+    dim:     pick('--dim',    light ? '#6a6354' : '#8d96ab'),
+    accent:  pick('--accent', light ? '#b67d10' : '#ffce47'),
+    accent2: pick('--accent-2', light ? '#1d8a78' : '#5fe3cd'),
+    data6:   pick('--data-6', light ? '#c23f6c' : '#ff6f9c'), // a distinct 3rd (pink/magenta)
+  };
+}
+
+/** Parse a token color to [r,g,b] bytes for the pixel-buffer previews (fractal/
+ *  Julia write into ImageData). Handles #rgb / #rrggbb / rgb(); falls back to fb. */
+function rgbBytes(col: string, fb: [number, number, number]): [number, number, number] {
+  const s = col.trim();
+  let m = /^#([0-9a-f]{3})$/i.exec(s);
+  if (m) { const h = m[1]; return [parseInt(h[0] + h[0], 16), parseInt(h[1] + h[1], 16), parseInt(h[2] + h[2], 16)]; }
+  m = /^#([0-9a-f]{6})$/i.exec(s);
+  if (m) { const h = m[1]; return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
+  m = /^rgba?\(([^)]+)\)$/i.exec(s);
+  if (m) { const p = m[1].split(',').map(v => parseFloat(v)); if (p.length >= 3) return [p[0], p[1], p[2]]; }
+  return fb;
+}
+
+/** A token color rendered as rgba() at the given alpha, so faint/fading strokes
+ *  can keep their intent while following the skin (theme tokens are opaque). */
+function withAlpha(col: string, a: number): string {
+  const [r, g, b] = rgbBytes(col, [128, 128, 128]);
+  return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a})`;
+}
+
 /** Deterministic PRNG so module-scope "simulations" are stable across loads. */
 function mulberry32(seed: number) {
   let a = seed >>> 0;
@@ -92,14 +128,14 @@ function ParticlePreview({ light }: { light: boolean }) {
     }
     pts.current = arr;
   }
-  const bg = light ? '#f4f3ef' : '#000';
   // axis hues match lib/particles AXIS_COLORS (x 0 · y .25 · u .5 · v .75)
   const AXES: Array<[number, number, number, number, number]> = [
     [1.5, 0, 0, 0, 0], [0, 1.5, 0, 0, 0.25], [0, 0, 1.5, 0, 0.5], [0, 0, 0, 1.5, 0.75],
   ];
   const ref = useCanvas((ctx, W, H, t) => {
+    const ink = themeInk(light); // hue-based preview: only the bg follows the skin
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = bg;
+    ctx.fillStyle = ink.bg;
     ctx.fillRect(0, 0, W, H);
     const cx = W / 2, cy = H / 2;
     const scale = Math.min(W, H) * 0.30;
@@ -144,10 +180,10 @@ function ParticlePreview({ light }: { light: boolean }) {
 /* Mirrors the app's two view windows: the z-plane grid on the left sheet, its
    image under f on the right, with a probe line and its image linking them. */
 function PlanePreview({ light }: { light: boolean }) {
-  const bg = light ? '#f4f3ef' : '#000';
   const ref = useCanvas((ctx, W, H, t) => {
+    const ink = themeInk(light); // hue-based preview: only bg + labels follow the skin
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = bg;
+    ctx.fillStyle = ink.bg;
     ctx.fillRect(0, 0, W, H);
     const LINES = 9, SAMPLES = 28, R = 1.15;
     // a sheet = a gently tilted card; (u, v) in math coords → screen
@@ -200,7 +236,7 @@ function PlanePreview({ light }: { light: boolean }) {
     drawLine(range, k => [c, k * 2 * R - R], true, light ? 0.07 : 0.13, 0.95, probeW);
     // sheet labels
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = light ? 'rgba(40,40,50,0.75)' : 'rgba(255,255,255,0.65)';
+    ctx.fillStyle = ink.dim;
     ctx.font = `${Math.max(9, W * 0.032)}px ui-monospace, monospace`;
     const [zx, zy] = domain(-R, -R);
     const [fx, fy] = range(-R, -R);
@@ -215,6 +251,7 @@ function FractalPreview({ light }: { light: boolean }) {
   const field = useRef<{ its: Int16Array; rw: number; rh: number } | null>(null);
   const off = useRef<HTMLCanvasElement | null>(null);
   const ref = useCanvas((ctx, W, H, t) => {
+    const ink = themeInk(light); // hue-based preview: escape palette stays rainbow; only the set interior (the flat "background") follows the skin
     const rw = 260, rh = Math.max(1, Math.round(260 * H / Math.max(1, W)));
     const maxIt = 90;
     if (!field.current || field.current.rw !== rw || field.current.rh !== rh) {
@@ -253,11 +290,11 @@ function FractalPreview({ light }: { light: boolean }) {
       lut[i * 3] = r; lut[i * 3 + 1] = g; lut[i * 3 + 2] = b;
     }
     const { its } = field.current;
-    const inside = light ? 245 : 8;
+    const [ir, ig, ib] = rgbBytes(ink.bg, light ? [245, 245, 245] : [8, 8, 8]);
     for (let i = 0; i < its.length; i++) {
       const k = i * 4, it = its[i];
       if (it >= maxIt) {
-        img.data[k] = img.data[k + 1] = img.data[k + 2] = inside;
+        img.data[k] = ir; img.data[k + 1] = ig; img.data[k + 2] = ib;
       } else {
         const j = Math.min(255, Math.round((it / maxIt) * 255)) * 3;
         img.data[k] = lut[j]; img.data[k + 1] = lut[j + 1]; img.data[k + 2] = lut[j + 2];
@@ -277,6 +314,9 @@ function JuliaPreview({ light }: { light: boolean }) {
   const jul = useRef<HTMLCanvasElement | null>(null);
   const MX = -0.6, MSPAN = 3.0; // mandel pane: re ∈ [-2.1, 0.9]
   const ref = useCanvas((ctx, W, H, t) => {
+    const ink = themeInk(light); // hue-based preview: escape coloring stays; set interiors + marker follow the skin
+    const [bgR, bgG, bgB] = rgbBytes(ink.bg, light ? [230, 230, 230] : [14, 14, 14]);
+    const [accR, accG, accB] = rgbBytes(ink.accent, light ? [180, 120, 30] : [255, 200, 80]);
     const split = Math.round(W * 0.42);
     const maxIt = 60;
     if (!mandel.current) {
@@ -296,7 +336,7 @@ function JuliaPreview({ light }: { light: boolean }) {
           }
           const k = (px + py * rw) * 4;
           if (it >= maxIt) {
-            img.data[k] = img.data[k + 1] = img.data[k + 2] = light ? 230 : 14;
+            img.data[k] = bgR; img.data[k + 1] = bgG; img.data[k + 2] = bgB;
           } else {
             const m = it / maxIt;
             const v = light ? 235 - m * 160 : 25 + m * 120;
@@ -332,7 +372,8 @@ function JuliaPreview({ light }: { light: boolean }) {
           }
           const k = (px + py * rw) * 4;
           if (it >= jIt) {
-            img.data[k] = light ? 180 : 255; img.data[k + 1] = light ? 120 : 200; img.data[k + 2] = light ? 30 : 80;
+            // filled Julia set tinted by the skin accent (the gradient below stays intrinsic escape coloring)
+            img.data[k] = accR; img.data[k + 1] = accG; img.data[k + 2] = accB;
           } else {
             const m = it / jIt;
             const v = light ? 244 - m * 130 : m * 110;
@@ -351,10 +392,10 @@ function JuliaPreview({ light }: { light: boolean }) {
     ctx.fillRect(split - 1, 0, 2, H);
     const mpx = ((cr - MX) / MSPAN + 0.5) * split;
     const mpy = ((ci / (MSPAN * (H / Math.max(1, split)))) + 0.5) * H;
-    ctx.strokeStyle = light ? '#b67d10' : '#ffd400';
+    ctx.strokeStyle = ink.accent;
     ctx.lineWidth = Math.max(1, W * 0.004);
     ctx.beginPath(); ctx.arc(mpx, mpy, Math.max(3, W * 0.012), 0, 7); ctx.stroke();
-    ctx.fillStyle = light ? '#b67d10' : '#ffd400';
+    ctx.fillStyle = ink.accent;
     ctx.beginPath(); ctx.arc(mpx, mpy, Math.max(1.5, W * 0.004), 0, 7); ctx.fill();
   }, [light]);
   return <canvas ref={ref} style={canvasStyle} />;
@@ -362,9 +403,9 @@ function JuliaPreview({ light }: { light: boolean }) {
 
 /* ---- Topology walk: first-person flight down a twisting corridor ---------- */
 function CorridorPreview({ light }: { light: boolean }) {
-  const bg = light ? '#f4f3ef' : '#04060c';
   const ref = useCanvas((ctx, W, H, t) => {
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const ink = themeInk(light);
+    ctx.fillStyle = ink.bg; ctx.fillRect(0, 0, W, H);
     const s = t * 1.3;
     const f = s - Math.floor(s);
     const cx = W / 2 + Math.sin(s * 0.45) * W * 0.02;
@@ -385,9 +426,7 @@ function CorridorPreview({ light }: { light: boolean }) {
       }
       const fade = Math.min(1, 1.8 / Z);
       ctx.lineWidth = Math.max(1, (W * 0.0035) * fade);
-      ctx.strokeStyle = light
-        ? `rgba(40,44,66,${0.65 * fade})`
-        : `rgba(120,225,255,${0.75 * fade})`;
+      ctx.strokeStyle = withAlpha(ink.accent2, (light ? 0.65 : 0.75) * fade);
       ctx.beginPath();
       for (let j = 0; j <= 4; j++) {
         const [x, y] = corners[j % 4];
@@ -395,9 +434,7 @@ function CorridorPreview({ light }: { light: boolean }) {
       }
       ctx.stroke();
       if (prev) {
-        ctx.strokeStyle = light
-          ? `rgba(40,44,66,${0.3 * fade})`
-          : `rgba(120,225,255,${0.35 * fade})`;
+        ctx.strokeStyle = withAlpha(ink.accent2, (light ? 0.3 : 0.35) * fade);
         ctx.beginPath();
         for (let j = 0; j < 4; j++) {
           ctx.moveTo(corners[j][0], corners[j][1]);
@@ -414,13 +451,15 @@ function CorridorPreview({ light }: { light: boolean }) {
 /* ---- Trinary: three stars + a doomed orbiting world ----------------------- */
 function TrinaryPreview({ light }: { light: boolean }) {
   const trail = useRef<[number, number][]>([]);
-  const bg = light ? '#f4f3ef' : '#04040a';
   const ref = useCanvas((ctx, W, H, t) => {
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const ink = themeInk(light);
+    ctx.fillStyle = ink.bg; ctx.fillRect(0, 0, W, H);
     const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.22;
+    // three stars in three distinct skin colors (was fixed gold/orange/cyan)
+    const starCols = [ink.accent, ink.data6, ink.accent2];
     const stars = [0, 1, 2].map(i => {
       const a = t * 0.25 + i * (Math.PI * 2 / 3);
-      return { x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R, c: ['#ffd400', '#ff7a59', '#5ad1ff'][i] };
+      return { x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R, c: starCols[i] };
     });
     // planet position: chaotic-ish lissajous influenced by time
     const pa = t * 0.9, pr = R * (1.5 + 0.5 * Math.sin(t * 0.5));
@@ -439,7 +478,7 @@ function TrinaryPreview({ light }: { light: boolean }) {
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(s.x, s.y, R * 0.5, 0, 7); ctx.fill();
       ctx.fillStyle = s.c; ctx.beginPath(); ctx.arc(s.x, s.y, Math.max(2, W * 0.006), 0, 7); ctx.fill();
     });
-    ctx.fillStyle = light ? '#222' : '#fff';
+    ctx.fillStyle = ink.fg;
     ctx.beginPath(); ctx.arc(px, py, Math.max(1.5, W * 0.004), 0, 7); ctx.fill();
   }, [light]);
   return <canvas ref={ref} style={canvasStyle} />;
@@ -458,11 +497,14 @@ function SortingPreview({ light }: { light: boolean }) {
     return a;
   };
   if (!sim.current) sim.current = { arr: shuffled(), agents: [2, 11, 20, 29], last: 0, doneAt: -1 };
-  const bg = light ? '#f4f3ef' : '#05060d';
-  const pal = light
+  const palFallback = light
     ? ['#b3457a', '#7a4fbf', '#1d7a9e', '#b06a10', '#1d8a5e']
     : ['#ff5aa6', '#b78cff', '#5ad1ff', '#ffb04d', '#3de8b0'];
   const ref = useCanvas((ctx, W, H, t) => {
+    const ink = themeInk(light);
+    // value-band palette from the skin's categorical data tokens (data-2..6)
+    const cs = typeof document !== 'undefined' ? getComputedStyle(document.documentElement) : null;
+    const pal = palFallback.map((fb, i) => (cs?.getPropertyValue(`--data-${i + 2}`).trim() || fb));
     const s = sim.current!;
     const sorted = s.arr.every((v, i) => i === 0 || s.arr[i - 1] <= v);
     if (sorted && s.doneAt < 0) s.doneAt = t;
@@ -478,7 +520,7 @@ function SortingPreview({ light }: { light: boolean }) {
         return ni >= N - 1 ? 0 : ni;
       });
     }
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = ink.bg; ctx.fillRect(0, 0, W, H);
     const mid = H * 0.5, m = W * 0.05, bw = (W - 2 * m) / N, amp = H * 0.38;
     for (let i = 0; i < N; i++) {
       const v = s.arr[i];
@@ -493,9 +535,9 @@ function SortingPreview({ light }: { light: boolean }) {
     s.agents.forEach(i => {
       const x = m + i * bw + bw * 0.5;
       const r = Math.max(2.4, W * 0.0085);
-      ctx.fillStyle = light ? '#222' : '#fff';
+      ctx.fillStyle = ink.fg;
       ctx.beginPath(); ctx.arc(x, mid, r, 0, 7); ctx.fill();
-      ctx.strokeStyle = light ? 'rgba(34,34,34,0.35)' : 'rgba(255,255,255,0.35)';
+      ctx.strokeStyle = withAlpha(ink.fg, 0.35);
       ctx.lineWidth = Math.max(1, W * 0.003);
       ctx.beginPath(); ctx.arc(x, mid, r * 2, 0, 7); ctx.stroke();
     });
@@ -520,9 +562,9 @@ const LATTICE = (() => {
 })();
 
 function MatrixPreview({ light }: { light: boolean }) {
-  const bg = light ? '#f4f3ef' : '#05060d';
   const ref = useCanvas((ctx, W, H, t) => {
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const ink = themeInk(light);
+    ctx.fillStyle = ink.bg; ctx.fillRect(0, 0, W, H);
     const { n, heat, perms } = LATTICE;
     const cell = Math.min(W * 0.8 / n, H * 0.8 / n);
     const ox = (W - cell * n) / 2, oy = (H - cell * n) / 2;
@@ -531,9 +573,10 @@ function MatrixPreview({ light }: { light: boolean }) {
         const v = heat[i][j];
         const shimmer = 0.06 * Math.sin(t * 1.2 + i * 0.9 + j * 1.3);
         const a = Math.max(0, Math.min(1, v + shimmer));
-        ctx.fillStyle = light
-          ? `hsla(${35 + a * 10},${50 + a * 30}%,${88 - a * 45}%,1)`
-          : `hsla(${230 - a * 200},75%,${14 + a * 42}%,1)`;
+        // preference-intensity heatmap as an alpha ramp of the skin's secondary accent
+        ctx.fillStyle = ink.bg;
+        ctx.fillRect(ox + j * cell + 1, oy + i * cell + 1, cell - 2, cell - 2);
+        ctx.fillStyle = withAlpha(ink.accent2, 0.12 + a * 0.8);
         ctx.fillRect(ox + j * cell + 1, oy + i * cell + 1, cell - 2, cell - 2);
       }
     }
@@ -543,7 +586,7 @@ function MatrixPreview({ light }: { light: boolean }) {
     const k2 = (k + 1) % perms.length;
     const f = (t % PERIOD) / PERIOD;
     const ease = f < 0.3 ? f / 0.3 : 1; // slide early, rest late
-    ctx.strokeStyle = light ? '#b67d10' : '#ffd400';
+    ctx.strokeStyle = ink.accent;
     ctx.lineWidth = Math.max(1.4, W * 0.005);
     for (let i = 0; i < n; i++) {
       const j = perms[k][i] + (perms[k2][i] - perms[k][i]) * ease;
@@ -565,14 +608,15 @@ function PolygonPreview({ light }: { light: boolean }) {
     const dt = Math.min(0.05, Math.max(0, t - c.pt));
     c.pt = t;
     c.x += 0.1 * dt; c.z += 0.5 * dt;   // stroll forward with a slow drift
-    const gold = light ? '#b67d10' : '#ffd400';
-    const cyan = light ? '#1d8a78' : '#5ad1ff';
-    const pink = light ? '#b3457a' : '#ff5aa6';
+    const ink = themeInk(light);
+    const gold = ink.accent;
+    const cyan = ink.accent2;
+    const pink = ink.data6;
     const horizon = H * 0.4, f = W * 0.42, camH = 0.34;
-    // sky + ground
-    ctx.fillStyle = light ? '#eef0f2' : '#04060c';
-    ctx.fillRect(0, 0, W, horizon);
-    ctx.fillStyle = light ? '#e4dfd2' : '#0a0e1c';
+    // sky + ground: sky is the skin bg, the ground a faint dimmed wash over it
+    ctx.fillStyle = ink.bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = withAlpha(ink.dim, light ? 0.18 : 0.22);
     ctx.fillRect(0, horizon, W, H - horizon);
     const frac = (v: number) => ((v % 1) + 1) % 1;
     // tile grid on the ground: cross lines recede, long lines converge
@@ -633,7 +677,7 @@ function PolygonPreview({ light }: { light: boolean }) {
     ctx.beginPath(); ctx.arc(ax, ay - ar * 1.9, ar * 0.55, 0, 7); ctx.fill();
     // minimap inset: the fundamental square with glued-edge arrows
     const ms = Math.min(W, H) * 0.32, mx = W - ms - W * 0.03, my = H * 0.06;
-    ctx.fillStyle = light ? 'rgba(244,243,239,0.85)' : 'rgba(5,6,13,0.78)';
+    ctx.fillStyle = withAlpha(ink.bg, light ? 0.85 : 0.78);
     ctx.fillRect(mx, my, ms, ms);
     ctx.lineWidth = Math.max(1.4, W * 0.0045);
     ctx.strokeStyle = gold;
@@ -655,7 +699,7 @@ function PolygonPreview({ light }: { light: boolean }) {
     arrow(mx + ms, my + ms / 2, -Math.PI / 2, gold);  // right edge ↑ (same way = torus)
     arrow(mx + ms / 2, my, 0, cyan);                  // top edge →
     arrow(mx + ms / 2, my + ms, 0, cyan);             // bottom edge →
-    ctx.fillStyle = light ? '#222' : '#fff';
+    ctx.fillStyle = ink.fg;
     ctx.beginPath();
     ctx.arc(mx + frac(c.x) * ms, my + (1 - frac(c.z)) * ms, Math.max(2, W * 0.006), 0, 7);
     ctx.fill();
@@ -708,11 +752,12 @@ function TreeNetPreview({ light }: { light: boolean }) {
   }, []);
 
   const ref = useCanvas((ctx, W, H, t) => {
+    const ink = themeInk(light);
     const { n, tris } = cyc;
-    const gold = light ? '#b67d10' : '#ffd400';
-    const teal = light ? '#1d8a78' : '#5ad1ff';
-    const fg = light ? 'rgba(60,65,80,' : 'rgba(200,210,230,';
-    ctx.fillStyle = light ? '#eef0f2' : '#0a0e1c';
+    const gold = ink.accent;
+    const teal = ink.accent2;
+    const fg = (a: number) => withAlpha(ink.fg, a);
+    ctx.fillStyle = ink.bg;
     ctx.fillRect(0, 0, W, H);
     const cx = W / 2, cy = H * 0.52, R = Math.min(W, H) * 0.34;
     const vA = (k: number) => -Math.PI / 2 + (2 * Math.PI * k) / n;
@@ -738,10 +783,10 @@ function TreeNetPreview({ light }: { light: boolean }) {
       return [from[0] + (to[0] - from[0]) * lt, from[1] + (to[1] - from[1]) * lt] as [number, number];
     });
 
-    ctx.strokeStyle = `${fg}0.18)`; ctx.lineWidth = Math.max(1, W * 0.004);
+    ctx.strokeStyle = fg(0.18); ctx.lineWidth = Math.max(1, W * 0.004);
     ctx.beginPath(); for (let k = 0; k < n; k++) { if (k === 0) ctx.moveTo(PX(k), PY(k)); else ctx.lineTo(PX(k), PY(k)); } ctx.closePath(); ctx.stroke();
 
-    ctx.lineWidth = Math.max(1.5, W * 0.006); ctx.strokeStyle = `${fg}0.6)`;
+    ctx.lineWidth = Math.max(1.5, W * 0.006); ctx.strokeStyle = fg(0.6);
     for (let k = 0; k < n; k++) {
       const ti = B.findIndex((bt) => has(bt, k) && has(bt, (k + 1) % n)); if (ti < 0) continue;
       ctx.beginPath(); ctx.moveTo(nodeB[ti][0], nodeB[ti][1]); ctx.lineTo(cx + R * 0.96 * Math.cos(eA(k)), cy + R * 0.96 * Math.sin(eA(k))); ctx.stroke();
@@ -752,7 +797,7 @@ function TreeNetPreview({ light }: { light: boolean }) {
       B.forEach((bt, i) => { if (has(bt, a) && has(bt, b)) ts.push(i); });
       if (ts.length === 2) { ctx.beginPath(); ctx.moveTo(nodeB[ts[0]][0], nodeB[ts[0]][1]); ctx.lineTo(nodeB[ts[1]][0], nodeB[ts[1]][1]); ctx.stroke(); }
     }
-    ctx.fillStyle = light ? '#eef0f2' : '#0a0e1c'; ctx.strokeStyle = `${fg}0.9)`; ctx.lineWidth = Math.max(1, W * 0.004);
+    ctx.fillStyle = ink.bg; ctx.strokeStyle = fg(0.9); ctx.lineWidth = Math.max(1, W * 0.004);
     for (const p of nodeB) { ctx.beginPath(); ctx.arc(p[0], p[1], Math.max(2.5, W * 0.012), 0, 7); ctx.fill(); ctx.stroke(); }
     ctx.fillStyle = gold;
     for (let k = 0; k < n; k++) { ctx.beginPath(); ctx.arc(cx + R * 0.96 * Math.cos(eA(k)), cy + R * 0.96 * Math.sin(eA(k)), Math.max(2.5, W * 0.013), 0, 7); ctx.fill(); }
@@ -762,7 +807,8 @@ function TreeNetPreview({ light }: { light: boolean }) {
 
 function SolidPreview({ light }: { light: boolean }) {
   const ref = useCanvas((ctx, W, H, t) => {
-    ctx.fillStyle = light ? '#eef0f2' : '#070a14';
+    const ink = themeInk(light);
+    ctx.fillStyle = ink.bg;
     ctx.fillRect(0, 0, W, H);
     const cx = W / 2, cy = H / 2, s = Math.min(W, H) * 0.2;
     const ay = t * 0.5, ax = 0.5;
@@ -780,7 +826,7 @@ function SolidPreview({ light }: { light: boolean }) {
       [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1],
     ];
     const edges = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];
-    const accent = light ? '#1d6fb8' : '#5ad1ff';
+    const accent = ink.accent2;
     // a 3×1×1 strip of cubes — one room repeating along x
     for (let c = -1; c <= 1; c++) {
       const fade = c === 0 ? 1 : 0.4;
@@ -804,7 +850,7 @@ function SolidPreview({ light }: { light: boolean }) {
       ctx.stroke();
     };
     const c0 = proj(0, 0, 0); drawF(c0[0], c0[1], 1, accent);
-    const c1 = proj(2.05, 0, 0); drawF(c1[0], c1[1], -1, light ? '#b3457a' : '#ff5aa6');
+    const c1 = proj(2.05, 0, 0); drawF(c1[0], c1[1], -1, ink.data6);
   }, [light]);
   return <canvas ref={ref} style={canvasStyle} />;
 }
@@ -835,11 +881,8 @@ const SKELLAM = (() => {
 function SkellamPreview({ light }: { light: boolean }) {
   const ref = useCanvas((ctx, W, H, t) => {
     // pull the live theme tokens so the card matches the active skin, not just light/dark
-    const cs = getComputedStyle(document.documentElement);
-    const pick = (name: string, fb: string) => cs.getPropertyValue(name).trim() || fb;
-    const bg = pick('--bg', light ? '#f4f3ef' : '#05060d');
-    const gold = pick('--accent', light ? '#b67d10' : '#ffce47');
-    const teal = pick('--accent-2', light ? '#1d8a78' : '#5fe3cd');
+    const ink = themeInk(light);
+    const bg = ink.bg, gold = ink.accent, teal = ink.accent2;
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     const { G, K, pX, pY, jmax, sk, skmax } = SKELLAM;
     const gs = Math.min(W * 0.72, H * 0.6);
@@ -887,7 +930,7 @@ function SkellamPreview({ light }: { light: boolean }) {
 }
 
 export function Preview({ kind, skin }: { kind: PreviewKind; skin: string; hue?: number }) {
-  const light = skin === 'light';
+  const light = isLightSkin(skin);
   switch (kind) {
     case 'plane': return <PlanePreview light={light} />;
     case 'fractal': return <FractalPreview light={light} />;

@@ -25,6 +25,22 @@ informs future rounds. Delete or check off items as they land.
 
 # Backlog · animath
 
+- [ ] [chrome] !high Theming v2 — light/dark-paired themes (decouple identity from mode).
+  Full spec: `docs/sessions/progress/youthful-cray-7m6z9d/2026-06-24-S02-plan-light-dark-theming.md`
+  (status: proposed; execute next session). Every theme gets a light AND dark palette under
+  shared token names (via CSS `light-dark()`); a feature that *requires* a mode (glowing-particle
+  / star scenes → dark; printout → light) forces it on its own subtree, so scene objects use the
+  normal tokens at the theme's dark values — no bespoke per-app scene palette. The `data-scheme`
+  attribute (PR #238) is the switch; dark variants are theme-tinted (Observatory blue-black,
+  Mirage plum), so a forced-dark star field keeps the theme's character. Folds in the per-app viz
+  unification (Trinary scene/data, Complex Particles, Plane Transform, Fractals, Correspondence,
+  Trees, Argand), Agentic Sorting's deferred discrete-colormap adoption, and the Worlds' **day/
+  night skies** (mode = time of day). Decisions locked (in the plan): outcomes → divergent
+  colormap sampled by goodness; stars → discrete `--data` identity; planet → neutral; `--accent`
+  is UI-only; Phosphor's light analog = the 1980s beige case. Prereq is the shared engine
+  (Phase 0); most DOM/SVG apps then "just work," the WebGL apps need a force-mode wrapper +
+  token-reading. Dan 2026-06-24: "the correct move gives every theme a light/dark palette."
+
 - [ ] [counting-the-ways] !med The Lab should show cumulative results, not one-off rows.
   Today each *Run & log* draws an independent sample and appends a row with its own
   method-of-moments μ̂ — no accumulation. Make the catalog **cumulative**: a pooled /
@@ -118,15 +134,17 @@ informs future rounds. Delete or check off items as they land.
   docs/apps/<slug>.md" so there's a single architecture home. Touches the shared
   append-only CLAUDE.md — do it as its own pass to avoid parallel-branch conflicts.
 
-- [ ] [chrome] !med Make graphics consistently theme-driven — gallery previews + per-app canvases.
-  Counting the Ways' gallery preview now reads the live theme tokens (`--accent` /
-  `--accent-2` / `--bg` via `getComputedStyle(document.documentElement)`) so the card
-  tracks the active skin, not just light/dark — `SkellamPreview` in
-  `chrome/previews.tsx` is the **model**. The other previews still hardcode a
-  light/dark pair, and apps don't all respect the theme the same way. Future pass:
-  roll the getComputedStyle pattern across `previews.tsx` and audit in-app canvases so
-  every skin renders faithfully. Dan 2026-06-23: neat idea, not urgent — work toward it
-  once each app's theming is known to be consistent.
+- [ ] [chrome] !low Make in-app canvases consistently theme-driven (gallery previews DONE).
+  DONE 2026-06-24 (PR #238): rolled the `SkellamPreview` getComputedStyle pattern across
+  **all** gallery previews via a shared `themeInk(light)` helper in `chrome/previews.tsx` —
+  every card now reads `--viz-bg`/`--accent`/`--accent-2`/`--data-*` live, so it tracks the
+  *specific* skin (verified across Phosphor/Neon/Mirage/Daylight), keeping the rainbow hue
+  art on the complex-domain previews (Particles/Plane/Fractal/Julia) where hue encodes the
+  argument. Caveat: JuliaPreview's cached Mandelbrot inset captures the skin at first paint
+  and only re-tints on reload (the Julia pane + marker track live). Remaining (!low): a
+  systematic sweep of each app's in-app canvases/HUDs so every skin renders faithfully — many
+  were tokenized in the design-hardening pass, but deciding which 3D scene colors follow the
+  skin vs stay semantic is still open. Dan 2026-06-23: neat idea, not urgent.
 
 - [x] [agentic-sorting] EXPLAINER/README no longer describe the removed Replicate panel.
   DONE 2026-06-22. Removed the stale Replicate-panel copy from both the AgenticSorting
@@ -291,3 +309,37 @@ informs future rounds. Delete or check off items as they land.
   at 0 *errors* (CI-gated via `deploy.yml` + the new `sessions-lint.yml`); this is the
   warning cleanup. Once quiet, consider promoting the PR `sessions-lint` check and the
   mobile smoke from advisory to hard gates (drop `continue-on-error`).
+
+- [ ] [chrome] !low Adopt the discrete colormap registry in Agentic Sorting (theme --data palette for agent identity).
+  The 2026-06-24 design-hardening session shipped `src/lib/colormapRegistry.ts` +
+  `<ColormapPicker>` and adopted it in Stable Matching (divergent, default RdBu). Agentic
+  Sorting's Okabe-Ito agent palette (`arena.ts:13-25`) is the canonical *discrete* target but
+  was deferred: it feeds 3 surfaces (canvas `colorFor`, DOM swatches in `AgenticSorting.tsx`,
+  `LabResults` `barColor`) that must convert atomically, plus a `useThemeId()` subscription +
+  a per-frame ref refresh for the canvas; the existing palette is already colorblind-safe. Do
+  it as one pass with cross-skin visual verification. The same pattern fits Trinary Lab's
+  census outcome colors.
+
+- [ ] [chrome] !low Tokenize residual DOM color on the compliance-clean apps (polish, no visible break).
+  From the 2026-06-24 audit: Polygon/Solid Worlds HUD overlays (~12-14 hex each), Trinary's
+  preset/active buttons (hardcoded blue), PlaneTransform's split-pane bg `#0c0c10` + SVG
+  `stroke="#ffffff"`, TreesAndNets' `C_FLIP`/`C_CROSS`/`#ffd54a` SVG constants. NONE break on
+  light skins today (verified Trees + Plane in Daylight this session) — pure polish, so weigh
+  against regression risk on already-compliant apps. Leave 3D scene/material color + semantic
+  state markers alone (engine color, not chrome).
+
+- [ ] [chrome] !low Complex Particles: reflow/fade the pan-zoom hint when the 4D-Rotation panel covers it.
+  Design-doc 03 minor item; the hint lives on the shared view-overlay hint layer. Polish, not
+  a contract violation.
+
+- [ ] [chrome] !low Full 8-skin × all-apps tour sweep as a visual-regression baseline.
+  `npm run tour -- --skins all` now spans 8 skins (Daylight/Primary/Mirage added 2026-06-24).
+  The hardening session verified the changed apps in representative skins (dark/daylight/
+  phosphor) but not the full 8×14 matrix. Capture a baseline contact sheet; pairs with the
+  existing "wire the tour into CI" TODO above.
+
+- [ ] [chrome] !low Revisit --font-scale Option B (rem migration) if Phosphor still reads large.
+  2026-06-24 shipped Option A — a scoped `[data-theme="phosphor"] .am-app/.am-gallery-app
+  { zoom: var(--font-scale) }` (=0.9), screenshot-verified gap-free at gallery + app level.
+  Option B (migrate chrome px→rem + a type-root `calc()` multiplier) is the cleaner long-term
+  fix if A proves insufficient; bigger diff, deferred per the design doc.

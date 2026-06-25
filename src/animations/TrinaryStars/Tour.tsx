@@ -51,24 +51,24 @@ const scrim: React.CSSProperties = {
 };
 const card: React.CSSProperties = {
   width: 'min(440px, 100%)',
-  background: 'rgba(14,18,28,0.97)', border: '1px solid rgba(120,150,200,0.3)',
-  borderRadius: 14, padding: '20px 22px', color: '#cfe0f5',
+  background: 'var(--panel-solid)', border: '1px solid var(--border)',
+  borderRadius: 14, padding: '20px 22px', color: 'var(--fg)',
   boxShadow: '0 18px 50px rgba(0,0,0,0.55)',
 };
 const kicker: React.CSSProperties = {
   font: '600 11px/1 ui-monospace, monospace', letterSpacing: 0.6,
-  textTransform: 'uppercase', color: '#66f0ff', marginBottom: 8,
+  textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8,
 };
-const titleStyle: React.CSSProperties = { margin: '0 0 8px', font: '700 19px/1.25 system-ui, sans-serif', color: '#fff' };
-const bodyStyle: React.CSSProperties = { margin: 0, font: '14px/1.6 system-ui, sans-serif', color: '#b6c6e0' };
+const titleStyle: React.CSSProperties = { margin: '0 0 8px', font: '700 19px/1.25 system-ui, sans-serif', color: 'var(--fg)' };
+const bodyStyle: React.CSSProperties = { margin: 0, font: '14px/1.6 system-ui, sans-serif', color: 'var(--dim)' };
 const dotsRow: React.CSSProperties = { display: 'flex', gap: 6, margin: '18px 0 14px' };
 function dot(active: boolean): React.CSSProperties {
-  return { width: active ? 20 : 7, height: 7, borderRadius: 999, background: active ? '#66f0ff' : 'rgba(150,170,200,0.3)', transition: 'width 0.2s, background 0.2s' };
+  return { width: active ? 20 : 7, height: 7, borderRadius: 999, background: active ? 'var(--accent)' : 'var(--dim-2)', transition: 'width 0.2s, background 0.2s' };
 }
 const btnRow: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8 };
 const baseBtn: React.CSSProperties = {
   appearance: 'none', cursor: 'pointer', borderRadius: 8,
   padding: '8px 16px', font: '600 13px/1 system-ui, sans-serif',
 };
-const ghostBtn: React.CSSProperties = { ...baseBtn, border: '1px solid rgba(120,150,200,0.28)', background: 'transparent', color: '#9aa7bd' };
-const primaryBtn: React.CSSProperties = { ...baseBtn, border: 'none', background: '#66f0ff', color: '#06121f' };
+const ghostBtn: React.CSSProperties = { ...baseBtn, border: '1px solid var(--border)', background: 'transparent', color: 'var(--dim)' };
+const primaryBtn: React.CSSProperties = { ...baseBtn, border: 'none', background: 'var(--accent)', color: 'var(--accent-fg)' };

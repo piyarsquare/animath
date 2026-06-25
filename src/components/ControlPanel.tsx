@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './ControlPanel.css';
+import { COLORMAPS, FAMILIES, themeMapsFor, gradientCss, type ColorFamily } from '../lib/colormapRegistry';
 
 /**
  * Form primitives — Section, Slider, Pills, Select, Checkbox — used inside
@@ -344,5 +345,86 @@ export function Checkbox({ label, checked, onChange }: CheckboxProps) {
       />
       <span>{label}</span>
     </label>
+  );
+}
+
+interface ColormapPickerProps {
+  /** The data's required family — declared by the view (sequential / divergent /
+   *  discrete / cyclic). The picker foregrounds this family's theme-recommended
+   *  maps and tucks the others behind an "advanced" disclosure. */
+  family: ColorFamily;
+  /** Current map id, or 'discrete' for the theme's --data palette. */
+  value: string;
+  onChange: (id: string) => void;
+  /** Active skin id (from useSkin()) — drives the recommendations + discrete palette. */
+  themeId: string;
+  reverse?: boolean;
+  onReverse?: (b: boolean) => void;
+}
+
+/**
+ * A `color`-tier panel control for DOM/2D apps: pick a colormap from the family
+ * the *data* requires (the family is the app's call; the theme + user pick within
+ * it). Mirrors the design-handoff reference: family header, a grid of recommended
+ * swatches, and an advanced disclosure to reach the other families (including
+ * Discrete = the live theme palette). Re-curates when `themeId` changes.
+ */
+export function ColormapPicker({ family, value, onChange, themeId, reverse = false, onReverse }: ColormapPickerProps) {
+  const [showMore, setShowMore] = useState(false);
+  const recommended = themeMapsFor(family, themeId);
+  const rest = Object.keys(COLORMAPS).filter(k => COLORMAPS[k].family === family && !recommended.includes(k));
+  const primary = [...recommended, ...rest];
+  const otherFamilies = (Object.keys(FAMILIES) as ColorFamily[]).filter(f => f !== family);
+
+  const swatch = (id: string) => {
+    const cm = COLORMAPS[id];
+    const isDiscrete = id === 'discrete';
+    const name = isDiscrete ? 'Theme palette' : cm?.name ?? id;
+    const cb = isDiscrete ? false : cm?.cb ?? false;
+    return (
+      <button
+        key={id}
+        type="button"
+        className={`cp-cmap-sw ${value === id ? 'cp-active' : ''}`}
+        onClick={() => onChange(id)}
+        title={name}
+        aria-pressed={value === id}
+      >
+        <span className="cp-cmap-bar" style={{ backgroundImage: gradientCss(id, reverse) }} />
+        <span className="cp-cmap-name">{name}{cb && <i className="cp-cmap-cb" title="colorblind-safe" aria-label="colorblind-safe" />}</span>
+      </button>
+    );
+  };
+
+  return (
+    <div className="cp-row cp-cmap">
+      <div className="cp-row-label">
+        <span>{FAMILIES[family].label}</span>
+        <span className="cp-row-value">{family}</span>
+      </div>
+      <div className="cp-cmap-note">this view needs {family} · {FAMILIES[family].note}</div>
+      <div className="cp-cmap-grid">{primary.map(swatch)}</div>
+      {onReverse && family !== 'discrete' && (
+        <label className="cp-cmap-rev">
+          <input type="checkbox" checked={reverse} onChange={e => onReverse(e.target.checked)} />
+          <span>Reverse</span>
+        </label>
+      )}
+      <button type="button" className="cp-cmap-more" onClick={() => setShowMore(v => !v)} aria-expanded={showMore}>
+        <span className={`cp-section-chevron ${showMore ? 'cp-open' : ''}`}>▸</span> Other families (advanced)
+      </button>
+      {showMore && (
+        <div className="cp-cmap-more-body">
+          {otherFamilies.map(f => (
+            <div key={f} className="cp-cmap-fam">
+              <div className="cp-cmap-fam-label">{FAMILIES[f].label}</div>
+              <div className="cp-cmap-grid">
+                {(f === 'discrete' ? ['discrete'] : Object.keys(COLORMAPS).filter(k => COLORMAPS[k].family === f)).map(swatch)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
