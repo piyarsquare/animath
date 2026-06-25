@@ -11,7 +11,7 @@ followup: null
 pr: 239
 app: chrome, trinary, polygon-worlds, solid-worlds
 signals: needs-dan, visual-unverified
-next: Phase 2 rollout — the remaining WebGL/canvas apps (Complex Particles, Plane Transform, Fractals, Correspondence, Trees, Argand, Agentic) + the deferred Worlds HUD tokens / spherical sky-dome + the TrinaryLab console stat-text tokenization.
+next: Argand (skipped — in development on another branch) is the only app left untouched; when its branch lands, run the same per-app color audit on it. Otherwise the rollout + audit + loose ends are complete — ready for Dan's review / merge.
 ---
 
 # Theming v2 — light/dark-paired theme engine (Phase 0) + pilots
@@ -70,6 +70,53 @@ attribute, reactive `useSkin`/`useThemeId`) shipped in
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟢 milestone · 20:30 — Audit fixes + loose ends cleared (two commits)
+**Why:** Dan: "I don't like loose ends. but first, check over the existing work…
+launching a few independent auditors." Ran the audit, fixed the findings, then
+cleared the three named loose ends.
+
+**Audit-fix batch** (`ef1c08c`):
+- **HIGH — Worlds reset the walker to center on a skin switch.** The theme-triggered
+  engine rebuild (props regenerate on `themeId`/`themeMode`) disposed and recreated
+  the engine, dropping the pose. Now capture the chart/cube position before dispose
+  and restore it after — but **only for a theme-only rebuild**; a genuine world
+  change (different gluing) still drops the walker fresh (`prevSpecRef` distinguishes
+  them). Both Polygon Worlds + Solid Worlds.
+- **Reactive deps** — canvas/WebGL theme effects that follow the user's mode now
+  depend on **both** `themeId` and `themeMode` (a same-identity native↔light↔dark
+  switch was previously missed): Agentic Sorting, Trees & Nets (`g3` useMemo + both
+  Graph3D keys), Solid Worlds minimap/cube-map.
+- **Hardening** — `ControlPanel` select → `color-scheme: inherit` (was forcing dark);
+  `cornerColor` interpolates `--data` for landmark counts > 7 (was indexing out of
+  range); NaN-guarded the registry clamps; removed dead `OBJECTIVE_COLORS`/
+  `FROZEN_COLOR` exports; moved `readDecorPalette` below the imports.
+- **Docs** — theming v2 is now documented in `CLAUDE.md` (new *Theming* section +
+  overview/tree updates) and the `theme.css` header.
+
+**Loose ends batch** (`6203889`):
+- **TrinaryLab console** — outcome colors sample the theme's divergent fate ramp
+  (shared with the Destiny Map via `outcomeHex`); the warm record/longest-era
+  highlight is a discrete `--data` token; stat text that names an outcome borrows
+  that outcome's color. The `Histogram` + `LaunchSpace` canvases read `--viz-bg`/
+  `--dim`/`--data` live, so the plot beds, axis text, sampling box, sample dots and
+  physics-region tints all track the active skin × mode.
+- **Worlds chrome** — the floating walk-pad, the instruction hint (now a themed
+  pill) and the Polygon Worlds mini-map frame/label use the panel tokens like the
+  other workspace panels; the mini-map edge-pairing colors track the discrete
+  `--data` palette (matching how Solid Worlds already colors its cube map).
+- **Spherical sky-dome** — **verified already working**, no change needed: the
+  sphere dome retints by mode via the look system (light → daytime blue, dark →
+  moonlit navy). An earlier "doesn't retint" reading was a screenshot-harness
+  artifact (the mode `localStorage` seed was double-JSON-encoded, so the mode read
+  as native both times); with a correct plain-string seed the dome tracks the mode.
+
+**Build green · lint 0 errors (58, under baseline) · 88 tests.** Verified headless:
+the sphere is daytime in light mode / moonlit in dark mode, and the TrinaryLab
+console + Worlds chrome theme cleanly in light mode.
+
+With this, **theming v2 is complete** across the whole suite except **Argand**
+(deliberately skipped — in development on another branch).
 
 ### 🟡 milestone · 19:40 — Complex Particles force-dark stage (Dan picked option a)
 **Why:** Dan: "stick with A" — keep the rainbow domain coloring, theme the stage.
