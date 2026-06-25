@@ -13,7 +13,7 @@ import React, { useMemo } from 'react';
 import type { DistanceMatrix } from '../lib/metric';
 import type { NJTrace, NJStep } from '../lib/neighborJoining';
 import { njEdgeId } from '../lib/neighborJoining';
-import type { NNTrace } from '../lib/splitWeights';
+import type { NNTrace, NNStep } from '../lib/splitWeights';
 import type { SplitGraph } from '../lib/splitGraph';
 import { SplitGraphView } from './NetViews';
 
@@ -64,10 +64,36 @@ export function NeighborNetRun({
   const angleOf = (p: number): number => -Math.PI / 2 + (2 * Math.PI * p) / n;
   const pt = (p: number): Pt => ({ x: c + R * Math.cos(angleOf(p)), y: c + R * Math.sin(angleOf(p)) });
 
+  // Oriented rigid blocks: a component of size >= 2 is a locked sub-arc that can
+  // only move/flip as a whole. Draw it as a band hugging the circle.
+  const posOf = new Map<number, number>();
+  order.forEach((l, p) => posOf.set(l, p));
+  const recentMerged = step > 0 ? new Set(trace.steps[step - 1].mergedOrder) : new Set<number>();
+  const blocks = comps
+    .filter((chain) => chain.length >= 2 && chain.length < n)
+    .map((chain) => {
+      const ps = chain.map((l) => posOf.get(l) as number);
+      const set = new Set(ps);
+      let start = ps[0];
+      for (const p of ps) if (!set.has((p - 1 + n) % n)) { start = p; break; }
+      const recent = chain.length === recentMerged.size && chain.every((l) => recentMerged.has(l));
+      return { start, len: chain.length, recent };
+    });
+  const arcPath = (start: number, len: number): string => {
+    const aR = R + 11;
+    const a0 = angleOf(start);
+    const a1 = angleOf((start + len - 1) % n);
+    const largeArc = (len - 1) / n > 0.5 ? 1 : 0;
+    return `M ${c + aR * Math.cos(a0)} ${c + aR * Math.sin(a0)} A ${aR} ${aR} 0 ${largeArc} 1 ${c + aR * Math.cos(a1)} ${c + aR * Math.sin(a1)}`;
+  };
+
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
       <svg viewBox={`0 0 ${S} ${S}`} width="100%" height="100%" style={{ maxWidth: '100%', maxHeight: '100%' }}>
         <circle cx={c} cy={c} r={R} fill="none" stroke="var(--fg, #ccd)" strokeOpacity={0.1} strokeWidth={1} />
+        {blocks.map((bk, i) => (
+          <path key={`bk${i}`} d={arcPath(bk.start, bk.len)} fill="none" stroke={bk.recent ? C_HI : C_TEAL} strokeOpacity={bk.recent ? 0.9 : 0.5} strokeWidth={bk.recent ? 5 : 3.5} strokeLinecap="round" />
+        ))}
         {order.map((leaf, p) => {
           const q = (p + 1) % n;
           const next = order[q];
@@ -245,6 +271,53 @@ export function QMatrix({ step }: { step: NJStep | null }): JSX.Element {
                 if (j >= i) return <td key={`c${i}-${j}`} style={{ textAlign: 'center', color: 'var(--fg, #667)', opacity: 0.3 }}>{i === j ? '·' : ''}</td>;
                 const q = qOf.get(key(ri, cj));
                 const isMin = key(ri, cj) === chosen;
+                return (
+                  <td key={`c${i}-${j}`} style={{ padding: '1px 5px', textAlign: 'right', color: 'var(--fg, #dde)', background: q !== undefined ? tint(q) : 'transparent', outline: isMin ? '1.6px solid #ffd54a' : 'none', outlineOffset: -1 }}>
+                    {q !== undefined ? q.toFixed(1) : ''}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// =========================================================================
+// NeighborNet's decision surface: the component-level Q matrix at one merge.
+// Lower Q (a cheaper merge) is warmer; the minimum (the components NeighborNet
+// merges) is outlined. Labels are the components' leaf chains.
+// =========================================================================
+export function NNQMatrix({ step, matrix }: { step: NNStep | null; matrix: DistanceMatrix }): JSX.Element {
+  if (!step || step.qScores.length === 0) {
+    return <div style={{ fontSize: 12, color: 'var(--fg, #aab)', opacity: 0.7 }}>—</div>;
+  }
+  const labels = step.componentsBefore.map((chain) => chain.map((l) => matrix.leaves[l]).join(''));
+  const pairKey = (a: number, b: number): string => `${Math.min(a, b)}|${Math.max(a, b)}`;
+  const qOf = new Map<string, number>();
+  step.qScores.forEach((s) => qOf.set(pairKey(s.pair[0], s.pair[1]), s.q));
+  const qs = step.qScores.map((s) => s.q);
+  const lo = Math.min(...qs);
+  const hi = Math.max(...qs);
+  const tint = (q: number): string => { const t = hi > lo ? 1 - (q - lo) / (hi - lo) : 1; return `rgba(63, 182, 166, ${0.1 + 0.55 * t})`; };
+  const chosen = pairKey(step.leftIndex, step.rightIndex);
+  const head: React.CSSProperties = { fontFamily: 'var(--mono, monospace)', fontSize: 10, color: 'var(--accent, #cda434)', padding: '1px 4px', textAlign: 'center' };
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ borderCollapse: 'collapse', fontFamily: 'var(--mono, monospace)', fontSize: 10 }}>
+        <thead>
+          <tr><th />{labels.map((l, i) => <th key={`h${i}`} style={head}>{l}</th>)}</tr>
+        </thead>
+        <tbody>
+          {labels.map((rl, i) => (
+            <tr key={`r${i}`}>
+              <th style={head}>{rl}</th>
+              {labels.map((cl, j) => {
+                if (j >= i) return <td key={`c${i}-${j}`} style={{ textAlign: 'center', color: 'var(--fg, #667)', opacity: 0.3 }}>{i === j ? '·' : ''}</td>;
+                const q = qOf.get(pairKey(i, j));
+                const isMin = pairKey(i, j) === chosen;
                 return (
                   <td key={`c${i}-${j}`} style={{ padding: '1px 5px', textAlign: 'right', color: 'var(--fg, #dde)', background: q !== undefined ? tint(q) : 'transparent', outline: isMin ? '1.6px solid #ffd54a' : 'none', outlineOffset: -1 }}>
                     {q !== undefined ? q.toFixed(1) : ''}

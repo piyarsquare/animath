@@ -330,6 +330,9 @@ export interface NNStep {
   endpoints: [number, number];
   /** The ordered chain after splicing — the newly locked-in order fragment. */
   mergedOrder: number[];
+  /** Q-criterion value for every candidate component pair (the decision surface);
+   *  pair indices reference `componentsBefore`. The chosen pair is the minimum. */
+  qScores: { pair: [number, number]; q: number }[];
 }
 
 /** A full NeighborNet ordering run plus the per-merge trace that produced it. */
@@ -367,6 +370,15 @@ export function computeNeighborNetTrace(m: DistanceMatrix): NNTrace {
 
   while (components.length > 1) {
     const componentsBefore = components.map((component) => component.order.slice());
+    // The component-level Q decision surface (same criterion the selection uses).
+    const totals = components.map((comp, i) =>
+      components.reduce((s, other, oi) => (i === oi ? s : s + componentDistance(m, comp, other)), 0));
+    const qScores: { pair: [number, number]; q: number }[] = [];
+    for (let i = 0; i < components.length; i += 1) {
+      for (let j = i + 1; j < components.length; j += 1) {
+        qScores.push({ pair: [i, j], q: (components.length - 2) * componentDistance(m, components[i], components[j]) - totals[i] - totals[j] });
+      }
+    }
     const pair = selectLevyPachterComponentPair(m, components);
     const endpoints = selectLevyPachterEndpointPair(m, components, pair.left, pair.right);
     const left = orientComponentAtEndpoint(components[pair.left].order, endpoints.left, 'end');
@@ -378,6 +390,7 @@ export function computeNeighborNetTrace(m: DistanceMatrix): NNTrace {
       rightIndex: pair.right,
       endpoints: [endpoints.left, endpoints.right],
       mergedOrder: merged.order.slice(),
+      qScores,
     });
     components = components
       .filter((_, index) => index !== pair.left && index !== pair.right)

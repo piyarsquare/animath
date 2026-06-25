@@ -14,7 +14,7 @@ import { solveSplitWeights, computeLevyPachterOrdering, computeNeighborNetTrace 
 import { buildSplitGraph } from './lib/splitGraph';
 import { MatrixEditor } from './views/MatrixEditor';
 import { NJTreeView, SplitNetworkView, SplitGraphView, SplitWeightsList, type Highlight } from './views/NetViews';
-import { NeighborNetRun, NeighborJoiningRun, QMatrix } from './views/AlgorithmView';
+import { NeighborNetRun, NeighborJoiningRun, QMatrix, NNQMatrix } from './views/AlgorithmView';
 import explainer from './EXPLAINER.md?raw';
 
 // Persistence namespace. Bumped (was 'trees-and-nets') when the app was
@@ -446,11 +446,12 @@ export default function TreesAndNets(): JSX.Element {
     if (runStep >= nnTrace.steps.length) {
       runNarration = `Order locked: (${nnTrace.order.map((l) => matrix.leaves[l]).join(' ')}). The net is its split decomposition.`;
     } else if (runStep === 0) {
-      runNarration = 'Every leaf is its own component. Play to agglomerate — each merge locks one adjacency of the circular order.';
+      runNarration = 'Star: every circular ordering is equally likely. For each pair of components, Q scores merging them; the minimum merges, and once a block exceeds size 2 its orientation locks — it can only flip as a whole.';
     } else {
       const s = nnTrace.steps[runStep - 1];
       const chain = (idx: number): string => s.componentsBefore[idx].map((l) => matrix.leaves[l]).join('');
-      runNarration = `Merge ${chain(s.leftIndex)} + ${chain(s.rightIndex)} — splice ${matrix.leaves[s.endpoints[0]]}–${matrix.leaves[s.endpoints[1]]}.`;
+      const locked = s.mergedOrder.length > 2 ? ` Block ${s.mergedOrder.map((l) => matrix.leaves[l]).join('')} is now oriented — it flips only as a whole.` : '';
+      runNarration = `Merge ${chain(s.leftIndex)} + ${chain(s.rightIndex)} — splice ${matrix.leaves[s.endpoints[0]]}–${matrix.leaves[s.endpoints[1]]}.${locked}`;
     }
   } else if (runStep >= njTrace.steps.length) {
     runNarration = 'Tree complete — every cluster joined.';
@@ -463,6 +464,7 @@ export default function TreesAndNets(): JSX.Element {
       : `Join ${s.joined[0]}, ${s.joined[1]} → ${s.newNode}: the minimum of the Q matrix (Q ${Math.min(...s.qScores.map((x) => x.q)).toFixed(1)}).`;
   }
   const njDecisionStep = njTrace.steps[Math.min(runStep > 0 ? runStep - 1 : 0, Math.max(0, njTrace.steps.length - 1))] ?? null;
+  const nnDecisionStep = nnTrace.steps[Math.min(runStep > 0 ? runStep - 1 : 0, Math.max(0, nnTrace.steps.length - 1))] ?? null;
 
   const runSections: SectionDef[] = [
     {
@@ -476,18 +478,16 @@ export default function TreesAndNets(): JSX.Element {
         </div>
       ),
     },
-    ...(runAlgo === 'nj'
-      ? ([{
-        id: 'qmatrix', title: 'Q matrix', arch: 'readout', estHeight: 230,
-        node: (
-          <div style={{ display: 'grid', gap: 8 }}>
-            <QMatrix step={njDecisionStep} />
-            <Kicker>Q(i,j) = how cheap it is to force i, j adjacent (lower is better). NJ joins the{' '}
-              <b style={{ color: '#ffd54a' }}>minimum</b> (outlined) — that is <i>why</i> this pair, not another.</Kicker>
-          </div>
-        ),
-      }] as SectionDef[])
-      : []),
+    {
+      id: 'qmatrix', title: 'Q matrix', arch: 'readout', estHeight: 230,
+      node: (
+        <div style={{ display: 'grid', gap: 8 }}>
+          {runAlgo === 'nj' ? <QMatrix step={njDecisionStep} /> : <NNQMatrix step={nnDecisionStep} matrix={matrix} />}
+          <Kicker>Q = how cheap it is to {runAlgo === 'nj' ? 'force two clusters adjacent' : 'merge two components'} (lower is better).
+            The <b style={{ color: '#ffd54a' }}>minimum</b> (outlined) is chosen — that is <i>why</i>.</Kicker>
+        </div>
+      ),
+    },
     {
       id: 'runstate', title: 'Step', arch: 'readout', estHeight: 140,
       node: (
