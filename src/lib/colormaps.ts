@@ -124,8 +124,30 @@ export const PALETTE_GLSL = /* glsl */ `
   }
 `;
 
-/** Palette dropdown options, shared by both fractal viewers. */
+import { themeMapsFor } from './colormapRegistry';
+
+/** Sentinel palette value: "follow the theme" — resolve to the GLSL scheme that
+ *  matches the active theme's recommended sequential colormap. */
+export const PALETTE_THEME = -1;
+/** Registry colormap id → the GLSL `paletteColor` scheme that renders it (or the
+ *  closest match for maps without a dedicated GLSL fn — mako≈viridis, amber≈copper). */
+const REGISTRY_TO_SCHEME: Record<string, number> = {
+  viridis: 4, magma: 5, inferno: 6, plasma: 7, mako: 4, amber: 11,
+};
+/** The GLSL scheme id for a theme's signature (first recommended) sequential map. */
+export function themeFractalScheme(themeId: string): number {
+  const seq = themeMapsFor('sequential', themeId)[0];
+  return REGISTRY_TO_SCHEME[seq] ?? 4;
+}
+/** Resolve a palette value to a concrete GLSL scheme (PALETTE_THEME → theme map). */
+export function resolvePalette(value: number, themeId: string): number {
+  return value === PALETTE_THEME ? themeFractalScheme(themeId) : value;
+}
+
+/** Palette dropdown options, shared by both fractal viewers. A leading "Theme"
+ *  entry follows the active skin's colormap. */
 export const PALETTE_OPTIONS: { value: number; label: string }[] = [
+  { value: PALETTE_THEME, label: 'Theme' },
   { value: 0, label: 'Rainbow' },
   { value: 1, label: 'Fire' },
   { value: 2, label: 'Ocean' },

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Icon } from './icons';
-import { SkinPicker, useSkin } from './skins';
+import { SkinPicker, useSkin, useThemeMode } from './skins';
 import { ExplainerModal } from './ExplainerModal';
 
 export interface WorkspaceMode { id: string; label: string; }
@@ -34,6 +34,7 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
   children?: React.ReactNode;
 }) {
   const [skin, setSkin] = useSkin();
+  const [mode, setMode] = useThemeMode();
   const [helpOpen, setHelpOpen] = useState(false);
   // On the cramped phone bar, an always-on `extra` selector already names the
   // subject, so the title is redundant — drop it (and its separator) to make room.
@@ -106,7 +107,7 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
           <Icon name="help" size={17} />
         </button>
       )}
-      <SkinPicker skin={skin} onSetSkin={setSkin} compact={compact} />
+      <SkinPicker skin={skin} onSetSkin={setSkin} mode={mode} onSetMode={setMode} compact={compact} />
       {helpOpen && explainer && (
         <ExplainerModal title={title} markdown={explainer} onClose={() => setHelpOpen(false)} />
       )}

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { lerpStops } from '../../lib/colormapRegistry';
 
 /**
  * The decorated fundamental polygon, shared identically by all worlds. It carries a
@@ -38,6 +39,38 @@ export const ARRANGEMENTS: { id: ArrangementId; label: string }[] = [
   { id: 'ring', label: 'Ring' },
 ];
 
+/**
+ * Theme palette for the decor (theming v2). Every decor color used to be a fixed
+ * literal; now they all resolve from the live theme tokens — distinct landmark /
+ * corner identities cycle the `--data` slots, structural pieces use neutrals, the
+ * center beacon uses the accents, and glyph text uses the theme font. PolygonWorlds
+ * sets this from `getComputedStyle` before the engine (re)builds; the fallback
+ * reproduces the pre-v2 look. Keep it the single source of truth so the 3D
+ * markers and the mini-map (which calls `cornerColor`) stay in correspondence.
+ */
+export interface DecorPalette {
+  data: number[];     // landmark + corner identities → --data-1..7
+  trunk: number;      // tree trunk → --dim-2
+  stone: number;      // structural stone (plinth/capital/shaft base) → --dim
+  rim: number;        // corner-disc metal rim → --dim-2
+  floor: number;      // euclidean floor → a neutral
+  beacon: number;     // center beacon, top face (gold) → --accent
+  beaconAlt: number;  // center beacon, bottom face (magenta) → --accent-2
+  plaqueBg: string;   // landmark badge backing
+  font: string;       // glyph font family
+}
+const DECOR_FALLBACK: DecorPalette = {
+  data: [0x5fa8ff, 0x5fe3cd, 0x9ee85f, 0xffce47, 0xff9a5f, 0xff6f9c, 0xc08bff],
+  trunk: 0x6b4a2a, stone: 0xdedacb, rim: 0x9aa0ab, floor: 0x46658f,
+  beacon: 0xffcf4a, beaconAlt: 0xff5ad0,
+  plaqueBg: 'rgba(8,11,22,0.86)', font: '"Segoe UI", system-ui, sans-serif',
+};
+let PAL: DecorPalette = DECOR_FALLBACK;
+/** Install the theme palette (call before building decor / the cover). */
+export function setDecorPalette(p: DecorPalette): void { PAL = p; }
+/** Read the active decor palette (presenters use it for the floor, etc.). */
+export function getDecorPalette(): DecorPalette { return PAL; }
+
 /** Low-discrepancy sequence for an even "random-looking" scatter. */
 function halton(i: number, base: number): number {
   let r = 0, f = 1;
@@ -45,13 +78,20 @@ function halton(i: number, base: number): number {
   return r;
 }
 
-const hue = (i: number) => new THREE.Color().setHSL((i * 0.61803398875) % 1, 0.62, 0.58).getHex();
+const hue = (i: number) => PAL.data[(i % PAL.data.length + PAL.data.length) % PAL.data.length];
 
-/** A unique, evenly-spaced hue for corner marker `i` of `count` — distinct as a
- *  set so every corner reads as its own color. Shared by the 3D markers and the
- *  mini-map so the numbers + colors correspond. */
-export const cornerColor = (i: number, count: number): number =>
-  new THREE.Color().setHSL((i / Math.max(1, count)) % 1, 0.72, 0.56).getHex();
+/** A unique --data identity for corner marker `i` — distinct as a set so every
+ *  corner reads as its own color. Shared by the 3D markers and the mini-map so the
+ *  numbers + colors correspond. (`count` is kept for the call sites; the identity
+ *  is by index into the theme's data palette.) */
+export const cornerColor = (i: number, count: number): number => {
+  const n = PAL.data.length;
+  if (count <= n) return PAL.data[((i % n) + n) % n];
+  // More corners than palette slots (8-corner worlds: rp2oct, zipsphere8):
+  // interpolate within the data palette so every corner still reads distinct.
+  const hexes = PAL.data.map((c) => '#' + (c >>> 0).toString(16).padStart(6, '0'));
+  return new THREE.Color(lerpStops(hexes, i / Math.max(1, count - 1))).getHex();
+};
 
 /** Roman numeral for a small positive integer (corner markers go up to 8). */
 export function romanize(n: number): string {
@@ -69,7 +109,7 @@ export function romanize(n: number): string {
 export function generateProps(count: number, arrangement: ArrangementId): DecorProp[] {
   const props: DecorProp[] = [];
   // center beacon (special; its color is set per-face by the builder)
-  props.push({ u: 0.5, v: 0.5, color: 0xffd24a, label: '★', kind: 'center' });
+  props.push({ u: 0.5, v: 0.5, color: PAL.beacon, label: '★', kind: 'center' });
 
   // interior markers — spread through the domain but held clear of the edges
   const m = 0.12, span = 1 - 2 * m;
@@ -131,7 +171,7 @@ function labelTexture(label: string, color: number): THREE.CanvasTexture {
   // dark rounded plaque with a glowing hued rim
   const pad = s * 0.1, pw = s - 2 * pad, ph = s * 0.62, py = (s - ph) / 2;
   roundRect(ctx, pad, py, pw, ph, s * 0.12);
-  ctx.fillStyle = 'rgba(8,11,22,0.86)';
+  ctx.fillStyle = PAL.plaqueBg;
   ctx.fill();
   ctx.lineWidth = s * 0.045;
   ctx.strokeStyle = hex;
@@ -139,7 +179,7 @@ function labelTexture(label: string, color: number): THREE.CanvasTexture {
 
   const cy = s * 0.5;
   // number (left)
-  ctx.font = `900 ${Math.round(s * 0.4)}px "Segoe UI", system-ui, sans-serif`;
+  ctx.font = `900 ${Math.round(s * 0.4)}px ${PAL.font}`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.lineWidth = s * 0.05;
   ctx.strokeStyle = 'rgba(0,0,0,0.85)';
@@ -262,7 +302,7 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
   const discBodyGeo = new THREE.CylinderGeometry(1.15, 1.24, 0.32, 36);
   const discRimGeo = new THREE.TorusGeometry(1.12, 0.1, 10, 40);
   const discPlateGeo = new THREE.CircleGeometry(1.02, 44);
-  const discRimMat = new THREE.MeshStandardMaterial({ color: 0x9aa0ab, roughness: 0.4, metalness: 0.7, side: THREE.DoubleSide });
+  const discRimMat = new THREE.MeshStandardMaterial({ color: PAL.rim, roughness: 0.4, metalness: 0.7, side: THREE.DoubleSide });
   // per-corner caches (one decor instance per world; disposed below)
   const cornerBodyMats = new Map<number, THREE.MeshStandardMaterial>();
   const cornerPlateMats = new Map<string, THREE.MeshBasicMaterial>();
@@ -276,11 +316,15 @@ export function makeFundamentalSquareDecor(props: readonly DecorProp[]): Fundame
   const canopyMats: THREE.MeshStandardMaterial[] = [];
   const decalMats: THREE.MeshBasicMaterial[] = [];
   const decalTexs: THREE.CanvasTexture[] = [];
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.92, metalness: 0, side: THREE.DoubleSide });
-  // shared pale stone for the column's structural pieces (the hue lives on the shaft)
-  const stoneMat = new THREE.MeshStandardMaterial({ color: 0xdedacb, roughness: 0.78, metalness: 0.02, side: THREE.DoubleSide });
-  const goldMat = new THREE.MeshStandardMaterial({ color: 0xffcf4a, emissive: 0x7a5a00, emissiveIntensity: 0.7, roughness: 0.35, metalness: 0.45, side: THREE.DoubleSide });
-  const magentaMat = new THREE.MeshStandardMaterial({ color: 0xff5ad0, emissive: 0x66004a, emissiveIntensity: 0.7, roughness: 0.35, metalness: 0.45, side: THREE.DoubleSide });
+  const trunkMat = new THREE.MeshStandardMaterial({ color: PAL.trunk, roughness: 0.92, metalness: 0, side: THREE.DoubleSide });
+  // shared structural stone for the column's pieces (the hue lives on the shaft)
+  const stoneMat = new THREE.MeshStandardMaterial({ color: PAL.stone, roughness: 0.78, metalness: 0.02, side: THREE.DoubleSide });
+  // center beacon: accent (top face) vs counter-accent (bottom face), each with a
+  // dark emissive of its own hue so it glows a little in every look.
+  const beaconEmissive = new THREE.Color(PAL.beacon).multiplyScalar(0.4).getHex();
+  const beaconAltEmissive = new THREE.Color(PAL.beaconAlt).multiplyScalar(0.4).getHex();
+  const goldMat = new THREE.MeshStandardMaterial({ color: PAL.beacon, emissive: beaconEmissive, emissiveIntensity: 0.7, roughness: 0.35, metalness: 0.45, side: THREE.DoubleSide });
+  const magentaMat = new THREE.MeshStandardMaterial({ color: PAL.beaconAlt, emissive: beaconAltEmissive, emissiveIntensity: 0.7, roughness: 0.35, metalness: 0.45, side: THREE.DoubleSide });
 
   for (const p of props) {
     // column shaft: a limestone tint carrying the landmark hue

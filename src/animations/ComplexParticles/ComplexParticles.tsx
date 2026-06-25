@@ -654,7 +654,12 @@ export default function ComplexParticles({
       sceneRef.current = scene;
       state.cameraRef.current = camera;
       state.rendererRef.current = renderer;
-      renderer.setClearColor(state.objectMode ? 0xffffff : 0x000000);
+      // Initial clear = the theme's dark --viz-bg (the canvas is inside the
+      // force-dark <Scheme>); useUniformSync keeps it in sync on objectMode/skin.
+      {
+        const vb = getComputedStyle(renderer.domElement).getPropertyValue('--viz-bg').trim();
+        renderer.setClearColor(new THREE.Color(state.objectMode ? '#ffffff' : (vb || '#04060c')));
+      }
       camera.position.z = state.cameraZ;
 
       const textures = loadParticleTextures(() => {
