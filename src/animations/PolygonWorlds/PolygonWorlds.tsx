@@ -10,7 +10,31 @@ import { usePhone } from '../../chrome/usePhone';
 import { useThemeId, useThemeModeId, resolveScheme } from '../../chrome/skins';
 import { Slider, Select, Pills } from '../../components/ControlPanel';
 import { WORLDS, worldById, WorldSpec, deriveGeometry, analyzeWorld } from './worldSpec';
-import { generateProps, ARRANGEMENTS, ArrangementId } from './decor';
+import { generateProps, ARRANGEMENTS, ArrangementId, setDecorPalette, type DecorPalette } from './decor';
+
+/** Read the decor's theme palette from the live tokens (theming v2): landmark /
+ *  corner identities → the --data slots, structural pieces → neutrals, the center
+ *  beacon → the accents, glyph text → the theme font. Read off the document root,
+ *  which carries the user's theme × mode. */
+function readDecorPalette(): DecorPalette {
+  const cs = getComputedStyle(document.documentElement);
+  const hex = (name: string, fallback: number) => {
+    const v = cs.getPropertyValue(name).trim();
+    return v ? new THREE.Color(v).getHex() : fallback;
+  };
+  const str = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback;
+  return {
+    data: [1, 2, 3, 4, 5, 6, 7].map((k, i) => hex(`--data-${k}`, [0x5fa8ff, 0x5fe3cd, 0x9ee85f, 0xffce47, 0xff9a5f, 0xff6f9c, 0xc08bff][i])),
+    trunk: hex('--dim-2', 0x6b4a2a),
+    stone: hex('--dim', 0xdedacb),
+    rim: hex('--dim-2', 0x9aa0ab),
+    floor: hex('--dim', 0x46658f),
+    beacon: hex('--accent', 0xffcf4a),
+    beaconAlt: hex('--accent-2', 0xff5ad0),
+    plaqueBg: str('--panel-solid', 'rgba(8,11,22,0.86)'),
+    font: str('--font-ui', '"Segoe UI", system-ui, sans-serif'),
+  };
+}
 import { makeFundamentalSquareEngine } from './fundamentalSquareEngine';
 import { LOOKS } from './looks';
 import {
@@ -84,7 +108,16 @@ export default function PolygonWorlds() {
   const cover = deriveGeometry(spec).cover;
   const isSpherical = cover === 'spherical';
   const isHyperbolic = cover === 'hyperbolic';
-  const props = useMemo(() => generateProps(landmarkCount, arrangement), [landmarkCount, arrangement]);
+  // Theming v2: resolve the decor palette from the live tokens, then generate the
+  // props. Depending on themeId/themeMode means a skin or mode switch regenerates
+  // props → the engine's [spec, props] effect rebuilds the decor in the new colors
+  // (the same path a landmark-count change already uses). Set synchronously here so
+  // generateProps (which reads the module palette via hue()) sees the new colors.
+  const props = useMemo(() => {
+    setDecorPalette(readDecorPalette());
+    return generateProps(landmarkCount, arrangement);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [landmarkCount, arrangement, themeId, themeMode]);
   // Below 740px the workspace re-chromes (full-bleed view + floating bottom dock):
   // lift the walk pad clear of the dock and move the corner overlays off the bar.
   const phone = usePhone();
