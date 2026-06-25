@@ -11,8 +11,9 @@ import { neighborOrder, canonicalKey } from './lib/mosaic';
 import { preset, presetNames, type DistanceMatrix, type PresetName } from './lib/metric';
 import { computeNeighborJoining, njLeafPathInfo } from './lib/neighborJoining';
 import { solveSplitWeights, computeLevyPachterOrdering } from './lib/splitWeights';
+import { buildSplitGraph } from './lib/splitGraph';
 import { MatrixEditor } from './views/MatrixEditor';
-import { NJTreeView, SplitNetworkView, SplitWeightsList, type Highlight } from './views/NetViews';
+import { NJTreeView, SplitNetworkView, SplitGraphView, SplitWeightsList, type Highlight } from './views/NetViews';
 import explainer from './EXPLAINER.md?raw';
 
 // Persistence namespace. Bumped (was 'trees-and-nets') when the app was
@@ -239,6 +240,7 @@ export default function TreesAndNets(): JSX.Element {
   const lpOrder = useMemo(() => computeLevyPachterOrdering(matrix), [matrix]);
   const weightedSplits = useMemo(() => solveSplitWeights(matrix, lpOrder), [matrix, lpOrder]);
   const treeSplitKeys = useMemo(() => new Set(nj.splitKeys), [nj]);
+  const splitGraph = useMemo(() => buildSplitGraph(weightedSplits, lpOrder, n), [weightedSplits, lpOrder, n]);
 
   // ---- shared selection (links matrix ↔ tree ↔ net ↔ weights) + view mode ----
   const [appMode, setAppMode] = usePersistentState<'nets' | 'fibers'>(`${APP_ID}:appmode`, 'nets');
@@ -407,7 +409,8 @@ export default function TreesAndNets(): JSX.Element {
 
   const netsViews: ViewDef[] = [
     { id: 'njtree', title: 'Neighbor-Joining tree', defaultRect: { x: 360, y: 16, w: 400, h: 400 }, node: <NJTreeView nj={nj} matrix={matrix} highlight={hl} onSelect={setHl} /> },
-    { id: 'splitnet', title: 'Split network (the net)', defaultRect: { x: 776, y: 16, w: 420, h: 420 }, node: <SplitNetworkView splits={weightedSplits} order={lpOrder} matrix={matrix} highlight={hl} onSelect={setHl} /> },
+    { id: 'splitgraph', title: 'Split network (SplitsTree)', defaultRect: { x: 776, y: 16, w: 440, h: 360 }, node: <SplitGraphView graph={splitGraph} matrix={matrix} highlight={hl} onSelect={setHl} /> },
+    { id: 'splitnet', title: 'Chord net (simple)', defaultRect: { x: 776, y: 392, w: 380, h: 380 }, node: <SplitNetworkView splits={weightedSplits} order={lpOrder} matrix={matrix} highlight={hl} onSelect={setHl} /> },
   ];
 
   const fibersViews: ViewDef[] = [
@@ -421,7 +424,7 @@ export default function TreesAndNets(): JSX.Element {
   const sections = appMode === 'nets' ? netsSections : fibersSections;
   const views = appMode === 'nets' ? netsViews : fibersViews;
   const layouts: LayoutDef[] = appMode === 'nets'
-    ? [{ id: 'essentials', name: 'Nets', open: { distances: { x: 84, y: 16 }, connect: { x: 84, y: 410 }, weights: { x: 84, y: 560 } }, views: { njtree: { open: true }, splitnet: { open: true } } }]
+    ? [{ id: 'essentials', name: 'Nets', open: { distances: { x: 84, y: 16 }, connect: { x: 84, y: 410 }, weights: { x: 84, y: 560 } }, views: { njtree: { open: true }, splitgraph: { open: true }, splitnet: { open: false } } }]
     : [{ id: 'essentials', name: 'Fibers', open: { nav: { x: 84, y: 16 }, state: { x: 84, y: 210 }, view: { x: 84, y: 340 } }, views: { tree: { open: true }, polygon: { open: false }, overlay: { open: true }, assoc: { open: true }, cube: { open: true } } }];
 
   const modes: WorkspaceMode[] = [

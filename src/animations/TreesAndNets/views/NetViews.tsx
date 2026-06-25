@@ -17,6 +17,7 @@ import {
 } from '../lib/neighborJoining';
 import { canonicalSplitKey } from '../lib/trees';
 import type { WeightedDisplayedSplit } from '../lib/splitWeights';
+import type { SplitGraph } from '../lib/splitGraph';
 
 const C_TEAL = '#3fb6a6';
 const C_HI = '#ffd54a'; // selection highlight (gold)
@@ -288,6 +289,64 @@ export function SplitWeightsList({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// =========================================================================
+// SplitsTree split-graph — the planar split network. A tree-like split system
+// collapses to a tree; conflicting splits open "boxes". Each edge carries a
+// split; the selected split's edges are highlighted (others dim).
+// =========================================================================
+export function SplitGraphView({
+  graph,
+  matrix,
+  highlight,
+  onSelect,
+}: {
+  graph: SplitGraph;
+  matrix: DistanceMatrix;
+  highlight: Highlight;
+  onSelect: SelectHandler;
+}): JSX.Element {
+  const W = 420;
+  const H = 320;
+  const cx = W / 2;
+  const cy = H / 2;
+  const maxW = Math.max(1e-6, ...graph.edges.map((e) => e.weight));
+  const anySel = !!highlight && highlight.kind === 'split';
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ maxWidth: '100%', maxHeight: '100%' }}>
+        {graph.edges.map((e, i) => {
+          const a = graph.nodes[e.a];
+          const b = graph.nodes[e.b];
+          const t = e.weight / maxW;
+          const on = isSplit(highlight, e.splitKey);
+          return (
+            <g key={`e${i}`} style={{ cursor: 'pointer' }} onClick={() => onSelect(on ? null : { kind: 'split', key: e.splitKey })}>
+              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={12} />
+              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                stroke={on ? C_HI : weightColor(t)}
+                strokeOpacity={on ? 1 : anySel ? 0.18 : 0.8}
+                strokeWidth={1.2 + 3.2 * t + (on ? 2.2 : 0)} strokeLinecap="round"
+                style={{ transition: 'stroke 160ms, stroke-opacity 160ms' }}>
+                <title>{`${e.splitKey}  weight ${e.weight.toFixed(3)}`}</title>
+              </line>
+            </g>
+          );
+        })}
+        {graph.nodes.map((nd, i) => {
+          if (nd.leaves.length === 0) return null;
+          const dir = Math.atan2(nd.y - cy, nd.x - cx) || 0;
+          return (
+            <g key={`n${i}`}>
+              <circle cx={nd.x} cy={nd.y} r={3} fill="var(--accent, #cda434)" />
+              <text x={nd.x + 11 * Math.cos(dir)} y={nd.y + 11 * Math.sin(dir)} fontSize={13} fontFamily="monospace" fill="var(--accent, #cda434)" textAnchor="middle" dominantBaseline="middle">{nd.leaves.map((l) => matrix.leaves[l]).join('')}</text>
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }

@@ -11,7 +11,7 @@ followup: null
 app: trees-and-nets
 thumbnail: assets/2026-06-25-S01-themeA-selected.png
 signals: null
-next: Theme B — SplitsTree split-graph view + scale (lazy fiber compute); then Theme C (build tree/CDM by edges)
+next: Theme C — build a tree / CDM by edges (the metric builder: add splits with weights → metric)
 ---
 
 # Trees and Nets — port the rest of quantum-tree (evidence engine first)
@@ -62,6 +62,21 @@ plane, and the quartet→split→ordering→tree assembly views.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 20:10 — Theme B: the SplitsTree split-network view
+**Why:** Dan wants the splits-tree view; the chord net was a stand-in.
+
+Ported the SplitsTree planar split-graph (convex-hull band-duplication + equal-angle
+layout) faithfully from `map.js` into `lib/splitGraph.ts` (+4 tests: tree metric →
+a tree with edges = nodes − 1; conflict → a box, cyclomatic rank > 0). New
+`SplitGraphView` renders it as the primary **Split network (SplitsTree)** view; the
+simple chord net stays as a secondary view (closed by default). Click-to-select +
+cross-highlight work on it like the rest. **Tree** preset → the net is a tree (all
+splits tagged △ tree); **Conflict** preset → a **box** opens — the conflict the NJ
+tree is forced to hide. Build green, **24/24** tests, lint clean. Verified headless.
+
+![Conflict: the split network opens a box beside the forced NJ tree](assets/2026-06-25-S01-themeB-conflict.png)
+![Tree: the split network collapses to a tree (all splits △ tree)](assets/2026-06-25-S01-themeB-tree.png)
 
 ### 🟡 milestone · 19:30 — Theme A: the views now connect (+ mobile, n→9)
 **Why:** Dan's feedback — make matrix↔solution read, fix mobile, connect weights to trees.
