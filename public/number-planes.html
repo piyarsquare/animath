@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<!-- Number Planes — a choice-driven, JS-enhanced teaching page about the three
+     number planes (complex / dual / split = Spin / Shear / Boost over j²=p).
+     PROSE-FIRST PROBE (2026-06-25): hub + a ring of lenses you circle, with a
+     carried j² choice that rewrites the prose live. Some lenses are fully
+     written; some are teaser-stubs. Applet <figure>s are placeholders until
+     numberPlanes.ts gets a #/embed/ route. Same visual family as the other
+     public/*-guide.html pages, but this one adds a small navigation layer.
+     Math source: src/animations/Argand/numberPlanes.ts. -->
+<html lang="en" data-plane="spin">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Number Planes — choose how to multiply</title>
+  <style>
+    :root {
+      --bg: #faf8f3; --fg: #232323; --muted: #8a8377; --rule: #ddd5c4;
+      --codebg: #1d1f23; --codefg: #e6e6e6; --codecm: #7f8a78;
+      --inlinebg: #f0ece1; --accent: #7a5cff; --eqbg: #f4f1e8;
+      /* --plane is the *carried choice* color; it changes with j². */
+      --plane: #6a5cff; --plane-soft: #efeaff;
+    }
+    /* The carried j² choice tints the page. Spin (complex) keeps the calm house
+       purple — the familiar start; Shear (dual) goes green, Boost (split) red,
+       so leaving the familiar plane is visible. */
+    html[data-plane="spin"]  { --plane: #6a5cff; --plane-soft: #ece9ff; }
+    html[data-plane="shear"] { --plane: #2f9e63; --plane-soft: #e6f3ea; }
+    html[data-plane="boost"] { --plane: #d65a33; --plane-soft: #f8e9e2; }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+           font: 17px/1.65 Georgia, 'Times New Roman', serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 8px 20px 96px; }
+    h1 { font-size: 33px; line-height: 1.2; margin: 0 0 6px; }
+    h2 { font-size: 25px; line-height: 1.25; margin: 8px 0 4px; }
+    h3 { font-size: 18px; margin: 26px 0 4px; }
+    .byline { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+    p { margin: 0 0 18px; }
+    a { color: var(--accent); }
+    em { color: #4a443a; }
+    strong { color: #1a1a1a; }
+    code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+           font-size: 0.86em; background: var(--inlinebg); padding: 1px 5px;
+           border-radius: 4px; }
+    sup, sub { line-height: 0; }
+
+    /* ---- the carried-choice header (sticky) ---- */
+    header.choice { position: sticky; top: 0; z-index: 20;
+      background: rgba(250,248,243,0.94); backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--rule); }
+    .choice-inner { max-width: 720px; margin: 0 auto; padding: 9px 20px;
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .brand { font-weight: 600; font-size: 15px; letter-spacing: 0.01em;
+      cursor: pointer; color: var(--fg); border: 0; background: none;
+      font-family: inherit; padding: 0; }
+    .brand:hover { color: var(--plane); }
+    .planes { display: flex; gap: 6px; margin-left: auto; }
+    .plane-btn { font-family: inherit; font-size: 13.5px; cursor: pointer;
+      border: 1px solid var(--rule); background: #fff; color: #4a443a;
+      border-radius: 999px; padding: 5px 13px; line-height: 1.1;
+      transition: all 0.13s; }
+    .plane-btn small { color: var(--muted); font-size: 0.82em; }
+    .plane-btn:hover { border-color: var(--plane); }
+    .plane-btn[aria-pressed="true"] { border-color: var(--plane);
+      background: var(--plane-soft); color: var(--plane); font-weight: 600; }
+    .plane-btn[aria-pressed="true"] small { color: var(--plane); }
+
+    /* the live one-line readout under the choice */
+    .readout { width: 100%; font-size: 13.5px; color: var(--muted);
+      border-top: 1px dashed var(--rule); padding-top: 7px; margin-top: 2px; }
+    .readout b { color: var(--plane); font-weight: 600; }
+
+    /* ---- the ring of perspectives (sticky, the thing you circle) ---- */
+    nav.ring { position: sticky; top: 0; z-index: 10; background: var(--bg);
+      border-bottom: 1px solid var(--rule); }
+    .ring-inner { max-width: 720px; margin: 0 auto; padding: 9px 20px;
+      display: flex; gap: 7px; overflow-x: auto; align-items: center; }
+    .ring-chip { font-family: inherit; font-size: 12.5px; white-space: nowrap;
+      cursor: pointer; border: 1px solid var(--rule); background: #fff;
+      color: #5a5346; border-radius: 7px; padding: 5px 10px; line-height: 1.1;
+      display: flex; align-items: center; gap: 6px; transition: all 0.13s; }
+    .ring-chip:hover { border-color: var(--plane); color: var(--plane); }
+    .ring-chip.active { border-color: var(--plane); background: var(--plane-soft);
+      color: var(--plane); font-weight: 600; }
+    .ring-chip .dot { width: 7px; height: 7px; border-radius: 50%;
+      border: 1.5px solid var(--muted); flex: none; }
+    .ring-chip.seen .dot { background: var(--plane); border-color: var(--plane); }
+    .ring-chip.home { font-size: 14px; padding: 5px 9px; }
+
+    /* ---- the hub ---- */
+    .lede { font-size: 19px; line-height: 1.55; color: #34302a; }
+    .panel { background: var(--plane-soft); border: 1px solid var(--rule);
+      border-left: 4px solid var(--plane); border-radius: 0 10px 10px 0;
+      padding: 16px 20px; margin: 24px 0; transition: background 0.2s; }
+    .panel h3 { margin-top: 0; }
+    .tri { width: 100%; border-collapse: collapse; font-size: 15.5px;
+      margin: 6px 0 2px; }
+    .tri td { padding: 6px 8px; border-bottom: 1px solid var(--rule);
+      vertical-align: top; }
+    .tri td:first-child { color: var(--muted); width: 38%; }
+    .tri b { color: var(--plane); }
+    .promise { font-size: 17px; border-left: 3px solid var(--plane);
+      padding: 2px 0 2px 16px; margin: 24px 0; color: #34302a; font-style: italic; }
+    .promise b { font-style: normal; }
+
+    /* the "choose a perspective" deck */
+    .deck-head { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--muted); margin: 36px 0 10px; }
+    .deck { list-style: none; margin: 0; padding: 0; display: grid;
+      grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 560px) { .deck { grid-template-columns: 1fr; } }
+    .card { border: 1px solid var(--rule); border-radius: 11px; background: #fff;
+      padding: 14px 16px; cursor: pointer; text-align: left; font-family: inherit;
+      transition: border-color 0.13s, transform 0.13s; position: relative; }
+    .card:hover { border-color: var(--plane); transform: translateY(-1px); }
+    .card .ct { font-size: 17px; font-weight: 600; color: var(--fg); }
+    .card .ct .ix { color: var(--plane); font-size: 14px; margin-right: 6px; }
+    .card .cd { font-size: 14px; color: #4a443a; margin-top: 3px; line-height: 1.45; }
+    .card .ch { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .card.leaf { background: #fbfaf6; border-style: dashed; }
+    .card .seen-tag { position: absolute; top: 12px; right: 14px; font-size: 11px;
+      color: var(--plane); opacity: 0; }
+    .card.seen .seen-tag { opacity: 1; }
+    .card.seen { border-color: var(--plane); }
+
+    /* ---- a lens ---- */
+    .lens { padding-top: 10px; }
+    .lens .kicker { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--plane); font-weight: 600; margin-bottom: 2px; }
+    .eq { background: var(--eqbg); border-left: 3px solid var(--plane);
+      padding: 12px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+      font-size: 16px; overflow-x: auto; }
+    .eq code { background: none; padding: 0; font-size: 1em; }
+    .pp { color: var(--plane); font-weight: 600; font-style: normal;
+      transition: color 0.2s; }
+    .note { border-left: 3px solid #c8a26a; background: #f7f1e3;
+      padding: 11px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+      font-size: 15.5px; }
+    .note b { color: #7a5a1e; }
+
+    /* the source listing (kept identical to the guide family) */
+    .listing { margin: 18px 0; }
+    .listing .src { font: 12px/1.2 ui-monospace, Menlo, Consolas, monospace;
+      color: var(--muted); margin: 0 0 5px; }
+    .listing .src b { color: #5a5346; font-weight: 600; }
+    pre { background: var(--codebg); color: var(--codefg); margin: 0;
+      padding: 16px 18px; border-radius: 9px; overflow-x: auto;
+      font: 13px/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+    pre .cm { color: var(--codecm); font-style: italic; }
+
+    /* a planned-applet placeholder (until numberPlanes.ts gets an embed route) */
+    figure { margin: 24px 0; }
+    .stub-box { border: 1.5px dashed var(--plane); border-radius: 10px;
+      background: var(--plane-soft); padding: 20px; min-height: 150px;
+      display: flex; flex-direction: column; justify-content: center; gap: 6px;
+      transition: background 0.2s, border-color 0.2s; }
+    .stub-box .tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--plane); font-weight: 700; }
+    .stub-box p { margin: 0; font-size: 15px; color: #34302a; }
+    figcaption { font-size: 13.5px; color: var(--muted); padding-top: 8px; }
+
+    /* the circle-back footer — the heart of the "circling" mechanic */
+    .circle-back { margin: 36px 0 8px; padding: 16px 18px; border: 1px solid var(--rule);
+      border-radius: 12px; background: var(--plane-soft); transition: background 0.2s; }
+    .cb-label { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--muted); margin: 0 0 10px; }
+    .cb-links { display: flex; flex-direction: column; gap: 8px; }
+    .cb-link { font-family: inherit; font-size: 15.5px; cursor: pointer;
+      background: none; border: 0; color: var(--plane); text-align: left;
+      padding: 0; text-decoration: none; }
+    .cb-link:hover { text-decoration: underline; }
+    .cb-link .em { color: #4a443a; font-style: italic; }
+    .cb-back { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); }
+    .cb-back button { font-family: inherit; font-size: 14px; cursor: pointer;
+      background: none; border: 0; color: var(--muted); padding: 0; }
+    .cb-back button:hover { color: var(--plane); }
+
+    .footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--rule);
+      color: var(--muted); font-size: 14px; }
+    .footer a { color: var(--accent); }
+    [hidden] { display: none !important; }
+    .draft-flag { background: #fff6e0; border: 1px solid #e8d49a; color: #7a5a1e;
+      border-radius: 8px; padding: 8px 14px; font-size: 13px; margin: 14px 0 0; }
+  </style>
+</head>
+<body>
+
+<!-- ============ the carried choice (sticky) ============ -->
+<header class="choice">
+  <div class="choice-inner">
+    <button class="brand" data-go="home">✦ Number&nbsp;Planes</button>
+    <div class="planes" role="group" aria-label="Choose how the plane multiplies (j² = p)">
+      <button class="plane-btn" data-set-plane="spin"  aria-pressed="true">Spin <small>j²=−1</small></button>
+      <button class="plane-btn" data-set-plane="shear" aria-pressed="false">Shear <small>j²=0</small></button>
+      <button class="plane-btn" data-set-plane="boost" aria-pressed="false">Boost <small>j²=+1</small></button>
+    </div>
+    <div class="readout">
+      In your plane: <code>×</code> is a <b class="pp" data-spin="rotation" data-shear="shear" data-boost="boost">rotation</b>
+      &middot; the unit curve is <b class="pp" data-spin="a circle" data-shear="a pair of lines" data-boost="a hyperbola">a circle</b>
+      &middot; there are <b class="pp" data-spin="no" data-shear="one" data-boost="two">no</b> rails.
+    </div>
+  </div>
+</header>
+
+<!-- ============ the ring of perspectives (sticky) ============ -->
+<nav class="ring" aria-label="Perspectives">
+  <div class="ring-inner">
+    <button class="ring-chip home" data-go="home" title="The choice">✦</button>
+    <button class="ring-chip" data-go="multiplication"><span class="dot"></span>Multiplication</button>
+    <button class="ring-chip" data-go="magnitude"><span class="dot"></span>Magnitude</button>
+    <button class="ring-chip" data-go="rails"><span class="dot"></span>Rails</button>
+    <button class="ring-chip" data-go="iteration"><span class="dot"></span>Iteration</button>
+    <button class="ring-chip" data-go="algebra"><span class="dot"></span>The algebra</button>
+    <button class="ring-chip" data-go="pspace"><span class="dot"></span>The circle of planes</button>
+    <button class="ring-chip" data-go="applications"><span class="dot"></span>Where it shows up</button>
+    <button class="ring-chip" data-go="higher"><span class="dot"></span>◆ Higher</button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ============ HUB ============ -->
+  <section id="hub">
+    <h1>Choose how to multiply the plane</h1>
+    <div class="byline">A number is something you can add <em>and</em> multiply. In the plane, one of those is a choice — and the choice is this whole page.</div>
+
+    <p class="lede">
+      On the number line, everything is settled: <code>+</code> slides, <code>&times;</code> scales, and there's nothing to decide.
+      Step up to the plane and <strong>addition is still forced</strong> &mdash; points are arrows, and arrows add one way.
+      But <strong>multiplication is suddenly a choice.</strong> Make it one way and you get the complex numbers and their spirals;
+      make it another and you get the arithmetic behind relativity, or the arithmetic behind automatic differentiation.
+      Remarkably, the entire choice collapses to <strong>one knob</strong>: what does <code>j = (0, 1)</code> square to?
+    </p>
+
+    <div class="eq">
+      <code>j&sup2; = p</code> &nbsp;&nbsp;and then&nbsp;&nbsp;
+      <code>(x&#8321;+y&#8321;j)(x&#8322;+y&#8322;j) = (x&#8321;x&#8322; + p&middot;y&#8321;y&#8322;) + (x&#8321;y&#8322; + y&#8321;x&#8322;)j</code>
+    </div>
+
+    <p>
+      Turn that knob with the three buttons up top. Only the <em>sign</em> of <code>p</code> matters, so there are exactly three
+      planes &mdash; and you're holding one right now:
+    </p>
+
+    <div class="panel">
+      <h3>The plane in your hands</h3>
+      <table class="tri">
+        <tr><td>You picked</td><td><b class="pp" data-spin="Spin — the complex numbers (j is i)" data-shear="Shear — the dual numbers (j is &epsilon;)" data-boost="Boost — the split-complex numbers">Spin — the complex numbers (j is i)</b></td></tr>
+        <tr><td>so <code>p = j&sup2;</code> is</td><td><b class="pp" data-spin="negative" data-shear="zero" data-boost="positive">negative</b></td></tr>
+        <tr><td>multiplying by a unit is</td><td><b class="pp" data-spin="a rotation" data-shear="a shear" data-boost="a boost (a squeeze)">a rotation</b></td></tr>
+        <tr><td>the unit curve <code>x&sup2;&minus;p&middot;y&sup2;=1</code> is</td><td><b class="pp" data-spin="a circle" data-shear="a pair of parallel lines" data-boost="a hyperbola">a circle</b></td></tr>
+        <tr><td>and it has</td><td><b class="pp" data-spin="no rails — it is entangled" data-shear="one rail" data-boost="two rails — it is separable">no rails — it is entangled</b></td></tr>
+      </table>
+    </div>
+
+    <p class="promise">
+      This page has a <b>single idea</b> at its center, and you're going to meet it from many directions.
+      Pick a perspective below; read it; come back and pick another. The same three-way split &mdash;
+      <b>two&nbsp;&middot;&nbsp;one&nbsp;&middot;&nbsp;zero</b> &mdash; will keep returning wearing different clothes:
+      as roots, as rails, as the shape of a curve, as the shape of an orbit. When you catch yourself thinking
+      <em>"wait, this is the same thing again,"</em> you'll have understood it.
+    </p>
+
+    <div class="deck-head">Choose a perspective &mdash; and feel free to circle back</div>
+    <ul class="deck" id="deck">
+      <li><button class="card" data-go="multiplication">
+        <span class="seen-tag">&#10003; seen</span>
+        <div class="ct"><span class="ix">&times;</span>Multiplication</div>
+        <div class="cd">The one rule that defines the plane: <code>j&sup2;=p</code>. Watch what &ldquo;times&rdquo; actually does.</div>
+        <div class="ch">the choice, up close</div>
+      </button></li>
+      <li><button class="card" data-go="magnitude">
+        <span class="seen-tag">&#10003; seen</span>
+        <div class="ct"><span class="ix">&#9711;</span>Magnitude</div>
+        <div class="cd">Every plane keeps <em>some</em> size constant. Its &ldquo;unit circle&rdquo; is a circle, a line-pair, or a hyperbola.</div>
+        <div class="ch">the 2&middot;1&middot;0 as a curve</div>
+      </button></li>
+      <li><button class="card" data-go="rails">
+        <span class="seen-tag">&#10003; seen</span>
+        <div class="ct"><span class="ix">&#9473;</span>Rails &mdash; the heart</div>
+        <div class="cd">Is there a direction multiplication only <em>slides</em> along, never turns? Count them: 2, 1, or 0.</div>
+        <div class="ch">separable vs. entangled</div>
+      </button></li>
+      <li><button class="card" data-go="iteration">
+        <span class="seen-tag">&#10003; seen</span>
+        <div class="ct"><span class="ix">&#8635;</span>Iteration</div>
+        <div class="cd">Apply <code>f(z)=&alpha;z+&beta;</code> over and over. The orbit spirals, shears, or rides a saddle.</div>
+        <div class="ch">the 2&middot;1&middot;0 as motion</div>
+      </button></li>
+      <li><button class="card" data-go="algebra">
+        <span class="seen-tag">&#10003; seen</span>
+        <div class="ct"><span class="ix">&#8862;</span>The algebra</div>
+        <div class="cd">Why is the split plane secretly <em>two separate number lines</em>? Idempotents, zero divisors, ℝ&times;ℝ.</div>
+        <div class="ch">the 2&middot;1&middot;0 as structure</div>
+      </button></li>
+      <li><button class="card" data-go="pspace">
+        <span class="seen-tag">&#10003; seen</span>
+        <div class="ct"><span class="ix">&#8734;</span>The circle of planes</div>
+        <div class="cd">The knob <code>p</code> looks like a line, but it's secretly a circle &mdash; with the dual plane at both 0 and ∞.</div>
+        <div class="ch">stepping outside the plane</div>
+      </button></li>
+      <li><button class="card" data-go="applications">
+        <span class="seen-tag">&#10003; seen</span>
+        <div class="ct"><span class="ix">&#9733;</span>Where it shows up</div>
+        <div class="cd">Boost is special relativity. Shear is autodiff. Spin is everywhere. The same three planes, in the wild.</div>
+        <div class="ch">the same split, out there</div>
+      </button></li>
+      <li><button class="card leaf" data-go="higher">
+        <span class="seen-tag">&#10003; seen</span>
+        <div class="ct"><span class="ix">&#9670;</span>Can I go higher?</div>
+        <div class="cd">Hamilton's quest: multiply <em>triples</em>? It can't be done &mdash; the door that opens is quaternions.</div>
+        <div class="ch">a one-way trapdoor</div>
+      </button></li>
+    </ul>
+
+    <p class="draft-flag">
+      <strong>Draft probe (2026-06-25).</strong> This page is being built prose-first. The fully-written
+      perspectives are <em>Multiplication</em>, <em>Magnitude</em>, <em>Rails</em>, and <em>Iteration</em>;
+      the rest are teaser-stubs. The dashed boxes are where the live applets will land once
+      <code>numberPlanes.ts</code> gets an embed route.
+    </p>
+  </section>
+
+  <!-- ============ LENS: MULTIPLICATION ============ -->
+  <article class="lens" id="lens-multiplication" hidden>
+    <div class="kicker">Perspective &middot; the choice, up close</div>
+    <h2><span style="color:var(--plane)">&times;</span> &nbsp;Multiplication is the whole choice</h2>
+
+    <p>
+      Demand only two reasonable things of multiplication &mdash; that it <strong>distributes</strong> over addition and has a
+      <strong>unit</strong> <code>1=(1,0)</code> &mdash; and almost everything is forced. The product of two arbitrary points is fixed
+      by one unknown: the value of <code>j&middot;j</code>, where <code>j=(0,1)</code>. Call it <code>p</code>. Expand:
+    </p>
+
+    <div class="eq">
+      <code>(x&#8321;+y&#8321;j)(x&#8322;+y&#8322;j) = x&#8321;x&#8322; + (x&#8321;y&#8322;+y&#8321;x&#8322;)j + y&#8321;y&#8322;&middot;j&sup2;
+      = (x&#8321;x&#8322; + p&middot;y&#8321;y&#8322;) + (x&#8321;y&#8322;+y&#8321;x&#8322;)j</code>
+    </div>
+
+    <p>
+      That single <code>p</code> in the first term is the entire decision. In <strong>your</strong> plane it is
+      <b class="pp" data-spin="p = &minus;1" data-shear="p = 0" data-boost="p = +1">p = &minus;1</b>,
+      which makes &ldquo;times&rdquo; behave as <b class="pp" data-spin="a rotation: angles add, lengths multiply" data-shear="a shear: the y-part picks up a copy of the x-part" data-boost="a boost: a balanced squeeze along the diagonals">a rotation: angles add, lengths multiply</b>.
+      The code is literally that one line:
+    </p>
+
+    <div class="listing">
+      <p class="src"><b>src/animations/Argand/numberPlanes.ts</b> : 60&ndash;64 &mdash; the rule that defines the class</p>
+      <pre><span class="cm">// Product (x&#8321;+y&#8321;j)(x&#8322;+y&#8322;j) with j&sup2; = p. p = &minus;1 is ordinary complex.</span>
+export const mul = (a, b, p) =&gt; ({
+  x: a.x * b.x + p * a.y * b.y,
+  y: a.x * b.y + a.y * b.x,
+});</pre>
+    </div>
+
+    <figure>
+      <div class="stub-box">
+        <span class="tag">applet</span>
+        <p>Drag two points and watch their product. A slider sets <code>p</code>; as it crosses zero you'll see the
+        product's spin slow, freeze into a shear, then open into a boost &mdash; the <em>same</em> multiplication, three behaviors.</p>
+      </div>
+      <figcaption>Planned live applet (<code>numberPlanes.ts &rarr; #/embed/number-planes</code>). For now, the prose carries it.</figcaption>
+    </figure>
+
+    <p>
+      Here is the first appearance of the split you were promised. There is a clean way to read &ldquo;how does <code>&times;</code> behave&rdquo;:
+      ask how many <em>directions</em> it leaves un-turned. That count is <b class="pp" data-spin="zero, in your plane" data-shear="one, in your plane" data-boost="two, in your plane">zero, in your plane</b> &mdash;
+      and it is the through-line of everything else here.
+    </p>
+
+    <div class="circle-back">
+      <p class="cb-label">The same idea, seen another way</p>
+      <div class="cb-links">
+        <button class="cb-link" data-go="magnitude">&rarr; <span class="em">What does multiplication keep constant?</span> The magnitude, and its unit curve.</button>
+        <button class="cb-link" data-go="rails">&rarr; <span class="em">Those un-turned directions have a name:</span> rails. Count them.</button>
+      </div>
+      <div class="cb-back"><button data-go="home">&#8617; back to the choice</button></div>
+    </div>
+  </article>
+
+  <!-- ============ LENS: MAGNITUDE ============ -->
+  <article class="lens" id="lens-magnitude" hidden>
+    <div class="kicker">Perspective &middot; the 2&middot;1&middot;0 as a curve</div>
+    <h2><span style="color:var(--plane)">&#9711;</span> &nbsp;The size each plane respects</h2>
+
+    <p>
+      Pick your plane and it hands you a notion of size for free &mdash; the one quantity multiplication never disturbs.
+      It's the <strong>norm</strong>
+    </p>
+
+    <div class="eq">
+      <code>N(z) = x&sup2; &minus; p&middot;y&sup2;</code>, &nbsp;and it is <em>multiplicative</em>: &nbsp;<code>N(z&middot;w) = N(z)&middot;N(w)</code>.
+    </div>
+
+    <p>
+      Set <code>N(z)=1</code> and you get that plane's version of &ldquo;the numbers of size one&rdquo; &mdash; its <strong>unit curve</strong>,
+      the true generalization of <code>&plusmn;1</code> on the line. In your plane it is
+      <b class="pp" data-spin="a circle (the familiar one, x&sup2;+y&sup2;=1)" data-shear="a pair of vertical lines, x = &plusmn;1" data-boost="a hyperbola, x&sup2;&minus;y&sup2;=1">a circle (the familiar one, x&sup2;+y&sup2;=1)</b>.
+      Multiplying by a point <em>on</em> that curve is the plane's rigid motion:
+      <b class="pp" data-spin="a rotation that slides points around the circle" data-shear="a shear that slides points along the lines" data-boost="a boost that slides points along the hyperbola">a rotation that slides points around the circle</b>.
+    </p>
+
+    <figure>
+      <div class="stub-box">
+        <span class="tag">applet</span>
+        <p>The unit curve, live. Drag <code>p</code> and watch <code>x&sup2;&minus;p&middot;y&sup2;=1</code> morph: ellipse &rarr; circle
+        (at <code>p=&minus;1</code>) &rarr; a single pair of lines (at <code>p=0</code>) &rarr; hyperbola. The curve <em>is</em> the plane's identity.</p>
+      </div>
+      <figcaption>Planned live applet. The morph is the picture of the whole trichotomy.</figcaption>
+    </figure>
+
+    <div class="note">
+      <b>A quiet surprise.</b> The everyday &ldquo;<code>|z|</code>&rdquo; you know &mdash; distance to the origin &mdash; is <em>not</em> plane-neutral.
+      It's the circle's answer. Each plane measures size by its <em>own</em> curve, and in two of the three that &ldquo;size&rdquo; can be
+      zero for nonzero points (the curve runs off to infinity). Hold that thought &mdash; it returns as <em>zero divisors</em> in
+      <button class="cb-link" style="display:inline" data-go="algebra">the algebra</button>.
+    </div>
+
+    <p>
+      So the trichotomy you met as a <em>behavior</em> of multiplication is now a <em>shape</em>: <strong>circle, line-pair, hyperbola</strong>.
+      One closed loop, one degenerate in-between, one open curve with two arms. Two &middot; one &middot; zero again &mdash; this time as
+      <em>how many ways the curve runs to infinity</em>.
+    </p>
+
+    <div class="circle-back">
+      <p class="cb-label">The same idea, seen another way</p>
+      <div class="cb-links">
+        <button class="cb-link" data-go="multiplication">&rarr; <span class="em">What is the motion along the curve?</span> The multiplication you just chose.</button>
+        <button class="cb-link" data-go="iteration">&rarr; <span class="em">Ride the curve forever:</span> iterate, and watch the orbit's shape.</button>
+        <button class="cb-link" data-go="rails">&rarr; <span class="em">The hyperbola's two arms point along&hellip;</span> the rails.</button>
+      </div>
+      <div class="cb-back"><button data-go="home">&#8617; back to the choice</button></div>
+    </div>
+  </article>
+
+  <!-- ============ LENS: RAILS (the heart) ============ -->
+  <article class="lens" id="lens-rails" hidden>
+    <div class="kicker">Perspective &middot; the heart of the matter</div>
+    <h2><span style="color:var(--plane)">&#9473;</span> &nbsp;How many rails?</h2>
+
+    <p>
+      Here is the question that organizes everything. Fix a number <code>&alpha;</code> and look at the map <code>z &mapsto; &alpha;&middot;z</code>.
+      Ask: <strong>is there a direction it doesn't turn &mdash; a line it only slides points along, stretching or shrinking but never
+      rotating off?</strong> Call such a line a <strong>rail</strong> (a mathematician says <em>eigenvector</em>), and the stretch factor
+      its <strong>slide</strong> (the <em>eigenvalue</em>).
+    </p>
+
+    <p>
+      A rail through the origin has some slope <code>t</code>; the point <code>(1, t)</code> stays on its own line under <code>&times;&alpha;</code>
+      exactly when <code>t</code> solves the plane's defining equation
+    </p>
+
+    <div class="eq"><code>t&sup2; = p</code></div>
+
+    <p>
+      &mdash; and now the whole story is just <em>how many real square roots <code>p</code> has</em>. In your plane:
+      <b class="pp" data-spin="p &lt; 0, so t&sup2;=p has no real solution — zero rails" data-shear="p = 0, so t&sup2;=p has one (doubled) solution — one rail" data-boost="p &gt; 0, so t&sup2;=p has two real solutions — two rails">p &lt; 0, so t&sup2;=p has no real solution &mdash; zero rails</b>.
+    </p>
+
+    <table class="tri">
+      <tr><td><b>Boost</b> (split, <code>p&gt;0</code>)</td><td><b>two</b> rails &mdash; <em>separable</em>. The 2-D map is secretly two independent 1-D maps, once you tilt your axes onto the rails.</td></tr>
+      <tr><td><b>Shear</b> (dual, <code>p=0</code>)</td><td><b>one</b> rail &mdash; the borderline. A single slide-direction, with a shear leaning on it.</td></tr>
+      <tr><td><b>Spin</b> (complex, <code>p&lt;0</code>)</td><td><b>zero</b> rails &mdash; <em>entangled</em>. No real direction survives un-turned; <code>x</code> and <code>y</code> can't be pulled apart.</td></tr>
+    </table>
+
+    <figure>
+      <div class="stub-box">
+        <span class="tag">applet &middot; the key interaction</span>
+        <p>Try to <em>find the rails</em> by shearing your coordinate frame until the motion becomes pure stretch.
+        In the <strong>split</strong> plane you succeed &mdash; two rails snap into place. In the <strong>complex</strong> plane you can
+        chase them forever and <em>never</em> catch them: that failure, made physical, <em>is</em> &ldquo;no real eigenvectors.&rdquo;</p>
+      </div>
+      <figcaption>Planned live applet &mdash; the single most important interaction on the page.</figcaption>
+    </figure>
+
+    <p>
+      This is the felt core of the whole subject, and it deserves the plainest possible words:
+    </p>
+
+    <div class="note">
+      <b>Separable vs. entangled.</b> A <em>separable</em> plane (split) is a disguise &mdash; underneath, it's two ordinary number
+      lines running in parallel, and multiplication just runs each one on its own. An <em>entangled</em> plane (complex) has no such
+      disguise: there is no pair of real axes that decouples it, and that irreducible twisting is exactly what makes complex numbers
+      <em>spiral</em> instead of merely stretch. The dual plane sits on the knife's edge between them.
+    </div>
+
+    <p>
+      Notice what just happened: the count you first saw as roots of <code>t&sup2;=p</code>, then as arms of a hyperbola, is now
+      <em>rails</em> &mdash; and it's about to become the <em>shape of an orbit</em>, and then the <em>structure of the algebra</em>.
+      Same two &middot; one &middot; zero, every time.
+    </p>
+
+    <div class="circle-back">
+      <p class="cb-label">The same idea, seen another way</p>
+      <div class="cb-links">
+        <button class="cb-link" data-go="iteration">&rarr; <span class="em">Put a point on a rail and push:</span> it slides. Off the rails, it spirals. Iterate.</button>
+        <button class="cb-link" data-go="algebra">&rarr; <span class="em">Two rails means two number lines:</span> split = ℝ&times;ℝ. Here's the algebra.</button>
+        <button class="cb-link" data-go="magnitude">&rarr; <span class="em">The rails are the hyperbola's asymptotes:</span> back to the unit curve.</button>
+      </div>
+      <div class="cb-back"><button data-go="home">&#8617; back to the choice</button></div>
+    </div>
+  </article>
+
+  <!-- ============ LENS: ITERATION ============ -->
+  <article class="lens" id="lens-iteration" hidden>
+    <div class="kicker">Perspective &middot; the 2&middot;1&middot;0 as motion</div>
+    <h2><span style="color:var(--plane)">&#8635;</span> &nbsp;Iterate, and feel it move</h2>
+
+    <p>
+      Take an affine map <code>f(z) = &alpha;&middot;z + &beta;</code> &mdash; the plane's version of <code>y = m&middot;x + b</code> &mdash; and apply it
+      again and again. Every such map has one balance point, the <strong>fixed point</strong>
+      <code>z* = &beta;/(1&minus;&alpha;)</code>, and the orbit lives out the plane's character around it:
+    </p>
+
+    <table class="tri">
+      <tr><td><b>Spin</b> (complex)</td><td>the orbit <b>spirals</b> into or out of <code>z*</code> &mdash; and rides a circle when <code>|&alpha;|=1</code>. It can't be reduced to anything simpler; that's the entanglement.</td></tr>
+      <tr><td><b>Shear</b> (dual)</td><td>the orbit <b>shears</b> &mdash; it drifts steadily along the single rail.</td></tr>
+      <tr><td><b>Boost</b> (split)</td><td>the orbit rides a <b>saddle</b>, sliding along a hyperbola; cover one rail and it's just <code>1, &frac12;, &frac14;, &hellip;</code></td></tr>
+    </table>
+
+    <p>
+      In your plane the picture is <b class="pp" data-spin="a spiral" data-shear="a shear drift" data-boost="a saddle">a spiral</b>.
+    </p>
+
+    <figure>
+      <div class="stub-box">
+        <span class="tag">applet</span>
+        <p>Drop a point and press iterate. Toggle &ldquo;show rails.&rdquo; In split, the orbit visibly decomposes onto the two rails;
+        in complex, there are no rails to decompose onto and the spiral stands irreducible.</p>
+      </div>
+      <figcaption>Planned live applet (orbit + fixed point + optional rails).</figcaption>
+    </figure>
+
+    <div class="note">
+      <b>A subtlety worth one sentence.</b> &ldquo;<code>|&alpha;|&lt;1</code> means the orbit is pulled in&rdquo; is true on the
+      <em>circle</em> &mdash; in the complex plane. In the split plane the same <code>|&alpha;|_p&lt;1</code> can still be a saddle that
+      throws points away along one rail while pulling them in along the other. Size measured by the wrong curve can mislead you;
+      this is the magnitude lens biting back.
+    </div>
+
+    <div class="circle-back">
+      <p class="cb-label">The same idea, seen another way</p>
+      <div class="cb-links">
+        <button class="cb-link" data-go="rails">&rarr; <span class="em">Why does split decompose and complex doesn't?</span> Rails.</button>
+        <button class="cb-link" data-go="magnitude">&rarr; <span class="em">Which curve is the orbit riding?</span> The unit curve.</button>
+        <button class="cb-link" data-go="pspace">&rarr; <span class="em">Slide the plane between cases</span> and watch the spiral flatten into a shear.</button>
+      </div>
+      <div class="cb-back"><button data-go="home">&#8617; back to the choice</button></div>
+    </div>
+  </article>
+
+  <!-- ============ STUB LENSES ============ -->
+  <article class="lens" id="lens-algebra" hidden>
+    <div class="kicker">Perspective &middot; the 2&middot;1&middot;0 as structure</div>
+    <h2><span style="color:var(--plane)">&#8862;</span> &nbsp;Why split is secretly ℝ&times;ℝ</h2>
+    <p>
+      <em>(Teaser &mdash; to be written.)</em> When <code>p=1</code>, <code>j&sup2;=1</code> factors as <code>(j&minus;1)(j+1)=0</code>: two
+      different square roots of one, so the algebra <strong>splits</strong>. The idempotents <code>e&plusmn;=(1&plusmn;j)/2</code> are a
+      pair of mutually-annihilating &ldquo;switches&rdquo;; in the right coordinates multiplication is just
+      <code>(a,b)&middot;(c,d)=(ac,bd)</code> &mdash; <strong>two independent number lines</strong>, exactly the two rails. Complex can't do
+      this (it's a field; <code>x&sup2;+1</code> has no real root), and dual sits between (one repeated root, <code>ℝ[&epsilon;]/&epsilon;&sup2;</code>).
+      The visible scandal: <strong>zero divisors</strong> &mdash; nonzero points whose product is zero, sitting exactly on the null curve.
+    </p>
+    <div class="circle-back">
+      <p class="cb-label">The same idea, seen another way</p>
+      <div class="cb-links">
+        <button class="cb-link" data-go="rails">&rarr; <span class="em">The two lines are the two rails.</span></button>
+        <button class="cb-link" data-go="magnitude">&rarr; <span class="em">Zero divisors live on the null curve.</span></button>
+      </div>
+      <div class="cb-back"><button data-go="home">&#8617; back to the choice</button></div>
+    </div>
+  </article>
+
+  <article class="lens" id="lens-pspace" hidden>
+    <div class="kicker">Perspective &middot; stepping outside the plane</div>
+    <h2><span style="color:var(--plane)">&#8734;</span> &nbsp;The knob is a circle</h2>
+    <p>
+      <em>(Teaser &mdash; to be written.)</em> The dial <code>p</code> looks like a line from <code>&minus;1</code> through <code>0</code> to
+      <code>+1</code>, but it closes up: the dual plane lives at <strong>both</strong> <code>p=0</code> and <code>p=&infin;</code>, the complex
+      arc and the split arc join them into a circle, and swapping the axes <code>x &harr; y</code> is the map <code>p &mapsto; 1/p</code>
+      (it fixes <code>&plusmn;1</code> and swaps <code>0 &harr; &infin;</code>). Drag <code>p</code> outward and the complex circle flattens
+      into a line &mdash; rotation degenerating to the very same shear you'd reach coming the other way.
+    </p>
+    <div class="circle-back">
+      <p class="cb-label">The same idea, seen another way</p>
+      <div class="cb-links">
+        <button class="cb-link" data-go="magnitude">&rarr; <span class="em">Watch the unit curve flatten at both ends.</span></button>
+        <button class="cb-link" data-go="applications">&rarr; <span class="em">Each arc is a geometry: elliptic / parabolic / hyperbolic.</span></button>
+      </div>
+      <div class="cb-back"><button data-go="home">&#8617; back to the choice</button></div>
+    </div>
+  </article>
+
+  <article class="lens" id="lens-applications" hidden>
+    <div class="kicker">Perspective &middot; the same split, out in the world</div>
+    <h2><span style="color:var(--plane)">&#9733;</span> &nbsp;Where these planes show up</h2>
+    <p>
+      <em>(Teaser &mdash; to be written.)</em> <strong>Boost</strong> is the arithmetic of <em>special relativity</em>: its &ldquo;angle&rdquo;
+      is rapidity, and multiplying by a unit is a Lorentz boost &mdash; the hyperbola is the set of equal-proper-time events.
+      <strong>Shear</strong> is the arithmetic of <em>automatic differentiation</em>: <code>(a+b&epsilon;)</code> carries a value and its
+      derivative, and <code>&epsilon;&sup2;=0</code> is exactly &ldquo;drop higher-order terms.&rdquo; <strong>Spin</strong> is everywhere a
+      rotation is. The trichotomy itself is the split between <em>elliptic, parabolic,</em> and <em>hyperbolic</em> geometry.
+    </p>
+    <div class="circle-back">
+      <p class="cb-label">The same idea, seen another way</p>
+      <div class="cb-links">
+        <button class="cb-link" data-go="pspace">&rarr; <span class="em">The three geometries as three arcs of the circle.</span></button>
+        <button class="cb-link" data-go="higher">&rarr; <span class="em">Relativity wants 4 dimensions &mdash; can we multiply there?</span></button>
+      </div>
+      <div class="cb-back"><button data-go="home">&#8617; back to the choice</button></div>
+    </div>
+  </article>
+
+  <article class="lens" id="lens-higher" hidden>
+    <div class="kicker">Perspective &middot; a one-way trapdoor</div>
+    <h2><span style="color:var(--plane)">&#9670;</span> &nbsp;Can I go higher?</h2>
+    <p>
+      <em>(Teaser &mdash; to be written.)</em> If a plane is two numbers with a multiplication, can we do <em>three</em>? Hamilton tried
+      for years to multiply triples while keeping magnitudes multiplicative &mdash; and it <strong>cannot be done</strong>. The escape,
+      carved into Broom Bridge in 1843, is to give up commutativity and add a <em>fourth</em> dimension: the <strong>quaternions</strong>,
+      <code>i&sup2;=j&sup2;=k&sup2;=ijk=&minus;1</code>, whose unit sphere <code>S&sup3;</code> rotates 3-D space. And then
+      <strong>Hurwitz</strong> closes the door: a magnitude-respecting multiplication exists only in dimensions <strong>1, 2, 4, 8</strong>
+      (ℝ, ℂ, ℍ, 𝕆) &mdash; and nowhere else, ever.
+    </p>
+    <div class="note">
+      This is a <b>leaf</b> &mdash; the page's one trapdoor out of the plane. There's a whole world below it (the
+      <a href="./#/complex-particles">4-D complex viewer</a> is one window in), but the trichotomy you came for lives up here, in two dimensions.
+    </div>
+    <div class="cb-back" style="border:0; margin-top:8px"><button class="cb-link" data-go="home">&#8617; back to the choice</button></div>
+  </article>
+
+  <!-- ============ FOOTER ============ -->
+  <div class="footer">
+    <p>
+      Part of <a href="./#/">animath</a>. The math on this page is computed by
+      <code>src/animations/Argand/numberPlanes.ts</code> (the same engine, generic in <code>p</code>); the live plane app is at
+      <a href="./#/argand">#/argand</a>, and the related guides are indexed at <a href="./guides.html">/guides.html</a>.
+    </p>
+    <p style="margin-top:12px">
+      <strong>Possible sources &amp; where to go further.</strong> The unified &ldquo;three planes&rdquo; view is classical
+      Cayley&ndash;Klein; I. M. Yaglom's <em>A Simple Non-Euclidean Geometry and Its Physical Basis</em> develops the dual/Galilean
+      case at length, and his <em>Complex Numbers in Geometry</em> the complex one. The split-complex/Minkowski reading runs through
+      the relativity literature (rapidity as hyperbolic angle). Quaternions: Hamilton (1843); the dimension restriction is
+      Hurwitz's theorem (1, 2, 4, 8). These are wayfinding pointers, named where I can stand behind them &mdash; not priority claims.
+    </p>
+  </div>
+
+</main>
+
+<script>
+  // ---- the carried j² choice + the lens navigation (the whole JS layer) ----
+  const root = document.documentElement;
+  const LENS_IDS = ['multiplication','magnitude','rails','iteration','algebra','pspace','applications','higher'];
+  const visited = new Set();
+
+  // Fill every .pp span from its data-{plane} attribute, retint the page, and
+  // update the choice buttons. This is what makes the prose rewrite itself.
+  function setPlane(kind) {
+    if (!['spin','shear','boost'].includes(kind)) return;
+    root.dataset.plane = kind;
+    document.querySelectorAll('.pp').forEach((s) => {
+      const v = s.dataset[kind];
+      if (v != null) s.textContent = v;
+    });
+    document.querySelectorAll('.plane-btn').forEach((b) =>
+      b.setAttribute('aria-pressed', String(b.dataset.setPlane === kind)));
+    try { localStorage.setItem('np:plane', kind); } catch (e) { /* ignore */ }
+  }
+
+  // Show the hub ('home') or one lens; mark visited; update the ring + cards.
+  function show(view) {
+    const isHome = view === 'home';
+    document.getElementById('hub').hidden = !isHome;
+    document.querySelectorAll('.lens').forEach((l) => {
+      l.hidden = l.id !== 'lens-' + view;
+    });
+    if (!isHome && LENS_IDS.includes(view)) visited.add(view);
+    // ring chips
+    document.querySelectorAll('.ring-chip').forEach((c) => {
+      const id = c.dataset.go;
+      c.classList.toggle('active', id === view);
+      c.classList.toggle('seen', visited.has(id));
+    });
+    // deck cards
+    document.querySelectorAll('.card').forEach((c) => {
+      c.classList.toggle('seen', visited.has(c.dataset.go));
+    });
+    try { localStorage.setItem('np:visited', JSON.stringify([...visited])); } catch (e) { /* ignore */ }
+    window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+  }
+
+  // One delegated click handler for everything (no inline onclick).
+  document.addEventListener('click', (e) => {
+    const sp = e.target.closest('[data-set-plane]');
+    if (sp) { setPlane(sp.dataset.setPlane); return; }
+    const go = e.target.closest('[data-go]');
+    if (go) { show(go.dataset.go); return; }
+  });
+
+  // Restore prior choice + visited (a returning reader keeps their plane).
+  (function init() {
+    let plane = 'spin';
+    try { plane = localStorage.getItem('np:plane') || 'spin'; } catch (e) { /* ignore */ }
+    try {
+      const v = JSON.parse(localStorage.getItem('np:visited') || '[]');
+      if (Array.isArray(v)) v.forEach((id) => visited.add(id));
+    } catch (e) { /* ignore */ }
+    setPlane(plane);
+    show('home');
+  })();
+</script>
+</body>
+</html>
