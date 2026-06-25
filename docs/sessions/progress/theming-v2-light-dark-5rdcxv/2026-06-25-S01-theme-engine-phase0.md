@@ -71,6 +71,27 @@ attribute, reactive `useSkin`/`useThemeId`) shipped in
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 19:10 — Fractals + Correspondence: "Theme" palette follows the skin
+**Why:** Dan: "fractals and Julia mandelbrot and complex use the hue colormaps for
+the theme."
+
+Added a `PALETTE_THEME` sentinel + `resolvePalette`/`themeFractalScheme` to
+`colormaps.ts`: the new default **Theme** palette maps the skin's recommended
+sequential registry colormap to the matching GLSL scheme (viridis/magma; mako≈
+viridis, amber≈copper fallbacks). FractalsGPU + Correspondence resolve it
+reactively on `useThemeId`, so Mandelbrot/Julia coloring tracks the skin
+(Primary→amber, Daylight→viridis — verified). Manual palettes still selectable.
+
+> [!IMPORTANT]
+> **Complex Particles — open question.** Its domain coloring *is* already the
+> canonical hue colormap (full HSV wheel, `hue = fract(param + hueShift)`), and the
+> locked plan said to **keep** that rainbow. The registry's only `cyclic` map is
+> `twilight` (identical for all 8 themes), so "use the theme hue map" for complex
+> would either (a) keep the readable rainbow (it's the standard for domain coloring,
+> theme-independent by design) and just do the force-dark background, or (b) require
+> authoring **per-theme cyclic colormaps** (8) + a LUT in the particle shader for the
+> coloring to visibly shift per skin. Needs Dan's call before touching the iconic viz.
+
 ### 🟡 milestone · 18:40 — Trees & Nets + Agentic Sorting themed; Argand skipped
 **Why:** Continue the rollout; Dan said Argand is in development on another branch.
 
