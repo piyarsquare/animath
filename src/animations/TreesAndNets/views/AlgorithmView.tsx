@@ -16,9 +16,8 @@ import { njEdgeId } from '../lib/neighborJoining';
 import type { NNTrace, NNStep } from '../lib/splitWeights';
 import type { SplitGraph } from '../lib/splitGraph';
 import { SplitGraphView } from './NetViews';
+import { useNetColors } from './themeColors';
 
-const C_TEAL = '#3fb6a6';
-const C_HI = '#ffd54a';
 const C_DIM = 'var(--fg, #6b7790)';
 
 interface Pt { x: number; y: number; }
@@ -37,6 +36,7 @@ export function NeighborNetRun({
   splitGraph: SplitGraph;
   step: number;
 }): JSX.Element {
+  const col = useNetColors();
   const S = 360;
   const c = S / 2;
   const R = S * 0.34;
@@ -92,7 +92,7 @@ export function NeighborNetRun({
       <svg viewBox={`0 0 ${S} ${S}`} width="100%" height="100%" style={{ maxWidth: '100%', maxHeight: '100%' }}>
         <circle cx={c} cy={c} r={R} fill="none" stroke="var(--fg, #ccd)" strokeOpacity={0.1} strokeWidth={1} />
         {blocks.map((bk, i) => (
-          <path key={`bk${i}`} d={arcPath(bk.start, bk.len)} fill="none" stroke={bk.recent ? C_HI : C_TEAL} strokeOpacity={bk.recent ? 0.9 : 0.5} strokeWidth={bk.recent ? 5 : 3.5} strokeLinecap="round" />
+          <path key={`bk${i}`} d={arcPath(bk.start, bk.len)} fill="none" stroke={bk.recent ? col.highlight : col.structure} strokeOpacity={bk.recent ? 0.9 : 0.5} strokeWidth={bk.recent ? 5 : 3.5} strokeLinecap="round" />
         ))}
         {order.map((leaf, p) => {
           const q = (p + 1) % n;
@@ -105,7 +105,7 @@ export function NeighborNetRun({
           const b = pt(q);
           return (
             <line key={`lk${p}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-              stroke={isRecent ? C_HI : locked ? C_TEAL : C_DIM}
+              stroke={isRecent ? col.highlight : locked ? col.structure : C_DIM}
               strokeOpacity={isRecent ? 1 : locked ? 0.9 : 0.22}
               strokeWidth={isRecent ? 4.5 : locked ? 3 : 1.4}
               strokeDasharray={locked || isRecent ? undefined : '3 4'}
@@ -118,8 +118,8 @@ export function NeighborNetRun({
           const hot = recentPair.has(leaf);
           return (
             <g key={`v${leaf}`}>
-              <circle cx={a.x} cy={a.y} r={hot ? 5 : 3.4} fill={hot ? C_HI : 'var(--accent, #cda434)'} />
-              <text x={c + (R + 16) * Math.cos(dir)} y={c + (R + 16) * Math.sin(dir)} fontSize={14} fontFamily="monospace" fill={hot ? C_HI : 'var(--accent, #cda434)'} textAnchor="middle" dominantBaseline="middle">{matrix.leaves[leaf]}</text>
+              <circle cx={a.x} cy={a.y} r={hot ? 5 : 3.4} fill={hot ? col.highlight : 'var(--accent, #cda434)'} />
+              <text x={c + (R + 16) * Math.cos(dir)} y={c + (R + 16) * Math.sin(dir)} fontSize={14} fontFamily="monospace" fill={hot ? col.highlight : 'var(--accent, #cda434)'} textAnchor="middle" dominantBaseline="middle">{matrix.leaves[leaf]}</text>
             </g>
           );
         })}
@@ -176,6 +176,7 @@ export function NeighborJoiningRun({
   matrix: DistanceMatrix;
   step: number;
 }): JSX.Element {
+  const col = useNetColors();
   const S = 360;
   const leafSet = useMemo(() => new Set(matrix.leaves), [matrix]);
   const pos = useMemo(() => layoutTree(trace, leafSet), [trace, leafSet]);
@@ -213,7 +214,7 @@ export function NeighborJoiningRun({
           const on = created === step - 1;
           return (
             <line key={`e${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-              stroke={on ? C_HI : 'var(--fg, #aeb6c8)'} strokeOpacity={on ? 1 : 0.8}
+              stroke={on ? col.highlight : 'var(--fg, #aeb6c8)'} strokeOpacity={on ? 1 : 0.8}
               strokeWidth={on ? 3.6 : 2} strokeLinecap="round" style={{ transition: 'stroke 200ms' }} />
           );
         })}
@@ -222,14 +223,14 @@ export function NeighborJoiningRun({
           const t = T(p);
           if (!leafSet.has(id)) {
             if (appears >= step) return null;
-            return <circle key={`n${id}`} cx={t.x} cy={t.y} r={recentNodes.has(id) ? 4 : 2.5} fill={recentNodes.has(id) ? C_HI : 'var(--fg, #889)'} opacity={0.8} />;
+            return <circle key={`n${id}`} cx={t.x} cy={t.y} r={recentNodes.has(id) ? 4 : 2.5} fill={recentNodes.has(id) ? col.highlight : 'var(--fg, #889)'} opacity={0.8} />;
           }
           const dir = Math.atan2(t.y - S / 2, t.x - S / 2);
           const hot = recentNodes.has(id);
           return (
             <g key={`l${id}`}>
-              <circle cx={t.x} cy={t.y} r={hot ? 4.6 : 3.2} fill={hot ? C_HI : C_TEAL} />
-              <text x={t.x + 13 * Math.cos(dir)} y={t.y + 13 * Math.sin(dir)} fontSize={14} fontFamily="monospace" fill={hot ? C_HI : 'var(--accent, #cda434)'} textAnchor="middle" dominantBaseline="middle">{id}</text>
+              <circle cx={t.x} cy={t.y} r={hot ? 4.6 : 3.2} fill={hot ? col.highlight : col.node} />
+              <text x={t.x + 13 * Math.cos(dir)} y={t.y + 13 * Math.sin(dir)} fontSize={14} fontFamily="monospace" fill={hot ? col.highlight : 'var(--accent, #cda434)'} textAnchor="middle" dominantBaseline="middle">{id}</text>
             </g>
           );
         })}
@@ -244,6 +245,7 @@ export function NeighborJoiningRun({
 // joins) is outlined. This is the "why this pair" the join alone doesn't show.
 // =========================================================================
 export function QMatrix({ step }: { step: NJStep | null }): JSX.Element {
+  const col = useNetColors();
   if (!step || step.qScores.length === 0) {
     return <div style={{ fontSize: 12, color: 'var(--fg, #aab)', opacity: 0.7 }}>Terminal join — only two clusters remain; they connect directly (no Q choice).</div>;
   }
@@ -254,7 +256,9 @@ export function QMatrix({ step }: { step: NJStep | null }): JSX.Element {
   const qs = step.qScores.map((s) => s.q);
   const lo = Math.min(...qs);
   const hi = Math.max(...qs);
-  const tint = (q: number): string => { const t = hi > lo ? 1 - (q - lo) / (hi - lo) : 1; return `rgba(205, 164, 52, ${0.1 + 0.55 * t})`; };
+  // Lower Q is the warm/salient end → invert the normalization so low Q maps to
+  // the high (bright) end of the sequential colormap.
+  const tint = (q: number): string => `${col.ramp(hi > lo ? 1 - (q - lo) / (hi - lo) : 1)}55`;
   const chosen = key(step.joined[0], step.joined[1]);
   const head: React.CSSProperties = { fontFamily: 'var(--mono, monospace)', fontSize: 10, color: 'var(--accent, #cda434)', padding: '1px 4px', textAlign: 'center' };
   return (
@@ -272,7 +276,7 @@ export function QMatrix({ step }: { step: NJStep | null }): JSX.Element {
                 const q = qOf.get(key(ri, cj));
                 const isMin = key(ri, cj) === chosen;
                 return (
-                  <td key={`c${i}-${j}`} style={{ padding: '1px 5px', textAlign: 'right', color: 'var(--fg, #dde)', background: q !== undefined ? tint(q) : 'transparent', outline: isMin ? '1.6px solid #ffd54a' : 'none', outlineOffset: -1 }}>
+                  <td key={`c${i}-${j}`} style={{ padding: '1px 5px', textAlign: 'right', color: 'var(--fg, #dde)', background: q !== undefined ? tint(q) : 'transparent', outline: isMin ? `1.6px solid ${col.highlight}` : 'none', outlineOffset: -1 }}>
                     {q !== undefined ? q.toFixed(1) : ''}
                   </td>
                 );
@@ -291,6 +295,7 @@ export function QMatrix({ step }: { step: NJStep | null }): JSX.Element {
 // merges) is outlined. Labels are the components' leaf chains.
 // =========================================================================
 export function NNQMatrix({ step, matrix }: { step: NNStep | null; matrix: DistanceMatrix }): JSX.Element {
+  const col = useNetColors();
   if (!step || step.qScores.length === 0) {
     return <div style={{ fontSize: 12, color: 'var(--fg, #aab)', opacity: 0.7 }}>—</div>;
   }
@@ -301,7 +306,8 @@ export function NNQMatrix({ step, matrix }: { step: NNStep | null; matrix: Dista
   const qs = step.qScores.map((s) => s.q);
   const lo = Math.min(...qs);
   const hi = Math.max(...qs);
-  const tint = (q: number): string => { const t = hi > lo ? 1 - (q - lo) / (hi - lo) : 1; return `rgba(63, 182, 166, ${0.1 + 0.55 * t})`; };
+  // Lower Q is the warm/salient end → invert so low Q maps to the bright end.
+  const tint = (q: number): string => `${col.ramp(hi > lo ? 1 - (q - lo) / (hi - lo) : 1)}55`;
   const chosen = pairKey(step.leftIndex, step.rightIndex);
   const head: React.CSSProperties = { fontFamily: 'var(--mono, monospace)', fontSize: 10, color: 'var(--accent, #cda434)', padding: '1px 4px', textAlign: 'center' };
   return (
@@ -319,7 +325,7 @@ export function NNQMatrix({ step, matrix }: { step: NNStep | null; matrix: Dista
                 const q = qOf.get(pairKey(i, j));
                 const isMin = pairKey(i, j) === chosen;
                 return (
-                  <td key={`c${i}-${j}`} style={{ padding: '1px 5px', textAlign: 'right', color: 'var(--fg, #dde)', background: q !== undefined ? tint(q) : 'transparent', outline: isMin ? '1.6px solid #ffd54a' : 'none', outlineOffset: -1 }}>
+                  <td key={`c${i}-${j}`} style={{ padding: '1px 5px', textAlign: 'right', color: 'var(--fg, #dde)', background: q !== undefined ? tint(q) : 'transparent', outline: isMin ? `1.6px solid ${col.highlight}` : 'none', outlineOffset: -1 }}>
                     {q !== undefined ? q.toFixed(1) : ''}
                   </td>
                 );

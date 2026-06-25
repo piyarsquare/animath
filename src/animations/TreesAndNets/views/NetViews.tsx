@@ -18,9 +18,7 @@ import {
 import { canonicalSplitKey } from '../lib/trees';
 import type { WeightedDisplayedSplit } from '../lib/splitWeights';
 import type { SplitGraph } from '../lib/splitGraph';
-
-const C_TEAL = '#3fb6a6';
-const C_HI = '#ffd54a'; // selection highlight (gold)
+import { useNetColors } from './themeColors';
 
 /** A shared selection across the Nets views. */
 export type Highlight =
@@ -31,15 +29,6 @@ export type Highlight =
 export type SelectHandler = (h: Highlight) => void;
 
 const isSplit = (h: Highlight, key: string): boolean => !!h && h.kind === 'split' && h.key === key;
-
-/** Teal→gold ramp for a normalized weight t∈[0,1]. */
-function weightColor(t: number): string {
-  const c = Math.max(0, Math.min(1, t));
-  const r = Math.round(63 + (205 - 63) * c);
-  const g = Math.round(182 + (164 - 182) * c);
-  const b = Math.round(166 + (52 - 166) * c);
-  return `rgb(${r}, ${g}, ${b})`;
-}
 
 interface Pt {
   x: number;
@@ -98,6 +87,7 @@ export function NJTreeView({
   highlight: Highlight;
   onSelect: SelectHandler;
 }): JSX.Element {
+  const col = useNetColors();
   const S = 360;
   const n = matrix.leaves.length;
   const leafSet = useMemo(() => new Set(matrix.leaves), [matrix]);
@@ -157,12 +147,12 @@ export function NJTreeView({
               onClick={key ? () => onSelect(isSplit(highlight, key) ? null : { kind: 'split', key }) : undefined}>
               <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={16} />
               <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                stroke={on ? C_HI : neg ? '#c75d5d' : 'var(--fg, #aeb6c8)'}
+                stroke={on ? col.highlight : neg ? 'var(--danger, #c75d5d)' : 'var(--fg, #aeb6c8)'}
                 strokeOpacity={on ? 1 : 0.85} strokeWidth={on ? w + 2.4 : w}
                 strokeDasharray={neg ? '4 3' : undefined} strokeLinecap="round"
                 style={{ transition: 'stroke 160ms' }} />
               {on && key && (
-                <text x={mid.x} y={mid.y - 5} fontSize={11} fontFamily="monospace" fill={C_HI} textAnchor="middle">{e.length.toFixed(2)}</text>
+                <text x={mid.x} y={mid.y - 5} fontSize={11} fontFamily="monospace" fill={col.highlight} textAnchor="middle">{e.length.toFixed(2)}</text>
               )}
             </g>
           );
@@ -173,7 +163,7 @@ export function NJTreeView({
           const dir = Math.atan2(t.y - S / 2, t.x - S / 2);
           return (
             <g key={`l${id}`}>
-              <circle cx={t.x} cy={t.y} r={3.2} fill={C_TEAL} />
+              <circle cx={t.x} cy={t.y} r={3.2} fill={col.node} />
               <text x={t.x + 13 * Math.cos(dir)} y={t.y + 13 * Math.sin(dir)} fontSize={14} fontFamily="monospace" fill="var(--accent, #cda434)" textAnchor="middle" dominantBaseline="middle">{id}</text>
             </g>
           );
@@ -200,6 +190,7 @@ export function SplitNetworkView({
   highlight: Highlight;
   onSelect: SelectHandler;
 }): JSX.Element {
+  const col = useNetColors();
   const S = 360;
   const c = S / 2;
   const R = S * 0.34;
@@ -225,7 +216,7 @@ export function SplitNetworkView({
             <g key={`s${i}`} style={{ cursor: 'pointer' }} onClick={() => onSelect(on ? null : { kind: 'split', key: s.key })}>
               <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={14} />
               <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                stroke={on ? C_HI : weightColor(t)}
+                stroke={on ? col.highlight : col.ramp(t)}
                 strokeOpacity={on ? 1 : anySel ? 0.12 + 0.18 * t : 0.25 + 0.6 * t}
                 strokeWidth={(1 + 6 * t) + (on ? 2.5 : 0)} strokeLinecap="round"
                 style={{ transition: 'stroke 160ms, stroke-opacity 160ms' }}>
@@ -264,6 +255,7 @@ export function SplitWeightsList({
   highlight: Highlight;
   onSelect: SelectHandler;
 }): JSX.Element {
+  const col = useNetColors();
   const rows = splits.filter((s) => !s.trivial && s.weight > 1e-6).sort((a, b) => b.weight - a.weight);
   const maxW = Math.max(1e-6, ...rows.map((s) => s.weight));
 
@@ -280,11 +272,11 @@ export function SplitWeightsList({
         return (
           <div key={`w${i}`} onClick={() => onSelect(on ? null : { kind: 'split', key: s.key })}
             style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-            <div style={{ position: 'relative', height: 16, background: 'var(--am-border, rgba(255,255,255,0.08))', borderRadius: 4, overflow: 'hidden', outline: on ? `1.5px solid ${C_HI}` : 'none' }}>
-              <div style={{ position: 'absolute', inset: 0, width: `${Math.max(4, t * 100)}%`, background: on ? C_HI : weightColor(t), opacity: on ? 0.7 : 0.5 }} />
+            <div style={{ position: 'relative', height: 16, background: 'var(--am-border, rgba(255,255,255,0.08))', borderRadius: 4, overflow: 'hidden', outline: on ? `1.5px solid ${col.highlight}` : 'none' }}>
+              <div style={{ position: 'absolute', inset: 0, width: `${Math.max(4, t * 100)}%`, background: on ? col.highlight : col.ramp(t), opacity: on ? 0.7 : 0.5 }} />
               <span style={{ position: 'absolute', left: 6, top: 1, color: 'var(--fg, #dde)' }}>{s.key}</span>
             </div>
-            <span style={{ color: inTree ? C_TEAL : 'transparent', fontSize: 10 }} title={inTree ? 'also an edge of the NJ tree' : ''}>△&nbsp;tree</span>
+            <span style={{ color: inTree ? col.structure : 'transparent', fontSize: 10 }} title={inTree ? 'also an edge of the NJ tree' : ''}>△&nbsp;tree</span>
             <span style={{ color: 'var(--fg, #ccd)', minWidth: '3.0em', textAlign: 'right' }}>{s.weight.toFixed(2)}</span>
           </div>
         );
@@ -309,6 +301,7 @@ export function SplitGraphView({
   highlight: Highlight;
   onSelect: SelectHandler;
 }): JSX.Element {
+  const col = useNetColors();
   const W = 420;
   const H = 320;
   const cx = W / 2;
@@ -327,7 +320,7 @@ export function SplitGraphView({
             <g key={`e${i}`} style={{ cursor: 'pointer' }} onClick={() => onSelect(on ? null : { kind: 'split', key: e.splitKey })}>
               <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={12} />
               <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                stroke={on ? C_HI : weightColor(t)}
+                stroke={on ? col.highlight : col.ramp(t)}
                 strokeOpacity={on ? 1 : anySel ? 0.18 : 0.8}
                 strokeWidth={1.2 + 3.2 * t + (on ? 2.2 : 0)} strokeLinecap="round"
                 style={{ transition: 'stroke 160ms, stroke-opacity 160ms' }}>

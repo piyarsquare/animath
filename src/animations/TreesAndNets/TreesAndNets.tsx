@@ -368,7 +368,7 @@ export default function TreesAndNets(): JSX.Element {
     const delta = treeDist - actual;
     connectNode = (
       <div style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12, lineHeight: 1.7 }}>
-        pair&nbsp;&nbsp;<b style={{ color: '#ffd54a' }}>{a}–{b}</b><br />
+        pair&nbsp;&nbsp;<b style={{ color: 'var(--accent)' }}>{a}–{b}</b><br />
         actual&nbsp;&nbsp;{actual.toFixed(2)}<br />
         tree&nbsp;&nbsp;&nbsp;&nbsp;{treeDist.toFixed(2)}&nbsp;&nbsp;(Δ {delta >= 0 ? '+' : ''}{delta.toFixed(2)})
       </div>
@@ -377,7 +377,7 @@ export default function TreesAndNets(): JSX.Element {
     const w = weightedSplits.find((s) => s.key === hl.key)?.weight;
     connectNode = (
       <div style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12, lineHeight: 1.7 }}>
-        split&nbsp;&nbsp;<b style={{ color: '#ffd54a' }}>{hl.key}</b><br />
+        split&nbsp;&nbsp;<b style={{ color: 'var(--accent)' }}>{hl.key}</b><br />
         weight&nbsp;{w !== undefined ? w.toFixed(2) : '—'}<br />
         {treeSplitKeys.has(hl.key) ? 'an edge of the NJ tree' : 'a net split not in the tree'}
       </div>
@@ -500,7 +500,7 @@ export default function TreesAndNets(): JSX.Element {
         <div style={{ display: 'grid', gap: 8 }}>
           {runAlgo === 'nj' ? <QMatrix step={njDecisionStep} /> : <NNQMatrix step={nnDecisionStep} matrix={matrix} />}
           <Kicker>Q = how cheap it is to {runAlgo === 'nj' ? 'force two clusters adjacent' : 'merge two components'} (lower is better).
-            The <b style={{ color: '#ffd54a' }}>minimum</b> (outlined) is chosen — that is <i>why</i>.</Kicker>
+            The <b style={{ color: 'var(--accent)' }}>minimum</b> (outlined) is chosen — that is <i>why</i>.</Kicker>
         </div>
       ),
     },

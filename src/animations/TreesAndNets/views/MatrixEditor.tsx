@@ -6,6 +6,7 @@
 import React from 'react';
 import type { DistanceMatrix } from '../lib/metric';
 import type { Highlight, SelectHandler } from './NetViews';
+import { useNetColors } from './themeColors';
 
 /** Min/max over the off-diagonal entries (for the heatmap normalization). */
 function extent(m: DistanceMatrix): [number, number] {
@@ -20,15 +21,6 @@ function extent(m: DistanceMatrix): [number, number] {
   }
   if (!Number.isFinite(lo)) return [0, 1];
   return [lo, hi];
-}
-
-/** A cool→warm tint for a normalized value t∈[0,1] (teal → gold, the app palette). */
-function heat(t: number): string {
-  const c = Math.max(0, Math.min(1, t));
-  const r = Math.round(63 + (205 - 63) * c);
-  const g = Math.round(182 + (164 - 182) * c);
-  const b = Math.round(166 + (52 - 166) * c);
-  return `rgba(${r}, ${g}, ${b}, 0.22)`;
 }
 
 const isPair = (h: Highlight, i: number, j: number): boolean =>
@@ -46,8 +38,13 @@ export function MatrixEditor({
   highlight: Highlight;
   onSelect: SelectHandler;
 }): JSX.Element {
+  const col = useNetColors();
   const [lo, hi] = extent(matrix);
   const norm = (v: number): number => (hi > lo ? (v - lo) / (hi - lo) : 0.5);
+  // Heatmap tint for a normalized distance t∈[0,1] (ordered magnitude → the
+  // theme's sequential colormap). The '55' hex-alpha keeps it a faint wash
+  // behind the cell text so values stay legible in every mode.
+  const heat = (t: number): string => `${col.ramp(t)}55`;
 
   const commit = (i: number, j: number, raw: string): void => {
     const v = Number.parseFloat(raw);
@@ -59,7 +56,7 @@ export function MatrixEditor({
     fontFamily: 'var(--mono, monospace)', fontSize: 12, color: 'var(--accent, #cda434)', textAlign: 'center', padding: '2px 4px',
   };
   const sel = (i: number, j: number): React.CSSProperties =>
-    isPair(highlight, i, j) ? { outline: '1.5px solid #ffd54a', outlineOffset: -1 } : {};
+    isPair(highlight, i, j) ? { outline: `1.5px solid ${col.highlight}`, outlineOffset: -1 } : {};
 
   return (
     <div style={{ overflowX: 'auto' }}>
