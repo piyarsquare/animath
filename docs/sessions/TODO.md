@@ -1,5 +1,5 @@
 <!-- docs/sessions/TODO.md — the project backlog / to-do list.
-================================================================================
+
 HAND-EDITED. This is Dan's durable to-do list: items that should inform future
 sessions. The session control center (build-sessions.mjs → control-center.html)
 parses this file and renders it as the "To-do" panel at the top, alongside the
@@ -20,10 +20,31 @@ FORMAT — one GitHub task-list item per todo (renders natively on GitHub too):
 
 Keep titles short; put the "why / how / where" in the note — that's the part that
 informs future rounds. Delete or check off items as they land.
-================================================================================
+
 -->
 
 # Backlog · animath
+
+- [ ] [docs] !high Build the **Number Planes** choice-driven educational page.
+  Narrative-first teaching page about the three number planes (complex/dual/split as
+  Spin/Shear/Squeeze over j²), in the `public/*-guide.html` family but JS-driven and
+  navigated as a curiosity-driven web. Full story + plan + open questions:
+  `docs/sessions/progress/argand-plane-review-51egvz/2026-06-24-S01-plan-number-planes-page.md`.
+  Engine ready: `src/animations/Argand/numberPlanes.ts` (dormant, 50 tests). First
+  consumer would be a `#/embed/number-planes` applet (j² dial · rails · change-of-basis
+  morph). Converge the plan's open questions with Dan before drafting.
+
+- [ ] [argand] !med `complexOps.ts` (the live Argand math) has no tests.
+  The new `numberPlanes.ts` is tested (50 assertions) but nothing uses it yet; the
+  shipping app runs on `complexOps.ts`, still untested. Mirror the numberPlanes suite
+  onto complexOps, or migrate the app onto numberPlanes.
+
+- [ ] [argand] !med Argand plane-app: open five-hat review Tier-1 items.
+  From `2026-06-24-S01-expert-synthesis.md`: the one real correctness bug = fabricated
+  dual/split *quadratic* fixed points (drawn as confident gold dots — flag/hide +
+  disclose); the centered hint pill; the clipped "Re" label. Plus consider splitting
+  PR #237 (review docs vs the narrative/engine work). Number-line/tour experiments were
+  shelved this session (history only) — do NOT resurrect without a fresh formulation.
 
 - [ ] [chrome] !high Theming v2 — light/dark-paired themes (decouple identity from mode).
   Full spec: `docs/sessions/progress/youthful-cray-7m6z9d/2026-06-24-S02-plan-light-dark-theming.md`
