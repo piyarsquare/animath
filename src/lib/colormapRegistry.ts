@@ -86,8 +86,9 @@ export function gradientCss(id: string, reverse = false): string {
   return `linear-gradient(90deg, ${s.join(',')})`;
 }
 
-/** Parse a #rgb/#rrggbb hex to [r,g,b] (0–255); returns black on a bad string. */
-function hexToRgb(hex: string): [number, number, number] {
+/** Parse a #rgb/#rrggbb hex to [r,g,b] (0–255); returns black on a bad string.
+ *  Exported for canvas engines that need numeric channels (e.g. ImageData). */
+export function hexToRgb(hex: string): [number, number, number] {
   let h = hex.trim().replace('#', '');
   if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
   const n = parseInt(h, 16);
