@@ -2,17 +2,17 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
-import type { SectionDef, ViewDef, LayoutDef } from '../../chrome/workspace/types';
+import type { SectionDef, ViewDef, LayoutDef, WorkspaceMode } from '../../chrome/workspace/types';
 import { Pills, Checkbox, Slider } from '../../components/ControlPanel';
 import { Kicker } from '../../chrome/readouts';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { buildAssociahedron, type Triangulation } from './lib/associahedron';
 import { neighborOrder, canonicalKey } from './lib/mosaic';
 import { preset, presetNames, type DistanceMatrix, type PresetName } from './lib/metric';
-import { computeNeighborJoining } from './lib/neighborJoining';
+import { computeNeighborJoining, njLeafPathInfo } from './lib/neighborJoining';
 import { solveSplitWeights, computeLevyPachterOrdering } from './lib/splitWeights';
 import { MatrixEditor } from './views/MatrixEditor';
-import { NJTreeView, SplitNetworkView, SplitWeightsList } from './views/NetViews';
+import { NJTreeView, SplitNetworkView, SplitWeightsList, type Highlight } from './views/NetViews';
 import explainer from './EXPLAINER.md?raw';
 
 // Persistence namespace. Bumped (was 'trees-and-nets') when the app was
@@ -231,13 +231,18 @@ export default function TreesAndNets(): JSX.Element {
   const [n, setN] = usePersistentState<number>(`${APP_ID}:n`, 5);
   const [presetName, setPresetName] = usePersistentState<PresetName>(`${APP_ID}:preset`, 'tree');
   const [matrix, setMatrix] = useState<DistanceMatrix>(() => preset(n, presetName));
-  useEffect(() => { setMatrix(preset(n, presetName)); }, [n, presetName]);
+  useEffect(() => { setMatrix(preset(n, presetName)); setHl(null); }, [n, presetName]);
   const setCell = useCallback((i: number, j: number, value: number) => {
     setMatrix((prev) => { const d = prev.d.map((row) => row.slice()); d[i][j] = value; d[j][i] = value; return { leaves: prev.leaves, d }; });
   }, []);
   const nj = useMemo(() => computeNeighborJoining(matrix), [matrix]);
   const lpOrder = useMemo(() => computeLevyPachterOrdering(matrix), [matrix]);
   const weightedSplits = useMemo(() => solveSplitWeights(matrix, lpOrder), [matrix, lpOrder]);
+  const treeSplitKeys = useMemo(() => new Set(nj.splitKeys), [nj]);
+
+  // ---- shared selection (links matrix ↔ tree ↔ net ↔ weights) + view mode ----
+  const [appMode, setAppMode] = usePersistentState<'nets' | 'fibers'>(`${APP_ID}:appmode`, 'nets');
+  const [hl, setHl] = useState<Highlight>(null);
 
   // ---- fibers: the associahedron × cube explorer (now a secondary layout) ----
   const [mode, setMode] = usePersistentState<'flip' | 'cross'>(`${APP_ID}:mode`, 'flip');
@@ -315,31 +320,67 @@ export default function TreesAndNets(): JSX.Element {
 
   const splitText = tri.diagonals.length ? tri.diagonals.map((d) => `{${splitKey(d, order, n)}}`).join(' ') : '—';
 
-  const sections: SectionDef[] = [
+  // Selection detail: the matrix→tree bridge (pair → tree path length vs actual)
+  // and split detail (weight, and whether it is also an edge of the NJ tree).
+  let connectNode: JSX.Element;
+  if (hl?.kind === 'pair') {
+    const a = matrix.leaves[hl.i];
+    const b = matrix.leaves[hl.j];
+    const actual = matrix.d[hl.i][hl.j];
+    const treeDist = njLeafPathInfo(nj, a, b).dist;
+    const delta = treeDist - actual;
+    connectNode = (
+      <div style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12, lineHeight: 1.7 }}>
+        pair&nbsp;&nbsp;<b style={{ color: '#ffd54a' }}>{a}–{b}</b><br />
+        actual&nbsp;&nbsp;{actual.toFixed(2)}<br />
+        tree&nbsp;&nbsp;&nbsp;&nbsp;{treeDist.toFixed(2)}&nbsp;&nbsp;(Δ {delta >= 0 ? '+' : ''}{delta.toFixed(2)})
+      </div>
+    );
+  } else if (hl?.kind === 'split') {
+    const w = weightedSplits.find((s) => s.key === hl.key)?.weight;
+    connectNode = (
+      <div style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12, lineHeight: 1.7 }}>
+        split&nbsp;&nbsp;<b style={{ color: '#ffd54a' }}>{hl.key}</b><br />
+        weight&nbsp;{w !== undefined ? w.toFixed(2) : '—'}<br />
+        {treeSplitKeys.has(hl.key) ? 'an edge of the NJ tree' : 'a net split not in the tree'}
+      </div>
+    );
+  } else {
+    connectNode = (
+      <Kicker>Click a <b>matrix cell</b> to trace that pair through the tree (tree vs. actual distance), or click a{' '}
+        <b>split</b> — its weight bar, its net chord, or its tree edge — to light it up everywhere.</Kicker>
+    );
+  }
+
+  const netsSections: SectionDef[] = [
     {
-      id: 'distances', title: 'Distances', arch: 'subject', estHeight: 360,
+      id: 'distances', title: 'Distances', arch: 'subject', estHeight: 380,
       node: (
         <div style={{ display: 'grid', gap: 10 }}>
-          <Pills<number> label="Leaves (n)" value={n} onChange={setN} options={[5, 6, 7, 8].map((k) => ({ value: k, label: String(k) }))} />
+          <Pills<number> label="Leaves (n)" value={n} onChange={setN} options={[5, 6, 7, 8, 9].map((k) => ({ value: k, label: String(k) }))} />
           <Pills<PresetName> label="Preset metric" value={presetName} onChange={setPresetName} options={presetNames(n).map((p) => ({ value: p, label: p.charAt(0).toUpperCase() + p.slice(1) }))} />
-          <MatrixEditor matrix={matrix} onCell={setCell} />
-          <Kicker>Edit any distance — the <b>tree</b>, the <b>net</b>, and the split weights all recompute
-            from this matrix. <b>Tree</b> = clean nested structure; <b>Conflict</b> = net-like.</Kicker>
+          <MatrixEditor matrix={matrix} onCell={setCell} highlight={hl} onSelect={setHl} />
+          <Kicker>Edit any distance — the <b>tree</b>, the <b>net</b>, and the weights all recompute. Click a cell to
+            trace that pair in the tree. <b>Tree</b> preset = clean nesting; <b>Conflict</b> = net-like.</Kicker>
         </div>
       ),
     },
+    { id: 'connect', title: 'Selection', arch: 'readout', estHeight: 130, node: connectNode },
     {
       id: 'weights', title: 'Split weights', arch: 'readout', estHeight: 240,
       node: (
         <div style={{ display: 'grid', gap: 8 }}>
-          <SplitWeightsList splits={weightedSplits} />
-          <Kicker>Non-negative weights of the circular splits (the chords in the net), fit to the metric
-            by least squares in the Levy–Pachter order.</Kicker>
+          <SplitWeightsList splits={weightedSplits} treeSplitKeys={treeSplitKeys} highlight={hl} onSelect={setHl} />
+          <Kicker>Non-negative weights of the circular splits (the net's chords).{' '}
+            <b style={{ color: C_FLIP }}>△ tree</b> marks splits that are also edges of the Neighbor-Joining tree.</Kicker>
         </div>
       ),
     },
+  ];
+
+  const fibersSections: SectionDef[] = [
     {
-      id: 'nav', title: 'Move (fibers)', arch: 'drive', estHeight: 170,
+      id: 'nav', title: 'Move', arch: 'drive', estHeight: 170,
       node: (
         <div style={{ display: 'grid', gap: 10 }}>
           <Pills<'flip' | 'cross'> label="Click an edge to…" value={mode} onChange={setMode} options={[{ value: 'flip', label: 'Flip (tree)' }, { value: 'cross', label: 'Cross (order)' }]} />
@@ -349,11 +390,11 @@ export default function TreesAndNets(): JSX.Element {
       ),
     },
     {
-      id: 'state', title: 'Where you are (fibers)', arch: 'readout', estHeight: 110,
+      id: 'state', title: 'Where you are', arch: 'readout', estHeight: 110,
       node: <div style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12, lineHeight: 1.7 }}>order&nbsp;&nbsp;({order.join(' ')})<br />tree&nbsp;&nbsp;&nbsp;#{curSafe}<br />splits&nbsp;{splitText}</div>,
     },
     {
-      id: 'view', title: 'Display (fibers)', arch: 'view', estHeight: 160,
+      id: 'view', title: 'Display', arch: 'view', estHeight: 160,
       node: (
         <div style={{ display: 'grid', gap: 10 }}>
           <Slider label="Neighborhood radius" value={radius} min={1} max={6} step={1} onChange={setRadius} format={(v) => `${v} step${v > 1 ? 's' : ''}`} />
@@ -364,9 +405,12 @@ export default function TreesAndNets(): JSX.Element {
     },
   ];
 
-  const views: ViewDef[] = [
-    { id: 'njtree', title: 'Neighbor-Joining tree', defaultRect: { x: 360, y: 16, w: 380, h: 380 }, node: <NJTreeView nj={nj} matrix={matrix} /> },
-    { id: 'splitnet', title: 'Split network (the net)', defaultRect: { x: 756, y: 16, w: 400, h: 400 }, node: <SplitNetworkView splits={weightedSplits} order={lpOrder} matrix={matrix} /> },
+  const netsViews: ViewDef[] = [
+    { id: 'njtree', title: 'Neighbor-Joining tree', defaultRect: { x: 360, y: 16, w: 400, h: 400 }, node: <NJTreeView nj={nj} matrix={matrix} highlight={hl} onSelect={setHl} /> },
+    { id: 'splitnet', title: 'Split network (the net)', defaultRect: { x: 776, y: 16, w: 420, h: 420 }, node: <SplitNetworkView splits={weightedSplits} order={lpOrder} matrix={matrix} highlight={hl} onSelect={setHl} /> },
+  ];
+
+  const fibersViews: ViewDef[] = [
     { id: 'tree', title: 'Tree (circular order)', defaultRect: { x: 360, y: 16, w: 380, h: 380 }, node: <DiskView n={n} order={order} tri={tri} flash={flash} showTree showPolygon={false} onChord={onChord} /> },
     { id: 'polygon', title: 'Polygon + triangulation', defaultRect: { x: 360, y: 408, w: 380, h: 380 }, node: <DiskView n={n} order={order} tri={tri} flash={flash} showTree={false} showPolygon onChord={onChord} /> },
     { id: 'overlay', title: 'Overlay (tree + triangulation)', defaultRect: { x: 756, y: 408, w: 380, h: 380 }, node: <DiskView n={n} order={order} tri={tri} flash={flash} showTree showPolygon={showPoly} onChord={onChord} /> },
@@ -374,12 +418,22 @@ export default function TreesAndNets(): JSX.Element {
     { id: 'cube', title: `(n−3)-cube fiber — orders | tree`, defaultRect: { x: 1156, y: 408, w: 360, h: 380 }, node: <Graph3D key={`q-${treeKey}-${n}`} positions={cube.positions} edges={cube.edges} adjacency={cube.adj} currentRef={cubeCurRef} radiusRef={radiusRef} accent={0xe08a3c} onPick={pickCube} spinRef={spinRef} /> },
   ];
 
-  const layouts: LayoutDef[] = [
-    { id: 'nets', name: 'Nets', open: { distances: { x: 84, y: 16 }, weights: { x: 84, y: 470 } }, views: { njtree: { open: true }, splitnet: { open: true }, tree: { open: false }, polygon: { open: false }, overlay: { open: false }, assoc: { open: false }, cube: { open: false } } },
-    { id: 'fibers', name: 'Fibers', open: { nav: { x: 84, y: 16 }, state: { x: 84, y: 210 }, view: { x: 84, y: 340 } }, views: { njtree: { open: false }, splitnet: { open: false }, tree: { open: true }, polygon: { open: false }, overlay: { open: true }, assoc: { open: true }, cube: { open: true } } },
+  const sections = appMode === 'nets' ? netsSections : fibersSections;
+  const views = appMode === 'nets' ? netsViews : fibersViews;
+  const layouts: LayoutDef[] = appMode === 'nets'
+    ? [{ id: 'essentials', name: 'Nets', open: { distances: { x: 84, y: 16 }, connect: { x: 84, y: 410 }, weights: { x: 84, y: 560 } }, views: { njtree: { open: true }, splitnet: { open: true } } }]
+    : [{ id: 'essentials', name: 'Fibers', open: { nav: { x: 84, y: 16 }, state: { x: 84, y: 210 }, view: { x: 84, y: 340 } }, views: { tree: { open: true }, polygon: { open: false }, overlay: { open: true }, assoc: { open: true }, cube: { open: true } } }];
+
+  const modes: WorkspaceMode[] = [
+    { id: 'nets', label: 'Nets' },
+    { id: 'fibers', label: 'Fibers' },
   ];
 
   return (
-    <Workspace appId={APP_ID} title="Trees and Nets" subtitle={`${n} leaves · metric → tree + nets`} sections={sections} views={views} layouts={layouts} defaultLayoutId="nets" explainer={explainer} />
+    <Workspace appId={APP_ID} title="Trees and Nets"
+      subtitle={appMode === 'nets' ? `${n} leaves · metric → tree + net` : `${n} leaves · tree-space fibers`}
+      sections={sections} views={views} layouts={layouts} defaultLayoutId="essentials"
+      explainer={explainer} modes={modes} activeMode={appMode}
+      onModeChange={(id) => setAppMode(id as 'nets' | 'fibers')} />
   );
 }

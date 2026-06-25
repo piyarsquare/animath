@@ -162,3 +162,48 @@ export function splitForEdge(
   }
   return leaves;
 }
+
+/** Stable id for the undirected edge between nodes `a` and `b` (sorted). */
+export function njEdgeId(a: string, b: string): string {
+  return a < b ? `${a}~${b}` : `${b}~${a}`;
+}
+
+/**
+ * The path in the NJ tree between two leaves: the set of edge ids it traverses
+ * and the summed branch length (the tree's distance for that pair). For an
+ * additive metric this `dist` reproduces the input distance — which is exactly
+ * the "matrix → solution" bridge the UI draws when you pick a pair.
+ */
+export function njLeafPathInfo(nj: NJResult, a: string, b: string): { edgeIds: Set<string>; dist: number } {
+  const adj = new Map<string, { to: string; len: number }[]>();
+  nj.nodes.forEach((id) => adj.set(id, []));
+  nj.edges.forEach((e) => {
+    adj.get(e.left)!.push({ to: e.right, len: e.length });
+    adj.get(e.right)!.push({ to: e.left, len: e.length });
+  });
+  const prev = new Map<string, { node: string; len: number }>();
+  const seen = new Set<string>([a]);
+  const queue: string[] = [a];
+  while (queue.length > 0) {
+    const u = queue.shift()!;
+    if (u === b) break;
+    for (const { to, len } of adj.get(u) ?? []) {
+      if (!seen.has(to)) {
+        seen.add(to);
+        prev.set(to, { node: u, len });
+        queue.push(to);
+      }
+    }
+  }
+  const edgeIds = new Set<string>();
+  let dist = 0;
+  let cur = b;
+  while (cur !== a) {
+    const p = prev.get(cur);
+    if (!p) break;
+    edgeIds.add(njEdgeId(cur, p.node));
+    dist += p.len;
+    cur = p.node;
+  }
+  return { edgeIds, dist };
+}

@@ -23,7 +23,7 @@ import {
   treeCompatibleWithOrder,
   type Tree,
 } from '../trees';
-import { computeNeighborJoining } from '../neighborJoining';
+import { computeNeighborJoining, njLeafPathInfo } from '../neighborJoining';
 import {
   circularDisplayedSplits,
   computeLevyPachterOrdering,
@@ -141,6 +141,19 @@ describe('neighbor joining recovers an additive tree metric', () => {
       (t) => t.splits.length === njKeys.size && t.splits.every((k) => njKeys.has(k)),
     );
     expect(match).toBeDefined();
+  });
+
+  it('NJ tree path length reproduces the additive metric (the matrix→tree bridge)', () => {
+    const { m } = referenceSixLeafTree();
+    const nj = computeNeighborJoining(m);
+    // For an additive metric, the summed branch length along the tree path
+    // between two leaves equals their input distance.
+    for (let i = 0; i < m.leaves.length; i += 1) {
+      for (let j = i + 1; j < m.leaves.length; j += 1) {
+        const { dist } = njLeafPathInfo(nj, m.leaves[i], m.leaves[j]);
+        expect(dist).toBeCloseTo(m.d[i][j], 6);
+      }
+    }
   });
 });
 

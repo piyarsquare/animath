@@ -9,9 +9,9 @@ status: in-progress
 build: passing
 followup: null
 app: trees-and-nets
-thumbnail: assets/2026-06-25-S01-nets-conflict.png
-signals: needs-dan
-next: Confirm priority (rec: Theme A — connect matrix↔tree↔net↔weights + fix mobile), then build
+thumbnail: assets/2026-06-25-S01-themeA-selected.png
+signals: null
+next: Theme B — SplitsTree split-graph view + scale (lazy fiber compute); then Theme C (build tree/CDM by edges)
 ---
 
 # Trees and Nets — port the rest of quantum-tree (evidence engine first)
@@ -62,6 +62,25 @@ plane, and the quartet→split→ordering→tree assembly views.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 19:30 — Theme A: the views now connect (+ mobile, n→9)
+**Why:** Dan's feedback — make matrix↔solution read, fix mobile, connect weights to trees.
+
+A shared **selection** links every Nets view: click a **matrix cell** → the leaf
+pair's **path lights up in the NJ tree** and a **Selection** readout shows **tree
+vs. actual distance** (the matrix→solution bridge); click a **split** (its weight
+bar, its net chord, or its tree edge) → it highlights everywhere. The weights list
+tags **△ tree** for splits that are also NJ-tree edges, and tree edges are
+**thickness-weighted**. Nets/Fibers became top-bar **modes** (not layouts), so the
+mobile dock shows only the active mode's panels — the fiber-control clutter is gone.
+Leaf picker now to **n=9**. New engine helper `njLeafPathInfo` (+ test). Build green,
+**20/20** engine tests, lint clean. Verified headless (desktop selected-state + mobile).
+
+![Clicking the a–b cell lights its path in the tree + Selection readout + △ tree tags](assets/2026-06-25-S01-themeA-selected.png)
+![Mobile: dock shows only Nets panels (Distances · Selection · Split weights)](assets/2026-06-25-S01-themeA-mobile.png)
+
+Deferred to **Theme B**: the SplitsTree planar split-graph view and lazy fiber
+compute for higher n; **Theme C**: build a tree / CDM by edges.
 
 ### 🔵 finding · 18:50 — Dan's feedback on the preview: "okay, not excellent"
 **Why:** Dan opened the Cloudflare preview (mobile) and gave directional feedback.
