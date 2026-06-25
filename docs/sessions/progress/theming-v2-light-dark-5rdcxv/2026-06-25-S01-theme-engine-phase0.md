@@ -6,12 +6,12 @@ title: Theming v2 — light/dark-paired theme engine (Phase 0) + pilots
 branch: claude/theming-v2-light-dark-5rdcxv
 slug: theming-v2-light-dark-5rdcxv
 status: in-progress
-build: unknown
+build: passed
 followup: null
 pr: null
 app: chrome, trinary, polygon-worlds, solid-worlds
 signals: needs-dan, visual-unverified
-next: Execute Phase 0 — convert theme.css tokens to light-dark() pairs + author the missing light/dark companions, then add the <Scheme mode> force-mode primitive + useThemeTokens() canvas hook + identity×mode picker.
+next: Phase 1 pilot — Trinary star scene (force-dark via <Scheme>; stars→discrete --data, planet→neutral, outcomes→divergent registry colormap; canvas reads tokens + redraws). Dan wants to eyeball the divergence map.
 ---
 
 # Theming v2 — light/dark-paired theme engine (Phase 0) + pilots
@@ -70,6 +70,45 @@ attribute, reactive `useSkin`/`useThemeId`) shipped in
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 01:47 — Phase 0 engine complete + verified (committed)
+**Why:** The theme engine is the prerequisite for both pilots; de-risk it (build
++ headless screenshots across identity × mode) before the per-app design work.
+
+Built and verified the full identity × mode engine. **Build green, lint 0 errors
+(60 baseline warnings, none new), 88 tests pass.**
+
+- **`theme.css`** — all 8 themes converted to family vars (`--x-n` native source +
+  sparse `--x-lt`/`--x-dk` companions); shared `[data-theme]`/`[data-scheme=light]`/
+  `[data-scheme=dark]` blocks map consumed tokens with native fallback. Authored
+  the missing companions: light Observatory (cool paper + gold), light Blueprint
+  (white-print), light Spectrum (white + teal/magenta), light Mirage (peach dawn),
+  dark Paper (warm sepia night), dark Daylight (charcoal), dark Primary (true-black
+  Bauhaus), and **light Phosphor = the 1980s beige case** (warm plastic, dark
+  CRT-green ink, mono kept).
+- **`skins.tsx`** — `ThemeMode`, `resolveScheme`, `useThemeMode`/`useThemeModeId`;
+  `data-scheme` now carries the user's mode (default native); identity + mode both
+  persisted; picker gains a Native/Light/Dark toggle.
+- **`Scheme.tsx`** — the `<Scheme mode>` force-mode primitive (layout-transparent
+  by default).
+- **`useThemeTokens.ts`** — reactive canvas token reader (+ `readThemeTokens` for
+  non-React engines) that re-reads on identity/mode change.
+- **Gallery previews** track the mode (`resolveScheme`).
+
+Verified headless across combos — Observatory-by-day, Paper-at-night,
+Primary-at-night, and the beige Phosphor all resolve, and **Stable Matching under
+Observatory forced-light** themes cleanly end-to-end (no light-on-light), proving
+the path works in a real app, not just the gallery.
+
+![Phosphor light = the 1980s beige case](assets/2026-06-25-S01-phosphor-beige.png)
+![Paper at night (forced-dark companion)](assets/2026-06-25-S01-paper-night.png)
+![Observatory forced-light in a real app (Stable Matching)](assets/2026-06-25-S01-observatory-day-app.png)
+
+> [!NOTE]
+> Engine is non-breaking by construction: with companions falling back to native,
+> every theme in native mode renders exactly as before #238. Previews still carry
+> their own hardcoded on-light/on-dark palettes (branch on `resolveScheme`); fully
+> tokenizing them is a Phase 2 rollout item.
 
 ### 🟣 decision · 00:18 — Adjusted model (Dan) + the CSS engine architecture
 **Why:** Dan refined the two-mode plan into **three** modes, and the three-mode
