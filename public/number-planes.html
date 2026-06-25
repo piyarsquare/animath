@@ -12,41 +12,31 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Number Planes — choose how to multiply</title>
+  <link rel="stylesheet" href="./guide-theme.css">
+  <script src="./guide-skin.js"></script>
   <style>
-    :root {
-      --bg: #faf8f3; --fg: #232323; --muted: #8a8377; --rule: #ddd5c4;
-      --codebg: #1d1f23; --codefg: #e6e6e6; --codecm: #7f8a78;
-      --inlinebg: #f0ece1; --accent: #7a5cff; --eqbg: #f4f1e8;
-      /* --plane is the *carried choice* color; it changes with j². */
-      --plane: #6a5cff; --plane-soft: #efeaff;
-    }
-    /* The carried j² choice tints the page. Spin (complex) keeps the calm house
-       purple — the familiar start; Shear (dual) goes green, Boost (split) red,
-       so leaving the familiar plane is visible. */
-    html[data-plane="spin"]  { --plane: #6a5cff; --plane-soft: #ece9ff; }
-    html[data-plane="shear"] { --plane: #2f9e63; --plane-soft: #e6f3ea; }
-    html[data-plane="boost"] { --plane: #d65a33; --plane-soft: #f8e9e2; }
+    /* Skin tokens (--bg/--fg/--accent/--rule/--eqbg/--codebg/…) come from
+       guide-theme.css, switched by the shared skin picker. Only the
+       page-specific layout + the carried j² color live here. --plane is the
+       j² choice color (semantic, stable across skins); --plane-soft and --ink
+       adapt to the active skin's background via color-mix. */
+    html { --plane: #7a6cff;
+           --plane-soft: color-mix(in srgb, var(--plane) 17%, var(--bg));
+           --ink: color-mix(in srgb, var(--fg) 80%, var(--bg)); }
+    html[data-plane="spin"]  { --plane: #7a6cff; }
+    html[data-plane="shear"] { --plane: #2aa566; }
+    html[data-plane="boost"] { --plane: #e0683c; }
 
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--fg);
-           font: 17px/1.65 Georgia, 'Times New Roman', serif; }
     main { max-width: 720px; margin: 0 auto; padding: 8px 20px 96px; }
     h1 { font-size: 33px; line-height: 1.2; margin: 0 0 6px; }
     h2 { font-size: 25px; line-height: 1.25; margin: 8px 0 4px; }
     h3 { font-size: 18px; margin: 26px 0 4px; }
     .byline { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
     p { margin: 0 0 18px; }
-    a { color: var(--accent); }
-    em { color: #4a443a; }
-    strong { color: #1a1a1a; }
-    code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-           font-size: 0.86em; background: var(--inlinebg); padding: 1px 5px;
-           border-radius: 4px; }
-    sup, sub { line-height: 0; }
 
     /* ---- the carried-choice header (sticky) ---- */
     header.choice { position: sticky; top: 0; z-index: 20;
-      background: rgba(250,248,243,0.94); backdrop-filter: blur(6px);
+      background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(6px);
       border-bottom: 1px solid var(--rule); }
     .choice-inner { max-width: 720px; margin: 0 auto; padding: 9px 20px;
       display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
@@ -56,7 +46,7 @@
     .brand:hover { color: var(--plane); }
     .planes { display: flex; gap: 6px; margin-left: auto; }
     .plane-btn { font-family: inherit; font-size: 13.5px; cursor: pointer;
-      border: 1px solid var(--rule); background: #fff; color: #4a443a;
+      border: 1px solid var(--rule); background: var(--card); color: var(--fg);
       border-radius: 999px; padding: 5px 13px; line-height: 1.1;
       transition: all 0.13s; }
     .plane-btn small { color: var(--muted); font-size: 0.82em; }
@@ -76,8 +66,8 @@
     .ring-inner { max-width: 720px; margin: 0 auto; padding: 9px 20px;
       display: flex; gap: 7px; overflow-x: auto; align-items: center; }
     .ring-chip { font-family: inherit; font-size: 12.5px; white-space: nowrap;
-      cursor: pointer; border: 1px solid var(--rule); background: #fff;
-      color: #5a5346; border-radius: 7px; padding: 5px 10px; line-height: 1.1;
+      cursor: pointer; border: 1px solid var(--rule); background: var(--card);
+      color: color-mix(in srgb, var(--fg) 72%, var(--bg)); border-radius: 7px; padding: 5px 10px; line-height: 1.1;
       display: flex; align-items: center; gap: 6px; transition: all 0.13s; }
     .ring-chip:hover { border-color: var(--plane); color: var(--plane); }
     .ring-chip.active { border-color: var(--plane); background: var(--plane-soft);
@@ -88,7 +78,7 @@
     .ring-chip.home { font-size: 14px; padding: 5px 9px; }
 
     /* ---- the hub ---- */
-    .lede { font-size: 19px; line-height: 1.55; color: #34302a; }
+    .lede { font-size: 19px; line-height: 1.55; color: var(--ink); }
     .panel { background: var(--plane-soft); border: 1px solid var(--rule);
       border-left: 4px solid var(--plane); border-radius: 0 10px 10px 0;
       padding: 16px 20px; margin: 24px 0; transition: background 0.2s; }
@@ -100,7 +90,7 @@
     .tri td:first-child { color: var(--muted); width: 38%; }
     .tri b { color: var(--plane); }
     .promise { font-size: 17px; border-left: 3px solid var(--plane);
-      padding: 2px 0 2px 16px; margin: 24px 0; color: #34302a; font-style: italic; }
+      padding: 2px 0 2px 16px; margin: 24px 0; color: var(--ink); font-style: italic; }
     .promise b { font-style: normal; }
 
     /* the "choose a perspective" deck */
@@ -109,15 +99,15 @@
     .deck { list-style: none; margin: 0; padding: 0; display: grid;
       grid-template-columns: 1fr 1fr; gap: 12px; }
     @media (max-width: 560px) { .deck { grid-template-columns: 1fr; } }
-    .card { border: 1px solid var(--rule); border-radius: 11px; background: #fff;
+    .card { border: 1px solid var(--rule); border-radius: 11px; background: var(--card);
       padding: 14px 16px; cursor: pointer; text-align: left; font-family: inherit;
       transition: border-color 0.13s, transform 0.13s; position: relative; }
     .card:hover { border-color: var(--plane); transform: translateY(-1px); }
     .card .ct { font-size: 17px; font-weight: 600; color: var(--fg); }
     .card .ct .ix { color: var(--plane); font-size: 14px; margin-right: 6px; }
-    .card .cd { font-size: 14px; color: #4a443a; margin-top: 3px; line-height: 1.45; }
+    .card .cd { font-size: 14px; color: var(--ink); margin-top: 3px; line-height: 1.45; }
     .card .ch { font-size: 12px; color: var(--muted); margin-top: 8px; }
-    .card.leaf { background: #fbfaf6; border-style: dashed; }
+    .card.leaf { background: color-mix(in srgb, var(--muted) 6%, var(--card)); border-style: dashed; }
     .card .seen-tag { position: absolute; top: 12px; right: 14px; font-size: 11px;
       color: var(--plane); opacity: 0; }
     .card.seen .seen-tag { opacity: 1; }
@@ -133,16 +123,16 @@
     .eq code { background: none; padding: 0; font-size: 1em; }
     .pp { color: var(--plane); font-weight: 600; font-style: normal;
       transition: color 0.2s; }
-    .note { border-left: 3px solid #c8a26a; background: #f7f1e3;
+    .note { border-left: 3px solid var(--accent2); background: var(--soft);
       padding: 11px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
       font-size: 15.5px; }
-    .note b { color: #7a5a1e; }
+    .note b { color: var(--accent2); }
 
     /* the source listing (kept identical to the guide family) */
     .listing { margin: 18px 0; }
     .listing .src { font: 12px/1.2 ui-monospace, Menlo, Consolas, monospace;
       color: var(--muted); margin: 0 0 5px; }
-    .listing .src b { color: #5a5346; font-weight: 600; }
+    .listing .src b { color: var(--ink); font-weight: 600; }
     pre { background: var(--codebg); color: var(--codefg); margin: 0;
       padding: 16px 18px; border-radius: 9px; overflow-x: auto;
       font: 13px/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
@@ -156,7 +146,7 @@
       transition: background 0.2s, border-color 0.2s; }
     .stub-box .tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
       color: var(--plane); font-weight: 700; }
-    .stub-box p { margin: 0; font-size: 15px; color: #34302a; }
+    .stub-box p { margin: 0; font-size: 15px; color: var(--fg); }
     figcaption { font-size: 13.5px; color: var(--muted); padding-top: 8px; }
 
     /* the circle-back footer — the heart of the "circling" mechanic */
@@ -169,7 +159,7 @@
       background: none; border: 0; color: var(--plane); text-align: left;
       padding: 0; text-decoration: none; }
     .cb-link:hover { text-decoration: underline; }
-    .cb-link .em { color: #4a443a; font-style: italic; }
+    .cb-link .em { color: var(--ink); font-style: italic; }
     .cb-back { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); }
     .cb-back button { font-family: inherit; font-size: 14px; cursor: pointer;
       background: none; border: 0; color: var(--muted); padding: 0; }
@@ -179,7 +169,7 @@
       color: var(--muted); font-size: 14px; }
     .footer a { color: var(--accent); }
     [hidden] { display: none !important; }
-    .draft-flag { background: #fff6e0; border: 1px solid #e8d49a; color: #7a5a1e;
+    .draft-flag { background: var(--soft); border: 1px solid var(--rule); color: var(--muted);
       border-radius: 8px; padding: 8px 14px; font-size: 13px; margin: 14px 0 0; }
   </style>
 </head>
@@ -194,6 +184,7 @@
       <button class="plane-btn" data-set-plane="shear" aria-pressed="false">Shear <small>j²=0</small></button>
       <button class="plane-btn" data-set-plane="boost" aria-pressed="false">Boost <small>j²=+1</small></button>
     </div>
+    <div id="skin-picker"></div>
     <div class="readout">
       In your plane: <code>×</code> is a <b class="pp" data-spin="rotation" data-shear="shear" data-boost="boost">rotation</b>
       &middot; the unit curve is <b class="pp" data-spin="a circle" data-shear="a pair of lines" data-boost="a hyperbola">a circle</b>

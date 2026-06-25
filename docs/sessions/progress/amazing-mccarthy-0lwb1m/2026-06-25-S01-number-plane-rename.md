@@ -11,7 +11,7 @@ followup: null
 pr: null
 app: argand, docs
 signals: needs-dan
-next: Build a prose-first probe of the Number Planes HTML guide page — a hub ringed by lenses you circle, with a carried j² choice that rewrites the prose live; show Dan, iterate on the "circling" feel.
+next: Get Dan's read on the themed guides gallery — keep it as a standalone themed static section (current), or promote the guides into the chrome for native skins (no drift). Then finish the 4 stub lenses + build the #/embed/number-planes applet.
 ---
 
 # Number Plane app — continuing the Argand → Number Plane rename + narrative
@@ -39,6 +39,67 @@ then **shelved** an in-app number-line/tour experiment; (4) co-designed a
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 19:10 — Built a themed "guides gallery" + a shared skin layer (option 2); both pages reskin
+**Why:** The AskUserQuestion tool errored and Dan said "continue"; with "everything
+is provisional," I took the lightest reversible path that still delivers "a gallery
+for guides with the same theming modes" — a standalone themed static section.
+
+New + changed (all in `public/`, fully reversible):
+- **`guide-theme.css`** — mirrors the app's **8 skins** on the same `[data-theme]`
+  attribute (anchors copied from `theme.css`), with `color-mix` deriving soft
+  tints. Phosphor even goes mono, like the app.
+- **`guide-skin.js`** — a small skin picker that reads/writes the **same**
+  `animath:v1:chrome:skin` key as the chrome, so a skin chosen in the app carries
+  into the guides and back. Applies `[data-theme]` from `<head>` (no flash).
+- **`guides.html`** → rebuilt as a **gallery** ("like the app gallery but for
+  guides"): sticky bar + skin picker, a featured *Number Planes* card (accent
+  glow), and the existing complex-viewer guides as a card grid. Nothing lost.
+- **`number-planes.html`** → rewired onto the shared theme: dropped its private
+  warm-paper tokens, tokenized every hardcoded color, added the skin picker. The
+  carried-**j²** color is now *semantic + skin-agnostic* (Spin purple / Shear green
+  / Boost orange), and `--plane-soft`/`--ink` adapt to the skin bg via `color-mix`.
+
+Verified (R1): headless `file://` shots across skins — gallery in Observatory /
+Paper / **Phosphor** (green CRT, mono), page in Observatory and Paper+Boost. The
+picker drives the skin end-to-end (no page errors); `npm run build` green.
+
+![Guides gallery — Observatory (dark)](assets/guides-01-dark.png)
+![Guides gallery — Phosphor (CRT green, mono): the same theming modes as the app](assets/guides-04-phosphor.png)
+![Number Planes page now adopts the shared skin (Observatory)](assets/np-04-hub-dark.png)
+
+> [!NOTE]
+> **This is the "standalone themed static" option (2 of 3).** It's a parallel COPY
+> of the theming that can drift from `theme.css`. If Dan wants it "for real" (no
+> drift, native), we promote the guides into the chrome (option 1) — the content is
+> validated either way. Test-drive: `*.pages.dev` is blocked from the sandbox, so
+> previews are browser-side; open a PR and the Cloudflare bot comments the link.
+
+### 🟣 decision · 18:25 — New direction: a themed "gallery for guides"; posing the where-do-guides-live fork
+**Why:** Dan: *"something like the gallery but for the guides … keep the same
+theming modes and styles and a coherent experience and a place to keep these types
+of pages."* Plus he asked how to test-drive / whether Cloudflare builds from a PR.
+
+**Test-drive findings:** `*.pages.dev` is **blocked from this sandbox** (HTTP 000 to
+the production URL *and* a known-good branch URL), so I can't open previews here —
+they're browser-side for Dan. Cloudflare Pages **is** connected (PR #238's bot
+posted real per-commit + per-branch URLs); it builds every pushed branch, and a PR
+gets the bot to comment the clickable link. Caveat: Cloudflare's build is
+`npm run build` only, so the **sessions control center is NOT on Cloudflare** — it
+ships solely on the GitHub-Pages (main) deploy at `/animath/sessions/`.
+
+**Orientation (chrome theming):** `theme.css` defines **8 skins** on `[data-theme]`
+(Observatory/Paper/Spectrum/Blueprint/Phosphor/Daylight/Primary/Mirage), `data-scheme`
+light/dark, persisted `animath:v1:chrome:skin`; `skins.tsx` has SKINS + SkinPicker +
+applyPersistedSkin; `Gallery.tsx` is the React landing. **The static `public/*-guide.html`
+pages use their own warm-paper palette — they do NOT use the skin system.** So
+"same theming modes" requires the guides to respond to `data-theme`.
+
+**Fork posed to Dan** (genuinely his call — it decides where guides live and whether
+number-planes.html stays static or ports to React): (1·rec) guides in-chrome on the
+real skins; (2) standalone themed static section mirroring the skins in `public/`;
+(3) themed `#/guides` gallery now, port pages later. Recommending (1) for true
+coherence / no theming drift.
 
 ### 🟡 milestone · 18:05 — Prose-first probe built & verified: `public/number-planes.html`
 **Why:** Dan wanted to *see* the page, and a standalone `public/` HTML file is the
