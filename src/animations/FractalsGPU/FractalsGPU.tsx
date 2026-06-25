@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
-import { PALETTE_GLSL, PALETTE_OPTIONS } from '../../lib/colormaps';
+import { PALETTE_GLSL, PALETTE_OPTIONS, PALETTE_THEME, resolvePalette } from '../../lib/colormaps';
 import { useViewportGestures } from '../../lib/useViewportGestures';
+import { useThemeId } from '../../chrome/skins';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { Slider, Pills, Select, Checkbox, NumberInput } from '../../components/ControlPanel';
@@ -128,7 +129,8 @@ export default function FractalsGPU() {
   const [juliaC, setJuliaC] = useState({ real: -0.7, imag: 0.27015 });
   const [iter, setIter] = useState(100);
   const [startIter, setStartIter] = useState(0);
-  const [palette, setPalette] = useState(0);
+  const themeId = useThemeId();
+  const [palette, setPalette] = useState(PALETTE_THEME);
   const [power, setPower] = useState(2);
   const [colorMode, setColorMode] = useState<"escape" | "limit" | "layered">(
     "escape"
@@ -190,15 +192,15 @@ export default function FractalsGPU() {
     const tMap = { mandelbrot: 0, julia: 1, burning: 2, tricorn: 3 } as const;
     materialRef.current.uniforms.type.value = tMap[type];
     materialRef.current.uniforms.juliaC.value = new THREE.Vector2(juliaC.real, juliaC.imag);
-    materialRef.current.uniforms.palette.value = palette;
-    materialRef.current.uniforms.paletteIn.value = insidePalette;
+    materialRef.current.uniforms.palette.value = resolvePalette(palette, themeId);
+    materialRef.current.uniforms.paletteIn.value = resolvePalette(insidePalette, themeId);
     materialRef.current.uniforms.power.value = power;
     materialRef.current.uniforms.colorMode.value = colorMode === 'escape' ? 0 : colorMode === 'limit' ? 1 : 2;
     materialRef.current.uniforms.offset.value = offset;
     if (sceneRef.current && cameraRef.current) {
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     }
-  }, [view, iter, startIter, type, juliaC, palette, insidePalette, power, colorMode, offset]);
+  }, [view, iter, startIter, type, juliaC, palette, insidePalette, power, colorMode, offset, themeId]);
 
   // Keep renderRef pointing at the latest render implementation
   useEffect(() => {
@@ -347,8 +349,8 @@ export default function FractalsGPU() {
       startIter: { value: startIter },
       type: { value: 0 },
       juliaC: { value: new THREE.Vector2(juliaC.real, juliaC.imag) },
-      palette: { value: palette },
-      paletteIn: { value: insidePalette },
+      palette: { value: resolvePalette(palette, themeId) },
+      paletteIn: { value: resolvePalette(insidePalette, themeId) },
       power: { value: power },
       colorMode: { value: 0 },
       offset: { value: offset }

@@ -7,9 +7,11 @@ import { Icon } from '../../chrome/icons';
 import { useEscLayer } from '../../chrome/useEscLayer';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { usePhone } from '../../chrome/usePhone';
+import { useThemeId, useThemeModeId, resolveScheme } from '../../chrome/skins';
+import { useThemeTokens } from '../../chrome/useThemeTokens';
 import { Slider, Select, Pills } from '../../components/ControlPanel';
 import { WORLDS, worldById, WorldSpec, deriveGeometry, analyzeWorld } from './worldSpec';
-import { generateProps, ARRANGEMENTS, ArrangementId } from './decor';
+import { generateProps, ARRANGEMENTS, ArrangementId, setDecorPalette, type DecorPalette } from './decor';
 import { makeFundamentalSquareEngine } from './fundamentalSquareEngine';
 import { LOOKS } from './looks';
 import {
@@ -26,6 +28,30 @@ import DebugPoseHUD from '../../components/DebugPoseHUD';
 import { poseParams, pNum, pStr, hudEnabled, type DebugState } from '../../lib/debugPose';
 import { nearestMarkerDistance } from '../../lib/nearestMarker';
 import explainerText from './EXPLAINER.md?raw';
+
+/** Read the decor's theme palette from the live tokens (theming v2): landmark /
+ *  corner identities → the --data slots, structural pieces → neutrals, the center
+ *  beacon → the accents, glyph text → the theme font. Read off the document root,
+ *  which carries the user's theme × mode. */
+function readDecorPalette(): DecorPalette {
+  const cs = getComputedStyle(document.documentElement);
+  const hex = (name: string, fallback: number) => {
+    const v = cs.getPropertyValue(name).trim();
+    return v ? new THREE.Color(v).getHex() : fallback;
+  };
+  const str = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback;
+  return {
+    data: [1, 2, 3, 4, 5, 6, 7].map((k, i) => hex(`--data-${k}`, [0x5fa8ff, 0x5fe3cd, 0x9ee85f, 0xffce47, 0xff9a5f, 0xff6f9c, 0xc08bff][i])),
+    trunk: hex('--dim-2', 0x6b4a2a),
+    stone: hex('--dim', 0xdedacb),
+    rim: hex('--dim-2', 0x9aa0ab),
+    floor: hex('--dim', 0x46658f),
+    beacon: hex('--accent', 0xffcf4a),
+    beaconAlt: hex('--accent-2', 0xff5ad0),
+    plaqueBg: str('--panel-solid', 'rgba(8,11,22,0.86)'),
+    font: str('--font-ui', '"Segoe UI", system-ui, sans-serif'),
+  };
+}
 
 const LOOK_SENS = 0.0035;
 const MAX_PITCH = 1.3;
@@ -68,14 +94,31 @@ export default function PolygonWorlds() {
   const [arrangement, setArrangement] = usePersistentState<ArrangementId>(pk('arrangement'), 'scattered');
   const [signFront, setSignFront] = usePersistentState(pk('signFront'), 'FRONT');
   const [signBack, setSignBack] = usePersistentState(pk('signBack'), 'BACK');
-  const [look, setLook] = usePersistentState(pk('look'), 'daytime');
+  // Look defaults to 'auto' — the sky/lighting follow the theme's light/dark mode
+  // (theming v2: the mode IS the time of day). Light → daytime, dark → moonlit;
+  // the user can still pick a specific atmosphere to override.
+  const [look, setLook] = usePersistentState(pk('look'), 'auto');
+  const themeId = useThemeId();
+  const themeMode = useThemeModeId();
+  const resolvedLook = look === 'auto'
+    ? (resolveScheme(themeId, themeMode) === 'light' ? 'daytime' : 'moonlit')
+    : look;
 
   const spec = worldById(worldId);
   const analysis = useMemo(() => analyzeWorld(spec), [spec]);
   const cover = deriveGeometry(spec).cover;
   const isSpherical = cover === 'spherical';
   const isHyperbolic = cover === 'hyperbolic';
-  const props = useMemo(() => generateProps(landmarkCount, arrangement), [landmarkCount, arrangement]);
+  // Theming v2: resolve the decor palette from the live tokens, then generate the
+  // props. Depending on themeId/themeMode means a skin or mode switch regenerates
+  // props → the engine's [spec, props] effect rebuilds the decor in the new colors
+  // (the same path a landmark-count change already uses). Set synchronously here so
+  // generateProps (which reads the module palette via hue()) sees the new colors.
+  const props = useMemo(() => {
+    setDecorPalette(readDecorPalette());
+    return generateProps(landmarkCount, arrangement);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [landmarkCount, arrangement, themeId, themeMode]);
   // Below 740px the workspace re-chromes (full-bleed view + floating bottom dock):
   // lift the walk pad clear of the dock and move the corner overlays off the bar.
   const phone = usePhone();
@@ -96,7 +139,7 @@ export default function PolygonWorlds() {
   const thickRef = useRef(floorThickness);
   const opacityRef = useRef(floorOpacity);
   const radiusRef = useRef(planetRadius);
-  const lookRef = useRef(look);
+  const lookRef = useRef(resolvedLook);
   const propsRef = useRef(props);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
@@ -189,12 +232,21 @@ export default function PolygonWorlds() {
   // engine (children-first effect order) with the boot pose applied — rebuilding
   // here would be redundant work AND would discard a debug-pose deep link's position.
   const skipFirstRebuild = useRef(true);
+  const prevSpecRef = useRef(spec);
   useEffect(() => {
+    const worldChanged = prevSpecRef.current !== spec;
+    prevSpecRef.current = spec;
     worldRef.current = spec;
     propsRef.current = props;
     const deps = depsRef.current;
     if (!deps || !engineRef.current) return;
     if (skipFirstRebuild.current) { skipFirstRebuild.current = false; return; }
+    // This effect also fires when `props` is regenerated for a theme/mode switch
+    // (same world, recolored decor). In that case keep the walker where it stands —
+    // capture the chart position before disposing and restore it after the rebuild —
+    // so changing skins doesn't teleport you to center. A genuine world change
+    // (different gluing) still drops the walker fresh at the default pose.
+    const keepPose = worldChanged ? null : engineRef.current.getMapState();
     engineRef.current.dispose();
     engineRef.current = makeFundamentalSquareEngine(deps, spec, {
       squareSize: sizeRef.current, floorThickness: thickRef.current, props,
@@ -203,6 +255,7 @@ export default function PolygonWorlds() {
     engineRef.current.setRadius(radiusRef.current);
     engineRef.current.setCameraDistance(camDistRef.current);
     engineRef.current.setLook(lookRef.current);
+    if (keepPose) engineRef.current.setPose({ u: keepPose.u, v: keepPose.v });
   }, [spec, props]);
 
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
@@ -212,7 +265,7 @@ export default function PolygonWorlds() {
   useEffect(() => { thickRef.current = floorThickness; engineRef.current?.setFloorThickness(floorThickness); }, [floorThickness]);
   useEffect(() => { radiusRef.current = planetRadius; engineRef.current?.setRadius(planetRadius); }, [planetRadius]);
   useEffect(() => { camDistRef.current = camDistance; engineRef.current?.setCameraDistance(camDistance); }, [camDistance]);
-  useEffect(() => { lookRef.current = look; engineRef.current?.setLook(look); }, [look]);
+  useEffect(() => { lookRef.current = resolvedLook; engineRef.current?.setLook(resolvedLook); }, [resolvedLook]);
 
   useEffect(() => {
     const map: Record<string, MoveKey> = {
@@ -386,7 +439,7 @@ export default function PolygonWorlds() {
       {phone && (
         <Pills label="Perspective" options={[{ value: 'third', label: 'Third person' }, { value: 'first', label: 'First person' }]} value={thirdPerson ? 'third' : 'first'} onChange={(v) => setThirdPerson(v === 'third')} />
       )}
-      <Select label="Look" options={LOOKS.map((l) => ({ value: l.id, label: l.label }))} value={look} onChange={setLook} />
+      <Select label="Look" options={[{ value: 'auto', label: 'Auto (day / night by mode)' }, ...LOOKS.map((l) => ({ value: l.id, label: l.label }))]} value={look} onChange={setLook} />
       {thirdPerson && (
         <Slider label="Camera distance" value={camDistance} min={1.5} max={12} step={0.5} onChange={setCamDistance} format={(v) => `${v.toFixed(1)}`} />
       )}
@@ -481,10 +534,16 @@ export default function PolygonWorlds() {
 
           {!phone && (
             <div style={{
-              position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
-              color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
+              position: 'absolute', top: 12, left: 0, right: 0, display: 'flex', justifyContent: 'center',
+              pointerEvents: 'none',
             }}>
-              Drag to look · WASD / arrows or the pad to walk · the polygon's gluing decides the world
+              <div style={{
+                background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 999,
+                padding: '4px 12px', color: 'var(--dim)', fontSize: 12, backdropFilter: 'blur(6px)',
+                boxShadow: 'var(--shadow-1)',
+              }}>
+                Drag to look · WASD / arrows or the pad to walk · the polygon's gluing decides the world
+              </div>
             </div>
           )}
         </div>
@@ -609,27 +668,35 @@ function MovePad({ onSet, phone }: { onSet: (k: MoveKey, v: boolean) => void; ph
 }
 
 function padBtn(style: React.CSSProperties): React.CSSProperties {
+  // Floating walk-pad over the 3D scene: chrome tracks the theme like the other
+  // workspace panels (panel bg / border / fg), so a skin or mode switch restyles it.
   return {
     position: 'absolute', width: 46, height: 46, ...style,
-    borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)',
-    background: 'rgba(12,12,16,0.6)', color: '#f0f0f3', fontSize: 18,
+    borderRadius: 8, border: '1px solid var(--border)',
+    background: 'var(--panel)', color: 'var(--fg)', fontSize: 18,
     backdropFilter: 'blur(6px)', cursor: 'pointer', touchAction: 'none',
+    boxShadow: 'var(--shadow-1)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   };
 }
 
+/** Mini-map edge-pairing identities → discrete --data slots (theming v2), with the
+ *  former hardcoded hues as fallbacks. Distinct slots keep the four glue cases
+ *  (straight lr / straight tb / single flip / double flip) separable. */
 const MAP_RED = '#ff4060', MAP_BLUE = '#4080ff', MAP_TEAL = '#34d6c0', MAP_PURPLE = '#b070ff';
+interface MapPalette { red: string; blue: string; teal: string; purple: string; }
+const DEFAULT_MAP_PAL: MapPalette = { red: MAP_RED, blue: MAP_BLUE, teal: MAP_TEAL, purple: MAP_PURPLE };
 
 /** Build the square mini-map spec from the world's edge identifications + the
  *  player chart. (Opposite-edge worlds for now; the sphere's adjacent fold lands
  *  with the spherical cover.) */
-function squareSpec(spec: WorldSpec, st: SquareMapState | null): SquareMapSpec {
+function squareSpec(spec: WorldSpec, st: SquareMapState | null, pal: MapPalette): SquareMapSpec {
   // a = left/right pair, b = top/bottom pair (square worlds only — guarded by caller)
   const e = spec.edges!;
   const aFlip = e.left.orient === -1 || e.right.orient === -1;
   const bFlip = e.top.orient === -1 || e.bottom.orient === -1;
-  const lr: SquareEdgeSpec = { color: aFlip ? (bFlip ? MAP_PURPLE : MAP_RED) : MAP_TEAL, glue: aFlip ? 'flip' : 'straight', double: true };
-  const tb: SquareEdgeSpec = { color: bFlip ? MAP_RED : MAP_BLUE, glue: bFlip ? 'flip' : 'straight', double: false };
+  const lr: SquareEdgeSpec = { color: aFlip ? (bFlip ? pal.purple : pal.red) : pal.teal, glue: aFlip ? 'flip' : 'straight', double: true };
+  const tb: SquareEdgeSpec = { color: bFlip ? pal.red : pal.blue, glue: bFlip ? 'flip' : 'straight', double: false };
   const marker = st
     ? { sx: (st.u - 0.5) * 2, sy: (st.v - 0.5) * 2, angle: Math.atan2(-st.hz, st.hx), flipped: st.flipped }
     : null;
@@ -664,6 +731,16 @@ function SquareMiniMap({ getState, spec, phone }: { getState: () => SquareMapSta
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const specRef = useRef(spec);
   specRef.current = spec;
+  // Edge-pairing colors track the theme's discrete --data palette (read live; the
+  // rAF loop pulls them off a ref so a skin/mode switch recolors without a restart).
+  const tk = useThemeTokens(['--data-1', '--data-2', '--data-6', '--data-7']);
+  const palRef = useRef<MapPalette>(DEFAULT_MAP_PAL);
+  palRef.current = {
+    blue: tk['--data-1'] || MAP_BLUE,
+    teal: tk['--data-2'] || MAP_TEAL,
+    red: tk['--data-6'] || MAP_RED,
+    purple: tk['--data-7'] || MAP_PURPLE,
+  };
   useEffect(() => {
     const cvs = canvasRef.current; if (!cvs) return;
     const ctx = cvs.getContext('2d'); if (!ctx) return;
@@ -674,7 +751,7 @@ function SquareMiniMap({ getState, spec, phone }: { getState: () => SquareMapSta
     let raf = 0;
     const loop = () => {
       const s = specRef.current;
-      if (s.edges) drawSquareMap(ctx, SIZE, squareSpec(s, getState()));
+      if (s.edges) drawSquareMap(ctx, SIZE, squareSpec(s, getState(), palRef.current));
       else drawPolygonMap(ctx, SIZE, polygonSpec(s, getState()));
       raf = requestAnimationFrame(loop);
     };
@@ -686,13 +763,13 @@ function SquareMiniMap({ getState, spec, phone }: { getState: () => SquareMapSta
   return (
     <div style={{
       position: 'absolute', top: phone ? 52 : 12, right: phone ? 8 : 12, width: box, height: box,
-      pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.18)',
-      borderRadius: 8, boxShadow: '0 4px 14px rgba(0,0,0,0.45)', overflow: 'hidden',
+      pointerEvents: 'none', border: '1px solid var(--border)',
+      borderRadius: 8, boxShadow: 'var(--shadow-2)', overflow: 'hidden',
     }}>
       <canvas ref={canvasRef} style={{ width: box, height: box, display: 'block' }} />
       <div style={{
         position: 'absolute', top: 4, left: 8, fontSize: 10, letterSpacing: '0.08em',
-        color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase',
+        color: 'var(--dim)', textTransform: 'uppercase',
       }}>Map</div>
     </div>
   );
