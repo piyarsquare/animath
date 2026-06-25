@@ -8,7 +8,7 @@ slug: theming-v2-light-dark-5rdcxv
 status: in-progress
 build: passed
 followup: null
-pr: null
+pr: 239
 app: chrome, trinary, polygon-worlds, solid-worlds
 signals: needs-dan, visual-unverified
 next: Get Dan's read on the divergence ramp + cool-data stars; then the Worlds day/night sky pilot, and roll the contract out (Trinary Lab fate map, Complex Particles, Plane Transform, Fractals, Correspondence, Trees, Argand, Agentic).
@@ -70,6 +70,40 @@ attribute, reactive `useSkin`/`useThemeId`) shipped in
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 03:05 — Trinary Lab Destiny Map themed (fate · chaos · stat) + PR #239
+**Why:** Dan, reviewing the Cloudflare preview, flagged the **fate map** (then the
+**chaos map**) "not taking theme colors" — the Lab was deferred from the pilot.
+
+Opened **PR #239** (engine + pilot), subscribed to its activity; Cloudflare
+preview is live (`https://claude-theming-v2-light-dark.animath.pages.dev`).
+Then, on Dan's feedback, two rounds:
+
+1. **Observatory outcomes → registry divergent map** (was a custom success/danger
+   ramp): the theme's recommended divergent map sampled by goodness (coolwarm
+   flipped). **Stars → spread `--data` slots 1·4·6** (was adjacent 1·2·3) so the
+   three hues read distinct (blue/gold/pink) without touching the shared palette.
+2. **Lab Destiny Map now tracks the theme** — the fate/chaos/stat maps were fully
+   hardcoded. They're computed in workers/GPU (no DOM), but the map already stores
+   an outcome-code grid + value grids and recolors on the main thread, so I moved
+   *all* coloring to themed ramps there (no worker-protocol change): **fate →
+   divergent map by outcome goodness** (same voice as the Observatory timeline),
+   **chaos & stat → registry sequential maps**. Recolors on a skin switch without
+   resimulating. Also tokenized the map background, star-path overlay, legend
+   swatches, gradient bars, and the box-dimension inset. Exported `hexToRgb` from
+   the registry.
+
+**Build green · lint 0 errors (60 baseline) · 88 tests.** Verified headless by
+scripting a Lab render across themes:
+
+![Lab fate map — divergent outcomes (Observatory)](assets/2026-06-25-S01-lab-fate.png)
+![Lab chaos map — sequential colormap](assets/2026-06-25-S01-lab-chaos.png)
+![Lab under Daylight — light chrome + light map](assets/2026-06-25-S01-lab-daylight.png)
+
+> [!NOTE]
+> Remaining Trinary hardcoded color: `SkyView`'s first-person insolation sky (a
+> physical temperature gradient, arguably the actual sky, not a data encoding) +
+> `MiniSim`/`TrinaryLab` outcome flash/meta swatches. Small; next pass.
 
 ### 🟡 milestone · 02:02 — Phase 1 pilot: Trinary star scene (force-dark + divergence map)
 **Why:** Prove the force-mode + canvas-token path end-to-end on the scene Dan
