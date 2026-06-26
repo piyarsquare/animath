@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import FractalPane, { Complex, ViewBounds } from './FractalPane';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
-import { Slider, Select, NumberInput } from '../../components/ControlPanel';
+import { Slider, Select, NumberInput, Pills } from '../../components/ControlPanel';
 import { Kicker } from '../../chrome/readouts';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
@@ -15,6 +15,7 @@ export default function Correspondence() {
   const [juliaView, setJuliaView] = useState<ViewBounds>({ xMin: -2, xMax: 2, yMin: -2, yMax: 2 });
   const [c, setC] = useState<Complex>({ real: -0.7, imag: 0.27015 });
   const [iter, setIter] = useState(100);
+  const [precision, setPrecision] = useState<'single' | 'double'>('single');
   const themeId = useThemeId();
   const [paletteM, setPaletteM] = useState(PALETTE_THEME);
   const [offsetM, setOffsetM] = useState(0);
@@ -168,18 +169,40 @@ export default function Correspondence() {
     </div>
   );
 
+  // Deepest zoom across the two panes (both start 4 units wide), versus the
+  // ~1e5× float32 wall. df64 ("Extended") pushes that out ~1e7×.
+  const deepZoom = Math.max(
+    4 / (mandelView.xMax - mandelView.xMin),
+    4 / (juliaView.xMax - juliaView.xMin),
+  );
   const iterationNode = (
-    <Slider label="Max iterations" value={iter}
-      min={10} max={1000} step={10}
-      onChange={(v) => setIter(Math.max(1, Math.round(v)))}
-      format={v => String(v)} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <Slider label="Max iterations" value={iter}
+        min={10} max={1000} step={10}
+        onChange={(v) => setIter(Math.max(1, Math.round(v)))}
+        format={v => String(v)} />
+      <Pills label="Precision"
+        options={[
+          { value: 'single', label: 'Standard' },
+          { value: 'double', label: 'Extended' },
+        ]}
+        value={precision}
+        onChange={setPrecision} />
+      <div className="am-hint">
+        Zoom: {deepZoom < 1e4 ? deepZoom.toFixed(deepZoom < 10 ? 2 : 0) : deepZoom.toExponential(1)}×
+        {precision === 'single' && deepZoom > 1e5 && (
+          <> — past Standard precision; switch to <strong>Extended</strong> (df64) for deep zoom.</>
+        )}
+        {precision === 'double' && <> — Extended (df64) precision, deep zoom.</>}
+      </div>
+    </div>
   );
 
   const sections: SectionDef[] = [
     { id: 'palettes', title: 'Palettes', arch: 'color', node: palettesNode, estHeight: 330 },
     { id: 'seed', title: 'Seed', arch: 'drive', node: seedNode, estHeight: 230 },
     { id: 'path', title: 'Path', arch: 'playback', node: pathNode, estHeight: 360 },
-    { id: 'iteration', title: 'Iteration', arch: 'quality', node: iterationNode, estHeight: 110 },
+    { id: 'iteration', title: 'Iteration', arch: 'quality', node: iterationNode, estHeight: 210 },
   ];
 
   const views: ViewDef[] = [
@@ -198,6 +221,7 @@ export default function Correspondence() {
             iter={iter}
             palette={resolvePalette(paletteM, themeId)}
             offset={offsetM}
+            precision={precision}
             markC={c}
             onPickC={handlePick}
             drawing={drawingPath}
@@ -221,6 +245,7 @@ export default function Correspondence() {
             iter={iter}
             palette={resolvePalette(paletteJ, themeId)}
             offset={offsetJ}
+            precision={precision}
           />
         </div>
       ),

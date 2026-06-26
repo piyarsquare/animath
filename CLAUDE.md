@@ -100,9 +100,9 @@ animath/
     │   │                       #   (absorbs the former Roots z^(p/q) and
     │   │                       #    Multibranch sqrt/ln modes as variants)
     │   ├── PlaneTransform/      # f as a transformation of the colored plane
-    │   ├── FractalsGPU/         # GPU Mandelbrot / Julia / Burning Ship / Tricorn
+    │   ├── FractalsGPU/         # GPU Mandelbrot / Julia / Burning Ship / Tricorn; Precision toggle (Standard float32 ↔ Extended df64 emulated-double for deep zoom past the ~1e5× float32 wall — method + the "limits of computation" write-up in DEEP_ZOOM.md, surfaced in the ? modal)
     │   ├── Fractals/            # legacy CPU 2D fractals (routed at #/fractals-cpu)
-    │   ├── Correspondence/      # Mandelbrot ↔ Julia split-pane explorer
+    │   ├── Correspondence/      # Mandelbrot ↔ Julia split-pane explorer; shares the Precision toggle (Standard float32 ↔ Extended df64) on both panes (FractalPane), method documented in FractalsGPU/DEEP_ZOOM.md
     │   ├── TopologyWalk/        # UNLISTED / being retired (Polygon Worlds supersedes it; absorbed its scene looks). Möbius corridor + flat torus / Klein bottle
     │   ├── TrinaryStars/        # three-body planet sandbox (Observatory) + ensemble Lab
     │   │                        #   (Trinary.tsx hosts both as tabs; engine in lib/nbody)

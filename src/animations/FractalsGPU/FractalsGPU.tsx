@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
+import deepZoomText from './DEEP_ZOOM.md?raw';
 import { PALETTE_GLSL, PALETTE_OPTIONS, PALETTE_THEME, resolvePalette } from '../../lib/colormaps';
 import { useViewportGestures } from '../../lib/useViewportGestures';
 import { useThemeId } from '../../chrome/skins';
@@ -12,6 +13,17 @@ import { Slider, Pills, Select, Checkbox, NumberInput } from '../../components/C
 type FractalType = 'mandelbrot' | 'julia' | 'burning' | 'tricorn';
 
 const INITIAL_VIEW = { xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 };
+/** The view's initial width, the reference for the "zoom" readout. */
+const INITIAL_WIDTH = INITIAL_VIEW.xMax - INITIAL_VIEW.xMin;
+
+/** Split a float64 into a (hi, lo) pair of float32s whose exact sum is the
+ *  original value — the df64 representation the shader expects. `Math.fround`
+ *  is the round-to-float32; the residual lo is what single precision throws
+ *  away (and what carries the deep-zoom detail). */
+function splitDouble(value: number): [number, number] {
+  const hi = Math.fround(value);
+  return [hi, value - hi];
+}
 
 const FORMULAS: Record<FractalType, string> = {
   mandelbrot: 'z_{n+1} = z_n^k + c',
@@ -38,52 +50,136 @@ const vertexShader = `
 const fragmentShader = `
   precision highp float;
   varying vec2 vUv;
-  uniform vec4 view;
+  // Pixel coordinate is built as center + offset, with the center carried in
+  // extended precision: centerHi + centerLo is the unevaluated double, span is
+  // the (small) view width/height. See DEEP_ZOOM.md for why this matters.
+  uniform vec2 centerHi;
+  uniform vec2 centerLo;
+  uniform vec2 span;
   uniform int iter;
   uniform int startIter;
   uniform int type;
-  uniform vec2 juliaC;
+  uniform vec2 juliaCHi;
+  uniform vec2 juliaCLo;
   uniform int palette;
   uniform int paletteIn;
   uniform int power;
   uniform int colorMode;
   uniform float offset;
+  uniform int hp;          // 0 = single float32, 1 = extended (df64)
 
   const int MAX_ITER = 1000;
   const int MAX_POWER = 100;
+
+  // ---- df64: an "extended" number is the unevaluated sum hi+lo of two float32s.
+  // dfAdd / dfMul are error-free transformations (two-sum, Dekker two-product):
+  // they compute the rounded result AND the rounding error, so carrying the
+  // error in 'lo' roughly doubles the working mantissa (~46 bits ≈ 14 digits).
+  vec2 dfAdd(vec2 a, vec2 b){
+    float t1 = a.x + b.x;
+    float e  = t1 - a.x;
+    float t2 = ((b.x - e) + (a.x - (t1 - e))) + a.y + b.y;
+    float hi = t1 + t2;
+    float lo = t2 - (hi - t1);
+    return vec2(hi, lo);
+  }
+  vec2 dfMul(vec2 a, vec2 b){
+    float split = 4097.0;            // 2^12 + 1, the Dekker split for float32
+    float cona = a.x * split;
+    float conb = b.x * split;
+    float a1 = cona - (cona - a.x);
+    float b1 = conb - (conb - b.x);
+    float a2 = a.x - a1;
+    float b2 = b.x - b1;
+    float c11 = a.x * b.x;
+    float c21 = a2 * b2 - (((c11 - a1 * b1) - a2 * b1) - a1 * b2);
+    float c2 = a.x * b.y + a.y * b.x;
+    float t1 = c11 + c2;
+    float e = t1 - c11;
+    float t2 = ((c2 - e) + (c11 - (t1 - e))) + c21 + a.y * b.y;
+    float hi = t1 + t2;
+    float lo = t2 - (hi - t1);
+    return vec2(hi, lo);
+  }
+  vec2 dfNeg(vec2 a){ return vec2(-a.x, -a.y); }
+  vec2 dfAbs(vec2 a){ return (a.x < 0.0) ? vec2(-a.x, -a.y) : a; }
 
   ${PALETTE_GLSL}
 
   void main(){
     // type: 0=Mandelbrot, 1=Julia, 2=Burning Ship, 3=Tricorn
-    vec2 c = vec2(mix(view.x, view.y, vUv.x), mix(view.z, view.w, vUv.y));
-    vec2 z = (type==0 || type==2 || type==3) ? vec2(0.0) : c;
-    vec2 k = (type==0 || type==2 || type==3) ? c : juliaC;
-    int i;
+    // Per-pixel offset from the view center (small even at deep zoom).
+    float ox = (vUv.x - 0.5) * span.x;
+    float oy = (vUv.y - 0.5) * span.y;
+
+    int i = 0;
     float maxMag = 0.0;
-    for(i=0;i<MAX_ITER;i++){
-      if(i>=iter) break;
-      if(dot(z,z)>4.0) break;
-      vec2 zcur = z;
-      if(type==2){
-        zcur = vec2(abs(zcur.x), abs(zcur.y));
-      }else if(type==3){
-        zcur = vec2(zcur.x, -zcur.y);
+    vec2 zf = vec2(0.0);  // final z (hi parts) handed to the coloring below
+
+    if(hp == 0){
+      // ---- standard single precision (float32) ----
+      vec2 c = vec2(centerHi.x + ox, centerHi.y + oy);
+      vec2 z = (type==1) ? c : vec2(0.0);
+      vec2 k = (type==1) ? juliaCHi : c;
+      for(i=0;i<MAX_ITER;i++){
+        if(i>=iter) break;
+        if(dot(z,z)>4.0) break;
+        vec2 zcur = z;
+        if(type==2){
+          zcur = vec2(abs(zcur.x), abs(zcur.y));
+        }else if(type==3){
+          zcur = vec2(zcur.x, -zcur.y);
+        }
+        vec2 zpow = zcur;
+        for(int p=1;p<MAX_POWER;p++){
+          if(p>=power) break;
+          zpow = vec2(zpow.x*zcur.x - zpow.y*zcur.y, zpow.x*zcur.y + zpow.y*zcur.x);
+        }
+        z = zpow + k;
+        if(i >= startIter){
+          maxMag = max(maxMag, length(z));
+        }
       }
-      vec2 zpow = zcur;
-      for(int p=1;p<MAX_POWER;p++){
-        if(p>=power) break;
-        zpow = vec2(zpow.x*zcur.x - zpow.y*zcur.y, zpow.x*zcur.y + zpow.y*zcur.x);
+      zf = z;
+    }else{
+      // ---- extended precision (df64) ----
+      vec2 cr = dfAdd(vec2(centerHi.x, centerLo.x), vec2(ox, 0.0));
+      vec2 ci = dfAdd(vec2(centerHi.y, centerLo.y), vec2(oy, 0.0));
+      vec2 zr, zi, kr, ki;
+      if(type==1){           // Julia: start at the pixel, add the fixed c
+        zr = cr; zi = ci;
+        kr = vec2(juliaCHi.x, juliaCLo.x);
+        ki = vec2(juliaCHi.y, juliaCLo.y);
+      }else{                 // Mandelbrot family: start at 0, add the pixel c
+        zr = vec2(0.0); zi = vec2(0.0);
+        kr = cr; ki = ci;
       }
-      z = zpow + k;
-      if(i >= startIter){
-        maxMag = max(maxMag, length(z));
+      for(i=0;i<MAX_ITER;i++){
+        if(i>=iter) break;
+        vec2 mag = dfAdd(dfMul(zr, zr), dfMul(zi, zi));
+        if(mag.x > 4.0) break;
+        vec2 wr = zr, wi = zi;
+        if(type==2){ wr = dfAbs(wr); wi = dfAbs(wi); }
+        else if(type==3){ wi = dfNeg(wi); }
+        vec2 pr = wr, pi = wi;
+        for(int p=1;p<MAX_POWER;p++){
+          if(p>=power) break;
+          vec2 nr = dfAdd(dfMul(pr, wr), dfNeg(dfMul(pi, wi)));
+          vec2 ni = dfAdd(dfMul(pr, wi), dfMul(pi, wr));
+          pr = nr; pi = ni;
+        }
+        zr = dfAdd(pr, kr);
+        zi = dfAdd(pi, ki);
+        if(i >= startIter){
+          maxMag = max(maxMag, length(vec2(zr.x, zi.x)));
+        }
       }
+      zf = vec2(zr.x, zi.x);
     }
-    float v = float(i);
+
     float escVal = 0.0;
     if(i < iter){
-      float log_zn = log(dot(z,z))/2.0;
+      float log_zn = log(dot(zf,zf))/2.0;
       escVal = float(i) + 1.0 - log(log_zn)/log(2.0);
     }
     float idx = (escVal==0.0) ? 0.0 : mod(floor(escVal*10.0), 255.0);
@@ -142,6 +238,10 @@ export default function FractalsGPU() {
    *  that point. When false, taps do nothing (so panning doesn't spawn
    *  unwanted trajectories). Default off. */
   const [tracing, setTracing] = useState(false);
+  /** Arithmetic precision of the shader iteration. 'single' is plain 32-bit
+   *  float (fast, pixelates past ~1e5× zoom); 'double' is df64 emulated double
+   *  precision (≈14 digits, deep zoom — see DEEP_ZOOM.md), ~10× slower. */
+  const [precision, setPrecision] = useState<'single' | 'double'>('single');
 
   const normalizeView = useCallback((v: typeof view, canvas: HTMLCanvasElement) => {
     const aspect = canvas.width / canvas.height;
@@ -186,21 +286,34 @@ export default function FractalsGPU() {
 
   const render = useCallback(() => {
     if (!rendererRef.current || !materialRef.current) return;
-    materialRef.current.uniforms.view.value = new THREE.Vector4(view.xMin, view.xMax, view.yMin, view.yMax);
-    materialRef.current.uniforms.iter.value = iter;
-    materialRef.current.uniforms.startIter.value = startIter;
+    const u = materialRef.current.uniforms;
+    // Carry the view center in extended precision (hi + lo); the span stays a
+    // plain float because the per-pixel offset it scales is already small.
+    const cx = (view.xMin + view.xMax) / 2;
+    const cy = (view.yMin + view.yMax) / 2;
+    const [cxHi, cxLo] = splitDouble(cx);
+    const [cyHi, cyLo] = splitDouble(cy);
+    u.centerHi.value = new THREE.Vector2(cxHi, cyHi);
+    u.centerLo.value = new THREE.Vector2(cxLo, cyLo);
+    u.span.value = new THREE.Vector2(view.xMax - view.xMin, view.yMax - view.yMin);
+    u.iter.value = iter;
+    u.startIter.value = startIter;
     const tMap = { mandelbrot: 0, julia: 1, burning: 2, tricorn: 3 } as const;
-    materialRef.current.uniforms.type.value = tMap[type];
-    materialRef.current.uniforms.juliaC.value = new THREE.Vector2(juliaC.real, juliaC.imag);
-    materialRef.current.uniforms.palette.value = resolvePalette(palette, themeId);
-    materialRef.current.uniforms.paletteIn.value = resolvePalette(insidePalette, themeId);
-    materialRef.current.uniforms.power.value = power;
-    materialRef.current.uniforms.colorMode.value = colorMode === 'escape' ? 0 : colorMode === 'limit' ? 1 : 2;
-    materialRef.current.uniforms.offset.value = offset;
+    u.type.value = tMap[type];
+    const [jrHi, jrLo] = splitDouble(juliaC.real);
+    const [jiHi, jiLo] = splitDouble(juliaC.imag);
+    u.juliaCHi.value = new THREE.Vector2(jrHi, jiHi);
+    u.juliaCLo.value = new THREE.Vector2(jrLo, jiLo);
+    u.palette.value = resolvePalette(palette, themeId);
+    u.paletteIn.value = resolvePalette(insidePalette, themeId);
+    u.power.value = power;
+    u.colorMode.value = colorMode === 'escape' ? 0 : colorMode === 'limit' ? 1 : 2;
+    u.offset.value = offset;
+    u.hp.value = precision === 'double' ? 1 : 0;
     if (sceneRef.current && cameraRef.current) {
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     }
-  }, [view, iter, startIter, type, juliaC, palette, insidePalette, power, colorMode, offset, themeId]);
+  }, [view, iter, startIter, type, juliaC, palette, insidePalette, power, colorMode, offset, precision, themeId]);
 
   // Keep renderRef pointing at the latest render implementation
   useEffect(() => {
@@ -344,16 +457,20 @@ export default function FractalsGPU() {
     mount.appendChild(canvas);
 
     const uniforms = {
-      view: { value: new THREE.Vector4(view.xMin, view.xMax, view.yMin, view.yMax) },
+      centerHi: { value: new THREE.Vector2(0, 0) },
+      centerLo: { value: new THREE.Vector2(0, 0) },
+      span: { value: new THREE.Vector2(1, 1) },
       iter: { value: iter },
       startIter: { value: startIter },
       type: { value: 0 },
-      juliaC: { value: new THREE.Vector2(juliaC.real, juliaC.imag) },
+      juliaCHi: { value: new THREE.Vector2(juliaC.real, juliaC.imag) },
+      juliaCLo: { value: new THREE.Vector2(0, 0) },
       palette: { value: resolvePalette(palette, themeId) },
       paletteIn: { value: resolvePalette(insidePalette, themeId) },
       power: { value: power },
       colorMode: { value: 0 },
-      offset: { value: offset }
+      offset: { value: offset },
+      hp: { value: 0 }
     };
     const material = new THREE.ShaderMaterial({
       uniforms,
@@ -423,6 +540,11 @@ export default function FractalsGPU() {
     </>
   );
 
+  const zoom = INITIAL_WIDTH / (view.xMax - view.xMin);
+  // float32 carries ~7 digits, so per-pixel coordinates collapse to the same
+  // value somewhere around 1e5×; df64 ("Extended") carries ~14 and pushes that
+  // wall out by roughly 1e7×. See DEEP_ZOOM.md.
+  const singleWall = zoom > 1e5;
   const viewportNode = (
     <>
       <button className="am-mini" style={{ width: '100%' }} onClick={reset}>
@@ -430,6 +552,20 @@ export default function FractalsGPU() {
       </button>
       <div className="am-hint">
         Navigate on the canvas itself: drag to pan, pinch or mouse-wheel to zoom.
+      </div>
+      <Pills label="Precision"
+        options={[
+          { value: 'single', label: 'Standard' },
+          { value: 'double', label: 'Extended' },
+        ]}
+        value={precision}
+        onChange={setPrecision} />
+      <div className="am-hint">
+        Zoom: {zoom < 1e4 ? zoom.toFixed(zoom < 10 ? 2 : 0) : zoom.toExponential(1)}×
+        {precision === 'single' && singleWall && (
+          <> — past Standard precision; switch to <strong>Extended</strong> to keep resolving detail.</>
+        )}
+        {precision === 'double' && <> — Extended (df64) precision, deep zoom.</>}
       </div>
     </>
   );
@@ -486,7 +622,7 @@ export default function FractalsGPU() {
 
   const sections: SectionDef[] = [
     { id: 'set', title: 'Set', arch: 'subject', node: setNode, estHeight: 220 },
-    { id: 'viewport', title: 'Viewport', arch: 'domain', node: viewportNode, estHeight: 130 },
+    { id: 'viewport', title: 'Viewport', arch: 'domain', node: viewportNode, estHeight: 230 },
     { id: 'palette', title: 'Palette', arch: 'color', node: paletteNode, estHeight: 280 },
     { id: 'trace', title: 'Trace', arch: 'drive', node: traceNode, estHeight: 130 },
     { id: 'iteration', title: 'Iteration', arch: 'quality', node: iterationNode, estHeight: 150 },
@@ -526,7 +662,7 @@ export default function FractalsGPU() {
 
   // The "?" modal carries both the short explainer and the full About readme,
   // so nothing from the old drawer's About section is lost.
-  const help = [explainerText, readmeText].filter(Boolean).join('\n\n---\n\n');
+  const help = [explainerText, readmeText, deepZoomText].filter(Boolean).join('\n\n---\n\n');
 
   return (
     <Workspace
