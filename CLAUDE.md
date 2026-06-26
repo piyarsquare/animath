@@ -10,9 +10,12 @@ Every animation ("app") is a self-contained module that plugs into the shared
 **workspace chrome** (`src/chrome/`, specified by `docs/redesign/DESIGN-SPEC.md`):
 a landing **gallery** opens into a per-app **workspace** where the plot(s) and
 the control panels are draggable windows on a dotted stage, opened from a left
-icon rail whose icons come from a closed 11-archetype vocabulary. Five **skins**
-restyle everything via one `data-theme` attribute; below 740px the workspace
-re-chromes into a phone UI (stacked view cards, bottom dock, bottom sheets).
+icon rail whose icons come from a closed 11-archetype vocabulary. **Skins**
+restyle everything via one `data-theme` attribute, and **theming v2** adds a
+`data-scheme` *mode* axis (native · light · dark) so each skin exists in three
+modes under one set of token names — and **every app's visualization tracks the
+skin × mode, not just the chrome** (see *Theming* below); below 740px the
+workspace re-chromes into a phone UI (stacked view cards, bottom dock, bottom sheets).
 Apps declare themselves in a single registry (`src/apps.ts`) and pass their
 panels/views to one `<Workspace>` component, so the chrome stays uniform across
 every view.
@@ -69,7 +72,9 @@ animath/
     ├── apps.ts                 # THE app registry (AppDescriptor; feeds the gallery)
     │
     ├── chrome/                 # the global chrome (see docs/redesign/)
-    │   ├── theme.css           # design tokens: 5 skins on [data-theme] + am-* styles
+    │   ├── theme.css           # design tokens: skins on [data-theme] × modes on [data-scheme] (theming v2) + am-* styles
+    │   ├── Scheme.tsx          # <Scheme mode> — force native/light/dark on a subtree
+    │   ├── useThemeTokens.ts   # read resolved theme tokens for canvas/WebGL consumers
     │   ├── icons.tsx           # closed stroke icon set (Icon + ICONS)
     │   ├── skins.tsx           # SKINS registry + useSkin/applyPersistedSkin + SkinPicker
     │   ├── TopBar.tsx          # brand-mark Home · title/formula · mode pills · ? · skins
@@ -138,6 +143,7 @@ animath/
     │   ├── viewpoint.ts                # 4D → 3D projection helpers + ProjectionMode
     │   ├── complexMath.ts              # complex arithmetic + function name/formula tables
     │   ├── colormaps.ts                # GLSL palette source + palette options (fractals)
+    │   ├── colormapRegistry.ts         # JS/CSS-side colormaps by family (theming v2); themeMapsFor/sampleContinuous/lerpStops
     │   └── textures.ts                 # particle texture factory (checker/stone/metal/HDR)
     │
     ├── math/
@@ -240,6 +246,57 @@ rendering **one component**:
 building blocks for panel bodies, styled by `ControlPanel.css` on the theme
 tokens (`--cp-*` vars alias `--fg`/`--accent`/…). Use them instead of
 hand-rolling inputs so every app looks consistent.
+
+## Theming (v2): identity × mode — apps must track the skin
+
+A theme is an **identity** (Observatory, Phosphor, …) that exists in three
+**modes** — `native` (the default), `light`, and `dark` — under one set of token
+names. The identity is `data-theme` on `<html>`; the mode is `data-scheme`. **Every
+app's visualization must track the active skin × mode, not just the chrome** — no
+bespoke per-app scene palette.
+
+**CSS token convention** (`src/chrome/theme.css`, see its `THEMING v2` header):
+each consumed token `--x` is set *only* by shared `[data-scheme]` blocks from a
+family — `--x-n` (native source, the default) plus sparse `--x-lt`/`--x-dk`
+companions resolved as `var(--x-lt, var(--x-n))`. Omitting a companion makes
+"this mode = native" **free** and the resolution is **leak-proof** (a forced
+subtree re-derives every token from the inherited family, so a force-dark stage
+under a light root gets the theme's *dark* values, not the root's light deltas).
+Paired `[data-scheme]` blocks, **not** `light-dark()` (three modes, not two).
+
+**Color roles (locked):** `--accent`/`--accent-2` are **UI-voice only — never
+data**. Data color comes from: ordered/polar → a registry **colormap**; unordered
+identity → the discrete `--data-1..7` tokens; a planet/neutral object → `--fg`/
+neutral. Don't hardcode scene colors.
+
+**JS/React side:**
+- `src/chrome/skins.tsx` — `useThemeId()` (identity), `useThemeModeId()` (mode),
+  `resolveScheme(id, mode)` → the concrete `'light'|'dark'` a forced/native subtree
+  resolves to; `applySkinAttrs`, persistence, and the `SkinPicker` (identity +
+  Native/Light/Dark pills).
+- `src/chrome/Scheme.tsx` — `<Scheme mode="dark">` forces a mode on a subtree
+  (`display:contents`). Use for features that *require* a mode regardless of the
+  user's choice — glowing particle/star stages force **dark**; print forces **light**.
+- `src/chrome/useThemeTokens.ts` — `useThemeTokens(names)` / `readThemeTokens` read
+  resolved token values for canvas/WebGL consumers (var() doesn't resolve in
+  `fillStyle`/clear color, so read the token and pass the hex).
+- `src/lib/colormapRegistry.ts` — JS/CSS-side colormaps typed by **family**
+  (`sequential`/`divergent`/`discrete`/`cyclic`); `themeMapsFor(family, themeId)`
+  (per-theme recommendation, default first), `sampleContinuous`/`lerpStops`/
+  `sampleStops`, `hexToRgb`. Discrete = the theme's `--data` tokens.
+- `src/lib/colormaps.ts` — GLSL palettes for shader apps; `PALETTE_THEME` (`-1`)
+  sentinel + `resolvePalette(value, themeId)` / `themeFractalScheme(themeId)` so
+  fractals/complex default to the theme's hue map.
+
+**Engine integration patterns** (pick by app): (a) set a module-global palette
+before building (`setDecorPalette`/`setRoomPalette` in the Worlds); (b) **rebuild**
+the engine on a `themeId`/`themeMode` change (then capture/restore walker pose so a
+skin switch doesn't teleport — see PolygonWorlds/SolidWorlds); (c) refresh palette
+refs on a `useThemeId` effect for canvas redraws; (d) **in-place recolor** without a
+rebuild (Trinary's `applyPalette` — preferred when feasible). Canvas/WebGL effects
+that follow the user's mode must depend on **both** `themeId` and `themeMode`;
+force-mode stages depend only on `themeId`. Force-dark scenes (Complex Particles,
+Trinary) theme only their *background* and keep their intrinsic data coloring.
 
 ## Architecture Patterns
 

@@ -10,6 +10,9 @@ import { WorkerPool } from './pool';
 import { GpuRunner, gpuAvailable } from './gpu';
 import BasinMap, { type BasinHandle } from './BasinMap';
 import MiniSim from './MiniSim';
+import { useThemeId, useThemeModeId } from '../../../chrome/skins';
+import { useThemeTokens } from '../../../chrome/useThemeTokens';
+import { outcomeHex } from './themeColors';
 import explainerText from '../EXPLAINER.md?raw';
 
 const HAS_WORKERS = typeof Worker !== 'undefined';
@@ -50,12 +53,12 @@ function download(name: string, text: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
-const OUTCOME_META: Record<Outcome, { label: string; color: string }> = {
-  happy: { label: 'Happy ending (star ejected, planet survives)', color: '#46d98a' },
-  survived: { label: 'Survived (bound, still chaotic)', color: '#9ec7ff' },
-  'planet-ejected': { label: 'Planet ejected (frozen wanderer)', color: '#5a9be8' },
-  'planet-destroyed': { label: 'Planet destroyed (close pass)', color: '#ff7043' },
-  blowup: { label: 'Numerical blow-up (discarded)', color: '#555' },
+const OUTCOME_LABEL: Record<Outcome, string> = {
+  happy: 'Happy ending (star ejected, planet survives)',
+  survived: 'Survived (bound, still chaotic)',
+  'planet-ejected': 'Planet ejected (frozen wanderer)',
+  'planet-destroyed': 'Planet destroyed (close pass)',
+  blowup: 'Numerical blow-up (discarded)',
 };
 
 const panel: React.CSSProperties = {
@@ -66,23 +69,26 @@ const h3: React.CSSProperties = { margin: '0 0 8px', font: '600 12px/1.2 ui-mono
 
 function Histogram({ data, max, color, domain }: { data: number[]; max: number; color: string; domain: [string, string] }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  // The bar fill (`color`) is themed by the caller; the plot bed + axis text track
+  // the active skin × mode here (the canvas can't read CSS vars, so resolve them).
+  const tk = useThemeTokens(['--viz-bg', '--dim-2']);
   useEffect(() => {
     const cv = ref.current; const ctx = cv?.getContext('2d');
     if (!cv || !ctx) return;
     const W = cv.width, H = cv.height;
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#0a0e16'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = tk['--viz-bg'] || '#0a0e16'; ctx.fillRect(0, 0, W, H);
     const n = data.length, bw = W / n;
     for (let i = 0; i < n; i++) {
       const h = Math.max(0, (data[i] / max) * (H - 3));
       ctx.fillStyle = color;
       ctx.fillRect(i * bw + 0.5, H - h, bw - 1, h);
     }
-  }, [data, max, color]);
+  }, [data, max, color, tk]);
   return (
     <div>
       <canvas ref={ref} width={320} height={84} style={{ width: '100%', height: 84, borderRadius: 6, display: 'block' }} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', font: '10px/1.4 ui-monospace, monospace', color: '#6f7f99', marginTop: 2 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', font: '10px/1.4 ui-monospace, monospace', color: 'var(--dim-2)', marginTop: 2 }}>
         <span>{domain[0]}</span><span>{domain[1]}</span>
       </div>
     </div>
@@ -97,6 +103,11 @@ function LaunchSpace({ rMin, rMax, fMin, fMax, allowRetro }: {
   rMin: number; rMax: number; fMin: number; fMax: number; allowRetro: boolean;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const themeId = useThemeId();
+  // Canvas can't read CSS vars: resolve the plot bed, label, selection-box and
+  // sample-dot colors for the active skin × mode; the physics regions (escape /
+  // bound) borrow the themed outcome voice so the diagnostic reads in one palette.
+  const tk = useThemeTokens(['--viz-bg', '--dim', '--dim-2', '--accent', '--accent-2', '--data-1']);
   useEffect(() => {
     const cv = ref.current; const ctx = cv?.getContext('2d');
     if (!cv || !ctx) return;
@@ -105,20 +116,27 @@ function LaunchSpace({ rMin, rMax, fMin, fMax, allowRetro }: {
     const X = (r: number) => pad + ((r - RD0) / (RD1 - RD0)) * (W - 2 * pad);
     const Y = (f: number) => H - pad - ((f - FD0) / (FD1 - FD0)) * (H - 2 * pad);
 
-    ctx.fillStyle = '#0a0e16'; ctx.fillRect(0, 0, W, H);
+    const escape = outcomeHex(themeId, 'planet-destroyed', tk['--dim-2'] || '#ff7043');
+    const bound = outcomeHex(themeId, 'survived', tk['--dim-2'] || '#5a9be8');
+    const box = tk['--accent'] || '#66f0ff';
+    const pro = tk['--data-1'] || '#66f0ff';
+    const retroCol = tk['--accent-2'] || '#ff5fa2';
+    const withA = (hex: string, a: number) => { const n = parseInt(hex.replace('#', ''), 16); return Number.isNaN(n) ? hex : `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; };
+
+    ctx.fillStyle = tk['--viz-bg'] || '#0a0e16'; ctx.fillRect(0, 0, W, H);
     const yEsc = Y(Math.SQRT2), yCirc = Y(1);
-    ctx.fillStyle = 'rgba(255,112,67,0.10)'; ctx.fillRect(pad, pad, W - 2 * pad, yEsc - pad);          // likely escape
-    ctx.fillStyle = 'rgba(90,155,232,0.08)'; ctx.fillRect(pad, yCirc, W - 2 * pad, (H - pad) - yCirc); // likely bound/infall
+    ctx.fillStyle = withA(escape, 0.10); ctx.fillRect(pad, pad, W - 2 * pad, yEsc - pad);          // likely escape
+    ctx.fillStyle = withA(bound, 0.08); ctx.fillRect(pad, yCirc, W - 2 * pad, (H - pad) - yCirc); // likely bound/infall
 
     ctx.setLineDash([4, 3]); ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(230,193,90,0.8)'; ctx.beginPath(); ctx.moveTo(pad, yCirc); ctx.lineTo(W - pad, yCirc); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,112,67,0.8)'; ctx.beginPath(); ctx.moveTo(pad, yEsc); ctx.lineTo(W - pad, yEsc); ctx.stroke();
+    ctx.strokeStyle = withA(box, 0.8); ctx.beginPath(); ctx.moveTo(pad, yCirc); ctx.lineTo(W - pad, yCirc); ctx.stroke();
+    ctx.strokeStyle = withA(escape, 0.8); ctx.beginPath(); ctx.moveTo(pad, yEsc); ctx.lineTo(W - pad, yEsc); ctx.stroke();
     ctx.setLineDash([]);
 
     // Selected sampling box.
     const bx0 = X(rMin), bx1 = X(rMax), by0 = Y(fMax), by1 = Y(fMin);
-    ctx.fillStyle = 'rgba(102,240,255,0.12)'; ctx.fillRect(bx0, by0, bx1 - bx0, by1 - by0);
-    ctx.strokeStyle = '#66f0ff'; ctx.lineWidth = 1.5; ctx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0);
+    ctx.fillStyle = withA(box, 0.12); ctx.fillRect(bx0, by0, bx1 - bx0, by1 - by0);
+    ctx.strokeStyle = box; ctx.lineWidth = 1.5; ctx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0);
 
     // Scatter of representative samples (deterministic).
     let s = 0x1234abcd >>> 0;
@@ -127,22 +145,43 @@ function LaunchSpace({ rMin, rMax, fMin, fMax, allowRetro }: {
       const r = rMin + (rMax - rMin) * rnd();
       const f = fMin + (fMax - fMin) * rnd();
       const retro = allowRetro && rnd() < 0.5;
-      ctx.fillStyle = retro ? 'rgba(255,95,162,0.85)' : 'rgba(102,240,255,0.9)';
+      ctx.fillStyle = retro ? withA(retroCol, 0.85) : withA(pro, 0.9);
       ctx.beginPath(); ctx.arc(X(r), Y(f), 1.5, 0, 7); ctx.fill();
     }
 
-    ctx.fillStyle = '#8a96ad'; ctx.font = '10px ui-monospace, monospace';
+    ctx.fillStyle = tk['--dim'] || '#8a96ad'; ctx.font = '10px ui-monospace, monospace';
     ctx.fillText('circular', W - pad - 48, yCirc - 3);
     ctx.fillText('escape √2', W - pad - 58, yEsc - 3);
-    ctx.fillStyle = '#6f7f99';
+    ctx.fillStyle = tk['--dim-2'] || '#6f7f99';
     ctx.fillText('radius →', W - pad - 52, H - 8);
     ctx.save(); ctx.translate(11, pad + 70); ctx.rotate(-Math.PI / 2); ctx.fillText('speed × circular →', 0, 0); ctx.restore();
-  }, [rMin, rMax, fMin, fMax, allowRetro]);
+  }, [rMin, rMax, fMin, fMax, allowRetro, themeId, tk]);
   return <canvas ref={ref} width={340} height={250}
     style={{ width: '100%', borderRadius: 6, display: 'block' }} />;
 }
 
 export default function TrinaryLab() {
+  // Theming v2: the console's outcome colors track the active skin × mode. Outcome
+  // identities sample the theme's divergent fate ramp (shared with the Destiny Map
+  // via outcomeHex); the warm "record / longest-era" highlight is a discrete data
+  // token (data-4), not the UI accent. Stat text that names a specific outcome
+  // borrows that outcome's color so the readout and the legend speak in one voice.
+  const themeId = useThemeId();
+  const themeMode = useThemeModeId();
+  const tk = useThemeTokens(['--dim-2', '--data-4']);
+  const C = useMemo(() => {
+    const neutral = tk['--dim-2'] || '#808080';
+    const outcome = {} as Record<Outcome, string>;
+    for (const o of OUTCOMES) outcome[o] = outcomeHex(themeId, o, neutral);
+    return {
+      outcome,
+      happy: outcome.happy,
+      survived: outcome.survived,
+      record: tk['--data-4'] || '#ffce47',
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themeId, themeMode, tk]);
+
   // Initialize from a shareable URL config, if present.
   const urlRef = useRef<URLSearchParams | null>(null);
   if (!urlRef.current) urlRef.current = labParams();
@@ -420,7 +459,7 @@ export default function TrinaryLab() {
         ]}
         onChange={(v) => setEngine(v as Engine)} />
       {engine === 'gpu' && (
-        <div style={{ font: '11px/1.5 system-ui', color: '#ffd27f', marginTop: 4 }}>
+        <div style={{ font: '11px/1.5 system-ui', color: 'var(--accent)', marginTop: 4 }}>
           ⚠ Experimental WebGPU engine: simplified classifier (no “calm” axis, so Paradise% reads 0). Verify against CPU; falls back automatically on error.
         </div>
       )}
@@ -478,7 +517,7 @@ export default function TrinaryLab() {
     <>
       <div style={{ font: '12px ui-monospace, monospace', color: 'var(--dim)', margin: '4px 0 8px' }}>
         <b style={{ color: 'var(--fg)' }}>{n.toLocaleString()}</b> / {targetN.toLocaleString()} worlds ·{' '}
-        <b style={{ color: '#46d98a' }}>{pct(happyPct)}</b> happy endings
+        <b style={{ color: C.happy }}>{pct(happyPct)}</b> happy endings
       </div>
       {OUTCOMES.map(o => {
         const c = agg?.counts[o] ?? 0;
@@ -486,20 +525,20 @@ export default function TrinaryLab() {
         return (
           <div key={o} style={{ marginBottom: 7 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', font: '11px ui-monospace, monospace' }}>
-              <span style={{ color: OUTCOME_META[o].color }}>{OUTCOME_META[o].label}</span>
+              <span style={{ color: C.outcome[o] }}>{OUTCOME_LABEL[o]}</span>
               <span style={{ color: 'var(--dim)' }}>{pct(frac)}</span>
             </div>
             <div style={{ height: 6, borderRadius: 3, background: 'var(--track)', marginTop: 2 }}>
-              <div style={{ height: '100%', width: `${frac * 100}%`, background: OUTCOME_META[o].color, borderRadius: 3 }} />
+              <div style={{ height: '100%', width: `${frac * 100}%`, background: C.outcome[o], borderRadius: 3 }} />
             </div>
           </div>
         );
       })}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 10, font: '12px ui-monospace, monospace' }}>
-        <span>mean habitable&nbsp;<b style={{ color: '#46d98a' }}>{agg ? pct(agg.habMean) : '—'}</b>
+        <span>mean habitable&nbsp;<b style={{ color: C.happy }}>{agg ? pct(agg.habMean) : '—'}</b>
           {agg && agg.n > 1 ? <span style={{ color: 'var(--dim-2)' }}> ±{(agg.habStderr * 100).toFixed(2)}</span> : null}</span>
-        <span>mean stable era&nbsp;<b style={{ color: '#9ec7ff' }}>{agg ? agg.longMean.toFixed(1) : '—'}</b></span>
-        <span>longest ever&nbsp;<b style={{ color: '#ffd27f' }}>{agg ? agg.longMax.toFixed(1) : '—'}</b></span>
+        <span>mean stable era&nbsp;<b style={{ color: C.survived }}>{agg ? agg.longMean.toFixed(1) : '—'}</b></span>
+        <span>longest ever&nbsp;<b style={{ color: C.record }}>{agg ? agg.longMax.toFixed(1) : '—'}</b></span>
       </div>
     </>
   );
@@ -507,11 +546,11 @@ export default function TrinaryLab() {
   const distNode = (
     <>
       <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', margin: '2px 0' }}>habitable fraction of lifetime</div>
-      <Histogram data={agg?.histHab ?? []} max={agg?.histMax.hab ?? 1} color="#46d98a" domain={['0%', '100%']} />
+      <Histogram data={agg?.histHab ?? []} max={agg?.histMax.hab ?? 1} color={C.happy} domain={['0%', '100%']} />
       <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', margin: '8px 0 2px' }}>longest stable era</div>
-      <Histogram data={agg?.histLong ?? []} max={agg?.histMax.long ?? 1} color="#9ec7ff" domain={['0', tMax.toFixed(0)]} />
+      <Histogram data={agg?.histLong ?? []} max={agg?.histMax.long ?? 1} color={C.survived} domain={['0', tMax.toFixed(0)]} />
       <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', margin: '8px 0 2px' }}>time to star ejection (happy runs)</div>
-      <Histogram data={agg?.histEject ?? []} max={agg?.histMax.eject ?? 1} color="#ffd27f" domain={['0', tMax.toFixed(0)]} />
+      <Histogram data={agg?.histEject ?? []} max={agg?.histMax.eject ?? 1} color={C.record} domain={['0', tMax.toFixed(0)]} />
       <div style={note}>Distributions sharpen as N grows.</div>
     </>
   );
@@ -529,12 +568,12 @@ export default function TrinaryLab() {
           {(agg?.records ?? []).map((r, i) => (
             <tr key={i} style={{ textAlign: 'right', borderTop: '1px solid var(--border)' }}>
               <td style={{ textAlign: 'left', color: 'var(--dim-2)' }}>{i + 1}</td>
-              <td style={{ color: '#ffd27f' }}>{r.longestHabitable.toFixed(1)}</td>
+              <td style={{ color: C.record }}>{r.longestHabitable.toFixed(1)}</td>
               <td>{(r.habitableFraction * 100).toFixed(0)}</td>
               <td>{r.radius.toFixed(2)}</td>
               <td>{r.speed.toFixed(2)}</td>
               <td>{r.retro ? 'retro' : 'pro'}</td>
-              <td style={{ color: OUTCOME_META[r.outcome].color }}>{r.outcome}</td>
+              <td style={{ color: C.outcome[r.outcome] }}>{r.outcome}</td>
             </tr>
           ))}
           {!agg?.records.length && <tr><td colSpan={7} style={{ color: 'var(--dim-2)', padding: '8px 0' }}>Run the census to populate…</td></tr>}
@@ -594,7 +633,7 @@ export default function TrinaryLab() {
               <span style={{ color: 'var(--dim-2)' }}>/ {targetN.toLocaleString()} worlds explored</span>
               <span style={{ flex: 1 }} />
               {rate > 0 && <span style={{ font: '12px ui-monospace, monospace', color: 'var(--dim-2)' }}>{rate.toFixed(0)} worlds/s</span>}
-              <span style={{ font: '700 20px ui-monospace, monospace', color: '#46d98a' }}>{pct(happyPct)}</span>
+              <span style={{ font: '700 20px ui-monospace, monospace', color: C.happy }}>{pct(happyPct)}</span>
               <span style={{ color: 'var(--dim-2)' }}>happy endings</span>
             </div>
             <div style={{ height: 8, borderRadius: 4, background: 'var(--track)', marginTop: 8, overflow: 'hidden' }}>

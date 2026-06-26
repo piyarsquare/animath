@@ -119,9 +119,12 @@
   font-weight: 600;
   width: 100%;
 }
-/* Keep the OS-native dropdown popup readable on dark skins. */
-.cp-row select { color-scheme: dark; }
-[data-scheme="light"] .cp-row select { color-scheme: light; }
+/* Keep the OS-native dropdown popup readable: inherit the color-scheme each
+   theme/mode sets on the root (theming v2). The old `[data-scheme="light"]`
+   override is obsolete now that data-scheme is the user's mode (native/light/
+   dark), not a derived light/dark — inheriting tracks the resolved scheme for
+   every theme × mode (incl. native-mode light skins). */
+.cp-row select { color-scheme: inherit; }
 .cp-row select option {
   background: var(--panel-solid, #0c0c10);
   color: var(--cp-fg);

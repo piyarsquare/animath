@@ -3,8 +3,9 @@ import * as THREE from 'three';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import deepZoomText from './DEEP_ZOOM.md?raw';
-import { PALETTE_GLSL, PALETTE_OPTIONS } from '../../lib/colormaps';
+import { PALETTE_GLSL, PALETTE_OPTIONS, PALETTE_THEME, resolvePalette } from '../../lib/colormaps';
 import { useViewportGestures } from '../../lib/useViewportGestures';
+import { useThemeId } from '../../chrome/skins';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { Slider, Pills, Select, Checkbox, NumberInput } from '../../components/ControlPanel';
@@ -224,7 +225,8 @@ export default function FractalsGPU() {
   const [juliaC, setJuliaC] = useState({ real: -0.7, imag: 0.27015 });
   const [iter, setIter] = useState(100);
   const [startIter, setStartIter] = useState(0);
-  const [palette, setPalette] = useState(0);
+  const themeId = useThemeId();
+  const [palette, setPalette] = useState(PALETTE_THEME);
   const [power, setPower] = useState(2);
   const [colorMode, setColorMode] = useState<"escape" | "limit" | "layered">(
     "escape"
@@ -302,8 +304,8 @@ export default function FractalsGPU() {
     const [jiHi, jiLo] = splitDouble(juliaC.imag);
     u.juliaCHi.value = new THREE.Vector2(jrHi, jiHi);
     u.juliaCLo.value = new THREE.Vector2(jrLo, jiLo);
-    u.palette.value = palette;
-    u.paletteIn.value = insidePalette;
+    u.palette.value = resolvePalette(palette, themeId);
+    u.paletteIn.value = resolvePalette(insidePalette, themeId);
     u.power.value = power;
     u.colorMode.value = colorMode === 'escape' ? 0 : colorMode === 'limit' ? 1 : 2;
     u.offset.value = offset;
@@ -311,7 +313,7 @@ export default function FractalsGPU() {
     if (sceneRef.current && cameraRef.current) {
       rendererRef.current.render(sceneRef.current, cameraRef.current);
     }
-  }, [view, iter, startIter, type, juliaC, palette, insidePalette, power, colorMode, offset, precision]);
+  }, [view, iter, startIter, type, juliaC, palette, insidePalette, power, colorMode, offset, precision, themeId]);
 
   // Keep renderRef pointing at the latest render implementation
   useEffect(() => {
@@ -463,8 +465,8 @@ export default function FractalsGPU() {
       type: { value: 0 },
       juliaCHi: { value: new THREE.Vector2(juliaC.real, juliaC.imag) },
       juliaCLo: { value: new THREE.Vector2(0, 0) },
-      palette: { value: palette },
-      paletteIn: { value: insidePalette },
+      palette: { value: resolvePalette(palette, themeId) },
+      paletteIn: { value: resolvePalette(insidePalette, themeId) },
       power: { value: power },
       colorMode: { value: 0 },
       offset: { value: offset },

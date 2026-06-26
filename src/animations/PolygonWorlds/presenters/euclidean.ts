@@ -4,7 +4,7 @@ import { SquareMapState } from '../engineTypes';
 import { glassState, POLYGON_GLASS } from '../glassSurface';
 import { makeInkTrail } from '../inkTrail';
 import { makeSignBuilder, SignBuilder } from '../sign';
-import { cornerColor } from '../decor';
+import { cornerColor, getDecorPalette } from '../decor';
 import { parseWord } from '../surfaceSchema';
 import { realize, Realization } from '../lib/realize';
 import { applyMat, det3, ORIGIN, Isometry } from '../lib/cayleyKlein';
@@ -48,8 +48,8 @@ const TRAIL_SPACING = 1.6;
 // sheet solid. The threshold spec is shared across all three worlds so the
 // slider feels identical everywhere (see POLYGON_GLASS).
 const GLASS = POLYGON_GLASS;
-const FLOOR_COLOR = 0x46658f;   // one neutral sheet color (the two sides are told
-                                // apart by trees vs columns + the warm/cool light)
+// Floor color is the theme neutral (getDecorPalette().floor), read at build; the
+// two sides are told apart by trees vs columns + the warm/cool light.
 // Vertex towers sit just inside every corner of the cell — the m-gon's
 // "slightly smaller polygon". 0.82 keeps them clear of the seams.
 const VERTEX_INSET = 0.82;
@@ -163,6 +163,7 @@ export function makeEuclideanPresenter(c: CoverDeps): CoverModel {
   scene.fog = new THREE.Fog(SKY, side * 0.7, side * 3);
 
   // ── one neutral glass slab material (no per-side color) ─────────────────────
+  const FLOOR_COLOR = getDecorPalette().floor;   // theme neutral (read at build)
   const floorMat = new THREE.MeshStandardMaterial({
     color: FLOOR_COLOR, emissive: FLOOR_COLOR, emissiveIntensity: 0.16, roughness: 0.5,
     metalness: 0.05, transparent: true, opacity: floorOpacity, side: THREE.DoubleSide,
