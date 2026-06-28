@@ -102,6 +102,8 @@ export default function FractalPane({
     uniform float offset;
     uniform int hp;          // 0 = single float32, 1 = extended (df64)
 
+    const int MAX_ITER = 4000;   // hard ceiling; maxIter is the dynamic cap
+
     // df64: an extended number is the unevaluated sum hi+lo of two float32s.
     // dfAdd / dfMul are error-free transformations (two-sum, Dekker
     // two-product) — they keep the rounding error in lo, roughly doubling the
@@ -144,8 +146,10 @@ export default function FractalPane({
         vec2 pos = vec2(centerHi.x + ox, centerHi.y + oy);
         vec2 z = fType==0 ? vec2(0.0) : pos;
         vec2 k = fType==0 ? pos : cHi;
-        for(i=0;i<maxIter;i++){
-          if(dot(z,z)>4.0) break;
+        i = maxIter;
+        for(int it=0; it<MAX_ITER; it++){
+          if(it>=maxIter) break;
+          if(dot(z,z)>4.0){ i = it; break; }
           vec2 zp = z;
           for(int p=1;p<10;p++){
             if(p>=power) break;
@@ -160,9 +164,11 @@ export default function FractalPane({
         vec2 zr, zi, kr, ki;
         if(fType==0){ zr=vec2(0.0); zi=vec2(0.0); kr=pr; ki=pi; }
         else { zr=pr; zi=pi; kr=vec2(cHi.x,cLo.x); ki=vec2(cHi.y,cLo.y); }
-        for(i=0;i<maxIter;i++){
+        i = maxIter;
+        for(int it=0; it<MAX_ITER; it++){
+          if(it>=maxIter) break;
           vec2 mag = dfAdd(dfMul(zr,zr), dfMul(zi,zi));
-          if(mag.x>4.0) break;
+          if(mag.x>4.0){ i = it; break; }
           vec2 ar=zr, ai=zi;
           vec2 qr=ar, qi=ai;
           for(int p=1;p<10;p++){

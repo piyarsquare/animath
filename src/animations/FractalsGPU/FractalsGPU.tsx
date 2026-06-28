@@ -25,6 +25,18 @@ function splitDouble(value: number): [number, number] {
   return [hi, value - hi];
 }
 
+/** Hard ceiling on iterations (must match the shader's MAX_ITER). */
+const MAX_ITERATIONS = 4000;
+
+/** A reasonable iteration cap for a given zoom factor. Deep zoom needs many
+ *  more iterations to resolve the boundary (escape times grow with depth), so
+ *  this ramps up with log2(zoom) — without it, a deep view renders as a flat
+ *  interior and the Extended-precision detail is invisible. */
+function suggestedIter(zoom: number): number {
+  const v = 100 + 110 * Math.max(0, Math.log2(Math.max(1, zoom)) - 2);
+  return Math.min(MAX_ITERATIONS, Math.max(100, Math.round(v / 10) * 10));
+}
+
 const FORMULAS: Record<FractalType, string> = {
   mandelbrot: 'z_{n+1} = z_n^k + c',
   julia: 'z_{n+1} = z_n^k + c',
@@ -68,7 +80,7 @@ const fragmentShader = `
   uniform float offset;
   uniform int hp;          // 0 = single float32, 1 = extended (df64)
 
-  const int MAX_ITER = 1000;
+  const int MAX_ITER = 4000;
   const int MAX_POWER = 100;
 
   // ---- df64: an "extended" number is the unevaluated sum hi+lo of two float32s.
@@ -242,6 +254,11 @@ export default function FractalsGPU() {
    *  float (fast, pixelates past ~1e5× zoom); 'double' is df64 emulated double
    *  precision (≈14 digits, deep zoom — see DEEP_ZOOM.md), ~10× slower. */
   const [precision, setPrecision] = useState<'single' | 'double'>('single');
+  /** Auto-raise the iteration count as you zoom in. Deep zoom needs far more
+   *  iterations to resolve the boundary; with too few, everything reads as
+   *  interior (black) and any precision gain is invisible. The slider becomes a
+   *  manual override (dragging it turns Auto off). */
+  const [autoIter, setAutoIter] = useState(true);
 
   const normalizeView = useCallback((v: typeof view, canvas: HTMLCanvasElement) => {
     const aspect = canvas.width / canvas.height;
@@ -429,8 +446,16 @@ export default function FractalsGPU() {
     const canvas = rendererRef.current?.domElement;
     if (!canvas) return;
     setView(normalizeView(INITIAL_VIEW, canvas));
-    setIter(100);
+    setAutoIter(true);
   }, [normalizeView]);
+
+  // Auto-raise iterations with zoom (until the user takes manual control). This
+  // is what makes a deep zoom actually show detail instead of a flat interior.
+  useEffect(() => {
+    if (!autoIter) return;
+    const zoom = INITIAL_WIDTH / (view.xMax - view.xMin);
+    setIter(suggestedIter(zoom));
+  }, [view, autoIter]);
 
   useEffect(() => {
     if (animating) {
@@ -609,14 +634,19 @@ export default function FractalsGPU() {
 
   const iterationNode = (
     <>
+      <Checkbox label="Auto-raise with zoom" checked={autoIter} onChange={setAutoIter} />
       <Slider label="Max iterations" value={iter}
-        min={10} max={1000} step={10}
-        onChange={(v) => setIter(Math.max(1, Math.round(v)))}
+        min={10} max={MAX_ITERATIONS} step={10}
+        onChange={(v) => { setAutoIter(false); setIter(Math.max(1, Math.round(v))); }}
         format={v => String(v)} />
       <Slider label="Start iteration" value={startIter}
         min={0} max={500} step={1}
         onChange={(v) => setStartIter(Math.max(0, Math.round(v)))}
         format={v => String(v)} />
+      <div className="am-hint">
+        Deep zoom needs more iterations to resolve the boundary — leave
+        <strong> Auto</strong> on, or raise this yourself.
+      </div>
     </>
   );
 
@@ -625,7 +655,7 @@ export default function FractalsGPU() {
     { id: 'viewport', title: 'Viewport', arch: 'domain', node: viewportNode, estHeight: 230 },
     { id: 'palette', title: 'Palette', arch: 'color', node: paletteNode, estHeight: 280 },
     { id: 'trace', title: 'Trace', arch: 'drive', node: traceNode, estHeight: 130 },
-    { id: 'iteration', title: 'Iteration', arch: 'quality', node: iterationNode, estHeight: 150 },
+    { id: 'iteration', title: 'Iteration', arch: 'quality', node: iterationNode, estHeight: 240 },
   ];
 
   const views: ViewDef[] = [
