@@ -47,6 +47,23 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🔵 finding · 13:25 — PR #245 up + live preview; Codex P2 (discoverability) deferred to Dan
+**Why:** Dan: create/follow a PR and send the live link. Codex then flagged that
+page 1 has no inbound link.
+
+- **PR [#245](https://github.com/piyarsquare/animath/pull/245)** opened (base =
+  `number-plane-guide`, the stacked base — *not* main). Subscribed for CI/review
+  events; one-shot ~1h fallback check-in armed (webhooks miss CI-success/merge).
+- **Cloudflare deploy ✅.** Live page (branch preview, auto-updates):
+  `https://claude-number-plane-guide-fi.animath.pages.dev/number-planes-line.html`
+  (this commit: `https://c73b0bd1.animath.pages.dev/number-planes-line.html`).
+- **Codex review P2** (not a bug): page 1 only links *forward* to
+  `number-planes.html`; nothing in `guides.html` / the hub links *to* it, so the
+  Guides gallery still lands on the old hub. **Deferred to Dan, not acted on** —
+  wiring the gallery entry point to the new trail is the exact "where does the
+  trail start live / how do pages join" decision Dan reserved for later. Did not
+  reply on the PR thread (keeping GitHub chatter minimal).
+
 ### 🟢 code · 13:45 — Built page 1 of the trail: `public/number-planes-line.html` (the line)
 **Why:** Dan: "build the first page around the Real number line, addition and
 multiplication with the open aside to tropical numbers (where lives a postmark)
