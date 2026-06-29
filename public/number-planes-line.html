@@ -14,6 +14,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Number Planes · 1 — The line</title>
   <link rel="stylesheet" href="./guide-theme.css">
+  <link rel="stylesheet" href="./guide-deck.css">
   <script src="./guide-skin.js"></script>
   <style>
     /* Skin tokens (--bg/--fg/--accent/--rule/--eqbg/…) come from guide-theme.css.
@@ -129,6 +130,7 @@
 
 <main>
 
+  <section class="slide" data-sid="open">
   <p class="eyebrow">Number Planes &middot; the trail begins</p>
   <h1>It starts on a line</h1>
 
@@ -141,7 +143,10 @@
 
   <p>So before we go anywhere, let's look hard at the line we think we already know.</p>
 
+  </section>
+
   <!-- ============ ADDITION ============ -->
+  <section class="slide" data-sid="add">
   <h2>Addition is arrowheads</h2>
 
   <p>
@@ -152,33 +157,8 @@
   </p>
 
   <figure>
-    <svg class="fig" viewBox="0 0 660 150" role="img" aria-label="Adding on the line by laying arrows tip to tail: 3 plus negative 5 lands at negative 2.">
-      <defs>
-        <marker id="ahA" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z"/></marker>
-        <marker id="ahB" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z"/></marker>
-      </defs>
-      <!-- axis -->
-      <line class="axis" x1="40" y1="112" x2="620" y2="112"/>
-      <!-- ticks at -6..6 step 2, plus integers as light marks -->
-      <g>
-        <line class="tick" x1="100" y1="106" x2="100" y2="118"/><text class="tlab" x="100" y="134">&minus;5</text>
-        <line class="tick" x1="180" y1="106" x2="180" y2="118"/><text class="tlab" x="180" y="134">&minus;3</text>
-        <line class="tick" x1="220" y1="106" x2="220" y2="118"/><text class="tlab" x="220" y="134">&minus;2</text>
-        <line class="tick" x1="300" y1="104" x2="300" y2="120"/><text class="zero" x="300" y="136">0</text>
-        <line class="tick" x1="420" y1="106" x2="420" y2="118"/><text class="tlab" x="420" y="134">3</text>
-        <line class="tick" x1="540" y1="106" x2="540" y2="118"/><text class="tlab" x="540" y="134">6</text>
-      </g>
-      <!-- arrow A: 0 -> +3  (x: 300 -> 420) -->
-      <line class="arrA" x1="300" y1="74" x2="416" y2="74" marker-end="url(#ahA)"/>
-      <text class="flab a" x="358" y="64" text-anchor="middle">+3</text>
-      <!-- arrow B: +3 -> -2  (x: 420 -> 220), points left -->
-      <line class="arrB" x1="420" y1="48" x2="224" y2="48" marker-end="url(#ahB)"/>
-      <text class="flab b" x="322" y="38" text-anchor="middle">&minus;5</text>
-      <!-- result -->
-      <circle class="resdot" cx="220" cy="112" r="5"/>
-      <text class="flab m" x="220" y="20" text-anchor="middle">lands at &minus;2</text>
-    </svg>
-    <figcaption>3 + (&minus;5) = &minus;2. Tip to tail; the arrowhead tells you the answer. Adding a negative just means an arrow pointing the other way.</figcaption>
+    <div class="w-add-host" data-widget="add-line"></div>
+    <figcaption>It opens on <code>3 + (&minus;5) = &minus;2</code> &mdash; now <strong>drag an arrowhead</strong>, type a value, or pick a pair. Tip to tail; the last arrowhead is the answer, and adding a negative just points the other way.</figcaption>
   </figure>
 
   <p>
@@ -188,7 +168,10 @@
     that: <em>addition won't change at all</em> when we step up to the plane.
   </p>
 
+  </section>
+
   <!-- ============ MULTIPLICATION ============ -->
+  <section class="slide" data-sid="multiply">
   <h2>Multiplication is scale &amp; flip</h2>
 
   <p>
@@ -222,7 +205,10 @@
     <figcaption>The only &ldquo;turn&rdquo; a line allows is a 180&deg; flip &mdash; because a line has just two directions. Keep that in mind: in the plane there will be a whole circle of directions to turn through, and <em>that</em> is where the choice is born.</figcaption>
   </figure>
 
+  </section>
+
   <!-- ============ WHY (-)(-) = + ============ -->
+  <section class="slide" data-sid="forced">
   <h2>Why <em>must</em> minus times minus be plus?</h2>
 
   <p>
@@ -261,7 +247,10 @@
     leave you exactly one.)
   </p>
 
+  </section>
+
   <!-- ============ POST-MARK: TROPICAL ============ -->
+  <section class="slide" data-sid="tropical">
   <div class="postmark">
     <div class="pm-tag">&#10551; A path off the trail</div>
     <h3>Could we ever choose otherwise? &mdash; the tropical numbers</h3>
@@ -280,7 +269,10 @@
     <p class="later">We'll plant a marker here and walk on. The lesson to carry: the rules of a number system are the price of the guarantees you demand of it.</p>
   </div>
 
+  </section>
+
   <!-- ============ STRETCHABLE PLANT ============ -->
+  <section class="slide" data-sid="stretchable">
   <h2>One more habit of the line: everything (but zero) is stretchable</h2>
 
   <p>
@@ -297,7 +289,10 @@
     turns out to decide the answer &mdash; and the simple rule we just stated is the first thing to crack.
   </div>
 
+  </section>
+
   <!-- ============ CLOSE: FIELD ============ -->
+  <section class="slide" data-sid="field">
   <h2>The line, named once</h2>
 
   <p>
@@ -330,7 +325,11 @@
     Part of the <a href="guides.html">animath guides</a>. This is page 1 of the Number&nbsp;Planes trail &mdash;
     a single thread with sign-posted side-paths (like the tropical detour above) to wander when you're curious.
   </div>
+  </section>
 
 </main>
+
+<script src="./guide-widgets.js"></script>
+<script src="./guide-deck.js"></script>
 </body>
 </html>

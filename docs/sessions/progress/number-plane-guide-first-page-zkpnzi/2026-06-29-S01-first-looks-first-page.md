@@ -47,6 +47,51 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 14:10 — Built the "trail deck" viewer + first manipulable widget (probe)
+**Why:** Dan: break the trail into pages/slides ("maybe JS… a new kind of document
+viewer"), and the figures "have to be manipulable" (drag/type/choose `a`,`b` → live
+`a+b`). Built a small reversible probe to react to (RECIPES R2).
+
+New reusable viewer toolkit in `public/` (progressive enhancement, no framework):
+- **`guide-deck.js`** — turns `<section class="slide">` blocks into a stepper:
+  Back/Next + keyboard (←/→/space/Home/End) + clickable progress dots + swipe, a
+  deep-link hash per slide, and a lazy `window.GuideWidgets[key]` mount hook. With
+  JS off, `body.deck` is never added → slides render as the old scroll page (free
+  fallback).
+- **`guide-deck.css`** — deck layout + control bar + the interactive-widget styles
+  (skin-aware via the shared tokens).
+- **`guide-widgets.js`** — `add-line`: addition as tip-to-tail arrows with
+  **draggable arrowheads**, number inputs, and preset chips; live colored
+  `a + b = sum`. Trivial arithmetic kept inline on purpose; the plane-and-beyond
+  widgets will embed the tested `numberPlanes.ts` engine via `#/embed/` applets.
+- **`number-planes-line.html`** rewrapped: 7 slides (`open · add · multiply ·
+  forced · tropical · stretchable · field`), the static addition figure swapped
+  for the live widget.
+
+**Forward call recorded:** widgets by complexity — vanilla for the line, embedded
+React `#/embed/number-planes` (on `numberPlanes.ts`) for the plane onward (DRY +
+keeps hard math under test).
+
+> [!CAUTION]
+> **R1 caught a real bug.** On a deep-linked slide the heading hid behind the
+> sticky bar: the browser's `#fragment` scroll fires as late as the `load` event
+> (after our JS re-adds the id), aligning the slide top *under* the bar.
+> `scrollRestoration='manual'` + a `load` re-pin weren't enough (timing). Fixed
+> timing-independently with `scroll-margin-top: 72px` on `.slide` (+ ids carried
+> as `data-sid`). Verified: `h2top` 62–74 now clears `barBottom` 54 on every
+> deep-link.
+
+Verified headless (R1): `open / add / forced` + phone (390px) across **Observatory
+/ Paper / Phosphor** — deck nav, the widget (`3 + −5 = −2`, drag handles), theming,
+and wrapping all hold; `npm run build` green.
+
+> [!NOTE]
+> **Verification caveat (R3):** drag *interaction* is verified by the widget's
+> logic + static end-state, not by a scripted pointer-drag in headless. The deck
+> nav state is trivial (index clamp); not unit-tested as it lives in `public/`
+> vanilla JS outside the vitest harness — flagged for extraction+test if the spur
+> (post-mark side-step) state machine lands next.
+
 ### 🔵 finding · 13:25 — PR #245 up + live preview; Codex P2 (discoverability) deferred to Dan
 **Why:** Dan: create/follow a PR and send the live link. Codex then flagged that
 page 1 has no inbound link.
