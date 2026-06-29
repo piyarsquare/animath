@@ -6,12 +6,12 @@ title: Trees and Nets — port the rest of quantum-tree (evidence engine first)
 branch: claude/pensive-pasteur-ewpdqb
 slug: pensive-pasteur-ewpdqb
 status: in-progress
-build: passing
+build: passed
 followup: null
 app: trees-and-nets
-thumbnail: assets/2026-06-25-S01-run-nn.png
-signals: null
-next: theming-v2 compliance for the new Nets/Run views (track skin × mode); then Theme C (build by edges)
+thumbnail: assets/2026-06-26-tabs-matrix-tree.png
+signals: phone-needed
+next: write the per-tab teaching explainers (doc-first missions); optionally add the two missing DAG cells (Tree→Net "fatten", Net→Matrix)
 ---
 
 # Trees and Nets — port the rest of quantum-tree (evidence engine first)
@@ -62,6 +62,84 @@ plane, and the quartet→split→ordering→tree assembly views.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 2026-06-26 — Rebuilt as a tabbed app of independent domains (no crossover)
+**Why:** Dan: the multi-mode app had become "too many applications in one" with no
+easy flow — "split into distinct domains with NO CROSSOVER; each tab is independent."
+
+`TreesAndNets.tsx` is now a thin **tab router**; each tab is a self-contained
+mini-app in `tabs/` that renders its **own `<Workspace>`** (own appId → own persisted
+layout) with its own state and its own teaching explainer — crossover is impossible
+by construction (no shared matrix, no shared selection). The shared *atom* is
+conceptual: a **weighted split system**, of which a matrix, a tree, and a net are
+three views. The five tabs are the edges of this DAG:
+
+```
+        D ──Matrix→Tree (nj)──►  T        D ──Matrix→Net (NeighborNet)──► N
+        D ◄─Tree→Matrix (additive)─ T      D ──Circular sums (tour energy/σ)──► v
+        Run = the two processes stepped:  D ⇒ T (NJ) · D ⇒ N (NeighborNet)
+        empty cells (next tabs): T→N "fatten" · N→D
+```
+
+**Circular sums** is new (`views/ValuePlot.tsx` = ValuePlot + CircleTour): the tour
+energy plotted across every circular order, the shortest highlighted, the selected
+order traced. Engine + view components reused as-is; the old fatten control
+generalized to `EdgeSliders`. Build green, lint 0, **212 tests**; all five tabs
+verified headless (desktop, 1280×800 — phone width not yet checked). Commit `181c7c9`.
+
+![The five independent tabs — Matrix → Tree](assets/2026-06-26-tabs-matrix-tree.png)
+![Circular sums — tour energy over every order + the traced tour](assets/2026-06-26-tabs-circular-sums.png)
+
+> [!IMPORTANT]
+> **Fibers is parked.** The engine `lib/{associahedron,mosaic}.ts` is intact but
+> **dormant** (`buildAssociahedron` has no callers). The renderers that drew it
+> (`DiskView`/`Graph3D`) were inline in the old `TreesAndNets.tsx` and are **only in
+> git history** (commit `325afd8`). Re-adding a Fibers tab = restore those from git +
+> wrap in `tabs/FibersTab.tsx`; no math to redo. Dan: "leave it parked."
+
+### 🟣 decision · 2026-06-26 — Pivot: the single-roof multi-mode app was the wrong container
+**Why:** Dan: "this approach has been something of a failure ... already too many
+applications in one ... pry one or two things out."
+
+Diagnosis (agreed): the failure was **packaging, not math**. Four mental models
+(analyze / construct / animate / abstract) sharing one `matrix` + selection forced
+the same state to mean opposite things per mode (a source-of-truth conflict patched
+with effects). The engine (`lib/`) is clean and tested, so "from zero" is cheap — a
+fresh shell on the same engine. Chose a **tabbed app of independent transforms**,
+document-first (each tab a teaching module standing on the shared atom).
+
+### 🟢 code · 2026-06-26 — Theme-specific edge-weight colormap
+**Why:** Dan: "there should be a theme specific colormap for the edge weights."
+
+Weights/Q/heatmap shared the generic registry sequential map (viridis on
+Observatory, clashing with its gold·teal). `views/themeColors.ts` now carries a
+**per-skin weight ramp** built from each skin's own hues (Observatory teal→gold,
+Phosphor CRT green, Paper amber, …), high end matched to the skin's background so
+high weights stay visible. Scoped to this app (no shared-registry/picker change).
+Commit `325afd8`.
+
+![Edge weights in Observatory's own teal→gold](assets/2026-06-26-colormap-observatory.png)
+
+### 🟢 code · 2026-06-26 — Theme C "fatten a tree → net" (later superseded by the tabs)
+**Why:** Dan: "build a CDM by adjusting some edges to fatten a tree."
+
+Added `lib/fattenTree.ts` (balancedTreeEdges / companionSide / fattenedMetric —
+unit-tested: a pure tree is additive → NJ recovers it exactly; the companion split
+crosses its edge → opens a box) and a fatten-a-tree Build mode (narrow per-edge
+dials → CDM → NJ tree + SplitsTree net). Shipped at `c8bc415`; the fatten gesture now
+lives in the engine and will return as the **Tree → Net** tab. The earlier
+wide-dial "weight every circular arc" builder (`lib/buildMetric.ts`) was removed as
+too complex (Dan: dials "too wide in scale").
+
+![Fattening two edges opens boxes in the SplitsTree net](assets/2026-06-26-fatten-box.png)
+
+### 🟢 code · 2026-06-26 — Theming-v2 compliance for the new Nets/Run views
+**Why:** clear the 21:55 WARNING — the new views hardcoded teal/gold and didn't track skin × mode.
+
+Routed all data color through one `useNetColors()` helper (`views/themeColors.ts`):
+structure → `--fg`, highlight → `--accent`, ordered magnitude → a sequential
+colormap. Fixed an opaque-fill readability regression (a faint `55` hex-alpha on the
+matrix/Q heatmaps so low-value cells read in light mode). Commit `e4f91e2`.
 
 ### 🟢 code · 21:55 — NeighborNet decision surface + oriented-block lock; theming v2 merged in
 **Why:** Finish "show the computation" for NeighborNet (Dan's model); a maintainer
