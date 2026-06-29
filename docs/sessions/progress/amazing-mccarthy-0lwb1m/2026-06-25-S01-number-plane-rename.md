@@ -8,7 +8,7 @@ slug: amazing-mccarthy-0lwb1m
 status: in-progress
 build: passed
 followup: null
-pr: null
+pr: https://github.com/piyarsquare/animath/pull/244
 app: argand, docs
 signals: needs-dan
 next: Get Dan's read on the themed guides gallery — keep it as a standalone themed static section (current), or promote the guides into the chrome for native skins (no drift). Then finish the 4 stub lenses + build the #/embed/number-planes applet.
@@ -39,6 +39,35 @@ then **shelved** an in-app number-line/tour experiment; (4) co-designed a
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 19:45 — PR opened, review fixes, main-synced, migrated to branch `number-plane-guide` (PR #244)
+**Why:** Dan: open the PR, follow it, address the bot's review comments, and move
+the work to a cleanly-named branch to continue development.
+
+- **Test-drive:** Cloudflare is live; the clean branch preview is
+  **https://number-plane-guide.animath.pages.dev/guides.html** (gallery) and
+  **/number-planes.html** (page). (`*.pages.dev` is blocked from the sandbox, so I
+  read deploy status from the PR bot — ✅ successful.)
+- **Two P2 review comments fixed** (commit `70233f4`) and the threads resolved:
+  (1) chooser + perspective ring were both `sticky; top:0` → wrapped in one
+  `.topstick` sticky region so the ring stays visible; (2) guide cards had nested
+  `<a>` (Part 1/2 inside the card link) → cards are `<div>`s with a stretched title
+  link. Verified headless (ring sits at chooser's bottom edge; 0 nested anchors).
+- **Synced `main`** (the prescribed PR-finalization step): the remote branch had
+  already merged `main` (Theming v2 #239); I merged that + the latest `main`
+  (Trees #240, Fractals #242/#243). Clean (my files are isolated to `public/` +
+  `docs/sessions/`). `npm run build` green.
+- **Branch migration:** PR #241 (auto-named `claude/amazing-mccarthy-0lwb1m`)
+  **closed/superseded**; work continues on **`number-plane-guide`** → **PR #244**.
+  Subscribed to #244, check-in cron re-pointed. **CI #244 green** (lint · Cloudflare
+  · trigger-deploy; smoke passed on this commit).
+
+> [!IMPORTANT]
+> **Theming v2 (#239) landing the same day sharpens the open fork.** It added a
+> light/dark *mode per identity* that this static guide mirror doesn't replicate —
+> a concrete instance of the drift risk. Strengthens the case for **promoting the
+> guides into the chrome** (native skins, no drift) over the static mirror. Still
+> Dan's call; awaiting it before finishing the 4 stub lenses + the embed applet.
 
 ### 🟡 milestone · 19:10 — Built a themed "guides gallery" + a shared skin layer (option 2); both pages reskin
 **Why:** The AskUserQuestion tool errored and Dan said "continue"; with "everything
