@@ -1,134 +1,173 @@
 <!DOCTYPE html>
-<!-- Index hub for the animath complex-viewer guide series. Deployed at
-     <site>/guides.html. Links the six standalone guide pages (each pairs serif
-     prose with a live #/embed/ applet and quoted source) + the embed demo. No
-     iframes here — just a fast, styled table of contents. -->
+<!-- The animath guides gallery — a themed, skin-aware index for the guide pages,
+     built to feel "like the app gallery but for the guides." Shares the app's 8
+     skins via guide-theme.css + guide-skin.js (same saved-skin key as the chrome).
+     PROVISIONAL (2026-06-25): a standalone themed static section; if we promote
+     guides into the chrome, this becomes a React route. Featured: the explorable
+     Number Planes page; below it, the existing complex-viewer guide series. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>animath guides — the math and code of the complex viewers</title>
+  <title>animath guides</title>
+  <link rel="stylesheet" href="./guide-theme.css">
+  <script src="./guide-skin.js"></script>
   <style>
-    :root {
-      --bg: #faf8f3; --fg: #232323; --muted: #8a8377; --rule: #ddd5c4;
-      --inlinebg: #f0ece1; --accent: #7a5cff; --eqbg: #f4f1e8;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--fg);
-           font: 17px/1.65 Georgia, 'Times New Roman', serif; }
-    main { max-width: 720px; margin: 0 auto; padding: 56px 20px 96px; }
-    h1 { font-size: 34px; line-height: 1.2; margin: 0 0 8px; }
-    .byline { color: var(--muted); font-size: 15px; margin-bottom: 28px; }
-    h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.05em;
-         color: var(--muted); margin: 40px 0 6px; }
-    p { margin: 0 0 18px; }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-           font-size: 0.84em; background: var(--inlinebg); padding: 1px 5px;
-           border-radius: 4px; }
-    ol.cards { list-style: none; margin: 0; padding: 0; counter-reset: g; }
-    ol.cards li { display: block; border: 1px solid var(--rule); border-radius: 11px;
-                  padding: 16px 20px; margin: 12px 0; background: #fff;
-                  transition: border-color 0.15s, transform 0.15s; }
-    ol.cards li:hover { border-color: var(--accent); }
-    ol.cards a.title { font-size: 20px; font-weight: 600; display: inline-block; }
-    ol.cards .desc { color: #4a443a; font-size: 15.5px; margin-top: 3px; }
-    ol.cards .src { color: var(--muted); font-size: 12.5px; margin-top: 6px;
-                    font-family: ui-monospace, Menlo, Consolas, monospace; }
-    .lead { background: var(--eqbg); border: 1px solid var(--rule);
-            border-radius: 11px; padding: 16px 20px; margin: 0 0 8px; font-size: 16px; }
+    main { max-width: 860px; margin: 0 auto; padding: 8px 22px 110px; }
+    .topbar { position: sticky; top: 0; z-index: 30;
+      background: color-mix(in srgb, var(--bg) 86%, transparent);
+      backdrop-filter: blur(8px); border-bottom: 1px solid var(--rule); }
+    .topbar-inner { max-width: 860px; margin: 0 auto; padding: 10px 22px;
+      display: flex; align-items: center; gap: 14px; }
+    .brand { font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+      font-weight: 700; letter-spacing: -0.02em; font-size: 16px; color: var(--fg);
+      text-decoration: none; }
+    .brand:hover { color: var(--accent); }
+    .home { margin-left: auto; font-family: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+      font-size: 13px; color: var(--muted); text-decoration: none; }
+    .home:hover { color: var(--accent); }
+
+    h1 { font-family: "Space Grotesk", ui-sans-serif, sans-serif; font-weight: 700;
+      letter-spacing: -0.035em; font-size: 38px; line-height: 1.1; margin: 30px 0 8px; }
+    .tagline { color: var(--muted); font-size: 17px; margin: 0 0 30px; max-width: 620px; }
+    .tagline em { color: color-mix(in srgb, var(--fg) 80%, var(--bg)); }
+
+    .sec { font-family: "Hanken Grotesk", ui-sans-serif, sans-serif; font-size: 13px;
+      text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+      margin: 40px 0 14px; }
+
+    /* the featured (explorable) card */
+    .feature { display: block; text-decoration: none; color: inherit;
+      border: 1px solid var(--rule); border-radius: 16px; background: var(--card);
+      padding: 24px 26px; position: relative; overflow: hidden;
+      transition: border-color 0.15s, transform 0.15s; }
+    .feature::before { content: ""; position: absolute; inset: 0;
+      background: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%);
+      pointer-events: none; }
+    .feature:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .kick { font-family: "Hanken Grotesk", sans-serif; font-size: 11.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+    .feature h2 { font-family: "Space Grotesk", sans-serif; font-weight: 700;
+      font-size: 27px; letter-spacing: -0.02em; margin: 6px 0 6px; }
+    .feature p { margin: 0; font-size: 16px; color: color-mix(in srgb, var(--fg) 84%, var(--bg)); max-width: 640px; }
+    .feature .go { display: inline-block; margin-top: 14px; font-family: "Hanken Grotesk", sans-serif;
+      font-size: 14px; font-weight: 600; color: var(--accent); }
+
+    /* the card grid */
+    .grid { list-style: none; margin: 0; padding: 0; display: grid;
+      grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+    /* card is a <div>, not an <a> — its title is the link, stretched over the
+       whole card via ::after, so the Part 1/2 links aren't nested anchors. */
+    .card { position: relative;
+      border: 1px solid var(--rule); border-radius: 13px; background: var(--card);
+      padding: 17px 19px; transition: border-color 0.15s, transform 0.15s; }
+    .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .card .t { display: inline-block; font-family: "Space Grotesk", sans-serif; font-weight: 600;
+      font-size: 18px; color: var(--fg); text-decoration: none; letter-spacing: -0.01em; }
+    .card .t::after { content: ""; position: absolute; inset: 0; }
+    .card .d { font-size: 14.5px; color: color-mix(in srgb, var(--fg) 78%, var(--bg));
+      margin-top: 4px; line-height: 1.5; }
+    .card .d code, .feature p code { font-size: 0.85em; }
+    .card .meta { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px;
+      color: var(--muted); margin-top: 10px; }
+    .card .parts { font-size: 13px; margin-top: 7px; }
+    .card .parts a { color: var(--accent2); text-decoration: none; position: relative; z-index: 1; }
+    .card .parts a:hover { text-decoration: underline; }
+
     .footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--rule);
-              color: var(--muted); font-size: 14px; }
-    sup { line-height: 0; }
+      color: var(--muted); font-size: 14px; }
+    .footer a { color: var(--accent); }
   </style>
 </head>
 <body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="./#/">✦ animath</a>
+    <a class="home" href="./#/">← gallery</a>
+    <div id="skin-picker"></div>
+  </div>
+</div>
+
 <main>
 
-  <h1>animath guides</h1>
-  <div class="byline">The math <em>and</em> the code behind the complex-function viewers &mdash; each page pairs a live applet with the exact source lines that compute it</div>
-
-  <p class="lead">
-    These guides take the <a href="./#/complex-particles">Complex Particles</a> and
-    <a href="./#/plane-transform">Plane Transform</a> viewers apart and explain how
-    they work, from the functions through the projections to the pixels. They read
-    like a code manual crossed with a short math course: drag the embedded applets,
-    then read the routine that drew them. The two longest are split into a Part 1 and
-    Part 2; each page keeps only a few live applets so it stays light. Start anywhere
-    &mdash; they cross-link.
+  <h1>Guides</h1>
+  <p class="tagline">
+    Long-form, explorable companions to the animath apps &mdash; math <em>and</em> the exact code that
+    computes it. They share the app's skins (try the picker, top right); pick one and read.
   </p>
 
-  <h2>The math &mdash; from a function to your screen</h2>
-  <ol class="cards">
-    <li>
-      <a class="title" href="./complex-functions-guide.html">What the functions do</a>
-      <div class="desc">How each complex function is computed, and what that does to
-        the plane it transforms &mdash; angle-doubling, poles, branches, and the
-        functions that are secretly <code>e<sup>z</sup></code>.
-        <br><a href="./complex-functions-guide.html">Part 1: coloring, powers, growth</a>
-        &middot; <a href="./complex-functions-2-guide.html">Part 2: branches, trig &amp; special</a></div>
-      <div class="src">src/lib/complexMath.ts</div>
-    </li>
-    <li>
-      <a class="title" href="./complex-particles-guide.html">From 4D to your screen</a>
-      <div class="desc">The 4-D graph of <code>(z, f(z))</code>, the projections that
-        flatten it (Perspective, Drop-axis, Torus, the Hopf sphere), and the
-        quaternion rotations that turn it.
-        <br><a href="./complex-particles-guide.html">Part 1: the graph &amp; flat projections</a>
-        &middot; <a href="./complex-particles-2-guide.html">Part 2: curved projections &amp; rotations</a></div>
-      <div class="src">src/lib/viewpoint.ts &middot; src/math/quat4.ts</div>
-    </li>
-    <li>
-      <a class="title" href="./complex-rendering-guide.html">How the surface is drawn</a>
-      <div class="desc">The render modes &mdash; Points, Sheet, Tiles, Net &mdash; and
-        adaptive density: how a cloud of samples becomes a picture, and how it crowds
-        toward where the function works hardest.</div>
-      <div class="src">src/lib/particles/createParticleGeometry.ts</div>
-    </li>
-  </ol>
+  <div class="sec">Explorable guides</div>
+  <a class="feature" href="./number-planes.html">
+    <div class="kick">Choose-your-own &middot; new</div>
+    <h2>Number Planes</h2>
+    <p>
+      A number is something you can add <em>and</em> multiply &mdash; and in the plane, multiplication is a
+      <em>choice</em>. Circle one idea (the three-way split into complex, dual, and split planes) from many
+      perspectives: multiplication, magnitude, rails, iteration. Pick how the plane multiplies and watch the
+      prose rewrite itself.
+    </p>
+    <span class="go">Open the page &rarr;</span>
+  </a>
 
-  <h2>Going deeper &mdash; the layers underneath</h2>
-  <ol class="cards">
-    <li>
-      <a class="title" href="./complex-color-guide.html">How a complex number becomes a color</a>
-      <div class="desc">Domain coloring: phase&rarr;hue, magnitude&rarr;brightness, the
-        quantity channels, the sequential colormaps, and contour bands &mdash; reading
-        a function straight off its colors.</div>
-      <div class="src">calcColor &middot; src/lib/colormaps.ts</div>
-    </li>
-    <li>
-      <a class="title" href="./complex-sampling-guide.html">Sampling the plane</a>
-      <div class="desc">Where the viewer places its points before <code>f</code> acts:
-        the grid, the radial fiber patterns, equal-area radius, and the per-point
-        seed.</div>
-      <div class="src">createParticleGeometry.ts &middot; pattern= embed param</div>
-    </li>
-    <li>
-      <a class="title" href="./complex-plane-transform-guide.html">Two planes, one map</a>
-      <div class="desc">The flat cousin of the 4-D viewer: <code>f</code> as a
-        transformation of the colored plane, conformality (why right angles survive),
-        and the log-polar unrolling.</div>
-      <div class="src">src/animations/PlaneTransform/</div>
-    </li>
-  </ol>
+  <div class="sec">The complex viewers &mdash; the math &amp; the code</div>
+  <ul class="grid">
+    <li><div class="card">
+      <a class="t" href="./complex-functions-guide.html">What the functions do</a>
+      <div class="d">How each complex function is computed, and what it does to the plane &mdash;
+        angle-doubling, poles, branches, and the maps that are secretly <code>e<sup>z</sup></code>.</div>
+      <div class="parts"><a href="./complex-functions-guide.html">Part 1</a> &middot; <a href="./complex-functions-2-guide.html">Part 2</a></div>
+      <div class="meta">src/lib/complexMath.ts</div>
+    </div></li>
+    <li><div class="card">
+      <a class="t" href="./complex-particles-guide.html">From 4D to your screen</a>
+      <div class="d">The 4-D graph of <code>(z, f(z))</code>, the projections that flatten it (Perspective,
+        Drop-axis, Torus, the Hopf sphere), and the quaternion rotations that turn it.</div>
+      <div class="parts"><a href="./complex-particles-guide.html">Part 1</a> &middot; <a href="./complex-particles-2-guide.html">Part 2</a></div>
+      <div class="meta">src/lib/viewpoint.ts · src/math/quat4.ts</div>
+    </div></li>
+    <li><div class="card">
+      <a class="t" href="./complex-rendering-guide.html">How the surface is drawn</a>
+      <div class="d">The render modes &mdash; Points, Sheet, Tiles, Net &mdash; and adaptive density: how a
+        cloud of samples becomes a picture, crowding toward where the function works hardest.</div>
+      <div class="meta">createParticleGeometry.ts</div>
+    </div></li>
+    <li><div class="card">
+      <a class="t" href="./complex-color-guide.html">How a number becomes a color</a>
+      <div class="d">Domain coloring: phase&rarr;hue, magnitude&rarr;brightness, the quantity channels,
+        sequential colormaps, and contour bands.</div>
+      <div class="meta">calcColor · src/lib/colormaps.ts</div>
+    </div></li>
+    <li><div class="card">
+      <a class="t" href="./complex-sampling-guide.html">Sampling the plane</a>
+      <div class="d">Where the viewer places its points before <code>f</code> acts: the grid, the radial
+        fiber patterns, equal-area radius, and the per-point seed.</div>
+      <div class="meta">createParticleGeometry.ts · pattern=</div>
+    </div></li>
+    <li><div class="card">
+      <a class="t" href="./complex-plane-transform-guide.html">Two planes, one map</a>
+      <div class="d">The flat cousin of the 4-D viewer: <code>f</code> as a transformation of the colored
+        plane, conformality, and the log-polar unrolling.</div>
+      <div class="meta">src/animations/PlaneTransform/</div>
+    </div></li>
+  </ul>
 
-  <h2>Also</h2>
-  <ol class="cards">
-    <li>
-      <a class="title" href="./embed-demo.html">Seeing e<sup>z</sup> &mdash; the embed demo</a>
-      <div class="desc">The minimal example of embedding a live applet in a page, and
-        the starting point for the <code>#/embed/</code> URL parameters.</div>
-      <div class="src">docs/EMBEDS.md</div>
-    </li>
-  </ol>
+  <div class="sec">Also</div>
+  <ul class="grid">
+    <li><div class="card">
+      <a class="t" href="./embed-demo.html">Seeing e<sup>z</sup> &mdash; the embed demo</a>
+      <div class="d">The minimal example of embedding a live applet in a page, and the starting point for
+        the <code>#/embed/</code> URL parameters.</div>
+      <div class="meta">docs/EMBEDS.md</div>
+    </div></li>
+  </ul>
 
   <div class="footer">
     <p>
-      Part of <a href="./#/">animath</a> &mdash; a toolkit for mathematical animations
-      and generative art. These pages document the live source; the viewers themselves
-      are at <a href="./#/complex-particles">#/complex-particles</a> and
-      <a href="./#/plane-transform">#/plane-transform</a>.
+      Part of <a href="./#/">animath</a> &mdash; a toolkit for mathematical animations and generative art.
+      These pages document the live source; the viewers themselves are at
+      <a href="./#/complex-particles">#/complex-particles</a> and <a href="./#/plane-transform">#/plane-transform</a>.
     </p>
   </div>
 

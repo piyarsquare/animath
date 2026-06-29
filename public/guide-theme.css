@@ -1,0 +1,64 @@
+/* guide-theme.css — shared theming for the static animath guides.
+   PROVISIONAL (2026-06-25). Mirrors the app's 8 skins (src/chrome/theme.css) on
+   the SAME [data-theme] attribute, and the companion guide-skin.js reads/writes
+   the SAME saved-skin key (animath:v1:chrome:skin) — so a guide's skin is shared
+   with the app and switches identically. This is a faithful *subset* of the
+   chrome tokens, adapted for a reading/document context (serif body, dark code
+   blocks). If we promote the guides into the chrome later, this file goes away
+   and the pages read theme.css directly. */
+
+:root {
+  /* dark code blocks read well on every skin (a "terminal" on the page) */
+  --codebg: #14161d; --codefg: #e7eaf1; --codecm: #7f8a9c;
+  /* derived tints — recomputed whenever --accent / --fg / --bg change with skin */
+  --eqbg: color-mix(in srgb, var(--accent) 9%, var(--bg));
+  --inlinebg: color-mix(in srgb, var(--fg) 8%, var(--bg));
+  --soft: color-mix(in srgb, var(--accent) 13%, var(--bg));
+  /* fallback ≈ Observatory until guide-skin.js sets [data-theme] */
+  --bg: #0a0c12; --fg: #eef1f7; --muted: #8d96ab; --rule: rgba(150,175,220,0.16);
+  --accent: #ffce47; --accent2: #5fe3cd; --card: #13161f;
+  color-scheme: dark;
+}
+
+/* The 8 skins — anchors copied from src/chrome/theme.css (accent picked so it
+   reads as a link/emphasis color in a document: e.g. Blueprint & Primary use
+   their blue, not their near-white / yellow primary accent). */
+[data-theme="dark"]      { color-scheme: dark;  --bg:#0a0c12; --fg:#eef1f7; --muted:#8d96ab; --rule:rgba(150,175,220,0.16); --accent:#ffce47; --accent2:#5fe3cd; --card:#13161f; }
+[data-theme="light"]     { color-scheme: light; --bg:#f0ede4; --fg:#1d1c18; --muted:#6a6354; --rule:rgba(40,34,20,0.14);    --accent:#b67d10; --accent2:#1d8a78; --card:#fffdf8; }
+[data-theme="blueprint"] { color-scheme: dark;  --bg:#0e2148; --fg:#f2f6ff; --muted:#9fb4e0; --rule:rgba(170,200,255,0.22); --accent:#69a8ff; --accent2:#9ec3ff; --card:#152c5c; }
+[data-theme="phosphor"]  { color-scheme: dark;  --bg:#03100a; --fg:#d4ffe0; --muted:#6fae85; --rule:rgba(80,255,140,0.20);  --accent:#3dff7a; --accent2:#ffd24d; --card:#07190f; }
+[data-theme="neon"]      { color-scheme: dark;  --bg:#05060f; --fg:#e9f0ff; --muted:#8ea2c8; --rule:rgba(130,170,255,0.20); --accent:#34e6cf; --accent2:#ff5aa6; --card:#0b0f20; }
+[data-theme="daylight"]  { color-scheme: light; --bg:#eef2f8; --fg:#16202e; --muted:#5b6678; --rule:rgba(20,40,80,0.14);    --accent:#2f6fe0; --accent2:#e0683a; --card:#ffffff; }
+[data-theme="primary"]   { color-scheme: light; --bg:#f0eee8; --fg:#14130f; --muted:#5a584f; --rule:rgba(0,0,0,0.16);       --accent:#1f4fd6; --accent2:#e63327; --card:#ffffff; }
+[data-theme="mirage"]    { color-scheme: dark;  --bg:#1a1230; --fg:#fbeef6; --muted:#b59ec9; --rule:rgba(200,170,255,0.20); --accent:#ffb37a; --accent2:#b08cff; --card:#241638; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+       font: 17px/1.65 Georgia, 'Times New Roman', serif;
+       transition: background 0.25s, color 0.25s; }
+/* Phosphor is "all mono" in the app — echo that for guides too. */
+[data-theme="phosphor"] body { font-family: "Space Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 15.5px; }
+a { color: var(--accent); }
+em { color: color-mix(in srgb, var(--fg) 82%, var(--bg)); }
+strong { color: var(--fg); }
+code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.86em;
+       background: var(--inlinebg); padding: 1px 5px; border-radius: 4px; }
+sup, sub { line-height: 0; }
+
+/* ---- the skin picker (mirrors the app's SkinPicker, sans-serif UI) ---- */
+.gs { position: relative; font-family: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif; }
+.gs-btn { display: flex; align-items: center; gap: 8px; cursor: pointer; font: inherit; font-size: 13px;
+  background: var(--card); color: var(--fg); border: 1px solid var(--rule); border-radius: 999px; padding: 6px 12px; }
+.gs-btn:hover { border-color: var(--accent); }
+.gs-dots { display: inline-flex; gap: 3px; }
+.gs-dots i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+.gs-menu { position: absolute; right: 0; top: calc(100% + 6px); width: 236px; z-index: 50;
+  background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 6px;
+  box-shadow: 0 16px 44px rgba(0,0,0,0.4); }
+.gs-item { display: flex; align-items: center; gap: 10px; width: 100%; cursor: pointer; font: inherit;
+  background: none; border: 0; color: var(--fg); border-radius: 8px; padding: 8px 9px; text-align: left; }
+.gs-item:hover { background: color-mix(in srgb, var(--fg) 8%, var(--bg)); }
+.gs-item.on { background: color-mix(in srgb, var(--accent) 15%, var(--bg)); }
+.gs-meta { display: flex; flex-direction: column; line-height: 1.2; }
+.gs-meta b { font-weight: 600; font-size: 13.5px; }
+.gs-meta span { font-size: 11.5px; color: var(--muted); }
