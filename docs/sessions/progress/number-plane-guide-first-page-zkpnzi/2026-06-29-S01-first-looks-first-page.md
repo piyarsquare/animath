@@ -8,7 +8,7 @@ slug: number-plane-guide-first-page-zkpnzi
 status: in-progress
 build: passed
 followup: null
-pr: null
+pr: https://github.com/piyarsquare/animath/pull/245
 app: docs, argand
 signals: needs-dan
 next: Get Dan's read on page 1 (number-planes-line.html); then build page 2 (into the plane — addition unchanged, j²=? the one choice).
