@@ -47,6 +47,54 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 13:10 — Single thread + "post-marks", not a branching web; two-axes is *a* throughline, not *the* one
+**Why:** Dan: a story with multiple unfolding pathways is conceptually possible,
+but "we are going to try for a single thread and put the post-marks for other
+paths along the way. we will maybe figure out how to join them." The two-axes
+framing (distributivity count vs. stretchability ladder) is **one** throughline,
+not **the** one.
+
+Reverses the original plan's explorable-*web* navigation model in favor of a
+**linear spine with signposts**. Post-marks are the future seams where a branch
+can attach; joining is deferred. Demotes the two-axes structure from
+candidate-spine to one of the signposted side-paths.
+
+**Inventory of post-marks surfaced this session** (each a side-path, not the
+trunk): why `(−)(−)=+` is *forced* by distributivity (a theorem, not a
+convention); **tropical** math = give up subtraction (the additive group is
+itself a choice); **stretchability** = having an inverse, and the **1·2·4·8**
+normed-division ladder; **3-D is empty of division** but holds a rich
+classifiable **zoo of five** commutative-unital algebras (incl. `ℝ[x]/x³` =
+second-order autodiff, `ℝ³` = three rails); **Hamilton/quaternions** (jump to 4-D,
+lose commutativity) as the far trapdoor; the magnitude/unit-curve; eigenvalues &
+the change-of-basis "find the rails" morph; relativity (split) / autodiff (dual)
+applications; the circle of planes (`p ↦ 1/p`, dual at ∞).
+
+Open: name **the** single spine (candidate = Dan's opening arc continued: line →
+plane+choice → the three → feel them → the dial is a circle, with "how many
+rails / separable vs entangled" as the heart) and decide where it ends.
+
+### 🔵 finding · 12:55 — Math thread that reshapes Beat 1: what's actually *forced*
+**Why:** Dan challenged "there's only one way to multiply the line," then pushed
+through 3-D and the magnitude condition. The math we settled becomes page content.
+
+- **Sign rules are theorems, not conventions.** Distributivity over a genuine
+  additive group + a unit *forces* `0·a=0`, `(−1)a=−a`, `(−1)(−1)=1`. On ℤ/ℚ it
+  pins multiplication completely (0 free parameters). The plane is the first
+  place the same demand leaves one knob loose (`j²=p`). → sharper Beat 1→2 hinge.
+- **Tropical** keeps distributivity but drops additive inverses (a semiring) — the
+  honest "you could choose otherwise" escape is *give up subtraction*, not
+  *redefine negatives*.
+- **Magnitude was never required for the trichotomy** — distributivity + unit alone
+  gives the three planes. The conjugate-product norm `N_p = x²−p·y²` appears on its
+  own and is multiplicative in all three, but positive-definite (a true norm,
+  stretchable = nonzero) **only for complex**. Demanding it collapses the plane to
+  ℂ alone. → "stretchable" is a *second axis*, orthogonal to `j²`.
+- **3-D under distributivity-only is rich**: exactly **five** commutative
+  associative unital ℝ-algebras (`ℝ³`, `ℝ×ℂ`, `ℝ×ℝ[ε]`, `ℝ[x]/x³`, `ℝ[x,y]/(x,y)²`),
+  none a division algebra (no 3-D field over ℝ exists). `ℝ[x]/x³` = second-order
+  autodiff — the dual-number thread, one floor up.
+
 ### 🟡 milestone · 12:30 — Session start: oriented, awaiting "first looks" discussion
 **Why:** New branch (`number-plane-guide-first-page-zkpnzi`) continuing the
 Number Planes guide; this is a hands-on discussion session, so pin the topic
