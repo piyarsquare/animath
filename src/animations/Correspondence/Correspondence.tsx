@@ -219,6 +219,10 @@ export default function Correspondence() {
         )}
         {precision === 'double' && <> — Extended (df64) precision, deep zoom.</>}
       </div>
+      <div className="am-hint">
+        {/* "scale key": the math-coordinate width of the deeper pane at this zoom. */}
+        Scale: {(() => { const w = 4 / deepZoom; return w >= 0.001 ? w.toFixed(4) : w.toExponential(2); })()} wide
+      </div>
     </div>
   );
 

@@ -37,6 +37,22 @@ function suggestedIter(zoom: number): number {
   return Math.min(MAX_ITERATIONS, Math.max(100, Math.round(v / 10) * 10));
 }
 
+// TODO(deep-zoom): go past the df64 wall (~1e13-1e14x zoom, measured). Extended
+// (df64) carries ~14 digits, so neighboring pixels collapse to the same
+// coordinate beyond there (see DEEP_ZOOM.md "Extended has a wall too"). Two ways
+// deeper, in rough order of effort:
+//   1. Quad-float (4 stacked float32s, ~29 digits -> ~1e28x). Same compensated-
+//      arithmetic idea as df64, just more of it; ~4-10x slower. Self-contained.
+//   2. Perturbation + reference orbit -- the real fix, effectively unlimited
+//      depth. Compute ONE reference orbit Z_n at high precision on the CPU, then
+//      iterate only each pixel's deviation d from it on the GPU in plain float:
+//          d_{n+1} = 2*Z_n*d_n + d_n^2 + D       (D = pixel offset from reference)
+//      d stays tiny, so no per-pixel high precision is needed. Requires: a CPU
+//      reference orbit (bignum past ~1e15x), glitch detection (Pauldelbrot) +
+//      rebasing for pixels that diverge from the reference, and optionally
+//      series approximation to skip early iterations. The math is written up in
+//      DEEP_ZOOM.md; this is the architecturally interesting follow-up.
+
 const FORMULAS: Record<FractalType, string> = {
   mandelbrot: 'z_{n+1} = z_n^k + c',
   julia: 'z_{n+1} = z_n^k + c',
@@ -570,6 +586,12 @@ export default function FractalsGPU() {
   // value somewhere around 1e5×; df64 ("Extended") carries ~14 and pushes that
   // wall out by roughly 1e7×. See DEEP_ZOOM.md.
   const singleWall = zoom > 1e5;
+  // The "scale key": the real size of what's on screen at this zoom — the view's
+  // math-coordinate width, and the size one pixel covers.
+  const spanX = view.xMax - view.xMin;
+  const canvasW = rendererRef.current?.domElement?.clientWidth ?? 0;
+  const perPx = canvasW > 0 ? spanX / canvasW : 0;
+  const fmtScale = (v: number) => (v >= 0.001 ? v.toFixed(4) : v.toExponential(2));
   const viewportNode = (
     <>
       <button className="am-mini" style={{ width: '100%' }} onClick={reset}>
@@ -591,6 +613,9 @@ export default function FractalsGPU() {
           <> — past Standard precision; switch to <strong>Extended</strong> to keep resolving detail.</>
         )}
         {precision === 'double' && <> — Extended (df64) precision, deep zoom.</>}
+      </div>
+      <div className="am-hint">
+        Scale: {fmtScale(spanX)} wide{perPx > 0 && <> · {fmtScale(perPx)}/px</>}
       </div>
     </>
   );
