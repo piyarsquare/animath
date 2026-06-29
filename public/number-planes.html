@@ -503,7 +503,7 @@ export const mul = (a, b, p) =&gt; ({
 
     <p>
       Take an affine map <code>f(z) = &alpha;&middot;z + &beta;</code> &mdash; the plane's version of <code>y = m&middot;x + b</code> &mdash; and apply it
-      again and again. Every such map has one balance point, the <strong>fixed point</strong>
+      again and again. As long as <code>1&minus;&alpha;</code> is invertible, it has a single <strong>fixed point</strong>
       <code>z* = &beta;/(1&minus;&alpha;)</code>, and the orbit lives out the plane's character around it:
     </p>
 
@@ -515,6 +515,13 @@ export const mul = (a, b, p) =&gt; ({
 
     <p>
       In your plane the picture is <b class="pp" data-spin="a spiral" data-shear="a shear drift" data-boost="a saddle">a spiral</b>.
+    </p>
+
+    <p>
+      One honest caveat: this needs <code>1&minus;&alpha;</code> to be invertible. A <strong>pure shift</strong>
+      (<code>&alpha;=1</code>) has <em>no</em> fixed point &mdash; the balance point has slid off to infinity &mdash; and in
+      the dual and split planes a <code>1&minus;&alpha;</code> that lands on the null set breaks the division the same way.
+      (That's exactly when the engine returns no fixed point instead of inventing one.)
     </p>
 
     <figure>
