@@ -57,19 +57,22 @@
     .grid { list-style: none; margin: 0; padding: 0; display: grid;
       grid-template-columns: 1fr 1fr; gap: 14px; }
     @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
-    .card { display: block; text-decoration: none; color: inherit;
+    /* card is a <div>, not an <a> — its title is the link, stretched over the
+       whole card via ::after, so the Part 1/2 links aren't nested anchors. */
+    .card { position: relative;
       border: 1px solid var(--rule); border-radius: 13px; background: var(--card);
       padding: 17px 19px; transition: border-color 0.15s, transform 0.15s; }
     .card:hover { border-color: var(--accent); transform: translateY(-2px); }
-    .card .t { font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 18px;
-      color: var(--fg); letter-spacing: -0.01em; }
+    .card .t { display: inline-block; font-family: "Space Grotesk", sans-serif; font-weight: 600;
+      font-size: 18px; color: var(--fg); text-decoration: none; letter-spacing: -0.01em; }
+    .card .t::after { content: ""; position: absolute; inset: 0; }
     .card .d { font-size: 14.5px; color: color-mix(in srgb, var(--fg) 78%, var(--bg));
       margin-top: 4px; line-height: 1.5; }
     .card .d code, .feature p code { font-size: 0.85em; }
     .card .meta { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px;
       color: var(--muted); margin-top: 10px; }
     .card .parts { font-size: 13px; margin-top: 7px; }
-    .card .parts a { color: var(--accent2); text-decoration: none; }
+    .card .parts a { color: var(--accent2); text-decoration: none; position: relative; z-index: 1; }
     .card .parts a:hover { text-decoration: underline; }
 
     .footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--rule);
@@ -110,54 +113,54 @@
 
   <div class="sec">The complex viewers &mdash; the math &amp; the code</div>
   <ul class="grid">
-    <li><a class="card" href="./complex-functions-guide.html">
-      <div class="t">What the functions do</div>
+    <li><div class="card">
+      <a class="t" href="./complex-functions-guide.html">What the functions do</a>
       <div class="d">How each complex function is computed, and what it does to the plane &mdash;
         angle-doubling, poles, branches, and the maps that are secretly <code>e<sup>z</sup></code>.</div>
       <div class="parts"><a href="./complex-functions-guide.html">Part 1</a> &middot; <a href="./complex-functions-2-guide.html">Part 2</a></div>
       <div class="meta">src/lib/complexMath.ts</div>
-    </a></li>
-    <li><a class="card" href="./complex-particles-guide.html">
-      <div class="t">From 4D to your screen</div>
+    </div></li>
+    <li><div class="card">
+      <a class="t" href="./complex-particles-guide.html">From 4D to your screen</a>
       <div class="d">The 4-D graph of <code>(z, f(z))</code>, the projections that flatten it (Perspective,
         Drop-axis, Torus, the Hopf sphere), and the quaternion rotations that turn it.</div>
       <div class="parts"><a href="./complex-particles-guide.html">Part 1</a> &middot; <a href="./complex-particles-2-guide.html">Part 2</a></div>
       <div class="meta">src/lib/viewpoint.ts · src/math/quat4.ts</div>
-    </a></li>
-    <li><a class="card" href="./complex-rendering-guide.html">
-      <div class="t">How the surface is drawn</div>
+    </div></li>
+    <li><div class="card">
+      <a class="t" href="./complex-rendering-guide.html">How the surface is drawn</a>
       <div class="d">The render modes &mdash; Points, Sheet, Tiles, Net &mdash; and adaptive density: how a
         cloud of samples becomes a picture, crowding toward where the function works hardest.</div>
       <div class="meta">createParticleGeometry.ts</div>
-    </a></li>
-    <li><a class="card" href="./complex-color-guide.html">
-      <div class="t">How a number becomes a color</div>
+    </div></li>
+    <li><div class="card">
+      <a class="t" href="./complex-color-guide.html">How a number becomes a color</a>
       <div class="d">Domain coloring: phase&rarr;hue, magnitude&rarr;brightness, the quantity channels,
         sequential colormaps, and contour bands.</div>
       <div class="meta">calcColor · src/lib/colormaps.ts</div>
-    </a></li>
-    <li><a class="card" href="./complex-sampling-guide.html">
-      <div class="t">Sampling the plane</div>
+    </div></li>
+    <li><div class="card">
+      <a class="t" href="./complex-sampling-guide.html">Sampling the plane</a>
       <div class="d">Where the viewer places its points before <code>f</code> acts: the grid, the radial
         fiber patterns, equal-area radius, and the per-point seed.</div>
       <div class="meta">createParticleGeometry.ts · pattern=</div>
-    </a></li>
-    <li><a class="card" href="./complex-plane-transform-guide.html">
-      <div class="t">Two planes, one map</div>
+    </div></li>
+    <li><div class="card">
+      <a class="t" href="./complex-plane-transform-guide.html">Two planes, one map</a>
       <div class="d">The flat cousin of the 4-D viewer: <code>f</code> as a transformation of the colored
         plane, conformality, and the log-polar unrolling.</div>
       <div class="meta">src/animations/PlaneTransform/</div>
-    </a></li>
+    </div></li>
   </ul>
 
   <div class="sec">Also</div>
   <ul class="grid">
-    <li><a class="card" href="./embed-demo.html">
-      <div class="t">Seeing e<sup>z</sup> &mdash; the embed demo</div>
+    <li><div class="card">
+      <a class="t" href="./embed-demo.html">Seeing e<sup>z</sup> &mdash; the embed demo</a>
       <div class="d">The minimal example of embedding a live applet in a page, and the starting point for
         the <code>#/embed/</code> URL parameters.</div>
       <div class="meta">docs/EMBEDS.md</div>
-    </a></li>
+    </div></li>
   </ul>
 
   <div class="footer">
