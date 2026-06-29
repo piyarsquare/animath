@@ -47,6 +47,41 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 14:35 — Voice + opening reframe: plain & example-first, NOT memoir; lead with "which multiplication?"
+**Why:** Dan rejected my first "in-voice" attempt as feeling like a **diary**. His
+model: *"Complex numbers are defined by their addition and multiplication. But I
+can already think of other ways… like (a,b)·(c,d)=(a·c,b·d). But what are the
+constraints — and we start listing them out, then think of them on the number
+line."*
+
+**Voice (locked-ish, to become a committed voice guide):**
+- **Plain, declarative, example-first.** State the thing → produce a real rival →
+  ask *what constrains the choice?* → list the demands → drop to the line to read
+  them. Curiosity rides the **math moves**, not personal narrative.
+- **Reasoning-"we"/"you" OK; autobiographical-"I" is the diary smell** (the exact
+  failure: "no one would explain to me", "I did that for years"). Cut it.
+- **Touchstones (Dan):** John McPhee (structure, immersion, restraint), Alfred
+  Korzybski (map ≠ territory — "could it be different?" is the native question;
+  this is the guide's actual thesis, not a flourish), Bill Bryson (warm + history
+  geek-out) **but braver — don't flinch when the math gets hard.**
+- **Aesthetic goal:** feel like a *hand-drawn* artifact, not a webpage. Future
+  "look": sketch-rendered schematics (rough.js wobbly ink + hatching) under a
+  field-notebook theme (toothy paper, ink palette, marginalia type). Parked as the
+  advanced request — after voice + content land.
+
+**Opening reframe:** the trail's motivating question becomes **"Why are complex
+numbers special — what are the knobs, could it be different?"** (the under-taught
+gap a complex-analysis course leaves). Page 1 reopens: define complex by +/×, show
+the coordinate-wise rival `(ac,bd)` (which is secretly `ℝ×ℝ` = the split plane), ask
+what singles out the complex product, **enumerate the demands as the spine**, and
+use the line as the place to isolate each demand. Dan is "taking notes" on the
+why/knobs — requested as the best seed (his voice + the content).
+
+> [!NOTE]
+> Next build, once Dan confirms the register: restructure `number-planes-line.html`
+> §1 to the "which multiplication?" opening + re-tone all 7 slides; draft the voice
+> guide doc; then page 2.
+
 ### 🟢 code · 14:10 — Built the "trail deck" viewer + first manipulable widget (probe)
 **Why:** Dan: break the trail into pages/slides ("maybe JS… a new kind of document
 viewer"), and the figures "have to be manipulable" (drag/type/choose `a`,`b` → live
