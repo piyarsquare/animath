@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<!-- Number Planes · Page 1 — THE LINE.
+     First page of the linear "Number Planes" trail (single thread + post-marks;
+     see docs/sessions/.../number-plane-guide-first-page-zkpnzi). Built 2026-06-29.
+     Content: the real line, addition as tip-to-tail arrows, multiplication as
+     scale/flip, WHY (−)(−)=+ is forced by distributivity (a theorem, not a
+     convention), a POST-MARK off to tropical numbers (give up subtraction), the
+     "stretchable" plant (invertibility, harvested much later), closing on
+     ℝ-is-a-field kept to definition boxes. Prose-first; static SVG figures; no
+     applets yet. Same visual family + shared skin layer as the other guides. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Number Planes · 1 — The line</title>
+  <link rel="stylesheet" href="./guide-theme.css">
+  <script src="./guide-skin.js"></script>
+  <style>
+    /* Skin tokens (--bg/--fg/--accent/--rule/--eqbg/…) come from guide-theme.css.
+       This page is PRE-choice — no plane is picked yet (the whole point: the line
+       offers no choice), so emphasis uses the skin's own --accent, not a j² color. */
+    html { --ink: color-mix(in srgb, var(--fg) 82%, var(--bg)); }
+
+    main { max-width: 720px; margin: 0 auto; padding: 12px 20px 96px; }
+    h1 { font-size: 33px; line-height: 1.18; margin: 6px 0 8px; }
+    h2 { font-size: 24px; line-height: 1.25; margin: 40px 0 6px; }
+    p  { margin: 0 0 18px; }
+    .eyebrow { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); font-family: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+      margin: 4px 0 0; }
+    .lede { font-size: 19px; line-height: 1.55; color: var(--ink); }
+    .k { color: var(--accent); font-weight: 600; }
+
+    /* ---- the slim top bar (no j² chooser — that arrives on the next page) ---- */
+    .bar { position: sticky; top: 0; z-index: 20;
+      background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--rule); }
+    .bar-inner { max-width: 720px; margin: 0 auto; padding: 9px 20px;
+      display: flex; align-items: center; gap: 14px; }
+    .brand { font-weight: 600; font-size: 15px; cursor: pointer; color: var(--fg);
+      border: 0; background: none; font-family: inherit; padding: 0; }
+    .brand:hover { color: var(--accent); }
+    .trail { font-size: 13px; color: var(--muted);
+      font-family: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif; }
+    .trail b { color: var(--fg); font-weight: 600; }
+    #skin-picker { margin-left: auto; }
+
+    /* ---- equations / derivations (shared look) ---- */
+    .eq { background: var(--eqbg); border-left: 3px solid var(--accent);
+      padding: 12px 16px; margin: 18px 0; border-radius: 0 6px 6px 0;
+      font-size: 16px; overflow-x: auto; }
+    .deriv { font: 14px/1.9 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+      background: var(--eqbg); border-left: 3px solid var(--accent);
+      padding: 14px 18px; margin: 18px 0; border-radius: 0 6px 6px 0; overflow-x: auto; }
+    .deriv .why { color: var(--muted); }
+    .deriv b { color: var(--accent); font-weight: 600; }
+
+    /* ---- a definition box: keeps a precise term off to the side ---- */
+    .defn { border: 1px solid var(--rule); border-radius: 10px; background: var(--soft);
+      padding: 13px 17px; margin: 22px 0; font-size: 15px; }
+    .defn .dt { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--accent2); font-weight: 700;
+      font-family: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif; }
+    .defn .dn { font-weight: 600; color: var(--fg); }
+    .defn p { margin: 5px 0 0; color: var(--ink); }
+
+    /* ---- a POST-MARK: a signpost to a path off the trail, joined later ---- */
+    .postmark { border: 1px dashed var(--accent2); border-radius: 10px;
+      background: color-mix(in srgb, var(--accent2) 8%, var(--bg));
+      padding: 14px 18px 14px 16px; margin: 26px 0; position: relative; }
+    .postmark .pm-tag { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--accent2); font-weight: 700; margin-bottom: 5px;
+      font-family: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+      display: flex; align-items: center; gap: 7px; }
+    .postmark h3 { font-size: 17px; margin: 0 0 6px; color: var(--fg); }
+    .postmark p { margin: 0 0 8px; font-size: 15px; }
+    .postmark p:last-child { margin-bottom: 0; }
+    .postmark .later { font-size: 13px; color: var(--muted); font-style: italic; }
+
+    /* ---- a soft "remember this" plant ---- */
+    .note { border-left: 3px solid var(--accent2); background: var(--soft);
+      padding: 11px 16px; margin: 20px 0; border-radius: 0 6px 6px 0; font-size: 15.5px; }
+    .note b { color: var(--accent2); }
+
+    /* ---- figures (static SVG; adapt to skin via CSS vars) ---- */
+    figure { margin: 22px 0; }
+    .fig { width: 100%; height: auto; display: block;
+      background: var(--card); border: 1px solid var(--rule); border-radius: 10px; }
+    figcaption { font-size: 13.5px; color: var(--muted); padding-top: 8px; }
+    .axis  { stroke: var(--muted); stroke-width: 2; }
+    .tick  { stroke: var(--rule);  stroke-width: 1.5; }
+    .tlab  { fill: var(--muted); font: 12px "Hanken Grotesk", ui-sans-serif, sans-serif; text-anchor: middle; }
+    .zero  { fill: var(--fg); font: 600 13px "Hanken Grotesk", ui-sans-serif, sans-serif; text-anchor: middle; }
+    .arrA  { stroke: var(--accent);  stroke-width: 3.5; fill: none; }
+    .arrB  { stroke: var(--accent2); stroke-width: 3.5; fill: none; }
+    .arrG  { stroke: var(--muted);   stroke-width: 2.5; fill: none; stroke-dasharray: 4 4; }
+    #ahA path { fill: var(--accent); }
+    #ahB path { fill: var(--accent2); }
+    .resdot { fill: var(--accent); }
+    .flab   { font: 600 14px "Hanken Grotesk", ui-sans-serif, sans-serif; }
+    .flab.a { fill: var(--accent); } .flab.b { fill: var(--accent2); }
+    .flab.m { fill: var(--muted); font-weight: 400; }
+
+    .footer { margin-top: 46px; padding-top: 18px; border-top: 1px solid var(--rule);
+      color: var(--muted); font-size: 14px; }
+    .footer a { color: var(--accent); }
+
+    /* ---- the forward step on the trail ---- */
+    .next { display: block; margin: 40px 0 0; padding: 18px 20px; text-decoration: none;
+      border: 1px solid var(--rule); border-radius: 12px; background: var(--soft);
+      transition: border-color 0.13s, transform 0.13s; }
+    .next:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .next .nl { font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--muted); font-family: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif; }
+    .next .nt { font-size: 19px; color: var(--fg); font-weight: 600; margin-top: 2px; }
+    .next .nt .arr { color: var(--accent); }
+    .next .nd { font-size: 14.5px; color: var(--ink); margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-inner">
+    <button class="brand" onclick="location.href='guides.html'">&#10022; Number&nbsp;Planes</button>
+    <span class="trail"><b>1.</b>&nbsp; The line</span>
+    <div id="skin-picker"></div>
+  </div>
+</header>
+
+<main>
+
+  <p class="eyebrow">Number Planes &middot; the trail begins</p>
+  <h1>It starts on a line</h1>
+
+  <p class="lede">
+    A number is something you can do two things with: <strong>add</strong> it and <strong>multiply</strong> it.
+    On the number line both feel completely settled &mdash; so settled that the rules seem like facts of nature.
+    They are not. They are <em>forced</em>, and seeing exactly <em>what</em> forces them is the thread we'll
+    pull all the way into the plane, where one of the two rules quietly comes loose.
+  </p>
+
+  <p>So before we go anywhere, let's look hard at the line we think we already know.</p>
+
+  <!-- ============ ADDITION ============ -->
+  <h2>Addition is arrowheads</h2>
+
+  <p>
+    Picture each number not as a dot but as an <strong>arrow</strong> starting at <code>0</code>:
+    <span class="k">+3</span> is an arrow three units to the right, <span class="k">&minus;5</span> is an
+    arrow five units to the <em>left</em>. To add, you lay the arrows <strong>tip to tail</strong> and read off
+    where the last arrowhead lands.
+  </p>
+
+  <figure>
+    <svg class="fig" viewBox="0 0 660 150" role="img" aria-label="Adding on the line by laying arrows tip to tail: 3 plus negative 5 lands at negative 2.">
+      <defs>
+        <marker id="ahA" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z"/></marker>
+        <marker id="ahB" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z"/></marker>
+      </defs>
+      <!-- axis -->
+      <line class="axis" x1="40" y1="112" x2="620" y2="112"/>
+      <!-- ticks at -6..6 step 2, plus integers as light marks -->
+      <g>
+        <line class="tick" x1="100" y1="106" x2="100" y2="118"/><text class="tlab" x="100" y="134">&minus;5</text>
+        <line class="tick" x1="180" y1="106" x2="180" y2="118"/><text class="tlab" x="180" y="134">&minus;3</text>
+        <line class="tick" x1="220" y1="106" x2="220" y2="118"/><text class="tlab" x="220" y="134">&minus;2</text>
+        <line class="tick" x1="300" y1="104" x2="300" y2="120"/><text class="zero" x="300" y="136">0</text>
+        <line class="tick" x1="420" y1="106" x2="420" y2="118"/><text class="tlab" x="420" y="134">3</text>
+        <line class="tick" x1="540" y1="106" x2="540" y2="118"/><text class="tlab" x="540" y="134">6</text>
+      </g>
+      <!-- arrow A: 0 -> +3  (x: 300 -> 420) -->
+      <line class="arrA" x1="300" y1="74" x2="416" y2="74" marker-end="url(#ahA)"/>
+      <text class="flab a" x="358" y="64" text-anchor="middle">+3</text>
+      <!-- arrow B: +3 -> -2  (x: 420 -> 220), points left -->
+      <line class="arrB" x1="420" y1="48" x2="224" y2="48" marker-end="url(#ahB)"/>
+      <text class="flab b" x="322" y="38" text-anchor="middle">&minus;5</text>
+      <!-- result -->
+      <circle class="resdot" cx="220" cy="112" r="5"/>
+      <text class="flab m" x="220" y="20" text-anchor="middle">lands at &minus;2</text>
+    </svg>
+    <figcaption>3 + (&minus;5) = &minus;2. Tip to tail; the arrowhead tells you the answer. Adding a negative just means an arrow pointing the other way.</figcaption>
+  </figure>
+
+  <p>
+    That's the whole of addition, and notice two things we'll want later. First, you can always <strong>undo</strong>
+    it: every arrow has an opposite that walks you straight back to <code>0</code> &mdash; that's what subtraction
+    <em>is</em>. Second, the recipe never mentions which way is &ldquo;positive.&rdquo; Arrows just add. Hold onto
+    that: <em>addition won't change at all</em> when we step up to the plane.
+  </p>
+
+  <!-- ============ MULTIPLICATION ============ -->
+  <h2>Multiplication is scale &amp; flip</h2>
+
+  <p>
+    Multiplying does something different to an arrow: it <strong>scales</strong> it, and &mdash; for a negative
+    multiplier &mdash; <strong>flips</strong> it. Times <span class="k">2</span> doubles the arrow;
+    times <span class="k">&frac12;</span> halves it; times <span class="k">&minus;1</span> spins it around to
+    point the other way; times <span class="k">&minus;1.5</span> flips it <em>and</em> scales it by one and a half.
+  </p>
+
+  <figure>
+    <svg class="fig" viewBox="0 0 660 150" role="img" aria-label="Multiplying by negative 1.5: the arrow at 2 flips across zero and stretches to negative 3.">
+      <defs>
+        <marker id="ahA2" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--accent)"/></marker>
+        <marker id="ahB2" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--accent2)"/></marker>
+      </defs>
+      <line class="axis" x1="40" y1="100" x2="620" y2="100"/>
+      <g>
+        <line class="tick" x1="160" y1="94" x2="160" y2="106"/><text class="tlab" x="160" y="122">&minus;3</text>
+        <line class="tick" x1="220" y1="94" x2="220" y2="106"/><text class="tlab" x="220" y="122">&minus;2</text>
+        <line class="tick" x1="330" y1="92" x2="330" y2="108"/><text class="zero" x="330" y="124">0</text>
+        <line class="tick" x1="440" y1="94" x2="440" y2="106"/><text class="tlab" x="440" y="122">2</text>
+      </g>
+      <!-- original arrow 0 -> 2 (330 -> 440) -->
+      <line class="arrA" x1="330" y1="100" x2="436" y2="100" marker-end="url(#ahA2)"/>
+      <text class="flab a" x="385" y="88" text-anchor="middle">2</text>
+      <!-- result arrow 0 -> -3 (330 -> 160) above, dashed guide of the flip -->
+      <line class="arrB" x1="330" y1="64" x2="164" y2="64" marker-end="url(#ahB2)"/>
+      <text class="flab b" x="245" y="54" text-anchor="middle">&minus;3</text>
+      <text class="flab m" x="330" y="26" text-anchor="middle">&times; (&minus;1.5):&nbsp; scale by 1.5, then flip</text>
+    </svg>
+    <figcaption>The only &ldquo;turn&rdquo; a line allows is a 180&deg; flip &mdash; because a line has just two directions. Keep that in mind: in the plane there will be a whole circle of directions to turn through, and <em>that</em> is where the choice is born.</figcaption>
+  </figure>
+
+  <!-- ============ WHY (-)(-) = + ============ -->
+  <h2>Why <em>must</em> minus times minus be plus?</h2>
+
+  <p>
+    Here's the question every student asks and most are simply told to accept: why is
+    <code>(&minus;1) &times; (&minus;1) = +1</code>? Couldn't we just <em>decide</em> that two negatives make a
+    negative? It turns out we can't &mdash; not without breaking something we're quietly relying on. The sign rule
+    is a <strong>theorem</strong>, not a convention.
+  </p>
+
+  <p>
+    The thing we're relying on is the one rule that ties addition and multiplication together: <strong>distributivity</strong>.
+  </p>
+
+  <div class="defn">
+    <span class="dt">Definition</span>
+    <span class="dn">Distributivity</span> &mdash; the law that lets you multiply across a sum:
+    <p><code>a &middot; (b + c) = a&middot;b + a&middot;c</code>. It is the only bridge between the two operations; everything below rides on it.</p>
+  </div>
+
+  <p>Watch it force the sign rule, with nothing else up our sleeve but &ldquo;<code>1 + (&minus;1) = 0</code>&rdquo; and &ldquo;anything times <code>0</code> is <code>0</code>&rdquo;:</p>
+
+  <div class="deriv">
+    &nbsp;&nbsp;0 = (&minus;1) &middot; 0<span class="why">&nbsp;&nbsp;&nbsp;&larr; anything &times; 0 is 0</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;= (&minus;1) &middot; (1 + (&minus;1))<span class="why">&nbsp;&nbsp;&nbsp;&larr; because 1 + (&minus;1) = 0</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;= (&minus;1)&middot;1 + (&minus;1)&middot;(&minus;1)<span class="why">&nbsp;&nbsp;&nbsp;&larr; <b>distribute</b></span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;= &minus;1 + (&minus;1)(&minus;1)<br>
+    <br>
+    &nbsp;&nbsp;so&nbsp; (&minus;1)(&minus;1) = <b>+1</b>.&nbsp; <span class="why">It could not have been otherwise.</span>
+  </div>
+
+  <p>
+    Read it again and feel where the freedom went: the moment you insist multiplication <em>distributes</em> over
+    addition, the sign rule is decided for you. In fact on the whole numbers this pins down multiplication
+    <em>entirely</em> &mdash; every integer is a pile of <code>+1</code>'s and <code>&minus;1</code>'s, and distributing
+    across the pile computes every product. The line leaves you <strong>no choices</strong>. (Spoiler: the plane will
+    leave you exactly one.)
+  </p>
+
+  <!-- ============ POST-MARK: TROPICAL ============ -->
+  <div class="postmark">
+    <div class="pm-tag">&#10551; A path off the trail</div>
+    <h3>Could we ever choose otherwise? &mdash; the tropical numbers</h3>
+    <p>
+      We said the rules are forced. The honest fine print is: forced <em>once you keep subtraction.</em> The whole
+      derivation leaned on undoing addition (&ldquo;<code>1 + (&minus;1) = 0</code>&rdquo;). Give <em>that</em> up
+      and a different, perfectly consistent arithmetic appears.
+    </p>
+    <p>
+      In <strong>tropical</strong> arithmetic, &ldquo;add&rdquo; means <em>take the smaller</em> and
+      &ldquo;multiply&rdquo; means <em>ordinary&nbsp;add</em>:
+      <code>3 &oplus; 5 = min(3,5) = 3</code> and <code>3 &otimes; 5 = 3 + 5 = 8</code>. It still distributes, it's
+      still useful (it linearizes hard optimization problems) &mdash; it just has no subtraction, so none of our
+      sign reasoning applies.
+    </p>
+    <p class="later">We'll plant a marker here and walk on. The lesson to carry: the rules of a number system are the price of the guarantees you demand of it.</p>
+  </div>
+
+  <!-- ============ STRETCHABLE PLANT ============ -->
+  <h2>One more habit of the line: everything (but zero) is stretchable</h2>
+
+  <p>
+    Multiplication on the line has a quiet superpower. Multiply by any number except <code>0</code> and you can
+    always <strong>get back</strong>: there's a reciprocal waiting to stretch you to exactly <code>1</code>
+    (<code>3</code> has <code>&#8531;</code>, <code>&minus;&frac12;</code> has <code>&minus;2</code>). Only
+    <code>0</code> traps you &mdash; nothing multiplies it back to <code>1</code>.
+  </p>
+
+  <div class="note">
+    Let's call a number <b>stretchable</b> when it has such a partner &mdash; a multiplicative inverse.
+    On the line the rule is dead simple: <b>stretchable = not zero.</b> It feels like a law of arithmetic itself.
+    Remember the word. Far down the trail, when we ask how high these number systems can climb, <em>stretchable</em>
+    turns out to decide the answer &mdash; and the simple rule we just stated is the first thing to crack.
+  </div>
+
+  <!-- ============ CLOSE: FIELD ============ -->
+  <h2>The line, named once</h2>
+
+  <p>
+    Put it together: on the real line you can add and undo adding, multiply and undo multiplying (except by zero),
+    and the two cooperate through distributivity. A system with all of that has a name &mdash; we'll use it once and
+    then mostly leave it in the box where definitions live.
+  </p>
+
+  <div class="defn">
+    <span class="dt">Definition (we'll rarely need it again)</span>
+    <span class="dn">Field</span> &mdash; a number system where you can add, subtract, multiply, and divide by anything
+    except <code>0</code>, all obeying the familiar laws (distributivity included).
+    <p>The real numbers <code>&#8477;</code> are <em>the</em> field we grew up inside. The point of everything ahead is
+    that <code>&#8477;</code> is not the only one &mdash; and that some of its closest relatives are <em>not</em> fields at all.</p>
+  </div>
+
+  <p>
+    So the line is closed: addition forced, multiplication forced, no decisions left to make. That is exactly why
+    the next step is a jolt. We give each number a <em>second</em> coordinate &mdash; we step into the plane &mdash;
+    and addition comes along completely unchanged. But multiplication, for the first time, <strong>opens a choice.</strong>
+  </p>
+
+  <a class="next" href="number-planes.html">
+    <div class="nl">Next on the trail &middot; 2</div>
+    <div class="nt">Into the plane: where multiplication becomes a choice <span class="arr">&rarr;</span></div>
+    <div class="nd">Two coordinates, the same arrowhead addition &mdash; and one knob, <code>j&sup2; = ?</code>, that decides everything else.</div>
+  </a>
+
+  <div class="footer">
+    Part of the <a href="guides.html">animath guides</a>. This is page 1 of the Number&nbsp;Planes trail &mdash;
+    a single thread with sign-posted side-paths (like the tropical detour above) to wander when you're curious.
+  </div>
+
+</main>
+</body>
+</html>

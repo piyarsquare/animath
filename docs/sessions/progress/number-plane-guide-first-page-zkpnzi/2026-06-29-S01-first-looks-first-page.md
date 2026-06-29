@@ -6,12 +6,12 @@ title: Number Planes guide — "first looks" + what a first page should be
 branch: claude/number-plane-guide-first-page-zkpnzi
 slug: number-plane-guide-first-page-zkpnzi
 status: in-progress
-build: unknown
+build: passed
 followup: null
 pr: null
 app: docs, argand
 signals: needs-dan
-next: Hands-on discussion of "first looks" — settle what the reader sees first on the Number Planes page before changing the artifact.
+next: Get Dan's read on page 1 (number-planes-line.html); then build page 2 (into the plane — addition unchanged, j²=? the one choice).
 ---
 
 # Number Planes guide — "first looks" + what a first page should be
@@ -46,6 +46,45 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟢 code · 13:45 — Built page 1 of the trail: `public/number-planes-line.html` (the line)
+**Why:** Dan: "build the first page around the Real number line, addition and
+multiplication with the open aside to tropical numbers (where lives a postmark)
+and finishes with our familiar field over the real numbers (only in passing, or
+in boxes that keep definitions)."
+
+New standalone page in the `public/*-guide.html` family, reusing the shared skin
+layer (`guide-theme.css` + `guide-skin.js`) — a **reversible probe** that leaves
+the existing `number-planes.html` hub intact for later folding-in. Content, in
+order:
+
+- **It starts on a line** — a number is something you add *and* multiply; the
+  rules look like facts of nature but are *forced*, and the line is where we find
+  out by what.
+- **Addition is arrowheads** — tip-to-tail arrows (static SVG figure: `3+(−5)=−2`),
+  with the two seeds: addition is *undoable*, and it *won't change* in the plane.
+- **Multiplication is scale & flip** — SVG of `×(−1.5)` flipping `2`→`−3`; the
+  line's only "turn" is a 180° flip *because a line has two directions* (the bridge
+  to the plane's circle of directions).
+- **Why must (−)(−)=+** — the forcing derivation in a mono block; a **Definition**
+  box for *distributivity*; the punch that the line leaves *no* choices (plane
+  leaves one).
+- **Post-mark → tropical** — first instance of the signpost mechanic (dashed
+  `.postmark`): the rules are forced *only if you keep subtraction*; tropical
+  (min, +) is the give-up-subtraction world.
+- **Stretchable plant** — `.note`: invertible = "stretchable", on the line
+  `stretchable = nonzero`, flagged to crack far down the trail.
+- **The line, named once** — **Field** kept to a definition box; close sets up the
+  jolt: addition comes to the plane unchanged, multiplication opens a choice.
+  Forward `.next` card → "Into the plane" (temporarily linked to the existing hub).
+
+Prose-first; static SVG (no applets yet); plane-agnostic accent (no `j²` color —
+the choice hasn't happened). **Verified (R1):** `npm run build` green; headless
+full-page shots across **Observatory / Paper / Phosphor** + a **390px phone** —
+theming, figures, and wrapping all hold.
+
+![Page 1 — the line (Observatory)](assets/np1-line-dark.png)
+![Page 1 — the line (Paper)](assets/np1-line-light.png)
 
 ### 🟣 decision · 13:10 — Single thread + "post-marks", not a branching web; two-axes is *a* throughline, not *the* one
 **Why:** Dan: a story with multiple unfolding pathways is conceptually possible,
