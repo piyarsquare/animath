@@ -37,6 +37,17 @@ Tap anywhere on the Mandelbrot to choose `c`. Or draw a
 your curve. The scrubber on the side of the playback panel seeks along the
 path.
 
+Drag to pan, pinch or scroll to zoom either pane. Past about **10⁵× zoom** the
+plot pixelates — the GPU's 32-bit floats run out of digits, not the fractal out
+of detail. The **Precision** toggle (Iteration panel) switches to **Extended**
+(df64 emulated double precision), carrying ~twice the digits to push the zoom
+wall out roughly ten-million-fold; the full method and the limits of computing
+with finite bits are written up in the **Fractals** app's *Deep zoom* note.
+Deep zoom also needs more **iterations** to resolve the boundary, so
+**Auto-raise iterations with zoom** (Iteration panel, on by default) scales them
+up as you dive — otherwise a deep view reads as flat interior whatever the
+precision.
+
 ## Possible sources & where to go further
 
 Pointers for going deeper, not priority claims.

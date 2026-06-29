@@ -81,6 +81,28 @@ informs future rounds. Delete or check off items as they land.
   through the complex/dual/split-complex variants in Argand. Recategorized to
   general (not particular to any single app) and demoted from !high.
 
+- [ ] [trees-and-nets] !high Write the per-tab teaching explainers (document-first).
+  Trees and Nets is now a tabbed app of independent transforms (Matrix→Tree · Tree→Matrix
+  · Matrix→Net · Circular sums · Run); each tab ships only a STARTER explainer string.
+  Flesh each into a real teaching module (the agreed "explainer missions"). Tabs live in
+  `src/animations/TreesAndNets/tabs/`; the shared atom is a weighted split system. Handoff:
+  `docs/sessions/handoff/pensive-pasteur-ewpdqb/2026-06-25-S01-quantum-tree-port-scoping.md`.
+
+- [ ] [trees-and-nets] !med Add the two missing DAG cells: Tree→Net ("fatten") + Net→Matrix.
+  The transform DAG currently has D→T, T→D, D→N, D→v; the empty cells are T→N (fatten a tree
+  into a net — engine already built + tested in `lib/fattenTree.ts`) and N→D (read a net's
+  distances). Adding them closes the graph and is the natural place to make the "weighted
+  split system" atom a literal shared type instead of a conceptual one.
+
+- [ ] [trees-and-nets] !low Phone-verify the new Trees-and-Nets tabs (≤740px).
+  ValuePlot bars, CircleTour, EdgeSliders, and the per-tab matrices were only checked headless
+  at 1280×800. Confirm the phone re-chrome (stacked cards + dock) reads for each tab.
+
+- [ ] [trees-and-nets] !low Decide the fate of the dormant Fibers / associahedron code.
+  `lib/{associahedron,mosaic}.ts` are intact but unreferenced (`buildAssociahedron` has no
+  callers); the `DiskView`/`Graph3D` renderers live only in git `325afd8`. Either restore them
+  as a `tabs/FibersTab.tsx` or delete the dormant files. Dan 2026-06-26: "leave it parked."
+
 - [x] [docs] !high Productionize the signals/to-do system — teach agents to author it.
   DONE 2026-06-24 (repo-priorities-review). The authoring discipline is now enforced
   end-to-end: REPORT_STYLE.md + `_template-handoff.md` mark `signals:`/`next:`

@@ -31,8 +31,17 @@ iteration cap — is drawn solid.
 - **Power `k`** — the exponent in `zᵏ + c`. `k = 2` is the classic
   Mandelbrot; higher powers give `(k − 1)`-fold symmetry.
 - **Iterations** — how long we test each point before giving up. More
-  iterations resolve finer filaments but cost more time.
+  iterations resolve finer filaments but cost more time. Deep zoom needs *many*
+  more (escape times climb with depth), so **Auto-raise with zoom** (Iteration
+  panel, on by default) scales the count up as you dive — without it a deep view
+  reads as flat interior no matter the precision.
 - **Coloring mode** — escape velocity, limit magnitude, or a blend of both.
+- **Precision** (Viewport panel) — **Standard** is fast 32-bit float and
+  pixelates somewhere past ~10⁵× zoom; **Extended** carries ~twice the digits
+  (df64 emulated double precision) for deep zoom, at some speed cost. The
+  blockiness at deep zoom is the *computer* running out of numbers, not the
+  fractal running out of detail — see **Deep zoom, and the limits of
+  computation** below for why, and why the fix is legitimate.
 - **Click the fractal** to trace an **orbit**: the path
   `z₀ → z₁ → z₂ → …` for the point you clicked.
 
