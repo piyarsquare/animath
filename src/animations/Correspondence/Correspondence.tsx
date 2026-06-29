@@ -2,12 +2,23 @@ import { useState, useRef, useEffect } from 'react';
 import FractalPane, { Complex, ViewBounds } from './FractalPane';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
-import { Slider, Select, NumberInput, Pills } from '../../components/ControlPanel';
+import { Slider, Select, NumberInput, Pills, Checkbox } from '../../components/ControlPanel';
 import { Kicker } from '../../chrome/readouts';
 import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { PALETTE_OPTIONS, PALETTE_THEME, resolvePalette } from '../../lib/colormaps';
 import { useThemeId } from '../../chrome/skins';
+
+/** Hard ceiling on iterations (must match FractalPane's MAX_ITER). */
+const MAX_ITERATIONS = 4000;
+
+/** A reasonable iteration cap for a given zoom — deep zoom needs many more
+ *  iterations to resolve the boundary, otherwise it renders as flat interior
+ *  and the Extended-precision detail is invisible. Ramps with log2(zoom). */
+function suggestedIter(zoom: number): number {
+  const v = 100 + 110 * Math.max(0, Math.log2(Math.max(1, zoom)) - 2);
+  return Math.min(MAX_ITERATIONS, Math.max(100, Math.round(v / 10) * 10));
+}
 
 export default function Correspondence() {
   const baseView: ViewBounds = { xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 };
@@ -15,6 +26,7 @@ export default function Correspondence() {
   const [juliaView, setJuliaView] = useState<ViewBounds>({ xMin: -2, xMax: 2, yMin: -2, yMax: 2 });
   const [c, setC] = useState<Complex>({ real: -0.7, imag: 0.27015 });
   const [iter, setIter] = useState(100);
+  const [autoIter, setAutoIter] = useState(true);
   const [precision, setPrecision] = useState<'single' | 'double'>('single');
   const themeId = useThemeId();
   const [paletteM, setPaletteM] = useState(PALETTE_THEME);
@@ -35,6 +47,17 @@ export default function Correspondence() {
 
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { playingRef.current = playing; }, [playing]);
+
+  // Auto-raise iterations with the deeper pane's zoom (until manual override),
+  // so deep zoom shows detail instead of a flat interior.
+  useEffect(() => {
+    if (!autoIter) return;
+    const zoom = Math.max(
+      4 / (mandelView.xMax - mandelView.xMin),
+      4 / (juliaView.xMax - juliaView.xMin),
+    );
+    setIter(suggestedIter(zoom));
+  }, [mandelView, juliaView, autoIter]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
   // Tap-to-pick is always armed (CHROME-REVIEW PR D, user decision a): tap is
@@ -177,9 +200,10 @@ export default function Correspondence() {
   );
   const iterationNode = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <Checkbox label="Auto-raise iterations with zoom" checked={autoIter} onChange={setAutoIter} />
       <Slider label="Max iterations" value={iter}
-        min={10} max={1000} step={10}
-        onChange={(v) => setIter(Math.max(1, Math.round(v)))}
+        min={10} max={MAX_ITERATIONS} step={10}
+        onChange={(v) => { setAutoIter(false); setIter(Math.max(1, Math.round(v))); }}
         format={v => String(v)} />
       <Pills label="Precision"
         options={[
@@ -195,6 +219,10 @@ export default function Correspondence() {
         )}
         {precision === 'double' && <> — Extended (df64) precision, deep zoom.</>}
       </div>
+      <div className="am-hint">
+        {/* "scale key": the math-coordinate width of the deeper pane at this zoom. */}
+        Scale: {(() => { const w = 4 / deepZoom; return w >= 0.001 ? w.toFixed(4) : w.toExponential(2); })()} wide
+      </div>
     </div>
   );
 
@@ -202,7 +230,7 @@ export default function Correspondence() {
     { id: 'palettes', title: 'Palettes', arch: 'color', node: palettesNode, estHeight: 330 },
     { id: 'seed', title: 'Seed', arch: 'drive', node: seedNode, estHeight: 230 },
     { id: 'path', title: 'Path', arch: 'playback', node: pathNode, estHeight: 360 },
-    { id: 'iteration', title: 'Iteration', arch: 'quality', node: iterationNode, estHeight: 210 },
+    { id: 'iteration', title: 'Iteration', arch: 'quality', node: iterationNode, estHeight: 280 },
   ];
 
   const views: ViewDef[] = [

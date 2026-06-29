@@ -147,6 +147,19 @@ program lives inside.
   the limit of two stacked floats — the genuine edge of what this representation
   can compute.
 
+### Iterations matter as much as precision
+
+Precision decides whether two nearby points get *different* coordinates;
+**iterations** decide whether the escape-time computation runs long enough to
+*tell them apart*. Escape times climb steeply with depth — a point that needs 80
+steps to escape near the surface may need 2000 in a deep valley. With too few
+iterations, every deep point hits the cap and is painted as solid interior, so a
+deep view looks like a flat blank no matter how much precision you have. (This is
+why extended precision can look like it "does nothing" at depth — the bottleneck
+is the iteration budget, not the arithmetic.) The **Iteration** panel's
+**Auto-raise with zoom** does this for you, scaling the cap up as you dive;
+turn it off to set the count by hand.
+
 ## Possible sources & where to go further
 
 Pointers for going deeper, not priority claims.

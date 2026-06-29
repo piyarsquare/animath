@@ -25,6 +25,34 @@ function splitDouble(value: number): [number, number] {
   return [hi, value - hi];
 }
 
+/** Hard ceiling on iterations (must match the shader's MAX_ITER). */
+const MAX_ITERATIONS = 4000;
+
+/** A reasonable iteration cap for a given zoom factor. Deep zoom needs many
+ *  more iterations to resolve the boundary (escape times grow with depth), so
+ *  this ramps up with log2(zoom) — without it, a deep view renders as a flat
+ *  interior and the Extended-precision detail is invisible. */
+function suggestedIter(zoom: number): number {
+  const v = 100 + 110 * Math.max(0, Math.log2(Math.max(1, zoom)) - 2);
+  return Math.min(MAX_ITERATIONS, Math.max(100, Math.round(v / 10) * 10));
+}
+
+// TODO(deep-zoom): go past the df64 wall (~1e13-1e14x zoom, measured). Extended
+// (df64) carries ~14 digits, so neighboring pixels collapse to the same
+// coordinate beyond there (see DEEP_ZOOM.md "Extended has a wall too"). Two ways
+// deeper, in rough order of effort:
+//   1. Quad-float (4 stacked float32s, ~29 digits -> ~1e28x). Same compensated-
+//      arithmetic idea as df64, just more of it; ~4-10x slower. Self-contained.
+//   2. Perturbation + reference orbit -- the real fix, effectively unlimited
+//      depth. Compute ONE reference orbit Z_n at high precision on the CPU, then
+//      iterate only each pixel's deviation d from it on the GPU in plain float:
+//          d_{n+1} = 2*Z_n*d_n + d_n^2 + D       (D = pixel offset from reference)
+//      d stays tiny, so no per-pixel high precision is needed. Requires: a CPU
+//      reference orbit (bignum past ~1e15x), glitch detection (Pauldelbrot) +
+//      rebasing for pixels that diverge from the reference, and optionally
+//      series approximation to skip early iterations. The math is written up in
+//      DEEP_ZOOM.md; this is the architecturally interesting follow-up.
+
 const FORMULAS: Record<FractalType, string> = {
   mandelbrot: 'z_{n+1} = z_n^k + c',
   julia: 'z_{n+1} = z_n^k + c',
@@ -68,7 +96,7 @@ const fragmentShader = `
   uniform float offset;
   uniform int hp;          // 0 = single float32, 1 = extended (df64)
 
-  const int MAX_ITER = 1000;
+  const int MAX_ITER = 4000;
   const int MAX_POWER = 100;
 
   // ---- df64: an "extended" number is the unevaluated sum hi+lo of two float32s.
@@ -242,6 +270,11 @@ export default function FractalsGPU() {
    *  float (fast, pixelates past ~1e5× zoom); 'double' is df64 emulated double
    *  precision (≈14 digits, deep zoom — see DEEP_ZOOM.md), ~10× slower. */
   const [precision, setPrecision] = useState<'single' | 'double'>('single');
+  /** Auto-raise the iteration count as you zoom in. Deep zoom needs far more
+   *  iterations to resolve the boundary; with too few, everything reads as
+   *  interior (black) and any precision gain is invisible. The slider becomes a
+   *  manual override (dragging it turns Auto off). */
+  const [autoIter, setAutoIter] = useState(true);
 
   const normalizeView = useCallback((v: typeof view, canvas: HTMLCanvasElement) => {
     const aspect = canvas.width / canvas.height;
@@ -429,8 +462,16 @@ export default function FractalsGPU() {
     const canvas = rendererRef.current?.domElement;
     if (!canvas) return;
     setView(normalizeView(INITIAL_VIEW, canvas));
-    setIter(100);
+    setAutoIter(true);
   }, [normalizeView]);
+
+  // Auto-raise iterations with zoom (until the user takes manual control). This
+  // is what makes a deep zoom actually show detail instead of a flat interior.
+  useEffect(() => {
+    if (!autoIter) return;
+    const zoom = INITIAL_WIDTH / (view.xMax - view.xMin);
+    setIter(suggestedIter(zoom));
+  }, [view, autoIter]);
 
   useEffect(() => {
     if (animating) {
@@ -545,6 +586,12 @@ export default function FractalsGPU() {
   // value somewhere around 1e5×; df64 ("Extended") carries ~14 and pushes that
   // wall out by roughly 1e7×. See DEEP_ZOOM.md.
   const singleWall = zoom > 1e5;
+  // The "scale key": the real size of what's on screen at this zoom — the view's
+  // math-coordinate width, and the size one pixel covers.
+  const spanX = view.xMax - view.xMin;
+  const canvasW = rendererRef.current?.domElement?.clientWidth ?? 0;
+  const perPx = canvasW > 0 ? spanX / canvasW : 0;
+  const fmtScale = (v: number) => (v >= 0.001 ? v.toFixed(4) : v.toExponential(2));
   const viewportNode = (
     <>
       <button className="am-mini" style={{ width: '100%' }} onClick={reset}>
@@ -566,6 +613,9 @@ export default function FractalsGPU() {
           <> — past Standard precision; switch to <strong>Extended</strong> to keep resolving detail.</>
         )}
         {precision === 'double' && <> — Extended (df64) precision, deep zoom.</>}
+      </div>
+      <div className="am-hint">
+        Scale: {fmtScale(spanX)} wide{perPx > 0 && <> · {fmtScale(perPx)}/px</>}
       </div>
     </>
   );
@@ -609,14 +659,19 @@ export default function FractalsGPU() {
 
   const iterationNode = (
     <>
+      <Checkbox label="Auto-raise with zoom" checked={autoIter} onChange={setAutoIter} />
       <Slider label="Max iterations" value={iter}
-        min={10} max={1000} step={10}
-        onChange={(v) => setIter(Math.max(1, Math.round(v)))}
+        min={10} max={MAX_ITERATIONS} step={10}
+        onChange={(v) => { setAutoIter(false); setIter(Math.max(1, Math.round(v))); }}
         format={v => String(v)} />
       <Slider label="Start iteration" value={startIter}
         min={0} max={500} step={1}
         onChange={(v) => setStartIter(Math.max(0, Math.round(v)))}
         format={v => String(v)} />
+      <div className="am-hint">
+        Deep zoom needs more iterations to resolve the boundary — leave
+        <strong> Auto</strong> on, or raise this yourself.
+      </div>
     </>
   );
 
@@ -625,7 +680,7 @@ export default function FractalsGPU() {
     { id: 'viewport', title: 'Viewport', arch: 'domain', node: viewportNode, estHeight: 230 },
     { id: 'palette', title: 'Palette', arch: 'color', node: paletteNode, estHeight: 280 },
     { id: 'trace', title: 'Trace', arch: 'drive', node: traceNode, estHeight: 130 },
-    { id: 'iteration', title: 'Iteration', arch: 'quality', node: iterationNode, estHeight: 150 },
+    { id: 'iteration', title: 'Iteration', arch: 'quality', node: iterationNode, estHeight: 240 },
   ];
 
   const views: ViewDef[] = [

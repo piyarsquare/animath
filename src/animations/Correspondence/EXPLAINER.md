@@ -43,6 +43,10 @@ of detail. The **Precision** toggle (Iteration panel) switches to **Extended**
 (df64 emulated double precision), carrying ~twice the digits to push the zoom
 wall out roughly ten-million-fold; the full method and the limits of computing
 with finite bits are written up in the **Fractals** app's *Deep zoom* note.
+Deep zoom also needs more **iterations** to resolve the boundary, so
+**Auto-raise iterations with zoom** (Iteration panel, on by default) scales them
+up as you dive — otherwise a deep view reads as flat interior whatever the
+precision.
 
 ## Possible sources & where to go further
 
