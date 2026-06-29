@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Icon } from './icons';
-import { useSkin } from './skins';
+import { useSkin, useThemeModeId } from './skins';
 import { TopBar } from './TopBar';
 import { Preview } from './previews';
 import { CARDS, CATEGORIES } from './catalog';
@@ -15,6 +15,7 @@ import { rollHeroVerbs } from './heroVerbs';
 export default function Gallery() {
   const [cat, setCat] = useState<(typeof CATEGORIES)[number]>('All');
   const [skin] = useSkin();
+  const mode = useThemeModeId();
   const cards = CARDS.filter(c => cat === 'All' || c.cat === cat);
   // Randomized hero verbs — three drawn per load, the strangest one last.
   // Clicking the headline rerolls them (a quiet easter egg), cross-fading
@@ -58,7 +59,7 @@ export default function Gallery() {
         <div className="am-gal-grid">
           {cards.map(a => (
             <button key={a.id} className="am-gcard" onClick={() => { window.location.hash = '#' + a.hash; }}>
-              <div className="am-gcard-viz"><Preview kind={a.kind} skin={skin} hue={a.hue} /></div>
+              <div className="am-gcard-viz"><Preview kind={a.kind} skin={skin} mode={mode} hue={a.hue} /></div>
               <div className="am-gcard-body">
                 <div className="am-gcard-cat">{a.cat}</div>
                 <div className="am-gcard-name"><span className="am-gcard-glyph">{a.glyph}</span> {a.name}</div>

@@ -6,6 +6,7 @@ import type { SectionDef, ViewDef, LayoutDef } from '../../chrome/workspace/type
 import { Pills, Checkbox, Slider } from '../../components/ControlPanel';
 import { Kicker } from '../../chrome/readouts';
 import { usePersistentState } from '../../lib/usePersistentState';
+import { useThemeId, useThemeModeId } from '../../chrome/skins';
 import { buildAssociahedron, type Triangulation } from './lib/associahedron';
 import { neighborOrder, canonicalKey } from './lib/mosaic';
 import explainer from './EXPLAINER.md?raw';
@@ -14,8 +15,11 @@ const APP_ID = 'trees-and-nets';
 const dkey = (d: [number, number]) => `${d[0]},${d[1]}`;
 const sameOrder = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
-const C_FLIP = '#3fb6a6';   // associahedron (tree) move
-const C_CROSS = '#e08a3c';  // (n-3)-cube (order) move
+// The two move-type identities (theming v2) → discrete --data slots; used as
+// CSS/SVG values in the net + legend (var() resolves live). The 3D fibers need
+// numeric colors, resolved from the same tokens in the component (graph3dColors).
+const C_FLIP = 'var(--data-2)';   // associahedron (tree) move
+const C_CROSS = 'var(--data-5)';  // (n-3)-cube (order) move
 
 // one split key (min side, sorted values) of diagonal d under order ord
 function splitKey(d: [number, number], ord: number[], n: number): string {
@@ -113,7 +117,7 @@ function DiskView({
           return (
             <g key={`c${dkey(d)}`} style={{ cursor: 'pointer' }} onClick={() => onChord(d)}>
               <line x1={PX(d[0])} y1={PY(d[0])} x2={PX(d[1])} y2={PY(d[1])} stroke="transparent" strokeWidth={16} />
-              <line x1={PX(d[0])} y1={PY(d[0])} x2={PX(d[1])} y2={PY(d[1])} stroke={on ? '#ffd54a' : 'var(--fg, #9fb)'} strokeWidth={on ? 4 : 2.4} strokeOpacity={showTree ? 0.45 : 0.85} style={{ transition: 'stroke 300ms' }} />
+              <line x1={PX(d[0])} y1={PY(d[0])} x2={PX(d[1])} y2={PY(d[1])} stroke={on ? 'var(--accent)' : 'var(--fg, #9fb)'} strokeWidth={on ? 4 : 2.4} strokeOpacity={showTree ? 0.45 : 0.85} style={{ transition: 'stroke 300ms' }} />
             </g>
           );
         })}
@@ -123,7 +127,7 @@ function DiskView({
             {internal.map(({ d, a, b }) => { if (a == null || b == null) return null; const on = flash.has(dkey(d)); return (
               <g key={`i${dkey(d)}`} style={{ cursor: 'pointer' }} onClick={() => onChord(d)}>
                 <line x1={node[a][0]} y1={node[a][1]} x2={node[b][0]} y2={node[b][1]} stroke="transparent" strokeWidth={18} />
-                <line x1={node[a][0]} y1={node[a][1]} x2={node[b][0]} y2={node[b][1]} stroke={on ? '#ffd54a' : C_FLIP} strokeWidth={on ? 5 : 3.5} strokeLinecap="round" style={{ transition: 'stroke 300ms' }} />
+                <line x1={node[a][0]} y1={node[a][1]} x2={node[b][0]} y2={node[b][1]} stroke={on ? 'var(--accent)' : C_FLIP} strokeWidth={on ? 5 : 3.5} strokeLinecap="round" style={{ transition: 'stroke 300ms' }} />
               </g>
             ); })}
             {node.map((p, i) => (<circle key={`n${i}`} cx={p[0]} cy={p[1]} r={4.5} fill="var(--bg, #1b1e27)" stroke="var(--fg, #cdd)" strokeWidth={1.5} />))}
@@ -142,11 +146,11 @@ function DiskView({
 // marker; color fades with graph-distance from current up to `radius`.
 // =========================================================================
 function Graph3D({
-  positions, edges, adjacency, currentRef, radiusRef, accent, onPick, spinRef,
+  positions, edges, adjacency, currentRef, radiusRef, accent, nodeColor, edgeColor, onPick, spinRef,
 }: {
   positions: THREE.Vector3[]; edges: [number, number][]; adjacency: number[][];
   currentRef: React.MutableRefObject<number>; radiusRef: React.MutableRefObject<number>;
-  accent: number; onPick: (i: number) => void; spinRef: React.MutableRefObject<boolean>;
+  accent: number; nodeColor: number; edgeColor: number; onPick: (i: number) => void; spinRef: React.MutableRefObject<boolean>;
 }) {
   const onPickRef = useRef(onPick); onPickRef.current = onPick;
   const onMount = useCallback(({ scene, camera, renderer }: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => {
@@ -159,12 +163,12 @@ function Graph3D({
     const ep: number[] = [];
     for (const [i, j] of edges) ep.push(positions[i].x, positions[i].y, positions[i].z, positions[j].x, positions[j].y, positions[j].z);
     const eg = new THREE.BufferGeometry(); eg.setAttribute('position', new THREE.Float32BufferAttribute(ep, 3)); disposables.push(eg);
-    const em = new THREE.LineBasicMaterial({ color: 0x9aa3b6, transparent: true, opacity: 0.45 }); disposables.push(em);
+    const em = new THREE.LineBasicMaterial({ color: edgeColor, transparent: true, opacity: 0.45 }); disposables.push(em);
     group.add(new THREE.LineSegments(eg, em));
 
     const sg = new THREE.SphereGeometry(0.13, 16, 12); disposables.push(sg);
     const spheres: THREE.Mesh[] = [];
-    positions.forEach((p, i) => { const m = new THREE.MeshStandardMaterial({ color: 0x6b7790, roughness: 0.5 }); disposables.push(m); const mesh = new THREE.Mesh(sg, m); mesh.position.copy(p); mesh.userData.index = i; group.add(mesh); spheres.push(mesh); });
+    positions.forEach((p, i) => { const m = new THREE.MeshStandardMaterial({ color: nodeColor, roughness: 0.5 }); disposables.push(m); const mesh = new THREE.Mesh(sg, m); mesh.position.copy(p); mesh.userData.index = i; group.add(mesh); spheres.push(mesh); });
 
     const mg = new THREE.SphereGeometry(0.22, 20, 16); disposables.push(mg);
     const mm = new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 0.5, roughness: 0.3 }); disposables.push(mm);
@@ -184,6 +188,7 @@ function Graph3D({
     el.addEventListener('pointerdown', down); el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('click', click as EventListener); el.addEventListener('wheel', wheel, { passive: false });
 
     const accentCol = new THREE.Color(accent);
+    const nodeCol = new THREE.Color(nodeColor);
     let raf = 0;
     const animate = () => {
       if (!dragging && spinRef.current) group.rotation.y += 0.0018;
@@ -193,7 +198,7 @@ function Graph3D({
       spheres.forEach((m, i) => {
         const mat = m.material as THREE.MeshStandardMaterial; const d = dist[i] ?? Infinity;
         if (i === cu) { m.visible = true; mat.color.copy(accentCol); m.scale.setScalar(0.1); }
-        else if (d <= rad) { m.visible = true; const f = 1 - (d - 1) / Math.max(rad, 1) * 0.6; mat.color.copy(accentCol).multiplyScalar(0.45 * f).addScalar(0); mat.color.lerp(new THREE.Color(0x6b7790), 1 - f); m.scale.setScalar(d === 1 ? 1.3 : 1); }
+        else if (d <= rad) { m.visible = true; const f = 1 - (d - 1) / Math.max(rad, 1) * 0.6; mat.color.copy(accentCol).multiplyScalar(0.45 * f).addScalar(0); mat.color.lerp(nodeCol, 1 - f); m.scale.setScalar(d === 1 ? 1.3 : 1); }
         else { m.visible = false; }
       });
       const target = positions[cu] ?? marker.position; marker.position.lerp(target, 0.18);
@@ -217,6 +222,17 @@ function embed(pts: number[][]): THREE.Vector3[] {
 
 // =========================================================================
 export default function TreesAndNets(): JSX.Element {
+  // 3D fiber colors resolved from the theme tokens (the SVG/legend use the
+  // var()-valued C_FLIP/C_CROSS directly). Recomputed + re-keyed on a skin change
+  // so the fibers rebuild in the new colors.
+  const themeId = useThemeId();
+  const themeMode = useThemeModeId();   // SVG/3D aren't force-dark → track mode too
+  const g3 = useMemo(() => {
+    const cs = getComputedStyle(document.documentElement);
+    const num = (name: string, f: number) => { const v = cs.getPropertyValue(name).trim(); return v ? new THREE.Color(v).getHex() : f; };
+    return { flip: num('--data-2', 0x3fb6a6), cross: num('--data-5', 0xe08a3c), node: num('--dim-2', 0x6b7790), edge: num('--dim', 0x9aa3b6) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themeId, themeMode]);
   const [n, setN] = usePersistentState<number>(`${APP_ID}:n`, 5);
   const [mode, setMode] = usePersistentState<'flip' | 'cross'>(`${APP_ID}:mode`, 'flip');
   const [showPoly, setShowPoly] = usePersistentState<boolean>(`${APP_ID}:poly`, true);
@@ -334,8 +350,8 @@ export default function TreesAndNets(): JSX.Element {
     { id: 'tree', title: 'Tree (circular order)', defaultRect: { x: 332, y: 16, w: 380, h: 380 }, node: <DiskView n={n} order={order} tri={tri} flash={flash} showTree showPolygon={false} onChord={onChord} /> },
     { id: 'polygon', title: 'Polygon + triangulation', defaultRect: { x: 332, y: 408, w: 380, h: 380 }, node: <DiskView n={n} order={order} tri={tri} flash={flash} showTree={false} showPolygon onChord={onChord} /> },
     { id: 'overlay', title: 'Overlay (tree + triangulation)', defaultRect: { x: 728, y: 408, w: 380, h: 380 }, node: <DiskView n={n} order={order} tri={tri} flash={flash} showTree showPolygon={showPoly} onChord={onChord} /> },
-    { id: 'assoc', title: `Associahedron fiber — trees | order`, defaultRect: { x: 728, y: 16, w: 360, h: 380 }, node: <Graph3D key={`a-${n}`} positions={assocPositions} edges={assoc.edges} adjacency={adjacency} currentRef={assocCurRef} radiusRef={radiusRef} accent={0x3fb6a6} onPick={pickTree} spinRef={spinRef} /> },
-    { id: 'cube', title: `(n−3)-cube fiber — orders | tree`, defaultRect: { x: 1104, y: 16, w: 360, h: 380 }, node: <Graph3D key={`q-${treeKey}-${n}`} positions={cube.positions} edges={cube.edges} adjacency={cube.adj} currentRef={cubeCurRef} radiusRef={radiusRef} accent={0xe08a3c} onPick={pickCube} spinRef={spinRef} /> },
+    { id: 'assoc', title: `Associahedron fiber — trees | order`, defaultRect: { x: 728, y: 16, w: 360, h: 380 }, node: <Graph3D key={`a-${n}-${themeId}-${themeMode}`} positions={assocPositions} edges={assoc.edges} adjacency={adjacency} currentRef={assocCurRef} radiusRef={radiusRef} accent={g3.flip} nodeColor={g3.node} edgeColor={g3.edge} onPick={pickTree} spinRef={spinRef} /> },
+    { id: 'cube', title: `(n−3)-cube fiber — orders | tree`, defaultRect: { x: 1104, y: 16, w: 360, h: 380 }, node: <Graph3D key={`q-${treeKey}-${n}-${themeId}-${themeMode}`} positions={cube.positions} edges={cube.edges} adjacency={cube.adj} currentRef={cubeCurRef} radiusRef={radiusRef} accent={g3.cross} nodeColor={g3.node} edgeColor={g3.edge} onPick={pickCube} spinRef={spinRef} /> },
   ];
 
   const layouts: LayoutDef[] = [

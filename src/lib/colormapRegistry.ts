@@ -86,6 +86,59 @@ export function gradientCss(id: string, reverse = false): string {
   return `linear-gradient(90deg, ${s.join(',')})`;
 }
 
+/** Parse a #rgb/#rrggbb hex to [r,g,b] (0–255); returns black on a bad string.
+ *  Exported for canvas engines that need numeric channels (e.g. ImageData). */
+export function hexToRgb(hex: string): [number, number, number] {
+  let h = hex.trim().replace('#', '');
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  const n = parseInt(h, 16);
+  if (h.length !== 6 || Number.isNaN(n)) return [0, 0, 0];
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const c = (v: number) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  return `#${c(r)}${c(g)}${c(b)}`;
+}
+
+/**
+ * Interpolate an arbitrary list of hex anchors at `t` ∈ [0,1] — like
+ * {@link sampleContinuous} but for ad-hoc stops built from live theme tokens
+ * (e.g. a `[--danger, neutral, --success]` outcome ramp). `t` is clamped; returns
+ * a #rrggbb string. A single stop returns itself; an empty list returns black.
+ */
+export function lerpStops(stops: string[], t: number): string {
+  if (stops.length === 0) return '#000000';
+  if (stops.length === 1) return stops[0];
+  const x = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0)) * (stops.length - 1);
+  const i = Math.floor(x);
+  const f = x - i;
+  if (i >= stops.length - 1) return stops[stops.length - 1];
+  const a = hexToRgb(stops[i]);
+  const b = hexToRgb(stops[i + 1]);
+  return rgbToHex(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f);
+}
+
+/**
+ * Sample a map **continuously** at `t` ∈ [0,1], linearly interpolating between the
+ * two surrounding anchors — for smooth scalar encodings (an outcome ramped by
+ * goodness, a chaos gradient) where nearest-anchor banding would be visible. For
+ * the discrete family there is nothing to interpolate, so it falls back to the
+ * nearest token. `t` is clamped. Returns a #rrggbb string.
+ */
+export function sampleContinuous(id: string, t: number): string {
+  const s = mapStops(id);
+  if (s.length === 0) return '#000000';
+  if (id === 'discrete') return s[Math.round(Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0)) * (s.length - 1))];
+  const x = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0)) * (s.length - 1);
+  const i = Math.floor(x);
+  const f = x - i;
+  if (i >= s.length - 1) return s[s.length - 1];
+  const a = hexToRgb(s[i]);
+  const b = hexToRgb(s[i + 1]);
+  return rgbToHex(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f);
+}
+
 /**
  * Sample a map to a flat array of `n` hex colors by nearest-anchor lookup —
  * enough for legends/swatches and for bucketing data into N classes (the common

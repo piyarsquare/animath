@@ -4,6 +4,27 @@ import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { usePhone } from '../../chrome/usePhone';
+import { useThemeId, useThemeModeId, resolveScheme } from '../../chrome/skins';
+import { setRoomPalette, type RoomPalette } from './decor/rooms';
+
+/** Read the room decor's theme palette from the live tokens (theming v2): walls
+ *  keep their X-warm/Y-green/Z-blue cue but in the data hues (blended toward a
+ *  neutral so they stay faint); wood/stone/metal → neutrals; frame + knobs →
+ *  accent; book spines → the data palette; the Klein ornament → counter-accent.
+ *  Emissive light/fire stays physically warm (handled in rooms.ts). */
+function readRoomPalette(): RoomPalette {
+  const cs = getComputedStyle(document.documentElement);
+  const C = (n: string, f: number) => { const v = cs.getPropertyValue(n).trim(); return v ? new THREE.Color(v).getHex() : f; };
+  const mix = (a: number, b: number, t: number) => new THREE.Color(a).lerp(new THREE.Color(b), t).getHex();
+  const d = (k: number, f: number) => C(`--data-${k}`, f);
+  const dim = C('--dim', 0x9a9088), dim2 = C('--dim-2', 0x4a3320), fg = C('--fg', 0xeee3c0), bg = C('--viz-bg', 0x171210);
+  return {
+    wallX: mix(d(5, 0x6f5a54), dim2, 0.5), wallY: mix(d(3, 0x566b5d), dim2, 0.5), wallZ: mix(d(1, 0x556071), dim2, 0.5),
+    wood: dim2, woodDark: mix(dim2, 0x000000, 0.35), stone: dim, darkBack: mix(bg, 0x000000, 0.3),
+    gold: C('--accent', 0xb0904a), metal: dim, candle: fg, pot: d(5, 0x9a5a3e), leaf: d(3, 0x3f7d44), klein: C('--accent-2', 0x9fd9e6),
+    books: [d(1, 0x9c3b34), d(2, 0x3a6ea5), d(3, 0x4f8a4f), d(4, 0xb0904a), d(6, 0x6b4a8a), d(7, 0x7a5a3a)],
+  };
+}
 import { Slider, Select, Pills, Checkbox } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { SOLID_WORLDS, DEFAULT_WORLD_ID, worldById } from './worlds';
@@ -56,7 +77,15 @@ export default function SolidWorlds() {
   const [showLabels, setShowLabels] = usePersistentState(pk('labels'), false);
   const [showCorners, setShowCorners] = usePersistentState(pk('corners'), false);
   const [showSeams, setShowSeams] = usePersistentState(pk('seams'), true);
-  const [look, setLook] = usePersistentState(pk('look'), 'daytime');
+  // 'auto' ties the sky/lighting to the theme's light/dark mode (theming v2: the
+  // mode IS the time of day). Light → daytime, dark → moonlit; a specific look
+  // still overrides.
+  const [look, setLook] = usePersistentState(pk('look'), 'auto');
+  const themeId = useThemeId();
+  const themeMode = useThemeModeId();
+  const resolvedLook = look === 'auto'
+    ? (resolveScheme(themeId, themeMode) === 'light' ? 'daytime' : 'moonlit')
+    : look;
 
   const spec = worldById(worldId);
   const analysis = useMemo(() => analyzeSolid(spec), [spec]);
@@ -85,7 +114,7 @@ export default function SolidWorlds() {
   const labelsRef = useRef(showLabels);
   const cornersRef = useRef(showCorners);
   const seamsRef = useRef(showSeams);
-  const lookRef = useRef(look);
+  const lookRef = useRef(resolvedLook);
   const decorRef = useRef(decorMode);
 
   const setKey = useCallback((k: MoveKey, v: boolean) => { keysRef.current[k] = v; }, []);
@@ -95,6 +124,7 @@ export default function SolidWorlds() {
   }) => {
     const deps: EngineDeps3 = { scene, camera, renderer };
     depsRef.current = deps;
+    setRoomPalette(readRoomPalette());   // theme the decor before the cover builds
     engineRef.current = makeCoverEngine(deps, worldRef.current, {
       roomSize: sizeRef.current, coverDepth: depthRef.current,
       cameraDistance: camDistRef.current, lookId: lookRef.current,
@@ -145,12 +175,21 @@ export default function SolidWorlds() {
   // the engine (children-first effect order) with the boot pose applied — rebuilding
   // here would be redundant AND would discard a debug-pose deep link's x/y/z position.
   const skipFirstRebuild = useRef(true);
+  const prevSpecRef = useRef(spec);
   useEffect(() => {
+    const worldChanged = prevSpecRef.current !== spec;
+    prevSpecRef.current = spec;
     worldRef.current = spec;
     const deps = depsRef.current;
     if (!deps || !engineRef.current) return;
     if (skipFirstRebuild.current) { skipFirstRebuild.current = false; return; }
+    // This effect also fires for a theme/mode switch (same world, recolored decor).
+    // In that case keep the walker where it stands — capture the cube position before
+    // disposing and restore it after the rebuild — so changing skins doesn't teleport
+    // you to center. A genuine world change still drops the walker fresh.
+    const keepPose = worldChanged ? null : engineRef.current.getMapState();
     engineRef.current.dispose();
+    setRoomPalette(readRoomPalette());   // re-theme the decor on a world/skin change
     engineRef.current = makeCoverEngine(deps, spec, {
       roomSize: sizeRef.current, coverDepth: depthRef.current,
       cameraDistance: camDistRef.current, lookId: lookRef.current,
@@ -159,7 +198,8 @@ export default function SolidWorlds() {
       showSeams: seamsRef.current, decorMode: decorRef.current,
     });
     engineRef.current.setTrailEnabled(trailRef.current);
-  }, [spec]);
+    if (keepPose) engineRef.current.setPose({ u: keepPose.u, v: keepPose.v, w: keepPose.w });
+  }, [spec, themeId, themeMode]);
 
   useEffect(() => { speedRef.current = moveSpeed; }, [moveSpeed]);
   useEffect(() => { thirdRef.current = thirdPerson; }, [thirdPerson]);
@@ -175,7 +215,7 @@ export default function SolidWorlds() {
   useEffect(() => { labelsRef.current = showLabels; engineRef.current?.setLabels(showLabels); }, [showLabels]);
   useEffect(() => { cornersRef.current = showCorners; engineRef.current?.setCorners(showCorners); }, [showCorners]);
   useEffect(() => { seamsRef.current = showSeams; engineRef.current?.setSeams(showSeams); }, [showSeams]);
-  useEffect(() => { lookRef.current = look; engineRef.current?.setLook(look); }, [look]);
+  useEffect(() => { lookRef.current = resolvedLook; engineRef.current?.setLook(resolvedLook); }, [resolvedLook]);
   useEffect(() => { decorRef.current = decorMode; engineRef.current?.setDecorMode(decorMode); }, [decorMode]);
 
   useEffect(() => {
@@ -333,7 +373,7 @@ export default function SolidWorlds() {
         value={decorMode}
         onChange={(v) => setDecorMode(v as DecorMode)}
       />
-      <Select label="Look" options={LOOKS.map((l) => ({ value: l.id, label: l.label }))} value={look} onChange={setLook} />
+      <Select label="Look" options={[{ value: 'auto', label: 'Auto (day / night by mode)' }, ...LOOKS.map((l) => ({ value: l.id, label: l.label }))]} value={look} onChange={setLook} />
       {thirdPerson && (
         <Slider label="Camera distance" value={camDistance} min={CAM_MIN} max={CAM_MAX} step={0.5} onChange={setCamDistance} format={(v) => v.toFixed(1)} />
       )}
@@ -411,10 +451,16 @@ export default function SolidWorlds() {
           <MovePad onSet={setKey} phone={phone} />
           {!phone && (
             <div style={{
-              position: 'absolute', top: 12, left: 0, right: 0, textAlign: 'center',
-              color: 'rgba(255,255,255,0.6)', fontSize: 12, pointerEvents: 'none', textShadow: '0 1px 2px #000',
+              position: 'absolute', top: 12, left: 0, right: 0, display: 'flex', justifyContent: 'center',
+              pointerEvents: 'none',
             }}>
-              Drag to look · WASD / arrows fly · walk the x-loop in Klein × Circle to come back mirrored
+              <div style={{
+                background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 999,
+                padding: '4px 12px', color: 'var(--dim)', fontSize: 12, backdropFilter: 'blur(6px)',
+                boxShadow: 'var(--shadow-1)',
+              }}>
+                Drag to look · WASD / arrows fly · walk the x-loop in Klein × Circle to come back mirrored
+              </div>
             </div>
           )}
         </div>
@@ -453,10 +499,12 @@ const LAYOUTS: LayoutDef[] = [
 /** The three holonomy states a loop can leave you in. A rotation (det +1) is
  *  cosmetic — you can turn your body to undo it; a reflection (det −1) is the
  *  real invariant — no reorientation fixes it. */
+// The three holonomy states map to discrete --data identities, matching the cube
+// diagram's edge legend (translation=blue · rotation=amber · glide-reflection=pink).
 function handedness(c: ChiralityState): { label: string; color: string } {
-  if (c.loopSign === -1) return { label: 'MIRRORED', color: '#ff5aa6' };
-  if (c.rotationDeg > 5) return { label: `ROTATED ${Math.round(c.rotationDeg)}°`, color: '#ffcf5a' };
-  return { label: 'ORIGINAL', color: '#5ad1ff' };
+  if (c.loopSign === -1) return { label: 'MIRRORED', color: 'var(--data-6)' };
+  if (c.rotationDeg > 5) return { label: `ROTATED ${Math.round(c.rotationDeg)}°`, color: 'var(--data-4)' };
+  return { label: 'ORIGINAL', color: 'var(--data-1)' };
 }
 
 /** The live handedness HUD, overlaid on the canvas — the headline instrument. */
@@ -481,13 +529,13 @@ function ChiralityHUD({ get, phone }: { get: () => ChiralityState | null; phone?
   return (
     <div style={{
       position: 'absolute', top: phone ? 52 : 12, left: 12, pointerEvents: 'none',
-      padding: '8px 12px', borderRadius: 8, background: 'rgba(8,10,18,0.6)',
-      border: '1px solid rgba(255,255,255,0.16)', boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
-      backdropFilter: 'blur(6px)', fontFamily: 'system-ui, sans-serif',
+      padding: '8px 12px', borderRadius: 8, background: 'var(--panel)',
+      border: '1px solid var(--border)', boxShadow: 'var(--shadow-2)',
+      backdropFilter: 'blur(6px)', fontFamily: 'var(--font-ui)',
     }}>
-      <div style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)' }}>Handedness</div>
-      <span ref={tagRef} style={{ fontSize: 20, fontWeight: 800, color: '#5ad1ff' }}>ORIGINAL</span>
-      <div ref={subRef} style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>loops · x 0 · y 0 · z 0</div>
+      <div style={{ fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--dim)' }}>Handedness</div>
+      <span ref={tagRef} style={{ fontSize: 20, fontWeight: 800, color: 'var(--data-1)' }}>ORIGINAL</span>
+      <div ref={subRef} style={{ fontSize: 11, color: 'var(--dim)', marginTop: 2 }}>loops · x 0 · y 0 · z 0</div>
     </div>
   );
 }
@@ -503,7 +551,7 @@ function ChiralityReadout({ get }: { get: () => ChiralityState | null }) {
         const mirrored = c.loopSign === -1;
         const rot = c.rotationDeg > 5 ? `, rotated ${Math.round(c.rotationDeg)}°` : '';
         ref.current.textContent = `Handedness: ${mirrored ? 'MIRRORED' : 'original'}${mirrored ? '' : rot} · per-step det = +1 (no local flip)`;
-        ref.current.style.color = mirrored ? '#ff5aa6' : 'var(--cp-fg)';
+        ref.current.style.color = mirrored ? 'var(--data-6)' : 'var(--cp-fg)';
       }
       raf = requestAnimationFrame(loop);
     };
@@ -546,6 +594,19 @@ function SolidMiniMap({ get, perAxis, phone }: { get: () => SolidMapState | null
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const perAxisRef = useRef(perAxis);
   perAxisRef.current = perAxis;
+  // Edge/walker colors track the theme (pairing kinds → discrete --data, matching
+  // the Handedness HUD). The Worlds aren't force-dark, so track mode too.
+  const themeId = useThemeId();
+  const themeMode = useThemeModeId();
+  const palRef = useRef<Record<string, string>>({});
+  useEffect(() => {
+    const cs = getComputedStyle(document.documentElement);
+    const g = (n: string, f: string) => cs.getPropertyValue(n).trim() || f;
+    palRef.current = {
+      translation: g('--data-1', '#7fa8d8'), rotation: g('--data-4', '#ffcf5a'), 'glide-reflection': g('--data-6', '#ff5aa6'),
+      fg: g('--fg', '#ffffff'), orig: g('--data-1', '#5ad1ff'), mirror: g('--data-6', '#ff5aa6'),
+    };
+  }, [themeId, themeMode]);
   useEffect(() => {
     const cvs = canvasRef.current; if (!cvs) return;
     const ctx = cvs.getContext('2d'); if (!ctx) return;
@@ -560,7 +621,7 @@ function SolidMiniMap({ get, perAxis, phone }: { get: () => SolidMapState | null
       ctx.lineWidth = 1.6;
       for (const [a, b] of CUBE_EDGES) {
         const kind = perAxisRef.current[edgeAxis(a, b)]?.kind ?? 'translation';
-        ctx.strokeStyle = AXIS_COLOR[kind];
+        ctx.strokeStyle = palRef.current[kind] ?? AXIS_COLOR[kind];
         const p = isoProject(...CUBE_CORNERS[a], cx, cy, s);
         const q = isoProject(...CUBE_CORNERS[b], cx, cy, s);
         ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
@@ -569,10 +630,10 @@ function SolidMiniMap({ get, perAxis, phone }: { get: () => SolidMapState | null
         const dot = isoProject(st.u, st.v, st.w, cx, cy, s);
         // heading arrow
         const end = isoProject(st.u + st.fwd[0] * 0.6, st.v + st.fwd[1] * 0.6, st.w + st.fwd[2] * 0.6, cx, cy, s);
-        ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.6;
+        ctx.strokeStyle = palRef.current.fg ?? 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.6;
         ctx.beginPath(); ctx.moveTo(dot[0], dot[1]); ctx.lineTo(end[0], end[1]); ctx.stroke();
-        // the walker — pink when mirror-reversed, cyan otherwise
-        ctx.fillStyle = st.mirrored ? '#ff5aa6' : '#5ad1ff';
+        // the walker — counter-accent when mirror-reversed, identity-1 otherwise
+        ctx.fillStyle = st.mirrored ? (palRef.current.mirror ?? '#ff5aa6') : (palRef.current.orig ?? '#5ad1ff');
         ctx.beginPath(); ctx.arc(dot[0], dot[1], 4, 0, 7); ctx.fill();
         ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1; ctx.stroke();
       }
@@ -585,14 +646,14 @@ function SolidMiniMap({ get, perAxis, phone }: { get: () => SolidMapState | null
   return (
     <div style={{
       position: 'absolute', top: phone ? 52 : 12, right: phone ? 8 : 12, width: box, height: box,
-      pointerEvents: 'none', borderRadius: 8, background: 'rgba(8,10,18,0.55)',
-      border: '1px solid rgba(255,255,255,0.16)', boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
+      pointerEvents: 'none', borderRadius: 8, background: 'var(--panel)',
+      border: '1px solid var(--border)', boxShadow: 'var(--shadow-2)',
       backdropFilter: 'blur(6px)', overflow: 'hidden',
     }}>
       <canvas ref={canvasRef} style={{ width: box, height: box, display: 'block' }} />
       <div style={{
         position: 'absolute', top: 4, left: 8, fontSize: 9, letterSpacing: '0.1em',
-        color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase',
+        color: 'var(--dim)', textTransform: 'uppercase',
       }}>Cube</div>
     </div>
   );
@@ -620,11 +681,14 @@ function MovePad({ onSet, phone }: { onSet: (k: MoveKey, v: boolean) => void; ph
 }
 
 function padBtn(style: React.CSSProperties): React.CSSProperties {
+  // Floating walk-pad over the 3D scene: chrome tracks the theme like the other
+  // workspace panels (panel bg / border / fg), so a skin or mode switch restyles it.
   return {
     position: 'absolute', width: 46, height: 46, ...style,
-    borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)',
-    background: 'rgba(12,12,16,0.6)', color: '#f0f0f3', fontSize: 18,
+    borderRadius: 8, border: '1px solid var(--border)',
+    background: 'var(--panel)', color: 'var(--fg)', fontSize: 18,
     backdropFilter: 'blur(6px)', cursor: 'pointer', touchAction: 'none',
+    boxShadow: 'var(--shadow-1)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   };
 }
