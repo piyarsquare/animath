@@ -1,53 +1,82 @@
 # Trees and Nets
 
-A point here is a **tree** together with a **cyclic order** of its leaves. Several
-windows show it, and you can open whichever you like:
+Start from distances between n leaves and watch them become a **tree** and a
+**net**. The top bar has four modes — **Build** (the default), **Nets**, **Run**,
+and **Fibers**.
 
-- **Tree** — the actual unrooted tree, leaves around the circle in cyclic order.
-- **Polygon + triangulation** — the same point as a triangulated polygon (a tree is
-  dual to a triangulation of an n‑gon).
-- **Overlay** — both at once (the "single object" view).
+## Fatten a tree into a net (*Build* — the default)
 
-Every tree has **n−3 interior edges**, and each edge gives two moves (toggle with
-**Flip / Cross**, or click a node in a fiber window):
+A tree is a net in disguise: with the leaves in a fixed cyclic order, every tree
+edge is a non-crossing **split**. Start from a balanced **tree** (choose the leaf
+count and the branch / leaf lengths), then **fatten** an internal edge — that adds
+the *crossing* split beside it, which opens a **box**. Fatten a few edges and the
+tree becomes a genuine net (a circular-decomposable metric). You see the result
+three ways at once:
 
-- **Flip** — keep the order, swap that edge. The *tree* changes. This is a step in
-  the **associahedron**.
-- **Cross** — keep the tree, reverse the leaves on that edge's arc. The *order*
-  changes (the tree re‑embeds). This is a step in the **(n−3)‑cube**.
+- **Neighbor-Joining tree** — the dominant tree (its edges *are* the splits).
+- **Split network (SplitsTree)** — the net, with a box wherever you fattened.
+- **Generated distances** — the matrix the weights imply (each distance is the sum
+  of the weights of the splits that separate that pair).
 
-## The two fibers
+## From a distance table (*Nets*)
 
-Through every point run two fibers, shown as embedded graphs:
+Switch to **Nets** to work the other way: edit any cell of the **Distances**
+matrix and everything recomputes — the Neighbor-Joining tree, the split network
+(the net), and the **split weights**. Each chord is a split whose weight is fit to
+the distances; a tree-like metric gives non-crossing chords, a conflicted metric
+gives **crossing chords** — the signature of structure no single tree can hold.
+Try the presets: **Tree** (clean and nested), **Conflict** (net-like), **Star**
+(no structure at all), **Cycle** (leaves evenly around a circle).
 
-- **Associahedron fiber** — all trees compatible with the *current order* (vary the
-  tree by flips). For n=6 this is the 3‑D associahedron.
-- **(n−3)‑cube fiber** — all orders compatible with the *current tree* (vary the
-  order by crosses). It really is a cube: 2^(n−3) orders, each edge toggling one
-  interior edge's twist.
+## Watch the algorithms run (*Run*)
 
-Your position glides as a marker in each. The **neighborhood radius** controls how
-far out from where you stand the fiber is drawn.
+**Run** plays Neighbor-Joining and NeighborNet **step by step** on the current
+matrix, so you can see *why* each pair is joined — not just the result. The **Q
+matrix** scores every pair by how cheap it is to join them, and the minimum
+(outlined) is the one chosen. NeighborNet locks in the circular order one
+adjacency per merge: once a block grows past size two its orientation is fixed,
+and from then on it can only flip **as a whole**.
+
+## Trees, orders, and the associahedron (*Fibers*)
+
+Switch to **Fibers** for the geometry of tree-space itself.
+Fix a circular order of the leaves around a polygon; the trees compatible with it
+are the **triangulations** of that polygon, and flipping one diagonal steps to a
+neighbor. That set of trees-with-flips is the **associahedron**. Hold a tree
+fixed instead and vary the order, and you trace an **(n−3)-cube**. The two
+windows show these two **fibers** through the current (tree, order) point; click
+**Flip** to change the tree, **Cross** to change the order.
+
+(This abstract tree-space view used to be the whole app; it is now one lens
+beside the data-driven trees and nets.)
 
 ## Possible sources & where to go further
 
-Pointers for going deeper, not priority claims.
+Pointers for going deeper, not priority claims. The project this ports from (a
+private `quantum-tree`) frames phylogenetics as **evidence assembly**: distances
+→ scores/energies → an *optional* probability law, never collapsing to a
+distribution too early.
 
-- **The associahedron** — the polytope whose vertices are triangulations of an
-  n-gon and whose edges are flips — is **Stasheff's** associahedron (originally
-  from homotopy theory, 1963); the polytope realization on triangulations is
-  classical, and **Loday's** explicit coordinates are one well-known realization.
-- **The secondary polytope** (the symmetric realization used here) is due to
-  **Gelfand, Kapranov & Zelevinsky** (the *GKZ* secondary polytope of a point
-  configuration); the associahedron is the secondary polytope of a convex polygon.
-- **Trees ↔ triangulations duality** and **flip graphs** are standard combinatorics
-  (see e.g. Devadoss & O'Rourke, *Discrete and Computational Geometry*).
-- **The mosaic / cyclic-order structure** — gluing associahedron tiles into the
-  real moduli space M̄₀,ₙ(ℝ) — follows **Satyan Devadoss's** *mosaic operad* work
-  on the real points of the moduli space of marked curves.
-- **Where the "Nets" half is headed** — distance matrices to split networks
-  (NeighborNet, neighbor-joining) is phylogenetics: **Bryant & Moulton** (NeighborNet),
-  **Saitou & Nei** (neighbor-joining), and the split-network framework of
-  **Bandelt & Dress**.
-- This app ports the classical core of a private `quantum-tree` project; the
-  attribution/license for that port is still being settled.
+What the underlying working paper itself points to:
+
+- **Neighbor-Net** and its circular-ordering view of tree-space — **Levy &
+  Pachter**, *The Neighbor-Net algorithm*.
+- The **associahedron tessellation of the real moduli space** M̄₀,ₙ(ℝ) (orders
+  glued across flips) — **Satyan Devadoss**'s mosaic-operad work, and
+  **Carr & Devadoss** on graph associahedra.
+- **Circular orders and trees** — **Semple & Steel**, on cyclic permutations and
+  evolutionary trees.
+- Tree-space as a metric space — **Billera, Holmes & Vogtmann** (the BHV
+  geometry of phylogenetic tree space).
+
+Standard sources for the methods used here, which we cite ourselves (the paper
+names them only in passing, without references):
+
+- **Neighbor-Joining** — **Saitou & Nei** (1987).
+- The **four-point condition** and **splits** — **Buneman**; split networks and
+  split decomposition — **Bandelt & Dress**; the original **NeighborNet** —
+  **Bryant & Moulton**.
+- **Circular-decomposable metrics** / the **Kalmanson** conditions — **Kalmanson**
+  (1975).
+- The **associahedron** — **Stasheff**; its symmetric realization as a
+  **secondary polytope** — **Gelfand, Kapranov & Zelevinsky**.
