@@ -3,8 +3,8 @@ kind: progress
 session: 2026-06-25-S01
 date: 2026-06-25
 title: Number Plane app — continuing the Argand → Number Plane rename + narrative
-branch: claude/amazing-mccarthy-0lwb1m
-slug: amazing-mccarthy-0lwb1m
+branch: number-plane-guide
+slug: number-plane-guide
 status: in-progress
 build: passed
 followup: null
@@ -39,6 +39,22 @@ then **shelved** an in-app number-line/tour experiment; (4) co-designed a
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 20:15 — Session wrap: 3rd review fix (fixed-point), lint-sessions green, handoff
+**Why:** Dan: study the gallery next session; update the report + write a handoff.
+
+- **Codex P2 (fixed-point) fixed** (`b3b07d9`): the Iteration lens claimed *every*
+  affine map has a unique `z* = β/(1−α)`; qualified it ("as long as `1−α` is
+  invertible") + a caveat for the singular cases (pure shift `α=1`; zero-divisor
+  `1−α` in dual/split) — matching `affineFixedPoint()` returning `null`. Thread
+  resolved. All three Codex P2s now fixed + resolved.
+- **CI lint-sessions error** (caught by the PR `lint` check on `b3b07d9`): a
+  no-pathspec `git commit` accidentally bundled the progress-report **move** into
+  that commit, so the report sat in `number-plane-guide/` while its `slug:` still
+  said `amazing-mccarthy-0lwb1m` (slug ≠ folder). Fixed by updating `slug`/`branch`
+  to `number-plane-guide`. Reports for this session now live under the active
+  branch's folder.
+- Handoff written; `npm run sessions:lint -- --strict` back to 0 errors.
 
 ### 🟡 milestone · 19:45 — PR opened, review fixes, main-synced, migrated to branch `number-plane-guide` (PR #244)
 **Why:** Dan: open the PR, follow it, address the bot's review comments, and move
