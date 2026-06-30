@@ -47,6 +47,23 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 16:05 — Card inspector: `cards/index.html` (view the graph)
+**Why:** Dan: "design a document html so we can look at the cards… see the
+connections, the type… examine the yaml." Nothing fancy.
+
+Self-contained viewer (no CDN), themed via the shared skin layer:
+- Reads the `.md` files **live** (tiny in-page frontmatter parser + minimal markdown
+  renderer) from a generated `manifest.json` — edits show without re-baking; only
+  add/remove needs a manifest regen.
+- Sidebar grouped by **kind** (colored dots) + filter; detail shows badge · `glance`
+  · `## note` · `## full` · figures · **links →** and **← linked from** (typed,
+  clickable, both directions) · collapsible **raw YAML**.
+- `![[id]]` transclusion renders inline (FD pulls in the `L5` facet).
+
+Verified (R1, http preview): rendered `CX` (15 edges, 1 figure, 0 missing links),
+`FD` (transclusion), overview; fixed a transclusion bug (`\s*` ate the blank line →
+`[ \t]*`). `npm run build` green. URL: `…pages.dev/number-planes/cards/`.
+
 ### 🟢 code · 15:30 — Content architecture: the note-card system + 27 cards
 **Why:** Dan steered from design (handled w/ Claude design — the "living notebook":
 glowing orbs that expand to a note → window → portal; reader-orderable) to

@@ -31,3 +31,11 @@ so they can live inside several cards without a page of their own.
 Plain, example-first, terse. Reasoning "we/you" — never autobiographical "I".
 Curiosity rides the math moves, not personal story. (McPhee structure · Korzybski
 "map ≠ territory / could it be different?" · Bryson history, but braver.)
+
+## Viewing the cards
+
+Open `index.html` (the card inspector) over http — it reads the cards live and
+shows type, glance/note/full, typed connections (both directions), figures, and the
+raw YAML. After adding/removing a card, regenerate the id list:
+
+    ls *.md | grep -v '^README' | sed 's/\.md$//' | sort | <to manifest.json as a JSON array>
