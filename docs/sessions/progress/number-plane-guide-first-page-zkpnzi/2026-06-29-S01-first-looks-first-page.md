@@ -47,6 +47,37 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 15:30 — Content architecture: the note-card system + 27 cards
+**Why:** Dan steered from design (handled w/ Claude design — the "living notebook":
+glowing orbs that expand to a note → window → portal; reader-orderable) to
+**content**: build the beats as an ordered, rearrangeable data structure.
+
+Decisions:
+- **Order is a *view*, not a property.** Atomic, self-contained, copyable cards;
+  the graph lives in each card's `links` (Zettelkasten / digital-garden shape). No
+  hard endpoints — quaternions etc. are just cards that connect.
+- **Format:** Markdown + YAML frontmatter, one file per card
+  (`public/number-planes/cards/`). Edge types: `same-as · contrasts · opens ·
+  leans-on · used-for`.
+- **Layered text** (Dan): `glance` (orb) · `## note` (terse house voice) · `## full`
+  (textbook). Presentation picks depth.
+- **Cards hold figures**, incl. one op across `p=−1,0,1` (CX `tri-multiply`).
+- **Variable granularity:** small fragments (e.g. *stretchable* = `L5`) are
+  `kind: facet`, transcluded `![[id]]`, not their own orb.
+- **L2 trimmed** to one idea (Dan: "doing too much"): treat the coordinates as
+  strangers → it's `j²=1` (split).
+
+Wrote **27 cards**: spine `L1 L2 L3 L4 L5 PL DV CX DU SP WH FD CR QD` · tangents
+`tropical relativity` · orbs `autodiff analysis higher FTA matrices modular
+cayley-dickson p-adic fields algebra` + `README` (schema + voice). All `[[links]]`
+resolve. (Matrix notation switched off `[[a,−b]]` to avoid wikilink collision.)
+
+> [!NOTE]
+> Cards are content, not yet rendered — no notebook UI consumes them. Verification
+> = link-resolution check only (R3: a proxy, not a rendered view). The "why fix
+> addition" answer (AX) settled a question Dan re-opened: addition is fixed *by
+> choice* (vector add + subtraction), tropical is the road that declines it.
+
 ### 🟣 decision · 14:35 — Voice + opening reframe: plain & example-first, NOT memoir; lead with "which multiplication?"
 **Why:** Dan rejected my first "in-voice" attempt as feeling like a **diary**. His
 model: *"Complex numbers are defined by their addition and multiplication. But I
