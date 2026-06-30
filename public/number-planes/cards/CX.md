@@ -31,6 +31,6 @@ With `j² = −1`, `(a+bj)(c+dj) = (ac − bd) + (ad + bc)j` — rotation-and-sc
 polar form moduli multiply and angles add. The norm `a² + b²` is positive-definite,
 so the only non-invertible element is `0`; that is exactly what makes it a field.
 
-Equivalently, "multiply by `a+bj`" is the matrix `[[a, −b], [b, a]]`, a scaled
+Equivalently, "multiply by `a+bj`" is the matrix `[a −b; b a]`, a scaled
 rotation. Its eigenvalues `a ± bj` are not real, which is the same fact as "no real
 rail." [[matrices]]
