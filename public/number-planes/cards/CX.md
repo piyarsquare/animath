@@ -2,6 +2,8 @@
 id: CX
 title: The complex plane (p = −1)
 kind: space
+type: space
+subject: complex
 glance: Multiply = turn. The plane that spins.
 links:
   leans-on: [PL, DV]

@@ -2,6 +2,8 @@
 id: FD
 title: Only one is a field
 kind: space
+type: claim
+subject: complex
 glance: Just the complex plane lets you always divide.
 links:
   leans-on: [DV]

@@ -2,6 +2,8 @@
 id: WH
 title: How many rails?
 kind: space
+type: claim
+subject: planes
 glance: Count the real square roots of p — 2, 1, or 0.
 links:
   leans-on: [DV]

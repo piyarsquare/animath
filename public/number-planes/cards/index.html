@@ -224,7 +224,10 @@ function renderCard(id){
   if (!c) { v.innerHTML = `<p class="miss">No card "${esc(id)}".</p>`; return; }
   const kc = KIND[c.kind] || { color:'var(--muted)', label:c.kind };
   let h = '';
-  h += `<div><span class="badge">${dot(c.kind)}${kc.label}</span> <span class="hid">${c.id}</span></div>`;
+  let meta = `<span class="badge">${dot(c.kind)}${kc.label}</span>`;
+  if (c.type) meta += ` <span class="badge" style="border-color:var(--accent2);color:var(--accent2)">type: ${esc(c.type)}</span>`;
+  if (c.subject) meta += ` <span class="badge">subject: ${esc(c.subject)}</span>`;
+  h += `<div>${meta} <span class="hid">${c.id}</span></div>`;
   h += `<h2 class="title">${esc(c.title||'')}</h2>`;
   if (c.glance) h += `<div class="glance">${mdInline(c.glance)}</div>`;
   if (c.note) h += `<div class="sec">note</div><div class="body">${mdBlock(c.note)}</div>`;
@@ -363,8 +366,13 @@ function route(){
 (async function(){
   try {
     const ids = await (await fetch('./manifest.json')).json();
-    const texts = await Promise.all(ids.map(id => fetch(`./${id}.md`).then(r=>r.text()).then(t=>[id,t])));
-    for (const [id,t] of texts) { const c = splitCard(t); c.id = c.id || id; cards[c.id] = c; }
+    const texts = await Promise.all(ids.map(async id => {
+      const r = await fetch(`./${id}.md`); return [id, r.ok ? await r.text() : null];
+    }));
+    for (const [id,t] of texts) {
+      if (t === null) { console.warn('card listed in manifest but missing:', id); continue; }
+      const c = splitCard(t); c.id = c.id || id; cards[c.id] = c;
+    }
     // build back-references
     for (const c of Object.values(cards))
       for (const et of EDGES)

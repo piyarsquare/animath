@@ -2,6 +2,8 @@
 id: SP
 title: The split plane (p = +1)
 kind: space
+type: space
+subject: split
 glance: Multiply = squeeze. Two rails. = ℝ×ℝ.
 links:
   leans-on: [PL, DV]

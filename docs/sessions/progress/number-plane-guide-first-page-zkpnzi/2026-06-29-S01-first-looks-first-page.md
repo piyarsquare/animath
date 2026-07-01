@@ -47,6 +47,31 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 17:20 — Executed the three-hats-reconciled plan (checker + additive type/subject pilot)
+**Why:** Dan ran the object-type classification plan through /three-hats; all three
+converged on **adopt the diagnosis, refuse the churn**
+([synthesis](2026-06-29-S01-expert-synthesis.md)). Dan: "proceed with the plan" →
+proceeding with the *reconciled* plan, not the raw re-atomization the panel rejected.
+
+Done (all reversible; 27 files intact):
+1. **Integrity checker** `scripts/check-cards.mjs` (the panel's #1 near-term risk):
+   verifies `manifest.json` ↔ the `.md` set and that every `[[id]]`/`![[id]]`/`links:`
+   target resolves; exits non-zero on drift/dangling. Currently green (27 cards).
+2. **`type` + `subject` as additive facets** (NOT primary, NOT replacing `kind`) on the
+   pilot cluster `CX·DU·SP·WH·FD`: spaces → `type: space`, claims (`WH`,`FD`) →
+   `type: claim`; `subject:` = complex/dual/split/planes. Label fixes adopted
+   (space not "domain"; claim instead of splitting observation/theorem).
+3. **Inspector** shows `type`/`subject` badges loudly + guards phantom cards
+   (`r.ok` check, warn+skip) so a 404-as-text can't become a ghost card.
+
+Deferred per the synthesis: observation↔theorem stays a **depth** distinction
+(glance/note/full + optional `▸ noticed/▸ why` labels), NOT split cards; the global
+`orb→topic` rename and rollout to all 27 wait until Dan sees the pilot; **no
+re-atomization** — count changes only when a real consumer (the deck) needs a piece.
+
+Verified (R1): `check-cards.mjs` green, `npm run build` green, CX badges render
+(`space · type: space · subject: complex`).
+
 ### 🟢 code · 16:30 — Graph view added to the inspector
 **Why:** Dan: "add a graph view? showing the different types of edges."
 

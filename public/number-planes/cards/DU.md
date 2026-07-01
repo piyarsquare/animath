@@ -2,6 +2,8 @@
 id: DU
 title: The dual plane (p = 0)
 kind: space
+type: space
+subject: dual
 glance: Multiply = shear. ε² = 0.
 links:
   leans-on: [PL, DV]
