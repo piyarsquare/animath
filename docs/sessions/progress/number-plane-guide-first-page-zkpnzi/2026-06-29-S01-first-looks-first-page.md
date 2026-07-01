@@ -47,6 +47,15 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 16:30 — Graph view added to the inspector
+**Why:** Dan: "add a graph view? showing the different types of edges."
+
+Self-contained force-directed graph (no libs): nodes colored by **kind**, edges
+colored + arrowed by **edge type** (leans-on · opens · same-as · contrasts ·
+used-for) with a two-row legend. `overview | graph` switch in the sidebar; click a
+node → open its card; drag to rearrange (reciprocal same-as/contrasts deduped).
+Verified (R1, http preview): 27 nodes, 66 edges, legend renders, no errors.
+
 ### 🟢 code · 16:05 — Card inspector: `cards/index.html` (view the graph)
 **Why:** Dan: "design a document html so we can look at the cards… see the
 connections, the type… examine the yaml." Nothing fancy.

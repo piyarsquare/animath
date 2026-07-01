@@ -68,12 +68,28 @@
     .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
     #skin-picker { margin-left: auto; }
     @media (max-width: 720px) { body { grid-template-columns: 1fr; } .side { position: static; height: auto; } }
+
+    /* ---- view switch + graph ---- */
+    .views { display: flex; gap: 12px; margin: 2px 6px 12px; font-size: 13px; }
+    .views a { color: var(--muted); text-decoration: none; cursor: pointer; }
+    .views a:hover, .views a.on { color: var(--accent); }
+    main.wide { max-width: none; }
+    .gsvg { width: 100%; height: 74vh; border: 1px solid var(--rule); border-radius: 10px;
+      background: var(--soft); touch-action: none; }
+    .gnode { cursor: pointer; }
+    .gnode circle { stroke: var(--card); stroke-width: 2; }
+    .gnode text { font: 600 11px ui-monospace, monospace; fill: var(--fg); pointer-events: none; }
+    .gedge { stroke-width: 1.7; fill: none; opacity: .8; }
+    .glegend { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 2px; font-size: 12.5px; color: var(--muted); }
+    .glegend .li { display: inline-flex; align-items: center; gap: 6px; }
+    .glegend .ln { width: 20px; border-top: 3px solid; display: inline-block; }
   </style>
 </head>
 <body>
   <nav class="side">
     <h1>&#10022; Number Planes</h1>
     <p class="sub">card inspector &middot; <span id="count"></span> cards</p>
+    <div class="views"><a id="v-cards" href="#">overview</a><a id="v-graph" href="#graph">graph</a></div>
     <input id="q" placeholder="filter…" autocomplete="off">
     <div id="list"></div>
   </nav>
@@ -93,6 +109,8 @@ const KIND = {
 };
 const KIND_ORDER = ['line','knob','space','facet','tangent','orb'];
 const EDGES = ['leans-on','opens','same-as','contrasts','used-for'];
+const EDGE_COLOR = { 'leans-on':'#8a94a6', 'opens':'#4ea1ff', 'same-as':'#35c08a', 'contrasts':'#e0663a', 'used-for':'#b08cff' };
+const UNDIRECTED = { 'same-as':1, 'contrasts':1 };
 const cards = {};         // id -> {id,title,kind,glance,links,figures,note,full,raw}
 const backrefs = {};      // id -> [{from, type}]
 
@@ -257,7 +275,90 @@ function overview(){
     Order is a <em>view</em>; the graph lives in each card's links (shown both directions).</p>`;
 }
 
-function route(){ const id = location.hash.replace('#',''); if (id) renderCard(id); else overview(); }
+// ---- graph view ----
+function graphData(){
+  const nodes = Object.values(cards).map(c => ({ id: c.id, kind: c.kind }));
+  const seen = {}, edges = [];
+  for (const c of Object.values(cards))
+    for (const et of EDGES)
+      for (const t of (c.links && c.links[et]) || []) {
+        if (!cards[t]) continue;
+        const key = UNDIRECTED[et] ? et+':'+[c.id,t].sort().join('-') : et+':'+c.id+'>'+t;
+        if (seen[key]) continue; seen[key] = 1;
+        edges.push({ from: c.id, to: t, type: et });
+      }
+  return { nodes, edges };
+}
+function layout(nodes, edges, W, H){
+  const idx = {}; const R = Math.min(W,H) * 0.34;
+  nodes.forEach((n,i)=>{ idx[n.id]=i; const a = 2*Math.PI*i/nodes.length;
+    n.x = W/2 + Math.cos(a)*R; n.y = H/2 + Math.sin(a)*R; n.vx = 0; n.vy = 0; });
+  for (let it=0; it<340; it++) {
+    for (let i=0;i<nodes.length;i++) for (let j=i+1;j<nodes.length;j++) {
+      const a=nodes[i], b=nodes[j]; let dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy||1, d=Math.sqrt(d2);
+      const r=6500/d2, fx=dx/d*r, fy=dy/d*r; a.vx+=fx; a.vy+=fy; b.vx-=fx; b.vy-=fy;
+    }
+    for (const e of edges) { const a=nodes[idx[e.from]], b=nodes[idx[e.to]];
+      let dx=b.x-a.x, dy=b.y-a.y, d=Math.sqrt(dx*dx+dy*dy)||1, k=(d-115)*0.02, fx=dx/d*k, fy=dy/d*k;
+      a.vx+=fx; a.vy+=fy; b.vx-=fx; b.vy-=fy;
+    }
+    for (const n of nodes) { n.vx+=(W/2-n.x)*0.003; n.vy+=(H/2-n.y)*0.003;
+      n.x+=n.vx*0.8; n.y+=n.vy*0.8; n.vx*=0.8; n.vy*=0.8;
+      n.x=Math.max(28,Math.min(W-28,n.x)); n.y=Math.max(24,Math.min(H-24,n.y)); }
+  }
+  return idx;
+}
+let G = null;
+function svgPoint(svg, cx, cy){ const r=svg.getBoundingClientRect(), vb=svg.viewBox.baseVal;
+  return { x:(cx-r.left)/r.width*vb.width, y:(cy-r.top)/r.height*vb.height }; }
+function edgeXY(a,b){ let dx=b.x-a.x, dy=b.y-a.y, d=Math.sqrt(dx*dx+dy*dy)||1, ux=dx/d, uy=dy/d;
+  return { x1:a.x+ux*14, y1:a.y+uy*14, x2:b.x-ux*16, y2:b.y-uy*16 }; }
+function updateGraph(v){ const {nodes,edges,idx}=G; const lines=v.querySelectorAll('line.gedge');
+  edges.forEach((e,i)=>{ const p=edgeXY(nodes[idx[e.from]],nodes[idx[e.to]]); const l=lines[i];
+    l.setAttribute('x1',p.x1.toFixed(1)); l.setAttribute('y1',p.y1.toFixed(1));
+    l.setAttribute('x2',p.x2.toFixed(1)); l.setAttribute('y2',p.y2.toFixed(1)); });
+  v.querySelectorAll('.gnode').forEach(g=>{ const n=nodes[idx[g.dataset.id]];
+    g.setAttribute('transform',`translate(${n.x.toFixed(1)},${n.y.toFixed(1)})`); });
+}
+function renderGraph(){
+  const v = document.getElementById('view'); const W=1000, H=720;
+  const { nodes, edges } = graphData(); const idx = layout(nodes, edges, W, H);
+  const kindLeg = KIND_ORDER.filter(k=>nodes.some(n=>n.kind===k))
+    .map(k=>`<span class="li"><span class="dot" style="background:${(KIND[k]||{}).color}"></span>${(KIND[k]||{}).label||k}</span>`).join('');
+  const edgeLeg = EDGES.map(e=>`<span class="li"><span class="ln" style="border-top-color:${EDGE_COLOR[e]}"></span>${e}</span>`).join('');
+  let svg = `<svg class="gsvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"><defs>`;
+  for (const e of EDGES) svg += `<marker id="ar-${e}" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="${EDGE_COLOR[e]}"/></marker>`;
+  svg += `</defs><g>`;
+  for (const e of edges) { const p=edgeXY(nodes[idx[e.from]], nodes[idx[e.to]]);
+    const mk = UNDIRECTED[e.type] ? '' : `marker-end="url(#ar-${e.type})"`;
+    svg += `<line class="gedge" x1="${p.x1.toFixed(1)}" y1="${p.y1.toFixed(1)}" x2="${p.x2.toFixed(1)}" y2="${p.y2.toFixed(1)}" stroke="${EDGE_COLOR[e.type]}" ${mk}/>`;
+  }
+  for (const n of nodes) { const col=(KIND[n.kind]||{}).color||'var(--muted)';
+    svg += `<g class="gnode" data-id="${n.id}" transform="translate(${n.x.toFixed(1)},${n.y.toFixed(1)})"><circle r="12" fill="${col}"></circle><text text-anchor="middle" dy="3.5">${n.id}</text></g>`;
+  }
+  svg += `</g></svg>`;
+  v.innerHTML = `<h2 class="title">Graph</h2><div class="glegend">${kindLeg}</div><div class="glegend">${edgeLeg}</div>${svg}`;
+  G = { nodes, edges, idx, W, H };
+  const svgEl = v.querySelector('svg');
+  v.querySelectorAll('.gnode').forEach(g=>{
+    g.addEventListener('pointerdown', ev=>{ ev.preventDefault(); let moved=false;
+      g.setPointerCapture(ev.pointerId); const n = nodes[idx[g.dataset.id]];
+      const move = e2 => { moved=true; const pt=svgPoint(svgEl,e2.clientX,e2.clientY); n.x=pt.x; n.y=pt.y; updateGraph(v); };
+      const up = () => { g.removeEventListener('pointermove',move); g.removeEventListener('pointerup',up);
+        if (!moved) location.hash = g.dataset.id; };
+      g.addEventListener('pointermove', move); g.addEventListener('pointerup', up);
+    });
+  });
+}
+
+function route(){
+  const id = location.hash.replace('#','');
+  document.querySelector('main').classList.toggle('wide', id === 'graph');
+  const vg = document.getElementById('v-graph'), vc = document.getElementById('v-cards');
+  if (vg) vg.classList.toggle('on', id === 'graph');
+  if (vc) vc.classList.toggle('on', !id);
+  if (id === 'graph') renderGraph(); else if (id) renderCard(id); else overview();
+}
 
 (async function(){
   try {
