@@ -47,6 +47,32 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 17:45 — Reframe: the unit is the "core concept" (dial back the machinery)
+**Why:** Dan: "we went too far… we were just trying to measure out the ideas into
+units. keep the text simple. the focus is on the idea. let's not be precious." The
+27 typed cards + type/subject + three-hats was over-precise for what he wanted.
+
+**Grain = the core concept** — a handful of units, each gathering a few neighbors
+and a widget or two. The 27 fine cards become the *things hanging under a core*, not
+the top level. Text stays simple, idea-first. Confirmed rhythm (Dan's own framing):
+
+- **Core 1 — see `+` and `×` on the line.** Make both operations visible. Cluster:
+  distributive rule · rings & fields · tropical.
+- **Core 2 — take `+` and `×` to the plane; now there are choices.** Harder than the
+  line. Two questions: (1) why are there choices, and what are they? (2) what do the
+  choices imply? Widgets: a **3-way comparator** at `p = −1, 0, 1` (same `w·z` on all
+  three — circle vs hyperbola — or the plane-transform under one fixed multiply); a
+  **single dial** turning the plane through `p`.
+
+Not a simple web page — the target is a *living notebook* (design being explored
+separately with Claude design).
+
+> [!NOTE]
+> Next: regroup the pile into these core units (a handful, not 27); the fine cards
+> become sub-"things." Drop the type/subject fuss as a driver (harmless, can stay).
+> The integrity checker + inspector stay useful regardless. Awaiting Dan's go to
+> regroup.
+
 ### 🟢 code · 17:20 — Executed the three-hats-reconciled plan (checker + additive type/subject pilot)
 **Why:** Dan ran the object-type classification plan through /three-hats; all three
 converged on **adopt the diagnosis, refuse the churn**
