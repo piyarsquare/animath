@@ -13,12 +13,14 @@ what `j²` equals — call it `p`. Three signs, three worlds:
 The three plots render the **same expression** under each plane's own
 multiplication:
 
-- **|z| = r** — the level sets of each plane's magnitude `√|x² − p·y²|`:
-  circles · vertical line pairs · hyperbolas. The bold curve is `|z| = 1`,
-  each plane's version of "the unit circle."
-- **αz + β** — `y = mx + b`, promoted to the plane. The grid turns, shears, or
-  squeezes (then slides). Drag `α` and `β` on any plot; all three share them.
-- **z²** — the same square, three ways.
+- **α₁z + α₀** — `y = mx + b`, promoted to the plane. The grid turns, shears,
+  or squeezes (then slides). Drag `α₁` and `α₀` on any plot; all three share them.
+- **α₂z² + α₁z + α₀** — the quadratic: the `α₂` term bends the plane.
+
+**Marks** can overlay the **level sets** `|z| = r` of each plane's magnitude
+`√|x² − p·y²|` — circles · vertical line pairs · hyperbolas, with `|z| = 1`
+bold: each plane's version of "the unit circle." The dashed **null set**
+(`|z| = 0`) marks the numbers nothing multiplies back to `1`.
 
 **Feeds.** For the map expressions, feed them a **Point** (a draggable white `z`
 — for `z²` it is literally the thing being squared — with its image `f(z)`, and

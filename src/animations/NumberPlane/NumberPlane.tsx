@@ -22,7 +22,7 @@ import explainer from './EXPLAINER.md?raw';
 
 const V = 340; // viewBox size
 
-type ExprId = 'unit' | 'affine' | 'quad';
+type ExprId = 'affine' | 'quad';
 type FeedId = 'point' | 'shape' | 'grid';
 type ShapeId = 'circle' | 'square' | 'triangle';
 interface ViewWin { cx: number; cy: number; r: number }
@@ -151,6 +151,7 @@ interface PlotProps {
   rails: number;
   showGrid: boolean;
   showNull: boolean;
+  showLevels: boolean;
   showLabels: boolean;
   cmap: string;
   cmapLo: number;
@@ -161,7 +162,7 @@ interface PlotProps {
 }
 
 function PlanePlot(props: PlotProps) {
-  const { p, expr, feed, shape, a1, a0, a2, z0, sc, t, iterN, rails, showGrid, showNull, showLabels, cmap, cmapLo, cmapHi, win, onDrag, onWin } = props;
+  const { p, expr, feed, shape, a1, a0, a2, z0, sc, t, iterN, rails, showGrid, showNull, showLevels, showLabels, cmap, cmapLo, cmapHi, win, onDrag, onWin } = props;
   const cAt = (u: number) => sampleContinuous(cmap, cmapLo + Math.max(0, Math.min(1, u)) * (cmapHi - cmapLo));
   const svgRef = useRef<SVGSVGElement | null>(null);
   const gesture = useRef<{ kind: 'handle' | 'pan'; which?: 'a1' | 'a0' | 'a2' | 'z0' | 'sc'; last?: { x: number; y: number } } | null>(null);
@@ -192,10 +193,10 @@ function PlanePlot(props: PlotProps) {
   const clientToWorld = (cx: number, cy: number): Planar => matInvApply(M, clientToFrame(cx, cy));
 
   const targets: Array<['a1' | 'a0' | 'a2' | 'z0' | 'sc', Planar]> = [];
-  if (expr !== 'unit') { targets.push(['a1', a1], ['a0', a0]); }
+  targets.push(['a1', a1], ['a0', a0]);
   if (expr === 'quad') targets.push(['a2', a2]);
-  if (feed === 'point' && expr !== 'unit') targets.push(['z0', z0]);
-  if (feed === 'shape' && expr !== 'unit') targets.push(['sc', sc]);
+  if (feed === 'point') targets.push(['z0', z0]);
+  if (feed === 'shape') targets.push(['sc', sc]);
 
   const onDown = (e: React.PointerEvent) => {
     pinch.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -271,21 +272,19 @@ function PlanePlot(props: PlotProps) {
 
   // source geometry for the mapped feeds
   const sourceLines: Planar[][] = [];
-  if (expr !== 'unit') {
-    if (feed === 'grid') {
-      for (let k = -2; k <= 2; k++) {
-        sourceLines.push(samples(-2, 2, 40).map(u => pt(k, u)));
-        sourceLines.push(samples(-2, 2, 40).map(u => pt(u, k)));
-      }
-    } else if (feed === 'shape') {
-      sourceLines.push(shapePts(shape, sc));
+  if (feed === 'grid') {
+    for (let k = -2; k <= 2; k++) {
+      sourceLines.push(samples(-2, 2, 40).map(u => pt(k, u)));
+      sourceLines.push(samples(-2, 2, 40).map(u => pt(u, k)));
     }
+  } else if (feed === 'shape') {
+    sourceLines.push(shapePts(shape, sc));
   }
 
   // the iterated orbit (point feed) with smooth arcs between iterates
   const orbitArcs: Planar[][] = [];
   const orbitPts: Planar[] = [];
-  if (expr !== 'unit' && feed === 'point') {
+  if (feed === 'point') {
     let z = z0;
     orbitPts.push(z);
     for (let i = 0; i < iterN; i++) {
@@ -335,25 +334,30 @@ function PlanePlot(props: PlotProps) {
           strokeOpacity={0.45} strokeWidth={1.5} strokeDasharray="5 5" />
       ))}
 
-      {expr === 'unit' ? (
+      {/* level-set overlay |z| = r (a mark, under the feed layers) */}
+      {showLevels && [0.5, 1, 1.5, 2].map(r =>
+        levelSet(p, r, E).map((c, i) => (
+          <polyline key={`lv${r}-${i}`} points={poly(c)} fill="none" stroke={col}
+            strokeWidth={r === 1 ? 2 : 1.1} strokeOpacity={r === 1 ? 0.85 : 0.4} />
+        )),
+      )}
+      {showLevels && showLabels && (
         <>
-          {[0.5, 1, 1.5, 2].map(r =>
-            levelSet(p, r, E).map((c, i) => (
-              <polyline key={`${r}-${i}`} points={poly(c)} fill="none" stroke={col}
-                strokeWidth={r === 1 ? 3 : 1.3} strokeOpacity={r === 1 ? 1 : 0.55} />
-            )),
-          )}
-          {showLabels && [0.5, 1, 1.5, 2].map(r => {
+          {[0.5, 1, 1.5, 2].map(r => {
             const v = toScreen(pt(r, 0));
             return (
-              <text key={`ll${r}`} x={v.x + 3} y={r === 1 ? v.y - 8 : v.y + 15}
-                fill={col} fillOpacity={r === 1 ? 1 : 0.65}
-                fontSize={r === 1 ? 12 : 10} fontWeight={r === 1 ? 700 : 400}
-                fontFamily="var(--font-mono, monospace)">{r === 1 ? '|z| = 1' : String(r)}</text>
+              <text key={`ll${r}`} x={v.x + 3} y={v.y - 6}
+                fill={col} fillOpacity={r === 1 ? 0.95 : 0.6}
+                fontSize={r === 1 ? 11 : 9.5} fontWeight={r === 1 ? 700 : 400}
+                fontFamily="var(--font-mono, monospace)">{String(r)}</text>
             );
           })}
+          <text x={V - 10} y={22} textAnchor="end" fill={col} fillOpacity={0.6} fontSize={11}
+            fontFamily="var(--font-mono, monospace)">levels: |z| = r</text>
         </>
-      ) : (
+      )}
+
+      {(
         <>
           {showGrid && sourceLines.map((line, i) => (
             <polyline key={`s${i}`} points={poly(line)} fill="none" stroke="var(--fg)" strokeOpacity={0.14} />
@@ -399,8 +403,8 @@ function PlanePlot(props: PlotProps) {
 
           {feed === 'shape' && marker(sc, Z_COL, 6)}
 
-          {marker(a1, A1_COL, 8, expr === 'quad' ? 'α₁' : 'α')}
-          {marker(a0, A0_COL, 8, expr === 'quad' ? 'α₀' : 'β')}
+          {marker(a1, A1_COL, 8, 'α₁')}
+          {marker(a0, A0_COL, 8, 'α₀')}
           {expr === 'quad' && marker(a2, A2_COL, 8, 'α₂')}
         </>
       )}
@@ -419,7 +423,8 @@ function PlanePlot(props: PlotProps) {
 
 // ---- the app ----
 export default function NumberPlane() {
-  const [expr, setExpr] = usePersistentState<ExprId>('number-plane:expr2', 'unit');
+  const [exprRaw, setExpr] = usePersistentState<ExprId>('number-plane:expr2', 'affine');
+  const expr: ExprId = exprRaw === 'quad' ? 'quad' : 'affine'; // shed stale 'unit'/'square' values
   const [feed, setFeed] = usePersistentState<FeedId>('number-plane:feed', 'grid');
   const [shape, setShape] = usePersistentState<ShapeId>('number-plane:shape', 'circle');
   const [dial, setDial] = usePersistentState('number-plane:dial', 1);
@@ -432,6 +437,7 @@ export default function NumberPlane() {
   const [rails, setRails] = usePersistentState('number-plane:rails', 0);
   const [showGrid, setShowGrid] = usePersistentState('number-plane:src-grid', true);
   const [showNull, setShowNull] = usePersistentState('number-plane:null-set', true);
+  const [showLevels, setShowLevels] = usePersistentState('number-plane:levels', true);
   const [showLabels, setShowLabels] = usePersistentState('number-plane:level-labels', true);
   const [t, setT] = React.useState(1);
   const [playing, setPlaying] = React.useState(false);
@@ -466,14 +472,13 @@ export default function NumberPlane() {
       <Pills<ExprId>
         label="Expression"
         options={[
-          { value: 'unit', label: '|z| = r' },
-          { value: 'affine', label: 'αz + β' },
+          { value: 'affine', label: 'α₁z + α₀' },
           { value: 'quad', label: 'α₂z² + α₁z + α₀' },
         ]}
         value={expr}
         onChange={setExpr}
       />
-      {expr !== 'unit' && (
+      {(
         <>
           <Pills<FeedId>
             label="Feed"
@@ -500,11 +505,9 @@ export default function NumberPlane() {
         </>
       )}
       <p style={{ fontSize: 12.5, opacity: 0.75, margin: '10px 2px 0', lineHeight: 1.5 }}>
-        {expr === 'unit'
-          ? 'The set |z| = r in each arithmetic: circle · line pair · hyperbola.'
-          : expr === 'affine'
-            ? 'y = mx + b, promoted to the plane. Drag α, β — and z — on any plot; all three share them.'
-            : 'The quadratic in each arithmetic: the α₂ term bends the plane. Drag α₂, α₁, α₀ — and z.'}
+        {expr === 'affine'
+          ? 'y = mx + b, promoted to the plane. Drag α₁, α₀ — and z — on any plot; all three share them.'
+          : 'The quadratic in each arithmetic: the α₂ term bends the plane. Drag α₂, α₁, α₀ — and z.'}
       </p>
     </div>
   );
@@ -572,10 +575,10 @@ export default function NumberPlane() {
 
   const paramsNode = (
     <div>
-      <Slider label="α · re" value={a1.x} min={-2} max={2} step={0.05} onChange={v => setA1(pt(v, a1.y))} />
-      <Slider label="α · im" value={a1.y} min={-2} max={2} step={0.05} onChange={v => setA1(pt(a1.x, v))} />
-      <Slider label="β · re" value={a0.x} min={-2} max={2} step={0.05} onChange={v => setA0(pt(v, a0.y))} />
-      <Slider label="β · im" value={a0.y} min={-2} max={2} step={0.05} onChange={v => setA0(pt(a0.x, v))} />
+      <Slider label="α₁ · re" value={a1.x} min={-2} max={2} step={0.05} onChange={v => setA1(pt(v, a1.y))} />
+      <Slider label="α₁ · im" value={a1.y} min={-2} max={2} step={0.05} onChange={v => setA1(pt(a1.x, v))} />
+      <Slider label="α₀ · re" value={a0.x} min={-2} max={2} step={0.05} onChange={v => setA0(pt(v, a0.y))} />
+      <Slider label="α₀ · im" value={a0.y} min={-2} max={2} step={0.05} onChange={v => setA0(pt(a0.x, v))} />
       <Slider label="α₂ · re" value={a2.x} min={-2} max={2} step={0.05} onChange={v => setA2(pt(v, a2.y))} />
       <Slider label="α₂ · im" value={a2.y} min={-2} max={2} step={0.05} onChange={v => setA2(pt(a2.x, v))} />
     </div>
@@ -585,7 +588,8 @@ export default function NumberPlane() {
     <div>
       <Checkbox label="Source (faint)" checked={showGrid} onChange={setShowGrid} />
       <Checkbox label="Null set (|z| = 0)" checked={showNull} onChange={setShowNull} />
-      <Checkbox label="Level labels (|z| = 1)" checked={showLabels} onChange={setShowLabels} />
+      <Checkbox label="Level sets (|z| = r)" checked={showLevels} onChange={setShowLevels} />
+      <Checkbox label="Level labels" checked={showLabels} onChange={setShowLabels} />
     </div>
   );
 
@@ -611,7 +615,7 @@ export default function NumberPlane() {
               borderRadius: 10, overflow: 'hidden', background: 'var(--viz-bg, #0c0c10)' }}>
               <PlanePlot p={p} expr={expr} feed={feed} shape={shape} a1={a1} a0={a0} a2={a2} z0={z0} sc={sc}
                 t={tShown} iterN={iterN} rails={rails} win={win}
-                showGrid={showGrid} showNull={showNull} showLabels={showLabels} cmap={cmap} cmapLo={cmapLo} cmapHi={cmapHi} onDrag={onDrag} onWin={setWin} />
+                showGrid={showGrid} showNull={showNull} showLevels={showLevels} showLabels={showLabels} cmap={cmap} cmapLo={cmapLo} cmapHi={cmapHi} onDrag={onDrag} onWin={setWin} />
             </div>
           ))}
         </div>
