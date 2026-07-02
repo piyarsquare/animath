@@ -6,6 +6,7 @@ import { usePersistentState } from '../../lib/usePersistentState';
 import { useThemeId } from '../../chrome/skins';
 import { themeMapsFor, sampleContinuous, hexToRgb } from '../../lib/colormapRegistry';
 import { useThemeTokens } from '../../chrome/useThemeTokens';
+import { usePhone } from '../../chrome/usePhone';
 import { type Planar, pt, add, smul, mul, affine, powReal, kindLabel, kindOf } from '../Argand/numberPlanes';
 import explainer from './EXPLAINER.md?raw';
 
@@ -442,6 +443,7 @@ export default function NumberPlane() {
   const [t, setT] = React.useState(1);
   const [playing, setPlaying] = React.useState(false);
   const [win, setWin] = React.useState<ViewWin>(HOME); // camera, not a setting — not persisted
+  const phone = usePhone();
   const themeId = useThemeId();
   const cmap = themeMapsFor('sequential', themeId)[0];
   const tokens = useThemeTokens(['--viz-bg']);
@@ -609,11 +611,14 @@ export default function NumberPlane() {
       defaultRect: { x: 370, y: 16, w: 880, h: 380 },
       node: (
         <div style={{ position: 'absolute', inset: 0, display: 'flex',
-          alignItems: 'center', justifyContent: 'center', gap: 8, padding: 8, background: 'var(--bg)' }}>
-          {/* three squares that never wrap — on a phone they shrink together so
-              the side-by-side comparison survives any width */}
+          flexDirection: phone ? 'column' : 'row',
+          alignItems: 'center', justifyContent: 'center', gap: 8,
+          padding: phone ? '48px 8px 92px' : 8, background: 'var(--bg)' }}>
+          {/* desktop: three squares in a row; phone: stacked vertically —
+              all three always visible, sharing the card's height */}
           {planes.map((p, i) => (
-            <div key={i} style={{ flex: '1 1 0', minWidth: 0, aspectRatio: '1 / 1', maxHeight: '100%',
+            <div key={i} style={{ flex: '1 1 0', minWidth: 0, minHeight: 0,
+              ...(phone ? { width: '100%' } : { aspectRatio: '1 / 1', maxHeight: '100%', alignSelf: 'center' }),
               border: '1px solid var(--rule)',
               borderRadius: 10, overflow: 'hidden', background: 'var(--viz-bg, #0c0c10)' }}>
               <PlanePlot p={p} expr={expr} feed={feed} shape={shape} a1={a1} a0={a0} a2={a2} z0={z0} sc={sc}
