@@ -47,6 +47,33 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 20:40 — Number Plane round 3: zoom/pan, honest flow paths, movable shape, quadratic, colormaps, labels
+**Why:** Dan's next batch: zoom/pan; the "smooth" path z→f(z); move the shape like
+z; switch z² to the quadratic form (Argand's); better subplot separation; a
+colormap on iterations *and* shapes; |z|=1 level labels in Marks.
+
+- **Zoom/pan**: wheel + drag-pan + 2-pointer pinch, one shared window across all
+  three plots (comparability preserved); double-click / ⟲ Reset view; dynamic axis
+  ticks; level/null sets extend to the window. Camera not persisted (a setting vs
+  view distinction).
+- **Smooth path**: the multiplicative flow `z·αᵗ` via engine `powReal` (spiral /
+  shear / boost arcs; straight blend only where the angle honestly doesn't exist —
+  powReal's documented fallback). Affine = two legs (spiral ×α, slide +β); the
+  **quadratic = three legs** (spiral ×α₁ · slide +α₀ · ramp α₂z² in). Point feed
+  draws the dotted arc; orbit arcs use the flow between iterates.
+- **Movable shape**: shapes centered on a draggable `sc` handle (persisted).
+- **Quadratic**: z² pill replaced by `α₂z² + α₁z + α₀` (expr storage key bumped to
+  expr2 to shed stale values); pink α₂ handle (--data-7) + sliders.
+- **Subplot separation**: real gutters (window bg behind, viz-bg per plot).
+- **Colormap**: theme sequential map (`themeMapsFor`/`sampleContinuous`, tracks
+  skin) colors the orbit by iteration and the shape image per-segment — the same
+  param color on source/image shows which point went where.
+- **Level labels**: Marks checkbox; bold `|z| = 1` above the axis, 0.5/1.5/2 below.
+
+Verified (R1): build green; screenshots — colormapped circle image under the
+quadratic on all three planes (gutters visible), staggered level labels, arc paths.
+Gestures remain headless-logic-verified (no scripted pinch).
+
 ### 🟢 code · 19:50 — Number Plane round 2: z point + feeds + Play morph + Iterate + rails slider
 **Why:** Dan's feature list after driving the app: move z and see its image; the
 grid AND shapes; watch things move; the iterate step; "I don't know what is

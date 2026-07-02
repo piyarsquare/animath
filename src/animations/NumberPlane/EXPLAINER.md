@@ -24,8 +24,15 @@ multiplication:
 — for `z²` it is literally the thing being squared — with its image `f(z)`, and
 an **Iterate** slider that chains `f` and shows the same `z` spiraling in the
 complex plane, shearing in the dual, and saddling in the split), a **Shape**
-(circle · square · triangle), or a **Grid**. The **t** slider (and ▶ Play)
-morphs source → image so you watch the transformation happen.
+(circle · square · triangle, draggable by its center handle), or a **Grid**.
+The **t** slider (and ▶ Play) morphs source → image — not by teleporting in a
+straight line, but along the multiplication's **own flow** `z·αᵗ`: a spiral arc,
+a shear, a boost (drawn dotted for the Point feed). Where that angle honestly
+doesn't exist (the null set) the path falls back to a straight blend.
+
+**Zoom & pan.** Scroll or pinch to zoom, drag empty space to pan; all three
+plots share one window so they stay comparable. Double-click (or ⟲ Reset view)
+to come home.
 
 **The dial.** One `p` knob: the outer plots show `j² = −p` and `+p` while the
 dual plane holds still between them; turn toward 0 and both worlds flatten

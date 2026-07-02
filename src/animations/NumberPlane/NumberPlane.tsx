@@ -3,25 +3,29 @@ import Workspace from '../../chrome/workspace/Workspace';
 import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { Pills, Slider, Checkbox } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
-import { type Planar, pt, mul, affine, kindLabel, kindOf } from '../Argand/numberPlanes';
+import { useThemeId } from '../../chrome/skins';
+import { themeMapsFor, sampleContinuous } from '../../lib/colormapRegistry';
+import { type Planar, pt, add, smul, mul, affine, powReal, kindLabel, kindOf } from '../Argand/numberPlanes';
 import explainer from './EXPLAINER.md?raw';
 
 // ---------------------------------------------------------------------------
 // Number Plane — one expression, three arithmetics.
 // Three plots (j² = −p, 0, +p) render the SAME expression under each plane's
-// own multiplication. Feeds: a draggable point z (with its image and an
-// iterated orbit), preset shapes, or a grid; a t-morph + Play animates
-// source → image; a "rails" slider realigns the split plot's frame onto its
-// asymptotes (the complex plot has no real rails to align — that's the point).
-// Engine: Argand/numberPlanes.ts.
+// own multiplication. Feeds: a draggable point z (image, smooth flow path, and
+// an iterated orbit), preset shapes, or a grid; t + Play morphs source → image
+// along the multiplicative flow z·αˢ (spiral / shear / boost arcs — powReal
+// blends straight only where the angle honestly doesn't exist); a "rails"
+// slider realigns the split plot's frame onto its asymptotes. All three plots
+// share one zoom/pan window so they stay comparable.
 // ---------------------------------------------------------------------------
 
-const R = 3;   // world half-range per plot
 const V = 340; // viewBox size
 
-type ExprId = 'unit' | 'affine' | 'square';
+type ExprId = 'unit' | 'affine' | 'quad';
 type FeedId = 'point' | 'shape' | 'grid';
 type ShapeId = 'circle' | 'square' | 'triangle';
+interface ViewWin { cx: number; cy: number; r: number }
+const HOME: ViewWin = { cx: 0, cy: 0, r: 3 };
 
 // The three planes are distinct *identities* → discrete data tokens (never --accent).
 const planeCol = (p: number) =>
@@ -29,9 +33,8 @@ const planeCol = (p: number) =>
 const A1_COL = 'var(--data-4, #b08cff)';
 const A0_COL = 'var(--data-5, #69a8ff)';
 const Z_COL = 'var(--data-6, #f0f0f4)';
+const A2_COL = 'var(--data-7, #ff9daa)';
 
-const sx = (x: number) => ((x + R) / (2 * R)) * V;
-const sy = (y: number) => V - ((y + R) / (2 * R)) * V;
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const lerpP = (a: Planar, b: Planar, t: number) => pt(lerp(a.x, b.x, t), lerp(a.y, b.y, t));
 
@@ -41,18 +44,18 @@ function samples(a: number, b: number, n = 48): number[] {
   return out;
 }
 
-/** |z| = r level set of x² − p·y², for any p (ellipse / line pair / hyperbolas). */
-function levelSet(p: number, r: number): Planar[][] {
+/** |z| = r level set of x² − p·y², for any p; E = how far to extend open curves. */
+function levelSet(p: number, r: number, E: number): Planar[][] {
   if (p < 0) {
     const s = 1 / Math.sqrt(-p);
-    return [samples(0, 2 * Math.PI).map(t => pt(r * Math.cos(t), r * s * Math.sin(t)))];
+    return [samples(0, 2 * Math.PI, 72).map(t => pt(r * Math.cos(t), r * s * Math.sin(t)))];
   }
   if (p === 0) return [
-    samples(-R, R).map(y => pt(r, y)),
-    samples(-R, R).map(y => pt(-r, y)),
+    samples(-E, E).map(y => pt(r, y)),
+    samples(-E, E).map(y => pt(-r, y)),
   ];
   const s = 1 / Math.sqrt(p);
-  const T = 2.4;
+  const T = Math.acosh(Math.max(E / r, 1.02)) + 0.2;
   return [
     samples(-T, T).map(t => pt(r * Math.cosh(t), r * s * Math.sinh(t))),
     samples(-T, T).map(t => pt(-r * Math.cosh(t), r * s * Math.sinh(t))),
@@ -62,20 +65,18 @@ function levelSet(p: number, r: number): Planar[][] {
 }
 
 /** The "no way back" set: numbers with |z| = 0 (nothing multiplies them to 1). */
-function nullSet(p: number): Planar[][] {
+function nullSet(p: number, E: number): Planar[][] {
   if (p < 0) return [];
-  if (p === 0) return [samples(-R, R).map(y => pt(0, y))];
+  if (p === 0) return [samples(-E, E).map(y => pt(0, y))];
   const s = 1 / Math.sqrt(p);
   return [
-    samples(-R, R).map(t => pt(t, t * s)),
-    samples(-R, R).map(t => pt(t, -t * s)),
+    samples(-E, E).map(t => pt(t, t * s)),
+    samples(-E, E).map(t => pt(t, -t * s)),
   ];
 }
 
 // ---- change of basis: align the frame to the rails (asymptotes), p > 0 only.
-// T sends the asymptote directions (1, ±1/√p) onto the axes; at p = 1 and s = 1
-// it is exactly a 45° rotation. Interpolated matrix keeps det > 0 throughout.
-type Mat = [number, number, number, number]; // row-major [a b; c d]
+type Mat = [number, number, number, number];
 function railMatrix(p: number, s: number): Mat {
   if (p <= 1e-9 || s <= 0) return [1, 0, 0, 1];
   const rp = Math.sqrt(p);
@@ -89,16 +90,31 @@ function matInvApply(m: Mat, z: Planar): Planar {
   return pt((m[3] * z.x - m[1] * z.y) / det, (-m[2] * z.x + m[0] * z.y) / det);
 }
 
+// ---- the smooth flow from source to image ----
+// Multiplication travels the one-parameter arc z·αˢ (powReal blends straight
+// exactly where the generalized angle doesn't exist). Affine takes Argand's two
+// honest legs: spiral to αz, then slide by β. The square rides z·zᵗ.
+// Legs: spiral ×α₁ · slide +α₀ · (quad only) bend the α₂z² term in.
+function flowAt(expr: ExprId, z: Planar, a1: Planar, a0: Planar, a2: Planar, p: number, t: number): Planar {
+  const L1 = expr === 'quad' ? 0.5 : 0.62;
+  const L2 = expr === 'quad' ? 0.75 : 1;
+  if (t <= L1) return mul(z, powReal(a1, p, t / L1), p);
+  const az = mul(z, a1, p);
+  if (t <= L2) return add(az, smul(a0, (t - L1) / (L2 - L1)));
+  const base = add(az, a0);
+  return add(base, smul(mul(a2, mul(z, z, p), p), (t - L2) / (1 - L2)));
+}
+
 // ---- feed shapes ----
-function shapePts(shape: ShapeId): Planar[] {
-  if (shape === 'circle') return samples(0, 2 * Math.PI, 72).map(t => pt(1.1 + 0.65 * Math.cos(t), 0.55 + 0.65 * Math.sin(t)));
+function shapePts(shape: ShapeId, c: Planar): Planar[] {
+  if (shape === 'circle') return samples(0, 2 * Math.PI, 72).map(t => pt(c.x + 0.65 * Math.cos(t), c.y + 0.65 * Math.sin(t)));
   if (shape === 'square') {
-    const c = pt(0.95, 0.6), h = 0.55, out: Planar[] = [];
+    const h = 0.55, out: Planar[] = [];
     const corners = [pt(c.x - h, c.y - h), pt(c.x + h, c.y - h), pt(c.x + h, c.y + h), pt(c.x - h, c.y + h), pt(c.x - h, c.y - h)];
     for (let i = 0; i < 4; i++) for (const t of samples(0, 1, 16)) out.push(lerpP(corners[i], corners[i + 1], t));
     return out;
   }
-  const v = [pt(0.35, 0.15), pt(1.6, 0.3), pt(0.9, 1.35), pt(0.35, 0.15)], out: Planar[] = [];
+  const v = [pt(c.x - 0.6, c.y - 0.45), pt(c.x + 0.65, c.y - 0.3), pt(c.x - 0.05, c.y + 0.75), pt(c.x - 0.6, c.y - 0.45)], out: Planar[] = [];
   for (let i = 0; i < 3; i++) for (const t of samples(0, 1, 20)) out.push(lerpP(v[i], v[i + 1], t));
   return out;
 }
@@ -113,61 +129,128 @@ interface PlotProps {
   shape: ShapeId;
   a1: Planar;
   a0: Planar;
+  a2: Planar;
   z0: Planar;
+  sc: Planar;
   t: number;
   iterN: number;
   rails: number;
   showGrid: boolean;
   showNull: boolean;
-  onDrag: (which: 'a1' | 'a0' | 'z0', z: Planar) => void;
+  showLabels: boolean;
+  cmap: string;
+  win: ViewWin;
+  onDrag: (which: 'a1' | 'a0' | 'a2' | 'z0' | 'sc', z: Planar) => void;
+  onWin: (w: ViewWin) => void;
 }
 
 function PlanePlot(props: PlotProps) {
-  const { p, expr, feed, shape, a1, a0, z0, t, iterN, rails, showGrid, showNull, onDrag } = props;
+  const { p, expr, feed, shape, a1, a0, a2, z0, sc, t, iterN, rails, showGrid, showNull, showLabels, cmap, win, onDrag, onWin } = props;
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const dragging = useRef<'a1' | 'a0' | 'z0' | null>(null);
+  const gesture = useRef<{ kind: 'handle' | 'pan'; which?: 'a1' | 'a0' | 'a2' | 'z0' | 'sc'; last?: { x: number; y: number } } | null>(null);
+  const pinch = useRef<Map<number, { x: number; y: number }>>(new Map());
   const col = planeCol(p);
   const M = railMatrix(p, rails);
 
-  const map = (z: Planar): Planar => (expr === 'affine' ? affine(z, a1, a0, p) : mul(z, z, p));
-  // view = rail basis applied on top of world coords
+  // world → rail frame → window → screen
   const view = (z: Planar) => matApply(M, z);
+  const px = (v: Planar) => pt(((v.x - win.cx) / (2 * win.r) + 0.5) * V, (0.5 - (v.y - win.cy) / (2 * win.r)) * V);
+  const toScreen = (z: Planar) => px(view(z));
   const poly = (ps: Planar[]) =>
-    ps.map(view)
-      .filter(q => isFinite(q.x) && isFinite(q.y) && Math.abs(q.x) < R * 6 && Math.abs(q.y) < R * 6)
-      .map(q => `${sx(q.x).toFixed(1)},${sy(q.y).toFixed(1)}`).join(' ');
+    ps.map(toScreen)
+      .filter(q => isFinite(q.x) && isFinite(q.y) && Math.abs(q.x - V / 2) < V * 3 && Math.abs(q.y - V / 2) < V * 3)
+      .map(q => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ');
 
-  const toWorld = (e: React.PointerEvent): Planar => {
+  const map = (z: Planar): Planar =>
+    expr === 'affine' ? affine(z, a1, a0, p) : add(affine(z, a1, a0, p), mul(a2, mul(z, z, p), p));
+  const E = (Math.abs(win.cx) + Math.abs(win.cy) + win.r) * 1.6 + 1;
+
+  const clientToFrame = (cx: number, cy: number): Planar => {
     const r = svgRef.current!.getBoundingClientRect();
-    const vw = pt(
-      ((e.clientX - r.left) / r.width) * 2 * R - R,
-      R - ((e.clientY - r.top) / r.height) * 2 * R,
+    return pt(
+      win.cx + ((cx - r.left) / r.width - 0.5) * 2 * win.r,
+      win.cy + (0.5 - (cy - r.top) / r.height) * 2 * win.r,
     );
-    return matInvApply(M, vw);
   };
+  const clientToWorld = (cx: number, cy: number): Planar => matInvApply(M, clientToFrame(cx, cy));
 
-  const targets: Array<['a1' | 'a0' | 'z0', Planar]> = [];
-  if (expr === 'affine') { targets.push(['a1', a1], ['a0', a0]); }
+  const targets: Array<['a1' | 'a0' | 'a2' | 'z0' | 'sc', Planar]> = [];
+  if (expr !== 'unit') { targets.push(['a1', a1], ['a0', a0]); }
+  if (expr === 'quad') targets.push(['a2', a2]);
   if (feed === 'point' && expr !== 'unit') targets.push(['z0', z0]);
+  if (feed === 'shape' && expr !== 'unit') targets.push(['sc', sc]);
 
   const onDown = (e: React.PointerEvent) => {
-    const w = toWorld(e);
-    let best: 'a1' | 'a0' | 'z0' | null = null, bd = 0.5;
+    pinch.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    (e.target as Element).setPointerCapture(e.pointerId);
+    if (pinch.current.size >= 2) { gesture.current = null; return; } // pinch takes over
+    const w = clientToWorld(e.clientX, e.clientY);
+    let best: 'a1' | 'a0' | 'a2' | 'z0' | 'sc' | null = null, bd = win.r / 6;
     for (const [k, q] of targets) {
       const d = Math.hypot(w.x - q.x, w.y - q.y);
       if (d < bd) { bd = d; best = k; }
     }
-    if (!best) return;
-    dragging.current = best;
-    (e.target as Element).setPointerCapture(e.pointerId);
+    gesture.current = best
+      ? { kind: 'handle', which: best }
+      : { kind: 'pan', last: { x: e.clientX, y: e.clientY } };
   };
+
   const onMove = (e: React.PointerEvent) => {
-    if (!dragging.current) return;
-    const w = toWorld(e);
-    const clamp = (v: number) => Math.max(-R, Math.min(R, Math.round(v * 20) / 20));
-    onDrag(dragging.current, pt(clamp(w.x), clamp(w.y)));
+    if (pinch.current.has(e.pointerId)) {
+      if (pinch.current.size === 2) {
+        const pts = [...pinch.current.entries()];
+        const other = pts.find(([id]) => id !== e.pointerId)![1];
+        const before = pinch.current.get(e.pointerId)!;
+        const dBefore = Math.hypot(before.x - other.x, before.y - other.y);
+        const dAfter = Math.hypot(e.clientX - other.x, e.clientY - other.y);
+        pinch.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (dBefore > 0 && dAfter > 0) {
+          const rect = svgRef.current!.getBoundingClientRect();
+          const scale = dBefore / dAfter;
+          const midX = (e.clientX + other.x) / 2, midY = (e.clientY + other.y) / 2;
+          const fx = win.cx + ((midX - rect.left) / rect.width - 0.5) * 2 * win.r;
+          const fy = win.cy + (0.5 - (midY - rect.top) / rect.height) * 2 * win.r;
+          const nr = Math.max(0.2, Math.min(40, win.r * scale));
+          onWin({ cx: fx + (win.cx - fx) * (nr / win.r), cy: fy + (win.cy - fy) * (nr / win.r), r: nr });
+        }
+        return;
+      }
+      pinch.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+    const g = gesture.current;
+    if (!g) return;
+    if (g.kind === 'handle' && g.which) {
+      const w = clientToWorld(e.clientX, e.clientY);
+      const snap = (v: number) => Math.round(v * 20) / 20;
+      onDrag(g.which, pt(snap(w.x), snap(w.y)));
+    } else if (g.kind === 'pan' && g.last) {
+      const rect = svgRef.current!.getBoundingClientRect();
+      const dx = ((e.clientX - g.last.x) / rect.width) * 2 * win.r;
+      const dy = ((e.clientY - g.last.y) / rect.height) * 2 * win.r;
+      g.last = { x: e.clientX, y: e.clientY };
+      onWin({ cx: win.cx - dx, cy: win.cy + dy, r: win.r });
+    }
   };
-  const onUp = () => { dragging.current = null; };
+
+  const onUp = (e: React.PointerEvent) => {
+    pinch.current.delete(e.pointerId);
+    gesture.current = null;
+  };
+
+  const onWheel = (e: React.WheelEvent) => {
+    const f = clientToFrame(e.clientX, e.clientY);
+    const k = Math.exp(e.deltaY * 0.0015);
+    const nr = Math.max(0.2, Math.min(40, win.r * k));
+    onWin({ cx: f.x + (win.cx - f.x) * (nr / win.r), cy: f.y + (win.cy - f.y) * (nr / win.r), r: nr });
+  };
+
+  // axis ticks that survive zoom
+  const step = win.r <= 6 ? 1 : win.r <= 15 ? 5 : 10;
+  const ticks: number[] = [];
+  for (let k = Math.ceil((win.cx - win.r) / step) * step; k <= win.cx + win.r; k += step) if (k !== 0) ticks.push(k);
+  const yticks: number[] = [];
+  for (let k = Math.ceil((win.cy - win.r) / step) * step; k <= win.cy + win.r; k += step) if (k !== 0) yticks.push(k);
+  const o = px(pt(0, 0));
 
   // source geometry for the mapped feeds
   const sourceLines: Planar[][] = [];
@@ -178,24 +261,32 @@ function PlanePlot(props: PlotProps) {
         sourceLines.push(samples(-2, 2, 40).map(u => pt(u, k)));
       }
     } else if (feed === 'shape') {
-      sourceLines.push(shapePts(shape));
+      sourceLines.push(shapePts(shape, sc));
     }
   }
 
-  // the iterated orbit (point feed): z, f(z), f²(z), … under THIS plane's p
-  const orbit: Planar[] = [];
+  // the iterated orbit (point feed) with smooth arcs between iterates
+  const orbitArcs: Planar[][] = [];
+  const orbitPts: Planar[] = [];
   if (expr !== 'unit' && feed === 'point') {
     let z = z0;
-    orbit.push(z);
-    for (let i = 0; i < iterN; i++) { z = map(z); orbit.push(z); if (!isFinite(z.x) || !isFinite(z.y)) break; }
+    orbitPts.push(z);
+    for (let i = 0; i < iterN; i++) {
+      const zn = map(z);
+      if (!isFinite(zn.x) || !isFinite(zn.y) || Math.hypot(zn.x, zn.y) > 1e4) break;
+      const zz = z;
+      orbitArcs.push(samples(0, 1, 24).map(s => flowAt(expr, zz, a1, a0, a2, p, s)));
+      orbitPts.push(zn);
+      z = zn;
+    }
   }
 
   const marker = (q: Planar, fill: string, r: number, label?: string, key?: string) => {
-    const vq = view(q);
+    const s = toScreen(q);
     return (
       <g key={key}>
-        <circle cx={sx(vq.x)} cy={sy(vq.y)} r={r} fill={fill} stroke="var(--card)" strokeWidth={2} />
-        {label && <text x={sx(vq.x) + 10} y={sy(vq.y) - 8} fill={fill} fontSize={13} fontWeight={700}
+        <circle cx={s.x} cy={s.y} r={r} fill={fill} stroke="var(--card)" strokeWidth={2} />
+        {label && <text x={s.x + 10} y={s.y - 8} fill={fill} fontSize={13} fontWeight={700}
           fontFamily="var(--font-mono, monospace)">{label}</text>}
       </g>
     );
@@ -206,58 +297,94 @@ function PlanePlot(props: PlotProps) {
       ref={svgRef}
       viewBox={`0 0 ${V} ${V}`}
       style={{ width: '100%', height: '100%', display: 'block', touchAction: 'none',
-        cursor: targets.length ? 'grab' : 'default' }}
+        cursor: 'grab' }}
       onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+      onWheel={onWheel} onDoubleClick={() => onWin(HOME)}
     >
-      {/* frame axes (the current basis — these stay put; the world realigns) */}
-      <line x1={0} y1={sy(0)} x2={V} y2={sy(0)} stroke="var(--fg)" strokeOpacity={0.25} />
-      <line x1={sx(0)} y1={0} x2={sx(0)} y2={V} stroke="var(--fg)" strokeOpacity={0.25} />
-      {[-2, -1, 1, 2].map(k => (
-        <g key={k}>
-          <line x1={sx(k)} y1={sy(0) - 4} x2={sx(k)} y2={sy(0) + 4} stroke="var(--fg)" strokeOpacity={0.3} />
-          <line x1={sx(0) - 4} y1={sy(k)} x2={sx(0) + 4} y2={sy(k)} stroke="var(--fg)" strokeOpacity={0.3} />
-        </g>
-      ))}
+      {/* frame axes */}
+      <line x1={0} y1={o.y} x2={V} y2={o.y} stroke="var(--fg)" strokeOpacity={0.25} />
+      <line x1={o.x} y1={0} x2={o.x} y2={V} stroke="var(--fg)" strokeOpacity={0.25} />
+      {ticks.map(k => {
+        const s = px(pt(k, 0));
+        return <line key={`tx${k}`} x1={s.x} y1={o.y - 4} x2={s.x} y2={o.y + 4} stroke="var(--fg)" strokeOpacity={0.3} />;
+      })}
+      {yticks.map(k => {
+        const s = px(pt(0, k));
+        return <line key={`ty${k}`} x1={o.x - 4} y1={s.y} x2={o.x + 4} y2={s.y} stroke="var(--fg)" strokeOpacity={0.3} />;
+      })}
 
-      {showNull && nullSet(p).map((c, i) => (
+      {showNull && nullSet(p, E).map((c, i) => (
         <polyline key={`n${i}`} points={poly(c)} fill="none" stroke="var(--fg)"
           strokeOpacity={0.45} strokeWidth={1.5} strokeDasharray="5 5" />
       ))}
 
       {expr === 'unit' ? (
-        [0.5, 1, 1.5, 2].map(r =>
-          levelSet(p, r).map((c, i) => (
-            <polyline key={`${r}-${i}`} points={poly(c)} fill="none" stroke={col}
-              strokeWidth={r === 1 ? 3 : 1.3} strokeOpacity={r === 1 ? 1 : 0.55} />
-          )),
-        )
+        <>
+          {[0.5, 1, 1.5, 2].map(r =>
+            levelSet(p, r, E).map((c, i) => (
+              <polyline key={`${r}-${i}`} points={poly(c)} fill="none" stroke={col}
+                strokeWidth={r === 1 ? 3 : 1.3} strokeOpacity={r === 1 ? 1 : 0.55} />
+            )),
+          )}
+          {showLabels && [0.5, 1, 1.5, 2].map(r => {
+            const v = toScreen(pt(r, 0));
+            return (
+              <text key={`ll${r}`} x={v.x + 3} y={r === 1 ? v.y - 8 : v.y + 15}
+                fill={col} fillOpacity={r === 1 ? 1 : 0.65}
+                fontSize={r === 1 ? 12 : 10} fontWeight={r === 1 ? 700 : 400}
+                fontFamily="var(--font-mono, monospace)">{r === 1 ? '|z| = 1' : String(r)}</text>
+            );
+          })}
+        </>
       ) : (
         <>
-          {/* faint source, plane-colored image morphing source → image with t */}
           {showGrid && sourceLines.map((line, i) => (
             <polyline key={`s${i}`} points={poly(line)} fill="none" stroke="var(--fg)" strokeOpacity={0.14} />
           ))}
-          {sourceLines.map((line, i) => (
-            <polyline key={`m${i}`} points={poly(line.map(q => lerpP(q, map(q), t)))} fill="none"
+          {feed !== 'shape' && sourceLines.map((line, i) => (
+            <polyline key={`m${i}`} points={poly(line.map(q => flowAt(expr, q, a1, a0, a2, p, t)))} fill="none"
               stroke={col} strokeWidth={1.7} strokeOpacity={0.85} />
           ))}
+          {feed === 'shape' && sourceLines.map((line, li) => {
+            const img = line.map(q => flowAt(expr, q, a1, a0, a2, p, t));
+            return img.slice(0, -1).map((q, i) => (
+              <polyline key={`cs${li}-${i}`} points={poly([q, img[i + 1]])} fill="none"
+                stroke={sampleContinuous(cmap, i / Math.max(1, img.length - 2))}
+                strokeWidth={2.2} strokeOpacity={0.95} />
+            ));
+          })}
 
           {feed === 'point' && (
             <>
-              {iterN > 1 && <polyline points={poly(orbit)} fill="none" stroke={col} strokeWidth={1.4} strokeOpacity={0.6} />}
-              {orbit.slice(1, iterN > 1 ? orbit.length : 2).map((q, i) =>
-                marker(iterN > 1 ? q : lerpP(z0, q, t), col, i === 0 ? 6 : Math.max(2.5, 5 - i * 0.4),
-                  i === 0 ? (expr === 'square' ? 'z²' : 'f(z)') : undefined, `o${i}`))}
+              {/* the smooth path z → f(z), with the moving dot at t */}
+              {iterN <= 1 && orbitArcs[0] && (
+                <>
+                  <polyline points={poly(orbitArcs[0])} fill="none" stroke={col}
+                    strokeWidth={1.6} strokeOpacity={0.55} strokeDasharray="1 4" strokeLinecap="round" />
+                  {marker(flowAt(expr, z0, a1, a0, a2, p, t), col, 6, 'f(z)')}
+                </>
+              )}
+              {iterN > 1 && (
+                <>
+                  {orbitArcs.map((arc, i) => (
+                    <polyline key={`oa${i}`} points={poly(arc)} fill="none"
+                      stroke={sampleContinuous(cmap, i / Math.max(1, orbitArcs.length - 1))}
+                      strokeWidth={1.5} strokeOpacity={0.75} />
+                  ))}
+                  {orbitPts.slice(1).map((q, i) =>
+                    marker(q, sampleContinuous(cmap, i / Math.max(1, orbitPts.length - 2)),
+                      Math.max(2.5, 6 - i * 0.35), i === 0 ? 'f(z)' : undefined, `o${i}`))}
+                </>
+              )}
               {marker(z0, Z_COL, 7, 'z')}
             </>
           )}
 
-          {expr === 'affine' && (
-            <>
-              {marker(a1, A1_COL, 8, 'α')}
-              {marker(a0, A0_COL, 8, 'β')}
-            </>
-          )}
+          {feed === 'shape' && marker(sc, Z_COL, 6)}
+
+          {marker(a1, A1_COL, 8, expr === 'quad' ? 'α₁' : 'α')}
+          {marker(a0, A0_COL, 8, expr === 'quad' ? 'α₀' : 'β')}
+          {expr === 'quad' && marker(a2, A2_COL, 8, 'α₂')}
         </>
       )}
 
@@ -275,26 +402,31 @@ function PlanePlot(props: PlotProps) {
 
 // ---- the app ----
 export default function NumberPlane() {
-  const [expr, setExpr] = usePersistentState<ExprId>('number-plane:expr', 'unit');
+  const [expr, setExpr] = usePersistentState<ExprId>('number-plane:expr2', 'unit');
   const [feed, setFeed] = usePersistentState<FeedId>('number-plane:feed', 'grid');
   const [shape, setShape] = usePersistentState<ShapeId>('number-plane:shape', 'circle');
   const [dial, setDial] = usePersistentState('number-plane:dial', 1);
   const [a1, setA1] = usePersistentState<Planar>('number-plane:a1', pt(1.2, 0.6));
   const [a0, setA0] = usePersistentState<Planar>('number-plane:a0', pt(0.4, 0.3));
+  const [a2, setA2] = usePersistentState<Planar>('number-plane:a2', pt(0.35, 0.15));
   const [z0, setZ0] = usePersistentState<Planar>('number-plane:z0', pt(1.3, 0.5));
+  const [sc, setSc] = usePersistentState<Planar>('number-plane:shape-c', pt(1.0, 0.6));
   const [iterN, setIterN] = usePersistentState('number-plane:iter', 1);
   const [rails, setRails] = usePersistentState('number-plane:rails', 0);
   const [showGrid, setShowGrid] = usePersistentState('number-plane:src-grid', true);
   const [showNull, setShowNull] = usePersistentState('number-plane:null-set', true);
+  const [showLabels, setShowLabels] = usePersistentState('number-plane:level-labels', true);
   const [t, setT] = React.useState(1);
   const [playing, setPlaying] = React.useState(false);
+  const [win, setWin] = React.useState<ViewWin>(HOME); // camera, not a setting — not persisted
+  const themeId = useThemeId();
+  const cmap = themeMapsFor('sequential', themeId)[0];
 
-  // Play: sweep t 0 → 1 and loop (a beat of rest at each end).
   useEffect(() => {
     if (!playing) return;
     let raf = 0, last = performance.now();
     const tick = (now: number) => {
-      const dt = (now - last) / 2200; last = now;
+      const dt = (now - last) / 2600; last = now;
       setT(v => (v + dt > 1.25 ? -0.25 : v + dt));
       raf = requestAnimationFrame(tick);
     };
@@ -304,8 +436,9 @@ export default function NumberPlane() {
   const tShown = Math.max(0, Math.min(1, t));
 
   const planes = [-dial, 0, dial];
-  const onDrag = (which: 'a1' | 'a0' | 'z0', z: Planar) =>
-    which === 'a1' ? setA1(z) : which === 'a0' ? setA0(z) : setZ0(z);
+  const onDrag = (which: 'a1' | 'a0' | 'a2' | 'z0' | 'sc', z: Planar) =>
+    which === 'a1' ? setA1(z) : which === 'a0' ? setA0(z) : which === 'a2' ? setA2(z)
+      : which === 'z0' ? setZ0(z) : setSc(z);
 
   const exprNode = (
     <div>
@@ -314,7 +447,7 @@ export default function NumberPlane() {
         options={[
           { value: 'unit', label: '|z| = r' },
           { value: 'affine', label: 'αz + β' },
-          { value: 'square', label: 'z²' },
+          { value: 'quad', label: 'α₂z² + α₁z + α₀' },
         ]}
         value={expr}
         onChange={setExpr}
@@ -350,7 +483,7 @@ export default function NumberPlane() {
           ? 'The set |z| = r in each arithmetic: circle · line pair · hyperbola.'
           : expr === 'affine'
             ? 'y = mx + b, promoted to the plane. Drag α, β — and z — on any plot; all three share them.'
-            : 'z² in each arithmetic. The white z is what gets squared — drag it and watch all three squares move.'}
+            : 'The quadratic in each arithmetic: the α₂ term bends the plane. Drag α₂, α₁, α₀ — and z.'}
       </p>
     </div>
   );
@@ -383,7 +516,9 @@ export default function NumberPlane() {
       <Slider label="Iterate (Point feed)" value={iterN} min={1} max={14} step={1} onChange={setIterN}
         format={v => (v <= 1 ? 'off' : `${v} steps`)} />
       <p style={{ fontSize: 12.5, opacity: 0.75, margin: '8px 2px 0', lineHeight: 1.5 }}>
-        Iterating the same z under each plane's f: spiral · shear · saddle.
+        The path from z to f(z) is the multiplication's own flow — a spiral arc, a
+        shear, a boost — not a straight teleport. Iterating chains it: spiral ·
+        shear · saddle.
       </p>
     </div>
   );
@@ -398,6 +533,19 @@ export default function NumberPlane() {
         The dual plane's rail already is an axis. The complex plane doesn't move:
         it has no real rails to align. That failure is the whole story.
       </p>
+      <div style={{ marginTop: 8 }}>
+        <button
+          onClick={() => setWin(HOME)}
+          style={{ font: 'inherit', fontSize: 13, fontWeight: 600, padding: '6px 16px', borderRadius: 8,
+            border: '1px solid var(--rule)', background: 'var(--soft)', color: 'var(--fg)', cursor: 'pointer' }}
+        >
+          ⟲ Reset view
+        </button>
+        <p style={{ fontSize: 12.5, opacity: 0.75, margin: '8px 2px 0', lineHeight: 1.5 }}>
+          Scroll / pinch to zoom, drag empty space to pan (all three plots share one
+          window), double-click to reset.
+        </p>
+      </div>
     </div>
   );
 
@@ -407,6 +555,8 @@ export default function NumberPlane() {
       <Slider label="α · im" value={a1.y} min={-2} max={2} step={0.05} onChange={v => setA1(pt(a1.x, v))} />
       <Slider label="β · re" value={a0.x} min={-2} max={2} step={0.05} onChange={v => setA0(pt(v, a0.y))} />
       <Slider label="β · im" value={a0.y} min={-2} max={2} step={0.05} onChange={v => setA0(pt(a0.x, v))} />
+      <Slider label="α₂ · re" value={a2.x} min={-2} max={2} step={0.05} onChange={v => setA2(pt(v, a2.y))} />
+      <Slider label="α₂ · im" value={a2.y} min={-2} max={2} step={0.05} onChange={v => setA2(pt(a2.x, v))} />
     </div>
   );
 
@@ -414,14 +564,15 @@ export default function NumberPlane() {
     <div>
       <Checkbox label="Source (faint)" checked={showGrid} onChange={setShowGrid} />
       <Checkbox label="Null set (|z| = 0)" checked={showNull} onChange={setShowNull} />
+      <Checkbox label="Level labels (|z| = 1)" checked={showLabels} onChange={setShowLabels} />
     </div>
   );
 
   const sections: SectionDef[] = [
     { id: 'expression', title: 'Expression', arch: 'subject', node: exprNode, estHeight: 230 },
     { id: 'dial', title: 'The dial', arch: 'drive', node: dialNode, estHeight: 150 },
-    { id: 'play', title: 'Play', arch: 'playback', node: playNode, estHeight: 240 },
-    { id: 'axes', title: 'Axes', arch: 'view', node: axesNode, estHeight: 170 },
+    { id: 'play', title: 'Play', arch: 'playback', node: playNode, estHeight: 260 },
+    { id: 'axes', title: 'Axes & view', arch: 'view', node: axesNode, estHeight: 260 },
     { id: 'params', title: 'Coefficients', arch: 'domain', node: paramsNode, estHeight: 220 },
     { id: 'marks', title: 'Marks', arch: 'marks', node: marksNode, estHeight: 100 },
   ];
@@ -433,13 +584,13 @@ export default function NumberPlane() {
       defaultRect: { x: 370, y: 16, w: 880, h: 380 },
       node: (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexWrap: 'wrap',
-          alignItems: 'stretch', gap: 8, padding: 8, background: 'var(--viz-bg, #0c0c10)' }}>
+          alignItems: 'stretch', gap: 14, padding: 12, background: 'var(--bg)' }}>
           {planes.map((p, i) => (
             <div key={i} style={{ flex: '1 1 220px', minWidth: 220, border: '1px solid var(--rule)',
-              borderRadius: 8, overflow: 'hidden' }}>
-              <PlanePlot p={p} expr={expr} feed={feed} shape={shape} a1={a1} a0={a0} z0={z0}
-                t={tShown} iterN={iterN} rails={rails}
-                showGrid={showGrid} showNull={showNull} onDrag={onDrag} />
+              borderRadius: 10, overflow: 'hidden', background: 'var(--viz-bg, #0c0c10)' }}>
+              <PlanePlot p={p} expr={expr} feed={feed} shape={shape} a1={a1} a0={a0} a2={a2} z0={z0} sc={sc}
+                t={tShown} iterN={iterN} rails={rails} win={win}
+                showGrid={showGrid} showNull={showNull} showLabels={showLabels} cmap={cmap} onDrag={onDrag} onWin={setWin} />
             </div>
           ))}
         </div>
