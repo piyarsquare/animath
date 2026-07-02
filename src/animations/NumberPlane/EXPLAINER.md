@@ -20,6 +20,23 @@ multiplication:
   squeezes (then slides). Drag `α` and `β` on any plot; all three share them.
 - **z²** — the same square, three ways.
 
+**Feeds.** For the map expressions, feed them a **Point** (a draggable white `z`
+— for `z²` it is literally the thing being squared — with its image `f(z)`, and
+an **Iterate** slider that chains `f` and shows the same `z` spiraling in the
+complex plane, shearing in the dual, and saddling in the split), a **Shape**
+(circle · square · triangle), or a **Grid**. The **t** slider (and ▶ Play)
+morphs source → image so you watch the transformation happen.
+
+**The dial.** One `p` knob: the outer plots show `j² = −p` and `+p` while the
+dual plane holds still between them; turn toward 0 and both worlds flatten
+into it.
+
+**Align frame to rails.** A change-of-basis slider that realigns the boost
+plot's frame onto its asymptotes — at 100% the hyperbolas sit square and its
+multiplication is visibly two independent stretches (`ℝ×ℝ` undisguised). The
+complex plane doesn't move: it has no real rails to align. That failure is
+the heart of the story.
+
 The dashed lines are the **null set**: numbers with `|z| = 0` that nothing
 multiplies back to `1`. The complex plane has none (only the origin) — that is
 what makes it a field, and the start of why it is special.

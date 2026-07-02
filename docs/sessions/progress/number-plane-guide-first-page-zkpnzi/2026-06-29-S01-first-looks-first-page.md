@@ -47,6 +47,31 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 19:50 — Number Plane round 2: z point + feeds + Play morph + Iterate + rails slider
+**Why:** Dan's feature list after driving the app: move z and see its image; the
+grid AND shapes; watch things move; the iterate step; "I don't know what is
+getting squared"; and a change-of-axis control realigning the boost onto its
+asymptotes.
+
+- **Point feed**: draggable white `z` shared across plots; image `f(z)`/`z²`
+  labeled (answers what-gets-squared); dashed-into via t.
+- **Feeds**: Point · Shape (○ □ △ presets) · Grid.
+- **Play**: `t` source→image morph slider + ▶ Play (rAF loop, brief rest at ends).
+- **Iterate** (1–14): orbit of the same z under each plane's f — **spiral · shear ·
+  saddle** side by side (verified screenshot; the app's money shot).
+- **Align frame to rails** slider: change-of-basis morph sending the split plot's
+  asymptote directions onto the axes (det>0 interpolation, exact 45° rotation at
+  p=1; pointer drags inverse-mapped). Complex plot deliberately doesn't move — no
+  real rails, the panel copy says that failure is the story. (This is the plan's
+  "change-of-basis morph — probably the single most important interaction".)
+- **Essentials layout** default (Expression·Dial·Play open) so the three plots are
+  visible on first open (Everything buried them under six panels).
+- EXPLAINER updated (feeds, dial, rails).
+
+Verified (R1): build green; screenshots — orbit trio (spiral/shear/saddle), rails
+at 100% (hyperbolas square, circle unmoved), z² point labeling. Drag remains
+headless-logic-verified only.
+
 ### 🟢 code · 19:00 — New app: Number Plane (`#/number-plane`) — the Beat-4 comparator
 **Why:** Dan pinned the main story's Beat 4 as the next build: a new gallery app
 "Number Plane" (may replace Argand later) — one panel, three plots (p = −1, 0, +1),
