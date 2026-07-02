@@ -4,7 +4,8 @@ import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/type
 import { Pills, Slider, Checkbox } from '../../components/ControlPanel';
 import { usePersistentState } from '../../lib/usePersistentState';
 import { useThemeId } from '../../chrome/skins';
-import { themeMapsFor, sampleContinuous } from '../../lib/colormapRegistry';
+import { themeMapsFor, sampleContinuous, hexToRgb } from '../../lib/colormapRegistry';
+import { useThemeTokens } from '../../chrome/useThemeTokens';
 import { type Planar, pt, add, smul, mul, affine, powReal, kindLabel, kindOf } from '../Argand/numberPlanes';
 import explainer from './EXPLAINER.md?raw';
 
@@ -119,6 +120,19 @@ function shapePts(shape: ShapeId, c: Planar): Planar[] {
   return out;
 }
 
+// Clamp a colormap's sampled range to the sub-interval whose luminance clears
+// the plot background by a margin — so no orbit step or shape segment vanishes
+// into the background, on dark AND light skins.
+function contrastRange(cmap: string, bgHex: string): [number, number] {
+  const lum = (hex: string) => { const [r, g, b] = hexToRgb(hex); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const lb = lum(bgHex);
+  const ok = (t: number) => Math.abs(lum(sampleContinuous(cmap, t)) - lb) >= 70;
+  let lo = 0, hi = 1;
+  while (lo < 0.6 && !ok(lo)) lo += 0.04;
+  while (hi > lo && !ok(hi)) hi -= 0.04;
+  return hi > lo ? [lo, hi] : [0, 1];
+}
+
 const fmtP = (p: number) => (p === 0 ? '0' : (p > 0 ? '+' : '−') + String(Math.round(Math.abs(p) * 100) / 100));
 
 // ---- one plot ----
@@ -139,13 +153,16 @@ interface PlotProps {
   showNull: boolean;
   showLabels: boolean;
   cmap: string;
+  cmapLo: number;
+  cmapHi: number;
   win: ViewWin;
   onDrag: (which: 'a1' | 'a0' | 'a2' | 'z0' | 'sc', z: Planar) => void;
   onWin: (w: ViewWin) => void;
 }
 
 function PlanePlot(props: PlotProps) {
-  const { p, expr, feed, shape, a1, a0, a2, z0, sc, t, iterN, rails, showGrid, showNull, showLabels, cmap, win, onDrag, onWin } = props;
+  const { p, expr, feed, shape, a1, a0, a2, z0, sc, t, iterN, rails, showGrid, showNull, showLabels, cmap, cmapLo, cmapHi, win, onDrag, onWin } = props;
+  const cAt = (u: number) => sampleContinuous(cmap, cmapLo + Math.max(0, Math.min(1, u)) * (cmapHi - cmapLo));
   const svgRef = useRef<SVGSVGElement | null>(null);
   const gesture = useRef<{ kind: 'handle' | 'pan'; which?: 'a1' | 'a0' | 'a2' | 'z0' | 'sc'; last?: { x: number; y: number } } | null>(null);
   const pinch = useRef<Map<number, { x: number; y: number }>>(new Map());
@@ -349,7 +366,7 @@ function PlanePlot(props: PlotProps) {
             const img = line.map(q => flowAt(expr, q, a1, a0, a2, p, t));
             return img.slice(0, -1).map((q, i) => (
               <polyline key={`cs${li}-${i}`} points={poly([q, img[i + 1]])} fill="none"
-                stroke={sampleContinuous(cmap, i / Math.max(1, img.length - 2))}
+                stroke={cAt(i / Math.max(1, img.length - 2))}
                 strokeWidth={2.2} strokeOpacity={0.95} />
             ));
           })}
@@ -368,11 +385,11 @@ function PlanePlot(props: PlotProps) {
                 <>
                   {orbitArcs.map((arc, i) => (
                     <polyline key={`oa${i}`} points={poly(arc)} fill="none"
-                      stroke={sampleContinuous(cmap, i / Math.max(1, orbitArcs.length - 1))}
+                      stroke={cAt(i / Math.max(1, orbitArcs.length - 1))}
                       strokeWidth={1.5} strokeOpacity={0.75} />
                   ))}
                   {orbitPts.slice(1).map((q, i) =>
-                    marker(q, sampleContinuous(cmap, i / Math.max(1, orbitPts.length - 2)),
+                    marker(q, cAt(i / Math.max(1, orbitPts.length - 2)),
                       Math.max(2.5, 6 - i * 0.35), i === 0 ? 'f(z)' : undefined, `o${i}`))}
                 </>
               )}
@@ -421,6 +438,10 @@ export default function NumberPlane() {
   const [win, setWin] = React.useState<ViewWin>(HOME); // camera, not a setting — not persisted
   const themeId = useThemeId();
   const cmap = themeMapsFor('sequential', themeId)[0];
+  const tokens = useThemeTokens(['--viz-bg']);
+  const [cmapLo, cmapHi] = React.useMemo(
+    () => contrastRange(cmap, tokens['--viz-bg'] || '#0c0c10'),
+    [cmap, tokens]);
 
   useEffect(() => {
     if (!playing) return;
@@ -590,7 +611,7 @@ export default function NumberPlane() {
               borderRadius: 10, overflow: 'hidden', background: 'var(--viz-bg, #0c0c10)' }}>
               <PlanePlot p={p} expr={expr} feed={feed} shape={shape} a1={a1} a0={a0} a2={a2} z0={z0} sc={sc}
                 t={tShown} iterN={iterN} rails={rails} win={win}
-                showGrid={showGrid} showNull={showNull} showLabels={showLabels} cmap={cmap} onDrag={onDrag} onWin={setWin} />
+                showGrid={showGrid} showNull={showNull} showLabels={showLabels} cmap={cmap} cmapLo={cmapLo} cmapHi={cmapHi} onDrag={onDrag} onWin={setWin} />
             </div>
           ))}
         </div>
