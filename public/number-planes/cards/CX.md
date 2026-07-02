@@ -12,10 +12,9 @@ links:
   opens: [analysis, matrices]
 figures:
   - id: tri-multiply
-    widget: plane-op
-    op: multiply
-    show: [-1, 0, 1]        # the SAME two numbers, multiplied under each p
-    caption: one product, three planes — watch the complex case turn
+    app: number-plane
+    href: ../../#/number-plane
+    note: pick αz + β with β = 0 — multiplying by α turns this plane (and shears/squeezes its siblings)
 ---
 ## note
 

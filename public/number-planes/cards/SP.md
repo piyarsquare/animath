@@ -13,9 +13,9 @@ links:
   opens: [relativity]
 figures:
   - id: split-boost
-    widget: plane-op
-    op: multiply
-    p: 1
+    app: number-plane
+    href: ../../#/number-plane
+    note: the right plot — hyperbola levels, two dashed rails, the squeeze
 ---
 ## note
 

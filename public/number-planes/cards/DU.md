@@ -12,9 +12,9 @@ links:
   opens: [autodiff]
 figures:
   - id: dual-shear
-    widget: plane-op
-    op: multiply
-    p: 0
+    app: number-plane
+    href: ../../#/number-plane
+    note: the middle plot — multiplication shears; z² sends the grid to parabolas
 ---
 ## note
 

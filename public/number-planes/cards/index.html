@@ -236,8 +236,10 @@ function renderCard(id){
   if (Array.isArray(c.figures) && c.figures.length) {
     h += `<div class="sec">figures</div>`;
     for (const fig of c.figures) {
-      const parts = Object.entries(fig).map(([k,val])=>`${k}: ${Array.isArray(val)?val.join(', '):val}`);
-      h += `<div class="fig">▦ ${parts.join('  ·  ')}</div>`;
+      const parts = Object.entries(fig).filter(([k])=>k!=='href')
+        .map(([k,val])=>`${k}: ${Array.isArray(val)?val.join(', '):val}`);
+      const open = fig.href ? ` &nbsp;<a href="${esc(fig.href)}" target="_blank" rel="noopener" style="color:var(--accent)">open →</a>` : '';
+      h += `<div class="fig">▦ ${parts.join('  ·  ')}${open}</div>`;
     }
   }
   // connections out
