@@ -202,16 +202,19 @@ function PlanePlot(props: PlotProps) {
   const onDown = (e: React.PointerEvent) => {
     pinch.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     (e.target as Element).setPointerCapture(e.pointerId);
-    if (pinch.current.size >= 2) { gesture.current = null; return; } // pinch takes over
+    if (pinch.current.size >= 2) { gesture.current = null; return; } // two fingers: pan+zoom
+    const touch = e.pointerType === 'touch';
     const w = clientToWorld(e.clientX, e.clientY);
-    let best: 'a1' | 'a0' | 'a2' | 'z0' | 'sc' | null = null, bd = win.r / 6;
+    // touch gets a fatter hit radius — and one finger NEVER pans (two fingers do),
+    // so grabbing a point can't accidentally drag the plane
+    let best: 'a1' | 'a0' | 'a2' | 'z0' | 'sc' | null = null, bd = touch ? win.r / 3.5 : win.r / 6;
     for (const [k, q] of targets) {
       const d = Math.hypot(w.x - q.x, w.y - q.y);
       if (d < bd) { bd = d; best = k; }
     }
     gesture.current = best
       ? { kind: 'handle', which: best }
-      : { kind: 'pan', last: { x: e.clientX, y: e.clientY } };
+      : touch ? null : { kind: 'pan', last: { x: e.clientX, y: e.clientY } };
   };
 
   const onMove = (e: React.PointerEvent) => {
@@ -222,15 +225,21 @@ function PlanePlot(props: PlotProps) {
         const before = pinch.current.get(e.pointerId)!;
         const dBefore = Math.hypot(before.x - other.x, before.y - other.y);
         const dAfter = Math.hypot(e.clientX - other.x, e.clientY - other.y);
+        const prevMidX = (before.x + other.x) / 2, prevMidY = (before.y + other.y) / 2;
+        const midX = (e.clientX + other.x) / 2, midY = (e.clientY + other.y) / 2;
         pinch.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
         if (dBefore > 0 && dAfter > 0) {
           const rect = svgRef.current!.getBoundingClientRect();
+          // pan by the midpoint drift…
+          const panX = ((midX - prevMidX) / rect.width) * 2 * win.r;
+          const panY = ((midY - prevMidY) / rect.height) * 2 * win.r;
+          let cx = win.cx - panX, cy = win.cy + panY;
+          // …then zoom about the midpoint
           const scale = dBefore / dAfter;
-          const midX = (e.clientX + other.x) / 2, midY = (e.clientY + other.y) / 2;
-          const fx = win.cx + ((midX - rect.left) / rect.width - 0.5) * 2 * win.r;
-          const fy = win.cy + (0.5 - (midY - rect.top) / rect.height) * 2 * win.r;
           const nr = Math.max(0.2, Math.min(40, win.r * scale));
-          onWin({ cx: fx + (win.cx - fx) * (nr / win.r), cy: fy + (win.cy - fy) * (nr / win.r), r: nr });
+          const fx = cx + ((midX - rect.left) / rect.width - 0.5) * 2 * win.r;
+          const fy = cy + (0.5 - (midY - rect.top) / rect.height) * 2 * win.r;
+          onWin({ cx: fx + (cx - fx) * (nr / win.r), cy: fy + (cy - fy) * (nr / win.r), r: nr });
         }
         return;
       }
@@ -568,8 +577,9 @@ export default function NumberPlane() {
           ⟲ Reset view
         </button>
         <p style={{ fontSize: 12.5, opacity: 0.75, margin: '8px 2px 0', lineHeight: 1.5 }}>
-          Scroll / pinch to zoom, drag empty space to pan (all three plots share one
-          window), double-click to reset.
+          Mouse: scroll to zoom, drag empty space to pan. Touch: one finger moves
+          points, two fingers pan &amp; zoom. All three plots share one window;
+          double-tap to reset.
         </p>
       </div>
     </div>

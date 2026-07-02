@@ -32,9 +32,10 @@ straight line, but along the multiplication's **own flow** `z·αᵗ`: a spiral 
 a shear, a boost (drawn dotted for the Point feed). Where that angle honestly
 doesn't exist (the null set) the path falls back to a straight blend.
 
-**Zoom & pan.** Scroll or pinch to zoom, drag empty space to pan; all three
-plots share one window so they stay comparable. Double-click (or ⟲ Reset view)
-to come home.
+**Zoom & pan.** Mouse: scroll to zoom, drag empty space to pan. Touch: one
+finger moves points; **two fingers pan and zoom** (so grabbing a point never
+drags the plane). All three plots share one window so they stay comparable.
+Double-click / double-tap (or ⟲ Reset view) to come home.
 
 **The dial.** One `p` knob: the outer plots show `j² = −p` and `+p` while the
 dual plane holds still between them; turn toward 0 and both worlds flatten
