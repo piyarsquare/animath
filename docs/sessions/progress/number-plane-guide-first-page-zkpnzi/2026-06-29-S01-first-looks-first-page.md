@@ -47,6 +47,32 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 19:00 — New app: Number Plane (`#/number-plane`) — the Beat-4 comparator
+**Why:** Dan pinned the main story's Beat 4 as the next build: a new gallery app
+"Number Plane" (may replace Argand later) — one panel, three plots (p = −1, 0, +1),
+the **same expression on each**. Mid-build he added: the notebook could *open* on
+this ("the three number planes"), and the comparator invites a **single p knob**
+that alters complex/split and leaves dual unchanged — both folded in.
+
+Built `src/animations/NumberPlane/` (self-contained, SVG, no WebGL):
+- **Three plots** side by side; expressions: `|z| = r` level sets (circle · line
+  pair · hyperbola; r=1 bold), `αz + β` (y=mx+b promoted; grid turn/shear/squeeze,
+  **α/β draggable on any plot, shared by all three**), `z²` (grid bends three ways).
+- **The dial**: one `p` slider — plots show `j² = −p, 0, +p`; turn toward 0 and both
+  outer worlds flatten into the dual (level sets generalized to arbitrary p:
+  ellipses / line pair / hyperbolas with 1/√|p| scaling).
+- **Null set** dashed (`|z| = 0`, the no-way-back numbers) — none · x=0 · y=±x/√p.
+- **First consumer of the dormant `numberPlanes.ts` engine** (mul/affine/kindLabel).
+- Theming: plane identities on `--data-1/2/3`, handles `--data-4/5` (no --accent).
+- Registered (append-only): `index.tsx`, `apps.ts` (icon ⊞), `catalog.ts`
+  (Complex/plane/hue 262), CLAUDE.md routing+tree rows, README item 14 + tree.
+- EXPLAINER with sources block (Yaglom; Clifford/Cockle; Needham; Harkin & Harkin).
+
+Verified (R1): build green; screenshots of all three expressions + dial at p=0.4
+(ellipses stretch, asymptotes steepen — both flattening toward dual). Drag is
+logic-verified only (headless, no pointer script) — signals: visual-unverified for
+touch feel. "Smaller vessels vs gallery apps" question noted, deferred per Dan.
+
 ### 🟢 code · 18:10 — Regrouped into core units (C1/C2/C3)
 **Why:** Dan: "yes please regroup into core units."
 

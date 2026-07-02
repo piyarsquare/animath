@@ -22,6 +22,7 @@ reachable directly by hash route.
 11. **[Solid Worlds](https://piyarsquare.github.io/animath/#/solid-worlds)** – walk *inside* a closed 3-manifold built from one glued cube — a single room that repeats forever. Walk an orientation-reversing loop in the Klein-bottle × circle world and the whole world, sign and your own footprints come back mirror-reversed (the 3D successor to Polygon Worlds).
 12. **[Argand Plane](https://piyarsquare.github.io/animath/#/argand)** – drag two complex numbers and watch arithmetic *become* geometry: addition slides tip-to-tail, multiplication spirals (angles add, lengths multiply), and `a·b = b·a` falls out of the picture. A standalone entry point to *arithmetic on the plane* — the complex plane as one of a family of "number planes" (Spin / Shear / Boost). It complements Plane Transform rather than replacing it.
 13. **[Counting the Ways](https://piyarsquare.github.io/animath/#/counting-the-ways)** – why does a Bessel function show up when you take the difference of two Poisson counts? A narrated *Play* tutorial builds the whole (gains, losses) grid and sums one diagonal to reveal the scary `I_{|k|}` as a plain sum — the Skellam distribution demystified — with rates you can set directly or from a length law, plus a cataloged Lab that recovers the rates from synthetic samples.
+14. **[Number Plane](https://piyarsquare.github.io/animath/#/number-plane)** – one expression, three arithmetics: three plots side by side (`j² = −p, 0, +p`) drawing the same thing — the `|z| = r` level sets (circle · line pair · hyperbola), `αz + β` with draggable coefficients shared across all three, and `z²` — each under its own plane's multiplication, with a single `p` dial that morphs the outer planes while the dual holds still.
 
 ---
 
@@ -151,6 +152,7 @@ src/
 │   ├── TrinaryStars/       # three-body sandbox (Observatory) + ensemble Lab
 │   ├── PolygonWorlds/      # walk every closed surface from one glued polygon
 │   └── CountingTheWays/    # Skellam = difference of two Poissons; the Bessel function as a diagonal sum (skellam.ts)
+│   └── NumberPlane/        # one expression, three arithmetics (j² = −p·0·+p side by side; numberPlanes.ts engine)
 │
 ├── components/             # shared app-side UI
 │   ├── ParticleViewerShell # turnkey workspace assembly for the particle viewers
