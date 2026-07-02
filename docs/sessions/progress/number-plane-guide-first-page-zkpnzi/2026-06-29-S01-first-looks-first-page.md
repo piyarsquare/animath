@@ -47,6 +47,21 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 18:10 — Regrouped into core units (C1/C2/C3)
+**Why:** Dan: "yes please regroup into core units."
+
+Added a thin **core** layer above the 27 fine cards (kept intact as the "things"):
+- **C1** see + and × on the line — gathers L1·L3·L4·L5·AX·fields·algebra·tropical·modular·p-adic
+- **C2** + and × on the plane → choices — gathers L2·PL·DV·CR·QD; figures for the
+  3-way comparator (`tri-compare`, p=−1,0,1) + the single `p-dial`
+- **C3** the three planes → what the choice gives — gathers CX·DU·SP·WH·FD + the topics
+- New `gathers` link type (core→thing) + `core` kind (leads the sidebar, larger graph
+  hubs). Checker + inspector updated. Simple, idea-first text.
+
+Verified (R1): checker green (30 cards, all refs resolve incl. gathers), build green,
+C2 card shows its cluster + both widget figures, graph shows 3 coral core hubs over
+the finer web.
+
 ### 🟣 decision · 17:45 — Reframe: the unit is the "core concept" (dial back the machinery)
 **Why:** Dan: "we went too far… we were just trying to measure out the ideas into
 units. keep the text simple. the focus is on the idea. let's not be precious." The
