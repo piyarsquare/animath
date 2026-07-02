@@ -608,10 +608,13 @@ export default function NumberPlane() {
       title: 'Three planes',
       defaultRect: { x: 370, y: 16, w: 880, h: 380 },
       node: (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexWrap: 'wrap',
-          alignItems: 'stretch', gap: 14, padding: 12, background: 'var(--bg)' }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex',
+          alignItems: 'center', justifyContent: 'center', gap: 8, padding: 8, background: 'var(--bg)' }}>
+          {/* three squares that never wrap — on a phone they shrink together so
+              the side-by-side comparison survives any width */}
           {planes.map((p, i) => (
-            <div key={i} style={{ flex: '1 1 220px', minWidth: 220, border: '1px solid var(--rule)',
+            <div key={i} style={{ flex: '1 1 0', minWidth: 0, aspectRatio: '1 / 1', maxHeight: '100%',
+              border: '1px solid var(--rule)',
               borderRadius: 10, overflow: 'hidden', background: 'var(--viz-bg, #0c0c10)' }}>
               <PlanePlot p={p} expr={expr} feed={feed} shape={shape} a1={a1} a0={a0} a2={a2} z0={z0} sc={sc}
                 t={tShown} iterN={iterN} rails={rails} win={win}
