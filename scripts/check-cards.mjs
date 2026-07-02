@@ -22,7 +22,7 @@ for (const id of ids) if (!mset.has(id)) problems.push(`manifest MISSING card: $
 for (const id of manifest) if (!ids.has(id)) problems.push(`manifest lists PHANTOM card: ${id} (no ${id}.md)`);
 
 // 2. reference integrity
-const EDGE_KEYS = ['leans-on', 'opens', 'same-as', 'contrasts', 'used-for'];
+const EDGE_KEYS = ['gathers', 'leans-on', 'opens', 'same-as', 'contrasts', 'used-for'];
 for (const f of files) {
   const id = f.replace(/\.md$/, '');
   const text = readFileSync(join(DIR, f), 'utf8');

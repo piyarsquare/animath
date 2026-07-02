@@ -100,6 +100,7 @@
 
 <script>
 const KIND = {
+  core:    { color: '#ef6f53',        label: 'core'    },
   line:    { color: 'var(--accent)',  label: 'line'    },
   knob:    { color: 'var(--accent2)', label: 'knob'    },
   space:   { color: '#4ea1ff',        label: 'space'   },
@@ -107,9 +108,9 @@ const KIND = {
   tangent: { color: '#e0a341',        label: 'tangent' },
   orb:     { color: 'var(--muted)',   label: 'orb'     },
 };
-const KIND_ORDER = ['line','knob','space','facet','tangent','orb'];
-const EDGES = ['leans-on','opens','same-as','contrasts','used-for'];
-const EDGE_COLOR = { 'leans-on':'#8a94a6', 'opens':'#4ea1ff', 'same-as':'#35c08a', 'contrasts':'#e0663a', 'used-for':'#b08cff' };
+const KIND_ORDER = ['core','line','knob','space','facet','tangent','orb'];
+const EDGES = ['gathers','leans-on','opens','same-as','contrasts','used-for'];
+const EDGE_COLOR = { 'gathers':'#ef6f53', 'leans-on':'#8a94a6', 'opens':'#4ea1ff', 'same-as':'#35c08a', 'contrasts':'#e0663a', 'used-for':'#b08cff' };
 const UNDIRECTED = { 'same-as':1, 'contrasts':1 };
 const cards = {};         // id -> {id,title,kind,glance,links,figures,note,full,raw}
 const backrefs = {};      // id -> [{from, type}]
@@ -336,8 +337,8 @@ function renderGraph(){
     const mk = UNDIRECTED[e.type] ? '' : `marker-end="url(#ar-${e.type})"`;
     svg += `<line class="gedge" x1="${p.x1.toFixed(1)}" y1="${p.y1.toFixed(1)}" x2="${p.x2.toFixed(1)}" y2="${p.y2.toFixed(1)}" stroke="${EDGE_COLOR[e.type]}" ${mk}/>`;
   }
-  for (const n of nodes) { const col=(KIND[n.kind]||{}).color||'var(--muted)';
-    svg += `<g class="gnode" data-id="${n.id}" transform="translate(${n.x.toFixed(1)},${n.y.toFixed(1)})"><circle r="12" fill="${col}"></circle><text text-anchor="middle" dy="3.5">${n.id}</text></g>`;
+  for (const n of nodes) { const col=(KIND[n.kind]||{}).color||'var(--muted)'; const r = n.kind==='core' ? 17 : 12;
+    svg += `<g class="gnode" data-id="${n.id}" transform="translate(${n.x.toFixed(1)},${n.y.toFixed(1)})"><circle r="${r}" fill="${col}"></circle><text text-anchor="middle" dy="3.5">${n.id}</text></g>`;
   }
   svg += `</g></svg>`;
   v.innerHTML = `<h2 class="title">Graph</h2><div class="glegend">${kindLeg}</div><div class="glegend">${edgeLeg}</div>${svg}`;
