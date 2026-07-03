@@ -52,3 +52,21 @@ slice recenters (divide by `a² − 1`); at exactly `a = 1` the section's center
 escapes to infinity and the linear term becomes un-absorbable. Parabola on the
 knife, line pair in the algebra: two faces of one class — one with its center
 escaped, one with its form degenerate.
+
+**The borrowed coordinate (why "one dimension up" works):** a plane conic
+carries terms of three kinds — quadratic (`x², xy, y²`), linear (`x, y`), and
+constant. Append a third coordinate `w` and *homogenize*:
+
+`Ax² + Bxy + Cy² + Dx + Ey + F  →  Ax² + Bxy + Cy² + Dxw + Eyw + Fw²`
+
+Every term is now degree 2 — the linear terms were **cross terms with a
+coordinate we weren't writing**, and the constant was `w²` in disguise. Recover
+the conic by slicing at `w = 1`. Two payoffs: (1) a homogeneous 3-variable form
+always has a center (the origin) and always diagonalizes — so the parabola's
+"missing center" exists upstairs, at the cone's apex; its escape to infinity
+just means it sits on the plane `w = 0`. Completing the square is
+diagonalization, and where it fails in two variables it succeeds in three.
+(2) Homogenization is what puts inhomogeneous curves under the jurisdiction of
+Sylvester's signature classification [[IN]] — the cone picture works because
+*every* conic is the `w = 1` shadow of a centered, diagonalizable form one
+dimension up.
