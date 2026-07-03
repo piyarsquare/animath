@@ -24,7 +24,7 @@ import explainer from './EXPLAINER.md?raw';
 const V = 340; // viewBox size
 
 type ExprId = 'affine' | 'quad';
-type FeedId = 'point' | 'shape' | 'grid';
+type FeedId = 'point' | 'shape' | 'grid' | 'rays';
 type ShapeId = 'circle' | 'square' | 'triangle';
 interface ViewWin { cx: number; cy: number; r: number }
 const HOME: ViewWin = { cx: 0, cy: 0, r: 3 };
@@ -289,6 +289,14 @@ function PlanePlot(props: PlotProps) {
     }
   } else if (feed === 'shape') {
     sourceLines.push(shapePts(shape, sc));
+  } else if (feed === 'rays') {
+    // the fan: every line through 0 is a copy of the real number line, t·(a+bj);
+    // multiplication shuffles the blades — color tracks which blade went where
+    const N = 12;
+    for (let i = 0; i < N; i++) {
+      const th = (i * Math.PI) / N;
+      sourceLines.push(samples(-2.4, 2.4, 48).map(u => pt(u * Math.cos(th), u * Math.sin(th))));
+    }
   }
 
   // the iterated orbit (point feed) with smooth arcs between iterates
@@ -370,11 +378,14 @@ function PlanePlot(props: PlotProps) {
       {(
         <>
           {showGrid && sourceLines.map((line, i) => (
-            <polyline key={`s${i}`} points={poly(line)} fill="none" stroke="var(--fg)" strokeOpacity={0.14} />
+            <polyline key={`s${i}`} points={poly(line)} fill="none"
+              stroke={feed === 'rays' ? cAt(i / Math.max(1, sourceLines.length - 1)) : 'var(--fg)'}
+              strokeOpacity={feed === 'rays' ? 0.25 : 0.14} />
           ))}
           {feed !== 'shape' && sourceLines.map((line, i) => (
             <polyline key={`m${i}`} points={poly(line.map(q => flowAt(expr, q, a1, a0, a2, p, t)))} fill="none"
-              stroke={col} strokeWidth={1.7} strokeOpacity={0.85} />
+              stroke={feed === 'rays' ? cAt(i / Math.max(1, sourceLines.length - 1)) : col}
+              strokeWidth={1.7} strokeOpacity={0.85} />
           ))}
           {feed === 'shape' && sourceLines.map((line, li) => {
             const img = line.map(q => flowAt(expr, q, a1, a0, a2, p, t));
@@ -497,6 +508,7 @@ export default function NumberPlane() {
               { value: 'point', label: 'Point' },
               { value: 'shape', label: 'Shape' },
               { value: 'grid', label: 'Grid' },
+              { value: 'rays', label: 'Rays' },
             ]}
             value={feed}
             onChange={setFeed}

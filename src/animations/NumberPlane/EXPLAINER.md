@@ -26,7 +26,13 @@ bold: each plane's version of "the unit circle." The dashed **null set**
 — for `z²` it is literally the thing being squared — with its image `f(z)`, and
 an **Iterate** slider that chains `f` and shows the same `z` spiraling in the
 complex plane, shearing in the dual, and saddling in the split), a **Shape**
-(circle · square · triangle, draggable by its center handle), or a **Grid**.
+(circle · square · triangle, draggable by its center handle), a **Grid**, or
+**Rays** — the fan of lines through 0, each a copy of the real number line
+`t·(a + bj)`, colored so you can track which blade lands where. Multiplication
+shuffles the fan: at `p < 0` every blade turns (no fixed line); at `p = 0` one
+blade holds; at `p > 0` the two rails hold and the rest crowd onto them — the
+rails are absorbing lines (ideals), and a plane is a field exactly when its fan
+has none. Set `α₀ = 0` to see the pure shuffle.
 The **t** slider (and ▶ Play) morphs source → image — not by teleporting in a
 straight line, but along the multiplication's **own flow** `z·αᵗ`: a spiral arc,
 a shear, a boost (drawn dotted for the Point feed). Where that angle honestly
