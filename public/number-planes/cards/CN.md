@@ -41,3 +41,14 @@ number plane is a flat shadow of one object upstairs. The 2-D null sets (the
 rails) are cones in the same official sense. Projectively: ellipse, parabola,
 hyperbola differ only in how they meet the line at infinity (0 · 1 · 2 points),
 and those intersection points are the rails. [[CK]]
+
+**Why lines, not parabolas (the `p = 0` "exception"):** the unit set is a level
+of a *norm* — homogeneous, hence centered, hence no linear term is available.
+A parabola is precisely the conic **without a center**: its equation needs its
+linear term to exist. Forced through a centered lens, the parabolic class can
+only show its central representative — the parallel line pair (same doubled
+point at infinity, so same class). Watch it in the cone view: for `a ≠ 1` the
+slice recenters (divide by `a² − 1`); at exactly `a = 1` the section's center
+escapes to infinity and the linear term becomes un-absorbable. Parabola on the
+knife, line pair in the algebra: two faces of one class — one with its center
+escaped, one with its form degenerate.
