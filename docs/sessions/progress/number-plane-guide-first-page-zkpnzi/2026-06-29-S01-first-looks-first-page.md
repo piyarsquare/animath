@@ -47,6 +47,34 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 22:30 — Conic/curvature/p-trace discussions → cards CN·CK·PT; the method is named
+**Why:** Dan kept pulling threads; each landed as a card. And he named the working
+method: *"this type of discussion is precisely the content of a notebook once we
+identify all the different connections and find a way to unfold them effectively."*
+— i.e., discussion → connection → card (+ marked proposed views) IS the pipeline.
+
+- **CN** "It was a cone all along" + **cone-slice view built** (isometric z²=x²+y²,
+  knife z=ax+c, tilt slider, p = a²−1 readout — the knife's tilt IS the dial;
+  escape routes 0/1/2 = rails; apex slices = null sets; cone = null set of the
+  norm form one dimension up, cones = ray-sets/homogeneity in general).
+- **CK** orb: Cayley–Klein 3×3 (distance × angle, each ell/par/hyp); number planes
+  = the ordinary-distance row (Euclid·Galileo·Minkowski = spin·shear·boost).
+  **Curvature knob discussion:** turning κ *destroys addition* (no translations on
+  a sphere) — the flat row is exactly where number systems can exist; curved rows
+  = same three algebras with Möbius maps (αz+β)/(γz+δ) (division = the door to
+  curvature; Poincaré disk over ℂ, de Sitter over split, Newton–Hooke over dual);
+  physics: p = relativity dial, κ = cosmological constant (Bacry–Lévy-Leblond,
+  flagged for verification). P¹ closures sphere/cylinder/torus (medium confidence).
+- **PT** "Turn the dial, watch one value": fix z, vary p → polynomial curve;
+  single products are linear in p and p-blind in the j-coordinate ⇒ **horizontal
+  straight trace; the three f(z) dots are collinear, level, evenly spaced** (a
+  checkable observable in the app today); zⁿ bends at half-degree; 1/z has one
+  personal pole p* = x²/y² ("every off-axis point has one plane where it dies");
+  d/dp at p=0 = the dual direction (the family self-describes). Proposed p-trace
+  overlay marked on the card (`status: proposed` figure).
+
+33 cards, checker green.
+
 ### 🟣 decision · 21:40 — Naming + math discussion → Rays feed + fan dynamics (built)
 **Why:** Dan paused to discuss. Settled and logged:
 
