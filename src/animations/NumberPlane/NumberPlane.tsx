@@ -454,6 +454,98 @@ function PlanePlot(props: PlotProps) {
   );
 }
 
+
+// ---- the cone view: one norm form upstairs; the knife's tilt is the dial ----
+// Isometric double cone z² = x² + y² sliced by z = a·x + c. The section's
+// quadratic part is the norm form with p = a² − 1: tilt = the dial.
+function ConeView({ a, onA }: { a: number; onA: (v: number) => void }) {
+  const CW = 460, CH = 400, S = 62;
+  const az = 0.9, ca = Math.cos(az), sa = Math.sin(az);
+  const proj = (x: number, y: number, z: number) => {
+    const X = x * ca + y * sa;
+    const depth = x * sa - y * ca;
+    return { x: CW / 2 + S * X, y: CH / 2 + 14 - S * (0.92 * z - 0.38 * depth) };
+  };
+  const path = (ps: Array<{ x: number; y: number; z: number }>) =>
+    ps.map(q => proj(q.x, q.y, q.z)).map(q => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ');
+
+  const Hc = 2.0, c = 0.4;
+  const pVal = a * a - 1;
+  const col = planeCol(pVal < -0.02 ? -1 : pVal > 0.02 ? 1 : 0);
+
+  // cone scaffold: generators + rims
+  const gens: string[] = [];
+  for (let k = 0; k < 14; k++) {
+    const th = (k * Math.PI * 2) / 14;
+    gens.push(path([
+      { x: -Hc * Math.cos(th), y: -Hc * Math.sin(th), z: -Hc },
+      { x: Hc * Math.cos(th), y: Hc * Math.sin(th), z: Hc },
+    ]));
+  }
+  const rim = (zz: number) => {
+    const ps = [] as Array<{ x: number; y: number; z: number }>;
+    for (let k = 0; k <= 48; k++) {
+      const th = (k * Math.PI * 2) / 48;
+      ps.push({ x: Math.abs(zz) * Math.cos(th), y: Math.abs(zz) * Math.sin(th), z: zz });
+    }
+    return path(ps);
+  };
+
+  // knife: the plane z = a·x + c as a patch
+  const K = 2.1;
+  const patch = [
+    { x: -K, y: -K, z: a * -K + c }, { x: K, y: -K, z: a * K + c },
+    { x: K, y: K, z: a * K + c }, { x: -K, y: K, z: a * -K + c },
+  ];
+
+  // section: y² = (a²−1)x² + 2acx + c², clipped to the cone's height
+  const f = (x: number) => (a * a - 1) * x * x + 2 * a * c * x + c * c;
+  const branch = (sign: number): string[] => {
+    const segs: string[] = [];
+    let run: Array<{ x: number; y: number; z: number }> = [];
+    for (let i = 0; i <= 260; i++) {
+      const x = -3.4 + (6.8 * i) / 260;
+      const v = f(x), z = a * x + c;
+      if (v >= 0 && Math.abs(z) <= Hc) run.push({ x, y: sign * Math.sqrt(v), z });
+      else if (run.length) { segs.push(path(run)); run = []; }
+    }
+    if (run.length) segs.push(path(run));
+    return segs;
+  };
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: 'var(--viz-bg, #0c0c10)', overflow: 'hidden' }}>
+      <svg viewBox={`0 0 ${CW} ${CH}`} style={{ width: '100%', height: '100%', display: 'block' }}>
+        {gens.map((g, i) => <polyline key={`g${i}`} points={g} fill="none" stroke="var(--fg)" strokeOpacity={0.16} />)}
+        <polyline points={rim(Hc)} fill="none" stroke="var(--fg)" strokeOpacity={0.3} />
+        <polyline points={rim(-Hc)} fill="none" stroke="var(--fg)" strokeOpacity={0.3} />
+        <polygon points={patch.map(q => { const s2 = proj(q.x, q.y, q.z); return `${s2.x.toFixed(1)},${s2.y.toFixed(1)}`; }).join(' ')}
+          fill={col} fillOpacity={0.13} stroke={col} strokeOpacity={0.55} strokeWidth={1.2} />
+        {branch(1).map((d, i) => <polyline key={`b+${i}`} points={d} fill="none" stroke={col} strokeWidth={2.6} />)}
+        {branch(-1).map((d, i) => <polyline key={`b-${i}`} points={d} fill="none" stroke={col} strokeWidth={2.6} />)}
+        <text x={12} y={24} fill={col} fontSize={14} fontWeight={700} fontFamily="var(--font-mono, monospace)">
+          {`p = a² − 1 = ${fmtP(Math.round(pVal * 100) / 100)}`}
+        </text>
+        <text x={12} y={42} fill="var(--fg)" fillOpacity={0.6} fontSize={12} fontFamily="var(--font-sans, sans-serif)">
+          {pVal < -0.02 ? 'ellipse — no escape route' : pVal > 0.02 ? 'hyperbola — two escape routes' : 'parabola — one escape route'}
+        </text>
+      </svg>
+      <div style={{ position: 'absolute', left: 12, right: 12, bottom: 10, display: 'flex',
+        alignItems: 'center', gap: 10, color: 'var(--fg)', fontSize: 12,
+        fontFamily: 'var(--font-sans, sans-serif)' }}>
+        <span style={{ opacity: 0.7, whiteSpace: 'nowrap' }}>knife tilt a</span>
+        <input type="range" min={0} max={1.6} step={0.01} value={a}
+          onChange={e => onA(Number(e.target.value))} style={{ flex: 1 }} />
+        <span style={{ opacity: 0.7, fontFamily: 'var(--font-mono, monospace)' }}>{a.toFixed(2)}</span>
+      </div>
+      <div style={{ position: 'absolute', right: 12, top: 10, textAlign: 'right', color: 'var(--fg)',
+        opacity: 0.55, fontSize: 11, fontFamily: 'var(--font-sans, sans-serif)' }}>
+        a = 0 circle · a = 1 parabola · a = √2 hyperbola
+      </div>
+    </div>
+  );
+}
+
 // ---- the app ----
 export default function NumberPlane() {
   const [exprRaw, setExpr] = usePersistentState<ExprId>('number-plane:expr2', 'affine');
@@ -468,6 +560,7 @@ export default function NumberPlane() {
   const [sc, setSc] = usePersistentState<Planar>('number-plane:shape-c', pt(1.0, 0.6));
   const [iterN, setIterN] = usePersistentState('number-plane:iter', 1);
   const [rails, setRails] = usePersistentState('number-plane:rails', 0);
+  const [knife, setKnife] = usePersistentState('number-plane:knife', 1);
   const [showGrid, setShowGrid] = usePersistentState('number-plane:src-grid', true);
   const [showNull, setShowNull] = usePersistentState('number-plane:null-set', true);
   const [showLevels, setShowLevels] = usePersistentState('number-plane:levels', true);
@@ -665,6 +758,13 @@ export default function NumberPlane() {
       ),
     },
   ];
+
+  views.push({
+    id: 'cone',
+    title: 'The cone',
+    defaultRect: { x: 370, y: 412, w: 470, h: 360 },
+    node: <ConeView a={knife} onA={setKnife} />,
+  });
 
   const layouts: LayoutDef[] = [
     {

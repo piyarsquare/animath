@@ -47,6 +47,13 @@ Double-click / double-tap (or ⟲ Reset view) to come home.
 dual plane holds still between them; turn toward 0 and both worlds flatten
 into it.
 
+**The cone.** A second view slices the double cone `z² = x² + y²` (the norm
+form one dimension up) with a knife `z = ax + c`. The section's quadratic part
+is the norm form with **`p = a² − 1`** — the knife's tilt IS the dial: `a = 0`
+circle, `a = 1` parabola (one escape route along the cone's lines), `a = √2`
+hyperbola (two). High school's conic sections were choosing an arithmetic all
+along.
+
 **Align frame to rails.** A change-of-basis slider that realigns the boost
 plot's frame onto its asymptotes — at 100% the hyperbolas sit square and its
 multiplication is visibly two independent stretches (`ℝ×ℝ` undisguised). The
