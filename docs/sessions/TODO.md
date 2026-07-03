@@ -25,6 +25,26 @@ informs future rounds. Delete or check off items as they land.
 
 # Backlog · animath
 
+- [ ] [number-plane] !high The "unfolding": turn the 35-card pile + Number Plane app into the living-notebook presentation.
+  The content is quarried (public/number-planes/cards/, 35 cards, checker green; the
+  app at #/number-plane is the key view; trail page 1 built). The presentation —
+  Dan's living notebook (orbs → note → portal, reader-orderable) — is the open
+  design problem, explored separately with a design agent. Recommendation from the
+  handoff: make trail pages *views over cards* before writing page 2. Full state:
+  docs/sessions/handoff/number-plane-guide-first-page-zkpnzi/2026-06-29-S01-first-looks-first-page.md
+
+- [ ] [number-plane] !med Build the proposed views marked on cards: p-trace overlay (PT), curvature/Möbius mode (CK), Heisenberg widget.
+  PT is small and checked (fix z, vary p → horizontal line; the three f(z) dots are
+  collinear samples). The curvature mode is a grammar change ((az+b)/(cz+d),
+  denominator ∝ κ) — spec'd in the CK/NH cards and the session log.
+
+- [ ] [number-plane] !med Extract + unit-test the app's pure math (flowAt, railMatrix, levelSet, contrastRange).
+  NumberPlane.tsx is ~700 lines with untested pure helpers (R4 debt). Split
+  PlanePlot/ConeView into modules while at it.
+
+- [ ] [number-plane] !low Touch feel pass on a real device (pinch, drag radius, dial).
+  All gestures shipped logic-verified + static-frame only (signals: phone-needed).
+
 - [ ] [docs] !high Build the **Number Planes** choice-driven educational page.
   Narrative-first teaching page about the three number planes (complex/dual/split as
   Spin/Shear/Squeeze over j²), in the `public/*-guide.html` family but JS-driven and

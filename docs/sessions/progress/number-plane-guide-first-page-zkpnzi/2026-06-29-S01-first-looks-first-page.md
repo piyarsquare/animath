@@ -5,13 +5,13 @@ date: 2026-06-29
 title: Number Planes guide — "first looks" + what a first page should be
 branch: claude/number-plane-guide-first-page-zkpnzi
 slug: number-plane-guide-first-page-zkpnzi
-status: in-progress
+status: completed
 build: passed
 followup: null
 pr: https://github.com/piyarsquare/animath/pull/245
-app: docs, argand
+app: number-plane, argand, docs
 signals: needs-dan
-next: Get Dan's read on page 1 (number-planes-line.html); then build page 2 (into the plane — addition unchanged, j²=? the one choice).
+next: See the handoff — Dan drives the unfolding (35 cards + the Number Plane app → the living notebook).
 ---
 
 # Number Planes guide — "first looks" + what a first page should be
