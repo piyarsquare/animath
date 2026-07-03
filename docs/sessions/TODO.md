@@ -25,6 +25,26 @@ informs future rounds. Delete or check off items as they land.
 
 # Backlog · animath
 
+- [ ] [number-plane] !high The "unfolding": turn the 35-card pile + Number Plane app into the living-notebook presentation.
+  The content is quarried (public/number-planes/cards/, 35 cards, checker green; the
+  app at #/number-plane is the key view; trail page 1 built). The presentation —
+  Dan's living notebook (orbs → note → portal, reader-orderable) — is the open
+  design problem, explored separately with a design agent. Recommendation from the
+  handoff: make trail pages *views over cards* before writing page 2. Full state:
+  docs/sessions/handoff/number-plane-guide-first-page-zkpnzi/2026-06-29-S01-first-looks-first-page.md
+
+- [ ] [number-plane] !med Build the proposed views marked on cards: p-trace overlay (PT), curvature/Möbius mode (CK), Heisenberg widget.
+  PT is small and checked (fix z, vary p → horizontal line; the three f(z) dots are
+  collinear samples). The curvature mode is a grammar change ((az+b)/(cz+d),
+  denominator ∝ κ) — spec'd in the CK/NH cards and the session log.
+
+- [ ] [number-plane] !med Extract + unit-test the app's pure math (flowAt, railMatrix, levelSet, contrastRange).
+  NumberPlane.tsx is ~700 lines with untested pure helpers (R4 debt). Split
+  PlanePlot/ConeView into modules while at it.
+
+- [ ] [number-plane] !low Touch feel pass on a real device (pinch, drag radius, dial).
+  All gestures shipped logic-verified + static-frame only (signals: phone-needed).
+
 - [ ] [docs] !high Build the **Number Planes** choice-driven educational page.
   Narrative-first teaching page about the three number planes (complex/dual/split as
   Spin/Shear/Squeeze over j²), in the `public/*-guide.html` family but JS-driven and
@@ -33,6 +53,23 @@ informs future rounds. Delete or check off items as they land.
   Engine ready: `src/animations/Argand/numberPlanes.ts` (dormant, 50 tests). First
   consumer would be a `#/embed/number-planes` applet (j² dial · rails · change-of-basis
   morph). Converge the plan's open questions with Dan before drafting.
+  **Status 2026-06-29:** a prose-first PROBE is built on branch `number-plane-guide`
+  (PR #244): `public/number-planes.html` (hub + lenses you circle + carried j²) plus a
+  themed "gallery for guides" (`guides.html` + shared `guide-theme.css`/`guide-skin.js`
+  mirroring the app's 8 skins). **Open decision (needs Dan):** keep the guides a
+  standalone themed static section, or **promote into the chrome as a real `#/guides`
+  route** (native skins, no drift — Theming v2 #239 already makes the static mirror
+  drift). Then write the 4 stub lenses, build the `#/embed/number-planes` applet (the
+  "find the rails" morph is the centerpiece), and reskin the 6 legacy complex guides.
+  Handoff: `docs/sessions/handoff/number-plane-guide/2026-06-25-S01-number-plane-rename.md`.
+
+- [ ] [docs] !low Reconsider whether the separate **handoff** file is still needed.
+  Dan 2026-06-29: "we might move away from having a separate handoff file — I'm not sure
+  we need it. Keep it for now, but make a note in case it comes up again." Option: fold
+  the handoff into a final progress-report entry (the progress timeline + Self-reflection
+  already overlap heavily with the handoff). Revisit at a process audit; if changed,
+  update the `/handoff` skill + `_template-handoff.md` + `build-sessions.mjs` (the
+  Reflections view scrapes handoff Self-reflection sections).
 
 - [ ] [argand] !med `complexOps.ts` (the live Argand math) has no tests.
   The new `numberPlanes.ts` is tested (50 assertions) but nothing uses it yet; the

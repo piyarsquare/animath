@@ -1,0 +1,101 @@
+/* guide-deck.css — turns a guide's <section class="slide"> blocks into a stepper.
+   Progressive enhancement: the rules below only bite once guide-deck.js adds
+   `body.deck`. With JS off (no .deck class), every slide renders in normal flow,
+   so the page degrades to the long scroll it already was. Reusable across guides;
+   relies on the shared skin tokens from guide-theme.css (--bg/--fg/--accent/…). */
+
+/* one slide at a time, with room at the bottom for the control bar */
+.deck main { padding-bottom: 116px; }
+/* if anything scrolls a slide to the top (e.g. the browser's late #fragment
+   jump), leave clearance for the sticky top bar so the heading isn't occluded */
+.deck .slide { display: none; scroll-margin-top: 72px; }
+.deck .slide.is-active { display: block; animation: deck-in 0.26s ease both; }
+.deck .slide.is-active[data-dir="back"] { animation-name: deck-in-back; }
+
+@keyframes deck-in      { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes deck-in-back { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .deck .slide.is-active { animation: none; }
+}
+
+/* drop the big top-margin off the first heading of each slide (it's now a page) */
+.deck .slide > :first-child { margin-top: 8px; }
+
+/* ---- the fixed control bar ---- */
+.deck-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  backdrop-filter: blur(8px); border-top: 1px solid var(--rule); }
+.deck-bar-inner { max-width: 720px; margin: 0 auto; padding: 10px 20px;
+  display: flex; align-items: center; gap: 12px; }
+
+.deck-btn { font: 600 14px "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+  color: var(--fg); background: var(--soft); border: 1px solid var(--rule);
+  border-radius: 9px; padding: 8px 15px; cursor: pointer;
+  transition: border-color 0.13s, color 0.13s, opacity 0.13s; }
+.deck-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.deck-btn:disabled { opacity: 0.35; cursor: default; }
+.deck-next { margin-left: auto; }
+
+/* segmented progress rail of clickable dots */
+.deck-rail { display: flex; gap: 7px; align-items: center; }
+.deck-dot { width: 9px; height: 9px; border-radius: 50%; border: 0; padding: 0;
+  background: var(--rule); cursor: pointer; transition: background 0.13s, transform 0.13s; }
+.deck-dot:hover { transform: scale(1.3); }
+.deck-dot.is-active { background: var(--accent); transform: scale(1.15); }
+.deck-count { font: 13px "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+  color: var(--muted); min-width: 42px; text-align: center; }
+
+@media (max-width: 520px) {
+  .deck-count { display: none; }
+}
+
+/* ============================================================================
+   INTERACTIVE WIDGETS — manipulable figures embedded in slides.
+   A widget mounts into a [data-widget] host (see guide-widgets.js). Styles are
+   self-contained and skin-aware so widgets work in any guide, deck or not.
+   ============================================================================ */
+
+.w-fig { width: 100%; height: auto; display: block; background: var(--card);
+  border: 1px solid var(--rule); border-radius: 10px; touch-action: none; }
+.w-axis { stroke: var(--muted); stroke-width: 2; }
+.w-tick { stroke: var(--rule); stroke-width: 1.5; }
+.w-tlab { fill: var(--muted); font: 11px "Hanken Grotesk", ui-sans-serif, sans-serif; text-anchor: middle; }
+.w-zero { fill: var(--fg); font: 600 12px "Hanken Grotesk", ui-sans-serif, sans-serif; text-anchor: middle; }
+.w-arrA { stroke: var(--accent);  stroke-width: 3.5; fill: none; }
+.w-arrB { stroke: var(--accent2); stroke-width: 3.5; fill: none; }
+.w-resdot { fill: var(--accent); }
+.w-vlab { font: 600 13px "Hanken Grotesk", ui-sans-serif, sans-serif; }
+.w-vlab.a { fill: var(--accent); } .w-vlab.b { fill: var(--accent2); } .w-vlab.s { fill: var(--fg); }
+
+/* draggable handles: a big invisible hit-target + a visible knob */
+.w-handle { cursor: grab; }
+.w-handle:active { cursor: grabbing; }
+.w-handle .hit { fill: transparent; }
+.w-handle .knob { stroke: var(--card); stroke-width: 2.5; }
+.w-handle.a .knob { fill: var(--accent); }
+.w-handle.b .knob { fill: var(--accent2); }
+.w-handle .ring { fill: none; stroke-width: 2; opacity: 0; transition: opacity 0.12s; }
+.w-handle.a .ring { stroke: var(--accent); }
+.w-handle.b .ring { stroke: var(--accent2); }
+.w-handle:hover .ring, .w-handle.dragging .ring { opacity: 0.5; }
+
+/* the live equation readout */
+.w-eq { text-align: center; margin: 16px 0 4px;
+  font: 600 23px ui-monospace, 'SF Mono', Menlo, Consolas, monospace; color: var(--muted); }
+.w-eq .wv.a { color: var(--accent); } .w-eq .wv.b { color: var(--accent2); } .w-eq .wv.s { color: var(--fg); }
+
+/* type + choose controls */
+.w-controls { display: flex; gap: 18px; align-items: center; justify-content: center;
+  flex-wrap: wrap; margin-top: 6px;
+  font: 14px "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif; color: var(--muted); }
+.w-controls label { display: inline-flex; align-items: center; gap: 6px; }
+.w-controls .w-in { width: 56px; text-align: center; color: var(--fg); background: var(--soft);
+  border: 1px solid var(--rule); border-radius: 7px; padding: 5px 6px; font: inherit; }
+.w-controls .w-in:focus { outline: none; border-color: var(--accent); }
+.w-presets { display: inline-flex; align-items: center; gap: 6px; }
+.w-presets .w-chip { font: 13px "Hanken Grotesk", ui-sans-serif, sans-serif; color: var(--fg);
+  background: none; border: 1px solid var(--rule); border-radius: 999px; padding: 4px 11px; cursor: pointer;
+  transition: border-color 0.12s, color 0.12s; }
+.w-presets .w-chip:hover { border-color: var(--accent); color: var(--accent); }
+.w-hint { text-align: center; font: 12.5px "Hanken Grotesk", ui-sans-serif, sans-serif;
+  color: var(--muted); margin-top: 10px; opacity: 0.85; }

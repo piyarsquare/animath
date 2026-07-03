@@ -39,6 +39,7 @@ const META: Record<string, { cat: Category; kind: PreviewKind; hue?: number }> =
   '/solid-worlds': { cat: 'Dynamics', kind: 'solid' },
   '/argand': { cat: 'Complex', kind: 'plane', hue: 180 },
   '/counting-the-ways': { cat: 'Algorithm', kind: 'skellam' },
+  '/number-plane': { cat: 'Complex', kind: 'plane', hue: 262 },
 };
 
 export const CARDS: AppCard[] = apps

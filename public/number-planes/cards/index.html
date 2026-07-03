@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<!-- Number Planes — card inspector.
+     A plain, dependency-free viewer for the note-cards: reads the .md files live
+     (so edits show without re-baking), and surfaces each card's TYPE, layered text
+     (glance/note/full), typed CONNECTIONS (out + back-references), figures, and the
+     raw YAML. Add/remove a card → regenerate manifest.json (ls *.md). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Number Planes — cards</title>
+  <link rel="stylesheet" href="../../guide-theme.css">
+  <script src="../../guide-skin.js"></script>
+  <style>
+    :root { --pad: 18px; }
+    * { box-sizing: border-box; }
+    body { margin: 0; display: grid; grid-template-columns: 300px 1fr; min-height: 100vh;
+      font-family: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif; color: var(--fg); background: var(--bg); }
+
+    /* ---- sidebar ---- */
+    .side { border-right: 1px solid var(--rule); background: var(--soft); position: sticky; top: 0;
+      height: 100vh; overflow-y: auto; padding: 14px 12px 40px; }
+    .side h1 { font-size: 15px; margin: 4px 6px 2px; }
+    .side .sub { font-size: 12px; color: var(--muted); margin: 0 6px 12px; }
+    #q { width: 100%; padding: 7px 10px; border: 1px solid var(--rule); border-radius: 8px;
+      background: var(--bg); color: var(--fg); font: inherit; margin-bottom: 12px; }
+    .grp { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
+      margin: 14px 6px 4px; }
+    .row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 7px;
+      cursor: pointer; text-decoration: none; color: var(--fg); }
+    .row:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+    .row.on { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+    .row .rid { font: 600 12px ui-monospace, monospace; color: var(--muted); min-width: 30px; }
+    .row .rt { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+
+    /* ---- main ---- */
+    main { padding: 26px 34px 80px; max-width: 760px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+      padding: 2px 9px; border-radius: 999px; border: 1px solid var(--rule); }
+    .hid { font: 600 13px ui-monospace, monospace; color: var(--muted); }
+    h2.title { font-size: 27px; margin: 8px 0 6px; }
+    .glance { font-size: 18px; color: color-mix(in srgb, var(--fg) 85%, var(--bg)); font-style: italic;
+      border-left: 3px solid var(--accent); padding-left: 12px; margin: 10px 0 22px; }
+    .sec { margin: 22px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+    .body { font-size: 15.5px; line-height: 1.6; }
+    .body p { margin: 0 0 12px; } .body ul { margin: 0 0 12px; padding-left: 22px; }
+    .body code { background: var(--eqbg); padding: 1px 5px; border-radius: 4px;
+      font: 13.5px ui-monospace, 'SF Mono', Menlo, monospace; }
+    .body a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+    .body blockquote { margin: 12px 0; padding: 8px 14px; border-left: 3px solid var(--accent2);
+      background: var(--soft); border-radius: 0 6px 6px 0; font-size: 14.5px; color: var(--muted); }
+    .full { opacity: .92; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; margin: 4px 0 6px; }
+    .edge { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; text-decoration: none;
+      color: var(--fg); border: 1px solid var(--rule); border-radius: 999px; padding: 3px 11px; }
+    .edge:hover { border-color: var(--accent); color: var(--accent); }
+    .edge .ety { font-size: 11px; color: var(--muted); }
+    .fig { border: 1px dashed var(--accent2); border-radius: 8px; padding: 10px 13px; margin: 6px 0;
+      font: 13px ui-monospace, monospace; color: var(--muted); background: color-mix(in srgb, var(--accent2) 6%, var(--bg)); }
+    details.yaml { margin-top: 26px; }
+    details.yaml summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+    pre.raw { background: var(--eqbg); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px;
+      overflow-x: auto; font: 12.5px ui-monospace, monospace; color: var(--fg); }
+    .miss { color: #c0504d; }
+    .overview { color: var(--muted); }
+    .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+    #skin-picker { margin-left: auto; }
+    @media (max-width: 720px) { body { grid-template-columns: 1fr; } .side { position: static; height: auto; } }
+
+    /* ---- view switch + graph ---- */
+    .views { display: flex; gap: 12px; margin: 2px 6px 12px; font-size: 13px; }
+    .views a { color: var(--muted); text-decoration: none; cursor: pointer; }
+    .views a:hover, .views a.on { color: var(--accent); }
+    main.wide { max-width: none; }
+    .gsvg { width: 100%; height: 74vh; border: 1px solid var(--rule); border-radius: 10px;
+      background: var(--soft); touch-action: none; }
+    .gnode { cursor: pointer; }
+    .gnode circle { stroke: var(--card); stroke-width: 2; }
+    .gnode text { font: 600 11px ui-monospace, monospace; fill: var(--fg); pointer-events: none; }
+    .gedge { stroke-width: 1.7; fill: none; opacity: .8; }
+    .glegend { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 2px; font-size: 12.5px; color: var(--muted); }
+    .glegend .li { display: inline-flex; align-items: center; gap: 6px; }
+    .glegend .ln { width: 20px; border-top: 3px solid; display: inline-block; }
+  </style>
+</head>
+<body>
+  <nav class="side">
+    <h1>&#10022; Number Planes</h1>
+    <p class="sub">card inspector &middot; <span id="count"></span> cards</p>
+    <div class="views"><a id="v-cards" href="#">overview</a><a id="v-graph" href="#graph">graph</a></div>
+    <input id="q" placeholder="filter…" autocomplete="off">
+    <div id="list"></div>
+  </nav>
+  <main>
+    <div class="topbar"><div id="skin-picker"></div></div>
+    <div id="view"><p class="overview">Loading cards…</p></div>
+  </main>
+
+<script>
+const KIND = {
+  core:    { color: '#ef6f53',        label: 'core'    },
+  line:    { color: 'var(--accent)',  label: 'line'    },
+  knob:    { color: 'var(--accent2)', label: 'knob'    },
+  space:   { color: '#4ea1ff',        label: 'space'   },
+  facet:   { color: 'var(--muted)',   label: 'facet'   },
+  tangent: { color: '#e0a341',        label: 'tangent' },
+  orb:     { color: 'var(--muted)',   label: 'orb'     },
+};
+const KIND_ORDER = ['core','line','knob','space','facet','tangent','orb'];
+const EDGES = ['gathers','leans-on','opens','same-as','contrasts','used-for'];
+const EDGE_COLOR = { 'gathers':'#ef6f53', 'leans-on':'#8a94a6', 'opens':'#4ea1ff', 'same-as':'#35c08a', 'contrasts':'#e0663a', 'used-for':'#b08cff' };
+const UNDIRECTED = { 'same-as':1, 'contrasts':1 };
+const cards = {};         // id -> {id,title,kind,glance,links,figures,note,full,raw}
+const backrefs = {};      // id -> [{from, type}]
+
+function esc(s){ return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function parseScalar(s){
+  s = s.trim();
+  if (s.startsWith('[') && s.endsWith(']')) {
+    const inner = s.slice(1,-1).trim();
+    return inner ? inner.split(',').map(x=>x.trim()) : [];
+  }
+  if ((s[0]==='"'&&s.slice(-1)==='"')||(s[0]==="'"&&s.slice(-1)==="'")) return s.slice(1,-1);
+  return s;
+}
+// tiny frontmatter parser for our restricted YAML (scalars, a map of lists, a list of maps)
+function parseFront(yaml){
+  const out = {}; const L = yaml.split('\n'); let i = 0;
+  while (i < L.length) {
+    const line = L[i];
+    if (!line.trim()) { i++; continue; }
+    const m = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+    if (m && !/^\s/.test(line)) {
+      const key = m[1], val = m[2];
+      if (val === '') {
+        if (key === 'figures') {
+          const arr = []; i++;
+          while (i < L.length && (/^\s/.test(L[i]) || !L[i].trim())) {
+            if (!L[i].trim()) { i++; continue; }
+            const it = L[i].match(/^\s*-\s*([A-Za-z0-9_-]+):\s*(.*)$/);
+            if (it) { const o = {}; o[it[1]] = parseScalar(it[2]); i++;
+              while (i < L.length && /^\s{3,}[A-Za-z0-9_-]+:/.test(L[i])) {
+                const kv = L[i].match(/^\s+([A-Za-z0-9_-]+):\s*(.*)$/); o[kv[1]] = parseScalar(kv[2]); i++;
+              }
+              arr.push(o);
+            } else i++;
+          }
+          out[key] = arr; continue;
+        } else {
+          const map = {}; i++;
+          while (i < L.length && (/^\s/.test(L[i]) || !L[i].trim())) {
+            if (!L[i].trim()) { i++; continue; }
+            const kv = L[i].match(/^\s+([A-Za-z0-9_-]+):\s*(.*)$/);
+            if (kv) { map[kv[1]] = parseScalar(kv[2]); i++; } else break;
+          }
+          out[key] = map; continue;
+        }
+      } else { out[key] = parseScalar(val); i++; }
+    } else i++;
+  }
+  return out;
+}
+function splitCard(text){
+  const m = text.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  const raw = m ? m[1] : '';
+  const front = m ? parseFront(raw) : {};
+  let body = m ? m[2] : text;
+  let note = '', full = '';
+  const fi = body.search(/^##\s*full\s*$/mi);
+  if (fi >= 0) { full = body.slice(fi).replace(/^##\s*full\s*$/mi,'').trim(); body = body.slice(0,fi); }
+  note = body.replace(/^##\s*note\s*$/mi,'').trim();
+  return { ...front, note, full, raw };
+}
+// minimal markdown: paragraphs, - lists, `code`, **bold**, *italic*, [[id]] links, ![[id]] transclude
+function mdInline(s){
+  s = esc(s);
+  s = s.replace(/!\[\[([\w-]+)\]\]/g, ''); // handled at block level
+  s = s.replace(/\[\[([\w-]+)\]\]/g, (m,id)=> cards[id]
+      ? `<a href="#${id}">${id}</a>`
+      : `<a class="miss" href="#${id}">${id}?</a>`);
+  s = s.replace(/`([^`]+)`/g, (m,c)=>`<code>${c}</code>`);
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
+  return s;
+}
+function mdBlock(md){
+  // expand ![[id]] transclusions to a blockquote of the target's note
+  md = md.replace(/^!\[\[([\w-]+)\]\][ \t]*$/gm, (m,id)=>
+    cards[id] ? `> ↪ from **${id}** — ${cards[id].note.replace(/\s+/g,' ').trim()}` : m);
+  const blocks = md.split(/\n{2,}/); let html = '';
+  for (let b of blocks) {
+    b = b.trim(); if (!b) continue;
+    if (b.startsWith('> ')) { html += `<blockquote>${mdInline(b.replace(/^> ?/gm,''))}</blockquote>`; }
+    else if (/^[-*] /m.test(b) && b.split('\n').every(l=>/^[-*] /.test(l.trim()))) {
+      const items = b.split('\n').map(l=>`<li>${mdInline(l.replace(/^[-*] /,''))}</li>`).join('');
+      html += `<ul>${items}</ul>`;
+    } else { html += `<p>${mdInline(b.replace(/\n/g,' '))}</p>`; }
+  }
+  return html;
+}
+
+function dot(kind){ return `<span class="dot" style="background:${(KIND[kind]||{}).color||'var(--muted)'}"></span>`; }
+
+function renderList(filter){
+  const list = document.getElementById('list'); list.innerHTML = '';
+  const f = (filter||'').toLowerCase();
+  for (const k of KIND_ORDER) {
+    const ids = Object.values(cards).filter(c=>c.kind===k)
+      .filter(c=> !f || (c.id+ ' ' + (c.title||'')).toLowerCase().includes(f))
+      .sort((a,b)=>a.id.localeCompare(b.id));
+    if (!ids.length) continue;
+    const g = document.createElement('div'); g.className='grp'; g.textContent = (KIND[k]||{}).label||k; list.appendChild(g);
+    for (const c of ids) {
+      const a = document.createElement('a'); a.className='row'; a.href='#'+c.id; a.dataset.id=c.id;
+      a.innerHTML = `${dot(c.kind)}<span class="rid">${c.id}</span><span class="rt">${esc(c.title||'')}</span>`;
+      list.appendChild(a);
+    }
+  }
+}
+
+function renderCard(id){
+  const v = document.getElementById('view'); const c = cards[id];
+  if (!c) { v.innerHTML = `<p class="miss">No card "${esc(id)}".</p>`; return; }
+  const kc = KIND[c.kind] || { color:'var(--muted)', label:c.kind };
+  let h = '';
+  let meta = `<span class="badge">${dot(c.kind)}${kc.label}</span>`;
+  if (c.type) meta += ` <span class="badge" style="border-color:var(--accent2);color:var(--accent2)">type: ${esc(c.type)}</span>`;
+  if (c.subject) meta += ` <span class="badge">subject: ${esc(c.subject)}</span>`;
+  h += `<div>${meta} <span class="hid">${c.id}</span></div>`;
+  h += `<h2 class="title">${esc(c.title||'')}</h2>`;
+  if (c.glance) h += `<div class="glance">${mdInline(c.glance)}</div>`;
+  if (c.note) h += `<div class="sec">note</div><div class="body">${mdBlock(c.note)}</div>`;
+  if (c.full) h += `<div class="sec">full</div><div class="body full">${mdBlock(c.full)}</div>`;
+  if (Array.isArray(c.figures) && c.figures.length) {
+    h += `<div class="sec">figures</div>`;
+    for (const fig of c.figures) {
+      const parts = Object.entries(fig).filter(([k])=>k!=='href')
+        .map(([k,val])=>`${k}: ${Array.isArray(val)?val.join(', '):val}`);
+      const open = fig.href ? ` &nbsp;<a href="${esc(fig.href)}" target="_blank" rel="noopener" style="color:var(--accent)">open →</a>` : '';
+      h += `<div class="fig">▦ ${parts.join('  ·  ')}${open}</div>`;
+    }
+  }
+  // connections out
+  const outEdges = [];
+  for (const et of EDGES) {
+    const arr = (c.links && c.links[et]) || [];
+    for (const t of arr) outEdges.push({ et, t });
+  }
+  if (outEdges.length) {
+    h += `<div class="sec">links →</div><div class="chips">`;
+    for (const e of outEdges) {
+      const ok = cards[e.t];
+      h += `<a class="edge" href="#${e.t}"><span class="ety">${e.et}</span>${dot(ok?ok.kind:'')}${e.t}${ok?'':'<span class="miss">?</span>'}</a>`;
+    }
+    h += `</div>`;
+  }
+  // back-references
+  const back = backrefs[id] || [];
+  if (back.length) {
+    h += `<div class="sec">← linked from</div><div class="chips">`;
+    for (const b of back) h += `<a class="edge" href="#${b.from}"><span class="ety">${b.type}</span>${dot(cards[b.from]?cards[b.from].kind:'')}${b.from}</a>`;
+    h += `</div>`;
+  }
+  h += `<details class="yaml"><summary>raw YAML</summary><pre class="raw">${esc(c.raw||'')}</pre></details>`;
+  v.innerHTML = h;
+  document.querySelectorAll('.row').forEach(r=>r.classList.toggle('on', r.dataset.id===id));
+  document.title = `${c.id} · Number Planes cards`;
+  window.scrollTo(0,0);
+}
+
+function overview(){
+  const v = document.getElementById('view');
+  const counts = KIND_ORDER.map(k=>{
+    const n = Object.values(cards).filter(c=>c.kind===k).length;
+    return n ? `${n} ${(KIND[k]||{}).label||k}` : null;
+  }).filter(Boolean).join(' · ');
+  v.innerHTML = `<h2 class="title">The pile</h2>
+    <p class="overview">${Object.keys(cards).length} cards — ${counts}. Pick one on the left.
+    Order is a <em>view</em>; the graph lives in each card's links (shown both directions).</p>`;
+}
+
+// ---- graph view ----
+function graphData(){
+  const nodes = Object.values(cards).map(c => ({ id: c.id, kind: c.kind }));
+  const seen = {}, edges = [];
+  for (const c of Object.values(cards))
+    for (const et of EDGES)
+      for (const t of (c.links && c.links[et]) || []) {
+        if (!cards[t]) continue;
+        const key = UNDIRECTED[et] ? et+':'+[c.id,t].sort().join('-') : et+':'+c.id+'>'+t;
+        if (seen[key]) continue; seen[key] = 1;
+        edges.push({ from: c.id, to: t, type: et });
+      }
+  return { nodes, edges };
+}
+function layout(nodes, edges, W, H){
+  const idx = {}; const R = Math.min(W,H) * 0.34;
+  nodes.forEach((n,i)=>{ idx[n.id]=i; const a = 2*Math.PI*i/nodes.length;
+    n.x = W/2 + Math.cos(a)*R; n.y = H/2 + Math.sin(a)*R; n.vx = 0; n.vy = 0; });
+  for (let it=0; it<340; it++) {
+    for (let i=0;i<nodes.length;i++) for (let j=i+1;j<nodes.length;j++) {
+      const a=nodes[i], b=nodes[j]; let dx=a.x-b.x, dy=a.y-b.y, d2=dx*dx+dy*dy||1, d=Math.sqrt(d2);
+      const r=6500/d2, fx=dx/d*r, fy=dy/d*r; a.vx+=fx; a.vy+=fy; b.vx-=fx; b.vy-=fy;
+    }
+    for (const e of edges) { const a=nodes[idx[e.from]], b=nodes[idx[e.to]];
+      let dx=b.x-a.x, dy=b.y-a.y, d=Math.sqrt(dx*dx+dy*dy)||1, k=(d-115)*0.02, fx=dx/d*k, fy=dy/d*k;
+      a.vx+=fx; a.vy+=fy; b.vx-=fx; b.vy-=fy;
+    }
+    for (const n of nodes) { n.vx+=(W/2-n.x)*0.003; n.vy+=(H/2-n.y)*0.003;
+      n.x+=n.vx*0.8; n.y+=n.vy*0.8; n.vx*=0.8; n.vy*=0.8;
+      n.x=Math.max(28,Math.min(W-28,n.x)); n.y=Math.max(24,Math.min(H-24,n.y)); }
+  }
+  return idx;
+}
+let G = null;
+function svgPoint(svg, cx, cy){ const r=svg.getBoundingClientRect(), vb=svg.viewBox.baseVal;
+  return { x:(cx-r.left)/r.width*vb.width, y:(cy-r.top)/r.height*vb.height }; }
+function edgeXY(a,b){ let dx=b.x-a.x, dy=b.y-a.y, d=Math.sqrt(dx*dx+dy*dy)||1, ux=dx/d, uy=dy/d;
+  return { x1:a.x+ux*14, y1:a.y+uy*14, x2:b.x-ux*16, y2:b.y-uy*16 }; }
+function updateGraph(v){ const {nodes,edges,idx}=G; const lines=v.querySelectorAll('line.gedge');
+  edges.forEach((e,i)=>{ const p=edgeXY(nodes[idx[e.from]],nodes[idx[e.to]]); const l=lines[i];
+    l.setAttribute('x1',p.x1.toFixed(1)); l.setAttribute('y1',p.y1.toFixed(1));
+    l.setAttribute('x2',p.x2.toFixed(1)); l.setAttribute('y2',p.y2.toFixed(1)); });
+  v.querySelectorAll('.gnode').forEach(g=>{ const n=nodes[idx[g.dataset.id]];
+    g.setAttribute('transform',`translate(${n.x.toFixed(1)},${n.y.toFixed(1)})`); });
+}
+function renderGraph(){
+  const v = document.getElementById('view'); const W=1000, H=720;
+  const { nodes, edges } = graphData(); const idx = layout(nodes, edges, W, H);
+  const kindLeg = KIND_ORDER.filter(k=>nodes.some(n=>n.kind===k))
+    .map(k=>`<span class="li"><span class="dot" style="background:${(KIND[k]||{}).color}"></span>${(KIND[k]||{}).label||k}</span>`).join('');
+  const edgeLeg = EDGES.map(e=>`<span class="li"><span class="ln" style="border-top-color:${EDGE_COLOR[e]}"></span>${e}</span>`).join('');
+  let svg = `<svg class="gsvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"><defs>`;
+  for (const e of EDGES) svg += `<marker id="ar-${e}" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="${EDGE_COLOR[e]}"/></marker>`;
+  svg += `</defs><g>`;
+  for (const e of edges) { const p=edgeXY(nodes[idx[e.from]], nodes[idx[e.to]]);
+    const mk = UNDIRECTED[e.type] ? '' : `marker-end="url(#ar-${e.type})"`;
+    svg += `<line class="gedge" x1="${p.x1.toFixed(1)}" y1="${p.y1.toFixed(1)}" x2="${p.x2.toFixed(1)}" y2="${p.y2.toFixed(1)}" stroke="${EDGE_COLOR[e.type]}" ${mk}/>`;
+  }
+  for (const n of nodes) { const col=(KIND[n.kind]||{}).color||'var(--muted)'; const r = n.kind==='core' ? 17 : 12;
+    svg += `<g class="gnode" data-id="${n.id}" transform="translate(${n.x.toFixed(1)},${n.y.toFixed(1)})"><circle r="${r}" fill="${col}"></circle><text text-anchor="middle" dy="3.5">${n.id}</text></g>`;
+  }
+  svg += `</g></svg>`;
+  v.innerHTML = `<h2 class="title">Graph</h2><div class="glegend">${kindLeg}</div><div class="glegend">${edgeLeg}</div>${svg}`;
+  G = { nodes, edges, idx, W, H };
+  const svgEl = v.querySelector('svg');
+  v.querySelectorAll('.gnode').forEach(g=>{
+    g.addEventListener('pointerdown', ev=>{ ev.preventDefault(); let moved=false;
+      g.setPointerCapture(ev.pointerId); const n = nodes[idx[g.dataset.id]];
+      const move = e2 => { moved=true; const pt=svgPoint(svgEl,e2.clientX,e2.clientY); n.x=pt.x; n.y=pt.y; updateGraph(v); };
+      const up = () => { g.removeEventListener('pointermove',move); g.removeEventListener('pointerup',up);
+        if (!moved) location.hash = g.dataset.id; };
+      g.addEventListener('pointermove', move); g.addEventListener('pointerup', up);
+    });
+  });
+}
+
+function route(){
+  const id = location.hash.replace('#','');
+  document.querySelector('main').classList.toggle('wide', id === 'graph');
+  const vg = document.getElementById('v-graph'), vc = document.getElementById('v-cards');
+  if (vg) vg.classList.toggle('on', id === 'graph');
+  if (vc) vc.classList.toggle('on', !id);
+  if (id === 'graph') renderGraph(); else if (id) renderCard(id); else overview();
+}
+
+(async function(){
+  try {
+    const ids = await (await fetch('./manifest.json')).json();
+    const texts = await Promise.all(ids.map(async id => {
+      const r = await fetch(`./${id}.md`); return [id, r.ok ? await r.text() : null];
+    }));
+    for (const [id,t] of texts) {
+      if (t === null) { console.warn('card listed in manifest but missing:', id); continue; }
+      const c = splitCard(t); c.id = c.id || id; cards[c.id] = c;
+    }
+    // build back-references
+    for (const c of Object.values(cards))
+      for (const et of EDGES)
+        for (const t of (c.links && c.links[et]) || [])
+          (backrefs[t] = backrefs[t] || []).push({ from: c.id, type: et });
+    document.getElementById('count').textContent = Object.keys(cards).length;
+    renderList('');
+    route();
+  } catch (e) {
+    document.getElementById('view').innerHTML = `<p class="miss">Failed to load cards: ${esc(String(e))}.<br>Serve over http (not file://).</p>`;
+  }
+})();
+document.getElementById('q').addEventListener('input', e => renderList(e.target.value));
+window.addEventListener('hashchange', route);
+</script>
+</body>
+</html>
