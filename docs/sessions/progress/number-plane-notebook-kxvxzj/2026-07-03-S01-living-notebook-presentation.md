@@ -38,6 +38,44 @@ app into the living-notebook presentation."*
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟣 decision · 20:15 — The garden plan drafted: four beds, three paths, nine seams
+**Why:** Dan set the frame: the notebook should carry the last session's rhythm
+(question → new way of seeing → the tools to see it) and the right analogy is a
+**garden** — we design beds and layouts, many paths natural to the layout, the
+visitor never walks into the plantings. He asked for a curatorial review of all
+35 cards + the surfaced ideas (with backward projection to the pre-recorded
+germ line) to decide the main paths and reveal the seams.
+
+Reviewed the full corpus (all 35 cards, the 2026-06-24 plan, the 2026-06-25 hub
+session, the 2026-06-29 marathon) and wrote
+[the garden plan](2026-07-03-S01-plan-garden-paths.md) (`kind: plan`,
+`status: proposed`). Its skeleton:
+
+- **Four beds**: the Line (forcing) · the Plaza (the choice) · the Three
+  Parterres (the worlds) · **the Overlook** (the terrace of unifications).
+- **Three paths**: A "Could it be different?" (forcing walk) · B "What does
+  each world feel like?" (residents' walk — the app IS this path) · C "It was
+  one thing all along" (the overlook climb — the last session's evening).
+- **Nine seams** where paths cross (L2=SP, WH's four costumes, CN's
+  knife=dial, QD, PT's family-speaks-dual, NH's sticky middles, IN the master
+  seam, CR's loop, CK's rhyme) — to be rendered as junctions, real places.
+- **Garden principles** for the presentation: depth = proximity (glance/note/
+  full as leaning in, not page jumps); junctions are where choice lives; gates
+  (orbs) are honest; the walk step is the rhythm; instruments planted in beds;
+  the graph is the gardener's plan, not the visitor's map.
+
+### 🔵 finding · 20:00 — The card graph already knows a fourth bed exists
+**Why:** Verifying the bed hypothesis against the actual `gathers:` lists
+before proposing structure on top of it.
+
+`C2` gathers plaza cards AND terrace cards mixed (`CR, CN, PT, NH` alongside
+`L2, PL, DV, QD`); `IN` is tucked into `C3`'s thirteen; **`CK` is gathered by
+no core at all** (reachable only via `CN`/`NH`/`IN` opens-links). The
+late-evening discussion cards were filed under whichever core was nearest
+because they arrived after the core layer was designed. Proposal in the plan:
+a fourth core **C4 — "one object in costume"** gathering `[CN, CR, PT, NH,
+IN, CK]`, slimming C2 back to the plaza. Awaiting Dan's yes (card edit only).
+
 ### 🟡 milestone · 19:53 — Session start: oriented on the unfolding
 **Why:** New branch (`claude/number-plane-notebook-kxvxzj`) picking up the
 open design problem the 2026-06-29 handoff left as its `next:`. /start-session
