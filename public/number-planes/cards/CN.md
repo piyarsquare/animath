@@ -1,0 +1,72 @@
+---
+id: CN
+title: It was a cone all along
+kind: knob
+glance: Slice one cone; the tilt of the knife is the dial.
+links:
+  leans-on: [DV, WH]
+  opens: [QD, CK]
+figures:
+  - id: cone-slice
+    app: number-plane
+    href: ../../#/number-plane
+    note: "The cone" view — tilt the knife, read off p = a² − 1
+---
+## note
+
+The double cone `z² = x² + y²` is straight-sided — made of lines through its tip.
+Slice it with a plane `z = ax + c`. The section can only run to infinity along the
+cone's lines, so count the lines parallel to your knife:
+
+- 0 → the curve closes: **ellipse**
+- 1 → one escape route: **parabola**
+- 2 → two: **hyperbola**
+
+Plug the plane into the cone and collect terms: the section satisfies
+`y² − (a²−1)x² − 2acx = c²` — the norm form with **`p = a² − 1`**. The knife's
+tilt IS the dial: `a = 0` gives the circle (`p = −1`), `a = 1` the parabola
+(`p = 0`), `a = √2` the hyperbola (`p = +1`).
+
+Slice through the tip (`c = 0`): a point · one line · a crossing pair — the null
+sets. Escape directions = rails = asymptotes. One cone, all planes.
+
+## full
+
+A **cone**, in the modern sense, is any set made of rays through the origin.
+The zero set of a homogeneous form automatically qualifies (`Q(λv) = λ²Q(v)`);
+the school cone is the null set of the 3-variable norm form `z² − x² − y²` —
+the light cone of 2+1 Minkowski space. Restricting that one form to the plane
+`z = ax + c` inherits the 2-variable form `N_p` with `p = a² − 1`, so every
+number plane is a flat shadow of one object upstairs. The 2-D null sets (the
+rails) are cones in the same official sense. Projectively: ellipse, parabola,
+hyperbola differ only in how they meet the line at infinity (0 · 1 · 2 points),
+and those intersection points are the rails. [[CK]]
+
+**Why lines, not parabolas (the `p = 0` "exception"):** the unit set is a level
+of a *norm* — homogeneous, hence centered, hence no linear term is available.
+A parabola is precisely the conic **without a center**: its equation needs its
+linear term to exist. Forced through a centered lens, the parabolic class can
+only show its central representative — the parallel line pair (same doubled
+point at infinity, so same class). Watch it in the cone view: for `a ≠ 1` the
+slice recenters (divide by `a² − 1`); at exactly `a = 1` the section's center
+escapes to infinity and the linear term becomes un-absorbable. Parabola on the
+knife, line pair in the algebra: two faces of one class — one with its center
+escaped, one with its form degenerate.
+
+**The borrowed coordinate (why "one dimension up" works):** a plane conic
+carries terms of three kinds — quadratic (`x², xy, y²`), linear (`x, y`), and
+constant. Append a third coordinate `w` and *homogenize*:
+
+`Ax² + Bxy + Cy² + Dx + Ey + F  →  Ax² + Bxy + Cy² + Dxw + Eyw + Fw²`
+
+Every term is now degree 2 — the linear terms were **cross terms with a
+coordinate we weren't writing**, and the constant was `w²` in disguise. Recover
+the conic by slicing at `w = 1`. Two payoffs: (1) a homogeneous 3-variable form
+always has a center (the origin) and always diagonalizes — so the parabola's
+"missing center" exists upstairs, at the cone's apex; its escape to infinity
+just means it sits on the plane `w = 0`. Completing the square is
+diagonalization, and where it fails in two variables it succeeds in three.
+(2) Homogenization is what puts inhomogeneous curves under the jurisdiction of
+Sylvester's signature classification [[IN]] — the cone picture works because
+*every* conic is the `w = 1` shadow of a centered, diagonalizable form one
+dimension up.

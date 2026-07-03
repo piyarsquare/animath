@@ -90,4 +90,10 @@ export const apps: AppDescriptor[] = [
     icon: '◫',
     blurb: 'Why does a Bessel function show up when you take the difference of two Poisson counts? Walk the diagonal of the (gains, losses) lattice and watch the scary function become a simple sum — the Skellam distribution, demystified.',
   },
+  {
+    hash: '/number-plane',
+    name: 'Number Plane',
+    icon: '⊞',
+    blurb: 'One expression, three arithmetics: the same |z| = 1, the same αz + β, the same z² — drawn side by side on the complex, dual, and split planes (j² = −1, 0, +1).',
+  },
 ];
