@@ -182,6 +182,14 @@ function PlanePlot(props: PlotProps) {
 
   const map = (z: Planar): Planar =>
     expr === 'affine' ? affine(z, a1, a0, p) : add(affine(z, a1, a0, p), mul(a2, mul(z, z, p), p));
+  const mapN = (z: Planar, n: number): Planar => {
+    let w = z;
+    for (let k = 0; k < n; k++) {
+      w = map(w);
+      if (!isFinite(w.x) || !isFinite(w.y) || Math.hypot(w.x, w.y) > 1e6) break;
+    }
+    return w;
+  };
   const E = (Math.abs(win.cx) + Math.abs(win.cy) + win.r) * 1.6 + 1;
 
   const clientToFrame = (cx: number, cy: number): Planar => {
@@ -383,7 +391,11 @@ function PlanePlot(props: PlotProps) {
               strokeOpacity={feed === 'rays' ? 0.25 : 0.14} />
           ))}
           {feed !== 'shape' && sourceLines.map((line, i) => (
-            <polyline key={`m${i}`} points={poly(line.map(q => flowAt(expr, q, a1, a0, a2, p, t)))} fill="none"
+            <polyline key={`m${i}`}
+              points={poly(line.map(q => (feed === 'rays' && iterN > 1)
+                ? mapN(q, iterN)
+                : flowAt(expr, q, a1, a0, a2, p, t)))}
+              fill="none"
               stroke={feed === 'rays' ? cAt(i / Math.max(1, sourceLines.length - 1)) : col}
               strokeWidth={1.7} strokeOpacity={0.85} />
           ))}
@@ -560,12 +572,13 @@ export default function NumberPlane() {
           {playing ? '❚❚ Pause' : '▶ Play'}
         </button>
       </div>
-      <Slider label="Iterate (Point feed)" value={iterN} min={1} max={14} step={1} onChange={setIterN}
+      <Slider label="Iterate (Point · Rays)" value={iterN} min={1} max={14} step={1} onChange={setIterN}
         format={v => (v <= 1 ? 'off' : `${v} steps`)} />
       <p style={{ fontSize: 12.5, opacity: 0.75, margin: '8px 2px 0', lineHeight: 1.5 }}>
         The path from z to f(z) is the multiplication's own flow — a spiral arc, a
-        shear, a boost — not a straight teleport. Iterating chains it: spiral ·
-        shear · saddle.
+        shear, a boost — not a straight teleport. Iterating chains it: a point goes
+        spiral · shear · saddle; the Rays fan stirs · creeps · snaps (scrub the
+        slider to watch the fan evolve under ×α₁ⁿ).
       </p>
     </div>
   );

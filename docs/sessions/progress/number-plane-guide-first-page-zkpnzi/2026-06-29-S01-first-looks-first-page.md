@@ -47,6 +47,31 @@ and Theming v2 (#239) landing sharpened the drift risk of the static mirror.
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 21:40 — Naming + math discussion → Rays feed + fan dynamics (built)
+**Why:** Dan paused to discuss. Settled and logged:
+
+- **Names:** *Number Planes* (family) and **the p-plane** (generic) adopted; literature
+  names kept as "also known as": generalized complex numbers ℂ_p (Harkin & Harkin
+  2004, Yaglom tradition), ℝ[j]/(j²−p). Parameter space = "the dial"; compactified
+  = "the circle of planes"; moduli = 3 points (non-Hausdorff — dual touches both).
+- **Core constraint** (sharpens L3): only **bilinearity + a unit** — in 2D
+  commutativity/associativity are FREE (one generator ⇒ ℝ[j]/(quadratic)); complete
+  the square ⇒ j²=p. The demands only become payable at dim 4 (quaternions).
+- **The fan:** f(t)=t(a+bj) is a copy of ℝ laid along w; z·f(t)=t·(zw) — lines
+  through 0 → lines through 0, t untouched. ×z shuffles the fan; fixed blades =
+  common eigenvectors of ALL ×z = **the rails = ideals (absorbing lines)**. A plane
+  is a field ⇔ its fan has no absorbing blade (unifies WH+FD).
+- **Iterated, f(t)·zⁿ:** direction dynamics on the circle — **stir** (dense
+  precession, p<0) · **creep** (~1/n to one rail, p=0) · **snap** (exponential to
+  the attracting rail, p>0). Magnitude does |z|ⁿ identically in all three — p lives
+  entirely in the direction. (Downstream: why ℂ has n n-th roots; split starves.)
+
+**Built (Dan: "add it so we can see it" / "yes, add the slider"):**
+- **Rays feed**: 12 colormapped lines through 0 (same color source→image tracks
+  each blade); pure shuffle at α₀=0.
+- **Iterate extended to Rays**: slider scrubs the fan under f ⁿ — verified at n=6:
+  stirred / crept / snapped, exactly as derived. Card-worthy: rails-as-ideals.
+
 ### 🟢 code · 20:40 — Number Plane round 3: zoom/pan, honest flow paths, movable shape, quadratic, colormaps, labels
 **Why:** Dan's next batch: zoom/pan; the "smooth" path z→f(z); move the shape like
 z; switch z² to the quadratic form (Argand's); better subplot separation; a
