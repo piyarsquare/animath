@@ -165,7 +165,10 @@ body.noanim *{transition:none !important; animation:none !important}
 .hmm .dismiss:hover{color:var(--light)}
 .linkish{font-style:italic; font-size:12.5px; color:var(--light); text-decoration:none;
   border-bottom:1px dotted var(--light)}
+.factors span{transition:color .4s ease, text-shadow .4s ease}
 .factors .lit{color:var(--light) !important; text-shadow:0 0 12px var(--glow)}
+.optoggle button:disabled{opacity:.35; cursor:default}
+.optoggle button:disabled:hover{color:var(--ink-faint)}
 .optoggle{position:absolute; top:8px; right:10px; z-index:3; display:flex; gap:2px;
   border:1px solid var(--hair); border-radius:8px; overflow:hidden}
 .optoggle[hidden]{display:none}
@@ -393,7 +396,8 @@ svg text{font-family:inherit; user-select:none; -webkit-user-select:none}
   .topbar .runhead{display:none}
   #zSection .cols{display:flex; flex-direction:column; gap:12px}
   .illo{height:auto; flex:0 0 46%}
-  #foilbox .factors{padding-top:8%}
+  #foilbox .factors{padding-top:6%}
+  .tile{font-size:13px; padding:5px 9px}
   #zSplit{flex-direction:column; gap:14px; overflow:hidden}
   #zSplit .lead{max-width:none; flex:0 0 auto}
   .cards3{flex-direction:column; gap:10px; overflow:hidden}
@@ -994,6 +998,10 @@ const AW={zx:1.25,zy:.7,wx:1.05,wy:.8,op:'+',p:-1};
 function drawAddWidget(){
   const svg=$('planeIllo'), cap=$('illocap');
   $('optoggle').hidden=false;
+  const xb=document.querySelector('#optoggle button[data-op="×"]');
+  xb.disabled=!foilPlayed;
+  xb.title=foilPlayed?'':'after the multiplication —';
+  if(AW.op==='×'&&!foilPlayed) AW.op='+';
   $('minidial').hidden=AW.op!=='×';
   svg.innerHTML=''; illoAxes(svg);
   const {zx:x,zy:y,wx:a,wy:b,op}=AW;
@@ -1017,7 +1025,8 @@ function drawAddWidget(){
     svg.appendChild(el('path',{d:poly([[0,y],[0,Y]]),stroke:'var(--im)','stroke-width':.06,opacity:.55,fill:'none'}));
     label(svg,x/2-.08,-.3,'x','var(--re)',.2); label(svg,x+a/2-.08,-.3,'a','var(--re)',.2);
     label(svg,-.34,y/2+.05,'y','var(--im)',.2); label(svg,-.34,y+b/2+.05,'b','var(--im)',.2);
-    cap.innerHTML='drag <b>z</b> or <b>w</b> — <span class="re">x adds a</span>, <span class="im">y adds b</span>; the parts never mix. Try <b>×</b> —';
+    cap.innerHTML='drag <b>z</b> or <b>w</b> — <span class="re">x adds a</span>, <span class="im">y adds b</span>; the parts never mix.'
+      +(foilPlayed?' Now try <b>×</b> —':'');
   } else {
     // the product's j-coordinate never feels j²: the landing slides on a rail
     const jy=x*b+y*a;
@@ -1030,6 +1039,7 @@ function drawAddWidget(){
         stroke:'var(--ink-soft)','stroke-width':.026}));
       label(svg,qt[0]-.14,jy+.16,(pv===-1?'−1':pv===0?'0':'+1'),'var(--ink-faint)',.15);
     }
+    label(svg,Math.max(q0[0],q1[0])+.12,jy-.05,'j²','var(--ink-soft)',.17);
     const q=mul(AW.p,[x,y],[a,b]);
     svg.appendChild(el('path',{d:poly([[0,0],q]),stroke:'var(--light)','stroke-width':.03,
       'stroke-dasharray':'.08 .06',fill:'none'}));
@@ -1041,6 +1051,7 @@ function drawAddWidget(){
   }
 }
 document.querySelectorAll('#optoggle button').forEach(bt=>bt.addEventListener('click',()=>{
+  if(bt.disabled) return;
   AW.op=bt.dataset.op;
   document.querySelectorAll('#optoggle button').forEach(x=>x.classList.toggle('on',x===bt));
   drawAddWidget();
@@ -1085,6 +1096,19 @@ const TERMS=[
   {a:'f_yj',b:'f_vj',h:'<span class="im">y·b</span>·<span class="hh">j²</span>', x:88, hot:true},
 ];
 const zzz=ms=>new Promise(r=>setTimeout(r,ms));
+function setCap(html){const cap=$('illocap');
+  if(!animate){cap.innerHTML=html; return;}
+  cap.animate([{opacity:1},{opacity:0}],{duration:170,easing:'ease-in'}).finished.then(()=>{
+    cap.innerHTML=html;
+    cap.animate([{opacity:0},{opacity:1}],{duration:280,easing:'ease-out'});
+  });
+}
+function foilSlots(){
+  const narrow=$('foilbox').clientWidth<520;
+  return narrow
+    ? {foil:[[26,38],[74,38],[26,62],[74,62]], merge:[50,50], final:[[50,30],[50,52],[50,74]]}
+    : {foil:[[12,55],[38,55],[62,55],[88,55]], merge:[50,55], final:[[16,55],[50,55],[84,55]]};
+}
 function tileCenter(elm){const r=elm.getBoundingClientRect(); return [r.left+r.width/2, r.top+r.height/2];}
 async function runFoilAnim(){
   if(foilPlaying) return;
@@ -1094,6 +1118,7 @@ async function runFoilAnim(){
   const litOff=()=>document.querySelectorAll('.factors .lit').forEach(e=>e.classList.remove('lit'));
   if(!animate){ foilPlaying=false; foilFinal(); if(M===1) advance(2); return; }
   const EASE='cubic-bezier(.22,.9,.3,1)';
+  const SL=foilSlots();
   const tiles=[];
   const caps=['<span class="re">x</span> meets <span class="re">a</span>',
     '<span class="re">x</span> meets <span class="im">b·j</span>',
@@ -1103,56 +1128,64 @@ async function runFoilAnim(){
   for(let i=0;i<TERMS.length;i++){
     const tm=TERMS[i];
     litOff(); $(tm.a).classList.add('lit'); $(tm.b).classList.add('lit');
-    cap.innerHTML=caps[i];
+    setCap(caps[i]);
     // the term is BORN between the two factors that make it, and rises into place
     const d=mkTile(tm.h,tm.hot?'hot':'');
-    d.style.left=tm.x+'%'; d.style.top='55%';
+    d.style.left=SL.foil[i][0]+'%'; d.style.top=SL.foil[i][1]+'%';
     const [ax,ay]=tileCenter($(tm.a)), [bx,by]=tileCenter($(tm.b));
     const [cx,cy]=tileCenter(d);
     const dx=(ax+bx)/2-cx, dy=(ay+by)/2-cy;
     d.animate([
-      {transform:`translate(-50%,-50%) translate(${dx}px,${dy}px) scale(.35)`, opacity:0},
-      {transform:`translate(-50%,-50%) translate(${dx*.45}px,${dy*.55-26}px) scale(1.04)`, opacity:1, offset:.62},
-      {transform:'translate(-50%,-50%) scale(1)', opacity:1}
-    ],{duration:1050, easing:EASE, fill:'backwards'});
+      {transform:`translate(-50%,-50%) translate(${dx}px,${dy}px) scale(.35) rotate(-3deg)`, opacity:0},
+      {transform:`translate(-50%,-50%) translate(${dx*.42}px,${dy*.5-24}px) scale(1.03) rotate(1deg)`, opacity:1, offset:.6},
+      {transform:'translate(-50%,-50%) scale(1) rotate(0deg)', opacity:1}
+    ],{duration:1200, easing:EASE, fill:'backwards'});
     d.animate([{boxShadow:'0 0 0 0 transparent'},
       {boxShadow:'0 0 22px 4px var(--glow-soft)', offset:.7},
-      {boxShadow:'0 0 0 0 transparent'}],{duration:1300, easing:'ease-out'});
+      {boxShadow:'0 0 0 0 transparent'}],{duration:1400, easing:'ease-out'});
     tiles.push(d);
-    await zzz(1050);
+    await zzz(920);
   }
-  litOff();
+  await zzz(350); litOff();
   // the two bare-j tiles drift together; the collected term emerges from their union
-  cap.innerHTML='two tiles carry a bare <span class="im">j</span> — like terms: collect them';
-  await zzz(500);
+  setCap('two tiles carry a bare <span class="im">j</span> — like terms: collect them');
+  await zzz(600);
   const [c1,c2]=[tiles[1],tiles[2]];
+  const rf=fb.getBoundingClientRect();
+  const mx=rf.left+rf.width*SL.merge[0]/100, my=rf.top+rf.height*SL.merge[1]/100;
   for(const [t2,dir] of [[c1,1],[c2,-1]]){
     t2.style.transition='none';
-    const r=t2.getBoundingClientRect(), rf=fb.getBoundingClientRect();
-    const gx=rf.left+rf.width*.5-(r.left+r.width/2);
+    const r=t2.getBoundingClientRect();
+    const gx=mx-(r.left+r.width/2), gy=my-(r.top+r.height/2);
     t2.animate([
       {transform:'translate(-50%,-50%)'},
-      {transform:`translate(-50%,-50%) translate(${gx}px,0) rotate(${4*dir}deg) scale(.45)`, opacity:.25}
-    ],{duration:750, easing:'cubic-bezier(.5,0,.8,.4)', fill:'forwards'});
+      {transform:`translate(-50%,-50%) translate(${gx}px,${gy}px) rotate(${4*dir}deg) scale(.45)`, opacity:.25}
+    ],{duration:850, easing:'cubic-bezier(.45,0,.55,1)', fill:'forwards'});
   }
-  await zzz(730);
+  await zzz(820);
   c1.remove(); c2.remove();
   const m=mkTile('(<span class="re">x</span>·<span class="im">b</span> + <span class="im">y</span>·<span class="re">a</span>)·<span class="im">j</span>');
-  m.style.left='50%'; m.style.top='55%';
+  m.style.left=SL.merge[0]+'%'; m.style.top=SL.merge[1]+'%';
   m.animate([
     {transform:'translate(-50%,-50%) scale(.4)', opacity:0, boxShadow:'0 0 30px 8px var(--glow)'},
-    {transform:'translate(-50%,-50%) scale(1.07)', opacity:1, boxShadow:'0 0 16px 3px var(--glow-soft)', offset:.7},
+    {transform:'translate(-50%,-50%) scale(1.06)', opacity:1, boxShadow:'0 0 16px 3px var(--glow-soft)', offset:.7},
     {transform:'translate(-50%,-50%) scale(1)', boxShadow:'0 0 0 0 transparent'}
-  ],{duration:750, easing:EASE});
+  ],{duration:850, easing:EASE});
   tiles[1]=m;
-  await zzz(900);
+  await zzz(950);
   // settle: real · j · and the unplaced third — Hmm?
-  cap.innerHTML='real part · j part · and <span class="hh" style="color:var(--light)">y·b·j²</span> — third place, until j² gets a value';
-  tiles[0].style.left='16%'; tiles[1].style.left='50%'; tiles[3].style.left='84%';
-  await zzz(1250);
+  setCap('real part · j part · and <span class="hh" style="color:var(--light)">y·b·j²</span> — third place, until j² gets a value');
+  [[tiles[0],0],[tiles[1],1],[tiles[3],2]].forEach(([t2,i])=>{
+    t2.style.left=SL.final[i][0]+'%'; t2.style.top=SL.final[i][1]+'%';});
+  await zzz(1350);
   $('hmm').hidden=false;
   foilPlaying=false; foilPlayed=true;
+  unlockTimes();
   if(M===1) advance(2);
+}
+function unlockTimes(){
+  const xb=document.querySelector('#optoggle button[data-op="×"]');
+  if(xb&&xb.disabled){ xb.disabled=false; xb.classList.add('born'); }
 }
 function illoSetForce(mode){ const fp=foilPlaying; foilPlaying=false; illoSet(mode); foilPlaying=fp; }
 function foilFinal(){
@@ -1161,11 +1194,13 @@ function foilFinal(){
   const fb=$('foilbox');
   if(fb.querySelectorAll('.tile').length===3 && fb.querySelector('.bracket')) return;
   clearTiles();
+  const SL=foilSlots();
   const A=mkTile(TERMS[0].h), C=mkTile(TERMS[3].h,'hot'),
         B=mkTile('(<span class="re">x</span>·<span class="im">b</span> + <span class="im">y</span>·<span class="re">a</span>)·<span class="im">j</span>');
-  A.style.left='16%'; A.style.top='55%';
-  B.style.left='50%'; B.style.top='55%';
-  C.style.left='84%'; C.style.top='55%';
+  [[A,0],[B,1],[C,2]].forEach(([t2,i])=>{
+    t2.style.transition='none';
+    t2.style.left=SL.final[i][0]+'%'; t2.style.top=SL.final[i][1]+'%';});
+  unlockTimes();
   if(!hmmDismissed) $('hmm').hidden=false;
   $('illocap').innerHTML='every tile is arithmetic we already own — except the lit one';
 }
