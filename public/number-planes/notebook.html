@@ -29,20 +29,21 @@ body{font-size:15px; line-height:1.5}
 .nb{height:100dvh; display:flex; flex-direction:column; overflow:hidden; position:relative}
 button{font:inherit; color:inherit; background:none; border:0; cursor:pointer; padding:0}
 
-/* ——— the twinkle: light marks where the story can advance ——— */
-@keyframes twinkle{0%,100%{opacity:.55; transform:scale(.85)} 50%{opacity:1; transform:scale(1.25)}}
+/* ——— the twinkle: a quiet glint, not a seesaw ———
+   calm at rest; one soft flash every ~4s; no continuous bouncing. */
+@keyframes glint{0%,74%,100%{opacity:.5; transform:scale(1)}
+  80%{opacity:1; transform:scale(1.06)} 88%{opacity:.6; transform:scale(1)}}
 .tw{position:relative}
 .tw::after{content:"✦"; color:var(--light); margin-left:7px; display:inline-block;
-  animation:twinkle 1.6s ease-in-out infinite;
+  opacity:.5; animation:glint 4.2s ease-in-out infinite;
   text-shadow:0 0 8px var(--glow), 0 0 18px var(--glow-soft)}
-.tw-dot::after{content:""; position:absolute; inset:-7px; border-radius:50%;
-  border:1px solid var(--light); opacity:.5;
-  animation:twinkle 1.6s ease-in-out infinite;
-  box-shadow:0 0 10px var(--glow)}
+@keyframes dotglint{0%,74%,100%{opacity:.78} 80%{opacity:1}}
+circle.tw-dot{animation:dotglint 4.2s ease-in-out infinite;
+  filter:drop-shadow(0 0 3px var(--glow))}
 @keyframes shimmer{from{box-shadow:0 0 0 0 var(--glow)} to{box-shadow:0 0 14px 6px transparent}}
 .born{animation:shimmer 1.1s ease-out 1}
 @media (prefers-reduced-motion: reduce){
-  .tw::after,.tw-dot::after{animation:none}
+  .tw::after,circle.tw-dot{animation:none}
   *{transition:none !important; animation:none !important}
 }
 
@@ -805,7 +806,8 @@ function drawPline(){
       fill:d.settled?'var(--light)':'color-mix(in srgb, var(--fg) 55%, var(--bg))'});
     c.setAttribute('style','cursor:pointer'+(d.settled?';filter:drop-shadow(0 0 4px var(--glow))':''));
     c.dataset.i=i;
-    if(!d.settled||(d.zero&&!zeroTapped)) c.classList.add('tw-dot');
+    if(!d.settled||(d.zero&&!zeroTapped)){ c.classList.add('tw-dot');
+      c.style.animationDelay=((i*0.7)%4.2).toFixed(2)+'s'; }
     c.addEventListener('click',()=>settleDot(i));
     PLINE.appendChild(c);
     if(!d.settled&&!d.zero){
