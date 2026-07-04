@@ -38,6 +38,48 @@ app into the living-notebook presentation."*
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟢 code · 03:40 — v2: one-screen desk, compartment faces, the operator, all 8 skins
+**Why:** Dan's structured feedback on v1: the page must fit the viewport
+entirely (scrolling doesn't exist — anything beyond is an interaction: a new
+page or a pan); drop the book/two-page mock (sections shape the page; halves
+only matter if they become phone "screens"); **nothing appears that cannot be
+hidden again**; compartments like a control panel — same-shaped slots whose
+contents swap, simple controls growing complex on demand; more interactive,
+less illustrative — specifically **the relationship with linear operators**;
+density a bit too sparse in parts; and enable the animath themes (light +
+dark). He also asked what review elements would help structure his feedback.
+
+Rebuilt as the **desk layout** (`d851b5b`, same URL):
+- **Viewport-fit everywhere**: topbar · dial strip · compartment grid ·
+  footbar in a `100dvh` flex column, `overflow:hidden`; asserted headless at
+  1440×900, 1280×800, 1680×1000, 390×844 (doc AND main never scroll). On
+  phone the six compartments become swipe screens (scroll-snap pager + dots).
+- **Compartments (slots) with faces**: uniform slot shape (header + face
+  tabs). Stage faces: Levels · Orbit · **Operator**; Margin faces:
+  Derivation · ✦Note. Touching the w sliders auto-swaps the stage to the
+  operator face — the requested "simple control becomes the complex type."
+- **The operator slot** (new content): ×w as the matrix [[a, p·b],[b, a]]
+  with the p·b entry lit (p enters exactly once), live eigenvalues
+  λ = a ± b√p tracking sign(p) (complex pair / repeated / two real), the
+  whisper "the characteristic equation is t² = p in disguise," and the stage
+  face showing the grid + unit square carried by ×w with rails dashed as
+  real eigen-directions. Connects WH + matrices cards.
+- **Hide-again rule**: the marginal note now lives in the Margin compartment
+  — reveals at p = 0 on the filament (which now arcs across the whole desk
+  from the dial thumb), dismisses with ×, leaves a persistent ✦ note tab to
+  reopen. Nothing un-hideable remains.
+- **Themed**: linked the shared `guide-theme.css`/`guide-skin.js` layer — all
+  8 skins (3 light, 5 dark), picker synced with the app's saved skin. The
+  "light responds" role rides `--accent`; paper is `--bg`/`--card`. Phosphor
+  verified in mono; Daylight verified light.
+- Denser: comparator as three compact rows (name · rails count · one-liner),
+  the demands line added to the claim, matrix+eigen readouts always live.
+
+Known thin spot: the phone claim screen is still airy (flagged to Dan).
+Verification artifact worth remembering: a screenshot taken mid-CSS-
+transition showed the *previous* comparator row still lit — looked like a
+selection bug, was actually the 0.35s fade; re-shot settled.
+
 ### 🟢 code · 01:10 — The probe built: `public/number-planes/notebook.html` (spread II · the choice)
 **Why:** Dan approved the probe ("yes I think that is a good idea") and left
 the path question open ("I am open to seeing what you come up with").
