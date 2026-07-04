@@ -70,6 +70,7 @@ input[type=range]::-moz-range-thumb{width:16px; height:16px; border-radius:50%; 
     "claim   stage operator"
     "threads stage margin";
 }
+.screen{display:contents}
 .slot{background:var(--card); border:1px solid var(--hair); border-radius:12px;
   min-height:0; min-width:0; display:flex; flex-direction:column; overflow:hidden;
   transition:box-shadow .4s, border-color .4s}
@@ -196,7 +197,13 @@ svg text{font-family:inherit}
   .main{display:flex; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
     gap:12px; padding:10px 12px; scrollbar-width:none}
   .main::-webkit-scrollbar{display:none}
-  .slot{flex:0 0 100%; scroll-snap-align:center}
+  .screen{display:flex; flex-direction:column; gap:10px; flex:0 0 100%;
+    scroll-snap-align:center; min-height:0; min-width:0}
+  .slot{flex:1 1 0; min-height:0}
+  #claim{flex:1.15} #stage{flex:1.9} #margin{flex:1.05}
+  #operator .body{align-content:flex-start; gap:8px 14px}
+  #claim .body{justify-content:center}
+  #claim .demands{margin-top:12px}
   .footbar .dots{display:flex}
   #claim p{max-width:none}
 }
@@ -224,6 +231,7 @@ svg text{font-family:inherit}
 
   <div class="main" id="main">
 
+   <div class="screen">
     <!-- ── claim ── -->
     <section class="slot" id="claim" style="grid-area:claim">
       <header><h3>II · The Choice</h3></header>
@@ -239,6 +247,28 @@ svg text{font-family:inherit}
       </div>
     </section>
 
+    <!-- ── comparator: three worlds, compact ── -->
+    <section class="slot" id="compare" style="grid-area:compare">
+      <header><h3>The three worlds</h3></header>
+      <div class="body">
+        <div class="wrow" data-k="-1">
+          <svg viewBox="-1.3 -1.05 2.6 2.1"><circle cx="0" cy="0" r=".72" fill="none" stroke="var(--stroke)" stroke-width=".07"/><path d="M 0 -.72 l -.14 -.1 M 0 -.72 l -.12 .13" stroke="var(--stroke)" stroke-width=".06" fill="none"/></svg>
+          <span class="name">SPIN <i>p &lt; 0 · complex</i></span><span class="tag">rails 0</span>
+          <span class="desc">multiplying turns the plane — no held line; every nonzero number divides</span>
+        </div>
+        <div class="wrow" data-k="0">
+          <svg viewBox="-1.3 -1.05 2.6 2.1"><line x1="0" y1="-.9" x2="0" y2=".9" stroke="var(--stroke)" stroke-width=".08"/><g stroke="var(--stroke)" stroke-width=".06" fill="none"><path d="M .55 -.35 L .55 .35 M .55 .35 l -.09 -.13 M .55 .35 l .09 -.13"/><path d="M -.55 .35 L -.55 -.35 M -.55 -.35 l -.09 .13 M -.55 -.35 l .09 .13"/></g></svg>
+          <span class="name">SHEAR <i>p = 0 · dual</i></span><span class="tag">rails 1</span>
+          <span class="desc">multiplying slides along one held line — the slide carries the derivative</span>
+        </div>
+        <div class="wrow" data-k="1">
+          <svg viewBox="-1.3 -1.05 2.6 2.1"><line x1="-1" y1="-1" x2="1" y2="1" stroke="var(--stroke)" stroke-width=".045" stroke-dasharray=".1 .08"/><line x1="-1" y1="1" x2="1" y2="-1" stroke="var(--stroke)" stroke-width=".045" stroke-dasharray=".1 .08"/><path id="cmphyp" d="" fill="none" stroke="var(--stroke)" stroke-width=".07"/></svg>
+          <span class="name">BOOST <i>p &gt; 0 · split</i></span><span class="tag">rails 2</span>
+          <span class="desc">multiplying squeezes along a hyperbola — the strangers’ multiply in disguise</span>
+        </div>
+      </div>
+    </section>
+   </div><div class="screen">
     <!-- ── stage: the swappable big figure ── -->
     <section class="slot" id="stage" style="grid-area:stage">
       <header>
@@ -273,28 +303,6 @@ svg text{font-family:inherit}
       </div>
     </section>
 
-    <!-- ── comparator: three worlds, compact ── -->
-    <section class="slot" id="compare" style="grid-area:compare">
-      <header><h3>The three worlds</h3></header>
-      <div class="body">
-        <div class="wrow" data-k="-1">
-          <svg viewBox="-1.3 -1.05 2.6 2.1"><circle cx="0" cy="0" r=".72" fill="none" stroke="var(--stroke)" stroke-width=".07"/><path d="M 0 -.72 l -.14 -.1 M 0 -.72 l -.12 .13" stroke="var(--stroke)" stroke-width=".06" fill="none"/></svg>
-          <span class="name">SPIN <i>p &lt; 0 · complex</i></span><span class="tag">rails 0</span>
-          <span class="desc">multiplying turns the plane — no held line; every nonzero number divides</span>
-        </div>
-        <div class="wrow" data-k="0">
-          <svg viewBox="-1.3 -1.05 2.6 2.1"><line x1="0" y1="-.9" x2="0" y2=".9" stroke="var(--stroke)" stroke-width=".08"/><g stroke="var(--stroke)" stroke-width=".06" fill="none"><path d="M .55 -.35 L .55 .35 M .55 .35 l -.09 -.13 M .55 .35 l .09 -.13"/><path d="M -.55 .35 L -.55 -.35 M -.55 -.35 l -.09 .13 M -.55 -.35 l .09 .13"/></g></svg>
-          <span class="name">SHEAR <i>p = 0 · dual</i></span><span class="tag">rails 1</span>
-          <span class="desc">multiplying slides along one held line — the slide carries the derivative</span>
-        </div>
-        <div class="wrow" data-k="1">
-          <svg viewBox="-1.3 -1.05 2.6 2.1"><line x1="-1" y1="-1" x2="1" y2="1" stroke="var(--stroke)" stroke-width=".045" stroke-dasharray=".1 .08"/><line x1="-1" y1="1" x2="1" y2="-1" stroke="var(--stroke)" stroke-width=".045" stroke-dasharray=".1 .08"/><path id="cmphyp" d="" fill="none" stroke="var(--stroke)" stroke-width=".07"/></svg>
-          <span class="name">BOOST <i>p &gt; 0 · split</i></span><span class="tag">rails 2</span>
-          <span class="desc">multiplying squeezes along a hyperbola — the strangers’ multiply in disguise</span>
-        </div>
-      </div>
-    </section>
-
     <!-- ── operator: ×w is a matrix ── -->
     <section class="slot" id="operator" style="grid-area:operator">
       <header><h3>×w is a linear operator</h3></header>
@@ -314,6 +322,7 @@ svg text{font-family:inherit}
       </div>
     </section>
 
+   </div><div class="screen">
     <!-- ── margin: derivation + the revealed note ── -->
     <section class="slot" id="margin" style="grid-area:margin">
       <header>
@@ -359,6 +368,7 @@ svg text{font-family:inherit}
         <div class="thread"><span class="glyph">∞</span>tropical — behind you</div>
       </div>
     </section>
+   </div>
   </div>
 
   <div class="footbar">
@@ -607,16 +617,18 @@ playBtn.addEventListener('click',()=>{
 
 /* ————— phone pager dots ————— */
 const main=document.getElementById('main'), dots=document.getElementById('dots');
-const slots=[...main.querySelectorAll('.slot')];
-slots.forEach((s,i)=>{const d=document.createElement('i');
+const screens=[...main.querySelectorAll('.screen')];
+screens.forEach(s=>{const d=document.createElement('i');
   d.addEventListener('click',()=>s.scrollIntoView({behavior:'smooth',inline:'center'}));
   dots.appendChild(d);});
 function syncDots(){
-  const x=main.scrollLeft, w=main.clientWidth, i=Math.round(x/(w+12));
+  const x=main.scrollLeft;
+  let i=0,best=1e9;
+  screens.forEach((s,j)=>{const d=Math.abs(s.offsetLeft-x-12); if(d<best){best=d;i=j;}});
   [...dots.children].forEach((d,j)=>d.classList.toggle('on',j===i));
 }
 main.addEventListener('scroll',syncDots,{passive:true}); syncDots();
-function pulseDot(){const i=slots.indexOf(marginSlot);
+function pulseDot(){const i=screens.indexOf(marginSlot.closest('.screen'));
   if(dots.children[i]) dots.children[i].classList.add('pulse');}
 
 update();
