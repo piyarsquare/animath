@@ -115,8 +115,10 @@ input[type=range]::-moz-range-thumb{width:16px; height:16px; border-radius:50%; 
 /* comparator: three compact rows */
 #compare .body{display:flex; flex-direction:column; justify-content:space-evenly; gap:4px}
 .wrow{display:grid; grid-template-columns:44px 1fr auto; gap:0 10px; align-items:center;
-  padding:4px 8px; border-radius:9px; border:1px solid transparent;
+  padding:4px 8px; border-radius:9px; border:1px solid transparent; cursor:pointer;
   transition:border-color .35s, box-shadow .4s, background .35s}
+.wrow:hover{border-color:var(--hair)}
+.wrow:focus-visible{outline:1px solid var(--light)}
 .wrow svg{width:44px; height:34px; grid-row:1/3}
 .wrow .name{font-size:11.5px; letter-spacing:.16em; font-weight:600}
 .wrow .name i{font-weight:400; letter-spacing:0; color:var(--ink-faint); margin-left:7px; font-size:11px}
@@ -127,7 +129,10 @@ input[type=range]::-moz-range-thumb{width:16px; height:16px; border-radius:50%; 
 .wrow.now .name{color:var(--light); text-shadow:0 0 10px var(--glow-soft)}
 
 /* operator */
-#operator .body{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; align-content:space-between}
+#operator .face.on.opgrid{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; align-content:space-between}
+#operator .why p{font-size:11.5px; font-style:italic; line-height:1.6; color:var(--ink); margin:0 0 7px}
+#operator .why p b{font-style:normal; font-weight:600}
+#operator .why .pb{color:var(--light); font-style:normal}
 #operator .wctl{grid-column:1/3; display:flex; gap:10px; align-items:center; font-size:11.5px; font-style:italic}
 #operator .wctl label{display:flex; gap:6px; align-items:center; flex:1}
 #operator .wctl input{flex:1}
@@ -141,6 +146,13 @@ input[type=range]::-moz-range-thumb{width:16px; height:16px; border-radius:50%; 
 #operator .eig .lam{color:var(--light); font-style:normal}
 #operator .whisper{grid-column:1/3; font-size:10.5px; font-style:italic; color:var(--ink-faint);
   border-top:1px solid color-mix(in srgb, var(--hair) 55%, transparent); padding-top:5px}
+
+/* compare: the 3-way comparator, called in as a stage face */
+.cmp3{display:flex; gap:10px; flex:1; min-height:0}
+.cmp3 .pane{flex:1; display:flex; flex-direction:column; min-width:0}
+.cmp3 svg{flex:1; min-height:0; width:100%}
+.cmp3 .cap{text-align:center; font-size:10.5px; font-style:italic; color:var(--ink-soft); padding-top:2px}
+.cmp3 .cap b{color:var(--ink); font-style:normal; letter-spacing:.08em}
 
 /* margin: derivation face + the revealed note face */
 #margin .note-body p{font-size:12px; font-style:italic; line-height:1.55; margin:0 0 6px; color:var(--ink)}
@@ -198,7 +210,8 @@ input[type=range]::-moz-range-thumb{width:16px; height:16px; border-radius:50%; 
 /* ——— the skin picker (top-right) ——— */
 #skin-picker{flex:0 0 auto}
 
-svg text{font-family:inherit}
+svg text{font-family:inherit; user-select:none; -webkit-user-select:none}
+#stage svg{user-select:none; -webkit-user-select:none; touch-action:none}
 
 /* ——— phone: sections become screens (a pager, not a scroll) ——— */
 @media (max-width:900px){
@@ -214,7 +227,7 @@ svg text{font-family:inherit}
     scroll-snap-align:center; min-height:0; min-width:0}
   .slot{flex:1 1 0; min-height:0}
   #claim{flex:1.15} #stage{flex:1.9} #margin{flex:1.05}
-  #operator .body{align-content:flex-start; gap:8px 14px}
+  #operator .face.on.opgrid{align-content:flex-start; gap:8px 14px}
   .sheet.on{display:block; animation:rise .5s cubic-bezier(.2,.7,.2,1)}
   #claim .body{justify-content:center}
   #claim .demands{margin-top:12px}
@@ -265,17 +278,17 @@ svg text{font-family:inherit}
     <section class="slot" id="compare" style="grid-area:compare">
       <header><h3>The three worlds</h3></header>
       <div class="body">
-        <div class="wrow" data-k="-1">
+        <div class="wrow" data-k="-1" role="button" tabindex="0" title="set p = −1">
           <svg viewBox="-1.3 -1.05 2.6 2.1"><circle cx="0" cy="0" r=".72" fill="none" stroke="var(--stroke)" stroke-width=".07"/><path d="M 0 -.72 l -.14 -.1 M 0 -.72 l -.12 .13" stroke="var(--stroke)" stroke-width=".06" fill="none"/></svg>
           <span class="name">SPIN <i>p &lt; 0 · complex</i></span><span class="tag">rails 0</span>
           <span class="desc">multiplying turns the plane — no held line; every nonzero number divides</span>
         </div>
-        <div class="wrow" data-k="0">
+        <div class="wrow" data-k="0" role="button" tabindex="0" title="set p = 0">
           <svg viewBox="-1.3 -1.05 2.6 2.1"><line x1="0" y1="-.9" x2="0" y2=".9" stroke="var(--stroke)" stroke-width=".08"/><g stroke="var(--stroke)" stroke-width=".06" fill="none"><path d="M .55 -.35 L .55 .35 M .55 .35 l -.09 -.13 M .55 .35 l .09 -.13"/><path d="M -.55 .35 L -.55 -.35 M -.55 -.35 l -.09 .13 M -.55 -.35 l .09 .13"/></g></svg>
           <span class="name">SHEAR <i>p = 0 · dual</i></span><span class="tag">rails 1</span>
           <span class="desc">multiplying slides along one held line — the slide carries the derivative</span>
         </div>
-        <div class="wrow" data-k="1">
+        <div class="wrow" data-k="1" role="button" tabindex="0" title="set p = +1">
           <svg viewBox="-1.3 -1.05 2.6 2.1"><line x1="-1" y1="-1" x2="1" y2="1" stroke="var(--stroke)" stroke-width=".045" stroke-dasharray=".1 .08"/><line x1="-1" y1="1" x2="1" y2="-1" stroke="var(--stroke)" stroke-width=".045" stroke-dasharray=".1 .08"/><path id="cmphyp" d="" fill="none" stroke="var(--stroke)" stroke-width=".07"/></svg>
           <span class="name">BOOST <i>p &gt; 0 · split</i></span><span class="tag">rails 2</span>
           <span class="desc">multiplying squeezes along a hyperbola — the strangers’ multiply in disguise</span>
@@ -291,6 +304,7 @@ svg text{font-family:inherit}
           <button data-face="levels" class="on">Levels</button>
           <button data-face="orbit">Orbit</button>
           <button data-face="operator">Operator</button>
+          <button data-face="compare">Compare</button>
         </div>
       </header>
       <div class="body">
@@ -314,16 +328,30 @@ svg text{font-family:inherit}
                aria-label="The grid carried by multiplication by w; rails are eigen-directions"></svg>
           <div class="stagefoot" id="opfoot">×w carries the square grid to the tilted one — <b>rails dashed</b> where real</div>
         </div>
+        <div class="face" data-face="compare">
+          <div class="cmp3">
+            <div class="pane"><svg id="cmpm1" viewBox="-1.7 -1.35 3.4 2.7" preserveAspectRatio="xMidYMid meet"></svg><div class="cap"><b>SPIN</b> · p = −1</div></div>
+            <div class="pane"><svg id="cmp0" viewBox="-1.7 -1.35 3.4 2.7" preserveAspectRatio="xMidYMid meet"></svg><div class="cap"><b>SHEAR</b> · p = 0</div></div>
+            <div class="pane"><svg id="cmpp1" viewBox="-1.7 -1.35 3.4 2.7" preserveAspectRatio="xMidYMid meet"></svg><div class="cap"><b>BOOST</b> · p = +1</div></div>
+          </div>
+          <div class="stagefoot">the same ×w in all three planes at once — only the j-side differs; the bottom edge lands on <b>w</b> in every one</div>
+        </div>
       </div>
     </section>
 
     <!-- ── operator: ×w is a matrix ── -->
     <section class="slot" id="operator" style="grid-area:operator">
-      <header><h3>×w is a linear operator</h3></header>
+      <header><h3>×w is a linear operator</h3>
+        <div class="faces">
+          <button data-face="numbers" class="on">Numbers</button>
+          <button data-face="why">Why?</button>
+        </div>
+      </header>
       <div class="body">
+        <div class="face on opgrid" data-face="numbers">
         <div class="wctl">
-          <label>a <input type="range" id="wa" min="-1.6" max="1.6" step="0.05" value="0.8" aria-label="Real part of w"></label>
-          <label>b <input type="range" id="wb" min="-1.6" max="1.6" step="0.05" value="0.6" aria-label="j part of w"></label>
+          <label>a <input type="range" id="wa" min="-2" max="2" step="0.05" value="0.8" aria-label="Real part of w"></label>
+          <label>b <input type="range" id="wb" min="-2" max="2" step="0.05" value="0.6" aria-label="j part of w"></label>
           <span class="wval" id="wval">w = 0.8 + 0.6 j</span>
         </div>
         <div class="matrix" aria-label="The matrix of multiplication by w">
@@ -333,6 +361,18 @@ svg text{font-family:inherit}
         <div class="eig" id="eig"></div>
         <div class="whisper">the characteristic equation is <i>t² = p</i> in disguise
           (λ = a ± b·√p) — rails are its real eigenvectors.</div>
+        </div>
+        <div class="face why" data-face="why">
+          <p><b>Where do 1 and j land?</b> The columns are exactly that:
+            w·1 = a + b·j is the first column (a, b);
+            w·j = a·j + b·j² = <span class="pb">p·b</span> + a·j is the second (p·b, a).</p>
+          <p>j² appears only where j meets j — so <b>exactly one entry</b>,
+            <span class="pb">p·b</span>, can feel the dial. The rest of the matrix
+            doesn't know which plane it lives in.</p>
+          <p>Same fact on the stage: the square's bottom edge is the segment 0 → 1,
+            so its image is <b>0 → w in every plane</b>. Only the j-edge bends
+            when p turns.</p>
+        </div>
       </div>
     </section>
 
@@ -391,7 +431,7 @@ svg text{font-family:inherit}
     <span>II · the choice</span>
     <span class="walk">the forcing walk · stop II</span>
     <div class="dots" id="dots"></div>
-    <a href="../#/number-plane">the full instrument ↗</a>
+    <a href="../#/number-plane">the full app · fallback ↗</a>
   </div>
 
   <svg id="filaments" aria-hidden="true">
@@ -521,16 +561,24 @@ function drawOperator(p){
       stroke:'var(--light)','stroke-width':.028,'stroke-dasharray':'.14 .1'}));}
   if(k===0) OP.appendChild(el('line',{x1:0,y1:-1.9,x2:0,y2:1.9,
     stroke:'var(--light)','stroke-width':.028,'stroke-dasharray':'.14 .1'}));
+  // the bottom edge 0→1 lands on 0→w — in every plane
+  OP.appendChild(el('path',{d:poly([[0,0],[wa,wb]]),stroke:'var(--light)','stroke-width':.05,fill:'none'}));
+  // where j lands: the one point that feels the dial
+  const jm=[p*wb,wa];
+  OP.appendChild(el('circle',{cx:jm[0],cy:-jm[1],r:.055,fill:'var(--accent2)'}));
+  const tj=el('text',{x:jm[0]+.1,y:-jm[1]-.1,'font-size':.2,fill:'var(--accent2)','font-style':'italic'});
+  tj.textContent='w·j'; OP.appendChild(tj);
   // w itself
   const wpt=el('circle',{cx:wa,cy:-wb,r:.07,fill:'var(--light)'});
   wpt.setAttribute('style','filter:drop-shadow(0 0 3px var(--glow))');
   OP.appendChild(wpt);
   const tw=el('text',{x:wa+.1,y:-wb-.12,'font-size':.22,fill:'var(--light)','font-style':'italic'});
   tw.textContent='w'; OP.appendChild(tw);
-  document.getElementById('opfoot').innerHTML = k===-1
+  document.getElementById('opfoot').innerHTML = (k===-1
     ? '×w carries the grid — <b>no real rail</b>: every line turns'
     : k===0 ? '×w carries the grid — <b>one rail</b> (dashed): the ε-axis holds'
-    : '×w carries the grid — <b>two rails</b> (dashed) hold their lines';
+    : '×w carries the grid — <b>two rails</b> (dashed) hold their lines')
+    + ' · drag <b>w</b> here · bottom edge ↦ <b>w</b>, always';
 }
 function updateOperatorPanel(p){
   const k=kindOf(p);
@@ -613,11 +661,14 @@ const slider=document.getElementById('pslider');
 /* the sticky middle magnets only under the pointer — keyboard arrows step freely */
 let pointerHeld=false;
 slider.addEventListener('pointerdown',()=>{pointerHeld=true;});
+for(const id of ['wa','wb']) document.getElementById(id)
+  .addEventListener('pointerdown',()=>{pointerHeld=true;});
 addEventListener('pointerup',()=>{pointerHeld=false;});
 addEventListener('pointercancel',()=>{pointerHeld=false;});
+const magnet=v=>{for(const s of [-1,0,1]) if(Math.abs(v-s)<0.08) return s; return v;};
 function update(){
   let v=parseFloat(slider.value);
-  if(pointerHeld && Math.abs(v)<0.08 && v!==0){v=0; slider.value='0';}
+  if(pointerHeld){const m=magnet(v); if(m!==v){v=m; slider.value=String(m);}}
   const k=kindOf(v);
   document.getElementById('pval').textContent=(v<0?'−':'')+Math.abs(v).toFixed(2);
   document.querySelectorAll('#compare .wrow').forEach(r=>
@@ -633,12 +684,61 @@ addEventListener('resize',()=>{
   else if(marginSlot.classList.contains('lit')) drawFilament(marginSlot);
 });
 
+/* the world rows are buttons: tap to set p to the representative value */
+document.querySelectorAll('#compare .wrow').forEach(r=>{
+  const go=()=>{slider.value=r.dataset.k; update();};
+  r.addEventListener('click',go);
+  r.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault(); go();}});
+});
+
 /* touching w swaps the stage to its operator face — a control growing complex on demand */
 for(const id of ['wa','wb']) document.getElementById(id).addEventListener('input',e=>{
-  if(e.target.id==='wa') wa=parseFloat(e.target.value); else wb=parseFloat(e.target.value);
-  setFace(document.getElementById('stage'),'operator');
-  drawOperator(parseFloat(slider.value)); updateOperatorPanel(parseFloat(slider.value));
+  let v=parseFloat(e.target.value);
+  if(pointerHeld){const m=magnet(v); if(m!==v){v=m; e.target.value=String(m);}}
+  if(e.target.id==='wa') wa=v; else wb=v;
+  if(!document.querySelector('#stage .face[data-face=compare]').classList.contains('on'))
+    setFace(document.getElementById('stage'),'operator');
+  drawOperator(parseFloat(slider.value)); updateOperatorPanel(parseFloat(slider.value)); drawCompare();
 });
+
+/* drag w directly on the operator stage */
+let opDrag=false;
+function svgMathPoint(svg,ev){
+  const q=new DOMPoint(ev.clientX,ev.clientY).matrixTransform(svg.getScreenCTM().inverse());
+  return [q.x,-q.y];
+}
+OP.style.touchAction='none';
+OP.addEventListener('pointerdown',ev=>{OP.setPointerCapture(ev.pointerId); opDrag=true; dragW(ev);});
+OP.addEventListener('pointermove',ev=>{if(opDrag) dragW(ev);});
+addEventListener('pointerup',()=>{opDrag=false;});
+function dragW(ev){
+  const [x,y]=svgMathPoint(OP,ev);
+  wa=Math.max(-2,Math.min(2,magnet(x)));
+  wb=Math.max(-2,Math.min(2,magnet(y)));
+  document.getElementById('wa').value=String(wa);
+  document.getElementById('wb').value=String(wb);
+  const pv=parseFloat(slider.value);
+  drawOperator(pv); updateOperatorPanel(pv); drawCompare();
+}
+
+/* the 3-way comparator, as a widget: the same ×w in all three planes */
+function drawCompare(){
+  for(const [pc,id] of [[-1,'cmpm1'],[0,'cmp0'],[1,'cmpp1']]){
+    const svg=document.getElementById(id); svg.innerHTML='';
+    svg.appendChild(el('line',{x1:-1.65,y1:0,x2:1.65,y2:0,stroke:'var(--hair)','stroke-width':.02}));
+    svg.appendChild(el('line',{x1:0,y1:-1.3,x2:0,y2:1.3,stroke:'var(--hair)','stroke-width':.02}));
+    const M=(x,y)=>[wa*x+pc*wb*y, wb*x+wa*y];
+    if(pc>0) for(const sg of [1,-1]) svg.appendChild(el('line',{x1:-1.6,y1:-1.6*sg,x2:1.6,y2:1.6*sg,
+      stroke:'var(--ink-soft)','stroke-width':.02,'stroke-dasharray':'.1 .08'}));
+    if(pc===0) svg.appendChild(el('line',{x1:0,y1:-1.3,x2:0,y2:1.3,
+      stroke:'var(--ink-soft)','stroke-width':.02,'stroke-dasharray':'.1 .08'}));
+    svg.appendChild(el('path',{d:poly([[0,0],[1,0],[1,1],[0,1],[0,0]]),stroke:'var(--ink-soft)','stroke-width':.035,fill:'none'}));
+    svg.appendChild(el('path',{d:poly([[0,0],M(1,0),M(1,1),M(0,1),[0,0]]),stroke:'var(--accent2)','stroke-width':.055,fill:'none'}));
+    svg.appendChild(el('path',{d:poly([[0,0],[wa,wb]]),stroke:'var(--light)','stroke-width':.06,fill:'none'}));
+    const wd=el('circle',{cx:wa,cy:-wb,r:.06,fill:'var(--light)'}); svg.appendChild(wd);
+  }
+}
+drawCompare();
 
 /* orbit controls */
 document.getElementById('tau').addEventListener('input',e=>{
