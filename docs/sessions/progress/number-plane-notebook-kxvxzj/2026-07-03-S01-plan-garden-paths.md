@@ -8,7 +8,7 @@ slug: number-plane-notebook-kxvxzj
 status: proposed
 build: passed
 followup: null
-pr: null
+pr: https://github.com/piyarsquare/animath/pull/246
 app: number-plane, docs
 signals: needs-dan
 next: Dan reacts to the three paths + the fourth bed (C4) proposal; then pick the first path to render as a notebook thread.

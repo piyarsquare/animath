@@ -8,7 +8,7 @@ slug: number-plane-notebook-kxvxzj
 status: in-progress
 build: unknown
 followup: null
-pr: null
+pr: https://github.com/piyarsquare/animath/pull/246
 app: number-plane, docs
 signals: needs-dan
 next: Converge with Dan on the notebook's presentation design (futuristic + tactile + personal, curated-not-forced) before building.
