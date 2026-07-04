@@ -10,7 +10,7 @@ const DEG = Math.PI / 180;
 export type BasinMode = 'pos' | 'radspeed' | 'anglespeed';
 export type BasinMetric = 'fate' | 'chaos';
 /** How a pixel is evaluated: one exact world, or a mini-ensemble of worlds that
- *  randomises the launch dimensions the plane does *not* pin to its axes. */
+ *  randomizes the launch dimensions the plane does *not* pin to its axes. */
 export type BasinLens = 'exact' | 'stat';
 /** Which outcome fraction the statistical lens paints. */
 export type StatMetric = 'happy' | 'hab' | 'destroyed' | 'survived';
@@ -252,7 +252,7 @@ export interface BasinPixel {
 export const STAT_ORDER: StatMetric[] = ['happy', 'hab', 'destroyed', 'survived'];
 
 /** Compute one statistical pixel: average `statRuns` worlds (complementary
- *  launch dims randomised from a per-pixel seeded stream) into the four outcome
+ *  launch dims randomized from a per-pixel seeded stream) into the four outcome
  *  fractions; color by the chosen one (the other three ride along for recolor). */
 function computeStatPixel(ctx: Ctx, p: number): BasinPixel {
   const { cfg, bc, preset } = ctx;
@@ -346,7 +346,7 @@ function runLyapBatched(cfg: EnsembleConfig, preset: ReturnType<typeof getScenar
  *  *same* star field (the planet is a test mass), so we integrate the stars once
  *  per batch and step all the worlds alongside them — bit-identical to the
  *  per-pixel path (`computeBasinPixel`), but far faster because the dominant star
- *  work is amortised over the whole block instead of repeated per pixel. */
+ *  work is amortized over the whole block instead of repeated per pixel. */
 export function computeBasinRange(cfg: EnsembleConfig, bc: BasinConfig, start: number, count: number): BasinBlock {
   const ctx = basinContext(cfg, bc);
   const { preset } = ctx;

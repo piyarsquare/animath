@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { cornerColor } from './decor';
 
 /**
- * ONE square-fundamental-domain mini-map, parameterised by the edge-identification
+ * ONE square-fundamental-domain mini-map, parameterized by the edge-identification
  * rule, replacing the two near-identical canvas renderers the flat (torus / Klein)
  * and spherical (ℝP²) worlds carried separately. All three square presentations —
  * torus (both pairs glue straight), Klein bottle (one pair flips), ℝP² (both pairs

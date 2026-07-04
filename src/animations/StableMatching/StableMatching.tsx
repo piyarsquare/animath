@@ -252,7 +252,7 @@ function LatticeView({ inst, set, capped, named, picked, onPick }: {
     <div className="sm2-lattice">
       <svg viewBox={`0 0 ${W} ${H}`} className="sm2-lattice-svg" preserveAspectRatio="xMidYMid meet">
         {layout.edges.map(([lo, hi], k) => (
-          <line key={k} x1={X(layout.pos[hi].x)} y1={Y(layout.pos[hi].y)} x2={X(layout.pos[lo].x)} y2={Y(layout.pos[lo].y)} stroke="#3a3a48" strokeWidth={1} />
+          <line key={k} x1={X(layout.pos[hi].x)} y1={Y(layout.pos[hi].y)} x2={X(layout.pos[lo].x)} y2={Y(layout.pos[lo].y)} style={{ stroke: 'var(--border)' }} strokeWidth={1} />
         ))}
         {set.map((M, i) => {
           const p = layout.pos[i], lab = labelFor(i), s = score(inst, M);
@@ -614,7 +614,7 @@ export default function StableMatching() {
   }, [labN, labRes, labTrials, labSeed, labMetric, labSchedule]);
   useEffect(() => () => { labCancel.current = true; }, []);
 
-  // display max for the colour scale — depends on whether we're showing mean or SD
+  // display max for the color scale — depends on whether we're showing mean or SD
   const labMax = useMemo(() => {
     if (!labData || !labData.length) return 1;
     if (labMetric === 'unstable' && labStat === 'mean') return 100;
@@ -790,12 +790,12 @@ export default function StableMatching() {
             <div className="sm2-row">
               <span className="sm2-bar-label"><i className="sw sq" />A</span>
               <strong style={{ color: rankBurd(acct.aAvg || 1, n) }}>#{acct.aAvg.toFixed(2)}</strong>
-              <div className="sm2-strip">{acct.aSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
+              <div className="sm2-strip">{acct.aSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? 'var(--border)' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
             </div>
             <div className="sm2-row">
               <span className="sm2-bar-label"><i className="sw disc" />B</span>
               <strong style={{ color: rankBurd(acct.bAvg || 1, n) }}>#{acct.bAvg.toFixed(2)}</strong>
-              <div className="sm2-strip">{acct.bSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? '#3a3a44' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
+              <div className="sm2-strip">{acct.bSorted.map((r, i) => <i key={i} style={{ background: r < 0 ? 'var(--border)' : rankBurd(r, n) }} title={r < 0 ? 'unmatched' : `#${r}`} />)}</div>
             </div>
           </div>
           <span className="sm2-metric-sub">each tick = one person, sorted best → worst · blue #1 → red #{n} · total rank {acct.combined}{acct.free ? ` · ${acct.free} still free` : ''}</span>

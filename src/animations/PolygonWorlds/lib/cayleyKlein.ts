@@ -240,7 +240,7 @@ export const turn = (f: Frame, theta: number): Frame =>
 export const stepHeading = (f: Frame, theta: number, s: number): Frame =>
   ({ kappa: f.kappa, g: mul(f.g, translateDir(f.kappa, theta, s)) });
 
-/** Re-orthonormalise the frame's matrix against Gκ (numerical hygiene). Uses
+/** Re-orthonormalize the frame's matrix against Gκ (numerical hygiene). Uses
  *  Gram–Schmidt in the Gκ metric on the first two columns, then rebuilds the
  *  point column from the shell constraint. */
 export function reorthonormalize(f: Frame): Frame {
@@ -250,7 +250,7 @@ export function reorthonormalize(f: Frame): Frame {
   const col = (j: number): Vec3 => [g[j], g[3 + j], g[6 + j]];
   const set = (m: number[], j: number, v: Vec3) => { m[j] = v[0]; m[3 + j] = v[1]; m[6 + j] = v[2]; };
   const pt = normalizePoint(k, col(2));
-  // tangent basis: project columns 0,1 to the tangent plane at pt and Gκ-orthonormalise
+  // tangent basis: project columns 0,1 to the tangent plane at pt and Gκ-orthonormalize
   // true-unit tangent has Gκ-norm² = κ; carry the sign of κ through.
   const tnorm = (v: Vec3) => form(k, v, v); // = κ for a unit tangent
   let e0 = sub3(col(0), scale3(pt, form(k, col(0), pt)));

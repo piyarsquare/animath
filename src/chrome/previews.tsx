@@ -13,7 +13,7 @@ import { resolveScheme, type ThemeMode } from './skins';
  * nothing (decision recorded in docs/redesign/IN-PROGRESS.md).
  */
 export type PreviewKind =
-  | 'particles' | 'plane' | 'fractal' | 'julia' | 'corridor'
+  | 'particles' | 'plane' | 'fractal' | 'julia'
   | 'trinary' | 'sorting' | 'matrix' | 'polygon' | 'treenet' | 'solid' | 'skellam';
 
 type DrawFn = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
@@ -397,53 +397,6 @@ function JuliaPreview({ light }: { light: boolean }) {
     ctx.beginPath(); ctx.arc(mpx, mpy, Math.max(3, W * 0.012), 0, 7); ctx.stroke();
     ctx.fillStyle = ink.accent;
     ctx.beginPath(); ctx.arc(mpx, mpy, Math.max(1.5, W * 0.004), 0, 7); ctx.fill();
-  }, [light]);
-  return <canvas ref={ref} style={canvasStyle} />;
-}
-
-/* ---- Topology walk: first-person flight down a twisting corridor ---------- */
-function CorridorPreview({ light }: { light: boolean }) {
-  const ref = useCanvas((ctx, W, H, t) => {
-    const ink = themeInk(light);
-    ctx.fillStyle = ink.bg; ctx.fillRect(0, 0, W, H);
-    const s = t * 1.3;
-    const f = s - Math.floor(s);
-    const cx = W / 2 + Math.sin(s * 0.45) * W * 0.02;
-    const cy = H / 2 + Math.cos(s * 0.33) * H * 0.02;
-    const S = Math.min(W, H) * 1.05;
-    const RINGS = 15;
-    let prev: [number, number][] | null = null;
-    ctx.lineCap = 'round';
-    for (let i = RINGS; i >= 0; i--) {
-      const Z = i + 1 - f;                       // ring depth in front of the camera
-      const id = Math.floor(s) + i + 1;          // world-fixed ring identity
-      const twist = id * 0.22;                   // corridor twist accumulates with distance
-      const proj = S / (Z * 0.85 + 0.35);
-      const corners: [number, number][] = [];
-      for (let j = 0; j < 4; j++) {
-        const a = twist + j * (Math.PI / 2) + Math.PI / 4;
-        corners.push([cx + Math.cos(a) * proj, cy + Math.sin(a) * proj]);
-      }
-      const fade = Math.min(1, 1.8 / Z);
-      ctx.lineWidth = Math.max(1, (W * 0.0035) * fade);
-      ctx.strokeStyle = withAlpha(ink.accent2, (light ? 0.65 : 0.75) * fade);
-      ctx.beginPath();
-      for (let j = 0; j <= 4; j++) {
-        const [x, y] = corners[j % 4];
-        if (j) ctx.lineTo(x, y); else ctx.moveTo(x, y);
-      }
-      ctx.stroke();
-      if (prev) {
-        ctx.strokeStyle = withAlpha(ink.accent2, (light ? 0.3 : 0.35) * fade);
-        ctx.beginPath();
-        for (let j = 0; j < 4; j++) {
-          ctx.moveTo(corners[j][0], corners[j][1]);
-          ctx.lineTo(prev[j][0], prev[j][1]);
-        }
-        ctx.stroke();
-      }
-      prev = corners;
-    }
   }, [light]);
   return <canvas ref={ref} style={canvasStyle} />;
 }
@@ -929,13 +882,12 @@ function SkellamPreview({ light }: { light: boolean }) {
   return <canvas ref={ref} style={canvasStyle} />;
 }
 
-export function Preview({ kind, skin, mode = 'native' }: { kind: PreviewKind; skin: string; mode?: ThemeMode; hue?: number }) {
+export function Preview({ kind, skin, mode = 'native' }: { kind: PreviewKind; skin: string; mode?: ThemeMode }) {
   const light = resolveScheme(skin, mode) === 'light';
   switch (kind) {
     case 'plane': return <PlanePreview light={light} />;
     case 'fractal': return <FractalPreview light={light} />;
     case 'julia': return <JuliaPreview light={light} />;
-    case 'corridor': return <CorridorPreview light={light} />;
     case 'trinary': return <TrinaryPreview light={light} />;
     case 'sorting': return <SortingPreview light={light} />;
     case 'matrix': return <MatrixPreview light={light} />;

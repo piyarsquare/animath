@@ -7,7 +7,7 @@
  * stability with probability 1. Pure random selection, however, can wander for
  * thousands of steps (and a naive deterministic order can cycle forever), so we
  * use the proven escape hatch sparingly: greedily satisfy the *most mutually
- * wanted* blocking pair (the one minimising rankA+rankB) — which collapses the
+ * wanted* blocking pair (the one minimizing rankA+rankB) — which collapses the
  * common case to a few dozen watchable steps — and fall back to a random
  * blocking pair only when greedy progress stalls, which breaks any cycle almost
  * surely. The number of repair steps is a natural "cost to stabilize" — larger

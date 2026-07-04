@@ -435,7 +435,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
           } catch { /* fall through to CPU */ }
         }
         // Batch a row or so per frame: worlds in a block share the star field,
-        // so the integration is amortised, while we still yield to keep painting.
+        // so the integration is amortized, while we still yield to keep painting.
         const blk = Math.max(N, 64);
         let p = 0;
         const chunk = () => {
@@ -770,7 +770,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
           )}
           <div style={{ font: '11px/1.5 system-ui', color: 'var(--dim)', marginTop: 8 }}>
             {lens === 'stat'
-              ? `Each pixel is a mini-census: ${statRuns} worlds that share these axes but randomise the other launch dimensions, colored by ${STAT_LABEL[statMetric]}. The Exact lens shows one world per pixel — switch to it to see the fractal final-state boundaries underneath these smooth statistics.`
+              ? `Each pixel is a mini-census: ${statRuns} worlds that share these axes but randomize the other launch dimensions, colored by ${STAT_LABEL[statMetric]}. The Exact lens shows one world per pixel — switch to it to see the fractal final-state boundaries underneath these smooth statistics.`
               : metric === 'fate'
                 ? 'One pixel = one exact starting condition. Hue = outcome, brightness = how long it lasted. Drag a box to zoom — the boundaries stay intricate at every scale: the three-body problem’s fractal final-state sensitivity. D is the box-counting dimension of the boundary (1 = smooth, →2 = space-filling); α = 2−D is the uncertainty exponent.'
                 : 'One pixel = one exact starting condition. Color = the planet’s Lyapunov exponent λ — how fast its future becomes unpredictable (blue = regular orbits, red = strongly chaotic). Drag a box to zoom. D is the box-counting dimension of the regular/chaotic frontier.'}
