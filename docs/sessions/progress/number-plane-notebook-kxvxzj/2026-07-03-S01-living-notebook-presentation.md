@@ -38,6 +38,68 @@ app into the living-notebook presentation."*
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🔵 finding · 00:45 — Dan's two mockups read: the anatomy of a spread + "paper should feel alive"
+**Why:** Dan attached two mockup images of the notebook style and layout — "so
+you have an idea of the informational units and connectivity. paper should
+feel alive." Both are preserved in `assets/` (they otherwise live outside the
+recorded history). Notably, **both mockups draw the same stop — the plaza
+(j² = p)** — independent confirmation that it is the notebook's center of
+gravity.
+
+![Mockup A — luminous vellum](assets/2026-07-03-S01-mockup-vellum.png)
+![Mockup B — the codex](assets/2026-07-03-S01-mockup-codex.png)
+
+**Informational units both mockups agree on** (the anatomy of a spread):
+1. **The spread** — the unit of place: one idea at full width, numbered
+   within a walk ("I. The Plane · II. Variation by p"; "Liber II", page I/XII).
+2. **The claim** — headline formula + a few lines in the locked voice ("One
+   essence, three natures").
+3. **The instrument** — the p slider lives ON the page and its state
+   propagates: at p = −0.75 the SPIN panel is selected, the level sets morph.
+4. **The comparator** — three parallel panels (the parterres seen from the
+   plaza), each figure + three terse observations.
+5. **The explorer** — a second, deeper instrument (trajectory z(τ) = e^{jτ}z₀
+   with play/scrub): lean-in depth of *interaction*, matching note/full depth
+   of *text*.
+6. **Marginalia — the revealed note** (vellum mockup): "Earlier thought:
+   preserve Euclidean length. Correction: preserve N(z) = x² − py²." A NEW
+   unit type not in the card schema — the record of corrected thinking. This
+   is how the notebook is *personal* without autobiographical "I": the
+   personality lives in revision marks, not narration. Solves the diary
+   problem. And these can be quarried from real session history.
+7. **The alternate derivation** — `## full` rendered as a subordinate side
+   card: kneeling depth, present in place.
+8. **The latent-threads rail** (vellum) — norm · eigen-structure · metric ·
+   isometries · flows · complex view · forms · limits, dim, waiting: the
+   junction exits / gates visible from this stop. (The codex rail is global
+   nav instead: Home · Planes · Trajectory · Text · Notes.)
+9. **The breadcrumb walk** (codex) — REAL LINE > COMPLEX PLANE > NUMBER
+   PLANES > GEOMETRIES: the path underfoot.
+10. **Connective filaments** (vellum) — connectivity drawn as luminous thread
+    ON the paper (slider → the note it revealed), not as hyperlink.
+
+**Two registers, one synthesis:** Mockup A is luminous vellum (futuristic,
+aurora light-seams, alive); Mockup B is the codex (Mathematica Sacra — warm,
+tactile, liturgical, with the clearer interaction semantics: selection state,
+breadcrumb, explorer). The brief wants both. Proposed split: **paper is what
+holds** (the codex's cream, serif, figure discipline, spread structure);
+**light is what responds** (the vellum's filaments, reveals, selection glow —
+every reader action answered in light). "Paper should feel alive" = state
+flows visibly across the page.
+
+**Mapping onto the garden plan:** spread = stop · breadcrumb = path underfoot
+· latent threads = junctions/gates seen from the stop · on-page instrument =
+instruments planted in beds · comparator = parterre view from the plaza ·
+alternate derivation = depth-as-proximity · filaments = seams made visible ·
+revealed marginalia = the meta-seam (the garden records its own walking).
+
+**Gap to fill:** the card schema has no marginalia unit. Proposal: marginalia
+belong to the **thread layer** (the walk's presentation), not the cards —
+sourced from real recorded corrections in the session logs, revealed by
+reader action. Register question flagged for Dan: how far to lean into the
+codex conceit (Latin section names, "Mathematica Sacra") vs keep it a quiet
+costume.
+
 ### 🟣 decision · 20:15 — The garden plan drafted: four beds, three paths, nine seams
 **Why:** Dan set the frame: the notebook should carry the last session's rhythm
 (question → new way of seeing → the tools to see it) and the right analogy is a
