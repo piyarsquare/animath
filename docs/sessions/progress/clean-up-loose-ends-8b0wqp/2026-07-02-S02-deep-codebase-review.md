@@ -349,6 +349,23 @@ file is touched anyway**. Not a cleanup in themselves.
 
 ## Working notes
 
+### 🟣 decision · 05:10 — Tier-3 decisions from Dan, executed
+**Why:** Dan reviewed the report and directed the follow-through.
+
+- **T3 TopologyWalk → archived, not deleted.** Moved to `archive/animations/TopologyWalk/`
+  (out of the build; routes + apps.ts entry removed; `#/topology-walk|mobius|wrap-world`
+  fall back to the gallery). Kept "to search its bones," notably the Möbius corridor
+  engine that has no live successor. Its per-app guide + surface-tour doc moved with it.
+- **T2 stale `*_UI.md` docs → deleted.** The 8 pre-redesign UI manuals + their index
+  `GLOBAL_APP_DESIGN.md` (superseded by `docs/apps/*.md`).
+- **T4 Argand engines → deferred (not merged).** Dan: the Argand/Number-Plane artifact
+  "needs a cleaner idea of what it's aiming for," and a separate **notebook thread** is
+  working out the final format. So instead of folding `complexOps`↔`numberPlanes` now,
+  we **clustered the complex-plane family** (Complex Particles · Plane Transform · Argand)
+  at the **end of the gallery** (`apps.ts`) until the format settles. Finding: the
+  "Number Plane" realization was **never a separate app** — it's the dormant, tested
+  `numberPlanes.ts` engine inside Argand + a planning doc; nothing was buried.
+
 ### 🟡 milestone · 02:45 — All 16 reviewers complete; report synthesized
 **Why:** The fan-out finished (10 results were stranded ~2h by a container
 suspend/resume that lost their completion notifications, then recovered from the
