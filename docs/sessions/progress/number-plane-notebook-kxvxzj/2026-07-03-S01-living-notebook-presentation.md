@@ -38,6 +38,45 @@ app into the living-notebook presentation."*
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟢 code · 07:00 — v3 built: the staged passage lives (`18c5a73`)
+**Why:** Dan approved the script with adjustments (multiple twinkles OK for
+unordered/forking tasks; text judged when assembled — ideally the notebook
+gets built *as we explore*; A0 reply my call; tap-per-line; include Stop D;
+ruler design my call, noting a possible change-of-basis analog for the
+hyperbolas later). Mid-build he added the C0 insight: the unit-square
+deformation (1 → w, the square follows) shows spin/shear/boost precisely
+because it shows the decomposition (1,1) = (1,0) + (0,1) added both ways —
+distributivity gives the full effect from the two basis moves.
+
+Built the moment engine (18 moments · 4 stops), replacing the static desk:
+- **Stop A**: the bare question → tap-per-line unfolding (add asks nothing;
+  distribute-and-collect; only j² unknown; j² = p born large, then a ghost
+  flies it to the header dock). Whisper: completing the square one floor up.
+- **Stop B**: the settle-the-dots renormalization widget — each p tapped
+  glides to sign(p) with its own ruler s = √|p| shown; the zero dot refuses,
+  with the no-neighborhood caption; **multiple twinkles** (one per unsettled
+  dot) as the unordered task set. Then the p-line *becomes the dial* (ghost
+  morph) and the three portraits light by sign; visiting all three advances.
+- **Stop C**: the triad rows (same + / same reals / same ×1) tap-per-line;
+  the close adds Dan's far-corner line; C1 desk with the operator stage now
+  drawing the full decomposition: 0→w gold, 0→w·j teal, dashed parallelogram
+  completion, the far corner labeled w + w·j. Threads → the **asks rail**
+  (questions that summon faces; future passages sit dim).
+- **Stop D**: the mirror trick unfolds with the same gesture as A; levels
+  exist only from here (face + ask both born at D1); the p=0 margin note
+  arms only here; dismissed notes leave a ✦ ask in the rail.
+- Engine: zones per layout, moments gate births/retirements, ghost flights
+  for the two signature morphs, stop-dot scrubber, resume via localStorage,
+  `?m=N` deep links, start-over.
+
+**Verified** by driving the entire passage headless (every advance clicked,
+all dots settled, all three signs visited, both columns tapped through):
+every moment viewport-fits at 1440×900 and 390×844; resume returns to the
+last moment; restart returns to the question. Two real bugs caught by the
+walk: the zero-dot tap didn't redraw (its twinkle never cleared — a human
+would have stalled there too), and the desk slots collapsed to header height
+(absolute faces gave the body no height). Both fixed and re-verified.
+
 ### 🟣 decision · 05:20 — Staging is the missing layer; the passage script is written
 **Why:** Dan's design review of the live desk: it overloads the screen — the
 concept isn't cohering because the page has *space* mechanics (compartments,
