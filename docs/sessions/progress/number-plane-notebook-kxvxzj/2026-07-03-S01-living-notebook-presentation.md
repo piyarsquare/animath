@@ -38,6 +38,53 @@ app into the living-notebook presentation."*
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟢 code · 01:10 — The probe built: `public/number-planes/notebook.html` (spread II · the choice)
+**Why:** Dan approved the probe ("yes I think that is a good idea") and left
+the path question open ("I am open to seeing what you come up with").
+
+**The path call:** the plaza doesn't belong to a path — paths belong to the
+plaza. The probe claims arrival by the **forcing walk** (Path A), because
+that's the only stretch already laid (trail page 1 = the line), so the
+breadcrumb `the line › the choice › the three worlds` is real, not fictional;
+the other two walks appear as **lit junction exits** in the latent-threads
+rail ("the three worlds", "it was a cone" — each marked *a walk crosses
+here*). The probe therefore exercises the junction mechanism instead of
+dodging the path question.
+
+**What's on the spread** (every mockup unit, on real card content):
+- Left page: claim (PL/DV note voice), j² = p, the trichotomy list (rows
+  highlight with the dial), and the **live level-set figure** (ellipses ↔
+  line pairs ↔ hyperbolas + dashed null set, unit curve bold) — state crosses
+  the fold.
+- Right page: the **p instrument** (luminous thumb, sticky snap at |p|<0.08 —
+  the sticky middle made tactile), the **comparator** (SPIN/SHEAR/BOOST,
+  selection glows by sign(p), text from CX/DU/SP/WH/L2), the **trajectory
+  explorer** (z(τ)=e^{jτ}z₀, play/scrub, live z readout — the "scrubber pays
+  its way" TODO honored), the **alternate derivation** card (kneel depth),
+  breadcrumb + folio + "the full instrument ↗" link to the app.
+- **The revealed marginal note**: hidden until the reader first drags p to 0;
+  then it unfolds on a luminous filament from the slider thumb. Content is a
+  *genuine* recorded correction (the no-parabola discussion, 29 June — CN
+  card), cited "— from the record". The kind-line adds "(no parabola — see
+  the note)" at p = 0.
+- Register: paper holds (cream, serif, hairlines, folio) / light responds
+  (filament, selection glow, luminous readouts). English section names (no
+  Latin) pending Dan's register call. Deliberately outside the skin system —
+  the notebook is an artifact with its own identity (probe-scope decision).
+- Engine: ~15 lines of vanilla JS ported from `numberPlanes.ts` (mul, expj,
+  kindOf) — inline for the probe; the June-29 forward call (embed the tested
+  engine for plane widgets) stands for the real build.
+
+**Verified** (headless puppeteer, driving the actual controls): note reveals
+at p=0 (class + computed opacity checked), BOOST selects at p=1.4, note
+persists after leaving 0, z readout changes under τ scrub, slider at 0.05
+snaps to 0; screenshots at spin/reveal/boost + phone 390px read correctly
+(one real bug caught and fixed from the pixels: the breadcrumb footer
+self-collided; plus a stray arrowhead artifact). `npm run build` green.
+
+![The probe at p=0 — the note revealed on its filament](assets/2026-07-03-S01-probe-shear-reveal.png)
+![The probe at p=1.4 — boost selected, hyperbola levels](assets/2026-07-03-S01-probe-boost.png)
+
 ### 🔵 finding · 00:45 — Dan's two mockups read: the anatomy of a spread + "paper should feel alive"
 **Why:** Dan attached two mockup images of the notebook style and layout — "so
 you have an idea of the informational units and connectivity. paper should

@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Number Planes — the notebook (probe: the choice)</title>
+<style>
+/* ————————————————————————————————————————————————
+   The living notebook — probe spread: II · the choice
+   Paper is what holds; light is what responds.
+   ———————————————————————————————————————————————— */
+:root{
+  --paper:#f6f0e3; --paper-hi:#fbf7ee; --paper-lo:#ece3cf;
+  --ink:#22334d; --ink-soft:#5b6a84; --ink-faint:#94a0b4;
+  --hair:#cfc4aa; --hair-soft:#ddd3bd;
+  --light:#3fb3ff; --light-soft:rgba(63,179,255,.35); --light-faint:rgba(63,179,255,.14);
+  --spin:#2f6fb4; --shear:#4a5a74; --boost:#7a5fb4;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#151820}
+body{
+  font-family:var(--serif); color:var(--ink);
+  background:radial-gradient(120% 90% at 50% 40%, #232837 0%, #151820 70%);
+  min-height:100vh; padding:38px 18px 60px;
+}
+.book{
+  max-width:1380px; margin:0 auto;
+  display:grid; grid-template-columns:170px 1fr 1fr; gap:0;
+  background:
+    repeating-linear-gradient(1.2deg, rgba(120,95,60,.022) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(-91deg, rgba(120,95,60,.016) 0 1px, transparent 1px 5px),
+    linear-gradient(115deg, var(--paper-hi) 0%, var(--paper) 55%, var(--paper-lo) 100%);
+  border-radius:14px;
+  box-shadow:0 30px 80px rgba(0,0,0,.55), 0 2px 0 rgba(255,255,255,.06) inset;
+  position:relative;
+}
+/* ——— the latent-threads rail ——— */
+.rail{
+  border-right:1px solid var(--hair-soft);
+  padding:42px 18px 34px 24px;
+  background:linear-gradient(180deg, rgba(120,95,60,.05), transparent 30%);
+  border-radius:14px 0 0 14px;
+}
+.rail h2{
+  font-size:11px; letter-spacing:.24em; font-weight:600; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:26px; line-height:1.7;
+}
+.thread{
+  display:flex; align-items:center; gap:10px;
+  padding:9px 0; color:var(--ink-faint); font-size:13px; font-style:italic;
+  position:relative; cursor:default;
+}
+.thread + .thread::before{
+  content:""; position:absolute; left:8px; top:-7px; height:12px;
+  border-left:1px dotted var(--hair);
+}
+.thread .glyph{
+  width:17px; height:17px; flex:0 0 17px; display:grid; place-items:center;
+  font-style:normal; font-size:12px; color:var(--ink-faint);
+}
+.thread.lit{color:var(--ink-soft)}
+.thread.lit .glyph{
+  color:var(--light);
+  text-shadow:0 0 7px var(--light-soft), 0 0 16px var(--light-faint);
+}
+.thread.lit::after{
+  content:"a walk crosses here"; position:absolute; left:27px; top:31px;
+  font-size:9px; letter-spacing:.08em; font-style:normal; color:var(--light);
+  opacity:.75;
+}
+.thread.lit{padding-bottom:22px}
+.rail .railfoot{margin-top:34px; font-size:10px; letter-spacing:.14em; color:var(--ink-faint); font-style:italic}
+/* ——— pages ——— */
+.page{padding:44px 46px 30px; position:relative; display:flex; flex-direction:column}
+.page.left{
+  border-right:1px solid rgba(120,95,60,.18);
+  background:linear-gradient(90deg, transparent 92%, rgba(90,70,40,.10) 100%);
+}
+.page.right{
+  background:linear-gradient(270deg, transparent 94%, rgba(90,70,40,.09) 100%);
+  border-radius:0 14px 14px 0;
+}
+.runhead{
+  font-size:10px; letter-spacing:.3em; text-transform:uppercase; color:var(--ink-faint);
+  text-align:center; margin-bottom:34px;
+}
+/* ——— left page ——— */
+h1{
+  font-size:44px; font-weight:500; letter-spacing:.08em; text-align:center;
+  color:var(--ink); margin-bottom:6px;
+}
+.subtitle{
+  text-align:center; font-size:11px; letter-spacing:.26em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:8px;
+}
+.rule{width:120px; margin:14px auto; border:0; border-top:1px solid var(--hair); position:relative}
+.rule::after{content:"◆"; position:absolute; top:-7px; left:50%; transform:translateX(-50%);
+  font-size:8px; color:var(--hair); background:transparent; padding:0 6px}
+.bigeq{
+  font-size:64px; text-align:center; font-style:italic; margin:22px 0 18px;
+  color:var(--ink);
+}
+.bigeq sup{font-size:.45em}
+.claim{
+  text-align:center; font-style:italic; font-size:16.5px; line-height:1.75;
+  color:var(--ink); max-width:40ch; margin:0 auto 8px;
+}
+.claim + .claim{margin-top:2px}
+.trich{
+  margin:26px auto 8px; font-size:14.5px; line-height:2.05; max-width:46ch;
+}
+.trich .row{display:flex; gap:14px; align-items:baseline; padding:0 6px; border-radius:6px;
+  transition:background .35s, box-shadow .35s}
+.trich .cond{font-style:italic; width:64px; flex:0 0 64px; text-align:right; color:var(--ink-soft)}
+.trich .row.now{background:rgba(63,179,255,.07); box-shadow:0 0 0 1px var(--light-faint)}
+.trich .row.now .cond{color:var(--light)}
+.trich b{font-weight:600; letter-spacing:.04em}
+/* level-set figure */
+.figcard{
+  margin-top:auto; border:1px solid var(--hair); border-radius:12px;
+  background:linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,.08));
+  padding:18px 18px 12px;
+}
+.figcard h3, .card h3{
+  font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; font-weight:600;
+  color:var(--ink-soft); text-align:center; margin-bottom:8px;
+}
+.figcard .kind{
+  text-align:center; font-size:12.5px; font-style:italic; color:var(--ink-soft); margin-top:6px;
+}
+.figcard .kind b{color:var(--ink); font-weight:600}
+.caption{font-size:12px; font-style:italic; color:var(--ink-soft); text-align:center; margin-top:8px; line-height:1.6}
+svg text{font-family:var(--serif)}
+.folio{
+  display:flex; justify-content:space-between; align-items:baseline;
+  margin-top:26px; font-size:11px; font-style:italic; color:var(--ink-soft);
+}
+.folio .no{letter-spacing:.18em; font-style:normal; font-size:10px; text-transform:uppercase}
+/* ——— right page ——— */
+.card{
+  border:1px solid var(--hair); border-radius:12px; padding:16px 20px 14px;
+  background:linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.06));
+  margin-bottom:18px; position:relative;
+}
+/* instrument */
+.instrument .peq{
+  text-align:center; font-size:19px; font-style:italic; color:var(--ink); margin:4px 0 10px;
+}
+.instrument .peq .val{color:var(--light); text-shadow:0 0 12px var(--light-faint); font-style:normal}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; width:100%; height:26px; background:transparent; cursor:pointer;
+}
+input[type=range]::-webkit-slider-runnable-track{height:2px; background:var(--hair);}
+input[type=range]::-moz-range-track{height:2px; background:var(--hair);}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:18px; height:18px; margin-top:-8px; border-radius:50%;
+  background:radial-gradient(circle at 40% 35%, #fff, var(--light) 55%, #1c6ea8);
+  box-shadow:0 0 10px var(--light-soft), 0 0 26px var(--light-faint), 0 1px 2px rgba(0,0,0,.4);
+  border:0;
+}
+input[type=range]::-moz-range-thumb{
+  width:18px; height:18px; border-radius:50%; border:0;
+  background:radial-gradient(circle at 40% 35%, #fff, var(--light) 55%, #1c6ea8);
+  box-shadow:0 0 10px var(--light-soft), 0 0 26px var(--light-faint);
+}
+.ticks{display:flex; justify-content:space-between; font-size:11px; font-style:italic;
+  color:var(--ink-faint); padding:0 4px; margin-top:2px}
+.ticks .zero{color:var(--ink-soft)}
+.stickynote{
+  text-align:center; font-size:10.5px; letter-spacing:.1em; color:var(--ink-faint);
+  font-style:italic; margin-top:8px;
+}
+/* the revealed marginal note */
+.note-wrap{position:relative}
+.filament{position:absolute; left:0; right:0; top:-18px; height:20px; width:100%;
+  pointer-events:none; overflow:visible; opacity:0; transition:opacity .8s ease .1s}
+.note{
+  max-height:0; opacity:0; overflow:hidden; margin-bottom:0;
+  transform:translateY(-6px);
+  transition:max-height .9s cubic-bezier(.2,.7,.2,1), opacity .9s ease .15s,
+             transform .9s ease .1s, margin-bottom .9s;
+  border-color:var(--light-soft);
+}
+.revealed .note{max-height:260px; opacity:1; transform:none; margin-bottom:18px;
+  box-shadow:0 0 0 1px var(--light-faint), 0 0 26px rgba(63,179,255,.10)}
+.revealed .filament{opacity:1}
+.note h3{color:var(--light); text-shadow:0 0 10px var(--light-faint)}
+.note h3::before{content:"✦ "; letter-spacing:0}
+.note p{font-size:14px; font-style:italic; line-height:1.7; color:var(--ink)}
+.note p + p{margin-top:6px}
+.note .lbl{font-style:normal; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft)}
+.note .src{margin-top:8px; font-size:10.5px; font-style:italic; color:var(--ink-faint)}
+/* comparator */
+.comparator{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:18px}
+.panel{
+  border:1px solid var(--hair); border-radius:12px; padding:14px 12px 12px; text-align:center;
+  background:linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.05));
+  transition:border-color .4s, box-shadow .5s, transform .4s;
+}
+.panel h4{font-size:12px; letter-spacing:.24em; font-weight:600; color:var(--ink)}
+.panel .cond{font-size:12.5px; font-style:italic; color:var(--ink-soft); margin-bottom:8px}
+.panel ul{list-style:none; margin-top:8px}
+.panel li{font-size:11.8px; font-style:italic; line-height:1.65; color:var(--ink-soft)}
+.panel .jsq{margin-top:8px; font-size:11px; font-style:italic; color:var(--ink-faint)}
+.panel.now{
+  border-color:var(--light);
+  box-shadow:0 0 0 1px var(--light-soft), 0 0 22px rgba(63,179,255,.16), 0 6px 18px rgba(0,0,0,.06);
+  transform:translateY(-2px);
+}
+.panel.now h4{color:var(--light); text-shadow:0 0 12px var(--light-faint)}
+/* explorer */
+.explorer .exgrid{display:grid; grid-template-columns:150px 1fr; gap:14px; align-items:center}
+.explorer .eqs{font-size:13.5px; font-style:italic; line-height:2; color:var(--ink)}
+.explorer .eqs .dim{color:var(--ink-faint); font-size:12px}
+.exbar{display:flex; gap:12px; align-items:center; margin-top:8px; border-top:1px solid var(--hair-soft); padding-top:10px}
+.exbar button{
+  font-family:var(--serif); font-size:13px; width:34px; height:30px; border-radius:8px;
+  border:1px solid var(--hair); background:rgba(255,255,255,.5); color:var(--ink); cursor:pointer;
+}
+.exbar button:hover{border-color:var(--light); color:var(--light)}
+.exbar input[type=range]{flex:1}
+.exbar .tau{font-size:12.5px; font-style:italic; color:var(--ink-soft); min-width:150px; text-align:right}
+.exbar .tau b{color:var(--ink); font-weight:600}
+/* derivation */
+.derivation p{font-size:13px; font-style:italic; line-height:1.9; color:var(--ink)}
+.derivation .m{font-style:italic}
+/* breadcrumb + folio */
+.crumbs{
+  margin-top:auto; padding-top:22px; display:flex; justify-content:space-between; align-items:baseline;
+  flex-wrap:wrap; gap:6px 28px;
+  font-size:10.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-faint);
+}
+.crumbs > span{white-space:nowrap}
+.crumbs .walk{font-style:italic; text-transform:none; letter-spacing:.06em; font-size:11.5px}
+.crumbs a{color:var(--ink-soft); text-decoration:none; border-bottom:1px dotted var(--hair)}
+.crumbs a:hover{color:var(--light); border-color:var(--light)}
+.crumbs .here{color:var(--light); text-shadow:0 0 10px var(--light-faint)}
+.crumbs .next{opacity:.55}
+.fullinstr{text-align:right; margin-top:6px}
+.fullinstr a{font-size:10.5px; font-style:italic; letter-spacing:.04em; color:var(--ink-faint);
+  text-decoration:none; border-bottom:1px dotted var(--hair)}
+.fullinstr a:hover{color:var(--light); border-color:var(--light)}
+/* ——— responsive ——— */
+@media (max-width:1080px){
+  .book{grid-template-columns:150px 1fr 1fr}
+  .page{padding:36px 30px 24px}
+  h1{font-size:36px} .bigeq{font-size:52px}
+}
+@media (max-width:900px){
+  body{padding:16px 8px 40px}
+  .book{grid-template-columns:1fr; border-radius:12px}
+  .rail{border-right:0; border-bottom:1px solid var(--hair-soft); border-radius:12px 12px 0 0;
+    padding:20px 22px 14px}
+  .rail h2{margin-bottom:12px}
+  .rail .threads{display:flex; flex-wrap:wrap; gap:2px 20px}
+  .thread + .thread::before{display:none}
+  .thread.lit{padding-bottom:22px}
+  .rail .railfoot{margin-top:10px}
+  .page.left{border-right:0; background:none; border-bottom:1px dashed var(--hair)}
+  .page.right{border-radius:0 0 12px 12px; background:none}
+  .comparator{grid-template-columns:1fr; gap:10px}
+  .panel{display:grid; grid-template-columns:120px 1fr; text-align:left; gap:0 14px; align-items:center}
+  .panel h4,.panel .cond{grid-column:2}
+  .panel svg{grid-row:1/5; grid-column:1}
+  .panel ul{grid-column:2}
+  .panel .jsq{grid-column:2}
+  .explorer .exgrid{grid-template-columns:1fr}
+  .figcard{margin-top:26px}
+}
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important; animation:none !important}
+}
+</style>
+</head>
+<body>
+<div class="book">
+
+  <!-- ═══ the latent-threads rail: junction exits seen from this stop ═══ -->
+  <aside class="rail" aria-label="Latent threads — walks and side-paths visible from this stop">
+    <h2>Latent<br>threads</h2>
+    <div class="threads">
+      <div class="thread lit" title="The residents' walk — not yet laid"><span class="glyph">◯</span>the three worlds</div>
+      <div class="thread lit" title="The overlook climb — not yet laid"><span class="glyph">∂</span>it was a cone</div>
+      <div class="thread" title="Not yet laid"><span class="glyph">△</span>how many rails</div>
+      <div class="thread" title="Not yet laid"><span class="glyph">◇</span>the circle of planes</div>
+      <div class="thread" title="Not yet laid"><span class="glyph">✳</span>quadratics, t² = p</div>
+      <div class="thread" title="Not yet laid"><span class="glyph">∅</span>the strangers’ multiply</div>
+      <div class="thread" title="Behind you, off the line"><span class="glyph">∞</span>tropical</div>
+    </div>
+    <div class="railfoot">unlit paths are laid,<br>not yet lit.</div>
+  </aside>
+
+  <!-- ═══ left page: the claim ═══ -->
+  <section class="page left">
+    <div class="runhead">· The Number Planes Notebook ·</div>
+    <h1>Number Planes</h1>
+    <div class="subtitle">geometry of&nbsp; j² = p</div>
+    <hr class="rule">
+    <div class="bigeq">j<sup>2</sup> = p</div>
+    <p class="claim">Step to two coordinates. Addition rides along unchanged.
+      Multiplication — under the same demands — collapses to a single number:
+      what <i>j</i>² equals.</p>
+    <p class="claim">Call it <i>p</i>. One dial. Turn it, and only the sign matters.</p>
+
+    <div class="trich" id="trich">
+      <div class="row" data-k="-1"><span class="cond">p &lt; 0</span><span><b>spin</b> — the plane turns <span style="color:var(--ink-faint)">(complex)</span></span></div>
+      <div class="row" data-k="0"><span class="cond">p = 0</span><span><b>shear</b> — it slides <span style="color:var(--ink-faint)">(dual)</span></span></div>
+      <div class="row" data-k="1"><span class="cond">p &gt; 0</span><span><b>boost</b> — it squeezes <span style="color:var(--ink-faint)">(split)</span></span></div>
+    </div>
+
+    <div class="figcard">
+      <h3>The plane for a given p</h3>
+      <svg id="levels" viewBox="-3.3 -2.35 6.6 4.7" width="100%" aria-label="Level sets of the p-norm, morphing with p"></svg>
+      <div class="kind" id="kindline">level sets of |z| — <b>circles</b></div>
+      <div class="caption">the unit curve bold; the null set dashed.<br>watch them morph as <i>p</i> varies.</div>
+    </div>
+
+    <div class="folio">
+      <span class="no">II · The Choice</span>
+      <span><a href="../number-planes-line.html" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--hair)">⟵ I · the line</a></span>
+    </div>
+  </section>
+
+  <!-- ═══ right page: the instruments ═══ -->
+  <section class="page right">
+    <div class="runhead">probe · one spread</div>
+
+    <!-- the instrument -->
+    <div class="card instrument">
+      <h3>p &nbsp;·&nbsp; the plane parameter</h3>
+      <div class="peq">p = <span class="val" id="pval">−0.75</span></div>
+      <input type="range" id="pslider" min="-2" max="2" step="0.05" value="-0.75"
+             aria-label="The plane parameter p">
+      <div class="ticks"><span>−2</span><span>−1</span><span class="zero">0</span><span>1</span><span>2</span></div>
+      <div class="stickynote" id="sticky">the middle is sticky — the dial lingers at p = 0</div>
+    </div>
+
+    <!-- the revealed marginal note (hidden until the reader reaches p = 0) -->
+    <div class="note-wrap" id="notewrap">
+      <svg class="filament" id="filament" aria-hidden="true">
+        <defs>
+          <filter id="fglow" x="-50%" y="-400%" width="200%" height="900%">
+            <feGaussianBlur stdDeviation="2.2"/>
+          </filter>
+        </defs>
+        <path id="filpath" fill="none" stroke="var(--light)" stroke-width="2.6" opacity=".35" filter="url(#fglow)"/>
+        <path id="filpath2" fill="none" stroke="#bfe7ff" stroke-width="1"/>
+      </svg>
+      <div class="card note" id="note" aria-live="polite">
+        <h3>Note · revealed at p = 0</h3>
+        <p><span class="lbl">Earlier thought:</span> the middle plane should carry a parabola —
+          ellipse, <i>parabola</i>, hyperbola.</p>
+        <p><span class="lbl">Correction:</span> a norm is centered, and the parabola is the conic
+          with no center. Forced through a centered lens, the parabolic class can only show its
+          central representative — the parallel line pair.</p>
+        <p class="src">— from the record, 29 June; the cone view settled it.</p>
+      </div>
+    </div>
+
+    <!-- the comparator -->
+    <div class="comparator" id="comparator">
+      <div class="panel" data-k="-1">
+        <h4>SPIN</h4><div class="cond">p &lt; 0</div>
+        <svg viewBox="-1.5 -1.25 3 2.5" width="100%" aria-label="Rotation orbits">
+          <line x1="-1.4" y1="0" x2="1.4" y2="0" stroke="#c9bfa8" stroke-width=".02"/>
+          <line x1="0" y1="-1.15" x2="0" y2="1.15" stroke="#c9bfa8" stroke-width=".02"/>
+          <circle cx="0" cy="0" r=".8" fill="none" stroke="var(--spin)" stroke-width=".045"/>
+          <path d="M 0 -.8 l -.1 -.08 M 0 -.8 l -.09 .1" stroke="var(--spin)" stroke-width=".04" fill="none"/>
+          <path d="M 0 .8 l .1 .08 M 0 .8 l .09 -.1" stroke="var(--spin)" stroke-width=".04" fill="none"/>
+          <circle cx="0" cy="0" r=".02" fill="var(--spin)"/>
+        </svg>
+        <ul>
+          <li>Multiplying turns the plane.</li>
+          <li>No direction holds its line — zero rails.</li>
+          <li>Every nonzero number divides.</li>
+        </ul>
+        <div class="jsq">j² negative — elliptic</div>
+      </div>
+      <div class="panel" data-k="0">
+        <h4>SHEAR</h4><div class="cond">p = 0</div>
+        <svg viewBox="-1.5 -1.25 3 2.5" width="100%" aria-label="Shear arrows along the held axis">
+          <line x1="-1.4" y1="0" x2="1.4" y2="0" stroke="#c9bfa8" stroke-width=".02"/>
+          <line x1="0" y1="-1.15" x2="0" y2="1.15" stroke="var(--shear)" stroke-width=".045"/>
+          <g stroke="var(--shear)" stroke-width=".04" fill="none">
+            <path d="M .5 -.3 L .5 .3 M .5 .3 l -.07 -.11 M .5 .3 l .07 -.11"/>
+            <path d="M 1 -.6 L 1 .6 M 1 .6 l -.07 -.11 M 1 .6 l .07 -.11"/>
+            <path d="M -.5 .3 L -.5 -.3 M -.5 -.3 l -.07 .11 M -.5 -.3 l .07 .11"/>
+            <path d="M -1 .6 L -1 -.6 M -1 -.6 l -.07 .11 M -1 -.6 l .07 .11"/>
+          </g>
+        </svg>
+        <ul>
+          <li>Multiplying slides — one held line.</li>
+          <li>One rail, repeated.</li>
+          <li>The slide carries the derivative.</li>
+        </ul>
+        <div class="jsq">j² = 0 — parabolic, degenerate</div>
+      </div>
+      <div class="panel" data-k="1">
+        <h4>BOOST</h4><div class="cond">p &gt; 0</div>
+        <svg viewBox="-1.5 -1.25 3 2.5" width="100%" aria-label="Hyperbolic squeeze along two rails">
+          <line x1="-1.4" y1="0" x2="1.4" y2="0" stroke="#c9bfa8" stroke-width=".02"/>
+          <line x1="0" y1="-1.15" x2="0" y2="1.15" stroke="#c9bfa8" stroke-width=".02"/>
+          <line x1="-1.2" y1="-1.2" x2="1.2" y2="1.2" stroke="var(--boost)" stroke-width=".022" stroke-dasharray=".07 .05"/>
+          <line x1="-1.2" y1="1.2" x2="1.2" y2="-1.2" stroke="var(--boost)" stroke-width=".022" stroke-dasharray=".07 .05"/>
+          <g fill="none" stroke="var(--boost)" stroke-width=".045">
+            <path id="hypR" d=""/><path id="hypL" d=""/>
+          </g>
+          <g stroke="var(--boost)" stroke-width=".04" fill="none">
+            <path d="M .86 .55 l -.02 -.14 M .86 .55 l -.13 -.03"/>
+            <path d="M -.86 -.55 l .02 .14 M -.86 -.55 l .13 .03"/>
+          </g>
+        </svg>
+        <ul>
+          <li>Multiplying squeezes along a hyperbola.</li>
+          <li>Two rails hold their lines.</li>
+          <li>The strangers’ multiply, in disguise.</li>
+        </ul>
+        <div class="jsq">j² positive — hyperbolic</div>
+      </div>
+    </div>
+
+    <!-- the explorer -->
+    <div class="card explorer">
+      <h3>Trajectory explorer</h3>
+      <div class="exgrid">
+        <div class="eqs">
+          z(τ) = e<sup>jτ</sup> · z₀<br>
+          z₀ = 1 + 0j<br>
+          <span class="dim" id="zread">z = (1.000, 0.000)</span>
+        </div>
+        <svg id="orbit" viewBox="-3.1 -2.0 6.2 4.0" width="100%" aria-label="The trajectory of 1 under e to the j tau"></svg>
+      </div>
+      <div class="exbar">
+        <button id="play" aria-label="Play">▶</button>
+        <input type="range" id="tau" min="0" max="1" step="0.002" value="0.2" aria-label="tau">
+        <div class="tau">τ = <b id="tauval">1.257</b></div>
+      </div>
+    </div>
+
+    <!-- the alternate derivation: kneeling depth -->
+    <div class="card derivation">
+      <h3>Alternate derivation</h3>
+      <p class="m">Let z = x + jy, with j² = p. Pair it with its conjugate z̄ = x − jy:
+        &nbsp;z·z̄ = x² − p·y² &nbsp;≡&nbsp; N(z).<br>
+        N(zw) = N(z)·N(w) — the invariant every plane respects.
+        Its level sets are the geometry above; its null set is where division dies.</p>
+    </div>
+
+    <div class="fullinstr"><a href="../#/number-plane">the full instrument — three planes side by side ↗</a></div>
+
+    <div class="crumbs">
+      <span class="walk">the forcing walk · stop II</span>
+      <span><a href="../number-planes-line.html">the line</a> › <span class="here">the choice</span> › <span class="next">the three worlds</span></span>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ————— arithmetic of j² = p (ported from src/animations/Argand/numberPlanes.ts) ————— */
+const mul = (p,a,b)=>[a[0]*b[0]+p*a[1]*b[1], a[0]*b[1]+a[1]*b[0]];
+function expj(p,t){                      // e^{jt} in the plane j² = p
+  if (p < -1e-9){ const w=Math.sqrt(-p); return [Math.cos(w*t), Math.sin(w*t)/w]; }
+  if (p >  1e-9){ const w=Math.sqrt(p);  return [Math.cosh(w*t), Math.sinh(w*t)/w]; }
+  return [1,t];
+}
+const kindOf = p => p<-1e-9 ? -1 : p>1e-9 ? 1 : 0;
+
+/* ————— svg helpers (math coords; y flipped on emit) ————— */
+const P = (x,y)=>`${x.toFixed(3)},${(-y).toFixed(3)}`;
+function poly(pts){ return 'M'+pts.map(q=>P(q[0],q[1])).join(' L'); }
+function el(n,attrs){ const e=document.createElementNS('http://www.w3.org/2000/svg',n);
+  for(const k in attrs) e.setAttribute(k,attrs[k]); return e; }
+
+/* ————— the level-set figure ————— */
+const LV = document.getElementById('levels');
+const RS = [0.5,1,1.5,2];
+function axes(svg,xm,ym){
+  svg.appendChild(el('line',{x1:-xm,y1:0,x2:xm,y2:0,stroke:'#c9bfa8','stroke-width':.016}));
+  svg.appendChild(el('line',{x1:0,y1:-ym,x2:0,y2:ym,stroke:'#c9bfa8','stroke-width':.016}));
+  for(const t of [-2,-1,1,2]){
+    svg.appendChild(el('line',{x1:t,y1:-.05,x2:t,y2:.05,stroke:'#c9bfa8','stroke-width':.016}));
+    const tx=el('text',{x:t-.08,y:.28,'font-size':.19,fill:'#94a0b4','font-style':'italic'});
+    tx.textContent=t; svg.appendChild(tx);
+  }
+}
+function drawLevels(p){
+  LV.innerHTML=''; axes(LV,3.2,2.25);
+  const k=kindOf(p);
+  const col=r=> r===1 ? '#2f6fb4' : '#7f97b9';
+  const w =r=> r===1 ? .05 : .028;
+  if (k===-1){                             // ellipses x² + |p|y² = r²
+    const q=Math.sqrt(-p);
+    for(const r of RS)
+      LV.appendChild(el('ellipse',{cx:0,cy:0,rx:r,ry:Math.min(r/q,60),fill:'none',
+        stroke:col(r),'stroke-width':w(r)}));
+    LV.appendChild(el('circle',{cx:0,cy:0,r:.028,fill:'#5b6a84'}));   // null set: the origin
+  } else if (k===0){                       // line pairs x = ±r
+    for(const r of RS) for(const s of [1,-1])
+      LV.appendChild(el('line',{x1:s*r,y1:-2.15,x2:s*r,y2:2.15,stroke:col(r),'stroke-width':w(r)}));
+    LV.appendChild(el('line',{x1:0,y1:-2.15,x2:0,y2:2.15,stroke:'#5b6a84','stroke-width':.024,
+      'stroke-dasharray':'.14 .1'}));
+  } else {                                 // hyperbolas x² − p y² = ±r²
+    const q=Math.sqrt(p), S=Math.asinh(2.6/1);
+    for(const r of RS){
+      for(const s of [1,-1]){              // x-opening family
+        const pts=[]; for(let i=0;i<=40;i++){ const t=-S+2*S*i/40;
+          pts.push([s*r*Math.cosh(t), (r/q)*Math.sinh(t)]); }
+        LV.appendChild(el('path',{d:poly(pts),fill:'none',stroke:col(r),'stroke-width':w(r)}));
+      }
+      for(const s of [1,-1]){              // y-opening family (fainter)
+        const pts=[]; for(let i=0;i<=40;i++){ const t=-S+2*S*i/40;
+          pts.push([r*Math.sinh(t), s*(r/q)*Math.cosh(t)]); }
+        LV.appendChild(el('path',{d:poly(pts),fill:'none',stroke:'#b9a9d6','stroke-width':.022}));
+      }
+    }
+    for(const s of [1,-1]){                // null rails, dashed
+      LV.appendChild(el('line',{x1:-3.1,y1:-3.1*s/q,x2:3.1,y2:3.1*s/q,stroke:'#5b6a84',
+        'stroke-width':.024,'stroke-dasharray':'.14 .1'}));
+    }
+  }
+  document.getElementById('kindline').innerHTML =
+    'level sets of |z| — <b>'+(k===-1?(p===-1?'circles':'ellipses'):k===0?'line pairs':'hyperbolas')+'</b>'
+    + (k===0 ? ' <span style="color:var(--ink-faint)">(no parabola — see the note)</span>' : '');
+}
+
+/* ————— the boost panel’s static hyperbola ————— */
+(function(){
+  const S=.95, seg=(sx)=>{ const pts=[]; for(let i=0;i<=24;i++){ const t=-S+2*S*i/24;
+    pts.push([sx*.55*Math.cosh(t),.55*Math.sinh(t)]);} return poly(pts); };
+  document.getElementById('hypR').setAttribute('d',seg(1));
+  document.getElementById('hypL').setAttribute('d',seg(-1));
+})();
+
+/* ————— the trajectory explorer ————— */
+const OR = document.getElementById('orbit');
+let ptau = 0.2, playing=false;
+function orbitT(p){ const k=kindOf(p);
+  return k===-1 ? 2*Math.PI/Math.sqrt(-p) : k===0 ? 4.4 : 3.6/Math.sqrt(p); }
+function drawOrbit(p){
+  OR.innerHTML=''; axes(OR,3.0,1.9);
+  const T=orbitT(p), k=kindOf(p);
+  const pts=[]; const t0 = k===-1 ? 0 : -T/2, t1 = k===-1 ? T : T/2;
+  for(let i=0;i<=160;i++){ const t=t0+(t1-t0)*i/160; pts.push(expj(p,t)); }
+  OR.appendChild(el('path',{d:poly(pts),fill:'none',stroke:'#2f6fb4','stroke-width':.035,
+    opacity:.85}));
+  if (k===1){ const q=Math.sqrt(p);
+    for(const s of [1,-1]) OR.appendChild(el('line',{x1:-3,y1:-3*s/q,x2:3,y2:3*s/q,
+      stroke:'#5b6a84','stroke-width':.02,'stroke-dasharray':'.12 .09'})); }
+  const z0=el('circle',{cx:1,cy:0,r:.05,fill:'none',stroke:'#5b6a84','stroke-width':.02});
+  OR.appendChild(z0);
+  const tz=el('text',{x:1.1,y:.3,'font-size':.22,fill:'#5b6a84','font-style':'italic'});
+  tz.textContent='z₀'; OR.appendChild(tz);
+  const tau = (k===-1 ? ptau*T : t0 + ptau*(t1-t0));
+  const z=expj(p,tau);
+  const dot=el('circle',{cx:z[0],cy:-z[1],r:.075,fill:'#3fb3ff'});
+  dot.setAttribute('style','filter:drop-shadow(0 0 3px rgba(63,179,255,.8))');
+  OR.appendChild(dot);
+  document.getElementById('tauval').textContent=tau.toFixed(3);
+  document.getElementById('zread').textContent='z = ('+z[0].toFixed(3)+', '+z[1].toFixed(3)+')';
+}
+
+/* ————— state: one dial drives the spread ————— */
+const slider=document.getElementById('pslider');
+let revealed=false;
+function drawFilament(){
+  const wrap=document.getElementById('notewrap');
+  const svg=document.getElementById('filament');
+  const r=wrap.getBoundingClientRect();
+  const th=slider.getBoundingClientRect();
+  // thumb x for current value, relative to the wrap
+  const f=(parseFloat(slider.value)+2)/4;
+  const x1=th.left + 9 + f*(th.width-18) - r.left;
+  const H=26; svg.setAttribute('viewBox','0 -'+H+' '+r.width+' '+(H+2));
+  svg.style.top=(-H)+'px'; svg.style.height=(H+2)+'px';
+  const d='M '+x1+' '+(-H)+' C '+x1+' '+(-H/3)+', '+(r.width/2)+' '+(-H*0.8)+', '+(r.width/2)+' 0';
+  document.getElementById('filpath').setAttribute('d',d);
+  document.getElementById('filpath2').setAttribute('d',d);
+}
+function update(){
+  let v=parseFloat(slider.value);
+  if (Math.abs(v)<0.08 && v!==0){ v=0; slider.value='0'; }   // the sticky middle
+  const k=kindOf(v);
+  document.getElementById('pval').textContent=(v<0?'−':'')+Math.abs(v).toFixed(2);
+  document.querySelectorAll('#comparator .panel').forEach(pn=>
+    pn.classList.toggle('now', parseInt(pn.dataset.k)===k));
+  document.querySelectorAll('#trich .row').forEach(rw=>
+    rw.classList.toggle('now', parseInt(rw.dataset.k)===k));
+  drawLevels(v); drawOrbit(v);
+  if (k===0 && !revealed){
+    revealed=true;
+    document.getElementById('notewrap').classList.add('revealed');
+    requestAnimationFrame(drawFilament);
+  } else if (revealed){ drawFilament(); }
+}
+slider.addEventListener('input',update);
+addEventListener('resize',()=>{ if(revealed) drawFilament(); });
+
+/* explorer controls */
+document.getElementById('tau').addEventListener('input',e=>{
+  ptau=parseFloat(e.target.value); drawOrbit(parseFloat(slider.value));});
+const playBtn=document.getElementById('play');
+let raf=null,last=0;
+function step(ts){ if(!playing) return;
+  if(last) { ptau=(ptau+(ts-last)/9000)%1; document.getElementById('tau').value=ptau; }
+  last=ts; drawOrbit(parseFloat(slider.value)); raf=requestAnimationFrame(step); }
+playBtn.addEventListener('click',()=>{
+  playing=!playing; playBtn.textContent=playing?'❚❚':'▶'; last=0;
+  if(playing) raf=requestAnimationFrame(step); else cancelAnimationFrame(raf); });
+
+update();
+</script>
+</body>
+</html>
