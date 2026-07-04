@@ -15,6 +15,8 @@
    ═══════════════════════════════════════════════════════════════ */
 :root{
   --light: var(--accent);
+  --re: color-mix(in srgb, var(--accent2) 85%, var(--fg));
+  --im: color-mix(in srgb, var(--accent) 72%, var(--fg));
   --glow: color-mix(in srgb, var(--accent) 40%, transparent);
   --glow-soft: color-mix(in srgb, var(--accent) 16%, transparent);
   --hair: var(--rule);
@@ -114,6 +116,11 @@ body.noanim *{transition:none !important; animation:none !important}
   color:var(--ink); transition:font-size .7s, padding .7s}
 .step .eq .hot{color:var(--light); text-shadow:0 0 10px var(--glow-soft); font-weight:600}
 .step .aside{font-size:12px; font-style:italic; color:var(--ink-faint)}
+.step .more,.trow .more{align-self:flex-start; font-size:12.5px; font-style:italic;
+  color:var(--ink-soft); margin-top:2px; display:none}
+.step.on .more,.trow.on .more{display:inline-block}
+.step.past .more{display:none}
+.step .more:hover,.trow .more:hover{color:var(--light)}
 .step.past{opacity:.5}
 .step.past .say{font-size:11px}
 .step.past .eq{font-size:14px; padding:0}
@@ -126,6 +133,47 @@ body.noanim *{transition:none !important; animation:none !important}
 .whisper summary{cursor:pointer; list-style:none}
 .whisper summary:hover{color:var(--light)}
 .whisper[open]{color:var(--ink-soft)}
+
+/* Stop A: text column left, living illustration right */
+.re{color:var(--re)} .im{color:var(--im)}
+#zColumn .cols{flex:1; min-height:0; width:100%; max-width:1180px; margin:auto;
+  display:grid; grid-template-columns:minmax(300px,45%) 1fr; gap:26px; align-items:center}
+.textcol{display:flex; flex-direction:column; min-width:0}
+.illo{position:relative; height:min(64vh,540px); border:1px solid var(--hair); border-radius:12px;
+  background:var(--card); overflow:hidden; display:flex; flex-direction:column}
+#planeIllo{flex:1; width:100%; display:none}
+#foilbox{flex:1; position:relative; display:none; font-style:italic}
+#foilbox .factors{text-align:center; font-size:clamp(18px,1.8vw,24px); padding-top:16%;
+  transition:opacity .8s}
+.tile{position:absolute; padding:7px 13px; border:1px solid var(--hair); border-radius:9px;
+  background:color-mix(in srgb, var(--card) 55%, var(--bg)); font-size:16.5px; font-style:italic;
+  white-space:nowrap; transform:translate(-50%,-50%);
+  transition:left .95s cubic-bezier(.3,.7,.2,1), top .95s cubic-bezier(.3,.7,.2,1),
+    opacity .6s, box-shadow .6s, border-color .6s}
+.tile.hot{border-color:var(--light); box-shadow:0 0 16px var(--glow-soft)}
+.tile.hot .hh{color:var(--light); text-shadow:0 0 10px var(--glow-soft); font-weight:600}
+.illocap{flex:0 0 auto; text-align:center; font-size:11.5px; font-style:italic;
+  color:var(--ink-soft); padding:8px; min-height:32px}
+.whisper-link{align-self:center; margin-top:8px; font-size:12px; font-style:italic;
+  color:var(--ink-faint)}
+.whisper-link:hover{color:var(--light)}
+/* the completing-the-square pop-out */
+.popout{position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
+  background:color-mix(in srgb, var(--bg) 55%, transparent)}
+.popout.on{display:flex}
+.popcard{width:min(600px,94vw); background:var(--card); border:1px solid var(--light);
+  border-radius:14px; padding:16px 20px 14px; position:relative;
+  box-shadow:0 0 0 1px var(--glow-soft), 0 20px 60px rgba(0,0,0,.4)}
+.popcard h4{font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--ink-soft);
+  font-weight:600; margin:0 0 8px}
+.popcard svg{width:100%}
+.popcard .alg{font-size:13.5px; font-style:italic; text-align:center; margin-top:6px}
+.popcard .note2{font-size:11.5px; font-style:italic; color:var(--ink-soft); text-align:center; margin-top:4px}
+.popcard .close{position:absolute; top:6px; right:10px; font-size:15px; color:var(--ink-faint)}
+.popcard .close:hover{color:var(--light)}
+.popcard .replay{position:absolute; bottom:8px; right:12px; font-size:11px; font-style:italic;
+  color:var(--ink-faint)}
+.popcard .replay:hover{color:var(--light)}
 
 /* SPLIT — the settle-the-dots widget */
 #zSplit{flex-direction:row; gap:26px; align-items:center; justify-content:center}
@@ -294,6 +342,9 @@ svg text{font-family:inherit; user-select:none; -webkit-user-select:none}
 @media (max-width:900px){
   .topbar{gap:10px}
   .topbar .runhead{display:none}
+  #zColumn .cols{display:flex; flex-direction:column; gap:12px}
+  .illo{height:auto; flex:0 0 46%}
+  #foilbox .factors{padding-top:8%}
   #zSplit{flex-direction:column; gap:14px; overflow:hidden}
   #zSplit .lead{max-width:none; flex:0 0 auto}
   .cards3{flex-direction:column; gap:10px; overflow:hidden}
@@ -338,39 +389,49 @@ svg text{font-family:inherit; user-select:none; -webkit-user-select:none}
       <div class="reply" id="a0reply"></div>
     </section>
 
-    <!-- ══ STOP A · beat 1 — the unfolding ══ -->
+    <!-- ══ STOP A · beat 1 — the unfolding: text left, the picture follows right ══ -->
     <section class="zone column" id="zColumn">
-      <div class="steps" id="stepsA">
-        <div class="step" data-m="1">
-          <div class="say">A plane number — <i>j</i> marks the second direction:</div>
-          <div class="eq">z = x + y·j</div>
+      <div class="cols">
+        <div class="textcol">
+          <div class="steps" id="stepsA">
+            <div class="step" data-m="1">
+              <div class="say">What do we want of a plane number? Two coordinates —
+                <span class="re">one real</span>, one along <span class="im">j</span>, the second direction:</div>
+              <div class="eq">z = <span class="re">x</span> + <span class="im">y·j</span></div>
+              <button class="more">add a second number —</button>
+            </div>
+            <div class="step" data-m="2">
+              <div class="say">Add two: nothing to decide — the parts add on their own.</div>
+              <div class="eq">= <span class="re">(x+u)</span> + <span class="im">(y+v)·j</span></div>
+              <button class="more">now multiply them —</button>
+            </div>
+            <div class="step" data-m="3">
+              <div class="say">Multiply. We respect the <b>distributive property</b>, and so —</div>
+              <button class="more">collect the like terms —</button>
+            </div>
+            <div class="step" data-m="4">
+              <div class="say">Collect like terms. Everything is settled — except one symbol.</div>
+              <button class="more">so — what is j²?</button>
+            </div>
+            <div class="step" data-m="5">
+              <div class="say">One real number, then. The whole choice:</div>
+            </div>
+          </div>
+          <div class="bigeq-wrap" id="bigeqwrap">
+            <button class="bigeq tw" id="bigeq">j<sup>2</sup> = p</button>
+            <div class="bigeq-cap">One number. That is the whole freedom of the plane.</div>
+          </div>
+          <button class="whisper-link" id="whyreal" style="display:none">▸ why may j² be taken real? — the picture</button>
         </div>
-        <div class="step" data-m="2">
-          <div class="say">Add two: nothing to decide.</div>
-          <div class="eq">(x + y·j) + (u + v·j) = (x+u) + (y+v)·j</div>
-          <div class="aside">addition never asks a question.</div>
-        </div>
-        <div class="step" data-m="3">
-          <div class="say">Multiply — nothing but distribute-and-collect:</div>
-          <div class="eq">(x + y·j)(u + v·j) = xu + xv·j + yu·j + yv·j²</div>
-        </div>
-        <div class="step" data-m="4">
-          <div class="say">Everything is settled — except one symbol:</div>
-          <div class="eq">= xu + (xv + yu)·j + yv·<span class="hot">j²</span></div>
-        </div>
-        <div class="step" data-m="5">
-          <div class="say">One real number, then. The whole choice:</div>
+        <div class="illo" id="illoA">
+          <svg id="planeIllo" viewBox="-0.7 -2.35 4.4 2.85" preserveAspectRatio="xMidYMid meet"
+               aria-label="The plane, drawn as the text advances"></svg>
+          <div id="foilbox">
+            <div class="factors" id="factors">(<span class="re">x</span> + <span class="im">y·j</span>)(<span class="re">u</span> + <span class="im">v·j</span>)</div>
+          </div>
+          <div class="illocap" id="illocap"></div>
         </div>
       </div>
-      <div class="bigeq-wrap" id="bigeqwrap">
-        <button class="bigeq tw" id="bigeq">j<sup>2</sup> = p</button>
-        <div class="bigeq-cap">One number. That is the whole freedom of the plane.</div>
-      </div>
-      <details class="whisper" id="whisperA">
-        <summary>▸ why may j² be taken real?</summary>
-        If j² came out as c + d·j, slide the unit: (j − d/2)² has no j-part left.
-        Completing the square, one floor up.
-      </details>
     </section>
 
     <!-- ══ STOP B · beat 0 — only the sign survives ══ -->
@@ -423,12 +484,14 @@ svg text{font-family:inherit; user-select:none; -webkit-user-select:none}
       <div class="triad">
         <div class="trow" data-m="0">
           <div><div class="claim"><b>They all treat + the same.</b></div>
-            <div class="sub">the same tip-to-tail parallelogram, in every plane — addition never asked the question</div></div>
+            <div class="sub">the same tip-to-tail parallelogram, in every plane</div>
+            <button class="more">and the real numbers? —</button></div>
           <svg viewBox="-0.4 -1.3 3.4 1.5"><g stroke="var(--stroke)" stroke-width=".05" fill="none"><path d="M 0 0 L 1.3 -.35 M 1.3 -.35 l -.16 -.03 M 1.3 -.35 l -.12 .11"/><path d="M 0 0 L .5 -.85 M .5 -.85 l -.13 .02 M .5 -.85 l .0 .15"/><path d="M 1.3 -.35 L 1.8 -1.2 M .5 -.85 L 1.8 -1.2" stroke-dasharray=".08 .06"/></g><circle cx="1.8" cy="-1.2" r=".07" fill="var(--stroke)"/></svg>
         </div>
         <div class="trow" data-m="1">
           <div><div class="claim"><b>They all treat real numbers the same.</b></div>
-            <div class="sub">on the shared axis, (x)(u) = xu — the real line is common ground in every world</div></div>
+            <div class="sub">on the shared axis, (x)(u) = xu — common ground in every world</div>
+            <button class="more">and multiplying by 1? —</button></div>
           <svg viewBox="-1.7 -0.55 3.4 1.0"><line x1="-1.6" y1="0" x2="1.6" y2="0" stroke="var(--stroke)" stroke-width=".05"/><circle cx="-.9" cy="0" r=".08" fill="var(--stroke)"/><circle cx=".5" cy="0" r=".08" fill="var(--stroke)"/><circle cx="-.45" cy="0" r=".1" fill="var(--light)"/><text x="-.62" y="-.22" font-size=".26" fill="var(--ink-soft)" font-style="italic">x·u</text></svg>
         </div>
         <div class="trow" data-m="2">
@@ -450,12 +513,14 @@ svg text{font-family:inherit; user-select:none; -webkit-user-select:none}
       <div class="steps" id="stepsD">
         <div class="step" data-m="0">
           <div class="say">Each plane has a mirror: flip the j-part.</div>
-          <div class="eq">z̄ = x − y·j</div>
+          <div class="eq">z̄ = x − <span class="im">y·j</span></div>
+          <button class="more">multiply z by its mirror —</button>
         </div>
         <div class="step" data-m="1">
           <div class="say">Multiply a number by its mirror — the same move as before:</div>
           <div class="eq">z·z̄ = x² − xy·j + xy·j − y²·j² = <span class="hot">x² − p·y²</span></div>
           <div class="aside">the j-part cancels; out of every z comes a plain real number. Call it N(z).</div>
+          <button class="more">does it respect ×? —</button>
         </div>
         <div class="step" data-m="2">
           <div class="say">And it respects multiplication:</div>
@@ -463,6 +528,7 @@ svg text{font-family:inherit; user-select:none; -webkit-user-select:none}
           <details class="whisper"><summary>▸ check it</summary>
             N(z)N(w) = (z·z̄)(w·w̄) = (zw)·(z̄w̄) — and the mirror of a product is the
             product of the mirrors, since flipping j respects + and ×.</details>
+          <button class="more">what does that give each world? —</button>
         </div>
         <div class="step" data-m="3">
           <div class="say">Each world carries its own size — where N holds constant are its <b>circles</b>.</div>
@@ -589,6 +655,18 @@ svg text{font-family:inherit; user-select:none; -webkit-user-select:none}
 
   <div class="sheet" id="notesheet" role="dialog" aria-label="Margin note"></div>
 
+  <div class="popout" id="csqpop" role="dialog" aria-label="Why j squared may be taken real">
+    <div class="popcard">
+      <button class="close" id="csqclose" aria-label="Close">×</button>
+      <h4>Why j² may be taken real — completing the square is a change of basis</h4>
+      <svg id="csqsvg" viewBox="-0.5 -1.45 3.2 1.95" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="alg">(j − d/2)² = j² − d·j + d²/4 = <span class="re">c + d²/4</span></div>
+      <div class="note2">slide the unit by half the j-part and the square lands on the real axis —
+        the plane is the same; only the ruler moved.</div>
+      <button class="replay" id="csqreplay">↺ again</button>
+    </div>
+  </div>
+
   <div class="footbar">
     <span class="folio">II · The Choice</span>
     <div class="stopdots" id="stopdots">
@@ -672,7 +750,8 @@ function apply(){
     s.classList.toggle('past', idx<cur);
   });
   $('bigeqwrap').classList.toggle('on', (m.z==='A'&&m.step>=5)||false);
-  $('whisperA').style.display=(m.z==='A'&&m.step>=5)?'block':'none';
+  $('whyreal').style.display=(m.z==='A'&&m.step>=5)?'':'none';
+  if(m.z==='A') illoMode(m.step);
   // triad rows
   document.querySelectorAll('#zTriad .trow').forEach((r,i)=>{
     const cur=m.z==='C0'?m.trow:(M>11?9:0);
@@ -735,31 +814,39 @@ function nextMore(listId,step){
   const steps=[...document.querySelectorAll('#'+listId+' .step')];
   return steps[step-1]?.querySelector('.more')||steps[step-1];
 }
-function nextTrow(i){return $('zTriad').querySelectorAll('.trow')[i-1];}
-function nextDstep(i){return document.querySelectorAll('#stepsD .step')[i-1];}
+function nextTrow(i){const r=$('zTriad').querySelectorAll('.trow')[i-1];
+  return r?.querySelector('.more')||r;}
+function nextDstep(i){const st=document.querySelectorAll('#stepsD .step')[i-1];
+  return st?.querySelector('.more')||st;}
 
 /* wire the advances */
 $('a0go').addEventListener('click',()=>{
-  $('a0reply').textContent='It doesn’t. But every alternative must answer one small question.';
+  $('a0reply').textContent='Let’s find out.';
+  $('qdock').textContent='Does the number plane have to be complex? — let’s find out.';
   setTw([]);
-  setTimeout(()=>advance(1), animate?1400:0);
+  setTimeout(()=>advance(1), animate?1200:0);
 });
-document.querySelectorAll('#stepsA .step').forEach(s=>{
-  s.addEventListener('click',()=>{const idx=+s.dataset.m;
-    if(M>=1&&M<=4&&idx===MOMENTS[M].step) advance();});
+document.querySelectorAll('#stepsA .step .more').forEach((b,i)=>{
+  b.addEventListener('click',e=>{e.stopPropagation();
+    if(M>=1&&M<=4&&i===MOMENTS[M].step-1) advance();});
 });
 $('bigeq').addEventListener('click',()=>{ if(M!==5) return;
   ghostFly($('bigeq'),$('eqdock'),'j² = p'); advance(6);});
 $('advB').addEventListener('click',()=>{ if(M!==6) return;
   ghostFly($('plinesvg'),$('dialstrip'),'⟶'); advance(7);});
 $('advB1').addEventListener('click',()=>{ if(M===7) advance(8);});
-document.querySelectorAll('#zTriad .trow').forEach((r,i)=>{
-  r.addEventListener('click',()=>{ if(M>=8&&M<=10&&i===MOMENTS[M].trow-1) advance();});
+document.querySelectorAll('#zTriad .trow .more').forEach((b,i)=>{
+  b.addEventListener('click',e=>{e.stopPropagation();
+    if(M>=8&&M<=9&&i===MOMENTS[M].trow-1) advance();});
 });
+// the third row's reveal opens the closing line via its own appearance (advC carries the verb)
+document.querySelectorAll('#zTriad .trow')[2]?.addEventListener('click',()=>{
+  if(M===10) advance();});
 $('advC').addEventListener('click',()=>{ if(M===11) advance(12);});
 $('advC1').addEventListener('click',()=>{ if(M===12) advance(13);});
-document.querySelectorAll('#stepsD .step').forEach((s,i)=>{
-  s.addEventListener('click',()=>{ if(M>=13&&M<=15&&i===MOMENTS[M].dstep-1) advance();});
+document.querySelectorAll('#stepsD .step .more').forEach((b,i)=>{
+  b.addEventListener('click',e=>{e.stopPropagation();
+    if(M>=13&&M<=15&&i===MOMENTS[M].dstep-1) advance();});
 });
 $('advD').addEventListener('click',()=>{ if(M===16) advance(17);});
 $('restart').addEventListener('click',()=>{
@@ -787,6 +874,148 @@ function ghostFly(fromEl,toEl,text){
   });});
   setTimeout(()=>g.remove(),1000);
 }
+
+/* ═══════ STOP A illustration: the picture follows the text ═══════ */
+function arrowTo(svg,x1,y1,x2,y2,color,wd){
+  svg.appendChild(el('line',{x1:x1,y1:-y1,x2:x2,y2:-y2,stroke:color,'stroke-width':wd}));
+  const ang=Math.atan2(y2-y1,x2-x1), L=.13;
+  const a1=ang+2.65, a2=ang-2.65;
+  for(const aa of [a1,a2])
+    svg.appendChild(el('line',{x1:x2,y1:-y2,x2:x2+L*Math.cos(aa),y2:-(y2+L*Math.sin(aa)),
+      stroke:color,'stroke-width':wd}));
+}
+function illoAxes(svg){
+  svg.appendChild(el('line',{x1:-.55,y1:0,x2:4.1-.55,y2:0,stroke:'var(--hair)','stroke-width':.022}));
+  svg.appendChild(el('line',{x1:0,y1:-2.3,x2:0,y2:.4,stroke:'var(--hair)','stroke-width':.022}));
+  const t=el('text',{x:3.25,y:.28,'font-size':.19,fill:'var(--ink-faint)','font-style':'italic'});
+  t.textContent='real'; svg.appendChild(t);
+  const t2=el('text',{x:.08,y:-2.05,'font-size':.19,fill:'var(--im)','font-style':'italic'});
+  t2.textContent='j'; svg.appendChild(t2);
+}
+function label(svg,x,y,txt,color,size){
+  const t=el('text',{x:x,y:-y,'font-size':size||.2,fill:color,'font-style':'italic'});
+  t.textContent=txt; svg.appendChild(t); return t;
+}
+let foilState=0;
+function illoMode(step){
+  const svg=$('planeIllo'), fb=$('foilbox'), cap=$('illocap');
+  const showPlane=step<=2, showFoil=step>=3;
+  svg.style.display=showPlane?'block':'none';
+  fb.style.display=showFoil?'block':'none';
+  if(step===1){
+    svg.innerHTML=''; illoAxes(svg);
+    const x=1.9,y=1.15;
+    arrowTo(svg,0,0,x,0,'var(--re)',.05);
+    arrowTo(svg,x,0,x,y,'var(--im)',.05);
+    svg.appendChild(el('circle',{cx:x,cy:-y,r:.07,fill:'var(--fg)'}));
+    label(svg,x/2-.1,-.32,'x','var(--re)',.24);
+    label(svg,x+.12,y/2,'y·j','var(--im)',.24);
+    label(svg,x+.14,y+.14,'z','var(--fg)',.26);
+    cap.innerHTML='one number, two directions — <span class="re">real</span> across, <span class="im">j</span> up';
+  }
+  if(step===2){
+    svg.innerHTML=''; illoAxes(svg);
+    const x=1.3,y=.75,u=1.1,v=.85;
+    arrowTo(svg,0,0,x,0,'var(--re)',.05);
+    arrowTo(svg,x,0,x,y,'var(--im)',.05);
+    svg.appendChild(el('circle',{cx:x,cy:-y,r:.06,fill:'var(--fg)'}));
+    label(svg,x-.35,y+.16,'z','var(--fg)',.22);
+    arrowTo(svg,x,y,x+u,y,'var(--re)',.05);
+    arrowTo(svg,x+u,y,x+u,y+v,'var(--im)',.05);
+    svg.appendChild(el('circle',{cx:x+u,cy:-(y+v),r:.07,fill:'var(--light)'}));
+    label(svg,x+u+.12,y+v,'z + w','var(--light)',.24);
+    svg.appendChild(el('path',{d:poly([[0,0],[x+u,y+v]]),stroke:'var(--ink-faint)',
+      'stroke-width':.02,'stroke-dasharray':'.1 .08',fill:'none'}));
+    cap.innerHTML='tip to tail: <span class="re">reals add reals</span>, <span class="im">j adds j</span> — the parts never mix';
+  }
+  if(step>=3){
+    // the FOIL theater: terms shuffle out; like terms collect
+    const want=step>=4?2:1;
+    if(foilState!==want||fb.querySelectorAll('.tile').length===0) buildFoil(want);
+    cap.innerHTML= step===3
+      ? 'four products fall out — each is <span class="re">real</span>·something: colors say where each lands'
+      : step===4 ? 'the two <span class="im">j-terms</span> collect; one tile holds the only unknown'
+      : 'every tile is arithmetic you already own — except the lit one';
+    if(step>=5){const t=fb.querySelector('.tile.hot'); if(t) t.style.boxShadow='0 0 26px var(--glow)';}
+  }
+  foilState=step>=4?2:step===3?1:0;
+}
+function mkTile(html,cls){
+  const d=document.createElement('div'); d.className='tile '+(cls||'');
+  d.innerHTML=html; $('foilbox').appendChild(d); return d;
+}
+function buildFoil(state){
+  const fb=$('foilbox');
+  fb.querySelectorAll('.tile').forEach(t=>t.remove());
+  const T=[
+    {h:'<span class="re">x·u</span>',x:14},
+    {h:'<span class="im">x·v·j</span>',x:38},
+    {h:'<span class="im">y·u·j</span>',x:62},
+    {h:'y·v·<span class="hh">j²</span>',x:86,hot:true},
+  ];
+  if(state===1){
+    T.forEach((t,i)=>{
+      const d=mkTile(t.h,t.hot?'hot':'');
+      if(animate){ d.style.left='50%'; d.style.top='22%'; d.style.opacity='0';
+        setTimeout(()=>{d.style.left=t.x+'%'; d.style.top='58%'; d.style.opacity='1';},80+i*260);
+      } else { d.style.left=t.x+'%'; d.style.top='58%'; }
+    });
+  } else {
+    // collected: xu · (xv+yu)j · yv·j²
+    const A=mkTile('<span class="re">x·u</span>');
+    const B=mkTile('<span class="im">(x·v + y·u)·j</span>');
+    const C=mkTile('y·v·<span class="hh">j²</span>','hot');
+    if(animate&&foilState===1){
+      const old={A:'14%',B1:'38%',B2:'62%',C:'86%'};
+      A.style.left='14%'; A.style.top='58%';
+      C.style.left='86%'; C.style.top='58%';
+      B.style.opacity='0'; B.style.left='50%'; B.style.top='58%';
+      const b1=mkTile('<span class="im">x·v·j</span>'), b2=mkTile('<span class="im">y·u·j</span>');
+      b1.style.left='38%'; b1.style.top='58%'; b2.style.left='62%'; b2.style.top='58%';
+      requestAnimationFrame(()=>{requestAnimationFrame(()=>{
+        b1.style.left='50%'; b2.style.left='50%'; b1.style.opacity='0'; b2.style.opacity='0';
+        A.style.left='16%'; C.style.left='84%';
+      });});
+      setTimeout(()=>{b1.remove(); b2.remove(); B.style.opacity='1';},950);
+    } else {
+      A.style.left='16%'; A.style.top='58%';
+      B.style.left='50%'; B.style.top='58%';
+      C.style.left='84%'; C.style.top='58%';
+    }
+  }
+}
+
+/* ═══════ the completing-the-square pop-out ═══════ */
+const CSQ=$('csqsvg'); const csqC=.9, csqD=.9;
+function drawCsq(t){ // t in [0,1]: the point slides from (c,d) to (c+d²/4, 0)
+  CSQ.innerHTML='';
+  CSQ.appendChild(el('line',{x1:-.4,y1:0,x2:2.6,y2:0,stroke:'var(--hair)','stroke-width':.02}));
+  CSQ.appendChild(el('line',{x1:0,y1:-1.35,x2:0,y2:.35,stroke:'var(--hair)','stroke-width':.02}));
+  label(CSQ,2.32,.2,'real','var(--ink-faint)',.14);
+  const tx=csqC+(csqC+csqD*csqD/4-csqC)*t, ty=csqD*(1-t);
+  CSQ.appendChild(el('line',{x1:tx,y1:0,x2:tx,y2:-ty,stroke:'var(--im)','stroke-width':.018,
+    'stroke-dasharray':'.07 .05'}));
+  const pt=el('circle',{cx:tx,cy:-ty,r:.07,fill:t<0.99?'var(--im)':'var(--re)'});
+  pt.setAttribute('style','filter:drop-shadow(0 0 3px var(--glow-soft));cursor:pointer');
+  pt.addEventListener('click',csqPlay);
+  CSQ.appendChild(pt);
+  label(CSQ,tx+.1,ty+.12, t<0.5?'j² = c + d·j':'j′² = c + d²/4', t<0.99?'var(--im)':'var(--re)',.17);
+  if(t>0.01&&t<0.99) label(CSQ,.15,-.3,'j → j − d/2  (the unit slides)','var(--ink-soft)',.15);
+}
+let csqRaf=null;
+function csqPlay(){
+  cancelAnimationFrame(csqRaf);
+  if(!animate){drawCsq(1); return;}
+  const t0=performance.now(), dur=1300;
+  (function f(ts){const t=Math.min(1,(ts-t0)/dur);
+    drawCsq(1-Math.pow(1-t,3));
+    if(t<1) csqRaf=requestAnimationFrame(f);})(t0);
+}
+$('whyreal').addEventListener('click',()=>{$('csqpop').classList.add('on'); drawCsq(0);
+  setTimeout(csqPlay, animate?700:0);});
+$('csqclose').addEventListener('click',()=>$('csqpop').classList.remove('on'));
+$('csqreplay').addEventListener('click',()=>{drawCsq(0); setTimeout(csqPlay,150);});
+$('csqpop').addEventListener('click',e=>{if(e.target===$('csqpop')) $('csqpop').classList.remove('on');});
 
 /* ═══════ STOP B widget: settle the dots (each p rescaled by its own ruler) ═══════ */
 const PLINE=$('plinesvg');
