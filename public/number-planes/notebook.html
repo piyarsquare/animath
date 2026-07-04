@@ -4,352 +4,339 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Number Planes — the notebook (probe: the choice)</title>
+<link rel="stylesheet" href="../guide-theme.css">
+<script src="../guide-skin.js"></script>
 <style>
-/* ————————————————————————————————————————————————
-   The living notebook — probe spread: II · the choice
-   Paper is what holds; light is what responds.
-   ———————————————————————————————————————————————— */
+/* ═══════════════════════════════════════════════════════════════
+   The living notebook, v2 — probe spread: II · the choice
+   One screen, no scroll. Compartments with swappable faces.
+   Paper holds (the skin's tokens); light responds (the accent).
+   ═══════════════════════════════════════════════════════════════ */
 :root{
-  --paper:#f6f0e3; --paper-hi:#fbf7ee; --paper-lo:#ece3cf;
-  --ink:#22334d; --ink-soft:#5b6a84; --ink-faint:#94a0b4;
-  --hair:#cfc4aa; --hair-soft:#ddd3bd;
-  --light:#3fb3ff; --light-soft:rgba(63,179,255,.35); --light-faint:rgba(63,179,255,.14);
-  --spin:#2f6fb4; --shear:#4a5a74; --boost:#7a5fb4;
-  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --light: var(--accent);
+  --glow: color-mix(in srgb, var(--accent) 40%, transparent);
+  --glow-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --hair: var(--rule);
+  --ink: var(--fg);
+  --ink-soft: color-mix(in srgb, var(--fg) 62%, var(--bg));
+  --ink-faint: var(--muted);
+  --stroke: color-mix(in srgb, var(--fg) 45%, var(--accent2));
+  --stroke-soft: color-mix(in srgb, var(--fg) 30%, var(--bg));
 }
-*{box-sizing:border-box;margin:0;padding:0}
-html{background:#151820}
-body{
-  font-family:var(--serif); color:var(--ink);
-  background:radial-gradient(120% 90% at 50% 40%, #232837 0%, #151820 70%);
-  min-height:100vh; padding:38px 18px 60px;
+html,body{height:100%; overflow:hidden}
+body{font-size:15px; line-height:1.45}
+.nb{height:100dvh; display:flex; flex-direction:column; overflow:hidden; position:relative}
+
+/* ——— top bar ——— */
+.topbar{flex:0 0 44px; display:flex; align-items:center; gap:18px; padding:0 16px;
+  border-bottom:1px solid var(--hair)}
+.topbar .runhead{font-size:10px; letter-spacing:.28em; text-transform:uppercase; color:var(--ink-faint); white-space:nowrap}
+.topbar .crumbs{flex:1; text-align:center; font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.topbar .crumbs a{color:var(--ink-soft); text-decoration:none; border-bottom:1px dotted var(--hair)}
+.topbar .crumbs a:hover{color:var(--light)}
+.topbar .crumbs .here{color:var(--light); text-shadow:0 0 10px var(--glow-soft)}
+.topbar .crumbs .next{opacity:.55}
+
+/* ——— the dial strip: one instrument drives the whole page ——— */
+.dialstrip{flex:0 0 66px; display:flex; align-items:center; gap:16px;
+  padding:4px 18px 0; border-bottom:1px solid var(--hair)}
+.dialstrip .peq{font-style:italic; font-size:19px; min-width:110px}
+.dialstrip .peq .val{color:var(--light); font-style:normal; text-shadow:0 0 12px var(--glow-soft)}
+.dialstrip .track{flex:1; position:relative; padding-top:2px}
+.dialstrip .ticks{display:flex; justify-content:space-between; font-size:10px; font-style:italic;
+  color:var(--ink-faint); padding:0 4px; margin-top:-2px}
+.dialstrip .ticks .zero{color:var(--ink-soft)}
+.dialstrip .hint{font-size:10px; font-style:italic; letter-spacing:.06em; color:var(--ink-faint);
+  max-width:170px; text-align:right; line-height:1.5}
+input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:24px;
+  background:transparent; cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:2px; background:var(--hair)}
+input[type=range]::-moz-range-track{height:2px; background:var(--hair)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:16px; height:16px;
+  margin-top:-7px; border-radius:50%; border:0;
+  background:radial-gradient(circle at 40% 35%, #fff, var(--light) 60%, color-mix(in srgb, var(--light) 55%, #000));
+  box-shadow:0 0 9px var(--glow), 0 0 22px var(--glow-soft)}
+input[type=range]::-moz-range-thumb{width:16px; height:16px; border-radius:50%; border:0;
+  background:radial-gradient(circle at 40% 35%, #fff, var(--light) 60%, color-mix(in srgb, var(--light) 55%, #000));
+  box-shadow:0 0 9px var(--glow), 0 0 22px var(--glow-soft)}
+
+/* ——— the compartment grid ——— */
+.main{flex:1; min-height:0; display:grid; gap:10px; padding:10px 14px;
+  grid-template-columns:minmax(230px,25fr) minmax(0,44fr) minmax(250px,31fr);
+  grid-template-rows:1.05fr 1fr 1.15fr;
+  grid-template-areas:
+    "claim   stage compare"
+    "claim   stage operator"
+    "threads stage margin";
 }
-.book{
-  max-width:1380px; margin:0 auto;
-  display:grid; grid-template-columns:170px 1fr 1fr; gap:0;
-  background:
-    repeating-linear-gradient(1.2deg, rgba(120,95,60,.022) 0 2px, transparent 2px 7px),
-    repeating-linear-gradient(-91deg, rgba(120,95,60,.016) 0 1px, transparent 1px 5px),
-    linear-gradient(115deg, var(--paper-hi) 0%, var(--paper) 55%, var(--paper-lo) 100%);
-  border-radius:14px;
-  box-shadow:0 30px 80px rgba(0,0,0,.55), 0 2px 0 rgba(255,255,255,.06) inset;
-  position:relative;
-}
-/* ——— the latent-threads rail ——— */
-.rail{
-  border-right:1px solid var(--hair-soft);
-  padding:42px 18px 34px 24px;
-  background:linear-gradient(180deg, rgba(120,95,60,.05), transparent 30%);
-  border-radius:14px 0 0 14px;
-}
-.rail h2{
-  font-size:11px; letter-spacing:.24em; font-weight:600; text-transform:uppercase;
-  color:var(--ink-soft); margin-bottom:26px; line-height:1.7;
-}
-.thread{
-  display:flex; align-items:center; gap:10px;
-  padding:9px 0; color:var(--ink-faint); font-size:13px; font-style:italic;
-  position:relative; cursor:default;
-}
-.thread + .thread::before{
-  content:""; position:absolute; left:8px; top:-7px; height:12px;
-  border-left:1px dotted var(--hair);
-}
-.thread .glyph{
-  width:17px; height:17px; flex:0 0 17px; display:grid; place-items:center;
-  font-style:normal; font-size:12px; color:var(--ink-faint);
-}
-.thread.lit{color:var(--ink-soft)}
-.thread.lit .glyph{
-  color:var(--light);
-  text-shadow:0 0 7px var(--light-soft), 0 0 16px var(--light-faint);
-}
-.thread.lit::after{
-  content:"a walk crosses here"; position:absolute; left:27px; top:31px;
-  font-size:9px; letter-spacing:.08em; font-style:normal; color:var(--light);
-  opacity:.75;
-}
-.thread.lit{padding-bottom:22px}
-.rail .railfoot{margin-top:34px; font-size:10px; letter-spacing:.14em; color:var(--ink-faint); font-style:italic}
-/* ——— pages ——— */
-.page{padding:44px 46px 30px; position:relative; display:flex; flex-direction:column}
-.page.left{
-  border-right:1px solid rgba(120,95,60,.18);
-  background:linear-gradient(90deg, transparent 92%, rgba(90,70,40,.10) 100%);
-}
-.page.right{
-  background:linear-gradient(270deg, transparent 94%, rgba(90,70,40,.09) 100%);
-  border-radius:0 14px 14px 0;
-}
-.runhead{
-  font-size:10px; letter-spacing:.3em; text-transform:uppercase; color:var(--ink-faint);
-  text-align:center; margin-bottom:34px;
-}
-/* ——— left page ——— */
-h1{
-  font-size:44px; font-weight:500; letter-spacing:.08em; text-align:center;
-  color:var(--ink); margin-bottom:6px;
-}
-.subtitle{
-  text-align:center; font-size:11px; letter-spacing:.26em; text-transform:uppercase;
-  color:var(--ink-soft); margin-bottom:8px;
-}
-.rule{width:120px; margin:14px auto; border:0; border-top:1px solid var(--hair); position:relative}
-.rule::after{content:"◆"; position:absolute; top:-7px; left:50%; transform:translateX(-50%);
-  font-size:8px; color:var(--hair); background:transparent; padding:0 6px}
-.bigeq{
-  font-size:64px; text-align:center; font-style:italic; margin:22px 0 18px;
-  color:var(--ink);
-}
-.bigeq sup{font-size:.45em}
-.claim{
-  text-align:center; font-style:italic; font-size:16.5px; line-height:1.75;
-  color:var(--ink); max-width:40ch; margin:0 auto 8px;
-}
-.claim + .claim{margin-top:2px}
-.trich{
-  margin:26px auto 8px; font-size:14.5px; line-height:2.05; max-width:46ch;
-}
-.trich .row{display:flex; gap:14px; align-items:baseline; padding:0 6px; border-radius:6px;
-  transition:background .35s, box-shadow .35s}
-.trich .cond{font-style:italic; width:64px; flex:0 0 64px; text-align:right; color:var(--ink-soft)}
-.trich .row.now{background:rgba(63,179,255,.07); box-shadow:0 0 0 1px var(--light-faint)}
-.trich .row.now .cond{color:var(--light)}
-.trich b{font-weight:600; letter-spacing:.04em}
-/* level-set figure */
-.figcard{
-  margin-top:auto; border:1px solid var(--hair); border-radius:12px;
-  background:linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,.08));
-  padding:18px 18px 12px;
-}
-.figcard h3, .card h3{
-  font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; font-weight:600;
-  color:var(--ink-soft); text-align:center; margin-bottom:8px;
-}
-.figcard .kind{
-  text-align:center; font-size:12.5px; font-style:italic; color:var(--ink-soft); margin-top:6px;
-}
-.figcard .kind b{color:var(--ink); font-weight:600}
-.caption{font-size:12px; font-style:italic; color:var(--ink-soft); text-align:center; margin-top:8px; line-height:1.6}
-svg text{font-family:var(--serif)}
-.folio{
-  display:flex; justify-content:space-between; align-items:baseline;
-  margin-top:26px; font-size:11px; font-style:italic; color:var(--ink-soft);
-}
-.folio .no{letter-spacing:.18em; font-style:normal; font-size:10px; text-transform:uppercase}
-/* ——— right page ——— */
-.card{
-  border:1px solid var(--hair); border-radius:12px; padding:16px 20px 14px;
-  background:linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.06));
-  margin-bottom:18px; position:relative;
-}
-/* instrument */
-.instrument .peq{
-  text-align:center; font-size:19px; font-style:italic; color:var(--ink); margin:4px 0 10px;
-}
-.instrument .peq .val{color:var(--light); text-shadow:0 0 12px var(--light-faint); font-style:normal}
-input[type=range]{
-  -webkit-appearance:none; appearance:none; width:100%; height:26px; background:transparent; cursor:pointer;
-}
-input[type=range]::-webkit-slider-runnable-track{height:2px; background:var(--hair);}
-input[type=range]::-moz-range-track{height:2px; background:var(--hair);}
-input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none; width:18px; height:18px; margin-top:-8px; border-radius:50%;
-  background:radial-gradient(circle at 40% 35%, #fff, var(--light) 55%, #1c6ea8);
-  box-shadow:0 0 10px var(--light-soft), 0 0 26px var(--light-faint), 0 1px 2px rgba(0,0,0,.4);
-  border:0;
-}
-input[type=range]::-moz-range-thumb{
-  width:18px; height:18px; border-radius:50%; border:0;
-  background:radial-gradient(circle at 40% 35%, #fff, var(--light) 55%, #1c6ea8);
-  box-shadow:0 0 10px var(--light-soft), 0 0 26px var(--light-faint);
-}
-.ticks{display:flex; justify-content:space-between; font-size:11px; font-style:italic;
-  color:var(--ink-faint); padding:0 4px; margin-top:2px}
-.ticks .zero{color:var(--ink-soft)}
-.stickynote{
-  text-align:center; font-size:10.5px; letter-spacing:.1em; color:var(--ink-faint);
-  font-style:italic; margin-top:8px;
-}
-/* the revealed marginal note */
-.note-wrap{position:relative}
-.filament{position:absolute; left:0; right:0; top:-18px; height:20px; width:100%;
-  pointer-events:none; overflow:visible; opacity:0; transition:opacity .8s ease .1s}
-.note{
-  max-height:0; opacity:0; overflow:hidden; margin-bottom:0;
-  transform:translateY(-6px);
-  transition:max-height .9s cubic-bezier(.2,.7,.2,1), opacity .9s ease .15s,
-             transform .9s ease .1s, margin-bottom .9s;
-  border-color:var(--light-soft);
-}
-.revealed .note{max-height:260px; opacity:1; transform:none; margin-bottom:18px;
-  box-shadow:0 0 0 1px var(--light-faint), 0 0 26px rgba(63,179,255,.10)}
-.revealed .filament{opacity:1}
-.note h3{color:var(--light); text-shadow:0 0 10px var(--light-faint)}
-.note h3::before{content:"✦ "; letter-spacing:0}
-.note p{font-size:14px; font-style:italic; line-height:1.7; color:var(--ink)}
-.note p + p{margin-top:6px}
-.note .lbl{font-style:normal; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft)}
-.note .src{margin-top:8px; font-size:10.5px; font-style:italic; color:var(--ink-faint)}
-/* comparator */
-.comparator{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:18px}
-.panel{
-  border:1px solid var(--hair); border-radius:12px; padding:14px 12px 12px; text-align:center;
-  background:linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.05));
-  transition:border-color .4s, box-shadow .5s, transform .4s;
-}
-.panel h4{font-size:12px; letter-spacing:.24em; font-weight:600; color:var(--ink)}
-.panel .cond{font-size:12.5px; font-style:italic; color:var(--ink-soft); margin-bottom:8px}
-.panel ul{list-style:none; margin-top:8px}
-.panel li{font-size:11.8px; font-style:italic; line-height:1.65; color:var(--ink-soft)}
-.panel .jsq{margin-top:8px; font-size:11px; font-style:italic; color:var(--ink-faint)}
-.panel.now{
-  border-color:var(--light);
-  box-shadow:0 0 0 1px var(--light-soft), 0 0 22px rgba(63,179,255,.16), 0 6px 18px rgba(0,0,0,.06);
-  transform:translateY(-2px);
-}
-.panel.now h4{color:var(--light); text-shadow:0 0 12px var(--light-faint)}
-/* explorer */
-.explorer .exgrid{display:grid; grid-template-columns:150px 1fr; gap:14px; align-items:center}
-.explorer .eqs{font-size:13.5px; font-style:italic; line-height:2; color:var(--ink)}
-.explorer .eqs .dim{color:var(--ink-faint); font-size:12px}
-.exbar{display:flex; gap:12px; align-items:center; margin-top:8px; border-top:1px solid var(--hair-soft); padding-top:10px}
-.exbar button{
-  font-family:var(--serif); font-size:13px; width:34px; height:30px; border-radius:8px;
-  border:1px solid var(--hair); background:rgba(255,255,255,.5); color:var(--ink); cursor:pointer;
-}
+.slot{background:var(--card); border:1px solid var(--hair); border-radius:12px;
+  min-height:0; min-width:0; display:flex; flex-direction:column; overflow:hidden;
+  transition:box-shadow .4s, border-color .4s}
+.slot>header{flex:0 0 auto; display:flex; align-items:baseline; gap:10px;
+  padding:7px 12px 5px; border-bottom:1px solid color-mix(in srgb, var(--hair) 55%, transparent)}
+.slot>header h3{font-size:9.5px; letter-spacing:.22em; text-transform:uppercase; font-weight:600;
+  color:var(--ink-soft); margin:0}
+.slot .faces{margin-left:auto; display:flex; gap:2px}
+.slot .faces button{font:inherit; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  background:none; border:0; border-radius:6px; padding:2px 7px; cursor:pointer; color:var(--ink-faint)}
+.slot .faces button:hover{color:var(--light)}
+.slot .faces button.on{color:var(--light); background:var(--glow-soft); text-shadow:0 0 8px var(--glow-soft)}
+.slot .body{flex:1; min-height:0; position:relative; padding:8px 12px 10px}
+.face{position:absolute; inset:8px 12px 10px; display:none; flex-direction:column; min-height:0}
+.face.on{display:flex}
+
+/* claim */
+#claim .body{display:flex; flex-direction:column; text-align:center; padding-top:4px}
+#claim h1{font-size:clamp(20px,1.8vw,27px); font-weight:500; letter-spacing:.06em; margin:0}
+#claim .sub{font-size:9px; letter-spacing:.24em; text-transform:uppercase; color:var(--ink-faint); margin:2px 0 0}
+#claim .bigeq{font-size:clamp(30px,3vw,42px); font-style:italic; margin:8px 0 6px}
+#claim .bigeq sup{font-size:.45em}
+#claim p{font-style:italic; font-size:12.8px; line-height:1.6; margin:3px auto; max-width:34ch; color:var(--ink)}
+#claim p b{font-style:normal; letter-spacing:.03em}
+#claim .demands{color:var(--ink-soft); border-top:1px solid var(--hair); margin-top:auto; padding-top:7px; font-size:12px}
+
+/* stage */
+#stage{position:relative}
+#stage svg{width:100%; height:100%; flex:1; min-height:0}
+#stage .stagefoot{flex:0 0 auto; text-align:center; font-size:11px; font-style:italic;
+  color:var(--ink-soft); padding-top:4px}
+#stage .stagefoot b{color:var(--ink)}
+.exbar{flex:0 0 auto; display:flex; gap:10px; align-items:center; padding-top:6px;
+  border-top:1px solid color-mix(in srgb, var(--hair) 55%, transparent)}
+.exbar button{font:inherit; font-size:12px; width:30px; height:26px; border-radius:7px;
+  border:1px solid var(--hair); background:none; color:var(--ink); cursor:pointer}
 .exbar button:hover{border-color:var(--light); color:var(--light)}
 .exbar input[type=range]{flex:1}
-.exbar .tau{font-size:12.5px; font-style:italic; color:var(--ink-soft); min-width:150px; text-align:right}
-.exbar .tau b{color:var(--ink); font-weight:600}
-/* derivation */
-.derivation p{font-size:13px; font-style:italic; line-height:1.9; color:var(--ink)}
-.derivation .m{font-style:italic}
-/* breadcrumb + folio */
-.crumbs{
-  margin-top:auto; padding-top:22px; display:flex; justify-content:space-between; align-items:baseline;
-  flex-wrap:wrap; gap:6px 28px;
-  font-size:10.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-faint);
-}
-.crumbs > span{white-space:nowrap}
-.crumbs .walk{font-style:italic; text-transform:none; letter-spacing:.06em; font-size:11.5px}
-.crumbs a{color:var(--ink-soft); text-decoration:none; border-bottom:1px dotted var(--hair)}
-.crumbs a:hover{color:var(--light); border-color:var(--light)}
-.crumbs .here{color:var(--light); text-shadow:0 0 10px var(--light-faint)}
-.crumbs .next{opacity:.55}
-.fullinstr{text-align:right; margin-top:6px}
-.fullinstr a{font-size:10.5px; font-style:italic; letter-spacing:.04em; color:var(--ink-faint);
-  text-decoration:none; border-bottom:1px dotted var(--hair)}
-.fullinstr a:hover{color:var(--light); border-color:var(--light)}
-/* ——— responsive ——— */
-@media (max-width:1080px){
-  .book{grid-template-columns:150px 1fr 1fr}
-  .page{padding:36px 30px 24px}
-  h1{font-size:36px} .bigeq{font-size:52px}
-}
+.exbar .tau{font-size:11.5px; font-style:italic; color:var(--ink-soft); min-width:150px; text-align:right}
+.exbar .tau b{color:var(--ink)}
+
+/* comparator: three compact rows */
+#compare .body{display:flex; flex-direction:column; justify-content:space-evenly; gap:4px}
+.wrow{display:grid; grid-template-columns:44px 1fr auto; gap:0 10px; align-items:center;
+  padding:4px 8px; border-radius:9px; border:1px solid transparent;
+  transition:border-color .35s, box-shadow .4s, background .35s}
+.wrow svg{width:44px; height:34px; grid-row:1/3}
+.wrow .name{font-size:11.5px; letter-spacing:.16em; font-weight:600}
+.wrow .name i{font-weight:400; letter-spacing:0; color:var(--ink-faint); margin-left:7px; font-size:11px}
+.wrow .desc{grid-column:2/4; font-size:11px; font-style:italic; color:var(--ink-soft); line-height:1.45}
+.wrow .tag{font-size:10px; font-style:italic; color:var(--ink-faint); justify-self:end}
+.wrow.now{border-color:var(--light); background:var(--glow-soft);
+  box-shadow:0 0 0 1px var(--glow-soft), 0 0 18px var(--glow-soft)}
+.wrow.now .name{color:var(--light); text-shadow:0 0 10px var(--glow-soft)}
+
+/* operator */
+#operator .body{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; align-content:space-between}
+#operator .wctl{grid-column:1/3; display:flex; gap:10px; align-items:center; font-size:11.5px; font-style:italic}
+#operator .wctl label{display:flex; gap:6px; align-items:center; flex:1}
+#operator .wctl input{flex:1}
+#operator .wctl .wval{color:var(--ink); min-width:86px; text-align:right; font-size:11px}
+.matrix{display:grid; grid-template-columns:auto auto; gap:2px 12px; padding:6px 12px;
+  border-left:1.5px solid var(--ink-soft); border-right:1.5px solid var(--ink-soft);
+  border-radius:4px; font-style:italic; font-size:13px; align-self:center; justify-items:center}
+.matrix .pb{color:var(--light); text-shadow:0 0 8px var(--glow-soft)}
+#operator .eig{font-size:11.5px; font-style:italic; line-height:1.55; color:var(--ink-soft); align-self:center}
+#operator .eig b{color:var(--ink); font-style:normal; font-weight:600}
+#operator .eig .lam{color:var(--light); font-style:normal}
+#operator .whisper{grid-column:1/3; font-size:10.5px; font-style:italic; color:var(--ink-faint);
+  border-top:1px solid color-mix(in srgb, var(--hair) 55%, transparent); padding-top:5px}
+
+/* margin: derivation face + the revealed note face */
+#margin .note-body p{font-size:12px; font-style:italic; line-height:1.55; margin:0 0 6px; color:var(--ink)}
+#margin .lbl{font-style:normal; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft)}
+#margin .src{font-size:10px; font-style:italic; color:var(--ink-faint); margin-top:auto}
+#margin .deriv p{font-size:12px; font-style:italic; line-height:1.7; margin:0; color:var(--ink)}
+#margin.lit{border-color:var(--light); box-shadow:0 0 0 1px var(--glow-soft), 0 0 24px var(--glow-soft)}
+#margin .faces .notetab{display:none}
+#margin .faces .notetab.found{display:inline-block}
+#margin .faces .notetab.found::before{content:"✦ "; color:var(--light)}
+#margin .dismiss{position:absolute; top:0; right:0; font:inherit; font-size:13px; line-height:1;
+  border:0; background:none; color:var(--ink-faint); cursor:pointer; padding:2px 4px}
+#margin .dismiss:hover{color:var(--light)}
+#margin .empty{font-size:11px; font-style:italic; color:var(--ink-faint); margin:auto; text-align:center}
+
+/* threads */
+#threads .body{display:flex; flex-direction:column; justify-content:space-evenly}
+.thread{display:flex; align-items:center; gap:8px; font-size:11px; font-style:italic;
+  color:var(--ink-faint); padding:1px 2px}
+.thread .glyph{width:15px; text-align:center; font-style:normal; font-size:11px}
+.thread.lit{color:var(--ink-soft)}
+.thread.lit .glyph{color:var(--light); text-shadow:0 0 7px var(--glow)}
+.thread.lit .xing{margin-left:auto; font-size:8.5px; letter-spacing:.08em; color:var(--light); opacity:.7; font-style:normal}
+
+/* ——— foot bar ——— */
+.footbar{flex:0 0 34px; display:flex; align-items:center; gap:16px; padding:0 16px;
+  border-top:1px solid var(--hair); font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint)}
+.footbar .walk{font-style:italic; text-transform:none; letter-spacing:.04em; font-size:11px}
+.footbar .dots{flex:1; display:none; justify-content:center; gap:7px}
+.footbar .dots i{width:6px; height:6px; border-radius:50%; background:var(--hair); cursor:pointer}
+.footbar .dots i.on{background:var(--light); box-shadow:0 0 7px var(--glow)}
+.footbar .dots i.pulse{background:var(--accent2); box-shadow:0 0 8px var(--accent2)}
+.footbar a{color:var(--ink-faint); text-decoration:none; border-bottom:1px dotted var(--hair);
+  font-style:italic; text-transform:none; letter-spacing:.03em; margin-left:auto}
+.footbar a:hover{color:var(--light); border-color:var(--light)}
+
+/* ——— filament overlay ——— */
+#filaments{position:absolute; inset:0; pointer-events:none; z-index:5; opacity:0; transition:opacity .8s}
+#filaments.on{opacity:1}
+
+/* ——— the skin picker (top-right) ——— */
+#skin-picker{flex:0 0 auto}
+
+svg text{font-family:inherit}
+
+/* ——— phone: sections become screens (a pager, not a scroll) ——— */
 @media (max-width:900px){
-  body{padding:16px 8px 40px}
-  .book{grid-template-columns:1fr; border-radius:12px}
-  .rail{border-right:0; border-bottom:1px solid var(--hair-soft); border-radius:12px 12px 0 0;
-    padding:20px 22px 14px}
-  .rail h2{margin-bottom:12px}
-  .rail .threads{display:flex; flex-wrap:wrap; gap:2px 20px}
-  .thread + .thread::before{display:none}
-  .thread.lit{padding-bottom:22px}
-  .rail .railfoot{margin-top:10px}
-  .page.left{border-right:0; background:none; border-bottom:1px dashed var(--hair)}
-  .page.right{border-radius:0 0 12px 12px; background:none}
-  .comparator{grid-template-columns:1fr; gap:10px}
-  .panel{display:grid; grid-template-columns:120px 1fr; text-align:left; gap:0 14px; align-items:center}
-  .panel h4,.panel .cond{grid-column:2}
-  .panel svg{grid-row:1/5; grid-column:1}
-  .panel ul{grid-column:2}
-  .panel .jsq{grid-column:2}
-  .explorer .exgrid{grid-template-columns:1fr}
-  .figcard{margin-top:26px}
+  .topbar{gap:10px}
+  .topbar .runhead{display:none}
+  .dialstrip{padding:4px 12px 0; gap:10px}
+  .dialstrip .hint{display:none}
+  .dialstrip .peq{min-width:84px; font-size:16px}
+  .main{display:flex; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
+    gap:12px; padding:10px 12px; scrollbar-width:none}
+  .main::-webkit-scrollbar{display:none}
+  .slot{flex:0 0 100%; scroll-snap-align:center}
+  .footbar .dots{display:flex}
+  #claim p{max-width:none}
 }
-@media (prefers-reduced-motion: reduce){
-  *{transition:none !important; animation:none !important}
-}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
 </style>
 </head>
 <body>
-<div class="book">
+<div class="nb">
 
-  <!-- ═══ the latent-threads rail: junction exits seen from this stop ═══ -->
-  <aside class="rail" aria-label="Latent threads — walks and side-paths visible from this stop">
-    <h2>Latent<br>threads</h2>
-    <div class="threads">
-      <div class="thread lit" title="The residents' walk — not yet laid"><span class="glyph">◯</span>the three worlds</div>
-      <div class="thread lit" title="The overlook climb — not yet laid"><span class="glyph">∂</span>it was a cone</div>
-      <div class="thread" title="Not yet laid"><span class="glyph">△</span>how many rails</div>
-      <div class="thread" title="Not yet laid"><span class="glyph">◇</span>the circle of planes</div>
-      <div class="thread" title="Not yet laid"><span class="glyph">✳</span>quadratics, t² = p</div>
-      <div class="thread" title="Not yet laid"><span class="glyph">∅</span>the strangers’ multiply</div>
-      <div class="thread" title="Behind you, off the line"><span class="glyph">∞</span>tropical</div>
-    </div>
-    <div class="railfoot">unlit paths are laid,<br>not yet lit.</div>
-  </aside>
+  <div class="topbar">
+    <span class="runhead">The Number Planes Notebook</span>
+    <span class="crumbs"><a href="../number-planes-line.html">the line</a> › <span class="here">the choice</span> › <span class="next">the three worlds</span></span>
+    <div id="skin-picker"></div>
+  </div>
 
-  <!-- ═══ left page: the claim ═══ -->
-  <section class="page left">
-    <div class="runhead">· The Number Planes Notebook ·</div>
-    <h1>Number Planes</h1>
-    <div class="subtitle">geometry of&nbsp; j² = p</div>
-    <hr class="rule">
-    <div class="bigeq">j<sup>2</sup> = p</div>
-    <p class="claim">Step to two coordinates. Addition rides along unchanged.
-      Multiplication — under the same demands — collapses to a single number:
-      what <i>j</i>² equals.</p>
-    <p class="claim">Call it <i>p</i>. One dial. Turn it, and only the sign matters.</p>
-
-    <div class="trich" id="trich">
-      <div class="row" data-k="-1"><span class="cond">p &lt; 0</span><span><b>spin</b> — the plane turns <span style="color:var(--ink-faint)">(complex)</span></span></div>
-      <div class="row" data-k="0"><span class="cond">p = 0</span><span><b>shear</b> — it slides <span style="color:var(--ink-faint)">(dual)</span></span></div>
-      <div class="row" data-k="1"><span class="cond">p &gt; 0</span><span><b>boost</b> — it squeezes <span style="color:var(--ink-faint)">(split)</span></span></div>
-    </div>
-
-    <div class="figcard">
-      <h3>The plane for a given p</h3>
-      <svg id="levels" viewBox="-3.3 -2.35 6.6 4.7" width="100%" aria-label="Level sets of the p-norm, morphing with p"></svg>
-      <div class="kind" id="kindline">level sets of |z| — <b>circles</b></div>
-      <div class="caption">the unit curve bold; the null set dashed.<br>watch them morph as <i>p</i> varies.</div>
-    </div>
-
-    <div class="folio">
-      <span class="no">II · The Choice</span>
-      <span><a href="../number-planes-line.html" style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--hair)">⟵ I · the line</a></span>
-    </div>
-  </section>
-
-  <!-- ═══ right page: the instruments ═══ -->
-  <section class="page right">
-    <div class="runhead">probe · one spread</div>
-
-    <!-- the instrument -->
-    <div class="card instrument">
-      <h3>p &nbsp;·&nbsp; the plane parameter</h3>
-      <div class="peq">p = <span class="val" id="pval">−0.75</span></div>
-      <input type="range" id="pslider" min="-2" max="2" step="0.05" value="-0.75"
-             aria-label="The plane parameter p">
+  <!-- the one dial that drives the whole page -->
+  <div class="dialstrip">
+    <span class="peq">p = <span class="val" id="pval">−0.75</span></span>
+    <div class="track">
+      <input type="range" id="pslider" min="-2" max="2" step="0.05" value="-0.75" aria-label="The plane parameter p">
       <div class="ticks"><span>−2</span><span>−1</span><span class="zero">0</span><span>1</span><span>2</span></div>
-      <div class="stickynote" id="sticky">the middle is sticky — the dial lingers at p = 0</div>
     </div>
+    <span class="hint">j² = p — one dial; the middle is sticky under your finger</span>
+  </div>
 
-    <!-- the revealed marginal note (hidden until the reader reaches p = 0) -->
-    <div class="note-wrap" id="notewrap">
-      <svg class="filament" id="filament" aria-hidden="true">
-        <defs>
-          <filter id="fglow" x="-50%" y="-400%" width="200%" height="900%">
-            <feGaussianBlur stdDeviation="2.2"/>
-          </filter>
-        </defs>
-        <path id="filpath" fill="none" stroke="var(--light)" stroke-width="2.6" opacity=".35" filter="url(#fglow)"/>
-        <path id="filpath2" fill="none" stroke="#bfe7ff" stroke-width="1"/>
-      </svg>
-      <div class="card note" id="note" aria-live="polite"></div>
+  <div class="main" id="main">
+
+    <!-- ── claim ── -->
+    <section class="slot" id="claim" style="grid-area:claim">
+      <header><h3>II · The Choice</h3></header>
+      <div class="body">
+        <h1>Number Planes</h1>
+        <div class="sub">geometry of j² = p</div>
+        <div class="bigeq">j<sup>2</sup> = p</div>
+        <p>Step to two coordinates. <b>Addition rides along unchanged.</b>
+          Multiplication collapses to a single number: what <i>j</i>² equals.</p>
+        <p>Call it <i>p</i>. Turn it, and only the sign matters.</p>
+        <p class="demands">Only two demands: <i>distribute over +</i>, and <i>keep a 1</i>.
+          On the line they force everything. Here they leave exactly one number loose.</p>
+      </div>
+    </section>
+
+    <!-- ── stage: the swappable big figure ── -->
+    <section class="slot" id="stage" style="grid-area:stage">
+      <header>
+        <h3>Stage</h3>
+        <div class="faces" role="tablist">
+          <button data-face="levels" class="on">Levels</button>
+          <button data-face="orbit">Orbit</button>
+          <button data-face="operator">Operator</button>
+        </div>
+      </header>
+      <div class="body">
+        <div class="face on" data-face="levels">
+          <svg id="levelsvg" viewBox="-3.3 -2.35 6.6 4.7" preserveAspectRatio="xMidYMid meet"
+               aria-label="Level sets of the p-norm, morphing with p"></svg>
+          <div class="stagefoot" id="kindline">level sets of |z| — <b>circles</b></div>
+        </div>
+        <div class="face" data-face="orbit">
+          <svg id="orbitsvg" viewBox="-3.1 -2.0 6.2 4.0" preserveAspectRatio="xMidYMid meet"
+               aria-label="The trajectory of z0 under e to the j tau"></svg>
+          <div class="stagefoot">z(τ) = e<sup>jτ</sup> · z₀ &nbsp;·&nbsp; <span id="zread">z = (1.000, 0.000)</span></div>
+          <div class="exbar">
+            <button id="play" aria-label="Play">▶</button>
+            <input type="range" id="tau" min="0" max="1" step="0.002" value="0.2" aria-label="tau">
+            <span class="tau">τ = <b id="tauval">…</b></span>
+          </div>
+        </div>
+        <div class="face" data-face="operator">
+          <svg id="opsvg" viewBox="-3.1 -2.0 6.2 4.0" preserveAspectRatio="xMidYMid meet"
+               aria-label="The grid carried by multiplication by w; rails are eigen-directions"></svg>
+          <div class="stagefoot" id="opfoot">×w carries the square grid to the tilted one — <b>rails dashed</b> where real</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── comparator: three worlds, compact ── -->
+    <section class="slot" id="compare" style="grid-area:compare">
+      <header><h3>The three worlds</h3></header>
+      <div class="body">
+        <div class="wrow" data-k="-1">
+          <svg viewBox="-1.3 -1.05 2.6 2.1"><circle cx="0" cy="0" r=".72" fill="none" stroke="var(--stroke)" stroke-width=".07"/><path d="M 0 -.72 l -.14 -.1 M 0 -.72 l -.12 .13" stroke="var(--stroke)" stroke-width=".06" fill="none"/></svg>
+          <span class="name">SPIN <i>p &lt; 0 · complex</i></span><span class="tag">rails 0</span>
+          <span class="desc">multiplying turns the plane — no held line; every nonzero number divides</span>
+        </div>
+        <div class="wrow" data-k="0">
+          <svg viewBox="-1.3 -1.05 2.6 2.1"><line x1="0" y1="-.9" x2="0" y2=".9" stroke="var(--stroke)" stroke-width=".08"/><g stroke="var(--stroke)" stroke-width=".06" fill="none"><path d="M .55 -.35 L .55 .35 M .55 .35 l -.09 -.13 M .55 .35 l .09 -.13"/><path d="M -.55 .35 L -.55 -.35 M -.55 -.35 l -.09 .13 M -.55 -.35 l .09 .13"/></g></svg>
+          <span class="name">SHEAR <i>p = 0 · dual</i></span><span class="tag">rails 1</span>
+          <span class="desc">multiplying slides along one held line — the slide carries the derivative</span>
+        </div>
+        <div class="wrow" data-k="1">
+          <svg viewBox="-1.3 -1.05 2.6 2.1"><line x1="-1" y1="-1" x2="1" y2="1" stroke="var(--stroke)" stroke-width=".045" stroke-dasharray=".1 .08"/><line x1="-1" y1="1" x2="1" y2="-1" stroke="var(--stroke)" stroke-width=".045" stroke-dasharray=".1 .08"/><path id="cmphyp" d="" fill="none" stroke="var(--stroke)" stroke-width=".07"/></svg>
+          <span class="name">BOOST <i>p &gt; 0 · split</i></span><span class="tag">rails 2</span>
+          <span class="desc">multiplying squeezes along a hyperbola — the strangers’ multiply in disguise</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── operator: ×w is a matrix ── -->
+    <section class="slot" id="operator" style="grid-area:operator">
+      <header><h3>×w is a linear operator</h3></header>
+      <div class="body">
+        <div class="wctl">
+          <label>a <input type="range" id="wa" min="-1.6" max="1.6" step="0.05" value="0.8" aria-label="Real part of w"></label>
+          <label>b <input type="range" id="wb" min="-1.6" max="1.6" step="0.05" value="0.6" aria-label="j part of w"></label>
+          <span class="wval" id="wval">w = 0.8 + 0.6 j</span>
+        </div>
+        <div class="matrix" aria-label="The matrix of multiplication by w">
+          <span id="m11">0.80</span><span class="pb" id="m12">−0.45</span>
+          <span id="m21">0.60</span><span id="m22">0.80</span>
+        </div>
+        <div class="eig" id="eig"></div>
+        <div class="whisper">the characteristic equation is <i>t² = p</i> in disguise
+          (λ = a ± b·√p) — rails are its real eigenvectors.</div>
+      </div>
+    </section>
+
+    <!-- ── margin: derivation + the revealed note ── -->
+    <section class="slot" id="margin" style="grid-area:margin">
+      <header>
+        <h3>Margin</h3>
+        <div class="faces">
+          <button data-face="deriv" class="on">Derivation</button>
+          <button data-face="note" class="notetab">note</button>
+        </div>
+      </header>
+      <div class="body">
+        <div class="face on deriv" data-face="deriv">
+          <p>Let z = x + jy, j² = p. Pair z with its conjugate z̄ = x − jy:
+            &nbsp;<b>z·z̄ = x² − p·y² ≡ N(z)</b>.<br>
+            N(zw) = N(z)·N(w) — the invariant every plane respects. Its level sets are the
+            stage’s geometry; its null set is where division dies.</p>
+        </div>
+        <div class="face note-body" data-face="note" aria-live="polite" id="notebody">
+          <div class="empty">the margin is waiting — something happens at p = 0</div>
+        </div>
+      </div>
       <template id="notetpl">
-        <h3>Note · revealed at p = 0</h3>
+        <button class="dismiss" id="dismissnote" aria-label="Hide the note">×</button>
+        <p><span class="lbl">Note · revealed at p = 0</span></p>
         <p><span class="lbl">Earlier thought:</span> the middle plane should carry a parabola —
           ellipse, <i>parabola</i>, hyperbola.</p>
         <p><span class="lbl">Correction:</span> a norm is centered, and the parabola is the conic
@@ -357,267 +344,280 @@ input[type=range]::-moz-range-thumb{
           central representative — the parallel line pair.</p>
         <p class="src">— from the record, 29 June; the cone view settled it.</p>
       </template>
-    </div>
+    </section>
 
-    <!-- the comparator -->
-    <div class="comparator" id="comparator">
-      <div class="panel" data-k="-1">
-        <h4>SPIN</h4><div class="cond">p &lt; 0</div>
-        <svg viewBox="-1.5 -1.25 3 2.5" width="100%" aria-label="Rotation orbits">
-          <line x1="-1.4" y1="0" x2="1.4" y2="0" stroke="#c9bfa8" stroke-width=".02"/>
-          <line x1="0" y1="-1.15" x2="0" y2="1.15" stroke="#c9bfa8" stroke-width=".02"/>
-          <circle cx="0" cy="0" r=".8" fill="none" stroke="var(--spin)" stroke-width=".045"/>
-          <path d="M 0 -.8 l -.1 -.08 M 0 -.8 l -.09 .1" stroke="var(--spin)" stroke-width=".04" fill="none"/>
-          <path d="M 0 .8 l .1 .08 M 0 .8 l .09 -.1" stroke="var(--spin)" stroke-width=".04" fill="none"/>
-          <circle cx="0" cy="0" r=".02" fill="var(--spin)"/>
-        </svg>
-        <ul>
-          <li>Multiplying turns the plane.</li>
-          <li>No direction holds its line — zero rails.</li>
-          <li>Every nonzero number divides.</li>
-        </ul>
-        <div class="jsq">j² negative — elliptic</div>
+    <!-- ── latent threads ── -->
+    <section class="slot" id="threads" style="grid-area:threads">
+      <header><h3>Latent threads</h3></header>
+      <div class="body">
+        <div class="thread lit"><span class="glyph">◯</span>the three worlds<span class="xing">a walk crosses here</span></div>
+        <div class="thread lit"><span class="glyph">∂</span>it was a cone<span class="xing">a walk crosses here</span></div>
+        <div class="thread"><span class="glyph">△</span>how many rails</div>
+        <div class="thread"><span class="glyph">◇</span>the circle of planes</div>
+        <div class="thread"><span class="glyph">✳</span>quadratics, t² = p</div>
+        <div class="thread"><span class="glyph">∅</span>the strangers’ multiply</div>
+        <div class="thread"><span class="glyph">∞</span>tropical — behind you</div>
       </div>
-      <div class="panel" data-k="0">
-        <h4>SHEAR</h4><div class="cond">p = 0</div>
-        <svg viewBox="-1.5 -1.25 3 2.5" width="100%" aria-label="Shear arrows along the held axis">
-          <line x1="-1.4" y1="0" x2="1.4" y2="0" stroke="#c9bfa8" stroke-width=".02"/>
-          <line x1="0" y1="-1.15" x2="0" y2="1.15" stroke="var(--shear)" stroke-width=".045"/>
-          <g stroke="var(--shear)" stroke-width=".04" fill="none">
-            <path d="M .5 -.3 L .5 .3 M .5 .3 l -.07 -.11 M .5 .3 l .07 -.11"/>
-            <path d="M 1 -.6 L 1 .6 M 1 .6 l -.07 -.11 M 1 .6 l .07 -.11"/>
-            <path d="M -.5 .3 L -.5 -.3 M -.5 -.3 l -.07 .11 M -.5 -.3 l .07 .11"/>
-            <path d="M -1 .6 L -1 -.6 M -1 -.6 l -.07 .11 M -1 -.6 l .07 .11"/>
-          </g>
-        </svg>
-        <ul>
-          <li>Multiplying slides — one held line.</li>
-          <li>One rail, repeated.</li>
-          <li>The slide carries the derivative.</li>
-        </ul>
-        <div class="jsq">j² = 0 — parabolic, degenerate</div>
-      </div>
-      <div class="panel" data-k="1">
-        <h4>BOOST</h4><div class="cond">p &gt; 0</div>
-        <svg viewBox="-1.5 -1.25 3 2.5" width="100%" aria-label="Hyperbolic squeeze along two rails">
-          <line x1="-1.4" y1="0" x2="1.4" y2="0" stroke="#c9bfa8" stroke-width=".02"/>
-          <line x1="0" y1="-1.15" x2="0" y2="1.15" stroke="#c9bfa8" stroke-width=".02"/>
-          <line x1="-1.2" y1="-1.2" x2="1.2" y2="1.2" stroke="var(--boost)" stroke-width=".022" stroke-dasharray=".07 .05"/>
-          <line x1="-1.2" y1="1.2" x2="1.2" y2="-1.2" stroke="var(--boost)" stroke-width=".022" stroke-dasharray=".07 .05"/>
-          <g fill="none" stroke="var(--boost)" stroke-width=".045">
-            <path id="hypR" d=""/><path id="hypL" d=""/>
-          </g>
-          <g stroke="var(--boost)" stroke-width=".04" fill="none">
-            <path d="M .86 .55 l -.02 -.14 M .86 .55 l -.13 -.03"/>
-            <path d="M -.86 -.55 l .02 .14 M -.86 -.55 l .13 .03"/>
-          </g>
-        </svg>
-        <ul>
-          <li>Multiplying squeezes along a hyperbola.</li>
-          <li>Two rails hold their lines.</li>
-          <li>The strangers’ multiply, in disguise.</li>
-        </ul>
-        <div class="jsq">j² positive — hyperbolic</div>
-      </div>
-    </div>
+    </section>
+  </div>
 
-    <!-- the explorer -->
-    <div class="card explorer">
-      <h3>Trajectory explorer</h3>
-      <div class="exgrid">
-        <div class="eqs">
-          z(τ) = e<sup>jτ</sup> · z₀<br>
-          z₀ = 1 + 0j<br>
-          <span class="dim" id="zread">z = (1.000, 0.000)</span>
-        </div>
-        <svg id="orbit" viewBox="-3.1 -2.0 6.2 4.0" width="100%" aria-label="The trajectory of 1 under e to the j tau"></svg>
-      </div>
-      <div class="exbar">
-        <button id="play" aria-label="Play">▶</button>
-        <input type="range" id="tau" min="0" max="1" step="0.002" value="0.2" aria-label="tau">
-        <div class="tau">τ = <b id="tauval">1.257</b></div>
-      </div>
-    </div>
+  <div class="footbar">
+    <span>II · the choice</span>
+    <span class="walk">the forcing walk · stop II</span>
+    <div class="dots" id="dots"></div>
+    <a href="../#/number-plane">the full instrument ↗</a>
+  </div>
 
-    <!-- the alternate derivation: kneeling depth -->
-    <div class="card derivation">
-      <h3>Alternate derivation</h3>
-      <p class="m">Let z = x + jy, with j² = p. Pair it with its conjugate z̄ = x − jy:
-        &nbsp;z·z̄ = x² − p·y² &nbsp;≡&nbsp; N(z).<br>
-        N(zw) = N(z)·N(w) — the invariant every plane respects.
-        Its level sets are the geometry above; its null set is where division dies.</p>
-    </div>
-
-    <div class="fullinstr"><a href="../#/number-plane">the full instrument — three planes side by side ↗</a></div>
-
-    <div class="crumbs">
-      <span class="walk">the forcing walk · stop II</span>
-      <span><a href="../number-planes-line.html">the line</a> › <span class="here">the choice</span> › <span class="next">the three worlds</span></span>
-    </div>
-  </section>
+  <svg id="filaments" aria-hidden="true">
+    <defs><filter id="fglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.4"/></filter></defs>
+    <path id="filpath" fill="none" stroke="var(--light)" stroke-width="2.6" opacity=".3" filter="url(#fglow)"/>
+    <path id="filpath2" fill="none" stroke="var(--light)" stroke-width="1" opacity=".8"/>
+  </svg>
 </div>
 
 <script>
 /* ————— arithmetic of j² = p (ported from src/animations/Argand/numberPlanes.ts) ————— */
-const mul = (p,a,b)=>[a[0]*b[0]+p*a[1]*b[1], a[0]*b[1]+a[1]*b[0]];
-function expj(p,t){                      // e^{jt} in the plane j² = p
-  if (p < -1e-9){ const w=Math.sqrt(-p); return [Math.cos(w*t), Math.sin(w*t)/w]; }
-  if (p >  1e-9){ const w=Math.sqrt(p);  return [Math.cosh(w*t), Math.sinh(w*t)/w]; }
+const mul=(p,a,b)=>[a[0]*b[0]+p*a[1]*b[1], a[0]*b[1]+a[1]*b[0]];
+function expj(p,t){
+  if(p<-1e-9){const w=Math.sqrt(-p); return [Math.cos(w*t),Math.sin(w*t)/w];}
+  if(p> 1e-9){const w=Math.sqrt(p);  return [Math.cosh(w*t),Math.sinh(w*t)/w];}
   return [1,t];
 }
-const kindOf = p => p<-1e-9 ? -1 : p>1e-9 ? 1 : 0;
+const kindOf=p=> p<-1e-9?-1 : p>1e-9?1 : 0;
 
-/* ————— svg helpers (math coords; y flipped on emit) ————— */
-const P = (x,y)=>`${x.toFixed(3)},${(-y).toFixed(3)}`;
-function poly(pts){ return 'M'+pts.map(q=>P(q[0],q[1])).join(' L'); }
-function el(n,attrs){ const e=document.createElementNS('http://www.w3.org/2000/svg',n);
-  for(const k in attrs) e.setAttribute(k,attrs[k]); return e; }
-
-/* ————— the level-set figure ————— */
-const LV = document.getElementById('levels');
-const RS = [0.5,1,1.5,2];
+/* ————— svg helpers ————— */
+const NS='http://www.w3.org/2000/svg';
+const P=(x,y)=>`${x.toFixed(3)},${(-y).toFixed(3)}`;
+const poly=pts=>'M'+pts.map(q=>P(q[0],q[1])).join(' L');
+function el(n,attrs){const e=document.createElementNS(NS,n);
+  for(const k in attrs)e.setAttribute(k,attrs[k]); return e;}
 function axes(svg,xm,ym){
-  svg.appendChild(el('line',{x1:-xm,y1:0,x2:xm,y2:0,stroke:'#c9bfa8','stroke-width':.016}));
-  svg.appendChild(el('line',{x1:0,y1:-ym,x2:0,y2:ym,stroke:'#c9bfa8','stroke-width':.016}));
+  svg.appendChild(el('line',{x1:-xm,y1:0,x2:xm,y2:0,stroke:'var(--hair)','stroke-width':.018}));
+  svg.appendChild(el('line',{x1:0,y1:-ym,x2:0,y2:ym,stroke:'var(--hair)','stroke-width':.018}));
   for(const t of [-2,-1,1,2]){
-    svg.appendChild(el('line',{x1:t,y1:-.05,x2:t,y2:.05,stroke:'#c9bfa8','stroke-width':.016}));
-    const tx=el('text',{x:t-.08,y:.28,'font-size':.19,fill:'#94a0b4','font-style':'italic'});
+    svg.appendChild(el('line',{x1:t,y1:-.05,x2:t,y2:.05,stroke:'var(--hair)','stroke-width':.018}));
+    const tx=el('text',{x:t-.08,y:.3,'font-size':.2,fill:'var(--ink-faint)','font-style':'italic'});
     tx.textContent=t; svg.appendChild(tx);
   }
 }
+
+/* ————— stage face: levels ————— */
+const LV=document.getElementById('levelsvg'), RS=[0.5,1,1.5,2];
 function drawLevels(p){
   LV.innerHTML=''; axes(LV,3.2,2.25);
   const k=kindOf(p);
-  const col=r=> r===1 ? '#2f6fb4' : '#7f97b9';
-  const w =r=> r===1 ? .05 : .028;
-  if (k===-1){                             // ellipses x² + |p|y² = r²
+  const col=r=> r===1?'var(--accent2)':'var(--stroke-soft)';
+  const w=r=> r===1?.05:.028;
+  if(k===-1){
     const q=Math.sqrt(-p);
-    for(const r of RS)
-      LV.appendChild(el('ellipse',{cx:0,cy:0,rx:r,ry:Math.min(r/q,60),fill:'none',
-        stroke:col(r),'stroke-width':w(r)}));
-    LV.appendChild(el('circle',{cx:0,cy:0,r:.028,fill:'#5b6a84'}));   // null set: the origin
-  } else if (k===0){                       // line pairs x = ±r
+    for(const r of RS) LV.appendChild(el('ellipse',{cx:0,cy:0,rx:r,ry:Math.min(r/q,60),
+      fill:'none',stroke:col(r),'stroke-width':w(r)}));
+    LV.appendChild(el('circle',{cx:0,cy:0,r:.028,fill:'var(--ink-soft)'}));
+  } else if(k===0){
     for(const r of RS) for(const s of [1,-1])
       LV.appendChild(el('line',{x1:s*r,y1:-2.15,x2:s*r,y2:2.15,stroke:col(r),'stroke-width':w(r)}));
-    LV.appendChild(el('line',{x1:0,y1:-2.15,x2:0,y2:2.15,stroke:'#5b6a84','stroke-width':.024,
-      'stroke-dasharray':'.14 .1'}));
-  } else {                                 // hyperbolas x² − p y² = ±r²
-    const q=Math.sqrt(p), S=Math.asinh(2.6/1);
+    LV.appendChild(el('line',{x1:0,y1:-2.15,x2:0,y2:2.15,stroke:'var(--ink-soft)',
+      'stroke-width':.024,'stroke-dasharray':'.14 .1'}));
+  } else {
+    const q=Math.sqrt(p), S=Math.asinh(2.6);
     for(const r of RS){
-      for(const s of [1,-1]){              // x-opening family
-        const pts=[]; for(let i=0;i<=40;i++){ const t=-S+2*S*i/40;
-          pts.push([s*r*Math.cosh(t), (r/q)*Math.sinh(t)]); }
+      for(const s of [1,-1]){
+        const pts=[]; for(let i=0;i<=40;i++){const t=-S+2*S*i/40;
+          pts.push([s*r*Math.cosh(t),(r/q)*Math.sinh(t)]);}
         LV.appendChild(el('path',{d:poly(pts),fill:'none',stroke:col(r),'stroke-width':w(r)}));
       }
-      for(const s of [1,-1]){              // y-opening family (fainter)
-        const pts=[]; for(let i=0;i<=40;i++){ const t=-S+2*S*i/40;
-          pts.push([r*Math.sinh(t), s*(r/q)*Math.cosh(t)]); }
-        LV.appendChild(el('path',{d:poly(pts),fill:'none',stroke:'#b9a9d6','stroke-width':.022}));
+      for(const s of [1,-1]){
+        const pts=[]; for(let i=0;i<=40;i++){const t=-S+2*S*i/40;
+          pts.push([r*Math.sinh(t),s*(r/q)*Math.cosh(t)]);}
+        LV.appendChild(el('path',{d:poly(pts),fill:'none',stroke:'var(--stroke-soft)','stroke-width':.02,opacity:.6}));
       }
     }
-    for(const s of [1,-1]){                // null rails, dashed
-      LV.appendChild(el('line',{x1:-3.1,y1:-3.1*s/q,x2:3.1,y2:3.1*s/q,stroke:'#5b6a84',
-        'stroke-width':.024,'stroke-dasharray':'.14 .1'}));
-    }
+    for(const s of [1,-1]) LV.appendChild(el('line',{x1:-3.1,y1:-3.1*s/q,x2:3.1,y2:3.1*s/q,
+      stroke:'var(--ink-soft)','stroke-width':.024,'stroke-dasharray':'.14 .1'}));
   }
-  document.getElementById('kindline').innerHTML =
+  document.getElementById('kindline').innerHTML=
     'level sets of |z| — <b>'+(k===-1?(p===-1?'circles':'ellipses'):k===0?'line pairs':'hyperbolas')+'</b>'
-    + (k===0 ? ' <span style="color:var(--ink-faint)">(no parabola — see the note)</span>' : '');
+    +(k===0?' <span style="color:var(--ink-faint)">(no parabola — see the margin)</span>':'');
 }
 
-/* ————— the boost panel’s static hyperbola ————— */
-(function(){
-  const S=.95, seg=(sx)=>{ const pts=[]; for(let i=0;i<=24;i++){ const t=-S+2*S*i/24;
-    pts.push([sx*.55*Math.cosh(t),.55*Math.sinh(t)]);} return poly(pts); };
-  document.getElementById('hypR').setAttribute('d',seg(1));
-  document.getElementById('hypL').setAttribute('d',seg(-1));
-})();
+/* comparator's static hyperbola glyph */
+(function(){const S=.9,pts=[];for(let i=0;i<=24;i++){const t=-S+2*S*i/24;
+  pts.push([.5*Math.cosh(t),.5*Math.sinh(t)]);}
+  document.getElementById('cmphyp').setAttribute('d',
+    poly(pts)+' '+poly(pts.map(q=>[-q[0],q[1]])).replace('M','M'));})();
 
-/* ————— the trajectory explorer ————— */
-const OR = document.getElementById('orbit');
-let ptau = 0.2, playing=false;
-function orbitT(p){ const k=kindOf(p);
-  return k===-1 ? 2*Math.PI/Math.sqrt(-p) : k===0 ? 4.4 : 3.6/Math.sqrt(p); }
+/* ————— stage face: orbit ————— */
+const OR=document.getElementById('orbitsvg');
+let ptau=0.2, playing=false;
+const orbitT=p=>{const k=kindOf(p);
+  return k===-1?2*Math.PI/Math.sqrt(-p) : k===0?4.4 : 3.6/Math.sqrt(p);};
 function drawOrbit(p){
   OR.innerHTML=''; axes(OR,3.0,1.9);
-  const T=orbitT(p), k=kindOf(p);
-  const pts=[]; const t0 = k===-1 ? 0 : -T/2, t1 = k===-1 ? T : T/2;
-  for(let i=0;i<=160;i++){ const t=t0+(t1-t0)*i/160; pts.push(expj(p,t)); }
-  OR.appendChild(el('path',{d:poly(pts),fill:'none',stroke:'#2f6fb4','stroke-width':.035,
-    opacity:.85}));
-  if (k===1){ const q=Math.sqrt(p);
+  const T=orbitT(p),k=kindOf(p);
+  const t0=k===-1?0:-T/2, t1=k===-1?T:T/2;
+  const pts=[]; for(let i=0;i<=160;i++){const t=t0+(t1-t0)*i/160; pts.push(expj(p,t));}
+  OR.appendChild(el('path',{d:poly(pts),fill:'none',stroke:'var(--accent2)','stroke-width':.035,opacity:.9}));
+  if(k===1){const q=Math.sqrt(p);
     for(const s of [1,-1]) OR.appendChild(el('line',{x1:-3,y1:-3*s/q,x2:3,y2:3*s/q,
-      stroke:'#5b6a84','stroke-width':.02,'stroke-dasharray':'.12 .09'})); }
-  const z0=el('circle',{cx:1,cy:0,r:.05,fill:'none',stroke:'#5b6a84','stroke-width':.02});
-  OR.appendChild(z0);
-  const tz=el('text',{x:1.1,y:.3,'font-size':.22,fill:'#5b6a84','font-style':'italic'});
+      stroke:'var(--ink-soft)','stroke-width':.02,'stroke-dasharray':'.12 .09'}));}
+  OR.appendChild(el('circle',{cx:1,cy:0,r:.05,fill:'none',stroke:'var(--ink-soft)','stroke-width':.02}));
+  const tz=el('text',{x:1.1,y:.3,'font-size':.22,fill:'var(--ink-soft)','font-style':'italic'});
   tz.textContent='z₀'; OR.appendChild(tz);
-  const tau = (k===-1 ? ptau*T : t0 + ptau*(t1-t0));
-  const z=expj(p,tau);
-  const dot=el('circle',{cx:z[0],cy:-z[1],r:.075,fill:'#3fb3ff'});
-  dot.setAttribute('style','filter:drop-shadow(0 0 3px rgba(63,179,255,.8))');
+  const tau=t0+ptau*(t1-t0), z=expj(p,tau);
+  const dot=el('circle',{cx:z[0],cy:-z[1],r:.075,fill:'var(--light)'});
+  dot.setAttribute('style','filter:drop-shadow(0 0 3px var(--glow))');
   OR.appendChild(dot);
   document.getElementById('tauval').textContent=tau.toFixed(3);
   document.getElementById('zread').textContent='z = ('+z[0].toFixed(3)+', '+z[1].toFixed(3)+')';
 }
 
-/* ————— state: one dial drives the spread ————— */
+/* ————— stage face: operator (×w as a matrix on the grid) ————— */
+const OP=document.getElementById('opsvg');
+let wa=0.8, wb=0.6;
+function drawOperator(p){
+  OP.innerHTML=''; axes(OP,3.0,1.9);
+  const M=(x,y)=>[wa*x+p*wb*y, wb*x+wa*y];
+  // base grid faint, image grid stroked (linear ⇒ endpoints suffice)
+  for(let g=-2;g<=2;g++){
+    OP.appendChild(el('path',{d:poly([[g,-2],[g,2]]),stroke:'var(--hair)','stroke-width':.014,fill:'none'}));
+    OP.appendChild(el('path',{d:poly([[-2,g],[2,g]]),stroke:'var(--hair)','stroke-width':.014,fill:'none'}));
+    OP.appendChild(el('path',{d:poly([M(g,-2),M(g,2)]),stroke:'var(--stroke-soft)','stroke-width':.022,fill:'none'}));
+    OP.appendChild(el('path',{d:poly([M(-2,g),M(2,g)]),stroke:'var(--stroke-soft)','stroke-width':.022,fill:'none'}));
+  }
+  // the unit square and its image
+  OP.appendChild(el('path',{d:poly([[0,0],[1,0],[1,1],[0,1],[0,0]]),stroke:'var(--ink-soft)','stroke-width':.03,fill:'none'}));
+  OP.appendChild(el('path',{d:poly([[0,0],M(1,0),M(1,1),M(0,1),[0,0]]),stroke:'var(--accent2)','stroke-width':.045,fill:'none'}));
+  // rails = real eigen-directions
+  const k=kindOf(p);
+  if(k===1){const q=Math.sqrt(p);
+    for(const s of [1,-1]) OP.appendChild(el('line',{x1:-3,y1:-3*s/q,x2:3,y2:3*s/q,
+      stroke:'var(--light)','stroke-width':.028,'stroke-dasharray':'.14 .1'}));}
+  if(k===0) OP.appendChild(el('line',{x1:0,y1:-1.9,x2:0,y2:1.9,
+    stroke:'var(--light)','stroke-width':.028,'stroke-dasharray':'.14 .1'}));
+  // w itself
+  const wpt=el('circle',{cx:wa,cy:-wb,r:.07,fill:'var(--light)'});
+  wpt.setAttribute('style','filter:drop-shadow(0 0 3px var(--glow))');
+  OP.appendChild(wpt);
+  const tw=el('text',{x:wa+.1,y:-wb-.12,'font-size':.22,fill:'var(--light)','font-style':'italic'});
+  tw.textContent='w'; OP.appendChild(tw);
+  document.getElementById('opfoot').innerHTML = k===-1
+    ? '×w carries the grid — <b>no real rail</b>: every line turns'
+    : k===0 ? '×w carries the grid — <b>one rail</b> (dashed): the ε-axis holds'
+    : '×w carries the grid — <b>two rails</b> (dashed) hold their lines';
+}
+function updateOperatorPanel(p){
+  const k=kindOf(p);
+  const f=n=>(n<0?'−':'')+Math.abs(n).toFixed(2);
+  document.getElementById('wval').textContent='w = '+f(wa)+' + '+f(wb)+' j';
+  document.getElementById('m11').textContent=f(wa);
+  document.getElementById('m22').textContent=f(wa);
+  document.getElementById('m21').textContent=f(wb);
+  document.getElementById('m12').textContent=f(p*wb);
+  const e=document.getElementById('eig');
+  if(k===-1){const q=Math.sqrt(-p);
+    e.innerHTML='eigenvalues <span class="lam">λ = '+f(wa)+' ± '+f(wb*q)+'·i</span><br><b>not real</b> — zero rails: the plane must turn';}
+  else if(k===0){
+    e.innerHTML='eigenvalues <span class="lam">λ = '+f(wa)+', '+f(wa)+'</span><br><b>one repeated</b> — one rail: a shear';}
+  else{const q=Math.sqrt(p);
+    e.innerHTML='eigenvalues <span class="lam">λ₊ = '+f(wa+wb*q)+' · λ₋ = '+f(wa-wb*q)+'</span><br><b>two real</b> — two rails, two stretch factors';}
+}
+
+/* ————— faces: compartments swap their contents ————— */
+function setFace(slot,face){
+  slot.querySelectorAll('.faces button').forEach(b=>b.classList.toggle('on',b.dataset.face===face));
+  slot.querySelectorAll('.face').forEach(f=>f.classList.toggle('on',f.dataset.face===face));
+}
+document.querySelectorAll('.slot .faces button').forEach(b=>
+  b.addEventListener('click',()=>setFace(b.closest('.slot'),b.dataset.face)));
+
+/* ————— the revealed marginal note: appears, dismisses, reopens ————— */
+const marginSlot=document.getElementById('margin');
+let discovered=false;
+function openNote(){
+  const body=document.getElementById('notebody');
+  if(!body.querySelector('.src')){
+    body.innerHTML='';
+    body.appendChild(document.getElementById('notetpl').content.cloneNode(true));
+    body.querySelector('#dismissnote').addEventListener('click',closeNote);
+  }
+  const tab=marginSlot.querySelector('.notetab');
+  tab.classList.add('found');
+  setFace(marginSlot,'note');
+  marginSlot.classList.add('lit');
+  drawFilament(); document.getElementById('filaments').classList.add('on');
+}
+function closeNote(){
+  setFace(marginSlot,'deriv');
+  marginSlot.classList.remove('lit');
+  document.getElementById('filaments').classList.remove('on');
+}
+function drawFilament(){
+  const svg=document.getElementById('filaments');
+  const nb=document.querySelector('.nb').getBoundingClientRect();
+  const th=slider.getBoundingClientRect();
+  const mg=marginSlot.getBoundingClientRect();
+  const f=(parseFloat(slider.value)+2)/4;
+  const x1=th.left+8+f*(th.width-16)-nb.left, y1=th.top+th.height/2-nb.top+8;
+  const x2=mg.left+mg.width/2-nb.left,        y2=mg.top-nb.top+2;
+  svg.setAttribute('viewBox','0 0 '+nb.width+' '+nb.height);
+  const d='M '+x1+' '+y1+' C '+x1+' '+(y1+70)+', '+x2+' '+(y2-90)+', '+x2+' '+y2;
+  document.getElementById('filpath').setAttribute('d',d);
+  document.getElementById('filpath2').setAttribute('d',d);
+}
+
+/* ————— state: one dial drives the page ————— */
 const slider=document.getElementById('pslider');
-let revealed=false;
-/* the sticky middle magnets only under the pointer — keyboard arrows step
-   freely (a 0.08 window would trap the 0.05 arrow step at zero) */
+/* the sticky middle magnets only under the pointer — keyboard arrows step freely */
 let pointerHeld=false;
 slider.addEventListener('pointerdown',()=>{pointerHeld=true;});
 addEventListener('pointerup',()=>{pointerHeld=false;});
 addEventListener('pointercancel',()=>{pointerHeld=false;});
-function drawFilament(){
-  const wrap=document.getElementById('notewrap');
-  const svg=document.getElementById('filament');
-  const r=wrap.getBoundingClientRect();
-  const th=slider.getBoundingClientRect();
-  // thumb x for current value, relative to the wrap
-  const f=(parseFloat(slider.value)+2)/4;
-  const x1=th.left + 9 + f*(th.width-18) - r.left;
-  const H=26; svg.setAttribute('viewBox','0 -'+H+' '+r.width+' '+(H+2));
-  svg.style.top=(-H)+'px'; svg.style.height=(H+2)+'px';
-  const d='M '+x1+' '+(-H)+' C '+x1+' '+(-H/3)+', '+(r.width/2)+' '+(-H*0.8)+', '+(r.width/2)+' 0';
-  document.getElementById('filpath').setAttribute('d',d);
-  document.getElementById('filpath2').setAttribute('d',d);
-}
 function update(){
   let v=parseFloat(slider.value);
-  if (pointerHeld && Math.abs(v)<0.08 && v!==0){ v=0; slider.value='0'; }   // the sticky middle
+  if(pointerHeld && Math.abs(v)<0.08 && v!==0){v=0; slider.value='0';}
   const k=kindOf(v);
   document.getElementById('pval').textContent=(v<0?'−':'')+Math.abs(v).toFixed(2);
-  document.querySelectorAll('#comparator .panel').forEach(pn=>
-    pn.classList.toggle('now', parseInt(pn.dataset.k)===k));
-  document.querySelectorAll('#trich .row').forEach(rw=>
-    rw.classList.toggle('now', parseInt(rw.dataset.k)===k));
-  drawLevels(v); drawOrbit(v);
-  if (k===0 && !revealed){
-    revealed=true;
-    // populate the live region only now, so assistive tech meets the note
-    // at the same moment sighted readers do
-    document.getElementById('note')
-      .appendChild(document.getElementById('notetpl').content.cloneNode(true));
-    document.getElementById('notewrap').classList.add('revealed');
-    requestAnimationFrame(drawFilament);
-  } else if (revealed){ drawFilament(); }
+  document.querySelectorAll('#compare .wrow').forEach(r=>
+    r.classList.toggle('now',parseInt(r.dataset.k)===k));
+  drawLevels(v); drawOrbit(v); drawOperator(v); updateOperatorPanel(v);
+  if(k===0 && !discovered){discovered=true; openNote(); pulseDot();}
+  else if(discovered && marginSlot.classList.contains('lit')) drawFilament();
 }
 slider.addEventListener('input',update);
-addEventListener('resize',()=>{ if(revealed) drawFilament(); });
+addEventListener('resize',()=>{ if(marginSlot.classList.contains('lit')) drawFilament(); });
 
-/* explorer controls */
+/* touching w swaps the stage to its operator face — a control growing complex on demand */
+for(const id of ['wa','wb']) document.getElementById(id).addEventListener('input',e=>{
+  if(e.target.id==='wa') wa=parseFloat(e.target.value); else wb=parseFloat(e.target.value);
+  setFace(document.getElementById('stage'),'operator');
+  drawOperator(parseFloat(slider.value)); updateOperatorPanel(parseFloat(slider.value));
+});
+
+/* orbit controls */
 document.getElementById('tau').addEventListener('input',e=>{
   ptau=parseFloat(e.target.value); drawOrbit(parseFloat(slider.value));});
-const playBtn=document.getElementById('play');
-let raf=null,last=0;
+const playBtn=document.getElementById('play'); let raf=null,last=0;
 function step(ts){ if(!playing) return;
-  if(last) { ptau=(ptau+(ts-last)/9000)%1; document.getElementById('tau').value=ptau; }
-  last=ts; drawOrbit(parseFloat(slider.value)); raf=requestAnimationFrame(step); }
+  if(last){ptau=(ptau+(ts-last)/9000)%1; document.getElementById('tau').value=ptau;}
+  last=ts; drawOrbit(parseFloat(slider.value)); raf=requestAnimationFrame(step);}
 playBtn.addEventListener('click',()=>{
   playing=!playing; playBtn.textContent=playing?'❚❚':'▶'; last=0;
-  if(playing) raf=requestAnimationFrame(step); else cancelAnimationFrame(raf); });
+  if(playing) raf=requestAnimationFrame(step); else cancelAnimationFrame(raf);});
+
+/* ————— phone pager dots ————— */
+const main=document.getElementById('main'), dots=document.getElementById('dots');
+const slots=[...main.querySelectorAll('.slot')];
+slots.forEach((s,i)=>{const d=document.createElement('i');
+  d.addEventListener('click',()=>s.scrollIntoView({behavior:'smooth',inline:'center'}));
+  dots.appendChild(d);});
+function syncDots(){
+  const x=main.scrollLeft, w=main.clientWidth, i=Math.round(x/(w+12));
+  [...dots.children].forEach((d,j)=>d.classList.toggle('on',j===i));
+}
+main.addEventListener('scroll',syncDots,{passive:true}); syncDots();
+function pulseDot(){const i=slots.indexOf(marginSlot);
+  if(dots.children[i]) dots.children[i].classList.add('pulse');}
 
 update();
 </script>
