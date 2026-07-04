@@ -156,6 +156,19 @@ input[type=range]::-moz-range-thumb{width:16px; height:16px; border-radius:50%; 
 #margin .dismiss:hover{color:var(--light)}
 #margin .empty{font-size:11px; font-style:italic; color:var(--ink-faint); margin:auto; text-align:center}
 
+/* the phone note-sheet: the reveal happens on WHATEVER screen you're on */
+.sheet{display:none; position:absolute; left:12px; right:12px; bottom:44px; z-index:6;
+  background:var(--card); border:1px solid var(--light); border-radius:14px;
+  padding:14px 16px 11px;
+  box-shadow:0 0 0 1px var(--glow-soft), 0 -10px 40px rgba(0,0,0,.35), 0 0 30px var(--glow-soft)}
+.sheet p{font-size:12.5px; font-style:italic; line-height:1.55; margin:0 0 7px; color:var(--ink)}
+.sheet .lbl{font-style:normal; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft)}
+.sheet .src{font-size:10px; font-style:italic; color:var(--ink-faint); margin-bottom:0}
+.sheet .dismiss{position:absolute; top:4px; right:6px; font:inherit; font-size:14px;
+  border:0; background:none; color:var(--ink-faint); cursor:pointer; padding:4px 6px}
+.sheet .dismiss:hover{color:var(--light)}
+@keyframes rise{from{transform:translateY(16px); opacity:0} to{transform:none; opacity:1}}
+
 /* threads */
 #threads .body{display:flex; flex-direction:column; justify-content:space-evenly}
 .thread{display:flex; align-items:center; gap:8px; font-size:11px; font-style:italic;
@@ -202,6 +215,7 @@ svg text{font-family:inherit}
   .slot{flex:1 1 0; min-height:0}
   #claim{flex:1.15} #stage{flex:1.9} #margin{flex:1.05}
   #operator .body{align-content:flex-start; gap:8px 14px}
+  .sheet.on{display:block; animation:rise .5s cubic-bezier(.2,.7,.2,1)}
   #claim .body{justify-content:center}
   #claim .demands{margin-top:12px}
   .footbar .dots{display:flex}
@@ -344,7 +358,7 @@ svg text{font-family:inherit}
         </div>
       </div>
       <template id="notetpl">
-        <button class="dismiss" id="dismissnote" aria-label="Hide the note">×</button>
+        <button class="dismiss" aria-label="Hide the note">×</button>
         <p><span class="lbl">Note · revealed at p = 0</span></p>
         <p><span class="lbl">Earlier thought:</span> the middle plane should carry a parabola —
           ellipse, <i>parabola</i>, hyperbola.</p>
@@ -370,6 +384,8 @@ svg text{font-family:inherit}
     </section>
    </div>
   </div>
+
+  <div class="sheet" id="notesheet" role="dialog" aria-label="Margin note"></div>
 
   <div class="footbar">
     <span>II · the choice</span>
@@ -543,30 +559,46 @@ document.querySelectorAll('.slot .faces button').forEach(b=>
 
 /* ————— the revealed marginal note: appears, dismisses, reopens ————— */
 const marginSlot=document.getElementById('margin');
+const sheet=document.getElementById('notesheet');
+const isPhone=()=>matchMedia('(max-width:900px)').matches;
 let discovered=false;
 function openNote(){
   const body=document.getElementById('notebody');
   if(!body.querySelector('.src')){
     body.innerHTML='';
     body.appendChild(document.getElementById('notetpl').content.cloneNode(true));
-    body.querySelector('#dismissnote').addEventListener('click',closeNote);
+    body.querySelector('.dismiss').addEventListener('click',closeNote);
   }
   const tab=marginSlot.querySelector('.notetab');
   tab.classList.add('found');
   setFace(marginSlot,'note');
   marginSlot.classList.add('lit');
-  drawFilament(); document.getElementById('filaments').classList.add('on');
+  if(isPhone()){
+    if(!sheet.querySelector('.src')){
+      sheet.appendChild(document.getElementById('notetpl').content.cloneNode(true));
+      sheet.querySelector('.dismiss').addEventListener('click',closeSheet);
+    }
+    sheet.classList.add('on');
+    requestAnimationFrame(()=>drawFilament(sheet));
+  } else {
+    drawFilament(marginSlot);
+  }
+  document.getElementById('filaments').classList.add('on');
 }
 function closeNote(){
   setFace(marginSlot,'deriv');
   marginSlot.classList.remove('lit');
   document.getElementById('filaments').classList.remove('on');
 }
-function drawFilament(){
+function closeSheet(){
+  sheet.classList.remove('on');
+  document.getElementById('filaments').classList.remove('on');
+}
+function drawFilament(target){
   const svg=document.getElementById('filaments');
   const nb=document.querySelector('.nb').getBoundingClientRect();
   const th=slider.getBoundingClientRect();
-  const mg=marginSlot.getBoundingClientRect();
+  const mg=(target||marginSlot).getBoundingClientRect();
   const f=(parseFloat(slider.value)+2)/4;
   const x1=th.left+8+f*(th.width-16)-nb.left, y1=th.top+th.height/2-nb.top+8;
   const x2=mg.left+mg.width/2-nb.left,        y2=mg.top-nb.top+2;
@@ -592,10 +624,14 @@ function update(){
     r.classList.toggle('now',parseInt(r.dataset.k)===k));
   drawLevels(v); drawOrbit(v); drawOperator(v); updateOperatorPanel(v);
   if(k===0 && !discovered){discovered=true; openNote(); pulseDot();}
-  else if(discovered && marginSlot.classList.contains('lit')) drawFilament();
+  else if(discovered && sheet.classList.contains('on')) drawFilament(sheet);
+  else if(discovered && marginSlot.classList.contains('lit')) drawFilament(marginSlot);
 }
 slider.addEventListener('input',update);
-addEventListener('resize',()=>{ if(marginSlot.classList.contains('lit')) drawFilament(); });
+addEventListener('resize',()=>{
+  if(sheet.classList.contains('on')) drawFilament(sheet);
+  else if(marginSlot.classList.contains('lit')) drawFilament(marginSlot);
+});
 
 /* touching w swaps the stage to its operator face — a control growing complex on demand */
 for(const id of ['wa','wb']) document.getElementById(id).addEventListener('input',e=>{
