@@ -1,55 +1,5 @@
 import * as THREE from 'three';
 
-/** `#rrggbb` → `rgba(r,g,b,a)`. */
-function rgba(hex: string, a: number): string {
-  const n = parseInt(hex.slice(1), 16);
-  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
-}
-
-/**
- * A **painted face** for the Rooms decor: a bold colored border + grid and one
- * **chiral up-arrow** motif (a flag jutting off one side, so it is asymmetric
- * under both rotation and reflection). Each glued face-pair shares a color (X red
- * · Y green · Z blue, the corner-marker convention), so the room reads as an
- * oriented box: you always know which way you face, you recognize the wall you
- * came through, and you watch it return rotated or mirrored after a loop.
- *
- * Every drawn pixel is **fully opaque**; everything else is **fully transparent**.
- * The material renders this with alpha *testing* (a hard cutout), not alpha
- * blending — so the faces draw in the opaque pass, depth-tested like the rest of
- * the scene, and never flicker the way tiled semi-transparent panes would. The
- * "see-through" is the genuinely open area between the markings.
- */
-export function faceMotifTexture(hex: string): THREE.CanvasTexture {
-  const S = 320;
-  const cvs = document.createElement('canvas');
-  cvs.width = cvs.height = S;
-  const ctx = cvs.getContext('2d')!;
-  ctx.clearRect(0, 0, S, S);
-
-  // thin, muted frame (the wall's color, kept dim so the tiled cover stays calm)
-  ctx.strokeStyle = rgba(hex, 1);
-  ctx.lineWidth = 8;
-  ctx.strokeRect(12, 12, S - 24, S - 24);
-
-  // small, faint chiral up-arrow (soft slate): spine + head + a flag on the RIGHT
-  // (so a mirror moves the flag to the left, a quarter-turn rotates the mark)
-  ctx.fillStyle = 'rgb(150,160,176)';
-  ctx.strokeStyle = 'rgb(150,160,176)';
-  ctx.lineWidth = 13; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.beginPath(); ctx.moveTo(S * 0.5, S * 0.64); ctx.lineTo(S * 0.5, S * 0.42); ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(S * 0.5, S * 0.34);
-  ctx.lineTo(S * 0.42, S * 0.46);
-  ctx.lineTo(S * 0.58, S * 0.46);
-  ctx.closePath(); ctx.fill();
-  ctx.fillRect(S * 0.5, S * 0.47, S * 0.12, S * 0.07);
-
-  const t = new THREE.CanvasTexture(cvs);
-  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
-  return t;
-}
-
 /**
  * A patterned **rug** for the furnished Rooms decor — warm field, cream border,
  * a row of diamonds. Just enough pattern that a copy seen through a doorway

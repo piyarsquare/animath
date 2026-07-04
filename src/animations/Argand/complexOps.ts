@@ -32,9 +32,6 @@ export const fromPolar = (r: number, theta: number): Cx => ({
 export const powReal = (b: Cx, t: number): Cx =>
   fromPolar(Math.pow(modulus(b), t), argument(b) * t);
 
-/** The addition path a + t·b: a straight tip-to-tail slide from a to a+b. */
-export const addPath = (a: Cx, b: Cx, t: number): Cx => add(a, scale(b, t));
-
 /** Subtraction a − b. */
 export const sub = (a: Cx, b: Cx): Cx => ({ re: a.re - b.re, im: a.im - b.im });
 
@@ -180,42 +177,6 @@ export const polyFixedPoints = (c: Cx[], p: number): Cx[] => {
 export const criticalPoint = (c: Cx[], p: number): Cx | null => {
   if (c.length < 3 || modulus(c[2]) < 1e-9) return null;
   return divG(scale(c[1], -1), scale(c[2], 2), p);
-};
-
-/**
- * Horner evaluation as an animated chain of "scaled effects modulated by p":
- * start at the leading coefficient, then repeatedly **×z** (a spiral) and **+
- * next coefficient** (a slide). φ∈[0,1] runs the whole 2·deg-leg chain; the
- * even legs are the multiplies, the odd legs the adds. Degree 1 is the familiar
- * α₁ → α₁z → f(z).
- */
-export const hornerAt = (c: Cx[], z: Cx, p: number, phi: number): Cx => {
-  const n = c.length - 1;
-  if (n <= 0) return c[0];
-  const legs = 2 * n;
-  const f = Math.min(1, Math.max(0, phi)) * legs;
-  const leg = Math.min(legs - 1, Math.floor(f));
-  const s = f - leg;
-  let acc = c[n];
-  for (let li = 0; li < leg; li++) {
-    if (li % 2 === 0) acc = mulG(acc, z, p);
-    else acc = add(acc, c[n - 1 - ((li - 1) >> 1)]);
-  }
-  if (leg % 2 === 0) return mulG(acc, powRealG(z, p, s), p);   // spiral acc → acc·z
-  return add(acc, scale(c[n - 1 - ((leg - 1) >> 1)], s));      // slide +coeff
-};
-
-/** The integer waypoints of the Horner chain (start, each ×z, each +coeff). */
-export const hornerWaypoints = (c: Cx[], z: Cx, p: number): Cx[] => {
-  const n = c.length - 1;
-  const pts: Cx[] = [c[n]];
-  let acc = c[n];
-  for (let li = 0; li < 2 * n; li++) {
-    if (li % 2 === 0) acc = mulG(acc, z, p);
-    else acc = add(acc, c[n - 1 - ((li - 1) >> 1)]);
-    pts.push(acc);
-  }
-  return pts;
 };
 
 /**

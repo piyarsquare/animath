@@ -66,9 +66,6 @@ export function softMinEnergyMap(values: number[], beta: number): number {
   return minValue - (Math.log(sum) - Math.log(values.length)) / beta;
 }
 
-/** The energy quantum-tree uses for tree topologies (negative mean support). */
-export const MAP_BETA = 1.1;
-
 /**
  * Tour (Hamiltonian cycle) length of a circular order: the sum of distances
  * between consecutive leaves around the cycle. Faithful port of map.js
@@ -240,17 +237,6 @@ export interface Tree {
   graph: TreeGraph;
 }
 
-/** k-combinations of `items` (map.js `combinationsMap`). */
-function combinations<T>(items: T[], size: number): T[][] {
-  if (size === 0) return [[]];
-  if (items.length < size) return [];
-  const [head, ...tail] = items;
-  return [
-    ...combinations(tail, size - 1).map((combo) => [head, ...combo]),
-    ...combinations(tail, size),
-  ];
-}
-
 /** The three pairings of four items into two pairs (map.js `pairingsForFour`). */
 function pairingsForFour<T>(items: T[]): [[T, T], [T, T]][] {
   const [a, b, c, d] = items;
@@ -320,22 +306,6 @@ export function enumerateTrees(m: DistanceMatrix): Tree[] {
       };
     })
     .sort((a, b) => a.id.localeCompare(b.id));
-}
-
-/**
- * Mean four-point support of a tree over all quartets — the score quantum-tree
- * shows; `energy = -support`. Provided as a convenience for consumers.
- */
-export function treeSupport(m: DistanceMatrix, tree: Tree): number {
-  const quartets = combinations(
-    Array.from({ length: leafCount(m) }, (_, i) => i),
-    4,
-  );
-  const supports = quartets.map((q) => {
-    const r = inducedResolution(tree.splitSides, q);
-    return supportMap(m, r.pairA, r.pairB);
-  });
-  return mean(supports);
 }
 
 // --------------------------------------------------------------------------

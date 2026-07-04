@@ -151,8 +151,6 @@ animath/
     │   └── quat4.ts            # 4D quaternion rotation builder
     │
     ├── config/defaults.ts      # shared slider ranges + initial values
-    ├── styles/responsive.ts    # breakpoints + useResponsive hook
-    ├── types/uniforms.d.ts     # shader uniform type declarations
     └── unported_examples/      # excluded from build (tsconfig exclude)
 ```
 

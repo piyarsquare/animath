@@ -42,21 +42,6 @@ export interface FractalPaneProps {
   onPathChange?: (pts: Complex[]) => void;
 }
 
-export function screenToComplex(
-  e: { clientX: number; clientY: number },
-  canvas: HTMLCanvasElement,
-  v: ViewBounds
-): Complex {
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left) / rect.width;
-  const y = (e.clientY - rect.top) / rect.height;
-  // Screen-Y down; math (imag) up.
-  return {
-    real: v.xMin + (v.xMax - v.xMin) * x,
-    imag: v.yMax - (v.yMax - v.yMin) * y,
-  };
-}
-
 export default function FractalPane({
   type,
   view,

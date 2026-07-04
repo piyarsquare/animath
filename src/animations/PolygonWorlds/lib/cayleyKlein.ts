@@ -48,7 +48,6 @@ export type Vec3 = readonly [number, number, number];
 /** Row-major 3×3 matrix: [m00,m01,m02, m10,m11,m12, m20,m21,m22]. */
 export type Mat3 = readonly [number, number, number, number, number, number, number, number, number];
 
-export const dot3 = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 export const add3 = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 export const sub3 = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 export const scale3 = (a: Vec3, s: number): Vec3 => [a[0] * s, a[1] * s, a[2] * s];
@@ -128,11 +127,6 @@ export function sinK(kappa: number, t: number): number {
   if (Math.abs(a) < 1e-8) return t * (1 - a / 6 + (a * a) / 120);
   return a > 0 ? Math.sin(Math.sqrt(kappa) * t) / Math.sqrt(kappa)
     : Math.sinh(Math.sqrt(-kappa) * t) / Math.sqrt(-kappa);
-}
-
-/** Tκ(t) = Sκ/Cκ — the curved tangent. */
-export function tanK(kappa: number, t: number): number {
-  return sinK(kappa, t) / cosK(kappa, t);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,8 +227,6 @@ export const makeFrame = (kappa: number, g: Mat3 = IDENTITY3): Frame => ({ kappa
 export const framePos = (f: Frame): Vec3 => applyMat(f.g, ORIGIN);
 /** The forward tangent (world ℝ³ vector) of this frame. */
 export const frameForward = (f: Frame): Vec3 => applyMat(f.g, [1, 0, 0]);
-/** The left tangent of this frame. */
-export const frameLeft = (f: Frame): Vec3 => applyMat(f.g, [0, 1, 0]);
 
 /** Walk arc length `s` straight ahead. */
 export const stepForward = (f: Frame, s: number): Frame =>

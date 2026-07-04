@@ -54,11 +54,6 @@ export function parseWord(s: string): EdgeWord {
   return out;
 }
 
-/** Canonical string form, e.g. `a b a⁻¹ b⁻¹`. */
-export function wordToString(w: EdgeWord): string {
-  return w.map((l) => String.fromCharCode(97 + l.gen) + (l.inv ? '⁻¹' : '')).join(' ');
-}
-
 /** Which two edges a generator glues, and whether the gluing reverses direction.
  *  Consumed by the (future) geometry layer to build the edge-pairing isometries. */
 export interface EdgePairing { gen: number; edges: [number, number]; reversed: boolean }
@@ -165,16 +160,3 @@ function classify(chi: number, orientable: boolean): {
 export function analyze(word: string): SchemaAnalysis {
   return analyzeSchema(parseWord(word));
 }
-
-/** The complexity ladder — canonical schemas, smallest-first, as a catalog the UI
- *  can offer. Each is just a word; all invariants come from {@link analyzeSchema}. */
-export const SCHEMA_LADDER: { word: string; note: string }[] = [
-  { word: 'a a⁻¹', note: 'sphere (2-gon)' },
-  { word: 'a a', note: 'projective plane (2-gon)' },
-  { word: 'a b a⁻¹ b⁻¹', note: 'torus' },
-  { word: 'a b a⁻¹ b', note: 'Klein bottle' },
-  { word: 'a a b b', note: 'Klein bottle (cross-cap form)' },
-  { word: 'a a b b c c', note: '3 cross-caps' },
-  { word: 'a b a⁻¹ b⁻¹ c d c⁻¹ d⁻¹', note: 'genus-2 (double torus)' },
-  { word: 'a a b b c c d d', note: '4 cross-caps' },
-];

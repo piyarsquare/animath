@@ -55,11 +55,6 @@ export function canonicalCircularOrder(order: number[]): number[] {
   return lexLess(forward.slice(1), reverse.slice(1)) ? forward : reverse;
 }
 
-/** A stable string id for a circular order (its canonical index sequence). */
-export function canonicalCircularOrderId(order: number[]): string {
-  return canonicalCircularOrder(order).join(',');
-}
-
 export interface CircularOrder {
   /** Canonical id (e.g. "0,1,2,3"). */
   id: string;
