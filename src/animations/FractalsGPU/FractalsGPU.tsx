@@ -4,6 +4,7 @@ import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import deepZoomText from './DEEP_ZOOM.md?raw';
 import { PALETTE_GLSL, PALETTE_OPTIONS, PALETTE_THEME, resolvePalette } from '../../lib/colormaps';
+import { DF64_GLSL, MAX_ITERATIONS, splitDouble, suggestedIter } from '../../lib/df64';
 import { useViewportGestures } from '../../lib/useViewportGestures';
 import { useThemeId } from '../../chrome/skins';
 import Workspace from '../../chrome/workspace/Workspace';
@@ -16,26 +17,8 @@ const INITIAL_VIEW = { xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 };
 /** The view's initial width, the reference for the "zoom" readout. */
 const INITIAL_WIDTH = INITIAL_VIEW.xMax - INITIAL_VIEW.xMin;
 
-/** Split a float64 into a (hi, lo) pair of float32s whose exact sum is the
- *  original value — the df64 representation the shader expects. `Math.fround`
- *  is the round-to-float32; the residual lo is what single precision throws
- *  away (and what carries the deep-zoom detail). */
-function splitDouble(value: number): [number, number] {
-  const hi = Math.fround(value);
-  return [hi, value - hi];
-}
-
-/** Hard ceiling on iterations (must match the shader's MAX_ITER). */
-const MAX_ITERATIONS = 4000;
-
-/** A reasonable iteration cap for a given zoom factor. Deep zoom needs many
- *  more iterations to resolve the boundary (escape times grow with depth), so
- *  this ramps up with log2(zoom) — without it, a deep view renders as a flat
- *  interior and the Extended-precision detail is invisible. */
-function suggestedIter(zoom: number): number {
-  const v = 100 + 110 * Math.max(0, Math.log2(Math.max(1, zoom)) - 2);
-  return Math.min(MAX_ITERATIONS, Math.max(100, Math.round(v / 10) * 10));
-}
+// df64 emulated extended precision (DF64_GLSL, splitDouble, MAX_ITERATIONS,
+// suggestedIter) is shared with Correspondence/FractalPane — see lib/df64.ts.
 
 // TODO(deep-zoom): go past the df64 wall (~1e13-1e14x zoom, measured). Extended
 // (df64) carries ~14 digits, so neighboring pixels collapse to the same
@@ -96,41 +79,8 @@ const fragmentShader = `
   uniform float offset;
   uniform int hp;          // 0 = single float32, 1 = extended (df64)
 
-  const int MAX_ITER = 4000;
+  ${DF64_GLSL}
   const int MAX_POWER = 100;
-
-  // ---- df64: an "extended" number is the unevaluated sum hi+lo of two float32s.
-  // dfAdd / dfMul are error-free transformations (two-sum, Dekker two-product):
-  // they compute the rounded result AND the rounding error, so carrying the
-  // error in 'lo' roughly doubles the working mantissa (~46 bits ≈ 14 digits).
-  vec2 dfAdd(vec2 a, vec2 b){
-    float t1 = a.x + b.x;
-    float e  = t1 - a.x;
-    float t2 = ((b.x - e) + (a.x - (t1 - e))) + a.y + b.y;
-    float hi = t1 + t2;
-    float lo = t2 - (hi - t1);
-    return vec2(hi, lo);
-  }
-  vec2 dfMul(vec2 a, vec2 b){
-    float split = 4097.0;            // 2^12 + 1, the Dekker split for float32
-    float cona = a.x * split;
-    float conb = b.x * split;
-    float a1 = cona - (cona - a.x);
-    float b1 = conb - (conb - b.x);
-    float a2 = a.x - a1;
-    float b2 = b.x - b1;
-    float c11 = a.x * b.x;
-    float c21 = a2 * b2 - (((c11 - a1 * b1) - a2 * b1) - a1 * b2);
-    float c2 = a.x * b.y + a.y * b.x;
-    float t1 = c11 + c2;
-    float e = t1 - c11;
-    float t2 = ((c2 - e) + (c11 - (t1 - e))) + c21 + a.y * b.y;
-    float hi = t1 + t2;
-    float lo = t2 - (hi - t1);
-    return vec2(hi, lo);
-  }
-  vec2 dfNeg(vec2 a){ return vec2(-a.x, -a.y); }
-  vec2 dfAbs(vec2 a){ return (a.x < 0.0) ? vec2(-a.x, -a.y) : a; }
 
   ${PALETTE_GLSL}
 
