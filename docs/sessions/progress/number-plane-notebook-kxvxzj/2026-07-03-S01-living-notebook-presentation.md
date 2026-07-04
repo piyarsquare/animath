@@ -38,6 +38,38 @@ app into the living-notebook presentation."*
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟢 code · 09:30 — The cover, the living section, the told FOIL (`dee4e5e` → `27b330f`)
+**Why:** Two rapid design rounds from Dan walking the live page. Round 1: A0
+answers "Let's find out" (Q+A dock to the corner); Stop A becomes text-left /
+illustration-right; color the real and j parts; addition as vector addition
+(the "never asks a question" line cut); FOIL + collect as a live animation;
+the why-real whisper becomes a pop-out with the completing-the-square
+picture; and **no click-to-advance** — every tap a named verb (click to
+open/reveal/discover, never to page-turn). Plus polish rounds: the twinkle
+scale-bounce read as a seesaw → calm glints (one soft flash per ~4s,
+staggered dots); step reveals were choppy/expository → smooth grow-ins with
+the prose thinned.
+
+Round 2 (the reconception): the notebook gets a **cover** — *Building the
+Number Plane*, the question as epigraph — that folds away at a touch; the
+section *What do we want in a plane number?* **unzips with ALL its text
+present** through the multiplication (the living-page principle: trust the
+reader; the unfolding is entrance choreography, not a gate); **hover/tap on
+a passage changes the illustration**; **colors belong to symbols, not
+roles** (x always its color — the coefficient recoloring was wrong); the
+vector sum redrawn (both numbers from origin, w carried to z's tip,
+coordinates as colored segments on the axes); and the FOIL became a **told
+animation** — factor pairs light as each term is born, bare-j tiles collect,
+then **j² moves in with the reals** under a bracket ("the real part — if j²
+is real…") and the **Hmm? floater** appears carrying the change-of-basis
+picture. Moments 18 → 15. Storage key bumped (moment2).
+
+All verified by driving the full passage (hover swaps, animation end-state
+= 3 tiles + bracket + floater, floater→pop-out, viewport fit at every
+moment on both surfaces, resume/restart). Two real bugs caught along the
+way by the walks: the zero-dot twinkle never cleared, and the desk slots
+collapsed to header height.
+
 ### 🟢 code · 07:00 — v3 built: the staged passage lives (`18c5a73`)
 **Why:** Dan approved the script with adjustments (multiple twinkles OK for
 unordered/forking tasks; text judged when assembled — ideally the notebook
