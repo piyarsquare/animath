@@ -38,6 +38,42 @@ app into the living-notebook presentation."*
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟣 decision · 05:20 — Staging is the missing layer; the passage script is written
+**Why:** Dan's design review of the live desk: it overloads the screen — the
+concept isn't cohering because the page has *space* mechanics (compartments,
+faces) but no *time* mechanics. His direction: open on the question ("Does the
+number plane have to be complex?"), then No → three choices → because j² must
+equal something → the equation → the slider; then the behavior questions. Plus
+four specifics: (1) twinkle/orb affordances announcing advance points;
+(2) named layouts with natural morphs between them (PowerPoint-like states,
+element travel between them); (3) beat 1 must SHOW the math — the derivation
+unfolds, "announcing is not our way" — and two missing mathematical beats
+identified: **renormalization** (only the sign of p survives rescaling; 0
+alone with no neighborhood — which finally *explains* the sticky dial) and
+the **× → level sets bridge** (the mirror trick z·z̄ = x² − p·y²; level sets
+are currently an unearned jump); (4) the stop ends on the shared-ground triad
+(same +, same reals, same ×1) as the setup for the three ×w motions. Multiple
+stops per page expected.
+
+**The method, named:** script particular passages first, plan the unfolding
+from the script, build, test how they perform — then, freed of the thread,
+see if the apparatus invites alternative views. The garden arranges itself
+around walks that are already true.
+
+Wrote [the passage script](2026-07-03-S01-plan-passage-script.md)
+(`kind: plan`): four stops (A the question→the equation unfolds · B
+renormalization, where the p-line *becomes* the dial · C the triad → the
+three ×w motions · D the mirror trick → levels, earned), six named layouts
+(CENTER/COLUMN/SPLIT/DESK-LITE/TRIAD/DESK) with FLIP morphs and two signature
+morphs (the equation travels; the p-line becomes the dial), the twinkle
+grammar (one live twinkle; advancing = doing the thing it sits on), memory
+(return visits open assembled), and the declutter accounting (claim dissolves
+into beats; operator/compare/levels are born, not resident; threads become
+the question rail). Key reorder the script commits to: **level sets come
+AFTER ×w** — they answer "what does ×w preserve?". Awaiting Dan's markup on
+the text, A0's reply mode, step-advance style, whether Stop D opens the next
+page, and the ruler-slider design.
+
 ### 🟢 code · 03:40 — v2: one-screen desk, compartment faces, the operator, all 8 skins
 **Why:** Dan's structured feedback on v1: the page must fit the viewport
 entirely (scrolling doesn't exist — anything beyond is an interaction: a new
