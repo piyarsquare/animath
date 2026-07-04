@@ -94,13 +94,6 @@ input[type=range]::-moz-range-thumb{width:16px; height:16px; border-radius:50%; 
 .advline.on,.bigeq-wrap.on{animation:softin .9s ease-out 1}
 body.noanim *{transition:none !important; animation:none !important}
 
-/* CENTER — the question */
-#zCenter{align-items:center; justify-content:center; text-align:center; gap:22px}
-#zCenter .bigq{font-size:clamp(24px,3vw,38px); font-style:italic; max-width:22ch; line-height:1.5}
-#zCenter .go{font-size:15px; font-style:italic; color:var(--ink-soft); letter-spacing:.04em}
-#zCenter .go:hover{color:var(--light)}
-#zCenter .reply{font-size:16px; font-style:italic; color:var(--light); min-height:24px;
-  text-shadow:0 0 12px var(--glow-soft)}
 
 /* COLUMN — unfolding derivations */
 .column{align-items:center; justify-content:center; overflow:hidden}
@@ -134,10 +127,53 @@ body.noanim *{transition:none !important; animation:none !important}
 .whisper summary:hover{color:var(--light)}
 .whisper[open]{color:var(--ink-soft)}
 
+/* the cover */
+#zCover{align-items:center; justify-content:center}
+.cover{width:min(560px,88vw); border:1px solid var(--hair); border-radius:16px;
+  background:linear-gradient(160deg, color-mix(in srgb, var(--card) 80%, var(--fg)) 0%, var(--card) 30%);
+  padding:64px 48px 48px; text-align:center; transform-origin:50% 10%;
+  box-shadow:0 24px 70px rgba(0,0,0,.35), 0 0 0 1px color-mix(in srgb, var(--hair) 50%, transparent);
+  transition:transform .95s cubic-bezier(.5,.05,.6,1), opacity .9s ease .1s}
+.cover.folding{transform:perspective(1100px) rotateX(-84deg); opacity:0}
+.c-kicker{font-size:10px; letter-spacing:.3em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:20px}
+.c-title{font-size:clamp(30px,3.6vw,44px); line-height:1.25; letter-spacing:.04em}
+.c-sub{font-size:13.5px; font-style:italic; color:var(--ink-soft); margin-top:18px}
+.c-open{margin-top:30px; font-size:15px; font-style:italic; color:var(--ink-soft)}
+.c-open:hover{color:var(--light)}
+/* the section: text is present; the reader is trusted */
+.sec-h{font-size:13px; letter-spacing:.2em; text-transform:uppercase; font-weight:600;
+  color:var(--ink-soft); margin:0 0 14px; padding-left:14px}
+.crit{padding:9px 14px; border-left:2px solid transparent; border-radius:0 9px 9px 0;
+  transition:border-color .35s, background .35s; cursor:default; outline:none}
+.crit:hover,.crit:focus-visible,.crit.here{border-left-color:var(--light);
+  background:color-mix(in srgb, var(--glow-soft) 55%, transparent)}
+.crit .say{font-style:italic; font-size:13.5px; color:var(--ink-soft)}
+.crit .eq{font-style:italic; font-size:17.5px; padding:4px 0 2px; letter-spacing:.02em; color:var(--ink)}
+.crit .eq .hot,.say2 .hot{color:var(--light); text-shadow:0 0 10px var(--glow-soft)}
+.say2{font-style:italic; font-size:13px; color:var(--ink-soft); padding:8px 14px 0}
+.unzip>*{animation:unzipin .7s cubic-bezier(.25,.7,.25,1) both; animation-delay:var(--d,0s)}
+@keyframes unzipin{from{opacity:0; clip-path:inset(0 0 92% 0); transform:translateY(-5px)}
+  to{opacity:1; clip-path:inset(0 0 -8% 0); transform:none}}
+/* the Hmm floater */
+.hmm{position:absolute; left:12px; right:12px; bottom:44px; z-index:4;
+  background:var(--card); border:1px solid var(--light); border-radius:12px;
+  padding:12px 30px 12px 14px; font-size:12.5px; font-style:italic; line-height:1.6;
+  color:var(--ink); box-shadow:0 0 0 1px var(--glow-soft), 0 0 24px var(--glow-soft)}
+.hmm[hidden]{display:none}
+.hmm .dismiss{position:absolute; top:3px; right:7px; font-size:13px; color:var(--ink-faint); padding:4px}
+.hmm .dismiss:hover{color:var(--light)}
+.linkish{font-style:italic; font-size:12.5px; color:var(--light); text-decoration:none;
+  border-bottom:1px dotted var(--light)}
+.factors .lit{color:var(--light) !important; text-shadow:0 0 12px var(--glow)}
+.bracket{position:absolute; height:10px; border:1px solid var(--ink-soft); border-top:0;
+  border-radius:0 0 8px 8px; transition:opacity .6s; pointer-events:none}
+.bracket span{position:absolute; top:12px; left:50%; transform:translateX(-50%);
+  font-size:11px; font-style:italic; color:var(--ink-soft); white-space:nowrap}
+
 /* Stop A: text column left, living illustration right */
 .re{color:var(--re)} .im{color:var(--im)}
-#zColumn .cols{flex:1; min-height:0; width:100%; max-width:1180px; margin:auto;
-  display:grid; grid-template-columns:minmax(300px,45%) 1fr; gap:26px; align-items:center}
+#zSection .cols{flex:1; min-height:0; width:100%; max-width:1180px; margin:auto;
+  display:grid; grid-template-columns:minmax(320px,47%) 1fr; gap:26px; align-items:center}
 .textcol{display:flex; flex-direction:column; min-width:0}
 .illo{position:relative; height:min(64vh,540px); border:1px solid var(--hair); border-radius:12px;
   background:var(--card); overflow:hidden; display:flex; flex-direction:column}
@@ -342,7 +378,7 @@ svg text{font-family:inherit; user-select:none; -webkit-user-select:none}
 @media (max-width:900px){
   .topbar{gap:10px}
   .topbar .runhead{display:none}
-  #zColumn .cols{display:flex; flex-direction:column; gap:12px}
+  #zSection .cols{display:flex; flex-direction:column; gap:12px}
   .illo{height:auto; flex:0 0 46%}
   #foilbox .factors{padding-top:8%}
   #zSplit{flex-direction:column; gap:14px; overflow:hidden}
@@ -382,52 +418,56 @@ svg text{font-family:inherit; user-select:none; -webkit-user-select:none}
 
   <div class="mainzone" id="mainzone">
 
-    <!-- ══ STOP A · beat 0 — the question ══ -->
-    <section class="zone" id="zCenter">
-      <div class="bigq">Does the number plane<br>have to be complex?</div>
-      <button class="go tw" id="a0go">could it be different —</button>
-      <div class="reply" id="a0reply"></div>
+    <!-- ══ the cover ══ -->
+    <section class="zone" id="zCover">
+      <div class="cover" id="coverCard">
+        <div class="c-kicker">a living notebook</div>
+        <div class="c-title">Building the<br>Number Plane</div>
+        <div class="c-sub">Does the number plane have to be complex? — let’s find out.</div>
+        <button class="c-open tw" id="coverOpen">open —</button>
+      </div>
     </section>
 
-    <!-- ══ STOP A · beat 1 — the unfolding: text left, the picture follows right ══ -->
-    <section class="zone column" id="zColumn">
+    <!-- ══ Section I — the whole text lives on the page; pictures follow the reader ══ -->
+    <section class="zone column" id="zSection">
       <div class="cols">
-        <div class="textcol">
-          <div class="steps" id="stepsA">
-            <div class="step" data-m="1">
-              <div class="say">What do we want of a plane number? Two coordinates —
-                <span class="re">one real</span>, one along <span class="im">j</span>, the second direction:</div>
-              <div class="eq">z = <span class="re">x</span> + <span class="im">y·j</span></div>
-              <button class="more">add a second number —</button>
-            </div>
-            <div class="step" data-m="2">
-              <div class="say">Add two: nothing to decide — the parts add on their own.</div>
-              <div class="eq">= <span class="re">(x+u)</span> + <span class="im">(y+v)·j</span></div>
-              <button class="more">now multiply them —</button>
-            </div>
-            <div class="step" data-m="3">
-              <div class="say">Multiply. We respect the <b>distributive property</b>, and so —</div>
-              <button class="more">collect the like terms —</button>
-            </div>
-            <div class="step" data-m="4">
-              <div class="say">Collect like terms. Everything is settled — except one symbol.</div>
-              <button class="more">so — what is j²?</button>
-            </div>
-            <div class="step" data-m="5">
-              <div class="say">One real number, then. The whole choice:</div>
-            </div>
+        <div class="textcol" id="secText">
+          <h2 class="sec-h">I · What do we want in a plane number?</h2>
+          <div class="crit" data-illo="point" tabindex="0">
+            <div class="say">Two coordinates — <span class="re">one real</span>, and one along
+              <span class="im">j</span>, the second direction.</div>
+            <div class="eq">z = <span class="re">x</span> + <span class="im">y·j</span></div>
           </div>
+          <div class="crit" data-illo="add" tabindex="0">
+            <div class="say">We can <b>add</b> — the parts add on their own; nothing to decide.</div>
+            <div class="eq">(<span class="re">x</span> + <span class="im">y·j</span>) + (<span class="re">u</span> + <span class="im">v·j</span>)
+              = <span class="re">(x+u)</span> + <span class="im">(y+v)·j</span></div>
+          </div>
+          <div class="crit" data-illo="foil" tabindex="0">
+            <div class="say">We can <b>multiply</b> — respecting the <b>distributive property</b>, and so:</div>
+            <div class="eq">(<span class="re">x</span> + <span class="im">y·j</span>)(<span class="re">u</span> + <span class="im">v·j</span>)
+              = <span class="re">x</span>·<span class="re">u</span> + <span class="im">y</span>·<span class="im">v</span>·<span class="hot">j²</span>
+              + (<span class="re">x</span>·<span class="im">v</span> + <span class="im">y</span>·<span class="re">u</span>)·<span class="im">j</span></div>
+            <button class="more" id="watchmul" style="display:inline-block">watch it unfold —</button>
+          </div>
+          <div class="say2">Every symbol is arithmetic we already own — except <span class="hot">j²</span>,
+            which has moved in with the reals.</div>
           <div class="bigeq-wrap" id="bigeqwrap">
             <button class="bigeq tw" id="bigeq">j<sup>2</sup> = p</button>
             <div class="bigeq-cap">One number. That is the whole freedom of the plane.</div>
           </div>
-          <button class="whisper-link" id="whyreal" style="display:none">▸ why may j² be taken real? — the picture</button>
         </div>
         <div class="illo" id="illoA">
           <svg id="planeIllo" viewBox="-0.7 -2.35 4.4 2.85" preserveAspectRatio="xMidYMid meet"
-               aria-label="The plane, drawn as the text advances"></svg>
+               aria-label="The plane, following the text"></svg>
           <div id="foilbox">
-            <div class="factors" id="factors">(<span class="re">x</span> + <span class="im">y·j</span>)(<span class="re">u</span> + <span class="im">v·j</span>)</div>
+            <div class="factors" id="factors">(<span class="re" id="f_x">x</span> + <span class="im" id="f_yj">y·j</span>)(<span class="re" id="f_u">u</span> + <span class="im" id="f_vj">v·j</span>)</div>
+          </div>
+          <div class="hmm" id="hmm" hidden>
+            <button class="dismiss" id="hmmClose" aria-label="Dismiss">×</button>
+            <b>Hmm?</b> — <span class="hot">j²</span> sits with the reals now. But j² is itself a
+            plane number… for that sum to make sense, it had better <i>be</i> real. It can be:
+            <button class="linkish" id="hmmPic">slide the unit — the picture ▸</button>
           </div>
           <div class="illocap" id="illocap"></div>
         </div>
@@ -720,11 +760,10 @@ const $=id=>document.getElementById(id);
    enter hook; twinkles mark the live advance points (several may coexist —
    unordered tasks each carry one). State persists; ?m=N jumps. */
 let M=0, maxM=0, animate=true;
-const ZONES={A0:'zCenter',A:'zColumn',B0:'zSplit',B1:'zLite',C0:'zTriad',C1:'zDesk',D0:'zColumnD',D1:'zDesk'};
+const ZONES={COVER:'zCover',SEC:'zSection',B0:'zSplit',B1:'zLite',C0:'zTriad',C1:'zDesk',D0:'zColumnD',D1:'zDesk'};
 const MOMENTS=[
-  {z:'A0',stop:0}, {z:'A',stop:0,step:1},{z:'A',stop:0,step:2},{z:'A',stop:0,step:3},
-  {z:'A',stop:0,step:4},{z:'A',stop:0,step:5},
-  {z:'B0',stop:1}, {z:'B1',stop:1},
+  {z:'COVER',stop:0},{z:'SEC',stop:0},{z:'SEC',stop:0,post:true},
+  {z:'B0',stop:1},{z:'B1',stop:1},
   {z:'C0',stop:2,trow:1},{z:'C0',stop:2,trow:2},{z:'C0',stop:2,trow:3},{z:'C0',stop:2,trow:4},
   {z:'C1',stop:2},
   {z:'D0',stop:3,dstep:1},{z:'D0',stop:3,dstep:2},{z:'D0',stop:3,dstep:3},{z:'D0',stop:3,dstep:4},
@@ -743,42 +782,38 @@ function showZone(name){
 function apply(){
   const m=MOMENTS[M];
   showZone(m.z);
-  // column A steps
-  document.querySelectorAll('#stepsA .step').forEach(s=>{
-    const idx=+s.dataset.m, cur=m.z==='A'?m.step:(M>5?99:0);
-    s.classList.toggle('on', idx<=cur);
-    s.classList.toggle('past', idx<cur);
-  });
-  $('bigeqwrap').classList.toggle('on', (m.z==='A'&&m.step>=5)||false);
-  $('whyreal').style.display=(m.z==='A'&&m.step>=5)?'':'none';
-  if(m.z==='A') illoMode(m.step);
+  // the section: all its text is present; only the closing equation is staged
+  if(m.z==='SEC'){
+    sectionEnter();
+    $('bigeqwrap').classList.toggle('on', !!m.post);
+    if(m.post) foilFinal();
+  }
   // triad rows
   document.querySelectorAll('#zTriad .trow').forEach((r,i)=>{
-    const cur=m.z==='C0'?m.trow:(M>11?9:0);
+    const cur=m.z==='C0'?m.trow:(M>8?9:0);
     r.classList.toggle('on', i<cur);
   });
   $('triadclose').style.display=(m.z==='C0'&&m.trow>=4)?'block':'none';
   $('advC').classList.toggle('on', m.z==='C0'&&m.trow>=4);
   // column D steps
   document.querySelectorAll('#stepsD .step').forEach((s,i)=>{
-    const cur=m.z==='D0'?m.dstep:(M>16?9:0);
+    const cur=m.z==='D0'?m.dstep:(M>13?9:0);
     s.classList.toggle('on', i<cur);
     s.classList.toggle('past', i<cur-1);
   });
   $('advD').classList.toggle('on', m.z==='D0'&&m.dstep>=4);
   // docks
   $('qdock').classList.toggle('on', M>=1);
-  $('eqdock').classList.toggle('on', M>=6);
+  $('eqdock').classList.toggle('on', M>=3);
   // the dial exists from B1 on
-  $('dialstrip').classList.toggle('on', M>=7);
+  $('dialstrip').classList.toggle('on', M>=4);
   // desk dressing
-  const desk=M>=17?'D1':'C1';
-  $('advC1').classList.toggle('on', m.z==='C1'&&M===12);
-  $('advD1').classList.toggle('on', M>=17);
-  $('faceLevelsBtn').style.display=M>=17?'':'none';
-  $('askLevels').style.display=M>=17?'':'none';
-  if(m.z==='C1'&&M===12) setFace($('stage'),'operator');
-  if(M===17) setFace($('stage'),'levels');
+  $('advC1').classList.toggle('on', m.z==='C1'&&M===9);
+  $('advD1').classList.toggle('on', M>=14);
+  $('faceLevelsBtn').style.display=M>=14?'':'none';
+  $('askLevels').style.display=M>=14?'':'none';
+  if(m.z==='C1'&&M===9) setFace($('stage'),'operator');
+  if(M===14) setFace($('stage'),'levels');
   // stop dots
   document.querySelectorAll('#stopdots button').forEach(b=>{
     const s=+b.dataset.stop, reachedStop=MOMENTS[maxM].stop;
@@ -787,20 +822,19 @@ function apply(){
   });
   // twinkles per moment
   const tws={
-    0:[$('a0go')], 1:[nextMore('stepsA',1)],2:[nextMore('stepsA',2)],3:[nextMore('stepsA',3)],
-    4:[nextMore('stepsA',4)],5:[$('bigeq')],
-    6:[], // dots twinkle individually via .tw-dot in the widget
-    7:[$('advB1')],
-    8:[nextTrow(1)],9:[nextTrow(2)],10:[nextTrow(3)],11:[$('advC')],
-    12:[$('advC1')],
-    13:[nextDstep(1)],14:[nextDstep(2)],15:[nextDstep(3)],16:[$('advD')],
-    17:[$('advD1')],
+    0:[$('coverOpen')], 1:[$('watchmul')], 2:[$('bigeq')],
+    3:[], // dots twinkle individually via .tw-dot in the widget
+    4:[$('advB1')],
+    5:[nextTrow(1)],6:[nextTrow(2)],7:[nextTrow(3)],8:[$('advC')],
+    9:[$('advC1')],
+    10:[nextDstep(1)],11:[nextDstep(2)],12:[nextDstep(3)],13:[$('advD')],
+    14:[$('advD1')],
   };
   setTw(tws[M]||[]);
-  if(M===6) drawPline();
+  if(M===3) drawPline();
   if(m.z==='C1'||m.z==='D1'){const pv=parseFloat(slider.value);
     drawOperator(pv); updateOperatorPanel(pv); drawCompare(); drawOrbit(pv); drawLevels(pv);}
-  try{localStorage.setItem('animath:v1:np-notebook:moment',String(maxM));}catch(e){}
+  try{localStorage.setItem('animath:v1:np-notebook:moment2',String(maxM));}catch(e){}
 }
 window.__np=()=>({M,maxM});
 function advance(to){
@@ -820,38 +854,34 @@ function nextDstep(i){const st=document.querySelectorAll('#stepsD .step')[i-1];
   return st?.querySelector('.more')||st;}
 
 /* wire the advances */
-$('a0go').addEventListener('click',()=>{
-  $('a0reply').textContent='Let’s find out.';
-  $('qdock').textContent='Does the number plane have to be complex? — let’s find out.';
+$('coverOpen').addEventListener('click',()=>{
   setTw([]);
-  setTimeout(()=>advance(1), animate?1200:0);
+  $('coverCard').classList.add('folding');
+  $('qdock').textContent='Does the number plane have to be complex? — let’s find out.';
+  setTimeout(()=>{advance(1); $('coverCard').classList.remove('folding');}, animate?850:0);
 });
-document.querySelectorAll('#stepsA .step .more').forEach((b,i)=>{
-  b.addEventListener('click',e=>{e.stopPropagation();
-    if(M>=1&&M<=4&&i===MOMENTS[M].step-1) advance();});
-});
-$('bigeq').addEventListener('click',()=>{ if(M!==5) return;
-  ghostFly($('bigeq'),$('eqdock'),'j² = p'); advance(6);});
-$('advB').addEventListener('click',()=>{ if(M!==6) return;
-  ghostFly($('plinesvg'),$('dialstrip'),'⟶'); advance(7);});
-$('advB1').addEventListener('click',()=>{ if(M===7) advance(8);});
+$('watchmul').addEventListener('click',()=>runFoilAnim());
+$('bigeq').addEventListener('click',()=>{ if(M!==2) return;
+  ghostFly($('bigeq'),$('eqdock'),'j² = p'); advance(3);});
+$('advB').addEventListener('click',()=>{ if(M!==3) return;
+  ghostFly($('plinesvg'),$('dialstrip'),'⟶'); advance(4);});
+$('advB1').addEventListener('click',()=>{ if(M===4) advance(5);});
 document.querySelectorAll('#zTriad .trow .more').forEach((b,i)=>{
   b.addEventListener('click',e=>{e.stopPropagation();
-    if(M>=8&&M<=9&&i===MOMENTS[M].trow-1) advance();});
+    if(M>=5&&M<=6&&i===MOMENTS[M].trow-1) advance();});
 });
-// the third row's reveal opens the closing line via its own appearance (advC carries the verb)
 document.querySelectorAll('#zTriad .trow')[2]?.addEventListener('click',()=>{
-  if(M===10) advance();});
-$('advC').addEventListener('click',()=>{ if(M===11) advance(12);});
-$('advC1').addEventListener('click',()=>{ if(M===12) advance(13);});
+  if(M===7) advance();});
+$('advC').addEventListener('click',()=>{ if(M===8) advance(9);});
+$('advC1').addEventListener('click',()=>{ if(M===9) advance(10);});
 document.querySelectorAll('#stepsD .step .more').forEach((b,i)=>{
   b.addEventListener('click',e=>{e.stopPropagation();
-    if(M>=13&&M<=15&&i===MOMENTS[M].dstep-1) advance();});
+    if(M>=10&&M<=12&&i===MOMENTS[M].dstep-1) advance();});
 });
-$('advD').addEventListener('click',()=>{ if(M===16) advance(17);});
+$('advD').addEventListener('click',()=>{ if(M===13) advance(14);});
 $('restart').addEventListener('click',()=>{
-  try{localStorage.removeItem('animath:v1:np-notebook:moment');}catch(e){}
-  discovered=false; visited.clear(); M=0; maxM=0; apply();});
+  try{localStorage.removeItem('animath:v1:np-notebook:moment2');}catch(e){}
+  discovered=false; visited.clear(); foilPlayed=false; M=0; maxM=0; apply();});
 document.querySelectorAll('#stopdots button').forEach(b=>{
   b.addEventListener('click',()=>{
     const s=+b.dataset.stop;
@@ -896,13 +926,26 @@ function label(svg,x,y,txt,color,size){
   const t=el('text',{x:x,y:-y,'font-size':size||.2,fill:color,'font-style':'italic'});
   t.textContent=txt; svg.appendChild(t); return t;
 }
-let foilState=0;
-function illoMode(step){
+let foilPlayed=false, foilPlaying=false, zipped=false, curIllo='';
+function sectionEnter(){
+  if(!zipped){ zipped=true;
+    if(animate){ const kids=[...$('secText').children];
+      $('secText').classList.add('unzip');
+      kids.forEach((k,i)=>k.style.setProperty('--d',(i*0.14).toFixed(2)+'s'));
+      setTimeout(()=>$('secText').classList.remove('unzip'),2200);
+    }
+    illoSet('point');
+  }
+}
+function illoSet(mode){
+  if(foilPlaying) return;
+  curIllo=mode;
+  document.querySelectorAll('.crit').forEach(c=>c.classList.toggle('here',c.dataset.illo===mode));
   const svg=$('planeIllo'), fb=$('foilbox'), cap=$('illocap');
-  const showPlane=step<=2, showFoil=step>=3;
-  svg.style.display=showPlane?'block':'none';
-  fb.style.display=showFoil?'block':'none';
-  if(step===1){
+  svg.style.display=mode==='foil'?'none':'block';
+  fb.style.display=mode==='foil'?'block':'none';
+  $('hmm').hidden = !(mode==='foil'&&foilPlayed&&!hmmDismissed);
+  if(mode==='point'){
     svg.innerHTML=''; illoAxes(svg);
     const x=1.9,y=1.15;
     arrowTo(svg,0,0,x,0,'var(--re)',.05);
@@ -913,77 +956,132 @@ function illoMode(step){
     label(svg,x+.14,y+.14,'z','var(--fg)',.26);
     cap.innerHTML='one number, two directions — <span class="re">real</span> across, <span class="im">j</span> up';
   }
-  if(step===2){
+  if(mode==='add'){
     svg.innerHTML=''; illoAxes(svg);
-    const x=1.3,y=.75,u=1.1,v=.85;
-    arrowTo(svg,0,0,x,0,'var(--re)',.05);
-    arrowTo(svg,x,0,x,y,'var(--im)',.05);
-    svg.appendChild(el('circle',{cx:x,cy:-y,r:.06,fill:'var(--fg)'}));
-    label(svg,x-.35,y+.16,'z','var(--fg)',.22);
-    arrowTo(svg,x,y,x+u,y,'var(--re)',.05);
-    arrowTo(svg,x+u,y,x+u,y+v,'var(--im)',.05);
-    svg.appendChild(el('circle',{cx:x+u,cy:-(y+v),r:.07,fill:'var(--light)'}));
-    label(svg,x+u+.12,y+v,'z + w','var(--light)',.24);
-    svg.appendChild(el('path',{d:poly([[0,0],[x+u,y+v]]),stroke:'var(--ink-faint)',
-      'stroke-width':.02,'stroke-dasharray':'.1 .08',fill:'none'}));
-    cap.innerHTML='tip to tail: <span class="re">reals add reals</span>, <span class="im">j adds j</span> — the parts never mix';
+    const x=1.25,y=.7,u=1.05,v=.8, X=x+u, Y=y+v;
+    // the two numbers, from the origin
+    arrowTo(svg,0,0,x,y,'var(--fg)',.045);
+    arrowTo(svg,0,0,u,v,'var(--ink-soft)',.035);
+    label(svg,x-.28,y+.15,'z','var(--fg)',.22);
+    label(svg,u+.06,v-.26,'w','var(--ink-soft)',.2);
+    // w carried to the tip of z (dashed), the sum
+    svg.appendChild(el('path',{d:poly([[x,y],[X,Y]]),stroke:'var(--ink-soft)',
+      'stroke-width':.028,'stroke-dasharray':'.1 .07',fill:'none'}));
+    arrowTo(svg,0,0,X,Y,'var(--light)',.05);
+    svg.appendChild(el('circle',{cx:X,cy:-Y,r:.07,fill:'var(--light)'}));
+    label(svg,X+.1,Y+.05,'z + w','var(--light)',.24);
+    // the coordinates, kept in their own colors on the axes
+    svg.appendChild(el('path',{d:poly([[X,Y],[X,0]]),stroke:'var(--re)','stroke-width':.02,
+      'stroke-dasharray':'.05 .05',fill:'none'}));
+    svg.appendChild(el('path',{d:poly([[0,0],[x,0]]),stroke:'var(--re)','stroke-width':.06,fill:'none'}));
+    svg.appendChild(el('path',{d:poly([[x,0],[X,0]]),stroke:'var(--re)','stroke-width':.06,opacity:.55,fill:'none'}));
+    label(svg,x/2-.08,-.3,'x','var(--re)',.2); label(svg,x+u/2-.08,-.3,'u','var(--re)',.2);
+    svg.appendChild(el('path',{d:poly([[X,Y],[0,Y]]),stroke:'var(--im)','stroke-width':.02,
+      'stroke-dasharray':'.05 .05',fill:'none'}));
+    svg.appendChild(el('path',{d:poly([[0,0],[0,y]]),stroke:'var(--im)','stroke-width':.06,fill:'none'}));
+    svg.appendChild(el('path',{d:poly([[0,y],[0,Y]]),stroke:'var(--im)','stroke-width':.06,opacity:.55,fill:'none'}));
+    label(svg,-.34,y/2+.05,'y','var(--im)',.2); label(svg,-.34,y+v/2+.05,'v','var(--im)',.2);
+    cap.innerHTML='<span class="re">x adds u</span> on the real axis; <span class="im">y adds v</span> on the j axis — the parts never mix';
   }
-  if(step>=3){
-    // the FOIL theater: terms shuffle out; like terms collect
-    const want=step>=4?2:1;
-    if(foilState!==want||fb.querySelectorAll('.tile').length===0) buildFoil(want);
-    cap.innerHTML= step===3
-      ? 'four products fall out — each is <span class="re">real</span>·something: colors say where each lands'
-      : step===4 ? 'the two <span class="im">j-terms</span> collect; one tile holds the only unknown'
-      : 'every tile is arithmetic you already own — except the lit one';
-    if(step>=5){const t=fb.querySelector('.tile.hot'); if(t) t.style.boxShadow='0 0 26px var(--glow)';}
+  if(mode==='foil'){
+    if(foilPlayed) foilFinal();
+    else{ clearTiles();
+      cap.innerHTML='the four pairings, told slowly — <i>watch it unfold</i> from the text';}
   }
-  foilState=step>=4?2:step===3?1:0;
 }
+let hmmDismissed=false;
+function clearTiles(){ $('foilbox').querySelectorAll('.tile,.bracket').forEach(t=>t.remove());
+  $('hmm').hidden=true; }
 function mkTile(html,cls){
   const d=document.createElement('div'); d.className='tile '+(cls||'');
   d.innerHTML=html; $('foilbox').appendChild(d); return d;
 }
-function buildFoil(state){
-  const fb=$('foilbox');
-  fb.querySelectorAll('.tile').forEach(t=>t.remove());
-  const T=[
-    {h:'<span class="re">x·u</span>',x:14},
-    {h:'<span class="im">x·v·j</span>',x:38},
-    {h:'<span class="im">y·u·j</span>',x:62},
-    {h:'y·v·<span class="hh">j²</span>',x:86,hot:true},
-  ];
-  if(state===1){
-    T.forEach((t,i)=>{
-      const d=mkTile(t.h,t.hot?'hot':'');
-      if(animate){ d.style.left='50%'; d.style.top='22%'; d.style.opacity='0';
-        setTimeout(()=>{d.style.left=t.x+'%'; d.style.top='58%'; d.style.opacity='1';},80+i*260);
-      } else { d.style.left=t.x+'%'; d.style.top='58%'; }
-    });
-  } else {
-    // collected: xu · (xv+yu)j · yv·j²
-    const A=mkTile('<span class="re">x·u</span>');
-    const B=mkTile('<span class="im">(x·v + y·u)·j</span>');
-    const C=mkTile('y·v·<span class="hh">j²</span>','hot');
-    if(animate&&foilState===1){
-      const old={A:'14%',B1:'38%',B2:'62%',C:'86%'};
-      A.style.left='14%'; A.style.top='58%';
-      C.style.left='86%'; C.style.top='58%';
-      B.style.opacity='0'; B.style.left='50%'; B.style.top='58%';
-      const b1=mkTile('<span class="im">x·v·j</span>'), b2=mkTile('<span class="im">y·u·j</span>');
-      b1.style.left='38%'; b1.style.top='58%'; b2.style.left='62%'; b2.style.top='58%';
+const TERMS=[
+  {a:'f_x',b:'f_u', h:'<span class="re">x</span>·<span class="re">u</span>', x:12},
+  {a:'f_x',b:'f_vj',h:'<span class="re">x</span>·<span class="im">v·j</span>', x:38},
+  {a:'f_yj',b:'f_u',h:'<span class="im">y</span>·<span class="re">u</span>·<span class="im">j</span>', x:62},
+  {a:'f_yj',b:'f_vj',h:'<span class="im">y·v</span>·<span class="hh">j²</span>', x:88, hot:true},
+];
+function runFoilAnim(){
+  if(foilPlaying) return;
+  foilPlaying=true; hmmDismissed=false;
+  illoSetForce('foil'); clearTiles();
+  const cap=$('illocap'), fb=$('foilbox');
+  const litOff=()=>document.querySelectorAll('.factors .lit').forEach(e=>e.classList.remove('lit'));
+  const T=animate?1:0;
+  let t=200*T;
+  const tiles=[];
+  TERMS.forEach((tm,i)=>{
+    setTimeout(()=>{ litOff();
+      $(tm.a).classList.add('lit'); $(tm.b).classList.add('lit');
+      cap.innerHTML=['<span class="re">x</span> meets <span class="re">u</span>',
+        '<span class="re">x</span> meets <span class="im">v·j</span>',
+        '<span class="im">y·j</span> meets <span class="re">u</span>',
+        '<span class="im">y·j</span> meets <span class="im">v·j</span> — and j meets j'][i];
+      const d=mkTile(tm.h,tm.hot?'hot':'');
+      d.style.left='50%'; d.style.top='26%'; d.style.opacity='0';
       requestAnimationFrame(()=>{requestAnimationFrame(()=>{
-        b1.style.left='50%'; b2.style.left='50%'; b1.style.opacity='0'; b2.style.opacity='0';
-        A.style.left='16%'; C.style.left='84%';
-      });});
-      setTimeout(()=>{b1.remove(); b2.remove(); B.style.opacity='1';},950);
-    } else {
-      A.style.left='16%'; A.style.top='58%';
-      B.style.left='50%'; B.style.top='58%';
-      C.style.left='84%'; C.style.top='58%';
-    }
-  }
+        d.style.left=tm.x+'%'; d.style.top='55%'; d.style.opacity='1';});});
+      tiles.push(d);
+    }, t); t+=1150*T;
+  });
+  // collect the two j-terms
+  setTimeout(()=>{ litOff();
+    cap.innerHTML='two tiles carry a bare <span class="im">j</span> — like terms: collect them';
+    tiles[1].style.left='50%'; tiles[2].style.left='50%';
+    tiles[1].style.opacity='0'; tiles[2].style.opacity='0';
+    setTimeout(()=>{ tiles[1].remove(); tiles[2].remove();
+      const m=mkTile('(<span class="re">x</span>·<span class="im">v</span> + <span class="im">y</span>·<span class="re">u</span>)·<span class="im">j</span>');
+      m.style.left='50%'; m.style.top='55%'; m.style.opacity=animate?'0':'1';
+      requestAnimationFrame(()=>m.style.opacity='1');
+      tiles[1]=m;
+    }, 800*T);
+  }, t); t+=1600*T;
+  // the regroup: j² moves in with the reals — Hmm?
+  setTimeout(()=>{
+    cap.innerHTML='and <span class="hh" style="color:var(--light)">j²</span> — no bare j on it — moves in with the reals';
+    tiles[0].style.left='16%';
+    tiles[3].style.left='38%'; tiles[1].style.left='76%';
+    setTimeout(()=>{
+      const br=document.createElement('div'); br.className='bracket';
+      br.style.left='7%'; br.style.width='42%'; br.style.top='62%';
+      br.innerHTML='<span>the real part — if j² is real…</span>';
+      $('foilbox').appendChild(br);
+      $('hmm').hidden=false;
+      foilPlaying=false; foilPlayed=true;
+      if(M===1) advance(2);
+    }, 1100*T);
+  }, t);
 }
+function illoSetForce(mode){ const fp=foilPlaying; foilPlaying=false; illoSet(mode); foilPlaying=fp; }
+function foilFinal(){
+  if(foilPlaying) return;
+  foilPlayed=true;
+  const fb=$('foilbox');
+  if(fb.querySelectorAll('.tile').length===3 && fb.querySelector('.bracket')) return;
+  clearTiles();
+  const A=mkTile(TERMS[0].h), C=mkTile(TERMS[3].h,'hot'),
+        B=mkTile('(<span class="re">x</span>·<span class="im">v</span> + <span class="im">y</span>·<span class="re">u</span>)·<span class="im">j</span>');
+  A.style.left='16%'; A.style.top='55%';
+  C.style.left='38%'; C.style.top='55%';
+  B.style.left='76%'; B.style.top='55%';
+  const br=document.createElement('div'); br.className='bracket';
+  br.style.left='7%'; br.style.width='42%'; br.style.top='62%';
+  br.innerHTML='<span>the real part — if j² is real…</span>';
+  fb.appendChild(br);
+  if(!hmmDismissed) $('hmm').hidden=false;
+  $('illocap').innerHTML='every tile is arithmetic we already own — except the lit one';
+}
+/* the text is alive: pointing at a passage changes the picture */
+document.querySelectorAll('.crit').forEach(c=>{
+  const go=()=>illoSet(c.dataset.illo);
+  c.addEventListener('mouseenter',go);
+  c.addEventListener('focus',go);
+  c.addEventListener('click',go);
+});
+$('hmmClose').addEventListener('click',()=>{hmmDismissed=true; $('hmm').hidden=true;});
+$('hmmPic').addEventListener('click',()=>{$('csqpop').classList.add('on'); drawCsq(0);
+  setTimeout(csqPlay, animate?700:0);});
 
 /* ═══════ the completing-the-square pop-out ═══════ */
 const CSQ=$('csqsvg'); const csqC=.9, csqD=.9;
@@ -1011,8 +1109,6 @@ function csqPlay(){
     drawCsq(1-Math.pow(1-t,3));
     if(t<1) csqRaf=requestAnimationFrame(f);})(t0);
 }
-$('whyreal').addEventListener('click',()=>{$('csqpop').classList.add('on'); drawCsq(0);
-  setTimeout(csqPlay, animate?700:0);});
 $('csqclose').addEventListener('click',()=>$('csqpop').classList.remove('on'));
 $('csqreplay').addEventListener('click',()=>{drawCsq(0); setTimeout(csqPlay,150);});
 $('csqpop').addEventListener('click',e=>{if(e.target===$('csqpop')) $('csqpop').classList.remove('on');});
@@ -1094,14 +1190,14 @@ function update(){
   $('pval').textContent=(v<0?'−':'')+Math.abs(v).toFixed(2);
   document.querySelectorAll('.wcard').forEach(c=>{
     c.classList.toggle('now',parseInt(c.dataset.k)===k);
-    if(parseInt(c.dataset.k)===k&&M===7){c.classList.add('seen'); visited.add(k);}
+    if(parseInt(c.dataset.k)===k&&M===4){c.classList.add('seen'); visited.add(k);}
   });
   document.querySelectorAll('#chips button').forEach(c=>
     c.classList.toggle('now',parseInt(c.dataset.k)===k));
-  if(M===7&&visited.size>=3){$('advB1').classList.add('on'); setTw([$('advB1')]);}
+  if(M===4&&visited.size>=3){$('advB1').classList.add('on'); setTw([$('advB1')]);}
   const z=MOMENTS[M].z;
   if(z==='C1'||z==='D1'){drawOperator(v); updateOperatorPanel(v); drawOrbit(v); drawLevels(v);}
-  if(M>=17&&k===0&&!discovered){discovered=true; openNote();}
+  if(M>=14&&k===0&&!discovered){discovered=true; openNote();}
   else if(discovered&&sheet.classList.contains('on')) drawFilament(sheet);
   else if(discovered&&$('margin').classList.contains('lit')) drawFilament($('margin'));
 }
@@ -1366,11 +1462,12 @@ addEventListener('resize',()=>{
   const qm=new URLSearchParams(location.search).get('m');
   let start=0;
   if(qm!==null) start=Math.max(0,Math.min(MOMENTS.length-1,parseInt(qm)||0));
-  else{ try{ start=parseInt(localStorage.getItem('animath:v1:np-notebook:moment')||'0')||0;
+  else{ try{ start=parseInt(localStorage.getItem('animath:v1:np-notebook:moment2')||'0')||0;
     start=Math.max(0,Math.min(MOMENTS.length-1,start)); }catch(e){} }
   document.body.classList.add('noanim');
   animate=false; M=start; maxM=start;
-  if(start>=7){visited.add(-1);visited.add(0);visited.add(1);
+  if(start>=2){zipped=true; foilPlayed=true;}
+  if(start>=4){visited.add(-1);visited.add(0);visited.add(1);
     pdots.forEach(d=>{d.settled=true; d.p=Math.sign(d.p0);}); zeroTapped=true;}
   apply(); update();
   requestAnimationFrame(()=>requestAnimationFrame(()=>document.body.classList.remove('noanim')));
