@@ -32,6 +32,31 @@ from this session's cleanup focus).
 
 ## Working notes
 
+### 🟢 code · 04:36 — Quick-wins tier + df64 extraction landed (PR #247)
+**Why:** Dan approved the first two tasks. Opened draft PR #247 and executed:
+- **Deleted** dead files (`styles/responsive.ts`, `types/uniforms.d.ts`,
+  `unported_examples/fractint-simulator.tsx`), 3 orphaned `.html` session
+  artifacts, and ~10 orphaned one-off scripts (probe-*, shoot-pw, sign-shots,
+  test-rotations, probe-trivial-words).
+- **Removed ~15 grep-confirmed dead exports** across viewpoint/debugPose/
+  complexOps/Trees/PolygonWorlds/SolidWorlds/FractalPane (+ the private helpers
+  `rgba`, `combinations` they orphaned).
+- **Dead UI plumbing:** CorridorPreview + `'corridor'` kind, the `hue` prop chain.
+- **American-spelling pass** (14 fixes incl. one user-facing string) + tokenized
+  StableMatching's hardcoded grays (`var(--border)`).
+- **df64 extraction (T1):** new `lib/df64.ts` (`DF64_GLSL`, `splitDouble`,
+  `MAX_ITERATIONS`, `suggestedIter`); both fractal shaders now inline it like
+  `PALETTE_GLSL`. The one real structural fix.
+- **Two review claims REFUTED by verification and dropped:** `runBattery` (used by
+  `verify-geometry.ts`) and the stone/metal particle textures (live via the Texture
+  picker — `textureNames` includes them). Left `numberPlanes.kindLabel` in place
+  since that whole file is pending the T4 engine-merge decision.
+
+Verified: `npm run build` green, `npm run lint` 0 errors, `npm test` 212/212 pass,
+`df64-gpu-probe` passes, and both `#/fractals` + `#/correspondence` render correctly
+(screenshotted — shaders compile with the inlined DF64_GLSL). Tier-3 decisions
+(TopologyWalk, Argand engines, `*_UI.md` docs, Argand theming) left for Dan.
+
 ### 🟡 milestone · 02:45 — Review complete → full report written
 **Why:** All 16 reviewers finished. Findings synthesized into
 [2026-07-02-S02-deep-codebase-review.md](2026-07-02-S02-deep-codebase-review.md)
