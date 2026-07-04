@@ -13,7 +13,6 @@ const FractalsGPU = React.lazy(() => import('./animations/FractalsGPU/FractalsGP
 const Fractals2D = React.lazy(() => import('./animations/Fractals/Fractals2D'));
 const Correspondence = React.lazy(() => import('./animations/Correspondence/Correspondence'));
 const PlaneTransform = React.lazy(() => import('./animations/PlaneTransform/PlaneTransform'));
-const TopologyWalk = React.lazy(() => import('./animations/TopologyWalk/TopologyWalk'));
 const Trinary = React.lazy(() => import('./animations/TrinaryStars/Trinary'));
 const StableMatching = React.lazy(() => import('./animations/StableMatching/StableMatching'));
 const AgenticSorting = React.lazy(() => import('./animations/AgenticSorting/AgenticSorting'));
@@ -31,9 +30,6 @@ const routes: Record<string, React.ComponentType> = {
   '/fractals': FractalsGPU,
   '/fractals-cpu': Fractals2D,
   '/correspondence': Correspondence,
-  '/topology-walk': TopologyWalk,
-  '/mobius': TopologyWalk,      // legacy hashes → merged app
-  '/wrap-world': TopologyWalk,
   // Trinary System is one app with two views; `/trinary-lab` is the Lab tab and
   // is kept as a route so existing deep-links resolve (see Trinary.tsx).
   '/trinary': Trinary,

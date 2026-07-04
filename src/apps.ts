@@ -73,12 +73,6 @@ export const apps: AppDescriptor[] = [
     blurb: 'See tree-space as a polytope: every triangulation of an n-gon is a tree, every flip an edge, and the whole associahedron a 3D (or 4D) shape colored by energy.',
   },
   {
-    hash: '/topology-walk',
-    name: 'Topology Walk',
-    icon: '∞',
-    blurb: 'Walk a closed surface in first person — twisting corridor or flat torus / Klein bottle — and read the topology off your own footprints.',
-  },
-  {
     hash: '/solid-worlds',
     name: 'Solid Worlds',
     icon: '⬢',
