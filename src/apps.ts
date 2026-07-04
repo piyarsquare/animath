@@ -9,21 +9,17 @@ export interface AppDescriptor {
   blurb?: string;
 }
 
-/** Catalog of animations — the canonical app registry (append-only). The
- *  gallery (src/chrome/catalog.ts) derives its cards from this order. */
+/** Catalog of animations — the canonical app registry. The gallery
+ *  (src/chrome/catalog.ts) derives its cards from THIS order.
+ *
+ *  Normally append-only (see CLAUDE.md's parallel-branch rule). The one
+ *  deliberate exception is the **complex-plane family** at the very end
+ *  (Complex Particles · Plane Transform · Argand): these are unmerged
+ *  realizations of the same "arithmetic on the plane / number planes" idea
+ *  (Argand also carries the dormant `numberPlanes.ts` engine), grouped here
+ *  until we settle their final unified format — a notebook thread is working
+ *  out what that artifact should be. Keep new apps ABOVE this trailing group. */
 export const apps: AppDescriptor[] = [
-  {
-    hash: '/complex-particles',
-    name: 'Complex Particles',
-    icon: '✦',
-    blurb: 'Visualize z → f(z) as a cloud of particles living in 4D, projected down to 3D.',
-  },
-  {
-    hash: '/argand',
-    name: 'Argand Plane',
-    icon: '∡',
-    blurb: 'Build the complex line f(z) = α₁·z + α₀ (and quadratics): drag the coefficients, feed it a point, a shape or the whole grid, and watch multiply spiral while add slides — through complex, dual and split-complex numbers.',
-  },
   {
     hash: '/fractals',
     name: 'Fractals',
@@ -35,12 +31,6 @@ export const apps: AppDescriptor[] = [
     name: 'Polygon Worlds',
     icon: '⬚',
     blurb: 'One decorated square, four worlds: glue its edges and let curvature follow — walk a torus, Klein bottle, projective plane or sphere in first person.',
-  },
-  {
-    hash: '/plane-transform',
-    name: 'Plane Transform',
-    icon: '↦',
-    blurb: 'Watch a complex function f : ℂ → ℂ warp a colored grid of the plane.',
   },
   {
     hash: '/correspondence',
@@ -83,5 +73,25 @@ export const apps: AppDescriptor[] = [
     name: 'Counting the Ways',
     icon: '◫',
     blurb: 'Why does a Bessel function show up when you take the difference of two Poisson counts? Walk the diagonal of the (gains, losses) lattice and watch the scary function become a simple sum — the Skellam distribution, demystified.',
+  },
+
+  // ---- Complex-plane family (grouped at the end; see the header note) --------
+  {
+    hash: '/complex-particles',
+    name: 'Complex Particles',
+    icon: '✦',
+    blurb: 'Visualize z → f(z) as a cloud of particles living in 4D, projected down to 3D.',
+  },
+  {
+    hash: '/plane-transform',
+    name: 'Plane Transform',
+    icon: '↦',
+    blurb: 'Watch a complex function f : ℂ → ℂ warp a colored grid of the plane.',
+  },
+  {
+    hash: '/argand',
+    name: 'Argand Plane',
+    icon: '∡',
+    blurb: 'Build the complex line f(z) = α₁·z + α₀ (and quadratics): drag the coefficients, feed it a point, a shape or the whole grid, and watch multiply spiral while add slides — through complex, dual and split-complex numbers.',
   },
 ];
