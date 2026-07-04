@@ -32,6 +32,19 @@ from this session's cleanup focus).
 
 ## Working notes
 
+### 🟡 milestone · 02:45 — Review complete → full report written
+**Why:** All 16 reviewers finished. Findings synthesized into
+[2026-07-02-S02-deep-codebase-review.md](2026-07-02-S02-deep-codebase-review.md)
+(kind: plan, status: proposed). Note on process: the background subagents did NOT
+survive a container suspend/resume — 10 of them completed ~2h before I noticed but
+their completion notifications were lost; I recovered their final findings from the
+transcript files. Lesson: for a long fan-out in this environment, prefer
+synchronous agents or check the task output files rather than trusting
+notifications alone. Headline: codebase is healthy; accidental complexity is
+edge-accretion (duplicated df64 shader, stale *_UI.md docs, retired TopologyWalk,
+two Argand math engines, dead files/exports, one-off scripts). Awaiting Dan's
+go on the quick-wins tier + 4 judgment calls.
+
 ### 🟢 code · 16:52 — 15 review subagents launched; results streaming
 **Why:** Fan-out running. 12 area reviewers + 3 cross-cutting hunters
 (dead-code, duplication, convention-drift), each grounding findings in rg/grep
