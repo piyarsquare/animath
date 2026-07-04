@@ -347,7 +347,8 @@ input[type=range]::-moz-range-thumb{
         <path id="filpath" fill="none" stroke="var(--light)" stroke-width="2.6" opacity=".35" filter="url(#fglow)"/>
         <path id="filpath2" fill="none" stroke="#bfe7ff" stroke-width="1"/>
       </svg>
-      <div class="card note" id="note" aria-live="polite">
+      <div class="card note" id="note" aria-live="polite"></div>
+      <template id="notetpl">
         <h3>Note · revealed at p = 0</h3>
         <p><span class="lbl">Earlier thought:</span> the middle plane should carry a parabola —
           ellipse, <i>parabola</i>, hyperbola.</p>
@@ -355,7 +356,7 @@ input[type=range]::-moz-range-thumb{
           with no center. Forced through a centered lens, the parabolic class can only show its
           central representative — the parallel line pair.</p>
         <p class="src">— from the record, 29 June; the cone view settled it.</p>
-      </div>
+      </template>
     </div>
 
     <!-- the comparator -->
@@ -563,6 +564,12 @@ function drawOrbit(p){
 /* ————— state: one dial drives the spread ————— */
 const slider=document.getElementById('pslider');
 let revealed=false;
+/* the sticky middle magnets only under the pointer — keyboard arrows step
+   freely (a 0.08 window would trap the 0.05 arrow step at zero) */
+let pointerHeld=false;
+slider.addEventListener('pointerdown',()=>{pointerHeld=true;});
+addEventListener('pointerup',()=>{pointerHeld=false;});
+addEventListener('pointercancel',()=>{pointerHeld=false;});
 function drawFilament(){
   const wrap=document.getElementById('notewrap');
   const svg=document.getElementById('filament');
@@ -579,7 +586,7 @@ function drawFilament(){
 }
 function update(){
   let v=parseFloat(slider.value);
-  if (Math.abs(v)<0.08 && v!==0){ v=0; slider.value='0'; }   // the sticky middle
+  if (pointerHeld && Math.abs(v)<0.08 && v!==0){ v=0; slider.value='0'; }   // the sticky middle
   const k=kindOf(v);
   document.getElementById('pval').textContent=(v<0?'−':'')+Math.abs(v).toFixed(2);
   document.querySelectorAll('#comparator .panel').forEach(pn=>
@@ -589,6 +596,10 @@ function update(){
   drawLevels(v); drawOrbit(v);
   if (k===0 && !revealed){
     revealed=true;
+    // populate the live region only now, so assistive tech meets the note
+    // at the same moment sighted readers do
+    document.getElementById('note')
+      .appendChild(document.getElementById('notetpl').content.cloneNode(true));
     document.getElementById('notewrap').classList.add('revealed');
     requestAnimationFrame(drawFilament);
   } else if (revealed){ drawFilament(); }
