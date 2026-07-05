@@ -54,6 +54,11 @@ export function parseWord(s: string): EdgeWord {
   return out;
 }
 
+/** Canonical string form, e.g. `a b a⁻¹ b⁻¹`. Used by scripts/verify-schemas.ts. */
+export function wordToString(w: EdgeWord): string {
+  return w.map((l) => String.fromCharCode(97 + l.gen) + (l.inv ? '⁻¹' : '')).join(' ');
+}
+
 /** Which two edges a generator glues, and whether the gluing reverses direction.
  *  Consumed by the (future) geometry layer to build the edge-pairing isometries. */
 export interface EdgePairing { gen: number; edges: [number, number]; reversed: boolean }
