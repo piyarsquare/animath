@@ -13,13 +13,20 @@ export interface AppDescriptor {
  *  (src/chrome/catalog.ts) derives its cards from THIS order.
  *
  *  Normally append-only (see CLAUDE.md's parallel-branch rule). The one
- *  deliberate exception is the **complex-plane family** at the very end
- *  (Complex Particles · Plane Transform · Argand): these are unmerged
- *  realizations of the same "arithmetic on the plane / number planes" idea
- *  (Argand also carries the dormant `numberPlanes.ts` engine), grouped here
- *  until we settle their final unified format — a notebook thread is working
- *  out what that artifact should be. Keep new apps ABOVE this trailing group. */
+ *  deliberate exception is the trailing **plane-arithmetic pair** (Plane
+ *  Transform · Argand): two unmerged realizations of the same "arithmetic on
+ *  the plane / number planes" idea (Argand also carries the dormant
+ *  `numberPlanes.ts` engine), grouped at the end until we settle their final
+ *  unified format — a notebook thread is working out what that artifact should
+ *  be. Complex Particles stays the flagship (first). Keep new apps ABOVE the
+ *  trailing pair. */
 export const apps: AppDescriptor[] = [
+  {
+    hash: '/complex-particles',
+    name: 'Complex Particles',
+    icon: '✦',
+    blurb: 'Visualize z → f(z) as a cloud of particles living in 4D, projected down to 3D.',
+  },
   {
     hash: '/fractals',
     name: 'Fractals',
@@ -75,13 +82,7 @@ export const apps: AppDescriptor[] = [
     blurb: 'Why does a Bessel function show up when you take the difference of two Poisson counts? Walk the diagonal of the (gains, losses) lattice and watch the scary function become a simple sum — the Skellam distribution, demystified.',
   },
 
-  // ---- Complex-plane family (grouped at the end; see the header note) --------
-  {
-    hash: '/complex-particles',
-    name: 'Complex Particles',
-    icon: '✦',
-    blurb: 'Visualize z → f(z) as a cloud of particles living in 4D, projected down to 3D.',
-  },
+  // ---- Plane-arithmetic pair (grouped at the end; see the header note) -------
   {
     hash: '/plane-transform',
     name: 'Plane Transform',
