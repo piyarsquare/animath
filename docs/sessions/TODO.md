@@ -34,10 +34,31 @@ informs future rounds. Delete or check off items as they land.
   consumer would be a `#/embed/number-planes` applet (j² dial · rails · change-of-basis
   morph). Converge the plan's open questions with Dan before drafting.
 
-- [ ] [argand] !med `complexOps.ts` (the live Argand math) has no tests.
-  The new `numberPlanes.ts` is tested (50 assertions) but nothing uses it yet; the
-  shipping app runs on `complexOps.ts`, still untested. Mirror the numberPlanes suite
-  onto complexOps, or migrate the app onto numberPlanes.
+- [ ] [argand] !high Decide the Argand / Number-Plane final unified format (blocks the two items below).
+  From the 2026-07-02 deep review (`clean-up-loose-ends-8b0wqp/2026-07-02-S02`): Argand
+  and the "Number Plane" idea are two unmerged realizations of one concept — the
+  shipping app runs on `complexOps.ts`; the "Number Plane" is the dormant, tested
+  `numberPlanes.ts` engine + a planning doc (never its own app; nothing was buried).
+  A separate **notebook thread** is working out what that artifact should ultimately
+  be. Until it lands, the two apps are **clustered at the END of the gallery** (Plane
+  Transform · Argand; Complex Particles stays the flagship — see `src/apps.ts` header).
+  Dan 2026-07-02: "needs a cleaner idea of what it's aiming for." Converge with Dan +
+  the notebook before merging engines or restyling.
+
+- [ ] [argand] !med Wire Argand's visualization onto theme tokens (it's currently theme-blind).
+  From the 2026-07-02 review (convention-drift): `ArgandPlane.tsx` hardcodes a 7-color
+  role palette (`Z_COL`/`A0..2_COL`/`F_COL`/`FIX_COL`/`CRIT_COL`) + inline scene hex and
+  imports **no** theme hook, so its picture ignores skin × mode — the only app that
+  fully does. Map the roles onto `--data-1..7` via `useThemeTokens`, re-read on
+  `themeId`+`themeMode`. Mechanical, but entangled with the format question above — do
+  it once the artifact's direction is settled, not before.
+
+- [ ] [argand] !med `complexOps.ts` (the live Argand math) has no tests — two engines, one job.
+  The tested `numberPlanes.ts` (50 assertions) is dead; the shipping app runs on the
+  untested `complexOps.ts` — the two re-implement the same p=j² algebra and can silently
+  drift (2026-07-02 review T4). Cheapest fix once the format lands: make `numberPlanes`
+  the core and have `complexOps` thin-wrap it (delete the duplicated primitives), which
+  puts the live math under the existing suite. Do NOT do this before the format decision.
 
 - [ ] [argand] !med Argand plane-app: open five-hat review Tier-1 items.
   From `2026-06-24-S01-expert-synthesis.md`: the one real correctness bug = fabricated
