@@ -5,13 +5,13 @@ date: 2026-07-02
 title: Clean up loose ends
 branch: claude/clean-up-loose-ends-8b0wqp
 slug: clean-up-loose-ends-8b0wqp
-status: in-progress
-build: unknown
-followup: null
-pr: null
-app: general
-signals: needs-dan
-next: Dan to pick which loose ends this session tackles (backlog triage candidates listed in the summary).
+status: completed
+build: passed
+followup: LOW
+pr: 247
+app: general, fractals, chrome, docs
+signals: visual-unverified
+next: Review + merge PR #247. Then (deferred to Dan / a notebook thread) the Argand/Number-Plane final unified format and Argand's theme-token wiring.
 ---
 
 # Clean up loose ends
@@ -31,6 +31,43 @@ items are merging PR #243 and the future perturbation engine, a separate arc
 from this session's cleanup focus).
 
 ## Working notes
+
+### 🟡 milestone · 14:40 — Follow-on tidy pass; session complete
+**Why:** Dan: "look for any other low-hanging cleanup ops." Swept the residue left
+by the archive/reorg and closed the session.
+
+- **Stale docs:** deleted two executed-plan docs (`docs/polygon-worlds-plan.md`,
+  `docs/TRINARY_ROADMAP.md`); bannered the two completed redesign docs
+  (`CHROME-REVIEW.md`, `IMPLEMENTATION.md`) as historical/implemented.
+- **Dead `#/topology-walk` refs after the archive:** the load-bearing one was
+  `smoke.mjs` (still testing it as `webgl:true` → now the WebGL-less gallery
+  fallback, a false test) — removed. Also `shoot.mjs` examples, the Mobile-checklist
+  item, PLAN.md's P3 HUD reference (→ live Polygon/Solid Worlds), and the three-hats
+  skill (→ live `docs/apps/*.md` + DESIGN-SPEC instead of the deleted `*_UI.md`).
+- **Left alone (deliberately):** `unported_examples/` (a distinct staging convention),
+  provenance mentions of Topology Walk, export-narrowing (churn ≫ value).
+- Discovery scan clean: no orphaned app guides (`drift: none`), no broken doc links,
+  no debt markers beyond the legitimate df64 `TODO`.
+
+### 🟣 decision · 05:20 — Gallery: keep Complex Particles as the flagship
+**Why:** Dan: "please keep complex particles at the top." Investigation (his three
+"in flight" apps) found **no buried Number-Plane app** — that realization exists only
+as the dormant, tested `numberPlanes.ts` engine inside Argand + a planning doc.
+Resolution: Complex Particles returns to first; the trailing gallery cluster is just
+the **plane-arithmetic pair** (Plane Transform · Argand) — the two unmerged "number
+planes" realizations — held together until a separate notebook thread settles the
+final artifact. `apps.ts` header documents the one deliberate exception to
+append-only ordering.
+
+### 🟣 decision · 05:10 — Tier-3 decisions from Dan, executed (see S02 report)
+**Why:** Dan directed the Tier-3 follow-through from the review.
+
+- **TopologyWalk → archived** to `archive/animations/TopologyWalk/` (out of the build,
+  kept "to search its bones," esp. the Möbius corridor engine that has no live
+  successor). Routes + `apps.ts` entry removed; legacy hashes fall back to the gallery.
+- **Stale `*_UI.md` docs → deleted** (8 pre-redesign UI manuals + `GLOBAL_APP_DESIGN.md`).
+- **Argand engine-merge → deferred** pending the notebook thread's format decision
+  (→ the gallery clustering above instead).
 
 ### 🟢 code · 04:36 — Quick-wins tier + df64 extraction landed (PR #247)
 **Why:** Dan approved the first two tasks. Opened draft PR #247 and executed:
