@@ -19,7 +19,7 @@ This is the plan, proposal, or question to evaluate. If the user provides a file
 path, read that file. If the user provides inline text, use it directly. If the
 argument is brief (a topic name or question), gather relevant context from the
 codebase first (`CLAUDE.md`, `AGENTS.md`, the relevant `src/animations/<App>/`, the
-`docs/*_UI.md` snapshots, `docs/GLOBAL_APP_DESIGN.md`) before dispatching.
+`docs/apps/<slug>.md` guide, `docs/redesign/DESIGN-SPEC.md`) before dispatching.
 
 ## Output Files
 

@@ -1,3 +1,6 @@
+<!-- HISTORICAL (completed): this phased migration has been executed; the chrome it
+     describes is live. Kept for reference, not open work. -->
+
 # Implementation plan
 
 For an agent with repo access and permission to update main. Work in **phases that each leave main

@@ -8,10 +8,10 @@
 //
 // Usage:
 //   1. Build + serve the app:   npm run build && npm run preview &
-//   2. Shoot a route:           node scripts/shoot.mjs '#/topology-walk' out.png
+//   2. Shoot a route:           node scripts/shoot.mjs '#/solid-worlds' out.png
 //
 // Args:
-//   argv[2]  route hash (default '#/')          e.g. '#/topology-walk'
+//   argv[2]  route hash (default '#/')          e.g. '#/solid-worlds'
 //   argv[3]  output PNG path (default shot.png)
 //
 // Env:

@@ -1,3 +1,7 @@
+<!-- HISTORICAL (implemented): the three gaps reviewed here — always-on actions,
+     fullscreen access, and paired views — have all shipped and are described as
+     current chrome in CLAUDE.md. Kept as a record of the review, not open work. -->
+
 # Chrome design review — always-on actions, fullscreen access, paired views
 
 *2026-06-10 · branch `claude/app-chrome-overhaul-lnqgle` · review of the shipped chrome

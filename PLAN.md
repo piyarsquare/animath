@@ -14,8 +14,9 @@ file only ranks; keep both in sync when an item lands:
 1. **Hardware phone pass** on the chrome overhaul (action strip, hints,
    fullscreen panels, split views). Everything was verified headlessly at
    390×844 only; this is the cheapest way to de-risk the largest recent change.
-2. **P3 — `ViewDef.hud`**: design the HUD contract against TopologyWalk's
-   *actual* overlay inventory (MovePad + mini-map + captions), reusing the
+2. **P3 — `ViewDef.hud`**: design the HUD contract against the first-person
+   walkers' (Polygon / Solid Worlds) *actual* overlay inventory (MovePad +
+   mini-map + captions), reusing the
    `.am-view-overlay` layer PR D laid down. Unblocks: legitimizing the MovePad
    HUDs, Plane Transform's hint *arming* draw mode, and the P3-deferred polish.
 3. **Polygon Worlds path-demonstration redesign** — the only HIGH follow-up
