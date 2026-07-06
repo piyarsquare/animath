@@ -5,7 +5,7 @@ import {
   matMul, matVec, sub,
   pdf, logPdf, mahalanobis, mahalanobisMeansSq, mahalanobisPooledSq,
   klDivergence, klDecompose, jeffreys,
-  bhattacharyya, hellinger, bayesErrorBound, overlapIntegral,
+  bhattacharyya, hellinger, bayesErrorBound, overlapIntegral, wasserstein2,
 } from '../gaussian2d';
 
 /* ── helpers ──────────────────────────────────────────────────────────────── */
@@ -221,6 +221,32 @@ describe('total variation & Bayes error', () => {
       const r = overlapIntegral(p, q, { grid: 300 });
       expect(r.tv).toBeLessThanOrEqual(Math.sqrt(klDivergence(p, q) / 2) + 1e-3);
     }
+  });
+});
+
+/* ── Wasserstein-2 (Bures) ────────────────────────────────────────────────── */
+
+describe('Wasserstein-2', () => {
+  it('W₂(P,P) = 0 and symmetric', () => {
+    for (const [p, q] of PAIRS) {
+      expect(wasserstein2(p, p).distance).toBeCloseTo(0, 9);
+      expect(wasserstein2(p, q).squared).toBeCloseTo(wasserstein2(q, p).squared, 9);
+    }
+  });
+
+  it('equal covariances ⇒ W₂ = Euclidean gap between means (NOT Mahalanobis)', () => {
+    const p = G([0, 0], 0.4, 1.3, 0.7);
+    const q = G([1.5, -0.8], 0.4, 1.3, 0.7);
+    expect(wasserstein2(p, q).distance).toBeCloseTo(Math.hypot(1.5, -0.8), 9);
+  });
+
+  it('axis-aligned diagonal case: W₂² = Σ[(Δμ)² + (σ_P − σ_Q)²]', () => {
+    const p = G([0, 0], 0, 2, 0.5);
+    const q = G([1, 0], 0, 1, 1);
+    // means differ by (1,0); σ along x: 2 vs 1, along y: 0.5 vs 1
+    const expected = 1 * 1 + (2 - 1) ** 2 + (0.5 - 1) ** 2;
+    expect(wasserstein2(p, q).squared).toBeCloseTo(expected, 9);
+    expect(wasserstein2(p, q).distance).toBeCloseTo(1.5, 9);
   });
 });
 

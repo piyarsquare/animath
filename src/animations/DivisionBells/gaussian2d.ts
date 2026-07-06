@@ -267,6 +267,39 @@ export function hellinger(p: Gaussian2D, q: Gaussian2D): Hellinger {
 /** Bhattacharyya upper bound on the equal-prior Bayes error: P_e ≤ ½·BC. */
 export const bayesErrorBound = (p: Gaussian2D, q: Gaussian2D): number => 0.5 * bhattacharyya(p, q).coefficient;
 
+/* ── Wasserstein-2 (Bures / optimal transport) ────────────────────────────── */
+
+export interface Wasserstein {
+  /** Squared 2-Wasserstein distance W₂². */
+  squared: number;
+  /** W₂ — a true metric; the geometry-aware "how far must the mass move" distance. */
+  distance: number;
+}
+
+/**
+ * The 2-Wasserstein (Bures/Fréchet) distance between two Gaussians — closed form:
+ *   W₂² = |μ_P − μ_Q|² + tr(Σ_P + Σ_Q − 2(Σ_Q^{½}Σ_P Σ_Q^{½})^{½}).
+ * Unlike KL/Hellinger/TV (which compare densities pointwise), this is an
+ * *optimal-transport* distance: how far probability mass must physically move.
+ * For a 2×2 SPD matrix M, tr(√M) = √(tr M + 2√det M) (eigenvalues a,b give
+ * (√a+√b)² = a+b+2√ab), and by the cyclic trace tr(Σ_Q^{½}Σ_P Σ_Q^{½}) =
+ * tr(Σ_P Σ_Q), det(·) = detΣ_P·detΣ_Q — so no explicit matrix root is needed.
+ * When Σ_P = Σ_Q the covariance term vanishes and W₂ is the plain Euclidean gap
+ * between the means (contrast KL, which becomes ½·d_M²).
+ */
+export function wasserstein2(p: Gaussian2D, q: Gaussian2D): Wasserstein {
+  const sp = covariance(p);
+  const sq = covariance(q);
+  const d = sub(p.mean, q.mean);
+  const meanTerm = d[0] * d[0] + d[1] * d[1];
+  const trM = matTrace(matMul(sp, sq)); // tr(Σ_P Σ_Q)
+  const detM = detCov(p) * detCov(q);
+  const traceRoot = Math.sqrt(Math.max(0, trM + 2 * Math.sqrt(Math.max(0, detM))));
+  const bures = Math.max(0, matTrace(sp) + matTrace(sq) - 2 * traceRoot);
+  const squared = meanTerm + bures;
+  return { squared, distance: Math.sqrt(Math.max(0, squared)) };
+}
+
 /* ── total variation & Bayes error (numeric — no Gaussian closed form) ─────── */
 
 export interface OverlapResult {

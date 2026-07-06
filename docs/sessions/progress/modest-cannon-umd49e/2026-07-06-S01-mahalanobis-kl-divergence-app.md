@@ -8,10 +8,10 @@ slug: modest-cannon-umd49e
 status: in-progress
 build: unknown
 followup: null
-pr: null
-app: general
-signals: needs-dan
-next: Converge with Dan on the scope/framing of the new app (what "separation" and "divergence" should feel like on-screen) before building.
+pr: 248
+app: division-bells
+signals: null
+next: Waves 2–4 on branch (Bhattacharyya+Hellinger · Bayes-error+TV+decision-boundary · Wasserstein-2) + whitening/density-heat, all under PR #248.
 ---
 
 # New app — Mahalanobis separation & Kullback–Leibler divergence
@@ -33,6 +33,18 @@ That work is closed and unrelated to this session's focus.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟣 decision · 13:00 — PR #248 opened; building Waves 2–4 + whitening/heat
+**Why:** Dan approved all remaining scope and asked to open a PR now. Wave 1 is a
+clean verified milestone, so [PR #248](https://github.com/piyarsquare/animath/pull/248)
+opens on it and updates as later waves push to the same branch.
+
+Build order on-branch: (1) Wasserstein-2 (Bures) into the engine + tests — cheap,
+self-contained; (2) `measures.ts` registry + a progressive-disclosure family
+readout carrying Bhattacharyya + Hellinger (Wave 2) and the numeric TV/Bayes-error
+(Wave 3 scalars); (3) whitening toggle + canvas density / KL-integrand heat;
+(4) Wave 3 full — decision boundary + overlap shading + prior control, Bayes error
+as the operational anchor.
 
 ### 🟡 milestone · 12:45 — Wave-1 app shipped & verified (build + lint + tests + eyes)
 **Why:** The MVP payload is live and rendering correctly; time to lock it in.
