@@ -34,6 +34,32 @@ That work is closed and unrelated to this session's focus.
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 10:15 — Resuming the three hats to weigh *more* divergence measures
+**Why:** Dan asked whether Division Bells should include other measures —
+**Bayes error, total-variation (TV), Hellinger** (and Bhattacharyya) — and asked
+me to put the question back to the three experts while their review context is
+still warm. Resuming each agent (context intact) beats asking cold.
+
+All three closed-form for Gaussians, so engine-cheap; the real questions are
+scope (Maintainer), a divergence-family abstraction (Consultant), and which are
+honest/illuminating + how they relate — Pinsker (TV≤√(KL/2)), Bhattacharyya
+bounding Bayes error, the f-divergence family, bounded [0,1] vs unbounded KL
+(Pedagogy). Tailored follow-up sent to each; will fold answers into the plan.
+
+### 🟡 milestone · 10:05 — Three-hats review complete + synthesis written
+**Why:** All three reviews returned; convergence synthesis captures the plan.
+
+**Unanimous: build it.** Pedagogy re-derived the Gaussian-KL closed form and
+Monte-Carlo-checked it (1.5952 vs 1.5939); the `Σ₁=Σ₂ ⇒ KL = ½·d_M²` collapse is
+exact. Synthesis:
+[2026-07-06-S01-expert-synthesis.md](2026-07-06-S01-expert-synthesis.md) (per-hat
+reports linked within). Locked calls: hero Mahalanobis = directed-in-Q; KL
+Breakdown = two non-negative bars using the eigenvalue form ½·Σ(λ−1−lnλ); MVP =
+single immersive plane, engine-first with tests, heat/whitening/slice deferred;
+`logPdf` + running ∫=KL when the integrand heat lands. Blind spot the reviewers
+couldn't see: the album-cover gallery tile (added post-dispatch) → new
+`previews.tsx` kind.
+
 ### 🟣 decision · 09:45 — Gallery tile: inspired by *The Division Bell* album cover
 **Why:** Dan asked to base the gallery preview tile on the Pink Floyd *The
 Division Bell* (1994, Storm Thorgerson) cover — two giant facing metal-head
