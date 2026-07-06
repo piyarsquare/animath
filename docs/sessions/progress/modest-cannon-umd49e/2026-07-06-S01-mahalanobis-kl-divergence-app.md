@@ -34,6 +34,24 @@ That work is closed and unrelated to this session's focus.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 10:40 — Divergence-family question resolved; staged plan locked
+**Why:** All three hats' follow-ups returned and converge.
+
+**Reframe adopted:** Bayes error is the **operational anchor** — the app grows from
+"Mahalanobis + KL" into "how far apart are two distributions, by every honest
+yardstick," an honest **bounded stack** (TV, Hellinger, BC, Bayes error ∈ [0,1])
+with **KL the unbounded outlier**, linked by Pinsker + the Bhattacharyya bound.
+Staging: **Wave 1** KL + Mahalanobis (the exact ½·d_M² unification, engine-first +
+tests) · **Wave 2** Bhattacharyya + Hellinger (one BC computation, closed-form) ·
+**Wave 3** Bayes error + TV (gated on the decision-boundary/overlap conic + a prior
+control; **numeric**, labeled "≈"). Correctness catch (all three): TV & Bayes error
+have **no closed form for unequal Σ** — need a numeric overlap integrator, must be
+labeled. Structure: a scoped stateless `measures.ts` presentation registry for the
+scalar family; math stays in tested `gaussian2d.ts`; KL + Mahalanobis stay bespoke.
+Full convergence table appended to the
+[synthesis](2026-07-06-S01-expert-synthesis.md). Next: build `gaussian2d.ts` +
+tests (whole family up front; UI discloses progressively).
+
 ### 🟣 decision · 10:15 — Resuming the three hats to weigh *more* divergence measures
 **Why:** Dan asked whether Division Bells should include other measures —
 **Bayes error, total-variation (TV), Hellinger** (and Bhattacharyya) — and asked

@@ -424,3 +424,104 @@ the CountingTheWays skeleton, with those tests as the definition of done.
    design critique; follow-up (a `gaussian2d.ts` spike + a handle-interaction
    prototype) would confirm two reasoned assertions but is unlikely to change the
    verdict or the top concerns.
+
+## Follow-up: additional divergence measures
+
+Dan asks whether to add **Bayes error, TV distance, Hellinger, Bhattacharyya**,
+and whether a divergence-family registry is justified. First a correction that
+reshapes the whole answer:
+
+> [!CAUTION]
+> **The premise "all have closed forms for 2-D Gaussians" is only half true.**
+> Bhattacharyya (and therefore Hellinger) have clean Gaussian closed forms. **TV
+> and Bayes error do NOT** for the general unequal-Σ case — the decision region
+> `{π₁p > π₂q}` is a *conic* and the integral is elementary only when `Σ₁=Σ₂`.
+> Both need **numerical integration** in general. So they are not "cheap and
+> closed-form like the others"; they are the two that carry the most verification
+> and UI weight.
+
+The measures split into two classes, and that split — not the count — is the
+architecturally interesting thing:
+
+| Measure | Closed form (2-D Gaussian)? | Sym | Bounded | Verify by | Tier |
+|---|---|---|---|---|---|
+| KL(P‖Q), KL(Q‖P) | ✅ | ✗ | [0,∞) | integral-vs-closed-form (both-ways) | MVP (hero) |
+| Mahalanobis (directed / pooled) | ✅ | ✗ / ✅ | [0,∞) | algebraic identity + `=√(2KL)` at equal Σ | MVP (hero) |
+| **Bhattacharyya** `D_B` | ✅ `⅛ΔμᵀΣ̄⁻¹Δμ + ½ln(detΣ̄/√(detΣ₁detΣ₂))` | ✅ | [0,∞); `BC∈(0,1]` | `∫√(pq)` vs closed form | Wave 2 |
+| **Hellinger** `H²=1−BC` | ✅ (from `D_B`) | ✅ | [0,1] | derived; assert `H²=1−BC` | Wave 2 |
+| **TV** `½∫|p−q|` | ❌ general; ✅ only if `Σ₁=Σ₂` | ✅ | [0,1] | numeric; equal-Σ closed form + Pinsker bracket `TV≤√(KL/2)` | Wave 3 |
+| **Bayes error** `∫min(π₁p,π₂q)` | ❌ general; ✅ `Φ(−d_M/2)` at equal Σ, equal prior | ✅ | [0,½] | numeric; equal-Σ closed form + `=½(1−TV)` at equal priors | Wave 3 |
+
+Two facts I'd exploit: **Hellinger and Bhattacharyya are one computation**
+(`D_B → BC → H`), not two independent measures; and at **equal priors,
+`BayesError = ½(1−TV)` exactly**, with both reducing to closed forms at equal Σ
+(`TV = erf(d_M/2√2)`, `BE = Φ(−d_M/2)`). Those relations are free mutual-verification
+tests *and* a teaching spine (BC is the hub: Hellinger, the TV/Bayes brackets, and
+the drawn decision-boundary conic all hang off the overlap integral `∫√(pq)`).
+
+**1 · Abstraction call — a *light presentation* registry, yes; a math abstraction, no.**
+The tension resolves by putting the boundary in the right place:
+
+- The **math stays plain exported functions** in `gaussian2d.ts` (`bhattacharyya`,
+  `hellinger`, `tvNumeric`, `bayesError`, …). Tests target the functions. The
+  registry must **not** own the math — that would be the NIH move.
+- Add a **thin view-model registry** (~15 lines, app-side `measures.ts`):
+  `type Measure = { id; label; symmetric; bounded; method: 'closed'|'numeric';
+  range; compute:(P,Q)=>number; note }`. This is a *table the Analyze panel maps
+  over*, exactly like `COLORMAPS` / `AppDescriptor[]` / `ARCHETYPES` — house style,
+  not a foreign framework. The metadata is *earned*: the UI literally displays
+  symmetric?/bounded?/exact-vs-numeric, so these aren't speculative fields.
+- **Draw the registry boundary at the scalar-readout tier only.** The two hero
+  measures (KL with its live decomposition; Mahalanobis with the whitening picture)
+  stay **bespoke** — their output isn't `→ number`, it's `{value, decomposition,
+  direction}` and it drives canvas layers. Forcing them into a `compute:number`
+  descriptor is exactly where premature generalization would bite (optional fields
+  only two members use). So: registry = "and here are 4 more numbers, uniformly
+  presented"; bespoke = the two lenses that are the app's reason to exist.
+
+That is the honest reading of "skeptical of both NIH and over-engineering": the
+flat `compute(P,Q):number` signature is *fine* precisely because the registry is
+scoped to the flat-number tier; the measures that don't fit that signature aren't
+in it.
+
+**2 · Verification.** Give the both-ways integral test (the skellam trick) to the
+ones with a real closed form: **KL, Bhattacharyya, Hellinger** — numerically
+integrate `∫√(pq)` (or the KL integrand) on a fine grid, assert ≈ closed form.
+**TV and Bayes error have no independent closed form to check against** — the
+numeric integral *is* their definition. They get a softer, three-part guard:
+(a) the **equal-Σ special case** where closed forms exist (`Φ(−d_M/2)`,
+`erf(d_M/2√2)`); (b) **analytic brackets** (Pinsker `TV≤√(KL/2)`, Bhattacharyya
+`TV≤√(1−BC²)`, Chernoff for Bayes) asserted as inequalities; (c) **invariants**
+(∈ range, `=0` at P=Q, symmetry, `BE=½(1−TV)` at equal priors, monotone as means
+separate). Be honest in the UI: the descriptor's `method:'numeric'` flag should
+surface (a "≈" or "numeric" marker) because those two *will* wobble with grid
+resolution while the closed-form ones won't. That truth-in-labeling is a third
+reason the descriptor record earns its place.
+
+**3 · Structural risk — negligible.** The registry is a module-level constant
+computed from the pure engine (like `COLORMAPS`); it holds **no state** and does
+**not** leak into React state — the panel calls `m.compute(P,Q)` at render from the
+μ/Σ already in state, same as any derived readout. One trivial persisted set
+("which measures shown") at most. The one rule: keep `compute` pure `(P,Q)=>number`
+— never let it close over theme or React state. It composes cleanly with
+pure-engine→view→Workspace.
+
+It **does** sharpen the staging: **MVP = KL + Mahalanobis only** (the identity that
+is the app's reason to exist). **Wave 2 = Bhattacharyya + Hellinger** (one closed
+form, cheap, both-ways-testable) — the natural first use of the registry. **Wave 3
+= TV + Bayes error** — numeric integration, softer verification, and Bayes error
+additionally needs a **prior control (π₁,π₂)** and a **drawn decision-boundary
+conic** to be more than a naked number. Don't let "cheap to compute" wave TV/Bayes
+in early; they are the costliest of the set on both UI and verification, and they
+only earn their place if the app draws the **overlap region / decision boundary**
+they integrate over (otherwise they're extra digits).
+
+**4 · Recommendation.** Yes to the measures, staged; yes to a **light presentation
+registry scoped to the scalar-readout tier**, no to a math abstraction (functions
+stay plain and tested). Include **Bhattacharyya + Hellinger** as Wave 2 (best
+value/effort — one closed form, trivially verified, symmetric bounded companions to
+the asymmetric KL). Treat **TV + Bayes error** as Wave 3, gated on drawing the
+decision-boundary/overlap region and on the equal-Σ + bracket verification story;
+add a prior control for Bayes. Registry lives in `measures.ts` (view-model),
+functions in `gaussian2d.ts` (math). This keeps the hero decomposition bespoke, the
+secondary numbers uniform, and every measure honestly labeled exact-vs-numeric.

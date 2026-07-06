@@ -152,6 +152,49 @@ immersive plane, no heat/whitening/slice (A5, T3); `logPdf` + running ∫ = KL w
 heat lands (T5); σ-sliders are the always-works control, handles a desktop
 enhancement.
 
+## Follow-up: should Division Bells include more divergence measures?
+
+Dan asked whether to add **Bayes error, total-variation (TV), Hellinger,
+Bhattacharyya**. All three hats were resumed with their review context intact; the
+full arguments are in the `## Follow-up: additional divergence measures` section of
+each per-hat report. Convergence:
+
+### Unanimous
+| # | All three agree |
+|---|-----------------|
+| F1 | **Keep KL + Mahalanobis as the MVP spine.** The family is *not* in the first cut. |
+| F2 | **Bhattacharyya earns inclusion** — it's the **symmetric sibling of KL** (same mean-term + covariance-term structure), closed-form, and its `⅛·d_M²(pooled)` term bridges to KL's `½·d_M²`. Most on-theme addition. |
+| F3 | **Progressive disclosure, not a dashboard.** A wall of eight simultaneous numbers is the anti-payload; reveal the family behind a toggle/tier. |
+| F4 | **Correctness catch — the premise was half-wrong.** Bhattacharyya & Hellinger have Gaussian **closed forms**; **TV and Bayes error do NOT for unequal Σ** (the decision boundary is a conic → numeric overlap integral). They are the *costliest*, not the cheapest, and must be labeled **numeric / "≈"** in the UI — a silently-only-right-for-equal-Σ "TV" is a fabricated-precision trap. |
+
+### The reframe (Pedagogy + Maintainer, endorsed)
+**Make Bayes error the operational anchor.** Every measure is estimating one thing —
+*how often the best classifier must confuse P and Q* — and Bayes error **is** that
+number (`P_e = ½(1 − TV)` at equal priors). This opens the app from
+"Mahalanobis + KL" to **"how far apart are two distributions, by every honest
+yardstick, and why they agree,"** with an honest hierarchy: a **bounded stack**
+(TV, Hellinger, Bhattacharyya-coefficient, Bayes error — all in [0,1]) with **KL as
+the unbounded outlier**, tied together by **Pinsker** (`TV ≤ √(KL/2)`) and the
+**Bhattacharyya bound** (`P_e ≤ ½·BC`). All six relationships numerically verified
+by the Pedagogy hat.
+
+### Minor tensions → resolutions
+| Item | Maintainer | Pedagogy | Consultant | Resolution |
+|------|-----------|----------|------------|------------|
+| **Hellinger** | EXPLAINER "see also" (rescaling of BC) | Include — the true *bounded metric* foil to KL | Include (free with BC: `H² = 1−BC`) | **Include** — one line off BC, gives the bounded-metric contrast |
+| **TV** | See-also (`= 1−2·P_e`) | Show via **overlap shading**, not a tile | Wave 3, gated on the decision boundary | **Include with Bayes error** (same object), shown via overlap shading, numeric-labeled |
+| **Registry** | fits `readout` panel, no new chrome | — | **Yes, scoped**: ~15-line stateless `measures.ts` `{id,label,symmetric,bounded,method,compute}`; math stays in tested `gaussian2d.ts`; KL+Mahalanobis stay **bespoke** (they emit decompositions + canvas layers, not a scalar) | **Adopt** the scoped presentation registry |
+
+### Staging (consensus)
+- **Wave 1 / MVP:** KL + Mahalanobis + the exact `½·d_M²` unification. Engine-first + tests.
+- **Wave 2:** Bhattacharyya + Hellinger (one computation — BC — yields both; closed-form, both-ways integral test). Bhattacharyya's own `Breakdown` beside KL's = the symmetric-vs-asymmetric contrast.
+- **Wave 3:** Bayes error + TV, gated on drawing the **decision-boundary / overlap conic** + a prior control; labeled numeric, guarded by equal-Σ closed form + analytic brackets (Pinsker, Chernoff) + the `P_e = ½(1−TV)` invariant.
+
+**Engine note:** since I'm writing `gaussian2d.ts` anyway, put the *whole family* in
+the engine with tests up front (cheap; TV/Bayes get a numeric overlap integrator +
+`method: 'numeric'` flag). Scope discipline is enforced in the **UI disclosure**,
+not by leaving math unwritten.
+
 ## Self-reflection
 
 **Q1 — Did I do what was asked?** Yes: dispatched three independent expert
