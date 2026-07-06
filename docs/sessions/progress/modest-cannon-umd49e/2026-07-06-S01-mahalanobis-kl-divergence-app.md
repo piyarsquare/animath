@@ -34,6 +34,45 @@ That work is closed and unrelated to this session's focus.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 16:20 — 1D "felt" view shipped as the default; 2D parked as a mode
+**Why:** Delivers Dan's correction — the measures are now *visible* in the figure.
+
+`gaussian1d.ts` (pure: pdf/CDF, pooled+directed Mahalanobis, kl1, crossings,
+overlap/TV/Bayes) + 13 tests (overlap=2Φ(−δ/2σ), Bayes=½·overlap, KL vs numeric,
+crossings). Inline `Bells1D`: two bell curves on one axis with the **σ-ruler**
+(bracket + ticks every pooled σ, "dₘ = 2.40 σ"), the **shaded overlap lens**
+("overlap 23% · miss 12%"), and the **decision boundary** at the crossing. Top-bar
+**modes** *On a line* (default) · *On the plane* (the full 2-D — plane, family,
+whitening — kept in reserve). Focused line panels: two bells (μ/σ) · Separation &
+overlap readout (dₘ + overlap/Bayes, tied to the picture) · display toggles + prior.
+
+Verified headless: desktop (ruler with counted ticks, lens, boundary all read),
+mobile (renders, phone dock), and the *On the plane* switch (2D reserve intact).
+Build/lint(0)/34 tests green. Fixed the ruler colliding with the bottom caption
+(dropped the redundant caption — the start-hint carries the "drag" cue).
+
+![1D felt view — σ-ruler + overlap lens](assets/2026-07-06-S01-line.png)
+
+### 🟣 decision · 15:30 — Reframe: make the measures *felt* in 1D (Dan's correction)
+**Why:** Dan's feedback — the divergence values must be **felt in the figure**, not
+read off a panel; advancing to all measures + 2D so fast was a mistake. Pull back
+to **one or two measures in 1D**, where each measure *is* a visible area or distance.
+
+Decision (Dan): **Option A — Mahalanobis + overlap/Bayes error, in 1D, as the
+default**; the 2D plane, the yardstick family, and whitening stay in the codebase
+**parked as a mode** (nothing deleted — it's all in reserve on this branch/PR #248).
+
+The 1D "felt" mapping: two bell curves on one axis →
+- **Mahalanobis** = the peak-to-peak gap measured in **σ-units** — a ruler you read
+  ("2.4 σ apart"); pooled σ = √((σ₁²+σ₂²)/2) so it's always defined.
+- **Bayes error / overlap** = the **shaded lens** where the bells cross — the
+  confusable region; overlap = ∫min(p,q), Bayes error = ½·overlap (equal prior),
+  with the crossing point drawn as the decision boundary.
+
+Plan: `gaussian1d.ts` (pure, tested) → inline `Bells1D` view → top-bar modes
+*On a line* (1D, default) · *On the plane* (2D reserve). KL held for later (its
+felt form is the shaded p·log(p/q) integrand — the subtler third step).
+
 ### 🟡 milestone · 14:30 — View layer complete: canvas field + whitening (all scope done)
 **Why:** The deferred visual polish (density heat, KL-integrand, decision/overlap)
 and the whitening view — the last of the approved scope — are in and verified.

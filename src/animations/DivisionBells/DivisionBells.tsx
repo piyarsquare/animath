@@ -14,6 +14,7 @@ import {
   pdf, logPdf, covariance, whitenMatrix, fromCovariance, matMul, matVec, sub,
 } from './gaussian2d';
 import { FAMILY, MeasureCtx } from './measures';
+import { pdf1, mahalanobisPooled1, overlap1, bayesError1, crossings1 } from './gaussian1d';
 
 type FieldMode = 'none' | 'density' | 'kl' | 'classify';
 type WhitenMode = 'off' | 'P' | 'Q';
@@ -289,6 +290,116 @@ function BellsPlane({ P, Q, extent, show1, show2, showFill, showVector, field, p
   );
 }
 
+/* ── the 1-D "felt" view: two bell curves on one axis ───────────────────────── */
+
+interface Line1DProps {
+  m1: number; s1: number; m2: number; s2: number;
+  dM: number; overlap: number; bayes: number; crossings: number[];
+  showRuler: boolean; showLens: boolean; showBoundary: boolean; showFill: boolean;
+  onDragMu: (which: Which, mu: number) => void;
+}
+
+function Bells1D({ m1, s1, m2, s2, dM, overlap, bayes, crossings, showRuler, showLens, showBoundary, showFill, onDragMu }: Line1DProps) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const dragRef = useRef<Which | null>(null);
+  const { w, h } = useSize(wrapRef);
+
+  const XMIN = -6.5, XMAX = 6.5;
+  const padX = 24, padTop = 40, padBot = 72;
+  const sx = (x: number) => padX + ((x - XMIN) / (XMAX - XMIN)) * (w - 2 * padX);
+  const xOf = (clientX: number) => {
+    const r = svgRef.current!.getBoundingClientRect();
+    const fx = ((clientX - r.left) / (r.width || 1)) * w;
+    return XMIN + ((fx - padX) / (w - 2 * padX)) * (XMAX - XMIN);
+  };
+  const ymax = (Math.max(pdf1(m1, s1, m1), pdf1(m2, s2, m2)) || 1) * 1.18;
+  const baseY = h - padBot;
+  const sy = (d: number) => baseY - (d / ymax) * (baseY - padTop);
+
+  const N = 240;
+  const xs: number[] = [];
+  for (let i = 0; i <= N; i++) xs.push(XMIN + (i / N) * (XMAX - XMIN));
+  const curve = (mu: number, sig: number) => xs.map((x, i) => `${i ? 'L' : 'M'}${sx(x).toFixed(1)},${sy(pdf1(mu, sig, x)).toFixed(1)}`).join(' ');
+  const fillArea = (mu: number, sig: number) => `M${sx(XMIN).toFixed(1)},${baseY} ${xs.map(x => `L${sx(x).toFixed(1)},${sy(pdf1(mu, sig, x)).toFixed(1)}`).join(' ')} L${sx(XMAX).toFixed(1)},${baseY} Z`;
+  const lensArea = `M${sx(XMIN).toFixed(1)},${baseY} ${xs.map(x => `L${sx(x).toFixed(1)},${sy(Math.min(pdf1(m1, s1, x), pdf1(m2, s2, x))).toFixed(1)}`).join(' ')} L${sx(XMAX).toFixed(1)},${baseY} Z`;
+
+  const onDown = (which: Which) => (e: React.PointerEvent) => {
+    e.stopPropagation();
+    svgRef.current?.setPointerCapture(e.pointerId);
+    dragRef.current = which;
+  };
+  const onMove = (e: React.PointerEvent) => {
+    if (!dragRef.current) return;
+    onDragMu(dragRef.current, Math.max(XMIN + 0.4, Math.min(XMAX - 0.4, xOf(e.clientX))));
+  };
+  const onUp = (e: React.PointerEvent) => { svgRef.current?.releasePointerCapture(e.pointerId); dragRef.current = null; };
+
+  const peak = (mu: number, sig: number, which: Which, color: string) => {
+    const px = sx(mu), py = sy(pdf1(mu, sig, mu));
+    return (
+      <g key={which} style={{ cursor: 'ew-resize' }} onPointerDown={onDown(which)}>
+        <line x1={px} y1={py} x2={px} y2={baseY} stroke={color} strokeOpacity={0.4} strokeDasharray="3 3" />
+        <circle cx={px} cy={py} r={11} fill="transparent" />
+        <circle cx={px} cy={py} r={5} fill={color} stroke="var(--viz-bg, var(--bg))" strokeWidth={1.5} />
+        <text x={px} y={py - 11} fill={color} fontFamily="var(--font-mono)" fontSize={13} fontWeight={700} textAnchor="middle">{which}</text>
+      </g>
+    );
+  };
+
+  // the σ-ruler: a bracket between the peaks, ticked every pooled σ — so you can
+  // count how many bell-widths of gap there are.
+  const sp = Math.sqrt((s1 * s1 + s2 * s2) / 2);
+  const rulerY = baseY + 24;
+  const lo = Math.min(m1, m2), hi = Math.max(m1, m2);
+  const ticks: React.ReactNode[] = [];
+  if (showRuler && sp > 1e-6) {
+    for (let k = 1; (lo + k * sp) < hi - 1e-6 && k < 40; k++) {
+      const tx = sx(lo + k * sp);
+      ticks.push(<line key={k} x1={tx} y1={rulerY - 4} x2={tx} y2={rulerY + 4} stroke="var(--dim)" strokeOpacity={0.7} />);
+    }
+  }
+
+  return (
+    <div className="db-plane-wrap" ref={wrapRef}>
+      <svg ref={svgRef} className="db-plane" viewBox={`0 0 ${w} ${h}`} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
+        {/* baseline */}
+        <line x1={sx(XMIN)} y1={baseY} x2={sx(XMAX)} y2={baseY} stroke="var(--fg)" strokeOpacity={0.3} />
+        {/* faint fills under each bell */}
+        {showFill && <path d={fillArea(m1, s1)} fill="var(--data-1)" fillOpacity={0.1} />}
+        {showFill && <path d={fillArea(m2, s2)} fill="var(--data-2)" fillOpacity={0.1} />}
+        {/* the overlap lens — the confusable region */}
+        {showLens && <path d={lensArea} fill="var(--accent)" fillOpacity={0.42} />}
+        {/* the two bell curves */}
+        <path d={curve(m1, s1)} fill="none" stroke="var(--data-1)" strokeWidth={2.2} />
+        <path d={curve(m2, s2)} fill="none" stroke="var(--data-2)" strokeWidth={2.2} />
+        {/* decision boundary at the crossing(s) */}
+        {showBoundary && crossings.filter(x => x > XMIN && x < XMAX).map((x, i) => (
+          <line key={i} x1={sx(x)} y1={padTop - 6} x2={sx(x)} y2={baseY} stroke="var(--accent)" strokeOpacity={0.85} strokeWidth={1.4} strokeDasharray="4 3" />
+        ))}
+        {/* the σ-ruler */}
+        {showRuler && (
+          <g>
+            <line x1={sx(m1)} y1={rulerY} x2={sx(m2)} y2={rulerY} stroke="var(--dim)" strokeWidth={1.4} />
+            <line x1={sx(m1)} y1={rulerY - 5} x2={sx(m1)} y2={rulerY + 5} stroke="var(--dim)" />
+            <line x1={sx(m2)} y1={rulerY - 5} x2={sx(m2)} y2={rulerY + 5} stroke="var(--dim)" />
+            {ticks}
+            <text x={(sx(m1) + sx(m2)) / 2} y={rulerY + 18} fill="var(--fg)" fontFamily="var(--font-mono)" fontSize={12} fontWeight={700} textAnchor="middle">dₘ = {dM.toFixed(2)} σ</text>
+          </g>
+        )}
+        {peak(m1, s1, 'P', 'var(--data-1)')}
+        {peak(m2, s2, 'Q', 'var(--data-2)')}
+        {/* the lens's own label */}
+        {showLens && overlap > 0.008 && (
+          <text x={sx((m1 + m2) / 2)} y={sy(Math.min(pdf1(m1, s1, (m1 + m2) / 2), pdf1(m2, s2, (m1 + m2) / 2))) - 8} fill="var(--fg)" fontFamily="var(--font-mono)" fontSize={11} textAnchor="middle">
+            overlap {(overlap * 100).toFixed(0)}% · miss {(bayes * 100).toFixed(0)}%
+          </text>
+        )}
+      </svg>
+    </div>
+  );
+}
+
 /* ── the app ────────────────────────────────────────────────────────────────── */
 
 export default function DivisionBells() {
@@ -318,6 +429,29 @@ export default function DivisionBells() {
   // The Gaussians as displayed: whitened into P's or Q's metric, or as-is.
   const dP = whiten === 'off' ? P : whiten === 'Q' ? whitenGaussian(P, Q) : whitenGaussian(P, P);
   const dQ = whiten === 'off' ? Q : whiten === 'Q' ? whitenGaussian(Q, Q) : whitenGaussian(Q, P);
+
+  // ── the 1-D "felt" line view (the default) — its own simple state ──
+  const [mode, setMode] = usePersistentState<'line' | 'plane'>(`${NS}:mode`, 'line');
+  const [lM1, setLM1] = usePersistentState(`${NS}:lM1`, -1.2);
+  const [lS1, setLS1] = usePersistentState(`${NS}:lS1`, 1.0);
+  const [lM2, setLM2] = usePersistentState(`${NS}:lM2`, 1.2);
+  const [lS2, setLS2] = usePersistentState(`${NS}:lS2`, 1.0);
+  const [lPrior, setLPrior] = usePersistentState(`${NS}:lPrior`, 0.5);
+  const [lRuler, setLRuler] = usePersistentState(`${NS}:lRuler`, true);
+  const [lLens, setLLens] = usePersistentState(`${NS}:lLens`, true);
+  const [lBound, setLBound] = usePersistentState(`${NS}:lBound`, true);
+  const [lFill, setLFill] = usePersistentState(`${NS}:lFill`, true);
+
+  const lDM = mahalanobisPooled1(lM1, lS1, lM2, lS2);
+  const lOverlap = overlap1(lM1, lS1, lM2, lS2);
+  const lBayes = bayesError1(lM1, lS1, lM2, lS2, lPrior);
+  const lCross = crossings1(lM1, lS1, lM2, lS2);
+  const onDragMu = useCallback((which: Which, mu: number) => {
+    const r = Math.round(mu * 100) / 100;
+    if (which === 'P') setLM1(r); else setLM2(r);
+  }, [setLM1, setLM2]);
+  const matchWidths = () => setLS2(lS1);
+  const lReset = () => { setLM1(-1.2); setLS1(1.0); setLM2(1.2); setLS2(1.0); setLPrior(0.5); };
 
   const onDragMean = useCallback((which: Which, m: Vec2) => {
     const rx = Math.round(m[0] * 100) / 100, ry = Math.round(m[1] * 100) / 100;
@@ -480,46 +614,122 @@ export default function DivisionBells() {
     </>
   );
 
-  const sections: SectionDef[] = [
+  /* ── the 1-D (line) mode panels — the focused, "felt" default ── */
+  const lineBellPanel = (which: Which) => {
+    const isP = which === 'P';
+    const mu = isP ? lM1 : lM2, sig = isP ? lS1 : lS2;
+    const setMu = isP ? setLM1 : setLM2, setSig = isP ? setLS1 : setLS2;
+    const col = isP ? 'var(--data-1)' : 'var(--data-2)';
+    return (
+      <>
+        <div className="db-sub"><span className="db-swatch" style={{ background: col }} /> bell {which}</div>
+        <Slider label="mean μ" value={mu} min={-5} max={5} step={0.1} onChange={v => setMu(Math.round(v * 10) / 10)} format={v => v.toFixed(1)} />
+        <Slider label="width σ" value={sig} min={0.3} max={2.6} step={0.05} onChange={setSig} format={v => v.toFixed(2)} />
+      </>
+    );
+  };
+  const lineBellsNode = (
+    <>
+      {lineBellPanel('P')}
+      {lineBellPanel('Q')}
+      <div className="db-presets">
+        <button className="db-btn" onClick={matchWidths}>Match widths</button>
+        <button className="db-btn" onClick={lReset}>Reset</button>
+      </div>
+      <p className="db-hint">Or drag the <strong>peaks</strong> left/right on the plot.</p>
+    </>
+  );
+  const lineReadoutNode = (
+    <>
+      <Kicker>Separation — read it off the σ-ruler</Kicker>
+      <StatGrid stats={[
+        { k: 'Mahalanobis dₘ', v: `${lDM.toFixed(2)} σ` },
+        { k: 'peak gap |Δμ|', v: Math.abs(lM1 - lM2).toFixed(2) },
+      ]} />
+      <p className="db-hint">The peaks are <strong>{lDM.toFixed(2)}</strong> bell-widths apart — the gap measured in σ (pooled). Count the ticks on the ruler.</p>
+      <Kicker>Divergence — the shaded overlap</Kicker>
+      <Breakdown rows={[{ label: 'overlap', pct: Math.round(lOverlap * 100), color: 'var(--accent)' }]} />
+      <p className="db-hint">The lit lens is the <strong>overlap</strong> ({(lOverlap * 100).toFixed(0)}%). The best possible classifier still gets <strong>{(lBayes * 100).toFixed(1)}%</strong> wrong — the <strong>Bayes error</strong> (½·overlap at equal priors). Pull the bells apart and watch the lens — and the error — shrink.</p>
+      <Slider label="prior π(P)" value={lPrior} min={0.05} max={0.95} step={0.05} onChange={setLPrior} format={v => v.toFixed(2)} />
+    </>
+  );
+  const lineDisplayNode = (
+    <>
+      <Checkbox label="σ-ruler (the separation)" checked={lRuler} onChange={setLRuler} />
+      <Checkbox label="Overlap lens (how confusable)" checked={lLens} onChange={setLLens} />
+      <Checkbox label="Decision boundary" checked={lBound} onChange={setLBound} />
+      <Checkbox label="Curve fills" checked={lFill} onChange={setLFill} />
+    </>
+  );
+
+  const lineSections: SectionDef[] = [
+    { id: 'bells', title: 'The two bells', arch: 'subject', node: lineBellsNode, estHeight: 260 },
+    { id: 'readout', title: 'Separation & overlap', arch: 'readout', node: lineReadoutNode, estHeight: 360 },
+    { id: 'display', title: 'Display', arch: 'marks', node: lineDisplayNode, estHeight: 150 },
+  ];
+  const lineViews: ViewDef[] = [{
+    id: 'line',
+    title: 'Two bells on a line',
+    hint: 'drag P and Q — feel the σ-gap and the overlap',
+    node: (
+      <Bells1D
+        m1={lM1} s1={lS1} m2={lM2} s2={lS2}
+        dM={lDM} overlap={lOverlap} bayes={lBayes} crossings={lCross}
+        showRuler={lRuler} showLens={lLens} showBoundary={lBound} showFill={lFill}
+        onDragMu={onDragMu}
+      />
+    ),
+    defaultRect: { x: 372, y: 16, w: 760, h: 560 },
+  }];
+  const lineLayouts: LayoutDef[] = [
+    { id: 'essentials', name: 'Essentials', sub: 'Bells · Separation & overlap', icon: 'tune', open: { bells: { x: 84, y: 18 }, readout: { x: 84, y: 320 } } },
+  ];
+
+  /* ── the 2-D (plane) mode — kept in reserve behind the mode pill ── */
+  const planeSections: SectionDef[] = [
     { id: 'bells', title: 'The two bells', arch: 'subject', node: bellsNode, estHeight: 470 },
     { id: 'display', title: 'Display', arch: 'marks', node: displayNode, estHeight: 170 },
     { id: 'readout', title: 'Separation & divergence', arch: 'readout', node: readoutNode, estHeight: 340 },
     { id: 'yardsticks', title: 'The yardstick family', arch: 'lab', node: yardsticksNode, estHeight: 430 },
   ];
-
-  const views: ViewDef[] = [
-    {
-      id: 'plane',
-      title: 'The plane',
-      hint: 'drag P and Q — watch the divergence',
-      node: (
-        <BellsPlane
-          P={dP} Q={dQ} extent={6}
-          show1={show1} show2={show2} showFill={showFill} showVector={showVector}
-          field={field} priorP={priorP} whitened={whiten !== 'off'}
-          onDragMean={onDragMean}
-        />
-      ),
-      defaultRect: { x: 372, y: 16, w: 720, h: 720 },
-    },
-  ];
-
-  const layouts: LayoutDef[] = [
+  const planeViews: ViewDef[] = [{
+    id: 'plane',
+    title: 'The plane',
+    hint: 'drag P and Q — watch the divergence',
+    node: (
+      <BellsPlane
+        P={dP} Q={dQ} extent={6}
+        show1={show1} show2={show2} showFill={showFill} showVector={showVector}
+        field={field} priorP={priorP} whitened={whiten !== 'off'}
+        onDragMean={onDragMean}
+      />
+    ),
+    defaultRect: { x: 372, y: 16, w: 720, h: 720 },
+  }];
+  const planeLayouts: LayoutDef[] = [
     { id: 'essentials', name: 'Essentials', sub: 'Bells · KL & Mahalanobis', icon: 'tune', open: { bells: { x: 84, y: 18 }, readout: { x: 84, y: 500 } } },
     { id: 'measures', name: 'All measures', sub: 'Bells · the yardstick family', icon: 'grid', open: { bells: { x: 84, y: 18 }, yardsticks: { x: 84, y: 500 } } },
   ];
+
+  const isLine = mode === 'line';
+  const subtitle = isLine
+    ? `dₘ=${lDM.toFixed(2)}σ · misclassify ${(lBayes * 100).toFixed(0)}%`
+    : `KL(P‖Q)=${fmt(klPQ)} · dₘ=${fmt(dMdir)}σ`;
 
   return (
     <Workspace
       appId={NS}
       title="Division Bells"
-      subtitle={`KL(P‖Q)=${fmt(klPQ)} · dₘ=${fmt(dMdir)}σ`}
-      sections={sections}
-      views={views}
-      layouts={layouts}
+      subtitle={subtitle}
+      sections={isLine ? lineSections : planeSections}
+      views={isLine ? lineViews : planeViews}
+      layouts={isLine ? lineLayouts : planeLayouts}
       defaultLayoutId="essentials"
       immersive
       explainer={explainerText}
+      modes={[{ id: 'line', label: 'On a line' }, { id: 'plane', label: 'On the plane' }]}
+      activeMode={mode}
+      onModeChange={(id) => setMode(id as 'line' | 'plane')}
     />
   );
 }

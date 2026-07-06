@@ -1,8 +1,32 @@
 # Division Bells
 
-Two bell curves — Gaussians **P** and **Q** — sit on the plane. Drag their centers,
-tilt and stretch their ellipses, and watch two different answers to one question:
-**how far apart are these two distributions?**
+Two bells — Gaussians **P** and **Q** — and one question: **how far apart are they?**
+Start **On a line** (two bell curves on one axis), where each answer is something you
+can *see* and point at; switch to **On the plane** for the 2-D generalization.
+
+## On a line — the measures you can see
+
+Two bell curves on a shared axis. Drag the peaks:
+
+- **Mahalanobis separation** is the **gap between the peaks, measured in bell-widths
+  (σ)** — read it straight off the **σ-ruler** under the curves ("the peaks are 2.4 σ
+  apart"; count the ticks). It uses the pooled width σ = √((σ₁²+σ₂²)/2), so it is
+  always defined and symmetric.
+- The **divergence** is the **shaded lens where the bells overlap** — the *confusable*
+  region. Its area is the **overlap**; the best possible classifier told to tell P
+  from Q still misclassifies **½·overlap** of the time (equal priors) — the **Bayes
+  error**. The curves' crossing point is the **decision boundary**. Pull the bells
+  apart and the lens — and the error — shrink; push them together and it grows. That
+  is the divergence, *felt*.
+
+The prior π(P) tilts the decision boundary: if P is the more likely class, the
+boundary shifts toward Q and the error drops.
+
+## On the plane — the same ideas in 2-D
+
+Switch to *On the plane* and each bell becomes an ellipse you can drag, tilt and
+stretch; the full divergence family (KL, Bhattacharyya, Hellinger, TV, Bayes error,
+Wasserstein-2), the decision-overlap field, and the whitening view live there.
 
 ## Mahalanobis separation — distance in the distribution's own units
 
