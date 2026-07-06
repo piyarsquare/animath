@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   Gaussian2D, Vec2,
   covariance, precision, whitenMatrix, detCov, fromCovariance,
-  matMul, matVec, matInv, sub,
+  matMul, matVec, sub,
   pdf, logPdf, mahalanobis, mahalanobisMeansSq, mahalanobisPooledSq,
   klDivergence, klDecompose, jeffreys,
   bhattacharyya, hellinger, bayesErrorBound, overlapIntegral,

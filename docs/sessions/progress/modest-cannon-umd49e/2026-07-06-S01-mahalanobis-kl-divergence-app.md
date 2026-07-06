@@ -34,6 +34,47 @@ That work is closed and unrelated to this session's focus.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 12:45 — Wave-1 app shipped & verified (build + lint + tests + eyes)
+**Why:** The MVP payload is live and rendering correctly; time to lock it in.
+
+`DivisionBells.tsx` (immersive SVG plane, inlined `BellsPlane`), `EXPLAINER.md`
+(with the required *Possible sources* block), `divisionBells.css`; registered in
+`index.tsx` / `apps.ts` / `catalog.ts` (`Algorithm`/`divergence`) / README /
+CLAUDE, plus the album-cover **gallery tile** (`previews.tsx` `divergence` kind:
+two facing bell profiles + lit gap). `npm run build` green, `npm run lint` 0 errors
+(fixed 2 unused-import errors; 58 warnings = baseline), 18 engine tests green.
+
+Headless verification (R1) — DOM/SVG so no canvas, screenshotted as-is:
+
+![app](assets/2026-07-06-S01-app.png)
+
+The decomposition renders honestly: mean-shift 96% / cov-mismatch 4%, caption
+`= ½·d_M² 4.58 + cov 0.19 = 4.77 nats`, KL(P‖Q)=4.77 vs KL(Q‖P)=2.57 (the
+asymmetry is visible). Gallery tile (row 3) reads as two facing bells with the
+divergence lit between them:
+
+![gallery](assets/2026-07-06-S01-gallery.png)
+
+Mobile (390×844 direct shot) renders cleanly — two bells, axes, the phone dock
+with all three panels, no crash/blank; the phone re-chrome works out of the box.
+Added `#/division-bells` to `scripts/smoke.mjs` ROUTES (kept in sync with
+`index.tsx`).
+
+### 🟢 code · 11:55 — Studied precedents; building Wave-1 UI
+**Why:** Match conventions exactly before writing the view (R5 near-parallel-copy
+risk). Read the closest models: CountingTheWays (Workspace/sections/views/CSS +
+tested engine), workspace/types (`immersive`, ViewDef, SectionDef), readouts
+(`Breakdown` takes `pct∈[0,100]`, `StatGrid`, `Kicker`), ControlPanel primitives,
+`useThemeTokens`/`readThemeTokens`, previews.tsx (`PreviewKind` closed union +
+`themeInk` per-draw token read), catalog (`Category` closed — `Algorithm` is the
+fit), index route map, and Argand's pointer-drag + `toMath`/`toV` coordinate
+pattern for the immersive plane.
+
+Wave-1 scope: immersive SVG plane (two σ-ellipses + draggable means + difference
+vector), Define panels (θ/σ sliders + drag + presets Match-shapes/Concentric),
+Analyze panel (KL two-bar Breakdown + StatGrid both directions + Mahalanobis σ),
+theme tokens via SVG `var(--data-*)` (no canvas yet → heat deferred as planned).
+
 ### 🟢 code · 11:20 — Engine `gaussian2d.ts` + 18-test suite green
 **Why:** The pure engine is the real correctness guard (CI runs `tsc` only), so it
 lands first with tests (RECIPE R4), the whole measure family up front.
