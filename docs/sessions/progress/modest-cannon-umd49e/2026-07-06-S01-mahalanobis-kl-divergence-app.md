@@ -34,6 +34,29 @@ That work is closed and unrelated to this session's focus.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 11:20 — Engine `gaussian2d.ts` + 18-test suite green
+**Why:** The pure engine is the real correctness guard (CI runs `tsc` only), so it
+lands first with tests (RECIPE R4), the whole measure family up front.
+
+`src/animations/DivisionBells/gaussian2d.ts`: (θ, σ₁, σ₂) Gaussian with closed-form
+Σ / Σ⁻¹ / Σ^{±1/2} / det; `pdf`+`logPdf` (log-space); Mahalanobis (directed-in-Q
+**and** pooled); `klDivergence` + `klDecompose` (meanShift + covMismatch via the
+eigenvalue form ½·Σ(λ−1−lnλ), non-negative per axis); `bhattacharyya` (closed) →
+`hellinger`; `bayesErrorBound` (½·BC); `overlapIntegral` (numeric TV / overlap /
+Bayes error over an adaptive grid — the honest treatment of the two measures with
+**no** Gaussian closed form).
+
+18/18 tests pass (`npx vitest run …/gaussian2d.test.ts`). The load-bearing checks:
+closed-form KL == ∫p·(lnp−lnq) **both ways**; BC == ∫√(pq); the **exact collapse**
+(equal Σ ⇒ covMismatch=0, λ=1, KL = ½·d_M², directed=pooled); equal-spherical Bayes
+error == Φ(−δ/2) & TV == 2Φ(δ/2)−1; the **Bhattacharyya bound** Pₑ ≤ ½·BC and
+**Pinsker** TV ≤ √(KL/2) as inequalities; degenerate σ→0 floored, no NaN. Two
+initial failures were bad *test cases* (an accidentally-symmetric KL pair; a too-
+tight tol on √(1−BC) cancellation), not engine bugs — fixed.
+
+Next: Wave-1 UI — route + catalog registration, the immersive SVG plane view
+(draggable means + σ-ellipses), the KL Breakdown + Mahalanobis StatGrid, presets.
+
 ### 🟡 milestone · 10:40 — Divergence-family question resolved; staged plan locked
 **Why:** All three hats' follow-ups returned and converge.
 
