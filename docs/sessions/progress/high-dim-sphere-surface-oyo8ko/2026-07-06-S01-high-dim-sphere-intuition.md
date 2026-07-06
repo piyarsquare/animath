@@ -42,6 +42,50 @@ its cautionary hard-fail reflection).
 
 ## Working notes
 
+### 🟢 code · 21:32 — Phase 1 delivered: the notebook + reproducible probes + four validated figures
+**Why:** The math-first notebook is the phase-1 deliverable; landing it moves the session to "present the intuition to Dan, then decide phase 2."
+
+Landed in this folder:
+- **`2026-07-06-S01-hamming-sphere-notebook.md`** — the notebook: the shell
+  fact (`1 − (1−ε)^n`), the 2π/n volume recursion (peak at n = 5), the equator
+  squeeze (coordinate density `(1−x²)^((n−3)/2)`, σ = 1/√n, Archimedes flat at
+  n = 3), near-orthogonality (σ(cos θ) = 1/√n → exponentially many
+  almost-orthogonal directions — Hamming's coding punchline), the corner-sphere
+  box (√n − 1: escapes at n = 10, outgrows the box at n = 1206), the
+  LLN-unification (§6), an intuition digest (§7), Monte Carlo cross-checks
+  (§8), app seeds for phase 2 (§9), and the attribution block.
+- **`assets/probe.mjs`** — deterministic numeric probes (seeded MC): every
+  table in the notebook, reproducible with one command. All five MC checks
+  landed on theory to 3–4 digits (e.g. outer-1%-shell at n = 100: 63.40%
+  theory, 63.40% sampled).
+- **`assets/charts.mjs`** → four SVG figures (vn-vs-n, radial-cdf,
+  shell-fraction, coordinate-density). Built per the dataviz skill: ordinal
+  blue ramps (dimension is ordered) validated with the skill's palette
+  script (all PASS), reference chrome inks, self-contained light surface so
+  GitHub dark mode stays legible. Eyeballed via puppeteer screenshots (two
+  label-collision rounds fixed: chart-2 right corner, chart-3 ε labels,
+  chart-4 clipped Archimedes note).
+
+One probe bug caught and fixed during verification: at n = 3 the
+1.96/√n integration window exceeded the coordinate's [−1, 1] range (and JS's
+`0^0 = 1` silently inflated the integrand), reporting a nonsense 113% — the
+window is now clamped. Also pinned the folklore corner-sphere number by direct
+computation: the inner sphere's volume passes the box at exactly **n = 1206**.
+
+### 🟣 decision · 21:19 — Dan approved the three-phase plan; phase 1 (math notebook) begins
+**Why:** The path needed Dan's call; he chose the recommended route ("I think that is an excellent idea. let's begin.").
+
+Plan of record: **(1)** math-first notebook — derivations + numeric probes for
+the shell fact and its siblings, committed as a research-style report;
+**(2)** one small throwaway visual probe (no registry edits) to test whether
+interaction adds anything; **(3)** decide — graduate to an app
+(`kind: plan` + `/three-hats`) or park with the intuition banked. The
+`/explore-concept` room is reserved for after phase 1, if at all. Notebook
+lands as `2026-07-06-S01-hamming-sphere-notebook.md` (`kind: progress`,
+`status: investigation-only` — the linter's KINDS has no `research`), with a
+committed probe script + SVG charts under `assets/` (per R4: no throwaway
+`/tmp` verification).
+
 ### 🔵 finding · 20:40 — The rails: what the repo already has for "try the idea before the app"
 **Why:** Dan suspected "there might be additional rails to help start the process" — confirmed; inventoried them before proposing a plan.
 
