@@ -545,6 +545,165 @@ hand-wavy.
 
 ---
 
+## Follow-up: additional divergence measures
+
+*Dan asks whether to add **Bayes error**, **total-variation (TV)**,
+**Hellinger**, and **Bhattacharyya** to the Mahalanobis + KL pairing. Short
+answer from the fidelity lens: **yes to Bayes error + Bhattacharyya + Hellinger,
+and make Bayes error the operational anchor** — but only if the app treats the
+**relationships** as the payload, not the pile of numbers. I re-verified every
+closed form and bound below numerically (2-D Gaussians, grid-integrated to 5
+digits) before writing it.*
+
+### The through-line: how confusable are the two bells?
+
+Right now the app risks reading as "two unrelated formulas that happen to share a
+term." The measures Dan lists all answer **one operational question**: *if a
+classifier is shown a sample and told to call it P or Q, how often must it be
+wrong?* That lowest-possible error rate is the **Bayes error**, and every other
+measure is either **a bound on it** (Bhattacharyya, Hellinger, Pinsker/KL) or
+**an exact re-expression of it** (TV). Making Bayes error the anchor reframes the
+app from *"Mahalanobis + KL"* to *"how far apart are two distributions, by every
+honest yardstick — and why the yardsticks agree."* **I strongly recommend that
+reframe.** It is the thing that makes the collection feel like one idea.
+
+### The exact 2-D-Gaussian closed forms (verified)
+
+With `Σ̄ = (Σ₁+Σ₂)/2` and `Δμ = μ₂−μ₁`:
+
+```
+Bhattacharyya distance   D_B = ⅛·Δμᵀ Σ̄⁻¹ Δμ  +  ½·ln( det Σ̄ / √(det Σ₁ det Σ₂) )
+Bhattacharyya coeff      BC  = ∫√(pq) dx = exp(−D_B)              ∈ (0,1]   CLOSED FORM
+Hellinger (squared)      H²  = 1 − BC = 1 − exp(−D_B)            ∈ [0,1]    CLOSED FORM
+Hellinger distance       H   = √(1 − BC)                          ← a true METRIC
+```
+
+Numerical check (my run): `D_B = 0.4333`, `BC = 0.64838` (closed) `= 0.64838`
+(grid ∫√(pq)); `H² = 0.35162` both ways. ✔ The first term of `D_B` is **⅛·d_M²
+in the pooled metric** — note the **⅛**, versus KL's **½** on the same kind of
+quadratic form; do not let those factors cross-contaminate.
+
+> [!CAUTION]
+> **Gotcha — TV and Bayes error have NO elementary closed form for two general
+> Gaussians.** Both reduce to `∫ min(p,q)` (or `∫|p−q|`), which for unequal
+> covariances has a curved decision boundary and needs a **numeric overlap
+> integral** (a 2-D grid/quadrature, or the 1-D integral along the slice for the
+> equal-covariance case). This is a genuine asymmetry with BC/Hellinger/KL, which
+> *are* closed-form. The app must label TV/Bayes-error readouts as **computed
+> numerically** — and it's cheap here (one grid pass, the app already rasterizes
+> the density field), so it's honest *and* affordable.
+
+### The relationships (this is the payload)
+
+For **equal priors** `π₁=π₂=½` (the natural default; expose priors later):
+
+| relationship | statement | type | verified |
+|---|---|---|---|
+| Bayes error ↔ TV | `P_e = ½(1 − TV)` (since `∫min(p,q) = 1 − TV`) | **exact** | `0.18235 = 0.18235` ✔ |
+| Bayes error ↔ overlap | `P_e = ½·∫min(p,q)` = half the overlap mass | **exact** | ✔ |
+| Bhattacharyya bound | `P_e ≤ ½·BC = ½·e^(−D_B)` (Chernoff at s=½; tighter is `min_s …`) | **upper bound** | `0.18235 ≤ 0.32419` ✔ |
+| Hellinger ↔ BC | `H² = 1 − BC` | **exact** | ✔ |
+| Hellinger ↔ TV | `H² ≤ TV ≤ H·√(2−H²)` | **two-sided bound** | `0.352 ≤ 0.635 ≤ 0.761` ✔ |
+| Pinsker (ties to KL) | `TV ≤ √(KL/2)` (KL in nats) | **upper bound** | `0.635 ≤ 1.052` ✔ |
+
+Read as a chain, this is the lesson: **the bounded measures (TV, Hellinger, BC,
+Bayes error) all live in `[0,1]` and sandwich each other; KL sits *above* them,
+unbounded, connected only by the one-way Pinsker inequality.** That single
+picture — a stack of `[0,1]` measures with KL escaping to ∞ off the top — is the
+most honest way to show *why KL is the odd one out* (unbounded, asymmetric, not a
+metric) while the others are tame.
+
+### Bounded-vs-unbounded, metric-vs-divergence (keep this straight)
+
+| measure | range | symmetric? | true metric? |
+|---|---|:--:|:--:|
+| Bayes error `P_e` | `[0, ½]` | ✓ | — (an error rate, not a distance) |
+| TV | `[0,1]` | ✓ | ✓ (a genuine metric) |
+| Hellinger `H` | `[0,1]` | ✓ | ✓ (a genuine metric) |
+| Bhattacharyya coeff `BC` | `(0,1]` | ✓ | — (a *similarity*, `1`⇒identical) |
+| Bhattacharyya *distance* `D_B` | `[0,∞)` | ✓ | ✗ (fails triangle inequality) |
+| KL | `[0,∞)` | ✗ | ✗ |
+| Mahalanobis (fixed metric) | `[0,∞)` | ✓* | ✓ on points |
+
+`*` symmetric only within one fixed metric; the directed-in-Q's-metric one used
+inside KL is not (see §5). Note the subtlety worth teaching: **`D_B` is not a
+metric, but `√(1−e^(−D_B)) = H` is** — the same information, monotonically
+re-mapped into a bounded metric. That's a small, honest "aha" about how
+distance-like a divergence can be made.
+
+### Ranking: illuminating vs cluttering
+
+1. **Bayes error — include, as the operational anchor.** It's the *meaning* of
+   "how different," it's visual (overlap area), and it unifies the rest. Highest
+   value.
+2. **Bhattacharyya (coeff + distance) — include.** Closed-form, it's the natural
+   bound on Bayes error, and `D_B`'s `⅛·d_M²(pooled)` term rhymes with KL's
+   `½·d_M²(Q-metric)` — a direct bridge to the app's existing spine. It also
+   *is* the pooled-Σ Mahalanobis the §5 discussion already needs.
+3. **Hellinger — include (lightweight).** One line off BC (`H²=1−BC`), and it's
+   the app's chance to show a *true bounded metric*, contrasting KL. Cheap payoff.
+4. **TV — include as the readout that equals `½(1−overlap)`**, i.e. render it
+   *as* the Bayes-error/overlap story rather than as a seventh independent number.
+   Its operational tie (`P_e = ½(1−TV)`) is the point; standalone it clutters.
+5. **Chernoff (general `s`) — mention, don't build.** The tighter-than-½ bound is
+   a nice footnote (`min_s ∫p^s q^(1−s)`) but adds a slider for marginal insight;
+   leave it to the EXPLAINER's "go further."
+
+> [!IMPORTANT]
+> **Decision — recommended set:** Bayes error (anchor) · Bhattacharyya (BC + D_B)
+> · Hellinger · TV-as-`½(1−overlap)`, on top of the existing Mahalanobis + KL.
+> That's **six lenses that are really one question** plus the two the app was
+> built around. Present them in an **Analyze "Yardsticks" panel** as the chain
+> above (bounded stack + KL escaping), not as eight loose stat tiles.
+
+### Honesty traps specific to this addition
+
+- **Overlap shading ≠ KL integrand field.** Two *different* heat layers will be
+  on the same plane: the **overlap region** `min(p,q)` (unsigned, its area = Bayes
+  mass, symmetric) and the **KL integrand** `p·log(p/q)` (signed, directional,
+  integrates to KL). Learners *will* conflate them. Never show both lit at once;
+  gate them behind the active lens, and label the overlap "misclassification
+  mass" and the integrand "KL contribution (signed)." They answer different
+  questions and one is symmetric while the other is not.
+- **Disclose TV/Bayes numeric provenance** (above) — a small "≈ (numeric)" tag.
+- **Never call KL or `D_B` a metric.** TV and Hellinger are metrics; say so
+  explicitly *by contrast*, because that contrast is half the lesson.
+- **Priors:** `P_e = ½(1−TV)` and `P_e ≤ ½·BC` are the **equal-prior** forms.
+  Default to equal priors, and if you ever expose a prior slider, switch to
+  `P_e = π₁ − ∫max(0, π₁p − π₂q)` / `P_e ≤ √(π₁π₂)·BC` and relabel — don't leave
+  the ½'s hard-coded.
+
+### Recommended teaching order (extending §9's arc)
+
+1. **Overlap first (Bayes error).** Before any formula: shade `min(p,q)`, say
+   "this area is how often the best possible classifier is wrong." Concrete,
+   operational, no math.
+2. **TV = ½(1−overlap).** Name the overlap's complement; introduce TV as the same
+   fact renamed. Bounded `[0,1]`, a metric.
+3. **Bhattacharyya + Hellinger as the *bounds*.** "Here's a closed-form number
+   that upper-bounds that error (`½·BC`) and a bounded metric built from it
+   (`H`)." Now the learner has closed forms that *predict* the overlap without
+   integrating.
+4. **KL last, as the outlier.** "Every measure so far lives in `[0,1]`. KL
+   doesn't — it runs to ∞, it's asymmetric, it's not a metric — and Pinsker
+   (`TV ≤ √(KL/2)`) is the one bridge back." This is where KL's strangeness
+   becomes a *feature* the learner can place, not a wart.
+5. **Mahalanobis threads through** as the mean-separation seen in three metrics
+   (Q's inside KL at `½`, pooled inside `D_B` at `⅛`, shared at the collapse).
+
+That ordering makes Bayes error the floor everyone stands on and KL the ceiling
+that isn't there — which is exactly the honest hierarchy.
+
+> [!WARNING]
+> **Scope check.** Six measures is a lot; the §9 warning about staging applies
+> *doubly*. Do **not** surface all of them at rest. Ship Mahalanobis + KL as the
+> spine (the exact unification is still the headline), and put the yardstick
+> family behind a progressive-disclosure "compare all measures" step. The
+> relationships are the payload; a wall of eight simultaneous numbers is the
+> anti-payload.
+
+---
+
 ## Self-reflection
 
 1. **What would you do with another session?** Prototype the **whitened-frame

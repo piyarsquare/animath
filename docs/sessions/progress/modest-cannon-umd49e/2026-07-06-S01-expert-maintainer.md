@@ -461,3 +461,85 @@ prove the ½·d_M² collapse, and let the heat and the whitening warp be the vic
    critique, but the single highest-risk item (canvas density perf on mobile) is
    argued-from-precedent, not measured, and a cheap prototype would either confirm
    "defer the heat" or unlock shipping it in v1.
+
+## Follow-up: additional divergence measures
+
+Dan asks whether to add **Bayes error, TV, Hellinger, Bhattacharyya**. My maintainer
+answer starts by refusing the framing: these are **not four independent measures**.
+They collapse into **three lenses**, and two of the four are the same object as a third.
+
+| Measure | Closed form for 2-D Gaussians? | Really a distinct lens? |
+|---|---|---|
+| **Bhattacharyya** D_B | ✅ exact, cheap — same Σ̄⁻¹ quadratic form as pooled-Σ Mahalanobis + a log-det | ✅ the **symmetric sibling** of KL: same two-term structure |
+| **Hellinger** H | ✅ but H² = 1 − exp(−D_B) — a monotone transform of Bhattacharyya | ❌ no new information; a rescaling into [0,1] |
+| **Bayes error** ε | 🟡 only for equal Σ; unequal Σ ⇒ numeric integration | ✅ the **operational** lens: "how often would you misclassify?" |
+| **TV** | 🟡 same — TV = 1 − 2ε = 1 − overlap; no elementary form for unequal Σ | ❌ same object as Bayes error, less intuitive |
+
+> [!WARNING]
+> **The brief's premise "all four have cheap closed forms" is half-wrong.**
+> Bhattacharyya/Hellinger are exact and cheap. **TV and Bayes error are NOT** — for
+> unequal covariances the decision region {p>q} is a quadric, not a half-plane, and the
+> integral is not elementary. Shipping a "TV" that is silently only correct when Σ₁=Σ₂
+> is exactly the fabricated-precision trap the attribution policy warns against. The
+> cheap exact form (2Φ(d_M/2)−1-style) exists **only in the equal-Σ case**; general Σ
+> needs numeric quadrature.
+
+**1 · Scope discipline — where the line is.** Include a measure only if it adds a
+**lens**, not a **number**. The test: does it reinforce the "mean-shift term +
+covariance-mismatch term" decomposition, or is it a monotone rescaling of something
+already shown?
+- **Bhattacharyya** passes: its first term *is* the pooled-Σ Mahalanobis (÷8), so it has
+  the **identical two-part structure as KL but symmetric** — it deepens the brief's own
+  "KL asymmetric vs pooled-Σ Mahalanobis symmetric" contrast instead of diluting it. It
+  is the single most on-theme addition available.
+- **Bayes error** passes as the **operational payoff** — "if you guessed P vs Q from one
+  draw, how often would you be wrong?" is more intuitive than any divergence and answers
+  *why anyone should care*. But show it via the cheap **Bhattacharyya bound**
+  (ε ≤ ½·exp(−D_B)) by default; make the exact numeric integration an opt-in later tier.
+- **Hellinger** fails: it's 1 − BC. At most a derived caption under Bhattacharyya, never
+  its own headline row.
+- **TV** fails as a headline: it's the same object as Bayes error (less intuitive) and
+  carries the correctness trap. Represent the whole overlap/TV/Bayes cluster with **one**
+  number — Bayes error — and mention TV as its complement in the EXPLAINER.
+
+**MVP staging (unchanged):** none of these are MVP. MVP stays engine+tests → means +
+ellipses → the KL = ½·d_M² collapse. The family is a **Tier-2 "third lens" increment**,
+and Bhattacharyya + Bayes-via-bound ship **together as one coherent addition**, not five
+scattered rows. Hellinger/TV are **EXPLAINER "see also," never readout rows.**
+
+**2 · Layout — no new chrome, closed vocabulary intact (confirmed).** They live in the
+existing Analyze `readout` panel:
+- Reuse **`Breakdown`** for both KL *and* Bhattacharyya — both decompose into
+  mean-term + covariance-term, so the same primitive shows the same story twice
+  (symmetric vs asymmetric side by side). This is the payoff of the shared decomposition.
+- **`StatGrid`** for the scalar values, **`Kicker`** to label each lens
+  (Information · Similarity · Decision).
+- Hide the secondary lenses behind a **disclosure** (the `ColormapPicker`
+  "Other families (advanced)" pattern is the in-repo precedent for a folded-away
+  advanced section). Default view shows KL + Mahalanobis; "more measures" expands.
+- If it ever outgrows one panel, a **second `readout` panel** ("Measures") is legal —
+  panels may share an archetype (`ParticleViewerShell` ships two `marks` panels). No new
+  icon, no vocabulary stretch, no chrome change. Confirmed clean.
+
+**3 · Cost/debt — the code is cheap; the attention is not.** Bhattacharyya/Hellinger are
+a few lines + tests on machinery `gaussian2d.ts` already computes. The real costs are
+(a) exact TV/Bayes numeric integration — *not* cheap, correctness-sensitive, and
+adjacent to the same non-WebGL cost concern as the density heat; and (b) **cognitive
+real-estate**: five numbers in a teaching app is a glossary, not a lesson. The
+"it's only a few lines" argument is a trap — marginal code is cheap, marginal attention
+is expensive. Gate on lens-vs-number, not lines-of-code.
+
+**4 · Recommendation.**
+- **MVP:** KL + Mahalanobis only. No change to the §8 skeleton.
+- **Tier 2 — "the third lens":** add **Bhattacharyya** (symmetric decomposition, shown
+  in a second `Breakdown` beside KL's) **+ Bayes error via the Bhattacharyya bound**
+  (the "why care" payoff), behind a disclosure, organized by lens with the collapse
+  relationships shown (all become functions of d_M when Σ₁=Σ₂).
+- **See-also only (EXPLAINER / derived captions):** **Hellinger** (= 1 − BC) and
+  **TV/overlap** (= 1 − 2ε).
+- **Never silently:** exact TV/Bayes for unequal Σ — only via honest numeric integration
+  in a later session, domain-labeled.
+
+Net: a *curated subset of two* (Bhattacharyya + Bayes-via-bound), as one Tier-2 lens,
+turns a good two-lens app into an excellent three-lens app. Adding **all four raw
+measures** turns it into a dashboard and would earn a scope-creep flag from this hat.
