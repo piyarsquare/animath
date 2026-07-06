@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { LayoutDef, SectionDef, ViewDef } from '../../chrome/workspace/types';
 import { Slider, Checkbox } from '../../components/ControlPanel';
@@ -9,7 +9,9 @@ import './divisionBells.css';
 import {
   Gaussian2D, Vec2,
   klDivergence, klDecompose, mahalanobisMeans, mahalanobisPooled,
+  bhattacharyya, overlapIntegral,
 } from './gaussian2d';
+import { FAMILY, MeasureCtx } from './measures';
 
 const NS = 'division-bells';
 const LN2 = Math.log(2);
@@ -187,6 +189,7 @@ export default function DivisionBells() {
   const [show2, setShow2] = usePersistentState(`${NS}:show2`, true);
   const [showFill, setShowFill] = usePersistentState(`${NS}:showFill`, true);
   const [showVector, setShowVector] = usePersistentState(`${NS}:showVec`, true);
+  const [priorP, setPriorP] = usePersistentState(`${NS}:priorP`, 0.5); // prior for Bayes error
 
   const P: Gaussian2D = { mean: [pMx, pMy], theta: pTh, sigma: [pS1, pS2] };
   const Q: Gaussian2D = { mean: [qMx, qMy], theta: qTh, sigma: [qS1, qS2] };
@@ -214,6 +217,19 @@ export default function DivisionBells() {
   const pctMean = total > 1e-6 ? Math.round((dec.meanShift / total) * 100) : 0;
   const pctCov = total > 1e-6 ? Math.round((dec.covMismatch / total) * 100) : 0;
   const shapesMatch = dec.covMismatch < 1e-4;
+
+  // The numeric overlap (TV, Bayes error) — computed once here and shared, since
+  // it's the one expensive quantity and has no Gaussian closed form.
+  const overlap = useMemo(
+    () => overlapIntegral(P, Q, { grid: 170, priorP }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pMx, pMy, pTh, pS1, pS2, qMx, qMy, qTh, qS1, qS2, priorP],
+  );
+  const ctx: MeasureCtx = { overlap };
+  const bc = bhattacharyya(P, Q).coefficient;
+  // live relationship checks (the honest hierarchy)
+  const pinskerRHS = Math.sqrt(Math.max(0, klPQ) / 2); // TV ≤ √(KL/2)
+  const bhatBound = 0.5 * bc; // Pₑ ≤ ½·BC
 
   /* ── panels ── */
   const bellPanel = (which: Which) => {
@@ -284,10 +300,52 @@ export default function DivisionBells() {
     </>
   );
 
+  const fmtMeasure = (v: number, method: 'closed' | 'numeric') =>
+    Number.isNaN(v) ? '—' : `${method === 'numeric' ? '≈ ' : ''}${fmt(v, 3)}`;
+
+  const yardsticksNode = (
+    <>
+      <Kicker>The yardstick family — how confusable are the two bells?</Kicker>
+      <p className="db-hint">
+        Every row answers the same question. <strong>Bayes error</strong> is the
+        operational one: the mistake rate of the best classifier told to tell P from Q.
+      </p>
+      <Slider label="prior π(P) — for Bayes error" value={priorP} min={0.05} max={0.95} step={0.05} onChange={setPriorP} format={v => v.toFixed(2)} />
+      <table className="db-table">
+        <thead>
+          <tr><th>measure</th><th>value</th><th>kind</th></tr>
+        </thead>
+        <tbody>
+          {FAMILY.map(m => {
+            const v = m.compute(P, Q, ctx);
+            return (
+              <tr key={m.id} title={m.note}>
+                <td><span className="db-sym">{m.symbol}</span> {m.label}</td>
+                <td className="db-val">{fmtMeasure(v, m.method)}</td>
+                <td className="db-tags">
+                  {m.bounded ? <i className="db-tag b" title="bounded in [0,1]">[0,1]</i> : <i className="db-tag u" title="unbounded">∞</i>}
+                  {m.metric ? <i className="db-tag m" title="a true metric">M</i> : <i className="db-tag d" title="a divergence, not a metric">÷</i>}
+                  {m.method === 'numeric' && <i className="db-tag n" title="numeric (no Gaussian closed form)">≈</i>}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <div className="db-rel">
+        <div>Pₑ = ½(1 − TV) = <strong>{fmt(0.5 * (1 - overlap.tv), 3)}</strong> {priorP === 0.5 ? '✓' : '(equal-prior identity)'}</div>
+        <div>Pₑ ≤ ½·BC = <strong>{fmt(bhatBound, 3)}</strong> {overlap.bayesError <= bhatBound + 1e-3 ? '✓' : ''}</div>
+        <div>TV ≤ √(KL/2) = <strong>{fmt(pinskerRHS, 3)}</strong> {overlap.tv <= pinskerRHS + 1e-3 ? '✓ (Pinsker)' : ''}</div>
+      </div>
+      <p className="db-hint">A bounded stack (TV, Hellinger, Pₑ) with <strong>KL the unbounded outlier</strong>. Values marked <em>≈ num</em> have no Gaussian closed form (the decision boundary is a conic) and are integrated numerically.</p>
+    </>
+  );
+
   const sections: SectionDef[] = [
     { id: 'bells', title: 'The two bells', arch: 'subject', node: bellsNode, estHeight: 470 },
     { id: 'display', title: 'Display', arch: 'marks', node: displayNode, estHeight: 170 },
     { id: 'readout', title: 'Separation & divergence', arch: 'readout', node: readoutNode, estHeight: 340 },
+    { id: 'yardsticks', title: 'The yardstick family', arch: 'lab', node: yardsticksNode, estHeight: 430 },
   ];
 
   const views: ViewDef[] = [
@@ -303,7 +361,8 @@ export default function DivisionBells() {
   ];
 
   const layouts: LayoutDef[] = [
-    { id: 'essentials', name: 'Essentials', sub: 'Bells · Readout', icon: 'tune', open: { bells: { x: 84, y: 18 }, readout: { x: 84, y: 500 } } },
+    { id: 'essentials', name: 'Essentials', sub: 'Bells · KL & Mahalanobis', icon: 'tune', open: { bells: { x: 84, y: 18 }, readout: { x: 84, y: 500 } } },
+    { id: 'measures', name: 'All measures', sub: 'Bells · the yardstick family', icon: 'grid', open: { bells: { x: 84, y: 18 }, yardsticks: { x: 84, y: 500 } } },
   ];
 
   return (
