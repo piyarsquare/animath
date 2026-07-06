@@ -9,20 +9,23 @@ export interface AppDescriptor {
   blurb?: string;
 }
 
-/** Catalog of animations — the canonical app registry (append-only). The
- *  gallery (src/chrome/catalog.ts) derives its cards from this order. */
+/** Catalog of animations — the canonical app registry. The gallery
+ *  (src/chrome/catalog.ts) derives its cards from THIS order.
+ *
+ *  Normally append-only (see CLAUDE.md's parallel-branch rule). The one
+ *  deliberate exception is the trailing **plane-arithmetic pair** (Plane
+ *  Transform · Argand): two unmerged realizations of the same "arithmetic on
+ *  the plane / number planes" idea (Argand also carries the dormant
+ *  `numberPlanes.ts` engine), grouped at the end until we settle their final
+ *  unified format — a notebook thread is working out what that artifact should
+ *  be. Complex Particles stays the flagship (first). Keep new apps ABOVE the
+ *  trailing pair. */
 export const apps: AppDescriptor[] = [
   {
     hash: '/complex-particles',
     name: 'Complex Particles',
     icon: '✦',
     blurb: 'Visualize z → f(z) as a cloud of particles living in 4D, projected down to 3D.',
-  },
-  {
-    hash: '/argand',
-    name: 'Argand Plane',
-    icon: '∡',
-    blurb: 'Build the complex line f(z) = α₁·z + α₀ (and quadratics): drag the coefficients, feed it a point, a shape or the whole grid, and watch multiply spiral while add slides — through complex, dual and split-complex numbers.',
   },
   {
     hash: '/fractals',
@@ -35,12 +38,6 @@ export const apps: AppDescriptor[] = [
     name: 'Polygon Worlds',
     icon: '⬚',
     blurb: 'One decorated square, four worlds: glue its edges and let curvature follow — walk a torus, Klein bottle, projective plane or sphere in first person.',
-  },
-  {
-    hash: '/plane-transform',
-    name: 'Plane Transform',
-    icon: '↦',
-    blurb: 'Watch a complex function f : ℂ → ℂ warp a colored grid of the plane.',
   },
   {
     hash: '/correspondence',
@@ -73,12 +70,6 @@ export const apps: AppDescriptor[] = [
     blurb: 'See tree-space as a polytope: every triangulation of an n-gon is a tree, every flip an edge, and the whole associahedron a 3D (or 4D) shape colored by energy.',
   },
   {
-    hash: '/topology-walk',
-    name: 'Topology Walk',
-    icon: '∞',
-    blurb: 'Walk a closed surface in first person — twisting corridor or flat torus / Klein bottle — and read the topology off your own footprints.',
-  },
-  {
     hash: '/solid-worlds',
     name: 'Solid Worlds',
     icon: '⬢',
@@ -89,5 +80,19 @@ export const apps: AppDescriptor[] = [
     name: 'Counting the Ways',
     icon: '◫',
     blurb: 'Why does a Bessel function show up when you take the difference of two Poisson counts? Walk the diagonal of the (gains, losses) lattice and watch the scary function become a simple sum — the Skellam distribution, demystified.',
+  },
+
+  // ---- Plane-arithmetic pair (grouped at the end; see the header note) -------
+  {
+    hash: '/plane-transform',
+    name: 'Plane Transform',
+    icon: '↦',
+    blurb: 'Watch a complex function f : ℂ → ℂ warp a colored grid of the plane.',
+  },
+  {
+    hash: '/argand',
+    name: 'Argand Plane',
+    icon: '∡',
+    blurb: 'Build the complex line f(z) = α₁·z + α₀ (and quadratics): drag the coefficients, feed it a point, a shape or the whole grid, and watch multiply spiral while add slides — through complex, dual and split-complex numbers.',
   },
 ];

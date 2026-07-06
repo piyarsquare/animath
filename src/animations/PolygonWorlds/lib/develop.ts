@@ -34,7 +34,7 @@ export interface DevelopResult {
   visited: number;
 }
 
-/** Quantised key for de-duplicating group elements (matrices) up to tolerance. */
+/** Quantized key for de-duplicating group elements (matrices) up to tolerance. */
 function matKey(m: Mat3): string {
   let s = '';
   for (let i = 0; i < 9; i++) s += Math.round(m[i] * 1e5) + ',';

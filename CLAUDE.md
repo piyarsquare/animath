@@ -66,6 +66,7 @@ animath/
 │   └── PREVIEW_DEPLOYS.md      # per-PR preview deploy options
 ├── .github/workflows/deploy.yml  # GitHub Pages deploy (push to main + manual)
 ├── public/textures/            # HDR environment map + placeholder
+├── archive/                    # retired code kept for reference — NOT built/routed (see archive/README.md; e.g. animations/TopologyWalk)
 └── src/
     ├── index.tsx               # entry: bare hash router (gallery at #/), lazy route map
     ├── App.tsx                 # default Complex Particles route (lazy wrapper)
@@ -103,7 +104,6 @@ animath/
     │   ├── FractalsGPU/         # GPU Mandelbrot / Julia / Burning Ship / Tricorn; Precision toggle (Standard float32 ↔ Extended df64 emulated-double for deep zoom past the ~1e5× float32 wall — method + the "limits of computation" write-up in DEEP_ZOOM.md, surfaced in the ? modal) + Auto-raise iterations with zoom (deep zoom needs many more iterations or it reads as flat interior, hiding the precision gain; MAX_ITER 4000). Standalone GPU/visual deep-zoom tests: scripts/df64-gpu-probe.mjs (pass/fail) + scripts/df64-image-probe.mjs (before/after tiles)
     │   ├── Fractals/            # legacy CPU 2D fractals (routed at #/fractals-cpu)
     │   ├── Correspondence/      # Mandelbrot ↔ Julia split-pane explorer; shares the Precision toggle (Standard float32 ↔ Extended df64) on both panes (FractalPane), method documented in FractalsGPU/DEEP_ZOOM.md; also shares Auto-raise iterations with zoom
-    │   ├── TopologyWalk/        # UNLISTED / being retired (Polygon Worlds supersedes it; absorbed its scene looks). Möbius corridor + flat torus / Klein bottle
     │   ├── TrinaryStars/        # three-body planet sandbox (Observatory) + ensemble Lab
     │   │                        #   (Trinary.tsx hosts both as tabs; engine in lib/nbody)
     │   ├── AgenticSorting/      # concurrent agent-based sorting (CSS/DOM)
@@ -151,8 +151,6 @@ animath/
     │   └── quat4.ts            # 4D quaternion rotation builder
     │
     ├── config/defaults.ts      # shared slider ranges + initial values
-    ├── styles/responsive.ts    # breakpoints + useResponsive hook
-    ├── types/uniforms.d.ts     # shader uniform type declarations
     └── unported_examples/      # excluded from build (tsconfig exclude)
 ```
 
@@ -171,7 +169,6 @@ visible app catalog comes from `src/apps.ts` (+ `src/chrome/catalog.ts`).
 | `#/fractals`         | `FractalsGPU`    | GPU Mandelbrot / Julia / Burning Ship / Tricorn |
 | `#/fractals-cpu`     | `Fractals2D`     | Legacy CPU 2D fractals (unlisted)           |
 | `#/correspondence`   | `Correspondence` | Mandelbrot ↔ Julia, two linked view windows |
-| `#/topology-walk`    | `TopologyWalk`   | **Unlisted** (being retired; superseded by Polygon Worlds, which absorbed its scene looks). First-person walk on a closed surface (twisting Möbius corridor / flat torus / Klein); still URL-reachable, `#/mobius` and `#/wrap-world` redirect here |
 | `#/trinary`          | `Trinary`        | Three-star system: Observatory + Lab as top-bar modes (`#/trinary-lab` opens the Lab) |
 | `#/agentic-sorting`  | `AgenticSorting` | Concurrent agent-based sorting              |
 | `#/stable-matching`  | `StableMatching` | Rebuilt Gale–Shapley lab (matrix · welfare surface · lattice via layouts) |

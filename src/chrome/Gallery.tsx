@@ -59,7 +59,7 @@ export default function Gallery() {
         <div className="am-gal-grid">
           {cards.map(a => (
             <button key={a.id} className="am-gcard" onClick={() => { window.location.hash = '#' + a.hash; }}>
-              <div className="am-gcard-viz"><Preview kind={a.kind} skin={skin} mode={mode} hue={a.hue} /></div>
+              <div className="am-gcard-viz"><Preview kind={a.kind} skin={skin} mode={mode} /></div>
               <div className="am-gcard-body">
                 <div className="am-gcard-cat">{a.cat}</div>
                 <div className="am-gcard-name"><span className="am-gcard-glyph">{a.glyph}</span> {a.name}</div>

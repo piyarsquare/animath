@@ -56,20 +56,6 @@ export function hudEnabled(p: URLSearchParams = poseParams()): boolean {
 }
 
 /**
- * The frozen animation time, in seconds, or null if not requested.
- *
- * A reproducible screenshot needs a deterministic frame, but the walkers run a
- * wall-clock rAF loop — two shots of the same URL can differ. `?freeze` pins the
- * clock at 0; `?t=<seconds>` pins it at a chosen time. Apps that honor this feed
- * the returned value to their animation in place of the live delta.
- */
-export function frozenTime(p: URLSearchParams = poseParams()): number | null {
-  if (p.has('t')) return pNum(p, 't', 0);
-  if (p.has('freeze')) return 0;
-  return null;
-}
-
-/**
  * The app-agnostic diagnostic snapshot rendered by the dev HUD. An app fills the
  * fields it can; the HUD shows whichever are present.
  *

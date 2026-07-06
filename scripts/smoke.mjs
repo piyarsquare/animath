@@ -36,8 +36,7 @@
 import puppeteer from 'puppeteer';
 
 // The route table — keep in sync with src/index.tsx `routes`. `webgl` routes get
-// the dead-frame variance check; DOM/CSS routes get console/pageerror only. The
-// #/mobius + #/wrap-world redirects are omitted (they resolve to #/topology-walk).
+// the dead-frame variance check; DOM/CSS routes get console/pageerror only.
 const ROUTES = [
   { hash: '#/', webgl: false },                       // gallery
   { hash: '#/complex-particles', webgl: true },
@@ -50,7 +49,6 @@ const ROUTES = [
   { hash: '#/agentic-sorting', webgl: false },
   { hash: '#/stable-matching', webgl: false },
   { hash: '#/trees-and-nets', webgl: true },
-  { hash: '#/topology-walk', webgl: true },
   { hash: '#/solid-worlds', webgl: true },
   { hash: '#/fractals-cpu', webgl: false },            // Canvas2D, not WebGL
   // The Lab is a DOM/readout view (census, distributions) with small live

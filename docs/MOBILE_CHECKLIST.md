@@ -91,7 +91,6 @@ Verified on desktop only; iframes pinned to 400px, body to 720px.
 - [ ] **Counting the Ways** (`#/counting-the-ways`) — Explain lattice + distribution
       strips fit; **Play tutorial** transport on the action strip clears the dock;
       fullscreen grows the distributions (not the grid); Lab table scrolls.
-- [ ] **Topology Walk** (`#/topology-walk`, unlisted) — first-person controls by touch.
 
 ## Known issues to confirm on device
 

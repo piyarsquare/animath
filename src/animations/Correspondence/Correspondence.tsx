@@ -8,17 +8,7 @@ import readmeText from './README.md?raw';
 import explainerText from './EXPLAINER.md?raw';
 import { PALETTE_OPTIONS, PALETTE_THEME, resolvePalette } from '../../lib/colormaps';
 import { useThemeId } from '../../chrome/skins';
-
-/** Hard ceiling on iterations (must match FractalPane's MAX_ITER). */
-const MAX_ITERATIONS = 4000;
-
-/** A reasonable iteration cap for a given zoom — deep zoom needs many more
- *  iterations to resolve the boundary, otherwise it renders as flat interior
- *  and the Extended-precision detail is invisible. Ramps with log2(zoom). */
-function suggestedIter(zoom: number): number {
-  const v = 100 + 110 * Math.max(0, Math.log2(Math.max(1, zoom)) - 2);
-  return Math.min(MAX_ITERATIONS, Math.max(100, Math.round(v / 10) * 10));
-}
+import { MAX_ITERATIONS, suggestedIter } from '../../lib/df64';
 
 export default function Correspondence() {
   const baseView: ViewBounds = { xMin: -2.5, xMax: 1.5, yMin: -1.5, yMax: 1.5 };

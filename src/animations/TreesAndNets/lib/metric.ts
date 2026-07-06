@@ -39,11 +39,6 @@ export function dist(m: DistanceMatrix, i: number, j: number): number {
   return m.d[i][j];
 }
 
-/** Construct a DistanceMatrix from labels and a (full) symmetric matrix. */
-export function makeMetric(leaves: string[], d: number[][]): DistanceMatrix {
-  return { leaves, d };
-}
-
 /** Default labels a, b, c, … for n leaves (matches quantum-tree). */
 export function defaultLeaves(n: number): string[] {
   return Array.from({ length: n }, (_, i) => String.fromCharCode(97 + i));

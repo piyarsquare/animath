@@ -8,7 +8,7 @@ export interface Character {
 }
 
 /**
- * A small stylised walker. Built facing +Z (forward) with +Y up and feet at
+ * A small stylized walker. Built facing +Z (forward) with +Y up and feet at
  * y=0, so callers can place it with a basis quaternion (forward, up) on the
  * floor. Bright + lightly emissive so it reads against any theme.
  */

@@ -46,13 +46,6 @@ export function transposeM3(m: M3): M3 {
 
 export function traceM3(m: M3): number { return m[0] + m[4] + m[8]; }
 
-/** The rotation angle (degrees) of a proper orthogonal matrix; 0 for the
- *  identity. Meaningless for improper matrices (det −1) — callers gate on det. */
-export function rotationAngleDeg(m: M3): number {
-  const t = Math.max(-1, Math.min(1, (traceM3(m) - 1) / 2));
-  return (Math.acos(t) * 180) / Math.PI;
-}
-
 export function mulM3(a: M3, b: M3): M3 {
   const r = new Array(9).fill(0);
   for (let i = 0; i < 3; i++)

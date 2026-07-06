@@ -11,8 +11,6 @@ export enum ProjectionMode {
   Torus
 }
 
-export type Axis4D = 'xy' | 'xu' | 'xv' | 'yu' | 'yv' | 'uv';
-
 /** Soft floor (in quadrature) on the Torus stereographic denominator, so points
  *  near the projection pole map to a bounded radius instead of infinity. Shared
  *  with the shader's mode-7 projection. */
@@ -40,31 +38,6 @@ export function quatRotate4D(p: THREE.Vector4, a: THREE.Vector4, b: THREE.Vector
   const q = new THREE.Vector4(p.x,p.y,p.z,p.w);
   const r = quatMul(quatMul(a,q), quatConj(b));
   return new THREE.Vector4(r.x,r.y,r.z,r.w);
-}
-
-export function makeUnitQuat(angle: number, axis: Axis4D): {L: THREE.Vector4, R: THREE.Vector4}{
-  const h = angle*0.5;
-  const s = Math.sin(h); const c = Math.cos(h);
-  switch(axis){
-    case 'xy': {
-      const q = new THREE.Vector4(0,0,s,c); return {L:q.clone(), R:q.clone()};
-    }
-    case 'xu': {
-      const q = new THREE.Vector4(0,s,0,c); return {L:q.clone(), R:q.clone()};
-    }
-    case 'yu': {
-      const q = new THREE.Vector4(s,0,0,c); return {L:q.clone(), R:q.clone()};
-    }
-    case 'xv': {
-      const q = new THREE.Vector4(s,0,0,c); return {L:q.clone(), R:new THREE.Vector4(-s,0,0,c)};
-    }
-    case 'yv': {
-      const q = new THREE.Vector4(0,s,0,c); return {L:q.clone(), R:new THREE.Vector4(0,-s,0,c)};
-    }
-    case 'uv': {
-      const q = new THREE.Vector4(0,0,s,c); return {L:q.clone(), R:new THREE.Vector4(0,0,-s,c)};
-    }
-  }
 }
 
 export function project(p: THREE.Vector4, mode: ProjectionMode): THREE.Vector3{

@@ -41,7 +41,7 @@ export interface EdgePairing {
 /** Opposite-edge gluing (torus/Klein/ℝP²) vs adjacent-edge fold (sphere). */
 export type GluingMode = 'opposite' | 'adjacent';
 
-/** The universal cover the world is realised on — derived from χ. */
+/** The universal cover the world is realized on — derived from χ. */
 export type Cover = 'euclidean' | 'spherical' | 'hyperbolic';
 
 export interface WorldSpec {

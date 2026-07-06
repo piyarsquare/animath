@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import * as THREE from 'three';
 import { useViewportGestures } from '../../lib/useViewportGestures';
 import { PALETTE_GLSL } from '../../lib/colormaps';
+import { DF64_GLSL, splitDouble } from '../../lib/df64';
 
 export interface Complex {
   real: number;
@@ -17,12 +18,7 @@ export interface ViewBounds {
 
 export type FractalType = 'mandelbrot' | 'julia';
 
-/** Split a float64 into a (hi, lo) pair of float32s whose exact sum is the
- *  original — the df64 representation the Extended-precision shader expects. */
-function splitDouble(value: number): [number, number] {
-  const hi = Math.fround(value);
-  return [hi, value - hi];
-}
+// splitDouble + the df64 GLSL are shared with FractalsGPU — see lib/df64.ts.
 
 export interface FractalPaneProps {
   type: FractalType;
@@ -40,21 +36,6 @@ export interface FractalPaneProps {
   drawing?: boolean;
   path?: Complex[];
   onPathChange?: (pts: Complex[]) => void;
-}
-
-export function screenToComplex(
-  e: { clientX: number; clientY: number },
-  canvas: HTMLCanvasElement,
-  v: ViewBounds
-): Complex {
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left) / rect.width;
-  const y = (e.clientY - rect.top) / rect.height;
-  // Screen-Y down; math (imag) up.
-  return {
-    real: v.xMin + (v.xMax - v.xMin) * x,
-    imag: v.yMax - (v.yMax - v.yMin) * y,
-  };
 }
 
 export default function FractalPane({
@@ -102,39 +83,7 @@ export default function FractalPane({
     uniform float offset;
     uniform int hp;          // 0 = single float32, 1 = extended (df64)
 
-    const int MAX_ITER = 4000;   // hard ceiling; maxIter is the dynamic cap
-
-    // df64: an extended number is the unevaluated sum hi+lo of two float32s.
-    // dfAdd / dfMul are error-free transformations (two-sum, Dekker
-    // two-product) — they keep the rounding error in lo, roughly doubling the
-    // working mantissa. See FractalsGPU/DEEP_ZOOM.md.
-    vec2 dfAdd(vec2 a, vec2 b){
-      float t1 = a.x + b.x;
-      float e  = t1 - a.x;
-      float t2 = ((b.x - e) + (a.x - (t1 - e))) + a.y + b.y;
-      float hi = t1 + t2;
-      float lo = t2 - (hi - t1);
-      return vec2(hi, lo);
-    }
-    vec2 dfMul(vec2 a, vec2 b){
-      float split = 4097.0;            // 2^12 + 1, the Dekker split for float32
-      float cona = a.x * split;
-      float conb = b.x * split;
-      float a1 = cona - (cona - a.x);
-      float b1 = conb - (conb - b.x);
-      float a2 = a.x - a1;
-      float b2 = b.x - b1;
-      float c11 = a.x * b.x;
-      float c21 = a2 * b2 - (((c11 - a1 * b1) - a2 * b1) - a1 * b2);
-      float c2 = a.x * b.y + a.y * b.x;
-      float t1 = c11 + c2;
-      float e = t1 - c11;
-      float t2 = ((c2 - e) + (c11 - (t1 - e))) + c21 + a.y * b.y;
-      float hi = t1 + t2;
-      float lo = t2 - (hi - t1);
-      return vec2(hi, lo);
-    }
-    vec2 dfNeg(vec2 a){ return vec2(-a.x, -a.y); }
+    ${DF64_GLSL}
 
     ${PALETTE_GLSL}
     void main(){

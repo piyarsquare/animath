@@ -22,11 +22,9 @@ export interface AppCard {
   blurb: string;
   cat: Category;
   kind: PreviewKind;
-  /** Optional hue shift for particle previews so cards differ. */
-  hue?: number;
 }
 
-const META: Record<string, { cat: Category; kind: PreviewKind; hue?: number }> = {
+const META: Record<string, { cat: Category; kind: PreviewKind }> = {
   '/complex-particles': { cat: 'Complex', kind: 'particles' },
   '/plane-transform': { cat: 'Complex', kind: 'plane' },
   '/fractals': { cat: 'Fractal', kind: 'fractal' },
@@ -37,7 +35,7 @@ const META: Record<string, { cat: Category; kind: PreviewKind; hue?: number }> =
   '/polygon-worlds': { cat: 'Dynamics', kind: 'polygon' },
   '/trees-and-nets': { cat: 'Algorithm', kind: 'treenet' },
   '/solid-worlds': { cat: 'Dynamics', kind: 'solid' },
-  '/argand': { cat: 'Complex', kind: 'plane', hue: 180 },
+  '/argand': { cat: 'Complex', kind: 'plane' },
   '/counting-the-ways': { cat: 'Algorithm', kind: 'skellam' },
 };
 
