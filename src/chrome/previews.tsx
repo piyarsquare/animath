@@ -942,14 +942,10 @@ function DivergencePreview({ light }: { light: boolean }) {
     drawBell(cx2, d2);
     ctx.restore();
 
-    // peak markers (the two means) + the horizon
+    // the horizon (no apex markers — a bell curve's peak should stay smooth)
     ctx.strokeStyle = withAlpha(ink.dim, 0.45);
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, baseY + 0.5); ctx.lineTo(W, baseY + 0.5); ctx.stroke();
-    for (const [cx, col] of [[cx1, d1], [cx2, d2]] as const) {
-      ctx.fillStyle = col;
-      ctx.beginPath(); ctx.arc(cx, bell(cx)(cx), Math.max(2, W * 0.007), 0, 7); ctx.fill();
-    }
   }, [light]);
   return <canvas ref={ref} style={canvasStyle} />;
 }
