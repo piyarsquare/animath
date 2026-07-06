@@ -11,7 +11,7 @@ followup: null
 pr: 248
 app: division-bells
 signals: null
-next: Waves 2–4 on branch (Bhattacharyya+Hellinger · Bayes-error+TV+decision-boundary · Wasserstein-2) + whitening/density-heat, all under PR #248.
+next: Review + merge PR #248 (all waves shipped: Mahalanobis+KL, the yardstick family, canvas field, whitening). Future ideas: cumulative "sample the bells" scatter; a 1-D slice view.
 ---
 
 # New app — Mahalanobis separation & Kullback–Leibler divergence
