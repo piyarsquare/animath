@@ -34,6 +34,42 @@ That work is closed and unrelated to this session's focus.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 14:30 — View layer complete: canvas field + whitening (all scope done)
+**Why:** The deferred visual polish (density heat, KL-integrand, decision/overlap)
+and the whitening view — the last of the approved scope — are in and verified.
+
+Added a canvas field layer behind the SVG (offscreen 150-px → upscaled, redrawn on
+param/theme change only, colors via `useThemeTokens`) with a **Field** selector:
+`density` (two bells as `--data-1/2` clouds), `kl` (signed integrand `p·log(p/q)`,
+P-favored vs Q-favored, its integral = KL), `classify` (winner tint + the lit
+**Bayes-error band** at the decision boundary, prior-driven). A **Whiten into P/Q**
+toggle maps the plane by Σ_ref^{−½} so the reference bell becomes a **unit circle**
+and Mahalanobis reads as ordinary distance (drag disabled → sliders). Lint held at
+baseline (extracted the effect's dep params to avoid complex-expr warnings).
+
+All four verified headless:
+
+![classify — the Bayes-error band at the decision boundary](assets/2026-07-06-S01-classify.png)
+![whitened into Q — Q is the unit circle, P the residual ellipse](assets/2026-07-06-S01-whiten.png)
+
+Build/lint(0)/21 tests green. This closes Waves 2–4 + whitening/heat under PR #248.
+
+### 🟢 code · 13:40 — Wasserstein-2 + yardstick family readout landed
+**Why:** Working through the approved scope on-branch under PR #248.
+
+Wasserstein-2 (Bures) added to the engine (closed form via the 2×2 SPD identity
+`tr√M = √(trM + 2√detM)`; equal Σ ⇒ W₂ = Euclidean mean gap) + 3 tests (21 total).
+`measures.ts` presentation registry + the **Yardsticks** panel: family table
+(Bayes error · TV · Hellinger · Bhattacharyya · W₂ · KL) with bounded/metric/
+numeric tags, a **prior π(P) slider** driving Bayes error, and live relationship
+checks (Pₑ=½(1−TV), Pₑ≤½·BC, Pinsker TV≤√(KL/2)) — all ✓ in the render. Numeric
+TV/Bayes flagged `≈`. Shared overlap integral computed once. Verified headless
+(values consistent: KL 4.767, Pₑ 0.099=½(1−0.801)). Second layout *All measures*
+for progressive disclosure. Build/lint/tests green; pushed.
+
+Next: canvas field layer (density / KL-integrand / decision-overlap) + whitening
+toggle.
+
 ### 🟣 decision · 13:00 — PR #248 opened; building Waves 2–4 + whitening/heat
 **Why:** Dan approved all remaining scope and asked to open a PR now. Wave 1 is a
 clean verified milestone, so [PR #248](https://github.com/piyarsquare/animath/pull/248)
