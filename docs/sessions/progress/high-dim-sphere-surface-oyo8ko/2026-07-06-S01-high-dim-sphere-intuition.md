@@ -42,6 +42,17 @@ its cautionary hard-fail reflection).
 
 ## Working notes
 
+### 🔵 finding · 00:01 (Jul 7) — Dan opened a discussion on §2: unpack the Γ-function volume formula
+**Why:** The notebook quotes V_n = π^(n/2)/Γ(n/2+1) but only derives the 2π/n recursion; Dan asked for the formula itself to be explained.
+
+Explained in chat via the **Gaussian trick** (∫e^(−|x|²) computed Cartesian vs
+polar: π^(n/2) = n one-dimensional Gaussians; Γ(n/2)/2 = the radial integral
+under t = r²), with Γ read as the smooth factorial ((n/2)! with seed
+Γ(1/2) = √π — itself the Gaussian integral), small-n sanity checks, the
+recursion recovered as Γ's functional equation, Stirling for the collapse
+rate, and the Σ V_even = e^π delight. Candidate appendix for the notebook if
+Dan wants it kept in the record.
+
 ### 🟢 code · 21:32 — Phase 1 delivered: the notebook + reproducible probes + four validated figures
 **Why:** The math-first notebook is the phase-1 deliverable; landing it moves the session to "present the intuition to Dan, then decide phase 2."
 
