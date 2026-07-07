@@ -297,16 +297,24 @@ interface Line1DProps {
   dM: number; overlap: number; bayes: number; crossings: number[];
   showRuler: boolean; showLens: boolean; showBoundary: boolean; showFill: boolean;
   onDragMu: (which: Which, mu: number) => void;
+  onDragSigma: (which: Which, sigma: number) => void;
 }
 
-function Bells1D({ m1, s1, m2, s2, dM, overlap, bayes, crossings, showRuler, showLens, showBoundary, showFill, onDragMu }: Line1DProps) {
+const SIG_MIN = 0.3, SIG_MAX = 2.6;
+
+function Bells1D({ m1, s1, m2, s2, dM, overlap, bayes, crossings, showRuler, showLens, showBoundary, showFill, onDragMu, onDragSigma }: Line1DProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const dragRef = useRef<Which | null>(null);
+  const dragRef = useRef<{ kind: 'mean' | 'sigma'; which: Which } | null>(null);
   const { w, h } = useSize(wrapRef);
 
   const XMIN = -6.5, XMAX = 6.5;
-  const padX = 24, padTop = 40, padBot = 72;
+  const padX = 24, padTop = 34, padBot = 68;
+  // Cap the plot height by aspect ratio so a tall (phone-portrait) card doesn't
+  // stretch the bells into spikes; on a wide desktop stage this is a no-op. The
+  // plot region is centered vertically in whatever height the card gives us.
+  const H = Math.min(h, w * 0.72);
+  const yTop = (h - H) / 2;
   const sx = (x: number) => padX + ((x - XMIN) / (XMAX - XMIN)) * (w - 2 * padX);
   const xOf = (clientX: number) => {
     const r = svgRef.current!.getBoundingClientRect();
@@ -314,8 +322,9 @@ function Bells1D({ m1, s1, m2, s2, dM, overlap, bayes, crossings, showRuler, sho
     return XMIN + ((fx - padX) / (w - 2 * padX)) * (XMAX - XMIN);
   };
   const ymax = (Math.max(pdf1(m1, s1, m1), pdf1(m2, s2, m2)) || 1) * 1.18;
-  const baseY = h - padBot;
-  const sy = (d: number) => baseY - (d / ymax) * (baseY - padTop);
+  const baseY = yTop + H - padBot;
+  const plotTop = yTop + padTop;
+  const sy = (d: number) => baseY - (d / ymax) * (baseY - plotTop);
 
   const N = 240;
   const xs: number[] = [];
@@ -324,25 +333,53 @@ function Bells1D({ m1, s1, m2, s2, dM, overlap, bayes, crossings, showRuler, sho
   const fillArea = (mu: number, sig: number) => `M${sx(XMIN).toFixed(1)},${baseY} ${xs.map(x => `L${sx(x).toFixed(1)},${sy(pdf1(mu, sig, x)).toFixed(1)}`).join(' ')} L${sx(XMAX).toFixed(1)},${baseY} Z`;
   const lensArea = `M${sx(XMIN).toFixed(1)},${baseY} ${xs.map(x => `L${sx(x).toFixed(1)},${sy(Math.min(pdf1(m1, s1, x), pdf1(m2, s2, x))).toFixed(1)}`).join(' ')} L${sx(XMAX).toFixed(1)},${baseY} Z`;
 
-  const onDown = (which: Which) => (e: React.PointerEvent) => {
+  const onDown = (kind: 'mean' | 'sigma', which: Which) => (e: React.PointerEvent) => {
     e.stopPropagation();
     svgRef.current?.setPointerCapture(e.pointerId);
-    dragRef.current = which;
+    dragRef.current = { kind, which };
   };
   const onMove = (e: React.PointerEvent) => {
-    if (!dragRef.current) return;
-    onDragMu(dragRef.current, Math.max(XMIN + 0.4, Math.min(XMAX - 0.4, xOf(e.clientX))));
+    const d = dragRef.current;
+    if (!d) return;
+    const x = xOf(e.clientX);
+    if (d.kind === 'mean') {
+      onDragMu(d.which, Math.max(XMIN + 0.4, Math.min(XMAX - 0.4, x)));
+    } else {
+      const mu = d.which === 'P' ? m1 : m2;
+      onDragSigma(d.which, Math.max(SIG_MIN, Math.min(SIG_MAX, Math.abs(x - mu))));
+    }
   };
   const onUp = (e: React.PointerEvent) => { svgRef.current?.releasePointerCapture(e.pointerId); dragRef.current = null; };
 
   const peak = (mu: number, sig: number, which: Which, color: string) => {
     const px = sx(mu), py = sy(pdf1(mu, sig, mu));
     return (
-      <g key={which} style={{ cursor: 'ew-resize' }} onPointerDown={onDown(which)}>
+      <g key={which} style={{ cursor: 'ew-resize' }} onPointerDown={onDown('mean', which)}>
         <line x1={px} y1={py} x2={px} y2={baseY} stroke={color} strokeOpacity={0.4} strokeDasharray="3 3" />
         <circle cx={px} cy={py} r={11} fill="transparent" />
         <circle cx={px} cy={py} r={5} fill={color} stroke="var(--viz-bg, var(--bg))" strokeWidth={1.5} />
         <text x={px} y={py - 11} fill={color} fontFamily="var(--font-mono)" fontSize={13} fontWeight={700} textAnchor="middle">{which}</text>
+      </g>
+    );
+  };
+
+  // σ-handles: two grips at the ±1σ points (the curve's inflection height),
+  // joined by a "1σ" band through the mean. Drag either to set the width without
+  // touching a slider.
+  const sigmaGrips = (mu: number, sig: number, which: Which, color: string) => {
+    const yH = sy(pdf1(mu, sig, mu + sig)); // inflection height (same both sides)
+    const xl = sx(mu - sig), xr = sx(mu + sig);
+    const diamond = (cx: number) => `${cx},${yH - 5} ${cx + 5},${yH} ${cx},${yH + 5} ${cx - 5},${yH}`;
+    return (
+      <g key={`sig-${which}`}>
+        <line x1={xl} y1={yH} x2={xr} y2={yH} stroke={color} strokeOpacity={0.5} strokeDasharray="2 3" />
+        <text x={sx(mu)} y={yH - 7} fill={color} fillOpacity={0.8} fontFamily="var(--font-mono)" fontSize={10} textAnchor="middle">1σ</text>
+        {[xl, xr].map((hx, i) => (
+          <g key={i} style={{ cursor: 'ew-resize' }} onPointerDown={onDown('sigma', which)}>
+            <circle cx={hx} cy={yH} r={11} fill="transparent" />
+            <polygon points={diamond(hx)} fill={color} stroke="var(--viz-bg, var(--bg))" strokeWidth={1} />
+          </g>
+        ))}
       </g>
     );
   };
@@ -375,7 +412,7 @@ function Bells1D({ m1, s1, m2, s2, dM, overlap, bayes, crossings, showRuler, sho
         <path d={curve(m2, s2)} fill="none" stroke="var(--data-2)" strokeWidth={2.2} />
         {/* decision boundary at the crossing(s) */}
         {showBoundary && crossings.filter(x => x > XMIN && x < XMAX).map((x, i) => (
-          <line key={i} x1={sx(x)} y1={padTop - 6} x2={sx(x)} y2={baseY} stroke="var(--accent)" strokeOpacity={0.85} strokeWidth={1.4} strokeDasharray="4 3" />
+          <line key={i} x1={sx(x)} y1={plotTop - 6} x2={sx(x)} y2={baseY} stroke="var(--accent)" strokeOpacity={0.85} strokeWidth={1.4} strokeDasharray="4 3" />
         ))}
         {/* the σ-ruler */}
         {showRuler && (
@@ -387,6 +424,8 @@ function Bells1D({ m1, s1, m2, s2, dM, overlap, bayes, crossings, showRuler, sho
             <text x={(sx(m1) + sx(m2)) / 2} y={rulerY + 18} fill="var(--fg)" fontFamily="var(--font-mono)" fontSize={12} fontWeight={700} textAnchor="middle">dₘ = {dM.toFixed(2)} σ</text>
           </g>
         )}
+        {sigmaGrips(m1, s1, 'P', 'var(--data-1)')}
+        {sigmaGrips(m2, s2, 'Q', 'var(--data-2)')}
         {peak(m1, s1, 'P', 'var(--data-1)')}
         {peak(m2, s2, 'Q', 'var(--data-2)')}
         {/* the lens's own label */}
@@ -450,6 +489,10 @@ export default function DivisionBells() {
     const r = Math.round(mu * 100) / 100;
     if (which === 'P') setLM1(r); else setLM2(r);
   }, [setLM1, setLM2]);
+  const onDragSigma = useCallback((which: Which, sigma: number) => {
+    const r = Math.round(sigma * 100) / 100;
+    if (which === 'P') setLS1(r); else setLS2(r);
+  }, [setLS1, setLS2]);
   const matchWidths = () => setLS2(lS1);
   const lReset = () => { setLM1(-1.2); setLS1(1.0); setLM2(1.2); setLS2(1.0); setLPrior(0.5); };
 
@@ -636,7 +679,7 @@ export default function DivisionBells() {
         <button className="db-btn" onClick={matchWidths}>Match widths</button>
         <button className="db-btn" onClick={lReset}>Reset</button>
       </div>
-      <p className="db-hint">Or drag the <strong>peaks</strong> left/right on the plot.</p>
+      <p className="db-hint">Or on the plot: drag a <strong>peak</strong> to move it, or a <strong>◆ 1σ handle</strong> to change its width.</p>
     </>
   );
   const lineReadoutNode = (
@@ -676,7 +719,7 @@ export default function DivisionBells() {
         m1={lM1} s1={lS1} m2={lM2} s2={lS2}
         dM={lDM} overlap={lOverlap} bayes={lBayes} crossings={lCross}
         showRuler={lRuler} showLens={lLens} showBoundary={lBound} showFill={lFill}
-        onDragMu={onDragMu}
+        onDragMu={onDragMu} onDragSigma={onDragSigma}
       />
     ),
     defaultRect: { x: 372, y: 16, w: 760, h: 560 },

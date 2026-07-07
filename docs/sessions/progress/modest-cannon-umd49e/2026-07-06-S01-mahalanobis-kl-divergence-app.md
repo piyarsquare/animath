@@ -34,6 +34,20 @@ That work is closed and unrelated to this session's focus.
 
 <!-- Newest entry first. -->
 
+### 🟢 code · 17:10 — 1D: σ-drag handles + phone-portrait height cap (Dan's asks)
+**Why:** Two UX requests from Dan on the 1D view.
+
+1. **Width handles:** each bell now has two **◆ "1σ" diamond grips** at its
+   inflection points (μ±σ), joined by a dashed 1σ band; drag either to set the
+   width (σ ∈ [0.3, 2.6]) without opening the slider. The drag ref became a
+   `{kind:'mean'|'sigma', which}` descriptor so peaks move and grips resize.
+2. **Phone-portrait height:** the plot now caps its drawn height by aspect
+   (`H = min(h, w·0.72)`, centered vertically), so a tall phone card no longer
+   stretches the bells into spikes; on the wide desktop stage it's a no-op.
+
+Verified headless: desktop (grips visible + the plot fills height) and 390×844
+(bells read as bells, centered, ruler + grips intact). Build/lint(0)/34 tests green.
+
 ### 🟡 milestone · 16:20 — 1D "felt" view shipped as the default; 2D parked as a mode
 **Why:** Delivers Dan's correction — the measures are now *visible* in the figure.
 
