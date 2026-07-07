@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Number Planes · Chapter II — the plane</title>
+<link rel="stylesheet" href="../guide-theme.css">
+<script src="../guide-skin.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..700;1,6..72,200..700&family=Caveat:wght@400..700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400..700&family=Shadows+Into+Light&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   Chapter II — the plane. Faithful port of the Claude Design
+   reference (docs/design/notebook-handoff) onto the shared guide
+   theme layer: works with ALL 8 app skins. One p drives every plate.
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes pr-pulse{0%,100%{opacity:.3}50%{opacity:1}}
+html,body{margin:0;padding:0}
+*{box-sizing:border-box}
+.nbr{
+  /* derived from the chrome tokens so every [data-theme] works */
+  --desk:color-mix(in srgb, var(--bg) 88%, #000);
+  --deskimg:radial-gradient(120% 90% at 50% -10%,
+    color-mix(in srgb, var(--bg) 88%, var(--fg)) 0%, var(--bg) 55%,
+    color-mix(in srgb, var(--bg) 90%, #000) 100%);
+  --paper:var(--card); --paper2:color-mix(in srgb, var(--card) 93%, var(--fg));
+  --grid:color-mix(in srgb, var(--fg) 7%, transparent);
+  --border:var(--rule); --border-strong:color-mix(in srgb, var(--fg) 34%, transparent);
+  --ink:var(--fg); --dim:var(--muted); --dim2:color-mix(in srgb, var(--muted) 70%, var(--bg));
+  --live:var(--accent2); --live-soft:color-mix(in srgb, var(--accent2) 13%, transparent);
+  --voice:var(--accent); --seal:var(--accent); --seal-fg:var(--bg);
+  /* semantic plane colors — same meaning on every skin */
+  --d1:light-dark(#2b57c9, #5fa8ff);
+  --ok:light-dark(#149e57, #4cc878);
+  --d5:light-dark(#bd5f1c, #ff9a5f);
+  --hand:'Caveat',cursive; --serif:'Newsreader',Georgia,serif;
+  --mono:'Space Mono',monospace; --disp:'Space Grotesk',sans-serif;
+  --spd:0.75;
+}
+/* skin personalities, per the handoff */
+[data-theme="light"] .nbr{--live:#2f6df0; --voice:#9a4a32; --d1:#3565c8; --ok:#4a7d46; --d5:#b0592a}
+[data-theme="primary"] .nbr{--live:#1f4fd6; --voice:#e63327; --d1:#2b57c9; --ok:#149e57; --d5:#e6731f}
+[data-theme="blueprint"] .nbr{--d1:#c9a8ff; --ok:#7fe0a8; --d5:#ffab7a;
+  --hand:'Shadows Into Light',cursive; --serif:'Space Grotesk',sans-serif}
+[data-theme="phosphor"] .nbr{--d1:#5adcff; --ok:#9dff5a; --d5:#ffa05a;
+  --hand:'VT323',monospace; --serif:'Space Mono',monospace}
+
+/* the operation card: a big word cut from the plate stock; flips the whole plot */
+.opt{perspective:900px;cursor:pointer;background:var(--desk);border-radius:2px}
+.opt .oin{transform-style:preserve-3d;transition:transform calc(.6s / var(--spd)) cubic-bezier(.3,.9,.35,1)}
+.opt:hover .oin{transform:rotateY(9deg)}
+.opt[data-op="mul"] .oin{transform:rotateY(-180deg)}
+.opt[data-op="mul"]:hover .oin{transform:rotateY(-171deg)}
+.opt .of,.opt .ob{backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--paper);
+  border:1px solid var(--grid);border-radius:2px;padding:0 10px;transition:border-color .3s ease}
+.opt .ob{transform:rotateY(-180deg)}
+/* the cutout flap: invisible until it turns, a beat after the word */
+.cut{perspective:1100px;border-radius:2px}
+.cut.turning{background:var(--desk)}
+.cut .cin{position:relative;width:100%;height:100%;transform-style:preserve-3d;
+  transition:transform calc(.55s / var(--spd)) cubic-bezier(.3,.85,.35,1) calc(.055s / var(--spd))}
+.cut[data-op="mul"] .cin{transform:rotateY(-180deg)}
+.cut .cf,.cut .cb{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  background:var(--paper);border-radius:2px}
+.cut .cb{transform:rotateY(-180deg)}
+.c1t:hover .opt .of,.c1t:hover .opt .ob{border-color:var(--border)}
+/* hub plates: hover reads, click locks */
+.c1t{transition:border-color .3s ease,box-shadow .3s ease,transform calc(.4s / var(--spd)) cubic-bezier(.3,1.5,.45,1)}
+.c1t .ann{opacity:0;transition:opacity calc(.35s / var(--spd)) ease}
+.c1t:hover .ann,.c1t[data-on="1"] .ann{opacity:1}
+.c1t:hover{border-color:var(--border-strong) !important;transform:perspective(1400px) rotateY(-2.5deg)}
+.c1t[data-on="1"]{border-color:var(--voice) !important;box-shadow:inset 0 0 0 1px var(--voice);transform:none}
+/* flip plates */
+.vat{perspective:1000px;cursor:pointer}
+.vat .in{position:relative;width:100%;height:100%;transform-style:preserve-3d;
+  transition:transform calc(.55s / var(--spd)) cubic-bezier(.3,.85,.35,1)}
+.vat[data-on="1"] .in{transform:rotateY(180deg) !important}
+.vat:not([data-on="1"]):hover .in{transform:rotateY(-11deg);transition-timing-function:cubic-bezier(.3,1.25,.45,1)}
+.vat.sm:not([data-on="1"]):hover .in{transform:rotateY(-20deg)}
+.fgl{opacity:0;transition:opacity .3s ease}
+.vat:hover .fgl{opacity:1}
+.vat .fc,.vat .bk{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  border:1px solid var(--border);border-radius:2px;background:var(--paper);padding:9px 11px;
+  display:flex;flex-direction:column}
+.vat:hover .fc{border-color:var(--border-strong)}
+.vat .bk{transform:rotateY(180deg);border-color:var(--border-strong);background:var(--paper2)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+/* ——— responsive: the plates stack below the grid width ——— */
+.plategrid{display:grid;grid-template-columns:repeat(5,208px);grid-template-rows:repeat(4,208px);
+  gap:12px;justify-content:start}
+@media (max-width:1140px){
+  .plategrid{display:flex;flex-direction:column;gap:12px}
+  .plategrid>div{width:100%;min-height:208px}
+  #plateC2{min-height:620px}
+  #platePL{min-height:520px}
+  .vat{min-height:208px;height:208px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="nbr" id="nbr" style="min-height:100vh;background-color:var(--desk);background-image:var(--deskimg);padding:34px clamp(14px,3.5vw,56px) 80px;color:var(--ink);font-family:var(--serif);">
+<div style="width:min(1160px,100%);margin:0 auto;display:flex;flex-direction:column;gap:22px;">
+
+  <header style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;">
+    <h1 style="margin:0;font-family:var(--disp);font-weight:600;font-size:26px;letter-spacing:-.015em;">Number Planes &middot; Chapter II &mdash; the plane</h1>
+    <span style="font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--dim);">ONE p FOR THE WHOLE PAGE &middot; THE SLIDER SPEAKS TO EVERY PLATE</span>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:14px;">
+      <span id="hdrRead" style="font-family:var(--mono);font-size:11px;color:var(--live);white-space:nowrap;"></span>
+      <span id="skin-picker"></span>
+    </span>
+  </header>
+
+  <div class="plategrid">
+
+    <!-- ══ C2 · hub 3×3 ══ -->
+    <div class="c1t" id="plateC2" data-c1t="C2" data-on="0" style="grid-column:1/4;grid-row:1/4;position:relative;background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;cursor:pointer;">
+      <div style="display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--dim);">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--live);animation:pr-pulse 2.6s ease-in-out infinite;"></span>C2 &middot; THE PLANE
+        <span id="modeWord" style="font-size:9px;letter-spacing:.18em;color:var(--voice);white-space:nowrap;flex:none;">MODE: ADDING</span>
+        <span style="flex:1;"></span>
+        <span class="ann" id="c2Hint" style="font-family:var(--hand);font-size:14px;letter-spacing:0;color:var(--voice);">hover to read &middot; tap to lock</span>
+      </div>
+
+      <!-- the shared j² dial, as a slider — every plate on the page listens -->
+      <div style="display:flex;align-items:center;gap:9px;margin-top:9px;">
+        <span style="font-family:var(--hand);font-size:16px;color:var(--voice);flex:none;">j&sup2; =</span>
+        <button data-pset="-1" class="pchip" style="font-family:var(--mono);font-size:10.5px;border:1px solid var(--border);border-radius:3px;padding:2px 9px;">&minus;1</button>
+        <button data-pset="0" class="pchip" style="font-family:var(--mono);font-size:10.5px;border:1px solid var(--border);border-radius:3px;padding:2px 9px;">0</button>
+        <button data-pset="1" class="pchip" style="font-family:var(--mono);font-size:10.5px;border:1px solid var(--border);border-radius:3px;padding:2px 9px;">+1</button>
+        <span style="flex:1;"></span>
+        <span id="pBig" style="font-family:var(--mono);font-size:13px;font-weight:700;white-space:nowrap;"></span>
+        <span id="planeNm" style="font-style:italic;font-size:13px;color:var(--dim);white-space:nowrap;"></span>
+      </div>
+      <svg id="psl" viewBox="0 0 600 30" style="display:block;width:100%;margin-top:4px;touch-action:none;cursor:pointer;user-select:none;flex:none;">
+        <line x1="14" y1="15" x2="300" y2="15" stroke="var(--d1)" stroke-width="4" stroke-linecap="round" opacity=".55"></line>
+        <line x1="300" y1="15" x2="586" y2="15" stroke="var(--d5)" stroke-width="4" stroke-linecap="round" opacity=".55"></line>
+        <circle cx="300" cy="15" r="3.5" fill="var(--ok)"></circle>
+        <g id="pTicks"></g>
+        <circle id="pk1" cx="157" cy="15" r="9" fill="var(--paper2)" stroke="var(--d1)" stroke-width="2.4"></circle>
+        <circle id="pk2" cx="157" cy="15" r="2.5" fill="var(--d1)"></circle>
+      </svg>
+
+      <div style="display:flex;align-items:center;gap:16px;margin-top:10px;flex-wrap:wrap;">
+        <div class="opt" id="optEl" data-mode-toggle data-op="add" style="position:relative;width:280px;height:34px;flex:none;">
+          <div class="oin" style="position:absolute;inset:0;">
+            <div class="of" style="position:absolute;inset:0;display:flex;align-items:center;font-family:var(--disp);font-weight:700;font-size:25px;letter-spacing:.04em;color:var(--live);">ADDITION</div>
+            <div class="ob" style="position:absolute;inset:0;display:flex;align-items:center;font-family:var(--disp);font-weight:700;font-size:25px;letter-spacing:.04em;color:var(--voice);">MULTIPLICATION</div>
+          </div>
+        </div>
+        <span style="font-family:var(--hand);font-size:15px;color:var(--dim);">tap the word &mdash; it flips the whole plot. z and w stay put.</span>
+      </div>
+      <svg id="c2plot" viewBox="0 0 560 470" style="display:block;width:100%;flex:1;min-height:220px;touch-action:none;user-select:none;">
+        <line x1="14" y1="235" x2="546" y2="235" stroke="var(--dim2)" stroke-width="1"></line>
+        <line x1="280" y1="12" x2="280" y2="458" stroke="var(--dim2)" stroke-width="1"></line>
+        <circle cx="324" cy="235" r="2.5" fill="var(--dim)"></circle>
+        <circle id="jdot" cx="280" cy="191" r="2.5" fill="var(--dim)"></circle>
+        <g id="addG">
+          <line id="gzs" stroke="var(--voice)" stroke-dasharray="4 4" stroke-width="1.2"></line>
+          <line id="gws" stroke="var(--live)" stroke-dasharray="4 4" stroke-width="1.2"></line>
+          <line id="sumL" x1="280" y1="235" stroke="var(--ink)" stroke-width="3.6"></line>
+        </g>
+        <g id="mulG" style="display:none;">
+          <line id="railL" stroke="var(--dim)" stroke-dasharray="5 4" stroke-width="1.3"></line>
+          <g class="ann" id="railTicks"></g>
+          <line id="prL" x1="280" y1="235" stroke="var(--dim)" stroke-dasharray="4 3" stroke-width="1.1"></line>
+          <circle id="prDot" r="6.5" stroke="var(--paper)" stroke-width="1.5"></circle>
+        </g>
+        <line id="zL" x1="280" y1="235" stroke="var(--live)" stroke-width="3"></line>
+        <line id="wL" x1="280" y1="235" stroke="var(--voice)" stroke-width="3"></line>
+        <g class="ann" id="c2ann"></g>
+        <g id="ptLabels"></g>
+        <circle id="zh" data-adrag="z" r="12" fill="var(--live-soft)" stroke="var(--live)" stroke-width="1.4" style="cursor:grab;"></circle>
+        <circle id="wh" data-adrag="w" r="12" fill="color-mix(in srgb, var(--voice) 16%, transparent)" stroke="var(--voice)" stroke-width="1.4" style="cursor:grab;"></circle>
+      </svg>
+      <div class="cut" id="cutEl" data-op="add" style="position:relative;height:60px;flex:none;margin:4px -12px -10px;">
+        <div class="cin">
+          <div class="cf" style="display:flex;flex-direction:column;justify-content:center;gap:3px;padding:4px 12px 6px;">
+            <span id="c2AddSent" style="font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;"></span>
+            <span class="ann" style="font-family:var(--hand);font-size:16px;color:var(--dim);">x adds a, y adds b &mdash; the parts never mix. addition never feels the dial.</span>
+          </div>
+          <div class="cb" style="display:flex;flex-direction:column;justify-content:center;gap:3px;padding:4px 12px 6px;">
+            <span id="c2MulSent" style="font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;"></span>
+            <span class="ann" style="font-family:var(--hand);font-size:16px;color:var(--dim);">only the first coordinate feels p &mdash; slide the dial and the product walks its rail.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PL · the plane's shape 2×2 ══ -->
+    <div class="c1t" id="platePL" data-c1t="PL" data-on="0" style="grid-column:4/6;grid-row:1/3;position:relative;background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;cursor:pointer;">
+      <div style="display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--dim);"><span style="width:6px;height:6px;border-radius:50%;background:var(--live);animation:pr-pulse 2.6s ease-in-out infinite;"></span>PL &middot; THE PLANE&rsquo;S SHAPE<span style="flex:1;"></span><span class="ann2" id="railLabel" style="font-family:var(--hand);font-size:14px;letter-spacing:0;"></span></div>
+      <svg viewBox="-130 -130 260 260" style="display:block;width:100%;flex:1;min-height:200px;">
+        <defs>
+          <pattern id="lcGr" width="26" height="26" patternUnits="userSpaceOnUse"><path id="lcGrP" d="M 26 0 L 0 0 0 26" fill="none" stroke="var(--grid)" stroke-width="1"></path></pattern>
+        </defs>
+        <rect x="-130" y="-130" width="260" height="260" fill="url(#lcGr)"></rect>
+        <line x1="-130" y1="0" x2="130" y2="0" stroke="color-mix(in srgb, var(--ink) 38%, transparent)" stroke-width="1"></line>
+        <line x1="0" y1="-130" x2="0" y2="130" stroke="color-mix(in srgb, var(--ink) 38%, transparent)" stroke-width="1"></line>
+        <g id="lcg">
+          <g id="lcPos" style="display:none;">
+            <line id="railA" y1="130" y2="-130" stroke="color-mix(in srgb, var(--d5) 50%, transparent)" stroke-width="1.4" stroke-dasharray="6 5"></line>
+            <line id="railB" y1="-130" y2="130" stroke="color-mix(in srgb, var(--d5) 50%, transparent)" stroke-width="1.4" stroke-dasharray="6 5"></line>
+            <path id="hypR" fill="none" stroke-width="2.5"></path>
+            <path id="hypL" fill="none" stroke-width="2.5"></path>
+          </g>
+          <g id="lcZero">
+            <line x1="52" y1="-130" x2="52" y2="130" stroke="var(--ok)" stroke-width="2.5"></line>
+            <line x1="-52" y1="-130" x2="-52" y2="130" stroke="var(--ok)" stroke-width="2.5"></line>
+          </g>
+          <g id="lcInf" style="display:none;">
+            <line x1="-130" y1="52" x2="130" y2="52" stroke="var(--ok)" stroke-width="2.5"></line>
+            <line x1="-130" y1="-52" x2="130" y2="-52" stroke="var(--ok)" stroke-width="2.5"></line>
+          </g>
+          <ellipse id="ell" cx="0" cy="0" rx="52" fill="none" stroke-width="2.5" style="display:none;"></ellipse>
+          <circle cx="52" cy="0" r="4" fill="var(--ink)"></circle>
+          <circle id="juDot" cx="0" cy="-52" r="4" fill="var(--live)"></circle>
+          <circle id="j2Dot" cy="0" r="6" stroke="var(--paper)" stroke-width="1.5"></circle>
+          <g id="lcLabels"></g>
+        </g>
+      </svg>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:none;margin-top:8px;">
+        <!-- renormalize -->
+        <div style="border:1px solid var(--border);border-radius:2px;padding:6px 8px;display:flex;flex-direction:column;gap:3px;background:var(--paper2);">
+          <div style="font-family:var(--mono);font-size:7.5px;letter-spacing:.16em;color:var(--dim);">RENORMALIZE &middot; &#309; = j/&radic;|p|</div>
+          <svg viewBox="0 0 200 32" style="display:block;width:100%;">
+            <line x1="20" y1="22" x2="180" y2="22" stroke="color-mix(in srgb, var(--ink) 45%, transparent)" stroke-width="1"></line>
+            <line x1="60" y1="18" x2="60" y2="26" stroke="var(--d1)" stroke-width="1.4"></line>
+            <line x1="100" y1="18" x2="100" y2="26" stroke="var(--ok)" stroke-width="1.4"></line>
+            <line x1="140" y1="18" x2="140" y2="26" stroke="var(--d5)" stroke-width="1.4"></line>
+            <text x="60" y="13" text-anchor="middle" font-family="var(--mono)" font-size="7" fill="var(--d1)">&minus;1</text>
+            <text x="140" y="13" text-anchor="middle" font-family="var(--mono)" font-size="7" fill="var(--d5)">+1</text>
+            <g id="rsg"></g>
+          </svg>
+          <button id="rsBtn" data-rescale style="font-family:var(--hand);font-size:14px;color:var(--live);border:1px solid var(--border);border-radius:3px;padding:1px 7px;white-space:nowrap;align-self:flex-start;display:none;">reform to &plusmn;1 &#10227;</button>
+          <span id="rsMsg" style="font-family:var(--hand);font-size:13px;color:var(--dim);line-height:1.15;"></span>
+          <span class="ann" style="font-family:var(--hand);font-size:13px;color:var(--voice);line-height:1.15;">only the sign survives the stretch.</span>
+        </div>
+        <!-- tilt the axes -->
+        <div style="border:1px solid var(--border);border-radius:2px;padding:6px 8px;display:flex;flex-direction:column;gap:3px;background:var(--paper2);">
+          <div style="font-family:var(--mono);font-size:7.5px;letter-spacing:.16em;color:var(--dim);">TILT THE AXES &middot; e&plusmn; = (1&plusmn;j)/2</div>
+          <svg viewBox="-42 -22 84 44" style="display:block;width:100%;">
+            <g id="tiltg">
+              <line x1="-38" y1="0" x2="38" y2="0" stroke="color-mix(in srgb, var(--ink) 45%, transparent)" stroke-width="1"></line>
+              <line x1="0" y1="-20" x2="0" y2="20" stroke="color-mix(in srgb, var(--ink) 45%, transparent)" stroke-width="1"></line>
+              <g id="tPos" style="display:none;">
+                <line x1="-36" y1="19" x2="36" y2="-19" stroke="var(--d5)" stroke-width="1.6" stroke-dasharray="4 3"></line>
+                <line x1="-36" y1="-19" x2="36" y2="19" stroke="var(--d5)" stroke-width="1.6" stroke-dasharray="4 3"></line>
+              </g>
+              <g id="tZero">
+                <line x1="0" y1="-20" x2="0" y2="20" stroke="var(--ok)" stroke-width="1.8"></line>
+              </g>
+            </g>
+          </svg>
+          <button id="tiltBtn" data-tilt style="font-family:var(--hand);font-size:14px;color:var(--live);border:1px solid var(--border);border-radius:3px;padding:1px 7px;white-space:nowrap;align-self:flex-start;">turn 45&deg; &#10227;</button>
+          <span class="ann" id="tiltAnn" style="font-family:var(--hand);font-size:13px;color:var(--voice);line-height:1.15;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ DV · three worlds ══ -->
+    <div class="vat" data-t="DV" data-on="0" style="grid-column:4;grid-row:3;position:relative;">
+      <div class="in">
+        <div class="fc">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--dim);">DV</div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">
+            <span style="font-family:var(--mono);font-size:15px;color:var(--ink);">&minus;1 &middot; 0 &middot; +1</span>
+            <span id="dvNow" style="font-family:var(--mono);font-size:10px;"></span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:8px;justify-content:center;">
+            <span style="font-family:var(--hand);font-size:15px;color:var(--dim);">three worlds</span>
+            <span class="fgl" style="font-family:var(--hand);font-size:13px;color:var(--voice);">only the sign matters</span>
+          </div>
+        </div>
+        <div class="bk">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--voice);">DV</div>
+          <div style="font-size:11.5px;line-height:1.45;color:var(--ink);margin-top:4px;">Every p rescales to a cut representative &mdash; the sign is the invariant. Try them:</div>
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:5px;">
+            <button id="dv1" data-pset="-1" style="display:flex;align-items:baseline;gap:8px;font-family:var(--mono);font-size:11px;color:var(--d1);border:1px solid var(--border);border-radius:3px;padding:3px 8px;text-align:left;">p &lt; 0 <span style="font-family:var(--serif);font-style:italic;color:var(--ink);">complex &mdash; turns</span></button>
+            <button id="dv2" data-pset="0" style="display:flex;align-items:baseline;gap:8px;font-family:var(--mono);font-size:11px;color:var(--ok);border:1px solid var(--border);border-radius:3px;padding:3px 8px;text-align:left;">p = 0 <span style="font-family:var(--serif);font-style:italic;color:var(--ink);">dual &mdash; shears</span></button>
+            <button id="dv3" data-pset="1" style="display:flex;align-items:baseline;gap:8px;font-family:var(--mono);font-size:11px;color:var(--d5);border:1px solid var(--border);border-radius:3px;padding:3px 8px;text-align:left;">p &gt; 0 <span style="font-family:var(--serif);font-style:italic;color:var(--ink);">split &mdash; squeezes</span></button>
+          </div>
+          <div class="phх" style="font-family:var(--hand);font-size:13px;color:var(--voice);">tap to flip back</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ QD · quadratic, live root count ══ -->
+    <div class="vat" data-t="QD" data-on="0" style="grid-column:5;grid-row:3;position:relative;">
+      <div class="in">
+        <div class="fc">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--dim);">QD</div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+            <span style="font-family:var(--mono);font-size:15px;color:var(--ink);">t&sup2; = p</span>
+            <span id="qdDots" style="display:inline-flex;gap:6px;align-items:center;"></span>
+            <span id="qdLabel" style="font-family:var(--mono);font-size:9.5px;"></span>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:8px;justify-content:center;">
+            <span style="font-family:var(--hand);font-size:15px;color:var(--dim);">a quadratic</span>
+            <span class="fgl" style="font-family:var(--hand);font-size:13px;color:var(--voice);">the same count</span>
+          </div>
+        </div>
+        <div class="bk">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--voice);">QD</div>
+          <div style="flex:1;display:flex;align-items:center;font-size:12px;line-height:1.5;color:var(--ink);">Two roots, one, or none as p is positive, zero, negative &mdash; the rail count and the root count are one question. Forcing roots to always exist forces &radic;(negative) to live somewhere: the complex plane.</div>
+          <div style="font-family:var(--hand);font-size:13px;color:var(--voice);">tap to flip back</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CR · the dial is a circle — spinnable ══ -->
+    <div id="plateCR" style="grid-column:1/3;grid-row:4;position:relative;background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:10px 12px;display:flex;gap:14px;align-items:center;">
+      <svg id="crsvg" viewBox="0 0 180 180" style="display:block;height:150px;width:150px;flex:none;touch-action:none;cursor:pointer;user-select:none;">
+        <path d="M 90 28 A 62 62 0 0 0 90 152" fill="none" stroke="var(--d1)" stroke-width="4"></path>
+        <path d="M 90 28 A 62 62 0 0 1 90 152" fill="none" stroke="var(--d5)" stroke-width="4"></path>
+        <circle cx="90" cy="28" r="4.5" fill="var(--ok)"></circle>
+        <circle cx="90" cy="152" r="4.5" fill="var(--ok)"></circle>
+        <text x="90" y="15" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--ok)">0 &middot; dual</text>
+        <text x="90" y="173" text-anchor="middle" font-family="var(--mono)" font-size="8.5" fill="var(--ok)">&infin; &middot; dual again</text>
+        <text x="18" y="94" text-anchor="middle" font-family="var(--mono)" font-size="10" font-weight="700" fill="var(--d1)">&minus;1</text>
+        <text x="162" y="94" text-anchor="middle" font-family="var(--mono)" font-size="10" font-weight="700" fill="var(--d5)">+1</text>
+        <line id="crLine" x1="90" y1="90" stroke="color-mix(in srgb, var(--ink) 30%, transparent)" stroke-width="1.2" stroke-dasharray="3 3"></line>
+        <circle cx="90" cy="90" r="4" fill="color-mix(in srgb, var(--ink) 45%, transparent)"></circle>
+        <circle id="crT1" r="9" fill="var(--paper2)" stroke-width="2.4"></circle>
+        <circle id="crT2" r="2.5"></circle>
+      </svg>
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+        <span style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--dim);">CR &middot; THE DIAL IS A CIRCLE</span>
+        <span id="crRead" style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--ink);"></span>
+        <span id="crPlane" style="font-style:italic;font-size:15px;"></span>
+        <span style="font-family:var(--hand);font-size:15px;color:var(--voice);line-height:1.3;">spin it &mdash; the far side is p &#8614; 1/p, and the dual sits at both 0 and &infin;. one loop, not three boxes.</span>
+      </div>
+    </div>
+
+    <!-- ══ L2 · strangers ══ -->
+    <div class="vat" data-t="L2" data-on="0" style="grid-column:3;grid-row:4;position:relative;">
+      <div class="in">
+        <div class="fc">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--dim);">L2</div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12.5px;color:var(--ink);text-align:center;">(a,b)&middot;(c,d)<br>= (ac, bd)</div>
+          <div style="display:flex;align-items:baseline;gap:8px;justify-content:center;">
+            <span style="font-family:var(--hand);font-size:15px;color:var(--dim);">strangers</span>
+            <span class="fgl" style="font-family:var(--hand);font-size:13px;color:var(--voice);">tilt to see it</span>
+          </div>
+        </div>
+        <div class="bk">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--voice);">L2</div>
+          <div style="flex:1;display:flex;align-items:center;font-size:12px;line-height:1.5;color:var(--ink);">Multiply each coordinate on its own &mdash; a real, working arithmetic. It is one plane in disguise: j&sup2; = +1, the split one, its rails turned onto the axes. Tilt the plane 45&deg; at PL to watch it happen.</div>
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <button data-pset="1" style="font-family:var(--hand);font-size:14px;color:var(--live);border-bottom:1px dotted var(--live);">set the dial to +1</button>
+            <span style="flex:1;"></span>
+            <span style="font-family:var(--hand);font-size:13px;color:var(--voice);">tap to flip back</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ FTA · the seal 2×1 ══ -->
+    <div class="vat sm" data-t="FTA" data-on="0" style="grid-column:4/6;grid-row:4;position:relative;">
+      <div class="in">
+        <div class="fc" style="flex-direction:row;align-items:center;justify-content:center;gap:12px;border-style:dashed;">
+          <span style="width:34px;height:34px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:700;flex:none;">x&#8319;</span>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <span style="font-family:var(--hand);font-size:15px;color:var(--dim);line-height:1;">FTA &mdash; the seal</span>
+            <span class="fgl" style="font-family:var(--hand);font-size:13px;color:var(--voice);">sealed &mdash; not yet in the book</span>
+          </div>
+        </div>
+        <div class="bk" style="padding:8px 12px;justify-content:center;gap:4px;">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--voice);">ORB &middot; SEALED</div>
+          <div style="font-size:11.5px;line-height:1.45;color:var(--ink);">In &#8450; every degree-n polynomial has exactly n roots. The plane where t&sup2; = p always solves is the plane that completes algebra &mdash; the dial forced to &minus;1.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="font-family:var(--hand);font-size:16px;color:var(--dim);">the slider, the shape, the rail, the loop &mdash; one p runs through all of them, and they all move together.
+    <a href="notebook.html" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);">&larr; the walk in (the choice)</a>
+    &middot; <span style="opacity:.55;">chapter I &middot; chapter III &mdash; not yet laid</span>
+    &middot; <a href="cards/" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);">the cards</a>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ═══════ Chapter II — one p drives every plate (port of the reference logic) ═══════ */
+const $=id=>document.getElementById(id);
+const S={p:-1, pm:'add', zx:1.6, zy:1.1, wx:-1.2, wy:0.9, rsS:1, rot:0};
+let rsA=null, tiltA=null;
+
+const fmt=v=>{let r=Math.round(v*100)/100; if(Object.is(r,-0)) r=0;
+  let s=String(r); if(s[0]==='-') s='−'+s.slice(1); return s;};
+const pInf=v=>Math.abs(v)>=15 ? (v>0?'+∞':'−∞') : fmt(v);
+const sm=u=>u*u*(3-2*u);
+const NS='http://www.w3.org/2000/svg';
+function txt(g,x,y,size,fill,str,mono,anchor){
+  const t=document.createElementNS(NS,'text');
+  t.setAttribute('x',x); t.setAttribute('y',y);
+  t.setAttribute('text-anchor',anchor||'middle');
+  t.setAttribute('font-family',mono?'var(--mono)':'var(--hand)');
+  t.setAttribute('font-size',size); t.setAttribute('fill',fill);
+  t.textContent=str; g.appendChild(t); return t;
+}
+
+/* ticks under the slider */
+(function(){const g=$('pTicks');
+  for(const m of [-2,-1,0,1,2]){const x=300+m*143;
+    const l=document.createElementNS(NS,'line');
+    l.setAttribute('x1',x);l.setAttribute('x2',x);l.setAttribute('y1',9);l.setAttribute('y2',21);
+    l.setAttribute('stroke','var(--dim2)');l.setAttribute('stroke-width','1.2');g.appendChild(l);
+    txt(g,x,30,9,'var(--dim2)',(m<0?'−'+(-m):'+'+m),true);
+  }})();
+
+function setP(v){ S.p=v; S.rsS=1; render(); }
+
+function render(){
+  const p=S.p, pAbs=Math.abs(p), isInf=pAbs>=15;
+  const neg=p<-.001, pos=p>.001, zero=!neg&&!pos;
+  const pColor=isInf?'var(--ok)':neg?'var(--d1)':pos?'var(--d5)':'var(--ok)';
+  const planeName=isInf?'the dual plane, again':neg?'the complex plane':pos?'the split plane':'the dual plane';
+  const pLabel=pInf(p), jS=S.rsS||1, rot=S.rot||0;
+
+  $('hdrRead').innerHTML='j² = '+pLabel+' · '+planeName;
+  $('pBig').textContent=pLabel; $('pBig').style.color=pColor;
+  $('planeNm').textContent=planeName;
+
+  /* chips */
+  document.querySelectorAll('.pchip').forEach(ch=>{
+    const v=parseFloat(ch.dataset.pset);
+    const on=(v===-1&&neg)||(v===0&&zero)||(v===1&&pos&&!isInf);
+    const col=v===-1?'var(--d1)':v===0?'var(--ok)':'var(--d5)';
+    ch.style.color=on?col:'var(--ink)';
+    ch.style.background=on?'var(--live-soft)':'var(--grid)';
+    ch.style.borderColor=on?col:'var(--border)';
+  });
+
+  /* slider knob */
+  const kx=Math.max(14,Math.min(586,300+Math.max(-2,Math.min(2,p))*143));
+  $('pk1').setAttribute('cx',kx); $('pk2').setAttribute('cx',kx);
+  $('pk1').setAttribute('stroke',pColor); $('pk2').setAttribute('fill',pColor);
+
+  /* mode */
+  const addOn=S.pm==='add';
+  $('optEl').dataset.op=addOn?'add':'mul';
+  $('cutEl').dataset.op=addOn?'add':'mul';
+  $('modeWord').textContent=addOn?'MODE: ADDING':'MODE: MULTIPLYING';
+  $('addG').style.display=addOn?'':'none';
+  $('mulG').style.display=addOn?'none':'';
+
+  /* main plot */
+  const X=v=>280+v*44, Y=v=>235-v*44*jS;
+  const clx=v=>Math.max(10,Math.min(550,v)), cly=v=>Math.max(10,Math.min(460,v));
+  const {zx,zy,wx,wy}=S;
+  const smx=zx+wx, smy=zy+wy;
+  const pMain=Math.max(-6,Math.min(6,p));
+  const q=pv=>[zx*wx+pv*zy*wy, zx*wy+zy*wx];
+  const pr=q(pMain);
+  $('jdot').setAttribute('cy',Y(1));
+  const set=(id,a,v)=>$(id).setAttribute(a,v);
+  set('zL','x2',X(zx)); set('zL','y2',Y(zy));
+  set('wL','x2',X(wx)); set('wL','y2',Y(wy));
+  set('zh','cx',X(zx)); set('zh','cy',Y(zy));
+  set('wh','cx',X(wx)); set('wh','cy',Y(wy));
+  if(addOn){
+    set('gzs','x1',X(zx)); set('gzs','y1',Y(zy)); set('gzs','x2',clx(X(smx))); set('gzs','y2',cly(Y(smy)));
+    set('gws','x1',X(wx)); set('gws','y1',Y(wy)); set('gws','x2',clx(X(smx))); set('gws','y2',cly(Y(smy)));
+    set('sumL','x2',clx(X(smx))); set('sumL','y2',cly(Y(smy)));
+  } else {
+    set('railL','x1',clx(X(q(-1.9)[0]))); set('railL','x2',clx(X(q(1.9)[0])));
+    set('railL','y1',cly(Y(q(0)[1]))); set('railL','y2',cly(Y(q(0)[1])));
+    set('prL','x2',clx(X(pr[0]))); set('prL','y2',cly(Y(pr[1])));
+    set('prDot','cx',clx(X(pr[0]))); set('prDot','cy',cly(Y(pr[1])));
+    $('prDot').setAttribute('fill',pColor);
+    const rt=$('railTicks'); rt.innerHTML='';
+    for(const pv of [-1,0,1]) txt(rt,clx(X(q(pv)[0])),cly(Y(q(0)[1]))+18,9.5,'var(--dim)',
+      pv===-1?'−1':pv===0?'0':'+1',true);
+  }
+  const ann=$('c2ann'); ann.innerHTML='';
+  if(!addOn) txt(ann,clx(X(q(1.9)[0]))+4,cly(Y(q(0)[1]))-10,15,'var(--dim)','the j² rail',false,'end');
+  const pl=$('ptLabels'); pl.innerHTML='';
+  txt(pl,X(zx)+14,Y(zy)-10,17,'var(--live)','z');
+  txt(pl,X(wx)+14,Y(wy)-10,17,'var(--voice)','w');
+  if(addOn) txt(pl,clx(X(smx))+16,cly(Y(smy))+4,17,'var(--ink)','z + w',false,'start');
+  else txt(pl,clx(X(pr[0]))+12,cly(Y(pr[1]))-10,17,'var(--ink)','z·w',false,'start');
+  $('c2AddSent').textContent='adding: z + w = ('+fmt(smx)+', '+fmt(smy)+')';
+  $('c2MulSent').textContent='multiplying: z·w = (xa + p·yb, xb + ya) = ('+fmt(pr[0])+', '+fmt(pr[1])+')';
+
+  /* PL level curves */
+  const U=52, pDraw=Math.max(-6,Math.min(6,p));
+  $('lcg').setAttribute('transform','rotate('+rot.toFixed(1)+')');
+  $('tiltg').setAttribute('transform','rotate('+rot.toFixed(1)+')');
+  $('lcPos').style.display=(pos&&!isInf)?'':'none';
+  $('lcZero').style.display=zero?'':'none';
+  $('lcInf').style.display=isInf?'':'none';
+  $('ell').style.display=(neg&&!isInf)?'':'none';
+  $('tPos').style.display=(pos&&!isInf)?'':'none';
+  $('tZero').style.display=zero?'':'none';
+  if(neg&&!isInf){$('ell').setAttribute('ry',Math.min(U*jS/Math.sqrt(-pDraw),320).toFixed(1));
+    $('ell').setAttribute('stroke',pColor);}
+  if(pos&&!isInf){
+    const sq=Math.sqrt(pDraw), R=[], L=[];
+    for(let t=-1.6;t<=1.62;t+=.1){const x=U*Math.cosh(t), y=-U*jS*Math.sinh(t)/sq;
+      R.push(x.toFixed(1)+','+y.toFixed(1)); L.push((-x).toFixed(1)+','+y.toFixed(1));}
+    $('hypR').setAttribute('d','M '+R.join(' L ')); $('hypL').setAttribute('d','M '+L.join(' L '));
+    $('hypR').setAttribute('stroke',pColor); $('hypL').setAttribute('stroke',pColor);
+    const sp=Math.sqrt(pDraw)/jS, rx=(130*sp).toFixed(1), rxn=(-130*sp).toFixed(1);
+    set('railA','x1',rxn); set('railA','x2',rx);
+    set('railB','x1',rxn); set('railB','x2',rx);
+  }
+  const j2x=Math.max(-124,Math.min(124,U*pDraw));
+  $('j2Dot').setAttribute('cx',j2x.toFixed(1)); $('j2Dot').setAttribute('fill',pColor);
+  $('juDot').setAttribute('cy',(-U*jS).toFixed(1));
+  $('lcGrP').setAttribute('d','M 26 0 L 0 0 0 '+(26*jS).toFixed(2));
+  $('lcGr').setAttribute('height',(26*jS).toFixed(2));
+  const ll=$('lcLabels'); ll.innerHTML='';
+  if(rot<5){
+    txt(ll,58,14,11,'var(--ink)','1',true,'start');
+    txt(ll,-10,-U*jS+4,11,'var(--live)','j',true,'end');
+    txt(ll,j2x,-10,11,pColor,'j²',true);
+  }
+  $('railLabel').textContent=isInf?'∞ · dual again':neg?'0 RAILS · an ellipse':pos?'2 RAILS · a hyperbola':'1 RAIL · two lines';
+  $('railLabel').style.color=pColor;
+
+  /* renormalize mini line */
+  const RX=v=>100+v*40;
+  const rsSgn=pos?1:neg?-1:0;
+  const canRescale=pAbs>.02 && Math.abs(pAbs-1)>.02 && !isInf;
+  const rsPX=RX(Math.max(-2.1,Math.min(2.1,isInf?(p>0?2.1:-2.1):p)));
+  const rsSX=RX(rsSgn);
+  const rg=$('rsg'); rg.innerHTML='';
+  const c1=document.createElementNS(NS,'circle');
+  c1.setAttribute('cx',rsSX);c1.setAttribute('cy',22);c1.setAttribute('r',7);
+  c1.setAttribute('fill','none');c1.setAttribute('stroke','var(--ink)');
+  c1.setAttribute('stroke-width','1.3');c1.setAttribute('stroke-dasharray','3 3');rg.appendChild(c1);
+  const c2=document.createElementNS(NS,'circle');
+  c2.setAttribute('cx',rsPX);c2.setAttribute('cy',22);c2.setAttribute('r',5.5);
+  c2.setAttribute('fill',pColor);c2.setAttribute('stroke','var(--paper)');c2.setAttribute('stroke-width','1.4');rg.appendChild(c2);
+  if(canRescale){const a=document.createElementNS(NS,'path');
+    a.setAttribute('d','M '+rsPX.toFixed(1)+' 15 Q '+((rsPX+rsSX)/2).toFixed(1)+' 3 '+rsSX.toFixed(1)+' 15');
+    a.setAttribute('fill','none');a.setAttribute('stroke','color-mix(in srgb, var(--ink) 55%, transparent)');
+    a.setAttribute('stroke-width','1.2');a.setAttribute('stroke-dasharray','3 2');rg.appendChild(a);}
+  $('rsBtn').style.display=canRescale?'':'none';
+  $('rsBtn').innerHTML='reform to '+(p<0?'−1':'+1')+' ⟳';
+  $('rsMsg').style.display=canRescale?'none':'';
+  $('rsMsg').textContent=isInf?'p → ∞ · the far dual':zero?'p = 0 · nothing to stretch':'already ±1 · normal form';
+
+  /* tilt */
+  $('tiltBtn').innerHTML=rot>22?'turn back ⟲':'turn 45° ⟲';
+  $('tiltAnn').textContent=rot>22?'rails on the axes — the strangers’ multiply':
+    (pos&&!isInf?'watch the rails swing onto the axes':'a change of basis — spin the frame');
+
+  /* CR knob */
+  const phi=2*Math.atan(p);
+  const crx=(90+62*Math.sin(phi)).toFixed(1), cry=(90-62*Math.cos(phi)).toFixed(1);
+  set('crLine','x2',crx); set('crLine','y2',cry);
+  $('crT1').setAttribute('cx',crx); $('crT1').setAttribute('cy',cry); $('crT1').setAttribute('stroke',pColor);
+  $('crT2').setAttribute('cx',crx); $('crT2').setAttribute('cy',cry); $('crT2').setAttribute('fill',pColor);
+  $('crRead').innerHTML='j² = '+pLabel;
+  $('crPlane').textContent=planeName; $('crPlane').style.color=pColor;
+
+  /* DV / QD */
+  $('dvNow').textContent='now: '+planeName; $('dvNow').style.color=pColor;
+  $('dv1').style.borderColor=neg?'var(--d1)':'var(--border)';
+  $('dv2').style.borderColor=zero?'var(--ok)':'var(--border)';
+  $('dv3').style.borderColor=(pos&&!isInf)?'var(--d5)':'var(--border)';
+  const n=pos?2:zero?1:0;
+  $('qdDots').innerHTML = n>0
+    ? Array.from({length:n},()=>'<span style="width:10px;height:10px;border-radius:50%;background:'+pColor+';display:block;"></span>').join('')
+    : '<span style="font-family:var(--mono);font-size:13px;color:'+pColor+';">∅</span>';
+  $('qdLabel').textContent=n+(n===1?' real root':' real roots');
+  $('qdLabel').style.color=pColor;
+}
+
+/* ——— clicks: chips, DV/L2 psets, mode, rescale, tilt, locks, flips ——— */
+document.addEventListener('click',e=>{
+  if(e.target.closest('a')||e.target.closest('[data-dragel]')) return;
+  const mt=e.target.closest('[data-mode-toggle]');
+  if(mt){const cut=$('cutEl');
+    cut.classList.add('turning'); clearTimeout(window._cutT);
+    window._cutT=setTimeout(()=>cut.classList.remove('turning'),1400);
+    S.pm=S.pm==='add'?'mul':'add'; render(); return;}
+  if(e.target.closest('[data-rescale]')){doRescale(); return;}
+  if(e.target.closest('[data-tilt]')){doTilt(); return;}
+  const ps=e.target.closest('[data-pset]');
+  if(ps){setP(parseFloat(ps.dataset.pset)); return;}
+  const c1=e.target.closest('[data-c1t]');
+  if(c1){c1.dataset.on=c1.dataset.on==='1'?'0':'1';
+    const hint=c1.querySelector('.ann');
+    if(c1.id==='plateC2') $('c2Hint').textContent=c1.dataset.on==='1'?'locked ✦ — tap to unlock':'hover to read · tap to lock';
+    return;}
+  const t=e.target.closest('[data-t]');
+  if(t){t.dataset.on=t.dataset.on==='1'?'0':'1';}
+});
+
+/* ——— the j² slider ——— */
+let pd=false;
+const psl=$('psl');
+function setFromSlider(e){
+  const r=psl.getBoundingClientRect();
+  const x=(e.clientX-r.left)/r.width*600;
+  let p=(x-300)/143;
+  p=Math.max(-2,Math.min(2,p));
+  for(const m of [-1,0,1]) if(Math.abs(p-m)<.09){p=m;break;}
+  setP(Math.round(p*100)/100);
+}
+psl.setAttribute('data-dragel','');
+psl.addEventListener('pointerdown',e=>{pd=true;psl.setPointerCapture(e.pointerId);setFromSlider(e);e.preventDefault();});
+psl.addEventListener('pointermove',e=>{if(pd)setFromSlider(e);});
+addEventListener('pointerup',()=>{pd=false;});
+
+/* ——— z, w drag (vertical scale carries the rescale) ——— */
+let ad=null; const plot=$('c2plot');
+for(const id of ['zh','wh']){const h=$(id); h.setAttribute('data-dragel','');
+  h.addEventListener('pointerdown',e=>{ad=h.dataset.adrag;h.setPointerCapture(e.pointerId);e.preventDefault();e.stopPropagation();});
+  h.addEventListener('pointermove',e=>{
+    if(!ad) return;
+    const r=plot.getBoundingClientRect(), jS=S.rsS||1;
+    let x=((e.clientX-r.left)/r.width*560-280)/44;
+    let y=(235-(e.clientY-r.top)/r.height*470)/(44*jS);
+    x=Math.max(-5.8,Math.min(5.8,Math.round(x*10)/10));
+    y=Math.max(-4.8,Math.min(4.8,Math.round(y*10)/10));
+    if(ad==='z'){S.zx=x;S.zy=y;} else {S.wx=x;S.wy=y;}
+    render();
+  });
+  h.addEventListener('pointerup',()=>{ad=null;});
+}
+
+/* ——— CR spinnable knob ——— */
+let crd=false; const crsvg=$('crsvg');
+crsvg.setAttribute('data-dragel','');
+function setFromCr(e){
+  const r=crsvg.getBoundingClientRect();
+  const px=(e.clientX-r.left)/r.width*180, py=(e.clientY-r.top)/r.height*180;
+  let phi=Math.atan2(px-90,90-py);
+  if(Math.abs(phi)<.14){setP(0);return;}
+  if(Math.abs(phi-Math.PI/2)<.14){setP(1);return;}
+  if(Math.abs(phi+Math.PI/2)<.14){setP(-1);return;}
+  if(Math.abs(Math.abs(phi)-Math.PI)<.17){setP(phi>0?16:-16);return;}
+  let p=Math.tan(phi/2);
+  p=Math.max(-16,Math.min(16,p));
+  setP(Math.round(p*100)/100);
+}
+crsvg.addEventListener('pointerdown',e=>{crd=true;crsvg.setPointerCapture(e.pointerId);setFromCr(e);e.preventDefault();});
+crsvg.addEventListener('pointermove',e=>{if(crd)setFromCr(e);});
+addEventListener('pointerup',()=>{crd=false;});
+
+/* ——— renormalize: stretch the ruler, settle to ±1 ——— */
+function doRescale(){
+  if(rsA) return;
+  const from=S.p;
+  if(Math.abs(from)<.02||Math.abs(Math.abs(from)-1)<.02||Math.abs(from)>=15) return;
+  const to=from<0?-1:1, S0=Math.sqrt(Math.abs(from));
+  const t0=performance.now(), dA=900, dB=900;
+  const step=now=>{
+    const t=now-t0;
+    if(t<dA){S.rsS=1+(S0-1)*sm(t/dA); render();}
+    else if(t<dA+dB){const e=sm((t-dA)/dB); S.p=from+(to-from)*e; S.rsS=Math.sqrt(Math.abs(S.p)); render();}
+    else {S.p=to; S.rsS=1; render(); rsA=null; return;}
+    rsA=requestAnimationFrame(step);
+  };
+  rsA=requestAnimationFrame(step);
+}
+/* ——— tilt: 45° change of basis ——— */
+function doTilt(){
+  if(tiltA) return;
+  const from=S.rot||0, to=from>22?0:45;
+  const t0=performance.now(), d=800;
+  const step=now=>{const u=Math.min(1,(now-t0)/d);
+    S.rot=from+(to-from)*sm(u); render();
+    if(u<1) tiltA=requestAnimationFrame(step); else tiltA=null;};
+  tiltA=requestAnimationFrame(step);
+}
+
+/* expose for headless verification */
+window.__ch2={get:()=>({...S}), setP};
+render();
+</script>
+</body>
+</html>
