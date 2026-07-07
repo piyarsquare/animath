@@ -38,6 +38,39 @@ app into the living-notebook presentation."*
 
 <!-- Newest entry first. One ### per state transition. -->
 
+### 🟣 decision · 12:40 — The design handoff lands: plates + chapters, one p for the whole page
+**Why:** Dan attached the Claude Design mockup zip ("Notebook design system").
+Committed pristine to `docs/design/notebook-handoff/` (prototypes run by
+serving `designs/` over http; in the sandbox, React/Babel must be supplied
+locally — unpkg/jsdelivr are proxy-blocked; npm registry works).
+
+**What it establishes:** the notebook = **plates** (cards rendered on a 208px
+grid) + **chapters** (curated reading paths through plates). The core
+contract: **one `p` drives every plate** — slider, spinnable CR knob, DV
+buttons, QD root count, PL level curves/renormalize/tilt, and the C2 hub's
+z·w plot all read/write a single source of truth (default −1). **Chapter II
+— the plane** is the finalized reference implementation (7 plates: C2 3×3
+hub with j² slider + ADDITION/MULTIPLICATION 3-D flip + draggable z,w plot
+with the product rail; PL level-curves + 2-phase renormalize animation whose
+ruler `rsS` also drives the main plot's vertical scale + 45° tilt; CR
+spinnable circle-dial with `p = tan(φ/2)`, dual at 0 AND ∞; DV/QD/L2/FTA
+flip plates; hub lock states with handwritten annotations). Tokens map onto
+`theme.css`; plane colors are semantic constants (blue complex · green dual
+· orange split). Typography: Space Grotesk/Newsreader/Space Mono/Caveat.
+`cards-reference/` is byte-identical to the repo corpus — same content
+graph.
+
+**Reconciliation with what's built:** nothing is wasted — the staged passage
+is the *reading path* (the handoff's "chapter" concept with heavy staging);
+the recent widget rounds (draggable z,w; +/× flip; the j² mini-dial and
+rail) are literally the C2 hub in embryo; settle-the-dots is PL's
+renormalize box; the sticky trichotomy is DV; Stop D's level sets live
+inside PL. **Next: the faithful Chapter II port** onto the guide-theme
+layer as the notebook's reference page. Flagged tensions for Dan: the
+mockup is a scrollable page (vs. the earlier no-scroll rule); Google Fonts
+vs. the app's system stacks; where Chapter II sits relative to the staged
+passage (proposal: the passage is the walk INTO the plates room).
+
 ### 🟢 code · 09:30 — The cover, the living section, the told FOIL (`dee4e5e` → `27b330f`)
 **Why:** Two rapid design rounds from Dan walking the live page. Round 1: A0
 answers "Let's find out" (Q+A dock to the corner); Stop A becomes text-left /
