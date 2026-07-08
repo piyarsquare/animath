@@ -42,6 +42,33 @@ its cautionary hard-fail reflection).
 
 ## Working notes
 
+### 🟢 code · 14:49 (Jul 7) — Redesigned the shell chart per Dan's spec: ε-shell stack, both ε and N in one picture
+**Why:** Dan wants the §1 shell fact shown "as a function of both ε and N" — a filled-polygon plot, N on X, Y summing to 1, log scale, ε shading proportionately. Built it as a cheap reversible probe (R2) to react to, not folded into the notebook yet.
+
+`assets/shell-stack.mjs` → `assets/shell-stack.svg`: the unit ball partitioned
+into ε = 0.02 radial shells; Y = cumulative fraction of volume within radius r
+(partitions [0,1] exactly ⇒ "sums to 1"); color = shell radius (surface dark,
+core light) so **ε is the shading dimension**; N on X. Two shared-decomposition
+panels resolve the "sums to 1 **and** log" tension Dan flagged:
+- **A · linear Y** — the honest "sums to 1"; the dark skin shell floods the
+  panel as N grows.
+- **B · log Y** — the same axis, log-scaled: the shell boundaries `(1−kε)ᴺ`
+  become **straight, plunging lines** (semi-log turns exponentials into lines),
+  so Dan's favored framing "(1−ε)ᴺ shrinks quickly to zero" is a fan of rays;
+  thicker peel ⇒ steeper plunge. The three classic peels ε = 1%/5%/10% drawn
+  heavy + labeled, tying back to the notebook's original three-curve chart.
+
+Built on the dataviz method (sequential single-hue ramp for the radius
+magnitude; reference chrome inks; self-contained light surface). Verified by
+eye across three render rounds — fixed an inverted log axis (1 was at the
+bottom), colliding peel labels (now labeled only in panel B), colorbar label
+overlap, and floor "teeth" (monotone `r^N` lets each band stop cleanly at the
+floor; panel background painted core-shade so sub-floor gaps read as core).
+**Not yet folded into the notebook** — presented to Dan to pick the direction
+(replace §1's line chart, keep both, or push toward an interactive phase-2
+version). Also a strong phase-2 app candidate: this picture with a live N-cursor
+or ε-slider is nearly the whole story in one interaction.
+
 ### 🔵 finding · 00:01 (Jul 7) — Dan opened a discussion on §2: unpack the Γ-function volume formula
 **Why:** The notebook quotes V_n = π^(n/2)/Γ(n/2+1) but only derives the 2π/n recursion; Dan asked for the formula itself to be explained.
 
