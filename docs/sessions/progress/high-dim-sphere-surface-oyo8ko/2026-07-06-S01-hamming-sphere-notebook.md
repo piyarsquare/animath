@@ -59,6 +59,23 @@ sphere" become the same thing, measure-wise.
 
 ![Shell fraction vs dimension](assets/shell-fraction.svg)
 
+A second way to see the same fact holds **every ε and every N in one picture**.
+Partition the ball into thin radial shells (thickness ε = 0.02) and track each
+shell's share of the volume as the dimension climbs; the shading is the shell's
+radius, so peel-depth ε = 1 − r *is* the color axis. Reading the two panels:
+
+- **A · linear axis** is the honest "sums to 1": Y is the cumulative fraction of
+  volume within radius r, so the shells partition [0, 1] exactly. As N grows the
+  dark outer shell — the skin — floods the panel.
+- **B · log axis** is the same axis, log-scaled — where each shell boundary
+  `(1−kε)ⁿ` becomes a **straight, plunging line** (a semi-log plot turns an
+  exponential into a line). This is "the peel shrinks quickly to zero" made
+  literal: a fan of downward rays, steeper for a thicker peel. The three classic
+  peels ε = 1%/5%/10% are the heavy dashed lines — the same three curves as the
+  chart above, now read as boundaries in the shell fan.
+
+![The ball as ε-shells — volume share for every dimension at once](assets/shell-stack.svg)
+
 ## §2 · Where the volume goes: the 2π/n recursion
 
 The unit ball's volume is `V_n(1) = π^(n/2) / Γ(n/2 + 1)`, but the formula

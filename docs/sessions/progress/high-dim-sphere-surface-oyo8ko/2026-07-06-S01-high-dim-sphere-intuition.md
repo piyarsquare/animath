@@ -42,6 +42,15 @@ its cautionary hard-fail reflection).
 
 ## Working notes
 
+### 🟡 milestone · 14:57 (Jul 7) — Dan's call: keep old + add new figure; static plot only, no app yet
+**Why:** Dan chose "keep old + add new" for the §1 figure and said "this does not need an interactive app yet. for now, I just want to see a plot."
+
+Folded `shell-stack.svg` into the notebook's §1 as a *second* figure (the
+original three-curve `shell-fraction.svg` stays), with a short paragraph
+explaining the two panels (linear sums-to-1 vs the log fan). **Phase 2 (any
+interactive probe) is explicitly deferred** — the deliverable stays a static
+notebook for now.
+
 ### 🟢 code · 14:49 (Jul 7) — Redesigned the shell chart per Dan's spec: ε-shell stack, both ε and N in one picture
 **Why:** Dan wants the §1 shell fact shown "as a function of both ε and N" — a filled-polygon plot, N on X, Y summing to 1, log scale, ε shading proportionately. Built it as a cheap reversible probe (R2) to react to, not folded into the notebook yet.
 
