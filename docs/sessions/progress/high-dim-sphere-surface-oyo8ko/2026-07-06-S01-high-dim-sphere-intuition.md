@@ -42,6 +42,22 @@ its cautionary hard-fail reflection).
 
 ## Working notes
 
+### 🟢 code · 20:52 (Jul 7) — Viridis (hue) colormap + log-N figure added to the notebook
+**Why:** Dan found the shells hard to tell apart by shade alone and asked for a hue-based scale, and to add the log-N version to the notebook.
+
+- **Colormap → viridis** (multi-hue sequential: purple core → teal → green →
+  yellow surface). Hue *and* lightness both vary, so shells separate by hue
+  while staying perceptually ordered and colorblind-safe — the right answer to
+  "hard to distinguish from shade alone" without resorting to a naive rainbow.
+  Applied to both linear and log-N figures.
+- **Peel lines** now drawn with a **white halo** (white stroke under the black
+  dashes) so the ε = 1%/5%/10% boundaries stay legible across every viridis hue;
+  X gridlines switched to dark (reads on viridis' bright mid-range).
+- **Notebook §1** now shows *three* figures: the original three-curve chart, the
+  linear-N shell stack, and the **log-N shell stack** (added per Dan). Prose
+  updated (skin is now the bright end; the log-N trade-off documented).
+- Fixed stale "surface dark" captions and a caption overflow found on render.
+
 ### 🟢 code · 15:30 (Jul 7) — Added a log-N variant of the shell-stack chart
 **Why:** Dan asked to see the chart with N log-scaled too.
 

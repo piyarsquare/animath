@@ -24,13 +24,15 @@ const SURFACE = "#fcfcfb", INK = "#0b0b0b", INK2 = "#52514e", MUTED = "#898781";
 const GRID = "#e1e0d9", BASE = "#c3c2b7";
 const FONT = `system-ui, -apple-system, 'Segoe UI', sans-serif`;
 
-// sequential blue ramp (dataviz palette steps 150→700)
-const RAMP = ["#b7d3f6","#9ec5f4","#86b6ef","#6da7ec","#5598e7","#3987e5",
-              "#2a78d6","#256abf","#1c5cab","#184f95","#104281","#0d366b"];
+// Viridis — a multi-hue SEQUENTIAL colormap: hue AND lightness both vary
+// (purple→teal→green→yellow), so shells are distinguishable by hue, not shade
+// alone, while staying perceptually ordered and colorblind-safe.
+const RAMP = ["#440154","#482878","#3e4a89","#31688e","#26828e",
+              "#1f9e89","#35b779","#6ece58","#b5de2b","#fde725"];
 const hexToRgb = (h) => [1,3,5].map((i)=>parseInt(h.slice(i,i+2),16));
 const rgbToHex = (c) => "#"+c.map((v)=>Math.round(v).toString(16).padStart(2,"0")).join("");
-function colorForR(r){                         // r=1 surface → dark; r=0 center → light
-  const p = (0.05 + 0.95*r) * (RAMP.length-1);
+function colorForR(r){                          // r=0 center → dark purple; r=1 surface → yellow
+  const p = Math.max(0,Math.min(1,r)) * (RAMP.length-1);
   const i = Math.min(RAMP.length-2, Math.floor(p)), f = p-i;
   const a = hexToRgb(RAMP[i]), b = hexToRgb(RAMP[i+1]);
   return rgbToHex(a.map((v,k)=>v+(b[k]-v)*f));
@@ -68,18 +70,18 @@ function build({logX, NMAX, file}){
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="${FONT}">\n`;
   s += `<rect width="${W}" height="${H}" fill="${SURFACE}" rx="8"/>\n`;
   s += text(20,26,"The unit ball as ε-thick shells — where the volume lives, for every dimension at once",{size:14,fill:INK,weight:"600"});
-  s += text(20,43,"Each band = a radial shell of thickness ε = 0.02. Height = its share of the ball's volume; color = its radius (surface dark, center light).",{size:11,fill:INK2});
+  s += text(20,43,"Each band = a radial shell (ε = 0.02); height = its volume share; color = radius (viridis: purple center → yellow surface).",{size:11,fill:INK2});
 
   function xticks(yTop,yBot){
     let g="";
     const ticks = logX ? [1,10,100,1000,10000].filter(d=>d<=NMAX)
                        : [1,25,50,75,100,125,150].filter(d=>d<=NMAX);
-    if(logX){ // faint minor decade gridlines
-      for(const base of [1,10,100,1000]){ for(let m=2;m<=9;m++){ const n=base*m; if(n<=NMAX){ const xx=X(n); g+=line(xx,yTop,xx,yBot,"rgba(255,255,255,0.12)",1); } } }
+    if(logX){ // faint minor decade gridlines (dark reads on viridis' bright mid-range)
+      for(const base of [1,10,100,1000]){ for(let m=2;m<=9;m++){ const n=base*m; if(n<=NMAX){ const xx=X(n); g+=line(xx,yTop,xx,yBot,"rgba(0,0,0,0.13)",1); } } }
     }
     for(const n of ticks){
       const xx=X(n);
-      g+=line(xx,yTop,xx,yBot,"rgba(255,255,255,0.32)",1);
+      g+=line(xx,yTop,xx,yBot,"rgba(0,0,0,0.28)",1);
       g+=line(xx,yBot,xx,yBot+4,BASE,1);
       g+=text(xx, yBot+16, n>=1000?`${n/1000}k`:n, {anchor:"middle"});
     }
@@ -109,6 +111,7 @@ function build({logX, NMAX, file}){
     // classic peels ε = 1,5,10%
     for(const {r,lab} of [{r:0.99,lab:"ε = 1%"},{r:0.95,lab:"ε = 5%"},{r:0.90,lab:"ε = 10%"}]){
       const pts=Ns.map(n=>[X(n),Y(Math.max(cum(r,n), logY?1e-6:0))]);
+      g+=polyline(pts, "rgba(255,255,255,0.92)", 3.4);   // white halo → dashes read on any viridis hue
       g+=polyline(pts, INK, 1.4, "5 3");
       if(!labelPeels) continue;
       let bestN=Ns[Ns.length-1];
@@ -127,7 +130,7 @@ function build({logX, NMAX, file}){
   const bSub = logX ? "steeper for a thicker peel" : "thicker peel ⇒ steeper plunge to zero";
   const bTitle = logX ? "B · log Y — the peel (1−ε)ᴺ curves into a cliff"
                       : "B · log axis — the peel (1−ε)ᴺ is a straight, plunging line";
-  s += panel(80, 320, false, "A · linear axis — “Y sums to 1”", "the dark skin shell floods the panel", false);
+  s += panel(80, 320, false, "A · linear axis — “Y sums to 1”", "the bright skin shell floods the panel", false);
   s += panel(400, 620, true, bTitle, bSub, true);
   s += text((L+plotR)/2, 656, `dimension N  (${logX?"log scale":"linear"})`, {anchor:"middle", size:11, fill:INK2});
 
