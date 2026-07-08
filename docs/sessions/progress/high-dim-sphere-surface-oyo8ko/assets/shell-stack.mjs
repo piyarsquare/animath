@@ -101,6 +101,14 @@ function panel(yTop,yBot,logY,title,sub,labelPeels){
     const lx=X(Math.min(bestN, NMAX-1));
     g+=text(Math.min(lx+6, plotR-2), Y(cum(r,Math.min(bestN,NMAX)))-4, lab, {size:9.5, fill:INK, anchor: lx>plotR-70?"end":"start"});
   }
+  // X ticks — N is LINEAR (kept linear so panel B's peel lines stay straight).
+  // Gridlines drawn over the fill (translucent white reads on the dark fan) + labels below.
+  for(const n of [1,25,50,75,100,125,150]){
+    const xx=X(n);
+    g+=line(xx,yTop,xx,yBot,"rgba(255,255,255,0.30)",1);
+    g+=line(xx,yBot,xx,yBot+4,BASE,1);
+    g+=text(xx, yBot+16, n, {anchor:"middle"});
+  }
   g+=line(L,yBot,plotR,yBot,BASE,1.5);
   g+=line(L,yTop,L,yBot,BASE,1);
   g+=text(L, yTop-8, title, {size:12, fill:INK, weight:"600"});

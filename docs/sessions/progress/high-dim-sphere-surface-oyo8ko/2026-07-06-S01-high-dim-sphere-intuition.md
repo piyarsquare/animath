@@ -42,6 +42,14 @@ its cautionary hard-fail reflection).
 
 ## Working notes
 
+### 🟢 code · 15:12 (Jul 7) — Fixed the missing N axis on the shell-stack chart
+**Why:** Dan couldn't read N off the plot and asked if N was log-scaled. It wasn't — I had drawn no X tick labels at all.
+
+N is **linear** (1→150), kept linear on purpose so panel B's peel lines stay
+straight (log-N would bend `(1−ε)ⁿ` back into a curve). The bug was purely the
+missing axis: added tick labels at 1/25/50/75/100/125/150 and faint translucent
+gridlines on both panels so N is readable and traceable up into the fan.
+
 ### 🟡 milestone · 14:57 (Jul 7) — Dan's call: keep old + add new figure; static plot only, no app yet
 **Why:** Dan chose "keep old + add new" for the §1 figure and said "this does not need an interactive app yet. for now, I just want to see a plot."
 
