@@ -42,6 +42,20 @@ its cautionary hard-fail reflection).
 
 ## Working notes
 
+### 🟢 code · 15:30 (Jul 7) — Added a log-N variant of the shell-stack chart
+**Why:** Dan asked to see the chart with N log-scaled too.
+
+Refactored `shell-stack.mjs` into a `build({logX, NMAX, file})` function that
+emits both `shell-stack.svg` (linear N, 1–150, the notebook's figure) and
+`shell-stack-logN.svg` (log N, 1–10000, decade ticks). Trade-off shown
+directly: log-N gives the full sweep to N = 10⁴, but panel B's peel lines stop
+being straight — `(1−ε)ⁿ` bends into a curved cliff (a semi-log plot needs
+linear N for the straight-line property). Panel A (linear Y) reads especially
+well on log-N — the flood becomes a smooth S-curve across the whole range.
+Fixed two text-overflow bugs found on render (top caption run-off, panel-B
+title/subtitle collision). **Notebook still embeds the linear version**; the
+log-N file is an alternate pending Dan's preference.
+
 ### 🟢 code · 15:12 (Jul 7) — Fixed the missing N axis on the shell-stack chart
 **Why:** Dan couldn't read N off the plot and asked if N was log-scaled. It wasn't — I had drawn no X tick labels at all.
 
