@@ -85,6 +85,16 @@ html,body{margin:0;padding:0}
   display:flex;flex-direction:column}
 .vat:hover .fc{border-color:var(--border-strong)}
 .vat .bk{transform:rotateY(180deg);border-color:var(--border-strong);background:var(--paper2)}
+/* leaf: a flat tile — same footprint as a plate, no flip, content on the page surface.
+   sits closer to the desk than a raised plate: a faint paper wash, a hairline rule,
+   everything readable at once (no hover/flip to reveal). */
+.leaf{position:relative;border:1px solid var(--border);border-radius:2px;
+  background:color-mix(in srgb, var(--paper) 52%, transparent);
+  padding:10px 12px;display:flex;flex-direction:column;
+  box-shadow:inset 0 1px 0 color-mix(in srgb, var(--fg) 5%, transparent);
+  transition:border-color .3s ease}
+.leaf:hover{border-color:var(--border-strong)}
+.leaf:focus-within{border-color:var(--voice)}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 /* ——— responsive: the plates stack below the grid width ——— */
 .plategrid{display:grid;grid-template-columns:repeat(5,208px);grid-template-rows:repeat(4,208px);
@@ -286,27 +296,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
       </div>
     </div>
 
-    <!-- ══ QD · quadratic, live root count ══ -->
-    <div class="vat" data-t="QD" data-on="0" style="grid-column:5;grid-row:3;position:relative;">
-      <div class="in">
-        <div class="fc">
-          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--dim);">QD</div>
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
-            <span style="font-family:var(--mono);font-size:15px;color:var(--ink);">t&sup2; = p</span>
-            <span id="qdDots" style="display:inline-flex;gap:6px;align-items:center;"></span>
-            <span id="qdLabel" style="font-family:var(--mono);font-size:9.5px;"></span>
-          </div>
-          <div style="display:flex;align-items:baseline;gap:8px;justify-content:center;">
-            <span style="font-family:var(--hand);font-size:15px;color:var(--dim);">a quadratic</span>
-            <span class="fgl" style="font-family:var(--hand);font-size:13px;color:var(--voice);">the same count</span>
-          </div>
-        </div>
-        <div class="bk">
-          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--voice);">QD</div>
-          <div style="flex:1;display:flex;align-items:center;font-size:12px;line-height:1.5;color:var(--ink);">Two roots, one, or none as p is positive, zero, negative &mdash; the rail count and the root count are one question. Forcing roots to always exist forces &radic;(negative) to live somewhere: the complex plane.</div>
-          <div style="font-family:var(--hand);font-size:13px;color:var(--voice);">tap to flip back</div>
-        </div>
+    <!-- ══ QD · quadratic, live root count — a LEAF (flat tile, no flip) ══ -->
+    <div class="leaf" style="grid-column:5;grid-row:3;">
+      <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--dim);">QD</div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;">
+        <span style="font-family:var(--mono);font-size:15px;color:var(--ink);">t&sup2; = p</span>
+        <span id="qdDots" style="display:inline-flex;gap:6px;align-items:center;"></span>
+        <span id="qdLabel" style="font-family:var(--mono);font-size:9.5px;"></span>
       </div>
+      <div style="font-family:var(--hand);font-size:12.5px;color:var(--dim);line-height:1.25;">roots, rails, sign &mdash; one count. forcing &radic;(negative) to exist makes the complex plane.</div>
     </div>
 
     <!-- ══ CR · the dial is a circle — spinnable ══ -->
@@ -413,7 +411,8 @@ function txt(g,x,y,size,fill,str,mono,anchor){
     txt(g,x,30,9,'var(--dim2)',(m<0?'−'+(-m):'+'+m),true);
   }})();
 
-function setP(v){ S.p=v; S.rsS=1; render(); }
+const reduceMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+function setP(v){ if(rsA){cancelAnimationFrame(rsA);rsA=null;} S.p=v; S.rsS=1; render(); }
 
 function render(){
   const p=S.p, pAbs=Math.abs(p), isInf=pAbs>=15;
@@ -565,7 +564,7 @@ function render(){
   $('dv1').style.borderColor=neg?'var(--d1)':'var(--border)';
   $('dv2').style.borderColor=zero?'var(--ok)':'var(--border)';
   $('dv3').style.borderColor=(pos&&!isInf)?'var(--d5)':'var(--border)';
-  const n=pos?2:zero?1:0;
+  const n=isInf?1:pos?2:zero?1:0;
   $('qdDots').innerHTML = n>0
     ? Array.from({length:n},()=>'<span style="width:10px;height:10px;border-radius:50%;background:'+pColor+';display:block;"></span>').join('')
     : '<span style="font-family:var(--mono);font-size:13px;color:'+pColor+';">∅</span>';
@@ -652,6 +651,7 @@ function doRescale(){
   const from=S.p;
   if(Math.abs(from)<.02||Math.abs(Math.abs(from)-1)<.02||Math.abs(from)>=15) return;
   const to=from<0?-1:1, S0=Math.sqrt(Math.abs(from));
+  if(reduceMotion()){ S.p=to; S.rsS=1; render(); return; }
   const t0=performance.now(), dA=900, dB=900;
   const step=now=>{
     const t=now-t0;
@@ -666,6 +666,7 @@ function doRescale(){
 function doTilt(){
   if(tiltA) return;
   const from=S.rot||0, to=from>22?0:45;
+  if(reduceMotion()){ S.rot=to; render(); return; }
   const t0=performance.now(), d=800;
   const step=now=>{const u=Math.min(1,(now-t0)/d);
     S.rot=from+(to-from)*sm(u); render();
