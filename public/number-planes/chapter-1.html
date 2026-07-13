@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Number Planes · Chapter I — the line</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%235fa8ff' stroke-width='3'/%3E%3Ccircle cx='16' cy='3' r='3' fill='%234cc878'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../guide-theme.css">
+<script src="../guide-skin.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..700;1,6..72,200..700&family=Caveat:wght@400..700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400..700&family=Shadows+Into+Light&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   Chapter I — the line. Port of the Claude Design reference
+   (docs/design/notebook-handoff) onto the shared guide theme layer:
+   works with ALL 8 app skins. Two moves on one line; the plates
+   around the hub hold the demands that will pin the plane.
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes pr-pulse{0%,100%{opacity:.3}50%{opacity:1}}
+html,body{margin:0;padding:0}
+*{box-sizing:border-box}
+.nbr{
+  --desk:color-mix(in srgb, var(--bg) 88%, #000);
+  --deskimg:radial-gradient(120% 90% at 50% -10%,
+    color-mix(in srgb, var(--bg) 88%, var(--fg)) 0%, var(--bg) 55%,
+    color-mix(in srgb, var(--bg) 90%, #000) 100%);
+  --paper:var(--card); --paper2:color-mix(in srgb, var(--card) 93%, var(--fg));
+  --grid:color-mix(in srgb, var(--fg) 7%, transparent);
+  --border:var(--rule); --border-strong:color-mix(in srgb, var(--fg) 34%, transparent);
+  --ink:var(--fg); --dim:var(--muted); --dim2:color-mix(in srgb, var(--muted) 70%, var(--bg));
+  --live:var(--accent2); --live-soft:color-mix(in srgb, var(--accent2) 13%, transparent);
+  --voice:var(--accent); --seal:var(--accent); --seal-fg:var(--bg);
+  --d1:light-dark(#2b57c9, #5fa8ff);
+  --ok:light-dark(#149e57, #4cc878);
+  --d5:light-dark(#bd5f1c, #ff9a5f);
+  --hand:'Caveat',cursive; --serif:'Newsreader',Georgia,serif;
+  --mono:'Space Mono',monospace; --disp:'Space Grotesk',sans-serif;
+  --spd:0.75;
+}
+[data-theme="light"] .nbr{--live:#2f6df0; --voice:#9a4a32; --d1:#3565c8; --ok:#4a7d46; --d5:#b0592a}
+[data-theme="primary"] .nbr{--live:#1f4fd6; --voice:#e63327; --d1:#2b57c9; --ok:#149e57; --d5:#e6731f}
+[data-theme="blueprint"] .nbr{--d1:#c9a8ff; --ok:#7fe0a8; --d5:#ffab7a;
+  --hand:'Shadows Into Light',cursive; --serif:'Space Grotesk',sans-serif}
+[data-theme="phosphor"] .nbr{--d1:#5adcff; --ok:#9dff5a; --d5:#ffa05a;
+  --hand:'VT323',monospace; --serif:'Space Mono',monospace}
+
+/* the operation card: a big word cut from the plate stock; flips the whole plot */
+.opt{perspective:900px;cursor:pointer;background:var(--desk);border-radius:2px}
+.opt .oin{transform-style:preserve-3d;transition:transform calc(.6s / var(--spd)) cubic-bezier(.3,.9,.35,1)}
+.opt:hover .oin{transform:rotateY(9deg)}
+.opt[data-op="mul"] .oin{transform:rotateY(-180deg)}
+.opt[data-op="mul"]:hover .oin{transform:rotateY(-171deg)}
+.opt .of,.opt .ob{backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--paper);
+  border:1px solid var(--grid);border-radius:2px;padding:0 10px;transition:border-color .3s ease}
+.opt .ob{transform:rotateY(-180deg)}
+/* the cutout flap: a seamless piece of the plate that turns a beat after the word */
+.cut{perspective:1100px;border-radius:2px}
+.cut.turning{background:var(--desk)}
+.cut .cin{position:relative;width:100%;height:100%;transform-style:preserve-3d;
+  transition:transform calc(.55s / var(--spd)) cubic-bezier(.3,.85,.35,1) calc(.055s / var(--spd))}
+.cut[data-op="mul"] .cin{transform:rotateY(-180deg)}
+.cut .cf,.cut .cb{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  background:var(--paper);border-radius:2px}
+.cut .cb{transform:rotateY(-180deg)}
+.c1t:hover .opt .of,.c1t:hover .opt .ob{border-color:var(--border)}
+/* hub plates: hover reads, click locks */
+.c1t{transition:border-color .3s ease,box-shadow .3s ease,transform calc(.4s / var(--spd)) cubic-bezier(.3,1.5,.45,1)}
+.c1t .ann{opacity:0;transition:opacity calc(.35s / var(--spd)) ease}
+.c1t:hover .ann,.c1t[data-on="1"] .ann{opacity:1}
+.c1t:hover{border-color:var(--border-strong) !important;transform:perspective(1400px) rotateY(-2.5deg)}
+.c1t[data-on="1"]{border-color:var(--voice) !important;box-shadow:inset 0 0 0 1px var(--voice);transform:none}
+/* flip plates */
+.vat{perspective:1000px;cursor:pointer}
+.vat .in{position:relative;width:100%;height:100%;transform-style:preserve-3d;
+  transition:transform calc(.55s / var(--spd)) cubic-bezier(.3,.85,.35,1)}
+.vat[data-on="1"] .in{transform:rotateY(180deg) !important}
+.vat:not([data-on="1"]):hover .in{transform:rotateY(-11deg);transition-timing-function:cubic-bezier(.3,1.25,.45,1)}
+.vat.sm:not([data-on="1"]):hover .in{transform:rotateY(-20deg)}
+/* the gloss — the second voice on a plate. always present (touch has no hover),
+   quiet by default, brightening when the plate is engaged. */
+.fgl{opacity:.62;transition:opacity .3s ease}
+.vat:hover .fgl{opacity:1}
+.vat .fc,.vat .bk{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  border:1px solid var(--border);border-radius:2px;background:var(--paper);padding:9px 11px;
+  display:flex;flex-direction:column}
+.vat:hover .fc{border-color:var(--border-strong)}
+.vat .bk{transform:rotateY(180deg);border-color:var(--border-strong);background:var(--paper2)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+/* ——— touch: no hover exists, so the hover voices speak on their own ——— */
+@media (hover:none){
+  .fgl{opacity:.85}
+  .c1t .ann{opacity:.9}
+  .c1t:hover{transform:none}
+  .vat:not([data-on="1"]):hover .in,.vat.sm:not([data-on="1"]):hover .in{transform:none}
+}
+/* ——— responsive: below the grid width the plates re-pack, two-up ——— */
+.plategrid{display:grid;grid-template-columns:repeat(5,208px);grid-template-rows:repeat(3,208px);
+  gap:12px;justify-content:start}
+.sealgrid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:8px}
+@media (max-width:1140px){
+  .plategrid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:auto;gap:10px}
+  .plategrid>div{grid-column:auto !important;grid-row:auto !important;width:auto;min-height:0}
+  #plateC1{grid-column:1/-1 !important;min-height:470px}
+  .sealgrid{grid-column:1/-1 !important;grid-template-rows:none}
+  .sealgrid .vat{aspect-ratio:1.1}
+  .plategrid>.vat{height:auto;aspect-ratio:1.02}
+}
+@media (max-width:700px){#hdrRead{white-space:normal !important;text-align:right}}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="nbr" id="nbr" style="min-height:100vh;background-color:var(--desk);background-image:var(--deskimg);padding:34px clamp(14px,3.5vw,56px) 80px;color:var(--ink);font-family:var(--serif);">
+<div style="width:min(1160px,100%);margin:0 auto;display:flex;flex-direction:column;gap:22px;">
+
+  <header style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;">
+    <h1 style="margin:0;font-family:var(--disp);font-weight:600;font-size:26px;letter-spacing:-.015em;">Number Planes &middot; Chapter I &mdash; the line</h1>
+    <span style="font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--dim);">TWO MOVES, ONE LINE &middot; THE DIAL ARRIVES IN CHAPTER II</span>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:14px;">
+      <span id="hdrRead" style="font-family:var(--mono);font-size:11px;color:var(--live);white-space:nowrap;"></span>
+      <span id="skin-picker"></span>
+    </span>
+  </header>
+
+  <div class="plategrid">
+
+    <!-- ══ C1 · hub 3×3 — the line ══ -->
+    <div class="c1t" id="plateC1" data-c1t="C1" data-on="0" style="grid-column:1/4;grid-row:1/4;position:relative;background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;cursor:pointer;">
+      <div style="display:flex;align-items:center;gap:4px 10px;font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--dim);flex-wrap:wrap;">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--live);animation:pr-pulse 2.6s ease-in-out infinite;flex:none;"></span><span style="white-space:nowrap;">C1 &middot; THE LINE</span>
+        <span id="modeWord" style="font-size:9px;letter-spacing:.18em;color:var(--voice);white-space:nowrap;flex:none;">MODE: ADDING &mdash; THE ARROW SLIDES</span>
+        <span style="flex:1;"></span>
+        <span class="ann" id="c1Hint" style="font-family:var(--hand);font-size:14px;letter-spacing:0;color:var(--voice);">hover to read &middot; tap to lock</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;margin-top:22px;margin-left:clamp(0px,3vw,34px);flex-wrap:wrap;">
+        <div class="opt" id="optEl" data-mode-toggle data-op="add" style="position:relative;width:305px;height:38px;flex:none;">
+          <div class="oin" style="position:absolute;inset:0;">
+            <div class="of" style="position:absolute;inset:0;display:flex;align-items:center;font-family:var(--disp);font-weight:700;font-size:28px;letter-spacing:.05em;color:var(--live);">ADDITION</div>
+            <div class="ob" style="position:absolute;inset:0;display:flex;align-items:center;font-family:var(--disp);font-weight:700;font-size:28px;letter-spacing:.05em;color:var(--voice);">MULTIPLICATION</div>
+          </div>
+        </div>
+        <span style="font-family:var(--hand);font-size:16px;color:var(--dim);">tap the word &mdash; it flips the whole plot. a and b stay put.</span>
+      </div>
+      <svg id="lineSvg" viewBox="0 116 520 146" style="display:block;width:100%;margin-top:auto;touch-action:none;user-select:none;">
+        <defs>
+          <marker id="ahL" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--live)"></path></marker>
+          <marker id="ahV" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--voice)"></path></marker>
+          <marker id="ahI" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"></path></marker>
+        </defs>
+        <line x1="18" y1="220" x2="502" y2="220" stroke="var(--dim2)" stroke-width="1.2"></line>
+        <g id="ticks"></g>
+        <g class="ann" id="tickLabels"></g>
+        <!-- a and b: each its own arrow from 0. they never move when the operation flips. -->
+        <line id="bArr" x1="260" y1="158" y2="158" stroke="var(--voice)" stroke-width="3.5" marker-end="url(#ahV)"></line>
+        <line id="aArr" x1="260" y1="220" y2="220" stroke="var(--live)" stroke-width="3.5" marker-end="url(#ahL)"></line>
+        <g class="ann" id="topAnn"></g>
+        <circle id="ha" data-h="a" r="13" cy="220" fill="var(--live-soft)" stroke="var(--live)" stroke-width="1.4" style="cursor:ew-resize;"></circle>
+        <circle id="hb" data-h="b" r="13" cy="158" fill="color-mix(in srgb, var(--voice) 16%, transparent)" stroke="var(--voice)" stroke-width="1.4" style="cursor:ew-resize;"></circle>
+      </svg>
+      <div class="cut" id="cutEl" data-op="add" style="position:relative;flex:none;height:174px;margin:auto -12px -10px;">
+        <div class="cin">
+          <div class="cf" style="display:flex;flex-direction:column;padding:0 12px 8px;">
+            <svg viewBox="0 262 520 108" style="display:block;width:100%;">
+              <line id="adDrop" y1="264" y2="284" stroke="var(--dim2)" stroke-dasharray="3 3" stroke-width="1"></line>
+              <line id="adA" x1="260" y1="292" y2="292" stroke="var(--live)" stroke-width="3.5" marker-end="url(#ahL)"></line>
+              <line id="adB" y1="306" y2="306" stroke="var(--voice)" stroke-width="3.5" marker-end="url(#ahV)"></line>
+              <g class="ann" id="adAnn"></g>
+            </svg>
+            <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-top:auto;">
+              <span id="addSent" style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;flex:none;"></span>
+              <span class="ann" style="font-family:var(--hand);font-size:16px;color:var(--dim);">a and b each stand from 0 &mdash; the adding happens downstairs, b laid onto a.</span>
+            </div>
+          </div>
+          <div class="cb" style="display:flex;flex-direction:column;padding:0 12px 8px;">
+            <svg viewBox="0 262 520 108" style="display:block;width:100%;">
+              <line id="muDrop" y1="264" y2="292" stroke="var(--dim2)" stroke-dasharray="3 3" stroke-width="1"></line>
+              <line id="muArr" x1="260" y1="300" y2="300" stroke="var(--ink)" stroke-width="3.5" marker-end="url(#ahI)"></line>
+              <g class="ann" id="muAnn"></g>
+            </svg>
+            <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-top:auto;">
+              <span id="mulSent" style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;flex:none;"></span>
+              <span class="ann" style="font-family:var(--hand);font-size:16px;color:var(--dim);">same a, same b &mdash; downstairs now shows a stretched by b. negative b flips it.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ L1 · a number is two rules ══ -->
+    <div class="vat" data-t="L1" data-on="0" style="grid-column:4;grid-row:1;position:relative;">
+      <div class="in">
+        <div class="fc">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--dim);">L1</div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:15px;color:var(--ink);text-align:center;">+ &nbsp;&times;</div>
+          <div style="display:flex;align-items:baseline;gap:2px 8px;justify-content:center;flex-wrap:wrap;text-align:center;">
+            <span style="font-family:var(--hand);font-size:15px;color:var(--dim);white-space:nowrap;">a number</span>
+            <span class="fgl" style="font-family:var(--hand);font-size:13px;color:var(--voice);white-space:nowrap;">two rules</span>
+          </div>
+        </div>
+        <div class="bk">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--voice);">L1</div>
+          <div style="flex:1;display:flex;align-items:center;font-size:14px;line-height:1.5;color:var(--ink);">A number is a rule for combining &mdash; two of them: add, and multiply. Fix both and everything else is downstream.</div>
+          <div style="font-family:var(--hand);font-size:13px;color:var(--voice);">tap to flip back</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ L3 · the demands ══ -->
+    <div class="vat" data-t="L3" data-on="0" style="grid-column:5;grid-row:1;position:relative;">
+      <div class="in">
+        <div class="fc">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--dim);">L3</div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:15px;color:var(--ink);text-align:center;">a(b+c)</div>
+          <div style="display:flex;align-items:baseline;gap:2px 8px;justify-content:center;flex-wrap:wrap;text-align:center;">
+            <span style="font-family:var(--hand);font-size:15px;color:var(--dim);white-space:nowrap;">demands</span>
+            <span class="fgl" style="font-family:var(--hand);font-size:13px;color:var(--voice);white-space:nowrap;">just two</span>
+          </div>
+        </div>
+        <div class="bk">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--voice);">L3</div>
+          <div style="flex:1;display:flex;align-items:center;font-size:14px;line-height:1.5;color:var(--ink);">A multiply worth the name distributes over +, and has a 1 that changes nothing. Nearly all we ask.</div>
+          <div style="font-family:var(--hand);font-size:13px;color:var(--voice);">tap to flip back</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ L4 · the sign rule is a theorem ══ -->
+    <div class="vat" data-t="L4" data-on="0" style="grid-column:4;grid-row:2;position:relative;">
+      <div class="in">
+        <div class="fc">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--dim);">L4</div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:15px;color:var(--ink);text-align:center;">(&minus;1)(&minus;1)</div>
+          <div style="display:flex;align-items:baseline;gap:2px 8px;justify-content:center;flex-wrap:wrap;text-align:center;">
+            <span style="font-family:var(--hand);font-size:15px;color:var(--dim);white-space:nowrap;">no choice</span>
+            <span class="fgl" style="font-family:var(--hand);font-size:13px;color:var(--voice);white-space:nowrap;">a theorem</span>
+          </div>
+        </div>
+        <div class="bk">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--voice);">L4</div>
+          <div style="flex:1;display:flex;align-items:center;font-size:14px;line-height:1.5;color:var(--ink);">On the line the demands force the whole table &mdash; the sign rule included. The plane will leave exactly one choice.</div>
+          <div style="font-family:var(--hand);font-size:13px;color:var(--voice);">tap to flip back</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ AX · we hold + still ══ -->
+    <div class="vat" data-t="AX" data-on="0" style="grid-column:5;grid-row:2;position:relative;">
+      <div class="in">
+        <div class="fc">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--dim);">AX</div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:15px;color:var(--ink);text-align:center;">z &minus; z = 0</div>
+          <div style="display:flex;align-items:baseline;gap:2px 8px;justify-content:center;flex-wrap:wrap;text-align:center;">
+            <span style="font-family:var(--hand);font-size:15px;color:var(--dim);white-space:nowrap;">fix +</span>
+            <span class="fgl" style="font-family:var(--hand);font-size:13px;color:var(--voice);white-space:nowrap;">on purpose</span>
+          </div>
+        </div>
+        <div class="bk">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--voice);">AX</div>
+          <div style="flex:1;display:flex;align-items:center;font-size:14px;line-height:1.5;color:var(--ink);">Points add like arrows and every move is undoable &mdash; so we hold + still and spend all freedom on &times;.</div>
+          <div style="font-family:var(--hand);font-size:13px;color:var(--voice);">tap to flip back</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ the sealed orbs · worlds beyond the book ══ -->
+    <div class="sealgrid" style="grid-column:4/6;grid-row:3;">
+      <div class="vat sm" data-t="fields" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">&divide;</span>
+            <span style="font-family:var(--hand);font-size:13px;color:var(--dim);line-height:1;">fields</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;">
+            <div style="flex:1;display:flex;align-items:center;font-size:11px;line-height:1.4;color:var(--ink);overflow:hidden;">Systems where you can always divide: &#8474;, &#8477;, &#8450;.</div>
+          </div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="algebra" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">&#8858;</span>
+            <span style="font-family:var(--hand);font-size:13px;color:var(--dim);line-height:1;">algebra</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;">
+            <div style="flex:1;display:flex;align-items:center;font-size:11px;line-height:1.4;color:var(--ink);overflow:hidden;">Groups, rings, fields &mdash; the zoo these planes live in.</div>
+          </div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="L5" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">&#9671;</span>
+            <span style="font-family:var(--hand);font-size:13px;color:var(--dim);line-height:1;">stretch</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;">
+            <div style="flex:1;display:flex;align-items:center;font-size:11px;line-height:1.4;color:var(--ink);overflow:hidden;">Stretchable: something multiplies it back to 1.</div>
+          </div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="tropical" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">min</span>
+            <span style="font-family:var(--hand);font-size:13px;color:var(--dim);line-height:1;">tropical</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;">
+            <div style="flex:1;display:flex;align-items:center;font-size:11px;line-height:1.4;color:var(--ink);overflow:hidden;">&ldquo;Add&rdquo; = min &mdash; a world with no undo.</div>
+          </div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="modular" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">mod</span>
+            <span style="font-family:var(--hand);font-size:13px;color:var(--dim);line-height:1;">clock</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;">
+            <div style="flex:1;display:flex;align-items:center;font-size:11px;line-height:1.4;color:var(--ink);overflow:hidden;">Wrap at n. Prime n: a field. Else: zero divisors.</div>
+          </div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="p-adic" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">|&middot;|&#8346;</span>
+            <span style="font-family:var(--hand);font-size:13px;color:var(--dim);line-height:1;">p-adic</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;">
+            <div style="flex:1;display:flex;align-items:center;font-size:11px;line-height:1.4;color:var(--ink);overflow:hidden;">Close = divisible by a high prime power.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="font-family:var(--hand);font-size:16px;color:var(--dim);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;">the line holds + still and spends every freedom on &times; &mdash; the dial that pays it out arrives with the plane.
+    <a href="./" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">the cover</a>
+    &middot; <a href="chapter-2.html" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">chapter II &rarr;</a>
+    &middot; <a href="cards/" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">the cards</a>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ═══════ Chapter I — the two moves, one line (port of the reference logic) ═══════ */
+const $=id=>document.getElementById(id);
+const S={a:2.5, b:-1.5, pm:'add'};
+
+const fmt=v=>{let r=Math.round(v*100)/100; if(Object.is(r,-0)) r=0;
+  let s=String(r); if(s[0]==='-') s='−'+s.slice(1); return s;};
+const NS='http://www.w3.org/2000/svg';
+const touchOnly=matchMedia('(hover: none)').matches;
+const LOCK_HINT=touchOnly?'tap to pin the notes':'hover to read · tap to lock';
+function txt(g,x,y,size,fill,str,mono,anchor){
+  const t=document.createElementNS(NS,'text');
+  t.setAttribute('x',x); t.setAttribute('y',y);
+  t.setAttribute('text-anchor',anchor||'middle');
+  t.setAttribute('font-family',mono?'var(--mono)':'var(--hand)');
+  t.setAttribute('font-size',size); t.setAttribute('fill',fill);
+  t.textContent=str; g.appendChild(t); return t;
+}
+
+const X=v=>260+v*46;
+/* ticks: marks always, integer labels on focus */
+(function(){
+  const g=$('ticks'), gl=$('tickLabels');
+  for(let v=-5;v<=5;v++){
+    const l=document.createElementNS(NS,'line');
+    l.setAttribute('x1',X(v));l.setAttribute('x2',X(v));
+    l.setAttribute('y1',214);l.setAttribute('y2',226);
+    l.setAttribute('stroke','var(--dim2)');l.setAttribute('stroke-width',v===0?'1.6':'1');
+    g.appendChild(l);
+    txt(gl,X(v),244,10.5,v===0?'var(--dim)':'var(--dim2)',v<0?'−'+(-v):String(v),true);
+  }
+})();
+
+function render(){
+  const a=S.a, b=S.b, addOn=S.pm==='add';
+  const sm=Math.max(-5,Math.min(5,a+b));   /* drawn sum (arrowheads clamp; labels stay honest) */
+  const rr=Math.max(-5,Math.min(5,a*b));   /* drawn product */
+
+  $('modeWord').textContent=addOn?'MODE: ADDING — THE ARROW SLIDES':'MODE: MULTIPLYING — THE ARROW STRETCHES';
+  $('optEl').dataset.op=addOn?'add':'mul';
+  $('cutEl').dataset.op=addOn?'add':'mul';
+
+  /* upstairs: a and b never move */
+  $('aArr').setAttribute('x2',X(a)); $('bArr').setAttribute('x2',X(b));
+  $('ha').setAttribute('cx',X(a));   $('hb').setAttribute('cx',X(b));
+  const ta=$('topAnn'); ta.innerHTML='';
+  txt(ta,(260+X(a))/2,206,20,'var(--live)','a = '+fmt(a));
+  txt(ta,(260+X(b))/2,144,20,'var(--voice)','b = '+fmt(b));
+
+  /* downstairs, front: b laid onto a */
+  $('adDrop').setAttribute('x1',X(a)); $('adDrop').setAttribute('x2',X(a));
+  $('adA').setAttribute('x2',X(a));
+  $('adB').setAttribute('x1',X(a)); $('adB').setAttribute('x2',X(sm));
+  const aa=$('adAnn'); aa.innerHTML='';
+  txt(aa,(260+X(a))/2,286,17,'var(--live)','a');
+  txt(aa,(X(a)+X(sm))/2,330,17,'var(--voice)','b');
+  txt(aa,X(sm),352,20,'var(--ink)','a + b = '+fmt(a+b));
+  $('addSent').textContent='adding: '+fmt(a)+' + '+fmt(b)+' = '+fmt(a+b);
+
+  /* downstairs, back: a stretched by b */
+  $('muDrop').setAttribute('x1',X(rr)); $('muDrop').setAttribute('x2',X(rr));
+  $('muArr').setAttribute('x2',X(rr));
+  const ma=$('muAnn'); ma.innerHTML='';
+  txt(ma,(260+X(rr))/2,326,21,'var(--ink)','a · b = '+fmt(a*b));
+  txt(ma,X(rr),354,17,'var(--dim)','a, stretched by b');
+  if(b<0) txt(ma,Math.min(X(rr)+34,486),290,18,'var(--voice)','b < 0 — flipped!');
+  $('mulSent').textContent='multiplying: '+fmt(a)+' × '+fmt(b)+' = '+fmt(a*b);
+}
+
+/* ——— clicks: mode word, hub lock, plate flips ——— */
+document.addEventListener('click',e=>{
+  if(e.target.closest('a')||e.target.closest('[data-dragel]')) return;
+  const mt=e.target.closest('[data-mode-toggle]');
+  if(mt){const cut=$('cutEl');
+    cut.classList.add('turning'); clearTimeout(window._cutT);
+    window._cutT=setTimeout(()=>cut.classList.remove('turning'),1400);
+    S.pm=S.pm==='add'?'mul':'add'; render(); return;}
+  const c1=e.target.closest('[data-c1t]');
+  if(c1){c1.dataset.on=c1.dataset.on==='1'?'0':'1';
+    $('c1Hint').textContent=c1.dataset.on==='1'?'locked ✦ — tap to unlock':LOCK_HINT;
+    return;}
+  const t=e.target.closest('[data-t]');
+  if(t){t.dataset.on=t.dataset.on==='1'?'0':'1';}
+});
+
+/* ——— drag the ringed heads: a on the line, b on its shelf ——— */
+let hd=null; const lineSvg=$('lineSvg');
+for(const id of ['ha','hb']){const h=$(id); h.setAttribute('data-dragel','');
+  h.addEventListener('pointerdown',e=>{hd=h.dataset.h;h.setPointerCapture(e.pointerId);e.preventDefault();e.stopPropagation();});
+  h.addEventListener('pointermove',e=>{
+    if(!hd) return;
+    const r=lineSvg.getBoundingClientRect();
+    let v=((e.clientX-r.left)/r.width*520-260)/46;
+    v=Math.max(-5,Math.min(5,Math.round(v*2)/2));
+    if(hd==='a') S.a=v; else S.b=v;
+    render();
+  });
+  h.addEventListener('pointerup',()=>{hd=null;});
+}
+
+/* expose for headless verification */
+window.__ch1={get:()=>({...S})};
+$('c1Hint').textContent=LOCK_HINT;
+render();
+</script>
+</body>
+</html>

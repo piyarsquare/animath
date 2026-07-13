@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Number Planes — the notebook</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%235fa8ff' stroke-width='3'/%3E%3Ccircle cx='16' cy='3' r='3' fill='%234cc878'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../guide-theme.css">
+<script src="../guide-skin.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..700;1,6..72,200..700&family=Caveat:wght@400..700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400..700&family=Shadows+Into+Light&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   Number Planes — the notebook cover. The shelf that binds the
+   chapters (design language from docs/design/notebook-handoff),
+   on the shared guide theme layer: works with ALL 8 app skins.
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes pr-pulse{0%,100%{opacity:.3}50%{opacity:1}}
+@keyframes glint{0%,100%{opacity:.45;text-shadow:none}50%{opacity:1;text-shadow:0 0 10px color-mix(in srgb, var(--live) 50%, transparent)}}
+html,body{margin:0;padding:0}
+*{box-sizing:border-box}
+.nbr{
+  --desk:color-mix(in srgb, var(--bg) 88%, #000);
+  --deskimg:radial-gradient(120% 90% at 50% -10%,
+    color-mix(in srgb, var(--bg) 88%, var(--fg)) 0%, var(--bg) 55%,
+    color-mix(in srgb, var(--bg) 90%, #000) 100%);
+  --paper:var(--card); --paper2:color-mix(in srgb, var(--card) 93%, var(--fg));
+  --grid:color-mix(in srgb, var(--fg) 7%, transparent);
+  --border:var(--rule); --border-strong:color-mix(in srgb, var(--fg) 34%, transparent);
+  --ink:var(--fg); --dim:var(--muted); --dim2:color-mix(in srgb, var(--muted) 70%, var(--bg));
+  --live:var(--accent2); --live-soft:color-mix(in srgb, var(--accent2) 13%, transparent);
+  --voice:var(--accent); --seal:var(--accent); --seal-fg:var(--bg);
+  --d1:light-dark(#2b57c9, #5fa8ff);
+  --ok:light-dark(#149e57, #4cc878);
+  --d5:light-dark(#bd5f1c, #ff9a5f);
+  --hand:'Caveat',cursive; --serif:'Newsreader',Georgia,serif;
+  --mono:'Space Mono',monospace; --disp:'Space Grotesk',sans-serif;
+}
+[data-theme="light"] .nbr{--live:#2f6df0; --voice:#9a4a32; --d1:#3565c8; --ok:#4a7d46; --d5:#b0592a}
+[data-theme="primary"] .nbr{--live:#1f4fd6; --voice:#e63327; --d1:#2b57c9; --ok:#149e57; --d5:#e6731f}
+[data-theme="blueprint"] .nbr{--d1:#c9a8ff; --ok:#7fe0a8; --d5:#ffab7a;
+  --hand:'Shadows Into Light',cursive; --serif:'Space Grotesk',sans-serif}
+[data-theme="phosphor"] .nbr{--d1:#5adcff; --ok:#9dff5a; --d5:#ffa05a;
+  --hand:'VT323',monospace; --serif:'Space Mono',monospace}
+
+/* chapter plates on the shelf */
+.chp{display:flex;flex-direction:column;gap:8px;background:var(--paper);border:1px solid var(--border);
+  border-radius:2px;padding:14px 16px;color:var(--ink);text-decoration:none;
+  transition:border-color .3s ease,transform .35s cubic-bezier(.3,1.5,.45,1),box-shadow .3s ease}
+.chp:hover{border-color:var(--border-strong);transform:perspective(1200px) rotateY(-2deg) translateY(-2px)}
+.chp:hover .go{opacity:1}
+.chp .go{opacity:.62;transition:opacity .3s ease;margin-left:auto}
+/* side doors: leaves — flat tiles on the page surface */
+.leaf{display:flex;flex-direction:column;gap:4px;border:1px solid var(--border);border-radius:2px;
+  background:color-mix(in srgb, var(--paper) 52%, transparent);padding:10px 12px;
+  color:var(--ink);text-decoration:none;
+  box-shadow:inset 0 1px 0 color-mix(in srgb, var(--fg) 5%, transparent);transition:border-color .3s ease}
+.leaf:hover{border-color:var(--border-strong)}
+@media (hover:none){.chp .go{opacity:.85}}
+.shelf{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.doors{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:900px){.shelf,.doors{grid-template-columns:1fr}}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="nbr" id="nbr" style="min-height:100svh;background-color:var(--desk);background-image:var(--deskimg);padding:34px clamp(14px,3.5vw,56px) 80px;color:var(--ink);font-family:var(--serif);">
+<div style="width:min(1020px,100%);margin:0 auto;display:flex;flex-direction:column;gap:30px;">
+
+  <header style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;font-family:var(--hand);font-size:17px;color:var(--dim);">
+    <span style="transform:rotate(-1deg);display:inline-block;">Number Planes &mdash; a working copy</span>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:14px;">
+      <span style="transform:rotate(1deg);display:inline-block;">notes &middot; vii.26</span>
+      <span id="skin-picker"></span>
+    </span>
+  </header>
+
+  <!-- ══ masthead ══ -->
+  <div>
+    <div style="font-family:var(--mono);font-size:9px;letter-spacing:.4em;color:var(--voice);margin-bottom:12px;">A LIVING NOTEBOOK &middot; ONE QUESTION, THREE CHAPTERS</div>
+    <h1 style="margin:0;font-style:italic;font-weight:400;font-size:clamp(42px,7vw,64px);line-height:.96;letter-spacing:-.015em;font-family:var(--serif);">Number Planes</h1>
+    <svg width="330" height="13" viewBox="0 0 330 13" fill="none" style="display:block;margin-top:6px;overflow:visible;max-width:80vw;">
+      <path d="M3,8 C70,3 135,11 200,6 C250,2 300,10 327,6" stroke="var(--voice)" stroke-width="2.4" stroke-linecap="round" fill="none"></path>
+    </svg>
+    <div style="font-family:var(--hand);font-size:22px;color:var(--live);margin-top:14px;">does the number plane have to be complex? &mdash; let&rsquo;s find out <span style="animation:glint 4.2s ease-in-out infinite;">&#10022;</span></div>
+    <p style="font-size:17px;line-height:1.65;color:var(--ink);margin:.8em 0 0;max-width:58ch;">The line leaves one rule open: <span style="font-family:var(--mono);font-size:14.5px;">j&sup2; = ?</span> Every answer builds a plane &mdash; and only the <em>sign</em> of the answer survives honest bookkeeping. Three signs, three worlds: one turns, one shears, one squeezes. The chapters walk the choice.</p>
+  </div>
+
+  <!-- ══ the shelf: three chapters ══ -->
+  <div class="shelf">
+    <a class="chp" href="chapter-1.html">
+      <span style="font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--dim);">CHAPTER I</span>
+      <span style="font-style:italic;font-size:24px;line-height:1.1;">the line</span>
+      <svg viewBox="0 0 220 64" style="display:block;width:100%;margin:4px 0;">
+        <line x1="10" y1="40" x2="210" y2="40" stroke="var(--dim2)" stroke-width="1.2"></line>
+        <line x1="110" y1="35" x2="110" y2="45" stroke="var(--dim2)" stroke-width="1.2"></line>
+        <defs>
+          <marker id="cvA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--live)"></path></marker>
+          <marker id="cvB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--voice)"></path></marker>
+        </defs>
+        <line x1="110" y1="22" x2="66" y2="22" stroke="var(--voice)" stroke-width="3" marker-end="url(#cvB)"></line>
+        <line x1="110" y1="40" x2="182" y2="40" stroke="var(--live)" stroke-width="3" marker-end="url(#cvA)"></line>
+      </svg>
+      <span style="font-family:var(--hand);font-size:15.5px;color:var(--dim);">add slides, multiply stretches &mdash; and the demands that pin them.</span>
+      <span class="go" style="font-family:var(--hand);font-size:16px;color:var(--live);">open &rarr;</span>
+    </a>
+    <a class="chp" href="chapter-2.html">
+      <span style="font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--dim);">CHAPTER II</span>
+      <span style="font-style:italic;font-size:24px;line-height:1.1;">the plane</span>
+      <svg viewBox="0 0 220 64" style="display:block;width:100%;margin:4px 0;">
+        <line x1="14" y1="26" x2="110" y2="26" stroke="var(--d1)" stroke-width="3.5" stroke-linecap="round" opacity=".6"></line>
+        <line x1="110" y1="26" x2="206" y2="26" stroke="var(--d5)" stroke-width="3.5" stroke-linecap="round" opacity=".6"></line>
+        <circle cx="110" cy="26" r="3" fill="var(--ok)"></circle>
+        <circle cx="62" cy="26" r="7" fill="var(--paper2)" stroke="var(--d1)" stroke-width="2.2"></circle>
+        <circle cx="62" cy="26" r="2" fill="var(--d1)"></circle>
+        <text x="16" y="52" font-family="var(--mono)" font-size="11" fill="var(--d1)">j&sup2; = &minus;1</text>
+        <text x="204" y="52" font-family="var(--mono)" font-size="11" fill="var(--d5)" text-anchor="end">&hellip; or else?</text>
+      </svg>
+      <span style="font-family:var(--hand);font-size:15.5px;color:var(--dim);">one dial for the whole page &mdash; every plate listens to j&sup2;.</span>
+      <span class="go" style="font-family:var(--hand);font-size:16px;color:var(--live);">open &rarr;</span>
+    </a>
+    <a class="chp" href="chapter-3.html">
+      <span style="font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--dim);">CHAPTER III</span>
+      <span style="font-style:italic;font-size:24px;line-height:1.1;">three worlds</span>
+      <svg viewBox="0 0 220 64" style="display:block;width:100%;margin:4px 0;">
+        <circle cx="40" cy="32" r="20" fill="none" stroke="var(--d1)" stroke-width="2.2"></circle>
+        <line x1="102" y1="10" x2="102" y2="54" stroke="var(--ok)" stroke-width="2.2"></line>
+        <line x1="118" y1="10" x2="118" y2="54" stroke="var(--ok)" stroke-width="2.2"></line>
+        <path d="M 196 12 Q 178 32 196 52" fill="none" stroke="var(--d5)" stroke-width="2.2"></path>
+        <path d="M 164 12 Q 182 32 164 52" fill="none" stroke="var(--d5)" stroke-width="2.2"></path>
+      </svg>
+      <span style="font-family:var(--hand);font-size:15.5px;color:var(--dim);">count the rails: 0 turns, 1 shears, 2 squeeze &mdash; and one is a field.</span>
+      <span class="go" style="font-family:var(--hand);font-size:16px;color:var(--live);">open &rarr;</span>
+    </a>
+  </div>
+
+  <!-- ══ side doors ══ -->
+  <div class="doors">
+    <a class="leaf" href="notebook.html">
+      <span style="font-family:var(--mono);font-size:8.5px;letter-spacing:.24em;color:var(--dim);">THE WALK IN</span>
+      <span style="font-family:var(--hand);font-size:16px;color:var(--ink);">a staged first passage &mdash; the question, the sign, the motions, the mirror.</span>
+    </a>
+    <a class="leaf" href="cards/">
+      <span style="font-family:var(--mono);font-size:8.5px;letter-spacing:.24em;color:var(--dim);">THE CARDS</span>
+      <span style="font-family:var(--hand);font-size:16px;color:var(--ink);">every note, atomic &mdash; the graph the chapters are pinned from.</span>
+    </a>
+    <a class="leaf" href="../#/number-plane">
+      <span style="font-family:var(--mono);font-size:8.5px;letter-spacing:.24em;color:var(--dim);">THE FULL APP &#8599;</span>
+      <span style="font-family:var(--hand);font-size:16px;color:var(--ink);">Number Plane &mdash; three arithmetics side by side, one p dial.</span>
+    </a>
+  </div>
+
+  <div style="font-family:var(--hand);font-size:16px;color:var(--dim);">order is a view &mdash; the graph lives in the links.</div>
+
+</div>
+</div>
+</body>
+</html>

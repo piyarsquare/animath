@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Number Planes · Chapter II — the plane</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%235fa8ff' stroke-width='3'/%3E%3Ccircle cx='16' cy='3' r='3' fill='%234cc878'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="../guide-theme.css">
 <script src="../guide-skin.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -78,8 +79,10 @@ html,body{margin:0;padding:0}
 .vat[data-on="1"] .in{transform:rotateY(180deg) !important}
 .vat:not([data-on="1"]):hover .in{transform:rotateY(-11deg);transition-timing-function:cubic-bezier(.3,1.25,.45,1)}
 .vat.sm:not([data-on="1"]):hover .in{transform:rotateY(-20deg)}
-.fgl{opacity:0;transition:opacity .3s ease}
-.vat:hover .fgl{opacity:1}
+/* the gloss — the second voice on a plate. always present (touch has no hover),
+   quiet by default, brightening when the plate is engaged. */
+.fgl{opacity:.62;transition:opacity .3s ease}
+.vat:hover .fgl,.leaf:hover .fgl{opacity:1}
 .vat .fc,.vat .bk{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
   border:1px solid var(--border);border-radius:2px;background:var(--paper);padding:9px 11px;
   display:flex;flex-direction:column}
@@ -96,16 +99,26 @@ html,body{margin:0;padding:0}
 .leaf:hover{border-color:var(--border-strong)}
 .leaf:focus-within{border-color:var(--voice)}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
-/* ——— responsive: the plates stack below the grid width ——— */
+/* ——— touch: no hover exists, so the hover voices speak on their own ——— */
+@media (hover:none){
+  .fgl{opacity:.85}
+  .c1t .ann{opacity:.9}
+  .c1t:hover{transform:none}
+  .vat:not([data-on="1"]):hover .in,.vat.sm:not([data-on="1"]):hover .in{transform:none}
+}
+/* ——— responsive: below the grid width the plates re-pack, two-up ——— */
 .plategrid{display:grid;grid-template-columns:repeat(5,208px);grid-template-rows:repeat(4,208px);
   gap:12px;justify-content:start}
 @media (max-width:1140px){
-  .plategrid{display:flex;flex-direction:column;gap:12px}
-  .plategrid>div{width:100%;min-height:208px}
-  #plateC2{min-height:620px}
-  #platePL{min-height:520px}
-  .vat{min-height:208px;height:208px}
+  .plategrid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:auto;gap:10px}
+  .plategrid>div{grid-column:auto !important;grid-row:auto !important;width:auto;min-height:0}
+  #plateC2{grid-column:1/-1 !important;min-height:590px}
+  #platePL{grid-column:1/-1 !important;min-height:500px}
+  #plateCR{grid-column:1/-1 !important}
+  .vat,.leaf{height:auto;aspect-ratio:1.02}
+  .vat[data-t="FTA"]{aspect-ratio:auto}
 }
+@media (max-width:700px){#hdrRead{white-space:normal !important;text-align:right}}
 @media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
 </style>
 </head>
@@ -126,8 +139,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 
     <!-- ══ C2 · hub 3×3 ══ -->
     <div class="c1t" id="plateC2" data-c1t="C2" data-on="0" style="grid-column:1/4;grid-row:1/4;position:relative;background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;cursor:pointer;">
-      <div style="display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--dim);">
-        <span style="width:6px;height:6px;border-radius:50%;background:var(--live);animation:pr-pulse 2.6s ease-in-out infinite;"></span>C2 &middot; THE PLANE
+      <div style="display:flex;align-items:center;gap:4px 10px;font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--dim);flex-wrap:wrap;">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--live);animation:pr-pulse 2.6s ease-in-out infinite;flex:none;"></span><span style="white-space:nowrap;">C2 &middot; THE PLANE</span>
         <span id="modeWord" style="font-size:9px;letter-spacing:.18em;color:var(--voice);white-space:nowrap;flex:none;">MODE: ADDING</span>
         <span style="flex:1;"></span>
         <span class="ann" id="c2Hint" style="font-family:var(--hand);font-size:14px;letter-spacing:0;color:var(--voice);">hover to read &middot; tap to lock</span>
@@ -200,7 +213,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 
     <!-- ══ PL · the plane's shape 2×2 ══ -->
     <div class="c1t" id="platePL" data-c1t="PL" data-on="0" style="grid-column:4/6;grid-row:1/3;position:relative;background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;cursor:pointer;">
-      <div style="display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--dim);"><span style="width:6px;height:6px;border-radius:50%;background:var(--live);animation:pr-pulse 2.6s ease-in-out infinite;"></span>PL &middot; THE PLANE&rsquo;S SHAPE<span style="flex:1;"></span><span class="ann2" id="railLabel" style="font-family:var(--hand);font-size:14px;letter-spacing:0;"></span></div>
+      <div style="display:flex;align-items:center;gap:4px 7px;font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--dim);flex-wrap:wrap;"><span style="width:6px;height:6px;border-radius:50%;background:var(--live);animation:pr-pulse 2.6s ease-in-out infinite;flex:none;"></span><span style="white-space:nowrap;">PL &middot; THE PLANE&rsquo;S SHAPE</span><span style="flex:1;"></span><span class="ann2" id="railLabel" style="font-family:var(--hand);font-size:14px;letter-spacing:0;white-space:nowrap;"></span></div>
       <svg viewBox="-130 -130 260 260" style="display:block;width:100%;flex:1;min-height:200px;">
         <defs>
           <pattern id="lcGr" width="26" height="26" patternUnits="userSpaceOnUse"><path id="lcGrP" d="M 26 0 L 0 0 0 26" fill="none" stroke="var(--grid)" stroke-width="1"></path></pattern>
@@ -278,9 +291,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
             <span style="font-family:var(--mono);font-size:15px;color:var(--ink);">&minus;1 &middot; 0 &middot; +1</span>
             <span id="dvNow" style="font-family:var(--mono);font-size:10px;"></span>
           </div>
-          <div style="display:flex;align-items:baseline;gap:8px;justify-content:center;">
-            <span style="font-family:var(--hand);font-size:15px;color:var(--dim);">three worlds</span>
-            <span class="fgl" style="font-family:var(--hand);font-size:13px;color:var(--voice);">only the sign matters</span>
+          <div style="display:flex;align-items:baseline;gap:2px 8px;justify-content:center;flex-wrap:wrap;text-align:center;">
+            <span style="font-family:var(--hand);font-size:15px;color:var(--dim);white-space:nowrap;">three worlds</span>
+            <span class="fgl" style="font-family:var(--hand);font-size:13px;color:var(--voice);white-space:nowrap;">only the sign matters</span>
           </div>
         </div>
         <div class="bk">
@@ -291,7 +304,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
             <button id="dv2" data-pset="0" style="display:flex;align-items:baseline;gap:8px;font-family:var(--mono);font-size:11px;color:var(--ok);border:1px solid var(--border);border-radius:3px;padding:3px 8px;text-align:left;">p = 0 <span style="font-family:var(--serif);font-style:italic;color:var(--ink);">dual &mdash; shears</span></button>
             <button id="dv3" data-pset="1" style="display:flex;align-items:baseline;gap:8px;font-family:var(--mono);font-size:11px;color:var(--d5);border:1px solid var(--border);border-radius:3px;padding:3px 8px;text-align:left;">p &gt; 0 <span style="font-family:var(--serif);font-style:italic;color:var(--ink);">split &mdash; squeezes</span></button>
           </div>
-          <div class="phх" style="font-family:var(--hand);font-size:13px;color:var(--voice);">tap to flip back</div>
+          <div class="ph" style="font-family:var(--hand);font-size:13px;color:var(--voice);">tap to flip back</div>
         </div>
       </div>
     </div>
@@ -337,9 +350,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
         <div class="fc">
           <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--dim);">L2</div>
           <div style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12.5px;color:var(--ink);text-align:center;">(a,b)&middot;(c,d)<br>= (ac, bd)</div>
-          <div style="display:flex;align-items:baseline;gap:8px;justify-content:center;">
-            <span style="font-family:var(--hand);font-size:15px;color:var(--dim);">strangers</span>
-            <span class="fgl" style="font-family:var(--hand);font-size:13px;color:var(--voice);">tilt to see it</span>
+          <div style="display:flex;align-items:baseline;gap:2px 8px;justify-content:center;flex-wrap:wrap;text-align:center;">
+            <span style="font-family:var(--hand);font-size:15px;color:var(--dim);white-space:nowrap;">strangers</span>
+            <span class="fgl" style="font-family:var(--hand);font-size:13px;color:var(--voice);white-space:nowrap;">tilt to see it</span>
           </div>
         </div>
         <div class="bk">
@@ -373,10 +386,12 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 
   </div>
 
-  <div style="font-family:var(--hand);font-size:16px;color:var(--dim);">the slider, the shape, the rail, the loop &mdash; one p runs through all of them, and they all move together.
-    <a href="notebook.html" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);">&larr; the walk in (the choice)</a>
-    &middot; <span style="opacity:.55;">chapter I &middot; chapter III &mdash; not yet laid</span>
-    &middot; <a href="cards/" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);">the cards</a>
+  <div style="font-family:var(--hand);font-size:16px;color:var(--dim);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;">the slider, the shape, the rail, the loop &mdash; one p runs through all of them, and they all move together.
+    <a href="chapter-1.html" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">&larr; chapter I</a>
+    &middot; <a href="chapter-3.html" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">chapter III &rarr;</a>
+    &middot; <a href="./" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">the cover</a>
+    &middot; <a href="cards/" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">the cards</a>
+    &middot; <a href="notebook.html" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">the walk in</a>
   </div>
 
 </div>
@@ -412,6 +427,8 @@ function txt(g,x,y,size,fill,str,mono,anchor){
   }})();
 
 const reduceMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+const touchOnly=matchMedia('(hover: none)').matches;
+const LOCK_HINT=touchOnly?'tap to pin the notes':'hover to read · tap to lock';
 function setP(v){ if(rsA){cancelAnimationFrame(rsA);rsA=null;} S.p=v; S.rsS=1; render(); }
 
 function render(){
@@ -587,7 +604,7 @@ document.addEventListener('click',e=>{
   const c1=e.target.closest('[data-c1t]');
   if(c1){c1.dataset.on=c1.dataset.on==='1'?'0':'1';
     const hint=c1.querySelector('.ann');
-    if(c1.id==='plateC2') $('c2Hint').textContent=c1.dataset.on==='1'?'locked ✦ — tap to unlock':'hover to read · tap to lock';
+    if(c1.id==='plateC2') $('c2Hint').textContent=c1.dataset.on==='1'?'locked ✦ — tap to unlock':LOCK_HINT;
     return;}
   const t=e.target.closest('[data-t]');
   if(t){t.dataset.on=t.dataset.on==='1'?'0':'1';}
@@ -676,6 +693,7 @@ function doTilt(){
 
 /* expose for headless verification */
 window.__ch2={get:()=>({...S}), setP};
+$('c2Hint').textContent=LOCK_HINT;
 render();
 </script>
 </body>
