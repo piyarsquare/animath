@@ -102,9 +102,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   .plategrid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:auto;gap:10px}
   .plategrid>div{grid-column:auto !important;grid-row:auto !important;width:auto;min-height:0}
   #plateC1{grid-column:1/-1 !important;min-height:470px}
-  .sealgrid{grid-column:1/-1 !important;grid-template-rows:none}
-  .sealgrid .vat{aspect-ratio:1.1}
-  .plategrid>.vat{height:auto;aspect-ratio:1.02}
+  .sealgrid{grid-column:1/-1 !important;grid-template-rows:none;grid-template-columns:repeat(2,1fr)}
+  .sealgrid .vat{min-height:150px}
+  .plategrid>.vat{height:auto;min-height:206px}
 }
 @media (max-width:700px){#hdrRead{white-space:normal !important;text-align:right}}
 @media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
