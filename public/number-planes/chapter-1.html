@@ -103,8 +103,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   .plategrid>div{grid-column:auto !important;grid-row:auto !important;width:auto;min-height:0}
   #plateC1{grid-column:1/-1 !important;min-height:470px}
   .sealgrid{grid-column:1/-1 !important;grid-template-rows:none;grid-template-columns:repeat(2,1fr)}
-  .sealgrid .vat{min-height:150px}
-  .plategrid>.vat{height:auto;min-height:206px}
+  /* definite heights: the flip faces live inside a height:100% wrapper, which
+     iOS Safari resolves to 0 against min-height-only boxes */
+  .sealgrid .vat{height:150px !important}
+  .plategrid>.vat{height:206px}
 }
 @media (max-width:700px){#hdrRead{white-space:normal !important;text-align:right}}
 @media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}

@@ -115,7 +115,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   #plateC2{grid-column:1/-1 !important;min-height:590px}
   #platePL{grid-column:1/-1 !important;min-height:500px}
   #plateCR{grid-column:1/-1 !important}
-  .vat,.leaf{height:auto;min-height:206px}
+  /* definite heights: the flip faces live inside a height:100% wrapper, which
+     iOS Safari resolves to 0 against min-height-only boxes */
+  .vat{height:206px}
+  .leaf{min-height:206px}
 }
 @media (max-width:700px){#hdrRead{white-space:normal !important;text-align:right}}
 @media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
