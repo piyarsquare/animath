@@ -407,3 +407,16 @@ informs future rounds. Delete or check off items as they land.
   { zoom: var(--font-scale) }` (=0.9), screenshot-verified gap-free at gallery + app level.
   Option B (migrate chrome px→rem + a type-root `calc()` multiplier) is the cleaner long-term
   fix if A proves insufficient; bigger diff, deferred per the design doc.
+- [ ] [chrome] !med Decide the fate of PR #248 (Division Bells + the Storeroom).
+  The PR bundles the reusable gallery **Storeroom** (a keeper — `catalog.ts` `storeroom`
+  flag → collapsed de-emphasized gallery section; `Gallery.tsx`, `theme.css`) and
+  **Division Bells parked in it**. Merge as-is, or split the Storeroom out from the parked
+  app. Session `modest-cannon-umd49e`; build/lint/smoke/deploy were green on each push.
+- [ ] [division-bells] !low Division Bells is PARKED in the Storeroom — revive only on Dan's call.
+  It wasn't landing as "felt" for Dan (2026-07-07). Everything is retained: a 1-D "felt"
+  default view (σ-ruler = separation, shaded overlap lens = divergence; `gaussian1d.ts`,
+  tested) and a full 2-D mode in reserve (whole divergence family incl. Wasserstein-2 +
+  whitening; `gaussian2d.ts`, tested). If revived: build on the 1-D view; open thread is
+  bringing **KL** into 1-D as the shaded `p·log(p/q)` integrand (running area = KL), and
+  resolving the phone-portrait dead-space (anchor-to-top vs. shorter phone card default).
+  Real-device touch of the σ-drag handles is unverified (`phone-needed`).

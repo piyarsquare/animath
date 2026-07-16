@@ -27,6 +27,7 @@ export const CATEGORIES = {
   "trees-and-nets":    { label: "Trees and Nets",    hue: 115 },
   "argand":            { label: "Argand",            hue: 250 },
   "counting-the-ways": { label: "Counting the Ways", hue: 70  },
+  "division-bells":    { label: "Division Bells",    hue: 10  },
   "chrome":            { label: "Chrome / Shell",    hue: 220 },
   "engine":            { label: "Engine / lib",      hue: 285 },
   "docs":              { label: "Docs / Guides",     hue: 130 },

@@ -5,13 +5,13 @@ date: 2026-07-06
 title: New app — Mahalanobis separation & Kullback–Leibler divergence
 branch: claude/modest-cannon-umd49e
 slug: modest-cannon-umd49e
-status: in-progress
-build: unknown
-followup: null
+status: completed
+build: passed
+followup: MEDIUM
 pr: 248
-app: division-bells
-signals: null
-next: Review + merge PR #248 (all waves shipped: Mahalanobis+KL, the yardstick family, canvas field, whitening). Future ideas: cumulative "sample the bells" scatter; a 1-D slice view.
+app: division-bells, chrome
+signals: phone-needed
+next: PR #248 delivers Division Bells (built, then refocused to a "felt" 1-D view, then **parked in the new gallery Storeroom** at Dan's call) + the reusable Storeroom mechanism. If revisited, the 1-D felt view is the base; open threads — bring KL into 1-D (shaded integrand), rework phone dead-space. Storeroom is a general gallery feature now.
 ---
 
 # New app — Mahalanobis separation & Kullback–Leibler divergence
@@ -33,6 +33,19 @@ That work is closed and unrelated to this session's focus.
 ## Working notes
 
 <!-- Newest entry first. -->
+
+### 🟡 milestone · 2026-07-07 09:45 — Session wrap: report finalized, handoff next
+**Why:** Dan called the wrap. Net arc of the session below.
+
+Built Division Bells as a full 2-D Mahalanobis×KL app (three-hats review, whole
+divergence family engine + tests, canvas field, whitening, gallery tile, PR #248,
+CI green) → **Dan's correction**: the measures must be *felt*, and it moved too
+fast → **refocused to a 1-D view** (σ-ruler = separation, shaded overlap lens =
+divergence; pure `gaussian1d.ts` + tests), 2-D parked behind a mode → σ-drag
+handles + phone height cap → **Dan downshifted it entirely**: built a reusable
+gallery **Storeroom** and parked Division Bells there. All content retained in the
+codebase; the route stays live. 34 tests green; build/lint(0) throughout;
+everything on PR #248 (open, was green on each push). Handoff follows.
 
 ### 🟡 milestone · 2026-07-07 09:30 — Storeroom shipped; Division Bells parked
 **Why:** Dan's downshift, delivered as a reusable gallery mechanism.

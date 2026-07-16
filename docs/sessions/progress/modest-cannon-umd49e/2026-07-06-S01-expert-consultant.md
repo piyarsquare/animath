@@ -5,7 +5,7 @@ date: 2026-07-06
 title: "Division Bells — Architecture & Quality review"
 branch: claude/modest-cannon-umd49e
 slug: modest-cannon-umd49e
-status: complete
+status: completed
 build: n/a
 app: general
 ---
