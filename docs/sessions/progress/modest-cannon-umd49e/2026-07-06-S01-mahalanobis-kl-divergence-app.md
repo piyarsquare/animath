@@ -34,6 +34,17 @@ That work is closed and unrelated to this session's focus.
 
 <!-- Newest entry first. -->
 
+### 🟡 milestone · 2026-07-07 09:30 — Storeroom shipped; Division Bells parked
+**Why:** Dan's downshift, delivered as a reusable gallery mechanism.
+
+`catalog.ts` gains an optional `storeroom` flag; `Gallery.tsx` pulls flagged cards
+out of the main grid + category filter into a **collapsed "Storeroom" section** at
+the bottom (toggle + note + muted grid), footer counts only the main lineup. Route
+stays live so parked cards are still clickable. **Division Bells** is parked. General
+mechanism: retiring any old gallery element is now just `storeroom: true`. Verified
+collapsed (main grid 12) and expanded (the parked Division Bells card in the muted
+Storeroom). Build + lint(0) green; pushed (PR #248).
+
 ### 🟣 decision · 2026-07-07 09:00 — Downshift Division Bells; build a gallery "Storeroom"
 **Why:** Dan: Division Bells isn't working for him right now — **downshift its
 importance** and give the gallery a **"storeroom"** for parked things like this,
