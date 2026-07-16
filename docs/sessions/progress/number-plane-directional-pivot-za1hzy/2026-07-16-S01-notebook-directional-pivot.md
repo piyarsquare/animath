@@ -6,11 +6,12 @@ title: Number Planes notebook — directional pivot
 branch: claude/number-plane-directional-pivot-za1hzy
 slug: number-plane-directional-pivot-za1hzy
 status: in-progress
-build: unknown
+build: passed
 followup: null
 pr: null
 app: number-plane, docs
-next: Dan to define what the "directional pivot" is — a new direction for the notebook presentation.
+signals: needs-dan, phone-needed
+next: Dan reads journal.html (the entry-format probe) and rewrites the six drafted entries in his own voice.
 ---
 
 # Number Planes notebook — directional pivot
@@ -29,6 +30,93 @@ has since **merged** (`531bbe5` is on this branch's base), so this session
 starts from main with the notebook landed. First tracked session on this branch.
 
 ## Working notes
+
+### 🟡 milestone · 01:30 — The journal probe is built and verified headless
+**Why:** the scaffold + drafted entries Dan asked for exist and pass every check.
+
+`public/number-planes/journal.html` — six entries, ~29KB, chapter skeleton
+(guide-theme tokens, all 8 skins). Verified per R1 with a scratchpad shooter
+(`jshoot.mjs`, patterns from S03): desktop 1280 + phone 390 screenshots
+eyeballed; p driven via `window.__journal.setP` to +1 and re-shot (knob,
+level-curve, roots, header all track); Daylight light-skin shot; invariants —
+zero horizontal overflow, and the flip-card faces' boxes ≡ the vat's box at
+exactly 150px (the iOS definite-height rule; the sole `.vat` here carries a
+fixed height at every width). `npm run build` passes. Gotcha rediscovered: the
+guide skin key `animath:v1:chrome:skin` stores the **raw id** (not JSON), and
+`shoot.mjs` force-rewrites its arg into a `#/` hash route, so static pages
+need their own shooter. Fonts fail sandbox-only (known).
+
+Draft prose = placeholder register for Dan to rewrite; the math is from the
+cards (L1, AX, L2, PL, DV, QD) and is meant to survive the rewrite.
+
+### 🟢 code · 01:00 — journal.html: the entry format, built as a probe
+**Why:** Dan chose scaffold + drafted entries; this is the reversible probe
+(R2) enacting the fusion register.
+
+The format decisions, each mapping a piece of Dan's description:
+
+- **Entries in time**: one inked timeline down the left, a dot per entry lit
+  by scroll (IntersectionObserver); entry labels are non-literal time
+  (`ENTRY 02 · NEXT DAY`, `· A GOOD DAY`) — order, not dates.
+- **Sacred-text fusion**: each entry is a two-column grid — central working
+  prose (Newsreader, ≤60ch) + a hand-font gloss margin. **Backward refs live
+  in the prose; forward refs are `later —` margin notes** (`.mgn.later`,
+  voice-colored, left-ruled): the notebook conceit that the writer came back
+  and annotated, which is how a real notebook points forward. On phone the
+  margin folds under the prose as left-bordered slips.
+- **Plates used sparingly**: figures are "pasted in" (`.fig`, ±0.35° rotate,
+  mono `FIG. n` labels): the ×(−1) mirror (drag a), a taped-in worked
+  computation (strangers, zero divisors), **the j² knob** (chapter grammar,
+  same geometry), the unit-curve x²−p·y²=1, and t²=p roots — for p<0 the two
+  roots float **off the line** as hollow dots on the j-axis ("one floor up"),
+  which stages FTA honestly. One sealed orb (FTA) as the only flip card.
+- **One p per page** honored: entries 4–6 all read the single S.p; the knob
+  is its writer (chips in entry 5 too — all projections of p).
+- Cover: journal added as the first side-door leaf (doors grid → 2×2).
+
+Content arc (all grounded in the cards): the wrong question (L1) → the
+demands force the line (L3/L4/AX) → the strangers experiment (L2, logged as
+a disappointment) → one knob (PL) → three worlds, strangers resolved (DV) →
+the quadratic + sealed FTA (QD). The "disappointment → resolution" thread
+across entries 3→5 is the format's proof: it shows why time-order teaches
+something the spatial grids can't.
+
+### 🟣 decision · 00:40 — The three forks settled (voice · structure · deliverable)
+**Why:** asked Dan before building; his answers pin the register.
+
+1. **Voice** — "why would I address myself in a notebook?": the natural
+   notebook register. Working prose that thinks on the page, dropped-subject
+   ("Wrote the demands down…"), never addressing a reader as "you", no
+   didactic "we"; reflection appears only as it would. This intentionally
+   diverges from the cards' "we/you" house voice — the cards keep theirs;
+   the two registers are distinguishable on purpose.
+2. **Structure** — "a fusion of plates and the journal format… both sparingly
+   and in the correct register — see some of the examples like sacred text":
+   not journal-vs-chapters but one page where sparse central prose and
+   pasted-in plates share the space, margins carrying the glosses.
+3. **Deliverable** — scaffold + drafted entries (placeholder prose for Dan to
+   rewrite; something concrete to react to).
+
+### 🟣 decision · 00:20 — The pivot defined: the notebook needs voice + entries in time
+**Why:** Dan named the direction he'd been avoiding and now wants.
+
+Dan: he was avoiding a style that "felt like a webpage or had too much
+narration," but the notebook **does need voice** — written explanation that ties
+together "how the different parts arise from questions on top of questions and
+we find things out and play with them along the way." Format: **a notebook with
+entries in time** — not literal in the time dimension or presentation, but
+digestible chunks of small answers that tie into the bigger picture, navigable
+forward and back, with "things from before and things that come after" visible.
+
+Orientation finding: the card spec (`cards-reference/README.md`) already says
+"order is a *view*; the graph lives in each card's `links`" — but every view
+built so far is **spatial** (plate grids/chapters, the cover, the walk-in). The
+pivot asks for the missing **temporal** view: an entry spine that linearizes
+the card graph (`opens` / `leans-on` edges are latent question-arrows) into a
+narrated sequence. The card voice spec says "we/you — never autobiographical
+I"; an entries-in-time journal may bend that — flagged as an open question for
+Dan, along with whether the journal becomes the primary reading path or a
+parallel one beside the chapters.
 
 ### 🟡 milestone · 00:00 — Session started, oriented, awaiting the pivot
 **Why:** /start-session on a fresh branch; the focus names a "directional pivot"

@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Number Planes · the journal — entries in time</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%235fa8ff' stroke-width='3'/%3E%3Ccircle cx='16' cy='3' r='3' fill='%234cc878'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../guide-theme.css">
+<script src="../guide-skin.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..700;1,6..72,200..700&family=Caveat:wght@400..700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400..700&family=Shadows+Into+Light&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   The journal — the notebook's TEMPORAL spine (probe build).
+   Entries in time: central working prose in the notebook voice,
+   margins carrying the cross-time glosses (backward refs live in
+   the prose; FORWARD refs are later-added margin notes), plates
+   pasted in sparingly. One p drives every figure on the page.
+   DRAFT PROSE: scaffold copy for Dan to rewrite in his own hand.
+   Skeleton shared with the chapters (guide-theme tokens, .vat).
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes pr-pulse{0%,100%{opacity:.3}50%{opacity:1}}
+html,body{margin:0;padding:0}
+*{box-sizing:border-box}
+.nbr{
+  --desk:color-mix(in srgb, var(--bg) 88%, #000);
+  --deskimg:radial-gradient(120% 90% at 50% -10%,
+    color-mix(in srgb, var(--bg) 88%, var(--fg)) 0%, var(--bg) 55%,
+    color-mix(in srgb, var(--bg) 90%, #000) 100%);
+  --paper:var(--card); --paper2:color-mix(in srgb, var(--card) 93%, var(--fg));
+  --grid:color-mix(in srgb, var(--fg) 7%, transparent);
+  --border:var(--rule); --border-strong:color-mix(in srgb, var(--fg) 34%, transparent);
+  --ink:var(--fg); --dim:var(--muted); --dim2:color-mix(in srgb, var(--muted) 70%, var(--bg));
+  --live:var(--accent2); --live-soft:color-mix(in srgb, var(--accent2) 13%, transparent);
+  --voice:var(--accent); --seal:var(--accent); --seal-fg:var(--bg);
+  --d1:light-dark(#2b57c9, #5fa8ff);
+  --ok:light-dark(#149e57, #4cc878);
+  --d5:light-dark(#bd5f1c, #ff9a5f);
+  --hand:'Caveat',cursive; --serif:'Newsreader',Georgia,serif;
+  --mono:'Space Mono',monospace; --disp:'Space Grotesk',sans-serif;
+  --spd:0.75;
+}
+[data-theme="light"] .nbr{--live:#2f6df0; --voice:#9a4a32; --d1:#3565c8; --ok:#4a7d46; --d5:#b0592a}
+[data-theme="primary"] .nbr{--live:#1f4fd6; --voice:#e63327; --d1:#2b57c9; --ok:#149e57; --d5:#e6731f}
+[data-theme="blueprint"] .nbr{--d1:#c9a8ff; --ok:#7fe0a8; --d5:#ffab7a;
+  --hand:'Shadows Into Light',cursive; --serif:'Space Grotesk',sans-serif}
+[data-theme="phosphor"] .nbr{--d1:#5adcff; --ok:#9dff5a; --d5:#ffa05a;
+  --hand:'VT323',monospace; --serif:'Space Mono',monospace}
+
+/* ——— the time rail: entries hang off one inked line ——— */
+.entries{position:relative;display:flex;flex-direction:column;gap:52px;padding-left:30px}
+.entries::before{content:'';position:absolute;left:7px;top:6px;bottom:6px;width:1px;
+  background:linear-gradient(var(--border-strong), var(--border))}
+.entry{position:relative}
+.tdot{position:absolute;left:-27px;top:5px;width:9px;height:9px;border-radius:50%;
+  background:var(--desk);border:2px solid var(--dim);transition:border-color .3s ease,background .3s ease}
+.entry[data-here="1"] .tdot{border-color:var(--live);background:var(--live)}
+.elab{font-family:var(--mono);font-size:8.5px;letter-spacing:.26em;color:var(--dim)}
+.etitle{margin:2px 0 0;font-style:italic;font-weight:400;font-size:26px;line-height:1.12;
+  letter-spacing:-.01em;color:var(--ink)}
+/* ——— sacred-text split: prose column + gloss margin ——— */
+.ebody{display:grid;grid-template-columns:minmax(0,1fr) 205px;gap:8px 26px;margin-top:10px}
+.prose{font-size:15.5px;line-height:1.72;color:var(--ink);max-width:60ch}
+.prose p{margin:0 0 .85em}
+.prose p:last-child{margin-bottom:0}
+.prose .q{font-style:italic;color:var(--live)}
+.prose .m{font-family:var(--mono);font-size:13px}
+.margin{display:flex;flex-direction:column;gap:14px;padding-top:4px}
+.mgn{font-family:var(--hand);font-size:15.5px;line-height:1.35;color:var(--dim);
+  transform:rotate(-.6deg)}
+.mgn.later{color:var(--voice);border-left:2px solid color-mix(in srgb, var(--voice) 40%, transparent);
+  padding-left:9px;transform:rotate(.4deg)}
+.mgn a{color:inherit;text-decoration:none;border-bottom:1px dotted currentColor}
+.prose a{color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live)}
+/* ——— pasted-in figures ——— */
+.fig{background:var(--paper);border:1px solid var(--border);border-radius:2px;
+  padding:10px 12px 8px;margin:14px 0 4px;
+  box-shadow:0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent)}
+.fig:nth-of-type(odd){transform:rotate(-.35deg)}
+.fig:nth-of-type(even){transform:rotate(.3deg)}
+.flab{font-family:var(--mono);font-size:8px;letter-spacing:.22em;color:var(--dim);
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.flab .pulse{width:5px;height:5px;border-radius:50%;background:var(--live);
+  animation:pr-pulse 2.6s ease-in-out infinite;flex:none}
+.fcap{font-family:var(--hand);font-size:14.5px;color:var(--dim);margin-top:4px}
+/* flip plates (the sealed orb) — DEFINITE height: iOS resolves height:100%
+   against min-height-only boxes as zero (see chapter pages) */
+.vat{perspective:1000px;cursor:pointer;height:150px}
+.vat .in{position:relative;width:100%;height:100%;transform-style:preserve-3d;
+  transition:transform calc(.55s / var(--spd)) cubic-bezier(.3,.85,.35,1)}
+.vat[data-on="1"] .in{transform:rotateY(180deg) !important}
+.vat:not([data-on="1"]):hover .in{transform:rotateY(-11deg);transition-timing-function:cubic-bezier(.3,1.25,.45,1)}
+.vat .fc,.vat .bk{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  border:1px solid var(--border);border-radius:2px;background:var(--paper);padding:9px 11px;
+  display:flex;flex-direction:column}
+.vat:hover .fc{border-color:var(--border-strong)}
+.vat .bk{transform:rotateY(180deg);border-color:var(--border-strong);background:var(--paper2)}
+.fgl{opacity:.62;transition:opacity .3s ease}
+.vat:hover .fgl{opacity:1}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.pchip{font-family:var(--mono);font-size:10.5px;border:1px solid var(--border);
+  border-radius:3px;padding:2px 8px}
+@media (hover:none){
+  .fgl{opacity:.85}
+  .vat:not([data-on="1"]):hover .in{transform:none}
+}
+/* ——— phone: the margin folds under the prose as inline slips ——— */
+@media (max-width:860px){
+  .ebody{grid-template-columns:1fr}
+  .margin{padding-top:0;gap:8px}
+  .mgn{transform:none;border-left:2px solid color-mix(in srgb, var(--dim) 35%, transparent);padding-left:9px}
+  .mgn.later{transform:none}
+  .entries{padding-left:22px}
+  .tdot{left:-19px}
+  .fig:nth-of-type(odd),.fig:nth-of-type(even){transform:none}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="nbr" id="nbr" style="min-height:100vh;background-color:var(--desk);background-image:var(--deskimg);padding:34px clamp(14px,3.5vw,56px) 90px;color:var(--ink);font-family:var(--serif);">
+<div style="width:min(880px,100%);margin:0 auto;display:flex;flex-direction:column;gap:34px;">
+
+  <header style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;">
+    <div>
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:.4em;color:var(--voice);margin-bottom:10px;">A NOTEBOOK IN TIME &middot; ENTRIES 01&ndash;06 &middot; ONE p UNDER EVERYTHING BELOW</div>
+      <h1 style="margin:0;font-style:italic;font-weight:400;font-size:clamp(34px,6vw,48px);line-height:.98;letter-spacing:-.015em;">the journal</h1>
+      <div style="font-family:var(--hand);font-size:19px;color:var(--live);margin-top:10px;">questions on top of questions &mdash; small answers, kept in the order they came.</div>
+    </div>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:14px;">
+      <span id="hdrRead" style="font-family:var(--mono);font-size:11px;color:var(--live);white-space:nowrap;"></span>
+      <span id="skin-picker"></span>
+    </span>
+  </header>
+
+  <div style="font-family:var(--hand);font-size:15.5px;color:var(--dim);margin-top:-16px;">so far:
+    <a href="#e1" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);">the wrong question</a> &middot;
+    <a href="#e2" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);">the demands</a> &middot;
+    <a href="#e3" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);">strangers</a> &middot;
+    <a href="#e4" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);">one knob</a> &middot;
+    <a href="#e5" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);">three worlds</a> &middot;
+    <a href="#e6" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);">the quadratic</a>
+  </div>
+
+  <div class="entries">
+
+    <!-- ══ ENTRY 01 ══ -->
+    <article class="entry" id="e1">
+      <span class="tdot"></span>
+      <span class="elab">ENTRY 01 &middot; EARLY</span>
+      <h2 class="etitle">the wrong question</h2>
+      <div class="ebody">
+        <div class="prose">
+          <p><span class="q">What is a complex number?</span> &mdash; that was the question as first written. It has the wrong shape. A dot in the plane isn&rsquo;t a number, any more than a bead on a wire is. What made the line <em>numbers</em> was never its points &mdash; it was the two ways of combining them. An addition. A multiplication. Fix those two rules and everything else follows them around.</p>
+          <p>So the question worth keeping: <span class="q">on the plane, which two rules?</span></p>
+        </div>
+        <aside class="margin">
+          <div class="mgn">a number system is the pair of rules, not the set of dots. <a href="cards/index.html#L1">card L1</a></div>
+          <div class="mgn later">later &mdash; the whole notebook came out of this re-asking.</div>
+        </aside>
+      </div>
+    </article>
+
+    <!-- ══ ENTRY 02 ══ -->
+    <article class="entry" id="e2">
+      <span class="tdot"></span>
+      <span class="elab">ENTRY 02 &middot; NEXT DAY</span>
+      <h2 class="etitle">the demands, tried where the answer is known</h2>
+      <div class="ebody">
+        <div class="prose">
+          <p>Wrote the demands down before touching the plane, to test them where nothing can go wrong. Of a multiplication: it should <strong>distribute</strong> over addition, and something should play <strong>1</strong>. Addition itself stays fixed &mdash; points add like arrows, and subtraction must always undo it.</p>
+          <p>On the line the demands leave no room at all. Every product is forced &mdash; even the sign rule: <span class="m">0 = (&minus;1)&middot;(1 + (&minus;1)) = (&minus;1) + (&minus;1)(&minus;1)</span>, so <span class="m">(&minus;1)(&minus;1)</span> has no choice but <span class="m">+1</span>. A theorem, not a convention.</p>
+          <div class="fig">
+            <div class="flab"><span class="pulse"></span>FIG. 1 &middot; PASTED IN &middot; &times;(&minus;1) IS THE MIRROR &middot; DRAG a</div>
+            <svg id="mirror" viewBox="0 0 560 108" style="display:block;width:100%;touch-action:none;user-select:none;">
+              <line x1="20" y1="64" x2="540" y2="64" stroke="var(--dim2)" stroke-width="1.2"></line>
+              <g id="mTicks"></g>
+              <path id="mArc" fill="none" stroke="var(--voice)" stroke-width="1.6" stroke-dasharray="5 4"></path>
+              <circle id="mB" r="7" fill="var(--paper2)" stroke="var(--voice)" stroke-width="2.2"></circle>
+              <circle id="mA" r="9" fill="var(--live-soft)" stroke="var(--live)" stroke-width="2.2" style="cursor:grab;"></circle>
+              <text id="mAl" y="94" text-anchor="middle" font-family="var(--hand)" font-size="16" fill="var(--live)">a</text>
+              <text id="mBl" y="94" text-anchor="middle" font-family="var(--hand)" font-size="16" fill="var(--voice)">(&minus;1)&middot;a</text>
+            </svg>
+            <div class="fcap">the mirror, twice, is home &mdash; that is all (&minus;1)(&minus;1) = +1 says.</div>
+          </div>
+          <p>The line is finished before it starts. If any choice exists, it lives upstairs.</p>
+        </div>
+        <aside class="margin">
+          <div class="mgn">why hold + fixed? arrows add; and every move must be undoable. <a href="cards/index.html#AX">card AX</a></div>
+          <div class="mgn">(drop the undo and a strange door opens &mdash; tropical. not this trail.)</div>
+          <div class="mgn later">later &mdash; the plane leaves <em>exactly one</em> choice. <a href="#e4">&rarr; entry 04</a></div>
+        </aside>
+      </div>
+    </article>
+
+    <!-- ══ ENTRY 03 ══ -->
+    <article class="entry" id="e3">
+      <span class="tdot"></span>
+      <span class="elab">ENTRY 03 &middot; LATER THAT WEEK</span>
+      <h2 class="etitle">the strangers experiment</h2>
+      <div class="ebody">
+        <div class="prose">
+          <p>Tried the laziest plane multiplication first: keep the coordinates apart, strangers to each other &mdash; multiply each slot on its own.</p>
+          <div class="fig">
+            <div class="flab">FIG. 2 &middot; A WORKED COMPUTATION, TAPED IN</div>
+            <div style="font-family:var(--mono);font-size:14px;line-height:2;color:var(--ink);padding:6px 2px 2px;">
+              (a, b) &middot; (c, d) &nbsp;=&nbsp; (a&middot;c,&nbsp; b&middot;d)<br>
+              (1, 0) &middot; (0, 1) &nbsp;=&nbsp; <span style="color:var(--voice);font-weight:700;">(0, 0)</span>
+            </div>
+            <div class="fcap">two honest nonzero numbers, and their product is nothing.</div>
+          </div>
+          <p>It <em>works</em> &mdash; distributes, and <span class="m">(1,1)</span> plays 1. But it feels like two lines taped side by side, not a plane: nothing ever crosses between the slots, and the zero-product pairs sit there like a leak in the boat.</p>
+          <p>Logged as a disappointment. Question kept anyway: <span class="q">is this the only way to multiply a plane &mdash; or one of many?</span></p>
+        </div>
+        <aside class="margin">
+          <div class="mgn"><a href="cards/index.html#L2">card L2</a> &mdash; the strangers product.</div>
+          <div class="mgn later">much later &mdash; not a dead end at all. this was j&sup2; = +1 wearing a disguise. <a href="#e5">&rarr; entry 05</a></div>
+        </aside>
+      </div>
+    </article>
+
+    <!-- ══ ENTRY 04 ══ -->
+    <article class="entry" id="e4">
+      <span class="tdot"></span>
+      <span class="elab">ENTRY 04 &middot; A GOOD DAY</span>
+      <h2 class="etitle">one knob</h2>
+      <div class="ebody">
+        <div class="prose">
+          <p>Ran the demands on the plane properly this time. Write a point as <span class="m">x + y&middot;j</span>, with <span class="m">j</span> the unit of the new direction. Distributivity spends nearly all the freedom at once: every product reduces to real arithmetic plus the one product it cannot reach &mdash; <span class="m">j&middot;j</span>.</p>
+          <p>Whatever <span class="m">j&sup2;</span> is declared to be &mdash; call it <span class="m">p</span> &mdash; the entire multiplication follows. All the freedom of the plane, promised by the line&rsquo;s finished table, is <strong>one real number</strong>.</p>
+          <div class="fig">
+            <div class="flab"><span class="pulse"></span>FIG. 3 &middot; THE KNOB ITSELF &middot; DRAG &mdash; EVERY FIGURE BELOW LISTENS</div>
+            <svg id="psl" viewBox="0 0 600 30" style="display:block;width:100%;margin-top:4px;touch-action:none;cursor:pointer;user-select:none;">
+              <line x1="14" y1="15" x2="300" y2="15" stroke="var(--d1)" stroke-width="4" stroke-linecap="round" opacity=".55"></line>
+              <line x1="300" y1="15" x2="586" y2="15" stroke="var(--d5)" stroke-width="4" stroke-linecap="round" opacity=".55"></line>
+              <circle cx="300" cy="15" r="3.5" fill="var(--ok)"></circle>
+              <g id="pTicks"></g>
+              <circle id="pk1" cx="157" cy="15" r="9" fill="var(--paper2)" stroke="var(--d1)" stroke-width="2.4"></circle>
+              <circle id="pk2" cx="157" cy="15" r="2.5" fill="var(--d1)"></circle>
+            </svg>
+            <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-top:4px;">
+              <span id="pRead" style="font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--ink);"></span>
+              <span id="pName" style="font-style:italic;font-size:15px;"></span>
+            </div>
+            <div class="fcap">set it, and see. (the same knob the chapters turn &mdash; one p per page.)</div>
+          </div>
+        </div>
+        <aside class="margin">
+          <div class="mgn">j&sup2; = p &mdash; the knob the rest of this notebook keeps turning. <a href="cards/index.html#PL">card PL</a></div>
+          <div class="mgn">the &ldquo;exactly one&rdquo; promised back in <a href="#e2">entry 02</a>.</div>
+        </aside>
+      </div>
+    </article>
+
+    <!-- ══ ENTRY 05 ══ -->
+    <article class="entry" id="e5">
+      <span class="tdot"></span>
+      <span class="elab">ENTRY 05 &middot; TURNING IT</span>
+      <h2 class="etitle">three worlds, not a continuum</h2>
+      <div class="ebody">
+        <div class="prose">
+          <p>Expected a continuum of arithmetics, one per <span class="m">p</span>. Got three. Stretching <span class="m">j</span> is only a change of unit, and it rescales <span class="m">p</span> by any positive amount &mdash; so only the <em>sign</em> of <span class="m">p</span> survives honest bookkeeping. Three signs, three worlds; <span class="m">&minus;1, 0, +1</span> the clean representatives.</p>
+          <div class="fig">
+            <div class="flab"><span class="pulse"></span>FIG. 4 &middot; THE UNIT &ldquo;CIRCLE&rdquo; OF EACH WORLD &middot; x&sup2; &minus; p&middot;y&sup2; = 1</div>
+            <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+              <svg id="lvl" viewBox="-130 -130 260 260" style="display:block;width:min(240px,58vw);flex:none;">
+                <g id="lvlGrid"></g>
+                <line x1="-126" y1="0" x2="126" y2="0" stroke="var(--dim2)" stroke-width="1"></line>
+                <line x1="0" y1="-126" x2="0" y2="126" stroke="var(--dim2)" stroke-width="1"></line>
+                <path id="lvlRails" fill="none" stroke-width="1.4" stroke-dasharray="6 5" opacity=".75"></path>
+                <path id="lvlCurve" fill="none" stroke-width="2.4"></path>
+                <circle cx="52" cy="0" r="2.5" fill="var(--ink)"></circle>
+                <text x="58" y="14" font-family="var(--mono)" font-size="10" fill="var(--dim)">1</text>
+                <circle cx="0" cy="-52" r="2.5" fill="var(--ink)"></circle>
+                <text x="7" y="-56" font-family="var(--mono)" font-size="10" fill="var(--dim)">j</text>
+              </svg>
+              <div style="display:flex;flex-direction:column;gap:9px;min-width:150px;flex:1;">
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button data-pset="-1" class="pchip">&minus;1</button>
+                  <button data-pset="0" class="pchip">0</button>
+                  <button data-pset="1" class="pchip">+1</button>
+                </div>
+                <div id="railRead" style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;"></div>
+                <div style="font-family:var(--hand);font-size:15px;color:var(--dim);">0 rails turn &middot; 1 rail shears &middot; 2 rails squeeze.</div>
+              </div>
+            </div>
+          </div>
+          <p>And the two-rail world &mdash; the hyperbola riding its crossed asymptotes &mdash; is the strangers experiment of <a href="#e3">entry 03</a>, found again from the inside. The disappointment was a world all along.</p>
+        </div>
+        <aside class="margin">
+          <div class="mgn"><a href="cards/index.html#DV">card DV</a> &mdash; three planes, at the cuts.</div>
+          <div class="mgn later">&larr; <a href="#e3">entry 03</a>, resolved. file nothing as a dead end again.</div>
+        </aside>
+      </div>
+    </article>
+
+    <!-- ══ ENTRY 06 ══ -->
+    <article class="entry" id="e6">
+      <span class="tdot"></span>
+      <span class="elab">ENTRY 06 &middot; AFTER THAT</span>
+      <h2 class="etitle">the quadratic was there all along</h2>
+      <div class="ebody">
+        <div class="prose">
+          <p>The count <span class="m">2 / 1 / 0</span> keeps following the sign of <span class="m">p</span> around &mdash; rails, and now roots. <span class="m">t&sup2; = p</span> is the notebook in one equation: two solutions when <span class="m">p &gt; 0</span>, one doubled at <span class="m">p = 0</span>, and for <span class="m">p &lt; 0</span> none <em>on the line</em>.</p>
+          <div class="fig">
+            <div class="flab"><span class="pulse"></span>FIG. 5 &middot; t&sup2; = p &middot; WHERE THE ROOTS LIVE</div>
+            <svg id="roots" viewBox="0 0 560 120" style="display:block;width:100%;">
+              <line x1="30" y1="60" x2="530" y2="60" stroke="var(--dim2)" stroke-width="1.2"></line>
+              <line x1="280" y1="54" x2="280" y2="66" stroke="var(--dim2)" stroke-width="1.2"></line>
+              <line id="rAxis" x1="280" y1="14" x2="280" y2="106" stroke="var(--dim2)" stroke-width="1" stroke-dasharray="3 4" opacity="0"></line>
+              <g id="rDots"></g>
+            </svg>
+            <div id="rootRead" style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;"></div>
+            <div class="fcap">when they leave the line they do not vanish &mdash; they wait, one floor up.</div>
+          </div>
+          <p>The missing pair is the door. Forcing every quadratic &mdash; every polynomial &mdash; to keep its roots is forcing <span class="m">&radic;(negative)</span> to live somewhere, and that somewhere has a name and a sign of its own. That argument deserves an entry to itself, when it&rsquo;s earned.</p>
+          <div class="vat" data-t="FTA" data-on="0" style="max-width:330px;">
+            <div class="in">
+              <div class="fc" style="align-items:center;justify-content:center;gap:4px;border-style:dashed;">
+                <span style="width:28px;height:28px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">&radic;</span>
+                <span style="font-family:var(--hand);font-size:15px;color:var(--dim);text-align:center;">sealed &mdash; the fundamental theorem</span>
+                <span class="fgl" style="font-family:var(--hand);font-size:13.5px;color:var(--voice);">not yet in the book &middot; tap</span>
+              </div>
+              <div class="bk" style="justify-content:center;gap:4px;">
+                <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--voice);">FTA &middot; SEALED</div>
+                <div style="font-size:12px;line-height:1.5;color:var(--ink);">Demand that roots always exist and the dial is forced to &minus;1: the complex plane is where algebra closes. The proof &mdash; and what it costs &mdash; is a future entry.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <aside class="margin">
+          <div class="mgn"><a href="cards/index.html#QD">card QD</a> &mdash; it was a quadratic all along.</div>
+          <div class="mgn">root count = rail count = the sign. one invariant, three costumes.</div>
+        </aside>
+      </div>
+    </article>
+
+  </div>
+
+  <div style="font-family:var(--hand);font-size:16px;color:var(--dim);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;">the entries continue &mdash; this notebook is being written.
+    <a href="./" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">the cover</a>
+    &middot; <a href="chapter-2.html" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">chapter II &mdash; the room</a>
+    &middot; <a href="cards/" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">the cards</a>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ═══════ the journal — one p under every figure ═══════ */
+const $=id=>document.getElementById(id);
+const S={p:-1, a:1.6};
+const fmt=v=>{let r=Math.round(v*100)/100; if(Object.is(r,-0)) r=0;
+  let s=String(r); if(s[0]==='-') s='−'+s.slice(1); return s;};
+const NS='http://www.w3.org/2000/svg';
+
+/* slider ticks */
+(function(){const g=$('pTicks');
+  for(const m of [-2,-1,0,1,2]){const x=300+m*143;
+    const l=document.createElementNS(NS,'line');
+    l.setAttribute('x1',x);l.setAttribute('x2',x);l.setAttribute('y1',9);l.setAttribute('y2',21);
+    l.setAttribute('stroke','var(--dim2)');l.setAttribute('stroke-width','1.2');g.appendChild(l);
+    const t=document.createElementNS(NS,'text');
+    t.setAttribute('x',x);t.setAttribute('y',30);t.setAttribute('text-anchor','middle');
+    t.setAttribute('font-family','var(--mono)');t.setAttribute('font-size','9');
+    t.setAttribute('fill','var(--dim2)');t.textContent=(m<0?'−'+(-m):'+'+m);g.appendChild(t);
+  }})();
+
+/* mirror-line ticks */
+(function(){const g=$('mTicks');
+  for(let u=-4;u<=4;u++){const x=280+u*60;
+    const l=document.createElementNS(NS,'line');
+    l.setAttribute('x1',x);l.setAttribute('x2',x);l.setAttribute('y1',u===0?56:60);l.setAttribute('y2',u===0?72:68);
+    l.setAttribute('stroke','var(--dim2)');l.setAttribute('stroke-width',u===0?'1.4':'1');g.appendChild(l);
+  }})();
+
+function setP(v){ S.p=v; render(); }
+
+function render(){
+  const p=Math.max(-2,Math.min(2,S.p));
+  const neg=p<-.001, pos=p>.001, zero=!neg&&!pos;
+  const pColor=neg?'var(--d1)':pos?'var(--d5)':'var(--ok)';
+  const planeName=neg?'the complex plane':pos?'the split plane':'the dual plane';
+
+  $('hdrRead').textContent='j² = '+fmt(p)+' · '+planeName;
+
+  /* fig 1 — the mirror (independent of p) */
+  const ax=280+S.a*60, bx=280-S.a*60;
+  $('mA').setAttribute('cx',ax); $('mA').setAttribute('cy',64);
+  $('mB').setAttribute('cx',bx); $('mB').setAttribute('cy',64);
+  $('mAl').setAttribute('x',ax); $('mBl').setAttribute('x',bx);
+  const mid=(ax+bx)/2, w=Math.abs(ax-bx);
+  $('mArc').setAttribute('d','M '+ax+' 56 Q '+mid+' '+(56-Math.min(46,w*.22))+' '+bx+' 56');
+
+  /* fig 3 — the knob */
+  const kx=Math.max(14,Math.min(586,300+p*143));
+  $('pk1').setAttribute('cx',kx); $('pk2').setAttribute('cx',kx);
+  $('pk1').setAttribute('stroke',pColor); $('pk2').setAttribute('fill',pColor);
+  $('pRead').textContent='j² = '+fmt(p);
+  $('pName').textContent=planeName; $('pName').style.color=pColor;
+
+  /* chips */
+  document.querySelectorAll('.pchip').forEach(ch=>{
+    const v=parseFloat(ch.dataset.pset);
+    const on=(v===-1&&neg)||(v===0&&zero)||(v===1&&pos);
+    const col=v===-1?'var(--d1)':v===0?'var(--ok)':'var(--d5)';
+    ch.style.color=on?col:'var(--ink)';
+    ch.style.background=on?'var(--live-soft)':'var(--grid)';
+    ch.style.borderColor=on?col:'var(--border)';
+  });
+
+  /* fig 4 — the level set x² − p·y² = 1, unit U = 52 */
+  const U=52; let d='', rails='';
+  if(neg){const ry=Math.min(U/Math.sqrt(-p),320);
+    d='M '+U+' 0 A '+U+' '+ry.toFixed(1)+' 0 1 1 '+(-U)+' 0 A '+U+' '+ry.toFixed(1)+' 0 1 1 '+U+' 0';}
+  else if(zero){d='M '+U+' -126 L '+U+' 126 M '+(-U)+' -126 L '+(-U)+' 126';}
+  else {const s=Math.sqrt(p); const pts=b=>{let seg='';
+      for(let i=0;i<=36;i++){const t=-1.9+i*(3.8/36);
+        const x=b*Math.cosh(t)*U, y=-Math.sinh(t)/s*U;
+        if(Math.abs(y)>126&&i>0&&i<36) continue;
+        seg+=(seg?' L ':'M ')+x.toFixed(1)+' '+y.toFixed(1);}
+      return seg+' ';};
+    d=pts(1)+pts(-1);
+    const rx=126*s>126?126:126*s, ry=126*s>126?126/s:126;
+    rails='M '+(-rx)+' '+ry+' L '+rx+' '+(-ry)+' M '+(-rx)+' '+(-ry)+' L '+rx+' '+ry;}
+  $('lvlCurve').setAttribute('d',d); $('lvlCurve').setAttribute('stroke',pColor);
+  $('lvlRails').setAttribute('d',rails); $('lvlRails').setAttribute('stroke',pColor);
+  $('railRead').textContent=neg?'0 RAILS · AN ELLIPSE':zero?'1 RAIL · TWO LINES':'2 RAILS · A HYPERBOLA';
+  $('railRead').style.color=pColor;
+
+  /* fig 5 — roots of t² = p (60 px per unit; off-line pair floats on the j-axis) */
+  const g=$('rDots'); g.innerHTML='';
+  const dot=(x,y,hollow)=>{const c=document.createElementNS(NS,'circle');
+    c.setAttribute('cx',280+x*60); c.setAttribute('cy',60-y*38);
+    c.setAttribute('r','7');
+    c.setAttribute('fill',hollow?'transparent':pColor);
+    c.setAttribute('stroke',pColor); c.setAttribute('stroke-width','2.2');
+    if(hollow) c.setAttribute('stroke-dasharray','3 3');
+    g.appendChild(c);};
+  $('rAxis').setAttribute('opacity',neg?'.7':'0');
+  if(pos){const s=Math.sqrt(p); dot(s,0,false); dot(-s,0,false);
+    $('rootRead').textContent='2 REAL ROOTS · t = ±'+fmt(s);}
+  else if(zero){dot(0,0,false);
+    $('rootRead').textContent='1 ROOT, DOUBLED · t = 0';}
+  else {const s=Math.sqrt(-p); dot(0,s,true); dot(0,-s,true);
+    $('rootRead').textContent='0 ON THE LINE · t = ±'+fmt(s)+'·j — one floor up';}
+  $('rootRead').style.color=pColor;
+
+  /* level-set grid, drawn once */
+  if(!render.gridDone){render.gridDone=true; const gg=$('lvlGrid');
+    for(let k=-2;k<=2;k++){ if(!k) continue;
+      const v=document.createElementNS(NS,'line');
+      v.setAttribute('x1',k*U); v.setAttribute('x2',k*U);
+      v.setAttribute('y1',-126); v.setAttribute('y2',126);
+      v.setAttribute('stroke','var(--grid)'); gg.appendChild(v);
+      const h=document.createElementNS(NS,'line');
+      h.setAttribute('y1',k*U); h.setAttribute('y2',k*U);
+      h.setAttribute('x1',-126); h.setAttribute('x2',126);
+      h.setAttribute('stroke','var(--grid)'); gg.appendChild(h);}}
+}
+
+/* ——— clicks: chips + flips ——— */
+document.addEventListener('click',e=>{
+  if(e.target.closest('a')||e.target.closest('[data-dragel]')) return;
+  const ps=e.target.closest('[data-pset]');
+  if(ps){setP(parseFloat(ps.dataset.pset)); return;}
+  const t=e.target.closest('[data-t]');
+  if(t){t.dataset.on=t.dataset.on==='1'?'0':'1';}
+});
+
+/* ——— the j² slider (sticky at −1 · 0 · +1) ——— */
+let pd=false; const psl=$('psl');
+function setFromSlider(e){
+  const r=psl.getBoundingClientRect();
+  const x=(e.clientX-r.left)/r.width*600;
+  let p=(x-300)/143;
+  p=Math.max(-2,Math.min(2,p));
+  for(const m of [-1,0,1]) if(Math.abs(p-m)<.09){p=m;break;}
+  setP(Math.round(p*100)/100);
+}
+psl.setAttribute('data-dragel','');
+psl.addEventListener('pointerdown',e=>{pd=true;psl.setPointerCapture(e.pointerId);setFromSlider(e);e.preventDefault();});
+psl.addEventListener('pointermove',e=>{if(pd)setFromSlider(e);});
+addEventListener('pointerup',()=>{pd=false;});
+
+/* ——— drag a on the mirror line ——— */
+let md=false; const mir=$('mirror'), mA=$('mA');
+mA.setAttribute('data-dragel','');
+mA.addEventListener('pointerdown',e=>{md=true;mA.setPointerCapture(e.pointerId);e.preventDefault();e.stopPropagation();});
+mA.addEventListener('pointermove',e=>{
+  if(!md) return;
+  const r=mir.getBoundingClientRect();
+  let u=((e.clientX-r.left)/r.width*560-280)/60;
+  u=Math.max(-4,Math.min(4,Math.round(u*10)/10));
+  S.a=u; render();
+});
+mA.addEventListener('pointerup',()=>{md=false;});
+
+/* ——— the time rail: light the dot of the entry in view ——— */
+const obs=new IntersectionObserver(es=>{
+  es.forEach(en=>{en.target.dataset.here=en.isIntersecting?'1':'0';});
+},{rootMargin:'-30% 0px -55% 0px'});
+document.querySelectorAll('.entry').forEach(el=>obs.observe(el));
+
+/* expose for headless verification */
+window.__journal={get:()=>({...S}), setP};
+render();
+</script>
+</body>
+</html>
