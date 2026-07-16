@@ -423,3 +423,32 @@ informs future rounds. Delete or check off items as they land.
   { zoom: var(--font-scale) }` (=0.9), screenshot-verified gap-free at gallery + app level.
   Option B (migrate chrome px→rem + a type-root `calc()` multiplier) is the cleaner long-term
   fix if A proves insufficient; bigger diff, deferred per the design doc.
+
+- [ ] [number-plane] !high Confirm the flip-card fix on a real iPhone (1ae28f9).
+  iOS Safari resolved the faces' height:100% wrapper as 0 against min-height-only
+  boxes — cards rendered as empty frames while headless Chrome passed. Fixed with
+  definite heights (seals 150px !important, notes 206px, FD 176px). Any future
+  plate/phone CSS change must keep vat heights definite; re-check on device.
+
+- [ ] [number-plane] !med Harvest notebook.html's keeper animations into the chapters, then retire it.
+  Keepers per Dan + review: told-FOIL (belongs behind C2's Hmm seam), settle-the-dots
+  renormalization (pairs with PL), the cover fold, the Hmm? completing-the-square
+  pop-out. notebook.html stays URL-reachable until harvested.
+
+- [ ] [number-plane] !med Build the leak/re-grid annex (S02 plan) once the prototype arrives.
+  Plan: docs/sessions/progress/number-plane-notebook-kxvxzj/2026-07-08-S02-plan-q3-leak-regrid.md.
+  Blockers/corrections from review: re-letter to shipped z = x + y·j / w = a + b·j;
+  RG card same-as→leans-on; placement = Chapter II annex off the Hmm seam (PL's
+  renormalize plate is the plan's second act); one-p contract = sandboxed q + explicit
+  "adopt p′ = p + q²/4" exit. Prototype HTML was never uploaded — ask Dan or rebuild
+  from the plan's verification recipe.
+
+- [ ] [number-plane] !low Extract the ×4-duplicated chapter CSS skeleton into a shared notebook.css.
+  index/chapter-1/2/3.html each inline the same ~30KB token+vat+seal skeleton.
+  Self-contained was deliberate (parallel-branch safety), but four copies is the
+  drift threshold; a fifth page should trigger the extraction.
+
+- [ ] [number-plane] !low Port the 274KB "working copy" long-form notebook design.
+  docs/design/notebook-handoff/designs/Number Planes - The Notebook.dc.html — the
+  prose spine with margins, loose slips, unfold-to-plate figures. A project of its
+  own; today's cover (public/number-planes/index.html) stands in for it.
