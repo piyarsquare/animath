@@ -22,9 +22,12 @@ export interface AppCard {
   blurb: string;
   cat: Category;
   kind: PreviewKind;
+  /** Parked/retired: shown only in the gallery's de-emphasized Storeroom section
+   *  (out of the main grid and the category filter), but the route stays live. */
+  storeroom?: boolean;
 }
 
-const META: Record<string, { cat: Category; kind: PreviewKind }> = {
+const META: Record<string, { cat: Category; kind: PreviewKind; storeroom?: boolean }> = {
   '/complex-particles': { cat: 'Complex', kind: 'particles' },
   '/plane-transform': { cat: 'Complex', kind: 'plane' },
   '/fractals': { cat: 'Fractal', kind: 'fractal' },
@@ -37,7 +40,7 @@ const META: Record<string, { cat: Category; kind: PreviewKind }> = {
   '/solid-worlds': { cat: 'Dynamics', kind: 'solid' },
   '/argand': { cat: 'Complex', kind: 'plane' },
   '/counting-the-ways': { cat: 'Algorithm', kind: 'skellam' },
-  '/division-bells': { cat: 'Algorithm', kind: 'divergence' },
+  '/division-bells': { cat: 'Algorithm', kind: 'divergence', storeroom: true },
 };
 
 export const CARDS: AppCard[] = apps

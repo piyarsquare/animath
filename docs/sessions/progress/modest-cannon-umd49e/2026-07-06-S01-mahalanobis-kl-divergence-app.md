@@ -34,6 +34,18 @@ That work is closed and unrelated to this session's focus.
 
 <!-- Newest entry first. -->
 
+### 🟣 decision · 2026-07-07 09:00 — Downshift Division Bells; build a gallery "Storeroom"
+**Why:** Dan: Division Bells isn't working for him right now — **downshift its
+importance** and give the gallery a **"storeroom"** for parked things like this,
+which also becomes where **old gallery elements retire to**.
+
+Design: a `storeroom` flag in `catalog.ts` META → the Gallery pulls flagged cards
+out of the main grid and the category filter, and shows them in a **collapsed,
+de-emphasized "Storeroom" section at the bottom** (kept reachable — the route/app
+stay live — just out of the main lineup). Division Bells gets the flag. General
+mechanism, so any future retirement just sets `storeroom: true`. Built on the same
+branch/PR #248 (the PR now delivers Division Bells *parked*).
+
 ### 🟢 code · 17:10 — 1D: σ-drag handles + phone-portrait height cap (Dan's asks)
 **Why:** Two UX requests from Dan on the 1D view.
 
