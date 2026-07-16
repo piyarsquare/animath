@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..700;1,6..72,200..700&family=Caveat:wght@400..700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400..700&family=Shadows+Into+Light&family=VT323&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;}
+  *{box-sizing:border-box;}
+  @keyframes pr-pulse{0%,100%{opacity:.3;}50%{opacity:1;}}
+  .nbr{ /* Observatory — night ledger (default) */
+    --desk:#06070c; --deskimg:radial-gradient(120% 90% at 50% -10%, #12151f 0%, #0a0c12 55%, #06070c 100%);
+    --paper:#0d1119; --paper2:#141a29; --grid:rgba(150,175,220,.07);
+    --border:rgba(150,175,220,.16); --border-strong:rgba(150,175,220,.32);
+    --ink:#eef1f7; --dim:#8d96ab; --dim2:#5d667d;
+    --live:#5fe3cd; --live-soft:rgba(95,227,205,.13); --voice:#ffce47;
+    --seal:#ffce47; --seal-fg:#241a02;
+    --hand:'Caveat',cursive; --serif:'Newsreader',Georgia,serif; --mono:'Space Mono',monospace; --disp:'Space Grotesk',sans-serif;
+  }
+  .nbr[data-nb="manuscript"]{
+    --desk:#14100b; --deskimg:radial-gradient(120% 90% at 50% -10%, #2a2115 0%, #1a1410 48%, #100c08 100%);
+    --paper:#f5eedb; --paper2:#fbf6e7; --grid:rgba(120,95,55,.08);
+    --border:rgba(120,95,55,.28); --border-strong:rgba(139,110,60,.5);
+    --ink:#26324a; --dim:#8a7c60; --dim2:#a89877;
+    --live:#2f6df0; --live-soft:rgba(47,109,240,.12); --voice:#9a4a32;
+    --seal:#ddc188; --seal-fg:#5c431c;
+  }
+  .nbr[data-nb="primary"]{
+    --desk:#dcd8cc; --deskimg:radial-gradient(120% 90% at 50% -10%, #efece4 0%, #e7e4db 55%, #d6d2c4 100%);
+    --paper:#faf9f5; --paper2:#ffffff; --grid:rgba(20,19,15,.06);
+    --border:rgba(20,19,15,.22); --border-strong:rgba(20,19,15,.48);
+    --ink:#14130f; --dim:#6b675c; --dim2:#908d82;
+    --live:#1f4fd6; --live-soft:rgba(31,79,214,.1); --voice:#e63327;
+    --seal:#f5c518; --seal-fg:#14130f;
+  }
+  .nbr[data-nb="blueprint"]{
+    --desk:#071026; --deskimg:radial-gradient(130% 100% at 50% -10%, #123061 0%, #0a1838 60%, #071026 100%);
+    --paper:#0e2148; --paper2:#153060; --grid:rgba(170,200,255,.1);
+    --border:rgba(170,200,255,.24); --border-strong:rgba(170,200,255,.46);
+    --ink:#f2f6ff; --dim:#9fb4e0; --dim2:#647fb0;
+    --live:#7fc4ff; --live-soft:rgba(127,196,255,.12); --voice:#ffd98a;
+    --seal:#ffd98a; --seal-fg:#11254f;
+    --hand:'Shadows Into Light',cursive; --serif:'Space Grotesk',sans-serif;
+  }
+  .nbr[data-nb="phosphor"]{
+    --desk:#020a06; --deskimg:radial-gradient(120% 90% at 50% -10%, #071a10 0%, #03100a 55%, #020a06 100%);
+    --paper:#04150c; --paper2:#082013; --grid:rgba(80,255,140,.08);
+    --border:rgba(80,255,140,.2); --border-strong:rgba(80,255,140,.42);
+    --ink:#d4ffe0; --dim:#6fae85; --dim2:#417a58;
+    --live:#3dff7a; --live-soft:rgba(61,255,122,.1); --voice:#ffd24d;
+    --seal:#ffd24d; --seal-fg:#061104;
+    --hand:'VT323',monospace; --serif:'Space Mono',monospace;
+  }
+  /* the operation card: a big word that flips the whole plot */
+  .opt{perspective:900px;cursor:pointer;background:var(--desk);border-radius:2px;}
+  .opt .oin{transform-style:preserve-3d;transition:transform calc(.6s / var(--spd)) cubic-bezier(.3,.9,.35,1);}
+  .opt:hover .oin{transform:rotateY(9deg);}
+  .opt[data-op="mul"] .oin{transform:rotateY(-180deg);}
+  .opt[data-op="mul"]:hover .oin{transform:rotateY(-171deg);}
+  .opt .of,.opt .ob{backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--paper);border:1px solid var(--grid);border-radius:2px;padding:0 10px;transition:border-color .3s ease;}
+  .opt .ob{transform:rotateY(-180deg);}
+  /* the cutout: a seamless flap of the plate. seams appear on hover; the word's click turns it, a beat later */
+  .cut{perspective:1100px;border-radius:2px;}
+  .cut.turning{background:var(--desk);}
+  .cut .cin{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform calc(.55s / var(--spd)) cubic-bezier(.3,.85,.35,1) calc(.055s / var(--spd));}
+  .cut[data-op="mul"] .cin{transform:rotateY(-180deg);}
+  .cut .cf,.cut .cb{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--paper);border-radius:2px;}
+  .cut .cb{transform:rotateY(-180deg);}
+  .c1t:hover .opt .of,.c1t:hover .opt .ob{border-color:var(--border);}
+  /* C1 annotations: hover or pin — the plate answers like its neighbours */
+  .c1t{transition:border-color .3s ease,box-shadow .3s ease,transform calc(.4s / var(--spd)) cubic-bezier(.3,1.5,.45,1);}
+  .c1t .ann{opacity:0;transition:opacity calc(.35s / var(--spd)) ease;}
+  .c1t:hover .ann,.c1t[data-on="1"] .ann{opacity:1;}
+  .c1t:hover{border-color:var(--border-strong) !important;transform:perspective(1400px) rotateY(-2.5deg);}
+  .c1t[data-on="1"]{border-color:var(--voice) !important;box-shadow:inset 0 0 0 1px var(--voice);transform:none;}
+  /* A · flip */
+  .vat{perspective:1000px;cursor:pointer;}
+  .nbr{--spd:1;}
+  .vat .in{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform calc(.55s / var(--spd)) cubic-bezier(.3,.85,.35,1);}
+  [data-trig="hover"] .vat:hover .in{transform:rotateY(180deg);}
+  .vat[data-on="1"] .in{transform:rotateY(180deg) !important;}
+  [data-trig="click"] .vat:not([data-on="1"]):hover .in{transform:rotateY(-11deg);transition-timing-function:cubic-bezier(.3,1.25,.45,1);}
+  [data-trig="click"] .vat.sm:not([data-on="1"]):hover .in{transform:rotateY(-20deg);}
+  .fgl{opacity:0;transition:opacity .3s ease;}
+  [data-trig="click"] .vat:hover .fgl{opacity:1;}
+  [data-trig="hover"] .fgl{display:none;}
+  .vat .fc,.vat .bk{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:1px solid var(--border);border-radius:2px;background:var(--paper);padding:9px 11px;display:flex;flex-direction:column;}
+  .vat:hover .fc{border-color:var(--border-strong);}
+  .vat .bk{transform:rotateY(180deg);border-color:var(--border-strong);background:var(--paper2);}
+  /* B · shelf */
+  .vbt{cursor:pointer;transition:border-color .25s ease,transform .22s ease;}
+  .vbt:hover{transform:translateY(-2px);border-color:var(--border-strong) !important;}
+  .vbt[data-on="1"]{border-color:var(--live) !important;box-shadow:0 0 0 1px var(--live);}
+  .vbsh{display:grid;transition:grid-template-rows calc(.45s / var(--spd)) cubic-bezier(.25,.8,.3,1);}
+  /* C · ink */
+  .vct{cursor:pointer;overflow:hidden;transition:transform .22s ease,border-color .22s ease;}
+  .vct:hover{transform:translateY(-2px);border-color:var(--border-strong) !important;}
+  .vct .gl{opacity:0;transition:opacity .3s ease;}
+  .vct:hover .gl{opacity:1;}
+  .vct .inkp{position:absolute;inset:0;background:var(--paper2);border-top:2px solid var(--live);padding:9px 11px;transform:translateY(101%);transition:transform calc(.42s / var(--spd)) cubic-bezier(.25,.85,.3,1);display:flex;flex-direction:column;gap:3px;overflow:auto;}
+  [data-trig="hover"] .vct:hover .inkp{transform:translateY(0);}
+  .vct[data-on="1"] .inkp{transform:translateY(0) !important;}
+  [data-trig="click"] .vct:not([data-on="1"]):hover .inkp{transform:translateY(87%);transition-timing-function:cubic-bezier(.3,1.7,.45,1);}
+  .vct[data-on="1"] .inkp{border-top-color:var(--voice);}
+</style>
+</helmet>
+
+<div class="nbr" data-nb="{{ themeId }}" data-trig="{{ trig }}" style="--spd:{{ spd }};--fs:{{ fs }}px;min-height:100vh;background-color:var(--desk);background-image:var(--deskimg);padding:40px clamp(14px,3.5vw,56px) 90px;color:var(--ink);font-family:var(--serif);">
+<div style="width:min(1160px,100%);margin:0 auto;display:flex;flex-direction:column;gap:56px;">
+
+  <header style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;">
+    <h1 style="margin:0;font-family:var(--disp);font-weight:600;font-size:26px;letter-spacing:-.015em;">Number Planes &middot; Chapter I &mdash; the line</h1>
+    <span style="font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--dim);">PLATES &middot; HOVER TEASES &middot; CLICK FLIPS &middot; C1 LOCKS</span>
+  </header>
+
+  <!-- ============ 1a · FLIP ============ -->
+  <section data-screen-label="§ I — the line">
+    
+    <div data-v="a" style="display:grid;grid-template-columns:repeat(5,208px);grid-template-rows:repeat(3,208px);gap:12px;justify-content:start;">
+      <div class="c1t" data-c1t="a" data-on="{{ pinA }}" style="grid-column:1/4;grid-row:1/4;position:relative;background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;cursor:pointer;">
+        <div style="display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--dim);"><span style="width:6px;height:6px;border-radius:50%;background:var(--live);animation:pr-pulse 2.6s ease-in-out infinite;"></span>C1 &middot; THE LINE
+          <span style="font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:var(--voice);white-space:nowrap;flex:none;">{{ modeWord }}</span>
+          <span style="flex:1;"></span><span class="ann" style="font-family:var(--hand);font-size:calc(var(--fs) - 1px);letter-spacing:0;color:var(--voice);">{{ c1PinHint }}</span></div>
+        <div style="display:flex;align-items:center;gap:18px;margin-top:44px;margin-left:44px;">
+          <div class="opt" data-mode-toggle="" data-op="{{ opAttr }}" style="position:relative;width:305px;height:38px;flex:none;">
+            <div class="oin" style="position:absolute;inset:0;">
+              <div class="of" style="position:absolute;inset:0;display:flex;align-items:center;font-family:var(--disp);font-weight:700;font-size:28px;letter-spacing:.05em;color:var(--live);">ADDITION</div>
+              <div class="ob" style="position:absolute;inset:0;display:flex;align-items:center;font-family:var(--disp);font-weight:700;font-size:28px;letter-spacing:.05em;color:var(--voice);">MULTIPLICATION</div>
+            </div>
+          </div>
+          <span style="font-family:var(--hand);font-size:calc(var(--fs) + 1px);color:var(--dim);">tap the word &mdash; it flips the whole plot. a and b stay put.</span>
+        </div>
+        <svg viewBox="0 0 520 262" style="display:block;width:100%;touch-action:none;user-select:none;">
+          <line x1="18" y1="220" x2="502" y2="220" stroke="var(--dim2)" stroke-width="1.2"></line>
+          <line x1="260" y1="212" x2="260" y2="228" stroke="var(--dim2)" stroke-width="1.2"></line>
+          <defs>
+            <marker id="ahL" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--live)"></path></marker>
+            <marker id="ahV" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--voice)"></path></marker>
+            <marker id="ahI" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"></path></marker>
+          </defs>
+          {{ tickEls }}
+          <g class="ann">{{ tickLabelEls }}</g>
+<!-- a and b: each its own arrow from 0. they never move when the operation flips. -->
+          <line x1="260" y1="158" x2="{{ bX }}" y2="158" stroke="var(--voice)" stroke-width="3.5" marker-end="url(#ahV)"></line>
+          <line x1="260" y1="220" x2="{{ aX }}" y2="220" stroke="var(--live)" stroke-width="3.5" marker-end="url(#ahL)"></line>
+          <g class="ann">{{ topAnnEls }}</g>
+          <circle data-h="a" data-dragel="" onPointerDown="{{ hDown }}" onPointerMove="{{ hMove }}" onPointerUp="{{ hUp }}" cx="{{ aX }}" cy="220" r="13" fill="var(--live-soft)" stroke="var(--live)" stroke-width="1.4" style="cursor:ew-resize;"></circle>
+          <circle data-h="b2" data-dragel="" onPointerDown="{{ hDown }}" onPointerMove="{{ hMove }}" onPointerUp="{{ hUp }}" cx="{{ bX }}" cy="158" r="13" fill="color-mix(in srgb, var(--voice) 16%, transparent)" stroke="var(--voice)" stroke-width="1.4" style="cursor:ew-resize;"></circle>
+        </svg>
+        <div class="cut" data-op="{{ opAttr }}" style="position:relative;flex:1;min-height:0;margin:6px -12px -10px;">
+          <div class="cin">
+            <div class="cf" style="display:flex;flex-direction:column;padding:0 12px 8px;">
+              <svg viewBox="0 262 520 108" style="display:block;width:100%;">
+                <line x1="{{ aX }}" y1="264" x2="{{ aX }}" y2="284" stroke="var(--dim2)" stroke-dasharray="3 3" stroke-width="1"></line>
+                <line x1="260" y1="292" x2="{{ aX }}" y2="292" stroke="var(--live)" stroke-width="3.5" marker-end="url(#ahL)"></line>
+                <line x1="{{ aX }}" y1="306" x2="{{ sX }}" y2="306" stroke="var(--voice)" stroke-width="3.5" marker-end="url(#ahV)"></line>
+                <g class="ann">{{ annEls }}</g>
+              </svg>
+              <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-top:auto;">
+                <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;flex:none;">{{ addSent }}</span>
+                <span class="ann" style="font-family:var(--hand);font-size:calc(var(--fs) + 1px);color:var(--dim);">{{ addCap }}</span>
+              </div>
+            </div>
+            <div class="cb" style="display:flex;flex-direction:column;padding:0 12px 8px;">
+              <svg viewBox="0 262 520 108" style="display:block;width:100%;">
+                <line x1="{{ rX }}" y1="264" x2="{{ rX }}" y2="292" stroke="var(--dim2)" stroke-dasharray="3 3" stroke-width="1"></line>
+                <line x1="260" y1="300" x2="{{ rX }}" y2="300" stroke="var(--ink)" stroke-width="3.5" marker-end="url(#ahI)"></line>
+                <sc-if value="{{ flipped }}" hint-placeholder-val="{{ false }}"><g class="ann">{{ flipEl }}</g></sc-if>
+                <g class="ann">{{ mulAnnEls }}</g>
+              </svg>
+              <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-top:auto;">
+                <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;flex:none;">{{ mulSent }}</span>
+                <span class="ann" style="font-family:var(--hand);font-size:calc(var(--fs) + 1px);color:var(--dim);">{{ mulCap }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <sc-for list="{{ notesA }}" as="n" hint-placeholder-count="4">
+        <div class="vat" data-t="{{ n.id }}" data-on="{{ n.on }}" style="grid-column:{{ n.gc }};grid-row:{{ n.gr }};position:relative;">
+          <div class="in">
+            <div class="fc">
+              <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--dim);">{{ n.id }}</div>
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:15px;color:var(--ink);text-align:center;">{{ n.sym }}</div>
+              <div style="display:flex;align-items:baseline;gap:8px;justify-content:center;">
+                <span style="font-family:var(--hand);font-size:var(--fs);color:var(--dim);">{{ n.cap }}</span>
+                <span class="fgl" style="font-family:var(--hand);font-size:calc(var(--fs) - 2px);color:var(--voice);">{{ n.g }}</span>
+              </div>
+            </div>
+            <div class="bk">
+              <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--voice);">{{ n.id }}</div>
+              <div style="flex:1;display:flex;align-items:center;font-size:14px;line-height:1.5;color:var(--ink);">{{ n.b1 }}</div>
+              <div style="font-family:var(--hand);font-size:calc(var(--fs) - 2px);color:var(--voice);">{{ n.ph }}</div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+      <div style="grid-column:4/6;grid-row:3;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:8px;">
+        <sc-for list="{{ sealsA }}" as="se" hint-placeholder-count="6">
+          <div class="vat sm" data-t="{{ se.id }}" data-on="{{ se.on }}" style="position:relative;height:100%;">
+            <div class="in">
+              <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+                <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">{{ se.sig }}</span>
+                <span style="font-family:var(--hand);font-size:calc(var(--fs) - 3px);color:var(--dim);line-height:1;">{{ se.cap }}</span>
+              </div>
+              <div class="bk" style="padding:6px 7px;">
+                <div style="flex:1;display:flex;align-items:center;font-size:11px;line-height:1.4;color:var(--ink);overflow:hidden;">{{ se.b1 }}</div>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:820},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;observatory&quot;,&quot;manuscript&quot;,&quot;primary&quot;,&quot;blueprint&quot;,&quot;phosphor&quot;],&quot;default&quot;:&quot;observatory&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;},&quot;notesize&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:14,&quot;max&quot;:21,&quot;step&quot;:0.5,&quot;default&quot;:17,&quot;unit&quot;:&quot;px&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Type&quot;},&quot;trigger&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;hover&quot;,&quot;click&quot;],&quot;default&quot;:&quot;click&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Expansion gesture&quot;},&quot;speed&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0.25,&quot;max&quot;:3,&quot;step&quot;:0.25,&quot;default&quot;:0.5,&quot;unit&quot;:&quot;×&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Expansion gesture&quot;}}">
+class Component extends DCLogic {
+  state = { a: 2.5, b: -1.5, mode: 'add', m: 3, k: -1.5, on: { a: {}, b: null, c: {} }, pin: { a: false, b: false, c: false } };
+
+  NOTES = [
+    { id: 'L1', sym: '+ \u00d7', cap: 'a number', g: 'two rules', b1: 'A number is a rule for combining \u2014 two of them: add, and multiply. Fix both and everything else is downstream.', gc: '4', gr: '1' },
+    { id: 'L3', sym: 'a(b+c)', cap: 'demands', g: 'just two', b1: 'A multiply worth the name distributes over +, and has a 1 that changes nothing. Nearly all we ask.', gc: '5', gr: '1' },
+    { id: 'L4', sym: '(\u22121)(\u22121)', cap: 'no choice', g: 'a theorem', b1: 'On the line the demands force the whole table \u2014 the sign rule included. The plane will leave exactly one choice.', gc: '4', gr: '2' },
+    { id: 'AX', sym: 'z \u2212 z = 0', cap: 'fix +', g: 'on purpose', b1: 'Points add like arrows and every move is undoable \u2014 so we hold + still and spend all freedom on \u00d7.', gc: '5', gr: '2' },
+  ];
+  SEALS = [
+    { id: 'fields', sig: '\u00f7', cap: 'fields', b1: 'Systems where you can always divide: \u211a, \u211d, \u2102.' },
+    { id: 'algebra', sig: '\u229a', cap: 'algebra', b1: 'Groups, rings, fields \u2014 the zoo these planes live in.' },
+    { id: 'L5', sig: '\u25c7', cap: 'stretch', b1: 'Stretchable: something multiplies it back to 1.' },
+    { id: 'tropical', sig: 'min', cap: 'tropical', b1: '\u201cAdd\u201d = min \u2014 a world with no undo.' },
+    { id: 'modular', sig: 'mod', cap: 'clock', b1: 'Wrap at n. Prime n: a field. Else: zero divisors.' },
+    { id: 'p-adic', sig: '|\u00b7|\u209a', cap: 'p-adic', b1: 'Close = divisible by a high prime power.' },
+  ];
+
+  componentDidMount() {
+    this._click = (e) => {
+      if (e.target.closest('a') || e.target.closest('[data-dragel]')) return;
+      const mt = e.target.closest('[data-mode-toggle]');
+      if (mt) {
+        const cut = document.querySelector('.cut');
+        if (cut) { cut.classList.add('turning'); clearTimeout(this._cutT); this._cutT = setTimeout(() => cut.classList.remove('turning'), 1400); }
+        this.setState(s => ({ mode: s.mode === 'add' ? 'mul' : 'add' }));
+        return;
+      }
+      const c1 = e.target.closest('[data-c1t]');
+      if (c1) { const v = c1.getAttribute('data-c1t'); this.setState(s => ({ pin: { ...s.pin, [v]: !s.pin[v] } })); return; }
+      const t = e.target.closest('[data-t]');
+      if (!t) return;
+      const vEl = t.closest('[data-v]'); if (!vEl) return;
+      const v = vEl.getAttribute('data-v'), id = t.getAttribute('data-t');
+      this.setState(s => {
+        if (v === 'b') return { on: { ...s.on, b: s.on.b === id ? null : id } };
+        const set = { ...s.on[v] }; if (set[id]) delete set[id]; else set[id] = true;
+        return { on: { ...s.on, [v]: set } };
+      });
+    };
+    document.addEventListener('click', this._click);
+  }
+  componentWillUnmount() { document.removeEventListener('click', this._click); }
+
+  _fmt(v) { let r = Math.round(v * 100) / 100; if (Object.is(r, -0)) r = 0; let s = String(r); if (s[0] === '-') s = '\u2212' + s.slice(1); return s; }
+
+  _hDown = (e) => { this._h = e.currentTarget.getAttribute('data-h'); this._hSvg = e.currentTarget.ownerSVGElement; e.currentTarget.setPointerCapture(e.pointerId); e.preventDefault(); e.stopPropagation(); };
+  _hUp = () => { this._h = null; };
+  _hMove = (e) => {
+    if (!this._h || !this._hSvg) return;
+    const r = this._hSvg.getBoundingClientRect();
+    let v = ((e.clientX - r.left) / r.width * 520 - 260) / 46;
+    v = Math.max(-5, Math.min(5, Math.round(v * 2) / 2));
+    if (this._h === 'a') this.setState({ a: v });
+    else if (this._h === 'b2') this.setState({ b: v });
+  };
+
+  renderVals() {
+    const S = this.state, fmt = v => this._fmt(v);
+    const X = v => 260 + v * 46;
+    const a = S.a, b = S.b, sm = Math.max(-5, Math.min(5, a + b));
+    const T = (x, y, size, fill, txt, anchor) => React.createElement('text', { x, y, textAnchor: anchor || 'middle', fontFamily: 'var(--hand)', fontSize: size, fill }, txt);
+    const topAnnEls = [
+      T((260 + X(a)) / 2, 206, 20, 'var(--live)', 'a = ' + fmt(a)),
+      T((260 + X(b)) / 2, 144, 20, 'var(--voice)', 'b = ' + fmt(b)),
+    ];
+    const annEls = [
+      T((260 + X(a)) / 2, 286, 17, 'var(--live)', 'a'),
+      T((X(a) + X(sm)) / 2, 330, 17, 'var(--voice)', 'b'),
+      T(X(sm), 352, 20, 'var(--ink)', 'a + b = ' + fmt(a + b)),
+    ];
+    // ticks: marks always, integer labels on focus
+    const tickEls = [], tickLabelEls = [];
+    for (let v = -5; v <= 5; v++) {
+      tickEls.push(React.createElement('line', { key: 't' + v, x1: X(v), y1: 214, x2: X(v), y2: 226, stroke: 'var(--dim2)', strokeWidth: v === 0 ? 1.6 : 1 }));
+      tickLabelEls.push(React.createElement('text', { key: 'l' + v, x: X(v), y: 244, textAnchor: 'middle', fontFamily: 'var(--mono)', fontSize: 10.5, fill: v === 0 ? 'var(--dim)' : 'var(--dim2)' }, v < 0 ? '\u2212' + (-v) : String(v)));
+    }
+    // multiply mode — the SAME a and b, nothing changes but the operation
+    const addOn = S.mode === 'add';
+    const rr = Math.max(-5, Math.min(5, a * b));
+    const mulAnnEls = [
+      T((260 + X(rr)) / 2, 326, 21, 'var(--ink)', 'a \u00b7 b = ' + fmt(a * b)),
+      T(X(rr), 354, 17, 'var(--dim)', 'a, stretched by b'),
+    ];
+    const flipEl = T(X(rr) + 34, 290, 18, 'var(--voice)', 'b < 0 \u2014 flipped!');
+    const mk = v => {
+      const isOn = id => v === 'b' ? S.on.b === id : !!S.on[v][id];
+      const ph = id => isOn(id) ? 'tap to flip back' : 'tap to flip';
+      return {
+        notes: this.NOTES.map(n => ({ ...n, on: isOn(n.id) ? '1' : '0', ph: ph(n.id) })),
+        seals: this.SEALS.map(se => ({ ...se, on: isOn(se.id) ? '1' : '0' })),
+      };
+    };
+    const A = mk('a'), B = mk('b'), C = mk('c');
+    const shId = S.on.b;
+    const shN = shId ? (this.NOTES.find(n => n.id === shId) || this.SEALS.find(se => se.id === shId)) : null;
+    const hint = v => S.pin[v] ? 'locked \u2726 \u2014 tap to unlock' : 'hover to read \u00b7 tap to lock';
+    return {
+      themeId: this.props.theme ?? 'observatory',
+      trig: this.props.trigger ?? 'click',
+      spd: String(this.props.speed ?? 0.5),
+      aX: X(a).toFixed(1), bX: X(b).toFixed(1), sX: X(sm).toFixed(1), annEls, topAnnEls,
+      tickEls, tickLabelEls,
+      addOn, mulOn: !addOn,
+      opAttr: addOn ? 'add' : 'mul',
+      fs: String(this.props.notesize ?? 17),
+      modeWord: addOn ? 'MODE: ADDING \u2014 THE ARROW SLIDES' : 'MODE: MULTIPLYING \u2014 THE ARROW STRETCHES',
+      rX: X(rr).toFixed(1), mulAnnEls, flipEl, flipped: b < 0,
+      addSent: 'adding: ' + fmt(a) + ' + ' + fmt(b) + ' = ' + fmt(a + b),
+      mulSent: 'multiplying: ' + fmt(a) + ' \u00d7 ' + fmt(b) + ' = ' + fmt(a * b),
+      addCap: 'a and b each stand from 0 \u2014 the adding happens downstairs, b laid onto a.',
+      mulCap: 'same a, same b \u2014 downstairs now shows a stretched by b. negative b flips it.',
+      hDown: this._hDown, hMove: this._hMove, hUp: this._hUp,
+      pinA: S.pin.a ? '1' : '0', pinB: S.pin.b ? '1' : '0', pinC: S.pin.c ? '1' : '0',
+      c1PinHint: hint('a'), c1PinHintB: hint('b'), c1PinHintC: hint('c'),
+      notesA: A.notes, sealsA: A.seals,
+      notesB: B.notes, sealsB: B.seals,
+      notesC: C.notes, sealsC: C.seals,
+      shelfRows: shN ? '1fr' : '0fr',
+      shT: shN ? (shN.sig ? 'SEAL' : 'NOTE') + ' \u00b7 ' + shId : '',
+      shTitle: shN ? (shN.cap || '') : '', shB1: shN ? shN.b1 : '',
+    };
+  }
+}
+</script>
+</body>
+</html>

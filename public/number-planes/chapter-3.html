@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Number Planes · Chapter III — three worlds</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%235fa8ff' stroke-width='3'/%3E%3Ccircle cx='16' cy='3' r='3' fill='%234cc878'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../guide-theme.css">
+<script src="../guide-skin.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..700;1,6..72,200..700&family=Caveat:wght@400..700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400..700&family=Shadows+Into+Light&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   Chapter III — three worlds. Port of the Claude Design reference
+   (docs/design/notebook-handoff) onto the shared guide theme layer:
+   works with ALL 8 app skins. One operator ×w carries the whole
+   grid; the rails you can count are its real eigenvectors.
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes pr-pulse{0%,100%{opacity:.3}50%{opacity:1}}
+@keyframes pr-orbit{to{offset-distance:100%}}
+@keyframes pr-slide{from{offset-distance:0%}to{offset-distance:100%}}
+html,body{margin:0;padding:0}
+*{box-sizing:border-box}
+.nbr{
+  --desk:color-mix(in srgb, var(--bg) 88%, #000);
+  --deskimg:radial-gradient(120% 90% at 50% -10%,
+    color-mix(in srgb, var(--bg) 88%, var(--fg)) 0%, var(--bg) 55%,
+    color-mix(in srgb, var(--bg) 90%, #000) 100%);
+  --paper:var(--card); --paper2:color-mix(in srgb, var(--card) 93%, var(--fg));
+  --grid:color-mix(in srgb, var(--fg) 7%, transparent);
+  --border:var(--rule); --border-strong:color-mix(in srgb, var(--fg) 34%, transparent);
+  --ink:var(--fg); --dim:var(--muted); --dim2:color-mix(in srgb, var(--muted) 70%, var(--bg));
+  --live:var(--accent2); --live-soft:color-mix(in srgb, var(--accent2) 13%, transparent);
+  --voice:var(--accent); --seal:var(--accent); --seal-fg:var(--bg);
+  --d1:light-dark(#2b57c9, #5fa8ff);
+  --ok:light-dark(#149e57, #4cc878);
+  --d5:light-dark(#bd5f1c, #ff9a5f);
+  --hand:'Caveat',cursive; --serif:'Newsreader',Georgia,serif;
+  --mono:'Space Mono',monospace; --disp:'Space Grotesk',sans-serif;
+  --spd:0.75;
+}
+[data-theme="light"] .nbr{--live:#2f6df0; --voice:#9a4a32; --d1:#3565c8; --ok:#4a7d46; --d5:#b0592a}
+[data-theme="primary"] .nbr{--live:#1f4fd6; --voice:#e63327; --d1:#2b57c9; --ok:#149e57; --d5:#e6731f}
+[data-theme="blueprint"] .nbr{--d1:#c9a8ff; --ok:#7fe0a8; --d5:#ffab7a;
+  --hand:'Shadows Into Light',cursive; --serif:'Space Grotesk',sans-serif}
+[data-theme="phosphor"] .nbr{--d1:#5adcff; --ok:#9dff5a; --d5:#ffa05a;
+  --hand:'VT323',monospace; --serif:'Space Mono',monospace}
+
+/* hub plates: hover reads, click locks */
+.c1t{transition:border-color .3s ease,box-shadow .3s ease,transform calc(.4s / var(--spd)) cubic-bezier(.3,1.5,.45,1)}
+.c1t .ann{opacity:0;transition:opacity calc(.35s / var(--spd)) ease}
+.c1t:hover .ann,.c1t[data-on="1"] .ann{opacity:1}
+.c1t:hover{border-color:var(--border-strong) !important;transform:perspective(1400px) rotateY(-2.5deg)}
+.c1t[data-on="1"]{border-color:var(--voice) !important;box-shadow:inset 0 0 0 1px var(--voice);transform:none}
+/* flip plates */
+.vat{perspective:1000px;cursor:pointer}
+.vat .in{position:relative;width:100%;height:100%;transform-style:preserve-3d;
+  transition:transform calc(.55s / var(--spd)) cubic-bezier(.3,.85,.35,1)}
+.vat[data-on="1"] .in{transform:rotateY(180deg) !important}
+.vat:not([data-on="1"]):hover .in{transform:rotateY(-11deg);transition-timing-function:cubic-bezier(.3,1.25,.45,1)}
+.vat.sm:not([data-on="1"]):hover .in{transform:rotateY(-20deg)}
+/* the gloss — the second voice on a plate. always present (touch has no hover),
+   quiet by default, brightening when the plate is engaged. */
+.fgl{opacity:.62;transition:opacity .3s ease}
+.vat:hover .fgl{opacity:1}
+.vat .fc,.vat .bk{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  border:1px solid var(--border);border-radius:2px;background:var(--paper);padding:9px 11px;
+  display:flex;flex-direction:column}
+.vat:hover .fc{border-color:var(--border-strong)}
+.vat .bk{transform:rotateY(180deg);border-color:var(--border-strong);background:var(--paper2)}
+/* world cards: the three destinations answer the operator */
+.wld{transition:border-color .3s ease,box-shadow .3s ease,opacity .35s ease}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+/* ——— touch: no hover exists, so the hover voices speak on their own ——— */
+@media (hover:none){
+  .fgl{opacity:.85}
+  .c1t .ann{opacity:.9}
+  .c1t:hover{transform:none}
+  .vat:not([data-on="1"]):hover .in,.vat.sm:not([data-on="1"]):hover .in{transform:none}
+}
+/* ——— responsive: below the grid width the plates re-pack ——— */
+.plategrid{display:grid;grid-template-columns:repeat(5,208px);grid-template-rows:repeat(4,208px);
+  gap:12px;justify-content:start}
+.sealgrid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:8px}
+@media (max-width:1140px){
+  .plategrid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:auto;gap:10px}
+  .plategrid>div{grid-column:auto !important;grid-row:auto !important;width:auto;min-height:0}
+  #plateWH{grid-column:1/-1 !important;min-height:620px}
+  #cardCX,#cardDU,#cardSP{grid-column:1/-1 !important}
+  .vat[data-t="FD"]{grid-column:1/-1 !important;height:176px}
+  .sealgrid{grid-column:1/-1 !important;grid-template-rows:none;grid-template-columns:repeat(2,1fr)}
+  /* definite heights: the flip faces live inside a height:100% wrapper, which
+     iOS Safari resolves to 0 against min-height-only boxes */
+  .sealgrid .vat{height:150px !important}
+}
+@media (max-width:700px){#hdrRead{white-space:normal !important;text-align:right}}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="nbr" id="nbr" style="min-height:100vh;background-color:var(--desk);background-image:var(--deskimg);padding:34px clamp(14px,3.5vw,56px) 80px;color:var(--ink);font-family:var(--serif);">
+<div style="width:min(1160px,100%);margin:0 auto;display:flex;flex-direction:column;gap:22px;">
+
+  <header style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;">
+    <h1 style="margin:0;font-family:var(--disp);font-weight:600;font-size:26px;letter-spacing:-.015em;">Number Planes &middot; Chapter III &mdash; three worlds</h1>
+    <span style="font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--dim);">ONE COUNT, THREE FACES &middot; THE RAILS ARE REAL EIGENVECTORS</span>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:14px;">
+      <span id="hdrRead" style="font-family:var(--mono);font-size:11px;color:var(--live);white-space:nowrap;"></span>
+      <span id="skin-picker"></span>
+    </span>
+  </header>
+
+  <div class="plategrid">
+
+    <!-- ══ WH · the operator, live hub 3×3 ══ -->
+    <div class="c1t" id="plateWH" data-c1t="WH" data-on="0" style="grid-column:1/4;grid-row:1/4;position:relative;background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:12px 14px;display:flex;flex-direction:column;cursor:pointer;">
+      <div style="display:flex;align-items:center;gap:4px 10px;font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;color:var(--dim);flex-wrap:wrap;">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--live);animation:pr-pulse 2.6s ease-in-out infinite;flex:none;"></span><span style="white-space:nowrap;">WH &middot; THE OPERATOR &mdash; &times;w CARRIES THE GRID</span>
+        <span style="flex:1;"></span>
+        <span style="font-family:var(--hand);font-size:15px;letter-spacing:0;color:var(--voice);">j&sup2; =</span>
+        <button data-pset="-1" class="pchip" style="font-family:var(--mono);font-size:10.5px;border:1px solid var(--border);border-radius:3px;padding:2px 8px;">&minus;1</button>
+        <button data-pset="0" class="pchip" style="font-family:var(--mono);font-size:10.5px;border:1px solid var(--border);border-radius:3px;padding:2px 8px;">0</button>
+        <button data-pset="1" class="pchip" style="font-family:var(--mono);font-size:10.5px;border:1px solid var(--border);border-radius:3px;padding:2px 8px;">+1</button>
+        <span class="ann" id="whHint" style="font-family:var(--hand);font-size:14px;letter-spacing:0;color:var(--voice);white-space:nowrap;">hover to read &middot; tap to lock</span>
+      </div>
+      <svg id="psl" viewBox="0 0 600 30" style="display:block;width:100%;margin-top:6px;touch-action:none;cursor:pointer;user-select:none;flex:none;">
+        <line x1="14" y1="15" x2="300" y2="15" stroke="var(--d1)" stroke-width="4" stroke-linecap="round" opacity=".55"></line>
+        <line x1="300" y1="15" x2="586" y2="15" stroke="var(--d5)" stroke-width="4" stroke-linecap="round" opacity=".55"></line>
+        <circle cx="300" cy="15" r="3.5" fill="var(--ok)"></circle>
+        <g id="pTicks"></g>
+        <circle id="pk1" cx="157" cy="15" r="9" fill="var(--paper2)" stroke="var(--d1)" stroke-width="2.4"></circle>
+        <circle id="pk2" cx="157" cy="15" r="2.5" fill="var(--d1)"></circle>
+      </svg>
+      <svg id="opPlot" viewBox="-175 -175 350 350" style="display:block;width:100%;flex:1;min-height:0;touch-action:none;user-select:none;">
+        <defs>
+          <marker id="ah3L" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--live)"></path></marker>
+          <marker id="ah3V" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--voice)"></path></marker>
+        </defs>
+        <path id="ogv" fill="none" stroke="var(--grid)" stroke-width="1"></path>
+        <path id="ogh" fill="none" stroke="var(--grid)" stroke-width="1"></path>
+        <line x1="-175" y1="0" x2="175" y2="0" stroke="var(--dim2)" stroke-width="1"></line>
+        <line x1="0" y1="-175" x2="0" y2="175" stroke="var(--dim2)" stroke-width="1"></line>
+        <path id="tgv" fill="none" stroke="color-mix(in srgb, var(--dim) 45%, transparent)" stroke-width="1.1"></path>
+        <path id="tgh" fill="none" stroke="color-mix(in srgb, var(--dim) 45%, transparent)" stroke-width="1.1"></path>
+        <path id="rails" fill="none" stroke-width="1.8" stroke-dasharray="7 5" opacity=".8"></path>
+        <path d="M 0 0 L 40 0 L 40 -40 L 0 -40 Z" fill="none" stroke="var(--dim2)" stroke-width="1.4"></path>
+        <path id="sq" fill="color-mix(in srgb, var(--voice) 9%, transparent)" stroke="var(--voice)" stroke-width="2.4"></path>
+        <line id="wjArr" x1="0" y1="0" stroke="var(--voice)" stroke-width="2.4" marker-end="url(#ah3V)"></line>
+        <line id="wArr" x1="0" y1="0" stroke="var(--live)" stroke-width="3" marker-end="url(#ah3L)"></line>
+        <g id="opLabels"></g>
+        <circle id="hw" r="12" fill="var(--live-soft)" stroke="var(--live)" stroke-width="1.4" style="cursor:grab;"></circle>
+      </svg>
+      <div style="display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;">
+        <span id="wRead" style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;"></span>
+        <span style="display:grid;grid-template-columns:auto auto;gap:1px 10px;padding:3px 10px;border-left:2px solid var(--dim2);border-right:2px solid var(--dim2);border-radius:5px;justify-items:center;font-family:var(--mono);font-size:12px;color:var(--ink);">
+          <span id="m11"></span><span id="m12" style="color:var(--live);font-weight:700;"></span>
+          <span id="m21"></span><span id="m22"></span>
+        </span>
+        <span id="eigLine" style="font-style:italic;font-size:14px;color:var(--ink);"></span>
+        <span class="ann" style="font-family:var(--hand);font-size:15px;color:var(--dim);">drag w &mdash; 1 &#8614; w, j &#8614; w&middot;j, and the unit square rides along. the dashed rails are the lines it cannot leave.</span>
+      </div>
+    </div>
+
+    <!-- ══ CX · the complex world ══ -->
+    <div class="wld" id="cardCX" data-pworld="-1" style="grid-column:4/6;grid-row:1;position:relative;border:1px solid var(--d1);border-radius:2px;background:var(--paper);padding:9px 12px;display:flex;gap:12px;align-items:center;cursor:pointer;">
+      <svg viewBox="-46 -46 92 92" style="display:block;height:88px;width:88px;flex:none;">
+        <line x1="-42" y1="0" x2="42" y2="0" stroke="var(--dim2)" stroke-width="1"></line>
+        <line x1="0" y1="-42" x2="0" y2="42" stroke="var(--dim2)" stroke-width="1"></line>
+        <circle cx="0" cy="0" r="30" fill="none" stroke="var(--d1)" stroke-width="2.2"></circle>
+        <circle cx="30" cy="0" r="2.5" fill="var(--ink)"></circle>
+        <circle r="4" fill="var(--d1)" style="offset-path:path('M 30 0 A 30 30 0 1 1 -30 0 A 30 30 0 1 1 30 0');animation:pr-orbit 7s linear infinite;"></circle>
+      </svg>
+      <div style="min-width:0;">
+        <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--d1);">CX &middot; p &lt; 0 &middot; 0 RAILS</div>
+        <div style="font-style:italic;font-size:17px;color:var(--ink);">the complex plane</div>
+        <div style="font-family:var(--hand);font-size:15px;color:var(--dim);">multiply = turn &middot; the one field</div>
+        <div id="cxHere" style="font-family:var(--hand);font-size:14px;color:var(--d1);display:none;">&#10022; the operator is here now</div>
+      </div>
+    </div>
+
+    <!-- ══ DU · the dual world ══ -->
+    <div class="wld" id="cardDU" data-pworld="0" style="grid-column:4/6;grid-row:2;position:relative;border:1px solid var(--ok);border-radius:2px;background:var(--paper);padding:9px 12px;display:flex;gap:12px;align-items:center;cursor:pointer;">
+      <svg viewBox="-46 -46 92 92" style="display:block;height:88px;width:88px;flex:none;">
+        <line x1="-42" y1="0" x2="42" y2="0" stroke="var(--dim2)" stroke-width="1"></line>
+        <line x1="0" y1="-42" x2="0" y2="42" stroke="var(--ok)" stroke-width="1.4" stroke-dasharray="5 4"></line>
+        <line x1="30" y1="-42" x2="30" y2="42" stroke="var(--ok)" stroke-width="2.2"></line>
+        <line x1="-30" y1="-42" x2="-30" y2="42" stroke="var(--ok)" stroke-width="2.2"></line>
+        <circle cx="30" cy="0" r="2.5" fill="var(--ink)"></circle>
+        <circle r="4" fill="var(--ok)" style="offset-path:path('M 30 34 L 30 -34');animation:pr-slide 3s ease-in-out infinite alternate;"></circle>
+      </svg>
+      <div style="min-width:0;">
+        <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--ok);">DU &middot; p = 0 &middot; 1 RAIL</div>
+        <div style="font-style:italic;font-size:17px;color:var(--ink);">the dual plane</div>
+        <div style="font-family:var(--hand);font-size:15px;color:var(--dim);">multiply = shear &middot; &epsilon;&sup2; = 0</div>
+        <div id="duHere" style="font-family:var(--hand);font-size:14px;color:var(--ok);display:none;">&#10022; the operator is here now</div>
+      </div>
+    </div>
+
+    <!-- ══ SP · the split world ══ -->
+    <div class="wld" id="cardSP" data-pworld="1" style="grid-column:4/6;grid-row:3;position:relative;border:1px solid var(--d5);border-radius:2px;background:var(--paper);padding:9px 12px;display:flex;gap:12px;align-items:center;cursor:pointer;">
+      <svg viewBox="-46 -46 92 92" style="display:block;height:88px;width:88px;flex:none;">
+        <line x1="-42" y1="0" x2="42" y2="0" stroke="var(--dim2)" stroke-width="1"></line>
+        <line x1="0" y1="-42" x2="0" y2="42" stroke="var(--dim2)" stroke-width="1"></line>
+        <line x1="-40" y1="-40" x2="40" y2="40" stroke="var(--d5)" stroke-width="1.4" stroke-dasharray="5 4"></line>
+        <line x1="-40" y1="40" x2="40" y2="-40" stroke="var(--d5)" stroke-width="1.4" stroke-dasharray="5 4"></line>
+        <path d="M 40 -34 Q 24 0 40 34" fill="none" stroke="var(--d5)" stroke-width="2.2"></path>
+        <path d="M -40 -34 Q -24 0 -40 34" fill="none" stroke="var(--d5)" stroke-width="2.2"></path>
+        <circle cx="30" cy="0" r="2.5" fill="var(--ink)"></circle>
+        <circle r="4" fill="var(--d5)" style="offset-path:path('M 40 34 Q 24 0 40 -34');animation:pr-slide 3.6s ease-in-out infinite alternate;"></circle>
+      </svg>
+      <div style="min-width:0;">
+        <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--d5);">SP &middot; p &gt; 0 &middot; 2 RAILS</div>
+        <div style="font-style:italic;font-size:17px;color:var(--ink);">the split plane</div>
+        <div style="font-family:var(--hand);font-size:15px;color:var(--dim);">multiply = squeeze &middot; a boost</div>
+        <div id="spHere" style="font-family:var(--hand);font-size:14px;color:var(--d5);display:none;">&#10022; the operator is here now</div>
+      </div>
+    </div>
+
+    <!-- ══ FD · only one is a field ══ -->
+    <div class="vat" data-t="FD" data-on="0" style="grid-column:1/3;grid-row:4;position:relative;">
+      <div class="in">
+        <div class="fc" style="justify-content:center;gap:5px;">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--dim);">FD &middot; THE CLAIM</div>
+          <div style="font-style:italic;font-size:19px;color:var(--ink);">only one is a field</div>
+          <div style="font-family:var(--hand);font-size:15px;color:var(--dim);">only the complex plane always divides &mdash; the other two carry zero divisors.</div>
+          <span class="fgl" style="font-family:var(--hand);font-size:14px;color:var(--voice);">the norm decides it</span>
+        </div>
+        <div class="bk" style="justify-content:center;gap:5px;">
+          <div style="font-family:var(--mono);font-size:8px;letter-spacing:.2em;color:var(--voice);">FD</div>
+          <div style="font-size:12.5px;line-height:1.5;color:var(--ink);">The norm N&#8346; = x&sup2; &minus; p&middot;y&sup2; is positive-definite only for p &lt; 0 &mdash; there the sole non-unit is 0, so it is a field. p = 0 is degenerate, p &gt; 0 indefinite: both carry zero divisors. Demand a field and the dial is forced to &minus;1.</div>
+          <div style="font-family:var(--hand);font-size:13px;color:var(--voice);">tap to flip back</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ the sealed orbs · where each world works ══ -->
+    <div class="sealgrid" style="grid-column:3/6;grid-row:4;">
+      <div class="vat sm" data-t="matrices" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">[ ]</span>
+            <span style="font-family:var(--hand);font-size:13px;color:var(--dim);line-height:1;text-align:center;">matrices</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;">
+            <div style="flex:1;display:flex;align-items:center;font-size:10.5px;line-height:1.4;color:var(--ink);overflow:hidden;">a + bj is the real matrix [a &nbsp;pb; b &nbsp;a] &mdash; the grid-carrier you just dragged.</div>
+          </div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="analysis" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">&#8750;</span>
+            <span style="font-family:var(--hand);font-size:13px;color:var(--dim);line-height:1;text-align:center;">analysis</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;">
+            <div style="flex:1;display:flex;align-items:center;font-size:10.5px;line-height:1.4;color:var(--ink);overflow:hidden;">Multiplication as rotation makes differentiable maps conformal &mdash; Cauchy, residues, the lot.</div>
+          </div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="autodiff" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">&epsilon;&prime;</span>
+            <span style="font-family:var(--hand);font-size:13px;color:var(--dim);line-height:1;text-align:center;">autodiff</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;">
+            <div style="flex:1;display:flex;align-items:center;font-size:10.5px;line-height:1.4;color:var(--ink);overflow:hidden;">Carry &epsilon; with &epsilon;&sup2; = 0 and the &epsilon;-part is the exact derivative. Modern ML runs on it.</div>
+          </div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="relativity" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:7.5px;font-weight:700;">x&sup2;&minus;t&sup2;</span>
+            <span style="font-family:var(--hand);font-size:13px;color:var(--dim);line-height:1;text-align:center;">relativity</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;">
+            <div style="flex:1;display:flex;align-items:center;font-size:10.5px;line-height:1.4;color:var(--ink);overflow:hidden;">The split squeeze is a Lorentz boost; x&sup2; &minus; t&sup2; is the spacetime interval.</div>
+          </div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="higher" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">4&middot;8</span>
+            <span style="font-family:var(--hand);font-size:13px;color:var(--dim);line-height:1;text-align:center;">go higher?</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;">
+            <div style="flex:1;display:flex;align-items:center;font-size:10.5px;line-height:1.4;color:var(--ink);overflow:hidden;">Stretchable systems exist only in dim 1, 2, 4, 8: &#8477;, &#8450;, &#8461;, &#120558; &mdash; then it stops.</div>
+          </div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="cayley-dickson" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">&times;2</span>
+            <span style="font-family:var(--hand);font-size:13px;color:var(--dim);line-height:1;text-align:center;">doubling</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;">
+            <div style="flex:1;display:flex;align-items:center;font-size:10.5px;line-height:1.4;color:var(--ink);overflow:hidden;">&#8477; &rarr; &#8450; &rarr; &#8461; &rarr; &#120558;: each doubles the last, losing one property a step.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="font-family:var(--hand);font-size:16px;color:var(--dim);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;">count the rails and you have named the plane &mdash; 0 turns, 1 shears, 2 squeeze.
+    <a href="chapter-2.html" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">&larr; chapter II</a>
+    &middot; <a href="./" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">the cover</a>
+    &middot; <a href="cards/" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">the cards</a>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ═══════ Chapter III — the operator ×w and its three worlds ═══════ */
+const $=id=>document.getElementById(id);
+const S={p:-1, oa:0.9, ob:0.7};
+
+const fmt=v=>{let r=Math.round(v*100)/100; if(Object.is(r,-0)) r=0;
+  let s=String(r); if(s[0]==='-') s='−'+s.slice(1); return s;};
+const NS='http://www.w3.org/2000/svg';
+const touchOnly=matchMedia('(hover: none)').matches;
+const LOCK_HINT=touchOnly?'tap to pin the notes':'hover to read · tap to lock';
+function txt(g,x,y,size,fill,str,mono,anchor){
+  const t=document.createElementNS(NS,'text');
+  t.setAttribute('x',x); t.setAttribute('y',y);
+  t.setAttribute('text-anchor',anchor||'middle');
+  t.setAttribute('font-family',mono?'var(--mono)':'var(--hand)');
+  t.setAttribute('font-size',size); t.setAttribute('fill',fill);
+  t.textContent=str; g.appendChild(t); return t;
+}
+
+/* ticks under the slider */
+(function(){const g=$('pTicks');
+  for(const m of [-2,-1,0,1,2]){const x=300+m*143;
+    const l=document.createElementNS(NS,'line');
+    l.setAttribute('x1',x);l.setAttribute('x2',x);l.setAttribute('y1',9);l.setAttribute('y2',21);
+    l.setAttribute('stroke','var(--dim2)');l.setAttribute('stroke-width','1.2');g.appendChild(l);
+    txt(g,x,30,9,'var(--dim2)',(m<0?'−'+(-m):'+'+m),true);
+  }})();
+
+function setP(v){ S.p=v; render(); }
+
+function render(){
+  const p=Math.max(-2,Math.min(2,S.p));
+  const neg=p<-.001, pos=p>.001, zero=!neg&&!pos;
+  const pColor=neg?'var(--d1)':pos?'var(--d5)':'var(--ok)';
+  const planeName=neg?'the complex plane':pos?'the split plane':'the dual plane';
+  const a=S.oa, b=S.ob;
+
+  /* eigenvalues of ×w — the rails are the real ones */
+  let eig, orail;
+  if(neg){const s=Math.sqrt(-p); eig='λ = '+fmt(a)+' ± '+fmt(b*s)+'i — not real: it must turn.'; orail='0 RAILS — A SPIN';}
+  else if(pos){const s=Math.sqrt(p); eig='λ = '+fmt(a+b*s)+', '+fmt(a-b*s)+' — two real: two stretches.'; orail='2 RAILS — A SQUEEZE';}
+  else {eig='λ = '+fmt(a)+', '+fmt(a)+' — one, repeated: it slides.'; orail='1 RAIL — A SHEAR';}
+
+  $('hdrRead').textContent='j² = '+fmt(p)+' · '+planeName+' · '+orail;
+  $('eigLine').textContent=eig;
+
+  /* chips */
+  document.querySelectorAll('.pchip').forEach(ch=>{
+    const v=parseFloat(ch.dataset.pset);
+    const on=(v===-1&&neg)||(v===0&&zero)||(v===1&&pos);
+    const col=v===-1?'var(--d1)':v===0?'var(--ok)':'var(--d5)';
+    ch.style.color=on?col:'var(--ink)';
+    ch.style.background=on?'var(--live-soft)':'var(--grid)';
+    ch.style.borderColor=on?col:'var(--border)';
+  });
+
+  /* slider knob */
+  const kx=Math.max(14,Math.min(586,300+p*143));
+  $('pk1').setAttribute('cx',kx); $('pk2').setAttribute('cx',kx);
+  $('pk1').setAttribute('stroke',pColor); $('pk2').setAttribute('fill',pColor);
+
+  /* the operator carries the grid: 1 ↦ (a,b), j ↦ (pb,a) */
+  const Mx=(x,y)=>(a*x+p*b*y)*40, My=(x,y)=>-(b*x+a*y)*40;
+  let ogv='', ogh='', tgv='', tgh='';
+  for(let g=-3;g<=3;g++){
+    ogv+='M '+(g*40)+' -160 L '+(g*40)+' 160 ';
+    ogh+='M -160 '+(-g*40)+' L 160 '+(-g*40)+' ';
+    tgv+='M '+Mx(g,-3.6).toFixed(1)+' '+My(g,-3.6).toFixed(1)+' L '+Mx(g,3.6).toFixed(1)+' '+My(g,3.6).toFixed(1)+' ';
+    tgh+='M '+Mx(-3.6,g).toFixed(1)+' '+My(-3.6,g).toFixed(1)+' L '+Mx(3.6,g).toFixed(1)+' '+My(3.6,g).toFixed(1)+' ';
+  }
+  $('ogv').setAttribute('d',ogv); $('ogh').setAttribute('d',ogh);
+  $('tgv').setAttribute('d',tgv); $('tgh').setAttribute('d',tgh);
+  const c1=[Mx(1,0),My(1,0)], c2=[Mx(1,1),My(1,1)], c3=[Mx(0,1),My(0,1)];
+  $('sq').setAttribute('d','M 0 0 L '+c1[0].toFixed(1)+' '+c1[1].toFixed(1)+' L '+c2[0].toFixed(1)+' '+c2[1].toFixed(1)+' L '+c3[0].toFixed(1)+' '+c3[1].toFixed(1)+' Z');
+  let rails='';
+  if(pos){const s=Math.sqrt(p);
+    rails='M '+(-170*s).toFixed(1)+' 170 L '+(170*s).toFixed(1)+' -170 M '+(-170*s).toFixed(1)+' -170 L '+(170*s).toFixed(1)+' 170';}
+  else if(zero){rails='M 0 -170 L 0 170';}
+  $('rails').setAttribute('d',rails); $('rails').setAttribute('stroke',pColor);
+
+  const wX=(a*40).toFixed(1), wY=(-b*40).toFixed(1);
+  const wjX=(p*b*40).toFixed(1), wjY=(-a*40).toFixed(1);
+  $('wArr').setAttribute('x2',wX); $('wArr').setAttribute('y2',wY);
+  $('wjArr').setAttribute('x2',wjX); $('wjArr').setAttribute('y2',wjY);
+  $('hw').setAttribute('cx',wX); $('hw').setAttribute('cy',wY);
+  const ol=$('opLabels'); ol.innerHTML='';
+  txt(ol,parseFloat(wX)+12,parseFloat(wY)-9,16,'var(--live)','w',false,'start');
+  txt(ol,parseFloat(wjX)+12,parseFloat(wjY)-7,15,'var(--voice)','w·j',false,'start');
+
+  $('wRead').textContent='w = '+fmt(a)+' + '+fmt(b)+' j';
+  $('m11').textContent=fmt(a); $('m12').textContent=fmt(p*b);
+  $('m21').textContent=fmt(b); $('m22').textContent=fmt(a);
+
+  /* the three worlds answer */
+  const setCard=(id,hereId,on,col)=>{
+    const el=$(id);
+    el.style.border=(on?'2px':'1px')+' solid '+col;
+    el.style.boxShadow=on?'0 0 0 2px color-mix(in srgb, '+col+' 28%, transparent)':'none';
+    el.style.opacity=on?'1':'.66';
+    $(hereId).style.display=on?'':'none';
+  };
+  setCard('cardCX','cxHere',neg,'var(--d1)');
+  setCard('cardDU','duHere',zero,'var(--ok)');
+  setCard('cardSP','spHere',pos,'var(--d5)');
+}
+
+/* ——— clicks: chips, world cards, hub lock, plate flips ——— */
+document.addEventListener('click',e=>{
+  if(e.target.closest('a')||e.target.closest('[data-dragel]')) return;
+  const ps=e.target.closest('[data-pset]');
+  if(ps){setP(parseFloat(ps.dataset.pset)); return;}
+  const w=e.target.closest('[data-pworld]');
+  if(w){setP(parseFloat(w.dataset.pworld)); return;}
+  const c1=e.target.closest('[data-c1t]');
+  if(c1){c1.dataset.on=c1.dataset.on==='1'?'0':'1';
+    $('whHint').textContent=c1.dataset.on==='1'?'locked ✦ — tap to unlock':LOCK_HINT;
+    return;}
+  const t=e.target.closest('[data-t]');
+  if(t){t.dataset.on=t.dataset.on==='1'?'0':'1';}
+});
+
+/* ——— the j² slider (sticky at −1 · 0 · +1) ——— */
+let pd=false;
+const psl=$('psl');
+function setFromSlider(e){
+  const r=psl.getBoundingClientRect();
+  const x=(e.clientX-r.left)/r.width*600;
+  let p=(x-300)/143;
+  p=Math.max(-2,Math.min(2,p));
+  for(const m of [-1,0,1]) if(Math.abs(p-m)<.09){p=m;break;}
+  setP(Math.round(p*100)/100);
+}
+psl.setAttribute('data-dragel','');
+psl.addEventListener('pointerdown',e=>{pd=true;psl.setPointerCapture(e.pointerId);setFromSlider(e);e.preventDefault();});
+psl.addEventListener('pointermove',e=>{if(pd)setFromSlider(e);});
+addEventListener('pointerup',()=>{pd=false;});
+
+/* ——— drag w: the operator itself ——— */
+let wd=false; const opPlot=$('opPlot'), hw=$('hw');
+hw.setAttribute('data-dragel','');
+hw.addEventListener('pointerdown',e=>{wd=true;hw.setPointerCapture(e.pointerId);e.preventDefault();e.stopPropagation();});
+hw.addEventListener('pointermove',e=>{
+  if(!wd) return;
+  const r=opPlot.getBoundingClientRect();
+  let x=((e.clientX-r.left)/r.width*350-175)/40;
+  let y=(-((e.clientY-r.top)/r.height*350-175))/40;
+  x=Math.max(-3.2,Math.min(3.2,Math.round(x*20)/20));
+  y=Math.max(-3.2,Math.min(3.2,Math.round(y*20)/20));
+  S.oa=x; S.ob=y; render();
+});
+hw.addEventListener('pointerup',()=>{wd=false;});
+
+/* expose for headless verification */
+window.__ch3={get:()=>({...S}), setP};
+$('whHint').textContent=LOCK_HINT;
+render();
+</script>
+</body>
+</html>
