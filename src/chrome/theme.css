@@ -594,6 +594,20 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
 .am-gcard:hover .am-gcard-open { opacity: 1; transform: none; }
 .am-gal-foot { padding: 0 40px 40px; font-family: var(--font-mono); font-size: 11px; color: var(--dim-2); letter-spacing: .04em; }
 
+/* Storeroom — parked/retired cards, de-emphasized below the main lineup. */
+.am-gal-storeroom { border-top: 1px solid var(--border); margin: 0 40px 48px; padding-top: 18px; }
+.am-gal-store-toggle {
+  font: inherit; font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--dim); background: none; border: none; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px; padding: 4px 0;
+}
+.am-gal-store-toggle:hover { color: var(--fg); }
+.am-gal-store-chev { display: inline-flex; transition: transform .18s var(--ease); }
+.am-gal-store-chev.am-open { transform: rotate(90deg); }
+.am-gal-store-note { font-size: 12.5px; color: var(--dim); margin: 8px 0 2px; max-width: 60ch; }
+.am-gal-grid-stored { padding: 14px 0 8px; opacity: .82; }
+.am-gal-grid-stored .am-gcard { background: var(--panel); }
+
 @keyframes am-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes am-pop { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
 @keyframes am-slideup { from { transform: translateY(100%); } to { transform: none; } }
@@ -944,6 +958,7 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
   .am-gal-filters { padding: 14px 20px 4px; }
   .am-gal-grid { grid-template-columns: 1fr; padding: 14px 20px 30px; gap: 14px; }
   .am-gal-foot { padding: 0 20px 28px; }
+  .am-gal-storeroom { margin: 0 20px 30px; }
   .am-titlewrap .am-sub { display: none; }
   /* backdrop blur over a live canvas re-blurs every composited frame —
      too costly on phone GPUs, so the floating bars go solid here */

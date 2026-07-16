@@ -55,6 +55,7 @@ const ROUTES = [
   // mini-sim canvases — not one full-viewport WebGL scene — so the dead-frame
   // check doesn't apply (the WebGL Observatory is #/trinary, checked above).
   { hash: '#/trinary-lab', webgl: false },
+  { hash: '#/division-bells', webgl: false },          // DOM/SVG plane, no WebGL
   { hash: '#/embed/complex-particles', webgl: true },
   { hash: '#/embed/plane-transform', webgl: true },
 ];

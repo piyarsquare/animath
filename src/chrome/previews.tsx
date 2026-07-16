@@ -14,7 +14,7 @@ import { resolveScheme, type ThemeMode } from './skins';
  */
 export type PreviewKind =
   | 'particles' | 'plane' | 'fractal' | 'julia'
-  | 'trinary' | 'sorting' | 'matrix' | 'polygon' | 'treenet' | 'solid' | 'skellam';
+  | 'trinary' | 'sorting' | 'matrix' | 'polygon' | 'treenet' | 'solid' | 'skellam' | 'divergence';
 
 type DrawFn = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
 
@@ -882,6 +882,74 @@ function SkellamPreview({ light }: { light: boolean }) {
   return <canvas ref={ref} style={canvasStyle} />;
 }
 
+/* ---- Division Bells: two facing bell-curve profiles, gap lit between them --- */
+/* An homage to the "Division Bell" cover — two great facing heads whose negative
+   space reads as a third face. Here the heads are two Gaussians P (data-1) and
+   Q (data-2) rising from a dusk horizon; they breathe apart and together, and the
+   gap between their inner slopes glows — that gap IS the divergence the app measures. */
+function DivergencePreview({ light }: { light: boolean }) {
+  const ref = useCanvas((ctx, W, H, t) => {
+    const ink = themeInk(light);
+    const cs = typeof document !== 'undefined' ? getComputedStyle(document.documentElement) : null;
+    const d1 = (cs?.getPropertyValue('--data-1').trim()) || (light ? '#2b5f9e' : '#6aa8ff');
+    const d2 = (cs?.getPropertyValue('--data-2').trim()) || (light ? '#b0641a' : '#ffab52');
+
+    // dusk sky: the skin bg with a soft glow pooling on the horizon
+    ctx.fillStyle = ink.bg;
+    ctx.fillRect(0, 0, W, H);
+    const baseY = H * 0.78;
+    const glow = ctx.createLinearGradient(0, H * 0.1, 0, baseY);
+    glow.addColorStop(0, withAlpha(ink.bg, 0));
+    glow.addColorStop(1, withAlpha(ink.accent, light ? 0.1 : 0.16));
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, baseY);
+
+    // two bells breathe apart and together
+    const sep = W * (0.17 + 0.045 * Math.sin(t * 0.5));
+    const cx1 = W / 2 - sep, cx2 = W / 2 + sep;
+    const amp = H * 0.44, sw = W * 0.115;
+    const bell = (cx: number) => (x: number) => baseY - amp * Math.exp(-((x - cx) ** 2) / (2 * sw * sw));
+
+    // the gap between the inner slopes glows — the "third face" / the divergence
+    const gap = ctx.createLinearGradient(cx1, 0, cx2, 0);
+    gap.addColorStop(0, withAlpha(ink.accent2, 0));
+    gap.addColorStop(0.5, withAlpha(ink.accent2, light ? 0.34 : 0.5));
+    gap.addColorStop(1, withAlpha(ink.accent2, 0));
+    ctx.fillStyle = gap;
+    ctx.fillRect(cx1, H * 0.12, cx2 - cx1, baseY - H * 0.12);
+
+    // fill each bell as a silhouette rising from the horizon
+    const drawBell = (cx: number, col: string) => {
+      const f = bell(cx);
+      ctx.beginPath();
+      ctx.moveTo(cx - W * 0.5, baseY);
+      for (let x = cx - W * 0.5; x <= cx + W * 0.5; x += 3) ctx.lineTo(x, f(x));
+      ctx.lineTo(cx + W * 0.5, baseY);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(0, baseY - amp, 0, baseY);
+      g.addColorStop(0, withAlpha(col, light ? 0.85 : 0.92));
+      g.addColorStop(1, withAlpha(col, light ? 0.55 : 0.6));
+      ctx.fillStyle = g;
+      ctx.fill();
+    };
+    // clip each to its own half so the two silhouettes face across the gap
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, W / 2, H); ctx.clip();
+    drawBell(cx1, d1);
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath(); ctx.rect(W / 2, 0, W / 2, H); ctx.clip();
+    drawBell(cx2, d2);
+    ctx.restore();
+
+    // the horizon (no apex markers — a bell curve's peak should stay smooth)
+    ctx.strokeStyle = withAlpha(ink.dim, 0.45);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, baseY + 0.5); ctx.lineTo(W, baseY + 0.5); ctx.stroke();
+  }, [light]);
+  return <canvas ref={ref} style={canvasStyle} />;
+}
+
 export function Preview({ kind, skin, mode = 'native' }: { kind: PreviewKind; skin: string; mode?: ThemeMode }) {
   const light = resolveScheme(skin, mode) === 'light';
   switch (kind) {
@@ -895,6 +963,7 @@ export function Preview({ kind, skin, mode = 'native' }: { kind: PreviewKind; sk
     case 'treenet': return <TreeNetPreview light={light} />;
     case 'solid': return <SolidPreview light={light} />;
     case 'skellam': return <SkellamPreview light={light} />;
+    case 'divergence': return <DivergencePreview light={light} />;
     default: return <ParticlePreview light={light} />;
   }
 }

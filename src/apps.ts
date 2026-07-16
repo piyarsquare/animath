@@ -82,6 +82,13 @@ export const apps: AppDescriptor[] = [
     blurb: 'Why does a Bessel function show up when you take the difference of two Poisson counts? Walk the diagonal of the (gains, losses) lattice and watch the scary function become a simple sum — the Skellam distribution, demystified.',
   },
 
+  {
+    hash: '/division-bells',
+    name: 'Division Bells',
+    icon: '◗',
+    blurb: 'Two facing bell curves — drag them apart and watch how far apart they really are, by Mahalanobis separation and Kullback–Leibler divergence. When their shapes match, KL is exactly ½ the Mahalanobis distance squared.',
+  },
+
   // ---- Plane-arithmetic pair (grouped at the end; see the header note) -------
   {
     hash: '/plane-transform',

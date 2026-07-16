@@ -14,9 +14,26 @@ import { rollHeroVerbs } from './heroVerbs';
  */
 export default function Gallery() {
   const [cat, setCat] = useState<(typeof CATEGORIES)[number]>('All');
+  const [storeOpen, setStoreOpen] = useState(false);
   const [skin] = useSkin();
   const mode = useThemeModeId();
-  const cards = CARDS.filter(c => cat === 'All' || c.cat === cat);
+  // Storeroom cards are out of the main grid and the category filter — parked,
+  // but still reachable from the de-emphasized section at the bottom.
+  const cards = CARDS.filter(c => !c.storeroom && (cat === 'All' || c.cat === cat));
+  const stored = CARDS.filter(c => c.storeroom);
+  const mainCount = CARDS.filter(c => !c.storeroom).length;
+
+  const renderCard = (a: (typeof CARDS)[number]) => (
+    <button key={a.id} className="am-gcard" onClick={() => { window.location.hash = '#' + a.hash; }}>
+      <div className="am-gcard-viz"><Preview kind={a.kind} skin={skin} mode={mode} /></div>
+      <div className="am-gcard-body">
+        <div className="am-gcard-cat">{a.cat}</div>
+        <div className="am-gcard-name"><span className="am-gcard-glyph">{a.glyph}</span> {a.name}</div>
+        <div className="am-gcard-blurb">{a.blurb}</div>
+        <div className="am-gcard-open">Open workspace <Icon name="chevron" size={13} /></div>
+      </div>
+    </button>
+  );
   // Randomized hero verbs — three drawn per load, the strangest one last.
   // Clicking the headline rerolls them (a quiet easter egg), cross-fading
   // unless the visitor prefers reduced motion.
@@ -57,19 +74,31 @@ export default function Gallery() {
           ))}
         </div>
         <div className="am-gal-grid">
-          {cards.map(a => (
-            <button key={a.id} className="am-gcard" onClick={() => { window.location.hash = '#' + a.hash; }}>
-              <div className="am-gcard-viz"><Preview kind={a.kind} skin={skin} mode={mode} /></div>
-              <div className="am-gcard-body">
-                <div className="am-gcard-cat">{a.cat}</div>
-                <div className="am-gcard-name"><span className="am-gcard-glyph">{a.glyph}</span> {a.name}</div>
-                <div className="am-gcard-blurb">{a.blurb}</div>
-                <div className="am-gcard-open">Open workspace <Icon name="chevron" size={13} /></div>
-              </div>
-            </button>
-          ))}
+          {cards.map(renderCard)}
         </div>
-        <div className="am-gal-foot">animath · {CARDS.length} visual tools</div>
+        <div className="am-gal-foot">animath · {mainCount} visual tools</div>
+        {stored.length > 0 && (
+          <div className="am-gal-storeroom">
+            <button
+              className="am-gal-store-toggle"
+              onClick={() => setStoreOpen(o => !o)}
+              aria-expanded={storeOpen}
+            >
+              <span className={`am-gal-store-chev${storeOpen ? ' am-open' : ''}`}><Icon name="chevron" size={13} /></span>
+              Storeroom · {stored.length} parked
+            </button>
+            {storeOpen && (
+              <>
+                <p className="am-gal-store-note">
+                  Parked experiments and retired pieces — kept reachable, but out of the main lineup.
+                </p>
+                <div className="am-gal-grid am-gal-grid-stored">
+                  {stored.map(renderCard)}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -23,6 +23,7 @@ const Argand = React.lazy(() => import('./animations/Argand/Argand'));
 const EmbedComplexParticles = React.lazy(() => import('./embed/EmbedComplexParticles'));
 const EmbedPlaneTransform = React.lazy(() => import('./embed/EmbedPlaneTransform'));
 const CountingTheWays = React.lazy(() => import('./animations/CountingTheWays/CountingTheWays'));
+const DivisionBells = React.lazy(() => import('./animations/DivisionBells/DivisionBells'));
 
 const routes: Record<string, React.ComponentType> = {
   '/complex-particles': App,
@@ -44,6 +45,7 @@ const routes: Record<string, React.ComponentType> = {
   '/embed/complex-particles': EmbedComplexParticles,
   '/embed/plane-transform': EmbedPlaneTransform,
   '/counting-the-ways': CountingTheWays,
+  '/division-bells': DivisionBells,
 };
 
 function getHash(): string {

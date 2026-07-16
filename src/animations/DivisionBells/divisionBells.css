@@ -1,0 +1,141 @@
+/* Division Bells — immersive plane + small panel helpers. Token-styled so every
+   skin × mode works; the SVG reads --data-* / --fg / --dim directly. */
+
+.db-plane-wrap {
+  position: absolute;
+  inset: 0;
+  background: var(--viz-bg, var(--bg));
+  overflow: hidden;
+}
+
+.db-field {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.db-plane {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none; /* pointer drag owns the gesture */
+}
+
+.db-caption {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dim);
+  pointer-events: none;
+  background: color-mix(in srgb, var(--viz-bg, var(--bg)) 72%, transparent);
+  padding: 3px 7px;
+  border-radius: 7px;
+}
+
+.db-presets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 2px 0 4px;
+}
+
+.db-btn {
+  font: inherit;
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 9px;
+  cursor: pointer;
+}
+.db-btn:hover { border-color: var(--accent); }
+
+.db-hint {
+  font-size: 12px;
+  color: var(--dim);
+  margin: 4px 0 2px;
+}
+.db-hint strong { color: var(--fg); font-weight: 600; }
+
+.db-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--dim-2);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin: 10px 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.db-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+/* ── the yardstick family table ─────────────────────────────────────────── */
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin: 4px 0;
+}
+.db-table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  font-weight: 600;
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.db-table td {
+  padding: 4px;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg);
+  vertical-align: middle;
+}
+.db-sym {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--accent);
+}
+.db-val {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+.db-tags { text-align: right; white-space: nowrap; }
+.db-tag {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  margin-left: 3px;
+  border: 1px solid var(--border);
+  color: var(--dim);
+}
+.db-tag.u { color: var(--data-6); }
+.db-tag.m { color: var(--data-2); }
+.db-tag.n { color: var(--dim-2); }
+
+.db-rel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dim);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  margin: 6px 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.db-rel strong { color: var(--fg); }
