@@ -8,9 +8,9 @@ journal.html): per Dan, the journal is a *construction* — this chain is the
 style and the quarry, not a script ("we do not have to literally follow my
 precise chain of unfolding. the goal is clarity with fun and excitement of
 learning together"). Verbatim vs paraphrase is marked on every quote as the
-source reports marked it. Two shared chat conversations (chatgpt.com +
-claude.ai share links, 2026-07-17) are NOT yet in this record — unreachable
-from the sandbox; add them when saved into the repo. -->
+source reports marked it. The two chat conversations Dan pointed at
+(2026-07-17) are now saved verbatim in conversations/ and indexed below as
+Step 0. -->
 
 # The unfolding — how Number Planes actually happened
 
@@ -21,6 +21,41 @@ numbers." Are there other options?**
 
 Each step below: the question as it was asked, what got built in answer, the
 small answer it produced, and the question it opened.
+
+## Step 0 · the seed conversations (supplied 2026-07-17)
+
+**Question.** "Why do trig functions feel unnatural compared to polynomials,
+exponentials, etc.?" — the opening of the conversation Dan names as "the seed
+for this entire study" (`conversations/2026-07-complex-analysis-and-the-three-number-systems.md`).
+
+**Built.** No artifact — a conversation. It dissolves its own opening
+("naturalness" names a relation between a function and the operations licensed
+as primitive, not a property), walks Euler's actual route to e^(iθ), reads exp
+as Cartesian→polar, derives conformality as the Jacobian forced into the
+scaled-rotation form [a, −b; b, a] — and then asks the pivotal question:
+*"What are other 'natural' choices for ℝ²→ℝ² functions beyond Jacobian
+constraints?"*
+
+**Answer.** Demanding the derivative form a closed number system yields
+exactly three options by what K² equals: −1 (complex — rigid, the one field),
+0 (dual — shears, automatic differentiation), +1 (split — boosts, left/right
+movers). Unit sets: circle, parallel lines, hyperbola; the same discriminant
+that classifies conics and PDE types. The conversation closes by tracing its
+own reasoning into conic sections: "the complex function *is* the cone before
+cutting."
+
+**Opened.** The trichotomy, met in passing as a classification of Jacobians,
+became the residue that grew into the whole study — Dan's later phrasing
+("When I think of 'the number plane' I think of complex numbers… are there
+other options?") descends from it, and the archive picks up at Step 1. The
+follow-on conversation (`conversations/2026-07-dual-numbers-galilean-autodiff.md`)
+deepens the p = 0 world: dual numbers ↔ Galilean geometry (boost = shear; one
+direction invisible to the metric), complex-dual numbers as the tangent bundle
+of ℂ, the ε^n jet ladder, tropical algebra as a different "algebra of
+approximation," and forward/reverse autodiff — feeding the dual-world card,
+the autodiff seal, and the tropical postmark.
+
+<sub>Sources: docs/design/notebook-handoff/conversations/ (verbatim transcripts + README provenance note)</sub>
 
 ## Step 1 · 2026-06-20
 

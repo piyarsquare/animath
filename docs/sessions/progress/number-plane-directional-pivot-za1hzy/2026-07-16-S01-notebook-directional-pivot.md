@@ -31,6 +31,26 @@ starts from main with the notebook landed. First tracked session on this branch.
 
 ## Working notes
 
+### 🟡 milestone · 03:40 — The seed conversations arrive; the journal gains entry 00
+**Why:** Dan uploaded the two chat transcripts (the share links were
+sandbox-blocked) and named the first "the seed for this entire study."
+
+Saved verbatim under `docs/design/notebook-handoff/conversations/` (+ README
+provenance note — seed status is Dan's lineage claim, not a timestamp claim;
+the exports stamp July 2026). The true origin predates the plane question:
+the study began as a *complaint about trigonometry*, which dissolved
+("naturalness names a relation to the licensed primitives, not a property"),
+and the trichotomy K² = −1, 0, +1 was met almost in passing as the answer to
+"what are other natural choices for ℝ²→ℝ² beyond Jacobian constraints?" —
+a residue that became the whole subject. The second transcript (dual/
+Galilean/tropical/autodiff) feeds the dual-world card, the autodiff seal,
+and the tropical postmark. THE-UNFOLDING.md gained a Step 0 indexing both;
+the journal gained **ENTRY 00 · FOUND LATER, FILED FIRST — "a complaint
+about trigonometry"** (the conceit is the honest provenance: the seed
+surfaced after the pages were underway), with later-margins pointing at
+entry 04 (the special element's square became the knob) and entry 05 (the
+three curves became fig. 4). Header now ENTRIES 00–06. Re-verified headless.
+
 ### 🟡 milestone · 03:00 — The chain mined (287 moments → 17 steps) and the entries regrounded
 **Why:** the workflow returned; the record is now citable and the journal
 constructs from it.
