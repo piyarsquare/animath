@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   SCENARIOS, buildStars, launchPlanet, orbitFrame, recenter, getScenario,
+  circularSpeed, findStableLaunch,
   step, minStarDist, planetEnergy,
-  type SimState, type Planet,
+  type SimState, type Planet, type Star, type TargetId,
 } from '../index';
 
 /**
@@ -95,5 +96,32 @@ describe('launchPlanet geometry', () => {
     expect(Math.hypot(rvx, rvy)).toBeCloseTo(speed, 10);
     const dot = (p.x - f.cx) * rvx + (p.y - f.cy) * rvy;
     expect(dot).toBeCloseTo(0, 10);
+  });
+
+  it('circularSpeed is √(M/r) about the target', () => {
+    const stars = buildStars(getScenario('figure8'), [1, 1, 1]);
+    const f = orbitFrame(stars, 'bary');
+    expect(circularSpeed(stars, 'bary', 3)).toBeCloseTo(Math.sqrt(f.mass / 3), 10);
+  });
+});
+
+describe('findStableLaunch', () => {
+  // The empirical safe-orbit finder (backs the "Find a stable orbit" button and
+  // the fell-into-a-star recovery hint). Its contract: whatever it returns must
+  // actually survive — with clearance, not a chaotic knife-edge.
+  it.each(SCENARIOS.map(s => s.id))('returns a genuinely surviving orbit for %s', id => {
+    const sc = getScenario(id);
+    const stars = buildStars(sc, [1, 1, 1]);
+    const target: TargetId = sc.launch.target;
+    const found = findStableLaunch(stars, target, { starSoft: sc.system.softening, dt: sc.system.dt });
+    expect(found).not.toBeNull();
+    // Re-fly the returned launch independently and confirm it stays clear.
+    const s: Star[] = buildStars(sc, [1, 1, 1]);
+    const planet: Planet = { ...launchPlanet(s, target, found!.radius, found!.speed), alive: true };
+    const sim: SimState = { stars: s, planets: [planet], t: 0, dtBase: sc.system.dt, G: 1, starSoft: sc.system.softening, planetSoft: 0.05 };
+    let minDist = Infinity;
+    const steps = Math.round(120 / sc.system.dt);
+    for (let i = 0; i < steps; i++) { step(sim, sc.system.dt); minDist = Math.min(minDist, minStarDist(planet, s)); }
+    expect(minDist).toBeGreaterThan(0.3);
   });
 });

@@ -5,10 +5,11 @@ import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef, WorkspaceMode } from '../../chrome/workspace/types';
 import { Slider, Pills, Select, NumberInput } from '../../components/ControlPanel';
 import {
-  step, cloudSpread, lyapunovRenorm, SCENARIOS, getScenario, buildStars, orbitFrame, launchPlanet, Analyzer, DEFAULT_CLASSIFY,
+  step, cloudSpread, lyapunovRenorm, SCENARIOS, getScenario, buildStars, launchPlanet,
+  circularSpeed, findStableLaunch, Analyzer, DEFAULT_CLASSIFY,
   type SimState, type Planet, type Star, type TargetId, type ClassifyParams, type Snapshot,
 } from '@/lib/nbody';
-import Observatory from './Observatory';
+import AnalysisHUD from './AnalysisHUD';
 import SkyView, { type SkyData } from './SkyView';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
 import { Scheme } from '../../chrome/Scheme';
@@ -212,7 +213,7 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
   const [planetSpeed, setPlanetSpeedState] = usePersistentState(PK('planetSpeed'), getScenario(presetId).launch.speed);
   const [massMul, setMassMul] = usePersistentState<number[]>(fromLink ? null : PK('massMul'), [navNum(Q, 'm0', 1), navNum(Q, 'm1', 1), navNum(Q, 'm2', 1)]); // per-star mass multipliers
   const [starSoft, setStarSoft] = usePersistentState(fromLink ? null : PK('starSoft'), navNum(Q, 'ss', getScenario(presetId).system.softening)); // close-encounter softening
-  const [speed, setSpeed] = usePersistentState(PK('speed'), 1);          // sim-seconds per real-second
+  const [speed, setSpeed] = usePersistentState(PK('speed'), 1.5);        // sim-seconds per real-second (1.5× so the ghost cloud's fan-out reads sooner)
   const [trailLen, setTrailLen] = usePersistentState(PK('trailLen'), 500);
   const [showTrails, setShowTrails] = usePersistentState(PK('showTrails'), true);
   const [frameCenter, setFrameCenter] = usePersistentState(PK('frameCenter'), 'bary'); // reference-frame origin
@@ -814,9 +815,29 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
   // Set the launch speed to the local circular speed √(M/r) for the target.
   const onAutoCircular = () => {
     const stars = buildStars(getScenario(presetId), massMul);
-    const f = orbitFrame(stars, target);
-    const v = Math.sqrt(f.mass / Math.max(0.05, planetRadius));
+    const v = circularSpeed(stars, target, planetRadius);
     setPlanetSpeed(Math.round(v / 0.05) * 0.05);
+  };
+
+  // Empirically find a launch (radius + circular speed) whose planet stays clear
+  // of every star for a long probe — the reliable "safe orbit" in a chaotic field
+  // (a derived radius fails: stars get ejected, hierarchical systems orbit a
+  // sub-system). Adapts to the *current* masses/target. Falls back to the
+  // scenario's verified-safe default launch if the current target admits none.
+  const onFindStable = () => {
+    const sc = getScenario(presetId);
+    const stars = buildStars(sc, massMul);
+    const found = findStableLaunch(stars, target, { starSoft, dt: sc.system.dt, rKill: Math.max(collisionRadius, 1e-4) });
+    setCustom(null);
+    if (found) {
+      setPlanetRadiusState(found.radius);
+      setPlanetSpeedState(found.speed);
+    } else {
+      // No stable orbit around the current target → restore the scenario default.
+      setTargetState(sc.launch.target);
+      setPlanetRadiusState(sc.launch.radius);
+      setPlanetSpeedState(sc.launch.speed);
+    }
   };
 
   const onTogglePlace = () => {
@@ -920,14 +941,19 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
         onChange={setPlanetRadius} format={v => v.toFixed(2)} />
       <Slider label="Start speed" value={planetSpeed} min={0} max={3} step={0.05}
         onChange={setPlanetSpeed} format={v => v.toFixed(2)} />
-      <button style={{ ...btnStyle, width: '100%', flex: 'none' }} onClick={onAutoCircular}>
-        ◯ Circular orbit speed
-      </button>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button style={btnStyle} onClick={onAutoCircular}>
+          ◯ Circular speed
+        </button>
+        <button style={btnStyle} onClick={onFindStable}>
+          ✓ Find a stable orbit
+        </button>
+      </div>
       <button style={{ ...placeBtnStyle, width: '100%', flex: 'none', marginTop: 6 }} onClick={onTogglePlace}>
         {placeMode ? '✛ Placing — click + drag on the scene' : '✛ Place planet by hand'}
       </button>
       <div style={note}>
-        Radius &amp; speed are measured from the body you orbit. Pick a star for a tight inner (S-type) orbit; the barycenter or inner binary for a wide one. Custom mode pins the exact x/y/vx/vy shown in the System panel.
+        Radius &amp; speed are measured from the body you orbit. Pick a star for a tight inner (S-type) orbit; the barycenter or inner binary for a wide one. <b>Find a stable orbit</b> searches outward for a launch that stays clear of every star. Custom mode pins the exact x/y/vx/vy shown in the System panel.
       </div>
     </>
   );
@@ -1077,9 +1103,28 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
               {placeMode && <div style={{ color: 'var(--accent)' }}>click + drag to launch</div>}
             </div>
 
+            {/* Graceful-failure hint: when the planet has fallen into a star, offer
+                a one-click route back to a survivable orbit instead of a dead end. */}
+            {labSnap?.planetFate === 'destroyed' && (
+              <div style={{
+                position: 'absolute', left: '50%', bottom: 128, transform: 'translateX(-50%)',
+                display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                background: 'var(--panel)', border: '1px solid var(--danger)', borderRadius: 10,
+                color: 'var(--fg)', font: '13px/1.4 system-ui', boxShadow: '0 6px 24px rgba(0,0,0,0.35)',
+                backdropFilter: 'blur(6px)', maxWidth: 'min(90%, 460px)', zIndex: 5,
+              }}>
+                <span>☄ Your planet fell into a star.</span>
+                <button
+                  style={{ ...btnStyle, flex: 'none', padding: '8px 12px', borderColor: 'var(--accent)', background: 'var(--accent-soft)' }}
+                  onClick={onFindStable}>
+                  ✓ Find a stable orbit
+                </button>
+              </div>
+            )}
+
             {skyOn && <SkyView dataRef={skyRef} dayLen={dayLen} tilt={tilt} />}
 
-            <Observatory snapshot={labSnap} />
+            <AnalysisHUD snapshot={labSnap} />
           </div>
         </Scheme>
       ),

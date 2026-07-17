@@ -13,7 +13,8 @@
  * fresh array so the simulation can be re-seeded deterministically on reset.
  */
 
-import type { Planet, Star } from './integrator';
+import { step, type Planet, type SimState, type Star } from './integrator';
+import { planetEnergy } from './analysis/classify';
 
 /** What the planet is launched into orbit around:
  *  the system barycenter, one specific star, or the inner two-star binary. */
@@ -117,7 +118,7 @@ export const SCENARIOS: Scenario[] = [
   {
     id: 'pythagorean',
     name: 'Pythagorean',
-    blurb: "Burrau's problem: stars of mass 3, 4 and 5 fall together from rest, swing through violent close passes, and eject one of their own.",
+    blurb: "Burrau's problem: stars of mass 3, 4 and 5 fall together from rest, swing through violent close passes, and eject one of their own. Your planet is a witness, not a resident — it rides a wide orbit through the fireworks and is eventually flung into the dark.",
     system: {
       // Masses 3,4,5 at the vertices of a 3-4-5 right triangle, starting at rest.
       makeStars: () => recenter([
@@ -204,4 +205,71 @@ export function launchPlanet(
     vy: f.cvy + dir * speed * ca,
     ax: 0, ay: 0,
   };
+}
+
+/** The local circular-orbit speed √(M/r) around a target body at `radius`. */
+export function circularSpeed(stars: Star[], target: TargetId, radius: number): number {
+  const f = orbitFrame(stars, target);
+  return Math.sqrt(f.mass / Math.max(0.05, radius));
+}
+
+export interface StableLaunchOptions {
+  /** Softening length for star–star interactions (matches the live sim). */
+  starSoft: number;
+  /** Integrator step. */
+  dt: number;
+  /** Collision radius that counts as "destroyed". */
+  rKill?: number;
+  /** How far a planet must always stay from the nearest star to count as safe
+   *  (an absolute clearance — bigger ⇒ rounder, more robustly-bound orbits, and
+   *  crucially avoids chaotic knife-edge survivors). */
+  minClear?: number;
+  /** Sim-time to integrate each candidate. Long enough to reject slow decays. */
+  probeTime?: number;
+  smallestRadius?: number;
+  largestRadius?: number;
+  radiusStep?: number;
+}
+
+/**
+ * Empirically find a launch that survives — the only reliable "safe orbit" in a
+ * chaotic star field, where a derived radius fails (a star may be ejected to
+ * infinity; a hierarchical system's planet orbits a sub-system) and a single
+ * bare-survival probe lands on knife-edge orbits that a rounding-sized nudge
+ * destroys. Sweeps the launch radius outward, using the local circular speed at
+ * each, and returns the first whose planet stays bound **and** never comes within
+ * `minClear` of a star across `probeTime`. Values are rounded to the control
+ * steps the UI uses, so the returned orbit behaves exactly as previewed. Returns
+ * `null` if nothing in range qualifies. Pure — integrates a private copy.
+ */
+export function findStableLaunch(
+  stars: Star[], target: TargetId, opts: StableLaunchOptions,
+): { radius: number; speed: number } | null {
+  const {
+    starSoft, dt, rKill = 0.12, minClear = 0.5, probeTime = 140,
+    smallestRadius = 1.0, largestRadius = 16, radiusStep = 0.25,
+  } = opts;
+  const round2 = (x: number) => Math.round(x * 100) / 100;
+  const ss2 = starSoft * starSoft;
+  const steps = Math.round(probeTime / dt);
+
+  for (let r = smallestRadius; r <= largestRadius + 1e-9; r += radiusStep) {
+    const radius = round2(r);
+    const speed = round2(circularSpeed(stars, target, radius));
+    // Fresh star copy per candidate (the stars evolve during the probe).
+    const s: Star[] = stars.map(st => ({ ...st }));
+    const planet = launchPlanet(s, target, radius, speed);
+    const sim: SimState = { stars: s, planets: [planet], t: 0, dtBase: dt, G: 1, starSoft, planetSoft: 0.05 };
+    let ok = true;
+    for (let i = 0; i < steps; i++) {
+      step(sim, dt);
+      let dmin = Infinity;
+      for (const st of s) { const d = Math.hypot(st.x - planet.x, st.y - planet.y); if (d < dmin) dmin = d; }
+      if (dmin < Math.max(rKill, minClear)) { ok = false; break; }
+      // Unbound-and-far ⇒ this radius won't settle into an orbit.
+      if (Math.hypot(planet.x, planet.y) > largestRadius + 4 && planetEnergy(planet, s, ss2) > 0) { ok = false; break; }
+    }
+    if (ok) return { radius, speed };
+  }
+  return null;
 }

@@ -5,12 +5,12 @@ date: 2026-07-17
 title: Trinary System review — safe default launches
 branch: claude/trinary-system-review-59t0w1
 slug: trinary-system-review
-status: in-progress
+status: complete
 build: passing
 followup: null
 pr: null
 app: trinary
-next: Discuss broader review suggestions with Dan (safe-radius derivation, chaos legibility).
+next: Optional follow-ups — tune default speed/ε if the fan-out still reads slow; consider a general "Find a stable orbit" affordance beyond the failure hint.
 ---
 
 # Trinary System review — safe default launches
@@ -28,6 +28,30 @@ unrelated app branches — Division Bells, Solid Worlds, Argand — nothing to
 continue here.)
 
 ## Working notes
+
+### 🟡 milestone · 14:30 — All six review suggestions implemented + verified
+**Why:** Dan said "fix them all." Each is now landed, built, tested, and driven.
+
+1. **Systematic safe launch** — a *derived* radius proved unreliable (Pythagorean
+   ejects a star → excursion→∞; Binary is hierarchical), and a bare single-probe
+   finds chaotic knife-edges (an r that survives at v dies at v±0.01). So added
+   `findStableLaunch(stars, target, opts)` — an engine helper that sweeps radius
+   outward, uses the local circular speed, and returns the first orbit that keeps
+   a real *clearance* margin from every star across a long probe. Pure, adapts to
+   current masses, tested (asserts the returned orbit genuinely survives).
+2. **Chaos legibility** — default `speed` 1 → 1.5× so the ghost fan-out reads sooner.
+3. **Pythagorean copy** — blurb now frames the planet as a witness, not a resident.
+4. **Graceful failure** — when the planet falls into a star, a hint toast appears
+   over the scene with a one-click **Find a stable orbit** button (also added to
+   the Planet-launch panel). Drove it with Puppeteer: bad launch (r=1.5) → planet
+   destroyed → click → launch becomes r=3.25 → **planet bound, paradise 100%**.
+5. **Naming** — `Observatory.tsx` (the analysis HUD) renamed to `AnalysisHUD.tsx`.
+6. **Engine tests** — added `integrator.test.ts` (symplectic energy bound, momentum
+   conservation, frozen-planet no-op; analyzer destroyed/habitable classification)
+   and extended `scenarios.test.ts` (findStableLaunch survivability, circularSpeed).
+
+`npm test` → 263 passed; `npm run build` clean; lint 0 errors. Verified visually
+across all four scenarios + the failure/recovery flow.
 
 ### 🟡 milestone · 13:05 — Fix applied, verified visually + regression-tested
 **Why:** Close the loop — the fix must be real (not just simulated) and locked in.
@@ -89,9 +113,11 @@ than incinerated.
 ### 🟣 decision · 12:45 — Fix all four launch defaults, not just the default scenario
 **Why:** Any scenario a user clicks is a "first impression"; three were broken.
 
-## Suggestions for improvement (broader review)
+## Suggestions for improvement (broader review) — all implemented
 
-Captured while reviewing; to discuss/prioritize with Dan. Ordered by value.
+All six were implemented this session (see the 14:30 milestone). Original notes
+kept below for the reasoning; #1 landed as an *empirical* finder rather than a
+closed-form derivation, because the physics defeats a derived radius.
 
 1. **Derive the safe launch radius instead of hardcoding it** (root cause of this
    bug). Each scenario hand-picks a `radius`; three were wrong. A helper that
