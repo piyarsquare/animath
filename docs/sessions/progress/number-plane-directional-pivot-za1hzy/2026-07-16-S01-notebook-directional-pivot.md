@@ -31,6 +31,24 @@ starts from main with the notebook landed. First tracked session on this branch.
 
 ## Working notes
 
+### 🟣 decision · 02:00 — Ground the entries in the RECORDED evolution, not an invented arc
+**Why:** Dan pointed at the session notes as the true source: "There are already
+some examples in place of how this sort of process evolved… conversations that
+are recorded in our session notes that provide a very good idea of how we get
+to one animation from the other. So the question started with: 'When I think
+of the number plane I think of complex numbers.' Are there other options?"
+
+That seed question is the real entry 01. The probe's six entries used an
+invented question-arc (grounded in card math but not in the project's actual
+history); the journal's time dimension should instead follow the recorded
+chain — Argand app birth (06-20) → five-hat review + the Number Planes page
+plan (06-24) → the rename (06-25) → first guide page + trail (06-29) → the
+living-notebook design conversations (07-03) → reviews + leak plan (07-08) →
+notebook complete (07-13). Dispatched a mining workflow (7 readers over the
+~30 session files + a git historian, then a chronology-threading synthesis)
+to extract the verbatim Dan quotes, driving questions, findings, and artifact
+dates with citations. Entries get rewritten from that chain.
+
 ### 🟡 milestone · 01:30 — The journal probe is built and verified headless
 **Why:** the scaffold + drafted entries Dan asked for exist and pass every check.
 
