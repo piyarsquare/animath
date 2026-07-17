@@ -31,6 +31,19 @@ starts from main with the notebook landed. First tracked session on this branch.
 
 ## Working notes
 
+### 🟣 decision · 02:15 — The record is the style, not the script
+**Why:** Dan, refining the grounding directive: "this is still a
+'construction' so while that is the 'style' we do not have to literally
+follow my precise chain of unfolding. the goal is clarity with fun and
+excitement of learning together."
+
+So the mined chain feeds the entries as *material and register* — real
+questions, real quotes, real dead ends where they serve — but each entry is
+constructed for clarity and the excitement of discovery, free to reorder,
+compress, or invent beats when that teaches better. "Learning together" =
+the reader rides alongside the unfolding (which the no-reader-address voice
+already supports); it is a feel, not a switch to didactic address.
+
 ### 🟣 decision · 02:00 — Ground the entries in the RECORDED evolution, not an invented arc
 **Why:** Dan pointed at the session notes as the true source: "There are already
 some examples in place of how this sort of process evolved… conversations that
