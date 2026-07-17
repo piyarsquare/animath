@@ -31,6 +31,31 @@ starts from main with the notebook landed. First tracked session on this branch.
 
 ## Working notes
 
+### 🟡 milestone · 03:00 — The chain mined (287 moments → 17 steps) and the entries regrounded
+**Why:** the workflow returned; the record is now citable and the journal
+constructs from it.
+
+The mining pass (8 readers + threading synthesis, 287 moments) reconstructed
+the full question-chain 06-20 → 07-16 with verbatim Dan quotes, 17 recorded
+dead ends, and provenance caveats — committed as
+`docs/design/notebook-handoff/THE-UNFOLDING.md` (source material beside the
+cards; intro carries Dan's construction license). Key finds fed straight into
+the journal rewrite: entry 01 now opens on the true seed ("When I think of
+'the number plane,' I think of complex numbers… are there other options?" —
+its staged descendant is the cover's question, now cross-linked); entry 03
+carries Dan's recorded constraints question as a "from the record" margin
+mark (the marginalia register the notebook already established: revision
+marks, not narration); entry 04's margin quotes "the family was a slider
+before it was a theory"; entry 05 closes on the recorded resolution — split
+multiplication IS slot-by-slot in its diagonal basis; the trichotomy measures
+how much the axes entangle. Re-verified headless (desktop shot eyeballed,
+invariants pass, build green).
+
+Blocked/waiting: two shared chat conversations Dan pointed at (chatgpt.com +
+claude.ai share links) are unreachable from the sandbox (network-policy 403 /
+Cloudflare challenge) — asked Dan to paste or commit them; THE-UNFOLDING.md
+notes their absence.
+
 ### 🟣 decision · 02:15 — The record is the style, not the script
 **Why:** Dan, refining the grounding directive: "this is still a
 'construction' so while that is the 'style' we do not have to literally
