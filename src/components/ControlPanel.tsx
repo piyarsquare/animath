@@ -81,7 +81,8 @@ export function Section({ title, icon, defaultOpen = false, children }: SectionP
 }
 
 interface SliderProps {
-  label: string;
+  /** Usually a string; a ReactNode allows e.g. a token-colored swatch dot. */
+  label: React.ReactNode;
   value: number;
   min: number;
   max: number;

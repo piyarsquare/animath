@@ -59,6 +59,17 @@ export class Analyzer {
     this.ingest(t, stars, planet, true);
   }
 
+  /** Re-tune the classification knobs mid-run without restarting the timeline:
+   *  the habitable band is re-derived from the SAME launch reference S_ref, so
+   *  moving a climate slider re-labels the future without wiping the past (or
+   *  resetting the physics). Accumulated bins/segments keep their old labels —
+   *  the honest reading: they were classified under the rules of their time. */
+  retune(params: ClassifyParams) {
+    this.p = params;
+    this.Slo = this.Sref * params.habLo;
+    this.Shi = this.Sref * params.habHi;
+  }
+
   private ingest(t: number, stars: Star[], planet: Planet, accumulate: boolean) {
     const dt = Math.max(0, t - this.lastT);
     const { lumExp, insolSoft2, calmWindow, calmThresh, rKill, rEsc } = this.p;

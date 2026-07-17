@@ -7,6 +7,9 @@ export interface SectionDef {
   /** Stable id — keyed into layout persistence; keep it short and topical. */
   id: string;
   title: string;
+  /** Short label under the rail icon when `title` won't fit ~38px (rail labels,
+   *  DESIGN-SPEC §4.3). Defaults to `title`. */
+  railLabel?: string;
   /** Icon, tier and tooltip derive from ARCHETYPES[arch]. */
   arch: Archetype;
   /** Panel body — controls bound to real app state. */

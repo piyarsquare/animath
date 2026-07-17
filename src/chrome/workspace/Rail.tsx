@@ -35,7 +35,7 @@ export function Rail({ sections, openIds, onToggle, orientation = 'vertical' }: 
           onClick={() => onToggle(s.id)}
         >
           <Icon name={arch.icon} size={16} />
-          {orientation === 'vertical' && <span className="am-ws-rail-lbl">{s.title}</span>}
+          {orientation === 'vertical' && <span className="am-ws-rail-lbl">{s.railLabel ?? s.title}</span>}
           <span className="am-ws-rail-tip">{s.title}<i>{arch.tier}</i></span>
         </button>
       </React.Fragment>

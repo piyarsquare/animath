@@ -82,6 +82,29 @@ describe('Analyzer classification', () => {
     expect(snap.events.some(e => e.kind === 'planet-destroyed')).toBe(true);
   });
 
+  it('retune re-labels the band mid-run without wiping accumulated time', () => {
+    const sc = getScenario('figure8');
+    const stars = buildStars(sc, [1, 1, 1]);
+    const planet = { ...launchPlanet(stars, 'bary', 3.2, 1.0), alive: true };
+    const analyzer = new Analyzer(DEFAULT_CLASSIFY, stars, planet);
+    const sim: SimState = { stars, planets: [planet], t: 0, dtBase: sc.system.dt, G: 1, starSoft: sc.system.softening, planetSoft: 0.05 };
+    let sampleT = 0;
+    for (let i = 0; i < Math.round(20 / sc.system.dt); i++) {
+      step(sim, sc.system.dt);
+      if (sim.t >= sampleT) { analyzer.push(sim.t, stars, planet); sampleT = sim.t + 0.05; }
+    }
+    const before = analyzer.snapshot();
+    expect(before.total).toBeGreaterThan(10);
+    // Squeeze the habitable band to a sliver: the CURRENT climate must re-label
+    // (the planet's steady insolation now sits above the ceiling), while the
+    // accumulated timeline keeps its history instead of resetting to zero.
+    analyzer.retune({ ...DEFAULT_CLASSIFY, habLo: 0.001, habHi: 0.01 });
+    analyzer.push(sim.t + 0.05, stars, planet);
+    const after = analyzer.snapshot();
+    expect(after.total).toBeGreaterThanOrEqual(before.total);
+    expect(after.climate).toBe('hot');
+  });
+
   it('accumulates habitable time for a planet launched at the reference insolation', () => {
     const sc = getScenario('figure8');
     const stars = buildStars(sc, [1, 1, 1]);

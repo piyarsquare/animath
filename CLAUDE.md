@@ -248,10 +248,17 @@ rendering **one component**:
 ### Control primitives (import from `components/ControlPanel`)
 
 `Slider`, `Pills` (segmented buttons), `Select` (dropdown), `Checkbox`,
-`RangeSlider`, `NumberInput` (+ a legacy `Section`). These are the standard
-building blocks for panel bodies, styled by `ControlPanel.css` on the theme
-tokens (`--cp-*` vars alias `--fg`/`--accent`/…). Use them instead of
-hand-rolling inputs so every app looks consistent.
+`RangeSlider`, `NumberInput`, `Button` (closed emphasis variants
+`primary | secondary | ghost | danger | toggle` — **at most one `primary` per
+panel**, icons from `chrome/icons` only, never emoji), `Kicker` (mono uppercase
+group label), `Note` (quiet 11px explainer prose) (+ `Section`, the in-panel
+disclosure fold). These are the standard building blocks for panel bodies,
+styled by `ControlPanel.css` on the theme tokens (`--cp-*` vars alias
+`--fg`/`--accent`/…). Use them instead of hand-rolling inputs so every app looks
+consistent. **Accent is budgeted** (DESIGN-SPEC §4.2): it marks things you touch
+or that are on — thumbs, active pills, primary buttons, rail active state —
+never passive readouts. The desktop rail shows a label under each panel icon
+(`SectionDef.railLabel` overrides `title` when it won't fit ~38px).
 
 ## Theming (v2): identity × mode — apps must track the skin
 

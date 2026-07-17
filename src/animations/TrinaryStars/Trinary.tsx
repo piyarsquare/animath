@@ -66,11 +66,11 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Watch chaos unfold',
-    body: 'The planet launches with a swarm of near-identical pink “ghost” copies. They start together, then fan out and scatter — sensitive dependence on initial conditions erasing any prediction of the future.',
+    body: 'The planet launches with a swarm of faint “ghost” copies hugging it — near-identical worlds. They start together, then fan out and scatter — sensitive dependence on initial conditions erasing any prediction of the future. The Ghost swarm panel tunes how many, and how close they start.',
   },
   {
     title: 'Look around, tune it',
-    body: 'Drag to orbit the camera. The rail panels let you change star masses, set the habitable climate band, or even stand on the planet’s surface and watch the suns wheel overhead. Pick the “Advanced” layout (top bar) to open every knob at once.',
+    body: 'Drag to orbit the camera. The rail panels let you change star masses, set the habitable climate band, or even stand on the planet’s surface and watch the suns wheel overhead. The Layout menu (top bar) has one arrangement per activity — Ghost swarm, Climate & sky, Rotating frames — and “Everything” opens every knob.',
   },
   {
     title: 'Open the Lab',

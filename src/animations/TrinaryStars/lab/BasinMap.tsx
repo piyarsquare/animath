@@ -677,7 +677,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             <Pills label="Reference frame" value={frame}
               options={[
                 { value: 'bary', label: 'Barycenter' },
-                { value: 's0', label: 'Star A' }, { value: 's1', label: 'Star B' }, { value: 's2', label: 'Star C' },
+                { value: 's0', label: 'Star 1' }, { value: 's1', label: 'Star 2' }, { value: 's2', label: 'Star 3' },
               ]}
               onChange={(v) => setFrame(v as FrameId)} />
           )}
@@ -777,7 +777,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
           </div>
           {mode === 'pos' && frame !== 'bary' && (
             <div style={{ font: '11px/1.5 system-ui', color: 'var(--dim)', marginTop: 6 }}>
-              Frame co-moving with <b>{frame === 's0' ? 'Star A' : frame === 's1' ? 'Star B' : 'Star C'}</b>: each pixel is a start offset from that star, launched with the star’s own velocity, so destinies are read relative to a moving star (⌖ marks it, pinned at the origin while the others orbit).
+              Frame co-moving with <b>{frame === 's0' ? 'Star 1' : frame === 's1' ? 'Star 2' : 'Star 3'}</b>: each pixel is a start offset from that star, launched with the star’s own velocity, so destinies are read relative to a moving star (⌖ marks it, pinned at the origin while the others orbit).
             </div>
           )}
         </div>
