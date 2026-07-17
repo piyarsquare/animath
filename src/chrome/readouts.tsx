@@ -79,10 +79,6 @@ export function StatGrid({ stats }: { stats: { k: string; v: string }[] }) {
   );
 }
 
-export function Kicker({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--dim-2)', letterSpacing: '.1em', textTransform: 'uppercase', margin: '8px 0 5px' }}>
-      {children}
-    </div>
-  );
-}
+// Kicker moved into components/ControlPanel (the shared type scale's level 2);
+// re-exported here so existing Analyze-tier imports keep working.
+export { Kicker } from '../components/ControlPanel';

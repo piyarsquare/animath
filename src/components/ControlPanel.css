@@ -72,7 +72,10 @@
   color: var(--cp-fg);
 }
 .cp-row-value {
-  color: var(--cp-accent);
+  /* Accent rebudget (2026-07): readouts are passive state — they speak in the
+     foreground voice (mono already differentiates them). Accent is reserved for
+     things you touch or that are ON: thumbs, active pills, primary buttons. */
+  color: var(--cp-fg);
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
@@ -234,6 +237,65 @@
 .cp-pills button.cp-active {
   background: var(--cp-accent);
   color: var(--accent-fg, #000);
+}
+
+/* ---------- Button (the closed emphasis vocabulary for in-panel verbs) ----------
+   primary | secondary | ghost | danger | toggle — DESIGN-SPEC §4. At most one
+   primary per panel; accent belongs to it (and to the action strip's primary). */
+.cp-btn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%;
+  padding: 9px 13px;
+  border-radius: 7px;
+  border: 1px solid var(--cp-border);
+  background: var(--panel-2, rgba(255, 255, 255, 0.06));
+  color: var(--cp-fg);
+  font: inherit; font-family: var(--cp-font); font-size: 12.5px; font-weight: 600;
+  cursor: pointer;
+  transition: all .14s;
+  white-space: nowrap;
+}
+.cp-btn:disabled { color: var(--cp-fg-dim); cursor: default; opacity: .6; }
+.cp-btn:hover:not(:disabled) { background: var(--cp-hover); }
+.cp-btn-primary {
+  background: var(--cp-accent);
+  border-color: transparent;
+  color: var(--accent-fg, #000);
+}
+.cp-btn-primary:hover:not(:disabled) { background: var(--cp-accent); filter: brightness(1.07); }
+.cp-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--cp-fg-dim);
+}
+.cp-btn-ghost:hover:not(:disabled) { color: var(--cp-fg); background: var(--cp-hover); }
+.cp-btn-danger {
+  background: var(--danger-soft, rgba(240, 116, 106, 0.12));
+  border-color: var(--danger, #f0746a);
+  color: var(--danger, #f0746a);
+}
+.cp-btn-danger:hover:not(:disabled) { background: var(--danger-soft, rgba(240, 116, 106, 0.2)); filter: brightness(1.1); }
+.cp-btn-toggle.cp-armed {
+  background: var(--accent-soft, rgba(255, 212, 0, 0.12));
+  border-color: var(--cp-accent);
+  color: var(--cp-accent);
+}
+
+/* ---------- Type scale levels 2 & 4 (panel title > Kicker > row label > Note) */
+.cp-kicker {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--dim-2, var(--cp-fg-dim));
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin: 8px 0 0;
+}
+.cp-note {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--cp-fg-dim);
+  padding: 2px;
 }
 
 /* Function title block at top of Function section */

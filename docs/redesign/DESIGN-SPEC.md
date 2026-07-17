@@ -156,6 +156,40 @@ Analyze-tier content so labs feel consistent.
 
 Google Fonts import is in `theme.css`. The **Phosphor** skin overrides display+UI to Space Mono.
 
+### 4.1 In-panel type scale (2026-07)
+
+Panel bodies use a **four-level scale**, each with a shared primitive — no ad-hoc inline
+header styles:
+
+1. **Panel title** — the window header (Display font, 12.5px/700).
+2. **`Kicker`** (`components/ControlPanel`) — mono uppercase group label inside a body.
+3. **Row label** — `.cp-row-label` (12.5px/600), what every control primitive renders.
+4. **`Note`** (`components/ControlPanel`) — quiet 11px/1.5 explanatory prose under a group.
+
+### 4.2 Emphasis vocabulary — the `Button` primitive (2026-07)
+
+In-panel verbs use the shared **`Button`** (`components/ControlPanel`) with a **closed
+variant set**: `primary | secondary | ghost | danger | toggle`. Icons come from the closed
+stroke set (`chrome/icons.tsx`) — never emoji glyphs.
+
+**Grammar (the answer to "nothing stands out"):**
+
+- **At most one `primary` per panel** — the panel's one main verb, accent-filled. This
+  mirrors the action strip's one-primary-per-app rule.
+- **Accent is budgeted**: it belongs to things you *touch* or that are *on* — slider thumbs,
+  active pills, primary buttons, the rail's active state. Passive state (numeric readouts,
+  header archetype icons) speaks in `--fg`/`--dim`. Don't spend accent on decoration; a
+  primary verb must be the loudest element on screen.
+- `danger` marks destructive verbs (wiping saved state or results); `toggle` + `active`
+  marks armed modes (e.g. click-to-place).
+
+### 4.3 Rail labels (2026-07)
+
+The desktop vertical rail shows a persistent ~8px title under each icon (`.am-ws-rail-lbl`).
+The archetype icon remains the closed vocabulary; the label adds per-panel identity so apps
+with more panels than archetypes don't render adjacent identical glyphs. The horizontal
+(immersive) rail stays icon-only; the phone dock already labels icons.
+
 ## 5. Skins (design tokens)
 
 One attribute — `data-theme` on the root — restyles everything. Each skin is a token block in

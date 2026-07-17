@@ -1,12 +1,59 @@
 import React, { useEffect, useState } from 'react';
 import './ControlPanel.css';
 import { COLORMAPS, FAMILIES, themeMapsFor, gradientCss, type ColorFamily } from '../lib/colormapRegistry';
+import { Icon, ICONS } from '../chrome/icons';
 
 /**
- * Form primitives — Section, Slider, Pills, Select, Checkbox — used inside
- * AppShell's Settings/Actions tabs. The old desktop-drawer/mobile-sheet
+ * Form primitives — Section, Slider, Pills, Select, Checkbox, Button, Kicker,
+ * Note — used inside workspace panels. The old desktop-drawer/mobile-sheet
  * wrapper that lived here previously is now replaced by the global AppShell.
  */
+
+/** The closed emphasis vocabulary for in-panel verbs (DESIGN-SPEC §4):
+ *  - primary   — THE panel's action; accent-filled. At most one per panel.
+ *  - secondary — a normal verb (the default).
+ *  - ghost     — quiet utility (resets, "more…").
+ *  - danger    — destructive (clears saved state, wipes results).
+ *  - toggle    — an armed/disarmed mode; pass `active` for the armed state.
+ */
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'toggle';
+
+interface ButtonProps {
+  variant?: ButtonVariant;
+  /** Icon from the closed chrome set (chrome/icons.tsx) — no emoji glyphs. */
+  icon?: keyof typeof ICONS & string;
+  /** For variant="toggle": whether the mode is currently armed. */
+  active?: boolean;
+  disabled?: boolean;
+  title?: string;
+  onClick?: () => void;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}
+
+/** The shared in-panel button. Full-width by default; put several in a flex row
+ *  and pass style={{flex:1}} for a split row. */
+export function Button({ variant = 'secondary', icon, active = false, disabled, title, onClick, style, children }: ButtonProps) {
+  const cls = `cp-btn cp-btn-${variant}${variant === 'toggle' && active ? ' cp-armed' : ''}`;
+  return (
+    <button type="button" className={cls} disabled={disabled} title={title} onClick={onClick} style={style}
+      aria-pressed={variant === 'toggle' ? active : undefined}>
+      {icon && <Icon name={icon} size={13} />}
+      <span>{children}</span>
+    </button>
+  );
+}
+
+/** Mono uppercase in-panel group label — level 2 of the four-level type scale
+ *  (panel title > Kicker > row label > Note). */
+export function Kicker({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return <div className="cp-kicker" style={style}>{children}</div>;
+}
+
+/** Quiet explanatory prose under a control group — level 4 of the type scale. */
+export function Note({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return <div className="cp-note" style={style}>{children}</div>;
+}
 
 export interface SectionProps {
   title: string;

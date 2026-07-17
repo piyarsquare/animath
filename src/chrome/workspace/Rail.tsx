@@ -29,12 +29,13 @@ export function Rail({ sections, openIds, onToggle, orientation = 'vertical' }: 
       <React.Fragment key={s.id}>
         {prev && prev.tier !== arch.tier && <div className="am-ws-rail-sep" />}
         <button
-          className={`am-ws-rail-btn ${active ? 'am-on' : ''}`}
+          className={`am-ws-rail-btn am-labeled ${active ? 'am-on' : ''}`}
           aria-label={`${s.title} (${arch.tier})`}
           aria-pressed={active}
           onClick={() => onToggle(s.id)}
         >
-          <Icon name={arch.icon} size={18} />
+          <Icon name={arch.icon} size={16} />
+          {orientation === 'vertical' && <span className="am-ws-rail-lbl">{s.title}</span>}
           <span className="am-ws-rail-tip">{s.title}<i>{arch.tier}</i></span>
         </button>
       </React.Fragment>
