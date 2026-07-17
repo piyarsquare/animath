@@ -94,7 +94,11 @@ export const SCENARIOS: Scenario[] = [
       dt: 0.0022,
       softening: 0.01,
     },
-    launch: { target: 'bary', radius: 1.8, speed: 1.1 },
+    // A wide circumbinary (P-type) orbit that clears the stars' figure-eight loop:
+    // survives indefinitely, yet the breathing inner triple still fans the ghost
+    // cloud out over time. A closer launch (the old r=1.8) fell into a star in ~2
+    // time units — chaos, but a dead planet before you'd seen anything.
+    launch: { target: 'bary', radius: 3.2, speed: 1.0 },
   },
   {
     id: 'moth',
@@ -105,7 +109,10 @@ export const SCENARIOS: Scenario[] = [
       dt: 0.0004,
       softening: 0.0025,
     },
-    launch: { target: 'bary', radius: 2.2, speed: 1.1 },
+    // The Moth choreography is larger and more delicate than the figure-eight, so
+    // the planet needs a wider berth (old r=2.2 fell in almost at once). A gently
+    // sub-circular circumbinary orbit rides the whole regular era.
+    launch: { target: 'bary', radius: 3.5, speed: 0.95 },
   },
   {
     id: 'pythagorean',
@@ -121,7 +128,12 @@ export const SCENARIOS: Scenario[] = [
       dt: 0.0016,
       softening: 0.04,
     },
-    launch: { target: 'bary', radius: 4.0, speed: 1.6 },
+    // Burrau's problem is violently destructive — the stars fall from rest and one
+    // is eventually ejected — so no close orbit survives. A wide, slow launch keeps
+    // the planet clear of the initial collapse: it witnesses the whole spectacle
+    // and is flung into the dark much later, rather than incinerated at once (old
+    // r=4/v=1.6 fell in by t≈7).
+    launch: { target: 'bary', radius: 5.0, speed: 0.55 },
   },
   {
     id: 'binary',
