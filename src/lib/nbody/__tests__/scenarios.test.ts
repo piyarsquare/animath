@@ -124,4 +124,16 @@ describe('findStableLaunch', () => {
     for (let i = 0; i < steps; i++) { step(sim, sc.system.dt); minDist = Math.min(minDist, minStarDist(planet, s)); }
     expect(minDist).toBeGreaterThan(0.3);
   });
+
+  it('never returns a radius beyond largestRadius (must stay in the UI control range)', () => {
+    // The recovery UI caps Start radius at 8; a result past it would clamp on the
+    // next slider drag, back toward an unsafe orbit. The finder must respect the
+    // bound and return null (→ caller falls back to the safe scenario default)
+    // rather than an out-of-range orbit. Pythagorean around Star 3 is the case
+    // the reviewer flagged (unconstrained search wanted r≈11.5).
+    const sc = getScenario('pythagorean');
+    const stars = buildStars(sc, [1, 1, 1]);
+    const found = findStableLaunch(stars, 's2', { starSoft: sc.system.softening, dt: sc.system.dt, largestRadius: 8 });
+    if (found) expect(found.radius).toBeLessThanOrEqual(8);
+  });
 });

@@ -52,6 +52,12 @@ function readScenePalette(el: Element): ScenePalette {
 }
 const TRAIL_MAX = 2000; // points stored per body; visible length is a live slider.
 const VEL_SCALE = 1;    // sim-units of drag → units of launch speed.
+/** Max launch radius the Start-radius control can represent. The safe-orbit
+ *  finder is bounded to this so a recovered launch is always shown and preserved
+ *  by the slider (a larger result would clamp on the next drag, back into a
+ *  possibly-unsafe orbit); when nothing survives within range, onFindStable falls
+ *  back to the scenario's safe default (always ≤ this). */
+const MAX_RADIUS = 8;
 const SAMPLE_DT = 0.05; // sim-time between classifier samples of the reference planet.
 
 /** Sim plane lives at world y = 0 so the camera can look down on it like a floor. */
@@ -827,7 +833,12 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
   const onFindStable = () => {
     const sc = getScenario(presetId);
     const stars = buildStars(sc, massMul);
-    const found = findStableLaunch(stars, target, { starSoft, dt: sc.system.dt, rKill: Math.max(collisionRadius, 1e-4) });
+    const found = findStableLaunch(stars, target, {
+      starSoft, dt: sc.system.dt, rKill: Math.max(collisionRadius, 1e-4),
+      // Bound the search to the Start-radius control so the result is always
+      // representable (and preserved on a later slider drag).
+      largestRadius: MAX_RADIUS,
+    });
     setCustom(null);
     if (found) {
       setPlanetRadiusState(found.radius);
@@ -937,7 +948,7 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
         value={target}
         onChange={setTarget}
       />
-      <Slider label="Start radius" value={planetRadius} min={0.1} max={8} step={0.05}
+      <Slider label="Start radius" value={planetRadius} min={0.1} max={MAX_RADIUS} step={0.05}
         onChange={setPlanetRadius} format={v => v.toFixed(2)} />
       <Slider label="Start speed" value={planetSpeed} min={0} max={3} step={0.05}
         onChange={setPlanetSpeed} format={v => v.toFixed(2)} />
