@@ -56,13 +56,36 @@ describe('scenario launch defaults', () => {
   });
 
   // Figure-Eight is the app's default scenario — the very first thing a visitor
-  // sees — so hold it to a stricter bar: bound (not merely un-destroyed) for a
-  // long run.
-  it('the default scenario (Figure-Eight) keeps the planet bound long-term', () => {
+  // sees — so hold it to a stricter, two-sided bar. The launch is tuned to the
+  // EDGE of stability: (a) the planet survives the whole realistic viewing
+  // window, and (b) the ghost swarm visibly branches early — the app's headline
+  // demo must not require minutes of watching.
+  it('the default scenario (Figure-Eight) survives the viewing window', () => {
     expect(SCENARIOS[0].id).toBe('figure8');
     const { fate, tEnd } = flyDefault('figure8', 300);
     expect(fate).toBe('bound');
     expect(tEnd).toBeGreaterThanOrEqual(300);
+  });
+
+  it('the default launch sits near the edge: a 1e-3 ghost diverges by t=150', () => {
+    const sc = getScenario('figure8');
+    const stars = buildStars(sc, [1, 1, 1]);
+    const { target, radius, speed } = sc.launch;
+    const ref: Planet = { ...launchPlanet(stars, target, radius, speed), alive: true };
+    // Same offset the Observatory's default ghost spread uses (ε = 10^-3).
+    const ghost: Planet = { ...ref, x: ref.x + 1e-3 };
+    const sim: SimState = {
+      stars, planets: [ref, ghost], t: 0,
+      dtBase: sc.system.dt, G: 1, starSoft: sc.system.softening, planetSoft: 0.05,
+    };
+    let divT: number | null = null;
+    const steps = Math.round(150 / sc.system.dt);
+    for (let i = 0; i < steps; i++) {
+      step(sim, sc.system.dt);
+      if (Math.hypot(ghost.x - ref.x, ghost.y - ref.y) > 0.5) { divT = sim.t; break; }
+    }
+    expect(divT).not.toBeNull();
+    expect(divT!).toBeLessThan(150);
   });
 });
 
