@@ -8,7 +8,7 @@ slug: number-plane-directional-pivot-za1hzy
 status: in-progress
 build: passed
 followup: null
-pr: null
+pr: https://github.com/piyarsquare/animath/pull/251
 app: number-plane, docs
 signals: needs-dan, phone-needed
 next: Dan reads journal.html (the entry-format probe) and rewrites the six drafted entries in his own voice.
