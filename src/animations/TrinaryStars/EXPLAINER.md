@@ -23,9 +23,10 @@ It's **sensitive dependence on initial conditions**, the fingerprint of
 the same path… for a while. Then a close pass by a star **amplifies** the gap,
 the next pass amplifies it again, and the tiny initial difference explodes.
 
-> Turn up the **ghost planets** and give them a tiny **perturbation ε**. Watch
-> the cloud stay together, then suddenly smear across the whole system. The
-> moment it scatters is the moment the future became unknowable.
+> Open the **Ghost swarm** panel: turn up the **ghost planets** and shrink the
+> **ghost spread ε**. Watch the cloud stay together, then suddenly smear across
+> the whole system. The moment it scatters is the moment the future became
+> unknowable.
 
 That smear grows roughly **exponentially** in time — the rate is called the
 *Lyapunov exponent*. Exponential growth means precision is hopeless: to predict
@@ -63,8 +64,8 @@ on the scene to set the launch point and velocity arrow yourself.
 
 - **Bright spheres** are the three stars, full participants in the gravity —
   they pull on each other and on the planets.
-- The **cyan planet** is the reference world. The **pink ghosts** start almost
-  exactly where it does; their divergence *is* the unpredictability.
+- The **bright planet** is the reference world. The **faint ghosts** hugging it
+  start almost exactly where it does; their divergence *is* the unpredictability.
 - **Trails** show recent history. The planets are *test masses* — they feel the
   stars but don't tug back — so every ghost samples the identical star field,
   isolating chaos from noise.

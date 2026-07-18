@@ -63,7 +63,7 @@ function insolBar(s: Snapshot): { pos: number; loPos: number; hiPos: number } {
   return { pos: map(s.S), loPos: map(s.Slo), hiPos: map(s.Shi) };
 }
 
-export default function Observatory({ snapshot }: { snapshot: Snapshot | null }) {
+export default function AnalysisHUD({ snapshot }: { snapshot: Snapshot | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   // Read tokens from inside the forced-dark scene subtree so the timeline tracks

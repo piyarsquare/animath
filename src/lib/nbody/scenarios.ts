@@ -13,7 +13,8 @@
  * fresh array so the simulation can be re-seeded deterministically on reset.
  */
 
-import type { Planet, Star } from './integrator';
+import { step, type Planet, type SimState, type Star } from './integrator';
+import { planetEnergy } from './analysis/classify';
 
 /** What the planet is launched into orbit around:
  *  the system barycenter, one specific star, or the inner two-star binary. */
@@ -94,7 +95,13 @@ export const SCENARIOS: Scenario[] = [
       dt: 0.0022,
       softening: 0.01,
     },
-    launch: { target: 'bary', radius: 1.8, speed: 1.1 },
+    // A circumbinary (P-type) orbit tuned to the EDGE of stability: close enough
+    // that the ghost cloud visibly branches by t≈84 (vs t≈334 for the safer
+    // r=3.2/v=1.0), yet never destroyed from any launch angle — the reference
+    // planet dances through close passes (min star distance ≈0.96) and is finally
+    // ejected around t≈427, a long chaotic life ending as a frozen wanderer, not
+    // a fireball. (The old r=1.8/v=1.1 fell into a star in ~2 time units.)
+    launch: { target: 'bary', radius: 3.2, speed: 0.95 },
   },
   {
     id: 'moth',
@@ -105,12 +112,15 @@ export const SCENARIOS: Scenario[] = [
       dt: 0.0004,
       softening: 0.0025,
     },
-    launch: { target: 'bary', radius: 2.2, speed: 1.1 },
+    // The Moth choreography is larger and more delicate than the figure-eight, so
+    // the planet needs a wider berth (old r=2.2 fell in almost at once). A gently
+    // sub-circular circumbinary orbit rides the whole regular era.
+    launch: { target: 'bary', radius: 3.5, speed: 0.95 },
   },
   {
     id: 'pythagorean',
     name: 'Pythagorean',
-    blurb: "Burrau's problem: stars of mass 3, 4 and 5 fall together from rest, swing through violent close passes, and eject one of their own.",
+    blurb: "Burrau's problem: stars of mass 3, 4 and 5 fall together from rest, swing through violent close passes, and eject one of their own. Your planet is a witness, not a resident — it rides a wide orbit through the fireworks and is eventually flung into the dark.",
     system: {
       // Masses 3,4,5 at the vertices of a 3-4-5 right triangle, starting at rest.
       makeStars: () => recenter([
@@ -121,7 +131,12 @@ export const SCENARIOS: Scenario[] = [
       dt: 0.0016,
       softening: 0.04,
     },
-    launch: { target: 'bary', radius: 4.0, speed: 1.6 },
+    // Burrau's problem is violently destructive — the stars fall from rest and one
+    // is eventually ejected — so no close orbit survives. A wide, slow launch keeps
+    // the planet clear of the initial collapse: it witnesses the whole spectacle
+    // and is flung into the dark much later, rather than incinerated at once (old
+    // r=4/v=1.6 fell in by t≈7).
+    launch: { target: 'bary', radius: 5.0, speed: 0.55 },
   },
   {
     id: 'binary',
@@ -145,6 +160,31 @@ export const SCENARIOS: Scenario[] = [
 
 export function getScenario(id: string): Scenario {
   return SCENARIOS.find(s => s.id === id) ?? SCENARIOS[0];
+}
+
+/** Launch defaults shipped by EARLIER versions that are now known-bad: the
+ *  pre-2026-07 fatal launches (planet falls into a star within seconds) and the
+ *  too-stable interim figure-eight. Returning visitors have these persisted in
+ *  localStorage, so fixing the scenario defaults alone doesn't reach them —
+ *  their stored settings silently resurrect the old failure. */
+const LEGACY_LAUNCHES: Record<string, [radius: number, speed: number][]> = {
+  figure8: [[1.8, 1.1], [3.2, 1.0]],
+  moth: [[2.2, 1.1]],
+  pythagorean: [[4.0, 1.6]],
+};
+
+/** If a persisted (radius, speed) for `presetId` matches a legacy default
+ *  exactly, return the scenario's current launch to migrate to; else null.
+ *  Exact match only — a user's own hand-tuned values are never touched. */
+export function migrateLegacyLaunch(
+  presetId: string, radius: number, speed: number,
+): { radius: number; speed: number } | null {
+  const eq = (a: number, b: number) => Math.abs(a - b) < 1e-9;
+  const legacy = LEGACY_LAUNCHES[presetId] ?? [];
+  if (!legacy.some(([r, v]) => eq(radius, r) && eq(speed, v))) return null;
+  const { launch } = getScenario(presetId);
+  if (eq(radius, launch.radius) && eq(speed, launch.speed)) return null; // already current
+  return { radius: launch.radius, speed: launch.speed };
 }
 
 /** Build a scenario's stars with per-star mass multipliers applied, re-centered
@@ -192,4 +232,75 @@ export function launchPlanet(
     vy: f.cvy + dir * speed * ca,
     ax: 0, ay: 0,
   };
+}
+
+/** The local circular-orbit speed √(M/r) around a target body at `radius`. */
+export function circularSpeed(stars: Star[], target: TargetId, radius: number): number {
+  const f = orbitFrame(stars, target);
+  return Math.sqrt(f.mass / Math.max(0.05, radius));
+}
+
+export interface StableLaunchOptions {
+  /** Softening length for star–star interactions (matches the live sim). */
+  starSoft: number;
+  /** Integrator step. */
+  dt: number;
+  /** Collision radius that counts as "destroyed". */
+  rKill?: number;
+  /** How far a planet must always stay from the nearest star to count as safe
+   *  (an absolute clearance — bigger ⇒ rounder, more robustly-bound orbits, and
+   *  crucially avoids chaotic knife-edge survivors). */
+  minClear?: number;
+  /** Sim-time to integrate each candidate. Long enough to reject slow decays. */
+  probeTime?: number;
+  smallestRadius?: number;
+  largestRadius?: number;
+  radiusStep?: number;
+}
+
+/**
+ * Empirically find a launch that survives — the only reliable "safe orbit" in a
+ * chaotic star field, where a derived radius fails (a star may be ejected to
+ * infinity; a hierarchical system's planet orbits a sub-system) and a single
+ * bare-survival probe lands on knife-edge orbits that a rounding-sized nudge
+ * destroys. Sweeps the launch radius outward, using the local circular speed at
+ * each, and returns the first whose planet stays bound **and** never comes within
+ * `minClear` of a star across `probeTime`. Values are rounded to the control
+ * steps the UI uses, so the returned orbit behaves exactly as previewed. Returns
+ * `null` if nothing in range qualifies. Pure — integrates a private copy.
+ */
+export function findStableLaunch(
+  stars: Star[], target: TargetId, opts: StableLaunchOptions,
+): { radius: number; speed: number } | null {
+  const {
+    starSoft, dt, rKill = 0.12, minClear = 0.5, probeTime = 140,
+    smallestRadius = 1.0, largestRadius = 16, radiusStep = 0.25,
+  } = opts;
+  // Snap to the UI controls' 0.05 step so a returned launch is exactly
+  // representable — the probe below then tests the *snapped* values, so what
+  // ships is what was verified (an off-grid speed would drift on the next drag).
+  const CONTROL_STEP = 0.05;
+  const snap = (x: number) => Math.round(x / CONTROL_STEP) * CONTROL_STEP;
+  const ss2 = starSoft * starSoft;
+  const steps = Math.round(probeTime / dt);
+
+  for (let r = smallestRadius; r <= largestRadius + 1e-9; r += radiusStep) {
+    const radius = snap(r);
+    const speed = snap(circularSpeed(stars, target, radius));
+    // Fresh star copy per candidate (the stars evolve during the probe).
+    const s: Star[] = stars.map(st => ({ ...st }));
+    const planet = launchPlanet(s, target, radius, speed);
+    const sim: SimState = { stars: s, planets: [planet], t: 0, dtBase: dt, G: 1, starSoft, planetSoft: 0.05 };
+    let ok = true;
+    for (let i = 0; i < steps; i++) {
+      step(sim, dt);
+      let dmin = Infinity;
+      for (const st of s) { const d = Math.hypot(st.x - planet.x, st.y - planet.y); if (d < dmin) dmin = d; }
+      if (dmin < Math.max(rKill, minClear)) { ok = false; break; }
+      // Unbound-and-far ⇒ this radius won't settle into an orbit.
+      if (Math.hypot(planet.x, planet.y) > largestRadius + 4 && planetEnergy(planet, s, ss2) > 0) { ok = false; break; }
+    }
+    if (ok) return { radius, speed };
+  }
+  return null;
 }

@@ -138,6 +138,12 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
   // Resolution currently on the canvas — varies during a progressive render, so
   // hover/click/recolor index the grids by this, not the target `res` state.
   const paintedResRef = useRef(128);
+  // The domain/config the CURRENTLY PAINTED grids were computed with. The click
+  // handoff, hover readout and zoom selection must map pixels through THIS —
+  // not the live state — or moving any slider (sampling box, masses, launch
+  // rule, frame) after rendering silently remaps every pixel: the map would
+  // show world A's fate while a click launches world B.
+  const paintedCtxRef = useRef<{ domain: Domain; bc: BasinConfig; cfg: EnsembleConfig } | null>(null);
   const autoFitRef = useRef(autoFit); autoFitRef.current = autoFit;
   const statMetricRef = useRef(statMetric); statMetricRef.current = statMetric;
   // Identifies what the value grids currently hold, so an idle recolor only
@@ -182,13 +188,18 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     mode, metric, lens, statRuns, statMetric, domain: effDomain, res, samples, posRule, posSpeedFrac, fixedAngle, fixedRadius, fixedRetro, frame,
   });
   const goObservatory = (i: number, j: number) => {
-    const d = effDomain, pr = paintedResRef.current;
+    // Map the clicked pixel through the PAINTED context (domain + launch rules
+    // + system config at render time) — the live sliders may have moved since,
+    // and the pixel's fate belongs to the world it was computed for.
+    const pc = paintedCtxRef.current;
+    const d = pc?.domain ?? effDomain, pr = paintedResRef.current;
+    const pcfg = pc?.cfg ?? cfg;
     const ax = d.a0 + (d.a1 - d.a0) * ((i + 0.5) / pr);
     const by = d.b1 - (d.b1 - d.b0) * ((j + 0.5) / pr);
-    const planet = basinPlanetAt(cfg, currentBc(), ax, by);
+    const planet = basinPlanetAt(pcfg, pc?.bc ?? currentBc(), ax, by);
     const q = new URLSearchParams({
-      p: cfg.presetId, tg: cfg.target,
-      m0: String(cfg.massMul[0]), m1: String(cfg.massMul[1]), m2: String(cfg.massMul[2]), ss: String(cfg.starSoft),
+      p: pcfg.presetId, tg: pcfg.target,
+      m0: String(pcfg.massMul[0]), m1: String(pcfg.massMul[1]), m2: String(pcfg.massMul[2]), ss: String(pcfg.starSoft),
       px: planet.x.toFixed(5), py: planet.y.toFixed(5), vx: planet.vx.toFixed(5), vy: planet.vy.toFixed(5),
     });
     // Open the run in a new tab so the Lab — and the map you just computed —
@@ -381,6 +392,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
       }
       const outGrid = new Uint8Array(N * N), tGrid = new Float32Array(N * N), statGrid = new Float32Array(N * N * 4);
       outGridRef.current = outGrid; tGridRef.current = tGrid; statGridRef.current = statGrid; paintedResRef.current = N;
+      paintedCtxRef.current = { domain: dom, bc, cfg: cfgNow };
       let painted = 0; const total = N * N;
 
       // Color from the themed ramps (ignoring the worker/GPU's own rgb), so every
@@ -584,9 +596,11 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     const i = Math.min(pr - 1, Math.max(0, Math.floor(((e.clientX - r.left) / r.width) * pr)));
     const j = Math.min(pr - 1, Math.max(0, Math.floor(((e.clientY - r.top) / r.height) * pr)));
     if (tGridRef.current.length) {
-      const ax = effDomain.a0 + (effDomain.a1 - effDomain.a0) * ((i + 0.5) / pr);
-      const by = effDomain.b1 - (effDomain.b1 - effDomain.b0) * ((j + 0.5) / pr);
-      const [la, lb] = AXIS_LABELS[mode];
+      // Read through the painted domain — the live box may have moved since.
+      const pd = paintedCtxRef.current?.domain ?? effDomain;
+      const ax = pd.a0 + (pd.a1 - pd.a0) * ((i + 0.5) / pr);
+      const by = pd.b1 - (pd.b1 - pd.b0) * ((j + 0.5) / pr);
+      const [la, lb] = AXIS_LABELS[paintedCtxRef.current?.bc.mode ?? mode];
       const v = tGridRef.current[j * pr + i];
       const detail = lens === 'stat'
         ? `${STAT_LABEL[statMetric]} ${(v * 100).toFixed(0)}% (of ${statRuns} worlds)`
@@ -621,9 +635,12 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
     if (dx < 6 || dy < 6) return; // degenerate selection
     const nx0 = Math.min(d.x0, d.x1) / r.width, nx1 = Math.max(d.x0, d.x1) / r.width;
     const ny0 = Math.min(d.y0, d.y1) / r.height, ny1 = Math.max(d.y0, d.y1) / r.height;
+    // The user selected a rectangle OF THE PAINTED IMAGE — convert through the
+    // painted domain, then apply to the live box/domain.
+    const pd = paintedCtxRef.current?.domain ?? effDomain;
     const nd: Domain = {
-      a0: effDomain.a0 + (effDomain.a1 - effDomain.a0) * nx0, a1: effDomain.a0 + (effDomain.a1 - effDomain.a0) * nx1,
-      b0: effDomain.b1 - (effDomain.b1 - effDomain.b0) * ny1, b1: effDomain.b1 - (effDomain.b1 - effDomain.b0) * ny0,
+      a0: pd.a0 + (pd.a1 - pd.a0) * nx0, a1: pd.a0 + (pd.a1 - pd.a0) * nx1,
+      b0: pd.b1 - (pd.b1 - pd.b0) * ny1, b1: pd.b1 - (pd.b1 - pd.b0) * ny0,
     };
     if (mode === 'radspeed' && system?.onBox) system.onBox({ rMin: nd.a0, rMax: nd.a1, fMin: nd.b0, fMax: nd.b1 });
     else setDomain(nd);
@@ -677,7 +694,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
             <Pills label="Reference frame" value={frame}
               options={[
                 { value: 'bary', label: 'Barycenter' },
-                { value: 's0', label: 'Star A' }, { value: 's1', label: 'Star B' }, { value: 's2', label: 'Star C' },
+                { value: 's0', label: 'Star 1' }, { value: 's1', label: 'Star 2' }, { value: 's2', label: 'Star 3' },
               ]}
               onChange={(v) => setFrame(v as FrameId)} />
           )}
@@ -777,7 +794,7 @@ const BasinMap = forwardRef<BasinHandle, { cfg: EnsembleConfig; system?: BasinSy
           </div>
           {mode === 'pos' && frame !== 'bary' && (
             <div style={{ font: '11px/1.5 system-ui', color: 'var(--dim)', marginTop: 6 }}>
-              Frame co-moving with <b>{frame === 's0' ? 'Star A' : frame === 's1' ? 'Star B' : 'Star C'}</b>: each pixel is a start offset from that star, launched with the star’s own velocity, so destinies are read relative to a moving star (⌖ marks it, pinned at the origin while the others orbit).
+              Frame co-moving with <b>{frame === 's0' ? 'Star 1' : frame === 's1' ? 'Star 2' : 'Star 3'}</b>: each pixel is a start offset from that star, launched with the star’s own velocity, so destinies are read relative to a moving star (⌖ marks it, pinned at the origin while the others orbit).
             </div>
           )}
         </div>

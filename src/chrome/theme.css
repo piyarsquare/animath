@@ -662,6 +662,22 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
   display: grid; place-items: center; border: 1px solid transparent; background: transparent;
   color: var(--dim); cursor: pointer; transition: all .14s var(--ease);
 }
+/* Rail labels (2026-07): a persistent per-panel title under each icon, so ten
+   panels don't collapse into three identical archetype-glyph pairs. The closed
+   icon vocabulary is untouched — the label adds identity, not meaning. Vertical
+   rail only; the horizontal (immersive top-bar) rail keeps icon-only density,
+   and the phone dock already labels its icons. */
+.am-ws-rail:not(.am-ws-rail-h) .am-ws-rail-btn.am-labeled {
+  width: 40px; height: 44px;
+  grid-template-rows: 1fr auto; place-items: center; row-gap: 0;
+  padding: 5px 1px 4px;
+}
+.am-ws-rail-lbl {
+  max-width: 38px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--font-ui); font-size: 8px; font-weight: 600; letter-spacing: .01em;
+  line-height: 1.1; color: inherit; opacity: .92;
+}
+.am-ws-rail-h .am-ws-rail-lbl { display: none; }
 .am-ws-rail-btn:hover { background: var(--hover); color: var(--fg); }
 .am-ws-rail-btn.am-on { background: var(--accent-soft); color: var(--accent); border-color: var(--border); }
 .am-ws-rail-btn.am-on::before { content: ""; position: absolute; left: -6px; top: 50%; transform: translateY(-50%); width: 3px; height: 18px; border-radius: 2px; background: var(--accent); }
@@ -699,10 +715,21 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
 }
 .am-ws-phead:active { cursor: grabbing; }
 .am-ws-phead.am-collapsed { border-bottom-color: transparent; }
-.am-ws-pico { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; background: var(--panel-2); color: var(--accent); flex-shrink: 0; }
+/* Accent rebudget (2026-07): header archetype icons are wayfinding, not state —
+   they speak in the dim voice so primary verbs stay the loudest thing on screen. */
+.am-ws-pico { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; background: var(--panel-2); color: var(--dim); flex-shrink: 0; }
 .am-ws-panel-title { flex: 1; font-size: 12.5px; font-weight: 700; letter-spacing: -0.01em; }
 .am-ws-phead .am-btn-icon { width: 26px; height: 26px; }
-.am-ws-pbody { padding: 4px 13px 13px; max-height: 50vh; overflow-y: auto; }
+.am-ws-pbody {
+  padding: 4px 13px 13px; max-height: 50vh; overflow-y: auto;
+  /* An always-visible thin scrollbar when content overflows, so a clipped panel
+     signals "there's more" instead of cutting notes mid-sentence. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--track) transparent;
+  scrollbar-gutter: stable;
+}
+.am-ws-pbody::-webkit-scrollbar { width: 5px; }
+.am-ws-pbody::-webkit-scrollbar-thumb { background: var(--track); border-radius: 999px; }
 /* in narrow floating panels, let segmented pills wrap instead of clipping */
 .am-ws-pbody .am-pills { flex-wrap: wrap; }
 .am-ws-pbody .am-pill { flex: 1 1 calc(50% - 4px); min-width: 0; }
@@ -711,7 +738,7 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline
 .am-ws-view { position: absolute; display: flex; flex-direction: column; background: var(--panel-solid); border: 1px solid var(--border-strong); border-radius: 13px; overflow: hidden; box-shadow: var(--shadow); animation: am-pop .16s var(--ease); }
 .am-ws-vhead { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 11px; cursor: grab; border-bottom: 1px solid var(--border); user-select: none; background: var(--panel); touch-action: none; }
 .am-ws-vhead:active { cursor: grabbing; }
-.am-ws-vico { color: var(--accent); display: flex; }
+.am-ws-vico { color: var(--dim); display: flex; }
 .am-ws-vtitle { flex: 1; font-size: 12.5px; font-weight: 700; letter-spacing: -0.01em; }
 .am-ws-vhead .am-btn-icon { width: 26px; height: 26px; }
 .am-ws-view-body { position: relative; flex: 1; min-height: 0; background: var(--viz-bg); }

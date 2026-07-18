@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Workspace from '../../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef, WorkspaceMode } from '../../../chrome/workspace/types';
-import { Slider, Pills } from '../../../components/ControlPanel';
+import { Slider, Pills, Button } from '../../../components/ControlPanel';
 import { SCENARIOS, getScenario, DEFAULT_CLASSIFY, type TargetId, type Outcome, type RunResult } from '@/lib/nbody';
 import { Aggregator, OUTCOMES, type AggSnapshot } from './ensemble';
 import { runOne, targetMassOf } from './runner';
@@ -209,6 +209,8 @@ export default function TrinaryLab() {
 
   const [running, setRunning] = useState(false);
   const [agg, setAgg] = useState<AggSnapshot | null>(null);
+  // Settings changed since this census ran — results kept on screen, labeled.
+  const [stale, setStale] = useState(false);
   const [rate, setRate] = useState(0);
   const [engine, setEngine] = useState<Engine>(() => {
     const e = U.get('e') as Engine | null;
@@ -353,6 +355,7 @@ export default function TrinaryLab() {
 
   const start = () => {
     ensureAgg();
+    setStale(false); // fresh results will stream in and replace the kept census
     tmRef.current = targetMassOf(cfgRef.current);
     uiClock.current = { t: performance.now(), n: aggRef.current!.count };
     runningRef.current = true; setRunning(true);
@@ -372,13 +375,22 @@ export default function TrinaryLab() {
     pause();
     poolRef.current?.dispose(); poolRef.current = null;
     aggRef.current = new Aggregator(cfgRef.current.tMax);
-    setRate(0); setAgg(null);
+    setRate(0); setAgg(null); setStale(false);
   };
 
   const engineRef = useRef(engine); engineRef.current = engine;
   useEffect(() => () => { cancelAnimationFrame(rafRef.current); poolRef.current?.dispose(); }, []);
-  // Changing the configuration or engine invalidates accumulated stats.
-  useEffect(() => { reset(); }, [cfg, engine]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Changing the configuration or engine invalidates the accumulator — but a
+  // 20,000-world census is minutes of compute, so KEEP the last results on
+  // screen, banner them as stale, and let the next Run start fresh. Only the
+  // explicit Reset (or a fresh run) discards what's shown.
+  useEffect(() => {
+    pause();
+    poolRef.current?.dispose(); poolRef.current = null;
+    aggRef.current = new Aggregator(cfgRef.current.tMax);
+    setRate(0);
+    if (agg && agg.n > 0) setStale(true);
+  }, [cfg, engine]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onPickPreset = (id: string) => {
     setPresetId(id); setTarget(getScenario(id).launch.target);
@@ -423,6 +435,12 @@ export default function TrinaryLab() {
     background: 'var(--panel-2)', color: 'var(--fg)', cursor: 'pointer', fontSize: 14,
   };
   const note: React.CSSProperties = { font: '11px/1.5 system-ui', color: 'var(--dim)', marginTop: 4 };
+  // Token-colored dot matching each star's scene color (--data-1/4/6): the mass
+  // sliders point at stars by COLOR, not by a color name that drifts per skin.
+  const dotStyle = (token: string): React.CSSProperties => ({
+    display: 'inline-block', width: 8, height: 8, borderRadius: 8,
+    background: `var(--${token})`, marginRight: 6,
+  });
 
   const targetOptions: { value: TargetId; label: string }[] = [
     { value: 'bary', label: 'Barycenter' }, { value: 's0', label: 'Star 1' },
@@ -437,12 +455,12 @@ export default function TrinaryLab() {
       <Pills options={SCENARIOS.map(p => ({ value: p.id, label: p.name }))} value={presetId} onChange={onPickPreset} />
       <div style={{ font: '12px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '4px 2px' }}>{preset.blurb}</div>
       <Pills label="Orbit around" options={targetOptions} value={target} onChange={setTarget} />
-      <Slider label="Star 1 mass · gold" value={massMul[0]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(0, v)} format={(v) => (baseMasses[0] * v).toFixed(2)} />
-      <Slider label="Star 2 mass · orange" value={massMul[1]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(1, v)} format={(v) => (baseMasses[1] * v).toFixed(2)} />
-      <Slider label="Star 3 mass · blue" value={massMul[2]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(2, v)} format={(v) => (baseMasses[2] * v).toFixed(2)} />
-      <Slider label="Softening" value={starSoft} min={0.005} max={0.3} step={0.005} onChange={setStarSoft} format={(v) => v.toFixed(3)} />
-      <button style={{ ...btn, padding: '5px 12px', fontSize: 12, marginTop: 4 }}
-        onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); }}>⟲ Reset stars</button>
+      <Slider label={<><i style={dotStyle('data-1')} />Star 1 mass</>} value={massMul[0]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(0, v)} format={(v) => (baseMasses[0] * v).toFixed(2)} />
+      <Slider label={<><i style={dotStyle('data-4')} />Star 2 mass</>} value={massMul[1]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(1, v)} format={(v) => (baseMasses[1] * v).toFixed(2)} />
+      <Slider label={<><i style={dotStyle('data-6')} />Star 3 mass</>} value={massMul[2]} min={0.1} max={4} step={0.05} onChange={(v) => setStarMass(2, v)} format={(v) => (baseMasses[2] * v).toFixed(2)} />
+      <Slider label="Close-pass smoothing" value={starSoft} min={0.005} max={0.3} step={0.005} onChange={setStarSoft} format={(v) => v.toFixed(3)} />
+      <Button variant="ghost" icon="reset" style={{ width: 'auto', padding: '5px 12px', fontSize: 12, marginTop: 4 }}
+        onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); }}>Reset stars</Button>
     </>
   );
 
@@ -464,7 +482,7 @@ export default function TrinaryLab() {
         </div>
       )}
       <div style={note}>
-        How long each world is integrated, and the insolation band counted as habitable — used by <b style={{ color: 'var(--fg)' }}>both</b> the Destiny Map and the Census. Changing any setting clears the tally.
+        How long each world is integrated, and the insolation band counted as habitable — used by <b style={{ color: 'var(--fg)' }}>both</b> the Destiny Map and the Census. Changing a setting pauses the census and keeps its results on screen (labeled as the previous run) until you run again.
       </div>
     </>
   );
@@ -482,8 +500,7 @@ export default function TrinaryLab() {
         <LaunchSpace rMin={rMin} rMax={rMax} fMin={fMin} fMax={fMax} allowRetro={allowRetro} />
       </div>
       <div style={note}>
-        Each dot is a candidate world: a launch radius and a speed (as a multiple of the local circular speed). The cyan box is what you’re sampling now — move the sliders to reshape it, or drag a box on the Destiny Map’s radius×speed plane. Below the amber line orbits tend to be bound; above the red √2 line they tend to escape.
-        <span style={{ color: 'var(--dim)' }}> Changing any setting clears the tally.</span>
+        Each dot is a candidate world: a launch radius and a speed (as a multiple of the local circular speed). The highlighted box is what you’re sampling now — move the sliders to reshape it, or drag a box on the Destiny Map’s radius×speed plane. Below the dashed circular-speed line orbits tend to be bound; above the dashed √2 escape line they tend to escape.
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
         <button style={btn} title="New random ensemble seed" onClick={() => setBaseSeed((Math.random() * 4294967296) >>> 0)}>🎲 Reseed</button>
@@ -499,10 +516,18 @@ export default function TrinaryLab() {
   // the sampling box stay in the Sampling panel.
   const transportNode = (
     <>
+      {stale && (
+        <div style={{
+          font: '11px/1.5 system-ui', color: 'var(--fg)', background: 'var(--accent-soft)',
+          border: '1px solid var(--border)', borderRadius: 7, padding: '6px 9px', marginBottom: 8,
+        }}>
+          Settings changed — showing the <b>previous</b> run’s results. Run census starts fresh.
+        </div>
+      )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        <button style={{ ...btn, background: running ? 'var(--accent-soft)' : 'var(--success-soft)' }}
-          onClick={running ? pause : start}>{running ? '❚❚ Pause' : (n > 0 && n < targetN ? '▶ Resume' : '▶ Run census')}</button>
-        <button style={btn} onClick={reset}>↺ Reset</button>
+        <Button variant="primary" style={{ flex: 1, width: 'auto' }}
+          onClick={running ? pause : start}>{running ? 'Pause' : (!stale && n > 0 && n < targetN ? 'Resume' : 'Run census')}</Button>
+        <Button variant="ghost" icon="reset" style={{ flex: 'none', width: 'auto' }} onClick={reset}>Reset</Button>
       </div>
       <div style={{ height: 8, borderRadius: 4, background: 'var(--track)', marginTop: 10, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${Math.min(100, n / Math.max(1, targetN) * 100)}%`, background: 'var(--success)', transition: 'width 0.1s' }} />
@@ -545,7 +570,7 @@ export default function TrinaryLab() {
 
   const distNode = (
     <>
-      <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', margin: '2px 0' }}>habitable fraction of lifetime</div>
+      <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', margin: '2px 0' }}>habitable fraction of the time budget</div>
       <Histogram data={agg?.histHab ?? []} max={agg?.histMax.hab ?? 1} color={C.happy} domain={['0%', '100%']} />
       <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', margin: '8px 0 2px' }}>longest stable era</div>
       <Histogram data={agg?.histLong ?? []} max={agg?.histMax.long ?? 1} color={C.survived} domain={['0', tMax.toFixed(0)]} />
@@ -675,7 +700,7 @@ export default function TrinaryLab() {
     {
       id: 'run',
       icon: running ? 'pause' : 'flask',
-      label: running ? 'Pause' : (n > 0 && n < targetN ? 'Resume' : 'Run census'),
+      label: running ? 'Pause' : (!stale && n > 0 && n < targetN ? 'Resume' : 'Run census'),
       primary: true, active: running, sectionId: 'transport',
       onClick: running ? pause : start,
     },

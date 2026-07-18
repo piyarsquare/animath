@@ -3,12 +3,15 @@ import * as THREE from 'three';
 import Canvas3D from '@/components/Canvas3D';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef, WorkspaceMode } from '../../chrome/workspace/types';
-import { Slider, Pills, Select, NumberInput } from '../../components/ControlPanel';
+import { Slider, Pills, Select, NumberInput, Button, Kicker, Note, Section } from '../../components/ControlPanel';
+import { usePhone } from '../../chrome/usePhone';
 import {
-  step, cloudSpread, lyapunovRenorm, SCENARIOS, getScenario, buildStars, orbitFrame, launchPlanet, Analyzer, DEFAULT_CLASSIFY,
-  type SimState, type Planet, type Star, type TargetId, type ClassifyParams, type Snapshot,
+  step, cloudSpread, lyapunovRenorm, SCENARIOS, getScenario, buildStars, launchPlanet,
+  circularSpeed, findStableLaunch, migrateLegacyLaunch, Analyzer, DEFAULT_CLASSIFY,
+  type SimState, type Planet, type TargetId, type ClassifyParams, type Snapshot,
 } from '@/lib/nbody';
-import Observatory from './Observatory';
+import AnalysisHUD from './AnalysisHUD';
+import { frameTransform } from './frame';
 import SkyView, { type SkyData } from './SkyView';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
 import { Scheme } from '../../chrome/Scheme';
@@ -51,6 +54,12 @@ function readScenePalette(el: Element): ScenePalette {
 }
 const TRAIL_MAX = 2000; // points stored per body; visible length is a live slider.
 const VEL_SCALE = 1;    // sim-units of drag → units of launch speed.
+/** Max launch radius the Start-radius control can represent. The safe-orbit
+ *  finder is bounded to this so a recovered launch is always shown and preserved
+ *  by the slider (a larger result would clamp on the next drag, back into a
+ *  possibly-unsafe orbit); when nothing survives within range, onFindStable falls
+ *  back to the scenario's safe default (always ≤ this). */
+const MAX_RADIUS = 8;
 const SAMPLE_DT = 0.05; // sim-time between classifier samples of the reference planet.
 
 /** Sim plane lives at world y = 0 so the camera can look down on it like a floor. */
@@ -131,37 +140,7 @@ function navNum(u: URLSearchParams, k: string, d: number) { const v = u.get(k); 
 /** localStorage key namespace for the Observatory's persisted settings. */
 const PK = (field: string) => `trinary:${field}`;
 
-/** Anchor point (in sim coords) for a reference-frame selector: a star, a pair's
- *  center of mass, or the system barycenter. */
-function frameAnchor(stars: Star[], key: string): { x: number; y: number } {
-  const com = (idx: number[]) => {
-    let M = 0, x = 0, y = 0;
-    for (const i of idx) { const s = stars[i]; M += s.mass; x += s.mass * s.x; y += s.mass * s.y; }
-    return { x: x / M, y: y / M };
-  };
-  switch (key) {
-    case 's0': return { x: stars[0].x, y: stars[0].y };
-    case 's1': return { x: stars[1].x, y: stars[1].y };
-    case 's2': return { x: stars[2].x, y: stars[2].y };
-    case 'c01': return com([0, 1]);
-    case 'c02': return com([0, 2]);
-    case 'c12': return com([1, 2]);
-    default: return com([0, 1, 2]); // barycenter
-  }
-}
-
-/** A pure view transform: put `center` at the origin, and (unless align='none')
- *  rotate so the direction to `align` lies on +x. Physics is unchanged. */
-function frameTransform(stars: Star[], center: string, align: string): (x: number, y: number) => { x: number; y: number } {
-  const C = frameAnchor(stars, center);
-  let c = 1, s = 0;
-  if (align !== 'none') {
-    const A = frameAnchor(stars, align);
-    const ang = Math.atan2(A.y - C.y, A.x - C.x);
-    c = Math.cos(ang); s = Math.sin(ang);
-  }
-  return (x, y) => { const dx = x - C.x, dy = y - C.y; return { x: dx * c + dy * s, y: -dx * s + dy * c }; };
-}
+// Reference-frame view transforms live in frame.ts (pure, unit-tested).
 
 const FRAME_ANCHORS = [
   { value: 'bary', label: 'Barycenter' },
@@ -212,7 +191,7 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
   const [planetSpeed, setPlanetSpeedState] = usePersistentState(PK('planetSpeed'), getScenario(presetId).launch.speed);
   const [massMul, setMassMul] = usePersistentState<number[]>(fromLink ? null : PK('massMul'), [navNum(Q, 'm0', 1), navNum(Q, 'm1', 1), navNum(Q, 'm2', 1)]); // per-star mass multipliers
   const [starSoft, setStarSoft] = usePersistentState(fromLink ? null : PK('starSoft'), navNum(Q, 'ss', getScenario(presetId).system.softening)); // close-encounter softening
-  const [speed, setSpeed] = usePersistentState(PK('speed'), 1);          // sim-seconds per real-second
+  const [speed, setSpeed] = usePersistentState(PK('speed'), 1.5);        // sim-seconds per real-second (1.5× so the ghost cloud's fan-out reads sooner)
   const [trailLen, setTrailLen] = usePersistentState(PK('trailLen'), 500);
   const [showTrails, setShowTrails] = usePersistentState(PK('showTrails'), true);
   const [frameCenter, setFrameCenter] = usePersistentState(PK('frameCenter'), 'bary'); // reference-frame origin
@@ -232,6 +211,20 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
   const skyRef = useRef<SkyData | null>(null);
 
   const preset = getScenario(presetId);
+  const isPhone = usePhone(); // phone re-chrome: the floating top bar overlays the view
+
+  // Returning visitors carry persisted launches from before the safe-default
+  // fixes — their stored settings silently resurrect the old planet-into-star
+  // failure. Migrate an EXACT legacy default to the current safe launch, once,
+  // and only in Auto mode (hand-tuned values and pinned launches are untouched).
+  const migratedRef = useRef(false);
+  useEffect(() => {
+    if (migratedRef.current) return;
+    migratedRef.current = true;
+    if (fromLink || customRef.current) return;
+    const m = migrateLegacyLaunch(presetId, planetRadius, planetSpeed);
+    if (m) { setPlanetRadiusState(m.radius); setPlanetSpeedState(m.speed); }
+  }, [fromLink, presetId, planetRadius, planetSpeed, setPlanetRadiusState, setPlanetSpeedState]);
 
   // The collision radius also bounds the analyzer's "destroyed" test so the era
   // timeline agrees with what you see consumed on screen.
@@ -262,7 +255,7 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
   };
 
   // Imperative handles populated by onMount and called by control effects/buttons.
-  const api = useRef<{ reset: () => void; scatter: () => void; applyPalette: (p: ScenePalette) => void } | null>(null);
+  const api = useRef<{ reset: () => void; scatter: () => void; applyPalette: (p: ScenePalette) => void; retune: (c: ClassifyParams) => void } | null>(null);
   // Live scene palette (theming v2): read from the forced-dark tokens; the canvas
   // engine reads this ref so frame-built planets pick up the current colors.
   const paletteRef = useRef<ScenePalette>(SCENE_FALLBACK);
@@ -497,7 +490,12 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
       scene.add(grid);
     }
 
-    api.current = { reset, scatter, applyPalette };
+    api.current = {
+      reset, scatter, applyPalette,
+      // Re-tune the running classifier (habitable band, calm test, kill radius)
+      // without touching the physics — climate knobs re-label, never restart.
+      retune: (c: ClassifyParams) => { analyzer?.retune(c); },
+    };
     reset();
 
     // --- Orbit camera (drag to rotate, wheel to zoom) ---
@@ -582,8 +580,12 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
         placing = false;
         arrow.visible = false;
         customRef.current = { x: placeStart.x, y: placeStart.y, vx: draftVel.vx, vy: draftVel.vy };
-        setCustomState(customRef.current); // mirror for the System spinboxes
+        setCustomState(customRef.current); // mirror for the exact-launch spinboxes
         reset();
+        // A successful placement is a launch: disarm the tool and let it fly,
+        // instead of leaving the scene armed + frozen with no visible way out.
+        setPlaceMode(false);
+        setPaused(false);
         try { el.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
         return;
       }
@@ -770,7 +772,13 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
   // changes also clear any hand-placed launch via their wrapped setters.)
   useEffect(() => {
     api.current?.reset();
-  }, [presetId, target, ghostCount, epsExp, planetRadius, planetSpeed, massMul, starSoft, lumExp, habLo, habHi, calmThresh]);
+  }, [presetId, target, ghostCount, epsExp, planetRadius, planetSpeed, massMul, starSoft]);
+
+  // Climate knobs re-label the running world, they never restart it: re-tune the
+  // live classifier (band, calm test, kill radius) and leave the physics alone.
+  useEffect(() => {
+    api.current?.retune({ ...DEFAULT_CLASSIFY, lumExp, habLo, habHi, calmThresh, rKill: Math.max(collisionRadius, 1e-4) });
+  }, [lumExp, habLo, habHi, calmThresh, collisionRadius]);
 
   // Wrapped setters: any change that redefines the launch drops a pinned one.
   const setPlanetRadius = (v: number) => { setCustom(null); setPlanetRadiusState(v); };
@@ -800,9 +808,13 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
     api.current?.reset();
   };
 
+  // One-line feedback from the last "Find a stable orbit" run (transient UI).
+  const [findStatus, setFindStatus] = useState<string | null>(null);
+
   const onPickPreset = (id: string) => {
     const p = getScenario(id);
     setCustom(null);
+    setFindStatus(null);
     setPresetId(id);
     setTargetState(p.launch.target);
     setPlanetRadiusState(p.launch.radius);
@@ -814,9 +826,36 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
   // Set the launch speed to the local circular speed √(M/r) for the target.
   const onAutoCircular = () => {
     const stars = buildStars(getScenario(presetId), massMul);
-    const f = orbitFrame(stars, target);
-    const v = Math.sqrt(f.mass / Math.max(0.05, planetRadius));
+    const v = circularSpeed(stars, target, planetRadius);
     setPlanetSpeed(Math.round(v / 0.05) * 0.05);
+  };
+
+  // Empirically find a launch (radius + circular speed) whose planet stays clear
+  // of every star for a long probe — the reliable "safe orbit" in a chaotic field
+  // (a derived radius fails: stars get ejected, hierarchical systems orbit a
+  // sub-system). Adapts to the *current* masses/target. Falls back to the
+  // scenario's verified-safe default launch if the current target admits none.
+  const onFindStable = () => {
+    const sc = getScenario(presetId);
+    const stars = buildStars(sc, massMul);
+    const found = findStableLaunch(stars, target, {
+      starSoft, dt: sc.system.dt, rKill: Math.max(collisionRadius, 1e-4),
+      // Bound the search to the Start-radius control so the result is always
+      // representable (and preserved on a later slider drag).
+      largestRadius: MAX_RADIUS,
+    });
+    setCustom(null);
+    if (found) {
+      setPlanetRadiusState(found.radius);
+      setPlanetSpeedState(found.speed);
+      setFindStatus(`Found: radius ${found.radius.toFixed(2)} at speed ${found.speed.toFixed(2)} — launched.`);
+    } else {
+      // No stable orbit around the current target → restore the scenario default.
+      setTargetState(sc.launch.target);
+      setPlanetRadiusState(sc.launch.radius);
+      setPlanetSpeedState(sc.launch.speed);
+      setFindStatus('No stable orbit within reach of that target — restored this scenario’s safe launch instead.');
+    }
   };
 
   const onTogglePlace = () => {
@@ -833,20 +872,6 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
     ...(preset.system.hasBinary ? [{ value: 'binary' as TargetId, label: 'Inner binary' }] : []),
   ];
 
-  const btnStyle: React.CSSProperties = {
-    padding: '10px 14px', borderRadius: 6, border: '1px solid var(--cp-border, #2a3550)',
-    background: 'var(--panel-2)', color: 'var(--cp-fg, #e8edf6)', cursor: 'pointer', fontSize: 14, flex: 1,
-  };
-  const placeBtnStyle: React.CSSProperties = {
-    ...btnStyle,
-    background: placeMode ? 'var(--accent-soft)' : 'var(--panel-2)',
-    borderColor: placeMode ? 'var(--accent)' : 'var(--cp-border, #2a3550)',
-  };
-
-  const note: React.CSSProperties = {
-    font: '11px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '2px',
-  };
-
   /* ---- archetype panels (PARAM-MAP §6; rows ported from the old drawer) ---- */
 
   // Spinboxes show the active launch state: the pinned one if present, else the
@@ -854,6 +879,18 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
   const ic = custom ?? autoIC;
   const show = (v: number) => Number(v.toFixed(4));
 
+  // A token-colored dot matching each star's scene color (--data-1/4/6), so the
+  // mass sliders point at the stars by COLOR, not by a hardcoded color name that
+  // drifts when the skin changes.
+  const starDot = (token: string) => (
+    <span style={{
+      display: 'inline-block', width: 8, height: 8, borderRadius: 8,
+      background: `var(--${token})`, marginRight: 6, verticalAlign: 'baseline',
+    }} />
+  );
+
+  // The System panel is just the subject: which star system. The planet's exact
+  // launch state lives with the rest of the launch controls (Planet launch).
   const systemNode = (
     <>
       <Pills
@@ -864,41 +901,27 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
       <div style={{ font: '12px/1.5 system-ui', color: 'var(--cp-fg-dim, #93a2bd)', padding: '4px 2px' }}>
         {preset.blurb}
       </div>
-      <div style={{
-        font: '600 10px/1.4 ui-monospace, monospace', letterSpacing: 0.6, textTransform: 'uppercase',
-        color: 'var(--cp-fg-dim, #93a2bd)', margin: '8px 0 0',
-      }}>
-        Custom planet — {custom ? 'pinned launch state' : 'auto launch (edit to pin)'}
-      </div>
-      <NumberInput label="x" value={show(ic.x)} onChange={editCustom('x')} step={0.05} />
-      <NumberInput label="y" value={show(ic.y)} onChange={editCustom('y')} step={0.05} />
-      <NumberInput label="vx" value={show(ic.vx)} onChange={editCustom('vx')} step={0.05} />
-      <NumberInput label="vy" value={show(ic.vy)} onChange={editCustom('vy')} step={0.05} />
-      <div style={note}>
-        The planet’s exact start position &amp; velocity. Editing a value pins the launch (mode flips to Custom in the Planet launch panel); hand-placing or a Destiny-map link pins it too.
-      </div>
     </>
   );
 
   const starsNode = (
     <>
-      <Slider label="Star 1 mass · gold" value={massMul[0]} min={0.1} max={4} step={0.05}
+      <Slider label={<>{starDot('data-1')}Star 1 mass</>} value={massMul[0]} min={0.1} max={4} step={0.05}
         onChange={v => setStarMass(0, v)} format={v => (baseMasses[0] * v).toFixed(2)} />
-      <Slider label="Star 2 mass · orange" value={massMul[1]} min={0.1} max={4} step={0.05}
+      <Slider label={<>{starDot('data-4')}Star 2 mass</>} value={massMul[1]} min={0.1} max={4} step={0.05}
         onChange={v => setStarMass(1, v)} format={v => (baseMasses[1] * v).toFixed(2)} />
-      <Slider label="Star 3 mass · blue" value={massMul[2]} min={0.1} max={4} step={0.05}
+      <Slider label={<>{starDot('data-6')}Star 3 mass</>} value={massMul[2]} min={0.1} max={4} step={0.05}
         onChange={v => setStarMass(2, v)} format={v => (baseMasses[2] * v).toFixed(2)} />
-      <Slider label="Softening" value={starSoft} min={0.005} max={0.3} step={0.005}
+      <Slider label="Close-pass smoothing" value={starSoft} min={0.005} max={0.3} step={0.005}
         onChange={setStarSoft} format={v => v.toFixed(3)} />
-      <Slider label="Star size (collision)" value={collisionRadius} min={0} max={0.5} step={0.01}
+      <Slider label="Collision radius" value={collisionRadius} min={0} max={0.5} step={0.01}
         onChange={setCollisionRadius} format={v => (v === 0 ? 'off' : v.toFixed(2))} />
-      <button style={{ ...btnStyle, width: '100%', flex: 'none' }}
-        onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); }}>
-        ⟲ Reset star masses
-      </button>
-      <div style={note}>
-        Equal masses keep a preset’s character (just faster); uneven ones detune it — e.g. nudge a mass to watch the figure-eight fall into chaos. Softening sets how gently close passes are smoothed. Star size sets how close a planet must come to be consumed (0 = passes through).
-      </div>
+      <Button variant="ghost" icon="reset" onClick={() => { setMassMul([1, 1, 1]); setStarSoft(preset.system.softening); }}>
+        Reset star masses
+      </Button>
+      <Note>
+        Equal masses keep a preset’s character (just faster); uneven ones detune it — e.g. nudge a mass to watch the figure-eight fall into chaos. Close-pass smoothing sets how gently near-collisions are softened. Collision radius sets how close a planet must come to be consumed (0 = passes through).
+      </Note>
     </>
   );
 
@@ -916,35 +939,47 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
         value={target}
         onChange={setTarget}
       />
-      <Slider label="Start radius" value={planetRadius} min={0.1} max={8} step={0.05}
+      <Slider label="Start radius" value={planetRadius} min={0.1} max={MAX_RADIUS} step={0.05}
         onChange={setPlanetRadius} format={v => v.toFixed(2)} />
       <Slider label="Start speed" value={planetSpeed} min={0} max={3} step={0.05}
         onChange={setPlanetSpeed} format={v => v.toFixed(2)} />
-      <button style={{ ...btnStyle, width: '100%', flex: 'none' }} onClick={onAutoCircular}>
-        ◯ Circular orbit speed
-      </button>
-      <button style={{ ...placeBtnStyle, width: '100%', flex: 'none', marginTop: 6 }} onClick={onTogglePlace}>
-        {placeMode ? '✛ Placing — click + drag on the scene' : '✛ Place planet by hand'}
-      </button>
-      <div style={note}>
-        Radius &amp; speed are measured from the body you orbit. Pick a star for a tight inner (S-type) orbit; the barycenter or inner binary for a wide one. Custom mode pins the exact x/y/vx/vy shown in the System panel.
-      </div>
+      <Button variant="primary" onClick={onFindStable}
+        title="Search outward for a launch that stays clear of every star">
+        Find a stable orbit
+      </Button>
+      <Button onClick={onAutoCircular} title="Set speed to the local circular-orbit speed √(M/r)">
+        Circular speed
+      </Button>
+      {findStatus && <Note style={{ color: 'var(--cp-fg)' }}>{findStatus}</Note>}
+      <Section title="Exact launch state" defaultOpen={custom != null}>
+        <Kicker style={{ margin: 0 }}>{custom ? 'Pinned — sliders above will replace it' : 'Auto — edit a value to pin'}</Kicker>
+        <NumberInput label="x" value={show(ic.x)} onChange={editCustom('x')} step={0.05} />
+        <NumberInput label="y" value={show(ic.y)} onChange={editCustom('y')} step={0.05} />
+        <NumberInput label="vx" value={show(ic.vx)} onChange={editCustom('vx')} step={0.05} />
+        <NumberInput label="vy" value={show(ic.vy)} onChange={editCustom('vy')} step={0.05} />
+        <Note>
+          The planet’s exact start position &amp; velocity. Editing a value pins the launch (the mode pill flips to Custom); hand-placing or a Destiny-map link pins it too. Touching Orbit around / radius / speed unpins.
+        </Note>
+      </Section>
+      <Note>
+        Radius &amp; speed are measured from the body you orbit. Pick a star for a tight inner (S-type) orbit; the barycenter or inner binary for a wide one.
+      </Note>
     </>
   );
 
   const climateNode = (
     <>
-      <Slider label="Habitable floor (×ref)" value={habLo} min={0.1} max={1} step={0.05}
+      <Slider label="Habitable floor (×launch light)" value={habLo} min={0.1} max={1} step={0.05}
         onChange={setHabLo} format={v => v.toFixed(2)} />
-      <Slider label="Habitable ceiling (×ref)" value={habHi} min={1} max={6} step={0.25}
+      <Slider label="Habitable ceiling (×launch light)" value={habHi} min={1} max={6} step={0.25}
         onChange={setHabHi} format={v => v.toFixed(2)} />
-      <Slider label="Luminosity exponent β" value={lumExp} min={0.5} max={4} step={0.5}
+      <Slider label="Brightness vs mass (β)" value={lumExp} min={0.5} max={4} step={0.5}
         onChange={setLumExp} format={v => v.toFixed(1)} />
-      <Slider label="Calm threshold" value={calmThresh} min={0.01} max={0.2} step={0.01}
+      <Slider label="Orbit calmness cutoff" value={calmThresh} min={0.01} max={0.2} step={0.01}
         onChange={setCalmThresh} format={v => v.toFixed(2)} />
-      <div style={note}>
-        The habitable band is set relative to the planet’s starlight at launch (L = mᵝ). The timeline under the Orbit view classifies every moment as Paradise / Warm·precarious / Calm·barren / Chaotic.
-      </div>
+      <Note>
+        The habitable band is measured against the starlight the planet gets at launch (each star shines as massᵝ). These knobs re-label the timeline under the Orbit view (Paradise / Warm·precarious / Calm·barren / Chaotic) live — they never restart the run.
+      </Note>
     </>
   );
 
@@ -957,15 +992,18 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
         onChange={v => setSkyOn(v === 1)}
       />
       <Slider label="Day length (spin)" value={dayLen} min={0.1} max={3} step={0.1}
-        onChange={setDayLen} format={v => v.toFixed(1)} />
+        onChange={v => { if (!skyOn) setSkyOn(true); setDayLen(v); }} format={v => v.toFixed(1)} />
       <Slider label="Axial tilt (seasons)" value={tilt} min={0} max={0.6} step={0.05}
-        onChange={setTilt} format={v => v.toFixed(2)} />
-      <div style={note}>
-        Stand on the planet and watch the suns wheel overhead. Spin sets the day; tilt makes their noon height drift over the (chaotic, irregular) year. The sky’s color tracks the climate — frozen dark to searing white.
-      </div>
+        onChange={v => { if (!skyOn) setSkyOn(true); setTilt(v); }} format={v => v.toFixed(2)} />
+      <Note>
+        Stand on the planet and watch the suns wheel overhead. Spin sets the day; tilt makes their noon height drift over the (chaotic, irregular) year. The sky’s color tracks the climate — frozen dark to searing white. Touching a slider turns the sky view on.
+      </Note>
     </>
   );
 
+  // Reference frame + trails: one panel about HOW you watch the motion (both
+  // are pure view choices; trails even reset on a frame change — they belong
+  // together, not as a two-control orphan panel).
   const frameNode = (
     <>
       <Select label="Center on" value={frameCenter} onChange={setFrameCenter} options={FRAME_ANCHORS} />
@@ -973,81 +1011,84 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
         options={[{ value: 'none', label: 'None (inertial)' }, ...FRAME_ANCHORS]} />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
         {FRAME_PRESETS.map(p => (
-          <button key={p.label} style={{ ...btnStyle, flex: 'none', padding: '6px 10px', fontSize: 12 }}
-            onClick={() => { setFrameCenter(p.c); setFrameAlign(p.a); }}>{p.label}</button>
+          <Button key={p.label} style={{ width: 'auto', flex: 'none', padding: '6px 10px', fontSize: 12 }}
+            onClick={() => { setFrameCenter(p.c); setFrameAlign(p.a); }}>{p.label}</Button>
         ))}
-        <button style={{ ...btnStyle, flex: 'none', padding: '6px 10px', fontSize: 12 }}
+        <Button variant="ghost" icon="reset" style={{ width: 'auto', flex: 'none', padding: '6px 10px', fontSize: 12 }}
           disabled={frameCenter === 'bary' && frameAlign === 'none'}
-          onClick={() => { setFrameCenter('bary'); setFrameAlign('none'); }}>⟲ Reset frame</button>
+          onClick={() => { setFrameCenter('bary'); setFrameAlign('none'); }}>Reset frame</Button>
       </div>
-      <div style={note}>
+      <Kicker>Trails</Kicker>
+      <Slider label="Trail length" value={showTrails ? trailLen : 0} min={0} max={TRAIL_MAX} step={50}
+        onChange={v => { setShowTrails(v > 0); if (v > 0) setTrailLen(v); }}
+        format={v => (v === 0 ? 'off' : `${v}`)} />
+      <Note>
         A pure viewpoint — the physics is unchanged. In a rotating frame the planet appears to swerve (the Coriolis / centrifugal look), which is exactly how co-orbital, Trojan and horseshoe paths become visible. Trails reset when you change the frame.
-      </div>
+      </Note>
     </>
   );
 
-  const trailsNode = (
-    <>
-      <Slider label="Trail length" value={trailLen} min={0} max={TRAIL_MAX} step={50}
-        onChange={setTrailLen} format={v => (v === 0 ? 'off' : `${v}`)} />
-      <Pills
-        label="Trails"
-        options={[{ value: 1, label: 'On' }, { value: 0, label: 'Off' }]}
-        value={showTrails ? 1 : 0}
-        onChange={v => setShowTrails(v === 1)}
-      />
-    </>
-  );
-
-  const chaosNode = (
+  // The headline experiment: the swarm of near-identical ghost worlds whose
+  // fan-out IS sensitive dependence. Named for what you see, not the theory.
+  const swarmNode = (
     <>
       <Slider label="Ghost planets" value={ghostCount} min={1} max={120} step={1}
         onChange={setGhostCount} format={v => `${v}`} />
-      <Slider label="Perturbation ε" value={epsExp} min={-5} max={-1} step={0.5}
+      <Slider label="Ghost spread ε" value={epsExp} min={-5} max={-1} step={0.5}
         onChange={setEpsExp} format={v => `10^${v.toFixed(1)}`} />
-      <button style={{ ...btnStyle, width: '100%', flex: 'none', marginTop: 4 }}
-        onClick={() => api.current?.scatter()}>✦ Scatter ghosts here</button>
+      <Note>
+        Every ghost starts within ε of the real planet, with the same velocity. Watch the swarm hug the planet, then smear across the system — the moment it scatters is the moment the future became unknowable. Scatter (action bar below) re-gathers the swarm around the planet mid-flight.
+      </Note>
     </>
   );
 
-  // Play/Pause + Reset live once, in the always-on action strip (`actions`
-  // below) — never duplicated here. This panel keeps the Speed knob and the
-  // one-shot tour launch.
+  // Drive-tier "hands on the scene" verbs — projected into the action strip.
+  const handsNode = (
+    <>
+      <Button variant="toggle" active={placeMode} onClick={onTogglePlace}>
+        {placeMode ? 'Placing — click + drag on the scene' : 'Place planet by hand'}
+      </Button>
+      <Button icon="sparkles" onClick={() => api.current?.scatter()}>
+        Scatter ghosts here
+      </Button>
+      <Note>
+        Place pauses the sim and arms the scene: click where the planet should start, drag to set its velocity arrow, release to launch. Scatter re-gathers the ghost swarm around the planet’s current position mid-flight.
+      </Note>
+    </>
+  );
+
+  // Play/Pause + Restart live once, in the always-on action strip (`actions`
+  // below) — never duplicated here. This panel keeps the Speed knob, the
+  // one-shot tour launch, and the stored-settings reset.
   const simNode = (
     <>
       <Slider label="Speed" value={speed} min={0.1} max={4} step={0.1}
         onChange={setSpeed} format={v => `${v.toFixed(1)}×`} />
       {onTour && (
-        <button style={{ ...btnStyle, width: '100%', flex: 'none' }} onClick={onTour}>
-          ✦ Take the tour
-        </button>
+        <Button icon="sparkles" onClick={onTour}>
+          Take the tour
+        </Button>
       )}
-    </>
-  );
-
-  const settingsNode = (
-    <>
-      <button style={{ ...btnStyle, width: '100%', flex: 'none', marginTop: 8 }}
+      <Button variant="danger" icon="reset"
         onClick={() => { clearPersistedState('trinary'); window.location.hash = '#/trinary'; window.location.reload(); }}>
-        ↺ Reset settings to defaults
-      </button>
-      <div style={note}>
-        Your settings (system, masses, climate band, sky, trails…) are saved on this device and restored on reload. This clears them.
-      </div>
+        Reset settings to defaults
+      </Button>
+      <Note>
+        Your settings (system, masses, climate band, sky, trails…) are saved on this device and restored on reload. Reset clears them.
+      </Note>
     </>
   );
 
   const sections: SectionDef[] = [
-    { id: 'system', title: 'System', arch: 'subject', node: systemNode, estHeight: 430 },
-    { id: 'stars', title: 'Stars', arch: 'subject', node: starsNode, estHeight: 440 },
-    { id: 'launch', title: 'Planet launch', arch: 'domain', node: launchNode, estHeight: 480 },
-    { id: 'climate', title: 'Climate', arch: 'domain', node: climateNode, estHeight: 330 },
-    { id: 'sky', title: 'Sky', arch: 'view', node: skyNode, estHeight: 300 },
-    { id: 'frame', title: 'Reference frame', arch: 'view', node: frameNode, estHeight: 340 },
-    { id: 'trails', title: 'Trails', arch: 'marks', node: trailsNode, estHeight: 170 },
-    { id: 'chaos', title: 'Chaos demo', arch: 'lab', node: chaosNode, estHeight: 230 },
-    { id: 'sim', title: 'Sim', arch: 'playback', node: simNode, estHeight: 210 },
-    { id: 'settings', title: 'Settings', arch: 'quality', node: settingsNode, estHeight: 170 },
+    { id: 'system', title: 'System', arch: 'subject', node: systemNode, estHeight: 220 },
+    { id: 'stars', title: 'Stars', arch: 'subject', node: starsNode, estHeight: 460 },
+    { id: 'launch', title: 'Planet launch', railLabel: 'Launch', arch: 'domain', node: launchNode, estHeight: 560 },
+    { id: 'climate', title: 'Climate', arch: 'domain', node: climateNode, estHeight: 350 },
+    { id: 'sky', title: 'Sky', arch: 'view', node: skyNode, estHeight: 320 },
+    { id: 'frame', title: 'Viewpoint & trails', railLabel: 'View', arch: 'view', node: frameNode, estHeight: 460 },
+    { id: 'hands', title: 'Hands-on', railLabel: 'Hands', arch: 'drive', node: handsNode, estHeight: 240 },
+    { id: 'chaos', title: 'Ghost swarm', railLabel: 'Ghosts', arch: 'lab', node: swarmNode, estHeight: 280 },
+    { id: 'sim', title: 'Sim', arch: 'playback', node: simNode, estHeight: 300 },
   ];
 
   const views: ViewDef[] = [
@@ -1064,12 +1105,15 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
           <div ref={sceneElRef} style={{ position: 'absolute', inset: 0, background: 'var(--viz-bg)' }}>
             <Canvas3D onMount={onMount} />
 
-            {/* Live divergence readout. */}
+            {/* Live divergence readout. Top-RIGHT so the default layout's panel
+                column (which floats over the view's left edge) and the phone's
+                floating chrome bar never bury it. */}
             <div style={{
-              position: 'absolute', top: 10, left: 10, padding: '8px 12px',
+              position: 'absolute', top: isPhone ? 64 : 10, right: 10, padding: '8px 12px',
               background: 'var(--panel)', border: '1px solid var(--border)',
-              borderRadius: 8, color: 'var(--fg)', font: '12px/1.5 ui-monospace, monospace',
-              pointerEvents: 'none', backdropFilter: 'blur(4px)',
+              borderRadius: 8, color: 'var(--fg)', font: `${isPhone ? 11 : 12}px/1.5 ui-monospace, monospace`,
+              pointerEvents: 'none', backdropFilter: 'blur(4px)', textAlign: 'left',
+              maxWidth: 'calc(100% - 20px)',
             }}>
               <div>cloud spread&nbsp; <span ref={spreadElRef} style={{ color: 'var(--dim)' }}>0.00e+0</span></div>
               <div>Lyapunov λ&nbsp;&nbsp; <span ref={lyapElRef} style={{ color: 'var(--dim)' }}>…</span></div>
@@ -1077,37 +1121,73 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
               {placeMode && <div style={{ color: 'var(--accent)' }}>click + drag to launch</div>}
             </div>
 
+            {/* Graceful-failure hint: when the planet has fallen into a star, offer
+                a one-click route back to a survivable orbit instead of a dead end. */}
+            {labSnap?.planetFate === 'destroyed' && (
+              <div style={{
+                position: 'absolute', left: '50%', bottom: 128, transform: 'translateX(-50%)',
+                display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                background: 'var(--panel)', border: '1px solid var(--danger)', borderRadius: 10,
+                color: 'var(--fg)', font: '13px/1.4 system-ui', boxShadow: '0 6px 24px rgba(0,0,0,0.35)',
+                backdropFilter: 'blur(6px)', maxWidth: 'min(90%, 460px)', zIndex: 5,
+              }}>
+                <span>☄ Your planet fell into a star.</span>
+                <Button variant="primary" style={{ width: 'auto', flex: 'none', padding: '8px 12px' }} onClick={onFindStable}>
+                  Find a stable orbit
+                </Button>
+              </div>
+            )}
+
             {skyOn && <SkyView dataRef={skyRef} dayLen={dayLen} tilt={tilt} />}
 
-            <Observatory snapshot={labSnap} />
+            <AnalysisHUD snapshot={labSnap} />
           </div>
         </Scheme>
       ),
     },
   ];
 
-  // Built-in layouts replace the old Settings "simple / advanced" toggle:
-  // Sandbox ≈ the old simple set; Advanced opens every knob.
+  // Task-named layouts (the StableMatching precedent): each names a thing to DO,
+  // not a knob count. The framework's auto "Everything" remains the full spread.
+  // Sandbox opens the Ghost swarm — the app's headline experiment — on day one.
   const layouts: LayoutDef[] = [
     {
-      id: 'sandbox', name: 'Sandbox', sub: 'System · Planet launch · Sim', icon: 'tune',
-      open: { system: { x: 84, y: 18 }, launch: { x: 84, y: 466 }, sim: { x: 366, y: 18 } },
+      id: 'sandbox', name: 'Sandbox', sub: 'Pick a system · launch · watch the swarm', icon: 'tune',
+      // No Sim panel here: its verbs (Play/Restart) live in the always-on strip,
+      // and a fourth panel would bury the analysis strip along the view's bottom.
+      open: {
+        system: { x: 84, y: 18 }, launch: { x: 84, y: 270 },
+        chaos: { x: 366, y: 64 },
+      },
     },
     {
-      id: 'advanced', name: 'Advanced', sub: 'Every knob', icon: 'grid',
+      id: 'chaos', name: 'Ghost swarm', sub: 'Sensitive dependence, tuned by hand', icon: 'flask',
       open: {
-        system: { x: 84, y: 18 }, launch: { x: 84, y: 466 },
-        stars: { x: 366, y: 18 }, climate: { x: 366, y: 476 },
-        sky: { x: 648, y: 18 }, frame: { x: 648, y: 336 },
-        sim: { x: 930, y: 18 },
+        chaos: { x: 84, y: 18 }, hands: { x: 84, y: 330 },
+        stars: { x: 366, y: 64 }, sim: { x: 648, y: 64 },
+      },
+    },
+    {
+      id: 'climate-sky', name: 'Climate & sky', sub: 'Habitable band · stand on the planet', icon: 'window',
+      open: {
+        climate: { x: 84, y: 18 }, sky: { x: 84, y: 392 }, sim: { x: 366, y: 64 },
+      },
+    },
+    {
+      id: 'frames', name: 'Rotating frames', sub: 'Co-orbits, Trojans, horseshoes', icon: 'orbit',
+      open: {
+        frame: { x: 84, y: 18 }, launch: { x: 366, y: 64 }, sim: { x: 648, y: 64 },
       },
     },
   ];
 
-  /* Always-on action strip — projection of the Sim panel's verbs. */
+  /* Always-on action strip — the Drive/Playback verbs (Play projects Sim;
+     Place/Scatter project the Hands-on panel). */
   const actions: ActionDef[] = [
     { id: 'play', icon: paused ? 'play' : 'pause', label: paused ? 'Play' : 'Pause', primary: true, active: !paused, sectionId: 'sim', onClick: () => setPaused(p => !p) },
-    { id: 'reset', icon: 'reset', label: 'Reset', sectionId: 'sim', onClick: () => api.current?.reset() },
+    { id: 'place', icon: 'move', label: placeMode ? 'Placing…' : 'Place', active: placeMode, sectionId: 'hands', onClick: onTogglePlace },
+    { id: 'scatter', icon: 'sparkles', label: 'Scatter', sectionId: 'hands', onClick: () => api.current?.scatter() },
+    { id: 'reset', icon: 'reset', label: 'Restart', sectionId: 'sim', onClick: () => api.current?.reset() },
   ];
 
   return (
