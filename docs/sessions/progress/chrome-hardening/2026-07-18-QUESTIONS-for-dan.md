@@ -1,3 +1,18 @@
+---
+kind: plan
+session: 2026-07-18-S01
+date: 2026-07-18
+title: Open product-direction questions (post external review)
+branch: claude/chrome-hardening
+slug: chrome-hardening
+status: proposed
+build: n/a
+followup: null
+pr: null
+app: chrome, general
+next: Dan answers; each answer unblocks its item independently.
+---
+
 # Open questions for Dan — product direction after the external review
 
 Everything mechanical from the external review (GPT sol 5.6) is done or in PR

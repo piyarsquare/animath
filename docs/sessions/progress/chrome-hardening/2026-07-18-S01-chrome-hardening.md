@@ -5,8 +5,8 @@ date: 2026-07-18
 title: Chrome hardening — failure containment, a11y batch, layout clamp
 branch: claude/chrome-hardening
 slug: chrome-hardening
-status: complete
-build: passing
+status: completed
+build: passed
 followup: null
 pr: null
 app: chrome
