@@ -44,7 +44,10 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
     const wanted = defaultLayoutId ?? appLayouts?.[0]?.id ?? 'everything';
     return builtin.find(l => l.id === wanted) ?? builtin[builtin.length - 1];
   };
-  const initial = (): PersistedWorkspace => applyLayout(sections, views, defaultLayout(), []);
+  // Stage size for clamping authored layout geometry on-screen (the stage is
+  // the window minus the 54px top bar; see --bar-h in theme.css).
+  const stageViewport = () => (typeof window === 'undefined' ? null : { w: window.innerWidth, h: window.innerHeight - 54 });
+  const initial = (): PersistedWorkspace => applyLayout(sections, views, defaultLayout(), [], stageViewport());
 
   const [raw, setRaw] = usePersistentState<PersistedWorkspace | null>(`ws:${appId}`, null);
   const state = useMemo(
@@ -176,7 +179,7 @@ export default function DesktopWorkspace(props: WorkspaceProps) {
     update(s => ({ ...s, layout: 'custom', views: { ...s.views, [id]: { ...s.views[id], collapsed: !s.views[id].collapsed } } }));
 
   /* ---- layouts ---- */
-  const pickLayout = (l: LayoutDef) => update(s => applyLayout(sections, views, l, s.saved));
+  const pickLayout = (l: LayoutDef) => update(s => applyLayout(sections, views, l, s.saved, stageViewport()));
   const saveLayout = () => {
     const name = window.prompt('Name this layout', 'My layout');
     if (!name) return;

@@ -23,8 +23,10 @@ export default function Gallery() {
   const stored = CARDS.filter(c => c.storeroom);
   const mainCount = CARDS.filter(c => !c.storeroom).length;
 
+  // Cards are real links (not hash-mutating buttons): copyable, open-in-new-tab,
+  // and visible to assistive tech's link navigation.
   const renderCard = (a: (typeof CARDS)[number]) => (
-    <button key={a.id} className="am-gcard" onClick={() => { window.location.hash = '#' + a.hash; }}>
+    <a key={a.id} className="am-gcard" href={'#' + a.hash}>
       <div className="am-gcard-viz"><Preview kind={a.kind} skin={skin} mode={mode} /></div>
       <div className="am-gcard-body">
         <div className="am-gcard-cat">{a.cat}</div>
@@ -32,7 +34,7 @@ export default function Gallery() {
         <div className="am-gcard-blurb">{a.blurb}</div>
         <div className="am-gcard-open">Open workspace <Icon name="chevron" size={13} /></div>
       </div>
-    </button>
+    </a>
   );
   // Randomized hero verbs — three drawn per load, the strangest one last.
   // Clicking the headline rerolls them (a quiet easter egg), cross-fading
@@ -54,7 +56,7 @@ export default function Gallery() {
         note="A toolkit for exploring mathematics through visualization"
         home={false}
       />
-      <div className="am-gal-scroll">
+      <main className="am-gal-scroll" aria-label="Animation gallery">
         <div className="am-gal-hero">
           <h1
             className={`am-gal-title am-gal-title-roll${swapping ? ' is-swapping' : ''}`}
@@ -99,7 +101,7 @@ export default function Gallery() {
             )}
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

@@ -156,6 +156,7 @@ export function Pills<T extends string | number>({ label, options, value, onChan
           <button
             key={String(opt.value)}
             className={value === opt.value ? 'cp-active' : ''}
+            aria-pressed={value === opt.value}
             onClick={() => onChange(opt.value)}
           >
             {opt.label}

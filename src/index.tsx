@@ -3,8 +3,10 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import Gallery from './chrome/Gallery';
 import { LoadingScreen } from './chrome/LoadingScreen';
+import { RouteBoundary } from './chrome/RouteBoundary';
 import './chrome/theme.css';
 import { applyPersistedSkin } from './chrome/skins';
+import { apps } from './apps';
 
 // Set <html data-theme> before first paint so every route renders skinned.
 applyPersistedSkin();
@@ -52,6 +54,16 @@ function getHash(): string {
   return window.location.hash.replace(/^#/, '') || '/';
 }
 
+// The boot-time title ('animath', or '<branch> · animath' on preview deploys —
+// see the branchTitle plugin in vite.config.ts). Route titles append to it so
+// tabs are tellable apart without losing the preview's branch identity.
+const BASE_TITLE = typeof document !== 'undefined' ? document.title : 'animath';
+
+function routeTitle(path: string): string {
+  const app = apps.find(a => a.hash === path || (path === '/trinary-lab' && a.hash === '/trinary'));
+  return app ? `${app.name} · ${BASE_TITLE}` : BASE_TITLE;
+}
+
 function Router(): JSX.Element {
   const [hash, setHash] = React.useState(getHash());
 
@@ -64,16 +76,23 @@ function Router(): JSX.Element {
   // Routes may carry a `?query` (e.g. the lab's shareable config); match on path.
   const path = hash.split('?')[0];
 
+  // Tab title names the route (a11y: link lists, history, tab bars).
+  React.useEffect(() => { document.title = routeTitle(path); }, [path]);
+
   // The gallery is the landing page and the only cross-app hub; unknown
   // hashes fall back to it. Every app owns its chrome (Workspace + TopBar)
   // and renders bare.
   const Component = routes[path];
   if (path === '/' || !Component) return <Gallery />;
 
+  // Boundary keyed by route: an error is contained to the app that threw it,
+  // and navigating away (or Home from the error panel) always recovers.
   return (
-    <React.Suspense fallback={<LoadingScreen />}>
-      <Component />
-    </React.Suspense>
+    <RouteBoundary key={path}>
+      <React.Suspense fallback={<LoadingScreen />}>
+        <Component />
+      </React.Suspense>
+    </RouteBoundary>
   );
 }
 

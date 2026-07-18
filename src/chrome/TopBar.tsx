@@ -42,11 +42,11 @@ export function TopBar({ title, subtitle, modes, activeMode, onModeChange, expla
   return (
     <header className="am-bar" style={compact ? { padding: '0 10px' } : undefined}>
       {home ? (
-        <button className="am-brand am-home-btn" title="Home — all animations" aria-label="Home — all animations"
-          onClick={() => { window.location.hash = '#/'; }}>
+        <a className="am-brand am-home-btn" title="Home — all animations" aria-label="Home — all animations"
+          href="#/">
           <span className="am-brand-mark">a</span>
           <Icon name="home" size={13} className="am-home-hint" />
-        </button>
+        </a>
       ) : (
         <div className="am-brand"><span className="am-brand-mark">a</span></div>
       )}
