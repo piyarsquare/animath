@@ -95,11 +95,13 @@ export const SCENARIOS: Scenario[] = [
       dt: 0.0022,
       softening: 0.01,
     },
-    // A wide circumbinary (P-type) orbit that clears the stars' figure-eight loop:
-    // survives indefinitely, yet the breathing inner triple still fans the ghost
-    // cloud out over time. A closer launch (the old r=1.8) fell into a star in ~2
-    // time units — chaos, but a dead planet before you'd seen anything.
-    launch: { target: 'bary', radius: 3.2, speed: 1.0 },
+    // A circumbinary (P-type) orbit tuned to the EDGE of stability: close enough
+    // that the ghost cloud visibly branches by t≈84 (vs t≈334 for the safer
+    // r=3.2/v=1.0), yet never destroyed from any launch angle — the reference
+    // planet dances through close passes (min star distance ≈0.96) and is finally
+    // ejected around t≈427, a long chaotic life ending as a frozen wanderer, not
+    // a fireball. (The old r=1.8/v=1.1 fell into a star in ~2 time units.)
+    launch: { target: 'bary', radius: 3.2, speed: 0.95 },
   },
   {
     id: 'moth',
