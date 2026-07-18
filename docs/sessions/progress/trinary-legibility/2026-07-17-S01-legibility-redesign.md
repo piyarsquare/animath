@@ -38,6 +38,34 @@ fossilized implementation history; (D) copy drifted from the theming-v2 scene.
 
 ## Working notes
 
+### 🟢 code · 03:00 — Application test suite (36 new tests) + two bugs it caught
+**Why:** Dan: "please write a test suite for this application. I think there are
+some issues." Tests were written against the code's own documented claims.
+
+New suites (301 tests total pass): `analysis.test.ts` (scalars, events,
+Analyzer timeline invariants, a synthetic Paradise system), `reversibility.test.ts`
+(the leapfrog's exact time-reversibility), `lab/__tests__/lab.test.ts` (seeded
+reproducibility contracts, Aggregator vs brute force, the batch runners'
+"bit-identical" claim held to exact equality — it holds), `frame.test.ts`
+(rotating-frame transform extracted to `frame.ts`: isometry, no mirror,
+align-to-+x). Two real issues surfaced and fixed:
+
+1. **`findStableLaunch` off-grid results** — rounded to 0.01 while the sliders
+   step 0.05, so a recovered speed could drift on the next drag. Now snaps to
+   the control grid *before* probing.
+2. **Persistence resurrects the fatal launch** — returning visitors hold
+   pre-fix `planetRadius/planetSpeed` in localStorage, so the safe defaults
+   never reach them and the planet still explodes (very likely the "current
+   starting point is a failure" experience on any browser that visited before
+   the fix). New `migrateLegacyLaunch()` maps exact legacy defaults to the
+   current safe launch once at mount (Auto mode only; hand-tuned values
+   untouched). Verified end-to-end with a seeded browser.
+
+Earlier this session the default was also re-tuned to the edge of stability
+(r=3.2, v=0.95 — ghosts branch at t≈84, late ejection t≈427; committed to the
+PR #249 branch and merged here). Note: PR #249 alone fixes *fresh* visitors;
+the migration in this branch is what fixes *returning* ones.
+
 ### 🟢 code · 19:00 — Chrome: the emphasis vocabulary (root cause A + B)
 **Why:** "Nothing stands out" is chrome-level and unfixable per-app.
 
