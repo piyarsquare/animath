@@ -162,6 +162,31 @@ export function getScenario(id: string): Scenario {
   return SCENARIOS.find(s => s.id === id) ?? SCENARIOS[0];
 }
 
+/** Launch defaults shipped by EARLIER versions that are now known-bad: the
+ *  pre-2026-07 fatal launches (planet falls into a star within seconds) and the
+ *  too-stable interim figure-eight. Returning visitors have these persisted in
+ *  localStorage, so fixing the scenario defaults alone doesn't reach them —
+ *  their stored settings silently resurrect the old failure. */
+const LEGACY_LAUNCHES: Record<string, [radius: number, speed: number][]> = {
+  figure8: [[1.8, 1.1], [3.2, 1.0]],
+  moth: [[2.2, 1.1]],
+  pythagorean: [[4.0, 1.6]],
+};
+
+/** If a persisted (radius, speed) for `presetId` matches a legacy default
+ *  exactly, return the scenario's current launch to migrate to; else null.
+ *  Exact match only — a user's own hand-tuned values are never touched. */
+export function migrateLegacyLaunch(
+  presetId: string, radius: number, speed: number,
+): { radius: number; speed: number } | null {
+  const eq = (a: number, b: number) => Math.abs(a - b) < 1e-9;
+  const legacy = LEGACY_LAUNCHES[presetId] ?? [];
+  if (!legacy.some(([r, v]) => eq(radius, r) && eq(speed, v))) return null;
+  const { launch } = getScenario(presetId);
+  if (eq(radius, launch.radius) && eq(speed, launch.speed)) return null; // already current
+  return { radius: launch.radius, speed: launch.speed };
+}
+
 /** Build a scenario's stars with per-star mass multipliers applied, re-centered
  *  so net momentum stays zero. A uniform multiplier just rescales time; uneven
  *  ones detune the configuration (e.g. break the figure-eight) — useful for
@@ -251,13 +276,17 @@ export function findStableLaunch(
     starSoft, dt, rKill = 0.12, minClear = 0.5, probeTime = 140,
     smallestRadius = 1.0, largestRadius = 16, radiusStep = 0.25,
   } = opts;
-  const round2 = (x: number) => Math.round(x * 100) / 100;
+  // Snap to the UI controls' 0.05 step so a returned launch is exactly
+  // representable — the probe below then tests the *snapped* values, so what
+  // ships is what was verified (an off-grid speed would drift on the next drag).
+  const CONTROL_STEP = 0.05;
+  const snap = (x: number) => Math.round(x / CONTROL_STEP) * CONTROL_STEP;
   const ss2 = starSoft * starSoft;
   const steps = Math.round(probeTime / dt);
 
   for (let r = smallestRadius; r <= largestRadius + 1e-9; r += radiusStep) {
-    const radius = round2(r);
-    const speed = round2(circularSpeed(stars, target, radius));
+    const radius = snap(r);
+    const speed = snap(circularSpeed(stars, target, radius));
     // Fresh star copy per candidate (the stars evolve during the probe).
     const s: Star[] = stars.map(st => ({ ...st }));
     const planet = launchPlanet(s, target, radius, speed);

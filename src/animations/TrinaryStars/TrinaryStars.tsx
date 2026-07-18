@@ -7,10 +7,11 @@ import { Slider, Pills, Select, NumberInput, Button, Kicker, Note, Section } fro
 import { usePhone } from '../../chrome/usePhone';
 import {
   step, cloudSpread, lyapunovRenorm, SCENARIOS, getScenario, buildStars, launchPlanet,
-  circularSpeed, findStableLaunch, Analyzer, DEFAULT_CLASSIFY,
-  type SimState, type Planet, type Star, type TargetId, type ClassifyParams, type Snapshot,
+  circularSpeed, findStableLaunch, migrateLegacyLaunch, Analyzer, DEFAULT_CLASSIFY,
+  type SimState, type Planet, type TargetId, type ClassifyParams, type Snapshot,
 } from '@/lib/nbody';
 import AnalysisHUD from './AnalysisHUD';
+import { frameTransform } from './frame';
 import SkyView, { type SkyData } from './SkyView';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
 import { Scheme } from '../../chrome/Scheme';
@@ -139,37 +140,7 @@ function navNum(u: URLSearchParams, k: string, d: number) { const v = u.get(k); 
 /** localStorage key namespace for the Observatory's persisted settings. */
 const PK = (field: string) => `trinary:${field}`;
 
-/** Anchor point (in sim coords) for a reference-frame selector: a star, a pair's
- *  center of mass, or the system barycenter. */
-function frameAnchor(stars: Star[], key: string): { x: number; y: number } {
-  const com = (idx: number[]) => {
-    let M = 0, x = 0, y = 0;
-    for (const i of idx) { const s = stars[i]; M += s.mass; x += s.mass * s.x; y += s.mass * s.y; }
-    return { x: x / M, y: y / M };
-  };
-  switch (key) {
-    case 's0': return { x: stars[0].x, y: stars[0].y };
-    case 's1': return { x: stars[1].x, y: stars[1].y };
-    case 's2': return { x: stars[2].x, y: stars[2].y };
-    case 'c01': return com([0, 1]);
-    case 'c02': return com([0, 2]);
-    case 'c12': return com([1, 2]);
-    default: return com([0, 1, 2]); // barycenter
-  }
-}
-
-/** A pure view transform: put `center` at the origin, and (unless align='none')
- *  rotate so the direction to `align` lies on +x. Physics is unchanged. */
-function frameTransform(stars: Star[], center: string, align: string): (x: number, y: number) => { x: number; y: number } {
-  const C = frameAnchor(stars, center);
-  let c = 1, s = 0;
-  if (align !== 'none') {
-    const A = frameAnchor(stars, align);
-    const ang = Math.atan2(A.y - C.y, A.x - C.x);
-    c = Math.cos(ang); s = Math.sin(ang);
-  }
-  return (x, y) => { const dx = x - C.x, dy = y - C.y; return { x: dx * c + dy * s, y: -dx * s + dy * c }; };
-}
+// Reference-frame view transforms live in frame.ts (pure, unit-tested).
 
 const FRAME_ANCHORS = [
   { value: 'bary', label: 'Barycenter' },
@@ -241,6 +212,19 @@ export default function TrinaryStars({ onTour }: { onTour?: () => void }) {
 
   const preset = getScenario(presetId);
   const isPhone = usePhone(); // phone re-chrome: the floating top bar overlays the view
+
+  // Returning visitors carry persisted launches from before the safe-default
+  // fixes — their stored settings silently resurrect the old planet-into-star
+  // failure. Migrate an EXACT legacy default to the current safe launch, once,
+  // and only in Auto mode (hand-tuned values and pinned launches are untouched).
+  const migratedRef = useRef(false);
+  useEffect(() => {
+    if (migratedRef.current) return;
+    migratedRef.current = true;
+    if (fromLink || customRef.current) return;
+    const m = migrateLegacyLaunch(presetId, planetRadius, planetSpeed);
+    if (m) { setPlanetRadiusState(m.radius); setPlanetSpeedState(m.speed); }
+  }, [fromLink, presetId, planetRadius, planetSpeed, setPlanetRadiusState, setPlanetSpeedState]);
 
   // The collision radius also bounds the analyzer's "destroyed" test so the era
   // timeline agrees with what you see consumed on screen.

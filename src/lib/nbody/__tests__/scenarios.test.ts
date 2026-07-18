@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   SCENARIOS, buildStars, launchPlanet, orbitFrame, recenter, getScenario,
-  circularSpeed, findStableLaunch,
+  circularSpeed, findStableLaunch, migrateLegacyLaunch,
   step, minStarDist, planetEnergy,
   type SimState, type Planet, type Star, type TargetId,
 } from '../index';
@@ -89,6 +89,30 @@ describe('scenario launch defaults', () => {
   });
 });
 
+describe('migrateLegacyLaunch', () => {
+  // Returning visitors persist launches from before the safe-default fixes;
+  // without migration their stored settings resurrect the planet-into-star
+  // opening no matter what the scenario defaults say.
+  it('maps each known-fatal legacy default to the current safe launch', () => {
+    for (const [presetId, r, v] of [
+      ['figure8', 1.8, 1.1], ['figure8', 3.2, 1.0],
+      ['moth', 2.2, 1.1], ['pythagorean', 4.0, 1.6],
+    ] as const) {
+      const m = migrateLegacyLaunch(presetId, r, v);
+      expect(m).not.toBeNull();
+      const { launch } = getScenario(presetId);
+      expect(m).toEqual({ radius: launch.radius, speed: launch.speed });
+    }
+  });
+
+  it('never touches hand-tuned or already-current values', () => {
+    expect(migrateLegacyLaunch('figure8', 2.71, 0.83)).toBeNull();      // user's own
+    const { launch } = getScenario('figure8');
+    expect(migrateLegacyLaunch('figure8', launch.radius, launch.speed)).toBeNull(); // current
+    expect(migrateLegacyLaunch('binary', 1.8, 1.1)).toBeNull();          // preset without legacy entries
+  });
+});
+
 describe('recenter', () => {
   it('zeroes net momentum and the center of mass', () => {
     const stars = recenter([
@@ -146,6 +170,16 @@ describe('findStableLaunch', () => {
     const steps = Math.round(120 / sc.system.dt);
     for (let i = 0; i < steps; i++) { step(sim, sc.system.dt); minDist = Math.min(minDist, minStarDist(planet, s)); }
     expect(minDist).toBeGreaterThan(0.3);
+  });
+
+  it('returns values on the UI controls’ 0.05 grid (representable + preserved by the sliders)', () => {
+    const sc = getScenario('figure8');
+    const stars = buildStars(sc, [1, 1, 1]);
+    const found = findStableLaunch(stars, 'bary', { starSoft: sc.system.softening, dt: sc.system.dt });
+    expect(found).not.toBeNull();
+    const onGrid = (x: number) => Math.abs(x / 0.05 - Math.round(x / 0.05)) < 1e-9;
+    expect(onGrid(found!.radius)).toBe(true);
+    expect(onGrid(found!.speed)).toBe(true);
   });
 
   it('never returns a radius beyond largestRadius (must stay in the UI control range)', () => {
