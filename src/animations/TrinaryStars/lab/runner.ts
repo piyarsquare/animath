@@ -77,12 +77,19 @@ function outcomeOf(s: ReturnType<Analyzer['snapshot']>, blowup: boolean): Outcom
     : 'survived';
 }
 
-function resultOf(s: ReturnType<Analyzer['snapshot']>, blowup: boolean, params: RunParams): RunResult {
+function resultOf(s: ReturnType<Analyzer['snapshot']>, blowup: boolean, params: RunParams, tMax: number): RunResult {
+  // Fractions are measured over the ensemble's TIME BUDGET, not the planet's
+  // survived lifetime. The analyzer's own fractions are per-lifetime — fine for
+  // a live view, but poison for averaging: a world destroyed at t≈2 that was
+  // habitable right up to the end would report ~100% habitable and a census of
+  // early-killed planets would read absurdly rosy. Over the budget, that world
+  // reports 2/tMax — dead time is not habitable time.
+  const scale = s.total / Math.max(tMax, 1e-9);
   return {
     tSim: s.t,
     outcome: outcomeOf(s, blowup),
-    habitableFraction: s.habitableFraction,
-    bothFraction: s.bothFraction,
+    habitableFraction: Math.min(1, s.habitableFraction * scale),
+    bothFraction: Math.min(1, s.bothFraction * scale),
     longestHabitable: s.longestHabitable,
     minStarDist: s.minStarDist,
     ejectedStar: s.ejectedStar,
@@ -100,7 +107,7 @@ export function runOne(cfg: EnsembleConfig, params: RunParams): RunResult {
   const stars = buildStars(getScenario(cfg.presetId), cfg.massMul);
   const planet = launchPlanet(stars, cfg.target, params.radius, params.speed, params.angleDeg * DEG, params.retro);
   const { s, blowup } = simulate(cfg, stars, planet);
-  return resultOf(s, blowup, params);
+  return resultOf(s, blowup, params, cfg.tMax);
 }
 
 /** Run a single explicit planet IC against a given star configuration — used by
@@ -108,7 +115,7 @@ export function runOne(cfg: EnsembleConfig, params: RunParams): RunResult {
  *  radius/speed/angle parameterization. */
 export function runPlanet(cfg: EnsembleConfig, stars: Star[], planet: Planet): RunResult {
   const { s, blowup } = simulate(cfg, stars, planet);
-  return resultOf(s, blowup, { radius: 0, speed: 0, angleDeg: 0, retro: false, seed: 0 });
+  return resultOf(s, blowup, { radius: 0, speed: 0, angleDeg: 0, retro: false, seed: 0 }, cfg.tMax);
 }
 
 /** Finite-time largest Lyapunov exponent for one explicit planet IC (Benettin
@@ -170,7 +177,7 @@ export function runBatchFate(cfg: EnsembleConfig, stars: Star[], planets: Planet
       }
     }
   }
-  return planets.map((_, k) => resultOf(an[k].snapshot(), blowup[k] === 1, BATCH_PARAMS));
+  return planets.map((_, k) => resultOf(an[k].snapshot(), blowup[k] === 1, BATCH_PARAMS, cfg.tMax));
 }
 
 /** Batched finite-time Lyapunov runner (chaos lens): the same idea with a

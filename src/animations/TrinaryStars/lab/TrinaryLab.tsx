@@ -570,7 +570,7 @@ export default function TrinaryLab() {
 
   const distNode = (
     <>
-      <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', margin: '2px 0' }}>habitable fraction of lifetime</div>
+      <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', margin: '2px 0' }}>habitable fraction of the time budget</div>
       <Histogram data={agg?.histHab ?? []} max={agg?.histMax.hab ?? 1} color={C.happy} domain={['0%', '100%']} />
       <div style={{ font: '11px ui-monospace, monospace', color: 'var(--dim)', margin: '8px 0 2px' }}>longest stable era</div>
       <Histogram data={agg?.histLong ?? []} max={agg?.histMax.long ?? 1} color={C.survived} domain={['0', tMax.toFixed(0)]} />

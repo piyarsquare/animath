@@ -123,6 +123,17 @@ describe('runner', () => {
     expect(r.tSim).toBeLessThan(20);
   });
 
+  it('an early-destroyed world reports a SMALL habitable fraction (of the budget, not its short life)', () => {
+    // The world dies within a few time units, habitable right up to the end.
+    // Per-lifetime it would read ~100% habitable and poison the census mean;
+    // per-budget it must read roughly tDeath/tMax.
+    const c = cfg({ tMax: 60 });
+    const r = runOne(c, { radius: 1.2, speed: 0, angleDeg: 0, retro: false, seed: 1 });
+    expect(r.outcome).toBe('planet-destroyed');
+    expect(r.habitableFraction).toBeLessThanOrEqual(r.tSim / 60 + 0.02);
+    expect(r.habitableFraction).toBeLessThan(0.2);
+  });
+
   it('classifies the edge-tuned default as bound through a short budget', () => {
     const c = cfg({ tMax: 30 });
     const r = runOne(c, { radius: 3.2, speed: 0.95, angleDeg: 0, retro: false, seed: 1 });

@@ -15,7 +15,9 @@ const ZERO_BINS = (): Record<Bin, number> => ({ both: 0, climate: 0, dynamics: 0
 
 export class Analyzer {
   private p: ClassifyParams;
-  readonly Sref: number;
+  /** Reference insolation at launch (public for the sky view; retuning β
+   *  re-measures it from the launch snapshot). */
+  Sref: number;
   private Slo: number;
   private Shi: number;
 
@@ -45,9 +47,20 @@ export class Analyzer {
   private lastBound = true;
   private lastCalm = false;
 
+  /** The launch configuration S_ref was measured from, kept so a β (lumExp)
+   *  retune can re-measure the reference under the new law — "×launch light"
+   *  must keep meaning the light at THIS launch, whatever β currently is. */
+  private launchSnapshot: { stars: Star[]; planet: Planet } | null;
+
   constructor(params: ClassifyParams, stars: Star[], planet: Planet, Sref?: number) {
     this.p = params;
     this.Sref = Sref ?? insolation(planet, stars, params.lumExp, params.insolSoft2);
+    // With an externally-supplied Sref we don't own the reference's meaning, so
+    // never recompute it (retune keeps it fixed in that case).
+    this.launchSnapshot = Sref !== undefined ? null : {
+      stars: stars.map(s => ({ ...s })),
+      planet: { ...planet },
+    };
     this.Slo = this.Sref * params.habLo;
     this.Shi = this.Sref * params.habHi;
     // Seed the first sample so segment/era tracking starts cleanly.
@@ -60,11 +73,17 @@ export class Analyzer {
   }
 
   /** Re-tune the classification knobs mid-run without restarting the timeline:
-   *  the habitable band is re-derived from the SAME launch reference S_ref, so
    *  moving a climate slider re-labels the future without wiping the past (or
-   *  resetting the physics). Accumulated bins/segments keep their old labels —
+   *  resetting the physics). If β (lumExp) changed, S_ref is re-measured from
+   *  the stored launch configuration under the new law — otherwise the launch
+   *  point would drift away from meaning exactly 1× launch light in
+   *  unequal-mass systems. Accumulated bins/segments keep their old labels —
    *  the honest reading: they were classified under the rules of their time. */
   retune(params: ClassifyParams) {
+    if (params.lumExp !== this.p.lumExp && this.launchSnapshot) {
+      const { stars, planet } = this.launchSnapshot;
+      this.Sref = insolation(planet, stars, params.lumExp, params.insolSoft2);
+    }
     this.p = params;
     this.Slo = this.Sref * params.habLo;
     this.Shi = this.Sref * params.habHi;

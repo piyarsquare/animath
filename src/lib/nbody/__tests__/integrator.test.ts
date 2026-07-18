@@ -105,6 +105,26 @@ describe('Analyzer classification', () => {
     expect(after.climate).toBe('hot');
   });
 
+  it('retuning β re-measures S_ref so the launch point still reads exactly 1× launch light', () => {
+    // Unequal masses (Pythagorean, 3/4/5) make the β-dependence of insolation
+    // strong: with a stale S_ref, changing β re-reads the SAME state against the
+    // wrong reference and the HUD can flip hot/cold from the slider alone.
+    const sc = getScenario('pythagorean');
+    const stars = buildStars(sc, [1, 1, 1]);
+    const planet = { ...launchPlanet(stars, 'bary', 5.0, 0.55), alive: true };
+    const analyzer = new Analyzer({ ...DEFAULT_CLASSIFY, lumExp: 1 }, stars, planet);
+    // Without stepping, the state at t>0 equals the launch state exactly.
+    analyzer.push(0.1, stars, planet);
+    expect(analyzer.snapshot().climate).toBe('habitable');
+    // Crank β 1 → 4. The same unchanged state must still read as 1× launch
+    // light (habitable), because S_ref is re-measured under the new law.
+    analyzer.retune({ ...DEFAULT_CLASSIFY, lumExp: 4 });
+    analyzer.push(0.2, stars, planet);
+    const snap = analyzer.snapshot();
+    expect(snap.climate).toBe('habitable');
+    expect(snap.S / snap.Sref).toBeCloseTo(1, 6);
+  });
+
   it('accumulates habitable time for a planet launched at the reference insolation', () => {
     const sc = getScenario('figure8');
     const stars = buildStars(sc, [1, 1, 1]);
