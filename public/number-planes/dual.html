@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Number Planes · the dual room</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%235fa8ff' stroke-width='3'/%3E%3Ccircle cx='16' cy='3' r='3' fill='%234cc878'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../guide-theme.css">
+<script src="../guide-skin.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..700;1,6..72,200..700&family=Caveat:wght@400..700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400..700&family=Shadows+Into+Light&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   The dual room — the first world INTERIOR (p = 0 is home), built
+   on the chapter skeleton. The page's p defaults to 0 but the
+   sticky POCKET DIAL (knob + level curve + the j² landing point —
+   the everywhere-reachable core cluster, per Dan) lets you lean
+   out both windows: every plate degenerates/regenerates as p
+   roams. Centerpiece: the derivative-estimator hub — the j-slot
+   of f(a + b·j) IS centered difference (p>0) · exact autodiff
+   (p=0) · complex step (p<0). One formula, one dial.
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes pr-pulse{0%,100%{opacity:.3}50%{opacity:1}}
+html,body{margin:0;padding:0}
+*{box-sizing:border-box}
+.nbr{
+  --desk:color-mix(in srgb, var(--bg) 88%, #000);
+  --deskimg:radial-gradient(120% 90% at 50% -10%,
+    color-mix(in srgb, var(--bg) 88%, var(--fg)) 0%, var(--bg) 55%,
+    color-mix(in srgb, var(--bg) 90%, #000) 100%);
+  --paper:var(--card); --paper2:color-mix(in srgb, var(--card) 93%, var(--fg));
+  --grid:color-mix(in srgb, var(--fg) 7%, transparent);
+  --border:var(--rule); --border-strong:color-mix(in srgb, var(--fg) 34%, transparent);
+  --ink:var(--fg); --dim:var(--muted); --dim2:color-mix(in srgb, var(--muted) 70%, var(--bg));
+  --live:var(--accent2); --live-soft:color-mix(in srgb, var(--accent2) 13%, transparent);
+  --voice:var(--accent); --seal:var(--accent); --seal-fg:var(--bg);
+  --d1:light-dark(#2b57c9, #5fa8ff);
+  --ok:light-dark(#149e57, #4cc878);
+  --d5:light-dark(#bd5f1c, #ff9a5f);
+  --hand:'Caveat',cursive; --serif:'Newsreader',Georgia,serif;
+  --mono:'Space Mono',monospace; --disp:'Space Grotesk',sans-serif;
+  --spd:0.75;
+}
+[data-theme="light"] .nbr{--live:#2f6df0; --voice:#9a4a32; --d1:#3565c8; --ok:#4a7d46; --d5:#b0592a}
+[data-theme="primary"] .nbr{--live:#1f4fd6; --voice:#e63327; --d1:#2b57c9; --ok:#149e57; --d5:#e6731f}
+[data-theme="blueprint"] .nbr{--d1:#c9a8ff; --ok:#7fe0a8; --d5:#ffab7a;
+  --hand:'Shadows Into Light',cursive; --serif:'Space Grotesk',sans-serif}
+[data-theme="phosphor"] .nbr{--d1:#5adcff; --ok:#9dff5a; --d5:#ffa05a;
+  --hand:'VT323',monospace; --serif:'Space Mono',monospace}
+
+/* the pocket dial — sticky, so the core knobs are reachable everywhere */
+.pocket{position:sticky;top:0;z-index:40;background:color-mix(in srgb, var(--desk) 88%, transparent);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--border);margin:0 calc(-1 * clamp(14px,3.5vw,56px));
+  padding:8px clamp(14px,3.5vw,56px)}
+.pocket-in{width:min(1160px,100%);margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+/* flip plates */
+.vat{perspective:1000px;cursor:pointer}
+.vat .in{position:relative;width:100%;height:100%;transform-style:preserve-3d;
+  transition:transform calc(.55s / var(--spd)) cubic-bezier(.3,.85,.35,1)}
+.vat[data-on="1"] .in{transform:rotateY(180deg) !important}
+.vat:not([data-on="1"]):hover .in{transform:rotateY(-11deg);transition-timing-function:cubic-bezier(.3,1.25,.45,1)}
+.vat.sm:not([data-on="1"]):hover .in{transform:rotateY(-20deg)}
+.fgl{opacity:.62;transition:opacity .3s ease}
+.vat:hover .fgl{opacity:1}
+.vat .fc,.vat .bk{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  border:1px solid var(--border);border-radius:2px;background:var(--paper);padding:9px 11px;
+  display:flex;flex-direction:column}
+.vat:hover .fc{border-color:var(--border-strong)}
+.vat .bk{transform:rotateY(180deg);border-color:var(--border-strong);background:var(--paper2)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.pill{font-family:var(--mono);font-size:10px;border:1px solid var(--border);border-radius:3px;padding:2px 7px}
+.pill[data-on="1"]{color:var(--live);border-color:var(--live);background:var(--live-soft)}
+.plate{position:relative;background:var(--paper);border:1px solid var(--border);border-radius:2px;
+  padding:10px 12px;display:flex;flex-direction:column}
+.plab{font-family:var(--mono);font-size:8px;letter-spacing:.22em;color:var(--dim);
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.plab .pulse{width:5px;height:5px;border-radius:50%;background:var(--live);
+  animation:pr-pulse 2.6s ease-in-out infinite;flex:none}
+.hand{font-family:var(--hand);font-size:14.5px;color:var(--dim)}
+.plategrid{display:grid;grid-template-columns:repeat(5,208px);grid-auto-rows:208px;
+  gap:12px;justify-content:start}
+.sealgrid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:8px}
+@media (hover:none){
+  .fgl{opacity:.85}
+  .vat:not([data-on="1"]):hover .in,.vat.sm:not([data-on="1"]):hover .in{transform:none}
+}
+@media (max-width:1140px){
+  .plategrid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:auto;gap:10px}
+  .plategrid>div{grid-column:auto !important;grid-row:auto !important;min-height:0}
+  #plateAD{grid-column:1/-1 !important;min-height:560px}
+  #plateGR,#plateSH,#plateDG{min-height:0;flex-direction:column !important;align-items:stretch !important}
+  #plateGR svg,#plateSH svg,#plateDG svg{width:min(200px,100%);max-height:200px;margin:0 auto;flex:none}
+  #plateWALL{grid-column:1/-1 !important;min-height:170px}
+  .sealgrid{grid-column:1/-1 !important;grid-template-rows:none;grid-template-columns:repeat(2,1fr)}
+  /* definite heights: flip faces live in a height:100% wrapper — iOS resolves
+     that against min-height-only boxes as ZERO (see chapter pages) */
+  .sealgrid .vat{height:150px !important}
+}
+@media (max-width:700px){
+  #hdrRead{white-space:normal !important;text-align:right}
+  #plateGR,#plateSH,#plateDG{grid-column:1/-1 !important}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="nbr" id="nbr" style="min-height:100vh;background-color:var(--desk);background-image:var(--deskimg);padding:0 clamp(14px,3.5vw,56px) 80px;color:var(--ink);font-family:var(--serif);">
+<div style="width:min(1160px,100%);margin:0 auto;display:flex;flex-direction:column;gap:20px;">
+
+  <header style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;padding-top:30px;">
+    <h1 style="margin:0;font-family:var(--disp);font-weight:600;font-size:26px;letter-spacing:-.015em;">Number Planes &middot; the dual room</h1>
+    <span style="font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--dim);">THE FIRST INTERIOR &middot; p = 0 IS HOME &middot; LEAN OUT EITHER WINDOW</span>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:14px;">
+      <span id="hdrRead" style="font-family:var(--mono);font-size:11px;color:var(--live);white-space:nowrap;"></span>
+      <span id="skin-picker"></span>
+    </span>
+  </header>
+
+  <!-- ══ the pocket dial: knob + level curve + the j² landing point ══ -->
+  <div class="pocket">
+    <div class="pocket-in">
+      <svg id="psl" viewBox="0 0 600 30" style="display:block;flex:1;min-width:220px;max-width:560px;touch-action:none;cursor:pointer;user-select:none;">
+        <line x1="14" y1="15" x2="300" y2="15" stroke="var(--d1)" stroke-width="4" stroke-linecap="round" opacity=".55"></line>
+        <line x1="300" y1="15" x2="586" y2="15" stroke="var(--d5)" stroke-width="4" stroke-linecap="round" opacity=".55"></line>
+        <circle cx="300" cy="15" r="3.5" fill="var(--ok)"></circle>
+        <g id="pTicks"></g>
+        <circle id="pk1" cx="300" cy="15" r="9" fill="var(--paper2)" stroke="var(--ok)" stroke-width="2.4"></circle>
+        <circle id="pk2" cx="300" cy="15" r="2.5" fill="var(--ok)"></circle>
+      </svg>
+      <svg id="pocketLvl" viewBox="-46 -46 92 92" style="display:block;height:64px;width:64px;flex:none;">
+        <line x1="-42" y1="0" x2="42" y2="0" stroke="var(--dim2)" stroke-width="1"></line>
+        <line x1="0" y1="-42" x2="0" y2="42" stroke="var(--dim2)" stroke-width="1"></line>
+        <path id="pkCurve" fill="none" stroke-width="1.8"></path>
+        <circle cx="18" cy="0" r="1.8" fill="var(--ink)"></circle>
+        <circle id="pkJ2" cx="-18" cy="0" r="2.6" fill="var(--ok)"></circle>
+      </svg>
+      <span style="display:flex;flex-direction:column;gap:1px;flex:none;">
+        <span id="pkRead" style="font-family:var(--mono);font-size:12px;font-weight:700;"></span>
+        <span id="pkName" style="font-style:italic;font-size:13.5px;"></span>
+        <span class="hand" style="font-size:13px;">j&sup2; lands at the dot &larr;</span>
+      </span>
+    </div>
+  </div>
+
+  <div class="hand" style="font-size:16.5px;margin-top:-4px;">the wall between the two houses &mdash; where the neighbors&rsquo; approximations become exact. home is <span style="font-family:var(--mono);font-size:13px;color:var(--ok);">p = 0</span>; drag the knob to lean out either window and watch every plate degenerate back to it.</div>
+
+  <div class="plategrid">
+
+    <!-- ══ AD · the derivative machine, hub 3×3 ══ -->
+    <div class="plate" id="plateAD" style="grid-column:1/4;grid-row:1/4;">
+      <div class="plab"><span class="pulse"></span><span>AD &middot; THREE WAYS TO TAKE A DERIVATIVE &mdash; THE j-SLOT OF f(a + b&middot;j)</span>
+        <span style="flex:1;"></span>
+        <button class="pill fpill" data-f="0">x&sup2;+3x</button>
+        <button class="pill fpill" data-f="1">sin 3x</button>
+        <button class="pill fpill" data-f="2">x&sup3;&minus;2x</button>
+        <button class="pill fpill" data-f="3">e^(x/2)</button>
+      </div>
+      <svg id="adPlot" viewBox="0 0 560 330" style="display:block;width:100%;flex:1;min-height:0;touch-action:none;user-select:none;">
+        <g id="adGrid"></g>
+        <line id="adAxX" stroke="var(--dim2)" stroke-width="1"></line>
+        <path id="adCurve" fill="none" stroke="var(--dim)" stroke-width="2"></path>
+        <line id="adTrue" stroke="var(--dim2)" stroke-width="1.4" stroke-dasharray="3 4"></line>
+        <line id="adEst" stroke-width="2.6"></line>
+        <line id="adStem1" stroke="var(--dim2)" stroke-width="1" stroke-dasharray="2 3"></line>
+        <line id="adStem2" stroke="var(--dim2)" stroke-width="1" stroke-dasharray="2 3"></line>
+        <circle id="adS1" r="5" fill="transparent" stroke-width="2"></circle>
+        <circle id="adS2" r="5" fill="transparent" stroke-width="2"></circle>
+        <circle id="adA" r="9" fill="var(--live-soft)" stroke="var(--live)" stroke-width="2" style="cursor:grab;"></circle>
+        <text id="adFloor" font-family="var(--hand)" font-size="14" fill="var(--d1)" opacity="0">samples one floor up</text>
+      </svg>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0;">
+        <span style="font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:var(--dim);">STEP b</span>
+        <svg id="bsl" viewBox="0 0 200 22" style="display:block;width:170px;touch-action:none;cursor:pointer;user-select:none;">
+          <line x1="8" y1="11" x2="192" y2="11" stroke="var(--dim2)" stroke-width="2.5" stroke-linecap="round"></line>
+          <circle id="bk" cx="100" cy="11" r="7" fill="var(--paper2)" stroke="var(--voice)" stroke-width="2"></circle>
+        </svg>
+        <span id="bRead" style="font-family:var(--mono);font-size:11px;color:var(--voice);"></span>
+        <span id="adBadge" style="font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;padding:2px 8px;border:1px solid var(--border);border-radius:3px;"></span>
+      </div>
+      <div style="display:flex;gap:6px 18px;flex-wrap:wrap;align-items:baseline;">
+        <span id="adSlot" style="font-family:var(--mono);font-size:12px;color:var(--ink);"></span>
+        <span id="adErr" style="font-family:var(--mono);font-size:11px;"></span>
+      </div>
+      <div class="hand">the j-slot &divide; b is a slope. split samples the rails &middot; complex samples one floor up &middot; the dual takes no samples at all &mdash; and both windows close onto it as p &rarr; 0.</div>
+    </div>
+
+    <!-- ══ GR · the Galilean ruler ══ -->
+    <div class="plate" id="plateGR" style="grid-column:4/6;grid-row:1;flex-direction:row;gap:12px;align-items:center;">
+      <svg id="grPlot" viewBox="-95 -95 190 190" style="display:block;height:100%;max-height:180px;flex:none;touch-action:none;user-select:none;">
+        <line x1="-90" y1="0" x2="90" y2="0" stroke="var(--dim2)" stroke-width="1"></line>
+        <line x1="0" y1="-90" x2="0" y2="90" stroke="var(--dim2)" stroke-width="1"></line>
+        <path id="grLvl" fill="none" stroke-width="1.6" stroke-dasharray="5 4"></path>
+        <line id="grShadow" y1="0" y2="0" stroke="var(--voice)" stroke-width="3.5" opacity=".85"></line>
+        <line id="grVec" x1="0" y1="0" stroke="var(--live)" stroke-width="2.2"></line>
+        <circle id="grZ" r="8" fill="var(--live-soft)" stroke="var(--live)" stroke-width="2" style="cursor:grab;"></circle>
+      </svg>
+      <div style="min-width:0;display:flex;flex-direction:column;gap:4px;">
+        <div class="plab">GR &middot; THE RULER</div>
+        <div id="grRead" style="font-family:var(--mono);font-size:11.5px;color:var(--ink);"></div>
+        <div id="grCap" class="hand"></div>
+      </div>
+    </div>
+
+    <!-- ══ SH · parameters add ══ -->
+    <div class="plate" id="plateSH" style="grid-column:4/6;grid-row:2;flex-direction:row;gap:12px;align-items:center;">
+      <svg id="shPlot" viewBox="-95 -95 190 190" style="display:block;height:100%;max-height:180px;flex:none;">
+        <line x1="-90" y1="0" x2="90" y2="0" stroke="var(--dim2)" stroke-width="1"></line>
+        <line x1="0" y1="-90" x2="0" y2="90" stroke="var(--dim2)" stroke-width="1"></line>
+        <path id="shCurve" fill="none" stroke-width="1.6"></path>
+        <circle id="shU1" r="5" fill="var(--live)"></circle>
+        <circle id="shU2" r="5" fill="var(--voice)"></circle>
+        <circle id="shU3" r="6.5" fill="transparent" stroke="var(--ink)" stroke-width="2.2"></circle>
+      </svg>
+      <div style="min-width:0;display:flex;flex-direction:column;gap:4px;flex:1;">
+        <div class="plab">SH &middot; HOW MOTION COMPOSES</div>
+        <svg id="v1s" viewBox="0 0 200 20" style="display:block;width:100%;max-width:170px;touch-action:none;cursor:pointer;"><line x1="8" y1="10" x2="192" y2="10" stroke="var(--dim2)" stroke-width="2.5" stroke-linecap="round"></line><circle id="v1k" cx="120" cy="10" r="6.5" fill="var(--paper2)" stroke="var(--live)" stroke-width="2"></circle></svg>
+        <svg id="v2s" viewBox="0 0 200 20" style="display:block;width:100%;max-width:170px;touch-action:none;cursor:pointer;"><line x1="8" y1="10" x2="192" y2="10" stroke="var(--dim2)" stroke-width="2.5" stroke-linecap="round"></line><circle id="v2k" cx="80" cy="10" r="6.5" fill="var(--paper2)" stroke="var(--voice)" stroke-width="2"></circle></svg>
+        <div id="shRead" style="font-family:var(--mono);font-size:10.5px;color:var(--ink);"></div>
+        <div id="shCap" class="hand" style="font-size:13.5px;"></div>
+      </div>
+    </div>
+
+    <!-- ══ DG · the wall from both sides ══ -->
+    <div class="plate" id="plateDG" style="grid-column:4/6;grid-row:3;flex-direction:row;gap:12px;align-items:center;">
+      <svg id="dgPlot" viewBox="-95 -95 190 190" style="display:block;height:100%;max-height:180px;flex:none;">
+        <line x1="-90" y1="0" x2="90" y2="0" stroke="var(--dim2)" stroke-width="1"></line>
+        <line x1="0" y1="-90" x2="0" y2="90" stroke="var(--dim2)" stroke-width="1"></line>
+        <path id="dgHome" fill="none" stroke="var(--ok)" stroke-width="2.4"></path>
+        <path id="dgMe" fill="none" stroke-width="2"></path>
+        <path id="dgMirror" fill="none" stroke-width="2" stroke-dasharray="5 4" opacity=".7"></path>
+      </svg>
+      <div style="min-width:0;display:flex;flex-direction:column;gap:4px;">
+        <div class="plab">DG &middot; THE WALL, FROM BOTH SIDES</div>
+        <div id="dgRead" style="font-family:var(--mono);font-size:10.5px;color:var(--ink);"></div>
+        <div class="hand" style="font-size:13.5px;">your curve, its mirror at &minus;p, and the wall both fall onto. rotation and boost degenerate to the same shear.</div>
+      </div>
+    </div>
+
+    <!-- ══ WALL · the claim ══ -->
+    <div class="plate" id="plateWALL" style="grid-column:1/3;grid-row:4;justify-content:center;gap:5px;">
+      <div class="plab">THE CLAIM</div>
+      <div style="font-style:italic;font-size:18px;color:var(--ink);">the dual plane is the common wall</div>
+      <div style="font-size:12.5px;line-height:1.55;color:var(--ink);">Ellipse and hyperbola both flatten onto the line pair. Rotation and boost both degenerate to the shear. Centered difference and complex step both close onto the exact slot. Two houses, one wall &mdash; and the wall is where the derivative lives.</div>
+    </div>
+
+    <!-- ══ seals ══ -->
+    <div class="sealgrid" style="grid-column:3/6;grid-row:4;">
+      <div class="vat sm" data-t="jets" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">&epsilon;&sup3;</span>
+            <span class="hand" style="font-size:13px;line-height:1;text-align:center;">jets</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;"><div style="flex:1;display:flex;align-items:center;font-size:10.5px;line-height:1.4;color:var(--ink);overflow:hidden;">&epsilon;&sup3; = 0 carries the second derivative too; &epsilon;&#8319; = 0 carries a whole Taylor jet. A ladder of rooms behind this one.</div></div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="screws" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">&#8663;</span>
+            <span class="hand" style="font-size:13px;line-height:1;text-align:center;">screws</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;"><div style="flex:1;display:flex;align-items:center;font-size:10.5px;line-height:1.4;color:var(--ink);overflow:hidden;">Dual quaternions carry rotation + translation in one number &mdash; robot arms and rigid-body motion run on them.</div></div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="tropical" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;font-weight:700;">min</span>
+            <span class="hand" style="font-size:13px;line-height:1;text-align:center;">tropical</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;"><div style="flex:1;display:flex;align-items:center;font-size:10.5px;line-height:1.4;color:var(--ink);overflow:hidden;">A different &ldquo;close enough&rdquo;: keep the dominant scale, not the tangent. Nilpotent vs idempotent &mdash; two ways to kill cross terms.</div></div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="galileo" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:7.5px;font-weight:700;">t&#8202;=&#8202;t&prime;</span>
+            <span class="hand" style="font-size:13px;line-height:1;text-align:center;">Galileo</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;"><div style="flex:1;display:flex;align-items:center;font-size:10.5px;line-height:1.4;color:var(--ink);overflow:hidden;">Newton&rsquo;s spacetime IS this room: absolute time, boosts as shears, one direction invisible to the ruler.</div></div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="backprop" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">&nabla;</span>
+            <span class="hand" style="font-size:13px;line-height:1;text-align:center;">backprop</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;"><div style="flex:1;display:flex;align-items:center;font-size:10.5px;line-height:1.4;color:var(--ink);overflow:hidden;">Forward-mode AD is this plate run through a whole program; reverse mode runs the tape backward. ML trains on it.</div></div>
+        </div>
+      </div>
+      <div class="vat sm" data-t="lineage" data-on="0" style="position:relative;height:100%;">
+        <div class="in">
+          <div class="fc" style="align-items:center;justify-content:center;gap:3px;padding:5px;border-style:dashed;">
+            <span style="width:26px;height:26px;border-radius:50%;background:var(--seal);color:var(--seal-fg);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;">&#8756;</span>
+            <span class="hand" style="font-size:13px;line-height:1;text-align:center;">lineage</span>
+          </div>
+          <div class="bk" style="padding:6px 7px;"><div style="flex:1;display:flex;align-items:center;font-size:10px;line-height:1.35;color:var(--ink);overflow:hidden;">Dual numbers: Clifford (1873), Study&rsquo;s dual angles; Galilean geometry: Yaglom; the complex-step trick: Squire &amp; Trapp (1998); forward AD: Wengert (1964).</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="hand" style="font-size:16px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;">home is the wall; the houses are the views.
+    <a href="./" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">the cover</a>
+    &middot; <a href="journal.html" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">the journal</a>
+    &middot; <a href="chapter-3.html" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">three worlds</a>
+    &middot; <a href="cards/" style="color:var(--live);text-decoration:none;border-bottom:1px dotted var(--live);white-space:nowrap;">the cards</a>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ═══════ the dual room — one p (default 0), every plate listens ═══════ */
+const $=id=>document.getElementById(id);
+const S={p:0, a:0.9, b:0.6, fi:1, gx:1.4, gy:0.9, v1:0.5, v2:-0.35};
+const fmt=(v,d=2)=>{let r=Math.round(v*10**d)/10**d; if(Object.is(r,-0)) r=0;
+  let s=r.toFixed(d).replace(/\.?0+$/,''); if(s==='') s='0';
+  if(s[0]==='-') s='−'+s.slice(1); return s;};
+const NS='http://www.w3.org/2000/svg';
+
+/* presets: f, f′, and the real/imag parts of f(a+ih) for the complex window */
+const FS=[
+ {name:'x²+3x', f:x=>x*x+3*x, df:x=>2*x+3,
+  cre:(a,h)=>a*a-h*h+3*a, cim:(a,h)=>2*a*h+3*h, yr:[-4,12]},
+ {name:'sin 3x', f:x=>Math.sin(3*x), df:x=>3*Math.cos(3*x),
+  cre:(a,h)=>Math.sin(3*a)*Math.cosh(3*h), cim:(a,h)=>Math.cos(3*a)*Math.sinh(3*h), yr:[-1.6,1.6]},
+ {name:'x³−2x', f:x=>x*x*x-2*x, df:x=>3*x*x-2,
+  cre:(a,h)=>a*a*a-3*a*h*h-2*a, cim:(a,h)=>3*a*a*h-h*h*h-2*h, yr:[-6,6]},
+ {name:'e^(x/2)', f:x=>Math.exp(x/2), df:x=>Math.exp(x/2)/2,
+  cre:(a,h)=>Math.exp(a/2)*Math.cos(h/2), cim:(a,h)=>Math.exp(a/2)*Math.sin(h/2), yr:[-.5,6]},
+];
+
+/* pocket slider ticks */
+(function(){const g=$('pTicks');
+  for(const m of [-2,-1,0,1,2]){const x=300+m*143;
+    const l=document.createElementNS(NS,'line');
+    l.setAttribute('x1',x);l.setAttribute('x2',x);l.setAttribute('y1',9);l.setAttribute('y2',21);
+    l.setAttribute('stroke','var(--dim2)');l.setAttribute('stroke-width','1.2');g.appendChild(l);
+    const t=document.createElementNS(NS,'text');
+    t.setAttribute('x',x);t.setAttribute('y',30);t.setAttribute('text-anchor','middle');
+    t.setAttribute('font-family','var(--mono)');t.setAttribute('font-size','9');
+    t.setAttribute('fill','var(--dim2)');t.textContent=(m<0?'−'+(-m):'+'+m);g.appendChild(t);
+  }})();
+
+function setP(v){ S.p=v; render(); }
+
+/* level-set path in a viewBox of half-size R with unit U */
+function lvlPath(p,U,R){
+  if(p<-.001){const ry=Math.min(U/Math.sqrt(-p),R*3);
+    return 'M '+U+' 0 A '+U+' '+ry.toFixed(1)+' 0 1 1 '+(-U)+' 0 A '+U+' '+ry.toFixed(1)+' 0 1 1 '+U+' 0';}
+  if(p<.001){return 'M '+U+' '+(-R)+' L '+U+' '+R+' M '+(-U)+' '+(-R)+' L '+(-U)+' '+R;}
+  const s=Math.sqrt(p); let d='';
+  for(const br of [1,-1]){let seg='';
+    for(let i=0;i<=36;i++){const t=-2.2+i*(4.4/36);
+      const x=br*Math.cosh(t)*U, y=-Math.sinh(t)/s*U;
+      if(Math.abs(y)>R&&i>0&&i<36) continue;
+      seg+=(seg?' L ':'M ')+x.toFixed(1)+' '+y.toFixed(1);}
+    d+=seg+' ';}
+  return d;
+}
+
+function render(){
+  const p=Math.max(-2,Math.min(2,S.p));
+  const neg=p<-.001, pos=p>.001, zero=!neg&&!pos;
+  const pColor=neg?'var(--d1)':pos?'var(--d5)':'var(--ok)';
+  const planeName=neg?'the complex plane':pos?'the split plane':'the dual plane · home';
+
+  $('hdrRead').textContent='j² = '+fmt(p)+' · '+(zero?'home':planeName);
+
+  /* — pocket — */
+  const kx=Math.max(14,Math.min(586,300+p*143));
+  $('pk1').setAttribute('cx',kx); $('pk2').setAttribute('cx',kx);
+  $('pk1').setAttribute('stroke',pColor); $('pk2').setAttribute('fill',pColor);
+  $('pkCurve').setAttribute('d',lvlPath(p,18,42)); $('pkCurve').setAttribute('stroke',pColor);
+  $('pkJ2').setAttribute('cx',Math.max(-40,Math.min(40,18*p))); $('pkJ2').setAttribute('fill',pColor);
+  $('pkRead').textContent='j² = '+fmt(p); $('pkRead').style.color=pColor;
+  $('pkName').textContent=planeName; $('pkName').style.color=pColor;
+
+  /* — AD hub — */
+  const F=FS[S.fi], a=S.a, b=S.b;
+  document.querySelectorAll('.fpill').forEach(el=>el.dataset.on=el.dataset.f==String(S.fi)?'1':'0');
+  const X=v=>70+(v+3)*(470/6), yr=F.yr, Y=v=>310-(v-yr[0])*(290/(yr[1]-yr[0]));
+  /* axis + curve */
+  $('adAxX').setAttribute('x1',70);$('adAxX').setAttribute('x2',540);
+  $('adAxX').setAttribute('y1',Y(0));$('adAxX').setAttribute('y2',Y(0));
+  let d='';
+  for(let i=0;i<=140;i++){const x=-3+i*(6/140);let y=F.f(x);
+    y=Math.max(yr[0]-1,Math.min(yr[1]+1,y));
+    d+=(d?' L ':'M ')+X(x).toFixed(1)+' '+Y(y).toFixed(1);}
+  $('adCurve').setAttribute('d',d);
+  if(!render.gDone){render.gDone=true;const g=$('adGrid');
+    for(let x=-3;x<=3;x++){const l=document.createElementNS(NS,'line');
+      l.setAttribute('x1',X(x));l.setAttribute('x2',X(x));l.setAttribute('y1',20);l.setAttribute('y2',310);
+      l.setAttribute('stroke','var(--grid)');g.appendChild(l);
+      const t=document.createElementNS(NS,'text');t.setAttribute('x',X(x));t.setAttribute('y',326);
+      t.setAttribute('text-anchor','middle');t.setAttribute('font-family','var(--mono)');
+      t.setAttribute('font-size','9');t.setAttribute('fill','var(--dim2)');
+      t.textContent=(x<0?'−'+(-x):x);g.appendChild(t);}}
+  /* the estimator: h = b·√|p| */
+  const h=b*Math.sqrt(Math.abs(p));
+  const fa=F.f(a), tru=F.df(a);
+  let est, val, badge, mode;
+  if(pos){est=(F.f(a+h)-F.f(a-h))/(2*h); val=(F.f(a+h)+F.f(a-h))/2;
+    badge='CENTERED DIFFERENCE · rails at a ± '+fmt(h); mode='split';}
+  else if(neg){est=F.cim(a,h)/h; val=F.cre(a,h);
+    badge='COMPLEX STEP · samples one floor up (± '+fmt(h)+'i)'; mode='cx';}
+  else {est=tru; val=fa; badge='EXACT — THE DUAL SLOT · no samples, no limit'; mode='dual';}
+  /* slope lines through (a, value-anchor) */
+  const anchor=fa;
+  const L=Math.min(1.6, 2.6/Math.max(1,Math.abs(est),Math.abs(tru)));
+  $('adTrue').setAttribute('x1',X(a-L));$('adTrue').setAttribute('y1',Y(anchor-tru*L));
+  $('adTrue').setAttribute('x2',X(a+L));$('adTrue').setAttribute('y2',Y(anchor+tru*L));
+  $('adEst').setAttribute('x1',X(a-L));$('adEst').setAttribute('y1',Y(anchor-est*L));
+  $('adEst').setAttribute('x2',X(a+L));$('adEst').setAttribute('y2',Y(anchor+est*L));
+  $('adEst').setAttribute('stroke',pColor);
+  $('adA').setAttribute('cx',X(a));$('adA').setAttribute('cy',Y(fa));
+  /* samples */
+  const s1=$('adS1'),s2=$('adS2'),st1=$('adStem1'),st2=$('adStem2'),fl=$('adFloor');
+  if(mode==='split'){
+    s1.setAttribute('stroke','var(--d5)');s2.setAttribute('stroke','var(--d5)');
+    s1.setAttribute('stroke-dasharray','');s2.setAttribute('stroke-dasharray','');
+    s1.setAttribute('cx',X(a-h));s1.setAttribute('cy',Y(F.f(a-h)));s1.setAttribute('opacity','1');
+    s2.setAttribute('cx',X(a+h));s2.setAttribute('cy',Y(F.f(a+h)));s2.setAttribute('opacity','1');
+    st1.setAttribute('opacity','0');st2.setAttribute('opacity','0');fl.setAttribute('opacity','0');
+  } else if(mode==='cx'){
+    const dy=Math.min(70,h*70);
+    s1.setAttribute('stroke','var(--d1)');s2.setAttribute('stroke','var(--d1)');
+    s1.setAttribute('stroke-dasharray','3 3');s2.setAttribute('stroke-dasharray','3 3');
+    s1.setAttribute('cx',X(a));s1.setAttribute('cy',Y(fa)-dy);s1.setAttribute('opacity','1');
+    s2.setAttribute('cx',X(a));s2.setAttribute('cy',Y(fa)+dy);s2.setAttribute('opacity','1');
+    st1.setAttribute('x1',X(a));st1.setAttribute('x2',X(a));
+    st1.setAttribute('y1',Y(fa)-dy);st1.setAttribute('y2',Y(fa)+dy);st1.setAttribute('opacity','1');
+    st2.setAttribute('opacity','0');
+    fl.setAttribute('x',X(a)+12);fl.setAttribute('y',Y(fa)-dy-6);fl.setAttribute('opacity','.9');
+  } else {
+    s1.setAttribute('opacity','0');s2.setAttribute('opacity','0');
+    st1.setAttribute('opacity','0');st2.setAttribute('opacity','0');fl.setAttribute('opacity','0');
+  }
+  /* readouts */
+  $('bk').setAttribute('cx',8+((b-0.05)/1.45)*184);
+  $('bRead').textContent='b = '+fmt(b);
+  const bd=$('adBadge'); bd.textContent=badge; bd.style.color=pColor; bd.style.borderColor=pColor;
+  const slot=est*b;
+  $('adSlot').textContent='f(a + b·j) = '+fmt(val,3)+(slot<0?' − '+fmt(-slot,3):' + '+fmt(slot,3))+'·j   →   slope = '+fmt(est,4);
+  const err=Math.abs(est-tru);
+  $('adErr').textContent=zero?'error 0 — exact':'true f′(a) = '+fmt(tru,4)+' · error '+(err<1e-12?'≈ 0':fmt(err,4));
+  $('adErr').style.color=zero?'var(--ok)':(err<0.005?'var(--ok)':'var(--voice)');
+
+  /* — GR ruler — */
+  const gx=S.gx, gy=S.gy, GU=38;
+  $('grVec').setAttribute('x2',gx*GU);$('grVec').setAttribute('y2',-gy*GU);
+  $('grZ').setAttribute('cx',gx*GU);$('grZ').setAttribute('cy',-gy*GU);
+  $('grShadow').setAttribute('x1',0);$('grShadow').setAttribute('x2',gx*GU);
+  const N=gx*gx-p*gy*gy;
+  /* level curve of N through z: x² − p·y² = N */
+  let gd='';
+  if(Math.abs(N)>.02){const sN=Math.sqrt(Math.abs(N));
+    if(p<-.001){const rx=sN*GU, ry=Math.min(sN/Math.sqrt(-p)*GU,260);
+      gd='M '+rx.toFixed(1)+' 0 A '+rx.toFixed(1)+' '+ry.toFixed(1)+' 0 1 1 '+(-rx).toFixed(1)+' 0 A '+rx.toFixed(1)+' '+ry.toFixed(1)+' 0 1 1 '+rx.toFixed(1)+' 0';}
+    else if(p<.001){const x0=sN*GU; gd=N>0?('M '+x0+' -88 L '+x0+' 88 M '+(-x0)+' -88 L '+(-x0)+' 88'):'';}
+    else {const s=Math.sqrt(p);
+      if(N>0){for(const br of [1,-1]){let seg='';
+        for(let i=0;i<=30;i++){const t=-2+i*(4/30);
+          const x=br*sN*Math.cosh(t)*GU, y=-sN/s*Math.sinh(t)*GU;
+          if(Math.abs(y)>88&&i>0&&i<30) continue;
+          seg+=(seg?' L ':'M ')+x.toFixed(1)+' '+y.toFixed(1);}
+        gd+=seg+' ';}}
+      else {for(const br of [1,-1]){let seg='';
+        for(let i=0;i<=30;i++){const t=-2+i*(4/30);
+          const y=-br*sN/s*Math.cosh(t)*GU, x=sN*Math.sinh(t)*GU;
+          if(Math.abs(x)>88&&i>0&&i<30) continue;
+          seg+=(seg?' L ':'M ')+x.toFixed(1)+' '+y.toFixed(1);}
+        gd+=seg+' ';}}}}
+  $('grLvl').setAttribute('d',gd); $('grLvl').setAttribute('stroke',pColor);
+  $('grRead').innerHTML='z = '+fmt(gx)+' + '+fmt(gy)+'·j<br>N = x² − p·y² = <b style="color:'+ (zero?'var(--ok)':'var(--ink)') +'">'+fmt(N)+'</b>';
+  $('grCap').textContent=zero?'the ruler reads the shadow only — the vertical is invisible. drag z up and down: N holds still.'
+    :neg?'leaning out the complex window: both directions count. N is a real length².'
+    :'leaning out the split window: the vertical counts NEGATIVELY. N can vanish on the rails.';
+
+  /* — SH composition — */
+  const U2=52;
+  $('shCurve').setAttribute('d',lvlPath(p,U2,88)); $('shCurve').setAttribute('stroke',pColor);
+  const uPt=(t)=>{ /* unit element at parameter t, per plane */
+    if(neg){const s=Math.sqrt(-p);return [Math.cos(t)*U2, -Math.sin(t)/s*U2];}
+    if(zero) return [U2, -t*U2];
+    const s=Math.sqrt(p);return [Math.cosh(t)*U2, -Math.sinh(t)/s*U2];
+  };
+  const c1=uPt(S.v1), c2=uPt(S.v2), c3=uPt(S.v1+S.v2);
+  $('shU1').setAttribute('cx',c1[0]);$('shU1').setAttribute('cy',c1[1]);
+  $('shU2').setAttribute('cx',c2[0]);$('shU2').setAttribute('cy',c2[1]);
+  $('shU3').setAttribute('cx',c3[0]);$('shU3').setAttribute('cy',c3[1]);
+  $('v1k').setAttribute('cx',100+S.v1*76.6);
+  $('v2k').setAttribute('cx',100+S.v2*76.6);
+  const pname=neg?'angles':zero?'velocities':'rapidities';
+  $('shRead').textContent=fmt(S.v1)+' ∘ '+fmt(S.v2)+' = '+fmt(S.v1+S.v2)+'  ('+pname+' add)';
+  $('shCap').textContent=neg?'multiplying unit numbers turns: angles add around the circle.'
+    :zero?'multiplying unit numbers shears: velocities add along the line — Galileo’s rule, exact.'
+    :'multiplying unit numbers boosts: rapidities add along the hyperbola (velocities saturate).';
+
+  /* — DG wall — */
+  $('dgHome').setAttribute('d',lvlPath(0,52,88));
+  const me=$('dgMe'), mir=$('dgMirror');
+  if(zero){me.setAttribute('d','');mir.setAttribute('d','');}
+  else{me.setAttribute('d',lvlPath(p,52,88));me.setAttribute('stroke',pColor);
+    mir.setAttribute('d',lvlPath(-p,52,88));mir.setAttribute('stroke',p>0?'var(--d1)':'var(--d5)');}
+  $('dgRead').textContent=zero?'p = 0 — you are the wall':'p = '+fmt(p)+' and its mirror −p, both → the wall';
+}
+
+/* ——— pointer plumbing ——— */
+function slider(el,onMove){el.setAttribute('data-dragel','');let dn=false;
+  const go=e=>{const r=el.getBoundingClientRect();onMove((e.clientX-r.left)/r.width);};
+  el.addEventListener('pointerdown',e=>{dn=true;el.setPointerCapture(e.pointerId);go(e);e.preventDefault();});
+  el.addEventListener('pointermove',e=>{if(dn)go(e);});
+  addEventListener('pointerup',()=>{dn=false;});}
+slider($('psl'),f=>{let p=(f*600-300)/143;p=Math.max(-2,Math.min(2,p));
+  for(const m of [-1,0,1]) if(Math.abs(p-m)<.09){p=m;break;}
+  setP(Math.round(p*100)/100);});
+slider($('bsl'),f=>{S.b=Math.max(.05,Math.min(1.5,.05+f*1.45));render();});
+slider($('v1s'),f=>{S.v1=Math.max(-1.15,Math.min(1.15,(f-.5)*2.4));render();});
+slider($('v2s'),f=>{S.v2=Math.max(-1.15,Math.min(1.15,(f-.5)*2.4));render();});
+
+/* drag a on the AD plot */
+(function(){const plot=$('adPlot'),hd=$('adA');hd.setAttribute('data-dragel','');let dn=false;
+  hd.addEventListener('pointerdown',e=>{dn=true;hd.setPointerCapture(e.pointerId);e.preventDefault();e.stopPropagation();});
+  hd.addEventListener('pointermove',e=>{if(!dn)return;
+    const r=plot.getBoundingClientRect();
+    let a=((e.clientX-r.left)/r.width*560-70)/(470/6)-3;
+    S.a=Math.max(-2.6,Math.min(2.6,Math.round(a*20)/20));render();});
+  hd.addEventListener('pointerup',()=>{dn=false;});})();
+
+/* drag z on the ruler */
+(function(){const plot=$('grPlot'),hd=$('grZ');hd.setAttribute('data-dragel','');let dn=false;
+  hd.addEventListener('pointerdown',e=>{dn=true;hd.setPointerCapture(e.pointerId);e.preventDefault();e.stopPropagation();});
+  hd.addEventListener('pointermove',e=>{if(!dn)return;
+    const r=plot.getBoundingClientRect();
+    let x=((e.clientX-r.left)/r.width*190-95)/38;
+    let y=-((e.clientY-r.top)/r.height*190-95)/38;
+    S.gx=Math.max(-2.2,Math.min(2.2,Math.round(x*20)/20));
+    S.gy=Math.max(-2.2,Math.min(2.2,Math.round(y*20)/20));render();});
+  hd.addEventListener('pointerup',()=>{dn=false;});})();
+
+/* clicks: presets + seals */
+document.addEventListener('click',e=>{
+  if(e.target.closest('a')||e.target.closest('[data-dragel]')) return;
+  const fp=e.target.closest('.fpill');
+  if(fp){S.fi=parseInt(fp.dataset.f,10);render();return;}
+  const t=e.target.closest('[data-t]');
+  if(t){t.dataset.on=t.dataset.on==='1'?'0':'1';}
+});
+
+/* expose for headless verification */
+window.__dual={get:()=>({...S}), setP};
+render();
+</script>
+</body>
+</html>

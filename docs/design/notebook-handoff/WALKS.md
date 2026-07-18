@@ -109,14 +109,24 @@ entries 02/06 already contain most of its sculptures.
 
 ## Shared build inventory (ranked by how many walks starve without it)
 
-1. **The dual-world interior** (Galilean ruler + shear-composer) — Walks 1
-   and 3 both need it; the dual world currently has a placard but no
-   furniture. Quarry: the second seed conversation.
+1. **The dual-world interior** — ✅ BUILT v1 (2026-07-17):
+   `public/number-planes/dual.html` — the Galilean ruler (GR), the
+   parameter-composer (SH: angles/velocities/rapidities add), the wall from
+   both sides (DG), six seals, and the sticky **pocket dial** (knob + level
+   curve + the j² landing point — Dan's everywhere-reachable core cluster,
+   prototyped here; adopting it on every page is the follow-up that triggers
+   the shared notebook.css/js extraction).
 2. **The wiggle test** — Walk 2's centerpiece; the deepest missing sculpture
    (per-world rigidity made tangible).
-3. **The dual-number calculator** — cheap; the script exists verbatim.
+3. **The dual-number calculator** — ✅ BUILT v1, and it became more: the AD
+   hub on dual.html is the **three-estimators plate** — the j-slot of
+   f(a + b·j) IS the centered difference (p>0, rails at a±h), exact
+   forward-mode autodiff (p=0), and the complex-step derivative (p<0,
+   samples one floor up); both neighbors converge to the dual slot as p→0.
+   "Approached from either side as a common degeneracy" made literal.
 4. **The Jacobian microscope** — medium; also enriches Plane Transform.
-5. **Rapidity meter** — cheap; shared by Walks 1 and 3.
+5. **Rapidity meter** — folded into SH on dual.html (v1); a dedicated
+   velocity-saturation view remains open for Walk 3.
 
 **Authoring note:** every walk fits the journal's existing skeleton (entries
 + hand-gloss margins + pasted instruments + one p per page), so a leaflet

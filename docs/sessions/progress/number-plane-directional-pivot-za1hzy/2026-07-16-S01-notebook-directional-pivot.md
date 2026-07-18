@@ -31,6 +31,34 @@ starts from main with the notebook landed. First tracked session on this branch.
 
 ## Working notes
 
+### 🟢 code · 05:30 — The dual room built (first interior) + the pocket dial
+**Why:** Dan: some knobs must be reachable everywhere (knob + level curves +
+the square of the j vector); wants autodiff examples; wants the dual seen
+"from either side as a common degeneracy."
+
+`public/number-planes/dual.html` — chapter skeleton, page p defaults to 0
+(home), every plate listens as p roams. **The mathematical find that
+organizes the page:** the j-slot of f(a + b·j) IS the derivative-estimator
+family — centered finite difference at p>0 (samples on the rails at a±h,
+h=b√p), exact forward-mode AD at p=0 (no samples, no limit), and the
+complex-step derivative at p<0 (samples one floor up, Im f(a+ih)/h; the
+journal's entry-06 motif recurs) — so "approached from either side as a
+common degeneracy" is literally numerical differentiation converging to
+autodiff. Plates: AD hub (4 presets, draggable a, step-b slider, estimate
+vs true tangent, error readout), GR Galilean ruler (N = x²−p·y², vertical
+invisible at home), SH composer (angles/velocities/rapidities add), DG wall
+(curve + mirror at −p + the wall), claim plate, 6 seals (jets · screws ·
+tropical · Galileo · backprop · lineage — Clifford/Study/Yaglom/
+Squire–Trapp/Wengert, standard attributions only). The **pocket dial**
+(knob + mini level-curve + the j² landing dot) is position:sticky — the
+everywhere-reachable cluster, prototyped here; rolling it across all pages
+is the follow-up that should trigger the shared notebook.css extraction.
+Cover gains the dual-room leaf. Verified headless: p = 0 / +1 / −0.4 / 0.4
+states coherent (error 0.549→0 as p→0 on sin 3x), phone 390px overflow
+fixed (row-plates stack), flip faces ≡ vat at definite heights, build
+green. Bugs caught by eyeballing: slope line overrun, "+ −" sign clash,
+"velocity vs add" plural clash — all fixed. `signals: phone-needed` stands.
+
 ### 🟣 decision · 04:30 — The sculpture-garden reading; three walks designed
 **Why:** Dan, in discussion mode: the seed conversation's flow is "erratic
 and idiosyncratic… ideally the journey for any user is its own unique pass
