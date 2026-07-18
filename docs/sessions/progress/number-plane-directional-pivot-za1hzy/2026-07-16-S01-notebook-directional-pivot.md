@@ -31,6 +31,34 @@ starts from main with the notebook landed. First tracked session on this branch.
 
 ## Working notes
 
+### 🟣 decision · 04:30 — The sculpture-garden reading; three walks designed
+**Why:** Dan, in discussion mode: the seed conversation's flow is "erratic
+and idiosyncratic… ideally the journey for any user is its own unique pass
+through these concepts — sculpture garden? … a room that opens up off of
+complex analysis (and there is no privileged direction to the door, what is
+in and what is out)." Then: "generate three paths through this and suggest
+different ways of approaching the material."
+
+Discussion landed on: grounds primary (cards + instruments + adjacencies),
+every linear presentation a *leaflet*; the journal = leaflet #1, the
+founder's recorded walk (its erraticness is authenticity, not flaw); the
+sculptures are the instruments (walk-around, no inherent order — Dan's
+"circling" is the sculpture-garden behavior); one sample walk still ships
+because pure free-wander already failed once (June-24 web → single-thread
+reversal). The unprivileged door is structurally true both ways (annex vs
+entrance hall; ℂ = the p<0 room's interior) and echoes inversion swapping
+inside/outside the unit circle.
+
+Designed and committed `docs/design/notebook-handoff/WALKS.md`: three
+walks distinguished by what the visitor trusts at the gate and where the
+knob appears — **Residents' Walk** (senses; knob last; needs the dual-world
+interior built), **Analysis Door** (theorems; knob as the door; needs the
+wiggle test + Jacobian microscope; = entry 00 expanded), **Machines Walk**
+(tools; knob hidden in hardware; needs the dual-number calculator +
+rapidity meter), plus the Quadratic Thread kept as a drawer sketch, and a
+ranked shared build inventory (dual interior first — a placard with no
+furniture).
+
 ### 🟡 milestone · 03:40 — The seed conversations arrive; the journal gains entry 00
 **Why:** Dan uploaded the two chat transcripts (the share links were
 sandbox-blocked) and named the first "the seed for this entire study."
