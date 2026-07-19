@@ -1,6 +1,23 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { CANVAS_CONFIG } from '../config/defaults';
+
+/** Probe once whether a WebGL context can actually be created. In restricted
+ *  environments (hardware acceleration off, strict privacy modes, some remote
+ *  desktops) `new THREE.WebGLRenderer` throws — without this probe that error
+ *  used to blank the entire page instead of just this view. */
+let webglSupport: boolean | null = null;
+export function hasWebGL(): boolean {
+  if (webglSupport === null) {
+    try {
+      const c = document.createElement('canvas');
+      webglSupport = !!(c.getContext('webgl2') || c.getContext('webgl'));
+    } catch {
+      webglSupport = false;
+    }
+  }
+  return webglSupport;
+}
 
 export interface CanvasContext {
   scene: THREE.Scene;
@@ -20,14 +37,15 @@ export interface Canvas3DProps {
 
 export default function Canvas3D({ onMount }: Canvas3DProps) {
   const mountRef = useRef<HTMLDivElement>(null);
+  const [failed, setFailed] = useState(() => !hasWebGL());
 
   useEffect(() => {
-    if (!mountRef.current) return;
-    
+    if (failed || !mountRef.current) return;
+
     const mount = mountRef.current;
     const width = mount.clientWidth;
     const height = mount.clientHeight;
-    
+
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       CANVAS_CONFIG.fov,
@@ -35,13 +53,22 @@ export default function Canvas3D({ onMount }: Canvas3DProps) {
       CANVAS_CONFIG.near,
       CANVAS_CONFIG.far
     );
-    
-    const renderer = new THREE.WebGLRenderer({ 
-      antialias: true,
-      alpha: true,
-      preserveDrawingBuffer: true 
-    });
-    
+
+    // The probe can pass while renderer creation still fails (context limits,
+    // driver quirks) — contain that too instead of blanking the page.
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        preserveDrawingBuffer: true,
+      });
+    } catch (e) {
+      console.error('[animath] WebGL renderer creation failed:', e);
+      setFailed(true);
+      return;
+    }
+
     // Set initial size
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit DPR for performance
@@ -78,16 +105,35 @@ export default function Canvas3D({ onMount }: Canvas3DProps) {
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
     };
-  }, [onMount]);
+  }, [onMount, failed]);
+
+  if (failed) {
+    // A contained, named failure: the workspace chrome (rail, panels, top bar)
+    // stays fully alive — only this view reports.
+    return (
+      <div role="alert" style={{
+        position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
+        background: 'var(--viz-bg, #0a0e16)', color: 'var(--fg, #eee)', padding: 20,
+      }}>
+        <div style={{ maxWidth: 380, textAlign: 'center', font: '13.5px/1.55 var(--font-ui, system-ui)' }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>3D view unavailable</div>
+          <div style={{ color: 'var(--dim, #999)' }}>
+            This view needs WebGL, which this browser or environment isn’t providing.
+            Enabling hardware acceleration or trying another browser usually restores it.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div 
-      ref={mountRef} 
+    <div
+      ref={mountRef}
       style={{
         ...CANVAS_CONFIG.style,
         display: 'block',
         touchAction: 'none', // Prevent default touch behaviors
-      }} 
+      }}
     />
   );
 }

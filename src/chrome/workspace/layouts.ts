@@ -60,23 +60,69 @@ export function layoutViews(views: ViewDef[], layout: LayoutDef): Record<string,
   return out;
 }
 
-/** Full workspace state for a layout (panels stamped above the views). */
+/** Panel card width (must track theme.css .am-ws-panel). */
+const PANEL_W = 268;
+const STAGE_PAD = 8;
+
+/**
+ * Clamp authored geometry into the stage. Layouts are written against a
+ * roomy reference viewport; on a shorter/narrower one an absolute-positioned
+ * panel (or view) can extend past the stage edge into overflow:hidden space —
+ * part of the panel becomes permanently unreachable (the Argand "Essentials
+ * runs 136px below the fold" bug class). Pure; a null viewport is a no-op so
+ * tests and SSR-ish callers can skip it.
+ */
+export function clampToViewport(
+  state: PersistedWorkspace, sections: SectionDef[],
+  viewport: { w: number; h: number } | null,
+): PersistedWorkspace {
+  if (!viewport) return state;
+  const { w, h } = viewport;
+  if (!(w > 200 && h > 200)) return state; // degenerate measurements: leave as authored
+  const est = (id: string) => sections.find(s => s.id === id)?.estHeight ?? DEFAULT_EST;
+
+  const open: typeof state.open = {};
+  for (const id of Object.keys(state.open)) {
+    const p = state.open[id];
+    // Keep the whole card on-stage when it fits; a card taller than the stage
+    // pins to the top (its body scrolls internally).
+    const maxX = Math.max(WS_RAIL, w - PANEL_W - STAGE_PAD);
+    const maxY = Math.max(STAGE_PAD, h - est(id) - STAGE_PAD);
+    open[id] = { ...p, x: Math.min(Math.max(p.x, WS_RAIL), maxX), y: Math.min(Math.max(p.y, STAGE_PAD), maxY) };
+  }
+
+  const views: typeof state.views = {};
+  for (const id of Object.keys(state.views)) {
+    const v = state.views[id];
+    const vw = Math.min(v.w, w - WS_RAIL - STAGE_PAD);
+    const vh = Math.min(v.h, h - 2 * STAGE_PAD);
+    const x = Math.min(Math.max(v.x, WS_RAIL), Math.max(WS_RAIL, w - vw - STAGE_PAD));
+    const y = Math.min(Math.max(v.y, STAGE_PAD), Math.max(STAGE_PAD, h - vh - STAGE_PAD));
+    views[id] = { ...v, x, y, w: vw, h: vh };
+  }
+
+  return { ...state, open, views };
+}
+
+/** Full workspace state for a layout (panels stamped above the views).
+ *  Pass the stage `viewport` to clamp authored geometry on-screen. */
 export function applyLayout(
   sections: SectionDef[], views: ViewDef[], layout: LayoutDef,
-  saved: PersistedWorkspace['saved']
+  saved: PersistedWorkspace['saved'],
+  viewport: { w: number; h: number } | null = null,
 ): PersistedWorkspace {
   const known = new Set(sections.map(s => s.id));
   const open: LayoutDef['open'] = {};
   for (const id of Object.keys(layout.open)) {
     if (known.has(id)) open[id] = layout.open[id];
   }
-  return {
+  return clampToViewport({
     v: 1,
     layout: layout.id,
     open: stampZ(open, views.length),
     views: layoutViews(views, layout),
     saved,
-  };
+  }, sections, viewport);
 }
 
 /** Validate persisted state against the app's current sections/views. */

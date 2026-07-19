@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyLayout, compactZ, raiseWindow, sanitize, validateLayouts } from '../layouts';
+import { applyLayout, clampToViewport, compactZ, raiseWindow, sanitize, validateLayouts } from '../layouts';
 import { WS_RAIL } from '../geometry';
 import type { LayoutDef, PersistedWorkspace, SectionDef, ViewDef } from '../types';
 
@@ -35,6 +35,47 @@ describe('validateLayouts — authored panels must clear the rail band', () => {
 
   it('accepts panels at or beyond the rail clearance', () => {
     expect(validateLayouts([layout({ function: { x: WS_RAIL, y: 18 }, playback: { x: 400, y: 18 } })])).toEqual([]);
+  });
+});
+
+describe('clampToViewport — authored geometry must stay on-stage', () => {
+  const tall: SectionDef[] = [
+    { id: 'function', title: 'Function', arch: 'subject', node: null, estHeight: 400 },
+    { id: 'playback', title: 'Playback', arch: 'playback', node: null, estHeight: 200 },
+  ];
+
+  it('pulls a below-the-fold panel back into view (the Argand Essentials bug class)', () => {
+    // Panel authored at y:700 with estHeight 400 on a 800px-tall stage would
+    // run 300px past the bottom edge into overflow:hidden space.
+    const s = ws({ open: { function: { x: 84, y: 700, z: 1 } } });
+    const c = clampToViewport(s, tall, { w: 1400, h: 800 });
+    expect(c.open.function.y).toBeLessThanOrEqual(800 - 400 - 8);
+    expect(c.open.function.y).toBeGreaterThanOrEqual(8);
+  });
+
+  it('clamps a view rect into the stage and shrinks one that cannot fit', () => {
+    const s = ws({ views: { plot: { x: 1300, y: 900, w: 700, h: 1200, z: 1 }, aux: { x: 780, y: 16, w: 300, h: 300, z: 2 } } });
+    const c = clampToViewport(s, tall, { w: 1200, h: 700 });
+    const p = c.views.plot;
+    expect(p.x + p.w).toBeLessThanOrEqual(1200 - 8);
+    expect(p.y + p.h).toBeLessThanOrEqual(700 - 8);
+    expect(p.x).toBeGreaterThanOrEqual(WS_RAIL);
+  });
+
+  it('is a no-op for a null or degenerate viewport, and leaves fitting geometry alone', () => {
+    const s = ws();
+    expect(clampToViewport(s, tall, null)).toBe(s);
+    expect(clampToViewport(s, tall, { w: 50, h: 50 })).toBe(s);
+    const c = clampToViewport(s, tall, { w: 1600, h: 1000 });
+    expect(c.open.function.x).toBe(84);
+    expect(c.open.function.y).toBe(18);
+    expect(c.views.plot).toMatchObject({ x: 360, y: 16, w: 400, h: 300 });
+  });
+
+  it('applyLayout applies the clamp when given a viewport', () => {
+    const layout: LayoutDef = { id: 'l', name: 'L', open: { function: { x: 84, y: 700 } } };
+    const out = applyLayout(tall, views, layout, [], { w: 1400, h: 800 });
+    expect(out.open.function.y).toBeLessThanOrEqual(800 - 400 - 8);
   });
 });
 

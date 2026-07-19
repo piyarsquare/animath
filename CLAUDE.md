@@ -85,6 +85,7 @@ animath/
     │   ├── previews.tsx        # cheap animated canvas previews for the cards
     │   ├── readouts.tsx        # Breakdown/MiniHisto/Sparkline/StatGrid/Kicker
     │   ├── usePhone.ts         # ≤740px matchMedia hook (phone re-chrome)
+    │   ├── RouteBoundary.tsx   # per-route error boundary (named error panel; WebGL containment)
     │   └── workspace/          # the workspace engine
     │       ├── types.ts        # SectionDef / ViewDef / LayoutDef / WorkspaceProps
     │       ├── archetypes.ts   # 11 archetypes · 5 tiers (closed vocabulary)
