@@ -5,6 +5,36 @@ import { useEscLayer } from './useEscLayer';
 
 const FOCUSABLE = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
+/**
+ * Layered explainer: split the markdown at `## ` headings (fence-aware) so the
+ * dialog opens on the essentials — the intro and the first section — with every
+ * later section (derivations, methods, sources, implementation notes) folded
+ * behind a disclosure. Turns the old thousands-of-pixels encyclopedia into a
+ * short read that can still go deep, without rewriting any app's EXPLAINER.md.
+ */
+export function splitExplainer(md: string): { lead: string; sections: { title: string; body: string }[] } {
+  const lines = md.split('\n');
+  const chunks: { title: string | null; lines: string[] }[] = [{ title: null, lines: [] }];
+  let inFence = false;
+  for (const line of lines) {
+    if (/^\s*(```|~~~)/.test(line)) inFence = !inFence;
+    const m = !inFence && /^## +(.+?)\s*$/.exec(line);
+    if (m) chunks.push({ title: m[1], lines: [] });
+    else chunks[chunks.length - 1].lines.push(line);
+  }
+  // Lead = the intro chunk plus the FIRST titled section (kept under its
+  // heading so the text reads unchanged); the rest fold.
+  const intro = chunks[0].lines.join('\n');
+  const titled = chunks.slice(1);
+  if (titled.length === 0) return { lead: intro, sections: [] };
+  const first = titled[0];
+  const lead = `${intro}\n\n## ${first.title}\n${first.lines.join('\n')}`;
+  return {
+    lead,
+    sections: titled.slice(1).map(c => ({ title: c.title as string, body: c.lines.join('\n') })),
+  };
+}
+
 /** Trap Tab inside the dialog while it's open, focus it on open, and restore
  *  focus to the opener on close — without this, Tab kept driving the controls
  *  BEHIND the dialog, and closing dropped keyboard users at the document root. */
@@ -48,6 +78,21 @@ const Readme = React.lazy(() => import('../components/Readme'));
  * Esc goes through the shared layer stack (close the modal first, then the
  * fullscreen view on the next keypress).
  */
+function LayeredExplainer({ markdown }: { markdown: string }) {
+  const { lead, sections } = splitExplainer(markdown);
+  return (
+    <>
+      <Readme markdown={lead} />
+      {sections.map(s => (
+        <details key={s.title} className="am-expl-fold">
+          <summary>{s.title}</summary>
+          <Readme markdown={s.body} />
+        </details>
+      ))}
+    </>
+  );
+}
+
 export function ExplainerModal({ title, markdown, onClose }: {
   title: string;
   markdown: string;
@@ -74,7 +119,7 @@ export function ExplainerModal({ title, markdown, onClose }: {
           </button>
         </div>
         <Suspense fallback={<div className="am-hint">Loading…</div>}>
-          <Readme markdown={markdown} />
+          <LayeredExplainer markdown={markdown} />
         </Suspense>
       </div>
     </div>,

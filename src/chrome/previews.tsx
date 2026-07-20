@@ -41,12 +41,19 @@ function useCanvas(draw: DrawFn, deps: React.DependencyList) {
     // Paint one frame synchronously so cards are never blank on first render
     // (and screenshots capture content even with rAF throttled off-screen).
     try { draw(ctx, cv.width, cv.height, 0); } catch { /* ignore */ }
+    // Reduced motion: the synchronous frame above IS the preview — a still of
+    // each world — and the animation loop never starts.
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      return () => { ro.disconnect(); };
+    }
     let visible = true;
     const loop = (t: number) => {
       if (!running || !visible) { raf = 0; return; }
       // rAF timestamps can precede the t0 captured above (they are vsync
       // times) — clamp so draw never sees a negative t (JS % keeps sign).
-      draw(ctx, cv.width, cv.height, Math.max(0, (t - t0) / 1000));
+      // The global 0.65 scale calms the whole wall of previews — twelve live
+      // canvases at full tempo read as frenetic; the motion stays, slower.
+      draw(ctx, cv.width, cv.height, Math.max(0, (t - t0) / 1000) * 0.65);
       raf = requestAnimationFrame(loop);
     };
     // Pause scrolled-away cards — ten always-running canvases jank the
