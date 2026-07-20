@@ -3,7 +3,17 @@ import { createPortal } from 'react-dom';
 import { Icon } from './icons';
 import { useEscLayer } from './useEscLayer';
 
-const FOCUSABLE = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+// `summary` is natively focusable (it opens/closes the layered-explainer folds)
+// and must be in the trap; conversely, links inside a CLOSED <details> match the
+// selector but aren't reachable, so we filter to visible elements below.
+const FOCUSABLE = 'a[href], button:not([disabled]), textarea, input, select, summary, [tabindex]:not([tabindex="-1"])';
+
+/** Focusable descendants that are actually reachable — excludes anything inside
+ *  a collapsed <details> (display:none ⇒ no layout box ⇒ offsetParent null). */
+function focusableIn(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE))
+    .filter(el => el.offsetParent !== null || el === document.activeElement);
+}
 
 /**
  * Layered explainer: split the markdown at `## ` headings (fence-aware) so the
@@ -42,10 +52,11 @@ function useFocusTrap(ref: React.RefObject<HTMLElement>) {
   useEffect(() => {
     const dlg = ref.current;
     const opener = document.activeElement as HTMLElement | null;
-    dlg?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    if (dlg) focusableIn(dlg)[0]?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Tab' || !dlg) return;
-      const items = Array.from(dlg.querySelectorAll<HTMLElement>(FOCUSABLE));
+      // Recompute each Tab: opening/closing a fold changes what's reachable.
+      const items = focusableIn(dlg);
       if (!items.length) return;
       const first = items[0], last = items[items.length - 1];
       const active = document.activeElement;
