@@ -31,6 +31,30 @@ starts from main with the notebook landed. First tracked session on this branch.
 
 ## Working notes
 
+### 🟡 milestone · 06:10 — PR #251 opened (stacked) + the notebook packaged for Dan's side project
+**Why:** Dan asked for the PR "to the notebook branch" and a one-place
+package to refine the text offline.
+
+**Stacking discovery:** the real `main` does NOT contain the notebook — PR
+#246 merged into `number-plane-guide` (the stack trunk), and this branch
+descends from that trunk (531bbe5 = #246's merge commit). An accidental
+`merge origin/main` (started before checking, per finalize habit) was
+ABORTED — it dragged Division Bells/Trinary into the diff, exactly what the
+stacked-branch rule warns about. PR #251 opened with base
+`number-plane-guide`: https://github.com/piyarsquare/animath/pull/251.
+The trunk's own merge to main (#244) is where the notebook eventually goes
+live.
+
+**Package** (delivered as number-planes.zip, 308K/106 files; built in the
+scratchpad, not committed): `site/` (all pages self-contained — theme files
+copied in, `../guide-*` paths rewritten), `text/` (MANUSCRIPT.md — journal/
+cover/dual prose extracted from the RENDERED pages via puppeteer so it
+can't drift, margins tagged `[later]`; plus the 38 canonical card .md's),
+`record/` (THE-UNFOLDING, WALKS, seed conversations, design-handoff README,
+S03 handoff), `designs/` (pristine .dc.html references). README maps
+package↔repo paths and states the text-first workflow + port-back
+invariants (one p per page, definite flip heights, resting glosses).
+
 ### 🟢 code · 05:30 — The dual room built (first interior) + the pocket dial
 **Why:** Dan: some knobs must be reachable everywhere (knob + level curves +
 the square of the j vector); wants autodiff examples; wants the dual seen
