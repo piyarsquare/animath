@@ -19,19 +19,29 @@ export default function Gallery() {
   const mode = useThemeModeId();
   // Storeroom cards are out of the main grid and the category filter — parked,
   // but still reachable from the de-emphasized section at the bottom.
-  const cards = CARDS.filter(c => !c.storeroom && (cat === 'All' || c.cat === cat));
+  const visible = CARDS.filter(c => !c.storeroom && (cat === 'All' || c.cat === cat));
+  // The quiet entrance: three starter cards lead when no filter is active;
+  // the rest follow in the main grid. A filter shows everything flat.
+  const starters = cat === 'All'
+    ? visible.filter(c => c.starter).sort((a, b) => (a.starter ?? 9) - (b.starter ?? 9))
+    : [];
+  const cards = cat === 'All' ? visible.filter(c => !c.starter) : visible;
   const stored = CARDS.filter(c => c.storeroom);
   const mainCount = CARDS.filter(c => !c.storeroom).length;
 
   // Cards are real links (not hash-mutating buttons): copyable, open-in-new-tab,
-  // and visible to assistive tech's link navigation.
+  // and visible to assistive tech's link navigation. The leading line is the
+  // QUESTION the app explores (falling back to the registry blurb).
   const renderCard = (a: (typeof CARDS)[number]) => (
     <a key={a.id} className="am-gcard" href={'#' + a.hash}>
       <div className="am-gcard-viz"><Preview kind={a.kind} skin={skin} mode={mode} /></div>
       <div className="am-gcard-body">
-        <div className="am-gcard-cat">{a.cat}</div>
+        <div className="am-gcard-meta">
+          <span className="am-gcard-cat">{a.cat}</span>
+          {a.gpu && <span className="am-gcard-gpu" title="Uses WebGL (GPU) rendering">GPU</span>}
+        </div>
         <div className="am-gcard-name"><span className="am-gcard-glyph">{a.glyph}</span> {a.name}</div>
-        <div className="am-gcard-blurb">{a.blurb}</div>
+        <div className="am-gcard-blurb">{a.question ?? a.blurb}</div>
         <div className="am-gcard-open">Open workspace <Icon name="chevron" size={13} /></div>
       </div>
     </a>
@@ -75,6 +85,15 @@ export default function Gallery() {
             </button>
           ))}
         </div>
+        {starters.length > 0 && (
+          <>
+            <div className="am-gal-kicker">Start here</div>
+            <div className="am-gal-grid">
+              {starters.map(renderCard)}
+            </div>
+            <div className="am-gal-kicker">Everything</div>
+          </>
+        )}
         <div className="am-gal-grid">
           {cards.map(renderCard)}
         </div>
