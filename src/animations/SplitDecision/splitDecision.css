@@ -1,0 +1,80 @@
+/* Split Decision — token-styled so every skin × mode works. */
+
+.sd-stage { position: absolute; inset: 0; overflow: hidden; color: var(--fg); }
+.sd-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 13px; padding: 16px; text-align: center; }
+
+/* ── Arena ── */
+.sd-arena { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px 12px 8px; overflow: hidden; }
+.sd-grid { position: relative; flex: none; }
+.sd-cell {
+  position: absolute; left: 0; top: 0; box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  background: transparent;
+  transition: transform 300ms cubic-bezier(.2,.7,.2,1), background-color 200ms;
+  will-change: transform;
+}
+.sd-arena.fast .sd-cell { transition: none; }
+.sd-cell.cross { background: color-mix(in srgb, var(--data-1) 16%, transparent); }
+.sd-cell.one::after { content: ''; position: absolute; inset: 18%; background: var(--fg); border-radius: 1px; }
+.sd-cell.hov { border-color: var(--fg); }
+.sd-arena.paint .sd-cell { cursor: crosshair; }
+.sd-strip-l { position: absolute; left: 0; top: 0; height: 100%; }
+.sd-strip-t { position: absolute; left: 0; top: 0; width: 100%; }
+.sd-rbar, .sd-cbar { position: absolute; left: 0; top: 0; box-sizing: border-box; transition: transform 300ms cubic-bezier(.2,.7,.2,1); }
+.sd-arena.fast .sd-rbar, .sd-arena.fast .sd-cbar { transition: none; }
+.sd-rbar { width: 26px; display: flex; align-items: center; }
+.sd-cbar { height: 26px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.sd-rbar .sd-bar { position: absolute; left: 0; top: 30%; height: 40%; background: var(--data-2); opacity: .55; border-radius: 1px; }
+.sd-cbar .sd-bar { position: absolute; bottom: 0; left: 30%; width: 40%; background: var(--data-2); opacity: .55; border-radius: 1px; }
+.sd-rbar .sd-whisk { position: absolute; top: 50%; height: 1px; background: var(--fg); opacity: .7; }
+.sd-cbar .sd-whisk { position: absolute; left: 50%; width: 1px; background: var(--fg); opacity: .7; }
+.sd-pl { position: absolute; display: block; width: 5px; height: 5px; border-radius: 1px; border: 1px solid var(--dim); box-sizing: border-box; }
+.sd-rbar .sd-pl { right: -7px; top: calc(50% - 2.5px); }
+.sd-cbar .sd-pl { bottom: -7px; left: calc(50% - 2.5px); }
+.sd-pl.in { background: var(--data-4); border-color: var(--data-4); }
+.sd-caption { font-family: var(--font-mono); font-size: 11px; color: var(--dim); text-align: center; min-height: 14px; }
+
+/* ── Population ── */
+.sd-popwrap { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 10px 12px; gap: 6px; }
+.sd-poplegend { display: flex; gap: 14px; font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); }
+.sd-pop { flex: 1; width: 100%; min-height: 0; }
+.sd-gene { fill: var(--fg); }
+.sd-sep { fill: var(--border); }
+.sd-fit { fill: var(--data-2); opacity: .8; }
+.sd-sex.row { fill: var(--fg); }
+.sd-sex.col { fill: none; stroke: var(--fg); stroke-width: .12; vector-effect: non-scaling-stroke; }
+
+/* ── Trace ── */
+.sd-trace { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 10px 12px 8px; gap: 2px; }
+.sd-tr-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; font-size: 11.5px; color: var(--fg); }
+.sd-tr-head .u { color: var(--dim); }
+.sd-tr-head .lg { font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); }
+.sd-tr-head .lg::before { content: ''; display: inline-block; width: 14px; height: 2px; margin: 0 5px 3px 0; background: var(--dim); }
+.sd-tr-head .l-best::before, .sd-tr-head .l-samp::before { background: var(--data-1); }
+.sd-tr-head .l-mean::before { background: var(--data-2); }
+.sd-tr-head .l-opt::before { background: var(--fg); }
+.sd-tr-head .l-pl::before { background: var(--data-4); }
+.sd-tr-head .l-round::before { background: var(--data-3); }
+.sd-tr-head .l-neut::before { background: var(--dim); }
+.sd-chart { flex: 1; width: 100%; min-height: 40px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; }
+.sd-chart .ln { fill: none; stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.sd-chart .ln.best, .sd-chart .ln.samp { stroke: var(--data-1); }
+.sd-chart .ln.mean { stroke: var(--data-2); }
+.sd-chart .ln.round { stroke: var(--data-3); }
+.sd-chart .ln.neut { stroke: var(--dim); stroke-dasharray: 4 3; }
+.sd-chart .ref { stroke-width: 1; vector-effect: non-scaling-stroke; stroke-dasharray: 5 4; }
+.sd-chart .ref.opt { stroke: var(--fg); }
+.sd-chart .ref.pl { stroke: var(--data-4); }
+.sd-tr-axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10px; color: var(--dim-2); }
+
+/* ── Panels ── */
+.sd-note { font-size: 11.5px; line-height: 1.45; color: var(--dim); margin: 4px 0 2px; }
+.sd-note b { color: var(--fg); font-weight: 600; }
+.sd-note code { font-family: var(--font-mono); font-size: 11px; color: var(--fg); }
+.sd-status { font-family: var(--font-mono); font-size: 11.5px; color: var(--dim); margin: 2px 0 6px; }
+.sd-status b { color: var(--fg); }
+.sd-row { display: flex; gap: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sd-cell, .sd-rbar, .sd-cbar { transition: none; }
+}

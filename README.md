@@ -22,6 +22,7 @@ reachable directly by hash route.
 11. **[Argand Plane](https://piyarsquare.github.io/animath/#/argand)** – drag two complex numbers and watch arithmetic *become* geometry: addition slides tip-to-tail, multiplication spirals (angles add, lengths multiply), and `a·b = b·a` falls out of the picture. A standalone entry point to *arithmetic on the plane* — the complex plane as one of a family of "number planes" (Spin / Shear / Boost). It complements Plane Transform rather than replacing it.
 12. **[Counting the Ways](https://piyarsquare.github.io/animath/#/counting-the-ways)** – why does a Bessel function show up when you take the difference of two Poisson counts? A narrated *Play* tutorial builds the whole (gains, losses) grid and sums one diagonal to reveal the scary `I_{|k|}` as a plain sum — the Skellam distribution demystified — with rates you can set directly or from a length law, plus a cataloged Lab that recovers the rates from synthetic samples.
 13. **[Division Bells](https://piyarsquare.github.io/animath/#/division-bells)** – two facing bell curves P and Q on the plane: drag their means and reshape their covariance ellipses, and watch how far apart they really are by two lenses at once — **Mahalanobis separation** (the gap between the means in units of spread) and **Kullback–Leibler divergence** (asymmetric, information-theoretic). Match the two shapes and KL collapses exactly to ½·d_M²; make them differ and the covariance term switches on and KL turns asymmetric.
+14. **[Split Decision](https://piyarsquare.github.io/animath/#/split-decision)** – a population evolves a two-way split of a binary matrix (cells × variants) under your choice of judge — cut count, Hamming, chi-square, two mutual informations, modularity, description length — and the experiment is how it reproduces: clonal, sex by uniform swapping, or two sexes each passing on one half of the genome intact. Watch the matrix sort itself into blocks, the genome's entropy fall as it makes up its mind, and the planted split and the exact optimum disagree. (Storeroom.)
 
 ---
 
@@ -150,6 +151,7 @@ src/
 │   ├── TrinaryStars/       # three-body sandbox (Observatory) + ensemble Lab
 │   ├── PolygonWorlds/      # walk every closed surface from one glued polygon
 │   └── CountingTheWays/    # Skellam = difference of two Poissons; the Bessel function as a diagonal sum (skellam.ts)
+│   └── SplitDecision/      # a GA evolves a matrix split; judges = selection scores; clonal · swap-sex · two-sex (intact halves)
 │
 ├── components/             # shared app-side UI
 │   ├── ParticleViewerShell # turnkey workspace assembly for the particle viewers
