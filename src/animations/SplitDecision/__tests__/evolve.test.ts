@@ -12,7 +12,7 @@ import {
   initPopulation, populationAtCut, step, run, genStats, populationHash, makeRng, canonicalizeTo,
   type EvolveConfig, type Individual, type RuleId, type FitnessMode,
 } from '../evolve';
-import { decodeJob, encodeJob, jobCount, evaluationCount, runJob, summarize, reachedByGeneration, type SweepConfig } from '../lab/sweep';
+import { decodeJob, encodeJob, jobCount, evaluationCount, runJob, summarize, reachedByGeneration, medianReached, type SweepConfig } from '../lab/sweep';
 
 const cfgWith = (over: Partial<EvolveConfig>): EvolveConfig => ({ ...DEFAULT_CONFIG, ...over });
 const complete = () => { const f = fixtureById('complete-8x10')!; return { M: f.matrix, d: degrees(f.matrix), planted: f.planted as Cut }; };
@@ -189,7 +189,7 @@ describe('the sweep', () => {
   const sweep: SweepConfig = {
     engine: 1,
     base: { engine: 1, scoreId: 'bernoulli', fitness: 'sampled', samplesPerEval: 1, N: 16, selection: { kind: 'tournament', k: 2 }, mu: 0.1, sigma: 0.1, sexRatio: 0.5 },
-    m: 6, n: 6, r1: 3, c1: 3, signals: [0.2, 1], rules: ['clonal', 'mixer', 'prom'], seeds: 3, baseSeed: 9, matrixSeed: 3, gMax: 40, sustain: 3,
+    instance: { kind: 'planted', m: 6, n: 6, r1: 3, c1: 3 }, signals: [0.2, 1], rules: ['clonal', 'mixer', 'prom'], seeds: 3, baseSeed: 9, matrixSeed: 3, gMax: 40, sustain: 3,
   };
   it('job index ↔ (signal, rule, seed) is a bijection', () => {
     expect(jobCount(sweep)).toBe(18);
@@ -203,6 +203,15 @@ describe('the sweep', () => {
     expect(a.gens).toBeLessThanOrEqual(40);
     if (a.reachedAt !== null) expect(a.finalBestRounded).toBeCloseTo(a.optimum as number, 9);
   });
+  it('the Escape-the-trap preset starts every run at the trap and can only leave it for the global optimum', () => {
+    const trap: SweepConfig = { ...sweep, base: { ...sweep.base, scoreId: 'modularity', N: 32 }, instance: { kind: 'fixture', id: 'page50-4x4', startAt: PAGE50_TRAP_CUT }, signals: [0], seeds: 2, gMax: 60 };
+    expect(jobCount(trap)).toBe(6);
+    const r = runJob(trap, 0);
+    expect(r.startScore).toBeCloseTo(0.1728, 3);
+    expect(r.optimum).toBeCloseTo(0.2715, 3);
+    expect(r.plantedScore).toBeNull();
+    if (r.reachedAt !== null) expect(r.finalBestRounded).toBeCloseTo(0.2715, 3);
+  });
   it('summarize groups by cell and the reached-by-generation curve is monotone in [0, 1]', () => {
     const rows = Array.from({ length: jobCount(sweep) }, (_, i) => runJob(sweep, i));
     const cells = summarize(sweep, rows);
@@ -213,6 +222,8 @@ describe('the sweep', () => {
       const curve = reachedByGeneration(c, sweep.gMax, 10);
       for (let k = 1; k < curve.length; k++) expect(curve[k].frac).toBeGreaterThanOrEqual(curve[k - 1].frac);
       expect(curve[curve.length - 1].frac).toBeCloseTo(c.reached.length / 3, 12);
+      const med = medianReached(c);
+      if (c.reached.length * 2 > c.n) expect(med).toBe(c.reached[Math.floor(c.reached.length / 2)]); else expect(med).toBeNull();
     }
   });
 });

@@ -3,24 +3,29 @@
  *
  * A sweep is a grid over planted signal strength × reproductive rule × seed. One job
  * is one run to gMax generations; the job index is a mixed-radix code of
- * (signalIdx, ruleIdx, seedIdx). The worker builds the planted matrix itself from the
- * signal and matrix seed, so no matrix crosses the wire.
+ * (signalIdx, ruleIdx, seedIdx). The worker builds the instance itself from the
+ * config, so no matrix crosses the wire.
+ *
+ * Two instance kinds: a planted checkerboard whose densities follow the signal axis,
+ * or a fixture (optionally with every individual started at one cut — the
+ * Escape-the-trap preset), which has a single "signal" level.
  */
 
 import { runSeed } from '@/lib/rng';
-import { degrees, densitiesForSignal, planted, type Cut } from '../matrix';
+import { degrees, densitiesForSignal, fixtureById, planted, type BinaryMatrix, type Cut } from '../matrix';
 import { SCORES, evaluate, exactOptimum } from '../scores';
-import { ReachTracker, genStats, initPopulation, makeRng, step, type EvolveConfig, type RuleId } from '../evolve';
+import { ReachTracker, genStats, initPopulation, makeRng, populationAtCut, step, type EvolveConfig, type RuleId } from '../evolve';
+
+export type SweepInstance =
+  | { kind: 'planted'; m: number; n: number; r1: number; c1: number }
+  | { kind: 'fixture'; id: string; startAt: Cut | null };
 
 export interface SweepConfig {
   engine: number;
   /** Everything about the population except rule and seed, which the grid supplies. */
   base: Omit<EvolveConfig, 'rule' | 'seed'>;
-  m: number;
-  n: number;
-  r1: number;
-  c1: number;
-  /** Planted signal strengths s ∈ [0, 1] (ρ_in = ½ + s/2, ρ_out = ½ − s/2). */
+  instance: SweepInstance;
+  /** Planted signal strengths s ∈ [0, 1] (ρ_in = ½ + s/2, ρ_out = ½ − s/2). One entry for a fixture. */
   signals: number[];
   rules: RuleId[];
   /** Replicates per (signal, rule). */
@@ -41,7 +46,9 @@ export interface JobResult {
   reachedAt: number | null;
   /** The exact optimum (null when the matrix is too large to enumerate). */
   optimum: number | null;
-  plantedScore: number;
+  /** The planted split's score (null for a fixture without one). */
+  plantedScore: number | null;
+  startScore: number;
   finalBestRounded: number;
   finalMeanEntropy: number;
   gens: number;
@@ -68,10 +75,17 @@ export function evaluationCount(cfg: SweepConfig): number {
   return jobCount(cfg) * cfg.gMax * cfg.base.N;
 }
 
-/** The planted instance for a signal level: shared by every rule and seed at that level. */
-export function instanceFor(cfg: SweepConfig, signalIdx: number) {
+/** The instance for a signal level: shared by every rule and seed at that level. */
+export function instanceFor(cfg: SweepConfig, signalIdx: number): { matrix: BinaryMatrix; planted: Cut | null; startAt: Cut | null } {
+  if (cfg.instance.kind === 'fixture') {
+    const f = fixtureById(cfg.instance.id);
+    if (!f) throw new Error(`unknown fixture ${cfg.instance.id}`);
+    return { matrix: f.matrix, planted: f.planted, startAt: cfg.instance.startAt };
+  }
+  const { m, n, r1, c1 } = cfg.instance;
   const { rhoIn, rhoOut } = densitiesForSignal(cfg.signals[signalIdx]);
-  return planted({ m: cfg.m, n: cfg.n, r1: cfg.r1, c1: cfg.c1, rhoIn, rhoOut }, runSeed(cfg.matrixSeed, signalIdx));
+  const inst = planted({ m, n, r1, c1, rhoIn, rhoOut }, runSeed(cfg.matrixSeed, signalIdx));
+  return { matrix: inst.matrix, planted: inst.planted, startAt: null };
 }
 
 export function runJob(cfg: SweepConfig, i: number): JobResult {
@@ -80,12 +94,13 @@ export function runJob(cfg: SweepConfig, i: number): JobResult {
   const M = inst.matrix, d = degrees(M);
   const spec = SCORES[cfg.base.scoreId];
   const opt = exactOptimum(M, d, spec);
-  const plantedScore = evaluate(M, d, spec, inst.planted as Cut);
+  const plantedScore = inst.planted ? evaluate(M, d, spec, inst.planted) : null;
   const evo: EvolveConfig = { ...cfg.base, rule: cfg.rules[ruleIdx], seed: runSeed(cfg.baseSeed, i) };
   const rng = makeRng(evo);
-  let pop = initPopulation(M, d, evo, rng);
+  let pop = inst.startAt ? populationAtCut(inst.startAt, M, d, evo, rng) : initPopulation(M, d, evo, rng);
   const tracker = new ReachTracker(opt ? opt.score : null, cfg.sustain);
   let stats = genStats(pop, 0, M, d, evo);
+  const startScore = stats.bestRoundedFit;
   tracker.update(0, stats.bestRoundedFit);
   let g = 1;
   for (; g <= cfg.gMax; g++) {
@@ -98,6 +113,7 @@ export function runJob(cfg: SweepConfig, i: number): JobResult {
     reachedAt: tracker.reachedAt,
     optimum: opt ? opt.score : null,
     plantedScore,
+    startScore,
     finalBestRounded: stats.bestRoundedFit,
     finalMeanEntropy: stats.meanEntropy,
     gens: Math.min(g, cfg.gMax),
@@ -144,4 +160,10 @@ export function reachedByGeneration(cell: CellSummary, gMax: number, points = 60
     out.push({ g, frac: cell.n ? count / cell.n : 0 });
   }
   return out;
+}
+
+/** Median generation of the reached runs, or null when more than half censored. */
+export function medianReached(cell: CellSummary): number | null {
+  if (cell.n === 0 || cell.reached.length * 2 <= cell.n) return null;
+  return cell.reached[Math.floor(cell.reached.length / 2)];
 }
