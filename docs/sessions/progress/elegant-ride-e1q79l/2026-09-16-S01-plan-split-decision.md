@@ -5,13 +5,13 @@ date: 2026-09-16
 title: "Plan — Split Decision: a genetic algorithm that evolves a matrix split, with sex"
 branch: claude/elegant-ride-e1q79l
 slug: elegant-ride-e1q79l
-status: proposed
+status: executed
 build: n/a
 followup: null
 pr: null
 app: split-decision, engine
-signals: needs-dan, not-live
-next: Three-hats done (see the synthesis); Phase 1 (engine + tests) is in progress on this branch; the main PR lands with Phase 2.
+signals: not-live, visual-unverified, phone-needed
+next: Executed — Phases 1–3 shipped on this branch (see the progress report); a PR to main is Dan's call, then a real-device pass.
 ---
 
 # Plan — Split Decision: a genetic algorithm that evolves a matrix split, with sex
