@@ -17,7 +17,8 @@ import { FIXTURES, PAGE50_TRAP_CUT, degrees, fixtureById, handshake, planted, to
 import { SCORES, SCORE_IDS, evaluate, exactOptimum, isStrictLocalOptimum, type ScoreId } from './scores';
 import { DEFAULT_CONFIG, ENGINE_VERSION, RULES, RULE_IDS, type EvolveConfig, type FitnessMode, type RuleId } from './evolve';
 import { useWatchLoop } from './useWatchLoop';
-import { Arena } from './views/Arena';
+import { Arena, type LocusOrder } from './views/Arena';
+import { Linkage } from './views/Linkage';
 import { Population } from './views/Population';
 import { Trace } from './views/Trace';
 import { Sweep, type SweepRecord } from './views/Sweep';
@@ -279,7 +280,16 @@ export default function SplitDecision() {
           <Slider label="Signal levels (from 1 downward)" value={Math.max(2, Math.min(SIGNAL_LEVELS.length, labLevels))} min={2} max={SIGNAL_LEVELS.length} step={1} onChange={v => setLabLevels(Math.round(v))} format={v => `${v}`} />
         </>
       ) : (
-        <Note>The monograph's page-50 4×4 with every individual started at the cut that alternating best responses cannot leave. Judge forced to <b>Newman's Leftovers</b>{trapScore.length ? ` (the only judge for which it is a strict single-flip local optimum${trapScore.length > 1 ? 's' : ''}: ${trapScore.map(id => SCORES[id].name).join(', ')})` : ''}. "Reached" means the global optimum.</Note>
+        <>
+        <Note>
+          <b>Measured:</b> at μ ≤ 0.1 no rule escapes in 300 generations — every individual
+          starts at exactly 0 or 1, and a reflecting step of σ = 0.1 cannot carry a locus
+          back across ½ against selection. That is itself the finding (a strict local
+          optimum with no standing variation is absorbing). Raise <b>μ toward 0.2</b> in the
+          Reproduction panel to reach the regime where the rules differ.
+        </Note>
+        <Note>The monograph's page-50 4×4 with every individual started at the cut that alternating best responses cannot leave. Judge forced to <b>Newman's Leftovers</b>{trapScore.length ? ` (the only judge for which it is a strict single-flip local optimum${trapScore.length > 1 ? 's' : ''}: ${trapScore.map(id => SCORES[id].name).join(', ')})` : ''}. The curve reports <b>escape</b> — the first generation the best rounded cut beats the trap — which is what H3 asks.</Note>
+        </>
       )}
       <div className="sd-row">
         {RULE_IDS.map(id => <Checkbox key={id} label={RULES[id].name.split(' ').pop()!} checked={labRules.includes(id)} onChange={on => setLabRules(rs => (on ? RULE_IDS.filter(r => r === id || rs.includes(r)) : rs.filter(r => r !== id)))} />)}
@@ -305,6 +315,20 @@ export default function SplitDecision() {
     { id: 'readout', title: 'Readouts', arch: 'readout', node: readoutNode, estHeight: 330 },
   ];
 
+  // The locus order is shared by the Arena and the Linkage view so the two pictures
+  // line up. It follows the consensus genome, which refreshes on the loop's slow
+  // cadence, so this re-sorts a few times a second at most.
+  const consensus = snap?.stats.consensus ?? null;
+  const order: LocusOrder = useMemo(() => {
+    const rows = Array.from({ length: M.m }, (_, i) => i);
+    const cols = Array.from({ length: M.n }, (_, j) => j);
+    if (!sort || !consensus) return { rows, cols };
+    return {
+      rows: rows.sort((a, b) => (consensus.p[b] - consensus.p[a]) || (a - b)),
+      cols: cols.sort((a, b) => (consensus.q[b] - consensus.q[a]) || (a - b)),
+    };
+  }, [consensus, sort, M.m, M.n]);
+
   const animate = !loop.playing || loop.gps <= 10;
   const views: ViewDef[] = mode === 'lab' ? [
     {
@@ -315,7 +339,7 @@ export default function SplitDecision() {
     {
       id: 'arena', title: 'Arena — the matrix', defaultRect: { x: 372, y: 16, w: 560, h: 520 },
       node: <Arena M={M} d={d} snapshot={snap} planted={inst.planted} orientationBlind={spec.orientationBlind}
-        options={{ sort, showPlanted, tint, paint, animate }} onToggleCell={onToggleCell} />,
+        options={{ sort, showPlanted, tint, paint, animate }} order={order} onToggleCell={onToggleCell} />,
     },
     {
       id: 'trace', title: 'Trace', defaultRect: { x: 948, y: 16, w: 440, h: 330 },
@@ -325,12 +349,20 @@ export default function SplitDecision() {
       id: 'population', title: 'Population', defaultRect: { x: 948, y: 362, w: 440, h: 300 },
       node: <Population M={M} snapshot={snap} orientationBlind={spec.orientationBlind} showSexes={showSexes && rule === 'prom'} />,
     },
+    {
+      id: 'linkage', title: 'Linkage — correlation between loci', defaultRect: { x: 372, y: 552, w: 560, h: 420 },
+      node: <Linkage M={M} snapshot={snap} orientationBlind={spec.orientationBlind} rule={rule} order={order} />,
+    },
   ];
 
   const layouts: LayoutDef[] = mode === 'lab' ? [
     { id: 'essentials', name: 'Essentials', sub: 'Judge · Reproduction · Sweep', icon: 'tune', open: { lab: { x: 84, y: 18 }, repro: { x: 84, y: 600, collapsed: true } } },
   ] : [
-    { id: 'essentials', name: 'Essentials', sub: 'Judge · Matrix · Run', icon: 'tune', open: { score: { x: 84, y: 18 }, matrix: { x: 84, y: 330, collapsed: true }, run: { x: 84, y: 380 } } },
+    {
+      id: 'essentials', name: 'Essentials', sub: 'Judge · Matrix · Run', icon: 'tune',
+      open: { score: { x: 84, y: 18 }, matrix: { x: 84, y: 330, collapsed: true }, run: { x: 84, y: 380 } },
+      views: { linkage: { open: false } },
+    },
   ];
 
   const actions: ActionDef[] = mode === 'lab' ? [

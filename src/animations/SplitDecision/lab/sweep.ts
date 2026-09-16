@@ -44,6 +44,10 @@ export interface JobResult {
   seedIdx: number;
   /** First generation of a sustained optimum, or null if censored at gMax (or no exact optimum). */
   reachedAt: number | null;
+  /** First generation the best rounded cut scored strictly above where the run
+   *  started — the question the trap preset actually asks (H3 is about escaping a
+   *  local optimum, which is weaker than reaching the global one). */
+  escapedAt: number | null;
   /** The exact optimum (null when the matrix is too large to enumerate). */
   optimum: number | null;
   /** The planted split's score (null for a fixture without one). */
@@ -126,15 +130,18 @@ export function runJob(cfg: SweepConfig, i: number): JobResult {
   let stats = genStats(pop, 0, M, d, evo);
   const startScore = stats.bestRoundedFit;
   tracker.update(0, stats.bestRoundedFit);
+  let escapedAt: number | null = null;
   let g = 1;
   for (; g <= cfg.gMax; g++) {
     pop = step(pop, M, d, evo, rng);
     stats = genStats(pop, g, M, d, evo);
+    if (escapedAt === null && stats.bestRoundedFit > startScore + 1e-9) escapedAt = g;
     if (tracker.update(g, stats.bestRoundedFit) !== null) break;
   }
   return {
     i, signalIdx, ruleIdx, seedIdx,
     reachedAt: tracker.reachedAt,
+    escapedAt,
     optimum: opt ? opt.score : null,
     plantedScore,
     startScore,
@@ -152,6 +159,8 @@ export interface CellSummary {
   n: number;
   /** Sorted generations at which runs reached the optimum (censored runs omitted). */
   reached: number[];
+  /** Sorted generations at which runs first improved on their starting score. */
+  escaped: number[];
   censored: number;
   /** Median of (optimum − finalBestRounded) over all runs; null without an exact optimum. */
   medianFinalGap: number | null;
@@ -164,8 +173,9 @@ export function summarize(cfg: SweepConfig, rows: JobResult[]): CellSummary[] {
       const cell = rows.filter(x => x.signalIdx === s && x.ruleIdx === r);
       const reached = cell.filter(x => x.reachedAt !== null).map(x => x.reachedAt as number).sort((a, b) => a - b);
       const gaps = cell.filter(x => x.optimum !== null).map(x => (x.optimum as number) - x.finalBestRounded).sort((a, b) => a - b);
+      const escaped = cell.filter(x => x.escapedAt !== null).map(x => x.escapedAt as number).sort((a, b) => a - b);
       out.push({
-        signalIdx: s, ruleIdx: r, n: cell.length, reached,
+        signalIdx: s, ruleIdx: r, n: cell.length, reached, escaped,
         censored: cell.length - reached.length,
         medianFinalGap: gaps.length ? gaps[Math.floor(gaps.length / 2)] : null,
       });
@@ -174,13 +184,14 @@ export function summarize(cfg: SweepConfig, rows: JobResult[]): CellSummary[] {
   return out;
 }
 
-/** Survival-style curve: the fraction of runs that had reached the optimum by
- *  generation g, sampled at `points` generations from 0 to gMax. */
-export function reachedByGeneration(cell: CellSummary, gMax: number, points = 60): Array<{ g: number; frac: number }> {
+/** Survival-style curve: the fraction of runs past the given event by generation g,
+ *  sampled at `points` generations from 0 to gMax. */
+export function reachedByGeneration(cell: CellSummary, gMax: number, points = 60, event: 'reached' | 'escaped' = 'reached'): Array<{ g: number; frac: number }> {
+  const events = event === 'escaped' ? cell.escaped : cell.reached;
   const out: Array<{ g: number; frac: number }> = [];
   for (let k = 0; k <= points; k++) {
     const g = Math.round((k / points) * gMax);
-    const count = cell.reached.filter(x => x <= g).length;
+    const count = events.filter(x => x <= g).length;
     out.push({ g, frac: cell.n ? count / cell.n : 0 });
   }
   return out;
@@ -189,7 +200,8 @@ export function reachedByGeneration(cell: CellSummary, gMax: number, points = 60
 /** The generation by which half of ALL runs in the cell had reached the optimum
  *  (the survival curve's median, censored runs counted as never), or null when
  *  half of them never did. */
-export function medianReached(cell: CellSummary): number | null {
-  if (cell.n === 0 || cell.reached.length * 2 <= cell.n) return null;
-  return cell.reached[Math.ceil(cell.n / 2) - 1];
+export function medianReached(cell: CellSummary, event: 'reached' | 'escaped' = 'reached'): number | null {
+  const events = event === 'escaped' ? cell.escaped : cell.reached;
+  if (cell.n === 0 || events.length * 2 <= cell.n) return null;
+  return events[Math.ceil(cell.n / 2) - 1];
 }

@@ -269,8 +269,10 @@ describe('the sweep', () => {
       if (c.reached.length * 2 > c.n) expect(med).toBe(c.reached[Math.ceil(c.n / 2) - 1]); else expect(med).toBeNull();
     }
     // the median is the generation by which half of ALL runs had reached, censored runs counted as never
-    const cell = { signalIdx: 0, ruleIdx: 0, n: 12, reached: [10, 20, 30, 40, 50, 60, 70], censored: 5, medianFinalGap: null };
+    const cell = { signalIdx: 0, ruleIdx: 0, n: 12, reached: [10, 20, 30, 40, 50, 60, 70], escaped: [], censored: 5, medianFinalGap: null };
     expect(medianReached(cell)).toBe(60);
     expect(medianReached({ ...cell, reached: [10, 20, 30, 40, 50, 60], censored: 6 })).toBeNull();
+    // the same summary, read for escape instead of for reaching the optimum
+    expect(medianReached({ ...cell, escaped: [5, 6, 7, 8, 9, 10, 11] }, 'escaped')).toBe(10);
   });
 });

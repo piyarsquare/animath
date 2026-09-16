@@ -47,6 +47,11 @@ export function Sweep({ record, catalog, selectedSignal, onSelectSignal, onSelec
   const rec = record;
   const cells = rec ? summarize(rec.cfg, rec.results) : [];
   const cfg = rec?.cfg ?? null;
+  // The trap preset asks whether a rule can leave a strict local optimum at all, which
+  // is a weaker and more discriminating event than reaching the global optimum.
+  const isTrap = cfg?.instance.kind === 'fixture' && cfg.instance.startAt !== null;
+  const event: 'reached' | 'escaped' = isTrap ? 'escaped' : 'reached';
+  const verb = isTrap ? 'escaped the trap' : 'reached the optimum';
   const total = cfg ? jobCount(cfg) : 0;
   const sel = cfg ? Math.min(selectedSignal, cfg.signals.length - 1) : 0;
 
@@ -59,12 +64,12 @@ export function Sweep({ record, catalog, selectedSignal, onSelectSignal, onSelec
 
           {cfg.signals.length > 1 && (
             <>
-              <div className="sd-tr-head"><b>reached the optimum by G_max</b> <span className="u">(fraction of seeds)</span>
+              <div className="sd-tr-head"><b>{verb} by G_max</b> <span className="u">(fraction of seeds)</span>
                 {cfg.rules.map(r => <span key={r} className={`lg ${RULE_CLASS[r]}`}>{RULES[r].name}</span>)}
               </div>
               <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="sd-chart">
                 {cfg.rules.map((r, ri) => {
-                  const pts = cfg.signals.map((_, si) => { const c = cellOf(cells, si, ri); const frac = c && c.n ? c.reached.length / c.n : 0; return { x: PAD + (si / Math.max(1, cfg.signals.length - 1)) * (W - 2 * PAD), y: H - PAD - frac * (H - 2 * PAD) }; });
+                  const pts = cfg.signals.map((_, si) => { const c = cellOf(cells, si, ri); const ev = c ? (event === 'escaped' ? c.escaped : c.reached) : []; const frac = c && c.n ? ev.length / c.n : 0; return { x: PAD + (si / Math.max(1, cfg.signals.length - 1)) * (W - 2 * PAD), y: H - PAD - frac * (H - 2 * PAD) }; });
                   return <g key={r} className={RULE_CLASS[r]}>
                     <path className="ln" d={pts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')} />
                     {pts.map((p, i) => <circle key={i} className="dot" cx={p.x} cy={p.y} r={4} />)}
@@ -79,14 +84,19 @@ export function Sweep({ record, catalog, selectedSignal, onSelectSignal, onSelec
             </>
           )}
 
-          <div className="sd-tr-head"><b>reached by generation</b> <span className="u">(survival curve at signal {cfg.signals[sel].toFixed(2)})</span>
-            {cfg.rules.map((r, ri) => { const c = cellOf(cells, sel, ri); const med = c ? medianReached(c) : null; return <span key={r} className={`lg ${RULE_CLASS[r]}`}>{RULES[r].name}: {c ? `${c.reached.length}/${c.n}` : '—'}{med !== null ? `, median gen ${med}` : c && c.n ? ', median censored' : ''}</span>; })}
+          <div className="sd-tr-head"><b>{verb} by generation</b> <span className="u">(survival curve{cfg.signals.length > 1 ? ` at signal ${cfg.signals[sel].toFixed(2)}` : ''})</span>
+            {cfg.rules.map((r, ri) => {
+              const c = cellOf(cells, sel, ri);
+              const ev = c ? (event === 'escaped' ? c.escaped : c.reached) : [];
+              const med = c ? medianReached(c, event) : null;
+              return <span key={r} className={`lg ${RULE_CLASS[r]}`}>{RULES[r].name}: {c ? `${ev.length}/${c.n}` : '—'}{med !== null ? `, median gen ${med}` : c && c.n ? ', median censored' : ''}</span>;
+            })}
           </div>
           <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="sd-chart">
             {cfg.rules.map((r, ri) => {
               const c = cellOf(cells, sel, ri);
               if (!c || !c.n) return null;
-              const curve = reachedByGeneration(c, cfg.gMax, 80);
+              const curve = reachedByGeneration(c, cfg.gMax, 80, event);
               const d = curve.map((p, i) => `${i ? 'L' : 'M'}${(PAD + (p.g / cfg.gMax) * (W - 2 * PAD)).toFixed(1)},${(H - PAD - p.frac * (H - 2 * PAD)).toFixed(1)}`).join(' ');
               return <path key={r} className={`ln ${RULE_CLASS[r]}`} d={d} />;
             })}
@@ -107,7 +117,8 @@ export function Sweep({ record, catalog, selectedSignal, onSelectSignal, onSelec
                 {catalog.map(r => {
                   const cs = summarize(r.cfg, r.results);
                   const top = r.cfg.signals.length - 1;
-                  const reached = r.cfg.rules.map((rule, ri) => { const c = cellOf(cs, top, ri); return `${RULES[rule].name.split(' ').pop()} ${c ? `${c.reached.length}/${c.n}` : '—'}`; }).join(' · ');
+                  const isT = r.cfg.instance.kind === 'fixture' && r.cfg.instance.startAt !== null;
+                  const reached = r.cfg.rules.map((rule, ri) => { const c = cellOf(cs, top, ri); const e = c ? (isT ? c.escaped : c.reached) : []; return `${RULES[rule].name.split(' ').pop()} ${c ? `${e.length}/${c.n}` : '—'}`; }).join(' · ');
                   return (
                     <tr key={r.id} className={rec && r.id === rec.id ? 'sel' : ''} onClick={() => onSelectRecord(r.id)}>
                       <td>{r.id}</td>
@@ -132,12 +143,13 @@ export function Sweep({ record, catalog, selectedSignal, onSelectSignal, onSelec
 function Hypotheses({ cfg, cells, sel }: { cfg: SweepConfig; cells: CellSummary[]; sel: number }) {
   const idx = (r: RuleId) => cfg.rules.indexOf(r);
   const cell = (r: RuleId, s = sel) => (idx(r) >= 0 ? cellOf(cells, s, idx(r)) : undefined);
-  const frac = (c?: CellSummary) => (c && c.n ? `${c.reached.length}/${c.n}` : '—');
-  const med = (c?: CellSummary) => { const m = c ? medianReached(c) : null; return m === null ? 'censored' : `gen ${m}`; };
   const trap = cfg.instance.kind === 'fixture' && cfg.instance.startAt !== null;
+  const ev: 'reached' | 'escaped' = trap ? 'escaped' : 'reached';
+  const frac = (c?: CellSummary) => (c && c.n ? `${(ev === 'escaped' ? c.escaped : c.reached).length}/${c.n}` : '—');
+  const med = (c?: CellSummary) => { const m = c ? medianReached(c, ev) : null; return m === null ? 'censored' : `gen ${m}`; };
   const mixer = cell('mixer'), clonal = cell('clonal'), prom = cell('prom');
   const rows: Array<{ h: string; predicted: string; observed: string }> = trap
-    ? [{ h: 'H3 — escape from a strict single-flip local optimum', predicted: 'Monastery ≥ Mixer > Prom', observed: `Monastery ${frac(clonal)} (${med(clonal)}) · Mixer ${frac(mixer)} (${med(mixer)}) · Prom ${frac(prom)} (${med(prom)})` }]
+    ? [{ h: 'H3 — escape from a strict single-flip local optimum', predicted: 'Monastery ≥ Mixer > Prom escape', observed: `Monastery ${frac(clonal)} (${med(clonal)}) · Mixer ${frac(mixer)} (${med(mixer)}) · Prom ${frac(prom)} (${med(prom)})` }]
     : [
       { h: 'H1 — at strong signal the Mixer dominates the Monastery', predicted: 'Mixer reaches more seeds, sooner', observed: `Mixer ${frac(mixer)} (${med(mixer)}) vs Monastery ${frac(clonal)} (${med(clonal)})` },
       { h: 'H2 — the Prom is slower than the Mixer at every signal', predicted: 'Prom median later, fewer seeds', observed: `Prom ${frac(prom)} (${med(prom)}) vs Mixer ${frac(mixer)} (${med(mixer)})` },

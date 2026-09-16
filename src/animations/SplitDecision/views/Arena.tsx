@@ -23,6 +23,8 @@ export interface ArenaOptions {
   animate: boolean;
 }
 
+export interface LocusOrder { rows: number[]; cols: number[] }
+
 interface Props {
   M: BinaryMatrix;
   d: Degrees;
@@ -30,6 +32,8 @@ interface Props {
   planted: Cut | null;
   orientationBlind: boolean;
   options: ArenaOptions;
+  /** Shared with the Linkage view so the two pictures line up. */
+  order: LocusOrder;
   onToggleCell: (i: number, j: number) => void;
 }
 
@@ -46,7 +50,7 @@ function useSize(ref: React.RefObject<HTMLDivElement | null>) {
   return size;
 }
 
-export function Arena({ M, d, snapshot, planted, options, onToggleCell }: Props) {
+export function Arena({ M, d, snapshot, planted, options, order, onToggleCell }: Props) {
   const wrap = useRef<HTMLDivElement>(null);
   const { w: W, h: H } = useSize(wrap);
   const [hover, setHover] = useState<{ i: number; j: number } | null>(null);
@@ -57,16 +61,6 @@ export function Arena({ M, d, snapshot, planted, options, onToggleCell }: Props)
   const consensus: Genome | null = snapshot?.stats.consensus ?? null;
   const spreadP = snapshot?.stats.spreadP ?? null;
   const spreadQ = snapshot?.stats.spreadQ ?? null;
-
-  const order = useMemo(() => {
-    const rows = Array.from({ length: m }, (_, i) => i);
-    const cols = Array.from({ length: n }, (_, j) => j);
-    if (!options.sort || !consensus) return { rows, cols };
-    return {
-      rows: rows.sort((a, b) => (consensus.p[b] - consensus.p[a]) || (a - b)),
-      cols: cols.sort((a, b) => (consensus.q[b] - consensus.q[a]) || (a - b)),
-    };
-  }, [consensus, options.sort, m, n]);
 
   const rowPos = useMemo(() => { const p = new Array<number>(m); order.rows.forEach((i, k) => { p[i] = k; }); return p; }, [order, m]);
   const colPos = useMemo(() => { const p = new Array<number>(n); order.cols.forEach((j, k) => { p[j] = k; }); return p; }, [order, n]);

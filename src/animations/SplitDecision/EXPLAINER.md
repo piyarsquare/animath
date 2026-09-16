@@ -77,12 +77,49 @@ generation, so neither sex can go extinct.
   column away from the planted one. When the population climbs above the planted
   line, that is not a bug. It is the difference between a structural split and an
   optimizer's best contrast.
+- **Linkage — what the rule does to the population.** The *Linkage* view correlates
+  every pair of loci across the population and draws the matrix, ordered like the
+  Arena and split into the row half and the column half. This is where the three
+  rules look most different, and the reason is mechanical:
+
+  | | within rows | within columns | across the halves |
+  |---|---|---|---|
+  | **Mixer** | at the line | at the line | at the line |
+  | **Monastery** | high | high | high |
+  | **Prom** | high | high | **at the line** |
+
+  "At the line" means the mean |r| sits at what independent loci would produce. For
+  the Mixer that is **linkage equilibrium**: every locus is a coin flip between two
+  parents, associations are broken every generation, and the population ends up fully
+  described by its allele frequencies alone — Geiringer's theorem (1944), and the
+  condition under which sex reads as multiplicative-weights updates per locus. The
+  Monastery copies whole genomes, so whatever selection builds is inherited. The Prom
+  takes its rows from one parent and its columns from another, chosen independently,
+  so it is the one rule that cannot build an association *between* the halves — which
+  is exactly the association a coordinated row-and-column move would need. The trap is
+  that fact with consequences.
+
+  A single cell needs |r| above about 2/√N before it means anything; the three summary
+  means are compared against √(2/π)/√N, which is what a mean |r| reads when nothing is
+  linked. Once the population converges every locus is fixed and there is nothing left
+  to correlate, so the matrix empties — the readout says how many loci still vary.
+
 - **The race** (a hypothesis, not a result): on a strong planted signal, the Mixer
   should beat the Monastery — good rows are good against almost any column set,
   so recombining them pays. The Prom, judged against random passenger halves,
   should be slower than the Mixer everywhere. Where the optimum needs a
   coordinated row-and-column move (a *trap*), the Monastery should escape most
-  easily. The Lab, when it ships, measures these.
+  easily. The **Lab** measures these: a sweep over planted signal strength races the
+  rules and plots what fraction of seeds reached the optimum by each generation, with
+  each prediction printed next to what was observed.
+
+  The Lab's other preset starts every individual *inside* a trap and times the escape.
+  One measured warning, stated in its panel: at a mutation rate of 0.1 or below, no
+  rule escapes at all — every individual begins at exactly 0 or 1, and a reflecting
+  step of 0.1 cannot carry a locus back across ½ against selection. That is a finding
+  rather than a failure (a strict local optimum with no standing variation is
+  absorbing), but you have to raise the mutation rate toward 0.2 before the rules can
+  be told apart.
 
 ## Possible sources & where to go further
 
@@ -98,6 +135,10 @@ pointers to check before relying on them:
   learnable "?" alleles get replaced by fixed ones once the answer is found, is the
   closest computational ancestor of "the genome makes up its mind"; "survival of
   the flattest" (Wilke et al., 2001) is the Rounded twin's gap.
+- **Linkage equilibrium**: Geiringer's theorem (1944) is the result that free
+  recombination drives a population to independence across loci — what the Mixer's
+  pale correlation matrix is showing. Linkage disequilibrium and its decay are
+  standard population genetics; any text covers the measure.
 - **Why sex**: Fisher (1930) and Muller (1932) on recombination speeding
   adaptation; the *mixability* argument (Livnat, Papadimitriou, Dushoff & Feldman,
   *PNAS* 2008) and sex as multiplicative-weights updates on a coordination game
