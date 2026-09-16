@@ -420,3 +420,9 @@ informs future rounds. Delete or check off items as they land.
   bringing **KL** into 1-D as the shaded `p·log(p/q)` integrand (running area = KL), and
   resolving the phone-portrait dead-space (anchor-to-top vs. shorter phone card default).
   Real-device touch of the σ-drag handles is unverified (`phone-needed`).
+
+- [ ] [engine] !low Consolidate the six private `mulberry32` copies onto `src/lib/rng.ts`.
+  Split Decision (2026-09-16) added `src/lib/rng.ts` (`mulberry32` + `runSeed`) as the first shared copy.
+  The private copies still live in Trinary `lab/rng.ts`, StableMatching `model.ts`, AgenticSorting
+  `engine.ts`, CountingTheWays `skellam.ts`, TreesAndNets `lib/mosaic.ts`, and `chrome/previews.tsx`.
+  Re-point them one at a time (each app's tests pin its seeds, so verify trajectories are unchanged).
