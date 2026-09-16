@@ -16,7 +16,6 @@
 .sd-arena.fast .sd-cell { transition: none; }
 .sd-cell.cross { background: color-mix(in srgb, var(--data-1) 16%, transparent); }
 .sd-cell.one::after { content: ''; position: absolute; inset: 18%; background: var(--fg); border-radius: 1px; }
-.sd-cell.hov { border-color: var(--fg); }
 .sd-arena.paint .sd-cell { cursor: crosshair; }
 .sd-strip-l { position: absolute; left: 0; top: 0; height: 100%; }
 .sd-strip-t { position: absolute; left: 0; top: 0; width: 100%; }
@@ -32,17 +31,15 @@
 .sd-rbar .sd-pl { right: -7px; top: calc(50% - 2.5px); }
 .sd-cbar .sd-pl { bottom: -7px; left: calc(50% - 2.5px); }
 .sd-pl.in { background: var(--data-4); border-color: var(--data-4); }
+.sd-hov-row, .sd-hov-col { position: absolute; left: 0; top: 0; pointer-events: none; box-sizing: border-box; border: 1px solid var(--fg); opacity: .55; }
 .sd-caption { font-family: var(--font-mono); font-size: 11px; color: var(--dim); text-align: center; min-height: 14px; }
 
-/* ── Population ── */
+/* ── Population (canvas: ~N×(m+n) genome cells, too many for elements) ── */
 .sd-popwrap { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 10px 12px; gap: 6px; }
-.sd-poplegend { display: flex; gap: 14px; font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); }
-.sd-pop { flex: 1; width: 100%; min-height: 0; }
-.sd-gene { fill: var(--fg); }
-.sd-sep { fill: var(--border); }
-.sd-fit { fill: var(--data-2); opacity: .8; }
-.sd-sex.row { fill: var(--fg); }
-.sd-sex.col { fill: none; stroke: var(--fg); stroke-width: .12; vector-effect: non-scaling-stroke; }
+.sd-poplegend { display: flex; flex-wrap: wrap; gap: 14px; font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); }
+.sd-poplegend .dim { color: var(--dim-2); }
+.sd-popcanvaswrap { flex: 1; min-height: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--panel-2); overflow: hidden; }
+.sd-popcanvas { display: block; }
 
 /* ── Trace ── */
 .sd-trace { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 10px 12px 8px; gap: 2px; }

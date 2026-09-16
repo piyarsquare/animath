@@ -4,11 +4,12 @@ import scoresSrc from '../scores.ts?raw';
 import evolveSrc from '../evolve.ts?raw';
 import sweepSrc from '../lab/sweep.ts?raw';
 import { mulberry32, runSeed } from '@/lib/rng';
-import { degrees, fixtureById, planted, PAGE50_TRAP_CUT, type Cut } from '../matrix';
+import { degrees, fixtureById, fromRows, planted, PAGE50_TRAP_CUT, type Cut } from '../matrix';
 import { SCORES, exactOptimum, evaluate } from '../scores';
 import {
   DEFAULT_CONFIG, RULES, RULE_IDS, ReachTracker,
   tournament, uniformCrossover, mutate, reflect, sexQuota, roundedCut, samplePhenotype,
+  canonicalOrientation, variants, meanEntropyOf,
   initPopulation, populationAtCut, step, run, genStats, populationHash, makeRng, canonicalizeTo,
   type EvolveConfig, type Individual, type RuleId, type FitnessMode,
 } from '../evolve';
@@ -64,6 +65,37 @@ describe('operators', () => {
     expect(roundedCut({ p: [0.2, 0.5, 0.51], q: [1, 0] })).toEqual({ z: [0, 0, 1], w: [1, 0] });
     const c = samplePhenotype({ p: [0, 1, 0.5], q: [1] }, mulberry32(4));
     expect(c.z[0]).toBe(0); expect(c.z[1]).toBe(1); expect(c.w[0]).toBe(1);
+  });
+  it('meanEntropyOf is 0 for a decided genome, maximal at one half, and skips zero-degree loci', () => {
+    const f = fixtureById('complete-8x10')!;
+    const d0 = degrees(f.matrix);
+    const ind = (p: number, q: number): Individual => ({
+      p: new Array(8).fill(p), q: new Array(10).fill(q), sex: 'row', fit: 0, cut: { z: [], w: [] },
+    });
+    expect(meanEntropyOf([ind(0, 1)], d0)).toBeCloseTo(0, 12);
+    expect(meanEntropyOf([ind(0.5, 0.5)], d0)).toBeCloseTo(1, 12);
+    // a matrix with an all-zero column: that locus is invisible to the judges, so a
+    // fully undecided entry there must not count toward the entropy
+    const blind = fromRows(['110', '110']);
+    const dB = degrees(blind);
+    const half: Individual = { p: [0, 0], q: [0, 0, 0.5], sex: 'row', fit: 0, cut: { z: [], w: [] } };
+    expect(meanEntropyOf([half], dB)).toBeCloseTo(0, 12);
+  });
+  it('canonicalOrientation agrees with a brute force over the materialized variants', () => {
+    const rng = mulberry32(31);
+    for (let t = 0; t < 300; t++) {
+      const m = 2 + Math.floor(rng() * 5), n = 2 + Math.floor(rng() * 5);
+      const gen = () => ({ p: Array.from({ length: m }, () => rng()), q: Array.from({ length: n }, () => rng()) });
+      const ref = gen(), g = gen();
+      for (const blind of [false, true]) {
+        const { flipP, flipQ } = canonicalOrientation(ref, g, blind);
+        const applied = { p: flipP ? g.p.map(v => 1 - v) : g.p, q: flipQ ? g.q.map(v => 1 - v) : g.q };
+        const l1 = (a: typeof ref, b: typeof ref) =>
+          a.p.reduce((s, v, i) => s + Math.abs(v - b.p[i]), 0) + a.q.reduce((s, v, j) => s + Math.abs(v - b.q[j]), 0);
+        const bruteBest = Math.min(...variants(g, blind).map(v => l1(ref, v)));
+        expect(l1(ref, applied)).toBeCloseTo(bruteBest, 9);
+      }
+    }
   });
   it('canonicalization picks the labeling closest to the reference', () => {
     const ref = { p: [1, 1, 0, 0], q: [1, 0] };

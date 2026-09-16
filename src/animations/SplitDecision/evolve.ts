@@ -230,6 +230,7 @@ export function step(pop: Individual[], M: BinaryMatrix, d: Degrees, cfg: Evolve
 
 /* ── readouts ── */
 
+/** The per-generation record: scalars only, cheap enough to compute every step. */
 export interface GenStats {
   gen: number;
   bestFit: number;
@@ -239,12 +240,21 @@ export interface GenStats {
   bestRoundedFit: number;
   /** Mean over individuals of the mean per-locus binary entropy (bits), zero-degree loci excluded. */
   meanEntropy: number;
+}
+
+/** The per-frame picture: everything above plus the population-level summaries the
+ *  views draw. Computing these walks every genome's labeling variants, so they are
+ *  refreshed on the render cadence, not on every generation. */
+export interface FullStats extends GenStats {
   /** Per-locus entropy of the canonicalized population-mean genome (bits), zero-degree loci excluded. */
   consensusEntropy: number;
   /** The canonicalized population-mean genome (the Arena's sort key). */
   consensus: Genome;
   /** Fraction of individuals in the same labeling convention as the fittest one. */
   conventionFraction: number;
+  /** Per-locus interquartile range of the canonicalized population (the Arena's whiskers). */
+  spreadP: Array<[number, number]>;
+  spreadQ: Array<[number, number]>;
 }
 
 function binH(t: number): number {
@@ -261,49 +271,110 @@ export function variants(g: Genome, orientationBlind: boolean): Genome[] {
   return out;
 }
 
-function l1(a: Genome, b: Genome): number {
-  let s = 0;
-  for (let i = 0; i < a.p.length; i++) s += Math.abs(a.p[i] - b.p[i]);
-  for (let j = 0; j < a.q.length; j++) s += Math.abs(a.q[j] - b.q[j]);
-  return s;
+/** Which of `g`'s labelings lies closest to `ref`, as two flip flags — computed
+ *  from the half-distances, so nothing is allocated. Both the plain and the
+ *  complemented distance are accumulated in the same pass — note that
+ *  |ref − (1 − g)| is NOT len − |ref − g|, so the flipped sum has to be summed,
+ *  not derived (a brute-force equivalence test pins this). */
+export function canonicalOrientation(ref: Genome, g: Genome, orientationBlind: boolean): { flipP: boolean; flipQ: boolean } {
+  let dp = 0, dq = 0, dpFlip = 0, dqFlip = 0;
+  for (let i = 0; i < g.p.length; i++) {
+    dp += Math.abs(ref.p[i] - g.p[i]);
+    dpFlip += Math.abs(ref.p[i] - (1 - g.p[i]));
+  }
+  for (let j = 0; j < g.q.length; j++) {
+    dq += Math.abs(ref.q[j] - g.q[j]);
+    dqFlip += Math.abs(ref.q[j] - (1 - g.q[j]));
+  }
+  // Candidates: identity, the complement (both halves), and — when the judge cannot
+  // see orientation — either half alone.
+  const cands: Array<{ flipP: boolean; flipQ: boolean; d: number }> = [
+    { flipP: false, flipQ: false, d: dp + dq },
+    { flipP: true, flipQ: true, d: dpFlip + dqFlip },
+  ];
+  if (orientationBlind) {
+    cands.push({ flipP: false, flipQ: true, d: dp + dqFlip });
+    cands.push({ flipP: true, flipQ: false, d: dpFlip + dq });
+  }
+  let best = cands[0];
+  for (const c of cands) if (c.d < best.d - 1e-12) best = c;
+  return { flipP: best.flipP, flipQ: best.flipQ };
 }
 
 /** Re-label `g` (choosing among its variants) to lie closest to `ref`. */
 export function canonicalizeTo(ref: Genome, g: Genome, orientationBlind: boolean): { genome: Genome; flipped: boolean } {
-  const vs = variants(g, orientationBlind);
-  let best = 0, bestD = Infinity;
-  vs.forEach((v, i) => { const dd = l1(ref, v); if (dd < bestD - 1e-12) { bestD = dd; best = i; } });
-  return { genome: vs[best], flipped: best !== 0 };
+  const { flipP, flipQ } = canonicalOrientation(ref, g, orientationBlind);
+  const genome: Genome = {
+    p: flipP ? g.p.map(v => 1 - v) : g.p.slice(),
+    q: flipQ ? g.q.map(v => 1 - v) : g.q.slice(),
+  };
+  return { genome, flipped: flipP || flipQ };
 }
 
-export function genStats(pop: Individual[], gen: number, M: BinaryMatrix, d: Degrees, cfg: EvolveConfig): GenStats {
-  const spec = SCORES[cfg.scoreId];
-  let bestIdx = 0, sum = 0;
-  pop.forEach((ind, i) => { sum += ind.fit; if (ind.fit > pop[bestIdx].fit) bestIdx = i; });
-  const best = pop[bestIdx];
-  const bestRoundedFit = evaluate(M, d, spec, roundedCut(best));
-  const activeP = d.r.map(v => v > 0), activeQ = d.c.map(v => v > 0);
-  const nActive = activeP.filter(Boolean).length + activeQ.filter(Boolean).length || 1;
-  const sumP = new Array<number>(M.m).fill(0), sumQ = new Array<number>(M.n).fill(0);
-  let entSum = 0, same = 0;
+/** Which loci any ones-only judge can see at all: a zero-degree row or column has
+ *  no selection pressure, so its entry never canalizes and is left out of entropy. */
+function activeLoci(d: Degrees): { p: boolean[]; q: boolean[]; n: number } {
+  const p = d.r.map(v => v > 0), q = d.c.map(v => v > 0);
+  const n = p.filter(Boolean).length + q.filter(Boolean).length || 1;
+  return { p, q, n };
+}
+
+/** Mean over individuals of the mean per-locus entropy (bits). The only statistic
+ *  the neutral and Rounded twins contribute, so it is worth having on its own. */
+export function meanEntropyOf(pop: Individual[], d: Degrees): number {
+  const act = activeLoci(d);
+  let sum = 0;
   for (const ind of pop) {
     let e = 0;
-    ind.p.forEach((v, i) => { if (activeP[i]) e += binH(v); });
-    ind.q.forEach((v, j) => { if (activeQ[j]) e += binH(v); });
-    entSum += e / nActive;
-    const { genome, flipped } = canonicalizeTo(best, ind, spec.orientationBlind);
-    if (!flipped) same++;
-    genome.p.forEach((v, i) => { sumP[i] += v; });
-    genome.q.forEach((v, j) => { sumQ[j] += v; });
+    for (let i = 0; i < ind.p.length; i++) if (act.p[i]) e += binH(ind.p[i]);
+    for (let j = 0; j < ind.q.length; j++) if (act.q[j]) e += binH(ind.q[j]);
+    sum += e / act.n;
   }
-  const consensus: Genome = { p: sumP.map(v => v / pop.length), q: sumQ.map(v => v / pop.length) };
-  let cEnt = 0;
-  consensus.p.forEach((v, i) => { if (activeP[i]) cEnt += binH(v); });
-  consensus.q.forEach((v, j) => { if (activeQ[j]) cEnt += binH(v); });
+  return sum / pop.length;
+}
+
+/** The per-generation record. No canonicalization: this runs on every step. */
+export function genStats(pop: Individual[], gen: number, M: BinaryMatrix, d: Degrees, cfg: EvolveConfig): GenStats {
+  let bestIdx = 0, sum = 0;
+  for (let i = 0; i < pop.length; i++) { sum += pop[i].fit; if (pop[i].fit > pop[bestIdx].fit) bestIdx = i; }
+  const best = pop[bestIdx];
   return {
-    gen, bestFit: best.fit, meanFit: sum / pop.length, bestIdx, bestRoundedFit,
-    meanEntropy: entSum / pop.length, consensusEntropy: cEnt / nActive, consensus,
+    gen, bestFit: best.fit, meanFit: sum / pop.length, bestIdx,
+    bestRoundedFit: evaluate(M, d, SCORES[cfg.scoreId], roundedCut(best)),
+    meanEntropy: meanEntropyOf(pop, d),
+  };
+}
+
+/** The per-frame picture. Walks every genome once against the fittest one's
+ *  labeling, accumulating the consensus and the per-locus quartiles in the same
+ *  pass — no intermediate genome copies. */
+export function fullStats(pop: Individual[], gen: number, M: BinaryMatrix, d: Degrees, cfg: EvolveConfig): FullStats {
+  const light = genStats(pop, gen, M, d, cfg);
+  const spec = SCORES[cfg.scoreId];
+  const best = pop[light.bestIdx];
+  const act = activeLoci(d);
+  const colsP: number[][] = Array.from({ length: M.m }, () => []);
+  const colsQ: number[][] = Array.from({ length: M.n }, () => []);
+  let same = 0;
+  for (const ind of pop) {
+    const { flipP, flipQ } = canonicalOrientation(best, ind, spec.orientationBlind);
+    if (!flipP && !flipQ) same++;
+    for (let i = 0; i < M.m; i++) colsP[i].push(flipP ? 1 - ind.p[i] : ind.p[i]);
+    for (let j = 0; j < M.n; j++) colsQ[j].push(flipQ ? 1 - ind.q[j] : ind.q[j]);
+  }
+  const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+  const iqr = (a: number[]): [number, number] => {
+    const s = a.slice().sort((x, y) => x - y);
+    return [s[Math.floor(s.length * 0.25)], s[Math.floor(s.length * 0.75)]];
+  };
+  const consensus: Genome = { p: colsP.map(mean), q: colsQ.map(mean) };
+  let cEnt = 0;
+  for (let i = 0; i < M.m; i++) if (act.p[i]) cEnt += binH(consensus.p[i]);
+  for (let j = 0; j < M.n; j++) if (act.q[j]) cEnt += binH(consensus.q[j]);
+  return {
+    ...light, consensus, consensusEntropy: cEnt / act.n,
     conventionFraction: same / pop.length,
+    spreadP: colsP.map(iqr), spreadQ: colsQ.map(iqr),
   };
 }
 
