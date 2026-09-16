@@ -22,7 +22,7 @@ import { Population } from './views/Population';
 import { Trace } from './views/Trace';
 import { Sweep, type SweepRecord } from './views/Sweep';
 import { HAS_WORKERS, SweepPool, poolSize } from './lab/pool';
-import { evaluationCount, jobCount, type JobResult, type SweepConfig } from './lab/sweep';
+import { canEnumerate, evaluationCount, jobCount, type JobResult, type SweepConfig } from './lab/sweep';
 
 const NS = 'split-decision';
 const MAX_CELLS = 1600;
@@ -81,6 +81,7 @@ export default function SplitDecision() {
   const [selectedSignal, setSelectedSignal] = useState(SIGNAL_LEVELS.length - 1);
   const [sweeping, setSweeping] = useState(false);
   const poolRef = useRef<SweepPool | null>(null);
+  const activeSweepRef = useRef<number | null>(null);
 
   const r1c = clamp(r1, 1, pm - 1), c1c = clamp(c1, 1, pn - 1);
   const base = useMemo(() => {
@@ -111,7 +112,14 @@ export default function SplitDecision() {
   // Lab stops the pool. Unmount disposes it.
   const setPlaying = loop.setPlaying;
   useEffect(() => { if (mode !== 'watch') setPlaying(false); }, [mode, setPlaying]);
-  const stopSweep = useCallback(() => { poolRef.current?.dispose(); poolRef.current = null; setSweeping(false); }, []);
+  // Stopping (or leaving the Lab) marks the active record stopped, so the catalog
+  // never shows a sweep as running that no worker can add to.
+  const stopSweep = useCallback(() => {
+    poolRef.current?.dispose(); poolRef.current = null;
+    const id = activeSweepRef.current; activeSweepRef.current = null;
+    if (id !== null) setCatalog(c => c.map(x => (x.id === id && !x.done ? { ...x, done: true, stopped: true } : x)));
+    setSweeping(false);
+  }, [setCatalog]);
   useEffect(() => { if (mode !== 'lab') stopSweep(); }, [mode, stopSweep]);
   useEffect(() => () => { poolRef.current?.dispose(); }, []);
 
@@ -128,22 +136,29 @@ export default function SplitDecision() {
       : { engine: ENGINE_VERSION, base, instance: { kind: 'planted', m: pm, n: pn, r1: r1c, c1: c1c }, signals: levels, rules: labRules, seeds: labSeeds, baseSeed: labSeedBase, matrixSeed, gMax: labGMax, sustain: 5 };
   }, [cfg, preset, labLevels, labRules, labSeeds, labSeedBase, matrixSeed, labGMax, pm, pn, r1c, c1c]);
 
+  const enumerable = canEnumerate(sweepCfg);
   const runSweep = useCallback(() => {
     stopSweep();
-    if (!labRules.length) return;
+    if (!labRules.length || !canEnumerate(sweepCfg)) return;
     const id = (catalog.reduce((mx, r) => Math.max(mx, r.id), 0)) + 1;
     const record: SweepRecord = { id, when: new Date().toISOString(), cfg: sweepCfg, results: [], done: false };
     setCatalog(c => [record, ...c].slice(0, MAX_CATALOG));
     setSelectedRecord(id);
     setSelectedSignal(sweepCfg.signals.length - 1);
     const append = (r: JobResult) => setCatalog(c => c.map(x => (x.id === id ? { ...x, results: [...x.results, r] } : x)));
-    const pool = new SweepPool(sweepCfg, append, () => { setCatalog(c => c.map(x => (x.id === id ? { ...x, done: true } : x))); setSweeping(false); poolRef.current = null; });
+    const pool = new SweepPool(sweepCfg, append, () => { setCatalog(c => c.map(x => (x.id === id ? { ...x, done: true } : x))); setSweeping(false); poolRef.current = null; activeSweepRef.current = null; });
     poolRef.current = pool;
+    activeSweepRef.current = id;
     setSweeping(true);
     pool.start();
     setLabSeedBase(b => b + 1); // the next sweep is a fresh draw
   }, [stopSweep, labRules.length, catalog, sweepCfg, setCatalog, setLabSeedBase]);
   const clearCatalog = useCallback(() => { stopSweep(); setCatalog([]); setSelectedRecord(null); }, [stopSweep, setCatalog]);
+  useEffect(() => {
+    // A record still marked running after a reload has no pool behind it.
+    setCatalog(c => (c.some(x => !x.done && x.id !== activeSweepRef.current) ? c.map(x => (!x.done && x.id !== activeSweepRef.current ? { ...x, done: true, stopped: true } : x)) : c));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const shownRecord = catalog.find(r => r.id === selectedRecord) ?? catalog[0] ?? null;
 
   const onToggleCell = useCallback((i: number, j: number) => {
@@ -271,6 +286,7 @@ export default function SplitDecision() {
       </div>
       <Slider label="Seeds per cell" value={labSeeds} min={4} max={32} step={4} onChange={v => setLabSeeds(Math.round(v))} format={v => `${v}`} />
       <Slider label="G_max — generations per run" value={labGMax} min={50} max={1000} step={50} onChange={v => setLabGMax(Math.round(v))} format={v => `${v}`} />
+      {!enumerable && <Note><b>Too big to score.</b> The Lab defines "reached" against the exact optimum, which the Exhaustive Bailiff enumerates only for m + n ≤ 20. Shrink the matrix in the Matrix panel to run a sweep.</Note>}
       <div className="sd-status">{jobCount(sweepCfg)} runs · {evals >= 1e6 ? `${(evals / 1e6).toFixed(1)}M` : `${Math.round(evals / 1e3)}k`} evaluations · {HAS_WORKERS ? `${Math.min(poolSize(), jobCount(sweepCfg))} workers` : 'main thread (no Workers here)'}{sweeping && shownRecord ? ` · ${shownRecord.results.length}/${jobCount(shownRecord.cfg)} done` : ''}</div>
       <Note>The Lab matches evaluations per generation across rules, not lineages: the Prom's two sexes each hold about half the population.</Note>
     </>
@@ -318,7 +334,7 @@ export default function SplitDecision() {
   ];
 
   const actions: ActionDef[] = mode === 'lab' ? [
-    { id: 'run', icon: 'flask', label: 'Run sweep', primary: true, sectionId: 'lab', disabled: sweeping || labRules.length === 0, onClick: runSweep },
+    { id: 'run', icon: 'flask', label: 'Run sweep', primary: true, sectionId: 'lab', disabled: sweeping || labRules.length === 0 || !enumerable, onClick: runSweep },
     { id: 'stop', icon: 'pause', label: 'Stop', sectionId: 'lab', disabled: !sweeping, onClick: stopSweep },
     { id: 'clear', icon: 'reset', label: 'Clear', sectionId: 'lab', disabled: catalog.length === 0, onClick: clearCatalog },
   ] : [

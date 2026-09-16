@@ -13,7 +13,7 @@
 
 import { runSeed } from '@/lib/rng';
 import { degrees, densitiesForSignal, fixtureById, planted, type BinaryMatrix, type Cut } from '../matrix';
-import { SCORES, evaluate, exactOptimum } from '../scores';
+import { SCORES, evaluate, exactOptimum, type Optimum } from '../scores';
 import { ReachTracker, genStats, initPopulation, makeRng, populationAtCut, step, type EvolveConfig, type RuleId } from '../evolve';
 
 export type SweepInstance =
@@ -88,12 +88,36 @@ export function instanceFor(cfg: SweepConfig, signalIdx: number): { matrix: Bina
   return { matrix: inst.matrix, planted: inst.planted, startAt: null };
 }
 
+/** The largest m + n the Exhaustive Bailiff enumerates (2^19 cuts). */
+export const ENUMERATION_LIMIT = 20;
+
+/** Can every job in this sweep be scored against an exact optimum? Without one,
+ *  "reached" is undefined and every run would read as censored. */
+export function canEnumerate(cfg: SweepConfig): boolean {
+  if (cfg.instance.kind === 'planted') return cfg.instance.m + cfg.instance.n <= ENUMERATION_LIMIT;
+  const f = fixtureById(cfg.instance.id);
+  return !!f && f.matrix.m + f.matrix.n <= ENUMERATION_LIMIT;
+}
+
+// The exact optimum depends only on the instance and the judge, not on the rule
+// or seed, so each worker computes it once per signal level it sees.
+const OPTIMUM_CACHE = new Map<string, Optimum | null>();
+function optimumFor(cfg: SweepConfig, signalIdx: number, M: BinaryMatrix, d: ReturnType<typeof degrees>): Optimum | null {
+  const key = `${JSON.stringify(cfg.instance)}|${cfg.signals[signalIdx]}|${cfg.matrixSeed}|${cfg.base.scoreId}`;
+  const hit = OPTIMUM_CACHE.get(key);
+  if (hit !== undefined) return hit;
+  if (OPTIMUM_CACHE.size > 64) OPTIMUM_CACHE.clear();
+  const opt = exactOptimum(M, d, SCORES[cfg.base.scoreId], ENUMERATION_LIMIT);
+  OPTIMUM_CACHE.set(key, opt);
+  return opt;
+}
+
 export function runJob(cfg: SweepConfig, i: number): JobResult {
   const { signalIdx, ruleIdx, seedIdx } = decodeJob(cfg, i);
   const inst = instanceFor(cfg, signalIdx);
   const M = inst.matrix, d = degrees(M);
   const spec = SCORES[cfg.base.scoreId];
-  const opt = exactOptimum(M, d, spec);
+  const opt = optimumFor(cfg, signalIdx, M, d);
   const plantedScore = inst.planted ? evaluate(M, d, spec, inst.planted) : null;
   const evo: EvolveConfig = { ...cfg.base, rule: cfg.rules[ruleIdx], seed: runSeed(cfg.baseSeed, i) };
   const rng = makeRng(evo);
@@ -162,8 +186,10 @@ export function reachedByGeneration(cell: CellSummary, gMax: number, points = 60
   return out;
 }
 
-/** Median generation of the reached runs, or null when more than half censored. */
+/** The generation by which half of ALL runs in the cell had reached the optimum
+ *  (the survival curve's median, censored runs counted as never), or null when
+ *  half of them never did. */
 export function medianReached(cell: CellSummary): number | null {
   if (cell.n === 0 || cell.reached.length * 2 <= cell.n) return null;
-  return cell.reached[Math.floor(cell.reached.length / 2)];
+  return cell.reached[Math.ceil(cell.n / 2) - 1];
 }

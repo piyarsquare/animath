@@ -12,7 +12,7 @@ import {
   initPopulation, populationAtCut, step, run, genStats, populationHash, makeRng, canonicalizeTo,
   type EvolveConfig, type Individual, type RuleId, type FitnessMode,
 } from '../evolve';
-import { decodeJob, encodeJob, jobCount, evaluationCount, runJob, summarize, reachedByGeneration, medianReached, type SweepConfig } from '../lab/sweep';
+import { canEnumerate, decodeJob, encodeJob, jobCount, evaluationCount, runJob, summarize, reachedByGeneration, medianReached, type SweepConfig } from '../lab/sweep';
 
 const cfgWith = (over: Partial<EvolveConfig>): EvolveConfig => ({ ...DEFAULT_CONFIG, ...over });
 const complete = () => { const f = fixtureById('complete-8x10')!; return { M: f.matrix, d: degrees(f.matrix), planted: f.planted as Cut }; };
@@ -177,6 +177,12 @@ describe('ReachTracker and trap seeding', () => {
     expect(t.update(7, 0)).toBe(4);        // sticky
     expect(new ReachTracker(null).update(1, 5)).toBeNull();
   });
+  it('a degenerate rounded cut (score 0) never counts as reaching a negative optimum', () => {
+    const t = new ReachTracker(-0.5, 1);
+    expect(t.update(0, 0)).toBeNull();      // the guard's 0 exceeds −0.5 but is not the optimum
+    expect(t.update(1, 0.3)).toBeNull();
+    expect(t.update(2, -0.5)).toBe(2);
+  });
   it('a population seeded at the page-50 trap starts with every rounded cut equal to it', () => {
     const f = fixtureById('page50-4x4')!; const M = f.matrix, d = degrees(M);
     const cfg = cfgWith({ scoreId: 'modularity', N: 8, seed: 1 });
@@ -191,6 +197,11 @@ describe('the sweep', () => {
     base: { engine: 1, scoreId: 'bernoulli', fitness: 'sampled', samplesPerEval: 1, N: 16, selection: { kind: 'tournament', k: 2 }, mu: 0.1, sigma: 0.1, sexRatio: 0.5 },
     instance: { kind: 'planted', m: 6, n: 6, r1: 3, c1: 3 }, signals: [0.2, 1], rules: ['clonal', 'mixer', 'prom'], seeds: 3, baseSeed: 9, matrixSeed: 3, gMax: 40, sustain: 3,
   };
+  it('a sweep is gated on an enumerable optimum', () => {
+    expect(canEnumerate(sweep)).toBe(true);
+    expect(canEnumerate({ ...sweep, instance: { kind: 'planted', m: 12, n: 12, r1: 6, c1: 6 } })).toBe(false);
+    expect(canEnumerate({ ...sweep, instance: { kind: 'fixture', id: 'page50-4x4', startAt: null } })).toBe(true);
+  });
   it('job index ↔ (signal, rule, seed) is a bijection', () => {
     expect(jobCount(sweep)).toBe(18);
     for (let i = 0; i < jobCount(sweep); i++) { const { signalIdx, ruleIdx, seedIdx } = decodeJob(sweep, i); expect(encodeJob(sweep, signalIdx, ruleIdx, seedIdx)).toBe(i); }
@@ -223,7 +234,11 @@ describe('the sweep', () => {
       for (let k = 1; k < curve.length; k++) expect(curve[k].frac).toBeGreaterThanOrEqual(curve[k - 1].frac);
       expect(curve[curve.length - 1].frac).toBeCloseTo(c.reached.length / 3, 12);
       const med = medianReached(c);
-      if (c.reached.length * 2 > c.n) expect(med).toBe(c.reached[Math.floor(c.reached.length / 2)]); else expect(med).toBeNull();
+      if (c.reached.length * 2 > c.n) expect(med).toBe(c.reached[Math.ceil(c.n / 2) - 1]); else expect(med).toBeNull();
     }
+    // the median is the generation by which half of ALL runs had reached, censored runs counted as never
+    const cell = { signalIdx: 0, ruleIdx: 0, n: 12, reached: [10, 20, 30, 40, 50, 60, 70], censored: 5, medianFinalGap: null };
+    expect(medianReached(cell)).toBe(60);
+    expect(medianReached({ ...cell, reached: [10, 20, 30, 40, 50, 60], censored: 6 })).toBeNull();
   });
 });

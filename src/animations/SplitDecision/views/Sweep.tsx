@@ -17,6 +17,8 @@ export interface SweepRecord {
   cfg: SweepConfig;
   results: JobResult[];
   done: boolean;
+  /** Stopped before every job finished (Stop, leaving the Lab, or a reload). */
+  stopped?: boolean;
 }
 
 interface Props {
@@ -53,7 +55,7 @@ export function Sweep({ record, catalog, selectedSignal, onSelectSignal, onSelec
       {!rec && <div className="sd-story">Press <b>Run sweep</b> to race the three worlds across planted signal strength, or pick the <b>Escape the trap</b> preset in the Lab panel.</div>}
       {rec && cfg && (
         <>
-          <div className="sd-status">sweep #{rec.id} · {describe(cfg)} · {rec.results.length}/{total} runs{rec.done ? '' : ' · running…'}</div>
+          <div className="sd-status">sweep #{rec.id} · {describe(cfg)} · {rec.results.length}/{total} runs{rec.stopped ? ' · stopped' : rec.done ? '' : ' · running…'}</div>
 
           {cfg.signals.length > 1 && (
             <>
@@ -114,7 +116,7 @@ export function Sweep({ record, catalog, selectedSignal, onSelectSignal, onSelec
                       <td>{r.cfg.base.N} · {r.cfg.base.selection.k}</td>
                       <td>{r.cfg.seeds}</td>
                       <td>{r.cfg.gMax}</td>
-                      <td>{reached}{r.done ? '' : ' (running)'}</td>
+                      <td>{reached}{r.stopped ? ' (stopped)' : r.done ? '' : ' (running)'}</td>
                     </tr>
                   );
                 })}

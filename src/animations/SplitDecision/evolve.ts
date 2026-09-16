@@ -308,7 +308,9 @@ export function genStats(pop: Individual[], gen: number, M: BinaryMatrix, d: Deg
 }
 
 /** "Reached": the first generation of a run of `sustain` consecutive generations in
- *  which the fittest individual's rounded cut scores the exact optimum. */
+ *  which the fittest individual's rounded cut scores the exact optimum. Equality
+ *  within `eps`, not "at least": a degenerate rounded cut scores 0 under the guard,
+ *  which would exceed a negative optimum (the sparse fixture under Occam's Invoice). */
 export class ReachTracker {
   reachedAt: number | null = null;
   private streak = 0;
@@ -316,7 +318,7 @@ export class ReachTracker {
   constructor(private optimum: number | null, private sustain = 5, private eps = 1e-9) {}
   update(gen: number, bestRoundedFit: number): number | null {
     if (this.reachedAt !== null || this.optimum === null) return this.reachedAt;
-    if (bestRoundedFit >= this.optimum - this.eps) {
+    if (Math.abs(bestRoundedFit - this.optimum) <= this.eps) {
       if (this.streak === 0) this.streakStart = gen;
       this.streak++;
       if (this.streak >= this.sustain) this.reachedAt = this.streakStart;

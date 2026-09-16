@@ -78,12 +78,19 @@ export class SweepPool {
       this.outstanding++;
       w.postMessage(msg);
     }
-    if (this.running && this.next >= this.total && this.outstanding === 0) { this.running = false; this.onDone(); }
+    if (this.running && this.next >= this.total && this.outstanding === 0) this.finish();
+  }
+
+  /** Normal completion terminates the workers too; the pool is single-use. */
+  private finish() {
+    this.running = false;
+    this.dispose();
+    this.onDone();
   }
 
   private fallbackTick() {
     if (!this.running || this.disposed) return;
-    if (this.next >= this.total) { this.running = false; this.onDone(); return; }
+    if (this.next >= this.total) { this.finish(); return; }
     this.onResult(runJob(this.cfg, this.next++));
     this.fallbackTimer = setTimeout(() => this.fallbackTick(), 0);
   }
