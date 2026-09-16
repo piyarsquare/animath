@@ -28,6 +28,7 @@ export const CATEGORIES = {
   "argand":            { label: "Argand",            hue: 250 },
   "counting-the-ways": { label: "Counting the Ways", hue: 70  },
   "division-bells":    { label: "Division Bells",    hue: 10  },
+  "split-decision":    { label: "Split Decision",    hue: 30  },
   "chrome":            { label: "Chrome / Shell",    hue: 220 },
   "engine":            { label: "Engine / lib",      hue: 285 },
   "docs":              { label: "Docs / Guides",     hue: 130 },
