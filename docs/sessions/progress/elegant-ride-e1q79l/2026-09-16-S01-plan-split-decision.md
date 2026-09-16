@@ -11,7 +11,7 @@ followup: null
 pr: null
 app: split-decision, engine
 signals: needs-dan, not-live
-next: Dan reviews this plan; then a /three-hats pass; then Phase 1 (engine + tests).
+next: Three-hats done (see the synthesis); Phase 1 (engine + tests) is in progress on this branch; the main PR lands with Phase 2.
 ---
 
 # Plan — Split Decision: a genetic algorithm that evolves a matrix split, with sex
@@ -334,6 +334,99 @@ material lives; observation masks and structural zeros.
   working monograph" without naming correspondents unless Dan says otherwise.
 - **Name and preview.** *Split Decision* stays. The gallery preview needs a new
   `PreviewKind` (a tiny matrix sorting itself) or reuse of `matrix`.
+
+## Revisions after three-hats (2026-09-16, same session)
+
+The three reviews ([synthesis](2026-09-16-S01-expert-synthesis.md)) endorsed the shape
+and corrected the following. These override the sections above where they conflict.
+
+> [!IMPORTANT]
+> **Engine decisions.**
+> - **Operators, not rules.** `evolve.ts` exports `select` (tournament, exactly `k`
+>   draws), `mate`, `mutate`, `evaluate` as pure functions; the three Worlds are rows in
+>   a `RULES` table (`parents: 'one' | 'two' | 'sexed'`, `mate`). `step` is a loop over
+>   them with the RNG draw order documented at its top; a change to that order bumps
+>   `EvolveConfig.engine`.
+> - **Scores take the block table.** `blockTable(M, cut)` counts once per evaluation
+>   over the matrix's ones list; every score is `score(table, degrees)` in O(1). The
+>   guard lives in one `evaluate`. Ids are plain (`edgeCount`, `hamming`, `pearson`,
+>   `mutualInfo`, `bernoulli`, `modularity`, `mdl`); the character names are display
+>   metadata.
+> - **Sign convention pinned:** `x = 2z − 1`, `y = 2w − 1` in {±1}. **Orientation:** the
+>   planted cut is stored as `z = 1_A, w = 1_{B̄}` so that `R₁×C₂ = A×B`; `(z, 1−w)` is a
+>   *different* cut for Cut and Run, Hamming and modularity and the *same* cut for
+>   Pearson, both information scores and Occam (a second symmetry acceptance row).
+> - **Newman's Leftovers = Barber's Q** (`−xᵀ(M − rcᵀ/e)y / 2e`); the page-50 trap
+>   values become 0.173 (local) and 0.271 (global).
+> - **Occam's Invoice relative to the no-split code:** `k = L(no split) − L(cut)` with
+>   the same two-part code applied to the degenerate cut. The trivial cut scores 0 by
+>   construction (no guard exception); the 4×4 checkerboard reads about +3.28 bits, the
+>   8×10 complete about 51.2, and no cut of the 8×10 sparse pays for itself (best
+>   nondegenerate about −0.47). Values from the pedagogy review, re-verified by tests.
+> - **Reflecting mutation** at 0 and 1 (not clipping), so the neutral `k = 1` entropy
+>   curve stays flat and the canalization contrast is a real claim.
+> - **Prom mutates only the transmitted half** (`mutate` takes a locus mask; all-true
+>   for the other rules). The Prom's only difference from the Mixer is then transmission.
+> - **Seeded sex quota:** exactly `round(N·r)` row-sex children per generation, order
+>   shuffled by the run RNG. No fallback, no flag.
+> - **"Reached" is defined** as the first generation at which the fittest individual's
+>   *rounded* cut scores the exact optimum, sustained for 5 consecutive generations.
+>   Watch's converged readout and the Lab's metric share it.
+> - `EvolveConfig` carries everything that touches the trajectory, including `engine`,
+>   `samplesPerEval: 1`, and `selection` as a discriminated union.
+
+> [!IMPORTANT]
+> **Framework decisions.**
+> - Archetypes: Score → `subject`, Matrix → `domain`, Reproduction → `drive`, Run →
+>   `playback` (transport and rate only), Readouts → `readout`, Cells → `marks`
+>   (was "View"). Seed lives with Reproduction.
+> - The Lab mode gets a `lab` panel (signal levels, seeds, `G_max`, rules, presets)
+>   projected by `Run sweep · Stop · Clear`, and reuses Score and Reproduction; Matrix is
+>   not shown in the Lab (the signal axis replaces the fixture picker).
+> - Reuse `PreviewKind` `'matrix'` for the Storeroom card; a bespoke preview at
+>   promotion. `apps.ts` entry goes above the trailing plane-arithmetic pair.
+> - One **Essentials** layout per mode (Watch: Score · Matrix · Run).
+> - Phase 1 is a commit boundary on this branch; the `main` PR lands with Phase 2;
+>   Phase 3 is its own PR.
+> - Cut from v1: the Two-Step-with-restarts baseline. Deferred to Phase 3: "Initialize
+>   at a cut" with the Escape-the-trap preset.
+> - `src/lib/rng.ts` is the first *shared* copy (six private `mulberry32`s exist); a
+>   TODO.md line records the consolidation. Box–Muller stays in `evolve.ts`.
+
+> [!IMPORTANT]
+> **What the viewer sees.**
+> - The generator **shuffles** rows and columns and stores the permutation; the
+>   default fixture is a **10×10 planted at ρ ≈ 0.9 / 0.1** (the Bailiff still runs).
+> - The Arena sorts by the **canonicalized population-mean genome** (flip so `p₀ ≥ ½`,
+>   and `q₀ ≥ ½` under the orientation-blind judges), re-sorted at most ~4 times a
+>   second, cells `(i,j)`-keyed and transform-positioned, honoring
+>   `prefers-reduced-motion`; generator capped at `m·n ≤ 1600`. **One** cross-block
+>   tint; sexes by shape or glyph, hue as a bonus. Row/column strips show the mean with
+>   an interquartile whisker (the population's diversity, visible in the Arena). A
+>   "show planted" outline. Tap = inspect unless paint mode is on.
+> - The Trace shows best-rounded and mean fitness, **two reference lines** (planted and
+>   exact optimum), and **three entropy curves** (neutral `k = 1` · Rounded · Sampled),
+>   excluding zero-degree loci.
+> - The Lab plots **survival curves** (fraction reached by generation, per rule) with
+>   the censored fraction, states hypotheses per rule, and shows the observed result
+>   next to each prediction: **H1** at strong signal the Mixer dominates the Monastery;
+>   **H2** the Prom is slower than the Mixer at every signal (random-collaborator
+>   evaluation, effective N/2 per half) and settles on single-side-stable cuts more
+>   often; **H3** from a strict single-flip local optimum, escape ability orders
+>   Monastery ≥ Mixer > Prom. The Lab matches evaluations per generation, not lineages.
+> - The Lab catalog persists config + summary rows, engine-stamped and capped.
+
+**Revised acceptance rows** (replacing the corresponding rows above): Occam on the
+4×4 checkerboard ≈ +3.28 and on the trivial cut exactly 0; page-50 modularity local
+0.173 / global 0.271; the `(z, 1−w)` symmetry row (equal for four judges, different for
+three); determinism as one population hash after 50 generations for each rule and
+fitness mode; convergence as "at least 10 of 12 pinned seeds reach a sustained rounded
+optimum by generation 300" per rule on `ρ = 1/0`; canalization as "mean Sampled entropy
+at generation 100 below the neutral `k = 1` curve by more than the seed spread, with
+reflecting mutation" over 8 seeds; the Prom tested through `RULES.prom.mate` directly;
+property tests for complement and transposition symmetry, table invariants, score
+bounds, `runSeed` injectivity, and the sweep's job-index bijection; a source-string
+test asserting no `Math.random` in the engine files.
 
 ## Self-reflection
 
