@@ -73,7 +73,10 @@ export class RouteBoundary extends React.Component<React.PropsWithChildren, Stat
     if (!error) return this.props.children;
     const webgl = /webgl|context|three/i.test(`${error.name} ${error.message}`);
     return (
-      <div style={{
+      // The marker is the headless smoke check's signal (scripts/smoke.mjs): this
+      // boundary CATCHES the error, so no `pageerror` reaches the page and a crashed
+      // route would otherwise look like a clean load.
+      <div data-am-route-error="" style={{
         position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
         background: 'var(--bg)', color: 'var(--fg)', padding: 24,
       }}>

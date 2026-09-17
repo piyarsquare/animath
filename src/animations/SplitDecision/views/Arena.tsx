@@ -89,8 +89,11 @@ export function Arena({ M, d, snapshot, planted, options, order, onToggleCell }:
   const rowBars = useMemo(() => {
     const out: React.ReactNode[] = [];
     for (let i = 0; i < m; i++) {
-      const v = consensus ? consensus.p[i] : 0.5;
-      const [lo, hi] = spreadP ? spreadP[i] : [v, v];
+      // Indexed reads are total: a snapshot shorter than the matrix should draw a
+      // neutral bar, never take the whole route down (SplitDecision gates a stale
+      // snapshot, and this keeps the view honest if one ever slips through).
+      const v = consensus?.p[i] ?? 0.5;
+      const [lo, hi] = spreadP?.[i] ?? [v, v];
       out.push(
         <div key={i} className="sd-rbar" style={{ transform: `translate(0px, ${stripT + rowPos[i] * cs}px)`, height: cs }}>
           {options.showPlanted && planted && <i className={`sd-pl${planted.z[i] ? ' in' : ''}`} />}
@@ -105,8 +108,8 @@ export function Arena({ M, d, snapshot, planted, options, order, onToggleCell }:
   const colBars = useMemo(() => {
     const out: React.ReactNode[] = [];
     for (let j = 0; j < n; j++) {
-      const v = consensus ? consensus.q[j] : 0.5;
-      const [lo, hi] = spreadQ ? spreadQ[j] : [v, v];
+      const v = consensus?.q[j] ?? 0.5;
+      const [lo, hi] = spreadQ?.[j] ?? [v, v];
       out.push(
         <div key={j} className="sd-cbar" style={{ transform: `translate(${stripL + colPos[j] * cs}px, 0px)`, width: cs }}>
           {options.showPlanted && planted && <i className={`sd-pl${planted.w[j] ? ' in' : ''}`} />}

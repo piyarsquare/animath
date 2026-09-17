@@ -118,7 +118,15 @@ export default function SplitDecision() {
   }), [scoreId, fitness, rule, N, k, mu, sigma, sexRatio, seed]);
 
   const loop = useWatchLoop(M, d, cfg, optimum ? optimum.score : null);
-  const snap = loop.snapshot;
+  // The loop rebuilds when the matrix changes, but React renders the new size first:
+  // for one paint the snapshot still describes the OLD matrix while the views index it
+  // by the new m and n. Every view reads it per locus (`spreadP[i]`, `consensus.p[i]`,
+  // `ind.p[i]`), so a stale one is a crash, not a cosmetic glitch. Hand them nothing
+  // until the loop republishes — one frame of neutral bars.
+  const raw = loop.snapshot;
+  const snap = raw && raw.stats.consensus.p.length === M.m && raw.stats.consensus.q.length === M.n
+    ? raw
+    : null;
 
   // Leaving Watch pauses the population (it survives in the loop's ref); leaving the
   // Lab stops the pool. Unmount disposes it.
