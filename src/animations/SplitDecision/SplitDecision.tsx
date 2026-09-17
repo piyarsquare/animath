@@ -23,7 +23,7 @@ import { Population } from './views/Population';
 import { Trace } from './views/Trace';
 import { Sweep, type SweepRecord } from './views/Sweep';
 import { HAS_WORKERS, SweepPool, poolSize } from './lab/pool';
-import { canEnumerate, evaluationCount, jobCount, type JobResult, type SweepConfig } from './lab/sweep';
+import { canEnumerate, evaluationCount, jobCount, summarize, type JobResult, type SweepConfig } from './lab/sweep';
 
 const NS = 'split-decision';
 const MAX_CELLS = 1600;
@@ -31,6 +31,8 @@ type Source = 'planted' | 'fixture';
 type Mode = 'watch' | 'lab';
 type Preset = 'signal' | 'trap';
 const MAX_CATALOG = 12;
+/** Throttle for publishing sweep progress to React (ms). */
+const PUBLISH_MS = 250;
 const SIGNAL_LEVELS = [0, 0.2, 0.4, 0.6, 0.8, 1];
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -77,12 +79,21 @@ export default function SplitDecision() {
   const [labGMax, setLabGMax] = usePersistentState(`${NS}:labGMax`, 300);
   const [labRules, setLabRules] = usePersistentState<RuleId[]>(`${NS}:labRules`, ['clonal', 'mixer', 'prom']);
   const [labSeedBase, setLabSeedBase] = usePersistentState(`${NS}:labSeedBase`, 1);
+  // The Lab plants its own matrices. These are deliberately NOT the Matrix panel's
+  // sliders: turning the Watch matrix up past the enumeration limit used to disable
+  // the Lab, because "reached the optimum" needs an optimum to compare against.
+  const [labM, setLabM] = usePersistentState(`${NS}:labM`, 10);
+  const [labN, setLabN] = usePersistentState(`${NS}:labN`, 10);
   const [catalog, setCatalog] = usePersistentState<SweepRecord[]>(`${NS}:sweeps`, []);
   const [selectedRecord, setSelectedRecord] = useState<number | null>(null);
   const [selectedSignal, setSelectedSignal] = useState(SIGNAL_LEVELS.length - 1);
   const [sweeping, setSweeping] = useState(false);
   const poolRef = useRef<SweepPool | null>(null);
   const activeSweepRef = useRef<number | null>(null);
+  // Raw per-run rows for the sweep in flight. They never enter React state: only the
+  // summaries do, and only on a throttle.
+  const rowsRef = useRef<JobResult[]>([]);
+  const lastPublishRef = useRef(0);
 
   const r1c = clamp(r1, 1, pm - 1), c1c = clamp(c1, 1, pn - 1);
   const base = useMemo(() => {
@@ -118,7 +129,9 @@ export default function SplitDecision() {
   const stopSweep = useCallback(() => {
     poolRef.current?.dispose(); poolRef.current = null;
     const id = activeSweepRef.current; activeSweepRef.current = null;
-    if (id !== null) setCatalog(c => c.map(x => (x.id === id && !x.done ? { ...x, done: true, stopped: true } : x)));
+    if (id !== null) setCatalog(c => c.map(x => (x.id === id && !x.done
+      ? { ...x, cells: summarize(x.cfg, rowsRef.current), count: rowsRef.current.length, done: true, stopped: true }
+      : x)));
     setSweeping(false);
   }, [setCatalog]);
   useEffect(() => { if (mode !== 'lab') stopSweep(); }, [mode, stopSweep]);
@@ -134,20 +147,35 @@ export default function SplitDecision() {
     const levels = SIGNAL_LEVELS.slice(SIGNAL_LEVELS.length - Math.max(2, Math.min(SIGNAL_LEVELS.length, labLevels)));
     return preset === 'trap'
       ? { engine: ENGINE_VERSION, base: { ...base, scoreId: 'modularity' }, instance: { kind: 'fixture', id: 'page50-4x4', startAt: PAGE50_TRAP_CUT }, signals: [0], rules: labRules, seeds: labSeeds, baseSeed: labSeedBase, matrixSeed, gMax: labGMax, sustain: 5 }
-      : { engine: ENGINE_VERSION, base, instance: { kind: 'planted', m: pm, n: pn, r1: r1c, c1: c1c }, signals: levels, rules: labRules, seeds: labSeeds, baseSeed: labSeedBase, matrixSeed, gMax: labGMax, sustain: 5 };
-  }, [cfg, preset, labLevels, labRules, labSeeds, labSeedBase, matrixSeed, labGMax, pm, pn, r1c, c1c]);
+      : { engine: ENGINE_VERSION, base, instance: { kind: 'planted', m: labM, n: labN, r1: Math.max(1, Math.floor(labM / 2)), c1: Math.max(1, Math.floor(labN / 2)) }, signals: levels, rules: labRules, seeds: labSeeds, baseSeed: labSeedBase, matrixSeed, gMax: labGMax, sustain: 5 };
+  }, [cfg, preset, labLevels, labRules, labSeeds, labSeedBase, matrixSeed, labGMax, labM, labN]);
 
   const enumerable = canEnumerate(sweepCfg);
   const runSweep = useCallback(() => {
     stopSweep();
     if (!labRules.length || !canEnumerate(sweepCfg)) return;
     const id = (catalog.reduce((mx, r) => Math.max(mx, r.id), 0)) + 1;
-    const record: SweepRecord = { id, when: new Date().toISOString(), cfg: sweepCfg, results: [], done: false };
+    const record: SweepRecord = { id, when: new Date().toISOString(), cfg: sweepCfg, cells: [], count: 0, done: false };
     setCatalog(c => [record, ...c].slice(0, MAX_CATALOG));
     setSelectedRecord(id);
     setSelectedSignal(sweepCfg.signals.length - 1);
-    const append = (r: JobResult) => setCatalog(c => c.map(x => (x.id === id ? { ...x, results: [...x.results, r] } : x)));
-    const pool = new SweepPool(sweepCfg, append, () => { setCatalog(c => c.map(x => (x.id === id ? { ...x, done: true } : x))); setSweeping(false); poolRef.current = null; activeSweepRef.current = null; });
+    rowsRef.current = [];
+    lastPublishRef.current = 0;
+    const publish = () => setCatalog(c => c.map(x => (x.id === id
+      ? { ...x, cells: summarize(sweepCfg, rowsRef.current), count: rowsRef.current.length }
+      : x)));
+    const append = (r: JobResult) => {
+      rowsRef.current.push(r);
+      const now = performance.now();
+      if (now - lastPublishRef.current < PUBLISH_MS) return;   // the curve fills in, without 216 renders
+      lastPublishRef.current = now;
+      publish();
+    };
+    const pool = new SweepPool(sweepCfg, append, () => {
+      publish();
+      setCatalog(c => c.map(x => (x.id === id ? { ...x, done: true } : x)));
+      setSweeping(false); poolRef.current = null; activeSweepRef.current = null;
+    });
     poolRef.current = pool;
     activeSweepRef.current = id;
     setSweeping(true);
@@ -157,10 +185,20 @@ export default function SplitDecision() {
   const clearCatalog = useCallback(() => { stopSweep(); setCatalog([]); setSelectedRecord(null); }, [stopSweep, setCatalog]);
   useEffect(() => {
     // A record still marked running after a reload has no pool behind it.
-    setCatalog(c => (c.some(x => !x.done && x.id !== activeSweepRef.current) ? c.map(x => (!x.done && x.id !== activeSweepRef.current ? { ...x, done: true, stopped: true } : x)) : c));
+    setCatalog(c => (c.some(x => !x.done && x.id !== activeSweepRef.current)
+      ? c.map(x => (!x.done && x.id !== activeSweepRef.current ? { ...x, done: true, stopped: true } : x))
+      : c));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const shownRecord = catalog.find(r => r.id === selectedRecord) ?? catalog[0] ?? null;
+  // What the views draw. Records written by an older build stored raw per-run rows
+  // instead of summaries, so they have no `cells` to plot; a malformed one has no
+  // `cfg.base` to describe. Filtering here rather than in an effect matters: an effect
+  // runs after the first paint, so a stale record would crash the route before it ran.
+  const records = useMemo(
+    () => catalog.filter(r => r && Array.isArray((r as { cells?: unknown }).cells) && !!r.cfg?.base),
+    [catalog],
+  );
+  const shownRecord = records.find(r => r.id === selectedRecord) ?? records[0] ?? null;
 
   const onToggleCell = useCallback((i: number, j: number) => {
     setCustom(c => { const cur = c ?? inst; return { matrix: toggleCell(cur.matrix, i, j), planted: cur.planted }; });
@@ -276,7 +314,9 @@ export default function SplitDecision() {
         options={[{ value: 'signal', label: 'Signal sweep' }, { value: 'trap', label: 'Escape the trap' }]} />
       {preset === 'signal' ? (
         <>
-          <Note>Planted {pm}×{pn} (|R₁| = {r1c}, |C₁| = {c1c}) from the Matrix panel's sizes, at each signal level; every rule and seed at a level shares the same matrix. Judge, fitness, N, k, μ, σ come from the Judge and Reproduction panels.</Note>
+          <Note>The Lab plants its own {labM}×{labN} matrices — one per signal level, shared by every rule and seed at that level. These sizes are separate from the Matrix panel, so changing what you are watching never disables a sweep. Judge, fitness, N, k, μ and σ do come from the Judge and Reproduction panels.</Note>
+          <Slider label="Lab matrix rows" value={labM} min={4} max={16} step={1} onChange={v => setLabM(Math.round(v))} format={v => `${v}`} />
+          <Slider label="Lab matrix columns" value={labN} min={4} max={16} step={1} onChange={v => setLabN(Math.round(v))} format={v => `${v}`} />
           <Slider label="Signal levels (from 1 downward)" value={Math.max(2, Math.min(SIGNAL_LEVELS.length, labLevels))} min={2} max={SIGNAL_LEVELS.length} step={1} onChange={v => setLabLevels(Math.round(v))} format={v => `${v}`} />
         </>
       ) : (
@@ -296,8 +336,8 @@ export default function SplitDecision() {
       </div>
       <Slider label="Seeds per cell" value={labSeeds} min={4} max={32} step={4} onChange={v => setLabSeeds(Math.round(v))} format={v => `${v}`} />
       <Slider label="G_max — generations per run" value={labGMax} min={50} max={1000} step={50} onChange={v => setLabGMax(Math.round(v))} format={v => `${v}`} />
-      {!enumerable && <Note><b>Too big to score.</b> The Lab defines "reached" against the exact optimum, which the Exhaustive Bailiff enumerates only for m + n ≤ 20. Shrink the matrix in the Matrix panel to run a sweep.</Note>}
-      <div className="sd-status">{jobCount(sweepCfg)} runs · {evals >= 1e6 ? `${(evals / 1e6).toFixed(1)}M` : `${Math.round(evals / 1e3)}k`} evaluations · {HAS_WORKERS ? `${Math.min(poolSize(), jobCount(sweepCfg))} workers` : 'main thread (no Workers here)'}{sweeping && shownRecord ? ` · ${shownRecord.results.length}/${jobCount(shownRecord.cfg)} done` : ''}</div>
+      {!enumerable && <Note><b>Too big to score.</b> The Lab reads "reached" against the exact optimum, which the Exhaustive Bailiff enumerates only for rows + columns ≤ 20 (this one is {labM + labN}). Lower the Lab's own matrix sliders above to run a sweep.</Note>}
+      <div className="sd-status">{jobCount(sweepCfg)} runs · {evals >= 1e6 ? `${(evals / 1e6).toFixed(1)}M` : `${Math.round(evals / 1e3)}k`} evaluations · {HAS_WORKERS ? `${Math.min(poolSize(), jobCount(sweepCfg))} workers` : 'main thread (no Workers here)'}{sweeping && shownRecord ? ` · ${shownRecord.count}/${jobCount(shownRecord.cfg)} done` : ''}</div>
       <Note>The Lab matches evaluations per generation across rules, not lineages: the Prom's two sexes each hold about half the population.</Note>
     </>
   );
@@ -333,7 +373,7 @@ export default function SplitDecision() {
   const views: ViewDef[] = mode === 'lab' ? [
     {
       id: 'sweep', title: 'Sweep — the race', defaultRect: { x: 372, y: 16, w: 820, h: 700 },
-      node: <Sweep record={shownRecord} catalog={catalog} selectedSignal={selectedSignal} onSelectSignal={setSelectedSignal} onSelectRecord={setSelectedRecord} />,
+      node: <Sweep record={shownRecord} catalog={records} selectedSignal={selectedSignal} onSelectSignal={setSelectedSignal} onSelectRecord={setSelectedRecord} />,
     },
   ] : [
     {
@@ -358,17 +398,44 @@ export default function SplitDecision() {
   const layouts: LayoutDef[] = mode === 'lab' ? [
     { id: 'essentials', name: 'Essentials', sub: 'Judge · Reproduction · Sweep', icon: 'tune', open: { lab: { x: 84, y: 18 }, repro: { x: 84, y: 600, collapsed: true } } },
   ] : [
+    // Each layout moves the windows, not only the panels: three arrangements that
+    // leave the four views in the same places would make the Layout menu look broken.
     {
-      id: 'essentials', name: 'Essentials', sub: 'Judge · Matrix · Run', icon: 'tune',
+      id: 'essentials', name: 'Essentials', sub: 'The matrix and its trace', icon: 'tune',
       open: { score: { x: 84, y: 18 }, matrix: { x: 84, y: 330, collapsed: true }, run: { x: 84, y: 380 } },
-      views: { linkage: { open: false } },
+      views: {
+        arena: { x: 372, y: 16, w: 660, h: 640 },
+        trace: { x: 1048, y: 16, w: 336, h: 640 },
+        population: { open: false },
+        linkage: { open: false },
+      },
+    },
+    {
+      id: 'linkage', name: 'Linkage', sub: 'Matrix beside the correlation between loci', icon: 'grid',
+      open: { repro: { x: 84, y: 18 }, score: { x: 84, y: 452, collapsed: true } },
+      views: {
+        arena: { x: 372, y: 16, w: 500, h: 500 },
+        linkage: { x: 888, y: 16, w: 500, h: 500 },
+        trace: { x: 372, y: 532, w: 1016, h: 264 },
+        population: { open: false },
+      },
+    },
+    {
+      id: 'population', name: 'Population', sub: 'Every individual, with the trace', icon: 'layers',
+      open: { repro: { x: 84, y: 18 }, run: { x: 84, y: 452 } },
+      views: {
+        population: { x: 372, y: 16, w: 470, h: 780 },
+        arena: { x: 858, y: 16, w: 526, h: 460 },
+        trace: { x: 858, y: 492, w: 526, h: 304 },
+        linkage: { open: false },
+      },
     },
   ];
 
   const actions: ActionDef[] = mode === 'lab' ? [
     { id: 'run', icon: 'flask', label: 'Run sweep', primary: true, sectionId: 'lab', disabled: sweeping || labRules.length === 0 || !enumerable, onClick: runSweep },
     { id: 'stop', icon: 'pause', label: 'Stop', sectionId: 'lab', disabled: !sweeping, onClick: stopSweep },
-    { id: 'clear', icon: 'reset', label: 'Clear', sectionId: 'lab', disabled: catalog.length === 0, onClick: clearCatalog },
+    { id: 'clear', icon: 'reset', label: 'Clear', sectionId: 'lab', disabled: records.length === 0, onClick: clearCatalog },
   ] : [
     { id: 'play', icon: loop.playing ? 'pause' : 'play', label: loop.playing ? 'Pause' : 'Play', primary: true, active: loop.playing, sectionId: 'run', onClick: () => loop.setPlaying(p => !p) },
     { id: 'step', icon: 'step', label: 'Step', sectionId: 'run', disabled: loop.playing, onClick: loop.stepOnce },
@@ -376,7 +443,7 @@ export default function SplitDecision() {
   ];
 
   const subtitle = mode === 'lab'
-    ? `${spec.name} · ${preset === 'trap' ? 'escape the trap' : 'signal sweep'}${sweeping && shownRecord ? ` · ${shownRecord.results.length}/${jobCount(shownRecord.cfg)}` : ''}`
+    ? `${spec.name} · ${preset === 'trap' ? 'escape the trap' : 'signal sweep'}${sweeping && shownRecord ? ` · ${shownRecord.count}/${jobCount(shownRecord.cfg)}` : ''}`
     : `${ruleSpec.name} · ${spec.name} · gen ${snap?.gen ?? 0}${st ? ` · best ${sig2(st.bestRoundedFit)}` : ''}`;
   const modes: WorkspaceMode[] = [{ id: 'watch', label: 'Watch' }, { id: 'lab', label: 'Lab' }];
 

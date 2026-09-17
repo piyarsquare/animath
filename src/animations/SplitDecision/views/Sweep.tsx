@@ -9,13 +9,18 @@
 import React from 'react';
 import { RULES, type RuleId } from '../evolve';
 import { SCORES } from '../scores';
-import { reachedByGeneration, summarize, medianReached, jobCount, type JobResult, type SweepConfig, type CellSummary } from '../lab/sweep';
+import { reachedByGeneration, medianReached, jobCount, type SweepConfig, type CellSummary } from '../lab/sweep';
 
 export interface SweepRecord {
   id: number;
   when: string;
   cfg: SweepConfig;
-  results: JobResult[];
+  /** Per-(signal, rule) summaries — what the view draws and the only thing stored.
+   *  The raw per-run rows stay in a ref during the sweep: keeping 216 of them in
+   *  React state meant a re-render and a ~55 KB localStorage write per finished run. */
+  cells: CellSummary[];
+  /** Runs finished so far. */
+  count: number;
   done: boolean;
   /** Stopped before every job finished (Stop, leaving the Lab, or a reload). */
   stopped?: boolean;
@@ -45,7 +50,7 @@ function cellOf(cells: CellSummary[], s: number, r: number): CellSummary | undef
 
 export function Sweep({ record, catalog, selectedSignal, onSelectSignal, onSelectRecord }: Props) {
   const rec = record;
-  const cells = rec ? summarize(rec.cfg, rec.results) : [];
+  const cells = rec?.cells ?? [];
   const cfg = rec?.cfg ?? null;
   // The trap preset asks whether a rule can leave a strict local optimum at all, which
   // is a weaker and more discriminating event than reaching the global optimum.
@@ -60,7 +65,7 @@ export function Sweep({ record, catalog, selectedSignal, onSelectSignal, onSelec
       {!rec && <div className="sd-story">Press <b>Run sweep</b> to race the three worlds across planted signal strength, or pick the <b>Escape the trap</b> preset in the Lab panel.</div>}
       {rec && cfg && (
         <>
-          <div className="sd-status">sweep #{rec.id} · {describe(cfg)} · {rec.results.length}/{total} runs{rec.stopped ? ' · stopped' : rec.done ? '' : ' · running…'}</div>
+          <div className="sd-status">sweep #{rec.id} · {describe(cfg)} · {rec.count}/{total} runs{rec.stopped ? ' · stopped' : rec.done ? '' : ' · running…'}</div>
 
           {cfg.signals.length > 1 && (
             <>
@@ -115,7 +120,7 @@ export function Sweep({ record, catalog, selectedSignal, onSelectSignal, onSelec
               <thead><tr><th>#</th><th>instance</th><th>judge</th><th>N · k</th><th>seeds</th><th>G_max</th><th>reached at top signal</th></tr></thead>
               <tbody>
                 {catalog.map(r => {
-                  const cs = summarize(r.cfg, r.results);
+                  const cs = r.cells;
                   const top = r.cfg.signals.length - 1;
                   const isT = r.cfg.instance.kind === 'fixture' && r.cfg.instance.startAt !== null;
                   const reached = r.cfg.rules.map((rule, ri) => { const c = cellOf(cs, top, ri); const e = c ? (isT ? c.escaped : c.reached) : []; return `${RULES[rule].name.split(' ').pop()} ${c ? `${e.length}/${c.n}` : '—'}`; }).join(' · ');
