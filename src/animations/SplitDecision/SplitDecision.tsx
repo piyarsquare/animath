@@ -14,8 +14,8 @@ import { Kicker, StatGrid } from '../../chrome/readouts';
 import { usePersistentState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
 import { FIXTURES, PAGE50_TRAP_CUT, degrees, fixtureById, handshake, planted, toggleCell, type BinaryMatrix, type Cut } from './matrix';
-import { SCORES, SCORE_IDS, evaluate, exactOptimum, isStrictLocalOptimum, sexedYield, type ScoreId } from './scores';
-import { DEFAULT_CONFIG, ENGINE_VERSION, RULES, RULE_IDS, roundedCut, type EvolveConfig, type FitnessMode, type Payoff, type RuleId } from './evolve';
+import { SCORES, SCORE_IDS, evaluate, exactOptimum, isStrictLocalOptimum, sexedYield, type ScoreId, type YieldMode } from './scores';
+import { DEFAULT_CONFIG, ENGINE_VERSION, RULES, RULE_IDS, roundedCut, type EvolveConfig, type FitnessMode, type Payoff, type RuleId, type SexQuota } from './evolve';
 import { useWatchLoop } from './useWatchLoop';
 import { Arena, type LocusOrder } from './views/Arena';
 import { Linkage } from './views/Linkage';
@@ -65,6 +65,7 @@ export default function SplitDecision() {
   const [mu, setMu] = usePersistentState(`${NS}:mu`, DEFAULT_CONFIG.mu);
   const [sigma, setSigma] = usePersistentState(`${NS}:sigma`, DEFAULT_CONFIG.sigma);
   const [sexRatio, setSexRatio] = usePersistentState(`${NS}:sexRatio`, DEFAULT_CONFIG.sexRatio);
+  const [sexQuotaMode, setSexQuotaMode] = usePersistentState<SexQuota>(`${NS}:sexQuota`, DEFAULT_CONFIG.sexQuotaMode);
   const [seed, setSeed] = usePersistentState(`${NS}:seed`, DEFAULT_CONFIG.seed);
 
   /* ── the picture (Cells) ── */
@@ -74,6 +75,7 @@ export default function SplitDecision() {
   // is the shuffled order the matrix was generated in.
   const [orderMode, setOrderMode] = usePersistentState<OrderMode>(`${NS}:orderMode`, 'live');
   const [payoff, setPayoff] = usePersistentState<Payoff>(`${NS}:payoff`, 'shared');
+  const [yieldMode, setYieldMode] = usePersistentState<YieldMode>(`${NS}:yieldMode`, 'density');
   const [showPlanted, setShowPlanted] = usePersistentState(`${NS}:showPlanted`, true);
   const [tint, setTint] = usePersistentState(`${NS}:tint`, true);
   const [showSexes, setShowSexes] = usePersistentState(`${NS}:showSexes`, true);
@@ -120,9 +122,9 @@ export default function SplitDecision() {
   const shake = useMemo(() => handshake(M), [M]);
 
   const cfg: EvolveConfig = useMemo(() => ({
-    engine: ENGINE_VERSION, scoreId, fitness, payoff, samplesPerEval: 1, rule, N,
-    selection: { kind: 'tournament', k }, mu, sigma, sexRatio, seed,
-  }), [scoreId, fitness, payoff, rule, N, k, mu, sigma, sexRatio, seed]);
+    engine: ENGINE_VERSION, scoreId, fitness, payoff, yieldMode, samplesPerEval: 1, rule, N,
+    selection: { kind: 'tournament', k }, mu, sigma, sexRatio, sexQuotaMode, seed,
+  }), [scoreId, fitness, payoff, yieldMode, rule, N, k, mu, sigma, sexRatio, sexQuotaMode, seed]);
 
   const loop = useWatchLoop(M, d, cfg, optimum ? optimum.score : null);
   // The loop rebuilds when the matrix changes, but React renders the new size first:
@@ -143,12 +145,16 @@ export default function SplitDecision() {
     if (payoff !== 'sexed' || !consensus) return null;
     const cut = roundedCut(consensus);
     return {
-      row: sexedYield(M, cut, 'row'),
-      col: sexedYield(M, cut, 'col'),
+      row: sexedYield(M, cut, 'row', yieldMode),
+      col: sexedYield(M, cut, 'col', yieldMode),
+      // The share of the matrix's ones the two blocks hold between them. Under `count`
+      // this is exactly row + col; under `density` it is a separate figure, and the one
+      // that says whether the genders are cooperating or wrecking the pot.
+      captured: sexedYield(M, cut, 'row', 'count') + sexedYield(M, cut, 'col', 'count'),
       nR1: cut.z.reduce((a, b) => a + b, 0),
       nC1: cut.w.reduce((a, b) => a + b, 0),
     };
-  }, [payoff, consensus, M]);
+  }, [payoff, yieldMode, consensus, M]);
 
   // Leaving Watch pauses the population (it survives in the loop's ref); leaving the
   // Lab stops the pool. Unmount disposes it.
@@ -267,16 +273,33 @@ export default function SplitDecision() {
             </>}
       </Note>
       {payoff === 'sexed' && (
-        <Note>
-          Watch where this ends up: <b>the best position in this game is to not split at
-          all.</b> Put every column in C₁ and no rows in R₁ and the column gender's block,
-          R₂×C₁, becomes the whole matrix — it takes 100% and the row gender takes
-          nothing. Push both halves to "include everything" instead and R₂ and C₂ are both
-          empty, so both cross blocks are and nobody takes anything. Every judge scores
-          those cuts 0, because a split that puts everything on one side is not an answer;
-          a yield is not an answer, it is a payoff, so they are scored here. The Lab always
-          sweeps the shared judge — two yields are not one objective to reach.
-        </Note>
+        <>
+          <Pills label="Yield" value={yieldMode} onChange={setYieldMode}
+            options={[{ value: 'density', label: 'Density' }, { value: 'count', label: 'Count' }]} />
+          {yieldMode === 'density' ? (
+            <Note>
+              A gender's ones divided by the <b>cells of its own block</b>. Taking more
+              costs you the empty cells that come with it, so the pull is toward a block
+              that is <i>pure</i> rather than large — and on a clean checkerboard the pure
+              block is the true split, which is where both genders and the pot all peak at
+              once. On a noisy one they instead shrink onto whichever single row and column
+              happen to look best, keep a respectable density each, and let most of the 1s
+              fall outside both blocks.
+            </Note>
+          ) : (
+            <Note>
+              A gender's ones as a share of <b>every 1 in the matrix</b>, so taking more is
+              always better and <b>the best position is to not split at all</b>: put every
+              column in C₁ and no rows in R₁ and the column gender's block R₂×C₁ becomes
+              the whole matrix — 100% to it, nothing to the row gender. Push both halves to
+              "include everything" instead and both cross blocks are empty and nobody takes
+              anything. Every judge scores those cuts 0, because a split that puts
+              everything on one side is not an answer; a yield is not an answer, it is a
+              payoff, so they are scored here.
+            </Note>
+          )}
+          <Note>The Lab always sweeps the shared judge — two yields are not one objective to reach.</Note>
+        </>
       )}
     </>
   );
@@ -324,7 +347,21 @@ export default function SplitDecision() {
       <Note>k is the selection knob: a parent is the best of k draws, so it wins roughly the top 1/k of the population. k = 1 is pure drift; k = 16 at N = {N} is hard truncation, and canalizes in a fraction of the generations.</Note>
       <Slider label="Mutation rate μ per locus" value={mu} min={0} max={0.5} step={0.01} onChange={setMu} format={v => v.toFixed(2)} />
       <Slider label="Mutation step σ" value={sigma} min={0.01} max={0.5} step={0.01} onChange={setSigma} format={v => v.toFixed(2)} />
-      {rule === 'prom' && <Slider label="Sex ratio (row-sex fraction)" value={sexRatio} min={0.1} max={0.9} step={0.05} onChange={setSexRatio} format={v => v.toFixed(2)} />}
+      {rule === 'prom' && <>
+        <Slider label="Sex ratio (row-sex fraction)" value={sexRatio} min={0} max={1} step={0.01} onChange={setSexRatio} format={v => v.toFixed(2)} />
+        <Pills label="Sex quota" value={sexQuotaMode} onChange={setSexQuotaMode}
+          options={[{ value: 'exact', label: 'Enforced' }, { value: 'drift', label: 'Drifting' }]} />
+        <Note>
+          {sexQuotaMode === 'exact'
+            ? 'Every generation gets exactly that fraction row-sex, so runs are comparable — the composition is a setting, not an outcome.'
+            : <>Each birth is its own draw, so the realized ratio wanders. Push the ratio
+                far enough (or the population small enough) and the rare sex flickers out
+                — and a generation with only one sex present reproduces
+                <b> parthenogenetically</b>: one parent, both halves, like the Monastery.
+                With a fixed ratio that is a fluctuation, not a fate: the lost sex is back
+                in the next draw. A <i>heritable</i> ratio is what would let sex go for good.</>}
+        </Note>
+      </>}
       <div className="sd-row">
         <NumberInput label="Run seed" value={seed} onChange={v => setSeed(Math.round(v))} min={0} integer />
         <Button variant="secondary" icon="reset" onClick={() => setSeed(s => s + 1)} style={{ alignSelf: 'flex-end' }}>Next seed</Button>
@@ -358,22 +395,28 @@ export default function SplitDecision() {
           { k: 'reached (sustained 5 gens)', v: snap?.reachedAt !== null && snap?.reachedAt !== undefined ? `gen ${snap.reachedAt}` : optimum ? 'not yet' : '—' },
         ]),
         { k: 'same convention as best', v: st ? `${Math.round(st.conventionFraction * 100)}%` : '—' },
+        ...(rule === 'prom' ? [{
+          k: 'row-sex share (realized)',
+          v: st ? (st.rowShare === 0 || st.rowShare === 1 ? `${Math.round(st.rowShare * 100)}% — parthenogenetic` : `${Math.round(st.rowShare * 100)}%`) : '—',
+        }] : []),
       ]} />
       {payoff !== 'sexed' && <Note>"Reached" reads the fittest individual's <b>rounded</b> split, sustained for five generations — a lucky sample does not count. Entropy excludes zero-degree rows and columns, which no ones-only judge can see.</Note>}
       {payoff === 'sexed' && (
         <>
           <Kicker>the two genders</Kicker>
           <StatGrid stats={[
-            { k: 'row-gender yield (R₁×C₂)', v: yields ? `${Math.round(yields.row * 100)}%` : '—' },
-            { k: 'column-gender yield (R₂×C₁)', v: yields ? `${Math.round(yields.col * 100)}%` : '—' },
-            { k: 'captured between them', v: yields ? `${Math.round((yields.row + yields.col) * 100)}%` : '—' },
+            { k: `row-gender ${yieldMode} (R₁×C₂)`, v: yields ? `${Math.round(yields.row * 100)}%` : '—' },
+            { k: `column-gender ${yieldMode} (R₂×C₁)`, v: yields ? `${Math.round(yields.col * 100)}%` : '—' },
+            { k: 'ones captured between them', v: yields ? `${Math.round(yields.captured * 100)}%` : '—' },
             { k: 'rows included · columns included', v: yields ? `${yields.nR1} / ${M.m} · ${yields.nC1} / ${M.n}` : '—' },
           ]} />
           <Note>
-            Read off the population's consensus split, as a share of every 1 in the
-            matrix. <b>Captured</b> is the whole pot — what a shared judge maximizing the
-            edge count would get — and the first two rows are how the genders divided it.
-            Both starving is conflict; one at 100% is conquest.
+            Read off the population's consensus split. The first two rows are each
+            gender's own payoff; <b>ones captured between them</b> is the whole pot — what
+            a shared judge maximizing the edge count would get — and is the number that
+            says whether the two are cooperating. Under <b>density</b> a gender can score
+            well on a small pure block while the pot collapses; under <b>count</b> the two
+            yields ARE the pot, split between them.
           </Note>
           <Note>
             The judge's own readings are off while the payoff is sexed: an exact optimum

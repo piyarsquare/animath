@@ -186,6 +186,10 @@ export function evaluate(M: BinaryMatrix, d: Degrees, spec: ScoreSpec, cut: Cut)
 
 /* ── sexed yields: the two genders' separate payoffs ── */
 
+/** How a gender's captured ones are scored: as a share of every 1 in the matrix
+ *  (`count`), or as the density of its own block (`density`). */
+export type YieldMode = 'count' | 'density';
+
 /** What one gender captures, as a fraction of all the 1s in the matrix.
  *
  *  The **row** gender reads its row half as INCLUSION and its column half as
@@ -202,11 +206,23 @@ export function evaluate(M: BinaryMatrix, d: Degrees, spec: ScoreSpec, cut: Cut)
  *  not an answer, it is a payoff: each gender's individually-best move is to include
  *  its whole half, and where that leads has to be reachable and scoreable or the
  *  dynamic cannot be watched at all. */
-export function sexedYield(M: BinaryMatrix, cut: Cut, sex: 'row' | 'col'): number {
-  const total = M.ones.length;
-  if (total === 0) return 0;
+export function sexedYield(M: BinaryMatrix, cut: Cut, sex: 'row' | 'col', mode: YieldMode = 'count'): number {
   const t = blockTable(M, cut);
-  return (sex === 'row' ? t.N[0][1] : t.N[1][0]) / total;
+  const ones = sex === 'row' ? t.N[0][1] : t.N[1][0];
+  if (mode === 'count') {
+    const total = M.ones.length;
+    return total === 0 ? 0 : ones / total;
+  }
+  // Density: the ones divided by the CELLS of the block, not by all the ones in the
+  // matrix. Swallowing everything stops paying, because the empty cells come along with
+  // the ones — the whole-matrix block scores only the matrix's own background density,
+  // which any decent interior split beats. The price is the opposite temptation: a block
+  // shrunk to one dense cell also scores 1, so the pull is now toward small rather than
+  // large. Which of the two wins is an empirical question, and the answer is in the
+  // progress report — on a planted checkerboard the rows are equally dense, so there is
+  // little to gain by shrinking and the cooperative split holds.
+  const cells = sex === 'row' ? t.K[0][1] : t.K[1][0];
+  return cells === 0 ? 0 : ones / cells;
 }
 
 /* ── the Exhaustive Bailiff ── */

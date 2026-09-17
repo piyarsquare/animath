@@ -22,7 +22,7 @@
 
 import { mulberry32, type Rng } from '@/lib/rng';
 import { blockTable, isDegenerate, type BinaryMatrix, type Cut, type Degrees } from './matrix';
-import { SCORES, evaluate, sexedYield, type ScoreId } from './scores';
+import { SCORES, evaluate, sexedYield, type ScoreId, type YieldMode } from './scores';
 
 export const ENGINE_VERSION = 1;
 
@@ -31,6 +31,8 @@ export type RuleId = 'clonal' | 'mixer' | 'prom';
 export type FitnessMode = 'sampled' | 'rounded';
 /** Whether both genders are scored by the judge, or each by its own yield. */
 export type Payoff = 'shared' | 'sexed';
+/** Whether each generation's sex composition is enforced or drawn. */
+export type SexQuota = 'exact' | 'drift';
 
 export interface Genome { p: number[]; q: number[] }
 
@@ -50,6 +52,9 @@ export interface EvolveConfig {
    *  Lab sweeps). `sexed` — each gender is scored by its own cross-block yield
    *  instead, so the two halves face opposite selective pressures. */
   payoff: Payoff;
+  /** Only read when `payoff` is `sexed`: whether a gender's yield is the share of the
+   *  matrix's ones it captures, or the density of the block it captured them from. */
+  yieldMode: YieldMode;
   /** Phenotypes sampled per evaluation. Fixed at 1 (the canalization mechanism). */
   samplesPerEval: 1;
   rule: RuleId;
@@ -59,8 +64,11 @@ export interface EvolveConfig {
   /** Per-locus mutation probability and Gaussian step (reflected into [0, 1]). */
   mu: number;
   sigma: number;
-  /** Fraction of each generation born row-sex (a seeded quota, never a coin). */
+  /** Fraction of each generation born row-sex. */
   sexRatio: number;
+  /** `exact` enforces that fraction every generation; `drift` draws each birth, so the
+   *  realized ratio wanders and a sex can be lost (see `sexQuota` and `step`). */
+  sexQuotaMode: SexQuota;
   seed: number;
 }
 
@@ -69,6 +77,7 @@ export const DEFAULT_CONFIG: EvolveConfig = {
   scoreId: 'bernoulli',
   fitness: 'sampled',
   payoff: 'shared',
+  yieldMode: 'density',
   samplesPerEval: 1,
   rule: 'mixer',
   N: 128,
@@ -76,6 +85,7 @@ export const DEFAULT_CONFIG: EvolveConfig = {
   mu: 0.1,
   sigma: 0.1,
   sexRatio: 0.5,
+  sexQuotaMode: 'exact',
   seed: 1,
 };
 
@@ -138,7 +148,7 @@ export function evaluateIndividual(g: Genome, sex: Sex, M: BinaryMatrix, d: Degr
   // yield, so the two halves of the population are selected on opposite readings of
   // the same genome — see `sexedYield`.
   const fit = cfg.payoff === 'sexed'
-    ? sexedYield(M, cut, sex)
+    ? sexedYield(M, cut, sex, cfg.yieldMode)
     : evaluate(M, d, SCORES[cfg.scoreId], cut);
   return { p: g.p, q: g.q, sex, fit, cut };
 }
@@ -189,10 +199,22 @@ export const RULE_IDS: RuleId[] = ['clonal', 'mixer', 'prom'];
 
 /* ── the population ── */
 
-/** The sex quota for a generation: exactly round(N·r) row-sex (clamped so both sexes
- *  exist), in a seeded shuffled order. N − 1 draws. */
-export function sexQuota(N: number, ratio: number, rng: Rng): Sex[] {
-  const nRow = Math.min(N - 1, Math.max(1, Math.round(N * ratio)));
+/** The sexes of one generation.
+ *
+ *  `exact` — the quota: exactly round(N·r) row-sex, in a seeded shuffled order, N − 1
+ *  draws. The composition of every generation is then identical, which is what makes
+ *  runs comparable.
+ *
+ *  `drift` — each birth is its own draw at probability r, so the realized ratio is
+ *  binomial around it and **a sex can be missing altogether**. That is the point of
+ *  the mode: at a lopsided ratio (or a small population) the rare sex flickers out,
+ *  and a two-sex rule with only one sex present has to do something. See `step`:
+ *  it reproduces parthenogenetically.
+ *
+ *  Neither mode clamps. round(N·r) at r = 0 is zero row-sex, and that is allowed. */
+export function sexQuota(N: number, ratio: number, rng: Rng, mode: SexQuota = 'exact'): Sex[] {
+  if (mode === 'drift') return Array.from({ length: N }, () => (rng() < ratio ? 'row' : 'col'));
+  const nRow = Math.max(0, Math.min(N, Math.round(N * ratio)));
   const sexes: Sex[] = Array.from({ length: N }, (_, i) => (i < nRow ? 'row' : 'col'));
   for (let i = N - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [sexes[i], sexes[j]] = [sexes[j], sexes[i]]; }
   return sexes;
@@ -209,7 +231,7 @@ export function initPopulation(M: BinaryMatrix, d: Degrees, cfg: EvolveConfig, r
     const q = Array.from({ length: M.n }, () => rng());
     genomes.push({ p, q });
   }
-  const sexes = sexQuota(cfg.N, cfg.sexRatio, rng);
+  const sexes = sexQuota(cfg.N, cfg.sexRatio, rng, cfg.sexQuotaMode);
   return genomes.map((g, c) => evaluateIndividual(g, sexes[c], M, d, cfg, rng));
 }
 
@@ -227,15 +249,25 @@ export function step(pop: Individual[], M: BinaryMatrix, d: Degrees, cfg: Evolve
   const all = pop.map((_, i) => i);
   const rows = all.filter(i => pop[i].sex === 'row');
   const cols = all.filter(i => pop[i].sex === 'col');
-  const sexes = sexQuota(cfg.N, cfg.sexRatio, rng);
+  const sexes = sexQuota(cfg.N, cfg.sexRatio, rng, cfg.sexQuotaMode);
+  // A two-sex rule needs one parent of each sex. Under a drifting quota the rare sex
+  // can be missing entirely, and then the generation reproduces **parthenogenetically**:
+  // one parent, both halves transmitted, both halves mutated — the whiptail-lizard
+  // outcome, and the same operator the Monastery uses. Note this is a property of the
+  // generation, not an absorbing state: with a fixed ratio the lost sex reappears in the
+  // next draw. Making the ratio heritable is what would let sex be lost for good.
+  const parthenogenetic = rule.parents === 'sexed' && (rows.length === 0 || cols.length === 0);
   const children: Genome[] = [];
   for (let c = 0; c < cfg.N; c++) {
     let parents: Individual[];
-    if (rule.parents === 'one') parents = [tournament(pop, all, k, rng)];
+    if (rule.parents === 'one' || parthenogenetic) parents = [tournament(pop, all, k, rng)];
     else if (rule.parents === 'two') parents = [tournament(pop, all, k, rng), tournament(pop, all, k, rng)];
     else parents = [tournament(pop, rows, k, rng), tournament(pop, cols, k, rng)];
-    const g = rule.mate(parents, rng);
-    children.push(mutate(g, rule.mutationMask(sexes[c]), cfg.mu, cfg.sigma, rng));
+    const g = parthenogenetic
+      ? { p: parents[0].p.slice(), q: parents[0].q.slice() }
+      : rule.mate(parents, rng);
+    const mask = parthenogenetic ? { p: true, q: true } : rule.mutationMask(sexes[c]);
+    children.push(mutate(g, mask, cfg.mu, cfg.sigma, rng));
   }
   return children.map((g, c) => evaluateIndividual(g, sexes[c], M, d, cfg, rng));
 }
@@ -258,6 +290,10 @@ export interface GenStats {
    *  gender is empty (it never is: the quota clamps both to at least one). */
   meanFitRow: number;
   meanFitCol: number;
+  /** Fraction of the population born row-sex. Under an exact quota this is the setting;
+   *  under a drifting one it is what actually happened, and 0 or 1 means a sex is
+   *  missing — the generation reproduced parthenogenetically. */
+  rowShare: number;
 }
 
 /** The per-frame picture: everything above plus the population-level summaries the
@@ -369,6 +405,7 @@ export function genStats(pop: Individual[], gen: number, M: BinaryMatrix, d: Deg
     meanEntropy: meanEntropyOf(pop, d),
     meanFitRow: nRow ? sumRow / nRow : NaN,
     meanFitCol: nCol ? sumCol / nCol : NaN,
+    rowShare: pop.length ? nRow / pop.length : 0,
   };
 }
 

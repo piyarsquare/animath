@@ -260,7 +260,27 @@ describe('sexed yields', () => {
     for (const id of SCORE_IDS) expect(evaluate(M, degrees(M), SCORES[id], corner)).toBe(0);
   });
 
-  it('including more of your own half never costs you — the runaway is monotone', () => {
+  it('density scores the block, not the matrix — swallowing everything stops paying', () => {
+    // The whole-matrix block: every row included, every column excluded. Under `count`
+    // the row gender takes 100%; under `density` it takes only the matrix's own
+    // background density, which any purer interior block beats.
+    const all: Cut = { z: [1, 1], w: [0, 0] };
+    expect(sexedYield(M, all, 'row', 'count')).toBeCloseTo(1, 12);
+    expect(sexedYield(M, all, 'row', 'density')).toBeCloseTo(3 / 4, 12);   // 3 ones in 4 cells
+    // A block with no cells has no density and no ones: zero, not a division by zero.
+    expect(sexedYield(M, all, 'col', 'density')).toBe(0);
+    expect(Number.isFinite(sexedYield(M, { z: [0, 0], w: [0, 0] }, 'row', 'density'))).toBe(true);
+  });
+
+  it('density is bounded by 1 and reaches it on a pure block', () => {
+    // R₁={1}, C₂={0}: the single cell (1,0), which is a 1 → density exactly 1.
+    const pure: Cut = { z: [0, 1], w: [1, 0] };
+    expect(sexedYield(M, pure, 'row', 'density')).toBeCloseTo(1, 12);
+    // and that same block is a thin slice of the matrix's ones, so `count` rates it low
+    expect(sexedYield(M, pure, 'row', 'count')).toBeCloseTo(1 / 3, 12);
+  });
+
+  it('including more of your own half never costs you — the count runaway is monotone', () => {
     const base: Cut = { z: [0, 0], w: [0, 0] };
     const more: Cut = { z: [1, 0], w: [0, 0] };
     const most: Cut = { z: [1, 1], w: [0, 0] };

@@ -55,11 +55,14 @@ describe('operators', () => {
     expect(draws).toBe(3);
     expect(tournament(pop, [0, 1], 2, () => 0).fit).toBe(0);
   });
-  it('the sex quota is exact and both sexes always exist', () => {
+  it('the enforced sex quota is exactly round(N·r) — it no longer clamps', () => {
     const q = sexQuota(64, 0.5, mulberry32(1));
     expect(q.filter(s => s === 'row').length).toBe(32);
-    expect(sexQuota(10, 0.05, mulberry32(1)).filter(s => s === 'row').length).toBe(1);
-    expect(sexQuota(10, 0.99, mulberry32(1)).filter(s => s === 'row').length).toBe(9);
+    // These two used to be clamped to [1, N−1] to guarantee both sexes. That guarantee
+    // is gone on purpose: losing a sex is the parthenogenesis experiment, and `step`
+    // handles the empty side (see 'the sex quota, relaxed' below).
+    expect(sexQuota(10, 0.05, mulberry32(1)).filter(s => s === 'row').length).toBe(1);  // round(0.5)
+    expect(sexQuota(10, 0.99, mulberry32(1)).filter(s => s === 'row').length).toBe(10); // round(9.9)
   });
   it('rounded and sampled phenotypes', () => {
     expect(roundedCut({ p: [0.2, 0.5, 0.51], q: [1, 0] })).toEqual({ z: [0, 0, 1], w: [1, 0] });
@@ -226,7 +229,7 @@ describe('ReachTracker and trap seeding', () => {
 describe('the sweep', () => {
   const sweep: SweepConfig = {
     engine: 1,
-    base: { engine: 1, scoreId: 'bernoulli', fitness: 'sampled', payoff: 'shared', samplesPerEval: 1, N: 16, selection: { kind: 'tournament', k: 2 }, mu: 0.1, sigma: 0.1, sexRatio: 0.5 },
+    base: { engine: 1, scoreId: 'bernoulli', fitness: 'sampled', payoff: 'shared', yieldMode: 'density', samplesPerEval: 1, N: 16, selection: { kind: 'tournament', k: 2 }, mu: 0.1, sigma: 0.1, sexRatio: 0.5, sexQuotaMode: 'exact' },
     instance: { kind: 'planted', m: 6, n: 6, r1: 3, c1: 3 }, signals: [0.2, 1], rules: ['clonal', 'mixer', 'prom'], seeds: 3, baseSeed: 9, matrixSeed: 3, gMax: 40, sustain: 3,
   };
   it('a sweep is gated on an enumerable optimum', () => {
@@ -274,5 +277,65 @@ describe('the sweep', () => {
     expect(medianReached({ ...cell, reached: [10, 20, 30, 40, 50, 60], censored: 6 })).toBeNull();
     // the same summary, read for escape instead of for reaching the optimum
     expect(medianReached({ ...cell, escaped: [5, 6, 7, 8, 9, 10, 11] }, 'escaped')).toBe(10);
+  });
+});
+
+describe('the sex quota, relaxed', () => {
+  const M = fixtureById('complete-8x10')!.matrix;
+  const d = degrees(M);
+  const cfg = (over: Partial<EvolveConfig>): EvolveConfig => ({
+    ...DEFAULT_CONFIG, rule: 'prom', N: 32, seed: runSeed(31, 0), ...over,
+  });
+
+  it('enforced: every generation gets exactly round(N·r) row-sex', () => {
+    for (const r of [0.25, 0.5, 0.75]) {
+      const sexes = sexQuota(40, r, mulberry32(5), 'exact');
+      expect(sexes.filter(s => s === 'row').length).toBe(Math.round(40 * r));
+    }
+  });
+
+  it('enforced no longer clamps: r = 0 is an all-column generation', () => {
+    expect(sexQuota(16, 0, mulberry32(5), 'exact').every(s => s === 'col')).toBe(true);
+    expect(sexQuota(16, 1, mulberry32(5), 'exact').every(s => s === 'row')).toBe(true);
+  });
+
+  it('drifting: the realized ratio varies between generations', () => {
+    const rng = mulberry32(7);
+    const counts = Array.from({ length: 12 }, () => sexQuota(32, 0.5, rng, 'drift').filter(s => s === 'row').length);
+    expect(new Set(counts).size).toBeGreaterThan(1);          // not a fixed quota
+    const mean = counts.reduce((a, b) => a + b, 0) / counts.length;
+    expect(Math.abs(mean - 16)).toBeLessThan(4);              // but centered on it
+  });
+
+  it('a lone sex reproduces parthenogenetically instead of crashing', () => {
+    // r = 0 leaves no row-sex at all, so the Prom has no row parent to draw.
+    const c = cfg({ sexRatio: 0, sexQuotaMode: 'exact' });
+    const rng = makeRng(c);
+    let pop = initPopulation(M, d, c, rng);
+    expect(pop.every(x => x.sex === 'col')).toBe(true);
+    expect(() => { for (let g = 0; g < 5; g++) pop = step(pop, M, d, c, rng); }).not.toThrow();
+    expect(pop).toHaveLength(c.N);
+    expect(pop.every(x => x.p.every(Number.isFinite) && x.q.every(Number.isFinite))).toBe(true);
+  });
+
+  it('parthenogenesis mutates BOTH halves — nothing is a passenger with one parent', () => {
+    // The Prom normally freezes the half a child will not transmit. Alone, it transmits
+    // both, so both must move: a run with no row-sex still changes its p values.
+    const c = cfg({ sexRatio: 0, sexQuotaMode: 'exact', mu: 1, sigma: 0.3 });
+    const rng = makeRng(c);
+    let pop = initPopulation(M, d, c, rng);
+    const before = pop.map(x => x.p.join(','));
+    for (let g = 0; g < 3; g++) pop = step(pop, M, d, c, rng);
+    expect(pop.map(x => x.p.join(',')).some((s, i) => s !== before[i])).toBe(true);
+  });
+
+  it('rowShare reports what actually happened, and reads 0 when a sex is gone', () => {
+    const c = cfg({ sexRatio: 0, sexQuotaMode: 'exact' });
+    const rng = makeRng(c);
+    const pop = initPopulation(M, d, c, rng);
+    expect(genStats(pop, 0, M, d, c).rowShare).toBe(0);
+    const c2 = cfg({ sexRatio: 0.25, sexQuotaMode: 'exact' });
+    const pop2 = initPopulation(M, d, c2, makeRng(c2));
+    expect(genStats(pop2, 0, M, d, c2).rowShare).toBeCloseTo(0.25, 10);
   });
 });

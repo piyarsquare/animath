@@ -64,7 +64,7 @@ export function Trace({ history, optimum, plantedScore, units, sexed = false }: 
   return (
     <div className="sd-trace">
       <div className="sd-tr-head">
-        <b>{sexed ? 'yield' : 'fitness'}</b> <span className="u">({sexed ? 'share of all the 1s' : units})</span>
+        <b>{sexed ? 'yield' : 'fitness'}</b> <span className="u">({sexed ? 'per gender' : units})</span>
         {sexed
           ? <><span className="lg l-best">row gender</span><span className="lg l-mean">column gender</span></>
           : <><span className="lg l-best">best (rounded)</span><span className="lg l-mean">mean</span></>}
