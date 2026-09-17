@@ -487,16 +487,20 @@ export default function SplitDecision() {
   );
 
   const sections: SectionDef[] = mode === 'lab' ? [
-    { id: 'score', title: 'Judge', arch: 'subject', node: scoreNode, estHeight: 300 },
-    { id: 'repro', title: 'Reproduction', arch: 'drive', node: reproNode, estHeight: 420 },
+    { id: 'score', title: 'Judge', arch: 'subject', node: scoreNode, estHeight: 500 },
+    { id: 'repro', title: 'Reproduction', arch: 'drive', node: reproNode, estHeight: 480 },
     { id: 'lab', title: 'Sweep', arch: 'lab', node: labNode, estHeight: 540 },
   ] : [
-    { id: 'score', title: 'Judge', arch: 'subject', node: scoreNode, estHeight: 300 },
-    { id: 'matrix', title: 'Matrix', arch: 'domain', node: matrixNode, estHeight: source === 'planted' ? 520 : 260 },
-    { id: 'cells', title: 'Cells', arch: 'marks', node: cellsNode, estHeight: 210 },
-    { id: 'repro', title: 'Reproduction', arch: 'drive', node: reproNode, estHeight: 420 },
-    { id: 'run', title: 'Run', arch: 'playback', node: runNode, estHeight: 170 },
-    { id: 'readout', title: 'Readouts', arch: 'readout', node: readoutNode, estHeight: 330 },
+    // Measured heights (a card caps at ~497 and scrolls inside). Both the Everything
+    // packer and the viewport clamp read these, and the authored layouts below are
+    // placed from them: a stale estHeight is how the Judge panel ended up hidden under
+    // two other panels after it grew a Payoff control.
+    { id: 'score', title: 'Judge', arch: 'subject', node: scoreNode, estHeight: 500 },
+    { id: 'matrix', title: 'Matrix', arch: 'domain', node: matrixNode, estHeight: source === 'planted' ? 500 : 260 },
+    { id: 'cells', title: 'Cells', arch: 'marks', node: cellsNode, estHeight: 320 },
+    { id: 'repro', title: 'Reproduction', arch: 'drive', node: reproNode, estHeight: 480 },
+    { id: 'run', title: 'Run', arch: 'playback', node: runNode, estHeight: 215 },
+    { id: 'readout', title: 'Readouts', arch: 'readout', node: readoutNode, estHeight: 460 },
   ];
 
   // The locus order is shared by the Arena and the Linkage view so the two pictures
@@ -569,8 +573,12 @@ export default function SplitDecision() {
     // Each layout moves the windows, not only the panels: three arrangements that
     // leave the four views in the same places would make the Layout menu look broken.
     {
-      id: 'essentials', name: 'Essentials', sub: 'The matrix and its trace', icon: 'tune',
-      open: { score: { x: 84, y: 18 }, matrix: { x: 84, y: 330, collapsed: true }, run: { x: 84, y: 380 } },
+      id: 'essentials', name: 'Essentials', sub: 'Judge · Run · the matrix and its trace', icon: 'tune',
+      // Judge runs to the card cap (~497) and Run sits below it: 497 + 213 fits a
+      // 720px-tall viewport with nothing overlapping. Matrix used to ride along
+      // collapsed, but even its 48px header does not fit under those two on a
+      // laptop, and it is one rail click away.
+      open: { score: { x: 84, y: 18 }, run: { x: 84, y: 532 } },
       views: {
         arena: { x: 372, y: 16, w: 660, h: 640 },
         trace: { x: 1048, y: 16, w: 336, h: 640 },
@@ -580,7 +588,7 @@ export default function SplitDecision() {
     },
     {
       id: 'linkage', name: 'Linkage', sub: 'Matrix beside the correlation between loci', icon: 'grid',
-      open: { repro: { x: 84, y: 18 }, score: { x: 84, y: 452, collapsed: true } },
+      open: { repro: { x: 84, y: 18 }, score: { x: 84, y: 532, collapsed: true } },
       views: {
         arena: { x: 372, y: 16, w: 500, h: 500 },
         linkage: { x: 888, y: 16, w: 500, h: 500 },
@@ -590,7 +598,7 @@ export default function SplitDecision() {
     },
     {
       id: 'population', name: 'Population', sub: 'Every individual, with the trace', icon: 'layers',
-      open: { repro: { x: 84, y: 18 }, run: { x: 84, y: 452 } },
+      open: { repro: { x: 84, y: 18 }, run: { x: 84, y: 532 } },
       views: {
         population: { x: 372, y: 16, w: 470, h: 780 },
         arena: { x: 858, y: 16, w: 526, h: 460 },

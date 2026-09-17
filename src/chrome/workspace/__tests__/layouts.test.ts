@@ -53,6 +53,19 @@ describe('clampToViewport — authored geometry must stay on-stage', () => {
     expect(c.open.function.y).toBeGreaterThanOrEqual(8);
   });
 
+  it('clamps a collapsed panel by its header, not its open height', () => {
+    // Authored under a tall open panel: Function (400) at y:18, Playback collapsed
+    // at y:440. Clamped by Playback's OPEN height on a 600px stage it would be
+    // dragged up to 600-200-8 = 392 — on top of Function. It is a 48px header.
+    const s = ws({ open: { function: { x: 84, y: 18, z: 1 }, playback: { x: 84, y: 440, z: 2, collapsed: true } } });
+    const c = clampToViewport(s, tall, { w: 1400, h: 600 });
+    expect(c.open.playback.y).toBe(440);
+    expect(c.open.playback.collapsed).toBe(true);
+    // and the same panel open IS pulled up, since its body would run off the stage
+    const o = ws({ open: { function: { x: 84, y: 18, z: 1 }, playback: { x: 84, y: 440, z: 2 } } });
+    expect(clampToViewport(o, tall, { w: 1400, h: 600 }).open.playback.y).toBe(600 - 200 - 8);
+  });
+
   it('clamps a view rect into the stage and shrinks one that cannot fit', () => {
     const s = ws({ views: { plot: { x: 1300, y: 900, w: 700, h: 1200, z: 1 }, aux: { x: 780, y: 16, w: 300, h: 300, z: 2 } } });
     const c = clampToViewport(s, tall, { w: 1200, h: 700 });
