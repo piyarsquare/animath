@@ -17,9 +17,18 @@ function branchTitle(): Plugin {
   };
 }
 
+// Branch previews carry source maps; production does not. A crash reported from a
+// preview arrives as a minified frame (`assets/App-<hash>.js:162:31980`), which is
+// only actionable if the matching `.map` shipped beside it — and previews are where
+// crashes get reported from, often as a phone screenshot with no devtools.
+const PREVIEW_BUILD = !!process.env.CF_PAGES_BRANCH && process.env.CF_PAGES_BRANCH !== 'main';
+
 export default defineConfig({
   base: '/animath/',
   plugins: [react(), branchTitle()],
+  build: {
+    sourcemap: PREVIEW_BUILD,
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
