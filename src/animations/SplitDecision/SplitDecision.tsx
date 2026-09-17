@@ -15,7 +15,7 @@ import { usePersistentState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
 import { FIXTURES, PAGE50_TRAP_CUT, degrees, fixtureById, handshake, planted, toggleCell, type BinaryMatrix, type Cut } from './matrix';
 import { SCORES, SCORE_IDS, evaluate, exactOptimum, isStrictLocalOptimum, type ScoreId } from './scores';
-import { DEFAULT_CONFIG, ENGINE_VERSION, RULES, RULE_IDS, type EvolveConfig, type FitnessMode, type RuleId } from './evolve';
+import { DEFAULT_CONFIG, ENGINE_VERSION, RULES, RULE_IDS, roundedCut, type EvolveConfig, type FitnessMode, type RuleId } from './evolve';
 import { useWatchLoop } from './useWatchLoop';
 import { Arena, type LocusOrder } from './views/Arena';
 import { Linkage } from './views/Linkage';
@@ -30,6 +30,8 @@ const MAX_CELLS = 1600;
 type Source = 'planted' | 'fixture';
 type Mode = 'watch' | 'lab';
 type Preset = 'signal' | 'trap';
+/** How the loci are laid out in both pictures — see the `order` memo. */
+type OrderMode = 'live' | 'planted' | 'stored';
 const MAX_CATALOG = 12;
 /** Throttle for publishing sweep progress to React (ms). */
 const PUBLISH_MS = 250;
@@ -66,7 +68,11 @@ export default function SplitDecision() {
   const [seed, setSeed] = usePersistentState(`${NS}:seed`, DEFAULT_CONFIG.seed);
 
   /* ── the picture (Cells) ── */
-  const [sort, setSort] = usePersistentState(`${NS}:sort`, true);
+  // How the loci are laid out in the Arena and the correlation matrix. `live` is the
+  // self-sorting order the population discovers; `planted` freezes on the true cut, so
+  // nothing ever moves and what changes is the color filling into the blocks; `stored`
+  // is the shuffled order the matrix was generated in.
+  const [orderMode, setOrderMode] = usePersistentState<OrderMode>(`${NS}:orderMode`, 'live');
   const [showPlanted, setShowPlanted] = usePersistentState(`${NS}:showPlanted`, true);
   const [tint, setTint] = usePersistentState(`${NS}:tint`, true);
   const [showSexes, setShowSexes] = usePersistentState(`${NS}:showSexes`, true);
@@ -307,7 +313,20 @@ export default function SplitDecision() {
 
   const cellsNode = (
     <>
-      <Checkbox label="Sort rows and columns by the population mean" checked={sort} onChange={setSort} />
+      <Pills label="Locus order" value={orderMode} onChange={setOrderMode}
+        options={[
+          { value: 'live' as OrderMode, label: 'Live' },
+          // Planted needs a planted cut to group by; a painted matrix has none.
+          ...(inst.planted ? [{ value: 'planted' as OrderMode, label: 'Planted' }] : []),
+          { value: 'stored' as OrderMode, label: 'Stored' },
+        ]} />
+      <Note>
+        {orderMode === 'live'
+          ? 'Rows and columns follow the population mean, so the picture reorganizes as the population finds the split — the sort IS the discovery, and positions move while it converges.'
+          : orderMode === 'planted'
+            ? 'Frozen on the planted cut: nothing moves for the whole run, so what changes is the color filling into the blocks. It shows the answer from generation 0.'
+            : 'The order the matrix was generated in — shuffled, so the split is not visible in the layout and neither picture shows blocks.'}
+      </Note>
       <Checkbox label="Mark the planted classes on the edge strips" checked={showPlanted} onChange={setShowPlanted} />
       <Checkbox label="Tint the consensus cross blocks" checked={tint} onChange={setTint} />
       <Checkbox label="Mark sexes in the Population" checked={showSexes} onChange={setShowSexes} />
@@ -364,18 +383,43 @@ export default function SplitDecision() {
   ];
 
   // The locus order is shared by the Arena and the Linkage view so the two pictures
-  // line up. It follows the consensus genome, which refreshes on the loop's slow
-  // cadence, so this re-sorts a few times a second at most.
+  // line up, and it carries the block boundaries both of them rule.
+  //
+  //   live    — sort by the consensus genome, which refreshes on the loop's slow
+  //             cadence: the reorganizing IS the population's discovery, at the cost
+  //             of positions that move while it converges.
+  //   planted — group by the matrix's own planted cut, fixed for the whole run.
+  //             Nothing moves; the blocks are there from generation 0 and what
+  //             changes is the color filling into them.
+  //   stored  — the order the matrix was generated in (shuffled), so no grouping.
   const consensus = snap?.stats.consensus ?? null;
   const order: LocusOrder = useMemo(() => {
     const rows = Array.from({ length: M.m }, (_, i) => i);
     const cols = Array.from({ length: M.n }, (_, j) => j);
-    if (!sort || !consensus) return { rows, cols };
-    return {
-      rows: rows.sort((a, b) => (consensus.p[b] - consensus.p[a]) || (a - b)),
-      cols: cols.sort((a, b) => (consensus.q[b] - consensus.q[a]) || (a - b)),
+    // Group by a cut: members of the first class first, each class stable by index.
+    const group = (ids: number[], side: number[]) => {
+      const first = ids.filter(i => side[i] === 1);
+      const rest = ids.filter(i => side[i] !== 1);
+      return { ids: [...first, ...rest], at: first.length };
     };
-  }, [consensus, sort, M.m, M.n]);
+    if (orderMode === 'planted' && inst.planted) {
+      const r = group(rows, inst.planted.z), c = group(cols, inst.planted.w);
+      return { rows: r.ids, cols: c.ids, rowSplit: r.at, colSplit: c.at };
+    }
+    if (orderMode === 'live' && consensus) {
+      // Sorting by p̄ descending groups the rounded cut exactly (z = p̄ ≥ ½), so the
+      // boundary is just how many loci the consensus puts in the first class.
+      rows.sort((a, b) => (consensus.p[b] - consensus.p[a]) || (a - b));
+      cols.sort((a, b) => (consensus.q[b] - consensus.q[a]) || (a - b));
+      const cut = roundedCut(consensus);
+      return {
+        rows, cols,
+        rowSplit: rows.filter(i => cut.z[i] === 1).length,
+        colSplit: cols.filter(j => cut.w[j] === 1).length,
+      };
+    }
+    return { rows, cols, rowSplit: null, colSplit: null };
+  }, [consensus, orderMode, inst.planted, M.m, M.n]);
 
   const animate = !loop.playing || loop.gps <= 10;
   const views: ViewDef[] = mode === 'lab' ? [
@@ -387,7 +431,7 @@ export default function SplitDecision() {
     {
       id: 'arena', title: 'Arena — the matrix', defaultRect: { x: 372, y: 16, w: 560, h: 520 },
       node: <Arena M={M} d={d} snapshot={snap} planted={inst.planted} orientationBlind={spec.orientationBlind}
-        options={{ sort, showPlanted, tint, paint, animate }} order={order} onToggleCell={onToggleCell} />,
+        options={{ showPlanted, tint, paint, animate }} order={order} onToggleCell={onToggleCell} />,
     },
     {
       id: 'trace', title: 'Trace', defaultRect: { x: 948, y: 16, w: 440, h: 330 },

@@ -16,14 +16,24 @@ import { roundedCut, type Genome } from '../evolve';
 import type { WatchSnapshot } from '../useWatchLoop';
 
 export interface ArenaOptions {
-  sort: boolean;
   showPlanted: boolean;
   tint: boolean;
   paint: boolean;
   animate: boolean;
 }
 
-export interface LocusOrder { rows: number[]; cols: number[] }
+/** Display order for the loci, plus where the cut divides each half.
+ *
+ *  `rowSplit` is the index in `rows` at which the first group ends — so rows
+ *  `[0, rowSplit)` are R₁ and `[rowSplit, m)` are R₂ — and `null` when the order
+ *  does not group by the cut at all (the stored, shuffled order). The views draw
+ *  their block rules from it, so both pictures cut in the same places. */
+export interface LocusOrder {
+  rows: number[];
+  cols: number[];
+  rowSplit: number | null;
+  colSplit: number | null;
+}
 
 interface Props {
   M: BinaryMatrix;
@@ -134,7 +144,9 @@ export function Arena({ M, d, snapshot, planted, options, order, onToggleCell }:
     if (options.paint) onToggleCell(i, j); else setHover({ i, j });
   };
 
-  let caption = 'hover a cell · rows sort by p̄, columns by q̄';
+  let caption = order.rowSplit === null
+    ? 'hover a cell · stored order — the split is not in the layout'
+    : 'hover a cell · rows and columns grouped by the split, rule at the boundary';
   if (hover && cut) {
     const a = cut.z[hover.i] ? 'R₁' : 'R₂', b = cut.w[hover.j] ? 'C₁' : 'C₂';
     const role = cut.z[hover.i] !== cut.w[hover.j] ? 'cross block' : 'diagonal block';
@@ -148,6 +160,16 @@ export function Arena({ M, d, snapshot, planted, options, order, onToggleCell }:
         <div className="sd-strip-l" style={{ width: stripL - 4 }}>{rowBars}</div>
         <div className="sd-strip-t" style={{ height: stripT - 4 }}>{colBars}</div>
         {cells}
+        {/* The block rules: where the split divides the rows and the columns. Same
+            boundaries the correlation matrix rules, so the two pictures agree. */}
+        {order.rowSplit !== null && order.rowSplit > 0 && order.rowSplit < m && (
+          <div className="sd-blockrule sd-blockrule-h"
+            style={{ transform: `translate(${stripL}px, ${stripT + order.rowSplit * cs}px)`, width: n * cs }} />
+        )}
+        {order.colSplit !== null && order.colSplit > 0 && order.colSplit < n && (
+          <div className="sd-blockrule sd-blockrule-v"
+            style={{ transform: `translate(${stripL + order.colSplit * cs}px, ${stripT}px)`, height: m * cs }} />
+        )}
         {hover && (
           <>
             <div className="sd-hov-row" style={{ transform: `translate(${stripL}px, ${stripT + rowPos[hover.i] * cs}px)`, width: n * cs, height: cs }} />

@@ -32,6 +32,12 @@
 .sd-cbar .sd-pl { bottom: -7px; left: calc(50% - 2.5px); }
 .sd-pl.in { background: var(--data-4); border-color: var(--data-4); }
 .sd-hov-row, .sd-hov-col { position: absolute; left: 0; top: 0; pointer-events: none; box-sizing: border-box; border: 1px solid var(--fg); opacity: .55; }
+/* The split's boundary in the Arena — the same rule the correlation matrix draws,
+   so the two pictures cut in the same places. Neutral, never accent: it marks
+   structure in the data, not something you touch. */
+.sd-blockrule { position: absolute; left: 0; top: 0; pointer-events: none; background: var(--fg); opacity: .34; }
+.sd-blockrule-h { height: 1px; }
+.sd-blockrule-v { width: 1px; }
 .sd-caption { font-family: var(--font-mono); font-size: 11px; color: var(--dim); text-align: center; min-height: 14px; }
 
 /* ── Population (canvas: ~N×(m+n) genome cells, too many for elements) ── */
@@ -68,6 +74,7 @@
 .sd-note { font-size: 11.5px; line-height: 1.45; color: var(--dim); margin: 4px 0 2px; }
 .sd-note b { color: var(--fg); font-weight: 600; }
 .sd-note code { font-family: var(--font-mono); font-size: 11px; color: var(--fg); }
+.sd-note.dim { color: var(--dim-2); }
 .sd-status { font-family: var(--font-mono); font-size: 11.5px; color: var(--dim); margin: 2px 0 6px; }
 .sd-status b { color: var(--fg); }
 .sd-row { display: flex; gap: 8px; }
