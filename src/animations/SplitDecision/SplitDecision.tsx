@@ -267,10 +267,16 @@ export default function SplitDecision() {
             </>}
       </Note>
       {payoff === 'sexed' && (
-        <Note>A degenerate cut is allowed here, unlike every judge: "include my whole
-          half" is each gender's individually-best move, and where that leads is the
-          experiment. The Lab always sweeps the shared judge — two yields are not one
-          objective to reach.</Note>
+        <Note>
+          Watch where this ends up: <b>the best position in this game is to not split at
+          all.</b> Put every column in C₁ and no rows in R₁ and the column gender's block,
+          R₂×C₁, becomes the whole matrix — it takes 100% and the row gender takes
+          nothing. Push both halves to "include everything" instead and R₂ and C₂ are both
+          empty, so both cross blocks are and nobody takes anything. Every judge scores
+          those cuts 0, because a split that puts everything on one side is not an answer;
+          a yield is not an answer, it is a payoff, so they are scored here. The Lab always
+          sweeps the shared judge — two yields are not one objective to reach.
+        </Note>
       )}
     </>
   );
