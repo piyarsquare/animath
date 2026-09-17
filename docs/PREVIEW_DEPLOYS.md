@@ -51,6 +51,17 @@ reflects the branch on Cloudflare preview builds: a Vite plugin (`branchTitle` i
 subdomain, e.g. `claude-trees-and-nets · animath`). Production (`main`) and local
 builds keep the plain `animath` title.
 
+### Source maps on previews
+
+Previews are where crashes get reported from, often as a phone screenshot with no
+devtools — so preview builds ship **source maps** and production does not
+(`build.sourcemap` in `vite.config.ts`, gated on the same `CF_PAGES_BRANCH` the
+title plugin reads, and off for `main`). A crash on a preview shows its top stack
+frames right in the route error panel (`chrome/RouteBoundary.tsx`), shortened to
+`name (chunk.js:line:col)` with a **Copy details** button; the matching `.map`
+beside that chunk carries `sourcesContent`, so the frame maps back to a source
+line without a local rebuild.
+
 ### What about the existing piyarsquare.github.io URL?
 
 It keeps working unchanged. The two deployments are independent:
