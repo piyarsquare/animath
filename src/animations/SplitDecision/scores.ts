@@ -184,6 +184,31 @@ export function evaluate(M: BinaryMatrix, d: Degrees, spec: ScoreSpec, cut: Cut)
   return spec.score(t, d, { m: M.m, n: M.n });
 }
 
+/* ── sexed yields: the two genders' separate payoffs ── */
+
+/** What one gender captures, as a fraction of all the 1s in the matrix.
+ *
+ *  The **row** gender reads its row half as INCLUSION and its column half as
+ *  EXCLUSION, so it captures the ones in (rows it includes) × (columns it excludes)
+ *  — the block R₁ × C₂. The **column** gender reads the two halves the other way
+ *  round and captures R₂ × C₁. Those are the two cross blocks, so the genders are
+ *  dividing one pot: their yields sum to exactly the bipartite edge count that *Cut
+ *  and Run* scores. Hence the two faces of the regime — they want the same cut to be
+ *  a good cut (cooperation), and they want opposite sides of every locus
+ *  (conflict).
+ *
+ *  **No degenerate guard here, deliberately.** Every other judge zeroes a cut with an
+ *  empty class, because a "split" that splits nothing is not an answer. A yield is
+ *  not an answer, it is a payoff: each gender's individually-best move is to include
+ *  its whole half, and where that leads has to be reachable and scoreable or the
+ *  dynamic cannot be watched at all. */
+export function sexedYield(M: BinaryMatrix, cut: Cut, sex: 'row' | 'col'): number {
+  const total = M.ones.length;
+  if (total === 0) return 0;
+  const t = blockTable(M, cut);
+  return (sex === 'row' ? t.N[0][1] : t.N[1][0]) / total;
+}
+
 /* ── the Exhaustive Bailiff ── */
 
 export interface Optimum {

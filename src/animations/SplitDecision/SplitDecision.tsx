@@ -10,12 +10,12 @@ import './splitDecision.css';
 import Workspace from '../../chrome/workspace/Workspace';
 import type { ActionDef, LayoutDef, SectionDef, ViewDef, WorkspaceMode } from '../../chrome/workspace/types';
 import { Slider, Pills, Select, Checkbox, NumberInput, Button, Note } from '../../components/ControlPanel';
-import { StatGrid } from '../../chrome/readouts';
+import { Kicker, StatGrid } from '../../chrome/readouts';
 import { usePersistentState } from '../../lib/usePersistentState';
 import explainerText from './EXPLAINER.md?raw';
 import { FIXTURES, PAGE50_TRAP_CUT, degrees, fixtureById, handshake, planted, toggleCell, type BinaryMatrix, type Cut } from './matrix';
-import { SCORES, SCORE_IDS, evaluate, exactOptimum, isStrictLocalOptimum, type ScoreId } from './scores';
-import { DEFAULT_CONFIG, ENGINE_VERSION, RULES, RULE_IDS, roundedCut, type EvolveConfig, type FitnessMode, type RuleId } from './evolve';
+import { SCORES, SCORE_IDS, evaluate, exactOptimum, isStrictLocalOptimum, sexedYield, type ScoreId } from './scores';
+import { DEFAULT_CONFIG, ENGINE_VERSION, RULES, RULE_IDS, roundedCut, type EvolveConfig, type FitnessMode, type Payoff, type RuleId } from './evolve';
 import { useWatchLoop } from './useWatchLoop';
 import { Arena, type LocusOrder } from './views/Arena';
 import { Linkage } from './views/Linkage';
@@ -73,6 +73,7 @@ export default function SplitDecision() {
   // nothing ever moves and what changes is the color filling into the blocks; `stored`
   // is the shuffled order the matrix was generated in.
   const [orderMode, setOrderMode] = usePersistentState<OrderMode>(`${NS}:orderMode`, 'live');
+  const [payoff, setPayoff] = usePersistentState<Payoff>(`${NS}:payoff`, 'shared');
   const [showPlanted, setShowPlanted] = usePersistentState(`${NS}:showPlanted`, true);
   const [tint, setTint] = usePersistentState(`${NS}:tint`, true);
   const [showSexes, setShowSexes] = usePersistentState(`${NS}:showSexes`, true);
@@ -119,9 +120,9 @@ export default function SplitDecision() {
   const shake = useMemo(() => handshake(M), [M]);
 
   const cfg: EvolveConfig = useMemo(() => ({
-    engine: ENGINE_VERSION, scoreId, fitness, samplesPerEval: 1, rule, N,
+    engine: ENGINE_VERSION, scoreId, fitness, payoff, samplesPerEval: 1, rule, N,
     selection: { kind: 'tournament', k }, mu, sigma, sexRatio, seed,
-  }), [scoreId, fitness, rule, N, k, mu, sigma, sexRatio, seed]);
+  }), [scoreId, fitness, payoff, rule, N, k, mu, sigma, sexRatio, seed]);
 
   const loop = useWatchLoop(M, d, cfg, optimum ? optimum.score : null);
   // The loop rebuilds when the matrix changes, but React renders the new size first:
@@ -133,6 +134,21 @@ export default function SplitDecision() {
   const snap = raw && raw.stats.consensus.p.length === M.m && raw.stats.consensus.q.length === M.n
     ? raw
     : null;
+  const consensus = snap?.stats.consensus ?? null;
+
+  // The two genders' yields off the population's consensus split — the instrument for
+  // the sexed regime. Cheap (one block table), and on the slow cadence, since the
+  // consensus only refreshes there.
+  const yields = useMemo(() => {
+    if (payoff !== 'sexed' || !consensus) return null;
+    const cut = roundedCut(consensus);
+    return {
+      row: sexedYield(M, cut, 'row'),
+      col: sexedYield(M, cut, 'col'),
+      nR1: cut.z.reduce((a, b) => a + b, 0),
+      nC1: cut.w.reduce((a, b) => a + b, 0),
+    };
+  }, [payoff, consensus, M]);
 
   // Leaving Watch pauses the population (it survives in the loop's ref); leaving the
   // Lab stops the pool. Unmount disposes it.
@@ -157,7 +173,11 @@ export default function SplitDecision() {
   }, []);
 
   const sweepCfg: SweepConfig = useMemo(() => {
-    const { rule: _rule, seed: _seed, ...base } = cfg;
+    // The Lab reads "reached" against a single exact optimum, which only exists for a
+    // shared judge: sexed yields are two objectives, not one, so a sweep always runs
+    // the shared payoff whatever Watch mode is set to.
+    const { rule: _rule, seed: _seed, ...rest } = cfg;
+    const base = { ...rest, payoff: 'shared' as const };
     const levels = SIGNAL_LEVELS.slice(SIGNAL_LEVELS.length - Math.max(2, Math.min(SIGNAL_LEVELS.length, labLevels)));
     return preset === 'trap'
       ? { engine: ENGINE_VERSION, base: { ...base, scoreId: 'modularity' }, instance: { kind: 'fixture', id: 'page50-4x4', startAt: PAGE50_TRAP_CUT }, signals: [0], rules: labRules, seeds: labSeeds, baseSeed: labSeedBase, matrixSeed, gMax: labGMax, sustain: 5 }
@@ -232,6 +252,26 @@ export default function SplitDecision() {
       <Pills label="Fitness" value={fitness} onChange={setFitness}
         options={[{ value: 'sampled', label: 'Sampled' }, { value: 'rounded', label: 'Rounded' }]} />
       <Note>Sampled draws one split from the genome's probabilities (the canalization mechanism); Rounded scores the rounded genome.</Note>
+      <Pills label="Payoff" value={payoff} onChange={setPayoff}
+        options={[{ value: 'shared', label: 'Shared judge' }, { value: 'sexed', label: 'Sexed yields' }]} />
+      <Note>
+        {payoff === 'shared'
+          ? 'Every individual is scored by the judge above — one objective, the same for everyone.'
+          : <>
+              <b>The judge above is not being used.</b> Each gender is scored by what it
+              captures instead: the <b>row</b> gender reads its rows as inclusion and its
+              columns as exclusion, taking the ones in R₁×C₂; the <b>column</b> gender
+              reads them the other way and takes R₂×C₁. Those are the two cross blocks,
+              so the genders split one pot — they want the same cut to be a good cut, and
+              they want opposite sides of every locus.
+            </>}
+      </Note>
+      {payoff === 'sexed' && (
+        <Note>A degenerate cut is allowed here, unlike every judge: "include my whole
+          half" is each gender's individually-best move, and where that leads is the
+          experiment. The Lab always sweeps the shared judge — two yields are not one
+          objective to reach.</Note>
+      )}
     </>
   );
 
@@ -274,7 +314,8 @@ export default function SplitDecision() {
         options={RULE_IDS.map(id => ({ value: id, label: RULES[id].name.replace(/^(Muller's |Hardy–Weinberg |Potter–De Jong )/, '') }))} />
       <Note><b>{ruleSpec.name}</b> — {ruleSpec.blurb}</Note>
       <Slider label="Population N" value={N} min={8} max={256} step={8} onChange={v => setN(Math.round(v))} format={v => `${v}`} />
-      <Slider label="Tournament size k (1 = drift)" value={k} min={1} max={6} step={1} onChange={v => setK(Math.round(v))} format={v => `${v}`} />
+      <Slider label="Tournament size k (1 = drift)" value={k} min={1} max={16} step={1} onChange={v => setK(Math.round(v))} format={v => `${v}`} />
+      <Note>k is the selection knob: a parent is the best of k draws, so it wins roughly the top 1/k of the population. k = 1 is pure drift; k = 16 at N = {N} is hard truncation, and canalizes in a fraction of the generations.</Note>
       <Slider label="Mutation rate μ per locus" value={mu} min={0} max={0.5} step={0.01} onChange={setMu} format={v => v.toFixed(2)} />
       <Slider label="Mutation step σ" value={sigma} min={0.01} max={0.5} step={0.01} onChange={setSigma} format={v => v.toFixed(2)} />
       {rule === 'prom' && <Slider label="Sex ratio (row-sex fraction)" value={sexRatio} min={0.1} max={0.9} step={0.05} onChange={setSexRatio} format={v => v.toFixed(2)} />}
@@ -299,15 +340,42 @@ export default function SplitDecision() {
     <>
       <StatGrid stats={[
         { k: 'generation', v: `${snap?.gen ?? 0}` },
-        { k: `best (rounded), ${spec.units}`, v: st ? sig2(st.bestRoundedFit) : '—' },
-        { k: 'mean fitness', v: st ? sig2(st.meanFit) : '—' },
         { k: 'entropy, bits/locus', v: st ? st.meanEntropy.toFixed(2) : '—' },
-        { k: 'exact optimum', v: optimum ? sig2(optimum.score) : 'too big to enumerate' },
-        { k: 'planted split', v: plantedScore !== null ? sig2(plantedScore) : '—' },
-        { k: 'reached (sustained 5 gens)', v: snap?.reachedAt !== null && snap?.reachedAt !== undefined ? `gen ${snap.reachedAt}` : optimum ? 'not yet' : '—' },
+        // Everything below is the judge's, so it comes off under sexed payoff: an
+        // "exact optimum" nobody is being scored against, and a "reached" that can
+        // never fire, are worse than no readout at all.
+        ...(payoff === 'sexed' ? [] : [
+          { k: `best (rounded), ${spec.units}`, v: st ? sig2(st.bestRoundedFit) : '—' },
+          { k: 'mean fitness', v: st ? sig2(st.meanFit) : '—' },
+          { k: 'exact optimum', v: optimum ? sig2(optimum.score) : 'too big to enumerate' },
+          { k: 'planted split', v: plantedScore !== null ? sig2(plantedScore) : '—' },
+          { k: 'reached (sustained 5 gens)', v: snap?.reachedAt !== null && snap?.reachedAt !== undefined ? `gen ${snap.reachedAt}` : optimum ? 'not yet' : '—' },
+        ]),
         { k: 'same convention as best', v: st ? `${Math.round(st.conventionFraction * 100)}%` : '—' },
       ]} />
-      <Note>"Reached" reads the fittest individual's <b>rounded</b> split, sustained for five generations — a lucky sample does not count. Entropy excludes zero-degree rows and columns, which no ones-only judge can see.</Note>
+      {payoff !== 'sexed' && <Note>"Reached" reads the fittest individual's <b>rounded</b> split, sustained for five generations — a lucky sample does not count. Entropy excludes zero-degree rows and columns, which no ones-only judge can see.</Note>}
+      {payoff === 'sexed' && (
+        <>
+          <Kicker>the two genders</Kicker>
+          <StatGrid stats={[
+            { k: 'row-gender yield (R₁×C₂)', v: yields ? `${Math.round(yields.row * 100)}%` : '—' },
+            { k: 'column-gender yield (R₂×C₁)', v: yields ? `${Math.round(yields.col * 100)}%` : '—' },
+            { k: 'captured between them', v: yields ? `${Math.round((yields.row + yields.col) * 100)}%` : '—' },
+            { k: 'rows included · columns included', v: yields ? `${yields.nR1} / ${M.m} · ${yields.nC1} / ${M.n}` : '—' },
+          ]} />
+          <Note>
+            Read off the population's consensus split, as a share of every 1 in the
+            matrix. <b>Captured</b> is the whole pot — what a shared judge maximizing the
+            edge count would get — and the first two rows are how the genders divided it.
+            Both starving is conflict; one at 100% is conquest.
+          </Note>
+          <Note>
+            The judge's own readings are off while the payoff is sexed: an exact optimum
+            nobody is scored against, and a "reached" that can never fire, would only
+            mislead. Switch back to <b>Shared judge</b> to get them.
+          </Note>
+        </>
+      )}
     </>
   );
 
@@ -392,7 +460,6 @@ export default function SplitDecision() {
   //             Nothing moves; the blocks are there from generation 0 and what
   //             changes is the color filling into them.
   //   stored  — the order the matrix was generated in (shuffled), so no grouping.
-  const consensus = snap?.stats.consensus ?? null;
   const order: LocusOrder = useMemo(() => {
     const rows = Array.from({ length: M.m }, (_, i) => i);
     const cols = Array.from({ length: M.n }, (_, j) => j);
@@ -435,7 +502,7 @@ export default function SplitDecision() {
     },
     {
       id: 'trace', title: 'Trace', defaultRect: { x: 948, y: 16, w: 440, h: 330 },
-      node: <Trace history={snap?.history ?? []} optimum={optimum ? optimum.score : null} plantedScore={plantedScore} units={spec.units} />,
+      node: <Trace history={snap?.history ?? []} optimum={optimum ? optimum.score : null} plantedScore={plantedScore} units={spec.units} sexed={payoff === 'sexed'} />,
     },
     {
       id: 'population', title: 'Population', defaultRect: { x: 948, y: 362, w: 440, h: 300 },
@@ -496,7 +563,12 @@ export default function SplitDecision() {
 
   const subtitle = mode === 'lab'
     ? `${spec.name} · ${preset === 'trap' ? 'escape the trap' : 'signal sweep'}${sweeping && shownRecord ? ` · ${shownRecord.count}/${jobCount(shownRecord.cfg)}` : ''}`
-    : `${ruleSpec.name} · ${spec.name} · gen ${snap?.gen ?? 0}${st ? ` · best ${sig2(st.bestRoundedFit)}` : ''}`;
+    : payoff === 'sexed'
+      // The judge's `best` is 0 for a degenerate cut, which is exactly where this
+      // regime tends to go — so the subtitle reports the yields the genders are
+      // actually being scored on.
+      ? `${ruleSpec.name} · sexed yields · gen ${snap?.gen ?? 0}${yields ? ` · row ${Math.round(yields.row * 100)}% · col ${Math.round(yields.col * 100)}%` : ''}`
+      : `${ruleSpec.name} · ${spec.name} · gen ${snap?.gen ?? 0}${st ? ` · best ${sig2(st.bestRoundedFit)}` : ''}`;
   const modes: WorkspaceMode[] = [{ id: 'watch', label: 'Watch' }, { id: 'lab', label: 'Lab' }];
 
   return (

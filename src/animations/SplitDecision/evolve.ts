@@ -22,13 +22,15 @@
 
 import { mulberry32, type Rng } from '@/lib/rng';
 import { blockTable, isDegenerate, type BinaryMatrix, type Cut, type Degrees } from './matrix';
-import { SCORES, evaluate, type ScoreId } from './scores';
+import { SCORES, evaluate, sexedYield, type ScoreId } from './scores';
 
 export const ENGINE_VERSION = 1;
 
 export type Sex = 'row' | 'col';
 export type RuleId = 'clonal' | 'mixer' | 'prom';
 export type FitnessMode = 'sampled' | 'rounded';
+/** Whether both genders are scored by the judge, or each by its own yield. */
+export type Payoff = 'shared' | 'sexed';
 
 export interface Genome { p: number[]; q: number[] }
 
@@ -44,6 +46,10 @@ export interface EvolveConfig {
   engine: number;
   scoreId: ScoreId;
   fitness: FitnessMode;
+  /** `shared` — every individual is scored by the judge (the default, and what the
+   *  Lab sweeps). `sexed` — each gender is scored by its own cross-block yield
+   *  instead, so the two halves face opposite selective pressures. */
+  payoff: Payoff;
   /** Phenotypes sampled per evaluation. Fixed at 1 (the canalization mechanism). */
   samplesPerEval: 1;
   rule: RuleId;
@@ -62,6 +68,7 @@ export const DEFAULT_CONFIG: EvolveConfig = {
   engine: ENGINE_VERSION,
   scoreId: 'bernoulli',
   fitness: 'sampled',
+  payoff: 'shared',
   samplesPerEval: 1,
   rule: 'mixer',
   N: 128,
@@ -127,7 +134,12 @@ export function roundedCut(g: Genome): Cut {
 
 export function evaluateIndividual(g: Genome, sex: Sex, M: BinaryMatrix, d: Degrees, cfg: EvolveConfig, rng: Rng): Individual {
   const cut = cfg.fitness === 'sampled' ? samplePhenotype(g, rng) : roundedCut(g);
-  const fit = evaluate(M, d, SCORES[cfg.scoreId], cut);
+  // Under `sexed` payoff the judge is replaced by the individual's OWN gender's
+  // yield, so the two halves of the population are selected on opposite readings of
+  // the same genome — see `sexedYield`.
+  const fit = cfg.payoff === 'sexed'
+    ? sexedYield(M, cut, sex)
+    : evaluate(M, d, SCORES[cfg.scoreId], cut);
   return { p: g.p, q: g.q, sex, fit, cut };
 }
 
@@ -240,6 +252,12 @@ export interface GenStats {
   bestRoundedFit: number;
   /** Mean over individuals of the mean per-locus binary entropy (bits), zero-degree loci excluded. */
   meanEntropy: number;
+  /** Mean fitness within each gender. Under a shared judge these are the same quantity
+   *  measured on two halves of the population; under `sexed` payoff they are the two
+   *  genders' separate yields, which is the whole point of that regime. NaN when a
+   *  gender is empty (it never is: the quota clamps both to at least one). */
+  meanFitRow: number;
+  meanFitCol: number;
 }
 
 /** The per-frame picture: everything above plus the population-level summaries the
@@ -335,13 +353,22 @@ export function meanEntropyOf(pop: Individual[], d: Degrees): number {
 
 /** The per-generation record. No canonicalization: this runs on every step. */
 export function genStats(pop: Individual[], gen: number, M: BinaryMatrix, d: Degrees, cfg: EvolveConfig): GenStats {
-  let bestIdx = 0, sum = 0;
-  for (let i = 0; i < pop.length; i++) { sum += pop[i].fit; if (pop[i].fit > pop[bestIdx].fit) bestIdx = i; }
+  let bestIdx = 0, sum = 0, sumRow = 0, nRow = 0, sumCol = 0, nCol = 0;
+  for (let i = 0; i < pop.length; i++) {
+    sum += pop[i].fit;
+    if (pop[i].sex === 'row') { sumRow += pop[i].fit; nRow++; } else { sumCol += pop[i].fit; nCol++; }
+    if (pop[i].fit > pop[bestIdx].fit) bestIdx = i;
+  }
   const best = pop[bestIdx];
   return {
     gen, bestFit: best.fit, meanFit: sum / pop.length, bestIdx,
+    // The rounded reading is the judge's, and stays the judge's even under sexed
+    // payoff: it is what "reached the optimum" is measured against, and two yields
+    // are not one objective.
     bestRoundedFit: evaluate(M, d, SCORES[cfg.scoreId], roundedCut(best)),
     meanEntropy: meanEntropyOf(pop, d),
+    meanFitRow: nRow ? sumRow / nRow : NaN,
+    meanFitCol: nCol ? sumCol / nCol : NaN,
   };
 }
 

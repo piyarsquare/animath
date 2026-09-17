@@ -30,6 +30,9 @@ export interface TracePoint {
   gen: number;
   best: number;
   mean: number;
+  /** Mean fitness within each gender — the two separate yields under sexed payoff. */
+  row: number;
+  col: number;
   entropy: number;
   neutral: number;
   rounded: number;
@@ -100,6 +103,7 @@ export function useWatchLoop(M: BinaryMatrix, d: Degrees, cfg: EvolveConfig, opt
     tracker.update(0, stats.bestRoundedFit);
     const point: TracePoint = {
       gen: 0, best: stats.bestRoundedFit, mean: stats.meanFit,
+      row: stats.meanFitRow, col: stats.meanFitCol,
       entropy: stats.meanEntropy, neutral: neutral.entropy, rounded: rounded.entropy,
     };
     return { main, neutral, rounded, gen: 0, history: [point], tracker, stats, fullAt: performance.now() };
@@ -119,6 +123,7 @@ export function useWatchLoop(M: BinaryMatrix, d: Degrees, cfg: EvolveConfig, opt
       s.tracker.update(s.gen, light.bestRoundedFit);
       s.history.push({
         gen: s.gen, best: light.bestRoundedFit, mean: light.meanFit,
+        row: light.meanFitRow, col: light.meanFitCol,
         entropy: light.meanEntropy, neutral: s.neutral.entropy, rounded: s.rounded.entropy,
       });
       if (s.history.length > MAX_HISTORY) {

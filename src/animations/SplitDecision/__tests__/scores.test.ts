@@ -6,7 +6,7 @@ import {
 } from '../matrix';
 import {
   SCORES, SCORE_IDS, evaluate, exactOptimum, isStrictLocalOptimum, sameSplit,
-  codeLength, noSplitCodeLength, log2Choose, H,
+  codeLength, noSplitCodeLength, log2Choose, H, sexedYield,
 } from '../scores';
 
 const fx = (id: string) => { const f = fixtureById(id)!; return { M: f.matrix, d: degrees(f.matrix), cut: f.planted as Cut }; };
@@ -224,5 +224,48 @@ describe('combinatorics helpers', () => {
     expect(log2Choose(16, 8)).toBeCloseTo(Math.log2(12870), 9);
     expect(log2Choose(5, 0)).toBe(0);
     expect(log2Choose(5, 6)).toBe(-Infinity);
+  });
+});
+
+describe('sexed yields', () => {
+  // A 2×2 with one 1 in each cross block and one on a diagonal block, so the three
+  // quantities are distinguishable by hand.
+  const M = fromRows(['01', '11']);          // (0,1)=1 · (1,0)=1 · (1,1)=1  → 3 ones
+  const cut: Cut = { z: [1, 0], w: [1, 0] }; // R₁={0} R₂={1} · C₁={0} C₂={1}
+
+  it('each gender takes its own cross block, as a share of all the ones', () => {
+    // row gender: rows it INCLUDES × columns it EXCLUDES = {0}×{1} → the 1 at (0,1)
+    expect(sexedYield(M, cut, 'row')).toBeCloseTo(1 / 3, 12);
+    // column gender: rows it EXCLUDES × columns it includes = {1}×{0} → the 1 at (1,0)
+    expect(sexedYield(M, cut, 'col')).toBeCloseTo(1 / 3, 12);
+  });
+
+  it('the two yields sum to the bipartite edge count — one pot, divided', () => {
+    for (const z of [[1, 0], [0, 1], [1, 1], [0, 0]]) {
+      for (const w of [[1, 0], [0, 1], [1, 1], [0, 0]]) {
+        const c: Cut = { z, w };
+        const t = blockTable(M, c);
+        const crossOnes = t.N[0][1] + t.N[1][0];
+        expect(sexedYield(M, c, 'row') + sexedYield(M, c, 'col')).toBeCloseTo(crossOnes / M.ones.length, 12);
+      }
+    }
+  });
+
+  it('a degenerate cut is scored, not zeroed — unlike every judge', () => {
+    // Every column excluded, every row included: the row gender takes the whole matrix.
+    const corner: Cut = { z: [1, 1], w: [0, 0] };
+    expect(sexedYield(M, corner, 'row')).toBeCloseTo(1, 12);
+    expect(sexedYield(M, corner, 'col')).toBeCloseTo(0, 12);
+    // and that same cut is worth exactly nothing to every judge
+    for (const id of SCORE_IDS) expect(evaluate(M, degrees(M), SCORES[id], corner)).toBe(0);
+  });
+
+  it('including more of your own half never costs you — the runaway is monotone', () => {
+    const base: Cut = { z: [0, 0], w: [0, 0] };
+    const more: Cut = { z: [1, 0], w: [0, 0] };
+    const most: Cut = { z: [1, 1], w: [0, 0] };
+    const y = (c: Cut) => sexedYield(M, c, 'row');
+    expect(y(more)).toBeGreaterThanOrEqual(y(base));
+    expect(y(most)).toBeGreaterThanOrEqual(y(more));
   });
 });

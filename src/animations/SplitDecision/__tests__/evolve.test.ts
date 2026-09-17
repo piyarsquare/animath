@@ -226,7 +226,7 @@ describe('ReachTracker and trap seeding', () => {
 describe('the sweep', () => {
   const sweep: SweepConfig = {
     engine: 1,
-    base: { engine: 1, scoreId: 'bernoulli', fitness: 'sampled', samplesPerEval: 1, N: 16, selection: { kind: 'tournament', k: 2 }, mu: 0.1, sigma: 0.1, sexRatio: 0.5 },
+    base: { engine: 1, scoreId: 'bernoulli', fitness: 'sampled', payoff: 'shared', samplesPerEval: 1, N: 16, selection: { kind: 'tournament', k: 2 }, mu: 0.1, sigma: 0.1, sexRatio: 0.5 },
     instance: { kind: 'planted', m: 6, n: 6, r1: 3, c1: 3 }, signals: [0.2, 1], rules: ['clonal', 'mixer', 'prom'], seeds: 3, baseSeed: 9, matrixSeed: 3, gMax: 40, sustain: 3,
   };
   it('a sweep is gated on an enumerable optimum', () => {

@@ -12,6 +12,11 @@ interface Props {
   optimum: number | null;
   plantedScore: number | null;
   units: string;
+  /** Under sexed payoff the two genders are scored by different quantities, so a
+   *  "best" and a "mean" over the whole population average two incomparable things.
+   *  The top chart then plots the two genders' own yields instead, and the judge's
+   *  reference lines come off — they belong to an objective nobody is being scored on. */
+  sexed?: boolean;
 }
 
 const W = 600, H = 150;
@@ -22,7 +27,7 @@ function path(pts: TracePoint[], y: (p: TracePoint) => number, xMax: number, yMi
   return pts.map((p, i) => `${i ? 'L' : 'M'}${sx(p.gen).toFixed(1)},${sy(y(p)).toFixed(1)}`).join(' ');
 }
 
-export function Trace({ history, optimum, plantedScore, units }: Props) {
+export function Trace({ history, optimum, plantedScore, units, sexed = false }: Props) {
   // The loop mutates one history array in place, so the memo keys on its length
   // (and the y-axis inputs) rather than its identity.
   const n = history.length;
@@ -32,9 +37,12 @@ export function Trace({ history, optimum, plantedScore, units }: Props) {
     const pts = history.filter((_, i) => i % k === 0);
     if (pts[pts.length - 1] !== history[n - 1]) pts.push(history[n - 1]);
     const xMax = Math.max(10, history[n - 1].gen);
-    const fitVals = pts.flatMap(p => [p.best, p.mean]);
-    if (optimum !== null) fitVals.push(optimum);
-    if (plantedScore !== null) fitVals.push(plantedScore);
+    const fitVals = sexed
+      ? pts.flatMap(p => [p.row, p.col]).filter(Number.isFinite)
+      : pts.flatMap(p => [p.best, p.mean]);
+    if (!sexed && optimum !== null) fitVals.push(optimum);
+    if (!sexed && plantedScore !== null) fitVals.push(plantedScore);
+    if (!fitVals.length) fitVals.push(0, 1);
     let fMin = Math.min(...fitVals), fMax = Math.max(...fitVals);
     if (fMax - fMin < 1e-9) { fMin -= 1; fMax += 1; }
     const pad = (fMax - fMin) * 0.06;
@@ -42,13 +50,13 @@ export function Trace({ history, optimum, plantedScore, units }: Props) {
     const eMax = 1.02;
     return {
       xMax, fMin, fMax,
-      dMean: path(pts, p => p.mean, xMax, fMin, fMax),
-      dBest: path(pts, p => p.best, xMax, fMin, fMax),
+      dMean: path(pts, p => (sexed ? p.col : p.mean), xMax, fMin, fMax),
+      dBest: path(pts, p => (sexed ? p.row : p.best), xMax, fMin, fMax),
       dNeut: path(pts, p => p.neutral, xMax, 0, eMax),
       dRound: path(pts, p => p.rounded, xMax, 0, eMax),
       dSamp: path(pts, p => p.entropy, xMax, 0, eMax),
     };
-  }, [history, n, optimum, plantedScore]);
+  }, [history, n, optimum, plantedScore, sexed]);
   if (!view) return <div className="sd-empty">No generations yet.</div>;
   const { xMax, fMin, fMax } = view;
   const sy = (v: number) => H - ((v - fMin) / (fMax - fMin)) * H;
@@ -56,14 +64,16 @@ export function Trace({ history, optimum, plantedScore, units }: Props) {
   return (
     <div className="sd-trace">
       <div className="sd-tr-head">
-        <b>fitness</b> <span className="u">({units})</span>
-        <span className="lg l-best">best (rounded)</span><span className="lg l-mean">mean</span>
-        {optimum !== null && <span className="lg l-opt">exact optimum {fmt(optimum)}</span>}
-        {plantedScore !== null && <span className="lg l-pl">planted {fmt(plantedScore)}</span>}
+        <b>{sexed ? 'yield' : 'fitness'}</b> <span className="u">({sexed ? 'share of all the 1s' : units})</span>
+        {sexed
+          ? <><span className="lg l-best">row gender</span><span className="lg l-mean">column gender</span></>
+          : <><span className="lg l-best">best (rounded)</span><span className="lg l-mean">mean</span></>}
+        {!sexed && optimum !== null && <span className="lg l-opt">exact optimum {fmt(optimum)}</span>}
+        {!sexed && plantedScore !== null && <span className="lg l-pl">planted {fmt(plantedScore)}</span>}
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="sd-chart">
-        {optimum !== null && <line className="ref opt" x1={0} x2={W} y1={sy(optimum)} y2={sy(optimum)} />}
-        {plantedScore !== null && <line className="ref pl" x1={0} x2={W} y1={sy(plantedScore)} y2={sy(plantedScore)} />}
+        {!sexed && optimum !== null && <line className="ref opt" x1={0} x2={W} y1={sy(optimum)} y2={sy(optimum)} />}
+        {!sexed && plantedScore !== null && <line className="ref pl" x1={0} x2={W} y1={sy(plantedScore)} y2={sy(plantedScore)} />}
         <path className="ln mean" d={view.dMean} />
         <path className="ln best" d={view.dBest} />
       </svg>
