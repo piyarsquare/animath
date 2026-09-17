@@ -6,6 +6,15 @@
  * read against. They live in a ref and advance inside one requestAnimationFrame
  * loop with an accumulator (generations per second × Δt).
  *
+ * The operator dials — tournament k, μ, σ, sex ratio, sex quota — are LIVE: moving one
+ * changes the next generation of the running population, so you can turn selection up
+ * on a population that has drifted and watch it canalize, and the trace bends where
+ * you turned it. Everything that defines a run rather than steers it — the matrix, the
+ * judge, fitness and payoff, the rule, N, the seed — still starts a fresh one, because
+ * a population evaluated under one judge is not a population under another, and a
+ * different N or rule is a different population. (A run with a dial turned mid-way is
+ * not reproducible from its seed alone; that is what live dials mean.)
+ *
  * Three cadences, deliberately separate, because the simulation is cheap and React
  * is not (a profile of a 24×24 / N = 256 run spent 44% of its time in the
  * reconciler and 8% in this engine):
@@ -46,7 +55,9 @@ export interface WatchSnapshot {
   reachedAt: number | null;
 }
 
-interface Line { cfg: EvolveConfig; rng: Rng; pop: Individual[]; entropy: number }
+/** One of the three lockstep populations. Its config is derived per step from the
+ *  live one (`variant`), so a dial turned mid-run reaches it on the next generation. */
+interface Line { variant: (live: EvolveConfig) => EvolveConfig; rng: Rng; pop: Individual[]; entropy: number }
 interface Sim {
   main: Line; neutral: Line; rounded: Line;
   gen: number; history: TracePoint[]; tracker: ReachTracker;
@@ -73,12 +84,17 @@ export function useWatchLoop(M: BinaryMatrix, d: Degrees, cfg: EvolveConfig, opt
   const [gps, setGps] = useState(20);
   const gpsRef = useRef(gps);
   gpsRef.current = gps;
-  const cfgKey = `${JSON.stringify(cfg)}|${M.m}x${M.n}|${hashCells(M.cells)}|${optimum}`;
+  // The latest config, read by every step: the live dials arrive through here without a
+  // rebuild. The rebuild key below deliberately leaves them out.
+  const cfgRef = useRef(cfg);
+  cfgRef.current = cfg;
+  const { selection: _k, mu: _mu, sigma: _sigma, sexRatio: _r, sexQuotaMode: _q, ...structural } = cfg;
+  const cfgKey = `${JSON.stringify(structural)}|${M.m}x${M.n}|${hashCells(M.cells)}|${optimum}`;
 
   /** Recompute the population-level picture, unless one is recent enough. */
   const refreshFull = useCallback((s: Sim, now: number, force = false) => {
     if (!force && now - s.fullAt < FULL_MS) return;
-    s.stats = fullStats(s.main.pop, s.gen, M, d, s.main.cfg);
+    s.stats = fullStats(s.main.pop, s.gen, M, d, s.main.variant(cfgRef.current));
     s.fullAt = now;
   }, [M, d]);
 
@@ -90,15 +106,18 @@ export function useWatchLoop(M: BinaryMatrix, d: Degrees, cfg: EvolveConfig, opt
   }, [refreshFull]);
 
   const build = useCallback((): Sim => {
-    const mk = (c: EvolveConfig): Line => {
+    const live = cfgRef.current;
+    const mk = (variant: Line['variant']): Line => {
+      const c = variant(live);
       const rng = makeRng(c);
       const pop = initPopulation(M, d, c, rng);
-      return { cfg: c, rng, pop, entropy: meanEntropyOf(pop, d) };
+      return { variant, rng, pop, entropy: meanEntropyOf(pop, d) };
     };
-    const main = mk(cfg);
-    const neutral = mk({ ...cfg, selection: { kind: 'tournament', k: 1 } });
-    const rounded = mk({ ...cfg, fitness: 'rounded' });
-    const stats = fullStats(main.pop, 0, M, d, cfg);
+    const main = mk(c => c);
+    // The neutral twin pins k = 1 whatever the dial says; the rounded twin pins fitness.
+    const neutral = mk(c => ({ ...c, selection: { kind: 'tournament', k: 1 } }));
+    const rounded = mk(c => ({ ...c, fitness: 'rounded' }));
+    const stats = fullStats(main.pop, 0, M, d, live);
     const tracker = new ReachTracker(optimum, sustain);
     tracker.update(0, stats.bestRoundedFit);
     const point: TracePoint = {
@@ -107,17 +126,19 @@ export function useWatchLoop(M: BinaryMatrix, d: Degrees, cfg: EvolveConfig, opt
       entropy: stats.meanEntropy, neutral: neutral.entropy, rounded: rounded.entropy,
     };
     return { main, neutral, rounded, gen: 0, history: [point], tracker, stats, fullAt: performance.now() };
-  }, [M, d, cfg, optimum, sustain]);
+  }, [M, d, optimum, sustain]);
 
   const advance = useCallback((n: number) => {
     const s = simRef.current;
     if (!s) return;
+    const live = cfgRef.current;
+    const mainCfg = s.main.variant(live), neutralCfg = s.neutral.variant(live), roundedCfg = s.rounded.variant(live);
     for (let i = 0; i < n; i++) {
       s.gen++;
-      s.main.pop = step(s.main.pop, M, d, s.main.cfg, s.main.rng);
-      s.neutral.pop = step(s.neutral.pop, M, d, s.neutral.cfg, s.neutral.rng);
-      s.rounded.pop = step(s.rounded.pop, M, d, s.rounded.cfg, s.rounded.rng);
-      const light = genStats(s.main.pop, s.gen, M, d, s.main.cfg);
+      s.main.pop = step(s.main.pop, M, d, mainCfg, s.main.rng);
+      s.neutral.pop = step(s.neutral.pop, M, d, neutralCfg, s.neutral.rng);
+      s.rounded.pop = step(s.rounded.pop, M, d, roundedCfg, s.rounded.rng);
+      const light = genStats(s.main.pop, s.gen, M, d, mainCfg);
       s.neutral.entropy = meanEntropyOf(s.neutral.pop, d);
       s.rounded.entropy = meanEntropyOf(s.rounded.pop, d);
       s.tracker.update(s.gen, light.bestRoundedFit);

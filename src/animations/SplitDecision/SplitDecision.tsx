@@ -105,6 +105,10 @@ export default function SplitDecision() {
   const lastPublishRef = useRef(0);
 
   const r1c = clamp(r1, 1, pm - 1), c1c = clamp(c1, 1, pn - 1);
+  // k is read here rather than raw: a stored value outside the slider's range would
+  // otherwise reach the engine as-is while the input silently pins to its floor —
+  // a label reading 0 over a run that drifts, with nothing to say why.
+  const kc = clamp(Math.round(k), 1, 16);
   const base = useMemo(() => {
     if (source === 'fixture') {
       const f = fixtureById(fixtureId) ?? FIXTURES[0];
@@ -123,8 +127,8 @@ export default function SplitDecision() {
 
   const cfg: EvolveConfig = useMemo(() => ({
     engine: ENGINE_VERSION, scoreId, fitness, payoff, yieldMode, samplesPerEval: 1, rule, N,
-    selection: { kind: 'tournament', k }, mu, sigma, sexRatio, sexQuotaMode, seed,
-  }), [scoreId, fitness, payoff, yieldMode, rule, N, k, mu, sigma, sexRatio, sexQuotaMode, seed]);
+    selection: { kind: 'tournament', k: kc }, mu, sigma, sexRatio, sexQuotaMode, seed,
+  }), [scoreId, fitness, payoff, yieldMode, rule, N, kc, mu, sigma, sexRatio, sexQuotaMode, seed]);
 
   const loop = useWatchLoop(M, d, cfg, optimum ? optimum.score : null);
   // The loop rebuilds when the matrix changes, but React renders the new size first:
@@ -343,8 +347,9 @@ export default function SplitDecision() {
         options={RULE_IDS.map(id => ({ value: id, label: RULES[id].name.replace(/^(Muller's |Hardy–Weinberg |Potter–De Jong )/, '') }))} />
       <Note><b>{ruleSpec.name}</b> — {ruleSpec.blurb}</Note>
       <Slider label="Population N" value={N} min={8} max={256} step={8} onChange={v => setN(Math.round(v))} format={v => `${v}`} />
-      <Slider label="Tournament size k (1 = drift)" value={k} min={1} max={16} step={1} onChange={v => setK(Math.round(v))} format={v => `${v}`} />
-      <Note>k is the selection knob: a parent is the best of k draws, so it wins roughly the top 1/k of the population. k = 1 is pure drift; k = 16 at N = {N} is hard truncation, and canalizes in a fraction of the generations.</Note>
+      <Slider label="Tournament size k — the selection dial" value={kc} min={1} max={16} step={1} onChange={v => setK(Math.round(v))} format={v => `${v}`}
+        stops={[{ value: 1, label: 'drift' }, { value: 8, label: '8' }, { value: 16, label: 'hard' }]} />
+      <Note>A parent is the best of k draws, so it wins roughly the top 1/k of the population. k = 1 is pure drift — no selection at all; the default 3 is mild; k = 16 at N = {N} is hard truncation and canalizes in a fraction of the generations.</Note>
       <Slider label="Mutation rate μ per locus" value={mu} min={0} max={0.5} step={0.01} onChange={setMu} format={v => v.toFixed(2)} />
       <Slider label="Mutation step σ" value={sigma} min={0.01} max={0.5} step={0.01} onChange={setSigma} format={v => v.toFixed(2)} />
       {rule === 'prom' && <>
@@ -374,7 +379,7 @@ export default function SplitDecision() {
       <div className="sd-status">gen <b>{snap?.gen ?? 0}</b>{loop.playing ? ' · running' : ' · paused'}{snap?.reachedAt !== null && snap?.reachedAt !== undefined ? ` · reached the optimum at gen ${snap.reachedAt}` : ''}</div>
       <Slider label="Generations per second" value={loop.gps} min={1} max={200} step={1} onChange={v => loop.setGps(Math.round(v))} format={v => `${v}`}
         stops={[{ value: 5, label: 'slow' }, { value: 20, label: '20' }, { value: 100, label: 'fast' }]} />
-      <Note>Play, Step and Reset live on the action strip. Reset replays the same seed; Next seed (in Reproduction) starts a fresh run.</Note>
+      <Note>Play, Step and Reset live on the action strip. The Reproduction dials — k, μ, σ, the sex ratio and quota — are <b>live</b>: turn one and the running population feels it next generation, no restart. Changing the matrix, judge, fitness, payoff, rule or N starts a fresh run. Reset replays the same seed; Next seed starts a fresh one.</Note>
     </>
   );
 

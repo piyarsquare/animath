@@ -280,6 +280,23 @@ describe('the sweep', () => {
   });
 });
 
+describe('the selection dial', () => {
+  const M = fixtureById('complete-8x10')!.matrix;
+  const d = degrees(M);
+  it('k below 1 is drift, exactly as k = 1 — never something else', () => {
+    const at = (k: number) => {
+      const c: EvolveConfig = { ...DEFAULT_CONFIG, rule: 'clonal', N: 16, seed: 3, selection: { kind: 'tournament', k } };
+      const rng = makeRng(c);
+      let pop = initPopulation(M, d, c, rng);
+      for (let g = 0; g < 4; g++) pop = step(pop, M, d, c, rng);
+      return populationHash(pop);
+    };
+    expect(at(0)).toBe(at(1));
+    expect(at(-5)).toBe(at(1));
+    expect(at(3)).not.toBe(at(1));
+  });
+});
+
 describe('the sex quota, relaxed', () => {
   const M = fixtureById('complete-8x10')!.matrix;
   const d = degrees(M);

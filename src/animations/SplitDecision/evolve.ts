@@ -245,7 +245,9 @@ export function populationAtCut(cut: Cut, M: BinaryMatrix, d: Degrees, cfg: Evol
  *  generations, no elitism. */
 export function step(pop: Individual[], M: BinaryMatrix, d: Degrees, cfg: EvolveConfig, rng: Rng): Individual[] {
   const rule = RULES[cfg.rule];
-  const k = cfg.selection.k;
+  // k < 1 has no meaning (a tournament needs one draw); treat it as drift, which is
+  // what one draw is, rather than let a bad value through to `tournament`.
+  const k = Math.max(1, cfg.selection.k);
   const all = pop.map((_, i) => i);
   const rows = all.filter(i => pop[i].sex === 'row');
   const cols = all.filter(i => pop[i].sex === 'col');
