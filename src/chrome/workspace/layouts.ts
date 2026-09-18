@@ -62,6 +62,8 @@ export function layoutViews(views: ViewDef[], layout: LayoutDef): Record<string,
 
 /** Panel card width (must track theme.css .am-ws-panel). */
 const PANEL_W = 268;
+/** A collapsed card is its header alone (must track theme.css .am-ws-panel-hd). */
+export const PANEL_COLLAPSED_H = 48;
 const STAGE_PAD = 8;
 
 /**
@@ -85,9 +87,12 @@ export function clampToViewport(
   for (const id of Object.keys(state.open)) {
     const p = state.open[id];
     // Keep the whole card on-stage when it fits; a card taller than the stage
-    // pins to the top (its body scrolls internally).
+    // pins to the top (its body scrolls internally). A COLLAPSED card is only its
+    // header: clamping it by its open height would drag a 48px strip up to where a
+    // 500px card would have to sit — on top of whatever the layout put above it.
+    const cardH = p.collapsed ? PANEL_COLLAPSED_H : est(id);
     const maxX = Math.max(WS_RAIL, w - PANEL_W - STAGE_PAD);
-    const maxY = Math.max(STAGE_PAD, h - est(id) - STAGE_PAD);
+    const maxY = Math.max(STAGE_PAD, h - cardH - STAGE_PAD);
     open[id] = { ...p, x: Math.min(Math.max(p.x, WS_RAIL), maxX), y: Math.min(Math.max(p.y, STAGE_PAD), maxY) };
   }
 

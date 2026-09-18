@@ -420,3 +420,42 @@ informs future rounds. Delete or check off items as they land.
   bringing **KL** into 1-D as the shaded `p·log(p/q)` integrand (running area = KL), and
   resolving the phone-portrait dead-space (anchor-to-top vs. shorter phone card default).
   Real-device touch of the σ-drag handles is unverified (`phone-needed`).
+
+- [ ] [engine] !low Consolidate the six private `mulberry32` copies onto `src/lib/rng.ts`.
+  Split Decision (2026-09-16) added `src/lib/rng.ts` (`mulberry32` + `runSeed`) as the first shared copy.
+  The private copies still live in Trinary `lab/rng.ts`, StableMatching `model.ts`, AgenticSorting
+  `engine.ts`, CountingTheWays `skellam.ts`, TreesAndNets `lib/mosaic.ts`, and `chrome/previews.tsx`.
+  Re-point them one at a time (each app's tests pin its seeds, so verify trajectories are unchanged).
+
+- [ ] [split-decision] !high Real-device pass on Split Decision (phone).
+  Everything visual and perf-related was verified headless only — layouts, the Linkage
+  rendering, the gen/s figures, the phone widths. That gap is not theoretical: the crash
+  Dan hit in the wild (a population snapshot outliving its matrix, `Arena.tsx`) survived
+  every headless sweep — 17 routes, 8 skins × 3 modes, six seeded states, touch, DPR 3 —
+  and was only found when he pasted a stack frame from the preview. Carry a phone to it.
+- [ ] [split-decision] !med Make the sex ratio heritable, so sex can actually be lost.
+  `sexQuota` can now leave a generation with one sex, which reproduces parthenogenetically
+  (`step` in evolve.ts). But with a FIXED ratio that is a fluctuation, not a fate — the
+  lost sex is back in the next draw. A heritable ratio (a sex locus under selection) is
+  what would let a lineage commit to parthenogenesis, and it is the same machinery the
+  mother's-curse readout needs for the Prom's passenger half.
+- [ ] [split-decision] !med Extract the panel bodies out of SplitDecision.tsx.
+  ~600 lines with eight panel bodies inline after the Payoff/Yield/Locus-order/Sex-quota
+  controls landed. Pull them into a `panels/` folder before the next feature goes in.
+  Also worth folding the Payoff + Yield pills into one three-way control — they are two
+  only because I did not want to migrate a persisted value.
+- [ ] [split-decision] !low Decide whether Split Decision leaves the Storeroom.
+  It is markedly more finished than "an experiment that isn't ready", and nobody finds it
+  where it sits. `storeroom: true` in `src/chrome/catalog.ts`.
+- [ ] [split-decision] !low Raise the Escape-the-trap preset's power.
+  Measured: at μ ≤ 0.1 no rule escapes at all (the trap is absorbing — every individual
+  starts at exactly 0/1 and a reflecting step of 0.1 cannot cross ½ against selection), so
+  the sweep's default reports 0/12 for everything. The rules only separate above ~μ = 0.2.
+  Stated in the panel, but the default should probably move.
+- [ ] [trees-and-nets] !med Fix the mobile smoke failure on `#/trees-and-nets`.
+  `scripts/smoke.mjs` reports `no <canvas>` at 390×844. Confirmed pre-existing (identical
+  on an unmodified script) and advisory only (`continue-on-error`), so it has been failing
+  quietly in PR checks. Either the route is mis-classified `webgl: true` in the ROUTES
+  table — the same call already made for `#/trinary-lab` and `#/division-bells`, each with
+  a comment — or it genuinely renders nothing at phone width, which is an app bug.
+  `SHOTS_DIR=/tmp/shots npm run smoke` writes a PNG per route to see which.

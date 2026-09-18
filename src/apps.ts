@@ -89,6 +89,13 @@ export const apps: AppDescriptor[] = [
     blurb: 'Two facing bell curves — drag them apart and watch how far apart they really are, by Mahalanobis separation and Kullback–Leibler divergence. When their shapes match, KL is exactly ½ the Mahalanobis distance squared.',
   },
 
+  {
+    hash: '/split-decision',
+    name: 'Split Decision',
+    icon: '⊞',
+    blurb: 'A population evolves a two-way split of a binary matrix — cells × variants — under your choice of judge (cut count, chi-square, mutual information, modularity, description length). The experiment is how it reproduces: clonal, sex by swapping, or two sexes each passing on one half of the genome intact. Watch the matrix sort itself and the genome make up its mind.',
+  },
+
   // ---- Plane-arithmetic pair (grouped at the end; see the header note) -------
   {
     hash: '/plane-transform',
