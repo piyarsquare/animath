@@ -187,8 +187,9 @@ export function evaluate(M: BinaryMatrix, d: Degrees, spec: ScoreSpec, cut: Cut)
 /* ── sexed yields: the two genders' separate payoffs ── */
 
 /** How a gender's captured ones are scored: as a share of every 1 in the matrix
- *  (`count`), or as the density of its own block (`density`). */
-export type YieldMode = 'count' | 'density';
+ *  (`count`), as the density of its own block (`density`), or as the ones its block
+ *  holds beyond what a block that size would hold by chance (`excess`). */
+export type YieldMode = 'count' | 'density' | 'excess';
 
 /** What one gender captures, as a fraction of all the 1s in the matrix.
  *
@@ -222,7 +223,18 @@ export function sexedYield(M: BinaryMatrix, cut: Cut, sex: 'row' | 'col', mode: 
   // progress report — on a planted checkerboard the rows are equally dense, so there is
   // little to gain by shrinking and the cooperative split holds.
   const cells = sex === 'row' ? t.K[0][1] : t.K[1][0];
-  return cells === 0 ? 0 : ones / cells;
+  if (mode === 'density') return cells === 0 ? 0 : ones / cells;
+  // Excess: the share of the ones minus the share of the cells, i.e. (ones − ρ·cells)/T
+  // with ρ the matrix's own density — the per-block term of Newman's Leftovers. Both
+  // trivial cuts collapse: swallowing the whole matrix holds every 1 and every cell, so
+  // the two shares cancel to exactly 0; hoarding one 1-cell scores 1/T − 1/(m·n), about
+  // nothing. Size is charged at exactly the rate chance pays it back, so a block only
+  // scores by being denser than chance AND big — adding a row pays iff that row is denser
+  // over the excluded columns than the matrix is overall, the modularity greedy rule. Can
+  // go negative (a block sparser than chance), and reads best in percentage points.
+  const total = M.ones.length;
+  const area = M.m * M.n;
+  return (total === 0 ? 0 : ones / total) - (area === 0 ? 0 : cells / area);
 }
 
 /* ── the Exhaustive Bailiff ── */

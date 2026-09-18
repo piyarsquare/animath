@@ -25,6 +25,12 @@ import { Sweep, type SweepRecord } from './views/Sweep';
 import { HAS_WORKERS, SweepPool, poolSize } from './lab/pool';
 import { canEnumerate, evaluationCount, jobCount, summarize, type JobResult, type SweepConfig } from './lab/sweep';
 
+/** A gender's yield for display: a share as a percentage; an excess as signed percentage points. */
+function fmtYield(v: number, mode: YieldMode): string {
+  const n = Math.round(v * 100);
+  return mode === 'excess' ? `${n > 0 ? '+' : ''}${n} pts` : `${n}%`;
+}
+
 const NS = 'split-decision';
 const MAX_CELLS = 1600;
 type Source = 'planted' | 'fixture';
@@ -152,8 +158,8 @@ export default function SplitDecision() {
       row: sexedYield(M, cut, 'row', yieldMode),
       col: sexedYield(M, cut, 'col', yieldMode),
       // The share of the matrix's ones the two blocks hold between them. Under `count`
-      // this is exactly row + col; under `density` it is a separate figure, and the one
-      // that says whether the genders are cooperating or wrecking the pot.
+      // this is exactly row + col; under `density` and `excess` it is a separate figure,
+      // and the one that says whether the genders are cooperating or wrecking the pot.
       captured: sexedYield(M, cut, 'row', 'count') + sexedYield(M, cut, 'col', 'count'),
       nR1: cut.z.reduce((a, b) => a + b, 0),
       nC1: cut.w.reduce((a, b) => a + b, 0),
@@ -279,8 +285,23 @@ export default function SplitDecision() {
       {payoff === 'sexed' && (
         <>
           <Pills label="Yield" value={yieldMode} onChange={setYieldMode}
-            options={[{ value: 'density', label: 'Density' }, { value: 'count', label: 'Count' }]} />
-          {yieldMode === 'density' ? (
+            options={[{ value: 'density', label: 'Density' }, { value: 'count', label: 'Count' }, { value: 'excess', label: 'Excess' }]} />
+          {yieldMode === 'excess' ? (
+            <Note>
+              A gender's share of <b>the ones</b> minus its share of <b>the cells</b> — the
+              ones its block holds beyond what a block that size would hold by chance
+              (the per-block term of Newman's Leftovers). Swallowing the whole matrix
+              takes every 1 and every cell, so the two shares cancel to exactly 0; hoarding a
+              single 1-cell scores about nothing. Size is charged at exactly the rate chance
+              pays it back, so the only way to score is a block that is denser than chance
+              <i>and</i> big — a row is worth adding only if it is denser over the excluded
+              columns than the matrix is overall. Read in percentage points; it goes
+              negative for a block sparser than chance. Measured: on a clean checkerboard
+              both worlds land on the true split, +25 to each gender; on a noisy one the
+              clonal world hands one gender its own best block and leaves the other below
+              chance, while the two-sex Prom settles on an interior split where both score.
+            </Note>
+          ) : yieldMode === 'density' ? (
             <Note>
               A gender's ones divided by the <b>cells of its own block</b>. Taking more
               costs you the empty cells that come with it, so the pull is toward a block
@@ -410,8 +431,8 @@ export default function SplitDecision() {
         <>
           <Kicker>the two genders</Kicker>
           <StatGrid stats={[
-            { k: `row-gender ${yieldMode} (R₁×C₂)`, v: yields ? `${Math.round(yields.row * 100)}%` : '—' },
-            { k: `column-gender ${yieldMode} (R₂×C₁)`, v: yields ? `${Math.round(yields.col * 100)}%` : '—' },
+            { k: `row-gender ${yieldMode} (R₁×C₂)`, v: yields ? fmtYield(yields.row, yieldMode) : '—' },
+            { k: `column-gender ${yieldMode} (R₂×C₁)`, v: yields ? fmtYield(yields.col, yieldMode) : '—' },
             { k: 'ones captured between them', v: yields ? `${Math.round(yields.captured * 100)}%` : '—' },
             { k: 'rows included · columns included', v: yields ? `${yields.nR1} / ${M.m} · ${yields.nC1} / ${M.n}` : '—' },
           ]} />
@@ -629,7 +650,7 @@ export default function SplitDecision() {
       // The judge's `best` is 0 for a degenerate cut, which is exactly where this
       // regime tends to go — so the subtitle reports the yields the genders are
       // actually being scored on.
-      ? `${ruleSpec.name} · sexed yields · gen ${snap?.gen ?? 0}${yields ? ` · row ${Math.round(yields.row * 100)}% · col ${Math.round(yields.col * 100)}%` : ''}`
+      ? `${ruleSpec.name} · sexed yields · gen ${snap?.gen ?? 0}${yields ? ` · row ${fmtYield(yields.row, yieldMode)} · col ${fmtYield(yields.col, yieldMode)}` : ''}`
       : `${ruleSpec.name} · ${spec.name} · gen ${snap?.gen ?? 0}${st ? ` · best ${sig2(st.bestRoundedFit)}` : ''}`;
   const modes: WorkspaceMode[] = [{ id: 'watch', label: 'Watch' }, { id: 'lab', label: 'Lab' }];
 

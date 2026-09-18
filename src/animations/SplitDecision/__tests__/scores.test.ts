@@ -280,6 +280,52 @@ describe('sexed yields', () => {
     expect(sexedYield(M, pure, 'row', 'count')).toBeCloseTo(1 / 3, 12);
   });
 
+  it('excess = share of the ones minus share of the cells; both trivial cuts collapse', () => {
+    // M = ['01','11']: 3 ones in 4 cells, ρ = 3/4.
+    const y = (c: Cut, sex: 'row' | 'col' = 'row') => sexedYield(M, c, sex, 'excess');
+    // The identity that defines it, on every cut.
+    for (const z of [[1, 0], [0, 1], [1, 1], [0, 0]]) {
+      for (const w of [[1, 0], [0, 1], [1, 1], [0, 0]]) {
+        const c: Cut = { z, w };
+        for (const sex of ['row', 'col'] as const) {
+          const t = blockTable(M, c);
+          const cells = sex === 'row' ? t.K[0][1] : t.K[1][0];
+          expect(y(c, sex)).toBeCloseTo(sexedYield(M, c, sex, 'count') - cells / 4, 12);
+        }
+      }
+    }
+    // Swallowing everything: every 1 and every cell → the shares cancel to exactly 0.
+    expect(y({ z: [1, 1], w: [0, 0] })).toBeCloseTo(0, 12);
+    // Taking nothing: 0, and no division by zero.
+    expect(y({ z: [0, 0], w: [0, 0] })).toBe(0);
+    // A block sparser than chance goes NEGATIVE: R₁={0}, C₂={0} is the single 0-cell.
+    expect(y({ z: [1, 0], w: [0, 1] })).toBeCloseTo(0 - 1 / 4, 12);
+    // A single pure 1-cell scores 1/T − 1/(m·n): here 1/3 − 1/4, and in general about nothing.
+    expect(y({ z: [0, 1], w: [1, 0] })).toBeCloseTo(1 / 3 - 1 / 4, 12);
+  });
+
+  it('excess rewards the planted block over both the swallow and the hoard', () => {
+    // A clean 6×6 checkerboard: ones exactly in the two cross blocks R₁×C₂ and R₂×C₁
+    // of the planted 3/3 split, so ρ = 1/2 and T = 18.
+    const rows: string[] = [];
+    for (let i = 0; i < 6; i++) rows.push([0, 1, 2, 3, 4, 5].map(j => ((i < 3) !== (j < 3) ? '1' : '0')).join(''));
+    const C = fromRows(rows);
+    const y = (c: Cut) => sexedYield(C, c, 'row', 'excess');
+    const planted: Cut = { z: [1, 1, 1, 0, 0, 0], w: [1, 1, 1, 0, 0, 0] };
+    const swallow: Cut = { z: [1, 1, 1, 1, 1, 1], w: [0, 0, 0, 0, 0, 0] };
+    const hoard: Cut = { z: [1, 0, 0, 0, 0, 0], w: [1, 1, 1, 1, 1, 0] };  // the single 1-cell (0,5)
+    // planted: 9 of 18 ones over 9 of 36 cells → 1/2 − 1/4 = 1/4
+    expect(y(planted)).toBeCloseTo(1 / 4, 12);
+    expect(y(swallow)).toBeCloseTo(0, 12);
+    expect(y(hoard)).toBeCloseTo(1 / 18 - 1 / 36, 12);
+    expect(y(planted)).toBeGreaterThan(y(hoard));
+    expect(y(hoard)).toBeGreaterThan(y(swallow));
+    // where the two ratio modes tie or invert: density ties planted with hoard, count
+    // puts the swallow on top — the two barriers excess was added to clear.
+    expect(sexedYield(C, planted, 'row', 'density')).toBeCloseTo(sexedYield(C, hoard, 'row', 'density'), 12);
+    expect(sexedYield(C, swallow, 'row', 'count')).toBeGreaterThan(sexedYield(C, planted, 'row', 'count'));
+  });
+
   it('including more of your own half never costs you — the count runaway is monotone', () => {
     const base: Cut = { z: [0, 0], w: [0, 0] };
     const more: Cut = { z: [1, 0], w: [0, 0] };
