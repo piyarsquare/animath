@@ -104,6 +104,9 @@ export default function Canvas3D({ onMount }: Canvas3DProps) {
       resizeObserver.disconnect();
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
+      // React StrictMode remounts effects in development. Remove the old
+      // canvas as well as disposing its context so the remount has one view.
+      renderer.domElement.remove();
     };
   }, [onMount, failed]);
 

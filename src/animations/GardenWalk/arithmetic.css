@@ -1,0 +1,32 @@
+.garden-arithmetic { color: var(--fg); min-width: 0; }
+.garden-arithmetic p { line-height: 1.6; }
+.garden-arithmetic-formula { font-family: var(--font-mono, monospace); font-size: clamp(12px, 1.5vw, 15px); overflow-wrap: anywhere; padding: 14px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; }
+.garden-arithmetic-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 24px; align-items: start; }
+.garden-arithmetic-controls { min-width: 0; }
+.garden-arithmetic .cp-pills { flex-wrap: wrap; }
+.garden-arithmetic-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+.garden-arithmetic-note, .garden-arithmetic-figure figcaption { color: var(--dim); font-size: 12px; line-height: 1.6; }
+.garden-arithmetic-figure { margin: 0; min-width: 0; }
+.garden-arithmetic-plot { display: block; width: 100%; height: auto; background: var(--viz-bg); border: 1px solid var(--border); border-radius: 8px; color: var(--fg); touch-action: none; }
+.garden-arithmetic-plot text { fill: var(--fg); font-family: var(--font-mono, monospace); font-size: 12px; pointer-events: none; }
+.garden-arithmetic-plot .garden-arithmetic-ticks { fill: var(--dim); font-size: 10px; }
+.garden-arithmetic-axis { stroke: var(--border-strong); stroke-width: 1; }
+.garden-arithmetic-u { stroke: var(--accent); fill: var(--accent); }
+.garden-arithmetic-v { stroke: var(--accent-2); fill: var(--accent-2); }
+.garden-arithmetic-output { stroke: var(--fg); fill: var(--fg); }
+.garden-arithmetic-vector { stroke-width: 2; fill: none; opacity: 0.7; }
+.garden-arithmetic-vector.garden-arithmetic-v { stroke-dasharray: 5 4; }
+.garden-arithmetic-handle { cursor: grab; stroke-width: 2; fill: var(--viz-bg); }
+.garden-arithmetic-handle:focus-visible { outline: none; stroke-width: 5; }
+.garden-arithmetic-handle:active { cursor: grabbing; }
+.garden-arithmetic-curve { stroke: var(--accent); stroke-width: 3; fill: none; }
+.garden-arithmetic-tangent { stroke: var(--fg); stroke-width: 2; stroke-dasharray: 7 5; }
+.garden-arithmetic-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 18px 0; }
+.garden-arithmetic-slots > div { padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-2); }
+.garden-arithmetic-slots dt { font-size: 12px; color: var(--dim); }
+.garden-arithmetic-slots dd { margin: 8px 0 0; font: 600 24px var(--font-mono, monospace); overflow-wrap: anywhere; }
+@media (max-width: 680px) {
+  .garden-arithmetic-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .garden-arithmetic .cp-pills { flex-wrap: wrap; }
+  .garden-arithmetic .cp-pills button { min-width: 70px; }
+}

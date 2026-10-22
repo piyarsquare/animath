@@ -80,3 +80,7 @@ A paper walkthrough should establish these acceptance criteria before any implem
 5. A phone or keyboard storyboard preserves the essential control, result, and onward/return actions without relying on motion or color.
 
 These are proposed review criteria, not measured results. This deliverable is complete as a spec. Before building, Dan can accept or revise this concrete walk and authorize a separate implementation slice. That next slice must decide how to integrate the notebook sources and connect state; neither feature-branch merging nor a general workbench is authorized here.
+
+## Implementation authorization
+
+Dan subsequently said “authorized for implementation.” The bounded implementation is the [Number Planes Notebook](../src/animations/GardenWalk/README.md), at `#/garden`, adapting these three stops into the current workspace and reusing the graph/map renderers. The original spec above is retained as the design contract. Implementation and verification evidence are recorded in [the implementation run](execution/2026-10-21-garden-implementation/run.md).

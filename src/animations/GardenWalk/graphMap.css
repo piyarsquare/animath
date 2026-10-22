@@ -1,0 +1,15 @@
+.garden-graph-map { min-width: 0; }
+.garden-point-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0; }
+.garden-point-controls > .cp-row { flex: 1 1 130px; }
+.garden-point-controls button { padding: 8px 12px; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 6px; cursor: pointer; }
+.garden-pair-readout { display: grid; gap: 5px; margin: 12px 0; font-variant-numeric: tabular-nums; }
+.garden-instrument-viewport { position: relative; height: 390px; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--viz-bg); }
+.garden-instrument-viewport .am-embed { position: absolute; inset: 0; }
+.garden-instrument-viewport .am-embed-badge { display: none; }
+.garden-projection-note { font-size: 0.9em; line-height: 1.5; }
+@media (max-width: 600px) {
+  .garden-instrument-map { height: 540px; }
+  .garden-instrument-map .am-split { flex-direction: column; }
+  .garden-instrument-map .am-split-pane { min-height: 0; width: 100%; flex: 1; }
+  .garden-instrument-graph { height: 330px; }
+}

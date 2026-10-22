@@ -102,4 +102,10 @@ export const apps: AppDescriptor[] = [
     icon: '∡',
     blurb: 'Build the complex line f(z) = α₁·z + α₀ (and quadratics): drag the coefficients, feed it a point, a shape or the whole grid, and watch multiply spiral while add slides — through complex, dual and split-complex numbers.',
   },
+  {
+    hash: '/garden',
+    name: 'Number Planes Notebook',
+    icon: '▤',
+    blurb: 'Follow one square through multiplication, a dual-number derivative, and a complex graph and map. Three stops, with room to wander.',
+  },
 ];

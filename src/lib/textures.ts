@@ -75,7 +75,7 @@ export function loadParticleTextures(onHdrLoaded?: (tex: THREE.Texture) => void)
   textures[3] = makeStoneTexture(64);
   textures[4] = makeMetalTexture(64);
   new RGBELoader()
-    .setDataType(THREE.UnsignedByteType)
+    .setDataType(THREE.HalfFloatType)
     .load(`${import.meta.env.BASE_URL}textures/royal_esplanade_1k.hdr`, tex => {
       tex.minFilter = THREE.LinearFilter;
       tex.magFilter = THREE.LinearFilter;

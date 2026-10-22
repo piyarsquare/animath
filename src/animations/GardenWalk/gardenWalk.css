@@ -1,0 +1,64 @@
+.garden-workspace { height: 100%; }
+.garden-workspace .am-phone-dockwrap { display: none; }
+.garden-notebook { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; color: var(--fg); background: var(--bg); font-family: var(--font-ui); line-height: 1.6; }
+.garden-page { max-width: 1100px; margin: 0 auto; padding: 28px 52px 40px; }
+.garden-notebook a { color: var(--accent); text-underline-offset: 4px; }
+.garden-notebook button:focus-visible, .garden-notebook a:focus-visible, .garden-notebook input:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.garden-wayfinding { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 28px; font-size: 12px; color: var(--dim); }
+.garden-wayfinding a { font-weight: 700; font-size: 15px; text-decoration: none; }
+.garden-stops { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+.garden-stops a { display: flex; gap: 12px; align-items: baseline; padding: 10px 12px; border: 1px solid transparent; border-radius: 8px; text-decoration: none; color: var(--dim); font-size: 15px; }
+.garden-stops a:hover { background: var(--panel-2); color: var(--fg); }
+.garden-stops a[aria-current="step"] { border-color: var(--border-strong); background: var(--accent-soft); color: var(--fg); }
+.garden-stop-number, .garden-eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; color: var(--accent); }
+.garden-stops small { display: block; font-size: 11px; color: var(--dim); font-weight: 400; margin-top: 3px; }
+.garden-heading { margin: 30px 0 16px; }
+.garden-eyebrow { text-transform: uppercase; margin: 0 0 10px; }
+.garden-heading h1 { font-family: var(--font-display); font-size: clamp(28px, 3.5vw, 44px); line-height: 1.18; font-weight: 600; letter-spacing: -.035em; max-width: 820px; margin: 0; }
+.garden-heading h1:focus { outline: none; }
+.garden-cover-heading { margin-top: 48px; }
+.garden-cover-heading h1 { font-size: clamp(34px, 4.5vw, 58px); max-width: 800px; }
+.garden-lede { font-size: 18px; line-height: 1.7; max-width: 740px; color: var(--dim); margin: 24px 0; }
+.garden-cover-equation { display: flex; align-items: center; gap: 26px; padding: 25px 0; margin: 24px 0; font-family: var(--font-mono); font-size: clamp(21px, 2.5vw, 30px); }
+.garden-cover-equation > div { display: flex; gap: 36px; flex-wrap: wrap; }
+.garden-cover-equation small { display: block; font-size: 12px; color: var(--dim); margin-top: 8px; }
+.garden-equation-arrow { color: var(--accent); }
+.garden-cover-actions { display: flex; gap: 24px; align-items: center; margin: 24px 0 40px; }
+.garden-cover-actions .cp-btn { width: auto; min-height: 44px; padding: 12px 24px; }
+.garden-cover-actions p { font-size: 13px; color: var(--dim); max-width: 250px; }
+.garden-cover-notes { border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding-top: 12px; color: var(--dim); font-size: 14px; }
+.garden-cover-notes strong { color: var(--fg); }
+.garden-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 24px; }
+.garden-tools .cp-btn { width: auto; min-height: 36px; }
+.garden-passage { max-width: 800px; font-size: 17px; color: var(--dim); margin: 0 0 24px; }
+.garden-passage strong { color: var(--fg); }
+.garden-boundary { border-top: 1px solid var(--border-strong); margin-top: 32px; padding-top: 26px; max-width: 820px; }
+.garden-boundary h2 { font-family: var(--font-display); font-size: 26px; letter-spacing: -.02em; line-height: 1.3; margin: 8px 0 16px; }
+.garden-boundary p { color: var(--dim); }
+.garden-boundary strong { color: var(--fg); }
+.garden-boundary .cp-btn { width: auto; min-height: 44px; margin: 12px 0 6px; padding: 10px 18px; }
+.garden-reset-note { font-size: 13px; background: var(--panel-2); border-left: 2px solid var(--accent); padding: 12px 16px; }
+.garden-return-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+.garden-return-actions .cp-btn { width: auto; min-height: 44px; padding: 10px 18px; }
+.garden-footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--dim); display: flex; justify-content: space-between; gap: 16px; }
+@media (max-width: 740px) {
+  .garden-page { padding: 80px 20px 80px; }
+  .garden-wayfinding { margin-bottom: 16px; }
+  .garden-wayfinding > span { display: none; }
+  .garden-stops { gap: 4px; padding-bottom: 12px; }
+  .garden-stops a { display: block; padding: 8px 6px; font-size: 12px; }
+  .garden-stop-number { display: block; margin-bottom: 4px; }
+  .garden-stops small { display: none; }
+  .garden-heading, .garden-cover-heading { margin-top: 26px; }
+  .garden-lede, .garden-passage { font-size: 16px; }
+  .garden-cover-equation { flex-wrap: wrap; gap: 16px; }
+  .garden-cover-equation > div { width: 100%; gap: 20px; font-size: 19px; }
+  .garden-cover-actions { display: block; margin: 20px 0 28px; }
+  .garden-cover-actions p { max-width: none; }
+  .garden-cover-notes { grid-template-columns: 1fr; gap: 0; }
+  .garden-tools { gap: 4px; }
+  .garden-tools .cp-btn { font-size: 11px; padding: 8px; min-height: 44px; }
+  .garden-boundary h2 { font-size: 23px; }
+  .garden-footer { display: block; }
+  .garden-footer a { display: block; margin-top: 8px; }
+}

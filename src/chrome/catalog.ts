@@ -41,6 +41,7 @@ const META: Record<string, { cat: Category; kind: PreviewKind; storeroom?: boole
   '/argand': { cat: 'Complex', kind: 'plane' },
   '/counting-the-ways': { cat: 'Algorithm', kind: 'skellam' },
   '/division-bells': { cat: 'Algorithm', kind: 'divergence', storeroom: true },
+  '/garden': { cat: 'Complex', kind: 'plane' },
 };
 
 export const CARDS: AppCard[] = apps

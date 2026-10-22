@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import ParticleViewerShell from '../../components/ParticleViewerShell';
 import { Select, NumberInput, ComplexInput, Checkbox, RangeSlider } from '../../components/ControlPanel';
@@ -32,6 +32,8 @@ import {
   MULTIVALUED_INDICES, branchPeriod,
 } from '../../lib/complexMath';
 import { decodeFunction, encodeFunction, type FunctionState } from '../../lib/functionHandoff';
+import GardenReturn from '../../components/GardenReturn';
+import { decodeGardenContext, encodeGardenContext, noteGardenFunction } from '../../lib/gardenHandoff';
 import { useHandoffState } from '../../lib/useHandoffState';
 
 // ── Per-function "recommended view" presets (PR-1, 2026-06-16) ──────────────
@@ -55,6 +57,7 @@ type Complex2 = [number, number];
 export type { ViewPoint };
 
 export interface ComplexParticlesProps {
+  selectedPoint?: Complex2;
   count?: number;
   selectedFunction?: string;
   p?: number;
@@ -76,7 +79,12 @@ export default function ComplexParticles({
   onViewPointChange,
   viewPoint,
   embed,
+  selectedPoint,
 }: ComplexParticlesProps) {
+  const [gardenContext] = useState(() => embed ? null : decodeGardenContext(window.location.hash));
+  const selectedPointRef = useRef(selectedPoint ?? gardenContext?.point);
+  selectedPointRef.current = selectedPoint ?? gardenContext?.point;
+  const selectedMarkerRef = useRef<THREE.Points>();
   const state = useParticleState({
     count: embed?.count ?? count,
     viewPoint,
@@ -97,6 +105,10 @@ export default function ComplexParticles({
   // which overrides the live view for this session WITHOUT persisting — so the
   // destination app's own saved function survives (see useHandoffState).
   const [functionIndex, setFunctionIndex, seedFunctionIndex] = useHandoffState(ek('functionIndex'), defaultFunctionIndex);
+  // Keep the notice current for browser Back as well as the return button.
+  useEffect(() => {
+    if (gardenContext) noteGardenFunction(functionIndex);
+  }, [gardenContext, functionIndex]);
   const [expP, setExpP, seedExpP] = useHandoffState(ek('expP'), embed?.p ?? p);
   const [expQ, setExpQ, seedExpQ] = useHandoffState(ek('expQ'), embed?.q ?? q);
   // Riemann-sheet range. The viewer draws one particle set per sheet, at branch
@@ -679,6 +691,40 @@ export default function ComplexParticles({
 
       rebuildBranchObjects(scene);
 
+      // Reuse the graph shader and live uniforms so the chosen sample follows
+      // all camera, chart, 4D rotation, function and projection changes.
+      const markerGeometry = new THREE.BufferGeometry();
+      markerGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3));
+      markerGeometry.setAttribute('size', new THREE.Float32BufferAttribute([1], 1));
+      markerGeometry.setAttribute('seed', new THREE.Float32BufferAttribute([0.5, 0.5, 0.5, 0.5], 4));
+      const markerOverrides = {
+        jitterAmp: { value: 0 }, uReciprocal: { value: 0 }, uAdaptive: { value: 0 },
+      };
+      const markerMaterial = new THREE.ShaderMaterial({
+        vertexShader: vertexShader.replace('size * globalSize * (80. / -mv.z)', '18.0'),
+        fragmentShader: `void main() {
+          float r = length(gl_PointCoord - vec2(0.5));
+          if (r > 0.5) discard;
+          gl_FragColor = vec4(r > 0.32 ? vec3(0.02) : vec3(1.0), 1.0);
+        }`,
+        depthTest: false, depthWrite: false,
+      });
+      const marker = new THREE.Points(markerGeometry, markerMaterial);
+      marker.frustumCulled = false;
+      marker.renderOrder = 20;
+      marker.onBeforeRender = () => {
+        const point = selectedPointRef.current;
+        const source = state.materialsRef.current[0];
+        if (!source) return;
+        markerMaterial.uniforms = { ...source.uniforms, ...markerOverrides };
+        const pos = markerGeometry.getAttribute('position') as THREE.BufferAttribute;
+        pos.setXYZ(0, point?.[0] ?? 0, 0, point?.[1] ?? 0);
+        pos.needsUpdate = true;
+      };
+      selectedMarkerRef.current = marker;
+      marker.visible = !!selectedPointRef.current;
+      scene.add(marker);
+
       const axes = createAxes(scene, state.hueShift, state.axisWidth);
       state.xAxisRef.current = axes.x;
       state.yAxisRef.current = axes.y;
@@ -725,6 +771,10 @@ export default function ComplexParticles({
       // loop and its geometries/materials/textures.
       return () => {
         stopLoop();
+        scene.remove(marker);
+        markerGeometry.dispose();
+        markerMaterial.dispose();
+        selectedMarkerRef.current = undefined;
         const meshes = [
           ...pointsRef.current, ...fillMeshRef.current, ...wireMeshRef.current,
           ...tileMeshRef.current, ...netMeshRef.current,
@@ -772,6 +822,14 @@ export default function ComplexParticles({
   // drop axis) behaves exactly as in the full app.
   useEffect(() => {
     if (!embed) return;
+    if (selectedPoint) {
+      state.setInputCoord(0);
+      state.setOutputCoord(0);
+      state.setAxisScale(1);
+      state.setJitter(0);
+      state.setReciprocal(false);
+      state.setCameraZ(14);
+    }
     if (embed.render) state.setRenderMode(embed.render);
     if (embed.pattern !== undefined) state.setSamplePattern(embed.pattern);
     if (embed.motion) state.setViewMotion(embed.motion);
@@ -779,12 +837,27 @@ export default function ComplexParticles({
     if (embed.colormap !== undefined) state.setColormap(embed.colormap);
     if (embed.extent !== undefined) { state.setExtentX(embed.extent); state.setExtentY(embed.extent); }
     if (embed.proj !== undefined) {
+      if (selectedPoint) {
+        // A guided, labeled projection must be exact immediately, including
+        // reduced-motion visits. Seed before handleDropAxis so it does not tween.
+        state.projRef.current = embed.proj;
+        state.setProj(embed.proj);
+        state.materialsRef.current.forEach(material => {
+          material.uniforms.uProjMode.value = embed.proj;
+          material.uniforms.uProjTarget.value = embed.proj;
+          material.uniforms.uProjAlpha.value = 0;
+        });
+      }
       const drop = embed.proj === ProjectionMode.DropX ? 'DropX'
         : embed.proj === ProjectionMode.DropY ? 'DropY'
         : embed.proj === ProjectionMode.DropU ? 'DropU'
         : embed.proj === ProjectionMode.DropV ? 'DropV' : null;
       if (drop) controls.handleDropAxis(drop);
       else controls.handleViewType(embed.proj);
+    }
+    if (selectedPoint) {
+      // A 3D camera angle reveals the retained Re w direction without any 4D rotation.
+      state.setCamQuat(new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.3, 0.45, 0)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -807,6 +880,10 @@ export default function ComplexParticles({
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (selectedMarkerRef.current) selectedMarkerRef.current.visible = !!selectedPointRef.current;
+  }, [selectedPoint, gardenContext]);
 
   const currentName = functionNames[functionIndex];
   const isPowPQ = functionIndex === POW_PQ_INDEX;
@@ -914,10 +991,11 @@ export default function ComplexParticles({
   const fnState: FunctionState = { index: functionIndex, p: expP, q: expQ, quad: { a: quadA, b: quadB, c: quadC } };
   const topBarExtra = (
     <span className="am-bar-extra">
+      <GardenReturn context={gardenContext} functionIndex={functionIndex} />
       {functionTopSelect}
       <a
         className="am-bar-link"
-        href={`#/plane-transform?${encodeFunction(fnState)}`}
+        href={`#/plane-transform?${encodeFunction(fnState)}${encodeGardenContext(gardenContext)}`}
         title="See this function as a plane map — the domain z-plane beside its image f(z)"
       >↗ plane map</a>
     </span>

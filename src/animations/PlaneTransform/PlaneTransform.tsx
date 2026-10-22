@@ -14,6 +14,8 @@ import {
 } from '../../lib/complexMath';
 import { usePersistentState, clearPersistedState } from '../../lib/usePersistentState';
 import { decodeFunction, encodeFunction, type FunctionState } from '../../lib/functionHandoff';
+import GardenReturn from '../../components/GardenReturn';
+import { decodeGardenContext, encodeGardenContext, noteGardenFunction } from '../../lib/gardenHandoff';
 import { useHandoffState } from '../../lib/useHandoffState';
 import { vertexShader, fragmentShader } from './shaders';
 import {
@@ -56,11 +58,14 @@ interface PaneRefs {
  * The Grid panel offers a polar sampling grid (rings + rays) and a log-polar
  * plane layout (plot at (arg, log|·|)) — see polarViews.ts.
  */
-export default function PlaneTransform({ embed }: {
+export default function PlaneTransform({ embed, selectedPoint }: {
+  selectedPoint?: [number, number];
   /** Chrome-less applet mode (#/embed/plane-transform, docs/EMBEDS.md):
    *  URL-configured, ephemeral state, both panes side by side. */
   embed?: import('../../lib/embedParams').PlaneEmbedConfig;
 } = {}) {
+  const [gardenContext] = useState(() => embed ? null : decodeGardenContext(window.location.hash));
+  const chosenPoint = selectedPoint ?? gardenContext?.point;
   // Per-field persistence key; null in embed mode (ephemeral).
   const ek = (field: string) => (embed ? null : `${STORAGE_KEY}:${field}`);
   // A cross-app function handoff (?fn=…) seeds these via the third "seed" setter,
@@ -69,6 +74,10 @@ export default function PlaneTransform({ embed }: {
   const [functionIndex, setFunctionIndex, seedFunctionIndex] = useHandoffState(
     ek('functionIndex'), Math.max(0, functionNames.indexOf(embed?.fn ?? 'sin')),
   );
+  // Keep the notice current for browser Back as well as the return button.
+  useEffect(() => {
+    if (gardenContext) noteGardenFunction(functionIndex);
+  }, [gardenContext, functionIndex]);
   const [expP, setExpP, seedExpP] = useHandoffState(ek('expP'), embed?.p ?? 1);
   const [expQ, setExpQ, seedExpQ] = useHandoffState(ek('expQ'), embed?.q ?? 2);
   const [branchIndex, setBranchIndex] = usePersistentState(ek('branchIndex'), 0);
@@ -96,7 +105,7 @@ export default function PlaneTransform({ embed }: {
     // run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const [density, setDensity] = usePersistentState(ek('density'), 240);          // points per side
+  const [density, setDensity] = usePersistentState(ek('density'), embed && selectedPoint ? 96 : 240);          // points per side
   const [pointSize, setPointSize] = usePersistentState(ek('pointSize'), 2.5);
   const [viewExtent, setViewExtent] = usePersistentState(ek('viewExtent'), embed?.extent ?? 3);   // half-side of visible square
   const [gridMode, setGridMode] = usePersistentState<GridMode>(ek('gridMode'), 'cartesian');
@@ -286,6 +295,16 @@ export default function PlaneTransform({ embed }: {
       return [w.x, w.y] as CurvePoint;
     });
   }, [curve, functionIndex, expP, expQ, branchIndex, quadA, quadB, quadC]);
+
+  const selectedOutput = chosenPoint ? (() => {
+    const z = new THREE.Vector2(...chosenPoint);
+    const w = functionIndex === POW_PQ_INDEX
+      ? complexPowRational(z, expP, expQ === 0 ? 1 : expQ)
+      : functionIndex === QUADRATIC_INDEX
+        ? complexQuadratic(z, new THREE.Vector2(...quadA), new THREE.Vector2(...quadB), new THREE.Vector2(...quadC))
+        : applyComplexBranch(z, functionIndex, branchIndex);
+    return [w.x, w.y] as [number, number];
+  })() : undefined;
 
   const handleStandardCurve = (id: StandardCurveName) => {
     setCurve(buildStandardCurve(id, viewExtent));
@@ -483,6 +502,7 @@ export default function PlaneTransform({ embed }: {
           node: (
             <InputPane
               mountRef={inputMountRef}
+              selectedPoint={chosenPoint}
               viewExtent={viewExtent}
               planeMode={planeMode}
               drawMode={drawMode}
@@ -500,6 +520,7 @@ export default function PlaneTransform({ embed }: {
           node: (
             <OutputPane
               mountRef={outputMountRef}
+              selectedPoint={selectedOutput}
               viewExtent={viewExtent}
               planeMode={planeMode}
               curve={outputCurve}
@@ -539,6 +560,7 @@ export default function PlaneTransform({ embed }: {
                 node: (
                   <InputPane
                     mountRef={inputMountRef}
+                    selectedPoint={chosenPoint}
                     viewExtent={viewExtent}
                     planeMode={planeMode}
                     drawMode={false}
@@ -554,6 +576,7 @@ export default function PlaneTransform({ embed }: {
                 node: (
                   <OutputPane
                     mountRef={outputMountRef}
+                    selectedPoint={selectedOutput}
                     viewExtent={viewExtent}
                     planeMode={planeMode}
                     curve={outputCurve}
@@ -587,11 +610,11 @@ export default function PlaneTransform({ embed }: {
   // coeffs), never view/appearance state.
   const handoffState: FunctionState = { index: functionIndex, p: expP, q: expQ, quad: { a: quadA, b: quadB, c: quadC } };
   const topBarExtra = (
-    <a
+    <><GardenReturn context={gardenContext} functionIndex={functionIndex} /><a
       className="am-bar-link"
-      href={`#/complex-particles?${encodeFunction(handoffState)}`}
+      href={`#/complex-particles?${encodeFunction(handoffState)}${encodeGardenContext(gardenContext)}`}
       title="See this function as its 4D graph — the particle cloud (z, f(z)) in ℂ²"
-    >↗ 4D graph</a>
+    >↗ 4D graph</a></>
   );
 
   return (
@@ -653,6 +676,7 @@ function useInscribedSquare(ref: React.RefObject<HTMLDivElement>) {
 }
 
 interface PaneCommon {
+  selectedPoint?: [number, number];
   mountRef: React.RefObject<HTMLDivElement>;
   viewExtent: number;
   planeMode: PlaneMode;
@@ -694,7 +718,7 @@ function CurveSvg({ box, viewExtent, planeMode, points }: {
 }
 
 function InputPane({
-  mountRef, viewExtent, planeMode, drawMode, curve, onAppendCurve, onWheelZoom, children,
+  mountRef, viewExtent, planeMode, selectedPoint, drawMode, curve, onAppendCurve, onWheelZoom, children,
 }: PaneCommon & {
   drawMode: boolean;
   onAppendCurve: (pt: CurvePoint, fresh: boolean) => void;
@@ -785,13 +809,14 @@ function InputPane({
       onWheel={onWheel}
     >
       {children}
+      <SelectedPointSvg box={box} viewExtent={viewExtent} planeMode={planeMode} point={selectedPoint} />
       <CurveSvg box={box} viewExtent={viewExtent} planeMode={planeMode} points={curve} />
     </div>
   );
 }
 
 function OutputPane({
-  mountRef, viewExtent, planeMode, curve, onWheelZoom, children,
+  mountRef, viewExtent, planeMode, selectedPoint, curve, onWheelZoom, children,
 }: PaneCommon) {
   const box = useInscribedSquare(mountRef);
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
@@ -837,6 +862,7 @@ function OutputPane({
       onWheel={onWheel}
     >
       {children}
+      <SelectedPointSvg box={box} viewExtent={viewExtent} planeMode={planeMode} point={selectedPoint} />
       <CurveSvg box={box} viewExtent={viewExtent} planeMode={planeMode} points={curve} />
     </div>
   );
@@ -853,3 +879,19 @@ const paneStyle: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
 };
+
+/** Same chart transform and centered viewport as the WebGL panes. */
+function SelectedPointSvg({ box, viewExtent, planeMode, point }: {
+  box: { w: number; h: number; size: number; offX: number; offY: number };
+  viewExtent: number;
+  planeMode: PlaneMode;
+  point?: [number, number];
+}) {
+  if (!point || !point.every(Number.isFinite) || box.size === 0) return null;
+  const [x, y] = clipFromMath(point[0], point[1], planeMode, viewExtent);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > 1 || Math.abs(y) > 1) return null;
+  return <svg width={box.w} height={box.h} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2 }}>
+    <circle cx={box.offX + box.size * (1 + x) / 2} cy={box.offY + box.size * (1 - y) / 2}
+      r={7} fill="white" stroke="#111" strokeWidth={3} />
+  </svg>;
+}

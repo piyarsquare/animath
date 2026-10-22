@@ -77,3 +77,5 @@ The current architecture supports an incremental choice: [`src/index.tsx`](../sr
 ## Subsequent direction, October 21, 2026
 
 Dan chose “Grow toward the connected garden, with the notebook as the guided way into each part.” He then accepted the three-stop route spec as the first slice (Arrange updates 180 and 189). The resulting [notebook route specification](CONNECTED_GARDEN_ROUTE.md) covers multiplication, derivative, and graph/map. It is a spec only; implementation remains a separate decision. The open choice above records the state when this brief was written.
+
+Dan subsequently authorized implementation of that route. The [Number Planes Notebook](../src/animations/GardenWalk/README.md) is the bounded first slice, with the broader notebook branches remaining separate.
