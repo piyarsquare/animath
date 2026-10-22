@@ -73,3 +73,7 @@ I recommend **garden first, notebook walks as the way in**. It preserves the exi
 The current architecture supports an incremental choice: [`src/index.tsx`](../src/index.tsx) owns routing, [`src/App.tsx`](../src/App.tsx) is the Complex Particles route component, and [`ARCHITECTURE.md`](../ARCHITECTURE.md) explicitly marks its older folder proposal as historical. None of these visions requires adopting that obsolete layout or replacing the shared workspace.
 
 **Still for Dan:** Which vision, or mix of them, should AniMath grow toward? The sketches are complete; choosing a direction and implementing it are separate work. No roadmap priority or feature-branch merge is implied by this brief.
+
+## Subsequent direction, October 21, 2026
+
+Dan chose “Grow toward the connected garden, with the notebook as the guided way into each part.” He then accepted the three-stop route spec as the first slice (Arrange updates 180 and 189). The resulting [notebook route specification](CONNECTED_GARDEN_ROUTE.md) covers multiplication, derivative, and graph/map. It is a spec only; implementation remains a separate decision. The open choice above records the state when this brief was written.
